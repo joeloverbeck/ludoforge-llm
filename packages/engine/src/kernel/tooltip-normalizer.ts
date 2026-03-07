@@ -1,14 +1,24 @@
 /**
- * Core normalizer: converts leaf EffectAST nodes into semantic TooltipMessage instances.
+ * Core normalizer: converts EffectAST nodes into semantic TooltipMessage instances.
  * Handles variable effects (rules 1-8), token effects (rules 9-23b),
- * and marker effects (rules 24-28). Compound/control-flow effects are
- * handled by LEGACTTOO-005.
+ * marker effects (rules 24-28). Delegates compound/control-flow effects
+ * and macro override to tooltip-normalizer-compound.ts.
  */
 
 import type { EffectAST, ValueExpr, ZoneRef, NumericValueExpr, PlayerSel } from './types-ast.js';
 import type { VerbalizationDef } from './verbalization-types.js';
-import type { TooltipMessage } from './tooltip-ir.js';
+import type { TooltipMessage, VarScope } from './tooltip-ir.js';
 import { isSuppressed, isScaffoldingEffect } from './tooltip-suppression.js';
+import {
+  normalizeChooseN,
+  normalizeChooseOne,
+  normalizeForEach,
+  normalizeIf,
+  normalizeRollRandom,
+  normalizeRemoveByPriority,
+  normalizeGrantFreeOperation,
+  tryMacroOverride,
+} from './tooltip-normalizer-compound.js';
 
 export interface NormalizerContext {
   readonly verbalization: VerbalizationDef | undefined;
@@ -48,7 +58,7 @@ const stringifyNumericExpr = (expr: NumericValueExpr): string => {
 };
 
 type ScopeFields = {
-  readonly scope?: 'global' | 'player' | 'zone';
+  readonly scope?: VarScope;
   readonly scopeOwner?: string;
 };
 
@@ -92,17 +102,14 @@ const normalizeAddVar = (
 
   const scopeFields = extractScopeFields(payload.addVar);
 
-  // Rule 1: negative literal → pay
   if (isNegativeLiteral(delta)) {
     return [{ kind: 'pay', resource: varName, amount: Math.abs(delta), ...scopeFields, astPath }];
   }
 
-  // Rule 2: positive literal → gain
   if (isPositiveLiteral(delta)) {
     return [{ kind: 'gain', resource: varName, amount: delta, ...scopeFields, astPath }];
   }
 
-  // Rule 8: non-literal expression → generic set
   return [{ kind: 'set', target: varName, value: stringifyNumericExpr(delta), ...scopeFields, astPath }];
 };
 
@@ -113,28 +120,13 @@ const normalizeSetVar = (
 ): readonly TooltipMessage[] => {
   const { var: varName, value } = payload.setVar;
 
-  // Rules 4-6: suppressed variable
   if (isSuppressed(varName, ctx.suppressPatterns)) {
     return [{ kind: 'suppressed', reason: `suppressed var: ${varName}`, astPath }];
   }
 
   const scopeFields = extractScopeFields(payload.setVar);
 
-  // Rule 7: generic set
   return [{ kind: 'set', target: varName, value: stringifyValueExpr(value), ...scopeFields, astPath }];
-};
-
-const extractEndpointScopeFields = (
-  endpoint: { readonly scope: string; readonly player?: PlayerSel; readonly zone?: ZoneRef },
-  prefix: 'from' | 'to',
-): Record<string, string> => {
-  if (endpoint.scope === 'pvar' && endpoint.player !== undefined) {
-    return { [`${prefix}Scope`]: 'player', [`${prefix}ScopeOwner`]: stringifyPlayerSel(endpoint.player) };
-  }
-  if (endpoint.scope === 'zoneVar' && endpoint.zone !== undefined) {
-    return { [`${prefix}Scope`]: 'zone', [`${prefix}ScopeOwner`]: stringifyZoneRef(endpoint.zone) };
-  }
-  return {};
 };
 
 const normalizeTransferVar = (
@@ -144,8 +136,8 @@ const normalizeTransferVar = (
   const { from, to, amount } = payload.transferVar;
   const numAmount = typeof amount === 'number' ? amount : 0;
   const amountExpr = typeof amount === 'number' ? undefined : stringifyNumericExpr(amount);
-  const fromScopeFields = extractEndpointScopeFields(from, 'from');
-  const toScopeFields = extractEndpointScopeFields(to, 'to');
+  const fromScope = extractScopeFields(from);
+  const toScope = extractScopeFields(to);
   return [{
     kind: 'transfer',
     resource: from.var,
@@ -153,8 +145,8 @@ const normalizeTransferVar = (
     from: from.var,
     to: to.var,
     ...(amountExpr !== undefined ? { amountExpr } : {}),
-    ...fromScopeFields,
-    ...toScopeFields,
+    ...(fromScope.scope !== undefined ? { fromScope: fromScope.scope, fromScopeOwner: fromScope.scopeOwner } : {}),
+    ...(toScope.scope !== undefined ? { toScope: toScope.scope, toScopeOwner: toScope.scopeOwner } : {}),
     astPath,
   }];
 };
@@ -169,17 +161,14 @@ const normalizeMoveToken = (
   const fromStr = stringifyZoneRef(from);
   const toStr = stringifyZoneRef(to);
 
-  // Rule 9: from supply zone → place
   if (isSupplyZone(fromStr)) {
     return [{ kind: 'place', tokenFilter: token, targetZone: toStr, astPath }];
   }
 
-  // Rule 10: to supply/casualties zone → remove
   if (isRemovalZone(toStr)) {
     return [{ kind: 'remove', tokenFilter: token, fromZone: fromStr, destination: toStr, astPath }];
   }
 
-  // Rule 12: generic move
   return [{ kind: 'move', tokenFilter: token, fromZone: fromStr, toZone: toStr, astPath }];
 };
 
@@ -207,17 +196,14 @@ const normalizeMoveAll = (
   const toStr = stringifyZoneRef(to);
   const filterStr = filter !== undefined ? '<condition>' : undefined;
 
-  // Rule 21: from supply → place
   if (isSupplyZone(fromStr)) {
     return [{ kind: 'place', tokenFilter: '*', targetZone: toStr, ...(filterStr !== undefined ? { filter: filterStr } : {}), astPath }];
   }
 
-  // Rule 22: to supply/casualties → remove
   if (isRemovalZone(toStr)) {
     return [{ kind: 'remove', tokenFilter: '*', fromZone: fromStr, destination: toStr, ...(filterStr !== undefined ? { filter: filterStr } : {}), astPath }];
   }
 
-  // Rule 23: generic move
   return [{ kind: 'move', tokenFilter: '*', fromZone: fromStr, toZone: toStr, ...(filterStr !== undefined ? { filter: filterStr } : {}), astPath }];
 };
 
@@ -229,17 +215,14 @@ const normalizeSetTokenProp = (
 
   if (prop === 'activity') {
     const valueStr = stringifyValueExpr(value);
-    // Rule 13: active/underground → activate
     if (valueStr === 'active' || valueStr === 'underground') {
       return [{ kind: 'activate', tokenFilter: token, zone: '', astPath }];
     }
-    // Rule 14: inactive → deactivate
     if (valueStr === 'inactive') {
       return [{ kind: 'deactivate', tokenFilter: token, zone: '', astPath }];
     }
   }
 
-  // Rule 15: generic property set
   return [{
     kind: 'set',
     target: `${token}.${prop}`,
@@ -304,11 +287,13 @@ const normalizeShiftMarker = (
 ): readonly TooltipMessage[] => {
   const { marker, delta } = payload.shiftMarker;
   const numDelta = typeof delta === 'number' ? delta : 0;
+  const deltaExpr = typeof delta === 'number' ? undefined : stringifyNumericExpr(delta);
   return [{
     kind: 'shift',
     marker,
     direction: numDelta >= 0 ? '+' : '-',
     amount: Math.abs(numDelta),
+    ...(deltaExpr !== undefined ? { deltaExpr } : {}),
     astPath,
   }];
 };
@@ -349,14 +334,25 @@ const normalizeShiftGlobalMarker = (
 ): readonly TooltipMessage[] => {
   const { marker, delta } = payload.shiftGlobalMarker;
   const numDelta = typeof delta === 'number' ? delta : 0;
+  const deltaExpr = typeof delta === 'number' ? undefined : stringifyNumericExpr(delta);
   return [{
     kind: 'shift',
     marker,
     direction: numDelta >= 0 ? '+' : '-',
     amount: Math.abs(numDelta),
+    ...(deltaExpr !== undefined ? { deltaExpr } : {}),
     astPath,
   }];
 };
+
+// --- Recursive helper (injected into compound normalizers) ---
+
+const normalizeEffectList = (
+  effects: readonly EffectAST[],
+  ctx: NormalizerContext,
+  basePath: string,
+): readonly TooltipMessage[] =>
+  effects.flatMap((child, i) => normalizeEffect(child, ctx, `${basePath}[${i}]`));
 
 // --- Main entry point ---
 
@@ -371,6 +367,10 @@ export const normalizeEffect = (
   if (isScaffoldingEffect(key)) {
     return [{ kind: 'suppressed', reason: `scaffolding: ${key}`, astPath }];
   }
+
+  // Macro override: highest priority for compound effects
+  const macroResult = tryMacroOverride(effect, ctx, astPath);
+  if (macroResult !== undefined) return macroResult;
 
   // Variable effects (rules 1-8)
   if ('addVar' in effect) return normalizeAddVar(effect, ctx, astPath);
@@ -396,6 +396,20 @@ export const normalizeEffect = (
   if ('flipGlobalMarker' in effect) return normalizeFlipGlobalMarker(effect, astPath);
   if ('shiftGlobalMarker' in effect) return normalizeShiftGlobalMarker(effect, astPath);
 
-  // Rule 29: unhandled effects (compound/control-flow → LEGACTTOO-005)
+  // Compound / control-flow rules (28-35) — delegated, with DI recurse callback
+  if ('chooseN' in effect) return normalizeChooseN(effect, astPath);
+  if ('chooseOne' in effect) return normalizeChooseOne(effect, astPath);
+  if ('forEach' in effect) return normalizeForEach(effect, ctx, astPath, normalizeEffectList);
+  if ('if' in effect) return normalizeIf(effect, ctx, astPath, normalizeEffectList);
+  if ('rollRandom' in effect) return normalizeRollRandom(effect, ctx, astPath, normalizeEffectList);
+  if ('removeByPriority' in effect) return normalizeRemoveByPriority(effect, ctx, astPath, normalizeEffectList);
+
+  // Turn flow rule 41
+  if ('grantFreeOperation' in effect) return normalizeGrantFreeOperation(effect, astPath);
+
+  // Internal computation → suppressed
+  if ('reduce' in effect) return [{ kind: 'suppressed', reason: 'internal computation: reduce', astPath }];
+
+  // Fallback: unhandled effect
   return [{ kind: 'suppressed', reason: `unhandled: ${key}`, astPath }];
 };

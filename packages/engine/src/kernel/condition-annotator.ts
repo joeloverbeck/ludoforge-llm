@@ -20,6 +20,11 @@ import { createEvalContext, createEvalRuntimeResources, type EvalContext } from 
 import type { ActionDef, ActionUsageRecord, ConditionAST, GameDef, GameState, ValueExpr } from './types.js';
 import type { ActionPipelineDef } from './types-operations.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
+import type { ActionTooltipPayload, RuleCard, RuleState } from './tooltip-rule-card.js';
+import { normalizeEffect, type NormalizerContext } from './tooltip-normalizer.js';
+import { planContent } from './tooltip-content-planner.js';
+import { realizeContentPlan } from './tooltip-template-realizer.js';
+import { extractBlockers } from './tooltip-blocker-extractor.js';
 
 // ---------------------------------------------------------------------------
 // AnnotationContext — everything the annotator needs from the caller
@@ -271,6 +276,96 @@ const pipelineApplicabilityPasses = (
 };
 
 // ---------------------------------------------------------------------------
+// Tooltip pipeline
+// ---------------------------------------------------------------------------
+
+const buildRuleCard = (
+  action: ActionDef,
+  def: GameDef,
+  runtime: GameDefRuntime,
+): RuleCard => {
+  const actionId = String(action.id);
+  const cached = runtime.ruleCardCache.get(actionId);
+  if (cached !== undefined) return cached;
+
+  const normCtx: NormalizerContext = {
+    verbalization: def.verbalization,
+    suppressPatterns: def.verbalization?.suppressPatterns ?? [],
+  };
+
+  const allEffects = [...action.cost, ...action.effects];
+  const messages = allEffects.flatMap((e, i) => normalizeEffect(e, normCtx, `root[${i}]`));
+  const plan = planContent(messages, actionId);
+  const ruleCard = realizeContentPlan(plan, def.verbalization);
+
+  runtime.ruleCardCache.set(actionId, ruleCard);
+  return ruleCard;
+};
+
+const buildRuleState = (
+  action: ActionDef,
+  ruleCard: RuleCard,
+  evalCtx: EvalContext,
+  limitUsage: readonly LimitUsageInfo[],
+  def: GameDef,
+): RuleState => {
+  // Blocker extraction from preconditions
+  let available = true;
+  let blockerDetails: RuleState['blockers'] = [];
+  if (action.pre !== null) {
+    const blockerInfo = extractBlockers(
+      action.pre,
+      (c) => evalCondition(c, evalCtx),
+      def.verbalization,
+    );
+    available = blockerInfo.satisfied;
+    blockerDetails = blockerInfo.blockers;
+  }
+
+  // Active modifier detection via conditionAST evaluation
+  const activeModifierIndices: number[] = [];
+  for (let i = 0; i < ruleCard.modifiers.length; i++) {
+    const mod = ruleCard.modifiers[i]!;
+    if (mod.conditionAST !== undefined) {
+      try {
+        if (evalCondition(mod.conditionAST, evalCtx)) {
+          activeModifierIndices.push(i);
+        }
+      } catch {
+        // Condition depends on runtime bindings — skip
+      }
+    }
+  }
+
+  // Limit usage summary
+  const limitSummary = limitUsage.length > 0
+    ? { used: limitUsage[0]!.current, max: limitUsage[0]!.max }
+    : undefined;
+
+  return {
+    available,
+    blockers: blockerDetails,
+    activeModifierIndices,
+    ...(limitSummary !== undefined ? { limitUsage: limitSummary } : {}),
+  };
+};
+
+const buildTooltipPayload = (
+  action: ActionDef,
+  context: AnnotationContext,
+  evalCtx: EvalContext,
+  limitUsage: readonly LimitUsageInfo[],
+): ActionTooltipPayload | undefined => {
+  try {
+    const ruleCard = buildRuleCard(action, context.def, context.runtime);
+    const ruleState = buildRuleState(action, ruleCard, evalCtx, limitUsage, context.def);
+    return { ruleCard, ruleState };
+  } catch {
+    return undefined;
+  }
+};
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -311,7 +406,14 @@ export function describeAction(
     const applicablePipelines = pipelines.filter((p) => pipelineApplicabilityPasses(p, evalCtx));
     const pipelineSections = applicablePipelines.map((p) => buildAnnotatedPipelineSection(p, evalCtx));
 
-    return { sections: [...annotatedSections, ...pipelineSections], limitUsage };
+    // Build tooltip payload (graceful — undefined on error)
+    const tooltipPayload = buildTooltipPayload(action, context, evalCtx, limitUsage);
+
+    return {
+      sections: [...annotatedSections, ...pipelineSections],
+      limitUsage,
+      ...(tooltipPayload !== undefined ? { tooltipPayload } : {}),
+    };
   } catch {
     // Safety net: never throw from describeAction
     const sections = actionDefToDisplayTree(action);

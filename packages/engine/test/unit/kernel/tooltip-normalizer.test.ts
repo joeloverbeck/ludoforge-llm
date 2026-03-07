@@ -520,6 +520,20 @@ describe('tooltip-normalizer', () => {
         assert.equal(msg.marker, 'support');
         assert.equal(msg.direction, '+');
         assert.equal(msg.amount, 1);
+        assert.equal(msg.deltaExpr, undefined);
+      }
+    });
+
+    it('rule 24: shiftMarker with binding expression → ShiftMessage with deltaExpr', () => {
+      const effect: EffectAST = {
+        shiftMarker: { space: 'saigon', marker: 'support', delta: { ref: 'binding', name: 'shiftAmount' } },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'm[0b]'));
+      assert.equal(msg.kind, 'shift');
+      if (msg.kind === 'shift') {
+        assert.equal(msg.amount, 0);
+        assert.equal(msg.direction, '+');
+        assert.equal(msg.deltaExpr, 'shiftAmount');
       }
     });
 
@@ -582,6 +596,20 @@ describe('tooltip-normalizer', () => {
         assert.equal(msg.marker, 'trail');
         assert.equal(msg.direction, '+');
         assert.equal(msg.amount, 2);
+        assert.equal(msg.deltaExpr, undefined);
+      }
+    });
+
+    it('rule 28: shiftGlobalMarker with binding expression → ShiftMessage with deltaExpr', () => {
+      const effect: EffectAST = {
+        shiftGlobalMarker: { marker: 'trail', delta: { ref: 'binding', name: 'trailDelta' } },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'm[5b]'));
+      assert.equal(msg.kind, 'shift');
+      if (msg.kind === 'shift') {
+        assert.equal(msg.amount, 0);
+        assert.equal(msg.direction, '+');
+        assert.equal(msg.deltaExpr, 'trailDelta');
       }
     });
   });
@@ -616,23 +644,478 @@ describe('tooltip-normalizer', () => {
       assert.equal(msg.kind, 'suppressed');
     });
 
-    it('forEach effect → SuppressedMessage (unhandled, for LEGACTTOO-005)', () => {
+    it('forEach with empty effects → SuppressedMessage (empty forEach)', () => {
       const effect: EffectAST = {
         forEach: { bind: 'x', over: { query: 'enums', values: ['a'] }, effects: [] },
       };
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'u[0]'));
       assert.equal(msg.kind, 'suppressed');
       if (msg.kind === 'suppressed') {
-        assert.ok(msg.reason.includes('unhandled'));
+        assert.ok(msg.reason.includes('empty'));
       }
     });
 
-    it('if effect → SuppressedMessage (unhandled, for LEGACTTOO-005)', () => {
+    it('if effect with empty then → ModifierMessage only', () => {
       const effect: EffectAST = {
         if: { when: true, then: [] },
       };
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'u[1]'));
+      assert.equal(msg.kind, 'modifier');
+    });
+  });
+
+  // --- Compound / control-flow rules (28-41) ---
+
+  describe('compound effects', () => {
+    it('rule 28: chooseN over mapSpaces → SelectMessage(spaces) with bounds', () => {
+      const effect: EffectAST = {
+        chooseN: {
+          internalDecisionId: 'd1',
+          bind: 'spaces',
+          options: { query: 'mapSpaces' },
+          min: 1,
+          max: 6,
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[0]'));
+      assert.equal(msg.kind, 'select');
+      if (msg.kind === 'select') {
+        assert.equal(msg.target, 'spaces');
+        assert.deepStrictEqual(msg.bounds, { min: 1, max: 6 });
+      }
+    });
+
+    it('rule 28: chooseN with exact n → bounds min===max', () => {
+      const effect: EffectAST = {
+        chooseN: {
+          internalDecisionId: 'd2',
+          bind: 'spaces',
+          options: { query: 'mapSpaces' },
+          n: 3,
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[0b]'));
+      if (msg.kind === 'select') {
+        assert.deepStrictEqual(msg.bounds, { min: 3, max: 3 });
+      }
+    });
+
+    it('rule 29: chooseN over tokensInZone → SelectMessage(zones)', () => {
+      const effect: EffectAST = {
+        chooseN: {
+          internalDecisionId: 'd3',
+          bind: 'tokens',
+          options: { query: 'tokensInZone', zone: 'saigon' },
+          min: 1,
+          max: 4,
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[1]'));
+      assert.equal(msg.kind, 'select');
+      if (msg.kind === 'select') {
+        assert.equal(msg.target, 'zones');
+      }
+    });
+
+    it('rule 29b: chooseN over enums → SelectMessage(items)', () => {
+      const effect: EffectAST = {
+        chooseN: {
+          internalDecisionId: 'd4',
+          bind: 'items',
+          options: { query: 'enums', values: ['a', 'b', 'c'] },
+          min: 1,
+          max: 2,
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[1b]'));
+      assert.equal(msg.kind, 'select');
+      if (msg.kind === 'select') {
+        assert.equal(msg.target, 'items');
+        assert.deepStrictEqual(msg.bounds, { min: 1, max: 2 });
+      }
+    });
+
+    it('rule 29b: chooseN over intsInRange → SelectMessage(items)', () => {
+      const effect: EffectAST = {
+        chooseN: {
+          internalDecisionId: 'd4b',
+          bind: 'amounts',
+          options: { query: 'intsInRange', min: 1, max: 10 },
+          min: 1,
+          max: 3,
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[1c]'));
+      assert.equal(msg.kind, 'select');
+      if (msg.kind === 'select') {
+        assert.equal(msg.target, 'items');
+      }
+    });
+
+    it('rule 30: chooseOne over enums → ChooseMessage with options', () => {
+      const effect: EffectAST = {
+        chooseOne: {
+          internalDecisionId: 'd5',
+          bind: 'action',
+          options: { query: 'enums', values: ['attack', 'defend'] },
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[2]'));
+      assert.equal(msg.kind, 'choose');
+      if (msg.kind === 'choose') {
+        assert.deepStrictEqual(msg.options, ['attack', 'defend']);
+        assert.equal(msg.paramName, 'action');
+      }
+    });
+
+    it('rule 30b: chooseOne generic → ChooseMessage with empty options', () => {
+      const effect: EffectAST = {
+        chooseOne: {
+          internalDecisionId: 'd6',
+          bind: 'target',
+          options: { query: 'mapSpaces' },
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[2b]'));
+      assert.equal(msg.kind, 'choose');
+      if (msg.kind === 'choose') {
+        assert.deepStrictEqual(msg.options, []);
+        assert.equal(msg.paramName, 'target');
+      }
+    });
+
+    it('rule 31: forEach → recursively normalizes children', () => {
+      const effect: EffectAST = {
+        forEach: {
+          bind: 'space',
+          over: { query: 'mapSpaces' },
+          effects: [
+            { addVar: { scope: 'global', var: 'aid', delta: 1 } },
+            { setVar: { scope: 'global', var: 'patronage', value: 5 } },
+          ],
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'c[3]');
+      assert.equal(messages.length, 2);
+      assert.equal(messages[0]!.kind, 'gain');
+      assert.equal(messages[1]!.kind, 'set');
+      assert.ok(messages[0]!.astPath.startsWith('c[3].effects'));
+    });
+
+    it('rule 31: forEach with empty effects → single suppressed message', () => {
+      const effect: EffectAST = {
+        forEach: {
+          bind: 'x',
+          over: { query: 'enums', values: ['a'] },
+          effects: [],
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[3b]'));
       assert.equal(msg.kind, 'suppressed');
+    });
+
+    it('rule 31: forEach with in-block → normalizes both effects and in', () => {
+      const effect: EffectAST = {
+        forEach: {
+          bind: 'space',
+          over: { query: 'mapSpaces' },
+          effects: [
+            { addVar: { scope: 'global', var: 'aid', delta: 1 } },
+          ],
+          in: [
+            { setVar: { scope: 'global', var: 'result', value: 10 } },
+          ],
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'c[3c]');
+      assert.equal(messages.length, 2);
+      assert.equal(messages[0]!.kind, 'gain');
+      assert.equal(messages[1]!.kind, 'set');
+      assert.ok(messages[1]!.astPath.startsWith('c[3c].in'));
+    });
+
+    it('rule 32: if with globalMarkerState → ModifierMessage', () => {
+      const effect: EffectAST = {
+        if: {
+          when: {
+            op: '==',
+            left: { ref: 'globalMarkerState', marker: 'monsoon' },
+            right: 'active',
+          },
+          then: [
+            { addVar: { scope: 'global', var: 'aid', delta: -1 } },
+          ],
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'c[4]');
+      assert.ok(messages.length >= 2, 'Should produce modifier + child messages');
+      assert.equal(messages[0]!.kind, 'modifier');
+      if (messages[0]!.kind === 'modifier') {
+        assert.ok(messages[0]!.condition.includes('monsoon'));
+      }
+      assert.equal(messages[1]!.kind, 'pay');
+    });
+
+    it('rule 33: if generic → ModifierMessage + then children', () => {
+      const effect: EffectAST = {
+        if: {
+          when: { op: '>', left: { ref: 'gvar', var: 'aid' }, right: 0 },
+          then: [
+            { addVar: { scope: 'global', var: 'aid', delta: -1 } },
+          ],
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'c[5]');
+      assert.ok(messages.length >= 2);
+      assert.equal(messages[0]!.kind, 'modifier');
+      assert.equal(messages[1]!.kind, 'pay');
+    });
+
+    it('rule 33: if with else → includes both then and else children', () => {
+      const effect: EffectAST = {
+        if: {
+          when: true,
+          then: [{ addVar: { scope: 'global', var: 'a', delta: 1 } }],
+          else: [{ addVar: { scope: 'global', var: 'b', delta: 2 } }],
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'c[5b]');
+      assert.equal(messages.length, 3); // modifier + then + else
+      assert.equal(messages[0]!.kind, 'modifier');
+      assert.equal(messages[1]!.kind, 'gain');
+      assert.equal(messages[2]!.kind, 'gain');
+    });
+
+    it('rule 34: rollRandom → RollMessage + children', () => {
+      const effect: EffectAST = {
+        rollRandom: {
+          bind: 'dieRoll',
+          min: 1,
+          max: 6,
+          in: [
+            { addVar: { scope: 'global', var: 'aid', delta: 1 } },
+          ],
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'c[6]');
+      assert.ok(messages.length >= 2);
+      assert.equal(messages[0]!.kind, 'roll');
+      if (messages[0]!.kind === 'roll') {
+        assert.deepStrictEqual(messages[0]!.range, { min: 1, max: 6 });
+        assert.equal(messages[0]!.bindTo, 'dieRoll');
+      }
+      assert.equal(messages[1]!.kind, 'gain');
+    });
+
+    it('rule 35: removeByPriority single group → RemoveMessage with budget metadata', () => {
+      const effect: EffectAST = {
+        removeByPriority: {
+          budget: 3,
+          groups: [{
+            bind: 'guerrilla',
+            over: { query: 'tokensInZone', zone: 'saigon' },
+            to: 'casualties-nva',
+          }],
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'c[7]');
+      assert.equal(messages.length, 1, 'Should emit 1 remove (budget folded in)');
+      assert.equal(messages[0]!.kind, 'remove');
+      if (messages[0]!.kind === 'remove') {
+        assert.equal(messages[0]!.tokenFilter, 'guerrilla');
+        assert.equal(messages[0]!.destination, 'casualties-nva');
+        assert.equal(messages[0]!.budget, '3');
+        assert.equal(messages[0]!.astPath, 'c[7].groups[0]');
+      }
+    });
+
+    it('rule 35: removeByPriority with multiple groups → per-group RemoveMessages with budget, preserving priority order', () => {
+      const effect: EffectAST = {
+        removeByPriority: {
+          budget: 4,
+          groups: [
+            {
+              bind: 'guerrilla',
+              over: { query: 'tokensInZone', zone: 'saigon' },
+              to: 'casualties-nva',
+            },
+            {
+              bind: 'base',
+              over: { query: 'tokensInZone', zone: 'saigon' },
+              to: 'available-nva',
+            },
+          ],
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'c[7b]');
+      assert.equal(messages.length, 2, 'Should emit 2 removes (budget folded in)');
+      // Priority 0: guerrillas to casualties
+      assert.equal(messages[0]!.kind, 'remove');
+      if (messages[0]!.kind === 'remove') {
+        assert.equal(messages[0]!.tokenFilter, 'guerrilla');
+        assert.equal(messages[0]!.destination, 'casualties-nva');
+        assert.equal(messages[0]!.budget, '4');
+        assert.equal(messages[0]!.astPath, 'c[7b].groups[0]');
+      }
+      // Priority 1: bases to available
+      assert.equal(messages[1]!.kind, 'remove');
+      if (messages[1]!.kind === 'remove') {
+        assert.equal(messages[1]!.tokenFilter, 'base');
+        assert.equal(messages[1]!.destination, 'available-nva');
+        assert.equal(messages[1]!.budget, '4');
+        assert.equal(messages[1]!.astPath, 'c[7b].groups[1]');
+      }
+    });
+
+    it('rule 35: removeByPriority with from zone → RemoveMessage includes fromZone and budget', () => {
+      const effect: EffectAST = {
+        removeByPriority: {
+          budget: 2,
+          groups: [{
+            bind: 'troop',
+            over: { query: 'tokensInZone', zone: 'hue' },
+            from: 'hue',
+            to: 'available-us',
+          }],
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'c[7c]');
+      const removeMsg = messages.find(m => m.kind === 'remove');
+      assert.ok(removeMsg !== undefined);
+      if (removeMsg?.kind === 'remove') {
+        assert.equal(removeMsg.fromZone, 'hue');
+        assert.equal(removeMsg.destination, 'available-us');
+        assert.equal(removeMsg.budget, '2');
+      }
+    });
+
+    it('rule 35: removeByPriority never emits SetMessage with target "budget"', () => {
+      const effect: EffectAST = {
+        removeByPriority: {
+          budget: 5,
+          groups: [{
+            bind: 'guerrilla',
+            over: { query: 'tokensInZone', zone: 'saigon' },
+            to: 'casualties-nva',
+          }],
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'c[neg]');
+      const budgetSet = messages.find(
+        m => m.kind === 'set' && (m as { target: string }).target === 'budget'
+      );
+      assert.equal(budgetSet, undefined, 'No SetMessage with target "budget" should exist');
+    });
+
+    it('rule 41: grantFreeOperation → GrantMessage', () => {
+      const effect: EffectAST = {
+        grantFreeOperation: {
+          seat: 'arvn',
+          operationClass: 'operation',
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[8]'));
+      assert.equal(msg.kind, 'grant');
+      if (msg.kind === 'grant') {
+        assert.equal(msg.operation, 'operation');
+        assert.equal(msg.targetPlayer, 'arvn');
+      }
+    });
+
+    it('reduce → SuppressedMessage (internal computation)', () => {
+      const effect: EffectAST = {
+        reduce: {
+          itemBind: 'item',
+          accBind: 'acc',
+          over: { query: 'enums', values: ['a', 'b'] },
+          initial: 0,
+          next: 0,
+          resultBind: 'result',
+          in: [],
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[9]'));
+      assert.equal(msg.kind, 'suppressed');
+      if (msg.kind === 'suppressed') {
+        assert.ok(msg.reason.includes('reduce'));
+      }
+    });
+  });
+
+  // --- Macro override ---
+
+  describe('macro override', () => {
+    it('effect with macroOrigin + verbalization summary → single summary message', () => {
+      const ctx: NormalizerContext = {
+        verbalization: {
+          labels: {},
+          stages: {},
+          macros: { trainUs: { class: 'operation', summary: 'Place US forces and build support' } },
+          sentencePlans: {},
+          suppressPatterns: [],
+        },
+        suppressPatterns: [],
+      };
+      const effect: EffectAST = {
+        forEach: {
+          bind: 'space',
+          over: { query: 'mapSpaces' },
+          macroOrigin: { macroId: 'trainUs', stem: 'train' },
+          effects: [
+            { addVar: { scope: 'global', var: 'aid', delta: 1 } },
+            { addVar: { scope: 'global', var: 'aid', delta: 2 } },
+          ],
+        },
+      };
+      const messages = normalizeEffect(effect, ctx, 'macro[0]');
+      assert.equal(messages.length, 1, 'Macro override should produce exactly 1 message');
+      assert.equal(messages[0]!.kind, 'set');
+      if (messages[0]!.kind === 'set') {
+        assert.equal(messages[0]!.value, 'Place US forces and build support');
+        assert.equal(messages[0]!.macroOrigin, 'trainUs');
+      }
+    });
+
+    it('effect with macroOrigin but no verbalization → normal processing', () => {
+      const effect: EffectAST = {
+        forEach: {
+          bind: 'space',
+          over: { query: 'mapSpaces' },
+          macroOrigin: { macroId: 'trainUs', stem: 'train' },
+          effects: [
+            { addVar: { scope: 'global', var: 'aid', delta: 1 } },
+          ],
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'macro[1]');
+      assert.ok(messages.length >= 1);
+      assert.equal(messages[0]!.kind, 'gain');
+    });
+
+    it('effect with macroOrigin but macro has no summary → normal processing', () => {
+      const ctx: NormalizerContext = {
+        verbalization: {
+          labels: {},
+          stages: {},
+          macros: { otherMacro: { class: 'operation', summary: 'Other summary' } },
+          sentencePlans: {},
+          suppressPatterns: [],
+        },
+        suppressPatterns: [],
+      };
+      const effect: EffectAST = {
+        forEach: {
+          bind: 'space',
+          over: { query: 'mapSpaces' },
+          macroOrigin: { macroId: 'trainUs', stem: 'train' },
+          effects: [
+            { addVar: { scope: 'global', var: 'aid', delta: 1 } },
+          ],
+        },
+      };
+      const messages = normalizeEffect(effect, ctx, 'macro[2]');
+      assert.ok(messages.length >= 1);
+      assert.equal(messages[0]!.kind, 'gain');
     });
   });
 

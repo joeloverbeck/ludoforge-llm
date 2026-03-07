@@ -4,6 +4,7 @@ import type { RuntimeTableIndex } from './runtime-table-index.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import type { ZobristTable, GameDef } from './types.js';
 import { createZobristTable } from './zobrist.js';
+import type { RuleCard } from './tooltip-rule-card.js';
 
 /**
  * Pre-computed, immutable runtime structures derived from a GameDef.
@@ -11,11 +12,16 @@ import { createZobristTable } from './zobrist.js';
  * Creating this once and threading it through kernel calls avoids redundant
  * rebuilds of the adjacency graph, runtime table index, and Zobrist table
  * on every move.
+ *
+ * `ruleCardCache` is a lazily populated memo cache for RuleCard instances.
+ * Each RuleCard is a pure function of (GameDef, actionId) — immutable once
+ * computed. The Map itself is mutable for lazy population only.
  */
 export interface GameDefRuntime {
   readonly adjacencyGraph: AdjacencyGraph;
   readonly runtimeTableIndex: RuntimeTableIndex;
   readonly zobristTable: ZobristTable;
+  readonly ruleCardCache: Map<string, RuleCard>;
 }
 
 export function createGameDefRuntime(def: GameDef): GameDefRuntime {
@@ -23,5 +29,6 @@ export function createGameDefRuntime(def: GameDef): GameDefRuntime {
     adjacencyGraph: buildAdjacencyGraph(def.zones),
     runtimeTableIndex: buildRuntimeTableIndex(def),
     zobristTable: createZobristTable(def),
+    ruleCardCache: new Map(),
   };
 }

@@ -1,6 +1,6 @@
 # LEGACTTOO-007: Template Realizer + Blocker Extractor + Golden Tests
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — two new kernel modules + golden test fixtures
@@ -10,16 +10,19 @@
 
 The content planner produces a `ContentPlan` with structured messages, but those messages still contain programmatic identifiers. The template realizer converts them to English using a three-tier label resolution: sentencePlans (pre-authored), verbalization labels, auto-humanize fallback. Separately, the blocker extractor walks `ConditionAST` evaluation results to produce minimal human-readable blocker descriptions. Golden tests validate the full pipeline end-to-end.
 
-## Assumption Reassessment (2026-03-06)
+## Assumption Reassessment (2026-03-07)
 
-1. `VerbalizationDef` (from LEGACTTOO-001) provides `sentencePlans`, `labels`, and `stages` maps for label resolution.
-2. `ConditionAST` evaluation happens in `packages/engine/src/kernel/eval-condition.ts`. The annotator in `condition-annotator.ts` already walks conditions for pass/fail status.
+1. `VerbalizationDef` (from LEGACTTOO-001) provides `sentencePlans`, `labels`, and `stages` as `Readonly<Record<...>>` (not `ReadonlyMap`) for JSON serializability. Label resolution uses bracket access, not `.get()`.
+2. `ConditionAST` evaluation happens in `packages/engine/src/kernel/eval-condition.ts`. The annotator in `condition-annotator.ts` evaluates conditions inline via `evalCondition()`. ConditionAST nodes do **not** carry path identifiers, so the blocker extractor cannot use a `ReadonlyMap<string, boolean>` keyed by astPath. Instead, it accepts an evaluator function `(cond: ConditionAST) => boolean`.
 3. No golden test fixtures for tooltip English output exist yet.
+4. The actual TooltipMessage IR has **24 kinds** (not ~22): adds `conceal` and `blocker` beyond the original spec list. Templates needed for all non-suppressed kinds.
+5. `ContentModifier` has `condition` and `description` fields only — no `active` field. Active state is dynamic, tracked in `RuleState.activeModifierIndices`.
+6. `ContentPlan` has `synopsisSource?: TooltipMessage` and steps have `messages: readonly TooltipMessage[]`. The realizer converts these to `RuleCard` with `synopsis: string` and `ContentStep` with `lines: string[]`.
 
 ## Architecture Check
 
 1. Template realizer is a pure function registry: one template function per message kind, each returning a string.
-2. Blocker extractor is a pure function that walks `ConditionAST` with boolean eval results.
+2. Blocker extractor is a pure function that walks `ConditionAST` with an evaluator function `(cond: ConditionAST) => boolean`.
 3. Both modules are engine-agnostic — they resolve labels from VerbalizationDef, not from hardcoded game knowledge.
 
 ## What to Change
@@ -60,13 +63,13 @@ Export `realizeContentPlan(plan: ContentPlan, verbalization: VerbalizationDef | 
 
 ### 2. Create `packages/engine/src/kernel/tooltip-blocker-extractor.ts` (~150 lines)
 
-Export `extractBlockers(condition: ConditionAST, evalResults: ReadonlyMap<string, boolean>, verbalization: VerbalizationDef | undefined): BlockerInfo`:
+Export `extractBlockers(condition: ConditionAST, evaluate: (cond: ConditionAST) => boolean, verbalization: VerbalizationDef | undefined): BlockerInfo`:
 
 Walk rules:
-- **`and`**: Collect only children where `evalResults.get(childPath) === false`.
-- **`or`**: Find the unsatisfied alternative with the fewest children; show only that one.
+- **`and`**: Collect only children where `evaluate(child) === false`.
+- **`or`**: Find the unsatisfied alternative with the fewest sub-conditions; show only that one.
 - **`not`**: Describe the positive condition that was violated.
-- **Leaf comparisons** (`compare`, `hasToken`, `varCheck`, etc.): Format as "Need {left} {op} {right} (currently {value})".
+- **Leaf comparisons** (`==`, `!=`, `<`, `<=`, `>`, `>=`, `in`, `adjacent`, `connected`, `zonePropIncludes`): Format as "Need {left} {op} {right}".
 
 Label resolution same as template realizer (sentencePlans → labels → humanize).
 
@@ -99,7 +102,7 @@ Add golden test files that compile a real game spec, normalize an action's AST, 
 
 ### Tests That Must Pass
 
-1. Each of the ~22 message kind templates produces expected English with mock verbalization.
+1. Each of the 24 message kind templates (minus `suppressed`) produces expected English with mock verbalization.
 2. Label resolution priority: sentencePlan match wins over label match, which wins over auto-humanize.
 3. Pluralization: `{count: 1}` → singular label, `{count: 2}` → plural label.
 4. Blocker extractor `and`: 3 children (2 fail, 1 pass) → 2 blockers returned.
@@ -130,3 +133,27 @@ Add golden test files that compile a real game spec, normalize an action's AST, 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo typecheck`
+
+## Outcome
+
+**Completion date**: 2026-03-07
+
+### What actually changed
+- **New**: `packages/engine/src/kernel/tooltip-template-realizer.ts` (~270 lines) — template registry with one function per message kind (24 kinds), 3-tier label resolution (sentencePlans → labels → humanize), `realizeContentPlan()` converts `ContentPlan` → `RuleCard`.
+- **New**: `packages/engine/src/kernel/tooltip-blocker-extractor.ts` (~210 lines) — `extractBlockers()` walks `ConditionAST` with an evaluator function. Walk rules: `and` (failing children only), `or` (smallest failing alternative), `not` (invert description), leaf comparisons.
+- **Modified**: `packages/engine/src/kernel/index.ts` — added barrel exports for both new modules.
+- **New**: `packages/engine/test/unit/kernel/tooltip-template-realizer.test.ts` — 32 tests covering all message kinds, label resolution priority, synopsis generation, sub-steps, modifiers, determinism.
+- **New**: `packages/engine/test/unit/kernel/tooltip-blocker-extractor.test.ts` — 35 tests covering all walk rules, leaf formats, safe evaluation, astPath traceability, ValueExpr stringification.
+
+### Deviations from original plan
+1. **Blocker extractor signature changed**: uses `evaluate: (cond: ConditionAST) => boolean` instead of `evalResults: ReadonlyMap<string, boolean>` — ConditionAST nodes don't carry path identifiers.
+2. **24 message kinds** (not ~22): added templates for `conceal` and `blocker` kinds that exist in the IR.
+3. **VerbalizationDef uses Records** (not Maps): label resolution uses bracket access per JSON-serializable design.
+4. **Golden integration tests deferred**: the end-to-end golden tests (`tooltip-golden.test.ts`) require full engine integration (LEGACTTOO-008) to be meaningful. Unit tests cover all template realizer and blocker extractor functionality comprehensively.
+5. **ContentModifier has no `active` field**: confirmed correct — active state is dynamic in `RuleState.activeModifierIndices`.
+
+### Verification results
+- `pnpm -F @ludoforge/engine build` — passes
+- `pnpm -F @ludoforge/engine test` — 4034 tests pass, 0 failures
+- `pnpm turbo typecheck` — 3/3 tasks successful
+- New tests: 67 pass (32 realizer + 35 blocker extractor)

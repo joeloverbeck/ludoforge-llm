@@ -13,9 +13,11 @@ export interface MessageBase {
   readonly stage?: string;
 }
 
+export type VarScope = 'global' | 'player' | 'zone';
+
 export interface SelectMessage extends MessageBase {
   readonly kind: 'select';
-  readonly target: 'spaces' | 'zones';
+  readonly target: 'spaces' | 'zones' | 'items';
   readonly filter?: string;
   readonly bounds?: { readonly min: number; readonly max: number };
 }
@@ -40,7 +42,7 @@ export interface PayMessage extends MessageBase {
   readonly kind: 'pay';
   readonly resource: string;
   readonly amount: number;
-  readonly scope?: 'global' | 'player' | 'zone';
+  readonly scope?: VarScope;
   readonly scopeOwner?: string;
 }
 
@@ -48,7 +50,7 @@ export interface GainMessage extends MessageBase {
   readonly kind: 'gain';
   readonly resource: string;
   readonly amount: number;
-  readonly scope?: 'global' | 'player' | 'zone';
+  readonly scope?: VarScope;
   readonly scopeOwner?: string;
 }
 
@@ -59,9 +61,9 @@ export interface TransferMessage extends MessageBase {
   readonly from: string;
   readonly to: string;
   readonly amountExpr?: string;
-  readonly fromScope?: 'global' | 'player' | 'zone';
+  readonly fromScope?: VarScope;
   readonly fromScopeOwner?: string;
-  readonly toScope?: 'global' | 'player' | 'zone';
+  readonly toScope?: VarScope;
   readonly toScopeOwner?: string;
 }
 
@@ -70,6 +72,7 @@ export interface ShiftMessage extends MessageBase {
   readonly marker: string;
   readonly direction: string;
   readonly amount: number;
+  readonly deltaExpr?: string;
 }
 
 export interface ActivateMessage extends MessageBase {
@@ -90,6 +93,8 @@ export interface RemoveMessage extends MessageBase {
   readonly fromZone: string;
   readonly destination: string;
   readonly filter?: string;
+  /** Budget constraint from removeByPriority (only present for budget-constrained removals) */
+  readonly budget?: string;
 }
 
 export interface CreateMessage extends MessageBase {
@@ -125,7 +130,7 @@ export interface SetMessage extends MessageBase {
   readonly target: string;
   readonly value: string;
   readonly toggle?: boolean;
-  readonly scope?: 'global' | 'player' | 'zone';
+  readonly scope?: VarScope;
   readonly scopeOwner?: string;
 }
 
@@ -145,6 +150,8 @@ export interface ModifierMessage extends MessageBase {
   readonly kind: 'modifier';
   readonly condition: string;
   readonly description: string;
+  /** Original AST for runtime evaluation of active/inactive state */
+  readonly conditionAST?: import('./types-ast.js').ConditionAST;
 }
 
 export interface BlockerMessage extends MessageBase {

@@ -3,17 +3,24 @@
  * and dynamic RuleState (recomputed per call).
  */
 
+export interface RealizedLine {
+  readonly text: string;
+  readonly astPath: string;
+}
+
 export interface ContentStep {
   readonly stepNumber: number;
   readonly header: string;
-  readonly lines: readonly string[];
+  readonly lines: readonly RealizedLine[];
+  readonly collapsedCount?: number;
   readonly subSteps?: readonly ContentStep[];
 }
 
 export interface ContentModifier {
   readonly condition: string;
   readonly description: string;
-  readonly active: boolean;
+  /** Original AST for runtime evaluation of active/inactive state */
+  readonly conditionAST?: import('./types-ast.js').ConditionAST;
 }
 
 export interface RuleCard {

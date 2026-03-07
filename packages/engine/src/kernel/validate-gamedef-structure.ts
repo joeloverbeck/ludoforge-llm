@@ -4,6 +4,7 @@ import { RUNTIME_RESERVED_MOVE_BINDING_NAMES } from './move-runtime-bindings.js'
 import { resolveRuntimeTableRowsByPath } from './runtime-table-path.js';
 import type { GameDef, PlayerSel, ScenarioPiecePlacement, StackingConstraint, VariableDef, ZoneDef } from './types.js';
 import { buildMissingReferenceSuggestion } from '../contracts/index.js';
+import { isCanonicalLimitIdForAction } from './limit-identity.js';
 
 const PLAYER_ZONE_QUALIFIER_PATTERN = /^[0-9]+$/;
 const RESERVED_RUNTIME_PARAM_NAMES: ReadonlySet<string> = new Set(RUNTIME_RESERVED_MOVE_BINDING_NAMES);
@@ -803,6 +804,31 @@ export const validateStructureSections = (diagnostics: Diagnostic[], def: GameDe
         message: `Action "${action.id}" param "${param.name}" uses a reserved runtime binding name.`,
         suggestion: 'Rename the action param; names beginning with runtime-reserved "__" identifiers are not allowed.',
       });
+    });
+
+    const seenLimitIds = new Set<string>();
+    action.limits.forEach((limit, limitIndex) => {
+      const limitPath = `actions[${actionIndex}].limits[${limitIndex}].id`;
+      if (seenLimitIds.has(limit.id)) {
+        diagnostics.push({
+          code: 'DUPLICATE_LIMIT_ID',
+          path: limitPath,
+          severity: 'error',
+          message: `Action "${action.id}" has duplicate limit id "${limit.id}".`,
+          suggestion: 'Ensure each limit within an action has a unique id.',
+        });
+      }
+      seenLimitIds.add(limit.id);
+
+      if (!isCanonicalLimitIdForAction(limit.id, action.id, limitIndex, limit.scope)) {
+        diagnostics.push({
+          code: 'NON_CANONICAL_LIMIT_ID',
+          path: limitPath,
+          severity: 'error',
+          message: `Action "${action.id}" limit id "${limit.id}" does not match canonical format "${action.id}::${limit.scope}::${limitIndex}".`,
+          suggestion: 'Use the canonical format: "<actionId>::<scope>::<index>".',
+        });
+      }
     });
   });
 

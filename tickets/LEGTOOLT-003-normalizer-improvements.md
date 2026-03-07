@@ -57,6 +57,10 @@ In `tooltip-normalizer-compound.ts`, `normalizeChooseN()`:
 - `packages/engine/src/kernel/tooltip-ir.ts` (modify — add `optional` to `ChooseMessage`)
 - `packages/engine/src/kernel/tooltip-normalizer-compound.ts` (modify — all three normalizer changes)
 
+### 5. Narrow `resolveModifierEffect()` lookup by capability variable name
+
+In `tooltip-modifier-humanizer.ts`, `resolveModifierEffect()` currently scans ALL `modifierEffects` entries to find a string match. Instead, extract the primary variable name from the condition AST (e.g., if the condition references `cap_m48Patton`, look up `modifierEffects['cap_m48Patton']` directly) and match within that narrower set. This is cleaner and avoids O(n*m) scanning across all capabilities.
+
 ## Out of Scope
 
 - Template realizer changes for how `optional` is displayed (LEGTOOLT-005)

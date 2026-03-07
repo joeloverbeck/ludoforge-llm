@@ -12,6 +12,7 @@ import {
   applyEffect,
   asPhaseId,
   asPlayerId,
+  asTokenId,
   asZoneId,
   EFFECT_RUNTIME_REASONS,
   createRng,
@@ -20,6 +21,7 @@ import {
   type EffectContext,
   type GameDef,
   type GameState,
+  type Token,
   createCollector,
 } from '../../src/kernel/index.js';
 import { isEvalErrorCode } from '../../src/kernel/eval-error.js';
@@ -355,6 +357,117 @@ describe('effects choice assertions', () => {
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
     assert.equal(result.rng, ctx.rng);
+  });
+
+  it('chooseN preserves token runtime bindings for downstream tokenProp usage', () => {
+    const token: Token = { id: asTokenId('tok-1'), type: 'piece', props: { value: 4 } };
+    const baseState = makeState();
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        tokenTypes: [{ id: 'piece', props: { value: 'int' } }],
+      },
+      state: {
+        ...baseState,
+        zones: {
+          ...baseState.zones,
+          'hand:0': [token],
+        },
+      },
+      moveParams: { 'decision:$picks': [asTokenId('tok-1')] },
+    });
+    const chooseEffect: EffectAST = {
+      chooseN: {
+        internalDecisionId: 'decision:$picks',
+        bind: '$picks',
+        options: { query: 'tokensInZone', zone: 'hand:0' },
+        n: 1,
+      },
+    };
+
+    const chooseResult = applyEffect(chooseEffect, ctx);
+    assert.deepEqual(chooseResult.bindings?.$picks, [token]);
+
+    const followupEffect: EffectAST = {
+      forEach: {
+        bind: '$pick',
+        over: { query: 'binding', name: '$picks' },
+        effects: [
+          { setVar: { scope: 'global', var: 'score', value: { ref: 'tokenProp', token: '$pick', prop: 'value' } } },
+        ],
+      },
+    };
+    const followupResult = applyEffect(followupEffect, {
+      ...ctx,
+      moveParams: {},
+      bindings: chooseResult.bindings ?? {},
+    });
+    assert.equal(followupResult.state.globalVars.score, 4);
+  });
+
+  it('chooseOne rejects domains with ambiguous comparable collisions', () => {
+    const tokenA: Token = { id: asTokenId('tok-1'), type: 'piece', props: { value: 4 } };
+    const tokenB: Token = { id: asTokenId('tok-1'), type: 'piece', props: { value: 5 } };
+    const baseState = makeState();
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        tokenTypes: [{ id: 'piece', props: { value: 'int' } }],
+      },
+      state: {
+        ...baseState,
+        zones: {
+          ...baseState.zones,
+          'hand:0': [tokenA, tokenB],
+        },
+      },
+      moveParams: { 'decision:$pick': asTokenId('tok-1') },
+    });
+    const effect: EffectAST = {
+      chooseOne: {
+        internalDecisionId: 'decision:$pick',
+        bind: '$pick',
+        options: { query: 'tokensInZone', zone: 'hand:0' },
+      },
+    };
+
+    assert.throws(
+      () => applyEffect(effect, ctx),
+      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('ambiguous comparable values'),
+    );
+  });
+
+  it('chooseN rejects domains with ambiguous comparable collisions', () => {
+    const tokenA: Token = { id: asTokenId('tok-1'), type: 'piece', props: { value: 4 } };
+    const tokenB: Token = { id: asTokenId('tok-1'), type: 'piece', props: { value: 5 } };
+    const baseState = makeState();
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        tokenTypes: [{ id: 'piece', props: { value: 'int' } }],
+      },
+      state: {
+        ...baseState,
+        zones: {
+          ...baseState.zones,
+          'hand:0': [tokenA, tokenB],
+        },
+      },
+      moveParams: { 'decision:$picks': [asTokenId('tok-1')] },
+    });
+    const effect: EffectAST = {
+      chooseN: {
+        internalDecisionId: 'decision:$picks',
+        bind: '$picks',
+        n: 1,
+        options: { query: 'tokensInZone', zone: 'hand:0' },
+      },
+    };
+
+    assert.throws(
+      () => applyEffect(effect, ctx),
+      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('ambiguous comparable values'),
+    );
   });
 
   it('chooseN does not append iterationPath when decision ID is template-scoped', () => {

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — depends on core fix from LEGACTTOO-017; content/test updates for FITL card-29
-**Deps**: tickets/LEGACTTOO-017-choice-token-binding-fidelity-for-token-refs.md
+**Deps**: archive/tickets/LEGACTTOO/LEGACTTOO-017-choice-token-binding-fidelity-for-token-refs.md
 
 ## Problem
 

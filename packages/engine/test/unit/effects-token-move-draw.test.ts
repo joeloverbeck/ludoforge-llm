@@ -227,11 +227,14 @@ describe('effects moveToken and draw', () => {
           { moveToken: { token: '$token', from: 'deck:none', to: 'hand:0' } },
           { ...ctx, bindings: { $token: duplicate } },
         ),
-      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('multiple zones'),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME')
+        && String(error).includes('Token appears in multiple zones: dup')
+        && String(error).includes('"zones":["deck:none","discard:none"]'),
     );
   });
 
-  it('moveToken treats duplicate token ids within one zone as multiple occurrences', () => {
+  it('moveToken reports same-zone duplicate counts with zone-aware diagnostics', () => {
     const duplicate = token('dup-same-zone');
     const state = makeState();
     const ctx = makeCtx({
@@ -250,7 +253,10 @@ describe('effects moveToken and draw', () => {
           { moveToken: { token: '$token', from: 'deck:none', to: 'hand:0' } },
           { ...ctx, bindings: { $token: duplicate } },
         ),
-      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('multiple zones'),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME')
+        && String(error).includes('Token appears multiple times in zone "deck:none": dup-same-zone')
+        && String(error).includes('"occurrenceCount":2'),
     );
   });
 

@@ -280,4 +280,34 @@ describe('FITL coup resources phase (production data)', () => {
     assert.equal(next.globalVars.arvnResources, 75);
     assert.equal(next.globalVars.aid, 0);
   });
+
+  it('applies MiGs unshaded as -6 NVA resources each coup resources reset', () => {
+    const def = compileProductionDef();
+    const base = withClearedZones(initialState(def, 8605, 4).state);
+    const baseline = withCoupRound(base, {
+      globalVars: {
+        ...base.globalVars,
+        nvaResources: 10,
+        trail: 2,
+        terrorSabotageMarkersPlaced: 15,
+      },
+    });
+    const withMigs = {
+      ...baseline,
+      globalMarkers: {
+        ...baseline.globalMarkers,
+        cap_migs: 'unshaded',
+      },
+    };
+
+    const baselineAfter = resolveResourcesWithDefaultChoice(def, enterCoupResources(def, baseline));
+    const withMigsAfter = resolveResourcesWithDefaultChoice(def, enterCoupResources(def, withMigs));
+    const baselineNvaResources = Number(baselineAfter.globalVars.nvaResources ?? 0);
+    const withMigsNvaResources = Number(withMigsAfter.globalVars.nvaResources ?? 0);
+    assert.equal(
+      withMigsNvaResources,
+      baselineNvaResources - 6,
+      'cap_migs unshaded should subtract 6 NVA resources each coup resources phase',
+    );
+  });
 });

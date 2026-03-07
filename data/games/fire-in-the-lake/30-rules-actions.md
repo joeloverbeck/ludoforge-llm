@@ -3828,31 +3828,18 @@ actionPipelines:
                                                 - { op: '==', left: { ref: globalMarkerState, marker: cap_migs }, right: shaded }
                                                 - { op: '!=', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
                                             then:
-                                              - chooseN:
-                                                  bind: $migsCostSpaces
-                                                  options:
-                                                    query: concat
-                                                    sources:
-                                                      - { query: binding, name: $spaces }
-                                                      - { query: binding, name: $arcLightNoCoinProvinces }
-                                                  min: 0
-                                                  max: 1
                                               - forEach:
-                                                  bind: $migsCostSpace
-                                                  over: { query: binding, name: $migsCostSpaces }
+                                                  bind: $migsCostTroop
+                                                  over:
+                                                    query: tokensInZone
+                                                    zone: available-US:none
+                                                    filter: { op: and, args: [{ prop: faction, eq: US }, { prop: type, eq: troops }] }
+                                                  limit: 1
                                                   effects:
-                                                    - forEach:
-                                                        bind: $migsCostTroop
-                                                        over:
-                                                          query: tokensInZone
-                                                          zone: $migsCostSpace
-                                                          filter: { op: and, args: [{ prop: faction, eq: US }, { prop: type, eq: troops }] }
-                                                        limit: 1
-                                                        effects:
-                                                          - moveToken:
-                                                              token: $migsCostTroop
-                                                              from: $migsCostSpace
-                                                              to: { zoneExpr: 'casualties-US:none' }
+                                                    - moveToken:
+                                                        token: $migsCostTroop
+                                                        from: available-US:none
+                                                        to: { zoneExpr: 'casualties-US:none' }
                                         - if:
                                             when: { op: '==', left: { ref: globalMarkerState, marker: cap_sa2s }, right: unshaded }
                                             then:
@@ -3896,31 +3883,18 @@ actionPipelines:
                                     - { op: '==', left: { ref: globalMarkerState, marker: cap_migs }, right: shaded }
                                     - { op: '!=', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
                                 then:
-                                  - chooseN:
-                                      bind: $migsCostSpaces
-                                      options:
-                                        query: concat
-                                        sources:
-                                          - { query: binding, name: $spaces }
-                                          - { query: binding, name: $arcLightNoCoinProvinces }
-                                      min: 0
-                                      max: 1
                                   - forEach:
-                                      bind: $migsCostSpace
-                                      over: { query: binding, name: $migsCostSpaces }
+                                      bind: $migsCostTroop
+                                      over:
+                                        query: tokensInZone
+                                        zone: available-US:none
+                                        filter: { op: and, args: [{ prop: faction, eq: US }, { prop: type, eq: troops }] }
+                                      limit: 1
                                       effects:
-                                        - forEach:
-                                            bind: $migsCostTroop
-                                            over:
-                                              query: tokensInZone
-                                              zone: $migsCostSpace
-                                              filter: { op: and, args: [{ prop: faction, eq: US }, { prop: type, eq: troops }] }
-                                            limit: 1
-                                            effects:
-                                              - moveToken:
-                                                  token: $migsCostTroop
-                                                  from: $migsCostSpace
-                                                  to: { zoneExpr: 'casualties-US:none' }
+                                        - moveToken:
+                                            token: $migsCostTroop
+                                            from: available-US:none
+                                            to: { zoneExpr: 'casualties-US:none' }
                             - if:
                                 when: { op: '==', left: { ref: globalMarkerState, marker: cap_sa2s }, right: unshaded }
                                 then:

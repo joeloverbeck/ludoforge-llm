@@ -4631,12 +4631,12 @@ eventDecks:
           seatOrder: ["NVA", "US", "ARVN", "VC"]
           flavorText: "Interceptors contest US air power over the North."
         unshaded:
-          text: "NVA capability: Air Strike pressure is reduced unless unshaded Top Gun is active."
+          text: "NVA Resources -6 each Reset. NVA CAPABILITY."
           effects:
             - macro: set-global-marker
               args: { markerId: cap_migs, markerState: unshaded }
         shaded:
-          text: "NVA capability (shaded): US Air Strike can trigger extra troop costs in affected spaces."
+          text: "Unless unshaded Top Gun, whenever Air Strike Degrades Trail, US removes 1 Available Troop to Casualties."
           effects:
             - if:
                 when: { op: '==', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }

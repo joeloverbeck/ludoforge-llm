@@ -954,7 +954,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     assert.equal(final.markers[twoHitSpace]?.supportOpposition, 'passiveOpposition', 'Space removing 2 pieces should still shift by 1');
   });
 
-  it('Air Strike cap_topGun unshaded degrades Trail by 2 and suppresses cap_migs shaded troop loss', () => {
+  it('Air Strike cap_topGun unshaded degrades Trail by 2 and suppresses cap_migs shaded Available troop loss', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
@@ -982,9 +982,14 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
       },
     };
 
-    const usTroopsBefore = countTokens(
+    const availableTroopsBefore = countTokens(
       modifiedStart,
-      space,
+      'available-US:none',
+      (token) => token.props.faction === 'US' && token.type === 'troops',
+    );
+    const casualtiesTroopsBefore = countTokens(
+      modifiedStart,
+      'casualties-US:none',
       (token) => token.props.faction === 'US' && token.type === 'troops',
     );
 
@@ -999,10 +1004,138 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     const final = result.state;
     assert.equal(final.globalVars.trail, 1, 'cap_topGun unshaded should degrade Trail by 2');
     assert.equal(
-      countTokens(final, space, (token) => token.props.faction === 'US' && token.type === 'troops'),
-      usTroopsBefore,
-      'cap_topGun unshaded should suppress cap_migs shaded troop loss branch',
+      countTokens(final, 'available-US:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      availableTroopsBefore,
+      'cap_topGun unshaded should suppress cap_migs shaded Available troop loss',
     );
+    assert.equal(
+      countTokens(final, 'casualties-US:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      casualtiesTroopsBefore,
+      'cap_topGun unshaded should suppress cap_migs shaded Available troop to Casualties transfer',
+    );
+  });
+
+  it('Air Strike cap_migs shaded removes 1 US troop from Available to Casualties when Trail degrades', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const space = 'saigon:none';
+    const base = clearAllZones(initialState(def, 21033, 4).state);
+    const start: GameState = {
+      ...base,
+      activePlayer: asPlayerId(0),
+      globalVars: {
+        ...base.globalVars,
+        trail: 3,
+      },
+      globalMarkers: {
+        ...base.globalMarkers,
+        cap_migs: 'shaded',
+      },
+      zones: {
+        ...base.zones,
+        [space]: [
+          makeToken('migs-us-map', 'troops', 'US', { type: 'troops' }),
+          makeToken('migs-nva-map', 'troops', 'NVA', { type: 'troops' }),
+        ],
+        'available-US:none': [
+          makeToken('migs-us-av-1', 'troops', 'US', { type: 'troops' }),
+          makeToken('migs-us-av-2', 'troops', 'US', { type: 'troops' }),
+        ],
+      },
+    };
+
+    const availableBefore = countTokens(start, 'available-US:none', (token) => token.props.faction === 'US' && token.type === 'troops');
+    const casualtiesBefore = countTokens(start, 'casualties-US:none', (token) => token.props.faction === 'US' && token.type === 'troops');
+
+    const final = applyMoveWithResolvedDecisionIds(def, start, {
+      actionId: asActionId('airStrike'),
+      params: {
+        $spaces: [space],
+        $degradeTrail: 'yes',
+      },
+    }).state;
+
+    assert.equal(final.globalVars.trail, 2, 'Without Top Gun, Air Strike degrade should reduce Trail by 1');
+    assert.equal(
+      countTokens(final, 'available-US:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      availableBefore - 1,
+      'cap_migs shaded should remove exactly 1 US troop from Available when Trail degrades',
+    );
+    assert.equal(
+      countTokens(final, 'casualties-US:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      casualtiesBefore + 1,
+      'cap_migs shaded should move removed Available troop to Casualties',
+    );
+  });
+
+  it('Air Strike cap_migs shaded does not remove troops when Trail is not degraded or when no US troop is Available', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const space = 'saigon:none';
+
+    const noDegradeBase = clearAllZones(initialState(def, 21034, 4).state);
+    const noDegradeStart: GameState = {
+      ...noDegradeBase,
+      activePlayer: asPlayerId(0),
+      globalVars: {
+        ...noDegradeBase.globalVars,
+        trail: 3,
+      },
+      globalMarkers: {
+        ...noDegradeBase.globalMarkers,
+        cap_migs: 'shaded',
+      },
+      zones: {
+        ...noDegradeBase.zones,
+        [space]: [
+          makeToken('migs-nodegrade-us-map', 'troops', 'US', { type: 'troops' }),
+          makeToken('migs-nodegrade-nva', 'troops', 'NVA', { type: 'troops' }),
+        ],
+        'available-US:none': [makeToken('migs-nodegrade-us-av', 'troops', 'US', { type: 'troops' })],
+      },
+    };
+    const noDegradeFinal = applyMoveWithResolvedDecisionIds(def, noDegradeStart, {
+      actionId: asActionId('airStrike'),
+      params: {
+        $spaces: [space],
+        $degradeTrail: 'no',
+      },
+    }).state;
+    assert.equal(countTokens(noDegradeFinal, 'available-US:none', (token) => token.props.faction === 'US' && token.type === 'troops'), 1);
+    assert.equal(countTokens(noDegradeFinal, 'casualties-US:none', (token) => token.props.faction === 'US' && token.type === 'troops'), 0);
+
+    const noAvailableBase = clearAllZones(initialState(def, 21035, 4).state);
+    const noAvailableStart: GameState = {
+      ...noAvailableBase,
+      activePlayer: asPlayerId(0),
+      globalVars: {
+        ...noAvailableBase.globalVars,
+        trail: 3,
+      },
+      globalMarkers: {
+        ...noAvailableBase.globalMarkers,
+        cap_migs: 'shaded',
+      },
+      zones: {
+        ...noAvailableBase.zones,
+        [space]: [
+          makeToken('migs-noav-us-map', 'troops', 'US', { type: 'troops' }),
+          makeToken('migs-noav-nva-map', 'troops', 'NVA', { type: 'troops' }),
+        ],
+      },
+    };
+    const noAvailableFinal = applyMoveWithResolvedDecisionIds(def, noAvailableStart, {
+      actionId: asActionId('airStrike'),
+      params: {
+        $spaces: [space],
+        $degradeTrail: 'yes',
+      },
+    }).state;
+    assert.equal(countTokens(noAvailableFinal, 'available-US:none', (token) => token.props.faction === 'US' && token.type === 'troops'), 0);
+    assert.equal(countTokens(noAvailableFinal, 'casualties-US:none', (token) => token.props.faction === 'US' && token.type === 'troops'), 0);
   });
 
   it('Air Strike cap_aaa shaded enforces Trail floor of 2 without Top Gun modifiers', () => {

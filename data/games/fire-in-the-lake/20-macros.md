@@ -3030,6 +3030,10 @@ effectMacros:
               op: '*'
               left: 2
               right: { ref: gvar, var: trail }
+      - if:
+          when: { op: '==', left: { ref: globalMarkerState, marker: cap_migs }, right: unshaded }
+          then:
+            - addVar: { scope: global, var: nvaResources, delta: -6 }
 
   # ── coup-casualties-aid ───────────────────────────────────────────────────
   # Rule 6.2.5: reduce aid by 3 per US casualty piece.

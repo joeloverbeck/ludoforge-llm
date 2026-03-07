@@ -99,7 +99,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
     }
   });
 
-  it('encodes MiGs shaded with Top Gun unshaded cancellation guard', () => {
+  it('encodes MiGs exact card text and shaded Top Gun unshaded cancellation guard', () => {
     const { parsed, compiled } = compileProductionSpec();
 
     assertNoErrors(parsed);
@@ -107,6 +107,11 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
 
     const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-33');
     assert.notEqual(card, undefined);
+    assert.equal(card?.unshaded?.text, 'NVA Resources -6 each Reset. NVA CAPABILITY.');
+    assert.equal(
+      card?.shaded?.text,
+      'Unless unshaded Top Gun, whenever Air Strike Degrades Trail, US removes 1 Available Troop to Casualties.',
+    );
     assert.deepEqual((card?.unshaded?.effects?.[0] as { setGlobalMarker?: unknown })?.setGlobalMarker, {
       marker: 'cap_migs',
       state: 'unshaded',

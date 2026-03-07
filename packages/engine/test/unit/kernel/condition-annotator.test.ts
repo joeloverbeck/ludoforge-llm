@@ -21,6 +21,7 @@ import {
   type GameDef,
   type GameDefRuntime,
   type GameState,
+  type VerbalizationDef,
 } from '../../../src/kernel/index.js';
 
 // ---------------------------------------------------------------------------
@@ -97,6 +98,7 @@ const makeRuntime = (def: GameDef): GameDefRuntime => ({
   adjacencyGraph: buildAdjacencyGraph(def.zones),
   runtimeTableIndex: buildRuntimeTableIndex(def),
   zobristTable: createZobristTable(def),
+  ruleCardCache: new Map(),
 });
 
 const makeContext = (overrides: Partial<AnnotationContext> = {}): AnnotationContext => {
@@ -546,5 +548,245 @@ describe('describeAction (condition annotator)', () => {
     // so we should still see the pipeline section
     const pipelineGroup = result.sections.find((s) => s.label === 'Pipeline: fallback-pipeline');
     assert.ok(pipelineGroup !== undefined, 'Pipeline section should be present');
+  });
+
+  // -----------------------------------------------------------------------
+  // Tooltip pipeline tests
+  // -----------------------------------------------------------------------
+
+  // -----------------------------------------------------------------------
+  // 17. tooltipPayload present when action has effects
+  // -----------------------------------------------------------------------
+  it('returns tooltipPayload with ruleCard and ruleState when action has effects', () => {
+    const action = minimalActionDef({
+      pre: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 5 },
+      effects: [{ addVar: { scope: 'global', var: 'gold', delta: 3 } }],
+    });
+    const ctx = makeContext({ state: makeState({ globalVars: { gold: 10 } }) });
+    const result = describeAction(action, ctx);
+
+    assert.ok(result.tooltipPayload !== undefined, 'tooltipPayload should be present');
+    assert.ok(result.tooltipPayload.ruleCard !== undefined, 'ruleCard should be present');
+    assert.ok(result.tooltipPayload.ruleState !== undefined, 'ruleState should be present');
+    assert.ok(result.tooltipPayload.ruleCard.steps.length >= 1, 'should have at least one step');
+  });
+
+  // -----------------------------------------------------------------------
+  // 18. tooltipPayload present even without verbalization (auto-humanize)
+  // -----------------------------------------------------------------------
+  it('returns tooltipPayload even without verbalization via auto-humanization', () => {
+    const action = minimalActionDef({
+      effects: [{ addVar: { scope: 'global', var: 'gold', delta: -2 } }],
+    });
+    const def = makeDef(); // no verbalization
+    const ctx = makeContext({ def });
+    const result = describeAction(action, ctx);
+
+    assert.ok(result.tooltipPayload !== undefined, 'tooltipPayload should be present');
+    assert.equal(result.tooltipPayload.ruleState.available, true);
+  });
+
+  // -----------------------------------------------------------------------
+  // 19. RuleCard caching — reference equality on second call
+  // -----------------------------------------------------------------------
+  it('returns same RuleCard reference on repeated calls for same action', () => {
+    const action = minimalActionDef({
+      effects: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
+    });
+    const def = makeDef();
+    const runtime = makeRuntime(def);
+    const ctx: AnnotationContext = {
+      def,
+      runtime,
+      state: makeState(),
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+    };
+
+    const result1 = describeAction(action, ctx);
+    const result2 = describeAction(action, ctx);
+
+    assert.ok(result1.tooltipPayload !== undefined);
+    assert.ok(result2.tooltipPayload !== undefined);
+    assert.equal(
+      result1.tooltipPayload.ruleCard,
+      result2.tooltipPayload.ruleCard,
+      'RuleCard should be reference-equal (cached)',
+    );
+  });
+
+  // -----------------------------------------------------------------------
+  // 20. RuleState varies with GameState
+  // -----------------------------------------------------------------------
+  it('produces different ruleState.available when precondition passes vs fails', () => {
+    const pre: ConditionAST = {
+      op: '>=',
+      left: { ref: 'gvar', var: 'gold' },
+      right: 5,
+    };
+    const action = minimalActionDef({ pre, effects: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }] });
+    const def = makeDef();
+    const runtime = makeRuntime(def);
+
+    const ctxPass: AnnotationContext = {
+      def,
+      runtime,
+      state: makeState({ globalVars: { gold: 10 } }),
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+    };
+    const ctxFail: AnnotationContext = {
+      def,
+      runtime,
+      state: makeState({ globalVars: { gold: 2 } }),
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+    };
+
+    const resultPass = describeAction(action, ctxPass);
+    const resultFail = describeAction(action, ctxFail);
+
+    assert.ok(resultPass.tooltipPayload !== undefined);
+    assert.ok(resultFail.tooltipPayload !== undefined);
+    assert.equal(resultPass.tooltipPayload.ruleState.available, true);
+    assert.equal(resultFail.tooltipPayload.ruleState.available, false);
+    assert.ok(resultFail.tooltipPayload.ruleState.blockers.length >= 1, 'should have blocker details');
+  });
+
+  // -----------------------------------------------------------------------
+  // 21. Existing sections and limitUsage unchanged (no regression)
+  // -----------------------------------------------------------------------
+  it('does not alter sections or limitUsage when tooltipPayload is present', () => {
+    const pre: ConditionAST = {
+      op: '>=',
+      left: { ref: 'gvar', var: 'gold' },
+      right: 5,
+    };
+    const action = minimalActionDef({
+      pre,
+      effects: [{ setVar: { scope: 'global', var: 'gold', value: 0 } }],
+      limits: [{ scope: 'turn', max: 3 }],
+    });
+    const def = makeDef();
+    const runtime = makeRuntime(def);
+    const state = makeState({ globalVars: { gold: 10 } });
+    const ctx: AnnotationContext = {
+      def,
+      runtime,
+      state,
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+    };
+
+    const result = describeAction(action, ctx);
+
+    // Existing output preserved
+    assert.ok(result.sections.some((s) => s.label === 'Preconditions'));
+    assert.ok(result.sections.some((s) => s.label === 'Limits'));
+    assert.ok(result.sections.some((s) => s.label === 'Effects'));
+    assert.equal(result.limitUsage.length, 1);
+    // tooltipPayload is additive
+    assert.ok(result.tooltipPayload !== undefined);
+  });
+
+  // -----------------------------------------------------------------------
+  // 22. Error resilience — tooltipPayload undefined on empty action
+  // -----------------------------------------------------------------------
+  it('returns tooltipPayload even for action with no effects (empty RuleCard)', () => {
+    const action = minimalActionDef(); // no effects, no pre
+    const ctx = makeContext();
+    const result = describeAction(action, ctx);
+
+    // Even with empty effects, the pipeline should succeed (producing an empty RuleCard)
+    assert.ok(result.tooltipPayload !== undefined, 'tooltipPayload should still be present');
+    assert.equal(result.tooltipPayload.ruleState.available, true, 'no pre means available');
+  });
+
+  // -----------------------------------------------------------------------
+  // 23. Active modifier indices populated from conditionAST
+  // -----------------------------------------------------------------------
+  it('populates activeModifierIndices when if-condition is satisfied', () => {
+    const action = minimalActionDef({
+      effects: [{
+        if: {
+          when: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 5 },
+          then: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
+        },
+      }],
+    });
+    const def = makeDef();
+    const runtime = makeRuntime(def);
+
+    // gold=10: condition satisfied → modifier active
+    const ctxActive: AnnotationContext = {
+      def,
+      runtime,
+      state: makeState({ globalVars: { gold: 10 } }),
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+    };
+    const resultActive = describeAction(action, ctxActive);
+    assert.ok(resultActive.tooltipPayload !== undefined);
+    assert.ok(
+      resultActive.tooltipPayload.ruleState.activeModifierIndices.includes(0),
+      'modifier 0 should be active when condition is satisfied',
+    );
+
+    // gold=2: condition not satisfied → modifier inactive
+    const ctxInactive: AnnotationContext = {
+      def,
+      runtime,
+      state: makeState({ globalVars: { gold: 2 } }),
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+    };
+    const resultInactive = describeAction(action, ctxInactive);
+    assert.ok(resultInactive.tooltipPayload !== undefined);
+    assert.ok(
+      !resultInactive.tooltipPayload.ruleState.activeModifierIndices.includes(0),
+      'modifier 0 should be inactive when condition is not satisfied',
+    );
+  });
+
+  // -----------------------------------------------------------------------
+  // 24. tooltipPayload with verbalization labels
+  // -----------------------------------------------------------------------
+  it('uses verbalization labels in RuleCard when available', () => {
+    const verbalization: VerbalizationDef = {
+      labels: { gold: { singular: 'Gold Coin', plural: 'Gold Coins' } },
+      stages: {},
+      macros: {},
+      sentencePlans: {},
+      suppressPatterns: [],
+    };
+    const action = minimalActionDef({
+      effects: [{ addVar: { scope: 'global', var: 'gold', delta: 3 } }],
+    });
+    const def = makeDef({ verbalization });
+    const ctx = makeContext({ def });
+    const result = describeAction(action, ctx);
+
+    assert.ok(result.tooltipPayload !== undefined);
+    const allText = result.tooltipPayload.ruleCard.steps
+      .flatMap((s) => s.lines.map((l) => l.text))
+      .join(' ');
+    assert.ok(allText.includes('Gold Coins'), `Expected "Gold Coins" in RuleCard text, got: ${allText}`);
+  });
+
+  // -----------------------------------------------------------------------
+  // 25. structuredClone-safe with tooltipPayload
+  // -----------------------------------------------------------------------
+  it('produces structuredClone-safe output including tooltipPayload', () => {
+    const action = minimalActionDef({
+      pre: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 5 },
+      effects: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
+    });
+    const ctx = makeContext();
+    const result = describeAction(action, ctx);
+
+    const cloned = structuredClone(result);
+    assert.deepEqual(cloned.sections, result.sections);
+    assert.deepEqual(cloned.limitUsage, result.limitUsage);
+    assert.deepEqual(cloned.tooltipPayload, result.tooltipPayload);
   });
 });

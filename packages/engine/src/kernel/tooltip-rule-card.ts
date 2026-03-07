@@ -19,6 +19,8 @@ export interface ContentStep {
 export interface ContentModifier {
   readonly condition: string;
   readonly description: string;
+  /** Original AST for runtime evaluation of active/inactive state */
+  readonly conditionAST?: import('./types-ast.js').ConditionAST;
 }
 
 export interface RuleCard {

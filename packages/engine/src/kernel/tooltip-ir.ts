@@ -150,6 +150,8 @@ export interface ModifierMessage extends MessageBase {
   readonly kind: 'modifier';
   readonly condition: string;
   readonly description: string;
+  /** Original AST for runtime evaluation of active/inactive state */
+  readonly conditionAST?: import('./types-ast.js').ConditionAST;
 }
 
 export interface BlockerMessage extends MessageBase {

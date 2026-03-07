@@ -82,4 +82,5 @@ export interface LimitUsageInfo extends LimitDef {
 export interface AnnotatedActionDescription {
   readonly sections: readonly DisplayGroupNode[];
   readonly limitUsage: readonly LimitUsageInfo[];
+  readonly tooltipPayload?: import('./tooltip-rule-card.js').ActionTooltipPayload;
 }

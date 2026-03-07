@@ -269,6 +269,7 @@ const realizeModifiers = (
   plan.modifiers.map((m) => ({
     condition: m.condition,
     description: m.description,
+    ...(m.conditionAST !== undefined ? { conditionAST: m.conditionAST } : {}),
   }));
 
 // ---------------------------------------------------------------------------

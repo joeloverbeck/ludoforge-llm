@@ -141,7 +141,7 @@ export const normalizeIf = (
 
   const thenMessages = recurse(thenEffects, ctx, `${astPath}.then`);
 
-  const modifier: TooltipMessage = { kind: 'modifier', condition: condStr, description: `If ${condStr}`, astPath };
+  const modifier: TooltipMessage = { kind: 'modifier', condition: condStr, description: `If ${condStr}`, conditionAST: when, astPath };
 
   const elseMessages = elseEffects !== undefined
     ? recurse(elseEffects, ctx, `${astPath}.else`)

@@ -110,8 +110,9 @@ const realizeDeactivate = (msg: DeactivateMessage, ctx: LabelContext): string =>
 const realizeRemove = (msg: RemoveMessage, ctx: LabelContext): string => {
   const token = resolveLabel(msg.tokenFilter, ctx);
   const from = resolveLabel(msg.fromZone, ctx);
+  const dest = resolveLabel(msg.destination, ctx);
   const budget = msg.budget !== undefined ? ` (up to ${msg.budget})` : '';
-  return `Remove ${token} from ${from}${budget}`;
+  return `Remove ${token} from ${from} to ${dest}${budget}`;
 };
 
 const realizeCreate = (msg: CreateMessage, ctx: LabelContext): string => {

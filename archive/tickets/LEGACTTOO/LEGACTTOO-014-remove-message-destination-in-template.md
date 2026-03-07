@@ -1,6 +1,6 @@
 # LEGACTTOO-014: Include RemoveMessage Destination in Template Output
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/kernel/tooltip-template-realizer.ts`
@@ -65,3 +65,13 @@ With budget: `Remove {token} from {fromZone} to {destination} (up to {budget})`
 
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+**Changed vs planned**: Implemented exactly as planned. One architectural improvement: destination is resolved through `resolveLabel()` (consistent with how all other zone identifiers are handled) rather than used as a raw string.
+
+**Files modified**:
+- `packages/engine/src/kernel/tooltip-template-realizer.ts` — `realizeRemove` now includes resolved destination label in output
+- `packages/engine/test/unit/kernel/tooltip-template-realizer.test.ts` — 2 existing remove tests updated, 1 new test added (humanize fallback for unlabeled destinations)
+
+**Verification**: 4051 tests pass, 0 fail. Typecheck clean.

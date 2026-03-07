@@ -144,16 +144,22 @@ describe('realizeContentPlan', () => {
       assert.equal(result.steps[0]!.lines[0]!.text, 'Deactivate NVA Guerrillas in Saigon');
     });
 
-    it('realizes remove', () => {
+    it('realizes remove with destination', () => {
       const msg: TooltipMessage = { kind: 'remove', astPath: 'r', tokenFilter: 'usTroops', fromZone: 'saigon', destination: 'casualties' };
       const result = realizeContentPlan(plan([msg]), MOCK_VERB);
-      assert.equal(result.steps[0]!.lines[0]!.text, 'Remove US Troops from Saigon');
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Remove US Troops from Saigon to Casualties');
     });
 
-    it('realizes remove with budget', () => {
+    it('realizes remove with destination and budget', () => {
       const msg: TooltipMessage = { kind: 'remove', astPath: 'r', tokenFilter: 'usTroops', fromZone: 'saigon', destination: 'casualties', budget: '3' };
       const result = realizeContentPlan(plan([msg]), MOCK_VERB);
-      assert.equal(result.steps[0]!.lines[0]!.text, 'Remove US Troops from Saigon (up to 3)');
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Remove US Troops from Saigon to Casualties (up to 3)');
+    });
+
+    it('realizes remove with destination using humanize fallback', () => {
+      const msg: TooltipMessage = { kind: 'remove', astPath: 'r', tokenFilter: 'usTroops', fromZone: 'saigon', destination: 'outOfPlay' };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Remove US Troops from Saigon to Out Of Play');
     });
 
     it('realizes create', () => {

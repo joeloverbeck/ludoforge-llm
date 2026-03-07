@@ -275,9 +275,9 @@ describe('RandomAgent', () => {
     // Also add a simple non-template action so there's something to pick
     const simpleAction: ActionDef = {
       id: asActionId('simple'),
-actor: 'active',
-executor: 'actor',
-phase: [phaseId],
+      actor: 'active',
+      executor: 'actor',
+      phase: [phaseId],
       params: [],
       pre: null,
       cost: [],
@@ -301,5 +301,221 @@ phase: [phaseId],
 
     // Should have skipped the unplayable template and selected the simple move
     assert.equal(result.move.actionId, asActionId('simple'));
+  });
+
+  // --- Stochastic unresolved template tests ---
+
+  it('does not throw when all legal moves are stochastic-unresolved templates', () => {
+    // Create an action whose pipeline contains a rollRandom before a chooseOne,
+    // producing a pendingStochastic during discovery.
+    const stochasticAction: ActionDef = {
+      id: asActionId('stochastic'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [phaseId],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const stochasticProfile: ActionPipelineDef = {
+      id: 'profile-stochastic',
+      actionId: asActionId('stochastic'),
+      legality: null,
+      costValidation: null, costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          stage: 'resolve',
+          effects: [
+            {
+              rollRandom: {
+                bind: '$roll',
+                min: 1,
+                max: 2,
+                in: [
+                  {
+                    if: {
+                      when: { op: '==' as const, left: { ref: 'binding' as const, name: '$roll' }, right: 1 },
+                      then: [{ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } }],
+                      else: [{ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['beta'] } } }],
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+      atomicity: 'atomic',
+    };
+
+    const def = createDefWithProfile([stochasticAction], [stochasticProfile]);
+    const templateMove: Move = { actionId: asActionId('stochastic'), params: {} };
+    const agent = new RandomAgent();
+
+    // Should not throw — should return the partially-completed stochastic move
+    const result = agent.chooseMove({
+      def,
+      state: stateStub,
+      playerId: asPlayerId(0),
+      legalMoves: [templateMove],
+      rng: createRng(42n),
+    });
+
+    assert.equal(result.move.actionId, asActionId('stochastic'));
+  });
+
+  it('prefers completed moves over stochastic-unresolved ones', () => {
+    const stochasticAction: ActionDef = {
+      id: asActionId('stochastic'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [phaseId],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const stochasticProfile: ActionPipelineDef = {
+      id: 'profile-stochastic',
+      actionId: asActionId('stochastic'),
+      legality: null,
+      costValidation: null, costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          stage: 'resolve',
+          effects: [
+            {
+              rollRandom: {
+                bind: '$roll',
+                min: 1,
+                max: 2,
+                in: [
+                  {
+                    if: {
+                      when: { op: '==' as const, left: { ref: 'binding' as const, name: '$roll' }, right: 1 },
+                      then: [{ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } }],
+                      else: [{ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['beta'] } } }],
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+      atomicity: 'atomic',
+    };
+
+    const simpleAction: ActionDef = {
+      id: asActionId('simple'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [phaseId],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = createDefWithProfile([stochasticAction, simpleAction], [stochasticProfile]);
+    const stochasticMove: Move = { actionId: asActionId('stochastic'), params: {} };
+    const simpleMove: Move = { actionId: asActionId('simple'), params: {} };
+    const agent = new RandomAgent();
+
+    const result = agent.chooseMove({
+      def,
+      state: stateStub,
+      playerId: asPlayerId(0),
+      legalMoves: [stochasticMove, simpleMove],
+      rng: createRng(42n),
+    });
+
+    // Should pick the simple (completed) move, not the stochastic one
+    assert.equal(result.move.actionId, asActionId('simple'));
+  });
+
+  it('stochastic fallback is deterministic for identical seeds', () => {
+    const stochasticAction: ActionDef = {
+      id: asActionId('stochastic-a'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [phaseId],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const stochasticAction2: ActionDef = {
+      id: asActionId('stochastic-b'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [phaseId],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const makeProfile = (actionId: string): ActionPipelineDef => ({
+      id: `profile-${actionId}`,
+      actionId: asActionId(actionId),
+      legality: null,
+      costValidation: null, costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          stage: 'resolve',
+          effects: [
+            {
+              rollRandom: {
+                bind: '$roll',
+                min: 1,
+                max: 2,
+                in: [
+                  {
+                    if: {
+                      when: { op: '==' as const, left: { ref: 'binding' as const, name: '$roll' }, right: 1 },
+                      then: [{ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } }],
+                      else: [{ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['alpha'] } } }],
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+      atomicity: 'atomic',
+    });
+
+    const def = createDefWithProfile(
+      [stochasticAction, stochasticAction2],
+      [makeProfile('stochastic-a'), makeProfile('stochastic-b')],
+    );
+    const moves: Move[] = [
+      { actionId: asActionId('stochastic-a'), params: {} },
+      { actionId: asActionId('stochastic-b'), params: {} },
+    ];
+    const agent = new RandomAgent();
+
+    const makeInput = () => ({
+      def,
+      state: stateStub,
+      playerId: asPlayerId(0),
+      legalMoves: moves,
+      rng: createRng(77n),
+    });
+
+    const first = agent.chooseMove(makeInput());
+    const second = agent.chooseMove(makeInput());
+
+    assert.deepEqual(first, second);
   });
 });

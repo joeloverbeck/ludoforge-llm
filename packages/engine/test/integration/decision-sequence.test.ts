@@ -377,7 +377,8 @@ describe('decision sequence integration', () => {
 
     const rng = createRng(BigInt(500));
     const completed = completeTemplateMove(def, state, template, rng);
-    assert.ok(completed !== null, 'template should be completeable');
+    assert.equal(completed.kind, 'completed', 'template should be completeable');
+    if (completed.kind !== 'completed') throw new Error('unreachable');
 
     const freeMove: Move = { ...completed.move, freeOperation: true };
     const result = applyMove(def, state, freeMove);
@@ -406,7 +407,8 @@ describe('decision sequence integration', () => {
 
     const rng = createRng(BigInt(500));
     const completed = completeTemplateMove(def, state, template, rng);
-    assert.ok(completed !== null);
+    assert.equal(completed.kind, 'completed');
+    if (completed.kind !== 'completed') throw new Error('unreachable');
 
     // Apply without freeOperation (defaults to false)
     const result = applyMove(def, state, completed.move);

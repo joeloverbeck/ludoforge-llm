@@ -49,8 +49,9 @@ const completeIfPending = (
   }
   assert.equal(probe.kind, 'pending', 'Expected event move to be complete or pending');
   const completed = completeTemplateMove(def, state, move, createRng(seed));
-  assert.notEqual(completed, null, 'Expected pending event template to be completable');
-  return completed!.move;
+  assert.equal(completed.kind, 'completed', 'Expected pending event template to be completable');
+  if (completed.kind !== 'completed') throw new Error('unreachable');
+  return completed.move;
 };
 
 describe('FITL commitment phase production wiring', () => {

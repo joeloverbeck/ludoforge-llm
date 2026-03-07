@@ -237,12 +237,12 @@ describe('worker boundary structured clone compatibility', () => {
     const nextStamp = createStampFactory();
     await worker.init(TEST_DEF, 42, undefined, nextStamp());
 
-    vi.spyOn(runtime, 'completeTemplateMove').mockReturnValueOnce(null);
+    vi.spyOn(runtime, 'completeTemplateMove').mockReturnValueOnce({ kind: 'unsatisfiable' });
     const uncompletable = await worker.applyTemplateMove(LEGAL_TICK_MOVE, undefined, nextStamp());
     roundTripClone(uncompletable);
     expect(uncompletable).toEqual({ outcome: 'uncompletable' });
 
-    vi.spyOn(runtime, 'completeTemplateMove').mockReturnValueOnce({ move: { ...LEGAL_TICK_MOVE, actionId: asActionId('missing-action') } } as never);
+    vi.spyOn(runtime, 'completeTemplateMove').mockReturnValueOnce({ kind: 'completed', move: { ...LEGAL_TICK_MOVE, actionId: asActionId('missing-action') } } as never);
     const illegal = await worker.applyTemplateMove(LEGAL_TICK_MOVE, undefined, nextStamp());
     roundTripClone(illegal);
     expect(illegal.outcome).toBe('illegal');

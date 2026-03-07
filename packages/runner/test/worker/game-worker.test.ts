@@ -530,7 +530,7 @@ describe('createGameWorker', () => {
     const worker = createGameWorker();
     const nextStamp = createStampFactory();
     await worker.init(TEST_DEF, 53, undefined, nextStamp());
-    vi.spyOn(runtime, 'completeTemplateMove').mockReturnValue(null);
+    vi.spyOn(runtime, 'completeTemplateMove').mockReturnValue({ kind: 'unsatisfiable' });
 
     const outcome = await worker.applyTemplateMove(LEGAL_TICK_MOVE, undefined, nextStamp());
 
@@ -544,7 +544,7 @@ describe('createGameWorker', () => {
     const nextStamp = createStampFactory();
     await worker.init(TEST_DEF, 54, undefined, nextStamp());
     const before = await worker.getState();
-    vi.spyOn(runtime, 'completeTemplateMove').mockReturnValue({ move: ILLEGAL_MOVE } as never);
+    vi.spyOn(runtime, 'completeTemplateMove').mockReturnValue({ kind: 'completed', move: ILLEGAL_MOVE } as never);
 
     const outcome = await worker.applyTemplateMove(LEGAL_TICK_MOVE, undefined, nextStamp());
 

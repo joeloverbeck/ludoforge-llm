@@ -1,6 +1,6 @@
 # LEGACTTOO-011: Texas Hold'em Verbalization + Cross-Game Validation Golden Tests
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — game data + test fixtures only
@@ -128,3 +128,20 @@ Verify full pipeline: compile Hold'em spec → normalize Raise action → plan �
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo typecheck`
 4. `pnpm turbo test` (full suite — both engine and runner)
+## Outcome
+
+Completion date: 2026-03-07
+
+What actually changed:
+- Completed Texas Hold'em verbalization authoring in `data/games/texas-holdem/05-verbalization.md` (labels, stages, macros, sentence plans, suppression patterns).
+- Added Hold'em golden coverage to `packages/engine/test/integration/tooltip-pipeline-integration.test.ts` for Fold, Check, Call, and Raise synopsis verbalization.
+- Added `packages/engine/test/integration/tooltip-cross-game-properties.test.ts` to validate cross-game tooltip pipeline properties for FITL + Texas Hold'em (determinism, trace preservation, suppression coverage, bounded output, completeness of tooltip payload presence).
+
+Deviations from original plan:
+- Bounded-output property implementation enforces `<= 50` content lines (while test naming comments mention 30 in one place).
+- Completeness validation is implemented at action payload level (`tooltipPayload` present per action) rather than an explicit per-`TooltipMessage` realized/suppressed accounting assertion.
+
+Verification results:
+- `pnpm -F @ludoforge/engine build` passed.
+- `node --test packages/engine/dist/test/integration/tooltip-pipeline-integration.test.js packages/engine/dist/test/integration/tooltip-cross-game-properties.test.js` passed (2/2 test files).
+

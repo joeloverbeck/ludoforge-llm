@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — tests only (engine + runner)
-**Deps**: tickets/LEGACTTOO-030-first-class-limit-identity-contract.md, archive/tickets/LEGACTTOO/LEGACTTOO-026-availability-section-limit-rendering-hardening.md
+**Deps**: archive/tickets/LEGACTTOO/LEGACTTOO-030-first-class-limit-identity-contract.md, archive/tickets/LEGACTTOO/LEGACTTOO-026-availability-section-limit-rendering-hardening.md
 
 ## Problem
 

@@ -2921,39 +2921,42 @@ effectMacros:
     effects:
       - if:
           when:
-            op: '>'
-            left:
-              aggregate:
-                op: count
-                query:
-                  query: mapSpaces
-                  filter:
-                    op: and
-                    args:
-                      - conditionMacro: fitl-space-in-laos-cambodia
-                        args: { spaceExpr: $zone }
-                      - op: '>'
-                        left:
-                          aggregate:
-                            op: count
-                            query:
-                              query: tokensInZone
-                              zone: $zone
-                              filter:
-                                op: and
-                                args:
-                                  - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                        right:
-                          aggregate:
-                            op: count
-                            query:
-                              query: tokensInZone
-                              zone: $zone
-                              filter:
-                                op: and
-                                args:
-                                  - { prop: faction, op: in, value: ['NVA', 'VC'] }
-            right: 0
+            op: and
+            args:
+              - { op: '!=', left: { ref: gvar, var: mom_oriskany }, right: true }
+              - op: '>'
+                left:
+                  aggregate:
+                    op: count
+                    query:
+                      query: mapSpaces
+                      filter:
+                        op: and
+                        args:
+                          - conditionMacro: fitl-space-in-laos-cambodia
+                            args: { spaceExpr: $zone }
+                          - op: '>'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                            right:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                right: 0
           then:
             - addVar: { scope: global, var: trail, delta: -1 }
 

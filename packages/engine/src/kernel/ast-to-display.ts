@@ -589,7 +589,7 @@ const limitToDisplayLine = (limit: LimitDef, indent: number): DisplayLineNode =>
     kind: 'line',
     indent,
     children: spaced(val(String(limit.max), 'number'), kw('per'), kw(limit.scope)),
-    sourceRef: { kind: 'limit', id: limit.id },
+    sourceRef: { entity: 'limit', id: limit.id },
   });
 
 export const actionDefToDisplayTree = (action: ActionDef): readonly DisplayGroupNode[] => {

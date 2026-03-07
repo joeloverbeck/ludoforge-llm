@@ -208,7 +208,7 @@ const annotateLimitsGroup = (
   const annotatedChildren = group.children.map((child) => {
     if (child.kind !== 'line') return child;
     const sourceRef = child.sourceRef;
-    const info = sourceRef?.kind === 'limit' ? limitUsageById.get(sourceRef.id) : undefined;
+    const info = sourceRef?.entity === 'limit' ? limitUsageById.get(sourceRef.id) : undefined;
     if (info === undefined) return child;
     const annotation: DisplayAnnotationNode = {
       kind: 'annotation',

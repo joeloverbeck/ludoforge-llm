@@ -776,8 +776,8 @@ describe('actionDefToDisplayTree', () => {
     assert.ok(limitSection !== undefined);
     const lines = asGroup(limitSection).children.map(asLine);
     assert.deepEqual(lines.map((line) => line.sourceRef), [
-      { kind: 'limit', id: 'test::turn::0' },
-      { kind: 'limit', id: 'test::game::1' },
+      { entity: 'limit', id: 'test::turn::0' },
+      { entity: 'limit', id: 'test::game::1' },
     ]);
   });
 

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel condition annotator invariant enforcement + tests
-**Deps**: archive/tickets/LEGACTTOO-032-limit-identity-contract-centralization-and-validation.md, tickets/LEGACTTOO-034-display-source-reference-contract-generalization.md
+**Deps**: archive/tickets/LEGACTTOO-032-limit-identity-contract-centralization-and-validation.md, archive/tickets/LEGACTTOO-034-display-source-reference-contract-generalization.md
 
 ## Problem
 

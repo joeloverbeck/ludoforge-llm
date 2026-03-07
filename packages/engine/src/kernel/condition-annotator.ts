@@ -203,10 +203,13 @@ const annotateLimitsGroup = (
     const current = usage !== undefined ? usage[scopeToUsageField(limit.scope)] : 0;
     return { ...limit, current };
   });
+  const limitUsageById = new Map(limitUsage.map((limit) => [limit.id, limit] as const));
 
-  const annotatedChildren = group.children.map((child, idx) => {
-    const info = limitUsage[idx];
-    if (child.kind !== 'line' || info === undefined) return child;
+  const annotatedChildren = group.children.map((child) => {
+    if (child.kind !== 'line') return child;
+    const sourceRef = child.sourceRef;
+    const info = sourceRef?.kind === 'limit' ? limitUsageById.get(sourceRef.id) : undefined;
+    if (info === undefined) return child;
     const annotation: DisplayAnnotationNode = {
       kind: 'annotation',
       annotationType: 'usage',

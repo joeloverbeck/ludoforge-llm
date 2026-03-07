@@ -160,6 +160,36 @@ describe('AvailabilitySection', () => {
     expect(after[1]?.textContent).toContain('1 remaining total');
   });
 
+  it('keeps duplicate-scope limit rows mounted when each entry updates independently', () => {
+    const { rerender } = render(createElement(AvailabilitySection, {
+      ruleState: makeRuleState({
+        available: true,
+        limitUsage: [
+          { id: 'a::turn::0', scope: 'turn', used: 0, max: 1 },
+          { id: 'a::turn::1', scope: 'turn', used: 1, max: 3 },
+        ],
+      }),
+    }));
+    const before = screen.getAllByTestId('limit-usage-item');
+
+    rerender(createElement(AvailabilitySection, {
+      ruleState: makeRuleState({
+        available: true,
+        limitUsage: [
+          { id: 'a::turn::0', scope: 'turn', used: 1, max: 1 },
+          { id: 'a::turn::1', scope: 'turn', used: 2, max: 3 },
+        ],
+      }),
+    }));
+
+    const after = screen.getAllByTestId('limit-usage-item');
+    expect(after).toHaveLength(2);
+    expect(after[0]).toBe(before[0]);
+    expect(after[1]).toBe(before[1]);
+    expect(after[0]?.textContent).toContain('0 remaining this turn');
+    expect(after[1]?.textContent).toContain('1 remaining this turn');
+  });
+
   it('shows limit usage together with blocked state', () => {
     render(createElement(AvailabilitySection, {
       ruleState: makeRuleState({

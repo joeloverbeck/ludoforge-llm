@@ -767,6 +767,20 @@ describe('actionDefToDisplayTree', () => {
     assert.equal(asGroup(limitSection).children.length, 2);
   });
 
+  it('Limits section lines carry canonical limit sourceRef ids', () => {
+    const action = minimalActionDef({
+      limits: [{ id: 'test::turn::0', scope: 'turn', max: 1 }, { id: 'test::game::1', scope: 'game', max: 3 }],
+    });
+    const sections = actionDefToDisplayTree(action);
+    const limitSection = sections.find((s) => s.label === 'Limits');
+    assert.ok(limitSection !== undefined);
+    const lines = asGroup(limitSection).children.map(asLine);
+    assert.deepEqual(lines.map((line) => line.sourceRef), [
+      { kind: 'limit', id: 'test::turn::0' },
+      { kind: 'limit', id: 'test::game::1' },
+    ]);
+  });
+
   it('output is structuredClone-safe', () => {
     const action = minimalActionDef({
       pre: { op: 'and', args: [true, { op: '==', left: 1, right: 1 }] },

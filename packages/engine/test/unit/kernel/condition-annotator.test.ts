@@ -260,6 +260,41 @@ describe('describeAction (condition annotator)', () => {
     assert.equal(result.tooltipPayload?.ruleState.limitUsage?.[0]?.id, 'canonical-limit-id');
   });
 
+  it('keeps duplicate-scope limit identities distinct and parity-aligned across surfaces', () => {
+    const action = minimalActionDef({
+      limits: [
+        { id: 'test::turn::0', scope: 'turn', max: 1 },
+        { id: 'test::turn::1', scope: 'turn', max: 3 },
+      ],
+      effects: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
+    });
+    const ctx = makeContext({
+      state: makeState({
+        actionUsage: {
+          test: { turnCount: 1, phaseCount: 0, gameCount: 0 },
+        },
+      }),
+    });
+
+    const result = describeAction(action, ctx);
+    assert.ok(result.tooltipPayload !== undefined);
+    const tooltipLimitUsage = result.tooltipPayload.ruleState.limitUsage;
+    assert.ok(tooltipLimitUsage !== undefined);
+
+    assert.equal(result.limitUsage.length, 2);
+    assert.equal(new Set(result.limitUsage.map((limit) => limit.id)).size, 2);
+
+    assert.deepEqual(
+      result.limitUsage.map((limit) => ({
+        id: limit.id,
+        scope: limit.scope,
+        max: limit.max,
+        used: limit.current,
+      })),
+      tooltipLimitUsage,
+    );
+  });
+
   // -----------------------------------------------------------------------
   // 6. No cost/effect annotations
   // -----------------------------------------------------------------------

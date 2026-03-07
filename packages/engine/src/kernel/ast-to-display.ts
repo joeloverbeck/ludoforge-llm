@@ -585,7 +585,12 @@ const paramToDisplayLine = (param: ParamDef, indent: number): DisplayLineNode =>
   line(indent, spaced(ref(param.name, 'param'), kw('from'), ...optionsQueryToInlineNodes(param.domain)));
 
 const limitToDisplayLine = (limit: LimitDef, indent: number): DisplayLineNode =>
-  line(indent, spaced(val(String(limit.max), 'number'), kw('per'), kw(limit.scope)));
+  ({
+    kind: 'line',
+    indent,
+    children: spaced(val(String(limit.max), 'number'), kw('per'), kw(limit.scope)),
+    sourceRef: { kind: 'limit', id: limit.id },
+  });
 
 export const actionDefToDisplayTree = (action: ActionDef): readonly DisplayGroupNode[] => {
   const sections: DisplayGroupNode[] = [];

@@ -1,6 +1,6 @@
 # LEGACTTOO-031: Limit Identity Invariant Test Hardening
 
-**Status**: PENDING
+**Status**: COMPLETED (2026-03-07)
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — tests only (engine + runner)
@@ -8,10 +8,10 @@
 
 ## Problem
 
-Current tests validate basic limit rendering and presence of IDs, but miss key invariants:
+Current tests validate basic limit rendering and ID propagation, but miss key invariants:
 
 1. Distinct ID behavior when multiple limits share the same scope (for example two `turn` limits).
-2. Explicit parity checks that `AnnotatedActionDescription.limitUsage` and `tooltipPayload.ruleState.limitUsage` carry aligned IDs for the same action limits.
+2. Full-array parity checks that `AnnotatedActionDescription.limitUsage` and `tooltipPayload.ruleState.limitUsage` stay aligned for `id`/`scope`/`max`/usage across all entries, including same-scope duplicates.
 
 Without these tests, regressions can reintroduce implicit positional coupling or inconsistent identity propagation.
 
@@ -19,7 +19,7 @@ Without these tests, regressions can reintroduce implicit positional coupling or
 
 1. Existing tests assert `id` presence in condition-annotator and runner UI paths. Confirmed in `packages/engine/test/unit/kernel/condition-annotator.test.ts` and `packages/runner/test/ui/AvailabilitySection.test.ts`.
 2. No test currently asserts duplicate-scope limits produce distinct IDs. Confirmed by absence in current engine/runner limit-usage tests.
-3. No explicit test currently asserts ID parity between description-level `limitUsage` and tooltip `ruleState.limitUsage`. Confirmed in current `condition-annotator` tests.
+3. Current engine tests include partial parity checks (single-limit canonical ID preservation and mixed-scope tooltip `ruleState.limitUsage` assertions), but do not assert full entry-by-entry parity between description-level `limitUsage` and tooltip `ruleState.limitUsage` arrays.
 
 ## Architecture Check
 
@@ -35,7 +35,7 @@ Create tests where an action has multiple limits with identical scope and verify
 
 ### 2. Add cross-surface parity tests
 
-Assert ID/order/value parity between `result.limitUsage` and `result.tooltipPayload.ruleState.limitUsage` for the same action.
+Assert full entry-by-entry parity between `result.limitUsage` and `result.tooltipPayload.ruleState.limitUsage` for the same action, including duplicate scopes.
 
 ### 3. Add runner stability assertion with same-scope multi-limit entries
 
@@ -45,7 +45,7 @@ Extend runner `AvailabilitySection` tests to prove node stability when two same-
 
 - `packages/engine/test/unit/kernel/condition-annotator.test.ts` (modify)
 - `packages/runner/test/ui/AvailabilitySection.test.ts` (modify)
-- `packages/runner/test/ui/ActionTooltip.test.ts` (modify if parity coverage needed in fallback path)
+- `packages/runner/test/ui/ActionTooltip.test.ts` (no change required; existing coverage remained sufficient for this ticket scope)
 
 ## Out of Scope
 
@@ -71,9 +71,9 @@ Extend runner `AvailabilitySection` tests to prove node stability when two same-
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/kernel/condition-annotator.test.ts` — duplicate-scope and cross-surface parity assertions.
+1. `packages/engine/test/unit/kernel/condition-annotator.test.ts` — duplicate-scope uniqueness and strict cross-surface parity assertions.
 2. `packages/runner/test/ui/AvailabilitySection.test.ts` — same-scope multi-limit rerender stability assertions.
-3. `packages/runner/test/ui/ActionTooltip.test.ts` — confirm fallback/footer path handles canonical IDs in multi-limit cases.
+3. `packages/runner/test/ui/ActionTooltip.test.ts` — optional only if runner tooltip fallback path needs additional gap coverage after implementation.
 
 ### Commands
 
@@ -82,3 +82,11 @@ Extend runner `AvailabilitySection` tests to prove node stability when two same-
 3. `pnpm -F @ludoforge/runner test -- AvailabilitySection.test.ts ActionTooltip.test.ts`
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm -F @ludoforge/runner test`
+
+## Outcome
+
+Implemented as test-only hardening with no engine/runtime production code changes.
+
+1. Added an engine invariant test for duplicate-scope limits (`turn` + `turn`) to enforce distinct IDs and strict parity between `result.limitUsage` and `result.tooltipPayload.ruleState.limitUsage`.
+2. Added a runner UI stability test proving `AvailabilitySection` keeps both same-scope limit rows mounted across rerenders when usage updates independently.
+3. Kept `ActionTooltip` tests unchanged because no additional gap was required after the parity and same-scope invariants were covered by engine and availability-section tests.

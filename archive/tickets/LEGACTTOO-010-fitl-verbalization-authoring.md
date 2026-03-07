@@ -1,6 +1,6 @@
 # LEGACTTOO-010: FITL Verbalization Authoring
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — game data only
@@ -99,3 +99,16 @@ Verify all FITL actions produce readable English with the completed verbalizatio
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo typecheck`
+
+## Outcome
+
+- Completion date: 2026-03-07
+- What changed:
+  - Expanded FITL verbalization authoring in `data/games/fire-in-the-lake/05-verbalization.md` with comprehensive labels, stage text, macro summaries, sentence plans, and suppress patterns.
+  - Added FITL-focused tooltip integration coverage in `packages/engine/test/integration/tooltip-pipeline-integration.test.ts` for Train/Sweep/Rally verbalized synopses, label coverage, suppress pattern checks, and label-resolution behavior.
+- Deviations from original plan:
+  - Golden expectations were validated and added in `tooltip-pipeline-integration.test.ts` rather than a separate `tooltip-golden.test.ts` file.
+  - Additional suppress patterns (`mom_*`, `fitl_*`) were included alongside the baseline wildcard patterns.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/integration/tooltip-pipeline-integration.test.js` passed (12/12 tests).

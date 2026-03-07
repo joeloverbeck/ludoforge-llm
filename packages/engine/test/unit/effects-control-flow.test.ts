@@ -699,6 +699,71 @@ describe('effects control-flow handlers', () => {
     assert.equal(result.state.globalVars.bonus, 2);
   });
 
+  it('removeByPriority rejects id-only object items from binding query (must be Token or TokenId)', () => {
+    const def: GameDef = {
+      metadata: { id: 'remove-priority-invalid-item-shape', players: { min: 1, max: 2 } },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [
+        { id: asZoneId('space:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+        { id: asZoneId('available:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+      ],
+      tokenTypes: [{ id: 'troops', props: { faction: 'string' } }],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [],
+      triggers: [],
+      terminal: { conditions: [] },
+    };
+    const state: GameState = {
+      globalVars: {},
+      perPlayerVars: {},
+      zoneVars: {},
+      playerCount: 2,
+      zones: {
+        'space:none': [makeToken('t1', 'troops', 'F1')],
+        'available:none': [],
+      },
+      nextTokenOrdinal: 2,
+      currentPhase: asPhaseId('main'),
+      activePlayer: asPlayerId(0),
+      turnCount: 1,
+      rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
+      stateHash: 0n,
+      actionUsage: {},
+      turnOrderState: { type: 'roundRobin' },
+      markers: {},
+    };
+    const ctx = makeCtx({
+      def,
+      state,
+      bindings: {
+        $items: [{ id: 't1' }],
+      },
+    });
+    const effect: EffectAST = {
+      removeByPriority: {
+        budget: 1,
+        groups: [
+          {
+            bind: '$tok',
+            over: { query: 'binding', name: '$items' },
+            to: { zoneExpr: 'available:none' },
+          },
+        ],
+      },
+    };
+
+    assert.throws(
+      () => applyEffect(effect, ctx),
+      (error: unknown) => {
+        return error instanceof EffectRuntimeError
+          && String(error).includes('removeByPriority groups must resolve to token items');
+      },
+    );
+  });
+
   it('rollRandom generates a deterministic integer and binds it within scope', () => {
     const ctx = makeCtx();
     const effect: EffectAST = {

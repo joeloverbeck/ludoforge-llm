@@ -1,6 +1,6 @@
 # LEGACTTOO-022: Display Node Renderer Isolation and Exhaustive Type Guard
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -19,13 +19,14 @@
 1. `display-node-renderers.tsx` at line 9 imports `styles from './ActionTooltip.module.css'`. **Confirmed in worktree source.**
 2. `renderNode` default branch at line 60 uses `node as DisplayInlineNode`. **Confirmed in worktree source.**
 3. `DisplayNode` union is `DisplayGroupNode | DisplayLineNode | DisplayInlineNode` defined in `packages/engine/src/kernel/display-node.ts`. **Confirmed — three variants.**
-4. No other ticket covers renderer CSS isolation or type exhaustiveness.
+4. Existing runner tests (`ActionTooltip.test.ts`, `RawAstToggle.test.ts`) cover rendered output paths but do not explicitly enforce renderer stylesheet ownership boundaries. **Confirmed in test source.**
 
 ## Architecture Check
 
 1. Extracting renderer styles into a dedicated CSS module follows the "many small files" convention and keeps the renderer reusable across UI contexts without pulling in tooltip-specific class names.
-2. An exhaustive type guard is a zero-cost compile-time safety net — no runtime overhead, catches future `DisplayNode` variants at build time.
+2. An exhaustive type guard is a zero-cost compile-time safety net and catches future `DisplayNode` variants at build time.
 3. No game-specific logic; purely runner UI infrastructure.
+4. Scope is a refactor only: preserve rendered content and semantics while reducing coupling.
 
 ## What to Change
 
@@ -80,9 +81,26 @@ This ensures that if a new `DisplayNode` kind is added without updating `renderN
 
 ### New/Modified Tests
 
-1. No new tests needed — this is a pure refactor with no behavior change. Existing tests cover all rendering paths.
+1. `packages/runner/test/ui/RawAstToggle.test.ts` (modified comment) — remove stale note implying renderer depends on `ActionTooltip.module.css`.
+2. No new behavioral tests required; existing tooltip/raw-AST rendering tests already validate output parity.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm -F @ludoforge/runner typecheck`
+
+## Outcome
+
+- Completion date: 2026-03-07
+- What changed:
+  - Added `packages/runner/src/ui/DisplayNodeRenderers.module.css` and moved renderer-specific classes out of `ActionTooltip.module.css`.
+  - Updated `packages/runner/src/ui/display-node-renderers.tsx` to import `DisplayNodeRenderers.module.css`.
+  - Replaced unsafe `node as DisplayInlineNode` cast with exhaustive inline assignment in `renderNode`.
+  - Updated runner CSS contract test to assert wrapping in `DisplayNodeRenderers.module.css`.
+  - Updated stale comment in `RawAstToggle.test.ts` to reflect decoupled renderer styling.
+- Deviations from original plan:
+  - Added one additional test update (`ActionTooltip.test.ts`) to reflect new CSS ownership; behavior remained unchanged.
+- Verification results:
+  - `pnpm -F @ludoforge/runner test` passed.
+  - `pnpm -F @ludoforge/runner typecheck` passed.
+  - `pnpm -F @ludoforge/runner lint` passed.

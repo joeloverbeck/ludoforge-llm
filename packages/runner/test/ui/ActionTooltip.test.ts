@@ -283,9 +283,9 @@ describe('ActionTooltip', () => {
     expect(tooltipBlock).toContain('overflow-x: hidden;');
   });
 
-  it('enforces long-token wrapping on tooltip inline spans via CSS contract', () => {
+  it('enforces long-token wrapping on display-node inline spans via CSS contract', () => {
     const css = readFileSync(
-      resolve(process.cwd(), 'src/ui/ActionTooltip.module.css'),
+      resolve(process.cwd(), 'src/ui/DisplayNodeRenderers.module.css'),
       'utf-8',
     );
     const spanWrapBlock = css.match(/\.line\s*>\s*span\s*\{[^}]*\}/u)?.[0] ?? '';

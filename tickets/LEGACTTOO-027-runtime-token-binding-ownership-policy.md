@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel architecture guard tests for runtime token-binding resolver ownership
-**Deps**: archive/tickets/LEGACTTOO/LEGACTTOO-019-token-binding-contract-hardening-and-ref-parity.md, tickets/LEGACTTOO-022-kernel-token-shape-contract-ownership-policy.md
+**Deps**: archive/tickets/LEGACTTOO/LEGACTTOO-019-token-binding-contract-hardening-and-ref-parity.md, archive/tickets/LEGACTTOO/LEGACTTOO-022-kernel-token-shape-contract-ownership-policy.md
 
 ## Problem
 

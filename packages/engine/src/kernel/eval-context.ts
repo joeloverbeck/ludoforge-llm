@@ -1,7 +1,6 @@
 import type { PlayerId } from './branded.js';
 import { createCollector } from './execution-collector.js';
 import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
-import { createQueryRuntimeCache, type QueryRuntimeCache } from './query-runtime-cache.js';
 import type { RuntimeTableIndex } from './runtime-table-index.js';
 import type { AdjacencyGraph } from './spatial.js';
 import type { ConditionAST, ExecutionCollector, GameDef, GameState } from './types.js';
@@ -16,22 +15,18 @@ export interface FreeOperationZoneFilterDiagnostics {
 
 export interface EvalRuntimeResources {
   readonly collector: ExecutionCollector;
-  readonly queryRuntimeCache: QueryRuntimeCache;
 }
 
 interface EvalRuntimeResourceInput {
   readonly collector?: ExecutionCollector;
-  readonly queryRuntimeCache?: QueryRuntimeCache;
 }
 
 export function createEvalRuntimeResources(input?: EvalRuntimeResourceInput): EvalRuntimeResources {
   const {
     collector = createCollector(),
-    queryRuntimeCache = createQueryRuntimeCache(),
   } = input ?? {};
   return {
     collector,
-    queryRuntimeCache,
   };
 }
 
@@ -43,7 +38,6 @@ export interface EvalContext {
   readonly actorPlayer: PlayerId;
   readonly bindings: Readonly<Record<string, unknown>>;
   readonly resources: EvalRuntimeResources;
-  readonly queryRuntimeCache: QueryRuntimeCache;
   readonly runtimeTableIndex?: RuntimeTableIndex;
   readonly freeOperationZoneFilter?: ConditionAST;
   readonly freeOperationZoneFilterDiagnostics?: FreeOperationZoneFilterDiagnostics;
@@ -51,7 +45,7 @@ export interface EvalContext {
   readonly collector: ExecutionCollector;
 }
 
-export type EvalContextInput = Omit<EvalContext, 'collector' | 'queryRuntimeCache'> & {
+export type EvalContextInput = Omit<EvalContext, 'collector'> & {
   readonly resources: EvalRuntimeResources;
 };
 
@@ -63,7 +57,6 @@ export function createEvalContext(input: EvalContextInput): EvalContext {
   return {
     ...ctx,
     resources,
-    queryRuntimeCache: resources.queryRuntimeCache,
     collector: resources.collector,
   };
 }

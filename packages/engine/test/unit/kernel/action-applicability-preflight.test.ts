@@ -9,7 +9,6 @@ import {
   asZoneId,
   buildAdjacencyGraph,
   createEvalRuntimeResources,
-  createQueryRuntimeCache,
   type ActionDef,
   type EvalRuntimeResources,
   type ActionPipelineDef,
@@ -238,9 +237,7 @@ describe('resolveActionApplicabilityPreflight()', () => {
     const def = makeDef();
     const state = makeState({ activePlayer: asPlayerId(0) });
     const action = def.actions[0]!;
-    const queryRuntimeCache = createQueryRuntimeCache();
     const evalRuntimeResources = createEvalRuntimeResources({
-      queryRuntimeCache,
     });
     const result = resolveActionApplicabilityPreflight({
       def,
@@ -254,7 +251,6 @@ describe('resolveActionApplicabilityPreflight()', () => {
 
     assert.equal(result.kind, 'applicable');
     if (result.kind === 'applicable') {
-      assert.equal(result.evalCtx.queryRuntimeCache, queryRuntimeCache);
       assert.equal(result.evalCtx.collector, evalRuntimeResources.collector);
     }
   });

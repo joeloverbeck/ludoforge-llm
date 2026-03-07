@@ -9,7 +9,6 @@ import {
 } from '../../../src/kernel/effect-context.js';
 import * as effectContextModule from '../../../src/kernel/effect-context.js';
 import { createEvalRuntimeResources } from '../../../src/kernel/eval-context.js';
-import { createQueryRuntimeCache } from '../../../src/kernel/query-runtime-cache.js';
 import { createCollector } from '../../../src/kernel/execution-collector.js';
 import { createRng } from '../../../src/kernel/prng.js';
 import { buildAdjacencyGraph } from '../../../src/kernel/spatial.js';
@@ -57,7 +56,6 @@ const makeRuntimeEffectContextOptions = (
   const def = overrides.def ?? makeDef();
   const activePlayer = overrides.activePlayer ?? asPlayerId(0);
   const collector = createCollector();
-  const queryRuntimeCache = createQueryRuntimeCache();
   return {
     def,
     adjacencyGraph: overrides.adjacencyGraph ?? buildAdjacencyGraph(def.zones),
@@ -69,7 +67,6 @@ const makeRuntimeEffectContextOptions = (
     moveParams: overrides.moveParams ?? {},
     resources: overrides.resources ?? createEvalRuntimeResources({
       collector,
-      queryRuntimeCache,
     }),
     ...(overrides.decisionAuthorityPlayer === undefined
       ? {}

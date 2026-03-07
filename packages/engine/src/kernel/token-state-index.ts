@@ -5,6 +5,7 @@ export interface TokenStateIndexEntry {
   readonly index: number;
   readonly token: Token;
   readonly occurrenceCount: number;
+  readonly occurrenceZoneIds: readonly string[];
 }
 
 const tokenStateIndexByState = new WeakMap<GameState, ReadonlyMap<string, TokenStateIndexEntry>>();
@@ -25,12 +26,14 @@ function buildTokenStateIndex(state: GameState): ReadonlyMap<string, TokenStateI
           index: tokenIndex,
           token,
           occurrenceCount: 1,
+          occurrenceZoneIds: [zoneId],
         });
         continue;
       }
       index.set(tokenId, {
         ...existing,
         occurrenceCount: existing.occurrenceCount + 1,
+        occurrenceZoneIds: [...existing.occurrenceZoneIds, zoneId],
       });
     }
   }

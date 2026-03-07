@@ -13,42 +13,7 @@ type LiteralViolation = {
 };
 
 const QUOTES = [`'`, `"`, '`'] as const;
-
-function toLowerCamelCase(value: string): string {
-  return value.length === 0 ? value : value[0]!.toLowerCase() + value.slice(1);
-}
-
-function deriveQueryRuntimeCacheKeyLiterals(canonicalSource: string): string[] {
-  const getDomains = new Set<string>();
-  const setDomains = new Set<string>();
-
-  for (const match of canonicalSource.matchAll(/\bget(?<domain>[A-Z]\w*)Index\s*\(/gmu)) {
-    const domain = match.groups?.domain;
-    if (domain) {
-      getDomains.add(domain);
-    }
-  }
-  for (const match of canonicalSource.matchAll(/\bset(?<domain>[A-Z]\w*)Index\s*\(/gmu)) {
-    const domain = match.groups?.domain;
-    if (domain) {
-      setDomains.add(domain);
-    }
-  }
-
-  const getterOnly = [...getDomains].filter((domain) => !setDomains.has(domain));
-  const setterOnly = [...setDomains].filter((domain) => !getDomains.has(domain));
-  assert.deepEqual(
-    { getterOnly, setterOnly },
-    { getterOnly: [], setterOnly: [] },
-    [
-      'query-runtime-cache.ts must expose paired get*/set*Index accessors per query cache domain.',
-      `Getter-only domains: ${getterOnly.join(', ') || '(none)'}`,
-      `Setter-only domains: ${setterOnly.join(', ') || '(none)'}`,
-    ].join('\n'),
-  );
-
-  return [...getDomains].sort((left, right) => left.localeCompare(right)).map(toLowerCamelCase);
-}
+const LEGACY_QUERY_CACHE_LITERALS = ['tokenZoneByTokenId'];
 
 function findLineLiteralViolations(source: string, literal: string): LiteralViolation[] {
   const violations: LiteralViolation[] = [];
@@ -70,44 +35,20 @@ function findLineLiteralViolations(source: string, literal: string): LiteralViol
 }
 
 describe('query-runtime-cache key literal ownership policy', () => {
-  it('derives key literals from canonical query-runtime-cache accessor signatures', () => {
-    const source = [
-      'export interface QueryRuntimeCache {',
-      '  getTokenZoneByTokenIdIndex(state: GameState): ReadonlyMap<string, string> | undefined;',
-      '  setTokenZoneByTokenIdIndex(state: GameState, value: ReadonlyMap<string, string>): void;',
-      '  getStackTopByZoneIdIndex(state: GameState): ReadonlyMap<string, string> | undefined;',
-      '  setStackTopByZoneIdIndex(state: GameState, value: ReadonlyMap<string, string>): void;',
-      '}',
-    ].join('\n');
-
-    assert.deepEqual(deriveQueryRuntimeCacheKeyLiterals(source), ['stackTopByZoneId', 'tokenZoneByTokenId']);
-  });
-
-  it('keeps raw query cache key literals owned only by query-runtime-cache.ts', () => {
+  it('keeps legacy token-zone cache literals out of kernel and test modules', () => {
     const thisDir = dirname(fileURLToPath(import.meta.url));
     const engineRoot = findEnginePackageRoot(thisDir);
-    const canonicalFile = resolve(engineRoot, 'src', 'kernel', 'query-runtime-cache.ts');
     const policyTestFile = resolve(engineRoot, 'test', 'unit', 'lint', 'query-runtime-cache-key-literal-ownership-policy.test.ts');
-    const canonicalSource = readFileSync(canonicalFile, 'utf8');
-    const literals = deriveQueryRuntimeCacheKeyLiterals(canonicalSource);
-
-    assert.notEqual(
-      literals.length,
-      0,
-      'Failed to derive query cache key literals from canonical query-runtime-cache.ts accessor signatures.',
-    );
-
     const sourceFiles = [
       ...listTypeScriptFiles(resolve(engineRoot, 'src', 'kernel')),
       ...listTypeScriptFiles(resolve(engineRoot, 'test')),
-    ];
-    const disallowedCandidates = sourceFiles.filter((file) => file !== canonicalFile && file !== policyTestFile);
+    ].filter((file) => file !== policyTestFile);
 
     const violations: LiteralViolation[] = [];
 
-    for (const file of disallowedCandidates) {
+    for (const file of sourceFiles) {
       const source = readFileSync(file, 'utf8');
-      for (const literal of literals) {
+      for (const literal of LEGACY_QUERY_CACHE_LITERALS) {
         for (const violation of findLineLiteralViolations(source, literal)) {
           violations.push({
             ...violation,
@@ -121,8 +62,7 @@ describe('query-runtime-cache key literal ownership policy', () => {
       violations,
       [],
       [
-        'Raw query runtime cache key literals are only allowed in src/kernel/query-runtime-cache.ts.',
-        'Use QueryRuntimeCache domain methods instead of inline key strings.',
+        'Legacy query runtime cache key literals are forbidden after canonical token-state-index adoption.',
         'Violations:',
         ...violations.map((violation) => `- ${violation.file}:${violation.line} (${violation.literal}) -> ${violation.excerpt}`),
       ].join('\n'),

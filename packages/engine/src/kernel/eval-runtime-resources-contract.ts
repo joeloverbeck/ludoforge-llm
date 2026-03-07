@@ -24,7 +24,7 @@ export const assertEvalRuntimeResourcesContract: (
       `${resourcePath} must be an object; received ${describeType(value)}`,
     );
   }
-  const candidate = value as { collector?: unknown; queryRuntimeCache?: unknown };
+  const candidate = value as { collector?: unknown };
   if (!isObjectRecord(candidate.collector)) {
     throw kernelRuntimeError(
       'RUNTIME_CONTRACT_INVALID',
@@ -42,24 +42,6 @@ export const assertEvalRuntimeResourcesContract: (
     throw kernelRuntimeError(
       'RUNTIME_CONTRACT_INVALID',
       `${resourcePath}.collector.trace must be an array or null; received ${describeType(collectorTrace)}`,
-    );
-  }
-  if (!isObjectRecord(candidate.queryRuntimeCache)) {
-    throw kernelRuntimeError(
-      'RUNTIME_CONTRACT_INVALID',
-      `${resourcePath}.queryRuntimeCache must be an object; received ${describeType(candidate.queryRuntimeCache)}`,
-    );
-  }
-  if (typeof candidate.queryRuntimeCache.getTokenZoneByTokenIdIndex !== 'function') {
-    throw kernelRuntimeError(
-      'RUNTIME_CONTRACT_INVALID',
-      `${resourcePath}.queryRuntimeCache.getTokenZoneByTokenIdIndex must be a function; received ${describeType(candidate.queryRuntimeCache.getTokenZoneByTokenIdIndex)}`,
-    );
-  }
-  if (typeof candidate.queryRuntimeCache.setTokenZoneByTokenIdIndex !== 'function') {
-    throw kernelRuntimeError(
-      'RUNTIME_CONTRACT_INVALID',
-      `${resourcePath}.queryRuntimeCache.setTokenZoneByTokenIdIndex must be a function; received ${describeType(candidate.queryRuntimeCache.setTokenZoneByTokenIdIndex)}`,
     );
   }
 };

@@ -196,7 +196,7 @@ describe('dispatchTriggers', () => {
       terminal: { conditions: [] },
     };
     const state = createState({ zones: {} });
-    const invalidResources = { collector: createCollector({ trace: true }) };
+    const invalidResources = {};
 
     assert.throws(
       () => dispatchTriggers({
@@ -211,7 +211,7 @@ describe('dispatchTriggers', () => {
       }),
       (error: unknown) => {
         assert.equal((error as { code?: string }).code, 'RUNTIME_CONTRACT_INVALID');
-        assert.match((error as Error).message, /evalRuntimeResources\.queryRuntimeCache must be an object/);
+        assert.match((error as Error).message, /evalRuntimeResources\.collector must be an object/);
         return true;
       },
     );
@@ -221,7 +221,6 @@ describe('dispatchTriggers', () => {
     const state = createState({ zones: {} });
     const invalidResources = {
       collector: { warnings: {}, trace: [] },
-      queryRuntimeCache: createEvalRuntimeResources().queryRuntimeCache,
     };
 
     assert.throws(
@@ -243,7 +242,6 @@ describe('dispatchTriggers', () => {
     const state = createState({ zones: {} });
     const invalidResources = {
       collector: { warnings: [], trace: {} },
-      queryRuntimeCache: createEvalRuntimeResources().queryRuntimeCache,
     };
 
     assert.throws(
@@ -261,28 +259,22 @@ describe('dispatchTriggers', () => {
     );
   });
 
-  it('fails fast when request.evalRuntimeResources.queryRuntimeCache accessor methods are malformed', () => {
+  it('allows extra evalRuntimeResources fields as long as collector contract is valid', () => {
     const state = createState({ zones: {} });
     const invalidResources = {
       collector: createCollector({ trace: true }),
       queryRuntimeCache: {
-        getTokenZoneByTokenIdIndex: 'not-a-function',
-        setTokenZoneByTokenIdIndex: () => {},
-      },
+        getTokenStateIndex: 'not-a-function',
+      } as const,
     };
 
-    assert.throws(
+    assert.doesNotThrow(
       () => dispatchTriggers({
         ...createValidRequest(),
         state,
         rng: { state: state.rng },
         evalRuntimeResources: invalidResources as unknown as ReturnType<typeof createEvalRuntimeResources>,
       }),
-      (error: unknown) => {
-        assert.equal((error as { code?: string }).code, 'RUNTIME_CONTRACT_INVALID');
-        assert.match((error as Error).message, /getTokenZoneByTokenIdIndex must be a function/);
-        return true;
-      },
     );
   });
 

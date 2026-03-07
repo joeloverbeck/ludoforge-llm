@@ -8,11 +8,10 @@ import {
   createCollector,
   createEvalContext,
   createEvalRuntimeResources,
-  createQueryRuntimeCache,
-  asZoneId,
   type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
+import { getTokenStateIndexEntry } from '../../src/kernel/token-state-index.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'eval-context-test', players: { min: 1, max: 2 } },
@@ -61,16 +60,13 @@ describe('createEvalContext', () => {
 
     assert.equal(ctx.resources, resources);
     assert.equal(ctx.collector, resources.collector);
-    assert.equal(ctx.queryRuntimeCache, resources.queryRuntimeCache);
   });
 
-  it('preserves provided collector and query runtime cache instances', () => {
+  it('preserves provided collector instance', () => {
     const def = makeDef();
     const collector = createCollector({ trace: true });
-    const queryRuntimeCache = createQueryRuntimeCache();
     const resources = createEvalRuntimeResources({
       collector,
-      queryRuntimeCache,
     });
     const ctx = createEvalContext({
       def,
@@ -83,7 +79,6 @@ describe('createEvalContext', () => {
     });
 
     assert.equal(ctx.collector, collector);
-    assert.equal(ctx.queryRuntimeCache, queryRuntimeCache);
   });
 
   it('reuses one runtime resource object across multiple contexts', () => {
@@ -112,7 +107,6 @@ describe('createEvalContext', () => {
     });
 
     assert.equal(first.collector, second.collector);
-    assert.equal(first.queryRuntimeCache, second.queryRuntimeCache);
   });
 
   it('keeps contexts isolated when created with different runtime resources', () => {
@@ -142,41 +136,23 @@ describe('createEvalContext', () => {
     });
 
     assert.notEqual(first.collector, second.collector);
-    assert.notEqual(first.queryRuntimeCache, second.queryRuntimeCache);
   });
 });
 
-describe('createQueryRuntimeCache', () => {
-  it('stores and retrieves token-zone index snapshots per state through domain methods only', () => {
-    const indexEntries = (index: ReadonlyMap<string, string> | undefined): [string, string][] =>
-      index === undefined ? [] : [...index.entries()];
+describe('token-state-index canonical helper', () => {
+  it('derives canonical token state index entries directly from state', () => {
+    const state = {
+      ...makeState(),
+      zones: {
+        'hand:0': [{ id: 'shared-token', type: 'card', props: {} }],
+        'bench:1': [{ id: 'shared-token', type: 'card', props: {} }],
+      },
+    } as unknown as GameState;
 
-    const cache = createQueryRuntimeCache();
-    const firstState = makeState();
-    const secondState = makeState();
-    const firstIndex = new Map<string, string>([['a', asZoneId('hand:0')]]);
-    const secondIndex = new Map<string, string>([['b', asZoneId('bench:1')]]);
-
-    assert.equal(cache.getTokenZoneByTokenIdIndex(firstState), undefined);
-    assert.equal(cache.getTokenZoneByTokenIdIndex(secondState), undefined);
-
-    cache.setTokenZoneByTokenIdIndex(firstState, firstIndex);
-    cache.setTokenZoneByTokenIdIndex(secondState, secondIndex);
-
-    const cachedFirst = cache.getTokenZoneByTokenIdIndex(firstState);
-    const cachedSecond = cache.getTokenZoneByTokenIdIndex(secondState);
-
-    assert.notEqual(cachedFirst, undefined);
-    assert.notEqual(cachedSecond, undefined);
-    assert.notEqual(cachedFirst, firstIndex);
-    assert.notEqual(cachedSecond, secondIndex);
-    assert.deepEqual(indexEntries(cachedFirst), [...firstIndex.entries()]);
-    assert.deepEqual(indexEntries(cachedSecond), [...secondIndex.entries()]);
-
-    firstIndex.set('c', asZoneId('deck:none'));
-    secondIndex.set('d', asZoneId('tableau:2'));
-
-    assert.deepEqual(indexEntries(cache.getTokenZoneByTokenIdIndex(firstState)), [['a', asZoneId('hand:0')]]);
-    assert.deepEqual(indexEntries(cache.getTokenZoneByTokenIdIndex(secondState)), [['b', asZoneId('bench:1')]]);
+    const tokenStateEntry = getTokenStateIndexEntry(state, 'shared-token');
+    assert.notEqual(tokenStateEntry, undefined);
+    assert.equal(tokenStateEntry?.zoneId, 'hand:0');
+    assert.equal(tokenStateEntry?.occurrenceCount, 2);
+    assert.deepEqual(tokenStateEntry?.occurrenceZoneIds, ['hand:0', 'bench:1']);
   });
 });

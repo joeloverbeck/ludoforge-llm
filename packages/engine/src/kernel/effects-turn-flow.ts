@@ -236,7 +236,6 @@ export const applyGotoPhaseExact = (
   }
   const lifecycleResources = createEvalRuntimeResources({
     collector: ctx.collector,
-    queryRuntimeCache: ctx.queryRuntimeCache,
   });
   const targetPhaseId = phaseIds[targetPhaseIndex]!;
 
@@ -271,7 +270,6 @@ export const applyAdvancePhase = (
     ctx.state,
     createEvalRuntimeResources({
       collector: ctx.collector,
-      queryRuntimeCache: ctx.queryRuntimeCache,
     }),
     { policy },
   ));
@@ -312,7 +310,6 @@ export const applyPushInterruptPhase = (
   }
   const lifecycleResources = createEvalRuntimeResources({
     collector: ctx.collector,
-    queryRuntimeCache: ctx.queryRuntimeCache,
   });
   const targetPhase = resolvePhaseId(ctx, effect.pushInterruptPhase.phase, 'pushInterruptPhase', 'phase');
   const resumePhase = resolvePhaseId(ctx, effect.pushInterruptPhase.resumePhase, 'pushInterruptPhase', 'resumePhase');
@@ -348,7 +345,6 @@ export const applyPopInterruptPhase = (
   }
   const lifecycleResources = createEvalRuntimeResources({
     collector: ctx.collector,
-    queryRuntimeCache: ctx.queryRuntimeCache,
   });
   const activeStack = ctx.state.interruptPhaseStack ?? [];
   if (activeStack.length === 0) {

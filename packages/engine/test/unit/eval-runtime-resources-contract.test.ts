@@ -31,7 +31,6 @@ describe('assertEvalRuntimeResourcesContract', () => {
   it('fails when collector contract is malformed', () => {
     const invalidResources = {
       collector: { warnings: {}, trace: [] },
-      queryRuntimeCache: createEvalRuntimeResources().queryRuntimeCache,
     };
     assert.throws(
       () => {
@@ -45,13 +44,10 @@ describe('assertEvalRuntimeResourcesContract', () => {
     );
   });
 
-  it('fails when query runtime cache accessors are malformed', () => {
+  it('ignores unrelated extra fields and enforces only collector runtime resources contract', () => {
     const invalidResources = {
-      collector: createCollector({ trace: true }),
-      queryRuntimeCache: {
-        getTokenZoneByTokenIdIndex: () => undefined,
-        setTokenZoneByTokenIdIndex: 'bad',
-      },
+      collector: { warnings: [], trace: {} },
+      queryRuntimeCache: 'legacy-extra-field',
     };
     assert.throws(
       () => {
@@ -59,7 +55,7 @@ describe('assertEvalRuntimeResourcesContract', () => {
       },
       (error: unknown) => {
         assert.equal((error as { code?: string }).code, 'RUNTIME_CONTRACT_INVALID');
-        assert.match((error as Error).message, /setTokenZoneByTokenIdIndex must be a function/);
+        assert.match((error as Error).message, /collector\.trace must be an array or null/);
         return true;
       },
     );

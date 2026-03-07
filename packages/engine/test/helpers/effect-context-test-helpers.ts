@@ -9,7 +9,6 @@ import {
 } from '../../src/kernel/effect-context.js';
 import { createCollector } from '../../src/kernel/execution-collector.js';
 import { createRng } from '../../src/kernel/prng.js';
-import { createQueryRuntimeCache, type QueryRuntimeCache } from '../../src/kernel/query-runtime-cache.js';
 import { buildAdjacencyGraph } from '../../src/kernel/spatial.js';
 import type { FreeOperationZoneFilterDiagnostics } from '../../src/kernel/eval-context.js';
 import type { RuntimeTableIndex } from '../../src/kernel/runtime-table-index.js';
@@ -45,7 +44,6 @@ interface EffectContextTestOptions {
   readonly freeOperationZoneFilterDiagnostics?: FreeOperationZoneFilterDiagnostics;
   readonly maxQueryResults?: number;
   readonly collector?: ExecutionCollector;
-  readonly queryRuntimeCache?: QueryRuntimeCache;
   readonly resources?: RuntimeEffectContextOptions['resources'];
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
   readonly iterationPath?: string;
@@ -53,7 +51,6 @@ interface EffectContextTestOptions {
 
 export type EffectContextTestOverrides = Partial<RuntimeEffectContextOptions> & {
   readonly collector?: ExecutionCollector;
-  readonly queryRuntimeCache?: QueryRuntimeCache;
 };
 
 const makeRuntimeEffectContextOptions = ({
@@ -67,7 +64,6 @@ const makeRuntimeEffectContextOptions = ({
   bindings = {},
   moveParams = {},
   collector = createCollector(),
-  queryRuntimeCache = createQueryRuntimeCache(),
   resources,
   runtimeTableIndex,
   traceContext,
@@ -97,10 +93,7 @@ const makeRuntimeEffectContextOptions = ({
   ...(freeOperationZoneFilter === undefined ? {} : { freeOperationZoneFilter }),
   ...(freeOperationZoneFilterDiagnostics === undefined ? {} : { freeOperationZoneFilterDiagnostics }),
   ...(maxQueryResults === undefined ? {} : { maxQueryResults }),
-  resources: resources ?? makeEvalRuntimeResources({
-    collector,
-    queryRuntimeCache,
-  }),
+  resources: resources ?? makeEvalRuntimeResources({ collector }),
   ...(phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget }),
   ...(iterationPath === undefined ? {} : { iterationPath }),
 });

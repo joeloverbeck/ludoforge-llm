@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — discovery semantics in effect execution, decision-sequence completion, legality probing, test helpers
-**Deps**: tickets/FITLEVENTARCH-002-choice-validation-error-classification.md, specs/29-fitl-event-card-encoding.md, reports/fire-in-the-lake-rules-section-5.md
+**Deps**: archive/tickets/FITLEVENTARCH-002-choice-validation-error-classification.md, specs/29-fitl-event-card-encoding.md, reports/fire-in-the-lake-rules-section-5.md
 
 ## Problem
 

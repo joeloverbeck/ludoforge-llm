@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — CNL cross-validation for event-deck target executability
-**Deps**: archive/tickets/FITLEVENTARCH-001-event-target-application-semantics.md, tickets/FITLEVENTARCH-002-choice-validation-error-classification.md
+**Deps**: archive/tickets/FITLEVENTARCH-001-event-target-application-semantics.md, archive/tickets/FITLEVENTARCH-002-choice-validation-error-classification.md
 
 ## Problem
 

@@ -10,6 +10,8 @@ import {
   asTokenId,
   createEvalRuntimeResources,
   initialState,
+  ILLEGAL_MOVE_REASONS,
+  legalChoicesDiscover,
   legalMoves,
   type GameDef,
   type GameState,
@@ -162,6 +164,12 @@ describe('FITL card-41 Bombing Pause', () => {
 
     const move = findBombingPauseMove(def, setup);
     assert.notEqual(move, undefined, 'Expected card-41 event move');
+    const pending = legalChoicesDiscover(def, setup, move!);
+    assert.equal(pending.kind, 'pending', 'Expected Bombing Pause target choice to be pending');
+    if (pending.kind !== 'pending') {
+      throw new Error('Expected pending decision for Bombing Pause target selection');
+    }
+    const targetDecisionId = pending.decisionId;
 
     assert.throws(
       () =>
@@ -169,10 +177,15 @@ describe('FITL card-41 Bombing Pause', () => {
           ...move!,
           params: {
             ...move!.params,
-            $targetSpace: ['saigon:none'],
+            [targetDecisionId]: ['saigon:none'],
           },
         }),
-      /(?:moveHasIncompleteParams|chooseN selection cardinality mismatch)/,
+      (error: unknown) => {
+        const details = error as { readonly reason?: string; readonly context?: { readonly detail?: string } };
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_INVALID);
+        assert.match(String(details.context?.detail ?? ''), /chooseN selection cardinality mismatch/);
+        return true;
+      },
       'Bombing Pause must require exactly two selected spaces',
     );
 
@@ -182,10 +195,15 @@ describe('FITL card-41 Bombing Pause', () => {
           ...move!,
           params: {
             ...move!.params,
-            $targetSpace: ['saigon:none', 'loc-hue-da-nang:none'],
+            [targetDecisionId]: ['saigon:none', 'loc-hue-da-nang:none'],
           },
         }),
-      /(?:outside options domain|moveHasIncompleteParams)/,
+      (error: unknown) => {
+        const details = error as { readonly reason?: string; readonly context?: { readonly detail?: string } };
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_INVALID);
+        assert.match(String(details.context?.detail ?? ''), /outside options domain/);
+        return true;
+      },
       'Bombing Pause must reject LoC/non-support spaces from target selection',
     );
   });

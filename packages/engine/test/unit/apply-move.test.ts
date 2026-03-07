@@ -167,6 +167,65 @@ phase: [asPhaseId('main')],
     ],
   }) as unknown as GameDef;
 
+const createEventDynamicChooseNDecisionDef = (): GameDef =>
+  ({
+    metadata: { id: 'event-dynamic-choose-n-decision', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+    seats: [{ id: '0' }, { id: '1' }],
+    constants: {},
+    globalVars: [{ name: 'resolved', type: 'int', init: 0, min: 0, max: 99 }],
+    perPlayerVars: [],
+    zones: [
+      { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+      { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+    ],
+    tokenTypes: [{ id: 'card', props: {} }],
+    setup: [],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    actions: [
+      {
+        id: asActionId('event'),
+        capabilities: ['cardEvent'],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+    ],
+    triggers: [],
+    terminal: { conditions: [] },
+    eventDecks: [
+      {
+        id: 'event-deck',
+        drawZone: asZoneId('deck:none'),
+        discardZone: asZoneId('played:none'),
+        cards: [
+          {
+            id: 'event-card',
+            title: 'Event Card',
+            sideMode: 'single',
+            unshaded: {
+              effects: [
+                {
+                  chooseN: {
+                    internalDecisionId: 'decision:$targets',
+                    bind: '$targets',
+                    options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
+                    n: 2,
+                  },
+                },
+                { addVar: { scope: 'global', var: 'resolved', delta: 1 } },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  }) as unknown as GameDef;
+
 const createEventDynamicDecisionState = (): GameState => ({
   ...createState(),
   globalVars: { resolved: 0 },
@@ -2538,6 +2597,33 @@ phase: [asPhaseId('main')],
         const details = error as { readonly code?: string; readonly reason?: string };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_INVALID);
+        return true;
+      },
+    );
+  });
+
+  it('rejects invalid chooseN dynamic event-side params with canonical invalid-params code', () => {
+    const def = createEventDynamicChooseNDecisionDef();
+    const state = createEventDynamicDecisionState();
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('event'), params: { 'decision:$targets': ['alpha'] } }),
+      (error: unknown) => {
+        const details = error as { readonly code?: string; readonly reason?: string; readonly context?: { readonly detail?: string } };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_INVALID);
+        assert.match(String(details.context?.detail ?? ''), /chooseN selection cardinality mismatch/);
+        return true;
+      },
+    );
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('event'), params: { 'decision:$targets': ['alpha', 'delta'] } }),
+      (error: unknown) => {
+        const details = error as { readonly code?: string; readonly reason?: string; readonly context?: { readonly detail?: string } };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_INVALID);
+        assert.match(String(details.context?.detail ?? ''), /outside options domain/);
         return true;
       },
     );

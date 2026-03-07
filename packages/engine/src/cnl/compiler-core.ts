@@ -3,7 +3,7 @@ import type { EffectAST, EventDeckDef, GameDef, NumericTrackDef, RuntimeTableCon
 import type { TypeInferenceContext } from './type-inference.js';
 import { asActionId, asZoneId } from '../kernel/branded.js';
 import { isCardEventAction } from '../kernel/action-capabilities.js';
-import { ACTION_CAPABILITY_CARD_EVENT } from '../contracts/index.js';
+import { ACTION_CAPABILITY_CARD_EVENT, PREDICATE_OPERATORS } from '../contracts/index.js';
 import { isKernelReferenceDiagnosticCode } from '../kernel/reference-diagnostic-codes.js';
 import { validateGameDefBoundary, type ValidatedGameDef } from '../kernel/validate-gamedef.js';
 import { materializeZoneDefs } from './compile-zones.js';
@@ -231,7 +231,8 @@ export function compileGameSpecToGameDef(
   options?: CompileOptions,
 ): CompileResult {
   const limits = resolveCompileLimits(options?.limits);
-  const templateExpansion = expandTemplates(doc);
+  const normalizedDoc = normalizePredicateAliasShorthand(doc);
+  const templateExpansion = expandTemplates(normalizedDoc);
   const conditionExpansion = expandConditionMacros(templateExpansion.doc);
   const macroExpansion = expandEffectMacros(conditionExpansion.doc);
   const expanded = expandMacros(macroExpansion.doc, options);
@@ -259,6 +260,45 @@ export function compileGameSpecToGameDef(
     sections: compiled.sections,
     diagnostics: finalizedDiagnostics,
   };
+}
+
+type PredicateAliasKey = (typeof PREDICATE_OPERATORS)[number];
+
+function normalizePredicateAliasShorthand<TValue>(value: TValue): TValue {
+  if (Array.isArray(value)) {
+    return value.map((entry) => normalizePredicateAliasShorthand(entry)) as TValue;
+  }
+  if (!isRecord(value)) {
+    return value;
+  }
+
+  const normalized: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value)) {
+    normalized[key] = normalizePredicateAliasShorthand(child);
+  }
+
+  const hasPropOrField = typeof normalized.prop === 'string' || typeof normalized.field === 'string';
+  const hasCanonicalShape = Object.prototype.hasOwnProperty.call(normalized, 'op')
+    || Object.prototype.hasOwnProperty.call(normalized, 'value');
+  if (!hasPropOrField || hasCanonicalShape) {
+    return normalized as TValue;
+  }
+
+  const aliasKeys = PREDICATE_OPERATORS.filter((key) => Object.prototype.hasOwnProperty.call(normalized, key));
+  if (aliasKeys.length !== 1) {
+    return normalized as TValue;
+  }
+
+  const aliasKey = aliasKeys[0] as PredicateAliasKey;
+  const aliasValue = normalized[aliasKey];
+  delete normalized[aliasKey];
+  normalized.op = aliasKey;
+  normalized.value = aliasValue;
+  return normalized as TValue;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function compileExpandedDoc(

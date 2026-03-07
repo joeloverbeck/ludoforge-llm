@@ -1,6 +1,19 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import {
+  appendActionPipelineConditionSurfacePath,
+  appendEffectConditionSurfacePath,
+  appendQueryConditionSurfacePath,
+  appendValueExprConditionSurfacePath,
+  CONDITION_SURFACE_SUFFIX,
+} from '../../src/contracts/index.js';
+import type {
+  ActionPipelineConditionSurfaceSuffix,
+  EffectConditionSurfaceSuffix,
+  QueryConditionSurfaceSuffix,
+  ValueExprConditionSurfaceSuffix,
+} from '../../src/contracts/index.js';
 import type {
   AssetRowPredicate,
   ConditionAST,
@@ -13,7 +26,7 @@ import type {
   ScenarioPiecePlacement,
   TokenFilterPredicate,
 } from '../../src/kernel/index.js';
-import type { PredicateOp } from '../../src/kernel/predicate-op-contract.js';
+import type { PredicateOp } from '../../src/contracts/index.js';
 import { LEAF_OPTIONS_QUERY_TRANSFORM_CONTRACT_MAP, OPTIONS_QUERY_KIND_CONTRACT_MAP } from '../../src/kernel/query-kind-map.js';
 import type {
   LeafOptionsQueryKindFromContractMap,
@@ -325,5 +338,39 @@ describe('exhaustive kernel unions', () => {
     });
     void exhaustConditionAST({ op: 'adjacent', left: 'zone:a', right: 'zone:b' });
     void exhaustOptionsQuery({ query: 'players' });
+  });
+
+  it('keeps condition-surface helper families type-isolated', () => {
+    const valueExprPath = appendValueExprConditionSurfacePath('actions[0].effects[0]', CONDITION_SURFACE_SUFFIX.valueExpr.ifWhen);
+    const queryPath = appendQueryConditionSurfacePath('actions[0].params[0].domain', CONDITION_SURFACE_SUFFIX.query.where);
+    const effectPath = appendEffectConditionSurfacePath('actions[0].effects[0]', CONDITION_SURFACE_SUFFIX.effect.moveAllFilter);
+    const actionPipelinePath = appendActionPipelineConditionSurfacePath(
+      'actionPipelines[0]',
+      CONDITION_SURFACE_SUFFIX.actionPipeline.targetingFilter,
+    );
+    assert.equal(valueExprPath, 'actions[0].effects[0].if.when');
+    assert.equal(queryPath, 'actions[0].params[0].domain.where');
+    assert.equal(effectPath, 'actions[0].effects[0].moveAll.filter');
+    assert.equal(actionPipelinePath, 'actionPipelines[0].targeting.filter');
+
+    const valueExprSuffix: ValueExprConditionSurfaceSuffix = CONDITION_SURFACE_SUFFIX.valueExpr.ifWhen;
+    const querySuffix: QueryConditionSurfaceSuffix = CONDITION_SURFACE_SUFFIX.query.via;
+    const effectSuffix: EffectConditionSurfaceSuffix = CONDITION_SURFACE_SUFFIX.effect.ifWhen;
+    const actionPipelineSuffix: ActionPipelineConditionSurfaceSuffix =
+      CONDITION_SURFACE_SUFFIX.actionPipeline.legality;
+
+    void valueExprSuffix;
+    void querySuffix;
+    void effectSuffix;
+    void actionPipelineSuffix;
+
+    // @ts-expect-error query suffix must not be accepted by valueExpr helper.
+    void appendValueExprConditionSurfacePath('actions[0].params[0].domain', CONDITION_SURFACE_SUFFIX.query.where);
+    // @ts-expect-error effect suffix must not be accepted by query helper.
+    void appendQueryConditionSurfacePath('actions[0].effects[0]', CONDITION_SURFACE_SUFFIX.effect.moveAllFilter);
+    // @ts-expect-error actionPipeline suffix must not be accepted by effect helper.
+    void appendEffectConditionSurfacePath('actions[0].effects[0]', CONDITION_SURFACE_SUFFIX.actionPipeline.applicability);
+    // @ts-expect-error valueExpr suffix must not be accepted by actionPipeline helper.
+    void appendActionPipelineConditionSurfacePath('actionPipelines[0]', CONDITION_SURFACE_SUFFIX.valueExpr.ifWhen);
   });
 });

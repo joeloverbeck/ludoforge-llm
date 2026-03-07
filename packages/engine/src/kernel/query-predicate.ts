@@ -1,5 +1,5 @@
 import { typeMismatchError } from './eval-error.js';
-import { isPredicateOp, type PredicateOp, PREDICATE_OPERATORS } from './predicate-op-contract.js';
+import { isPredicateOp, type PredicateOp, PREDICATE_OPERATORS } from '../contracts/index.js';
 import { matchesScalarMembership } from './value-membership.js';
 
 export type PredicateScalar = string | number | boolean;

@@ -55,6 +55,40 @@ export const hasImportWithModuleSubstring = (sourceFile: ts.SourceFile, moduleSu
   return false;
 };
 
+export const collectNamedImportsByLocalName = (
+  sourceFile: ts.SourceFile,
+  moduleSpecifierText: string,
+): ReadonlyMap<string, string> => {
+  const importedNames = new Map<string, string>();
+
+  for (const statement of sourceFile.statements) {
+    if (!ts.isImportDeclaration(statement)) {
+      continue;
+    }
+    if (!ts.isStringLiteral(statement.moduleSpecifier) || statement.moduleSpecifier.text !== moduleSpecifierText) {
+      continue;
+    }
+
+    const namedBindings = statement.importClause?.namedBindings;
+    if (namedBindings === undefined || !ts.isNamedImports(namedBindings)) {
+      continue;
+    }
+
+    for (const element of namedBindings.elements) {
+      const importedName = element.propertyName?.text ?? element.name.text;
+      importedNames.set(element.name.text, importedName);
+    }
+  }
+
+  return importedNames;
+};
+
+export const hasDirectNamedImport = (
+  sourceFile: ts.SourceFile,
+  moduleSpecifierText: string,
+  identifier: string,
+): boolean => collectNamedImportsByLocalName(sourceFile, moduleSpecifierText).get(identifier) === identifier;
+
 const hasExportModifier = (modifiers: ts.NodeArray<ts.ModifierLike> | undefined): boolean =>
   modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) ?? false;
 

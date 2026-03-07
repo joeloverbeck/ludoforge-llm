@@ -49,12 +49,17 @@ import {
 import { inferTransformSourceIncompatibleRuntimeShapes } from './query-kind-contract.js';
 import { getLeafOptionsQueryTransformContract, type LeafOptionsQueryTransformKind } from './query-kind-map.js';
 import {
+  normalizeTokenFilterTraversalError,
+  type TokenFilterTraversalError,
   isTokenFilterPredicateExpr,
-  isTokenFilterTraversalError,
   tokenFilterPathSuffix,
-  walkTokenFilterExpr,
+  walkTokenFilterExprRecovering,
 } from './token-filter-expr-utils.js';
-import { isPredicateOp, PREDICATE_OPERATORS } from './predicate-op-contract.js';
+import {
+  tokenFilterTraversalValidatorMessage,
+  tokenFilterTraversalValidatorSuggestion,
+} from './token-filter-validator-boundary.js';
+import { isPredicateOp, PREDICATE_OPERATORS } from '../contracts/index.js';
 
 function validateStaticMapSpaceSelector(
   diagnostics: Diagnostic[],
@@ -633,42 +638,29 @@ const validateTokenFilterExpr = (
   path: string,
   context: ValidationContext,
 ): void => {
-  try {
-    walkTokenFilterExpr(filter, (entry, entryPathSegments) => {
-      const entryPath = `${path}${tokenFilterPathSuffix(entryPathSegments)}`;
-      if (isTokenFilterPredicateExpr(entry)) {
-        validateTokenFilterPredicate(diagnostics, entry, entryPath, context);
-        return;
-      }
-      if (entry.op === 'not') {
-        return;
-      }
-    });
-  } catch (error: unknown) {
-    if (!isTokenFilterTraversalError(error)) {
-      throw error;
-    }
-    const entryPath = `${path}${tokenFilterPathSuffix(error.context.path)}`;
-    const isBooleanOp = error.context.op === 'and' || error.context.op === 'or';
-    const suggestion = error.context.reason === 'unsupported_operator'
-      ? 'Use one of: and, or, not.'
-      : error.context.reason === 'empty_args'
-        ? booleanAritySuggestion('tokenFilter')
-        : 'Use a predicate leaf or a well-formed and/or/not expression node.';
-    const message = error.context.reason === 'unsupported_operator'
-      ? `Unsupported token filter operator "${String(error.context.op)}".`
-      : error.context.reason === 'empty_args'
-        ? booleanArityMessage('tokenFilter', isBooleanOp ? error.context.op : 'and')
-        : `Malformed token filter expression node for operator "${String(error.context.op)}".`;
-    const errorPath = error.context.reason === 'empty_args' ? `${entryPath}.args` : `${entryPath}.op`;
+  const pushTraversalDiagnostic = (error: TokenFilterTraversalError): void => {
+    const normalizedError = normalizeTokenFilterTraversalError(error);
+    const entryPath = `${path}${normalizedError.entryPathSuffix}`;
+    const errorPath = `${entryPath}${normalizedError.errorFieldSuffix}`;
     diagnostics.push({
       code: 'DOMAIN_QUERY_INVALID',
       path: errorPath,
       severity: 'error',
-      message,
-      suggestion,
+      message: tokenFilterTraversalValidatorMessage(normalizedError),
+      suggestion: tokenFilterTraversalValidatorSuggestion(normalizedError),
     });
-  }
+  };
+
+  walkTokenFilterExprRecovering(
+    filter,
+    (entry, entryPathSegments) => {
+      const entryPath = `${path}${tokenFilterPathSuffix(entryPathSegments)}`;
+      if (isTokenFilterPredicateExpr(entry)) {
+        validateTokenFilterPredicate(diagnostics, entry, entryPath, context);
+      }
+    },
+    pushTraversalDiagnostic,
+  );
 };
 
 const validateTokenFilter = (

@@ -11,7 +11,7 @@ import {
   ValueExprSchema,
   asPlayerId,
 } from '../../src/kernel/index.js';
-import { PREDICATE_OPERATORS } from '../../src/kernel/predicate-op-contract.js';
+import { PREDICATE_OPERATORS } from '../../src/contracts/index.js';
 import { AST_SCOPED_VAR_SCOPES } from '../../src/kernel/scoped-var-contract.js';
 import { buildDiscriminatedEndpointMatrix } from '../helpers/transfer-endpoint-matrix.js';
 

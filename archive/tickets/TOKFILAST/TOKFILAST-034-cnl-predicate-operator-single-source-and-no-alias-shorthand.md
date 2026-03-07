@@ -1,6 +1,6 @@
 # TOKFILAST-034: CNL Predicate Operators — Single Source Contract and No Alias Shorthand
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — CNL lowering/operator contract ownership
@@ -12,10 +12,11 @@ CNL lowering still duplicates predicate-operator literals and accepts shorthand 
 
 ## Assumption Reassessment (2026-03-06)
 
-1. Kernel predicate-op contracts are now centralized in `packages/engine/src/kernel/predicate-op-contract.ts`.
+1. Predicate-op contracts are now centralized in `packages/engine/src/contracts/predicate-op-contract.ts` and consumed via `packages/engine/src/contracts/index.ts`.
 2. CNL lowering currently declares independent operator tuples (`SUPPORTED_TOKEN_FILTER_OPS` and `SUPPORTED_ASSET_ROW_FILTER_OPS`) in `packages/engine/src/cnl/compile-conditions.ts`.
 3. CNL lowering currently accepts shorthand alias payloads (for example `{ prop, eq: ... }` and `{ field, in: ... }`) and resolves them into canonical operators.
-4. Existing active TOKFILAST tickets (`027`-`033`) do not scope CNL predicate-op single-sourcing plus shorthand alias removal.
+4. TOKFILAST `027`-`033` are already archived/completed and do not deliver CNL predicate-op single-sourcing plus shorthand alias removal.
+5. `packages/engine/test/unit/compile-conditions.test.ts` still encodes shorthand alias fixtures (`eq`/`neq`/`in`/`notIn`) across token-filter and query-lowering tests, so this ticket must update those fixtures to canonical `{ op, value }`.
 
 ## Architecture Check
 
@@ -27,7 +28,7 @@ CNL lowering still duplicates predicate-operator literals and accepts shorthand 
 
 ### 1. Replace duplicated CNL operator tuples with shared contract imports
 
-Use `PredicateOp` and/or `PREDICATE_OPERATORS` from `predicate-op-contract.ts` in CNL lowering paths for token filters and asset row predicates.
+Use `PredicateOp` and/or `PREDICATE_OPERATORS` from the shared contracts surface (`src/contracts`) in CNL lowering paths for token filters and asset row predicates.
 
 ### 2. Remove shorthand alias operator parsing from CNL lowering
 
@@ -37,16 +38,20 @@ Delete fallback resolution via `eq`/`neq`/`in`/`notIn` keys; require canonical `
 
 Ensure missing/invalid operator diagnostics continue to be deterministic after alias removal and list canonical operators only.
 
+### 4. Update unit fixtures to canonical predicate shape
+
+Replace shorthand alias fixtures in CNL unit coverage with canonical `{ op, value }` predicates and add explicit alias-rejection assertions.
+
 ## Files to Touch
 
 - `packages/engine/src/cnl/compile-conditions.ts` (modify)
 - `packages/engine/test/unit/compile-conditions.test.ts` (modify)
-- `packages/engine/test/unit/compiler-structured-results.test.ts` (modify, if diagnostic-shape assertions require updates)
+- `packages/engine/test/unit/compiler-structured-results.test.ts` (modify only if diagnostic-shape assertions require updates)
 
 ## Out of Scope
 
 - Token-filter traversal boundary/path behavior (`archive/tickets/TOKFILAST/TOKFILAST-027-token-filter-empty-args-path-fidelity-centralization.md`).
-- Condition-surface helper policy work (`tickets/TOKFILAST-030-condition-surface-policy-import-origin-enforcement.md` and follow-ups).
+- Condition-surface helper policy work (`archive/tickets/TOKFILAST/TOKFILAST-030-condition-surface-policy-import-origin-enforcement.md` and follow-ups).
 
 ## Acceptance Criteria
 
@@ -65,11 +70,19 @@ Ensure missing/invalid operator diagnostics continue to be deterministic after a
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/compile-conditions.test.ts` — assert canonical predicate shape acceptance and shorthand alias rejection.
-2. `packages/engine/test/unit/compiler-structured-results.test.ts` — verify deterministic CNL diagnostics for invalid predicate operator payloads after alias removal.
+1. `packages/engine/test/unit/compile-conditions.test.ts` — convert token-filter fixtures to canonical `{ op, value }`, assert canonical acceptance, and assert shorthand alias rejection for token-filter and `assetRows.where`.
+2. `packages/engine/test/unit/compiler-structured-results.test.ts` — update only if structured diagnostic-shape expectations change due to alias removal (otherwise no-op).
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test:unit`
 3. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- Removed shorthand alias parsing (`eq`/`neq`/`in`/`notIn`) from CNL token-filter and `assetRows.where` lowering; canonical `{ op, value }` is now required.
+- Replaced local CNL operator tuples with shared `isPredicateOp`/`PREDICATE_OPERATORS` contract usage.
+- Promoted predicate-op ownership to shared contracts (`src/contracts/predicate-op-contract.ts`) to satisfy import-boundary architecture and keep a single contract source.
+- Updated unit fixtures to canonical predicate shape and added explicit alias-rejection tests for token filters and `assetRows.where`.
+- Aligned dependent kernel/test imports and boundary-policy assertions with the shared contracts ownership model.

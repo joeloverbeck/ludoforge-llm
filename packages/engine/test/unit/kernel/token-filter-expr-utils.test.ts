@@ -7,8 +7,9 @@ import {
   tokenFilterBooleanArityError,
   tokenFilterPathSuffix,
   walkTokenFilterExpr,
+  walkTokenFilterExprRecovering,
 } from '../../../src/kernel/token-filter-expr-utils.js';
-import { PREDICATE_OPERATORS } from '../../../src/kernel/predicate-op-contract.js';
+import { PREDICATE_OPERATORS } from '../../../src/contracts/index.js';
 import type { TokenFilterExpr } from '../../../src/kernel/types.js';
 
 describe('token-filter-expr-utils', () => {
@@ -94,6 +95,39 @@ describe('token-filter-expr-utils', () => {
       '.args[0]=predicate:id',
       '.args[1]=op:not',
       '.args[1].arg=predicate:faction',
+    ]);
+  });
+
+  it('walkTokenFilterExprRecovering continues across siblings and reports traversal errors deterministically', () => {
+    const mixed = {
+      op: 'and',
+      args: [
+        { op: 'or', args: [] },
+        { prop: 'id', op: 'eq', value: 'a' },
+        { op: 'xor', args: [{ prop: 'id', op: 'eq', value: 'b' }] },
+      ],
+    } as unknown as TokenFilterExpr;
+
+    const visited: string[] = [];
+    const errors: string[] = [];
+    walkTokenFilterExprRecovering(
+      mixed,
+      (entry, path) => {
+        const node = 'prop' in entry ? `predicate:${entry.prop}` : `op:${entry.op}`;
+        visited.push(`${tokenFilterPathSuffix(path)}=${node}`);
+      },
+      (error) => {
+        errors.push(`${error.context.reason}@${tokenFilterPathSuffix(error.context.path)}`);
+      },
+    );
+
+    assert.deepEqual(visited, [
+      '=op:and',
+      '.args[1]=predicate:id',
+    ]);
+    assert.deepEqual(errors, [
+      'empty_args@.args[0]',
+      'unsupported_operator@.args[2]',
     ]);
   });
 

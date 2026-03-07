@@ -4,7 +4,12 @@ import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 import ts from 'typescript';
-import { collectCallExpressionsByIdentifier, parseTypeScriptSource } from '../../helpers/kernel-source-ast-guard.js';
+import {
+  collectCallExpressionsByIdentifier,
+  hasDirectNamedImport,
+  parseTypeScriptSource,
+  unwrapTypeScriptExpression,
+} from '../../helpers/kernel-source-ast-guard.js';
 import { findEnginePackageRoot } from '../../helpers/lint-policy-helpers.js';
 
 type ConditionPathViolation = {
@@ -20,18 +25,27 @@ const VALIDATOR_FILES = [
   ['src', 'kernel', 'validate-gamedef-extensions.ts'],
 ] as const;
 
-function isConditionSurfaceHelperCall(expression: ts.Expression): boolean {
-  if (!ts.isCallExpression(expression) || !ts.isIdentifier(expression.expression)) {
-    return false;
-  }
-  const callee = expression.expression.text;
+const CONDITION_SURFACE_HELPER_IDENTIFIERS = new Set<string>([
+  'appendValueExprConditionSurfacePath',
+  'appendQueryConditionSurfacePath',
+  'appendEffectConditionSurfacePath',
+  'appendActionPipelineConditionSurfacePath',
+]);
+
+function isConditionSurfaceHelperIdentifier(identifier: string): boolean {
   return (
-    callee === 'appendValueExprConditionSurfacePath'
-    || callee === 'appendQueryConditionSurfacePath'
-    || callee === 'appendEffectConditionSurfacePath'
-    || callee === 'appendActionPipelineConditionSurfacePath'
-    || callee.startsWith('conditionSurfacePathFor')
+    CONDITION_SURFACE_HELPER_IDENTIFIERS.has(identifier)
+    || identifier.startsWith('conditionSurfacePathFor')
   );
+}
+
+function getConditionSurfaceHelperCalleeName(expression: ts.Expression): string | undefined {
+  const unwrapped = unwrapTypeScriptExpression(expression);
+  if (!ts.isCallExpression(unwrapped) || !ts.isIdentifier(unwrapped.expression)) {
+    return undefined;
+  }
+  const callee = unwrapped.expression.text;
+  return isConditionSurfaceHelperIdentifier(callee) ? callee : undefined;
 }
 
 function findEnclosingFunctionName(node: ts.Node): string | undefined {
@@ -54,6 +68,57 @@ function findEnclosingFunctionName(node: ts.Node): string | undefined {
   return undefined;
 }
 
+function collectConditionPathViolations(
+  sourceFile: ts.SourceFile,
+  fileLabel: string,
+): readonly ConditionPathViolation[] {
+  const calls = collectCallExpressionsByIdentifier(sourceFile, 'validateConditionAst');
+  const violations: ConditionPathViolation[] = [];
+
+  for (const call of calls) {
+    const enclosingFunctionName = findEnclosingFunctionName(call);
+    if (enclosingFunctionName === 'validateConditionAst') {
+      continue;
+    }
+
+    const conditionPathArg = call.arguments[2];
+    if (conditionPathArg === undefined) {
+      const line = sourceFile.getLineAndCharacterOfPosition(call.getStart(sourceFile)).line + 1;
+      violations.push({
+        file: fileLabel,
+        line,
+        expression: call.getText(sourceFile),
+        reason: 'missing third path argument',
+      });
+      continue;
+    }
+
+    const helperCalleeName = getConditionSurfaceHelperCalleeName(conditionPathArg);
+    if (helperCalleeName === undefined) {
+      const line = sourceFile.getLineAndCharacterOfPosition(conditionPathArg.getStart(sourceFile)).line + 1;
+      violations.push({
+        file: fileLabel,
+        line,
+        expression: conditionPathArg.getText(sourceFile),
+        reason: 'path argument is not a condition-surface helper call',
+      });
+      continue;
+    }
+
+    if (!hasDirectNamedImport(sourceFile, '../contracts/index.js', helperCalleeName)) {
+      const line = sourceFile.getLineAndCharacterOfPosition(conditionPathArg.getStart(sourceFile)).line + 1;
+      violations.push({
+        file: fileLabel,
+        line,
+        expression: conditionPathArg.getText(sourceFile),
+        reason: 'condition-surface helper is not a direct named import from ../contracts/index.js',
+      });
+    }
+  }
+
+  return violations;
+}
+
 describe('condition-surface validator callsite policy', () => {
   it('keeps top-level validator validateConditionAst paths owned by condition-surface helpers', () => {
     const thisDir = dirname(fileURLToPath(import.meta.url));
@@ -64,36 +129,7 @@ describe('condition-surface validator callsite policy', () => {
       const absolutePath = resolve(engineRoot, ...segments);
       const source = readFileSync(absolutePath, 'utf8');
       const sourceFile = parseTypeScriptSource(source, absolutePath);
-      const calls = collectCallExpressionsByIdentifier(sourceFile, 'validateConditionAst');
-
-      for (const call of calls) {
-        const enclosingFunctionName = findEnclosingFunctionName(call);
-        if (enclosingFunctionName === 'validateConditionAst') {
-          continue;
-        }
-
-        const conditionPathArg = call.arguments[2];
-        if (conditionPathArg === undefined) {
-          const line = sourceFile.getLineAndCharacterOfPosition(call.getStart(sourceFile)).line + 1;
-          violations.push({
-            file: relative(engineRoot, absolutePath),
-            line,
-            expression: call.getText(sourceFile),
-            reason: 'missing third path argument',
-          });
-          continue;
-        }
-
-        if (!isConditionSurfaceHelperCall(conditionPathArg)) {
-          const line = sourceFile.getLineAndCharacterOfPosition(conditionPathArg.getStart(sourceFile)).line + 1;
-          violations.push({
-            file: relative(engineRoot, absolutePath),
-            line,
-            expression: conditionPathArg.getText(sourceFile),
-            reason: 'path argument is not a condition-surface helper call',
-          });
-        }
-      }
+      violations.push(...collectConditionPathViolations(sourceFile, relative(engineRoot, absolutePath)));
     }
 
     assert.deepEqual(
@@ -107,10 +143,35 @@ describe('condition-surface validator callsite policy', () => {
         'Disallowed at top-level validator callsites:',
         '- raw string literals (for example "triggers[0].when")',
         '- raw template literals (for example `actions[${index}].pre`)',
+        '- helper-like local wrappers that are not imported from ../contracts/index.js',
+        '- helper aliases imported with `as` renaming (direct helper names only)',
         '- ad-hoc helper aliases/wrappers instead of condition-surface contract helpers',
         'Violations:',
         ...violations.map((violation) => `- ${violation.file}:${violation.line} (${violation.reason}) -> ${violation.expression}`),
       ].join('\n'),
+    );
+  });
+
+  it('rejects same-name local helper wrappers even when callee text matches contracts helper naming', () => {
+    const fixtureFile = 'validator-wrapper-fixture.ts';
+    const source = `
+      import { validateConditionAst } from './validate-gamedef-behavior.js';
+
+      function appendQueryConditionSurfacePath(basePath: string, suffix: string): string {
+        return basePath + suffix;
+      }
+
+      export function validateThing(diagnostics: unknown[], condition: unknown, context: unknown): void {
+        validateConditionAst(diagnostics, condition, appendQueryConditionSurfacePath('actions[0].params[0].domain', '.where'), context);
+      }
+    `;
+    const sourceFile = parseTypeScriptSource(source, fixtureFile);
+    const violations = collectConditionPathViolations(sourceFile, fixtureFile);
+
+    assert.equal(violations.length, 1, 'Local same-name wrappers must be rejected by import-origin policy.');
+    assert.equal(
+      violations[0]?.reason,
+      'condition-surface helper is not a direct named import from ../contracts/index.js',
     );
   });
 });

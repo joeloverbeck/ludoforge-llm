@@ -1,5 +1,5 @@
 import type { PlayerId, TokenId, ZoneId } from './branded.js';
-import type { PredicateOp } from './predicate-op-contract.js';
+import type { PredicateOp } from '../contracts/index.js';
 import type { ScopedVarEndpointContract, ScopedVarPayloadContract } from './scoped-var-contract.js';
 import type { TurnFlowActionClass } from '../contracts/index.js';
 

@@ -6,7 +6,11 @@ import { describe, it } from 'node:test';
 import ts from 'typescript';
 
 import { findEnginePackageRoot, listTypeScriptFiles } from '../../helpers/lint-policy-helpers.js';
-import { collectCallExpressionsByIdentifier, parseTypeScriptSource } from '../../helpers/kernel-source-ast-guard.js';
+import {
+  collectCallExpressionsByIdentifier,
+  hasDirectNamedImport,
+  parseTypeScriptSource,
+} from '../../helpers/kernel-source-ast-guard.js';
 
 const thisDir = dirname(fileURLToPath(import.meta.url));
 const engineRoot = findEnginePackageRoot(thisDir);
@@ -21,22 +25,7 @@ const LINKED_WINDOW_MATCHING_ARRAY_IDENTIFIERS = new Set<string>([
 const DISALLOWED_ARRAY_MATCHING_METHODS = new Set<string>(['includes', 'indexOf', 'some', 'find', 'filter']);
 
 const importsLinkedWindowHelperFromContractsIndex = (sourceFile: ts.SourceFile): boolean => {
-  for (const statement of sourceFile.statements) {
-    if (!ts.isImportDeclaration(statement)) {
-      continue;
-    }
-    if (!ts.isStringLiteral(statement.moduleSpecifier) || statement.moduleSpecifier.text !== '../contracts/index.js') {
-      continue;
-    }
-    if (
-      statement.importClause?.namedBindings !== undefined
-      && ts.isNamedImports(statement.importClause.namedBindings)
-      && statement.importClause.namedBindings.elements.some((element) => element.name.text === 'findMissingTurnFlowLinkedWindows')
-    ) {
-      return true;
-    }
-  }
-  return false;
+  return hasDirectNamedImport(sourceFile, '../contracts/index.js', 'findMissingTurnFlowLinkedWindows');
 };
 
 const hasDisallowedAdHocLinkedWindowMatching = (sourceFile: ts.SourceFile): boolean => {

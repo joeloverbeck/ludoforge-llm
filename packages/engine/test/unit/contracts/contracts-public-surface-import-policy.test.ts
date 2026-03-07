@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
+import * as contractsIndex from '../../../src/contracts/index.js';
 
 const thisDir = dirname(fileURLToPath(import.meta.url));
 const engineSrcDir = resolve(thisDir, '../../../../src');
@@ -58,6 +59,38 @@ describe('contracts public surface import policy', () => {
         indexSource.includes(`'./${moduleName}.js'`) || indexSource.includes(`"./${moduleName}.js"`),
         true,
         `contracts/index.ts must re-export ./${moduleName}.js`,
+      );
+    }
+  });
+
+  it('does not expose legacy flat condition-surface exports on contracts public surface', () => {
+    const publicExportNames = Object.keys(contractsIndex);
+
+    assert.equal(
+      publicExportNames.includes('appendConditionSurfacePath'),
+      false,
+      'contracts/index public surface must not export appendConditionSurfacePath',
+    );
+
+    const legacyFlatConditionSurfaceKeys = [
+      'ifWhen',
+      'spaceFilterCondition',
+      'via',
+      'where',
+      'filterCondition',
+      'moveAllFilter',
+      'grantFreeOperationZoneFilter',
+      'applicability',
+      'legality',
+      'costValidation',
+      'targetingFilter',
+    ];
+
+    for (const legacyFlatKey of legacyFlatConditionSurfaceKeys) {
+      assert.equal(
+        publicExportNames.includes(legacyFlatKey),
+        false,
+        `contracts/index public surface must not export legacy flat condition-surface key ${legacyFlatKey}`,
       );
     }
   });

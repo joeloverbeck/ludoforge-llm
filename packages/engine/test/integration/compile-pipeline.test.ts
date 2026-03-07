@@ -81,6 +81,71 @@ actor: 'active',
     assert.deepEqual(raw, expanded);
   });
 
+  it('normalizes predicate shorthand aliases before compilation', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: pipeline-predicate-shorthand-normalization',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      'zones:',
+      '  - id: board:none',
+      '    owner: none',
+      '    visibility: public',
+      '    ordering: set',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      'actions:',
+      '  - id: pass',
+      '    actor: active',
+      '    executor: actor',
+      '    phase: [main]',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects: []',
+      '    limits: []',
+      'terminal:',
+      '  conditions:',
+      '    - when:',
+      '        op: "=="',
+      '        left:',
+      '          aggregate:',
+      '            op: count',
+      '            query:',
+      '              query: tokensInZone',
+      '              zone: board:none',
+      '              filter: { prop: type, eq: troops }',
+      '        right: 0',
+      '      result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_MISSING_CAPABILITY'
+          && diagnostic.path === 'doc.terminal.conditions.0.when.left.aggregate.query.filter'
+          && diagnostic.message.includes('token filter operator'),
+      ),
+      false,
+    );
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TOKEN_FILTER_PROP_UNKNOWN'
+          && diagnostic.path === 'doc.terminal.conditions.0.when.left.aggregate.query.filter.prop',
+      ),
+      true,
+    );
+  });
+
   it('merges adjacency validation diagnostics and nulls gameDef on any error', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),

@@ -1,6 +1,6 @@
 # LEGACTTOO-035: Limit Usage Annotation Invariant Enforcement
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel condition annotator invariant enforcement + tests

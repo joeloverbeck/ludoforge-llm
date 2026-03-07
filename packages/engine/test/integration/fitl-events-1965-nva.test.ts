@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { findDeep } from '../helpers/ast-search-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const expectedCards = [
@@ -79,6 +80,37 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
       assert.deepEqual(effect?.setupEffects, [{ setVar: { scope: 'global', var: expected.varName, value: true } }]);
       assert.deepEqual(effect?.teardownEffects, [{ setVar: { scope: 'global', var: expected.varName, value: false } }]);
     }
+  });
+
+  it('encodes card 38 as immediate redeploy plus ARVN -12 before momentum lockouts', () => {
+    const { parsed, compiled } = compileProductionSpec();
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-38');
+    const parsedCard = parsed.doc.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-38');
+    assert.notEqual(card, undefined);
+    assert.notEqual(parsedCard, undefined);
+    assert.equal(
+      card?.unshaded?.text,
+      'Redeploy all COIN forces outside Vietnam to COIN-Controlled Cities. ARVN Resources -12. No Infiltrate or Trail Improvement by Rally until Coup. MOMENTUM',
+    );
+
+    const arvnHit = findDeep(card?.unshaded?.effects, (node) =>
+      node?.addVar?.scope === 'global' && node?.addVar?.var === 'arvnResources' && node?.addVar?.delta === -12,
+    );
+    assert.ok(arvnHit.length >= 1, 'Card-38 should include ARVN Resources -12 immediate effect');
+
+    const outsideVietnamRefs = findDeep(parsedCard?.unshaded?.effects, (node) =>
+      node?.conditionMacro === 'fitl-space-outside-vietnam-province',
+    );
+    assert.ok(outsideVietnamRefs.length >= 1, 'Card-38 should source redeploy pieces from Laos/Cambodia provinces only');
+
+    const coinControlledCityRefs = findDeep(parsedCard?.unshaded?.effects, (node) =>
+      node?.conditionMacro === 'fitl-space-coin-controlled-city',
+    );
+    assert.ok(coinControlledCityRefs.length >= 1, 'Card-38 should target only COIN-controlled cities');
   });
 
   it('encodes card 44 (Ia Drang) as chained US operation grants plus shaded die-roll troop losses', () => {

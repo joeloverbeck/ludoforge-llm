@@ -56,14 +56,19 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
     for (const expected of expectedCards) {
       const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === expected.id);
       assert.notEqual(card, undefined, `Expected ${expected.id} to exist`);
+      const expectedSideMode = expected.id === 'card-41' ? 'single' : 'dual';
       assert.equal(card?.title, expected.title);
       assert.equal(card?.order, expected.order);
-      assert.equal(card?.sideMode, 'dual');
+      assert.equal(card?.sideMode, expectedSideMode);
       assert.equal(card?.metadata?.period, '1968');
       assert.deepEqual(card?.metadata?.seatOrder, expected.seatOrder);
       assert.equal(typeof card?.metadata?.flavorText, 'string', `${expected.id} must include flavorText`);
       assert.equal(typeof card?.unshaded?.text, 'string', `${expected.id} must include unshaded text`);
-      assert.equal(typeof card?.shaded?.text, 'string', `${expected.id} must include shaded text`);
+      if (expectedSideMode === 'dual') {
+        assert.equal(typeof card?.shaded?.text, 'string', `${expected.id} must include shaded text`);
+      } else {
+        assert.equal(card?.shaded, undefined, `${expected.id} must not include shaded side data`);
+      }
     }
   });
 
@@ -170,7 +175,21 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
 
     const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-41');
     assert.notEqual(card, undefined);
+    assert.equal(card?.sideMode, 'single');
     assert.equal(card?.tags?.includes('momentum'), true);
+    assert.equal(card?.unshaded?.text, 'Set any two spaces to Passive Support. Patronage +2. No Air Strike until Coup. MOMENTUM');
+    assert.equal(card?.shaded, undefined);
+    assert.equal(card?.unshaded?.targets?.[0]?.id, '$targetSpace');
+    assert.equal(card?.unshaded?.targets?.[0]?.selector.query, 'mapSpaces');
+    assert.deepEqual(card?.unshaded?.targets?.[0]?.cardinality, { n: 2 });
+    const filterCondition = card?.unshaded?.targets?.[0]?.selector.filter?.condition as
+      | { op?: string; args?: readonly unknown[] }
+      | undefined;
+    assert.equal(filterCondition?.op, 'and');
+    assert.equal(filterCondition?.args?.length, 3);
+    const firstEffect = card?.unshaded?.effects?.[0];
+    assert.equal('forEach' in (firstEffect ?? {}), true, 'Card 41 should apply marker set per selected space');
+    assert.deepEqual(card?.unshaded?.effects?.[1], { addVar: { scope: 'global', var: 'patronage', delta: 2 } });
 
     const momentum = card?.unshaded?.lastingEffects?.find((effect) => effect.id === 'mom-bombing-pause');
     assert.notEqual(momentum, undefined);

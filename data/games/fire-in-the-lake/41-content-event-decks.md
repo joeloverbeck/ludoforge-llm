@@ -4955,14 +4955,51 @@ eventDecks:
         metadata:
           period: "1968"
           seatOrder: ["NVA", "US", "VC", "ARVN"]
-          flavorText: "Prisoner exchanges and detention politics alter casualty flows."
+          flavorText: "Release negotiations keep US at war."
         unshaded:
-          text: "Move selected Casualties and adjust resources based on exchange outcomes."
+          text: "Free Air Strike. 2 US Troops from Casualties to Available."
+          effectTiming: afterGrants
+          freeOperationGrants:
+            - seat: self
+              executeAsSeat: "us"
+              sequence: { chain: pows-free-airstrike, step: 0 }
+              operationClass: operation
+              actionIds: [airStrike]
+          effects:
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: $usCasualtyTroop
+                    over:
+                      query: tokensInZone
+                      zone: casualties-US:none
+                      filter:
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: troops }
+                    to:
+                      zoneExpr: available-US:none
         shaded:
-          text: "Captivity leverage deepens COIN attrition and slows force recovery."
+          text: "3 US Troops from Available to Casualties."
+          effects:
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: $usAvailableTroop
+                    over:
+                      query: tokensInZone
+                      zone: available-US:none
+                      filter:
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: troops }
+                    to:
+                      zoneExpr: casualties-US:none
       - id: card-41
         title: Bombing Pause
-        sideMode: dual
+        sideMode: single
         order: 41
         tags: [momentum]
         metadata:
@@ -4970,7 +5007,32 @@ eventDecks:
           seatOrder: ["NVA", "ARVN", "US", "VC"]
           flavorText: "Air campaign pauses shift tempo across infiltration and support tracks."
         unshaded:
-          text: "No Air Strike until Coup. MOMENTUM"
+          text: "Set any two spaces to Passive Support. Patronage +2. No Air Strike until Coup. MOMENTUM"
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - op: or
+                      args:
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: southVietnam }
+                    - { op: '>', left: { ref: zoneProp, zone: $zone, prop: population }, right: 0 }
+              cardinality: { n: 2 }
+          effects:
+            - forEach:
+                bind: $space
+                over: { query: binding, name: $targetSpace }
+                effects:
+                  - setMarker:
+                      space: $space
+                      marker: supportOpposition
+                      state: passiveSupport
+            - macro: add-global-var-delta
+              args: { varName: patronage, deltaExpr: 2 }
           lastingEffects:
             - id: mom-bombing-pause
               duration: round
@@ -4980,8 +5042,6 @@ eventDecks:
               teardownEffects:
                 - macro: set-global-flag-false
                   args: { varName: mom_bombingPause }
-        shaded:
-          text: "Pause collapses: US resumes heavy air pressure and NVA pays strategic costs."
       - id: card-42
         title: Chou En Lai
         sideMode: dual
@@ -5709,7 +5769,52 @@ eventDecks:
           seatOrder: ["NVA", "US", "VC", "ARVN"]
           flavorText: "Barrier planning constrains infiltration routes."
         unshaded:
-          text: "No Infiltrate or Trail Improvement until Coup. MOMENTUM"
+          text: "Redeploy all COIN forces outside Vietnam to COIN-Controlled Cities. ARVN Resources -12. No Infiltrate or Trail Improvement by Rally until Coup. MOMENTUM"
+          effects:
+            - if:
+                when:
+                  op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: mapSpaces
+                        filter:
+                          conditionMacro: fitl-space-coin-controlled-city
+                          args: { spaceExpr: $zone }
+                  right: 0
+                then:
+                  - forEach:
+                      bind: $outsideVietnamProvince
+                      over:
+                        query: mapSpaces
+                        filter:
+                          conditionMacro: fitl-space-outside-vietnam-province
+                          args: { spaceExpr: $zone }
+                      effects:
+                        - forEach:
+                            bind: $coinForceToRedeploy
+                            over:
+                              query: tokensInZone
+                              zone: { zoneExpr: { ref: binding, name: $outsideVietnamProvince } }
+                              filter:
+                                op: and
+                                args:
+                                  - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                            effects:
+                              - chooseOne:
+                                  bind: $mcnamaraCityDestination
+                                  options:
+                                    query: mapSpaces
+                                    filter:
+                                      conditionMacro: fitl-space-coin-controlled-city
+                                      args: { spaceExpr: $zone }
+                              - moveToken:
+                                  token: $coinForceToRedeploy
+                                  from: { zoneExpr: { ref: tokenZone, token: $coinForceToRedeploy } }
+                                  to: { zoneExpr: { ref: binding, name: $mcnamaraCityDestination } }
+                else: []
+            - addVar: { scope: global, var: arvnResources, delta: -12 }
           lastingEffects:
             - id: mom-mcnamara-line
               duration: round
@@ -5729,9 +5834,163 @@ eventDecks:
           seatOrder: ["NVA", "US", "VC", "ARVN"]
           flavorText: "Carrier deck fire disrupts strike tempo."
         unshaded:
-          text: "Air Strike degrades Trail by 2 and lowers NVA Resources by 9."
+          text: "Remove any 4 pieces from North Vietnam or, once none, Laos. Degrade Trail 2 boxes."
+          effects:
+            - let:
+                bind: $northVietnamEligibleCount
+                value:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInMapSpaces
+                      spaceFilter:
+                        op: '=='
+                        left: { ref: zoneProp, zone: $zone, prop: country }
+                        right: northVietnam
+                      filter:
+                        op: and
+                        args:
+                          - { prop: faction, eq: NVA }
+                          - op: or
+                            args:
+                              - { prop: type, op: in, value: [troops, guerrilla] }
+                              - op: and
+                                args:
+                                  - { prop: type, eq: base }
+                                  - { prop: tunnel, eq: untunneled }
+                in:
+                  - let:
+                      bind: $northVietnamRemoveCount
+                      value:
+                        op: min
+                        left: 4
+                        right: { ref: binding, name: $northVietnamEligibleCount }
+                      in:
+                        - if:
+                            when: { op: '>', left: { ref: binding, name: $northVietnamRemoveCount }, right: 0 }
+                            then:
+                              - chooseN:
+                                  bind: $northVietnamPiecesToRemove
+                                  options:
+                                    query: tokensInMapSpaces
+                                    spaceFilter:
+                                      op: '=='
+                                      left: { ref: zoneProp, zone: $zone, prop: country }
+                                      right: northVietnam
+                                    filter:
+                                      op: and
+                                      args:
+                                        - { prop: faction, eq: NVA }
+                                        - op: or
+                                          args:
+                                            - { prop: type, op: in, value: [troops, guerrilla] }
+                                            - op: and
+                                              args:
+                                                - { prop: type, eq: base }
+                                                - { prop: tunnel, eq: untunneled }
+                                  min: { ref: binding, name: $northVietnamRemoveCount }
+                                  max: { ref: binding, name: $northVietnamRemoveCount }
+                              - forEach:
+                                  bind: $piece
+                                  over: { query: binding, name: $northVietnamPiecesToRemove }
+                                  effects:
+                                    - moveToken:
+                                        token: $piece
+                                        from: { zoneExpr: { ref: tokenZone, token: $piece } }
+                                        to: { zoneExpr: available-NVA:none }
+                            else: []
+                        - let:
+                            bind: $remainingToRemove
+                            value:
+                              op: '-'
+                              left: 4
+                              right: { ref: binding, name: $northVietnamRemoveCount }
+                            in:
+                              - if:
+                                  when: { op: '>', left: { ref: binding, name: $remainingToRemove }, right: 0 }
+                                  then:
+                                    - let:
+                                        bind: $laosEligibleCount
+                                        value:
+                                          aggregate:
+                                            op: count
+                                            query:
+                                              query: tokensInMapSpaces
+                                              spaceFilter:
+                                                op: '=='
+                                                left: { ref: zoneProp, zone: $zone, prop: country }
+                                                right: laos
+                                              filter:
+                                                op: and
+                                                args:
+                                                  - { prop: faction, eq: NVA }
+                                                  - op: or
+                                                    args:
+                                                      - { prop: type, op: in, value: [troops, guerrilla] }
+                                                      - op: and
+                                                        args:
+                                                          - { prop: type, eq: base }
+                                                          - { prop: tunnel, eq: untunneled }
+                                        in:
+                                          - let:
+                                              bind: $laosRemoveCount
+                                              value:
+                                                op: min
+                                                left: { ref: binding, name: $remainingToRemove }
+                                                right: { ref: binding, name: $laosEligibleCount }
+                                              in:
+                                                - if:
+                                                    when: { op: '>', left: { ref: binding, name: $laosRemoveCount }, right: 0 }
+                                                    then:
+                                                      - chooseN:
+                                                          bind: $laosPiecesToRemove
+                                                          options:
+                                                            query: tokensInMapSpaces
+                                                            spaceFilter:
+                                                              op: '=='
+                                                              left: { ref: zoneProp, zone: $zone, prop: country }
+                                                              right: laos
+                                                            filter:
+                                                              op: and
+                                                              args:
+                                                                - { prop: faction, eq: NVA }
+                                                                - op: or
+                                                                  args:
+                                                                    - { prop: type, op: in, value: [troops, guerrilla] }
+                                                                    - op: and
+                                                                      args:
+                                                                        - { prop: type, eq: base }
+                                                                        - { prop: tunnel, eq: untunneled }
+                                                          min: { ref: binding, name: $laosRemoveCount }
+                                                          max: { ref: binding, name: $laosRemoveCount }
+                                                      - forEach:
+                                                          bind: $piece
+                                                          over: { query: binding, name: $laosPiecesToRemove }
+                                                          effects:
+                                                            - moveToken:
+                                                                token: $piece
+                                                                from: { zoneExpr: { ref: tokenZone, token: $piece } }
+                                                                to: { zoneExpr: available-NVA:none }
+                                                    else: []
+                                  else: []
+            - addVar: { scope: global, var: trail, delta: -2 }
         shaded:
-          text: "No Trail degrade from Air Strike until Coup. MOMENTUM"
+          text: "1 Available US Troop out of play. Through next Coup, no Degrade of Trail. MOMENTUM"
+          effects:
+            - removeByPriority:
+                budget: 1
+                groups:
+                  - bind: $usTroop
+                    over:
+                      query: tokensInZone
+                      zone: available-US:none
+                      filter:
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: troops }
+                    to:
+                      zoneExpr: out-of-play-US:none
           lastingEffects:
             - id: mom-oriskany
               duration: round

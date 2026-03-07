@@ -4999,7 +4999,7 @@ eventDecks:
                       zoneExpr: casualties-US:none
       - id: card-41
         title: Bombing Pause
-        sideMode: dual
+        sideMode: single
         order: 41
         tags: [momentum]
         metadata:
@@ -5007,7 +5007,32 @@ eventDecks:
           seatOrder: ["NVA", "ARVN", "US", "VC"]
           flavorText: "Air campaign pauses shift tempo across infiltration and support tracks."
         unshaded:
-          text: "No Air Strike until Coup. MOMENTUM"
+          text: "Set any two spaces to Passive Support. Patronage +2. No Air Strike until Coup. MOMENTUM"
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - op: or
+                      args:
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: southVietnam }
+                    - { op: '>', left: { ref: zoneProp, zone: $zone, prop: population }, right: 0 }
+              cardinality: { n: 2 }
+          effects:
+            - forEach:
+                bind: $space
+                over: { query: binding, name: $targetSpace }
+                effects:
+                  - setMarker:
+                      space: $space
+                      marker: supportOpposition
+                      state: passiveSupport
+            - macro: add-global-var-delta
+              args: { varName: patronage, deltaExpr: 2 }
           lastingEffects:
             - id: mom-bombing-pause
               duration: round
@@ -5017,8 +5042,6 @@ eventDecks:
               teardownEffects:
                 - macro: set-global-flag-false
                   args: { varName: mom_bombingPause }
-        shaded:
-          text: "Pause collapses: US resumes heavy air pressure and NVA pays strategic costs."
       - id: card-42
         title: Chou En Lai
         sideMode: dual

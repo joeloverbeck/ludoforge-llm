@@ -1,6 +1,6 @@
 # LEGACTTOO-034: Display Source Reference Contract Generalization
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — kernel display-node contract + ast-to-display producer updates
@@ -78,3 +78,16 @@ Ensure display-node type/clone tests include line nodes with source references a
 3. `node --test packages/engine/dist/test/unit/kernel/ast-to-display.test.js`
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm -F @ludoforge/engine lint && pnpm -F @ludoforge/engine typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-07
+- **What changed**:
+  - Introduced `DisplayLimitSourceRef` interface and `DisplaySourceRef` discriminated union (keyed by `entity`) in `display-node.ts`
+  - Replaced inline `sourceRef: { kind: 'limit'; id: string }` with `sourceRef?: DisplaySourceRef` on `DisplayLineNode`
+  - Updated `limitToDisplayLine` in `ast-to-display.ts` to emit `entity: 'limit'`
+  - Updated `annotateLimitsGroup` in `condition-annotator.ts` to check `sourceRef?.entity === 'limit'`
+  - Added 4 new tests in `display-node.test.ts` (clone safety, entity discriminant, union acceptance, JSON round-trip)
+  - Updated existing `sourceRef` assertion in `ast-to-display.test.ts` to use `entity` discriminant
+- **Deviations**: Ticket corrected during reassessment to include `condition-annotator.ts` and its test file (not in original "Files to Touch"). The test file had no `sourceRef` references to update.
+- **Verification**: Build clean, 4250/4250 tests pass, lint clean, typecheck clean

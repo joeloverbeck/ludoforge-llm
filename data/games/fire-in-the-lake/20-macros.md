@@ -3226,6 +3226,46 @@ conditionMacros:
         - { op: '==', left: { ref: zoneProp, zone: { param: spaceExpr }, prop: category }, right: province }
         - { conditionMacro: fitl-space-outside-south, args: { spaceExpr: { param: spaceExpr } } }
 
+  # Shared geography predicate: Laos/Cambodia province only (FITL "outside Vietnam" for card-38).
+  - id: fitl-space-outside-vietnam-province
+    params:
+      - { name: spaceExpr, type: value }
+    condition:
+      op: and
+      args:
+        - { op: '==', left: { ref: zoneProp, zone: { param: spaceExpr }, prop: category }, right: province }
+        - { conditionMacro: fitl-space-in-laos-cambodia, args: { spaceExpr: { param: spaceExpr } } }
+
+  # Shared control predicate: COIN-controlled city (US+ARVN+VC strictly greater than NVA).
+  - id: fitl-space-coin-controlled-city
+    params:
+      - { name: spaceExpr, type: value }
+    condition:
+      op: and
+      args:
+        - { op: '==', left: { ref: zoneProp, zone: { param: spaceExpr }, prop: category }, right: city }
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { param: spaceExpr }
+                filter:
+                  op: and
+                  args:
+                    - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
+          right:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { param: spaceExpr }
+                filter:
+                  op: and
+                  args:
+                    - { prop: faction, eq: NVA }
+
   # Shared Rule 1.8.1 predicate:
   # US may spend ARVN Resources only if post-spend resource does not drop below totalEcon.
   - id: us-joint-op-arvn-spend-eligible

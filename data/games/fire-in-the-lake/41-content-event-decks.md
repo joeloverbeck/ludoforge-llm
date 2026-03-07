@@ -5709,7 +5709,52 @@ eventDecks:
           seatOrder: ["NVA", "US", "VC", "ARVN"]
           flavorText: "Barrier planning constrains infiltration routes."
         unshaded:
-          text: "No Infiltrate or Trail Improvement until Coup. MOMENTUM"
+          text: "Redeploy all COIN forces outside Vietnam to COIN-Controlled Cities. ARVN Resources -12. No Infiltrate or Trail Improvement by Rally until Coup. MOMENTUM"
+          effects:
+            - if:
+                when:
+                  op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: mapSpaces
+                        filter:
+                          conditionMacro: fitl-space-coin-controlled-city
+                          args: { spaceExpr: $zone }
+                  right: 0
+                then:
+                  - forEach:
+                      bind: $outsideVietnamProvince
+                      over:
+                        query: mapSpaces
+                        filter:
+                          conditionMacro: fitl-space-outside-vietnam-province
+                          args: { spaceExpr: $zone }
+                      effects:
+                        - forEach:
+                            bind: $coinForceToRedeploy
+                            over:
+                              query: tokensInZone
+                              zone: { zoneExpr: { ref: binding, name: $outsideVietnamProvince } }
+                              filter:
+                                op: and
+                                args:
+                                  - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                            effects:
+                              - chooseOne:
+                                  bind: $mcnamaraCityDestination
+                                  options:
+                                    query: mapSpaces
+                                    filter:
+                                      conditionMacro: fitl-space-coin-controlled-city
+                                      args: { spaceExpr: $zone }
+                              - moveToken:
+                                  token: $coinForceToRedeploy
+                                  from: { zoneExpr: { ref: tokenZone, token: $coinForceToRedeploy } }
+                                  to: { zoneExpr: { ref: binding, name: $mcnamaraCityDestination } }
+                else: []
+            - addVar: { scope: global, var: arvnResources, delta: -12 }
           lastingEffects:
             - id: mom-mcnamara-line
               duration: round

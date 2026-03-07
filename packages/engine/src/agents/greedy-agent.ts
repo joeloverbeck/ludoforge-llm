@@ -42,6 +42,7 @@ export class GreedyAgent implements Agent {
 
     // Expand template moves into concrete candidates
     const expandedMoves: Move[] = [];
+    const stochasticMoves: { move: Move; rng: Rng }[] = [];
     let rng: Rng = input.rng;
 
     for (const move of input.legalMoves) {
@@ -53,14 +54,26 @@ export class GreedyAgent implements Agent {
       const attempts = choiceState.kind === 'pending' ? this.completionsPerTemplate : 1;
       for (let i = 0; i < attempts; i += 1) {
         const result = completeTemplateMove(input.def, input.state, move, rng, input.runtime);
-        if (result !== null) {
+        if (result.kind === 'completed') {
           expandedMoves.push(result.move);
           rng = result.rng;
+        } else if (result.kind === 'stochasticUnresolved') {
+          stochasticMoves.push({ move: result.move, rng: result.rng });
+          rng = result.rng;
+          break;
         } else {
-          // Unplayable move under decision completion, skip all remaining attempts.
+          // Unsatisfiable — skip all remaining attempts.
           break;
         }
       }
+    }
+
+    if (expandedMoves.length === 0 && stochasticMoves.length > 0) {
+      if (stochasticMoves.length === 1) {
+        return { move: stochasticMoves[0]!.move, rng };
+      }
+      const [index, nextRng] = nextInt(rng, 0, stochasticMoves.length - 1);
+      return { move: stochasticMoves[index]!.move, rng: nextRng };
     }
 
     if (expandedMoves.length === 0) {

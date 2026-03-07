@@ -17,7 +17,7 @@ const DEFAULT_MAX_STEPS = 32;
 export interface LegalityParityStep {
   readonly step: number;
   readonly actionId: string;
-  readonly requestKind: 'pending' | 'complete' | 'illegal';
+  readonly requestKind: 'pending' | 'pendingStochastic' | 'complete' | 'illegal';
   readonly decisionId?: string;
   readonly decisionName?: string;
 }
@@ -99,6 +99,21 @@ export const assertLegalitySurfaceParityForMove = (
         parityContext('applyMove', step, move, 'move should apply successfully when legalChoices is complete'),
       );
       return trace;
+    }
+    if (request.kind === 'pendingStochastic') {
+      trace.push({
+        step,
+        actionId: String(move.actionId),
+        requestKind: 'pendingStochastic',
+      });
+      throw new Error(
+        parityContext(
+          'legalChoices',
+          step,
+          move,
+          `stochastic pending alternatives (${request.alternatives.length}) are unsupported by this parity helper`,
+        ),
+      );
     }
 
     trace.push({

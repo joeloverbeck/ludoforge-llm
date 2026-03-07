@@ -413,6 +413,20 @@ const VerbalizationMacroEntrySchema = z
   })
   .strict();
 
+const VerbalizationStageDescriptionSchema = z
+  .object({
+    label: StringSchema,
+    description: StringSchema.optional(),
+  })
+  .strict();
+
+const VerbalizationModifierEffectSchema = z
+  .object({
+    condition: StringSchema,
+    effect: StringSchema,
+  })
+  .strict();
+
 const VerbalizationDefSchema = z
   .object({
     labels: z.record(StringSchema, z.union([StringSchema, VerbalizationLabelEntrySchema])),
@@ -420,6 +434,8 @@ const VerbalizationDefSchema = z
     macros: z.record(StringSchema, VerbalizationMacroEntrySchema),
     sentencePlans: z.record(StringSchema, z.record(StringSchema, z.record(StringSchema, StringSchema))),
     suppressPatterns: z.array(StringSchema),
+    stageDescriptions: z.record(StringSchema, z.record(StringSchema, VerbalizationStageDescriptionSchema)),
+    modifierEffects: z.record(StringSchema, z.array(VerbalizationModifierEffectSchema)),
   })
   .strict();
 

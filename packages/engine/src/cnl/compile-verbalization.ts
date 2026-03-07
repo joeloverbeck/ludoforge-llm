@@ -17,5 +17,7 @@ export function compileVerbalization(raw: GameSpecVerbalization): VerbalizationD
     macros: raw.macros ?? EMPTY_RECORD,
     sentencePlans: raw.sentencePlans ?? EMPTY_RECORD,
     suppressPatterns: raw.suppressPatterns ?? EMPTY_ARRAY,
+    stageDescriptions: raw.stageDescriptions ?? EMPTY_RECORD,
+    modifierEffects: raw.modifierEffects ?? EMPTY_RECORD,
   };
 }

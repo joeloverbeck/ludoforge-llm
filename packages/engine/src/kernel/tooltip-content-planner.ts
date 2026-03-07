@@ -1,10 +1,11 @@
 /**
  * Content planner: transforms a flat TooltipMessage[] into a structured
  * ContentPlan grouped by pipeline stage, with synopsis source identification,
- * modifier extraction, sub-step detection, and rhetorical budget enforcement.
+ * modifier extraction and deduplication, and sub-step detection with
+ * semantic headers.
  *
  * This is a purely structural transform — no verbalization.
- * The template realizer (LEGACTTOO-007) converts ContentPlan → RuleCard.
+ * The template realizer converts ContentPlan → RuleCard.
  */
 
 import type { TooltipMessage, ModifierMessage } from './tooltip-ir.js';
@@ -17,7 +18,6 @@ export interface ContentPlanStep {
   readonly stepNumber: number;
   readonly header: string;
   readonly messages: readonly TooltipMessage[];
-  readonly collapsedCount: number;
   readonly subSteps?: readonly ContentPlanStep[];
 }
 
@@ -32,11 +32,34 @@ export interface ContentPlan {
 // Constants
 // ---------------------------------------------------------------------------
 
-const MAX_SUB_STEPS = 3;
-const BUDGET_SIMPLE = 15;
-const BUDGET_COMPLEX = 30;
-const COMPLEX_STAGE_THRESHOLD = 3;
 const DEFAULT_STAGE = '__default__';
+
+/**
+ * Map from message kind to a semantic label for sub-step headers.
+ */
+const SUB_STEP_HEADER_BY_KIND: Readonly<Record<string, string>> = {
+  select: 'Select spaces',
+  place: 'Place forces',
+  move: 'Move forces',
+  pay: 'Pay resources',
+  gain: 'Gain resources',
+  transfer: 'Transfer resources',
+  shift: 'Shift markers',
+  activate: 'Activate pieces',
+  deactivate: 'Deactivate pieces',
+  remove: 'Remove pieces',
+  create: 'Create tokens',
+  destroy: 'Destroy tokens',
+  reveal: 'Reveal information',
+  draw: 'Draw cards',
+  shuffle: 'Shuffle deck',
+  set: 'Set values',
+  choose: 'Choose option',
+  roll: 'Roll dice',
+  phase: 'Advance phase',
+  grant: 'Grant operation',
+  conceal: 'Conceal information',
+};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -46,6 +69,20 @@ function filterSuppressed(
   messages: readonly TooltipMessage[],
 ): readonly TooltipMessage[] {
   return messages.filter((m) => m.kind !== 'suppressed');
+}
+
+function deduplicateModifiers(
+  modifiers: readonly ModifierMessage[],
+): readonly ModifierMessage[] {
+  const seen = new Set<string>();
+  const result: ModifierMessage[] = [];
+  for (const m of modifiers) {
+    if (!seen.has(m.condition)) {
+      seen.add(m.condition);
+      result.push(m);
+    }
+  }
+  return result;
 }
 
 function extractModifiers(
@@ -60,7 +97,7 @@ function extractModifiers(
       content.push(m);
     }
   }
-  return { modifiers, content };
+  return { modifiers: deduplicateModifiers(modifiers), content };
 }
 
 function findSynopsisSource(
@@ -99,6 +136,18 @@ function parentPathAtDepth(astPath: string, targetDepth: number): string {
   return astPath.slice(0, lastEnd > 0 ? lastEnd : astPath.length);
 }
 
+/**
+ * Derive a semantic sub-step header from the first message in a group.
+ */
+function deriveSubStepHeader(messages: readonly TooltipMessage[], index: number): string {
+  if (messages.length > 0) {
+    const firstKind = messages[0]!.kind;
+    const semantic = SUB_STEP_HEADER_BY_KIND[firstKind];
+    if (semantic !== undefined) return semantic;
+  }
+  return `Sub-step ${index}`;
+}
+
 // ---------------------------------------------------------------------------
 // Stage grouping
 // ---------------------------------------------------------------------------
@@ -126,9 +175,9 @@ function groupByStage(
 
 function buildSubSteps(
   messages: readonly TooltipMessage[],
-): { readonly direct: readonly TooltipMessage[]; readonly subSteps: readonly ContentPlanStep[]; readonly collapsed: number } {
+): { readonly direct: readonly TooltipMessage[]; readonly subSteps: readonly ContentPlanStep[] } {
   if (messages.length === 0) {
-    return { direct: [], subSteps: [], collapsed: 0 };
+    return { direct: [], subSteps: [] };
   }
 
   const minDepth = Math.min(...messages.map((m) => pathDepth(m.astPath)));
@@ -136,7 +185,7 @@ function buildSubSteps(
   const deeper = messages.filter((m) => pathDepth(m.astPath) > minDepth);
 
   if (deeper.length === 0) {
-    return { direct, subSteps: [], collapsed: 0 };
+    return { direct, subSteps: [] };
   }
 
   // Group deeper messages by their parent path at minDepth+1
@@ -155,21 +204,14 @@ function buildSubSteps(
   let stepNum = 1;
   for (const [, groupMsgs] of subGroups) {
     allSubSteps.push({
-      stepNumber: stepNum++,
-      header: `Sub-step ${allSubSteps.length + 1}`,
+      stepNumber: stepNum,
+      header: deriveSubStepHeader(groupMsgs, stepNum),
       messages: groupMsgs,
-      collapsedCount: 0,
     });
+    stepNum++;
   }
 
-  // Collapse sub-steps beyond the limit
-  if (allSubSteps.length <= MAX_SUB_STEPS) {
-    return { direct, subSteps: allSubSteps, collapsed: 0 };
-  }
-
-  const kept = allSubSteps.slice(0, MAX_SUB_STEPS);
-  const collapsedCount = allSubSteps.length - MAX_SUB_STEPS;
-  return { direct, subSteps: kept, collapsed: collapsedCount };
+  return { direct, subSteps: allSubSteps };
 }
 
 // ---------------------------------------------------------------------------
@@ -184,85 +226,17 @@ function buildSteps(
 
   for (const [stage, messages] of stageGroups) {
     const header = stage === DEFAULT_STAGE ? `Step ${stepNum}` : stage;
-    const { direct, subSteps, collapsed } = buildSubSteps(messages);
+    const { direct, subSteps } = buildSubSteps(messages);
 
     steps.push({
       stepNumber: stepNum++,
       header,
       messages: direct,
-      collapsedCount: collapsed,
       ...(subSteps.length > 0 ? { subSteps } : {}),
     });
   }
 
   return steps;
-}
-
-// ---------------------------------------------------------------------------
-// Message counting
-// ---------------------------------------------------------------------------
-
-function countMessages(steps: readonly ContentPlanStep[]): number {
-  let count = 0;
-  for (const step of steps) {
-    count += step.messages.length;
-    if (step.subSteps !== undefined) {
-      count += countMessages(step.subSteps);
-    }
-  }
-  return count;
-}
-
-// ---------------------------------------------------------------------------
-// Rhetorical budget enforcement
-// ---------------------------------------------------------------------------
-
-function enforceBudget(
-  steps: readonly ContentPlanStep[],
-  budget: number,
-): readonly ContentPlanStep[] {
-  let total = countMessages(steps);
-  if (total <= budget) return steps;
-
-  // Collapse deepest sub-steps first, working backwards through steps
-  const result: ContentPlanStep[] = [...steps];
-
-  for (let i = result.length - 1; i >= 0 && total > budget; i--) {
-    const step = result[i]!;
-    if (step.subSteps !== undefined && step.subSteps.length > 0) {
-      const subMsgCount = step.subSteps.reduce(
-        (sum, s) => sum + s.messages.length, 0,
-      );
-      result[i] = {
-        stepNumber: step.stepNumber,
-        header: step.header,
-        messages: step.messages,
-        collapsedCount: step.collapsedCount + step.subSteps.length,
-      };
-      total -= subMsgCount;
-    }
-  }
-
-  // If still over budget, collapse messages within steps from the back
-  for (let i = result.length - 1; i >= 0 && total > budget; i--) {
-    const step = result[i]!;
-    if (step.messages.length > MAX_SUB_STEPS) {
-      const excess = Math.min(
-        step.messages.length - MAX_SUB_STEPS,
-        total - budget,
-      );
-      result[i] = {
-        stepNumber: step.stepNumber,
-        header: step.header,
-        messages: step.messages.slice(0, step.messages.length - excess),
-        collapsedCount: step.collapsedCount + excess,
-        ...(step.subSteps !== undefined ? { subSteps: step.subSteps } : {}),
-      };
-      total -= excess;
-    }
-  }
-
-  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -277,11 +251,7 @@ export function planContent(
   const { modifiers, content } = extractModifiers(filtered);
   const synopsisSource = findSynopsisSource(content);
   const stageGroups = groupByStage(content);
-  const rawSteps = buildSteps(stageGroups);
-
-  const stageCount = stageGroups.size;
-  const budget = stageCount >= COMPLEX_STAGE_THRESHOLD ? BUDGET_COMPLEX : BUDGET_SIMPLE;
-  const steps = enforceBudget(rawSteps, budget);
+  const steps = buildSteps(stageGroups);
 
   return {
     actionLabel,

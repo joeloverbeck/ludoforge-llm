@@ -12,10 +12,14 @@ export interface EventTargetCardinalityRange {
 
 export type EventTargetCardinality = EventTargetCardinalityExact | EventTargetCardinalityRange;
 
+export type EventTargetApplication = 'each' | 'aggregate';
+
 export interface EventTargetDef {
   readonly id: string;
   readonly selector: OptionsQuery;
   readonly cardinality: EventTargetCardinality;
+  readonly application: EventTargetApplication;
+  readonly effects?: readonly EffectAST[];
 }
 
 export interface EventLastingEffectDef {

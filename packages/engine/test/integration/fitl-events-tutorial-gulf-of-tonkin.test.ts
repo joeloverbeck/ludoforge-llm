@@ -69,8 +69,9 @@ const completeForApply = (
   }
   assert.equal(probe.kind, 'pending', 'Expected event move to be complete or pending');
   const completed = completeTemplateMove(def, state, move, createRng(seed));
-  assert.notEqual(completed, null, 'Expected pending event template to be completeable');
-  return completed!.move;
+  assert.equal(completed.kind, 'completed', 'Expected pending event template to be completeable');
+  if (completed.kind !== 'completed') throw new Error('unreachable');
+  return completed.move;
 };
 
 describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
@@ -450,8 +451,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     assert.notEqual(template, undefined, 'Expected unshaded event template');
 
     const completion = completeTemplateMove(def, setup, template!, createRng(2402n));
-    assert.notEqual(completion, null, 'Expected template to complete');
-    const completed = completion!.move;
+    assert.equal(completion.kind, 'completed', 'Expected template to complete');
+    if (completion.kind !== 'completed') throw new Error('unreachable');
+    const completed = completion.move;
     const choices = decisionEntries(completed);
     const chooseNEntry = choices.find((entry) => Array.isArray(entry[1]));
     assert.notEqual(chooseNEntry, undefined, 'Expected chooseN decision entry');

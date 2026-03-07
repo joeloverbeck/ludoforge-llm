@@ -82,6 +82,7 @@ describe('event target synthesis', () => {
         id: '$targetCity',
         selector: { query: 'enums', values: ['saigon:none', 'hue:none'] },
         cardinality: { n: 1 },
+        application: 'aggregate',
       },
     ];
 
@@ -101,6 +102,7 @@ describe('event target synthesis', () => {
         id: '$targets',
         selector: { query: 'enums', values: ['a', 'b', 'c'] },
         cardinality: { n: 2 },
+        application: 'aggregate',
       },
     ];
 
@@ -120,11 +122,13 @@ describe('event target synthesis', () => {
         id: '$optionalSingle',
         selector: { query: 'enums', values: ['x'] },
         cardinality: { max: 1 },
+        application: 'aggregate',
       },
       {
         id: '$range',
         selector: { query: 'enums', values: ['x', 'y', 'z'] },
         cardinality: { min: 1, max: 2 },
+        application: 'aggregate',
       },
     ];
 
@@ -149,20 +153,62 @@ describe('event target synthesis', () => {
   it('returns an empty list when no targets are provided', () => {
     assert.deepEqual(synthesizeEventTargetEffects([]), []);
   });
+
+  it('lowers each-application target effects with deterministic in-order fan-out', () => {
+    const targets: readonly EventTargetDef[] = [
+      {
+        id: '$spaces',
+        selector: { query: 'enums', values: ['a:none', 'b:none', 'c:none'] },
+        cardinality: { n: 2 },
+        application: 'each',
+        effects: [{ setMarker: { space: '$spaces', marker: 'support', state: 'passiveSupport' } }],
+      },
+    ];
+
+    const effects = synthesizeEventTargetEffects(targets);
+    assert.equal(effects.length, 2);
+    assert.ok('chooseN' in effects[0]!);
+    assert.ok('forEach' in effects[1]!);
+    if (!('chooseN' in effects[0]!) || !('forEach' in effects[1]!)) {
+      return;
+    }
+
+    assert.equal(effects[0].chooseN.bind, '$spaces');
+    assert.equal(effects[1].forEach.bind, '$spaces');
+    assert.deepEqual(effects[1].forEach.over, { query: 'binding', name: '$spaces' });
+    assert.deepEqual(effects[1].forEach.effects, [{ setMarker: { space: '$spaces', marker: 'support', state: 'passiveSupport' } }]);
+  });
+
+  it('keeps aggregate-application target effects single-run after selection', () => {
+    const targets: readonly EventTargetDef[] = [
+      {
+        id: '$spaces',
+        selector: { query: 'enums', values: ['a:none', 'b:none', 'c:none'] },
+        cardinality: { n: 2 },
+        application: 'aggregate',
+        effects: [{ addVar: { scope: 'global', var: 'counter', delta: 1 } }],
+      },
+    ];
+
+    const effects = synthesizeEventTargetEffects(targets);
+    assert.equal(effects.length, 2);
+    assert.ok('chooseN' in effects[0]!);
+    assert.deepEqual(effects[1], { addVar: { scope: 'global', var: 'counter', delta: 1 } });
+  });
 });
 
 describe('event target resolution and effect ordering', () => {
   it('collects side targets before branch targets', () => {
     const side: NonNullable<EventCardDef['unshaded']> = {
       targets: [
-        { id: '$sideA', selector: { query: 'enums', values: ['a'] }, cardinality: { n: 1 } },
-        { id: '$sideB', selector: { query: 'enums', values: ['b'] }, cardinality: { n: 1 } },
+        { id: '$sideA', selector: { query: 'enums', values: ['a'] }, cardinality: { n: 1 }, application: 'aggregate' },
+        { id: '$sideB', selector: { query: 'enums', values: ['b'] }, cardinality: { n: 1 }, application: 'aggregate' },
       ],
       effects: [],
       branches: [
         {
           id: 'branch',
-          targets: [{ id: '$branchA', selector: { query: 'enums', values: ['c'] }, cardinality: { n: 1 } }],
+          targets: [{ id: '$branchA', selector: { query: 'enums', values: ['c'] }, cardinality: { n: 1 }, application: 'aggregate' }],
         },
       ],
     };
@@ -178,12 +224,12 @@ describe('event target resolution and effect ordering', () => {
       title: 'Targeted event',
       sideMode: 'single',
       unshaded: {
-        targets: [{ id: '$sideTarget', selector: { query: 'enums', values: ['saigon:none'] }, cardinality: { n: 1 } }],
+        targets: [{ id: '$sideTarget', selector: { query: 'enums', values: ['saigon:none'] }, cardinality: { n: 1 }, application: 'aggregate' }],
         effects: [{ addVar: { scope: 'global', var: 'sideCounter', delta: 1 } }],
         branches: [
           {
             id: 'branch-a',
-            targets: [{ id: '$branchTarget', selector: { query: 'enums', values: ['hue:none'] }, cardinality: { max: 1 } }],
+            targets: [{ id: '$branchTarget', selector: { query: 'enums', values: ['hue:none'] }, cardinality: { max: 1 }, application: 'aggregate' }],
             effects: [{ addVar: { scope: 'global', var: 'branchCounter', delta: 1 } }],
           },
         ],

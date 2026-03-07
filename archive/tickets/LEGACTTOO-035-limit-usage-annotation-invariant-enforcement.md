@@ -1,6 +1,6 @@
 # LEGACTTOO-035: Limit Usage Annotation Invariant Enforcement
 
-**Status**: DONE
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel condition annotator invariant enforcement + tests
@@ -73,3 +73,18 @@ Ensure rule-state limit usage and description limit usage stay coherent under in
 2. `node --test packages/engine/dist/test/unit/kernel/condition-annotator.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint && pnpm -F @ludoforge/engine typecheck`
+
+## Outcome
+
+- Completion date: 2026-03-07
+- What changed:
+  - `annotateLimitsGroup` now enforces Limits-line identity invariants explicitly in `packages/engine/src/kernel/condition-annotator.ts`.
+  - Missing limit source identity is annotated with deterministic fail text `missing limit identity`.
+  - Mismatched/unresolvable limit source identity is annotated with deterministic fail text `unresolved limit identity`.
+  - `describeAction` continues to preserve never-throw behavior while exposing deterministic limit usage surfaces.
+  - Regression coverage was added in `packages/engine/test/unit/kernel/condition-annotator.test.ts` for missing/mismatched identity and cross-surface coherence.
+- Deviations from original plan:
+  - No material deviations observed.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build` passed on 2026-03-07.
+  - `node --test packages/engine/dist/test/unit/kernel/condition-annotator.test.js` passed on 2026-03-07.

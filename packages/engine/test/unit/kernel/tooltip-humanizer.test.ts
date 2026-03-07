@@ -115,6 +115,8 @@ describe('buildAcronymSet', () => {
       macros: {},
       sentencePlans: {},
       suppressPatterns: [],
+      stageDescriptions: {},
+      modifierEffects: {},
     };
     const result = buildAcronymSet(verbalization);
     assert.ok(result.has('US'));
@@ -129,6 +131,8 @@ describe('buildAcronymSet', () => {
       macros: {},
       sentencePlans: {},
       suppressPatterns: [],
+      stageDescriptions: {},
+      modifierEffects: {},
     };
     const result = buildAcronymSet(verbalization);
     assert.ok(result.has('NVA'));
@@ -141,6 +145,8 @@ describe('buildAcronymSet', () => {
       macros: {},
       sentencePlans: {},
       suppressPatterns: [],
+      stageDescriptions: {},
+      modifierEffects: {},
     };
     const result = buildAcronymSet(verbalization);
     assert.ok(result.has('US'));
@@ -154,6 +160,8 @@ describe('buildAcronymSet', () => {
       macros: {},
       sentencePlans: {},
       suppressPatterns: [],
+      stageDescriptions: {},
+      modifierEffects: {},
     };
     const result = buildAcronymSet(verbalization);
     assert.ok(!result.has('A'));

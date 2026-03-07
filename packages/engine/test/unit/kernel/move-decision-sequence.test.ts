@@ -6,6 +6,7 @@ import {
   asPhaseId,
   asPlayerId,
   asZoneId,
+  isMoveDecisionSequenceNotUnsatisfiable,
   isMoveDecisionSequenceSatisfiable,
   pickDeterministicChoiceValue,
   resolveMoveDecisionSequence,
@@ -126,6 +127,103 @@ phase: [asPhaseId('main')],
     assert.equal(pickDeterministicChoiceValue(request), 'legal');
   });
 
+  it('does not false-complete when rollRandom gates a nested decision', () => {
+    const action: ActionDef = {
+      id: asActionId('random-then-choose-op'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          rollRandom: {
+            bind: '$roll',
+            min: 1,
+            max: 6,
+            in: [
+              {
+                chooseOne: {
+                  internalDecisionId: 'decision:$target',
+                  bind: '$target',
+                  options: { query: 'enums', values: ['a', 'b'] },
+                },
+              } as GameDef['actions'][number]['effects'][number],
+            ],
+          },
+        } as GameDef['actions'][number]['effects'][number],
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const result = resolveMoveDecisionSequence(def, makeBaseState(), makeMove('random-then-choose-op'), {
+      choose: () => undefined,
+    });
+
+    assert.equal(result.complete, false);
+    assert.equal(result.nextDecision?.decisionId, 'decision:$target');
+    assert.deepEqual(result.nextDecision?.options.map((option) => option.value), ['a', 'b']);
+  });
+
+  it('returns stochastic alternatives when rollRandom outcomes require different pending decisions', () => {
+    const action: ActionDef = {
+      id: asActionId('random-branching-decisions-op'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          rollRandom: {
+            bind: '$roll',
+            min: 1,
+            max: 2,
+            in: [
+              {
+                if: {
+                  when: { op: '==', left: { ref: 'binding', name: '$roll' }, right: 1 },
+                  then: [
+                    {
+                      chooseOne: {
+                        internalDecisionId: 'decision:$alpha',
+                        bind: '$alpha',
+                        options: { query: 'enums', values: ['a1', 'a2'] },
+                      },
+                    } as GameDef['actions'][number]['effects'][number],
+                  ],
+                  else: [
+                    {
+                      chooseOne: {
+                        internalDecisionId: 'decision:$beta',
+                        bind: '$beta',
+                        options: { query: 'enums', values: ['b1', 'b2'] },
+                      },
+                    } as GameDef['actions'][number]['effects'][number],
+                  ],
+                },
+              } as GameDef['actions'][number]['effects'][number],
+            ],
+          },
+        } as GameDef['actions'][number]['effects'][number],
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const result = resolveMoveDecisionSequence(def, makeBaseState(), makeMove('random-branching-decisions-op'), {
+      choose: () => undefined,
+    });
+
+    assert.equal(result.complete, false);
+    assert.equal(result.nextDecision, undefined);
+    assert.equal(result.stochasticDecision?.kind, 'pendingStochastic');
+    assert.deepEqual(result.nextDecisionSet?.map((request) => request.decisionId), ['decision:$alpha', 'decision:$beta']);
+  });
+
   it('returns incomplete for unsatisfiable chooseN', () => {
     const action: ActionDef = {
       id: asActionId('unsat-op'),
@@ -171,6 +269,7 @@ phase: [asPhaseId('main')],
     assert.equal(result.nextDecision?.type, 'chooseN');
     assert.equal(result.nextDecision?.options.length ?? 0, 0);
     assert.equal(result.nextDecision?.min, 1);
+    assert.equal(isMoveDecisionSequenceNotUnsatisfiable(def, makeBaseState(), makeMove('unsat-op')), false);
     assert.equal(isMoveDecisionSequenceSatisfiable(def, makeBaseState(), makeMove('unsat-op')), false);
   });
 
@@ -326,6 +425,12 @@ phase: [asPhaseId('main')],
     });
     assert.equal(result.complete, false);
     assert.equal(result.nextDecision, undefined);
+    assert.equal(
+      isMoveDecisionSequenceNotUnsatisfiable(def, makeBaseState(), makeMove('stuck-op'), {
+        budgets: { maxDecisionProbeSteps: 0 },
+      }),
+      true,
+    );
     assert.equal(result.warnings.some((warning) => warning.code === 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'), true);
   });
 

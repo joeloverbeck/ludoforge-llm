@@ -100,7 +100,8 @@ describe('template-completion chooseN bounds', () => {
 
     for (let seed = 0n; seed < 200n; seed += 1n) {
       const result = completeTemplateMove(def, baseState, templateMove, createRng(seed));
-      assert.ok(result, `seed ${seed} should produce a playable completion`);
+      assert.equal(result.kind, 'completed', `seed ${seed} should produce a playable completion`);
+      if (result.kind !== 'completed') throw new Error('unreachable');
       const selected = result.move.params['decision:$targets'];
       assert.ok(Array.isArray(selected), `seed ${seed} expected chooseN array result`);
       assert.ok(selected.length >= 1 && selected.length <= 2, `seed ${seed} selected out-of-bounds count`);
@@ -117,7 +118,7 @@ describe('template-completion chooseN bounds', () => {
     const templateMove: Move = { actionId: asActionId('insufficient-min-choose-n'), params: {} };
 
     const result = completeTemplateMove(def, baseState, templateMove, createRng(42n));
-    assert.equal(result, null);
+    assert.equal(result.kind, 'unsatisfiable');
   });
 
   it('chooseN selections stay within the option domain across seeds', () => {
@@ -128,7 +129,8 @@ describe('template-completion chooseN bounds', () => {
 
     for (let seed = 0n; seed < 40n; seed += 1n) {
       const result = completeTemplateMove(def, baseState, templateMove, createRng(seed));
-      assert.ok(result, `seed ${seed} should produce a playable completion`);
+      assert.equal(result.kind, 'completed', `seed ${seed} should produce a playable completion`);
+      if (result.kind !== 'completed') throw new Error('unreachable');
       const selected = result.move.params['decision:$targets'];
       assert.ok(Array.isArray(selected));
       assert.ok(selected.length <= 2);
@@ -145,7 +147,8 @@ describe('template-completion chooseN bounds', () => {
     const templateMove: Move = { actionId: asActionId('empty-choose-n'), params: {} };
 
     const result = completeTemplateMove(def, baseState, templateMove, createRng(7n));
-    assert.notEqual(result, null);
-    assert.deepEqual(result?.move.params['decision:$targets'], []);
+    assert.equal(result.kind, 'completed');
+    if (result.kind !== 'completed') throw new Error('unreachable');
+    assert.deepEqual(result.move.params['decision:$targets'], []);
   });
 });

@@ -11,6 +11,7 @@ import type { RuntimeTableIndex } from './runtime-table-index.js';
 import type { AdjacencyGraph } from './spatial.js';
 import type {
   ChoicePendingRequest,
+  ChoiceStochasticPendingRequest,
   ConditionAST,
   EffectTraceEventContext,
   ExecutionCollector,
@@ -81,7 +82,7 @@ export interface EffectResult {
   readonly rng: Rng;
   readonly emittedEvents?: readonly TriggerEvent[];
   readonly bindings?: Readonly<Record<string, unknown>>;
-  readonly pendingChoice?: ChoicePendingRequest;
+  readonly pendingChoice?: ChoicePendingRequest | ChoiceStochasticPendingRequest;
 }
 
 interface RuntimeEffectContextOptions extends Omit<EffectContextBase, 'collector' | 'resources'> {

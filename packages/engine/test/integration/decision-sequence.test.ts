@@ -377,7 +377,8 @@ describe('decision sequence integration', () => {
 
     const rng = createRng(BigInt(500));
     const completed = completeTemplateMove(def, state, template, rng);
-    assert.ok(completed !== null, 'template should be completeable');
+    assert.equal(completed.kind, 'completed', 'template should be completeable');
+    if (completed.kind !== 'completed') throw new Error('unreachable');
 
     const freeMove: Move = { ...completed.move, freeOperation: true };
     const result = applyMove(def, state, freeMove);
@@ -406,7 +407,8 @@ describe('decision sequence integration', () => {
 
     const rng = createRng(BigInt(500));
     const completed = completeTemplateMove(def, state, template, rng);
-    assert.ok(completed !== null);
+    assert.equal(completed.kind, 'completed');
+    if (completed.kind !== 'completed') throw new Error('unreachable');
 
     // Apply without freeOperation (defaults to false)
     const result = applyMove(def, state, completed.move);
@@ -445,6 +447,10 @@ describe('decision sequence integration', () => {
     const withActionClass: Move = { ...template, actionClass: 'limitedOperation' };
     const choices = legalChoicesDiscover(def, state, withActionClass);
     assert.equal(choices.complete, false, 'should still have pending decisions');
+    assert.equal(choices.kind, 'pending', 'first decision should be pending');
+    if (choices.kind !== 'pending') {
+      throw new Error('Expected pending first decision with actionClass.');
+    }
     assert.equal(choices.decisionId, 'decision:$mode', 'first decision should be decision:$mode');
     assert.equal(choices.name, '$mode', 'first decision should be $mode');
 
@@ -452,6 +458,10 @@ describe('decision sequence integration', () => {
     const withoutActionClass: Move = { ...template };
     const choicesDefault = legalChoicesDiscover(def, state, withoutActionClass);
     assert.equal(choicesDefault.complete, false, 'should still have pending decisions');
+    assert.equal(choicesDefault.kind, 'pending', 'first decision should be pending');
+    if (choicesDefault.kind !== 'pending') {
+      throw new Error('Expected pending first decision without actionClass.');
+    }
     assert.equal(choicesDefault.decisionId, 'decision:$mode', 'first decision should be decision:$mode');
     assert.equal(choicesDefault.name, '$mode', 'first decision should be $mode');
   });

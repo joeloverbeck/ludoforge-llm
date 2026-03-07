@@ -53,13 +53,6 @@
   padding-left: var(--space-md);
 }
 
-.collapsedHint {
-  color: var(--text-muted);
-  font-style: italic;
-  font-size: var(--font-size-sm);
-  padding-left: var(--space-sm);
-}
-
 .limitFooter {
   margin-top: var(--space-sm);
   padding-top: var(--space-xs);

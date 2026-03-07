@@ -315,10 +315,10 @@ export function createGameWorker(): GameWorkerAPI {
           { state: current.state.rng },
           runtime ?? undefined,
         );
-        const completedMove = completion?.move ?? null;
-        if (completedMove === null) {
+        if (completion.kind !== 'completed') {
           return { outcome: 'uncompletable' };
         }
+        const completedMove = completion.move;
 
         try {
           const result = executeAppliedMove(current.def, current.state, completedMove, options);

@@ -641,6 +641,10 @@ phase: [asPhaseId('main')],
 
     const result = legalChoicesDiscover(def, state, makeMove('pickDynamicTargets'));
     assert.equal(result.complete, false);
+    assert.equal(result.kind, 'pending');
+    if (result.kind !== 'pending') {
+      throw new Error('expected pending dynamic chooseN request');
+    }
     assert.equal(result.type, 'chooseN');
     assert.equal(result.min, 1);
     assert.equal(result.max, 2);
@@ -710,11 +714,19 @@ phase: [asPhaseId('main')],
 
     // No params → first choice
     const r1 = legalChoicesDiscover(def, state, makeMove('multiChoice'));
+    assert.equal(r1.kind, 'pending');
+    if (r1.kind !== 'pending') {
+      throw new Error('expected pending first choice');
+    }
     assert.equal(r1.name, '$first');
     assert.equal(r1.complete, false);
 
     // First param filled → second choice
     const r2 = legalChoicesDiscover(def, state, makeMove('multiChoice', { 'decision:$first': 'x' }));
+    assert.equal(r2.kind, 'pending');
+    if (r2.kind !== 'pending') {
+      throw new Error('expected pending second choice');
+    }
     assert.equal(r2.name, '$second');
     assert.equal(r2.complete, false);
 
@@ -995,7 +1007,7 @@ phase: [asPhaseId('main')],
     assert.deepStrictEqual(result, { kind: 'complete', complete: true });
   });
 
-  it('9. legalChoices does NOT walk rollRandom.in effects (returns complete before inner choices)', () => {
+  it('9. legalChoices walks rollRandom.in effects and surfaces inner pending choices', () => {
     const action: ActionDef = {
       id: asActionId('randomThenChoose'),
 actor: 'active',
@@ -1028,9 +1040,14 @@ phase: [asPhaseId('main')],
     const def = makeBaseDef({ actions: [action] });
     const state = makeBaseState();
 
-    // rollRandom stops traversal, inner chooseOne not reached
     const result = legalChoicesDiscover(def, state, makeMove('randomThenChoose'));
-    assert.deepStrictEqual(result, { kind: 'complete', complete: true });
+    assert.equal(result.kind, 'pending');
+    assert.equal(result.complete, false);
+    if (result.kind !== 'pending') {
+      throw new Error('expected pending choice');
+    }
+    assert.equal(result.decisionId, 'decision:$innerChoice');
+    assert.deepEqual(result.options.map((option) => option.value), ['a', 'b']);
   });
 
   it('10. action with chooseN exact-n mode returns options with correct cardinality constraint', () => {
@@ -1412,6 +1429,133 @@ phase: [asPhaseId('main')],
       assert.deepStrictEqual(result.options, [
         { value: 'trap', legality: 'illegal', illegalReason: null },
         { value: 'safe', legality: 'legal', illegalReason: null },
+      ]);
+    });
+
+    it('marks chooseOne option legality as unknown when probe outcome is pendingStochastic', () => {
+      const action: ActionDef = {
+        id: asActionId('chooseOneStochasticProbeOp'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [
+          {
+            chooseOne: {
+              internalDecisionId: 'decision:$mode',
+              bind: '$mode',
+              options: { query: 'enums', values: ['stochastic', 'safe'] },
+            },
+          } as EffectAST,
+          {
+            if: {
+              when: { op: '==', left: { ref: 'binding', name: '$mode' }, right: 'stochastic' },
+              then: [
+                {
+                  rollRandom: {
+                    bind: '$roll',
+                    min: 1,
+                    max: 2,
+                    in: [
+                      {
+                        chooseOne: {
+                          internalDecisionId: 'decision:$stochasticPick@{$roll}',
+                          bind: '$stochasticPick@{$roll}',
+                          options: { query: 'enums', values: ['x', 'y'] },
+                        },
+                      } as EffectAST,
+                    ],
+                  },
+                } as EffectAST,
+              ],
+              else: [],
+            },
+          } as EffectAST,
+        ],
+        limits: [],
+      };
+
+      const result = legalChoicesEvaluate(
+        makeBaseDef({ actions: [action] }),
+        makeBaseState(),
+        makeMove('chooseOneStochasticProbeOp'),
+      );
+
+      assert.equal(result.kind, 'pending');
+      assert.equal(result.type, 'chooseOne');
+      assert.equal(result.decisionId, 'decision:$mode');
+      assert.deepStrictEqual(result.options, [
+        { value: 'stochastic', legality: 'unknown', illegalReason: null },
+        { value: 'safe', legality: 'legal', illegalReason: null },
+      ]);
+    });
+
+    it('marks chooseN option legality as unknown when probe outcome is pendingStochastic', () => {
+      const action: ActionDef = {
+        id: asActionId('chooseNStochasticProbeOp'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [
+          {
+            chooseN: {
+              internalDecisionId: 'decision:$targets',
+              bind: '$targets',
+              options: { query: 'enums', values: ['a', 'b', 'c'] },
+              min: 1,
+              max: 1,
+            },
+          } as EffectAST,
+          {
+            if: {
+              when: {
+                op: 'in',
+                item: 'b',
+                set: { ref: 'binding', name: '$targets' },
+              },
+              then: [
+                {
+                  rollRandom: {
+                    bind: '$roll',
+                    min: 1,
+                    max: 2,
+                    in: [
+                      {
+                        chooseOne: {
+                          internalDecisionId: 'decision:$stochasticPick@{$roll}',
+                          bind: '$stochasticPick@{$roll}',
+                          options: { query: 'enums', values: ['x', 'y'] },
+                        },
+                      } as EffectAST,
+                    ],
+                  },
+                } as EffectAST,
+              ],
+              else: [],
+            },
+          } as EffectAST,
+        ],
+        limits: [],
+      };
+
+      const result = legalChoicesEvaluate(
+        makeBaseDef({ actions: [action] }),
+        makeBaseState(),
+        makeMove('chooseNStochasticProbeOp'),
+      );
+
+      assert.equal(result.kind, 'pending');
+      assert.equal(result.type, 'chooseN');
+      assert.equal(result.decisionId, 'decision:$targets');
+      assert.deepStrictEqual(result.options, [
+        { value: 'a', legality: 'legal', illegalReason: null },
+        { value: 'b', legality: 'unknown', illegalReason: null },
+        { value: 'c', legality: 'legal', illegalReason: null },
       ]);
     });
 

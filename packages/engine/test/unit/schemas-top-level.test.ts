@@ -298,7 +298,7 @@ describe('top-level runtime schemas', () => {
             ],
           },
           shaded: {
-            targets: [{ id: 'us-troops', selector: { query: 'players' }, cardinality: { max: 3 } }],
+            targets: [{ id: 'us-troops', selector: { query: 'players' }, cardinality: { max: 3 }, application: 'aggregate' }],
             lastingEffects: [
               {
                 id: 'aid-mod',
@@ -325,7 +325,7 @@ describe('top-level runtime schemas', () => {
           title: 'Domino Theory',
           sideMode: 'single',
           unshaded: {
-            targets: [{ id: 'us-troops', selector: { query: 'players' }, cardinality: { min: 3, max: 2 } }],
+            targets: [{ id: 'us-troops', selector: { query: 'players' }, cardinality: { min: 3, max: 2 }, application: 'aggregate' }],
           },
         },
       ],

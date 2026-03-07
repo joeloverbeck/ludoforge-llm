@@ -156,6 +156,9 @@ export const classifyDecisionSequenceSatisfiability = (
     if (request.kind === 'illegal') {
       return 'unsatisfiable';
     }
+    if (request.kind === 'pendingStochastic') {
+      return 'unknown';
+    }
 
     let branchOutcome: DecisionSequenceSatisfiability = 'unsatisfiable';
     const exhausted = forEachDecisionSelection(request, (selection) => {

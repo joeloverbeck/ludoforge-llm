@@ -12,10 +12,127 @@ import { withTracePath } from './trace-provenance.js';
 import { normalizeChoiceDomain, toChoiceComparableValue, type MembershipScalar } from './value-membership.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
-import type { EffectAST, PlayerSel } from './types.js';
+import type { ChoiceOption, ChoicePendingRequest, ChoiceStochasticPendingRequest, EffectAST, PlayerSel } from './types.js';
 import type { EffectBudgetState } from './effects-control.js';
 
 type ApplyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContext, budget: EffectBudgetState) => EffectResult;
+
+const choiceOptionKey = (value: unknown): string => JSON.stringify([typeof value, value]);
+
+const mergePendingChoiceRequests = (
+  pendingChoices: readonly ChoicePendingRequest[],
+): ChoicePendingRequest => {
+  const [first, ...rest] = pendingChoices;
+  if (first === undefined) {
+    throw new Error('mergePendingChoiceRequests requires at least one pending choice');
+  }
+
+  for (const pending of rest) {
+    if (pending.type !== first.type) {
+      throw effectRuntimeError(
+        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+        `rollRandom discovery found incompatible pending decision types for ${first.decisionId}`,
+        {
+          effectType: 'rollRandom',
+          decisionId: first.decisionId,
+          expectedType: first.type,
+          actualType: pending.type,
+        },
+      );
+    }
+    if (pending.name !== first.name) {
+      throw effectRuntimeError(
+        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+        `rollRandom discovery found incompatible pending decision names for ${first.decisionId}`,
+        {
+          effectType: 'rollRandom',
+          decisionId: first.decisionId,
+          expectedName: first.name,
+          actualName: pending.name,
+        },
+      );
+    }
+    if (!Object.is(pending.decisionPlayer, first.decisionPlayer)) {
+      throw effectRuntimeError(
+        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+        `rollRandom discovery found incompatible decision owners for ${first.decisionId}`,
+        {
+          effectType: 'rollRandom',
+          decisionId: first.decisionId,
+          expectedDecisionPlayer: first.decisionPlayer,
+          actualDecisionPlayer: pending.decisionPlayer,
+        },
+      );
+    }
+  }
+
+  const intersectedKeys = new Set<string>(first.options.map((option) => choiceOptionKey(option.value)));
+  for (const pending of rest) {
+    const keys = new Set<string>(pending.options.map((option) => choiceOptionKey(option.value)));
+    for (const key of [...intersectedKeys]) {
+      if (!keys.has(key)) {
+        intersectedKeys.delete(key);
+      }
+    }
+  }
+  const mergedOptions: ChoiceOption[] = first.options
+    .filter((option) => intersectedKeys.has(choiceOptionKey(option.value)))
+    .map((option) => ({
+      value: option.value,
+      legality: 'unknown',
+      illegalReason: null,
+    }));
+  const targetKinds = [...new Set(pendingChoices.flatMap((pending) => pending.targetKinds))];
+
+  if (first.type === 'chooseOne') {
+    return {
+      kind: 'pending',
+      complete: false,
+      ...(first.decisionPlayer === undefined ? {} : { decisionPlayer: first.decisionPlayer }),
+      decisionId: first.decisionId,
+      name: first.name,
+      type: 'chooseOne',
+      options: mergedOptions,
+      targetKinds,
+    };
+  }
+
+  const mergedMin = pendingChoices.reduce((maxMin, pending) => Math.max(maxMin, pending.min ?? 0), 0);
+  const mergedMaxUnclamped = pendingChoices.reduce(
+    (minMax, pending) => Math.min(minMax, pending.max ?? pending.options.length),
+    Number.POSITIVE_INFINITY,
+  );
+  const mergedMax = Math.min(
+    Number.isFinite(mergedMaxUnclamped) ? mergedMaxUnclamped : mergedOptions.length,
+    mergedOptions.length,
+  );
+  return {
+    kind: 'pending',
+    complete: false,
+    ...(first.decisionPlayer === undefined ? {} : { decisionPlayer: first.decisionPlayer }),
+    decisionId: first.decisionId,
+    name: first.name,
+    type: 'chooseN',
+    options: mergedOptions,
+    targetKinds,
+    min: mergedMin,
+    max: mergedMax,
+  };
+};
+
+const toStochasticPendingChoice = (
+  pendingByDecisionId: ReadonlyMap<string, readonly ChoicePendingRequest[]>,
+): ChoiceStochasticPendingRequest => {
+  const alternatives = [...pendingByDecisionId.entries()]
+    .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
+    .map(([, requests]) => mergePendingChoiceRequests(requests));
+  return {
+    kind: 'pendingStochastic',
+    complete: false,
+    source: 'rollRandom',
+    alternatives,
+  };
+};
 
 const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => {
   const merged: Record<string, unknown> = {
@@ -428,9 +545,6 @@ export const applyRollRandom = (
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): EffectResult => {
-  if (ctx.mode === 'discovery') {
-    return { state: ctx.state, rng: ctx.rng, bindings: ctx.bindings };
-  }
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const minValue = evalValue(effect.rollRandom.min, evalCtx);
   const maxValue = evalValue(effect.rollRandom.max, evalCtx);
@@ -457,6 +571,59 @@ export const applyRollRandom = (
       min: minValue,
       max: maxValue,
     });
+  }
+
+  if (ctx.mode === 'discovery') {
+    const pendingByDecisionId = new Map<string, ChoicePendingRequest[]>();
+    const collectPending = (pendingChoice: ChoicePendingRequest): void => {
+      const existing = pendingByDecisionId.get(pendingChoice.decisionId);
+      if (existing === undefined) {
+        pendingByDecisionId.set(pendingChoice.decisionId, [pendingChoice]);
+      } else {
+        existing.push(pendingChoice);
+      }
+    };
+    for (let rolledValue = minValue; rolledValue <= maxValue; rolledValue += 1) {
+      const nestedCtx: EffectContext = {
+        ...ctx,
+        bindings: {
+          ...ctx.bindings,
+          [effect.rollRandom.bind]: rolledValue,
+        },
+      };
+      const nestedResult = applyEffectsWithBudget(effect.rollRandom.in, withTracePath(nestedCtx, '.rollRandom.in'), budget);
+      const pendingChoice = nestedResult.pendingChoice;
+      if (pendingChoice === undefined) {
+        continue;
+      }
+      if (pendingChoice.kind === 'pendingStochastic') {
+        pendingChoice.alternatives.forEach(collectPending);
+        continue;
+      }
+      collectPending(pendingChoice);
+    }
+
+    if (pendingByDecisionId.size === 0) {
+      return { state: ctx.state, rng: ctx.rng, bindings: ctx.bindings };
+    }
+
+    if (pendingByDecisionId.size > 1) {
+      return {
+        state: ctx.state,
+        rng: ctx.rng,
+        bindings: ctx.bindings,
+        pendingChoice: toStochasticPendingChoice(pendingByDecisionId),
+      };
+    }
+
+    const selectedDecisionId = pendingByDecisionId.keys().next().value as string;
+    const mergedPendingChoice = mergePendingChoiceRequests(pendingByDecisionId.get(selectedDecisionId)!);
+    return {
+      state: ctx.state,
+      rng: ctx.rng,
+      bindings: ctx.bindings,
+      pendingChoice: mergedPendingChoice,
+    };
   }
 
   const [rolledValue, nextRng] = nextInt(ctx.rng, minValue, maxValue);

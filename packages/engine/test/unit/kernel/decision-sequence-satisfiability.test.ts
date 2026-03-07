@@ -138,4 +138,37 @@ describe('decision sequence satisfiability', () => {
     assert.equal(result.classification, 'unknown');
     assert.equal(result.warnings.some((warning) => warning.code === 'MOVE_ENUM_PARAM_EXPANSION_BUDGET_EXCEEDED'), true);
   });
+
+  it('classifies stochastic pending alternatives as unknown', () => {
+    const result = classifyDecisionSequenceSatisfiability(
+      makeMove(),
+      (): ChoiceRequest => ({
+        kind: 'pendingStochastic',
+        complete: false,
+        source: 'rollRandom',
+        alternatives: [
+          {
+            kind: 'pending',
+            complete: false,
+            decisionId: 'decision:$alpha',
+            name: '$alpha',
+            type: 'chooseOne',
+            targetKinds: [],
+            options: [{ value: 'a', legality: 'unknown', illegalReason: null }],
+          },
+          {
+            kind: 'pending',
+            complete: false,
+            decisionId: 'decision:$beta',
+            name: '$beta',
+            type: 'chooseOne',
+            targetKinds: [],
+            options: [{ value: 'b', legality: 'unknown', illegalReason: null }],
+          },
+        ],
+      }),
+    );
+
+    assert.equal(result.classification, 'unknown');
+  });
 });

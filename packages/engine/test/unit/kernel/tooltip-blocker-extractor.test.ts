@@ -19,6 +19,8 @@ const MOCK_VERB: VerbalizationDef = {
   macros: {},
   sentencePlans: {},
   suppressPatterns: [],
+  stageDescriptions: {},
+  modifierEffects: {},
 };
 
 /** Create an evaluator that returns the given result for each condition by reference. */

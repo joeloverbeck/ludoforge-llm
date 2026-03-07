@@ -247,9 +247,11 @@
       "init": false
     },
     {
-      "name": "fitl_acesAirStrikeWindow",
-      "type": "boolean",
-      "init": false
+      "name": "fitl_airStrikeWindowMode",
+      "type": "int",
+      "init": 0,
+      "min": 0,
+      "max": 2
     },
     {
       "name": "fitl_operationAttleboroTunnelOverride",
@@ -25624,16 +25626,62 @@
                 },
                 "then": [
                   {
-                    "chooseOne": {
-                      "internalDecisionId": "decision:doc.actionPipelines.8.stages[2].effects.0.if.then.0.chooseOne",
-                      "bind": "$improveTrail",
-                      "options": {
-                        "query": "enums",
-                        "values": [
-                          "yes",
-                          "no"
+                    "if": {
+                      "when": {
+                        "op": "and",
+                        "args": [
+                          {
+                            "op": "==",
+                            "left": {
+                              "ref": "globalMarkerState",
+                              "marker": "cap_aaa"
+                            },
+                            "right": "unshaded"
+                          },
+                          {
+                            "op": ">",
+                            "left": {
+                              "aggregate": {
+                                "op": "count",
+                                "query": {
+                                  "query": "binding",
+                                  "name": "$targetSpaces"
+                                }
+                              }
+                            },
+                            "right": 1
+                          }
                         ]
-                      }
+                      },
+                      "then": [
+                        {
+                          "chooseOne": {
+                            "internalDecisionId": "decision:doc.actionPipelines.8.stages[2].effects.0.if.then.0.if.then.0.chooseOne",
+                            "bind": "$improveTrail",
+                            "options": {
+                              "query": "enums",
+                              "values": [
+                                "no"
+                              ]
+                            }
+                          }
+                        }
+                      ],
+                      "else": [
+                        {
+                          "chooseOne": {
+                            "internalDecisionId": "decision:doc.actionPipelines.8.stages[2].effects.0.if.then.0.if.else.0.chooseOne",
+                            "bind": "$improveTrail",
+                            "options": {
+                              "query": "enums",
+                              "values": [
+                                "yes",
+                                "no"
+                              ]
+                            }
+                          }
+                        }
+                      ]
                     }
                   },
                   {
@@ -34283,12 +34331,12 @@
                       "op": "and",
                       "args": [
                         {
-                          "op": "!=",
+                          "op": "==",
                           "left": {
                             "ref": "gvar",
-                            "var": "fitl_acesAirStrikeWindow"
+                            "var": "fitl_airStrikeWindowMode"
                           },
-                          "right": true
+                          "right": 0
                         },
                         {
                           "op": "==",
@@ -34338,12 +34386,12 @@
                       "op": "and",
                       "args": [
                         {
-                          "op": "!=",
+                          "op": "==",
                           "left": {
                             "ref": "gvar",
-                            "var": "fitl_acesAirStrikeWindow"
+                            "var": "fitl_airStrikeWindowMode"
                           },
-                          "right": true
+                          "right": 0
                         },
                         {
                           "op": "==",
@@ -34379,9 +34427,31 @@
                               "op": "==",
                               "left": {
                                 "ref": "gvar",
-                                "var": "fitl_acesAirStrikeWindow"
+                                "var": "fitl_airStrikeWindowMode"
+                              },
+                              "right": 2
+                            },
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "zoneProp",
+                                "zone": "$zone",
+                                "prop": "coastal"
                               },
                               "right": true
+                            }
+                          ]
+                        },
+                        {
+                          "op": "and",
+                          "args": [
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "gvar",
+                                "var": "fitl_airStrikeWindowMode"
+                              },
+                              "right": 1
                             },
                             {
                               "op": "==",
@@ -34435,12 +34505,12 @@
                           "op": "and",
                           "args": [
                             {
-                              "op": "!=",
+                              "op": "==",
                               "left": {
                                 "ref": "gvar",
-                                "var": "fitl_acesAirStrikeWindow"
+                                "var": "fitl_airStrikeWindowMode"
                               },
-                              "right": true
+                              "right": 0
                             },
                             {
                               "op": "!=",
@@ -34484,20 +34554,33 @@
                       "op": "==",
                       "left": {
                         "ref": "gvar",
-                        "var": "fitl_acesAirStrikeWindow"
+                        "var": "fitl_airStrikeWindowMode"
                       },
-                      "right": true
+                      "right": 2
                     },
-                    "then": 1,
+                    "then": 3,
                     "else": {
-                      "op": "-",
-                      "left": 6,
-                      "right": {
-                        "aggregate": {
-                          "op": "count",
-                          "query": {
-                            "query": "binding",
-                            "name": "$arcLightNoCoinProvinces"
+                      "if": {
+                        "when": {
+                          "op": "==",
+                          "left": {
+                            "ref": "gvar",
+                            "var": "fitl_airStrikeWindowMode"
+                          },
+                          "right": 1
+                        },
+                        "then": 1,
+                        "else": {
+                          "op": "-",
+                          "left": 6,
+                          "right": {
+                            "aggregate": {
+                              "op": "count",
+                              "query": {
+                                "query": "binding",
+                                "name": "$arcLightNoCoinProvinces"
+                              }
+                            }
                           }
                         }
                       }
@@ -34510,12 +34593,25 @@
                       "op": "==",
                       "left": {
                         "ref": "gvar",
-                        "var": "fitl_acesAirStrikeWindow"
+                        "var": "fitl_airStrikeWindowMode"
                       },
-                      "right": true
+                      "right": 2
                     },
                     "then": 1,
-                    "else": 0
+                    "else": {
+                      "if": {
+                        "when": {
+                          "op": "==",
+                          "left": {
+                            "ref": "gvar",
+                            "var": "fitl_airStrikeWindowMode"
+                          },
+                          "right": 1
+                        },
+                        "then": 1,
+                        "else": 0
+                      }
+                    }
                   }
                 }
               }
@@ -34665,8 +34761,37 @@
                                                 {
                                                   "removeByPriority": {
                                                     "budget": {
-                                                      "ref": "gvar",
-                                                      "var": "airStrikeRemaining"
+                                                      "if": {
+                                                        "when": {
+                                                          "op": "==",
+                                                          "left": {
+                                                            "ref": "gvar",
+                                                            "var": "fitl_airStrikeWindowMode"
+                                                          },
+                                                          "right": 2
+                                                        },
+                                                        "then": {
+                                                          "if": {
+                                                            "when": {
+                                                              "op": ">",
+                                                              "left": {
+                                                                "ref": "gvar",
+                                                                "var": "airStrikeRemaining"
+                                                              },
+                                                              "right": 2
+                                                            },
+                                                            "then": 2,
+                                                            "else": {
+                                                              "ref": "gvar",
+                                                              "var": "airStrikeRemaining"
+                                                            }
+                                                          }
+                                                        },
+                                                        "else": {
+                                                          "ref": "gvar",
+                                                          "var": "airStrikeRemaining"
+                                                        }
+                                                      }
                                                     },
                                                     "groups": [
                                                       {
@@ -34770,8 +34895,37 @@
                                                 {
                                                   "removeByPriority": {
                                                     "budget": {
-                                                      "ref": "gvar",
-                                                      "var": "airStrikeRemaining"
+                                                      "if": {
+                                                        "when": {
+                                                          "op": "==",
+                                                          "left": {
+                                                            "ref": "gvar",
+                                                            "var": "fitl_airStrikeWindowMode"
+                                                          },
+                                                          "right": 2
+                                                        },
+                                                        "then": {
+                                                          "if": {
+                                                            "when": {
+                                                              "op": ">",
+                                                              "left": {
+                                                                "ref": "gvar",
+                                                                "var": "airStrikeRemaining"
+                                                              },
+                                                              "right": 2
+                                                            },
+                                                            "then": 2,
+                                                            "else": {
+                                                              "ref": "gvar",
+                                                              "var": "airStrikeRemaining"
+                                                            }
+                                                          }
+                                                        },
+                                                        "else": {
+                                                          "ref": "gvar",
+                                                          "var": "airStrikeRemaining"
+                                                        }
+                                                      }
                                                     },
                                                     "groups": [
                                                       {
@@ -34928,8 +35082,37 @@
                                     {
                                       "removeByPriority": {
                                         "budget": {
-                                          "ref": "gvar",
-                                          "var": "airStrikeRemaining"
+                                          "if": {
+                                            "when": {
+                                              "op": "==",
+                                              "left": {
+                                                "ref": "gvar",
+                                                "var": "fitl_airStrikeWindowMode"
+                                              },
+                                              "right": 2
+                                            },
+                                            "then": {
+                                              "if": {
+                                                "when": {
+                                                  "op": ">",
+                                                  "left": {
+                                                    "ref": "gvar",
+                                                    "var": "airStrikeRemaining"
+                                                  },
+                                                  "right": 2
+                                                },
+                                                "then": 2,
+                                                "else": {
+                                                  "ref": "gvar",
+                                                  "var": "airStrikeRemaining"
+                                                }
+                                              }
+                                            },
+                                            "else": {
+                                              "ref": "gvar",
+                                              "var": "airStrikeRemaining"
+                                            }
+                                          }
                                         },
                                         "groups": [
                                           {
@@ -35295,12 +35478,12 @@
                       "right": true
                     },
                     {
-                      "op": "!=",
+                      "op": "==",
                       "left": {
                         "ref": "gvar",
-                        "var": "fitl_acesAirStrikeWindow"
+                        "var": "fitl_airStrikeWindowMode"
                       },
-                      "right": true
+                      "right": 0
                     },
                     {
                       "op": "or",
@@ -35341,142 +35524,145 @@
                 },
                 "then": [
                   {
-                    "if": {
-                      "when": {
-                        "op": "==",
-                        "left": {
-                          "ref": "globalMarkerState",
-                          "marker": "cap_topGun"
-                        },
-                        "right": "shaded"
-                      },
-                      "then": [
-                        {
-                          "rollRandom": {
-                            "bind": "$topGunDie",
-                            "min": 1,
-                            "max": 6,
-                            "in": [
-                              {
-                                "if": {
-                                  "when": {
-                                    "op": ">=",
-                                    "left": {
-                                      "ref": "binding",
-                                      "name": "$topGunDie"
+                    "let": {
+                      "bind": "$airStrikeTrailDegrade",
+                      "value": {
+                        "if": {
+                          "when": {
+                            "op": "==",
+                            "left": {
+                              "ref": "globalMarkerState",
+                              "marker": "cap_aaa"
+                            },
+                            "right": "shaded"
+                          },
+                          "then": {
+                            "if": {
+                              "when": {
+                                "op": ">",
+                                "left": {
+                                  "ref": "gvar",
+                                  "var": "trail"
+                                },
+                                "right": 2
+                              },
+                              "then": {
+                                "op": "min",
+                                "left": {
+                                  "if": {
+                                    "when": {
+                                      "op": "==",
+                                      "left": {
+                                        "ref": "globalMarkerState",
+                                        "marker": "cap_topGun"
+                                      },
+                                      "right": "unshaded"
                                     },
-                                    "right": 4
+                                    "then": 2,
+                                    "else": 1
+                                  }
+                                },
+                                "right": {
+                                  "op": "-",
+                                  "left": {
+                                    "ref": "gvar",
+                                    "var": "trail"
                                   },
-                                  "then": [
-                                    {
-                                      "addVar": {
-                                        "scope": "global",
-                                        "var": "trail",
-                                        "delta": {
-                                          "op": "-",
-                                          "left": 0,
-                                          "right": {
-                                            "if": {
-                                              "when": {
-                                                "op": "==",
-                                                "left": {
-                                                  "ref": "globalMarkerState",
-                                                  "marker": "cap_aaa"
-                                                },
-                                                "right": "shaded"
-                                              },
-                                              "then": {
-                                                "if": {
-                                                  "when": {
-                                                    "op": "==",
-                                                    "left": {
-                                                      "ref": "globalMarkerState",
-                                                      "marker": "cap_topGun"
-                                                    },
-                                                    "right": "unshaded"
-                                                  },
-                                                  "then": 2,
-                                                  "else": 1
-                                                }
-                                              },
-                                              "else": {
-                                                "if": {
-                                                  "when": {
-                                                    "op": "==",
-                                                    "left": {
-                                                      "ref": "globalMarkerState",
-                                                      "marker": "cap_topGun"
-                                                    },
-                                                    "right": "unshaded"
-                                                  },
-                                                  "then": 2,
-                                                  "else": 1
-                                                }
-                                              }
-                                            }
-                                          }
-                                        }
-                                      }
-                                    },
+                                  "right": 2
+                                }
+                              },
+                              "else": 0
+                            }
+                          },
+                          "else": {
+                            "if": {
+                              "when": {
+                                "op": "==",
+                                "left": {
+                                  "ref": "globalMarkerState",
+                                  "marker": "cap_topGun"
+                                },
+                                "right": "unshaded"
+                              },
+                              "then": 2,
+                              "else": 1
+                            }
+                          }
+                        }
+                      },
+                      "in": [
+                        {
+                          "if": {
+                            "when": {
+                              "op": "==",
+                              "left": {
+                                "ref": "globalMarkerState",
+                                "marker": "cap_topGun"
+                              },
+                              "right": "shaded"
+                            },
+                            "then": [
+                              {
+                                "rollRandom": {
+                                  "bind": "$topGunDie",
+                                  "min": 1,
+                                  "max": 6,
+                                  "in": [
                                     {
                                       "if": {
                                         "when": {
-                                          "op": "and",
-                                          "args": [
-                                            {
-                                              "op": "==",
-                                              "left": {
-                                                "ref": "globalMarkerState",
-                                                "marker": "cap_migs"
-                                              },
-                                              "right": "shaded"
-                                            },
-                                            {
-                                              "op": "!=",
-                                              "left": {
-                                                "ref": "globalMarkerState",
-                                                "marker": "cap_topGun"
-                                              },
-                                              "right": "unshaded"
-                                            }
-                                          ]
+                                          "op": ">=",
+                                          "left": {
+                                            "ref": "binding",
+                                            "name": "$topGunDie"
+                                          },
+                                          "right": 4
                                         },
                                         "then": [
                                           {
-                                            "chooseN": {
-                                              "internalDecisionId": "decision:doc.actionPipelines.18.stages[2].effects.1.if.then.0.if.then.0.rollRandom.in.0.if.then.1.if.then.0.chooseN",
-                                              "bind": "$migsCostSpaces",
-                                              "options": {
-                                                "query": "concat",
-                                                "sources": [
-                                                  {
-                                                    "query": "binding",
-                                                    "name": "$spaces"
-                                                  },
-                                                  {
-                                                    "query": "binding",
-                                                    "name": "$arcLightNoCoinProvinces"
-                                                  }
-                                                ]
-                                              },
-                                              "max": 1,
-                                              "min": 0
+                                            "addVar": {
+                                              "scope": "global",
+                                              "var": "trail",
+                                              "delta": {
+                                                "op": "-",
+                                                "left": 0,
+                                                "right": {
+                                                  "ref": "binding",
+                                                  "name": "$airStrikeTrailDegrade"
+                                                }
+                                              }
                                             }
                                           },
                                           {
-                                            "forEach": {
-                                              "bind": "$migsCostSpace",
-                                              "over": {
-                                                "query": "binding",
-                                                "name": "$migsCostSpaces"
+                                            "if": {
+                                              "when": {
+                                                "op": "and",
+                                                "args": [
+                                                  {
+                                                    "op": "==",
+                                                    "left": {
+                                                      "ref": "globalMarkerState",
+                                                      "marker": "cap_migs"
+                                                    },
+                                                    "right": "shaded"
+                                                  },
+                                                  {
+                                                    "op": "!=",
+                                                    "left": {
+                                                      "ref": "globalMarkerState",
+                                                      "marker": "cap_topGun"
+                                                    },
+                                                    "right": "unshaded"
+                                                  }
+                                                ]
                                               },
-                                              "effects": [
+                                              "then": [
                                                 {
                                                   "forEach": {
                                                     "bind": "$migsCostTroop",
                                                     "over": {
                                                       "query": "tokensInZone",
-                                                      "zone": "$migsCostSpace",
+                                                      "zone": "available-US:none",
                                                       "filter": {
                                                         "op": "and",
                                                         "args": [
@@ -35497,7 +35683,7 @@
                                                       {
                                                         "moveToken": {
                                                           "token": "$migsCostTroop",
-                                                          "from": "$migsCostSpace",
+                                                          "from": "available-US:none",
                                                           "to": {
                                                             "zoneExpr": "casualties-US:none"
                                                           }
@@ -35509,74 +35695,74 @@
                                                 }
                                               ]
                                             }
-                                          }
-                                        ]
-                                      }
-                                    },
-                                    {
-                                      "if": {
-                                        "when": {
-                                          "op": "==",
-                                          "left": {
-                                            "ref": "globalMarkerState",
-                                            "marker": "cap_sa2s"
                                           },
-                                          "right": "unshaded"
-                                        },
-                                        "then": [
                                           {
-                                            "chooseN": {
-                                              "internalDecisionId": "decision:doc.actionPipelines.18.stages[2].effects.1.if.then.0.if.then.0.rollRandom.in.0.if.then.2.if.then.0.chooseN",
-                                              "bind": "$sa2sCostSpaces",
-                                              "options": {
-                                                "query": "concat",
-                                                "sources": [
-                                                  {
-                                                    "query": "binding",
-                                                    "name": "$spaces"
-                                                  },
-                                                  {
-                                                    "query": "binding",
-                                                    "name": "$arcLightNoCoinProvinces"
+                                            "if": {
+                                              "when": {
+                                                "op": "==",
+                                                "left": {
+                                                  "ref": "globalMarkerState",
+                                                  "marker": "cap_sa2s"
+                                                },
+                                                "right": "unshaded"
+                                              },
+                                              "then": [
+                                                {
+                                                  "chooseN": {
+                                                    "internalDecisionId": "decision:doc.actionPipelines.18.stages[2].effects.1.if.then.0.let.in.0.if.then.0.rollRandom.in.0.if.then.2.if.then.0.chooseN",
+                                                    "bind": "$sa2sCostSpaces",
+                                                    "options": {
+                                                      "query": "concat",
+                                                      "sources": [
+                                                        {
+                                                          "query": "binding",
+                                                          "name": "$spaces"
+                                                        },
+                                                        {
+                                                          "query": "binding",
+                                                          "name": "$arcLightNoCoinProvinces"
+                                                        }
+                                                      ]
+                                                    },
+                                                    "max": 1,
+                                                    "min": 0
                                                   }
-                                                ]
-                                              },
-                                              "max": 1,
-                                              "min": 0
-                                            }
-                                          },
-                                          {
-                                            "forEach": {
-                                              "bind": "$sa2sCostSpace",
-                                              "over": {
-                                                "query": "binding",
-                                                "name": "$sa2sCostSpaces"
-                                              },
-                                              "effects": [
+                                                },
                                                 {
                                                   "forEach": {
-                                                    "bind": "$sa2sCostPiece",
+                                                    "bind": "$sa2sCostSpace",
                                                     "over": {
-                                                      "query": "tokensInZone",
-                                                      "zone": "$sa2sCostSpace",
-                                                      "filter": {
-                                                        "prop": "faction",
-                                                        "op": "eq",
-                                                        "value": "NVA"
-                                                      }
+                                                      "query": "binding",
+                                                      "name": "$sa2sCostSpaces"
                                                     },
                                                     "effects": [
                                                       {
-                                                        "moveToken": {
-                                                          "token": "$sa2sCostPiece",
-                                                          "from": "$sa2sCostSpace",
-                                                          "to": {
-                                                            "zoneExpr": "available-NVA:none"
-                                                          }
+                                                        "forEach": {
+                                                          "bind": "$sa2sCostPiece",
+                                                          "over": {
+                                                            "query": "tokensInZone",
+                                                            "zone": "$sa2sCostSpace",
+                                                            "filter": {
+                                                              "prop": "faction",
+                                                              "op": "eq",
+                                                              "value": "NVA"
+                                                            }
+                                                          },
+                                                          "effects": [
+                                                            {
+                                                              "moveToken": {
+                                                                "token": "$sa2sCostPiece",
+                                                                "from": "$sa2sCostSpace",
+                                                                "to": {
+                                                                  "zoneExpr": "available-NVA:none"
+                                                                }
+                                                              }
+                                                            }
+                                                          ],
+                                                          "limit": 1
                                                         }
                                                       }
-                                                    ],
-                                                    "limit": 1
+                                                    ]
                                                   }
                                                 }
                                               ]
@@ -35588,120 +35774,52 @@
                                   ]
                                 }
                               }
-                            ]
-                          }
-                        }
-                      ],
-                      "else": [
-                        {
-                          "addVar": {
-                            "scope": "global",
-                            "var": "trail",
-                            "delta": {
-                              "op": "-",
-                              "left": 0,
-                              "right": {
-                                "if": {
-                                  "when": {
-                                    "op": "==",
-                                    "left": {
-                                      "ref": "globalMarkerState",
-                                      "marker": "cap_aaa"
-                                    },
-                                    "right": "shaded"
-                                  },
-                                  "then": {
-                                    "if": {
-                                      "when": {
-                                        "op": "==",
-                                        "left": {
-                                          "ref": "globalMarkerState",
-                                          "marker": "cap_topGun"
-                                        },
-                                        "right": "unshaded"
-                                      },
-                                      "then": 2,
-                                      "else": 1
-                                    }
-                                  },
-                                  "else": {
-                                    "if": {
-                                      "when": {
-                                        "op": "==",
-                                        "left": {
-                                          "ref": "globalMarkerState",
-                                          "marker": "cap_topGun"
-                                        },
-                                        "right": "unshaded"
-                                      },
-                                      "then": 2,
-                                      "else": 1
+                            ],
+                            "else": [
+                              {
+                                "addVar": {
+                                  "scope": "global",
+                                  "var": "trail",
+                                  "delta": {
+                                    "op": "-",
+                                    "left": 0,
+                                    "right": {
+                                      "ref": "binding",
+                                      "name": "$airStrikeTrailDegrade"
                                     }
                                   }
                                 }
-                              }
-                            }
-                          }
-                        },
-                        {
-                          "if": {
-                            "when": {
-                              "op": "and",
-                              "args": [
-                                {
-                                  "op": "==",
-                                  "left": {
-                                    "ref": "globalMarkerState",
-                                    "marker": "cap_migs"
-                                  },
-                                  "right": "shaded"
-                                },
-                                {
-                                  "op": "!=",
-                                  "left": {
-                                    "ref": "globalMarkerState",
-                                    "marker": "cap_topGun"
-                                  },
-                                  "right": "unshaded"
-                                }
-                              ]
-                            },
-                            "then": [
+                              },
                               {
-                                "chooseN": {
-                                  "internalDecisionId": "decision:doc.actionPipelines.18.stages[2].effects.1.if.then.0.if.else.1.if.then.0.chooseN",
-                                  "bind": "$migsCostSpaces",
-                                  "options": {
-                                    "query": "concat",
-                                    "sources": [
+                                "if": {
+                                  "when": {
+                                    "op": "and",
+                                    "args": [
                                       {
-                                        "query": "binding",
-                                        "name": "$spaces"
+                                        "op": "==",
+                                        "left": {
+                                          "ref": "globalMarkerState",
+                                          "marker": "cap_migs"
+                                        },
+                                        "right": "shaded"
                                       },
                                       {
-                                        "query": "binding",
-                                        "name": "$arcLightNoCoinProvinces"
+                                        "op": "!=",
+                                        "left": {
+                                          "ref": "globalMarkerState",
+                                          "marker": "cap_topGun"
+                                        },
+                                        "right": "unshaded"
                                       }
                                     ]
                                   },
-                                  "max": 1,
-                                  "min": 0
-                                }
-                              },
-                              {
-                                "forEach": {
-                                  "bind": "$migsCostSpace",
-                                  "over": {
-                                    "query": "binding",
-                                    "name": "$migsCostSpaces"
-                                  },
-                                  "effects": [
+                                  "then": [
                                     {
                                       "forEach": {
                                         "bind": "$migsCostTroop",
                                         "over": {
                                           "query": "tokensInZone",
-                                          "zone": "$migsCostSpace",
+                                          "zone": "available-US:none",
                                           "filter": {
                                             "op": "and",
                                             "args": [
@@ -35722,7 +35840,7 @@
                                           {
                                             "moveToken": {
                                               "token": "$migsCostTroop",
-                                              "from": "$migsCostSpace",
+                                              "from": "available-US:none",
                                               "to": {
                                                 "zoneExpr": "casualties-US:none"
                                               }
@@ -35734,74 +35852,74 @@
                                     }
                                   ]
                                 }
-                              }
-                            ]
-                          }
-                        },
-                        {
-                          "if": {
-                            "when": {
-                              "op": "==",
-                              "left": {
-                                "ref": "globalMarkerState",
-                                "marker": "cap_sa2s"
                               },
-                              "right": "unshaded"
-                            },
-                            "then": [
                               {
-                                "chooseN": {
-                                  "internalDecisionId": "decision:doc.actionPipelines.18.stages[2].effects.1.if.then.0.if.else.2.if.then.0.chooseN",
-                                  "bind": "$sa2sCostSpaces",
-                                  "options": {
-                                    "query": "concat",
-                                    "sources": [
-                                      {
-                                        "query": "binding",
-                                        "name": "$spaces"
-                                      },
-                                      {
-                                        "query": "binding",
-                                        "name": "$arcLightNoCoinProvinces"
+                                "if": {
+                                  "when": {
+                                    "op": "==",
+                                    "left": {
+                                      "ref": "globalMarkerState",
+                                      "marker": "cap_sa2s"
+                                    },
+                                    "right": "unshaded"
+                                  },
+                                  "then": [
+                                    {
+                                      "chooseN": {
+                                        "internalDecisionId": "decision:doc.actionPipelines.18.stages[2].effects.1.if.then.0.let.in.0.if.else.2.if.then.0.chooseN",
+                                        "bind": "$sa2sCostSpaces",
+                                        "options": {
+                                          "query": "concat",
+                                          "sources": [
+                                            {
+                                              "query": "binding",
+                                              "name": "$spaces"
+                                            },
+                                            {
+                                              "query": "binding",
+                                              "name": "$arcLightNoCoinProvinces"
+                                            }
+                                          ]
+                                        },
+                                        "max": 1,
+                                        "min": 0
                                       }
-                                    ]
-                                  },
-                                  "max": 1,
-                                  "min": 0
-                                }
-                              },
-                              {
-                                "forEach": {
-                                  "bind": "$sa2sCostSpace",
-                                  "over": {
-                                    "query": "binding",
-                                    "name": "$sa2sCostSpaces"
-                                  },
-                                  "effects": [
+                                    },
                                     {
                                       "forEach": {
-                                        "bind": "$sa2sCostPiece",
+                                        "bind": "$sa2sCostSpace",
                                         "over": {
-                                          "query": "tokensInZone",
-                                          "zone": "$sa2sCostSpace",
-                                          "filter": {
-                                            "prop": "faction",
-                                            "op": "eq",
-                                            "value": "NVA"
-                                          }
+                                          "query": "binding",
+                                          "name": "$sa2sCostSpaces"
                                         },
                                         "effects": [
                                           {
-                                            "moveToken": {
-                                              "token": "$sa2sCostPiece",
-                                              "from": "$sa2sCostSpace",
-                                              "to": {
-                                                "zoneExpr": "available-NVA:none"
-                                              }
+                                            "forEach": {
+                                              "bind": "$sa2sCostPiece",
+                                              "over": {
+                                                "query": "tokensInZone",
+                                                "zone": "$sa2sCostSpace",
+                                                "filter": {
+                                                  "prop": "faction",
+                                                  "op": "eq",
+                                                  "value": "NVA"
+                                                }
+                                              },
+                                              "effects": [
+                                                {
+                                                  "moveToken": {
+                                                    "token": "$sa2sCostPiece",
+                                                    "from": "$sa2sCostSpace",
+                                                    "to": {
+                                                      "zoneExpr": "available-NVA:none"
+                                                    }
+                                                  }
+                                                }
+                                              ],
+                                              "limit": 1
                                             }
                                           }
-                                        ],
-                                        "limit": 1
+                                        ]
                                       }
                                     }
                                   ]
@@ -45095,83 +45213,96 @@
         {
           "if": {
             "when": {
-              "op": ">",
-              "left": {
-                "aggregate": {
-                  "op": "count",
-                  "query": {
-                    "query": "mapSpaces",
-                    "filter": {
-                      "condition": {
-                        "op": "and",
-                        "args": [
-                          {
-                            "op": "or",
+              "op": "and",
+              "args": [
+                {
+                  "op": "!=",
+                  "left": {
+                    "ref": "gvar",
+                    "var": "mom_oriskany"
+                  },
+                  "right": true
+                },
+                {
+                  "op": ">",
+                  "left": {
+                    "aggregate": {
+                      "op": "count",
+                      "query": {
+                        "query": "mapSpaces",
+                        "filter": {
+                          "condition": {
+                            "op": "and",
                             "args": [
                               {
-                                "op": "==",
-                                "left": {
-                                  "ref": "zoneProp",
-                                  "zone": "$zone",
-                                  "prop": "country"
-                                },
-                                "right": "laos"
+                                "op": "or",
+                                "args": [
+                                  {
+                                    "op": "==",
+                                    "left": {
+                                      "ref": "zoneProp",
+                                      "zone": "$zone",
+                                      "prop": "country"
+                                    },
+                                    "right": "laos"
+                                  },
+                                  {
+                                    "op": "==",
+                                    "left": {
+                                      "ref": "zoneProp",
+                                      "zone": "$zone",
+                                      "prop": "country"
+                                    },
+                                    "right": "cambodia"
+                                  }
+                                ]
                               },
                               {
-                                "op": "==",
+                                "op": ">",
                                 "left": {
-                                  "ref": "zoneProp",
-                                  "zone": "$zone",
-                                  "prop": "country"
+                                  "aggregate": {
+                                    "op": "count",
+                                    "query": {
+                                      "query": "tokensInZone",
+                                      "zone": "$zone",
+                                      "filter": {
+                                        "prop": "faction",
+                                        "op": "in",
+                                        "value": [
+                                          "US",
+                                          "ARVN"
+                                        ]
+                                      }
+                                    }
+                                  }
                                 },
-                                "right": "cambodia"
+                                "right": {
+                                  "aggregate": {
+                                    "op": "count",
+                                    "query": {
+                                      "query": "tokensInZone",
+                                      "zone": "$zone",
+                                      "filter": {
+                                        "prop": "faction",
+                                        "op": "in",
+                                        "value": [
+                                          "NVA",
+                                          "VC"
+                                        ]
+                                      }
+                                    }
+                                  }
+                                }
                               }
                             ]
-                          },
-                          {
-                            "op": ">",
-                            "left": {
-                              "aggregate": {
-                                "op": "count",
-                                "query": {
-                                  "query": "tokensInZone",
-                                  "zone": "$zone",
-                                  "filter": {
-                                    "prop": "faction",
-                                    "op": "in",
-                                    "value": [
-                                      "US",
-                                      "ARVN"
-                                    ]
-                                  }
-                                }
-                              }
-                            },
-                            "right": {
-                              "aggregate": {
-                                "op": "count",
-                                "query": {
-                                  "query": "tokensInZone",
-                                  "zone": "$zone",
-                                  "filter": {
-                                    "prop": "faction",
-                                    "op": "in",
-                                    "value": [
-                                      "NVA",
-                                      "VC"
-                                    ]
-                                  }
-                                }
-                              }
-                            }
                           }
-                        ]
+                        }
                       }
                     }
-                  }
+                  },
+                  "right": 0
                 }
-              },
-              "right": 0
+              ]
             },
             "then": [
               {
@@ -45354,6 +45485,27 @@
                 }
               }
             }
+          }
+        },
+        {
+          "if": {
+            "when": {
+              "op": "==",
+              "left": {
+                "ref": "globalMarkerState",
+                "marker": "cap_migs"
+              },
+              "right": "unshaded"
+            },
+            "then": [
+              {
+                "addVar": {
+                  "scope": "global",
+                  "var": "nvaResources",
+                  "delta": -6
+                }
+              }
+            ]
           }
         },
         {
@@ -51514,8 +51666,8 @@
         {
           "setVar": {
             "scope": "global",
-            "var": "fitl_acesAirStrikeWindow",
-            "value": false
+            "var": "fitl_airStrikeWindowMode",
+            "value": 0
           }
         },
         {
@@ -53427,8 +53579,8 @@
                   {
                     "setVar": {
                       "scope": "global",
-                      "var": "fitl_acesAirStrikeWindow",
-                      "value": true
+                      "var": "fitl_airStrikeWindowMode",
+                      "value": 1
                     }
                   }
                 ],
@@ -53436,8 +53588,8 @@
                   {
                     "setVar": {
                       "scope": "global",
-                      "var": "fitl_acesAirStrikeWindow",
-                      "value": false
+                      "var": "fitl_airStrikeWindowMode",
+                      "value": 0
                     }
                   }
                 ]
@@ -53447,8 +53599,8 @@
               {
                 "setVar": {
                   "scope": "global",
-                  "var": "fitl_acesAirStrikeWindow",
-                  "value": false
+                  "var": "fitl_airStrikeWindowMode",
+                  "value": 0
                 }
               },
               {
@@ -58890,668 +59042,75 @@
           },
           "unshaded": {
             "text": "US or ARVN free Air Strikes any 1-3 coastal spaces, removing up to 2 pieces per space (no die roll and no effect on Trail).",
-            "effects": [
+            "branches": [
               {
-                "chooseN": {
-                  "internalDecisionId": "decision:doc.eventDecks.0.cards.68.unshaded.effects.0.chooseN",
-                  "bind": "$coastalSpaces",
-                  "options": {
-                    "query": "mapSpaces",
-                    "filter": {
-                      "condition": {
-                        "op": "==",
-                        "left": {
-                          "ref": "zoneProp",
-                          "zone": "$zone",
-                          "prop": "coastal"
-                        },
-                        "right": true
-                      }
-                    }
-                  },
-                  "max": 3,
-                  "min": 1
-                }
+                "id": "uss-new-jersey-execute-as-us",
+                "order": 1,
+                "freeOperationGrants": [
+                  {
+                    "seat": "self",
+                    "executeAsSeat": "us",
+                    "sequence": {
+                      "chain": "uss-new-jersey-us",
+                      "step": 0
+                    },
+                    "operationClass": "operation",
+                    "actionIds": [
+                      "airStrike"
+                    ]
+                  }
+                ]
               },
               {
-                "forEach": {
-                  "bind": "$space",
-                  "over": {
-                    "query": "binding",
-                    "name": "$coastalSpaces"
-                  },
-                  "effects": [
-                    {
-                      "let": {
-                        "bind": "$enemyBefore",
-                        "value": {
-                          "aggregate": {
-                            "op": "count",
-                            "query": {
-                              "query": "tokensInZone",
-                              "zone": "$space",
-                              "filter": {
-                                "prop": "faction",
-                                "op": "in",
-                                "value": [
-                                  "NVA",
-                                  "VC"
-                                ]
-                              }
-                            }
-                          }
-                        },
-                        "in": [
-                          {
-                            "if": {
-                              "when": {
-                                "op": "==",
-                                "left": true,
-                                "right": true
-                              },
-                              "then": [
-                                {
-                                  "let": {
-                                    "bind": "$__macro_us_sa_remove_insurgents_eventDecks_0__cards_68__unshaded_effects_1__forEach_effects_0__let_in_0__undergroundEnemyCount",
-                                    "value": {
-                                      "aggregate": {
-                                        "op": "count",
-                                        "query": {
-                                          "query": "tokensInZone",
-                                          "zone": "$space",
-                                          "filter": {
-                                            "op": "and",
-                                            "args": [
-                                              {
-                                                "prop": "faction",
-                                                "op": "in",
-                                                "value": [
-                                                  "NVA",
-                                                  "VC"
-                                                ]
-                                              },
-                                              {
-                                                "prop": "type",
-                                                "op": "eq",
-                                                "value": "guerrilla"
-                                              },
-                                              {
-                                                "prop": "activity",
-                                                "op": "eq",
-                                                "value": "underground"
-                                              }
-                                            ]
-                                          }
-                                        }
-                                      }
-                                    },
-                                    "in": [
-                                      {
-                                        "if": {
-                                          "when": {
-                                            "op": ">",
-                                            "left": {
-                                              "ref": "binding",
-                                              "name": "$__macro_us_sa_remove_insurgents_eventDecks_0__cards_68__unshaded_effects_1__forEach_effects_0__let_in_0__undergroundEnemyCount"
-                                            },
-                                            "right": 0
-                                          },
-                                          "then": [
-                                            {
-                                              "removeByPriority": {
-                                                "budget": 2,
-                                                "groups": [
-                                                  {
-                                                    "bind": "$__macro_us_sa_remove_insurgents_eventDecks_0__cards_68__unshaded_effects_1__forEach_effects_0__let_in_0__target",
-                                                    "over": {
-                                                      "query": "tokensInZone",
-                                                      "zone": "$space",
-                                                      "filter": {
-                                                        "op": "and",
-                                                        "args": [
-                                                          {
-                                                            "prop": "faction",
-                                                            "op": "in",
-                                                            "value": [
-                                                              "NVA",
-                                                              "VC"
-                                                            ]
-                                                          },
-                                                          {
-                                                            "prop": "type",
-                                                            "op": "eq",
-                                                            "value": "troops"
-                                                          }
-                                                        ]
-                                                      }
-                                                    },
-                                                    "to": {
-                                                      "zoneExpr": {
-                                                        "concat": [
-                                                          "available-",
-                                                          {
-                                                            "ref": "tokenProp",
-                                                            "token": "$__macro_us_sa_remove_insurgents_eventDecks_0__cards_68__unshaded_effects_1__forEach_effects_0__let_in_0__target",
-                                                            "prop": "faction"
-                                                          },
-                                                          ":none"
-                                                        ]
-                                                      }
-                                                    },
-                                                    "macroOrigin": {
-                                                      "macroId": "us-sa-remove-insurgents",
-                                                      "stem": "target"
-                                                    }
-                                                  },
-                                                  {
-                                                    "bind": "$__macro_us_sa_remove_insurgents_eventDecks_0__cards_68__unshaded_effects_1__forEach_effects_0__let_in_0__target",
-                                                    "over": {
-                                                      "query": "tokensInZone",
-                                                      "zone": "$space",
-                                                      "filter": {
-                                                        "op": "and",
-                                                        "args": [
-                                                          {
-                                                            "prop": "faction",
-                                                            "op": "in",
-                                                            "value": [
-                                                              "NVA",
-                                                              "VC"
-                                                            ]
-                                                          },
-                                                          {
-                                                            "prop": "type",
-                                                            "op": "eq",
-                                                            "value": "guerrilla"
-                                                          },
-                                                          {
-                                                            "prop": "activity",
-                                                            "op": "eq",
-                                                            "value": "active"
-                                                          }
-                                                        ]
-                                                      }
-                                                    },
-                                                    "to": {
-                                                      "zoneExpr": {
-                                                        "concat": [
-                                                          "available-",
-                                                          {
-                                                            "ref": "tokenProp",
-                                                            "token": "$__macro_us_sa_remove_insurgents_eventDecks_0__cards_68__unshaded_effects_1__forEach_effects_0__let_in_0__target",
-                                                            "prop": "faction"
-                                                          },
-                                                          ":none"
-                                                        ]
-                                                      }
-                                                    },
-                                                    "macroOrigin": {
-                                                      "macroId": "us-sa-remove-insurgents",
-                                                      "stem": "target"
-                                                    }
-                                                  }
-                                                ],
-                                                "macroOrigin": {
-                                                  "macroId": "us-sa-remove-insurgents",
-                                                  "stem": "target"
-                                                }
-                                              }
-                                            }
-                                          ],
-                                          "else": [
-                                            {
-                                              "removeByPriority": {
-                                                "budget": 2,
-                                                "groups": [
-                                                  {
-                                                    "bind": "$__macro_us_sa_remove_insurgents_eventDecks_0__cards_68__unshaded_effects_1__forEach_effects_0__let_in_0__target",
-                                                    "over": {
-                                                      "query": "tokensInZone",
-                                                      "zone": "$space",
-                                                      "filter": {
-                                                        "op": "and",
-                                                        "args": [
-                                                          {
-                                                            "prop": "faction",
-                                                            "op": "in",
-                                                            "value": [
-                                                              "NVA",
-                                                              "VC"
-                                                            ]
-                                                          },
-                                                          {
-                                                            "prop": "type",
-                                                            "op": "eq",
-                                                            "value": "troops"
-                                                          }
-                                                        ]
-                                                      }
-                                                    },
-                                                    "to": {
-                                                      "zoneExpr": {
-                                                        "concat": [
-                                                          "available-",
-                                                          {
-                                                            "ref": "tokenProp",
-                                                            "token": "$__macro_us_sa_remove_insurgents_eventDecks_0__cards_68__unshaded_effects_1__forEach_effects_0__let_in_0__target",
-                                                            "prop": "faction"
-                                                          },
-                                                          ":none"
-                                                        ]
-                                                      }
-                                                    },
-                                                    "macroOrigin": {
-                                                      "macroId": "us-sa-remove-insurgents",
-                                                      "stem": "target"
-                                                    }
-                                                  },
-                                                  {
-                                                    "bind": "$__macro_us_sa_remove_insurgents_eventDecks_0__cards_68__unshaded_effects_1__forEach_effects_0__let_in_0__target",
-                                                    "over": {
-                                                      "query": "tokensInZone",
-                                                      "zone": "$space",
-                                                      "filter": {
-                                                        "op": "and",
-                                                        "args": [
-                                                          {
-                                                            "prop": "faction",
-                                                            "op": "in",
-                                                            "value": [
-                                                              "NVA",
-                                                              "VC"
-                                                            ]
-                                                          },
-                                                          {
-                                                            "prop": "type",
-                                                            "op": "eq",
-                                                            "value": "guerrilla"
-                                                          },
-                                                          {
-                                                            "prop": "activity",
-                                                            "op": "eq",
-                                                            "value": "active"
-                                                          }
-                                                        ]
-                                                      }
-                                                    },
-                                                    "to": {
-                                                      "zoneExpr": {
-                                                        "concat": [
-                                                          "available-",
-                                                          {
-                                                            "ref": "tokenProp",
-                                                            "token": "$__macro_us_sa_remove_insurgents_eventDecks_0__cards_68__unshaded_effects_1__forEach_effects_0__let_in_0__target",
-                                                            "prop": "faction"
-                                                          },
-                                                          ":none"
-                                                        ]
-                                                      }
-                                                    },
-                                                    "macroOrigin": {
-                                                      "macroId": "us-sa-remove-insurgents",
-                                                      "stem": "target"
-                                                    }
-                                                  },
-                                                  {
-                                                    "bind": "$__macro_us_sa_remove_insurgents_eventDecks_0__cards_68__unshaded_effects_1__forEach_effects_0__let_in_0__target",
-                                                    "over": {
-                                                      "query": "tokensInZone",
-                                                      "zone": "$space",
-                                                      "filter": {
-                                                        "op": "and",
-                                                        "args": [
-                                                          {
-                                                            "prop": "faction",
-                                                            "op": "in",
-                                                            "value": [
-                                                              "NVA",
-                                                              "VC"
-                                                            ]
-                                                          },
-                                                          {
-                                                            "prop": "type",
-                                                            "op": "eq",
-                                                            "value": "base"
-                                                          },
-                                                          {
-                                                            "prop": "tunnel",
-                                                            "op": "neq",
-                                                            "value": "tunneled"
-                                                          }
-                                                        ]
-                                                      }
-                                                    },
-                                                    "to": {
-                                                      "zoneExpr": {
-                                                        "concat": [
-                                                          "available-",
-                                                          {
-                                                            "ref": "tokenProp",
-                                                            "token": "$__macro_us_sa_remove_insurgents_eventDecks_0__cards_68__unshaded_effects_1__forEach_effects_0__let_in_0__target",
-                                                            "prop": "faction"
-                                                          },
-                                                          ":none"
-                                                        ]
-                                                      }
-                                                    },
-                                                    "macroOrigin": {
-                                                      "macroId": "us-sa-remove-insurgents",
-                                                      "stem": "target"
-                                                    }
-                                                  }
-                                                ],
-                                                "macroOrigin": {
-                                                  "macroId": "us-sa-remove-insurgents",
-                                                  "stem": "target"
-                                                }
-                                              }
-                                            }
-                                          ]
-                                        }
-                                      }
-                                    ]
-                                  }
-                                }
-                              ],
-                              "else": [
-                                {
-                                  "removeByPriority": {
-                                    "budget": 2,
-                                    "groups": [
-                                      {
-                                        "bind": "$__macro_us_sa_remove_insurgents_eventDecks_0__cards_68__unshaded_effects_1__forEach_effects_0__let_in_0__target",
-                                        "over": {
-                                          "query": "tokensInZone",
-                                          "zone": "$space",
-                                          "filter": {
-                                            "op": "and",
-                                            "args": [
-                                              {
-                                                "prop": "faction",
-                                                "op": "in",
-                                                "value": [
-                                                  "NVA",
-                                                  "VC"
-                                                ]
-                                              },
-                                              {
-                                                "prop": "type",
-                                                "op": "eq",
-                                                "value": "troops"
-                                              }
-                                            ]
-                                          }
-                                        },
-                                        "to": {
-                                          "zoneExpr": {
-                                            "concat": [
-                                              "available-",
-                                              {
-                                                "ref": "tokenProp",
-                                                "token": "$__macro_us_sa_remove_insurgents_eventDecks_0__cards_68__unshaded_effects_1__forEach_effects_0__let_in_0__target",
-                                                "prop": "faction"
-                                              },
-                                              ":none"
-                                            ]
-                                          }
-                                        },
-                                        "macroOrigin": {
-                                          "macroId": "us-sa-remove-insurgents",
-                                          "stem": "target"
-                                        }
-                                      },
-                                      {
-                                        "bind": "$__macro_us_sa_remove_insurgents_eventDecks_0__cards_68__unshaded_effects_1__forEach_effects_0__let_in_0__target",
-                                        "over": {
-                                          "query": "tokensInZone",
-                                          "zone": "$space",
-                                          "filter": {
-                                            "op": "and",
-                                            "args": [
-                                              {
-                                                "prop": "faction",
-                                                "op": "in",
-                                                "value": [
-                                                  "NVA",
-                                                  "VC"
-                                                ]
-                                              },
-                                              {
-                                                "prop": "type",
-                                                "op": "eq",
-                                                "value": "guerrilla"
-                                              }
-                                            ]
-                                          }
-                                        },
-                                        "to": {
-                                          "zoneExpr": {
-                                            "concat": [
-                                              "available-",
-                                              {
-                                                "ref": "tokenProp",
-                                                "token": "$__macro_us_sa_remove_insurgents_eventDecks_0__cards_68__unshaded_effects_1__forEach_effects_0__let_in_0__target",
-                                                "prop": "faction"
-                                              },
-                                              ":none"
-                                            ]
-                                          }
-                                        },
-                                        "macroOrigin": {
-                                          "macroId": "us-sa-remove-insurgents",
-                                          "stem": "target"
-                                        }
-                                      },
-                                      {
-                                        "bind": "$__macro_us_sa_remove_insurgents_eventDecks_0__cards_68__unshaded_effects_1__forEach_effects_0__let_in_0__target",
-                                        "over": {
-                                          "query": "tokensInZone",
-                                          "zone": "$space",
-                                          "filter": {
-                                            "op": "and",
-                                            "args": [
-                                              {
-                                                "prop": "faction",
-                                                "op": "in",
-                                                "value": [
-                                                  "NVA",
-                                                  "VC"
-                                                ]
-                                              },
-                                              {
-                                                "prop": "type",
-                                                "op": "eq",
-                                                "value": "base"
-                                              },
-                                              {
-                                                "prop": "tunnel",
-                                                "op": "neq",
-                                                "value": "tunneled"
-                                              }
-                                            ]
-                                          }
-                                        },
-                                        "to": {
-                                          "zoneExpr": {
-                                            "concat": [
-                                              "available-",
-                                              {
-                                                "ref": "tokenProp",
-                                                "token": "$__macro_us_sa_remove_insurgents_eventDecks_0__cards_68__unshaded_effects_1__forEach_effects_0__let_in_0__target",
-                                                "prop": "faction"
-                                              },
-                                              ":none"
-                                            ]
-                                          }
-                                        },
-                                        "macroOrigin": {
-                                          "macroId": "us-sa-remove-insurgents",
-                                          "stem": "target"
-                                        }
-                                      }
-                                    ],
-                                    "macroOrigin": {
-                                      "macroId": "us-sa-remove-insurgents",
-                                      "stem": "target"
-                                    }
-                                  }
-                                }
-                              ]
-                            }
-                          },
-                          {
-                            "let": {
-                              "bind": "$enemyAfter",
-                              "value": {
-                                "aggregate": {
-                                  "op": "count",
-                                  "query": {
-                                    "query": "tokensInZone",
-                                    "zone": "$space",
-                                    "filter": {
-                                      "prop": "faction",
-                                      "op": "in",
-                                      "value": [
-                                        "NVA",
-                                        "VC"
-                                      ]
-                                    }
-                                  }
-                                }
-                              },
-                              "in": [
-                                {
-                                  "let": {
-                                    "bind": "$removedInSpace",
-                                    "value": {
-                                      "op": "-",
-                                      "left": {
-                                        "ref": "binding",
-                                        "name": "$enemyBefore"
-                                      },
-                                      "right": {
-                                        "ref": "binding",
-                                        "name": "$enemyAfter"
-                                      }
-                                    },
-                                    "in": [
-                                      {
-                                        "if": {
-                                          "when": {
-                                            "op": "and",
-                                            "args": [
-                                              {
-                                                "op": "or",
-                                                "args": [
-                                                  {
-                                                    "op": "==",
-                                                    "left": {
-                                                      "ref": "zoneProp",
-                                                      "zone": "$space",
-                                                      "prop": "category"
-                                                    },
-                                                    "right": "province"
-                                                  },
-                                                  {
-                                                    "op": "==",
-                                                    "left": {
-                                                      "ref": "zoneProp",
-                                                      "zone": "$space",
-                                                      "prop": "category"
-                                                    },
-                                                    "right": "city"
-                                                  }
-                                                ]
-                                              },
-                                              {
-                                                "op": ">",
-                                                "left": {
-                                                  "ref": "zoneProp",
-                                                  "zone": "$space",
-                                                  "prop": "population"
-                                                },
-                                                "right": 0
-                                              },
-                                              {
-                                                "op": "!=",
-                                                "left": {
-                                                  "ref": "markerState",
-                                                  "space": "$space",
-                                                  "marker": "supportOpposition"
-                                                },
-                                                "right": "activeOpposition"
-                                              },
-                                              {
-                                                "op": "or",
-                                                "args": [
-                                                  {
-                                                    "op": "!=",
-                                                    "left": {
-                                                      "ref": "globalMarkerState",
-                                                      "marker": "cap_lgbs"
-                                                    },
-                                                    "right": "unshaded"
-                                                  },
-                                                  {
-                                                    "op": "!=",
-                                                    "left": {
-                                                      "ref": "binding",
-                                                      "name": "$removedInSpace"
-                                                    },
-                                                    "right": 1
-                                                  }
-                                                ]
-                                              }
-                                            ]
-                                          },
-                                          "then": [
-                                            {
-                                              "shiftMarker": {
-                                                "space": "$space",
-                                                "marker": "supportOpposition",
-                                                "delta": {
-                                                  "if": {
-                                                    "when": {
-                                                      "op": "and",
-                                                      "args": [
-                                                        {
-                                                          "op": "==",
-                                                          "left": {
-                                                            "ref": "globalMarkerState",
-                                                            "marker": "cap_arcLight"
-                                                          },
-                                                          "right": "shaded"
-                                                        },
-                                                        {
-                                                          "op": ">",
-                                                          "left": {
-                                                            "ref": "binding",
-                                                            "name": "$removedInSpace"
-                                                          },
-                                                          "right": 1
-                                                        }
-                                                      ]
-                                                    },
-                                                    "then": -2,
-                                                    "else": -1
-                                                  }
-                                                }
-                                              }
-                                            }
-                                          ],
-                                          "else": []
-                                        }
-                                      }
-                                    ]
-                                  }
-                                }
-                              ]
-                            }
-                          }
-                        ]
-                      }
+                "id": "uss-new-jersey-execute-as-arvn",
+                "order": 2,
+                "freeOperationGrants": [
+                  {
+                    "seat": "self",
+                    "executeAsSeat": "arvn",
+                    "sequence": {
+                      "chain": "uss-new-jersey-arvn",
+                      "step": 0
+                    },
+                    "operationClass": "operation",
+                    "actionIds": [
+                      "airStrike"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "effectTiming": "afterGrants",
+            "lastingEffects": [
+              {
+                "id": "evt-uss-new-jersey-window",
+                "duration": "turn",
+                "setupEffects": [
+                  {
+                    "setVar": {
+                      "scope": "global",
+                      "var": "fitl_airStrikeWindowMode",
+                      "value": 2
                     }
-                  ]
+                  }
+                ],
+                "teardownEffects": [
+                  {
+                    "setVar": {
+                      "scope": "global",
+                      "var": "fitl_airStrikeWindowMode",
+                      "value": 0
+                    }
+                  }
+                ]
+              }
+            ],
+            "effects": [
+              {
+                "setVar": {
+                  "scope": "global",
+                  "var": "fitl_airStrikeWindowMode",
+                  "value": 0
                 }
               }
             ]
@@ -59664,7 +59223,7 @@
             "flavorText": "Air defense guns thicken around infiltration routes."
           },
           "unshaded": {
-            "text": "NVA capability: Rally Trail improvement restricted.",
+            "text": "Rally that Improves Trail may select 1 space only. NVA CAPABILITY.",
             "effects": [
               {
                 "setGlobalMarker": {
@@ -59675,7 +59234,7 @@
             ]
           },
           "shaded": {
-            "text": "NVA capability (shaded): air defense suppresses COIN air power.",
+            "text": "Air Strike does not Degrade Trail below 2.",
             "effects": [
               {
                 "setGlobalMarker": {
@@ -59706,7 +59265,7 @@
             "flavorText": "Long-range artillery extends pressure across contested routes."
           },
           "unshaded": {
-            "text": "NVA capability: Bombard can target adjacent spaces from farther range.",
+            "text": "NVA Bombard max 1 space. NVA CAPABILITY. Other restrictions on Bombard apply normally (4.4.2).",
             "effects": [
               {
                 "setGlobalMarker": {
@@ -59717,7 +59276,7 @@
             ]
           },
           "shaded": {
-            "text": "NVA capability (shaded): COIN movement near artillery zones risks attrition.",
+            "text": "NVA Bombard max 3 spaces. NVA CAPABILITY. Other restrictions on Bombard apply normally (4.4.2).",
             "effects": [
               {
                 "setGlobalMarker": {
@@ -59748,7 +59307,7 @@
             "flavorText": "Interceptors contest US air power over the North."
           },
           "unshaded": {
-            "text": "NVA capability: Air Strike pressure is reduced unless unshaded Top Gun is active.",
+            "text": "NVA Resources -6 each Reset. NVA CAPABILITY.",
             "effects": [
               {
                 "setGlobalMarker": {
@@ -59759,7 +59318,7 @@
             ]
           },
           "shaded": {
-            "text": "NVA capability (shaded): US Air Strike can trigger extra troop costs in affected spaces.",
+            "text": "Unless unshaded Top Gun, whenever Air Strike Degrades Trail, US removes 1 Available Troop to Casualties.",
             "effects": [
               {
                 "if": {
@@ -59897,10 +59456,569 @@
             "flavorText": "Siege operations force major commitment and casualties."
           },
           "unshaded": {
-            "text": "Mass removal pressure in one contested area; route vulnerable US losses to Casualties."
+            "text": "Select a US Base with US Troops. Remove 10 NVA Troops within 1 space of it.",
+            "effects": [
+              {
+                "if": {
+                  "when": {
+                    "op": ">",
+                    "left": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": ">",
+                                  "left": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "tokensInZone",
+                                        "zone": "$zone",
+                                        "filter": {
+                                          "op": "and",
+                                          "args": [
+                                            {
+                                              "prop": "faction",
+                                              "op": "eq",
+                                              "value": "US"
+                                            },
+                                            {
+                                              "prop": "type",
+                                              "op": "eq",
+                                              "value": "base"
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "right": 0
+                                },
+                                {
+                                  "op": ">",
+                                  "left": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "tokensInZone",
+                                        "zone": "$zone",
+                                        "filter": {
+                                          "op": "and",
+                                          "args": [
+                                            {
+                                              "prop": "faction",
+                                              "op": "eq",
+                                              "value": "US"
+                                            },
+                                            {
+                                              "prop": "type",
+                                              "op": "eq",
+                                              "value": "troops"
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "right": 0
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "right": 0
+                  },
+                  "then": [
+                    {
+                      "chooseOne": {
+                        "internalDecisionId": "decision:doc.eventDecks.0.cards.74.unshaded.effects.0.if.then.0.chooseOne",
+                        "bind": "$targetBaseSpace",
+                        "options": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": ">",
+                                  "left": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "tokensInZone",
+                                        "zone": "$zone",
+                                        "filter": {
+                                          "op": "and",
+                                          "args": [
+                                            {
+                                              "prop": "faction",
+                                              "op": "eq",
+                                              "value": "US"
+                                            },
+                                            {
+                                              "prop": "type",
+                                              "op": "eq",
+                                              "value": "base"
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "right": 0
+                                },
+                                {
+                                  "op": ">",
+                                  "left": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "tokensInZone",
+                                        "zone": "$zone",
+                                        "filter": {
+                                          "op": "and",
+                                          "args": [
+                                            {
+                                              "prop": "faction",
+                                              "op": "eq",
+                                              "value": "US"
+                                            },
+                                            {
+                                              "prop": "type",
+                                              "op": "eq",
+                                              "value": "troops"
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "right": 0
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "chooseN": {
+                        "internalDecisionId": "decision:doc.eventDecks.0.cards.74.unshaded.effects.0.if.then.1.chooseN",
+                        "bind": "$nvaTroopsToRemove",
+                        "options": {
+                          "query": "concat",
+                          "sources": [
+                            {
+                              "query": "tokensInZone",
+                              "zone": "$targetBaseSpace",
+                              "filter": {
+                                "op": "and",
+                                "args": [
+                                  {
+                                    "prop": "faction",
+                                    "op": "eq",
+                                    "value": "NVA"
+                                  },
+                                  {
+                                    "prop": "type",
+                                    "op": "eq",
+                                    "value": "troops"
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "query": "tokensInAdjacentZones",
+                              "zone": "$targetBaseSpace",
+                              "filter": {
+                                "op": "and",
+                                "args": [
+                                  {
+                                    "prop": "faction",
+                                    "op": "eq",
+                                    "value": "NVA"
+                                  },
+                                  {
+                                    "prop": "type",
+                                    "op": "eq",
+                                    "value": "troops"
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        "max": {
+                          "op": "min",
+                          "left": 10,
+                          "right": {
+                            "aggregate": {
+                              "op": "count",
+                              "query": {
+                                "query": "concat",
+                                "sources": [
+                                  {
+                                    "query": "tokensInZone",
+                                    "zone": "$targetBaseSpace",
+                                    "filter": {
+                                      "op": "and",
+                                      "args": [
+                                        {
+                                          "prop": "faction",
+                                          "op": "eq",
+                                          "value": "NVA"
+                                        },
+                                        {
+                                          "prop": "type",
+                                          "op": "eq",
+                                          "value": "troops"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "query": "tokensInAdjacentZones",
+                                    "zone": "$targetBaseSpace",
+                                    "filter": {
+                                      "op": "and",
+                                      "args": [
+                                        {
+                                          "prop": "faction",
+                                          "op": "eq",
+                                          "value": "NVA"
+                                        },
+                                        {
+                                          "prop": "type",
+                                          "op": "eq",
+                                          "value": "troops"
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        },
+                        "min": {
+                          "op": "min",
+                          "left": 10,
+                          "right": {
+                            "aggregate": {
+                              "op": "count",
+                              "query": {
+                                "query": "concat",
+                                "sources": [
+                                  {
+                                    "query": "tokensInZone",
+                                    "zone": "$targetBaseSpace",
+                                    "filter": {
+                                      "op": "and",
+                                      "args": [
+                                        {
+                                          "prop": "faction",
+                                          "op": "eq",
+                                          "value": "NVA"
+                                        },
+                                        {
+                                          "prop": "type",
+                                          "op": "eq",
+                                          "value": "troops"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "query": "tokensInAdjacentZones",
+                                    "zone": "$targetBaseSpace",
+                                    "filter": {
+                                      "op": "and",
+                                      "args": [
+                                        {
+                                          "prop": "faction",
+                                          "op": "eq",
+                                          "value": "NVA"
+                                        },
+                                        {
+                                          "prop": "type",
+                                          "op": "eq",
+                                          "value": "troops"
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "forEach": {
+                        "bind": "$nvaTroop",
+                        "over": {
+                          "query": "binding",
+                          "name": "$nvaTroopsToRemove"
+                        },
+                        "effects": [
+                          {
+                            "moveToken": {
+                              "token": "$nvaTroop",
+                              "from": {
+                                "zoneExpr": {
+                                  "ref": "tokenZone",
+                                  "token": "$nvaTroop"
+                                }
+                              },
+                              "to": {
+                                "zoneExpr": "available-NVA:none"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "else": []
+                }
+              }
+            ]
           },
           "shaded": {
-            "text": "Relief effort redistributes pieces and partially relieves siege pressure."
+            "text": "Up to 3 US Troops in 1 space with NVA to Casualties. US Ineligible through next card.",
+            "eligibilityOverrides": [
+              {
+                "target": {
+                  "kind": "seat",
+                  "seat": "us"
+                },
+                "eligible": false,
+                "windowId": "make-ineligible"
+              }
+            ],
+            "effects": [
+              {
+                "if": {
+                  "when": {
+                    "op": ">",
+                    "left": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": ">",
+                                  "left": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "tokensInZone",
+                                        "zone": "$zone",
+                                        "filter": {
+                                          "op": "and",
+                                          "args": [
+                                            {
+                                              "prop": "faction",
+                                              "op": "eq",
+                                              "value": "US"
+                                            },
+                                            {
+                                              "prop": "type",
+                                              "op": "eq",
+                                              "value": "troops"
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "right": 0
+                                },
+                                {
+                                  "op": ">",
+                                  "left": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "tokensInZone",
+                                        "zone": "$zone",
+                                        "filter": {
+                                          "prop": "faction",
+                                          "op": "eq",
+                                          "value": "NVA"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "right": 0
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "right": 0
+                  },
+                  "then": [
+                    {
+                      "chooseOne": {
+                        "internalDecisionId": "decision:doc.eventDecks.0.cards.74.shaded.effects.0.if.then.0.chooseOne",
+                        "bind": "$targetBattleSpace",
+                        "options": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": ">",
+                                  "left": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "tokensInZone",
+                                        "zone": "$zone",
+                                        "filter": {
+                                          "op": "and",
+                                          "args": [
+                                            {
+                                              "prop": "faction",
+                                              "op": "eq",
+                                              "value": "US"
+                                            },
+                                            {
+                                              "prop": "type",
+                                              "op": "eq",
+                                              "value": "troops"
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "right": 0
+                                },
+                                {
+                                  "op": ">",
+                                  "left": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "tokensInZone",
+                                        "zone": "$zone",
+                                        "filter": {
+                                          "prop": "faction",
+                                          "op": "eq",
+                                          "value": "NVA"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "right": 0
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "chooseN": {
+                        "internalDecisionId": "decision:doc.eventDecks.0.cards.74.shaded.effects.0.if.then.1.chooseN",
+                        "bind": "$usTroopsToCasualties",
+                        "options": {
+                          "query": "tokensInZone",
+                          "zone": "$targetBattleSpace",
+                          "filter": {
+                            "op": "and",
+                            "args": [
+                              {
+                                "prop": "faction",
+                                "op": "eq",
+                                "value": "US"
+                              },
+                              {
+                                "prop": "type",
+                                "op": "eq",
+                                "value": "troops"
+                              }
+                            ]
+                          }
+                        },
+                        "max": {
+                          "op": "min",
+                          "left": 3,
+                          "right": {
+                            "aggregate": {
+                              "op": "count",
+                              "query": {
+                                "query": "tokensInZone",
+                                "zone": "$targetBattleSpace",
+                                "filter": {
+                                  "op": "and",
+                                  "args": [
+                                    {
+                                      "prop": "faction",
+                                      "op": "eq",
+                                      "value": "US"
+                                    },
+                                    {
+                                      "prop": "type",
+                                      "op": "eq",
+                                      "value": "troops"
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "min": 0
+                      }
+                    },
+                    {
+                      "forEach": {
+                        "bind": "$usTroop",
+                        "over": {
+                          "query": "binding",
+                          "name": "$usTroopsToCasualties"
+                        },
+                        "effects": [
+                          {
+                            "moveToken": {
+                              "token": "$usTroop",
+                              "from": {
+                                "zoneExpr": {
+                                  "ref": "tokenZone",
+                                  "token": "$usTroop"
+                                }
+                              },
+                              "to": {
+                                "zoneExpr": "casualties-US:none"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "else": []
+                }
+              }
+            ]
           }
         },
         {
@@ -59922,7 +60040,236 @@
             "flavorText": "Barrier planning constrains infiltration routes."
           },
           "unshaded": {
-            "text": "No Infiltrate or Trail Improvement until Coup. MOMENTUM",
+            "text": "Redeploy all COIN forces outside Vietnam to COIN-Controlled Cities. ARVN Resources -12. No Infiltrate or Trail Improvement by Rally until Coup. MOMENTUM",
+            "effects": [
+              {
+                "if": {
+                  "when": {
+                    "op": ">",
+                    "left": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "category"
+                                  },
+                                  "right": "city"
+                                },
+                                {
+                                  "op": ">",
+                                  "left": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "tokensInZone",
+                                        "zone": "$zone",
+                                        "filter": {
+                                          "prop": "faction",
+                                          "op": "in",
+                                          "value": [
+                                            "US",
+                                            "ARVN",
+                                            "VC"
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "right": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "tokensInZone",
+                                        "zone": "$zone",
+                                        "filter": {
+                                          "prop": "faction",
+                                          "op": "eq",
+                                          "value": "NVA"
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "right": 0
+                  },
+                  "then": [
+                    {
+                      "forEach": {
+                        "bind": "$outsideVietnamProvince",
+                        "over": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "category"
+                                  },
+                                  "right": "province"
+                                },
+                                {
+                                  "op": "or",
+                                  "args": [
+                                    {
+                                      "op": "==",
+                                      "left": {
+                                        "ref": "zoneProp",
+                                        "zone": "$zone",
+                                        "prop": "country"
+                                      },
+                                      "right": "laos"
+                                    },
+                                    {
+                                      "op": "==",
+                                      "left": {
+                                        "ref": "zoneProp",
+                                        "zone": "$zone",
+                                        "prop": "country"
+                                      },
+                                      "right": "cambodia"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "effects": [
+                          {
+                            "forEach": {
+                              "bind": "$coinForceToRedeploy",
+                              "over": {
+                                "query": "tokensInZone",
+                                "zone": {
+                                  "zoneExpr": {
+                                    "ref": "binding",
+                                    "name": "$outsideVietnamProvince"
+                                  }
+                                },
+                                "filter": {
+                                  "prop": "faction",
+                                  "op": "in",
+                                  "value": [
+                                    "US",
+                                    "ARVN"
+                                  ]
+                                }
+                              },
+                              "effects": [
+                                {
+                                  "chooseOne": {
+                                    "internalDecisionId": "decision:doc.eventDecks.0.cards.106.unshaded.effects.0.if.then.0.forEach.effects.0.forEach.effects.0.chooseOne",
+                                    "bind": "$mcnamaraCityDestination",
+                                    "options": {
+                                      "query": "mapSpaces",
+                                      "filter": {
+                                        "condition": {
+                                          "op": "and",
+                                          "args": [
+                                            {
+                                              "op": "==",
+                                              "left": {
+                                                "ref": "zoneProp",
+                                                "zone": "$zone",
+                                                "prop": "category"
+                                              },
+                                              "right": "city"
+                                            },
+                                            {
+                                              "op": ">",
+                                              "left": {
+                                                "aggregate": {
+                                                  "op": "count",
+                                                  "query": {
+                                                    "query": "tokensInZone",
+                                                    "zone": "$zone",
+                                                    "filter": {
+                                                      "prop": "faction",
+                                                      "op": "in",
+                                                      "value": [
+                                                        "US",
+                                                        "ARVN",
+                                                        "VC"
+                                                      ]
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "right": {
+                                                "aggregate": {
+                                                  "op": "count",
+                                                  "query": {
+                                                    "query": "tokensInZone",
+                                                    "zone": "$zone",
+                                                    "filter": {
+                                                      "prop": "faction",
+                                                      "op": "eq",
+                                                      "value": "NVA"
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "moveToken": {
+                                    "token": "$coinForceToRedeploy",
+                                    "from": {
+                                      "zoneExpr": {
+                                        "ref": "tokenZone",
+                                        "token": "$coinForceToRedeploy"
+                                      }
+                                    },
+                                    "to": {
+                                      "zoneExpr": {
+                                        "ref": "binding",
+                                        "name": "$mcnamaraCityDestination"
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "else": []
+                }
+              },
+              {
+                "addVar": {
+                  "scope": "global",
+                  "var": "arvnResources",
+                  "delta": -12
+                }
+              }
+            ],
             "lastingEffects": [
               {
                 "id": "mom-mcnamara-line",
@@ -59968,10 +60315,456 @@
             "flavorText": "Carrier deck fire disrupts strike tempo."
           },
           "unshaded": {
-            "text": "Air Strike degrades Trail by 2 and lowers NVA Resources by 9."
+            "text": "Remove any 4 pieces from North Vietnam or, once none, Laos. Degrade Trail 2 boxes.",
+            "effects": [
+              {
+                "let": {
+                  "bind": "$northVietnamEligibleCount",
+                  "value": {
+                    "aggregate": {
+                      "op": "count",
+                      "query": {
+                        "query": "tokensInMapSpaces",
+                        "spaceFilter": {
+                          "condition": {
+                            "op": "==",
+                            "left": {
+                              "ref": "zoneProp",
+                              "zone": "$zone",
+                              "prop": "country"
+                            },
+                            "right": "northVietnam"
+                          }
+                        },
+                        "filter": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "prop": "faction",
+                              "op": "eq",
+                              "value": "NVA"
+                            },
+                            {
+                              "op": "or",
+                              "args": [
+                                {
+                                  "prop": "type",
+                                  "op": "in",
+                                  "value": [
+                                    "troops",
+                                    "guerrilla"
+                                  ]
+                                },
+                                {
+                                  "op": "and",
+                                  "args": [
+                                    {
+                                      "prop": "type",
+                                      "op": "eq",
+                                      "value": "base"
+                                    },
+                                    {
+                                      "prop": "tunnel",
+                                      "op": "eq",
+                                      "value": "untunneled"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "in": [
+                    {
+                      "let": {
+                        "bind": "$northVietnamRemoveCount",
+                        "value": {
+                          "op": "min",
+                          "left": 4,
+                          "right": {
+                            "ref": "binding",
+                            "name": "$northVietnamEligibleCount"
+                          }
+                        },
+                        "in": [
+                          {
+                            "if": {
+                              "when": {
+                                "op": ">",
+                                "left": {
+                                  "ref": "binding",
+                                  "name": "$northVietnamRemoveCount"
+                                },
+                                "right": 0
+                              },
+                              "then": [
+                                {
+                                  "chooseN": {
+                                    "internalDecisionId": "decision:doc.eventDecks.0.cards.107.unshaded.effects.0.let.in.0.let.in.0.if.then.0.chooseN",
+                                    "bind": "$northVietnamPiecesToRemove",
+                                    "options": {
+                                      "query": "tokensInMapSpaces",
+                                      "spaceFilter": {
+                                        "condition": {
+                                          "op": "==",
+                                          "left": {
+                                            "ref": "zoneProp",
+                                            "zone": "$zone",
+                                            "prop": "country"
+                                          },
+                                          "right": "northVietnam"
+                                        }
+                                      },
+                                      "filter": {
+                                        "op": "and",
+                                        "args": [
+                                          {
+                                            "prop": "faction",
+                                            "op": "eq",
+                                            "value": "NVA"
+                                          },
+                                          {
+                                            "op": "or",
+                                            "args": [
+                                              {
+                                                "prop": "type",
+                                                "op": "in",
+                                                "value": [
+                                                  "troops",
+                                                  "guerrilla"
+                                                ]
+                                              },
+                                              {
+                                                "op": "and",
+                                                "args": [
+                                                  {
+                                                    "prop": "type",
+                                                    "op": "eq",
+                                                    "value": "base"
+                                                  },
+                                                  {
+                                                    "prop": "tunnel",
+                                                    "op": "eq",
+                                                    "value": "untunneled"
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "max": {
+                                      "ref": "binding",
+                                      "name": "$northVietnamRemoveCount"
+                                    },
+                                    "min": {
+                                      "ref": "binding",
+                                      "name": "$northVietnamRemoveCount"
+                                    }
+                                  }
+                                },
+                                {
+                                  "forEach": {
+                                    "bind": "$piece",
+                                    "over": {
+                                      "query": "binding",
+                                      "name": "$northVietnamPiecesToRemove"
+                                    },
+                                    "effects": [
+                                      {
+                                        "moveToken": {
+                                          "token": "$piece",
+                                          "from": {
+                                            "zoneExpr": {
+                                              "ref": "tokenZone",
+                                              "token": "$piece"
+                                            }
+                                          },
+                                          "to": {
+                                            "zoneExpr": "available-NVA:none"
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              ],
+                              "else": []
+                            }
+                          },
+                          {
+                            "let": {
+                              "bind": "$remainingToRemove",
+                              "value": {
+                                "op": "-",
+                                "left": 4,
+                                "right": {
+                                  "ref": "binding",
+                                  "name": "$northVietnamRemoveCount"
+                                }
+                              },
+                              "in": [
+                                {
+                                  "if": {
+                                    "when": {
+                                      "op": ">",
+                                      "left": {
+                                        "ref": "binding",
+                                        "name": "$remainingToRemove"
+                                      },
+                                      "right": 0
+                                    },
+                                    "then": [
+                                      {
+                                        "let": {
+                                          "bind": "$laosEligibleCount",
+                                          "value": {
+                                            "aggregate": {
+                                              "op": "count",
+                                              "query": {
+                                                "query": "tokensInMapSpaces",
+                                                "spaceFilter": {
+                                                  "condition": {
+                                                    "op": "==",
+                                                    "left": {
+                                                      "ref": "zoneProp",
+                                                      "zone": "$zone",
+                                                      "prop": "country"
+                                                    },
+                                                    "right": "laos"
+                                                  }
+                                                },
+                                                "filter": {
+                                                  "op": "and",
+                                                  "args": [
+                                                    {
+                                                      "prop": "faction",
+                                                      "op": "eq",
+                                                      "value": "NVA"
+                                                    },
+                                                    {
+                                                      "op": "or",
+                                                      "args": [
+                                                        {
+                                                          "prop": "type",
+                                                          "op": "in",
+                                                          "value": [
+                                                            "troops",
+                                                            "guerrilla"
+                                                          ]
+                                                        },
+                                                        {
+                                                          "op": "and",
+                                                          "args": [
+                                                            {
+                                                              "prop": "type",
+                                                              "op": "eq",
+                                                              "value": "base"
+                                                            },
+                                                            {
+                                                              "prop": "tunnel",
+                                                              "op": "eq",
+                                                              "value": "untunneled"
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "in": [
+                                            {
+                                              "let": {
+                                                "bind": "$laosRemoveCount",
+                                                "value": {
+                                                  "op": "min",
+                                                  "left": {
+                                                    "ref": "binding",
+                                                    "name": "$remainingToRemove"
+                                                  },
+                                                  "right": {
+                                                    "ref": "binding",
+                                                    "name": "$laosEligibleCount"
+                                                  }
+                                                },
+                                                "in": [
+                                                  {
+                                                    "if": {
+                                                      "when": {
+                                                        "op": ">",
+                                                        "left": {
+                                                          "ref": "binding",
+                                                          "name": "$laosRemoveCount"
+                                                        },
+                                                        "right": 0
+                                                      },
+                                                      "then": [
+                                                        {
+                                                          "chooseN": {
+                                                            "internalDecisionId": "decision:doc.eventDecks.0.cards.107.unshaded.effects.0.let.in.0.let.in.1.let.in.0.if.then.0.let.in.0.let.in.0.if.then.0.chooseN",
+                                                            "bind": "$laosPiecesToRemove",
+                                                            "options": {
+                                                              "query": "tokensInMapSpaces",
+                                                              "spaceFilter": {
+                                                                "condition": {
+                                                                  "op": "==",
+                                                                  "left": {
+                                                                    "ref": "zoneProp",
+                                                                    "zone": "$zone",
+                                                                    "prop": "country"
+                                                                  },
+                                                                  "right": "laos"
+                                                                }
+                                                              },
+                                                              "filter": {
+                                                                "op": "and",
+                                                                "args": [
+                                                                  {
+                                                                    "prop": "faction",
+                                                                    "op": "eq",
+                                                                    "value": "NVA"
+                                                                  },
+                                                                  {
+                                                                    "op": "or",
+                                                                    "args": [
+                                                                      {
+                                                                        "prop": "type",
+                                                                        "op": "in",
+                                                                        "value": [
+                                                                          "troops",
+                                                                          "guerrilla"
+                                                                        ]
+                                                                      },
+                                                                      {
+                                                                        "op": "and",
+                                                                        "args": [
+                                                                          {
+                                                                            "prop": "type",
+                                                                            "op": "eq",
+                                                                            "value": "base"
+                                                                          },
+                                                                          {
+                                                                            "prop": "tunnel",
+                                                                            "op": "eq",
+                                                                            "value": "untunneled"
+                                                                          }
+                                                                        ]
+                                                                      }
+                                                                    ]
+                                                                  }
+                                                                ]
+                                                              }
+                                                            },
+                                                            "max": {
+                                                              "ref": "binding",
+                                                              "name": "$laosRemoveCount"
+                                                            },
+                                                            "min": {
+                                                              "ref": "binding",
+                                                              "name": "$laosRemoveCount"
+                                                            }
+                                                          }
+                                                        },
+                                                        {
+                                                          "forEach": {
+                                                            "bind": "$piece",
+                                                            "over": {
+                                                              "query": "binding",
+                                                              "name": "$laosPiecesToRemove"
+                                                            },
+                                                            "effects": [
+                                                              {
+                                                                "moveToken": {
+                                                                  "token": "$piece",
+                                                                  "from": {
+                                                                    "zoneExpr": {
+                                                                      "ref": "tokenZone",
+                                                                      "token": "$piece"
+                                                                    }
+                                                                  },
+                                                                  "to": {
+                                                                    "zoneExpr": "available-NVA:none"
+                                                                  }
+                                                                }
+                                                              }
+                                                            ]
+                                                          }
+                                                        }
+                                                      ],
+                                                      "else": []
+                                                    }
+                                                  }
+                                                ]
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    ],
+                                    "else": []
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "addVar": {
+                  "scope": "global",
+                  "var": "trail",
+                  "delta": -2
+                }
+              }
+            ]
           },
           "shaded": {
-            "text": "No Trail degrade from Air Strike until Coup. MOMENTUM",
+            "text": "1 Available US Troop out of play. Through next Coup, no Degrade of Trail. MOMENTUM",
+            "effects": [
+              {
+                "removeByPriority": {
+                  "budget": 1,
+                  "groups": [
+                    {
+                      "bind": "$usTroop",
+                      "over": {
+                        "query": "tokensInZone",
+                        "zone": "available-US:none",
+                        "filter": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "prop": "faction",
+                              "op": "eq",
+                              "value": "US"
+                            },
+                            {
+                              "prop": "type",
+                              "op": "eq",
+                              "value": "troops"
+                            }
+                          ]
+                        }
+                      },
+                      "to": {
+                        "zoneExpr": "out-of-play-US:none"
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
             "lastingEffects": [
               {
                 "id": "mom-oriskany",
@@ -60012,19 +60805,102 @@
               "VC",
               "ARVN"
             ],
-            "flavorText": "Prisoner exchanges and detention politics alter casualty flows."
+            "flavorText": "Release negotiations keep US at war."
           },
           "unshaded": {
-            "text": "Move selected Casualties and adjust resources based on exchange outcomes."
+            "text": "Free Air Strike. 2 US Troops from Casualties to Available.",
+            "effectTiming": "afterGrants",
+            "freeOperationGrants": [
+              {
+                "seat": "self",
+                "executeAsSeat": "us",
+                "sequence": {
+                  "chain": "pows-free-airstrike",
+                  "step": 0
+                },
+                "operationClass": "operation",
+                "actionIds": [
+                  "airStrike"
+                ]
+              }
+            ],
+            "effects": [
+              {
+                "removeByPriority": {
+                  "budget": 2,
+                  "groups": [
+                    {
+                      "bind": "$usCasualtyTroop",
+                      "over": {
+                        "query": "tokensInZone",
+                        "zone": "casualties-US:none",
+                        "filter": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "prop": "faction",
+                              "op": "eq",
+                              "value": "US"
+                            },
+                            {
+                              "prop": "type",
+                              "op": "eq",
+                              "value": "troops"
+                            }
+                          ]
+                        }
+                      },
+                      "to": {
+                        "zoneExpr": "available-US:none"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
           },
           "shaded": {
-            "text": "Captivity leverage deepens COIN attrition and slows force recovery."
+            "text": "3 US Troops from Available to Casualties.",
+            "effects": [
+              {
+                "removeByPriority": {
+                  "budget": 3,
+                  "groups": [
+                    {
+                      "bind": "$usAvailableTroop",
+                      "over": {
+                        "query": "tokensInZone",
+                        "zone": "available-US:none",
+                        "filter": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "prop": "faction",
+                              "op": "eq",
+                              "value": "US"
+                            },
+                            {
+                              "prop": "type",
+                              "op": "eq",
+                              "value": "troops"
+                            }
+                          ]
+                        }
+                      },
+                      "to": {
+                        "zoneExpr": "casualties-US:none"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
           }
         },
         {
           "id": "card-41",
           "title": "Bombing Pause",
-          "sideMode": "dual",
+          "sideMode": "single",
           "order": 41,
           "tags": [
             "momentum"
@@ -60040,7 +60916,93 @@
             "flavorText": "Air campaign pauses shift tempo across infiltration and support tracks."
           },
           "unshaded": {
-            "text": "No Air Strike until Coup. MOMENTUM",
+            "text": "Set any two spaces to Passive Support. Patronage +2. No Air Strike until Coup. MOMENTUM",
+            "targets": [
+              {
+                "id": "$targetSpace",
+                "selector": {
+                  "query": "mapSpaces",
+                  "filter": {
+                    "condition": {
+                      "op": "and",
+                      "args": [
+                        {
+                          "op": "or",
+                          "args": [
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "zoneProp",
+                                "zone": "$zone",
+                                "prop": "category"
+                              },
+                              "right": "city"
+                            },
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "zoneProp",
+                                "zone": "$zone",
+                                "prop": "category"
+                              },
+                              "right": "province"
+                            }
+                          ]
+                        },
+                        {
+                          "op": "==",
+                          "left": {
+                            "ref": "zoneProp",
+                            "zone": "$zone",
+                            "prop": "country"
+                          },
+                          "right": "southVietnam"
+                        },
+                        {
+                          "op": ">",
+                          "left": {
+                            "ref": "zoneProp",
+                            "zone": "$zone",
+                            "prop": "population"
+                          },
+                          "right": 0
+                        }
+                      ]
+                    }
+                  }
+                },
+                "cardinality": {
+                  "n": 2
+                }
+              }
+            ],
+            "effects": [
+              {
+                "forEach": {
+                  "bind": "$space",
+                  "over": {
+                    "query": "binding",
+                    "name": "$targetSpace"
+                  },
+                  "effects": [
+                    {
+                      "setMarker": {
+                        "space": "$space",
+                        "marker": "supportOpposition",
+                        "state": "passiveSupport"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "addVar": {
+                  "scope": "global",
+                  "var": "patronage",
+                  "delta": 2
+                }
+              }
+            ],
             "lastingEffects": [
               {
                 "id": "mom-bombing-pause",
@@ -60065,9 +61027,6 @@
                 ]
               }
             ]
-          },
-          "shaded": {
-            "text": "Pause collapses: US resumes heavy air pressure and NVA pays strategic costs."
           }
         },
         {

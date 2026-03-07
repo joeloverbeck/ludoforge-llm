@@ -16,6 +16,11 @@ import type {
 
 export const MAX_CHOICES = 50;
 
+export type TemplateCompletionResult =
+  | { readonly kind: 'completed'; readonly move: Move; readonly rng: Rng }
+  | { readonly kind: 'unsatisfiable' }
+  | { readonly kind: 'stochasticUnresolved'; readonly move: Move; readonly rng: Rng };
+
 const selectFromChooseOne = (
   options: readonly MoveParamValue[],
   rng: Rng,
@@ -49,7 +54,11 @@ const selectFromChooseN = (
 
 /**
  * Attempt to complete a template move using the legalChoicesEvaluate() loop with random selections.
- * Returns null if the template is unplayable (empty options domain).
+ *
+ * Returns a discriminated result:
+ * - `completed`: all decisions filled, move is ready for `applyMove`
+ * - `unsatisfiable`: empty options domain or min > selectable; move is truly unplayable
+ * - `stochasticUnresolved`: decisions behind a `rollRandom` gate; move has all pre-stochastic decisions filled
  */
 export const completeTemplateMove = (
   def: GameDef,
@@ -57,7 +66,7 @@ export const completeTemplateMove = (
   templateMove: Move,
   rng: Rng,
   runtime?: GameDefRuntime,
-): { readonly move: Move; readonly rng: Rng } | null => {
+): TemplateCompletionResult => {
   let current = templateMove;
   let choices = legalChoicesEvaluate(def, state, current, undefined, runtime);
   let cursor = rng;
@@ -81,13 +90,13 @@ export const completeTemplateMove = (
         choices = legalChoicesEvaluate(def, state, current, undefined, runtime);
         continue;
       }
-      return null;
+      return { kind: 'unsatisfiable' };
     }
 
     const declaredMax = choices.type === 'chooseN' ? (choices.max ?? optionCount) : optionCount;
     const max = Math.min(declaredMax, optionCount);
     if (choices.type === 'chooseN' && (optionCount < min || max < min)) {
-      return null;
+      return { kind: 'unsatisfiable' };
     }
 
     const { selected, rng: nextRng } =
@@ -99,10 +108,13 @@ export const completeTemplateMove = (
     current = { ...current, params: { ...current.params, [choices.decisionId]: selected } };
     choices = legalChoicesEvaluate(def, state, current, undefined, runtime);
   }
-
-  if (choices.kind === 'illegal') {
-    return null;
+  if (choices.kind === 'pendingStochastic') {
+    return { kind: 'stochasticUnresolved', move: current, rng: cursor };
   }
 
-  return { move: current, rng: cursor };
+  if (choices.kind === 'illegal') {
+    return { kind: 'unsatisfiable' };
+  }
+
+  return { kind: 'completed', move: current, rng: cursor };
 };

@@ -345,7 +345,7 @@ describe('validateGameSpec structural rules', () => {
                 sideMode: 'dual',
                 unshaded: { effects: [{ op: 'branch-a' }] },
                 shaded: {
-                  targets: [{ id: 't', selector: { query: 'piecesInPool' }, cardinality: { max: 3 } }],
+                  targets: [{ id: 't', selector: { query: 'piecesInPool' }, cardinality: { max: 3 }, application: 'aggregate' }],
                 },
               },
             ],

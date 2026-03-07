@@ -1,6 +1,6 @@
 # LEGACTTOO-032: Limit Identity Contract Centralization and Semantic Validation
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — compiler diagnostics, kernel validation semantics, shared identity contract module
@@ -100,3 +100,10 @@ Add/extend unit tests for:
 3. `node --test packages/engine/dist/test/unit/compile-actions.test.js`
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm -F @ludoforge/engine typecheck && pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-07
+- **What changed**: All four deliverables were already implemented by prior tickets (LEGACTTOO-030, LEGACTTOO-031). The remaining gap was a missing compiler-lowering test for malformed limit diagnostic text consistency. Added `packages/engine/test/unit/compile-lowering-action-limits.test.ts` (5 tests) covering canonical ID assignment, multi-limit canonical IDs, malformed-limit diagnostic shape (verifying `<actionId>::<scope>::<index>` in alternatives), non-integer max, and negative max.
+- **Deviations from plan**: No `compile-actions.test.ts` was created; instead the test was placed in `compile-lowering-action-limits.test.ts` to match the existing naming pattern (`compile-lowering-action-defaults.test.ts`).
+- **Verification**: 4246/4246 engine tests pass. Typecheck and lint clean.

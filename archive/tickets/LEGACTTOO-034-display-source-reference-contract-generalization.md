@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — kernel display-node contract + ast-to-display producer updates
-**Deps**: tickets/LEGACTTOO-032-limit-identity-contract-centralization-and-validation.md, archive/tickets/LEGACTTOO/LEGACTTOO-031-limit-identity-invariant-test-hardening.md
+**Deps**: archive/tickets/LEGACTTOO-032-limit-identity-contract-centralization-and-validation.md, archive/tickets/LEGACTTOO/LEGACTTOO-031-limit-identity-invariant-test-hardening.md
 
 ## Problem
 

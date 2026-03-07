@@ -7,12 +7,14 @@ import type {
   DisplayGroupNode,
   DisplayInlineNode,
   DisplayKeywordNode,
+  DisplayLimitSourceRef,
   DisplayLineNode,
   DisplayNode,
   DisplayNodeKind,
   DisplayOperatorNode,
   DisplayPunctuationNode,
   DisplayReferenceNode,
+  DisplaySourceRef,
   DisplayValueNode,
   LimitUsageInfo,
 } from '../../../src/kernel/index.js';
@@ -113,6 +115,17 @@ describe('DisplayNode type system', () => {
       assert.deepEqual(cloned, line);
     });
 
+    it('DisplayLineNode with sourceRef survives structuredClone', () => {
+      const lineWithRef: DisplayLineNode = {
+        kind: 'line',
+        indent: 0,
+        children: [keyword],
+        sourceRef: { entity: 'limit', id: 'action::turn::0' },
+      };
+      const cloned = structuredClone(lineWithRef);
+      assert.deepEqual(cloned, lineWithRef);
+    });
+
     it('DisplayGroupNode survives structuredClone', () => {
       const cloned = structuredClone(group);
       assert.deepEqual(cloned, group);
@@ -175,6 +188,32 @@ describe('DisplayNode type system', () => {
       assert.equal(info.scope, 'turn');
       assert.equal(info.max, 2);
       assert.equal(info.current, 1);
+    });
+  });
+
+  describe('DisplaySourceRef contract', () => {
+    it('limit source ref has entity discriminant and id', () => {
+      const limitRef: DisplayLimitSourceRef = { entity: 'limit', id: 'action::turn::0' };
+      assert.equal(limitRef.entity, 'limit');
+      assert.equal(limitRef.id, 'action::turn::0');
+    });
+
+    it('DisplaySourceRef union accepts limit variant', () => {
+      const ref: DisplaySourceRef = { entity: 'limit', id: 'action::game::1' };
+      assert.equal(ref.entity, 'limit');
+      assert.equal(ref.id, 'action::game::1');
+    });
+
+    it('line node with sourceRef survives JSON round-trip', () => {
+      const lineWithRef: DisplayLineNode = {
+        kind: 'line',
+        indent: 0,
+        children: [keyword],
+        sourceRef: { entity: 'limit', id: 'action::phase::2' },
+      };
+      const json = JSON.stringify(lineWithRef);
+      const parsed = JSON.parse(json) as DisplayLineNode;
+      assert.deepEqual(parsed, lineWithRef);
     });
   });
 

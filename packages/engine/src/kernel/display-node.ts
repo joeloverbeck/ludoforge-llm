@@ -1,6 +1,18 @@
 import type { LimitDef } from './types.js';
 
 // ---------------------------------------------------------------------------
+// Display source references — generic identity envelope for line nodes
+// ---------------------------------------------------------------------------
+
+export interface DisplayLimitSourceRef {
+  readonly entity: 'limit';
+  readonly id: string;
+}
+
+/** Discriminated union for display-line source identity metadata. */
+export type DisplaySourceRef = DisplayLimitSourceRef;
+
+// ---------------------------------------------------------------------------
 // Inline node types (leaf-level semantic tokens)
 // ---------------------------------------------------------------------------
 
@@ -53,10 +65,7 @@ export interface DisplayLineNode {
   readonly kind: 'line';
   readonly indent: number;
   readonly children: readonly DisplayInlineNode[];
-  readonly sourceRef?: {
-    readonly kind: 'limit';
-    readonly id: string;
-  };
+  readonly sourceRef?: DisplaySourceRef;
 }
 
 export interface DisplayGroupNode {

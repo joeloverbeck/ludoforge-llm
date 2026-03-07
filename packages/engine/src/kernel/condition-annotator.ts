@@ -191,7 +191,7 @@ const scopeToUsageField = (scope: 'turn' | 'phase' | 'game'): keyof ActionUsageR
   }
 };
 
-const annotateLimitsGroup = (
+export const annotateLimitsGroup = (
   group: DisplayGroupNode,
   action: ActionDef,
   state: GameState,
@@ -208,8 +208,27 @@ const annotateLimitsGroup = (
   const annotatedChildren = group.children.map((child) => {
     if (child.kind !== 'line') return child;
     const sourceRef = child.sourceRef;
-    const info = sourceRef?.kind === 'limit' ? limitUsageById.get(sourceRef.id) : undefined;
-    if (info === undefined) return child;
+    if (sourceRef === undefined || sourceRef.entity !== 'limit') {
+      // Invariant: every line in a Limits group must carry a limit sourceRef.
+      // Missing identity is treated as an explicit failure, not a silent no-op.
+      const failAnnotation: DisplayAnnotationNode = {
+        kind: 'annotation',
+        annotationType: 'fail',
+        text: 'missing limit identity',
+      };
+      return appendAnnotations(child, [failAnnotation]);
+    }
+    const info = limitUsageById.get(sourceRef.id);
+    if (info === undefined) {
+      // Invariant: sourceRef id must resolve to a known limit on this action.
+      // Mismatched identity is treated as an explicit failure.
+      const failAnnotation: DisplayAnnotationNode = {
+        kind: 'annotation',
+        annotationType: 'fail',
+        text: 'unresolved limit identity',
+      };
+      return appendAnnotations(child, [failAnnotation]);
+    }
     const annotation: DisplayAnnotationNode = {
       kind: 'annotation',
       annotationType: 'usage',

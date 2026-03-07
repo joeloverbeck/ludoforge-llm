@@ -44,24 +44,18 @@ describe('token-filter-runtime-boundary', () => {
       op: 'or',
       entryPathSuffix: '.args[2]',
       errorFieldSuffix: '.args',
-      message: 'Token filter operator "or" requires at least one expression argument.',
-      suggestion: 'Provide one or more token filter expression arguments.',
     });
     assert.deepEqual(normalizedByReason.unsupported_operator, {
       reason: 'unsupported_operator',
       op: 'xor',
       entryPathSuffix: '',
       errorFieldSuffix: '.op',
-      message: 'Unsupported token filter operator "xor".',
-      suggestion: 'Use one of: and, or, not.',
     });
     assert.deepEqual(normalizedByReason.non_conforming_node, {
       reason: 'non_conforming_node',
       op: 'and',
       entryPathSuffix: '',
       errorFieldSuffix: '.op',
-      message: 'Malformed token filter expression node for operator "and".',
-      suggestion: 'Use a predicate leaf or a well-formed and/or/not expression node.',
     });
   });
 
@@ -76,7 +70,31 @@ describe('token-filter-runtime-boundary', () => {
         && error.message === traversalError.message
         && error.context?.reason === 'empty_args'
         && error.context?.op === 'and'
-        && Array.isArray(error.context?.path),
+        && Array.isArray(error.context?.path)
+        && error.context?.entryPathSuffix === ''
+        && error.context?.errorFieldSuffix === '.args',
+    );
+  });
+
+  it('preserves traversal error message source for runtime TYPE_MISMATCH mapping', () => {
+    const traversalError = {
+      code: 'TOKEN_FILTER_TRAVERSAL_ERROR',
+      message: 'custom traversal message from upstream source',
+      context: {
+        expr: { op: 'xor' },
+        op: 'xor',
+        path: [] as const,
+        reason: 'unsupported_operator' as const,
+      },
+    };
+
+    assert.throws(
+      () => mapTokenFilterTraversalToTypeMismatch(traversalError),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'TYPE_MISMATCH')
+        && error.message === traversalError.message
+        && error.context?.entryPathSuffix === ''
+        && error.context?.errorFieldSuffix === '.op',
     );
   });
 

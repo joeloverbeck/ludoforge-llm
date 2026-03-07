@@ -55,6 +55,10 @@ import {
   tokenFilterPathSuffix,
   walkTokenFilterExprRecovering,
 } from './token-filter-expr-utils.js';
+import {
+  tokenFilterTraversalValidatorMessage,
+  tokenFilterTraversalValidatorSuggestion,
+} from './token-filter-validator-boundary.js';
 import { isPredicateOp, PREDICATE_OPERATORS } from '../contracts/index.js';
 
 function validateStaticMapSpaceSelector(
@@ -642,8 +646,8 @@ const validateTokenFilterExpr = (
       code: 'DOMAIN_QUERY_INVALID',
       path: errorPath,
       severity: 'error',
-      message: normalizedError.message,
-      suggestion: normalizedError.suggestion,
+      message: tokenFilterTraversalValidatorMessage(normalizedError),
+      suggestion: tokenFilterTraversalValidatorSuggestion(normalizedError),
     });
   };
 

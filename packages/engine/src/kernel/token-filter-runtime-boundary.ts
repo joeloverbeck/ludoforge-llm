@@ -6,5 +6,9 @@ export const mapTokenFilterTraversalToTypeMismatch = (error: unknown): never => 
     throw error;
   }
   const normalizedError = normalizeTokenFilterTraversalError(error);
-  throw typeMismatchError(normalizedError.message, { ...error.context });
+  throw typeMismatchError(error.message, {
+    ...error.context,
+    entryPathSuffix: normalizedError.entryPathSuffix,
+    errorFieldSuffix: normalizedError.errorFieldSuffix,
+  });
 };

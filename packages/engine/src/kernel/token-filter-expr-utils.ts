@@ -1,5 +1,5 @@
 import type { TokenFilterExpr, TokenFilterPredicate } from './types.js';
-import { booleanArityMessage, booleanAritySuggestion, isNonEmptyArray } from './boolean-arity-policy.js';
+import { booleanArityMessage, isNonEmptyArray } from './boolean-arity-policy.js';
 import { isPredicateOp } from '../contracts/index.js';
 
 export interface TokenFilterPathSegmentNot {
@@ -35,8 +35,6 @@ export interface NormalizedTokenFilterTraversalError {
   readonly op: unknown;
   readonly entryPathSuffix: string;
   readonly errorFieldSuffix: '.op' | '.args';
-  readonly message: string;
-  readonly suggestion: string;
 }
 
 export interface TokenFilterExprFoldHandlers<TResult> {
@@ -65,19 +63,6 @@ const tokenFilterTraversalErrorMessage = (reason: TokenFilterTraversalErrorReaso
       return `Malformed token filter expression node for operator "${String(op)}".`;
     case 'empty_args':
       return booleanArityMessage('tokenFilter', isTokenFilterBooleanOperator(op) ? op : 'and');
-    default:
-      return assertNever(reason);
-  }
-};
-
-const tokenFilterTraversalErrorSuggestion = (reason: TokenFilterTraversalErrorReason): string => {
-  switch (reason) {
-    case 'unsupported_operator':
-      return 'Use one of: and, or, not.';
-    case 'non_conforming_node':
-      return 'Use a predicate leaf or a well-formed and/or/not expression node.';
-    case 'empty_args':
-      return booleanAritySuggestion('tokenFilter');
     default:
       return assertNever(reason);
   }
@@ -159,8 +144,6 @@ export const normalizeTokenFilterTraversalError = (
     op,
     entryPathSuffix: tokenFilterPathSuffix(error.context.path),
     errorFieldSuffix,
-    message: tokenFilterTraversalErrorMessage(reason, op),
-    suggestion: tokenFilterTraversalErrorSuggestion(reason),
   };
 };
 

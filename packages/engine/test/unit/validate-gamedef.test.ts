@@ -721,7 +721,7 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
-  it('maps token-filter traversal reasons to deterministic validator suggestions', () => {
+  it('maps token-filter traversal reasons to deterministic validator boundary messages/suggestions', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
@@ -765,6 +765,11 @@ describe('validateGameDef reference checks', () => {
         diag.code === 'DOMAIN_QUERY_INVALID'
         && diag.path === 'actions[0].params[0].domain.filter.args[2].op',
     );
+    const traversalDiagnostics = diagnostics.filter(
+      (diag) =>
+        diag.code === 'DOMAIN_QUERY_INVALID'
+        && diag.path.startsWith('actions[0].params[0].domain.filter.args['),
+    );
 
     assert.ok(emptyArgsDiagnostic);
     assert.equal(emptyArgsDiagnostic.suggestion, 'Provide one or more token filter expression arguments.');
@@ -778,6 +783,7 @@ describe('validateGameDef reference checks', () => {
       'Use a predicate leaf or a well-formed and/or/not expression node.',
     );
     assert.equal(nonConformingNodeDiagnostic.message, 'Malformed token filter expression node for operator "and".');
+    assert.equal(traversalDiagnostics.length, 3);
   });
 
   it('keeps condition-surface suffix taxonomy canonicalized by family', () => {

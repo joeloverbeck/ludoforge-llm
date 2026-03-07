@@ -190,6 +190,15 @@ const describeLeafBlocker = (
 // Not-blocker description
 // ---------------------------------------------------------------------------
 
+const INVERTED_OP_DISPLAY: Readonly<Record<string, string>> = {
+  '==': '\u2260',
+  '!=': '=',
+  '<': '\u2265',
+  '<=': '>',
+  '>': '\u2264',
+  '>=': '<',
+};
+
 const describeNotBlocker = (
   inner: ConditionAST,
   ctx: LabelContext,
@@ -197,17 +206,40 @@ const describeNotBlocker = (
   if (typeof inner === 'boolean') return `Expected not ${String(inner)}`;
 
   switch (inner.op) {
-    case '==': {
+    case '==':
+    case '!=':
+    case '<':
+    case '<=':
+    case '>':
+    case '>=': {
       const left = stringifyValueExpr(inner.left, ctx);
       const right = stringifyValueExpr(inner.right, ctx);
-      return `Need ${left} \u2260 ${right}`;
+      const opDisplay = INVERTED_OP_DISPLAY[inner.op] ?? inner.op;
+      return `Need ${left} ${opDisplay} ${right}`;
     }
     case 'in': {
       const item = stringifyValueExpr(inner.item, ctx);
       return `Need ${item} not in set`;
     }
-    default:
-      return `Violated negation condition`;
+    case 'adjacent': {
+      const left = stringifyZoneSel(inner.left, ctx);
+      const right = stringifyZoneSel(inner.right, ctx);
+      return `Need ${left} not adjacent to ${right}`;
+    }
+    case 'connected': {
+      const from = stringifyZoneSel(inner.from, ctx);
+      const to = stringifyZoneSel(inner.to, ctx);
+      return `Need ${from} not connected to ${to}`;
+    }
+    case 'zonePropIncludes': {
+      const zone = stringifyZoneSel(inner.zone, ctx);
+      const value = stringifyValueExpr(inner.value, ctx);
+      return `Need ${zone}.${inner.prop} to not include ${value}`;
+    }
+    case 'and':
+    case 'or':
+    case 'not':
+      return `Negation of compound condition`;
   }
 };
 

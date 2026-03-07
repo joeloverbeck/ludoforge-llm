@@ -223,6 +223,79 @@ describe('extractBlockers', () => {
       const result = extractBlockers(cond, () => false, MOCK_VERB);
       assert.equal(result.blockers[0]!.description, 'Need Saigon not in set');
     });
+
+    it('describes not(!=) as equality', () => {
+      const inner: ConditionAST = { op: '!=', left: { ref: 'gvar', var: 'aid' }, right: 0 };
+      const cond: ConditionAST = { op: 'not', arg: inner };
+
+      const result = extractBlockers(cond, () => false, MOCK_VERB);
+      assert.equal(result.blockers[0]!.description, 'Need Aid = 0');
+    });
+
+    it('describes not(>=) as less-than', () => {
+      const inner: ConditionAST = { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 };
+      const cond: ConditionAST = { op: 'not', arg: inner };
+
+      const result = extractBlockers(cond, () => false, MOCK_VERB);
+      assert.equal(result.blockers[0]!.description, 'Need Aid < 3');
+    });
+
+    it('describes not(<) as greater-or-equal', () => {
+      const inner: ConditionAST = { op: '<', left: { ref: 'gvar', var: 'aid' }, right: 5 };
+      const cond: ConditionAST = { op: 'not', arg: inner };
+
+      const result = extractBlockers(cond, () => false, MOCK_VERB);
+      assert.equal(result.blockers[0]!.description, 'Need Aid \u2265 5');
+    });
+
+    it('describes not(<=) as greater-than', () => {
+      const inner: ConditionAST = { op: '<=', left: { ref: 'gvar', var: 'aid' }, right: 5 };
+      const cond: ConditionAST = { op: 'not', arg: inner };
+
+      const result = extractBlockers(cond, () => false, MOCK_VERB);
+      assert.equal(result.blockers[0]!.description, 'Need Aid > 5');
+    });
+
+    it('describes not(>) as less-or-equal', () => {
+      const inner: ConditionAST = { op: '>', left: { ref: 'gvar', var: 'aid' }, right: 5 };
+      const cond: ConditionAST = { op: 'not', arg: inner };
+
+      const result = extractBlockers(cond, () => false, MOCK_VERB);
+      assert.equal(result.blockers[0]!.description, 'Need Aid \u2264 5');
+    });
+
+    it('describes not(adjacent) condition', () => {
+      const inner: ConditionAST = { op: 'adjacent', left: 'saigon', right: 'hue' };
+      const cond: ConditionAST = { op: 'not', arg: inner };
+
+      const result = extractBlockers(cond, () => false, MOCK_VERB);
+      assert.equal(result.blockers[0]!.description, 'Need Saigon not adjacent to Hue');
+    });
+
+    it('describes not(connected) condition', () => {
+      const inner: ConditionAST = { op: 'connected', from: 'saigon', to: 'hue' };
+      const cond: ConditionAST = { op: 'not', arg: inner };
+
+      const result = extractBlockers(cond, () => false, MOCK_VERB);
+      assert.equal(result.blockers[0]!.description, 'Need Saigon not connected to Hue');
+    });
+
+    it('describes not(zonePropIncludes) condition', () => {
+      const inner: ConditionAST = { op: 'zonePropIncludes', zone: 'saigon', prop: 'terrain', value: 'city' };
+      const cond: ConditionAST = { op: 'not', arg: inner };
+
+      const result = extractBlockers(cond, () => false, MOCK_VERB);
+      assert.equal(result.blockers[0]!.description, 'Need Saigon.terrain to not include City');
+    });
+
+    it('describes not(and) as compound negation', () => {
+      const child: ConditionAST = { op: '>=', left: 1, right: 2 };
+      const inner: ConditionAST = { op: 'and', args: [child] };
+      const cond: ConditionAST = { op: 'not', arg: inner };
+
+      const result = extractBlockers(cond, () => false, undefined);
+      assert.equal(result.blockers[0]!.description, 'Negation of compound condition');
+    });
   });
 
   // ---------------------------------------------------------------------------

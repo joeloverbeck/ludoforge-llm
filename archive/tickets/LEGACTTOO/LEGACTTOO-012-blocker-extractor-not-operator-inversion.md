@@ -1,6 +1,6 @@
 # LEGACTTOO-012: Blocker Extractor — Complete `not` Operator Inversion
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/kernel/tooltip-blocker-extractor.ts`
@@ -12,7 +12,7 @@
 
 ## Assumption Reassessment (2026-03-07)
 
-1. `describeNotBlocker` at `tooltip-blocker-extractor.ts:214-233` has a switch on `inner.op` with cases for `==` and `in` only; `default` returns a generic string.
+1. `describeNotBlocker` at `tooltip-blocker-extractor.ts:193-212` has a switch on `inner.op` with cases for `==` and `in` only; `default` returns a generic string.
 2. `ConditionAST` comparison operators are `==`, `!=`, `<`, `<=`, `>`, `>=` — all six have well-defined logical inversions.
 3. Spatial operators `adjacent`, `connected`, `zonePropIncludes` can be described as "not adjacent", "not connected", "not including" respectively.
 
@@ -79,3 +79,13 @@ Remove the generic `"Violated negation condition"` default — make the switch e
 
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-07
+- **What actually changed**:
+  - Modified `packages/engine/src/kernel/tooltip-blocker-extractor.ts`: replaced partial `describeNotBlocker` switch (only `==` and `in`) with exhaustive coverage of all `ConditionAST` leaf operators (`!=`, `<`, `<=`, `>`, `>=`, `adjacent`, `connected`, `zonePropIncludes`) using an `INVERTED_OP_DISPLAY` map. Added explicit `and`/`or`/`not` cases returning `"Negation of compound condition"`. Removed the generic `"Violated negation condition"` default.
+  - Modified `packages/engine/test/unit/kernel/tooltip-blocker-extractor.test.ts`: added 9 new test cases under the `not walk rule` describe block covering `not(!=)`, `not(>=)`, `not(<)`, `not(<=)`, `not(>)`, `not(adjacent)`, `not(connected)`, `not(zonePropIncludes)`, and `not(and(...))`.
+- **Deviations from original plan**:
+  - Added explicit `and`/`or`/`not` compound cases (returns `"Negation of compound condition"`) to achieve true exhaustiveness. The ticket's out-of-scope note only excluded *decomposition* of compound negations, not their presence in the switch.
+  - Fixed ticket assumption: line numbers were 193-212, not 214-233.

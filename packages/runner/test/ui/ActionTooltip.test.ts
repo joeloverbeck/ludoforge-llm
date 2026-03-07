@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type {
+  ActionTooltipPayload,
   AnnotatedActionDescription,
   DisplayGroupNode,
   DisplayLineNode,
@@ -346,5 +347,147 @@ describe('ActionTooltip', () => {
     fireEvent.pointerLeave(tooltip);
 
     expect(onPointerLeave).toHaveBeenCalledTimes(1);
+  });
+
+  /* -------------------------------------------------------------- */
+  /* Progressive Disclosure (tooltipPayload present)                 */
+  /* -------------------------------------------------------------- */
+
+  describe('progressive disclosure (tooltipPayload present)', () => {
+    function makePayload(overrides: Partial<ActionTooltipPayload> = {}): ActionTooltipPayload {
+      return {
+        ruleCard: {
+          synopsis: 'Train — Select 1-6 target spaces',
+          steps: [
+            { stepNumber: 1, header: 'Select target spaces', lines: [{ text: 'Choose 1-6 spaces', astPath: 'root.0' }] },
+            { stepNumber: 2, header: 'Place forces', lines: [] },
+          ],
+          modifiers: [
+            { condition: 'Shaded', description: '+1 Troop per space' },
+            { condition: 'Monsoon', description: 'No air lift' },
+          ],
+        },
+        ruleState: {
+          available: true,
+          blockers: [],
+          activeModifierIndices: [0],
+        },
+        ...overrides,
+      };
+    }
+
+    it('renders synopsis when tooltipPayload is present', () => {
+      const desc = makeDescription({
+        tooltipPayload: makePayload(),
+      });
+
+      render(createElement(ActionTooltip, { description: desc, anchorElement: makeAnchor() }));
+
+      const synopsis = screen.getByTestId('tooltip-synopsis');
+      expect(synopsis.textContent).toBe('Train — Select 1-6 target spaces');
+    });
+
+    it('renders numbered steps list', () => {
+      const desc = makeDescription({
+        tooltipPayload: makePayload(),
+      });
+
+      render(createElement(ActionTooltip, { description: desc, anchorElement: makeAnchor() }));
+
+      const steps = screen.getByTestId('tooltip-steps');
+      expect(steps.children).toHaveLength(2);
+      expect(steps.textContent).toContain('Select target spaces');
+      expect(steps.textContent).toContain('Place forces');
+    });
+
+    it('renders step detail lines', () => {
+      const desc = makeDescription({
+        tooltipPayload: makePayload(),
+      });
+
+      render(createElement(ActionTooltip, { description: desc, anchorElement: makeAnchor() }));
+
+      const steps = screen.getByTestId('tooltip-steps');
+      expect(steps.textContent).toContain('Choose 1-6 spaces');
+    });
+
+    it('renders modifiers section when modifiers exist', () => {
+      const desc = makeDescription({
+        tooltipPayload: makePayload(),
+      });
+
+      render(createElement(ActionTooltip, { description: desc, anchorElement: makeAnchor() }));
+
+      expect(screen.getByTestId('modifiers-section')).toBeTruthy();
+    });
+
+    it('renders availability section', () => {
+      const desc = makeDescription({
+        tooltipPayload: makePayload(),
+      });
+
+      render(createElement(ActionTooltip, { description: desc, anchorElement: makeAnchor() }));
+
+      expect(screen.getByTestId('availability-section')).toBeTruthy();
+      expect(screen.getByTestId('availability-section').textContent).toContain('Available');
+    });
+
+    it('renders raw AST toggle when sections are present alongside payload', () => {
+      const desc = makeDescription({
+        sections: [makeEffectsGroup()],
+        tooltipPayload: makePayload(),
+      });
+
+      render(createElement(ActionTooltip, { description: desc, anchorElement: makeAnchor() }));
+
+      expect(screen.getByTestId('raw-ast-toggle')).toBeTruthy();
+    });
+
+    it('does not render raw AST toggle when no sections alongside payload', () => {
+      const desc = makeDescription({
+        sections: [],
+        tooltipPayload: makePayload(),
+      });
+
+      render(createElement(ActionTooltip, { description: desc, anchorElement: makeAnchor() }));
+
+      expect(screen.queryByTestId('raw-ast-toggle')).toBeNull();
+    });
+
+    it('does not render legacy limit footer when payload is present', () => {
+      const desc = makeDescription({
+        sections: [makeEffectsGroup()],
+        limitUsage: [{ scope: 'turn', max: 2, current: 1 }],
+        tooltipPayload: makePayload(),
+      });
+
+      render(createElement(ActionTooltip, { description: desc, anchorElement: makeAnchor() }));
+
+      expect(screen.queryByTestId('limit-footer')).toBeNull();
+    });
+
+    it('falls back to DisplayNode rendering when tooltipPayload is absent', () => {
+      const desc = makeDescription({
+        sections: [makeEffectsGroup()],
+      });
+
+      render(createElement(ActionTooltip, { description: desc, anchorElement: makeAnchor() }));
+
+      // Legacy rendering: group labels visible, no synopsis
+      expect(screen.queryByTestId('tooltip-synopsis')).toBeNull();
+      const tooltip = screen.getByTestId('action-tooltip');
+      expect(tooltip.textContent).toContain('Effects');
+    });
+
+    it('preserves ARIA attributes in progressive disclosure mode', () => {
+      const desc = makeDescription({
+        tooltipPayload: makePayload(),
+      });
+
+      render(createElement(ActionTooltip, { description: desc, anchorElement: makeAnchor() }));
+
+      const tooltip = screen.getByTestId('action-tooltip');
+      expect(tooltip.getAttribute('role')).toBe('tooltip');
+    });
   });
 });

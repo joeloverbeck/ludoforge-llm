@@ -40,4 +40,16 @@ describe('hasDisplayableContent', () => {
     });
     expect(hasDisplayableContent(desc)).toBe(true);
   });
+
+  it('returns true when tooltipPayload is present but sections and limitUsage are empty', () => {
+    const desc = makeDescription({
+      sections: [],
+      limitUsage: [],
+      tooltipPayload: {
+        ruleCard: { synopsis: 'Train', steps: [], modifiers: [] },
+        ruleState: { available: true, blockers: [], activeModifierIndices: [] },
+      },
+    });
+    expect(hasDisplayableContent(desc)).toBe(true);
+  });
 });

@@ -56,6 +56,7 @@ export * from './stacking.js';
 export * from './types.js';
 export * from './validate-gamedef.js';
 export * from './zobrist.js';
+export * from './tooltip-rule-card.js';
 export * from './display-node.js';
 export * from './ast-to-display.js';
 export * from './condition-annotator.js';

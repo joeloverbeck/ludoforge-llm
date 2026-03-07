@@ -44470,6 +44470,7 @@
       "effects": [],
       "limits": [
         {
+          "id": "coupVictoryCheck::phase::0",
           "scope": "phase",
           "max": 1
         }
@@ -45381,6 +45382,7 @@
       ],
       "limits": [
         {
+          "id": "coupResourcesResolve::phase::0",
           "scope": "phase",
           "max": 1
         }
@@ -49269,6 +49271,7 @@
       ],
       "limits": [
         {
+          "id": "coupCommitmentResolve::phase::0",
           "scope": "phase",
           "max": 1
         }

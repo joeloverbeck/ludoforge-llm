@@ -717,7 +717,7 @@ describe('actionDefToDisplayTree', () => {
       pre: { op: '>', left: { ref: 'gvar', var: 'score' }, right: 0 },
       cost: [{ addVar: { scope: 'global', var: 'gold', delta: -1 } }],
       effects: [{ setVar: { scope: 'global', var: 'done', value: true } }],
-      limits: [{ scope: 'turn', max: 1 }],
+      limits: [{ id: 'test::turn::0', scope: 'turn', max: 1 }],
     });
 
     const sections = actionDefToDisplayTree(action);
@@ -758,7 +758,7 @@ describe('actionDefToDisplayTree', () => {
 
   it('Limits section shows max and scope', () => {
     const action = minimalActionDef({
-      limits: [{ scope: 'turn', max: 1 }, { scope: 'game', max: 3 }],
+      limits: [{ id: 'test::turn::0', scope: 'turn', max: 1 }, { id: 'test::game::1', scope: 'game', max: 3 }],
       effects: [{ advancePhase: {} }],
     });
     const sections = actionDefToDisplayTree(action);

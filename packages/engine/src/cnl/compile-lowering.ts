@@ -565,7 +565,12 @@ export function lowerActions(
       context,
       bindingScope,
     );
-    const limits = lowerActionLimits(action.limits, diagnostics, `${path}.limits`);
+    const limits = lowerActionLimits(
+      action.id,
+      action.limits,
+      diagnostics,
+      `${path}.limits`,
+    );
 
     if (actor.value === null || executor.value === null || (action.pre !== null && pre === null)) {
       continue;
@@ -726,7 +731,18 @@ function lowerActionParams(
   };
 }
 
-function lowerActionLimits(limitsSource: unknown, diagnostics: Diagnostic[], path: string): readonly LimitDef[] {
+const buildCanonicalLimitId = (
+  actionId: string,
+  limitIndex: number,
+  scope: LimitDef['scope'],
+): string => `${actionId}::${scope}::${limitIndex}`;
+
+function lowerActionLimits(
+  actionId: string,
+  limitsSource: unknown,
+  diagnostics: Diagnostic[],
+  path: string,
+): readonly LimitDef[] {
   if (!Array.isArray(limitsSource)) {
     diagnostics.push(missingCapabilityDiagnostic(path, 'action limits', limitsSource, ['array']));
     return [];
@@ -747,6 +763,7 @@ function lowerActionLimits(limitsSource: unknown, diagnostics: Diagnostic[], pat
       continue;
     }
     limits.push({
+      id: buildCanonicalLimitId(actionId, index, limit.scope),
       scope: limit.scope,
       max: maxValue,
     });

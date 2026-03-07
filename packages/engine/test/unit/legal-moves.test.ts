@@ -66,7 +66,7 @@ phase: [asPhaseId('main')],
         pre: null,
         cost: [],
         effects: [],
-        limits: [{ scope: 'turn', max: 1 }],
+        limits: [{ id: 'limitedTurn::turn::0', scope: 'turn', max: 1 }],
       },
       {
         id: asActionId('comboPre'),

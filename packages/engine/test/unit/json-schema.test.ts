@@ -103,7 +103,7 @@ phase: [asPhaseId('main')],
         },
         { setMarker: { space: { zoneExpr: 'discard:none' }, marker: 'support', state: 'neutral' } },
       ],
-      limits: [{ scope: 'turn', max: 1 }],
+      limits: [{ id: 'playCard::turn::0', scope: 'turn', max: 1 }],
     },
   ],
   triggers: [

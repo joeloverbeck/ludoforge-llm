@@ -138,6 +138,7 @@ export const ParamDefSchema = z
 
 export const LimitDefSchema = z
   .object({
+    id: StringSchema,
     scope: z.union([z.literal('turn'), z.literal('phase'), z.literal('game')]),
     max: NumberSchema,
   })

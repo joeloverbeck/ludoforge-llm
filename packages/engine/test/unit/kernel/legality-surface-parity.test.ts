@@ -171,7 +171,7 @@ describe('legality surface parity', () => {
         def: makeDef({
           action: makeAction({
             id: asActionId('limitedOp'),
-            limits: [{ scope: 'phase', max: 1 }],
+            limits: [{ id: 'limitedOp::phase::0', scope: 'phase', max: 1 }],
           }),
         }),
         state: makeState({

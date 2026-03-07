@@ -78,11 +78,6 @@ export function ActionTooltip({ description, anchorElement, onPointerEnter, onPo
                       ))}
                     </ol>
                   )}
-                  {step.collapsedCount !== undefined && step.collapsedCount > 0 && (
-                    <div className={styles.collapsedHint}>
-                      and {step.collapsedCount} more...
-                    </div>
-                  )}
                 </li>
               ))}
             </ol>

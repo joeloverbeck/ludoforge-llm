@@ -7,6 +7,7 @@ import { resolveZoneWithNormalization, selectorResolutionFailurePolicyForMode } 
 import { checkStackingConstraints } from './stacking.js';
 import { EffectRuntimeError, effectRuntimeError } from './effect-error.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
+import { isRuntimeToken } from './token-shape.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, Rng, Token } from './types.js';
@@ -115,7 +116,7 @@ const resolveBoundTokenId = (ctx: EffectContext, tokenBinding: string, effectTyp
     return boundValue;
   }
 
-  if (typeof boundValue === 'object' && boundValue !== null && 'id' in boundValue && typeof boundValue.id === 'string') {
+  if (isRuntimeToken(boundValue)) {
     return boundValue.id;
   }
 

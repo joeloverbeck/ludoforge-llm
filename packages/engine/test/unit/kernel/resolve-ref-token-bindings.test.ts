@@ -137,4 +137,62 @@ describe('resolveRef tokenProp token bindings', () => {
     assert.equal(prop, 3);
     assert.equal(zone, 'zone-a:none');
   });
+
+  it('resolves tokenZone from token-object bindings', () => {
+    const token: Token = { id: asTokenId('tok-1'), type: 'piece', props: { value: 5 } };
+    const ctx = makeExecutionEffectContext({
+      def: makeDef(),
+      adjacencyGraph: buildAdjacencyGraph([]),
+      state: makeState([token]),
+      rng: createRng(19n),
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+      bindings: { $tok: token },
+      moveParams: {},
+      collector: createCollector(),
+    });
+
+    const zone = resolveRef({ ref: 'tokenZone', token: '$tok' }, ctx);
+    assert.equal(zone, 'zone-a:none');
+  });
+
+  it('rejects malformed token-object bindings for tokenProp with TYPE_MISMATCH', () => {
+    const ctx = makeExecutionEffectContext({
+      def: makeDef(),
+      adjacencyGraph: buildAdjacencyGraph([]),
+      state: makeState([]),
+      rng: createRng(23n),
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+      bindings: { $tok: { id: 42, type: 'piece', props: { value: 1 } } as unknown },
+      moveParams: {},
+      collector: createCollector(),
+    });
+
+    assert.throws(
+      () => resolveRef({ ref: 'tokenProp', token: '$tok', prop: 'value' }, ctx),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'TYPE_MISMATCH') && String(error).includes('must resolve to a Token or token-id string'),
+    );
+  });
+
+  it('rejects malformed token-object bindings for tokenZone with TYPE_MISMATCH', () => {
+    const ctx = makeExecutionEffectContext({
+      def: makeDef(),
+      adjacencyGraph: buildAdjacencyGraph([]),
+      state: makeState([]),
+      rng: createRng(29n),
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+      bindings: { $tok: { id: asTokenId('tok-1'), props: { value: 1 } } as unknown },
+      moveParams: {},
+      collector: createCollector(),
+    });
+
+    assert.throws(
+      () => resolveRef({ ref: 'tokenZone', token: '$tok' }, ctx),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'TYPE_MISMATCH') && String(error).includes('must resolve to a Token or token-id string'),
+    );
+  });
 });

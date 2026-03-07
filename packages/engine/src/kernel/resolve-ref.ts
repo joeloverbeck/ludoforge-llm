@@ -12,6 +12,7 @@ import {
   runtimeTableIssueEvalError,
   runtimeTableRowBindingTypeEvalError,
 } from './runtime-table-eval-errors.js';
+import { isRuntimeToken } from './token-shape.js';
 import type { Reference, Token } from './types.js';
 
 function isScalarValue(value: unknown): value is number | boolean | string {
@@ -19,15 +20,18 @@ function isScalarValue(value: unknown): value is number | boolean | string {
 }
 
 function isTokenBinding(value: unknown): value is Token {
-  return typeof value === 'object' && value !== null && 'props' in value;
+  return isRuntimeToken(value);
 }
 
-function resolveTokenIdFromBinding(bindingName: string, value: unknown, reference: Reference): string {
+function resolveTokenBinding(bindingName: string, value: unknown, reference: Reference): {
+  readonly tokenId: string;
+  readonly tokenFromBinding: Token | null;
+} {
   if (typeof value === 'string') {
-    return value;
+    return { tokenId: value, tokenFromBinding: null };
   }
   if (isTokenBinding(value)) {
-    return value.id;
+    return { tokenId: value.id, tokenFromBinding: value };
   }
   throw typeMismatchError(`Token binding ${bindingName} must resolve to a Token or token-id string`, {
     reference,
@@ -35,6 +39,10 @@ function resolveTokenIdFromBinding(bindingName: string, value: unknown, referenc
     actualType: typeof value,
     value,
   });
+}
+
+function resolveTokenIdFromBinding(bindingName: string, value: unknown, reference: Reference): string {
+  return resolveTokenBinding(bindingName, value, reference).tokenId;
 }
 
 function findTokenByIdInZones(ctx: EvalContext, tokenId: string): Token | null {
@@ -124,20 +132,9 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
       });
     }
 
-    const tokenId = resolveTokenIdFromBinding(ref.token, boundToken, ref);
-    let token: Token | null;
-    if (typeof boundToken === 'string') {
-      token = findTokenByIdInZones(ctx, tokenId);
-    } else if (isTokenBinding(boundToken)) {
-      token = boundToken;
-    } else {
-      throw typeMismatchError(`Token binding ${ref.token} must resolve to a Token or token-id string`, {
-        reference: ref,
-        binding: ref.token,
-        actualType: typeof boundToken,
-        value: boundToken,
-      });
-    }
+    const resolvedBinding = resolveTokenBinding(ref.token, boundToken, ref);
+    const tokenId = resolvedBinding.tokenId;
+    const token = resolvedBinding.tokenFromBinding ?? findTokenByIdInZones(ctx, tokenId);
     if (token === null) {
       throw missingVarError(`Token ${String(tokenId)} not found in any zone`, {
         reference: ref,

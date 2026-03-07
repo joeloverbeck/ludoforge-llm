@@ -1,6 +1,6 @@
 # LEGACTTOO-019: Token Binding Contract Hardening and Ref Parity
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel reference resolution (`resolve-ref.ts`) and unit coverage
@@ -14,7 +14,7 @@
 
 1. `resolve-ref.ts` currently checks token-like objects via `isTokenBinding(value) => 'props' in value`, which is broader than the canonical `Token` shape. **Confirmed in `packages/engine/src/kernel/resolve-ref.ts`.**
 2. `tokenProp` and `tokenZone` now both accept token-id string bindings after LEGACTTOO-017. **Confirmed in `packages/engine/src/kernel/resolve-ref.ts`.**
-3. Current tests cover valid token-id and token-object bindings plus missing-token errors, but do not assert malformed token-object rejection paths (for example non-string `id`). **Confirmed in `packages/engine/test/unit/kernel/resolve-ref-token-bindings.test.ts`.**
+3. Current tests verify `tokenProp` valid token-id/token-object paths and token-id missing-token errors, plus one `tokenZone` token-id parity case; they do **not** explicitly cover `tokenZone` token-object binding or malformed token-like rejection for either ref kind. **Confirmed in `packages/engine/test/unit/kernel/resolve-ref-token-bindings.test.ts`.**
 
 ## Architecture Check
 
@@ -31,7 +31,8 @@
 
 ### 2. Add regression tests for malformed token-like bindings
 
-- Add unit tests proving malformed object bindings fail with deterministic `TYPE_MISMATCH` errors.
+- Add unit tests proving malformed object bindings fail with deterministic `TYPE_MISMATCH` errors for both `tokenProp` and `tokenZone`.
+- Add explicit parity coverage that `tokenZone` accepts valid token-object bindings in addition to token-id bindings.
 - Keep existing valid-path and missing-token-path assertions green.
 
 ## Files to Touch
@@ -61,10 +62,19 @@
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/kernel/resolve-ref-token-bindings.test.ts` — add malformed token-object binding rejection assertions for `tokenProp` and `tokenZone`.
+1. `packages/engine/test/unit/kernel/resolve-ref-token-bindings.test.ts` — add malformed token-object binding rejection assertions for `tokenProp` and `tokenZone`, plus explicit `tokenZone` token-object success coverage.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build`
 2. `node --test packages/engine/dist/test/unit/kernel/resolve-ref-token-bindings.test.js`
 3. `pnpm -F @ludoforge/engine test:unit`
+4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- Updated `resolve-ref.ts` to enforce strict token-object binding validation (`id: string`, `type: string`, `props: non-null object`) through a shared token-binding resolution path used by both `tokenProp` and `tokenZone`.
+- Expanded `resolve-ref-token-bindings.test.ts` with explicit `tokenZone` token-object success coverage and malformed-binding `TYPE_MISMATCH` regression tests for both `tokenProp` and `tokenZone`.
+- Added shared kernel helper `token-shape.ts` and reused it in `resolve-ref.ts`, `effects-token.ts`, and `eval-query.ts` to keep token-shape checks centralized while preserving query hot-path behavior.
+- Added `effects-lifecycle.test.ts` regression coverage to assert malformed token-object bindings are rejected at effect runtime boundary (`setTokenProp`).
+- Original intent was fully kept; scope was clarified first to correct overstated pre-existing `tokenZone` coverage in assumptions, then extended with the centralized token-shape architecture cleanup.

@@ -353,6 +353,19 @@ describe('effects setTokenProp', () => {
     );
   });
 
+  it('rejects malformed token-object bindings for setTokenProp at runtime boundary', () => {
+    const ctx = makeCtx({
+      def: makePieceDef(),
+      bindings: { $unit: { id: asTokenId('g1') } as unknown },
+    });
+
+    assert.throws(
+      () => applyEffect({ setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } }, ctx),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('must resolve to Token or TokenId'),
+    );
+  });
+
   it('throws when property is not defined on token type', () => {
     const t = makeTokenWithProps('g1', { faction: 'NVA', activity: 'underground' });
     const state = makeState();

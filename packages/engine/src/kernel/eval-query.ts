@@ -28,6 +28,7 @@ import { filterRowsByPredicates, type PredicateValue, type ResolvedRowPredicate 
 import { filterTokensByExpr } from './token-filter.js';
 import { foldTokenFilterExpr } from './token-filter-expr-utils.js';
 import { planAssetRowsLookup } from './runtime-table-lookup-plan.js';
+import { hasTokenRuntimeShapeKeys } from './token-shape.js';
 import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterExpr, TokenFilterPredicate, ValueExpr } from './types.js';
 
 type AssetRow = Readonly<Record<string, unknown>>;
@@ -527,18 +528,6 @@ function getTokenZoneIndex(ctx: EvalContext): ReadonlyMap<string, string> {
   return built;
 }
 
-function isTokenShape(value: unknown): value is Token {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'id' in value &&
-    'type' in value &&
-    'props' in value &&
-    typeof (value as { readonly props: unknown }).props === 'object' &&
-    (value as { readonly props: unknown }).props !== null
-  );
-}
-
 function classifyResultItem(item: QueryResult): Exclude<RuntimeQueryShape, 'empty' | 'mixed'> {
   if (typeof item === 'number') {
     return 'number';
@@ -546,7 +535,7 @@ function classifyResultItem(item: QueryResult): Exclude<RuntimeQueryShape, 'empt
   if (typeof item === 'string') {
     return 'string';
   }
-  if (isTokenShape(item)) {
+  if (hasTokenRuntimeShapeKeys(item)) {
     return 'token';
   }
   return 'object';
@@ -691,7 +680,7 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
 
       const zones = sourceItems.map((item) => {
         const tokenId =
-          isTokenShape(item)
+          hasTokenRuntimeShapeKeys(item)
             ? String(item.id)
             : typeof item === 'string' && knownTokenIds.has(item)
               ? item

@@ -1,5 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import ts from 'typescript';
+import { parseTypeScriptSource } from './kernel-source-ast-guard.js';
 
 export function findRepoRootFile(startDir: string, fileName: string): string {
   let current = startDir;
@@ -71,6 +73,61 @@ export function findModuleSpecifiers(source: string): string[] {
     }
   }
   return specifiers;
+}
+
+export type StaticModuleReference = Readonly<{
+  filePath: string;
+  line: number;
+  specifier: string;
+  kind: 'import' | 'export-from' | 'import-equals-require';
+}>;
+
+export function collectStaticModuleReferences(source: string, filePath: string): readonly StaticModuleReference[] {
+  const sourceFile = parseTypeScriptSource(source, filePath);
+  const references: StaticModuleReference[] = [];
+  const lineFromNode = (node: ts.Node): number => sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
+
+  for (const statement of sourceFile.statements) {
+    if (ts.isImportDeclaration(statement)) {
+      const moduleSpecifier = statement.moduleSpecifier;
+      if (ts.isStringLiteral(moduleSpecifier)) {
+        references.push({
+          filePath,
+          line: lineFromNode(statement),
+          specifier: moduleSpecifier.text,
+          kind: 'import',
+        });
+      }
+      continue;
+    }
+
+    if (ts.isExportDeclaration(statement)) {
+      const moduleSpecifier = statement.moduleSpecifier;
+      if (moduleSpecifier !== undefined && ts.isStringLiteral(moduleSpecifier)) {
+        references.push({
+          filePath,
+          line: lineFromNode(statement),
+          specifier: moduleSpecifier.text,
+          kind: 'export-from',
+        });
+      }
+      continue;
+    }
+
+    if (ts.isImportEqualsDeclaration(statement) && ts.isExternalModuleReference(statement.moduleReference)) {
+      const expression = statement.moduleReference.expression;
+      if (expression !== undefined && ts.isStringLiteral(expression)) {
+        references.push({
+          filePath,
+          line: lineFromNode(statement),
+          specifier: expression.text,
+          kind: 'import-equals-require',
+        });
+      }
+    }
+  }
+
+  return references;
 }
 
 type ImportViolationContext = {

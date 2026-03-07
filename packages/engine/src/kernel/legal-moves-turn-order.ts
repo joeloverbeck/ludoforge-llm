@@ -1,4 +1,4 @@
-import { isMoveDecisionSequenceSatisfiable, resolveMoveDecisionSequence } from './move-decision-sequence.js';
+import { isMoveDecisionSequenceNotUnsatisfiable, resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import type { MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import {
   isFreeOperationApplicableForMove,
@@ -384,14 +384,13 @@ export function applyPendingFreeOperationVariants(
       ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
     }).complete;
     const unresolvedDecisionCheckpoint = !checkpoint;
-    if (
-      unresolvedDecisionCheckpoint &&
-      !isMoveDecisionSequenceSatisfiable(def, state, candidate, {
+    if (unresolvedDecisionCheckpoint) {
+      if (!isMoveDecisionSequenceNotUnsatisfiable(def, state, candidate, {
         ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
         ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
-      })
-    ) {
-      continue;
+      })) {
+        continue;
+      }
     }
     if (!unresolvedDecisionCheckpoint && !isFreeOperationGrantedForMove(def, state, candidate, seatResolution)) {
       continue;

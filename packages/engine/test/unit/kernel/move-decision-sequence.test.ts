@@ -6,6 +6,7 @@ import {
   asPhaseId,
   asPlayerId,
   asZoneId,
+  isMoveDecisionSequenceNotUnsatisfiable,
   isMoveDecisionSequenceSatisfiable,
   pickDeterministicChoiceValue,
   resolveMoveDecisionSequence,
@@ -268,6 +269,7 @@ phase: [asPhaseId('main')],
     assert.equal(result.nextDecision?.type, 'chooseN');
     assert.equal(result.nextDecision?.options.length ?? 0, 0);
     assert.equal(result.nextDecision?.min, 1);
+    assert.equal(isMoveDecisionSequenceNotUnsatisfiable(def, makeBaseState(), makeMove('unsat-op')), false);
     assert.equal(isMoveDecisionSequenceSatisfiable(def, makeBaseState(), makeMove('unsat-op')), false);
   });
 
@@ -423,6 +425,12 @@ phase: [asPhaseId('main')],
     });
     assert.equal(result.complete, false);
     assert.equal(result.nextDecision, undefined);
+    assert.equal(
+      isMoveDecisionSequenceNotUnsatisfiable(def, makeBaseState(), makeMove('stuck-op'), {
+        budgets: { maxDecisionProbeSteps: 0 },
+      }),
+      true,
+    );
     assert.equal(result.warnings.some((warning) => warning.code === 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'), true);
   });
 

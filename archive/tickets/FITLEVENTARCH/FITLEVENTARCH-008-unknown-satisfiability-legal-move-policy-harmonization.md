@@ -1,6 +1,6 @@
 # FITLEVENTARCH-008: Harmonize Unknown Satisfiability Policy in Legal Move Enumeration
 
-**Status**: PENDING
+**Status**: COMPLETED (2026-03-07)
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — legal move and turn-order variant filtering policy under unknown decision satisfiability
@@ -19,6 +19,8 @@ This can hide stochastic-yet-playable actions from `legalMoves`.
 1. Event move enumeration in `legal-moves.ts` admits `classification === 'unknown'`.
 2. Pipeline action enumeration in `legal-moves.ts` currently requires `isMoveDecisionSequenceSatisfiable(...) === true` (strict `satisfiable`).
 3. Free-operation variant expansion in `legal-moves-turn-order.ts` also rejects `unknown` via the same satisfiability helper.
+4. Unit coverage already codifies the strict pipeline policy: `legal-moves.test.ts` test `24. surfaces decision probe budget warnings through legal move diagnostics` currently expects an empty move list under `maxDecisionProbeSteps: 0` for a pipeline decision sequence.
+5. Existing event-path regressions (`legal-moves.test.ts` tests 27/28) already enforce `unknown => kept`, `unsatisfiable => excluded`.
 
 ## Architecture Check
 
@@ -38,14 +40,13 @@ In `legal-moves-turn-order.ts`, use the same classification policy for unresolve
 
 ### 3. Add policy regressions
 
-Add tests proving stochastic/unknown decision templates still appear in legal moves where action applicability is otherwise valid.
+Update outdated pipeline regression and add/strengthen free-operation regressions proving stochastic/unknown decision templates still appear in legal moves where action applicability is otherwise valid.
 
 ## Files to Touch
 
 - `packages/engine/src/kernel/legal-moves.ts` (modify)
 - `packages/engine/src/kernel/legal-moves-turn-order.ts` (modify)
 - `packages/engine/test/unit/kernel/legal-moves.test.ts` (modify)
-- `packages/engine/test/unit/kernel/legal-choices.test.ts` (modify if helper assertions needed)
 
 ## Out of Scope
 
@@ -79,3 +80,13 @@ Add tests proving stochastic/unknown decision templates still appear in legal mo
 2. `node --test packages/engine/dist/test/unit/kernel/legal-moves.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint && pnpm -F @ludoforge/engine typecheck`
+
+## Outcome
+
+Implemented as planned, with scope tightened to actual touchpoints:
+
+1. `legal-moves.ts`: pipeline template gating now uses satisfiability classification and excludes only `unsatisfiable` (unknown retained).
+2. `legal-moves-turn-order.ts`: free-operation unresolved checkpoint gating now uses the same classification policy and excludes only `unsatisfiable`.
+3. `legal-moves.test.ts`: updated existing pipeline unknown regression expectation, and added explicit free-operation unknown/unsatisfiable regressions.
+4. `legal-choices.test.ts` was not modified because no helper/assertion changes were required.
+5. Follow-up architecture hardening: introduced `isMoveDecisionSequenceNotUnsatisfiable(...)` in `move-decision-sequence.ts` and switched legal-move call sites to it so the policy is defined once.

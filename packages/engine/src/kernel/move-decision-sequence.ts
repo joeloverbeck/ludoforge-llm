@@ -126,6 +126,16 @@ export const isMoveDecisionSequenceSatisfiable = (
   return classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime).classification === 'satisfiable';
 };
 
+export const isMoveDecisionSequenceNotUnsatisfiable = (
+  def: GameDef,
+  state: GameState,
+  baseMove: Move,
+  options?: Omit<ResolveMoveDecisionSequenceOptions, 'choose'>,
+  runtime?: GameDefRuntime,
+): boolean => {
+  return classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime).classification !== 'unsatisfiable';
+};
+
 export const classifyMoveDecisionSequenceSatisfiability = (
   def: GameDef,
   state: GameState,

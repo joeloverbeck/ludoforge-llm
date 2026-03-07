@@ -19,6 +19,7 @@ import { evalValue } from './eval-value.js';
 import { createEvalContext, createEvalRuntimeResources, type EvalContext } from './eval-context.js';
 import type { ActionDef, ActionUsageRecord, ConditionAST, GameDef, GameState, ValueExpr } from './types.js';
 import type { ActionPipelineDef } from './types-operations.js';
+import type { EffectAST } from './types-ast.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import type { ActionTooltipPayload, RuleCard, RuleState } from './tooltip-rule-card.js';
 import { normalizeEffect, type NormalizerContext } from './tooltip-normalizer.js';
@@ -275,6 +276,32 @@ const pipelineApplicabilityPasses = (
   }
 };
 
+const collectRuleCardEffects = (
+  action: ActionDef,
+  def: GameDef,
+): readonly EffectAST[] => {
+  const pipelines = (def.actionPipelines ?? []).filter((pipeline) => pipeline.actionId === action.id);
+  if (pipelines.length === 0) {
+    return [...action.cost, ...action.effects];
+  }
+
+  return pipelines.flatMap((pipeline) => {
+    const pipelineEffects = [
+      ...pipeline.costEffects,
+      ...pipeline.stages.flatMap((stage) => stage.effects),
+    ];
+    if (pipeline.applicability === undefined) {
+      return pipelineEffects;
+    }
+    return [{
+      if: {
+        when: pipeline.applicability,
+        then: pipelineEffects,
+      },
+    }];
+  });
+};
+
 // ---------------------------------------------------------------------------
 // Tooltip pipeline
 // ---------------------------------------------------------------------------
@@ -293,8 +320,8 @@ const buildRuleCard = (
     suppressPatterns: def.verbalization?.suppressPatterns ?? [],
   };
 
-  const allEffects = [...action.cost, ...action.effects];
-  const messages = allEffects.flatMap((e, i) => normalizeEffect(e, normCtx, `root[${i}]`));
+  const normalizedEffects = collectRuleCardEffects(action, def);
+  const messages = normalizedEffects.flatMap((e, i) => normalizeEffect(e, normCtx, `root[${i}]`));
   const plan = planContent(messages, actionId);
   const ruleCard = realizeContentPlan(plan, def.verbalization);
 

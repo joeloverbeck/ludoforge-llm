@@ -641,6 +641,10 @@ phase: [asPhaseId('main')],
 
     const result = legalChoicesDiscover(def, state, makeMove('pickDynamicTargets'));
     assert.equal(result.complete, false);
+    assert.equal(result.kind, 'pending');
+    if (result.kind !== 'pending') {
+      throw new Error('expected pending dynamic chooseN request');
+    }
     assert.equal(result.type, 'chooseN');
     assert.equal(result.min, 1);
     assert.equal(result.max, 2);
@@ -710,11 +714,19 @@ phase: [asPhaseId('main')],
 
     // No params → first choice
     const r1 = legalChoicesDiscover(def, state, makeMove('multiChoice'));
+    assert.equal(r1.kind, 'pending');
+    if (r1.kind !== 'pending') {
+      throw new Error('expected pending first choice');
+    }
     assert.equal(r1.name, '$first');
     assert.equal(r1.complete, false);
 
     // First param filled → second choice
     const r2 = legalChoicesDiscover(def, state, makeMove('multiChoice', { 'decision:$first': 'x' }));
+    assert.equal(r2.kind, 'pending');
+    if (r2.kind !== 'pending') {
+      throw new Error('expected pending second choice');
+    }
     assert.equal(r2.name, '$second');
     assert.equal(r2.complete, false);
 
@@ -995,7 +1007,7 @@ phase: [asPhaseId('main')],
     assert.deepStrictEqual(result, { kind: 'complete', complete: true });
   });
 
-  it('9. legalChoices does NOT walk rollRandom.in effects (returns complete before inner choices)', () => {
+  it('9. legalChoices walks rollRandom.in effects and surfaces inner pending choices', () => {
     const action: ActionDef = {
       id: asActionId('randomThenChoose'),
 actor: 'active',
@@ -1028,9 +1040,14 @@ phase: [asPhaseId('main')],
     const def = makeBaseDef({ actions: [action] });
     const state = makeBaseState();
 
-    // rollRandom stops traversal, inner chooseOne not reached
     const result = legalChoicesDiscover(def, state, makeMove('randomThenChoose'));
-    assert.deepStrictEqual(result, { kind: 'complete', complete: true });
+    assert.equal(result.kind, 'pending');
+    assert.equal(result.complete, false);
+    if (result.kind !== 'pending') {
+      throw new Error('expected pending choice');
+    }
+    assert.equal(result.decisionId, 'decision:$innerChoice');
+    assert.deepEqual(result.options.map((option) => option.value), ['a', 'b']);
   });
 
   it('10. action with chooseN exact-n mode returns options with correct cardinality constraint', () => {

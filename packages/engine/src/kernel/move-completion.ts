@@ -99,6 +99,9 @@ export const completeTemplateMove = (
     current = { ...current, params: { ...current.params, [choices.decisionId]: selected } };
     choices = legalChoicesEvaluate(def, state, current, undefined, runtime);
   }
+  if (choices.kind === 'pendingStochastic') {
+    return null;
+  }
 
   if (choices.kind === 'illegal') {
     return null;

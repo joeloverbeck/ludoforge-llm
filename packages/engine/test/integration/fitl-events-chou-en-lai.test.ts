@@ -7,8 +7,11 @@ import {
   asTokenId,
   initialState,
   legalMoves,
+  pickDeterministicChoiceValue,
+  resolveMoveDecisionSequence,
   type GameDef,
   type GameState,
+  type MoveParamValue,
   type Token,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
@@ -83,28 +86,21 @@ describe('FITL card-42 Chou En Lai', () => {
     const move = findChouEnLaiMove(def, setup, 'unshaded');
     assert.notEqual(move, undefined, 'Expected card-42 unshaded event move');
 
-    let missingChoiceError: Error | null = null;
-    try {
-      applyMove(def, setup, move!);
-      assert.fail('Expected unshaded card-42 move without troop-removal decision to fail');
-    } catch (error) {
-      missingChoiceError = error as Error;
-    }
-    assert.match(
-      missingChoiceError?.message ?? '',
-      /(?:Illegal move|choiceRuntimeValidationFailed|missing move param binding)/,
-      'Unshaded should require an explicit NVA troop-removal selection when troops exist',
-    );
-    const decisionId = missingChoiceError?.message.match(/\((decision:[^)]+)\)/)?.[1];
-    assert.equal(typeof decisionId, 'string', 'Expected runtime to report missing chooseN decision id');
-
-    const after = applyMove(def, setup, {
-      ...move!,
-      params: {
-        ...move!.params,
-        [decisionId!]: ['nva-troop-1'],
+    const resolved = resolveMoveDecisionSequence(def, setup, move!, {
+      choose: (request): MoveParamValue | undefined => {
+        if (request.type === 'chooseN') {
+          const required = Math.max(1, request.min ?? 0);
+          if (request.options.length < required) {
+            return undefined;
+          }
+          return request.options.slice(0, required).map((option) => option.value as string | number | boolean);
+        }
+        return pickDeterministicChoiceValue(request);
       },
-    }).state;
+    });
+    assert.equal(resolved.complete, true, 'Expected discovery-driven decision resolution for card-42 unshaded');
+
+    const after = applyMove(def, setup, resolved.move).state;
     assert.equal(after.globalVars.nvaResources, 0, 'Unshaded should subtract 10 NVA resources with floor at 0');
     assert.equal(countNVATroopsOnMap(after), 0, 'Single NVA troop on map should be removed');
     assert.equal(

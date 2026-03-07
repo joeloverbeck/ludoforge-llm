@@ -9,6 +9,7 @@ import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './mo
 import type {
   ChoiceIllegalRequest,
   ChoicePendingRequest,
+  ChoiceStochasticPendingRequest,
   GameDef,
   GameState,
   Move,
@@ -26,6 +27,8 @@ export interface ResolveMoveDecisionSequenceResult {
   readonly complete: boolean;
   readonly move: Move;
   readonly nextDecision?: ChoicePendingRequest;
+  readonly nextDecisionSet?: readonly ChoicePendingRequest[];
+  readonly stochasticDecision?: ChoiceStochasticPendingRequest;
   readonly illegal?: ChoiceIllegalRequest;
   readonly warnings: readonly RuntimeWarning[];
 }
@@ -77,6 +80,15 @@ export const resolveMoveDecisionSequence = (
     }
     if (request.kind === 'illegal') {
       return { complete: false, move, illegal: request, warnings };
+    }
+    if (request.kind === 'pendingStochastic') {
+      return {
+        complete: false,
+        move,
+        nextDecisionSet: request.alternatives,
+        stochasticDecision: request,
+        warnings,
+      };
     }
 
     const selected = choose(request);

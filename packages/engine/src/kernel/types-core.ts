@@ -630,6 +630,14 @@ export interface ChoicePendingRequest {
   readonly reason?: ChoiceIllegalReason;
 }
 
+export interface ChoiceStochasticPendingRequest {
+  readonly kind: 'pendingStochastic';
+  readonly complete: false;
+  readonly source: 'rollRandom';
+  readonly alternatives: readonly ChoicePendingRequest[];
+  readonly reason?: ChoiceIllegalReason;
+}
+
 export interface ChoiceIllegalRequest {
   readonly kind: 'illegal';
   readonly complete: false;
@@ -643,7 +651,11 @@ export interface ChoiceIllegalRequest {
   readonly reason: ChoiceIllegalReason;
 }
 
-export type ChoiceRequest = ChoiceCompleteRequest | ChoicePendingRequest | ChoiceIllegalRequest;
+export type ChoiceRequest =
+  | ChoiceCompleteRequest
+  | ChoicePendingRequest
+  | ChoiceStochasticPendingRequest
+  | ChoiceIllegalRequest;
 
 export interface StateDelta {
   readonly path: string;

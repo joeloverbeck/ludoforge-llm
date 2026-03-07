@@ -149,9 +149,12 @@ describe('effects choice assertions', () => {
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.pendingChoice?.kind, 'pending');
-    assert.equal(result.pendingChoice?.type, 'chooseOne');
-    assert.equal(result.pendingChoice?.decisionId, 'decision:$choice');
-    assert.deepEqual(result.pendingChoice?.options, [
+    if (result.pendingChoice?.kind !== 'pending') {
+      throw new Error('expected pending choice');
+    }
+    assert.equal(result.pendingChoice.type, 'chooseOne');
+    assert.equal(result.pendingChoice.decisionId, 'decision:$choice');
+    assert.deepEqual(result.pendingChoice.options, [
       { value: 'alpha', legality: 'unknown', illegalReason: null },
       { value: 'beta', legality: 'unknown', illegalReason: null },
     ]);
@@ -168,7 +171,11 @@ describe('effects choice assertions', () => {
     };
 
     const result = applyEffect(effect, ctx);
-    assert.equal(result.pendingChoice?.decisionId, 'decision:$choice[2]');
+    assert.equal(result.pendingChoice?.kind, 'pending');
+    if (result.pendingChoice?.kind !== 'pending') {
+      throw new Error('expected pending choice');
+    }
+    assert.equal(result.pendingChoice.decisionId, 'decision:$choice[2]');
   });
 
   it('chooseOne does not append iterationPath when decision ID is template-scoped', () => {
@@ -185,7 +192,11 @@ describe('effects choice assertions', () => {
     };
 
     const result = applyEffect(effect, ctx);
-    assert.equal(result.pendingChoice?.decisionId, 'decision:$choice@{$space}::$choice@saigon:none');
+    assert.equal(result.pendingChoice?.kind, 'pending');
+    if (result.pendingChoice?.kind !== 'pending') {
+      throw new Error('expected pending choice');
+    }
+    assert.equal(result.pendingChoice.decisionId, 'decision:$choice@{$space}::$choice@saigon:none');
   });
 
   it('chooseOne execution resolves templated decision IDs without appending iterationPath', () => {
@@ -485,7 +496,11 @@ describe('effects choice assertions', () => {
     };
 
     const result = applyEffect(effect, ctx);
-    assert.equal(result.pendingChoice?.decisionId, 'decision:$picks@{$zone}::$picks@saigon:none');
+    assert.equal(result.pendingChoice?.kind, 'pending');
+    if (result.pendingChoice?.kind !== 'pending') {
+      throw new Error('expected pending choice');
+    }
+    assert.equal(result.pendingChoice.decisionId, 'decision:$picks@{$zone}::$picks@saigon:none');
   });
 
   it('chooseN appends iterationPath to static decision IDs in discovery mode', () => {
@@ -500,7 +515,11 @@ describe('effects choice assertions', () => {
     };
 
     const result = applyEffect(effect, ctx);
-    assert.equal(result.pendingChoice?.decisionId, 'decision:$picks[1]');
+    assert.equal(result.pendingChoice?.kind, 'pending');
+    if (result.pendingChoice?.kind !== 'pending') {
+      throw new Error('expected pending choice');
+    }
+    assert.equal(result.pendingChoice.decisionId, 'decision:$picks[1]');
   });
 
   it('chooseN execution appends iterationPath to static decision IDs', () => {
@@ -570,7 +589,7 @@ describe('effects choice assertions', () => {
     });
   });
 
-  it('rollRandom is a deterministic no-op in discovery mode', () => {
+  it('rollRandom discovery surfaces pending nested choices', () => {
     const ctx = makeDiscoveryCtx();
     const effect: EffectAST = {
       rollRandom: {
@@ -592,7 +611,83 @@ describe('effects choice assertions', () => {
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
     assert.equal(result.rng, ctx.rng);
-    assert.equal(result.pendingChoice, undefined);
+    assert.equal(result.pendingChoice?.kind, 'pending');
+    assert.equal(result.pendingChoice?.decisionId, 'decision:$inside');
+    assert.deepEqual(result.pendingChoice?.options.map((option) => option.value), ['x']);
+  });
+
+  it('rollRandom discovery merges chooseN bounds conservatively across outcomes', () => {
+    const ctx = makeDiscoveryCtx();
+    const effect: EffectAST = {
+      rollRandom: {
+        bind: '$die',
+        min: 1,
+        max: 2,
+        in: [
+          {
+            chooseN: {
+              internalDecisionId: 'decision:$inside',
+              bind: '$inside',
+              options: { query: 'enums', values: ['a', 'b', 'c'] },
+              min: 1,
+              max: { ref: 'binding', name: '$die' },
+            },
+          },
+        ],
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.pendingChoice?.kind, 'pending');
+    assert.equal(result.pendingChoice?.type, 'chooseN');
+    assert.equal(result.pendingChoice?.decisionId, 'decision:$inside');
+    assert.equal(result.pendingChoice?.min, 1);
+    assert.equal(result.pendingChoice?.max, 1);
+    assert.deepEqual(result.pendingChoice?.options.map((option) => option.value), ['a', 'b', 'c']);
+  });
+
+  it('rollRandom discovery returns stochastic pending alternatives when outcome branches require different decisions', () => {
+    const ctx = makeDiscoveryCtx();
+    const effect: EffectAST = {
+      rollRandom: {
+        bind: '$die',
+        min: 1,
+        max: 2,
+        in: [
+          {
+            if: {
+              when: { op: '==', left: { ref: 'binding', name: '$die' }, right: 1 },
+              then: [
+                {
+                  chooseOne: {
+                    internalDecisionId: 'decision:$alpha',
+                    bind: '$alpha',
+                    options: { query: 'enums', values: ['a1', 'a2'] },
+                  },
+                },
+              ],
+              else: [
+                {
+                  chooseOne: {
+                    internalDecisionId: 'decision:$beta',
+                    bind: '$beta',
+                    options: { query: 'enums', values: ['b1', 'b2'] },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.pendingChoice?.kind, 'pendingStochastic');
+    if (result.pendingChoice?.kind !== 'pendingStochastic') {
+      throw new Error('expected stochastic pending choice');
+    }
+    assert.equal(result.pendingChoice.source, 'rollRandom');
+    assert.deepEqual(result.pendingChoice.alternatives.map((alt) => alt.decisionId), ['decision:$alpha', 'decision:$beta']);
   });
 
   it('chooseN supports up-to cardinality with max only', () => {

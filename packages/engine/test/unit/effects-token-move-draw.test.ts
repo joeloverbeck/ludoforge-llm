@@ -215,6 +215,29 @@ describe('effects moveToken and draw', () => {
     );
   });
 
+  it('moveToken treats duplicate token ids within one zone as multiple occurrences', () => {
+    const duplicate = token('dup-same-zone');
+    const state = makeState();
+    const ctx = makeCtx({
+      state: {
+        ...state,
+        zones: {
+          ...state.zones,
+          'deck:none': [duplicate, duplicate, ...(state.zones['deck:none'] ?? [])],
+        },
+      },
+    });
+
+    assert.throws(
+      () =>
+        applyEffect(
+          { moveToken: { token: '$token', from: 'deck:none', to: 'hand:0' } },
+          { ...ctx, bindings: { $token: duplicate } },
+        ),
+      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('multiple zones'),
+    );
+  });
+
   it('draw moves min(count, sourceSize) tokens from source front', () => {
     const ctx = makeCtx();
 

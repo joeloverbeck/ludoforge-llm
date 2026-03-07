@@ -20,9 +20,9 @@ export function AvailabilitySection({ ruleState }: AvailabilitySectionProps): Re
         <span className={available ? styles.labelAvailable : styles.labelBlocked}>
           {available ? 'Available' : 'Blocked'}
         </span>
-        {limitUsage !== undefined && (
+        {limitUsage !== undefined && limitUsage.length > 0 && (
           <span className={styles.limit} data-testid="limit-usage">
-            ({limitUsage.max - limitUsage.used} remaining this turn)
+            ({Math.min(...limitUsage.map(l => l.max - l.used))} remaining this turn)
           </span>
         )}
       </div>

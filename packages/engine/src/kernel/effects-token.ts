@@ -7,6 +7,8 @@ import { resolveZoneWithNormalization, selectorResolutionFailurePolicyForMode } 
 import { checkStackingConstraints } from './stacking.js';
 import { EffectRuntimeError, effectRuntimeError } from './effect-error.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
+import { isRuntimeToken } from './token-shape.js';
+import { getTokenStateIndexEntry } from './token-state-index.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, Rng, Token } from './types.js';
@@ -115,7 +117,7 @@ const resolveBoundTokenId = (ctx: EffectContext, tokenBinding: string, effectTyp
     return boundValue;
   }
 
-  if (typeof boundValue === 'object' && boundValue !== null && 'id' in boundValue && typeof boundValue.id === 'string') {
+  if (isRuntimeToken(boundValue)) {
     return boundValue.id;
   }
 
@@ -133,19 +135,25 @@ interface TokenOccurrence {
   readonly token: Token;
 }
 
-const findTokenOccurrences = (ctx: EffectContext, tokenId: string): readonly TokenOccurrence[] => {
-  const occurrences: TokenOccurrence[] = [];
-
-  for (const [zoneId, tokens] of Object.entries(ctx.state.zones)) {
-    for (let index = 0; index < tokens.length; index += 1) {
-      const token = tokens[index];
-      if (token?.id === tokenId) {
-        occurrences.push({ zoneId, index, token });
-      }
-    }
+const resolveTokenOccurrence = (ctx: EffectContext, tokenId: string): {
+  readonly occurrence: TokenOccurrence | null;
+  readonly occurrenceCount: number;
+  readonly occurrenceZoneIds: readonly string[];
+} => {
+  const tokenState = getTokenStateIndexEntry(ctx.state, tokenId);
+  if (tokenState === undefined) {
+    return { occurrence: null, occurrenceCount: 0, occurrenceZoneIds: [] };
   }
 
-  return occurrences;
+  return {
+    occurrence: {
+      zoneId: tokenState.zoneId,
+      index: tokenState.index,
+      token: tokenState.token,
+    },
+    occurrenceCount: tokenState.occurrenceCount,
+    occurrenceZoneIds: tokenState.occurrenceZoneIds,
+  };
 };
 
 const resolveMoveTokenAdjacentDestination = (
@@ -212,9 +220,9 @@ export const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: 
   const destinationTokens = resolveZoneTokens(ctx, toZoneId, 'moveToken', 'to');
 
   const tokenId = resolveBoundTokenId(ctx, effect.moveToken.token, 'moveToken');
-  const occurrences = findTokenOccurrences(ctx, tokenId);
+  const resolvedOccurrence = resolveTokenOccurrence(ctx, tokenId);
 
-  if (occurrences.length === 0) {
+  if (resolvedOccurrence.occurrenceCount === 0 || resolvedOccurrence.occurrence === null) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token not found in any zone: ${tokenId}`, {
       effectType: 'moveToken',
       tokenId,
@@ -222,15 +230,15 @@ export const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: 
     });
   }
 
-  if (occurrences.length > 1) {
+  if (resolvedOccurrence.occurrenceCount > 1) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token appears in multiple zones: ${tokenId}`, {
       effectType: 'moveToken',
       tokenId,
-      zones: occurrences.map((occurrence) => occurrence.zoneId).sort(),
+      zones: [...resolvedOccurrence.occurrenceZoneIds].sort(),
     });
   }
 
-  const occurrence = occurrences[0]!;
+  const occurrence = resolvedOccurrence.occurrence;
   if (occurrence.zoneId !== fromZoneId) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token is not in resolved from zone: ${tokenId}`, {
       effectType: 'moveToken',
@@ -398,24 +406,24 @@ export const applyCreateToken = (effect: Extract<EffectAST, { readonly createTok
 
 export const applyDestroyToken = (effect: Extract<EffectAST, { readonly destroyToken: unknown }>, ctx: EffectContext): EffectResult => {
   const tokenId = resolveBoundTokenId(ctx, effect.destroyToken.token, 'destroyToken');
-  const occurrences = findTokenOccurrences(ctx, tokenId);
+  const resolvedOccurrence = resolveTokenOccurrence(ctx, tokenId);
 
-  if (occurrences.length === 0) {
+  if (resolvedOccurrence.occurrenceCount === 0 || resolvedOccurrence.occurrence === null) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token not found in any zone: ${tokenId}`, {
       effectType: 'destroyToken',
       tokenId,
     });
   }
 
-  if (occurrences.length > 1) {
+  if (resolvedOccurrence.occurrenceCount > 1) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token appears in multiple zones: ${tokenId}`, {
       effectType: 'destroyToken',
       tokenId,
-      zones: occurrences.map((occurrence) => occurrence.zoneId).sort(),
+      zones: [...resolvedOccurrence.occurrenceZoneIds].sort(),
     });
   }
 
-  const occurrence = occurrences[0]!;
+  const occurrence = resolvedOccurrence.occurrence;
   const sourceTokens = ctx.state.zones[occurrence.zoneId]!;
   const zoneAfter = [...sourceTokens.slice(0, occurrence.index), ...sourceTokens.slice(occurrence.index + 1)];
 
@@ -442,24 +450,24 @@ export const applyDestroyToken = (effect: Extract<EffectAST, { readonly destroyT
 export const applySetTokenProp = (effect: Extract<EffectAST, { readonly setTokenProp: unknown }>, ctx: EffectContext): EffectResult => {
   const { token: tokenBinding, prop, value } = effect.setTokenProp;
   const tokenId = resolveBoundTokenId(ctx, tokenBinding, 'setTokenProp');
-  const occurrences = findTokenOccurrences(ctx, tokenId);
+  const resolvedOccurrence = resolveTokenOccurrence(ctx, tokenId);
 
-  if (occurrences.length === 0) {
+  if (resolvedOccurrence.occurrenceCount === 0 || resolvedOccurrence.occurrence === null) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token not found in any zone: ${tokenId}`, {
       effectType: 'setTokenProp',
       tokenId,
     });
   }
 
-  if (occurrences.length > 1) {
+  if (resolvedOccurrence.occurrenceCount > 1) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token appears in multiple zones: ${tokenId}`, {
       effectType: 'setTokenProp',
       tokenId,
-      zones: occurrences.map((occurrence) => occurrence.zoneId).sort(),
+      zones: [...resolvedOccurrence.occurrenceZoneIds].sort(),
     });
   }
 
-  const occurrence = occurrences[0]!;
+  const occurrence = resolvedOccurrence.occurrence;
   const tokenTypeDef = ctx.def.tokenTypes.find((tt) => tt.id === occurrence.token.type);
 
   if (tokenTypeDef !== undefined) {

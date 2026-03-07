@@ -7,7 +7,6 @@ import type { FreeOperationZoneFilterDiagnostics } from './eval-context.js';
 import {
   type EvalRuntimeResources,
 } from './eval-context.js';
-import type { QueryRuntimeCache } from './query-runtime-cache.js';
 import type { RuntimeTableIndex } from './runtime-table-index.js';
 import type { AdjacencyGraph } from './spatial.js';
 import type {
@@ -43,7 +42,6 @@ interface EffectContextBase {
   readonly actorPlayer: PlayerId;
   readonly bindings: Readonly<Record<string, unknown>>;
   readonly resources: EvalRuntimeResources;
-  readonly queryRuntimeCache: QueryRuntimeCache;
   readonly runtimeTableIndex?: RuntimeTableIndex;
   readonly moveParams: Readonly<Record<string, MoveParamValue>>;
   readonly traceContext?: EffectTraceContext;
@@ -86,7 +84,7 @@ export interface EffectResult {
   readonly pendingChoice?: ChoicePendingRequest;
 }
 
-interface RuntimeEffectContextOptions extends Omit<EffectContextBase, 'queryRuntimeCache' | 'collector' | 'resources'> {
+interface RuntimeEffectContextOptions extends Omit<EffectContextBase, 'collector' | 'resources'> {
   readonly resources: EvalRuntimeResources;
   readonly decisionAuthorityPlayer?: PlayerId;
 }
@@ -102,7 +100,6 @@ export const createExecutionEffectContext = (options: RuntimeEffectContextOption
     ...ctx,
     activePlayer,
     resources,
-    queryRuntimeCache: resources.queryRuntimeCache,
     collector: resources.collector,
     decisionAuthority: {
       source: 'engineRuntime',
@@ -124,7 +121,6 @@ export const createDiscoveryStrictEffectContext = (options: RuntimeEffectContext
     ...ctx,
     activePlayer,
     resources,
-    queryRuntimeCache: resources.queryRuntimeCache,
     collector: resources.collector,
     decisionAuthority: {
       source: 'engineRuntime',
@@ -148,7 +144,6 @@ export const createDiscoveryProbeEffectContext = (
     ...ctx,
     activePlayer,
     resources,
-    queryRuntimeCache: resources.queryRuntimeCache,
     collector: resources.collector,
     decisionAuthority: {
       source: 'engineRuntime',

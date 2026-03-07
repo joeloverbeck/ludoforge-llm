@@ -12,7 +12,6 @@ import {
   type EvalRuntimeResources,
   type GameDef,
   type GameState,
-  type QueryRuntimeCache,
 } from '../../src/kernel/index.js';
 import { dispatchLifecycleEvent } from '../../src/kernel/phase-lifecycle.js';
 
@@ -101,39 +100,23 @@ describe('dispatchLifecycleEvent runtime resources', () => {
     assert.equal(afterPhaseEnter, state);
   });
 
-  it('reuses provided query cache across successive lifecycle calls in one operation', () => {
+  it('reuses provided runtime resources across successive lifecycle calls in one operation', () => {
     const def = makeDef();
     const state = makeState();
-    let getCalls = 0;
-    let setCalls = 0;
-    const indexesByState = new WeakMap<GameState, ReadonlyMap<string, string>>();
-    const queryRuntimeCache: QueryRuntimeCache = {
-      getTokenZoneByTokenIdIndex: (cacheState) => {
-        getCalls += 1;
-        return indexesByState.get(cacheState);
-      },
-      setTokenZoneByTokenIdIndex: (cacheState, value) => {
-        setCalls += 1;
-        indexesByState.set(cacheState, value);
-      },
-    };
     const resources = createEvalRuntimeResources({
       collector: createCollector({ trace: true }),
-      queryRuntimeCache,
     });
 
     const afterTurnStart = dispatchLifecycleEvent(def, state, { type: 'turnStart' }, undefined, undefined, resources);
     const afterPhaseEnter = dispatchLifecycleEvent(def, afterTurnStart, { type: 'phaseEnter', phase: asPhaseId('main') }, undefined, undefined, resources);
 
     assert.equal(afterPhaseEnter, state);
-    assert.equal(setCalls, 1);
-    assert.equal(getCalls, 2);
   });
 
   it('fails fast with RUNTIME_CONTRACT_INVALID when evalRuntimeResources is malformed', () => {
     const def = makeDef();
     const state = makeState();
-    const malformedResources = { collector: 'not-an-object', queryRuntimeCache: {} };
+    const malformedResources = { collector: 'not-an-object' };
 
     assert.throws(
       () =>

@@ -37,11 +37,6 @@ describe('eval/effect resource constructor contract guard', () => {
     );
     assert.match(
       block,
-      /queryRuntimeCache:\s*resources\.queryRuntimeCache/u,
-      'createEvalContext must derive queryRuntimeCache from canonical resources identity',
-    );
-    assert.match(
-      block,
       /collector:\s*resources\.collector/u,
       'createEvalContext must derive collector from canonical resources identity',
     );
@@ -66,11 +61,6 @@ describe('eval/effect resource constructor contract guard', () => {
         block,
         /resources\s*\?\?/u,
         `${constructorName} must not reconstruct resources via nullish fallback`,
-      );
-      assert.match(
-        block,
-        /queryRuntimeCache:\s*resources\.queryRuntimeCache/u,
-        `${constructorName} must derive queryRuntimeCache from canonical resources identity`,
       );
       assert.match(
         block,

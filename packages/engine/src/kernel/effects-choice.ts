@@ -9,7 +9,7 @@ import { nextInt } from './prng.js';
 import { resolveSinglePlayerSel } from './resolve-selectors.js';
 import { resolveZoneWithNormalization, selectorResolutionFailurePolicyForMode } from './selector-resolution-normalization.js';
 import { withTracePath } from './trace-provenance.js';
-import { normalizeChoiceDomain, toChoiceComparableValue } from './value-membership.js';
+import { normalizeChoiceDomain, toChoiceComparableValue, type MembershipScalar } from './value-membership.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, PlayerSel } from './types.js';
@@ -79,6 +79,50 @@ const resolveChoiceDecisionPlayer = (
   }
 };
 
+const buildComparableDomainBindingMap = (
+  effectType: 'chooseOne' | 'chooseN',
+  bind: string,
+  decisionId: string,
+  options: readonly unknown[],
+  normalizedOptions: readonly MembershipScalar[],
+): ReadonlyMap<MembershipScalar, unknown> => {
+  const bindingMap = new Map<MembershipScalar, unknown>();
+  const firstIndexByComparable = new Map<MembershipScalar, number>();
+  for (let index = 0; index < normalizedOptions.length; index += 1) {
+    const comparable = normalizedOptions[index];
+    if (comparable === undefined) {
+      throw effectRuntimeError(
+        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+        `${effectType} options domain normalization failed: ${bind}`,
+        { effectType, bind, decisionId, index },
+      );
+    }
+    const value = options[index];
+    if (!bindingMap.has(comparable)) {
+      bindingMap.set(comparable, value);
+      firstIndexByComparable.set(comparable, index);
+      continue;
+    }
+    const existing = bindingMap.get(comparable);
+    if (!Object.is(existing, value)) {
+      const firstIndex = firstIndexByComparable.get(comparable);
+      throw effectRuntimeError(
+        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+        `${effectType} options domain has ambiguous comparable values: ${bind}`,
+        {
+          effectType,
+          bind,
+          decisionId,
+          comparable,
+          firstIndex,
+          secondIndex: index,
+        },
+      );
+    }
+  }
+  return bindingMap;
+};
+
 export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: unknown }>, ctx: EffectContext): EffectResult => {
   const resolvedBind = resolveBindingTemplate(effect.chooseOne.bind, ctx.bindings);
   const decisionId = composeScopedDecisionId(
@@ -103,6 +147,7 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
       value: issue.value,
     });
   });
+  const comparableBindingMap = buildComparableDomainBindingMap('chooseOne', resolvedBind, decisionId, options, normalizedOptions);
   if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, decisionId)) {
     if (ctx.mode === 'discovery') {
       const targetKinds = deriveChoiceTargetKinds(effect.chooseOne.options);
@@ -155,7 +200,7 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
   }
 
   const selectedComparable = toChoiceComparableValue(selected);
-  if (selectedComparable === null || !normalizedOptions.includes(selectedComparable)) {
+  if (selectedComparable === null || !comparableBindingMap.has(selectedComparable)) {
     throw effectRuntimeError(
       EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
       `invalid selection for chooseOne "${resolvedBind}" (${decisionId}): outside options domain`,
@@ -168,13 +213,14 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
       },
     );
   }
+  const selectedBinding = comparableBindingMap.get(selectedComparable);
 
   return {
     state: ctx.state,
     rng: ctx.rng,
     bindings: {
       ...ctx.bindings,
-      [resolvedBind]: selectedComparable,
+      [resolvedBind]: selectedBinding,
     },
   };
 };
@@ -251,6 +297,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
       value: issue.value,
     });
   });
+  const comparableBindingMap = buildComparableDomainBindingMap('chooseN', bind, decisionId, options, normalizedOptions);
   const clampedMax = Math.min(maxCardinality, normalizedOptions.length);
   if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, decisionId)) {
     if (ctx.mode === 'discovery') {
@@ -348,8 +395,9 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
       }
     }
   }
+  const selectedBindings: unknown[] = [];
   for (const selected of normalizedSelected) {
-    if (!normalizedOptions.includes(selected)) {
+    if (!comparableBindingMap.has(selected)) {
       throw effectRuntimeError(
         EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
         `invalid selection for chooseN "${bind}" (${decisionId}): outside options domain`,
@@ -361,6 +409,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
         },
       );
     }
+    selectedBindings.push(comparableBindingMap.get(selected));
   }
 
   return {
@@ -368,7 +417,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
     rng: ctx.rng,
     bindings: {
       ...ctx.bindings,
-      [bind]: normalizedSelected,
+      [bind]: selectedBindings,
     },
   };
 };

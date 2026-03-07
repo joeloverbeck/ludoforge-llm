@@ -615,6 +615,114 @@ describe('describeAction (condition annotator)', () => {
     );
   });
 
+  it('uses pipeline effects (not base action effects) in RuleCard when pipelines are configured', () => {
+    const action = minimalActionDef({
+      effects: [{ addVar: { scope: 'global', var: 'baseResource', delta: 5 } }],
+    });
+    const pipeline: ActionPipelineDef = {
+      id: 'pipeline-only-effects',
+      actionId: action.id,
+      legality: null,
+      costValidation: null,
+      costEffects: [{ addVar: { scope: 'global', var: 'pipeCostResource', delta: -1 } }],
+      targeting: {},
+      stages: [
+        {
+          stage: 'main',
+          effects: [{ addVar: { scope: 'global', var: 'pipeStageResource', delta: 2 } }],
+        },
+      ],
+      atomicity: 'atomic',
+    };
+    const verbalization: VerbalizationDef = {
+      labels: {
+        baseResource: { singular: 'BASE_RESOURCE_LABEL', plural: 'BASE_RESOURCE_LABEL' },
+        pipeCostResource: { singular: 'PIPE_COST_LABEL', plural: 'PIPE_COST_LABEL' },
+        pipeStageResource: { singular: 'PIPE_STAGE_LABEL', plural: 'PIPE_STAGE_LABEL' },
+      },
+      stages: {},
+      macros: {},
+      sentencePlans: {},
+      suppressPatterns: [],
+    };
+    const def = makeDef({
+      actions: [action],
+      globalVars: [
+        { name: 'gold', type: 'int', init: 0, min: 0, max: 999 },
+        { name: 'baseResource', type: 'int', init: 0, min: 0, max: 999 },
+        { name: 'pipeCostResource', type: 'int', init: 0, min: 0, max: 999 },
+        { name: 'pipeStageResource', type: 'int', init: 0, min: 0, max: 999 },
+      ],
+      verbalization,
+      actionPipelines: [pipeline],
+    });
+    const ctx = makeContext({ def });
+    const result = describeAction(action, ctx);
+
+    assert.ok(result.tooltipPayload !== undefined);
+    const text = result.tooltipPayload.ruleCard.steps
+      .flatMap((step) => step.lines.map((line) => line.text))
+      .join(' ');
+
+    assert.ok(text.includes('PIPE_COST_LABEL'), `Expected pipeline cost label in RuleCard text, got: ${text}`);
+    assert.ok(text.includes('PIPE_STAGE_LABEL'), `Expected pipeline stage label in RuleCard text, got: ${text}`);
+    assert.ok(!text.includes('BASE_RESOURCE_LABEL'), `Base action effect leaked into RuleCard text: ${text}`);
+  });
+
+  it('represents pipeline applicability as RuleCard modifier conditions', () => {
+    const applicability: ConditionAST = {
+      op: '>=',
+      left: { ref: 'gvar', var: 'gold' },
+      right: 5,
+    };
+    const action = minimalActionDef();
+    const pipeline: ActionPipelineDef = {
+      id: 'pipeline-applicability-modifier',
+      actionId: action.id,
+      applicability,
+      legality: null,
+      costValidation: null,
+      costEffects: [{ addVar: { scope: 'global', var: 'gold', delta: -1 } }],
+      targeting: {},
+      stages: [
+        {
+          stage: 'main',
+          effects: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
+        },
+      ],
+      atomicity: 'atomic',
+    };
+    const def = makeDef({ actionPipelines: [pipeline] });
+    const runtime = makeRuntime(def);
+
+    const activeCtx: AnnotationContext = {
+      def,
+      runtime,
+      state: makeState({ globalVars: { gold: 10 } }),
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+    };
+    const inactiveCtx: AnnotationContext = {
+      def,
+      runtime,
+      state: makeState({ globalVars: { gold: 2 } }),
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+    };
+
+    const activeResult = describeAction(action, activeCtx);
+    const inactiveResult = describeAction(action, inactiveCtx);
+
+    assert.ok(activeResult.tooltipPayload !== undefined);
+    assert.ok(inactiveResult.tooltipPayload !== undefined);
+
+    const modifiers = activeResult.tooltipPayload.ruleCard.modifiers;
+    assert.equal(modifiers.length, 1, 'Expected one pipeline applicability modifier');
+    assert.deepEqual(modifiers[0]!.conditionAST, applicability);
+    assert.deepEqual(activeResult.tooltipPayload.ruleState.activeModifierIndices, [0]);
+    assert.deepEqual(inactiveResult.tooltipPayload.ruleState.activeModifierIndices, []);
+  });
+
   // -----------------------------------------------------------------------
   // 20. RuleState varies with GameState
   // -----------------------------------------------------------------------
@@ -687,6 +795,32 @@ describe('describeAction (condition annotator)', () => {
     assert.equal(result.limitUsage.length, 1);
     // tooltipPayload is additive
     assert.ok(result.tooltipPayload !== undefined);
+    assert.deepEqual(result.tooltipPayload.ruleState.limitUsage, [{ scope: 'turn', used: 0, max: 3 }]);
+  });
+
+  it('surfaces all ruleState limit usage entries for multi-limit actions', () => {
+    const action = minimalActionDef({
+      limits: [
+        { scope: 'turn', max: 1 },
+        { scope: 'game', max: 3 },
+      ],
+      effects: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
+    });
+    const ctx = makeContext({
+      state: makeState({
+        actionUsage: {
+          test: { turnCount: 1, phaseCount: 0, gameCount: 2 },
+        },
+      }),
+    });
+
+    const result = describeAction(action, ctx);
+
+    assert.ok(result.tooltipPayload !== undefined);
+    assert.deepEqual(result.tooltipPayload.ruleState.limitUsage, [
+      { scope: 'turn', used: 1, max: 1 },
+      { scope: 'game', used: 2, max: 3 },
+    ]);
   });
 
   // -----------------------------------------------------------------------

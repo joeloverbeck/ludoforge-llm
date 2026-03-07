@@ -5,7 +5,6 @@ import {
   buildAdjacencyGraph,
   buildRuntimeTableIndex,
   createCollector,
-  createQueryRuntimeCache,
   asPhaseId,
   asPlayerId,
   asTokenId,
@@ -15,7 +14,6 @@ import {
   type EvalContext,
   type GameDef,
   type GameState,
-  type QueryRuntimeCache,
   type Token,
 } from '../../src/kernel/index.js';
 import { makeEvalContext } from '../helpers/eval-context-test-helpers.js';
@@ -1337,32 +1335,6 @@ describe('evalQuery', () => {
     assert.ok(tokenIdReads <= 40, `Expected <= 40 token id reads, received ${String(tokenIdReads)}`);
   });
 
-  it('uses QueryRuntimeCache domain methods for token zone lookup caching', () => {
-    const indexByState = new WeakMap<GameState, ReadonlyMap<string, string>>();
-    let getCalls = 0;
-    let setCalls = 0;
-    const queryRuntimeCache: QueryRuntimeCache = {
-      getTokenZoneByTokenIdIndex: (state) => {
-        getCalls += 1;
-        return indexByState.get(state);
-      },
-      setTokenZoneByTokenIdIndex: (state, index) => {
-        setCalls += 1;
-        indexByState.set(state, index);
-      },
-    };
-    const ctx = makeCtx({ queryRuntimeCache });
-    const query = { query: 'tokenZones' as const, source: { query: 'tokensInZone' as const, zone: 'hand:0' as const } };
-
-    assert.deepEqual(evalQuery(query, ctx), ['hand:0']);
-    assert.equal(getCalls, 1);
-    assert.equal(setCalls, 1);
-
-    assert.deepEqual(evalQuery(query, ctx), ['hand:0']);
-    assert.equal(getCalls, 2);
-    assert.equal(setCalls, 1);
-  });
-
   it('reuses token zone lookup across tokenZones evaluations for the same state', () => {
     let tokenIdReads = 0;
     const trackedToken = (id: string): Token => ({
@@ -1396,8 +1368,7 @@ describe('evalQuery', () => {
     assert.ok(tokenIdReads <= 120, `Expected <= 120 token id reads, received ${String(tokenIdReads)}`);
   });
 
-  it('does not reuse stale token zone mapping across state transitions when cache is shared', () => {
-    const queryRuntimeCache = createQueryRuntimeCache();
+  it('does not reuse stale token zone mapping across state transitions', () => {
     const initialState = makeState();
     const movedToken = initialState.zones['hand:0']?.[0];
     assert.ok(movedToken !== undefined);
@@ -1414,51 +1385,17 @@ describe('evalQuery', () => {
     const firstCtx = makeCtx({
       state: initialState,
       bindings: { $tokenIds: [movedToken.id] },
-      queryRuntimeCache,
     });
     const secondCtx = makeCtx({
       state: transitionedState,
       bindings: { $tokenIds: [movedToken.id] },
-      queryRuntimeCache,
     });
 
     assert.deepEqual(evalQuery(query, firstCtx), ['hand:0']);
     assert.deepEqual(evalQuery(query, secondCtx), ['bench:1']);
   });
 
-  it('reuses token zone lookup across separate contexts when runtime cache is intentionally shared', () => {
-    let tokenIdReads = 0;
-    const trackedToken = (id: string): Token => ({
-      get id() {
-        tokenIdReads += 1;
-        return asTokenId(id);
-      },
-      type: 'piece',
-      props: { faction: 'US' },
-    });
-
-    const state: GameState = {
-      ...makeState(),
-      zones: {
-        'deck:none': [],
-        'hand:0': [trackedToken('hand-0')],
-        'hand:1': [],
-        'bench:1': [],
-        'tableau:2': [],
-        'battlefield:none': [],
-      },
-    };
-    const queryRuntimeCache = createQueryRuntimeCache();
-    const query = { query: 'tokenZones' as const, source: { query: 'tokensInZone' as const, zone: 'hand:0' as const } };
-    const firstCtx = makeCtx({ state, queryRuntimeCache });
-    const secondCtx = makeCtx({ state, queryRuntimeCache });
-
-    assert.deepEqual(evalQuery(query, firstCtx), ['hand:0']);
-    assert.deepEqual(evalQuery(query, secondCtx), ['hand:0']);
-    assert.equal(tokenIdReads, 3);
-  });
-
-  it('does not reuse token zone lookup across different eval contexts', () => {
+  it('reuses token zone lookup across separate contexts sharing the same state object', () => {
     let tokenIdReads = 0;
     const trackedToken = (id: string): Token => ({
       get id() {
@@ -1486,7 +1423,38 @@ describe('evalQuery', () => {
 
     assert.deepEqual(evalQuery(query, firstCtx), ['hand:0']);
     assert.deepEqual(evalQuery(query, secondCtx), ['hand:0']);
-    assert.equal(tokenIdReads, 4);
+    assert.equal(tokenIdReads, 3);
+  });
+
+  it('reuses canonical token-state index across eval contexts that share the same state object', () => {
+    let tokenIdReads = 0;
+    const trackedToken = (id: string): Token => ({
+      get id() {
+        tokenIdReads += 1;
+        return asTokenId(id);
+      },
+      type: 'piece',
+      props: { faction: 'US' },
+    });
+
+    const state: GameState = {
+      ...makeState(),
+      zones: {
+        'deck:none': [],
+        'hand:0': [trackedToken('hand-0')],
+        'hand:1': [],
+        'bench:1': [],
+        'tableau:2': [],
+        'battlefield:none': [],
+      },
+    };
+    const query = { query: 'tokenZones' as const, source: { query: 'tokensInZone' as const, zone: 'hand:0' as const } };
+    const firstCtx = makeCtx({ state });
+    const secondCtx = makeCtx({ state });
+
+    assert.deepEqual(evalQuery(query, firstCtx), ['hand:0']);
+    assert.deepEqual(evalQuery(query, secondCtx), ['hand:0']);
+    assert.equal(tokenIdReads, 3);
   });
 
   it('rejects tokenZones when source query does not produce tokens', () => {

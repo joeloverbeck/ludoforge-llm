@@ -20,7 +20,6 @@ import {
   type TriggerLogEntry,
   type GameDef,
   type GameState,
-  type QueryRuntimeCache,
 } from '../../src/kernel/index.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
@@ -122,23 +121,8 @@ describe('phase advancement', () => {
       zones: { 'deck:none': [{ id: asTokenId('t1'), type: 'card', props: {} }] },
       nextTokenOrdinal: 1,
     });
-    let getCalls = 0;
-    let setCalls = 0;
-    const indexesByState = new WeakMap<GameState, ReadonlyMap<string, string>>();
-    const queryRuntimeCache: QueryRuntimeCache = {
-      getTokenZoneByTokenIdIndex: (cacheState) => {
-        getCalls += 1;
-        return indexesByState.get(cacheState);
-      },
-      setTokenZoneByTokenIdIndex: (cacheState, value) => {
-        setCalls += 1;
-        indexesByState.set(cacheState, value);
-      },
-    };
-
     const operationResources = createEvalRuntimeResources({
       collector: createCollector(),
-      queryRuntimeCache,
     });
 
     const afterFirst = advancePhase({
@@ -146,9 +130,6 @@ describe('phase advancement', () => {
       state,
       evalRuntimeResources: operationResources,
     });
-    const getCallsAfterFirst = getCalls;
-    const setCallsAfterFirst = setCalls;
-
     const afterSecond = advancePhase({
       def,
       state: afterFirst,
@@ -157,10 +138,6 @@ describe('phase advancement', () => {
 
     assert.equal(afterFirst.turnCount, 1);
     assert.equal(afterSecond.turnCount, 2);
-    assert.ok(getCallsAfterFirst > 0);
-    assert.ok(setCallsAfterFirst > 0);
-    assert.ok(getCalls > getCallsAfterFirst);
-    assert.ok(setCalls > setCallsAfterFirst);
   });
 
   it('fails fast when advancePhase evalRuntimeResources are missing at runtime', () => {
@@ -190,10 +167,6 @@ describe('phase advancement', () => {
     const state = createState({ currentPhase: asPhaseId('p1') });
     const malformedResources = {
       collector: { warnings: 'not-an-array', trace: null },
-      queryRuntimeCache: {
-        getTokenZoneByTokenIdIndex: () => undefined,
-        setTokenZoneByTokenIdIndex: () => undefined,
-      },
     };
 
     assert.throws(
@@ -209,38 +182,6 @@ describe('phase advancement', () => {
         const details = error as Error & { code?: unknown; message?: string };
         assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
         assert.match(String(details.message), /advancePhase evalRuntimeResources\.collector\.warnings must be an array/i);
-        return true;
-      },
-    );
-  });
-
-  it('fails fast when advancePhase evalRuntimeResources query cache contract is malformed', () => {
-    const def = createBaseDef();
-    const state = createState({ currentPhase: asPhaseId('p1') });
-    const malformedResources = {
-      collector: { warnings: [], trace: null },
-      queryRuntimeCache: {
-        getTokenZoneByTokenIdIndex: 123,
-        setTokenZoneByTokenIdIndex: () => undefined,
-      },
-    };
-
-    assert.throws(
-      () =>
-        advancePhase({
-          def,
-          state,
-          evalRuntimeResources:
-            malformedResources as unknown as Parameters<typeof advancePhase>[0]['evalRuntimeResources'],
-        }),
-      (error: unknown) => {
-        assert.ok(error instanceof Error);
-        const details = error as Error & { code?: unknown; message?: string };
-        assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
-        assert.match(
-          String(details.message),
-          /advancePhase evalRuntimeResources\.queryRuntimeCache\.getTokenZoneByTokenIdIndex must be a function/i,
-        );
         return true;
       },
     );

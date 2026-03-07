@@ -68,7 +68,7 @@ describe('AvailabilitySection', () => {
     render(createElement(AvailabilitySection, {
       ruleState: makeRuleState({
         available: true,
-        limitUsage: { used: 1, max: 3 },
+        limitUsage: [{ scope: 'turn' as const, used: 1, max: 3 }],
       }),
     }));
     const limit = screen.getByTestId('limit-usage');
@@ -87,7 +87,7 @@ describe('AvailabilitySection', () => {
       ruleState: makeRuleState({
         available: false,
         blockers: [{ astPath: 'root', description: 'Blocked reason' }],
-        limitUsage: { used: 2, max: 2 },
+        limitUsage: [{ scope: 'turn' as const, used: 2, max: 2 }],
       }),
     }));
     const section = screen.getByTestId('availability-section');

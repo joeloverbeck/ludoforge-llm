@@ -1,6 +1,6 @@
 # LEGACTTOO-015: Wire Plural Label Resolution Into Template Functions
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/kernel/tooltip-template-realizer.ts`
@@ -30,11 +30,13 @@ The shared `resolveLabel` accepts an optional `count` parameter for singular/plu
 For each template function that has a numeric amount/count and resolves a token/resource label:
 - `realizePay`: `resolveLabel(msg.resource, ctx, msg.amount)`
 - `realizeGain`: `resolveLabel(msg.resource, ctx, msg.amount)`
-- `realizeDraw`: `resolveLabel(msg.source, ctx, msg.count)` (if source should pluralize)
-- `realizeRemove`: token filter count if available
-- Other templates as appropriate
+- `realizeTransfer`: `resolveLabel(msg.resource, ctx, msg.amount)` (and `msg.amount` for resource only, not from/to)
 
-The key targets are token and resource labels that have singular/plural forms in `VerbalizationDef.labels`.
+**Excluded** (no pluralization benefit):
+- `realizeDraw`: `msg.source` is a deck name — pluralizing it is wrong ("Event Decks" makes no sense)
+- `realizeRemove`: `RemoveMessage` has no numeric count field (`budget` is a string expression)
+
+The key targets are resource labels that have singular/plural forms in `VerbalizationDef.labels`.
 
 ## Files to Touch
 
@@ -53,7 +55,8 @@ The key targets are token and resource labels that have singular/plural forms in
 1. `Pay 1 {resource}` with singular label → "Pay 1 US Troop".
 2. `Pay 3 {resource}` with plural label → "Pay 3 US Troops".
 3. `Gain 1 {resource}` → singular, `Gain 5 {resource}` → plural.
-4. Existing suite: `pnpm -F @ludoforge/engine test`
+4. `Transfer 1 {resource}` → singular, `Transfer 3 {resource}` → plural.
+5. Existing suite: `pnpm -F @ludoforge/engine test`
 
 ### Invariants
 
@@ -70,3 +73,16 @@ The key targets are token and resource labels that have singular/plural forms in
 
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+**Scope corrections** from the original ticket:
+- Removed `realizeDraw` — deck names don't pluralize
+- Removed `realizeRemove` — no numeric count field exists
+- Added `realizeTransfer` — has `msg.amount` and `msg.resource`, was missing from original ticket
+
+**Changes made:**
+- `tooltip-template-realizer.ts`: Passed `msg.amount` as count to `resolveLabel` in `realizePay`, `realizeGain`, and `realizeTransfer` (3 one-line changes)
+- `tooltip-template-realizer.test.ts`: Added 8 new tests covering singular (amount=1), plural (amount>1), amount=0, plain string labels, and transfer singular/plural
+
+All 56 tests pass. Typecheck clean.

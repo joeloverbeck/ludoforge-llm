@@ -69,17 +69,17 @@ const realizeMove = (msg: MoveMessage, ctx: LabelContext): string => {
 };
 
 const realizePay = (msg: PayMessage, ctx: LabelContext): string => {
-  const resource = resolveLabel(msg.resource, ctx);
+  const resource = resolveLabel(msg.resource, ctx, msg.amount);
   return `Pay ${msg.amount} ${resource}`;
 };
 
 const realizeGain = (msg: GainMessage, ctx: LabelContext): string => {
-  const resource = resolveLabel(msg.resource, ctx);
+  const resource = resolveLabel(msg.resource, ctx, msg.amount);
   return `Gain ${msg.amount} ${resource}`;
 };
 
 const realizeTransfer = (msg: TransferMessage, ctx: LabelContext): string => {
-  const resource = resolveLabel(msg.resource, ctx);
+  const resource = resolveLabel(msg.resource, ctx, msg.amount);
   const from = resolveLabel(msg.from, ctx);
   const to = resolveLabel(msg.to, ctx);
   const amount = msg.amountExpr !== undefined ? msg.amountExpr : String(msg.amount);

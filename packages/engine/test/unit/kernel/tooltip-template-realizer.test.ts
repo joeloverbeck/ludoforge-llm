@@ -262,6 +262,60 @@ describe('realizeContentPlan', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // Singular/plural label resolution
+  // ---------------------------------------------------------------------------
+
+  describe('singular/plural label resolution', () => {
+    it('pay with amount=1 uses singular label', () => {
+      const msg: TooltipMessage = { kind: 'pay', astPath: 'r', resource: 'usTroops', amount: 1 };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Pay 1 US Troop');
+    });
+
+    it('pay with amount>1 uses plural label', () => {
+      const msg: TooltipMessage = { kind: 'pay', astPath: 'r', resource: 'usTroops', amount: 3 };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Pay 3 US Troops');
+    });
+
+    it('gain with amount=1 uses singular label', () => {
+      const msg: TooltipMessage = { kind: 'gain', astPath: 'r', resource: 'usTroops', amount: 1 };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Gain 1 US Troop');
+    });
+
+    it('gain with amount>1 uses plural label', () => {
+      const msg: TooltipMessage = { kind: 'gain', astPath: 'r', resource: 'usTroops', amount: 5 };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Gain 5 US Troops');
+    });
+
+    it('transfer with amount=1 uses singular resource label', () => {
+      const msg: TooltipMessage = { kind: 'transfer', astPath: 'r', resource: 'usTroops', amount: 1, from: 'saigon', to: 'availableUs' };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Transfer 1 US Troop from Saigon to US Available Forces');
+    });
+
+    it('transfer with amount>1 uses plural resource label', () => {
+      const msg: TooltipMessage = { kind: 'transfer', astPath: 'r', resource: 'usTroops', amount: 3, from: 'saigon', to: 'availableUs' };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Transfer 3 US Troops from Saigon to US Available Forces');
+    });
+
+    it('plain string label is unaffected by count', () => {
+      const msg: TooltipMessage = { kind: 'pay', astPath: 'r', resource: 'aid', amount: 1 };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Pay 1 Aid');
+    });
+
+    it('amount=0 uses plural label', () => {
+      const msg: TooltipMessage = { kind: 'gain', astPath: 'r', resource: 'usTroops', amount: 0 };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Gain 0 US Troops');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // Label resolution priority
   // ---------------------------------------------------------------------------
 

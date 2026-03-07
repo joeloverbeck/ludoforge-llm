@@ -3,7 +3,7 @@ import type { EffectAST, EventDeckDef, GameDef, NumericTrackDef, RuntimeTableCon
 import type { TypeInferenceContext } from './type-inference.js';
 import { asActionId, asZoneId } from '../kernel/branded.js';
 import { isCardEventAction } from '../kernel/action-capabilities.js';
-import { ACTION_CAPABILITY_CARD_EVENT } from '../contracts/index.js';
+import { ACTION_CAPABILITY_CARD_EVENT, PREDICATE_OPERATORS } from '../contracts/index.js';
 import { isKernelReferenceDiagnosticCode } from '../kernel/reference-diagnostic-codes.js';
 import { validateGameDefBoundary, type ValidatedGameDef } from '../kernel/validate-gamedef.js';
 import { materializeZoneDefs } from './compile-zones.js';
@@ -262,8 +262,7 @@ export function compileGameSpecToGameDef(
   };
 }
 
-const PREDICATE_ALIAS_KEYS = ['eq', 'neq', 'in', 'notIn'] as const;
-type PredicateAliasKey = (typeof PREDICATE_ALIAS_KEYS)[number];
+type PredicateAliasKey = (typeof PREDICATE_OPERATORS)[number];
 
 function normalizePredicateAliasShorthand<TValue>(value: TValue): TValue {
   if (Array.isArray(value)) {
@@ -285,7 +284,7 @@ function normalizePredicateAliasShorthand<TValue>(value: TValue): TValue {
     return normalized as TValue;
   }
 
-  const aliasKeys = PREDICATE_ALIAS_KEYS.filter((key) => Object.prototype.hasOwnProperty.call(normalized, key));
+  const aliasKeys = PREDICATE_OPERATORS.filter((key) => Object.prototype.hasOwnProperty.call(normalized, key));
   if (aliasKeys.length !== 1) {
     return normalized as TValue;
   }

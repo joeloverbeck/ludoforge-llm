@@ -1,78 +1,16 @@
 import { useEffect, type ReactElement } from 'react';
 import { flip, offset, shift, useFloating } from '@floating-ui/react-dom';
-import type {
-  AnnotatedActionDescription,
-  DisplayGroupNode,
-  DisplayInlineNode,
-  DisplayLineNode,
-  DisplayNode,
-} from '@ludoforge/engine/runtime';
+import type { AnnotatedActionDescription } from '@ludoforge/engine/runtime';
 
 import { hasDisplayableContent } from './has-displayable-content.js';
+import { renderGroup } from './display-node-renderers.js';
+import { ModifiersSection } from './ModifiersSection.js';
+import { AvailabilitySection } from './AvailabilitySection.js';
+import { RawAstToggle } from './RawAstToggle.js';
 import styles from './ActionTooltip.module.css';
 
-const INDENT_PX = 12;
-
-function annotationClass(annotationType: string): string {
-  switch (annotationType) {
-    case 'pass': return styles.annotationPass ?? '';
-    case 'fail': return styles.annotationFail ?? '';
-    case 'value': return styles.annotationValue ?? '';
-    case 'usage': return styles.annotationUsage ?? '';
-    default: return styles.annotation ?? '';
-  }
-}
-
-function inlineClass(kind: string): string {
-  switch (kind) {
-    case 'keyword': return styles.keyword ?? '';
-    case 'operator': return styles.operator ?? '';
-    case 'value': return styles.value ?? '';
-    case 'reference': return styles.reference ?? '';
-    case 'punctuation': return styles.punctuation ?? '';
-    default: return '';
-  }
-}
-
-function renderInlineNode(node: DisplayInlineNode, key: string): ReactElement {
-  if (node.kind === 'annotation') {
-    return <span key={key} className={annotationClass(node.annotationType)}>{node.text}</span>;
-  }
-  return <span key={key} className={inlineClass(node.kind)}>{node.text}</span>;
-}
-
-function renderLine(line: DisplayLineNode, key: string): ReactElement {
-  return (
-    <div
-      key={key}
-      className={styles.line}
-      style={line.indent > 0 ? { paddingLeft: line.indent * INDENT_PX } : undefined}
-    >
-      {line.children.map((child, i) => renderInlineNode(child, `${key}-i${i}`))}
-    </div>
-  );
-}
-
-function renderNode(node: DisplayNode, key: string): ReactElement {
-  switch (node.kind) {
-    case 'group':
-      return renderGroup(node, key);
-    case 'line':
-      return renderLine(node, key);
-    default:
-      return renderInlineNode(node as DisplayInlineNode, key);
-  }
-}
-
-function renderGroup(group: DisplayGroupNode, key: string): ReactElement {
-  return (
-    <div key={key} className={styles.group}>
-      <span className={styles.groupLabel}>
-        {group.icon !== undefined ? `${group.icon} ` : ''}{group.label}
-      </span>
-      {group.children.map((child, i) => renderNode(child, `${key}-c${i}`))}
-    </div>
-  );
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 interface ActionTooltipProps {
@@ -96,6 +34,8 @@ export function ActionTooltip({ description, anchorElement, onPointerEnter, onPo
     return null;
   }
 
+  const { tooltipPayload } = description;
+
   return (
     <div
       ref={refs.setFloating}
@@ -110,22 +50,70 @@ export function ActionTooltip({ description, anchorElement, onPointerEnter, onPo
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
     >
-      {description.sections.map((section, i) =>
-        renderGroup(section, `s${i}`),
-      )}
-      {description.limitUsage.length > 0 && (
-        <div className={styles.limitFooter} data-testid="limit-footer">
-          {description.limitUsage.map((limit, i) => (
-            <div key={`${limit.scope}-${i}`} className={styles.limitRow}>
-              {capitalize(limit.scope)}: {limit.current} / {limit.max}
+      {tooltipPayload !== undefined ? (
+        <>
+          <div className={styles.synopsis} data-testid="tooltip-synopsis">
+            {tooltipPayload.ruleCard.synopsis}
+          </div>
+          {tooltipPayload.ruleCard.steps.length > 0 && (
+            <ol className={styles.stepsList} data-testid="tooltip-steps">
+              {tooltipPayload.ruleCard.steps.map((step) => (
+                <li key={step.stepNumber} className={styles.stepItem}>
+                  <span className={styles.stepHeader}>{step.header}</span>
+                  {step.lines.length > 0 && (
+                    <ul className={styles.stepLines}>
+                      {step.lines.map((line, li) => (
+                        <li key={`${step.stepNumber}-${li}`} className={styles.stepLine}>
+                          {line.text}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {step.subSteps !== undefined && step.subSteps.length > 0 && (
+                    <ol className={styles.subSteps}>
+                      {step.subSteps.map((sub) => (
+                        <li key={sub.stepNumber} className={styles.stepItem}>
+                          <span className={styles.stepHeader}>{sub.header}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                  {step.collapsedCount !== undefined && step.collapsedCount > 0 && (
+                    <div className={styles.collapsedHint}>
+                      and {step.collapsedCount} more...
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
+          {tooltipPayload.ruleCard.modifiers.length > 0 && (
+            <ModifiersSection
+              modifiers={tooltipPayload.ruleCard.modifiers}
+              activeModifierIndices={tooltipPayload.ruleState.activeModifierIndices}
+            />
+          )}
+          <AvailabilitySection ruleState={tooltipPayload.ruleState} />
+          {description.sections.length > 0 && (
+            <RawAstToggle sections={description.sections} />
+          )}
+        </>
+      ) : (
+        <>
+          {description.sections.map((section, i) =>
+            renderGroup(section, `s${i}`),
+          )}
+          {description.limitUsage.length > 0 && (
+            <div className={styles.limitFooter} data-testid="limit-footer">
+              {description.limitUsage.map((limit, i) => (
+                <div key={`${limit.scope}-${i}`} className={styles.limitRow}>
+                  {capitalize(limit.scope)}: {limit.current} / {limit.max}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   );
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }

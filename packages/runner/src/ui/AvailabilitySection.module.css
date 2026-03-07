@@ -1,0 +1,59 @@
+.section {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--space-xs);
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+}
+
+.dotAvailable,
+.dotBlocked {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dotAvailable {
+  background-color: var(--success);
+}
+
+.dotBlocked {
+  background-color: var(--danger);
+}
+
+.labelAvailable {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.labelBlocked {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.limit {
+  color: var(--text-muted);
+}
+
+.blockerList {
+  list-style: none;
+  margin: var(--space-xs) 0 0;
+  padding: 0 0 0 var(--space-md);
+}
+
+.blockerItem {
+  color: var(--text-muted);
+  line-height: 1.5;
+  font-size: var(--font-size-sm);
+}
+
+.blockerItem::before {
+  content: "\2022 ";
+  color: var(--danger);
+}

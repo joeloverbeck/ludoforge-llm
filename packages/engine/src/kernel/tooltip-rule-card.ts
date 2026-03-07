@@ -3,10 +3,15 @@
  * and dynamic RuleState (recomputed per call).
  */
 
+export interface RealizedLine {
+  readonly text: string;
+  readonly astPath: string;
+}
+
 export interface ContentStep {
   readonly stepNumber: number;
   readonly header: string;
-  readonly lines: readonly string[];
+  readonly lines: readonly RealizedLine[];
   readonly subSteps?: readonly ContentStep[];
 }
 

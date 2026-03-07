@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import type {
+  RealizedLine,
   ContentStep,
   ContentModifier,
   RuleCard,
@@ -16,16 +17,22 @@ import type { VerbalizationDef } from '../../../src/kernel/index.js';
 import type { GameDef } from '../../../src/kernel/index.js';
 
 describe('tooltip-rule-card types', () => {
+  it('constructs RealizedLine', () => {
+    const line: RealizedLine = { text: 'Place US Troops in Saigon', astPath: 'root.effects[0]' };
+    assert.equal(line.text, 'Place US Troops in Saigon');
+    assert.equal(line.astPath, 'root.effects[0]');
+  });
+
   it('constructs ContentStep with sub-steps', () => {
     const step: ContentStep = {
       stepNumber: 1,
       header: 'Select target spaces',
-      lines: ['Choose 1-6 spaces with COIN control'],
+      lines: [{ text: 'Choose 1-6 spaces with COIN control', astPath: 'root.effects[0]' }],
       subSteps: [
         {
           stepNumber: 1,
           header: 'Place forces',
-          lines: ['Place US Troops from Available'],
+          lines: [{ text: 'Place US Troops from Available', astPath: 'root.effects[0].in[0]' }],
         },
       ],
     };
@@ -46,7 +53,7 @@ describe('tooltip-rule-card types', () => {
       synopsis: 'Train — Select 1-6 target spaces',
       steps: [
         { stepNumber: 1, header: 'Select target spaces (1-6)', lines: [] },
-        { stepNumber: 2, header: 'Place forces from Available', lines: ['Place US Troops (max 6 total)'] },
+        { stepNumber: 2, header: 'Place forces from Available', lines: [{ text: 'Place US Troops (max 6 total)', astPath: 'root.effects[1]' }] },
       ],
       modifiers: [
         { condition: 'Shaded', description: '+1 Troop per space' },

@@ -4593,12 +4593,12 @@ eventDecks:
           seatOrder: ["NVA", "US", "ARVN", "VC"]
           flavorText: "Air defense guns thicken around infiltration routes."
         unshaded:
-          text: "NVA capability: Rally Trail improvement restricted."
+          text: "Rally that Improves Trail may select 1 space only. NVA CAPABILITY."
           effects:
             - macro: set-global-marker
               args: { markerId: cap_aaa, markerState: unshaded }
         shaded:
-          text: "NVA capability (shaded): air defense suppresses COIN air power."
+          text: "Air Strike does not Degrade Trail below 2."
           effects:
             - macro: set-global-marker
               args: { markerId: cap_aaa, markerState: shaded }

@@ -1005,6 +1005,83 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     );
   });
 
+  it('Air Strike cap_aaa shaded enforces Trail floor of 2 without Top Gun modifiers', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const space = 'saigon:none';
+    const base = clearAllZones(initialState(def, 21031, 4).state);
+    const start: GameState = {
+      ...base,
+      activePlayer: asPlayerId(0),
+      globalVars: {
+        ...base.globalVars,
+        trail: 2,
+      },
+      globalMarkers: {
+        ...base.globalMarkers,
+        cap_aaa: 'shaded',
+      },
+      zones: {
+        ...base.zones,
+        [space]: [
+          makeToken('aaa-floor-us', 'troops', 'US', { type: 'troops' }),
+          makeToken('aaa-floor-nva', 'troops', 'NVA', { type: 'troops' }),
+        ],
+      },
+    };
+
+    const final = applyMoveWithResolvedDecisionIds(def, start, {
+      actionId: asActionId('airStrike'),
+      params: {
+        $spaces: [space],
+        $degradeTrail: 'yes',
+      },
+    }).state;
+
+    assert.equal(final.globalVars.trail, 2, 'cap_aaa shaded should prevent Air Strike from degrading Trail below 2');
+  });
+
+  it('Air Strike cap_aaa shaded overrides cap_topGun unshaded to keep Trail at 2 minimum', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const space = 'saigon:none';
+    const base = clearAllZones(initialState(def, 21032, 4).state);
+    const start: GameState = {
+      ...base,
+      activePlayer: asPlayerId(0),
+      globalVars: {
+        ...base.globalVars,
+        trail: 3,
+      },
+      globalMarkers: {
+        ...base.globalMarkers,
+        cap_aaa: 'shaded',
+        cap_topGun: 'unshaded',
+      },
+      zones: {
+        ...base.zones,
+        [space]: [
+          makeToken('aaa-topgun-us', 'troops', 'US', { type: 'troops' }),
+          makeToken('aaa-topgun-nva', 'troops', 'NVA', { type: 'troops' }),
+        ],
+      },
+    };
+
+    const final = applyMoveWithResolvedDecisionIds(def, start, {
+      actionId: asActionId('airStrike'),
+      params: {
+        $spaces: [space],
+        $degradeTrail: 'yes',
+      },
+    }).state;
+
+    assert.equal(final.globalVars.trail, 2, 'cap_aaa shaded should clamp cap_topGun unshaded Trail degrade at 2');
+  });
+
   it('Air Strike cap_topGun shaded degrades Trail by 1 only on roll 4-6 when degrade is declared', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);

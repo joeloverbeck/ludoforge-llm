@@ -77,6 +77,8 @@ describe('FITL 1964 remaining event-card production spec', () => {
 
     assert.equal(card?.tags?.includes('capability'), true);
     assert.equal(card?.tags?.includes('NVA'), true);
+    assert.equal(card?.unshaded?.text, 'Rally that Improves Trail may select 1 space only. NVA CAPABILITY.');
+    assert.equal(card?.shaded?.text, 'Air Strike does not Degrade Trail below 2.');
     assert.deepEqual(card?.unshaded?.effects, [{ setGlobalMarker: { marker: 'cap_aaa', state: 'unshaded' } }]);
     assert.deepEqual(card?.shaded?.effects, [{ setGlobalMarker: { marker: 'cap_aaa', state: 'shaded' } }]);
   });

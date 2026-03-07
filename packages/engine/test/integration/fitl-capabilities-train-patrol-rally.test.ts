@@ -14,6 +14,7 @@ import {
 } from '../../src/kernel/index.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
@@ -392,6 +393,94 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
     );
   });
 
+  it('AAA unshaded allows multi-space Rally only when not improving Trail', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const spaceA = 'central-laos:none';
+    const spaceB = 'southern-laos:none';
+    const base = clearAllZones(initialState(def, 23031, 4).state);
+    const start: GameState = {
+      ...base,
+      activePlayer: asPlayerId(2),
+      globalVars: {
+        ...base.globalVars,
+        nvaResources: 10,
+        trail: 2,
+      },
+      globalMarkers: {
+        ...base.globalMarkers,
+        cap_aaa: 'unshaded',
+      },
+      zones: {
+        ...base.zones,
+      },
+    };
+
+    const legal = applyMoveWithResolvedDecisionIds(def, start, {
+      actionId: asActionId('rally'),
+      params: {
+        $targetSpaces: [spaceA, spaceB],
+        $improveTrail: 'no',
+      },
+    }).state;
+
+    assert.equal(legal.globalVars.trail, 2, 'AAA unshaded should allow multi-space Rally if Trail is not improved');
+    assert.equal(legal.globalVars.nvaResources, 8, 'Multi-space Rally should still pay normal per-space Rally cost');
+
+    assert.throws(
+      () =>
+        applyMoveWithResolvedDecisionIds(def, start, {
+          actionId: asActionId('rally'),
+          params: {
+            $targetSpaces: [spaceA, spaceB],
+            $improveTrail: 'yes',
+            $trailImproveSpaces: [spaceA],
+          },
+        }),
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
+      'AAA unshaded should reject Trail improvement when Rally selects more than 1 space',
+    );
+  });
+
+  it('AAA unshaded still allows single-space Rally to improve Trail', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const space = 'central-laos:none';
+    const base = clearAllZones(initialState(def, 23032, 4).state);
+    const start: GameState = {
+      ...base,
+      activePlayer: asPlayerId(2),
+      globalVars: {
+        ...base.globalVars,
+        nvaResources: 10,
+        trail: 2,
+      },
+      globalMarkers: {
+        ...base.globalMarkers,
+        cap_aaa: 'unshaded',
+      },
+      zones: {
+        ...base.zones,
+      },
+    };
+
+    const after = applyMoveWithResolvedDecisionIds(def, start, {
+      actionId: asActionId('rally'),
+      params: {
+        $targetSpaces: [space],
+        $improveTrail: 'yes',
+        $trailImproveSpaces: [space],
+      },
+    }).state;
+
+    assert.equal(after.globalVars.trail, 3, 'AAA unshaded should still permit Trail improvement with a single Rally space');
+    assert.equal(after.globalVars.nvaResources, 7, 'Single-space Rally + Trail improvement should cost 3 total Resources');
+  });
+
   it('encodes Rally trail and cadres branches with side-specific constraints', () => {
     const rallyNva = getParsedProfile('rally-nva-profile');
     const rallyVc = getParsedProfile('rally-vc-profile');
@@ -404,6 +493,16 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
     assert.ok(aaaUnshadedBranch.length >= 1, 'Expected cap_aaa unshaded branch in rally-nva trail improvement');
     const trailMaxOne = findDeep(aaaUnshadedBranch[0], (node: any) => node?.chooseN?.bind === '$trailImproveSpaces' && node?.chooseN?.max === 1);
     assert.ok(trailMaxOne.length >= 1, 'Expected cap_aaa unshaded to cap Rally trail-improvement spaces at 1');
+    const improveNoOnlyWhenMultiSpace = findDeep(rallyNva.stages, (node: any) =>
+      node?.chooseOne?.bind === '$improveTrail' &&
+      Array.isArray(node?.chooseOne?.options?.values) &&
+      node.chooseOne.options.values.length === 1 &&
+      node.chooseOne.options.values[0] === 'no',
+    );
+    assert.ok(
+      improveNoOnlyWhenMultiSpace.length >= 1,
+      'Expected cap_aaa unshaded to force $improveTrail=no when Rally selects more than 1 space',
+    );
 
     const sa2sShadedBranch = findDeep(rallyNva.stages, (node: any) =>
       node?.if?.when?.left?.ref === 'globalMarkerState' &&

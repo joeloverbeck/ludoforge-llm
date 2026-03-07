@@ -2759,9 +2759,25 @@ actionPipelines:
                   - { op: '<', left: { ref: gvar, var: trail }, right: 4 }
                   - { op: '!=', left: { ref: gvar, var: mom_mcnamaraLine }, right: true }
               then:
-                - chooseOne:
-                    bind: $improveTrail
-                    options: { query: enums, values: ['yes', 'no'] }
+                - if:
+                    when:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: globalMarkerState, marker: cap_aaa }, right: unshaded }
+                        - op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query: { query: binding, name: $targetSpaces }
+                          right: 1
+                    then:
+                      - chooseOne:
+                          bind: $improveTrail
+                          options: { query: enums, values: ['no'] }
+                    else:
+                      - chooseOne:
+                          bind: $improveTrail
+                          options: { query: enums, values: ['yes', 'no'] }
                 - if:
                     when: { op: '==', left: { ref: binding, name: $improveTrail }, right: 'yes' }
                     then:
@@ -3761,176 +3777,178 @@ actionPipelines:
                                 - { query: binding, name: $arcLightNoCoinProvinces }
                         right: 0
               then:
-                - if:
-                    when: { op: '==', left: { ref: globalMarkerState, marker: cap_topGun }, right: shaded }
-                    then:
-                      - rollRandom:
-                          bind: $topGunDie
-                          min: 1
-                          max: 6
-                          in:
-                            - if:
-                                when: { op: '>=', left: { ref: binding, name: $topGunDie }, right: 4 }
-                                then:
-                                  - addVar:
-                                      scope: global
-                                      var: trail
-                                      delta:
-                                        op: '-'
-                                        left: 0
-                                        right:
-                                          if:
-                                            when: { op: '==', left: { ref: globalMarkerState, marker: cap_aaa }, right: shaded }
+                - let:
+                    bind: $airStrikeTrailDegrade
+                    value:
+                      if:
+                        when: { op: '==', left: { ref: globalMarkerState, marker: cap_aaa }, right: shaded }
+                        then:
+                          if:
+                            when: { op: '>', left: { ref: gvar, var: trail }, right: 2 }
+                            then:
+                              op: min
+                              left:
+                                if:
+                                  when: { op: '==', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
+                                  then: 2
+                                  else: 1
+                              right:
+                                op: '-'
+                                left: { ref: gvar, var: trail }
+                                right: 2
+                            else: 0
+                        else:
+                          if:
+                            when: { op: '==', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
+                            then: 2
+                            else: 1
+                    in:
+                      - if:
+                          when: { op: '==', left: { ref: globalMarkerState, marker: cap_topGun }, right: shaded }
+                          then:
+                            - rollRandom:
+                                bind: $topGunDie
+                                min: 1
+                                max: 6
+                                in:
+                                  - if:
+                                      when: { op: '>=', left: { ref: binding, name: $topGunDie }, right: 4 }
+                                      then:
+                                        - addVar:
+                                            scope: global
+                                            var: trail
+                                            delta:
+                                              op: '-'
+                                              left: 0
+                                              right: { ref: binding, name: $airStrikeTrailDegrade }
+                                        - if:
+                                            when:
+                                              op: and
+                                              args:
+                                                - { op: '==', left: { ref: globalMarkerState, marker: cap_migs }, right: shaded }
+                                                - { op: '!=', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
                                             then:
-                                              if:
-                                                when: { op: '==', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
-                                                then: 2
-                                                else: 1
-                                            else:
-                                              if:
-                                                when: { op: '==', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
-                                                then: 2
-                                                else: 1
-                                  - if:
-                                      when:
-                                        op: and
-                                        args:
-                                          - { op: '==', left: { ref: globalMarkerState, marker: cap_migs }, right: shaded }
-                                          - { op: '!=', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
-                                      then:
-                                        - chooseN:
-                                            bind: $migsCostSpaces
-                                            options:
-                                              query: concat
-                                              sources:
-                                                - { query: binding, name: $spaces }
-                                                - { query: binding, name: $arcLightNoCoinProvinces }
-                                            min: 0
-                                            max: 1
-                                        - forEach:
-                                            bind: $migsCostSpace
-                                            over: { query: binding, name: $migsCostSpaces }
-                                            effects:
+                                              - chooseN:
+                                                  bind: $migsCostSpaces
+                                                  options:
+                                                    query: concat
+                                                    sources:
+                                                      - { query: binding, name: $spaces }
+                                                      - { query: binding, name: $arcLightNoCoinProvinces }
+                                                  min: 0
+                                                  max: 1
                                               - forEach:
-                                                  bind: $migsCostTroop
-                                                  over:
-                                                    query: tokensInZone
-                                                    zone: $migsCostSpace
-                                                    filter: { op: and, args: [{ prop: faction, eq: US }, { prop: type, eq: troops }] }
-                                                  limit: 1
+                                                  bind: $migsCostSpace
+                                                  over: { query: binding, name: $migsCostSpaces }
                                                   effects:
-                                                    - moveToken:
-                                                        token: $migsCostTroop
-                                                        from: $migsCostSpace
-                                                        to: { zoneExpr: 'casualties-US:none' }
-                                  - if:
-                                      when: { op: '==', left: { ref: globalMarkerState, marker: cap_sa2s }, right: unshaded }
-                                      then:
-                                        - chooseN:
-                                            bind: $sa2sCostSpaces
-                                            options:
-                                              query: concat
-                                              sources:
-                                                - { query: binding, name: $spaces }
-                                                - { query: binding, name: $arcLightNoCoinProvinces }
-                                            min: 0
-                                            max: 1
-                                        - forEach:
-                                            bind: $sa2sCostSpace
-                                            over: { query: binding, name: $sa2sCostSpaces }
-                                            effects:
+                                                    - forEach:
+                                                        bind: $migsCostTroop
+                                                        over:
+                                                          query: tokensInZone
+                                                          zone: $migsCostSpace
+                                                          filter: { op: and, args: [{ prop: faction, eq: US }, { prop: type, eq: troops }] }
+                                                        limit: 1
+                                                        effects:
+                                                          - moveToken:
+                                                              token: $migsCostTroop
+                                                              from: $migsCostSpace
+                                                              to: { zoneExpr: 'casualties-US:none' }
+                                        - if:
+                                            when: { op: '==', left: { ref: globalMarkerState, marker: cap_sa2s }, right: unshaded }
+                                            then:
+                                              - chooseN:
+                                                  bind: $sa2sCostSpaces
+                                                  options:
+                                                    query: concat
+                                                    sources:
+                                                      - { query: binding, name: $spaces }
+                                                      - { query: binding, name: $arcLightNoCoinProvinces }
+                                                  min: 0
+                                                  max: 1
                                               - forEach:
-                                                  bind: $sa2sCostPiece
-                                                  over:
-                                                    query: tokensInZone
-                                                    zone: $sa2sCostSpace
-                                                    filter: { op: and, args: [{ prop: faction, eq: NVA }] }
-                                                  limit: 1
+                                                  bind: $sa2sCostSpace
+                                                  over: { query: binding, name: $sa2sCostSpaces }
                                                   effects:
-                                                    - moveToken:
-                                                        token: $sa2sCostPiece
-                                                        from: $sa2sCostSpace
-                                                        to: { zoneExpr: 'available-NVA:none' }
-                    else:
-                      - addVar:
-                          scope: global
-                          var: trail
-                          delta:
-                            op: '-'
-                            left: 0
-                            right:
-                              if:
-                                when: { op: '==', left: { ref: globalMarkerState, marker: cap_aaa }, right: shaded }
+                                                    - forEach:
+                                                        bind: $sa2sCostPiece
+                                                        over:
+                                                          query: tokensInZone
+                                                          zone: $sa2sCostSpace
+                                                          filter: { op: and, args: [{ prop: faction, eq: NVA }] }
+                                                        limit: 1
+                                                        effects:
+                                                          - moveToken:
+                                                              token: $sa2sCostPiece
+                                                              from: $sa2sCostSpace
+                                                              to: { zoneExpr: 'available-NVA:none' }
+                          else:
+                            - addVar:
+                                scope: global
+                                var: trail
+                                delta:
+                                  op: '-'
+                                  left: 0
+                                  right: { ref: binding, name: $airStrikeTrailDegrade }
+                            - if:
+                                when:
+                                  op: and
+                                  args:
+                                    - { op: '==', left: { ref: globalMarkerState, marker: cap_migs }, right: shaded }
+                                    - { op: '!=', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
                                 then:
-                                  if:
-                                    when: { op: '==', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
-                                    then: 2
-                                    else: 1
-                                else:
-                                  if:
-                                    when: { op: '==', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
-                                    then: 2
-                                    else: 1
-                      - if:
-                          when:
-                            op: and
-                            args:
-                              - { op: '==', left: { ref: globalMarkerState, marker: cap_migs }, right: shaded }
-                              - { op: '!=', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
-                          then:
-                            - chooseN:
-                                bind: $migsCostSpaces
-                                options:
-                                  query: concat
-                                  sources:
-                                    - { query: binding, name: $spaces }
-                                    - { query: binding, name: $arcLightNoCoinProvinces }
-                                min: 0
-                                max: 1
-                            - forEach:
-                                bind: $migsCostSpace
-                                over: { query: binding, name: $migsCostSpaces }
-                                effects:
+                                  - chooseN:
+                                      bind: $migsCostSpaces
+                                      options:
+                                        query: concat
+                                        sources:
+                                          - { query: binding, name: $spaces }
+                                          - { query: binding, name: $arcLightNoCoinProvinces }
+                                      min: 0
+                                      max: 1
                                   - forEach:
-                                      bind: $migsCostTroop
-                                      over:
-                                        query: tokensInZone
-                                        zone: $migsCostSpace
-                                        filter: { op: and, args: [{ prop: faction, eq: US }, { prop: type, eq: troops }] }
-                                      limit: 1
+                                      bind: $migsCostSpace
+                                      over: { query: binding, name: $migsCostSpaces }
                                       effects:
-                                        - moveToken:
-                                            token: $migsCostTroop
-                                            from: $migsCostSpace
-                                            to: { zoneExpr: 'casualties-US:none' }
-                      - if:
-                          when: { op: '==', left: { ref: globalMarkerState, marker: cap_sa2s }, right: unshaded }
-                          then:
-                            - chooseN:
-                                bind: $sa2sCostSpaces
-                                options:
-                                  query: concat
-                                  sources:
-                                    - { query: binding, name: $spaces }
-                                    - { query: binding, name: $arcLightNoCoinProvinces }
-                                min: 0
-                                max: 1
-                            - forEach:
-                                bind: $sa2sCostSpace
-                                over: { query: binding, name: $sa2sCostSpaces }
-                                effects:
+                                        - forEach:
+                                            bind: $migsCostTroop
+                                            over:
+                                              query: tokensInZone
+                                              zone: $migsCostSpace
+                                              filter: { op: and, args: [{ prop: faction, eq: US }, { prop: type, eq: troops }] }
+                                            limit: 1
+                                            effects:
+                                              - moveToken:
+                                                  token: $migsCostTroop
+                                                  from: $migsCostSpace
+                                                  to: { zoneExpr: 'casualties-US:none' }
+                            - if:
+                                when: { op: '==', left: { ref: globalMarkerState, marker: cap_sa2s }, right: unshaded }
+                                then:
+                                  - chooseN:
+                                      bind: $sa2sCostSpaces
+                                      options:
+                                        query: concat
+                                        sources:
+                                          - { query: binding, name: $spaces }
+                                          - { query: binding, name: $arcLightNoCoinProvinces }
+                                      min: 0
+                                      max: 1
                                   - forEach:
-                                      bind: $sa2sCostPiece
-                                      over:
-                                        query: tokensInZone
-                                        zone: $sa2sCostSpace
-                                        filter: { op: and, args: [{ prop: faction, eq: NVA }] }
-                                      limit: 1
+                                      bind: $sa2sCostSpace
+                                      over: { query: binding, name: $sa2sCostSpaces }
                                       effects:
-                                        - moveToken:
-                                            token: $sa2sCostPiece
-                                            from: $sa2sCostSpace
-                                            to: { zoneExpr: 'available-NVA:none' }
+                                        - forEach:
+                                            bind: $sa2sCostPiece
+                                            over:
+                                              query: tokensInZone
+                                              zone: $sa2sCostSpace
+                                              filter: { op: and, args: [{ prop: faction, eq: NVA }] }
+                                            limit: 1
+                                            effects:
+                                              - moveToken:
+                                                  token: $sa2sCostPiece
+                                                  from: $sa2sCostSpace
+                                                  to: { zoneExpr: 'available-NVA:none' }
       - stage: air-strike-telemetry
         effects:
           - addVar:

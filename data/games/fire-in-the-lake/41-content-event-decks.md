@@ -4612,12 +4612,12 @@ eventDecks:
           seatOrder: ["NVA", "US", "ARVN", "VC"]
           flavorText: "Long-range artillery extends pressure across contested routes."
         unshaded:
-          text: "NVA capability: Bombard can target adjacent spaces from farther range."
+          text: "NVA Bombard max 1 space. NVA CAPABILITY. Other restrictions on Bombard apply normally (4.4.2)."
           effects:
             - macro: set-global-marker
               args: { markerId: cap_longRangeGuns, markerState: unshaded }
         shaded:
-          text: "NVA capability (shaded): COIN movement near artillery zones risks attrition."
+          text: "NVA Bombard max 3 spaces. NVA CAPABILITY. Other restrictions on Bombard apply normally (4.4.2)."
           effects:
             - macro: set-global-marker
               args: { markerId: cap_longRangeGuns, markerState: shaded }

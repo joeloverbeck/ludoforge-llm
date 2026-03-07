@@ -85,6 +85,17 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
       assert.equal(card?.tags?.includes('NVA'), true, `${expected.id} must include NVA tag`);
       assert.deepEqual(card?.unshaded?.effects, [{ setGlobalMarker: { marker: expected.marker, state: 'unshaded' } }]);
       assert.deepEqual(card?.shaded?.effects, [{ setGlobalMarker: { marker: expected.marker, state: 'shaded' } }]);
+
+      if (expected.id === 'card-32') {
+        assert.equal(
+          card?.unshaded?.text,
+          'NVA Bombard max 1 space. NVA CAPABILITY. Other restrictions on Bombard apply normally (4.4.2).',
+        );
+        assert.equal(
+          card?.shaded?.text,
+          'NVA Bombard max 3 spaces. NVA CAPABILITY. Other restrictions on Bombard apply normally (4.4.2).',
+        );
+      }
     }
   });
 

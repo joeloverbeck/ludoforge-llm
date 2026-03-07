@@ -231,7 +231,8 @@ export function compileGameSpecToGameDef(
   options?: CompileOptions,
 ): CompileResult {
   const limits = resolveCompileLimits(options?.limits);
-  const templateExpansion = expandTemplates(doc);
+  const normalizedDoc = normalizePredicateAliasShorthand(doc);
+  const templateExpansion = expandTemplates(normalizedDoc);
   const conditionExpansion = expandConditionMacros(templateExpansion.doc);
   const macroExpansion = expandEffectMacros(conditionExpansion.doc);
   const expanded = expandMacros(macroExpansion.doc, options);
@@ -259,6 +260,46 @@ export function compileGameSpecToGameDef(
     sections: compiled.sections,
     diagnostics: finalizedDiagnostics,
   };
+}
+
+const PREDICATE_ALIAS_KEYS = ['eq', 'neq', 'in', 'notIn'] as const;
+type PredicateAliasKey = (typeof PREDICATE_ALIAS_KEYS)[number];
+
+function normalizePredicateAliasShorthand<TValue>(value: TValue): TValue {
+  if (Array.isArray(value)) {
+    return value.map((entry) => normalizePredicateAliasShorthand(entry)) as TValue;
+  }
+  if (!isRecord(value)) {
+    return value;
+  }
+
+  const normalized: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value)) {
+    normalized[key] = normalizePredicateAliasShorthand(child);
+  }
+
+  const hasPropOrField = typeof normalized.prop === 'string' || typeof normalized.field === 'string';
+  const hasCanonicalShape = Object.prototype.hasOwnProperty.call(normalized, 'op')
+    || Object.prototype.hasOwnProperty.call(normalized, 'value');
+  if (!hasPropOrField || hasCanonicalShape) {
+    return normalized as TValue;
+  }
+
+  const aliasKeys = PREDICATE_ALIAS_KEYS.filter((key) => Object.prototype.hasOwnProperty.call(normalized, key));
+  if (aliasKeys.length !== 1) {
+    return normalized as TValue;
+  }
+
+  const aliasKey = aliasKeys[0] as PredicateAliasKey;
+  const aliasValue = normalized[aliasKey];
+  delete normalized[aliasKey];
+  normalized.op = aliasKey;
+  normalized.value = aliasValue;
+  return normalized as TValue;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function compileExpandedDoc(

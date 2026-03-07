@@ -12,6 +12,7 @@ export interface ContentStep {
   readonly stepNumber: number;
   readonly header: string;
   readonly lines: readonly RealizedLine[];
+  readonly collapsedCount?: number;
   readonly subSteps?: readonly ContentStep[];
 }
 

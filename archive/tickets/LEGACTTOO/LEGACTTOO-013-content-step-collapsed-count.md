@@ -1,6 +1,6 @@
 # LEGACTTOO-013: Carry `collapsedCount` Through to ContentStep
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/kernel/tooltip-rule-card.ts`, `packages/engine/src/kernel/tooltip-template-realizer.ts`
@@ -75,3 +75,14 @@ Pass `planStep.collapsedCount` through to the output `ContentStep` when non-zero
 
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+Implemented exactly as planned. No deviations from the ticket scope.
+
+**Changes**:
+- `tooltip-rule-card.ts`: Added optional `collapsedCount?: number` to `ContentStep` interface.
+- `tooltip-template-realizer.ts`: `realizeStep` now carries `planStep.collapsedCount` to output when > 0.
+- `tooltip-template-realizer.test.ts`: Added 3 tests covering non-zero passthrough, zero omission, and sub-step passthrough.
+
+**Verification**: All 4050 engine tests pass. Typecheck clean (engine + runner).

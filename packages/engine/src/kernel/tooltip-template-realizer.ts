@@ -237,6 +237,7 @@ const realizeStep = (
     stepNumber: planStep.stepNumber,
     header: planStep.header,
     lines,
+    ...(planStep.collapsedCount > 0 ? { collapsedCount: planStep.collapsedCount } : {}),
     ...(subSteps !== undefined && subSteps.length > 0 ? { subSteps } : {}),
   };
 };

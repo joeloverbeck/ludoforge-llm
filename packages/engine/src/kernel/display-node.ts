@@ -76,6 +76,7 @@ export type DisplayNodeKind = DisplayNode['kind'];
 // ---------------------------------------------------------------------------
 
 export interface LimitUsageInfo extends LimitDef {
+  readonly id: string;
   readonly current: number;
 }
 

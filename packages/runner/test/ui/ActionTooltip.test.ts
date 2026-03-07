@@ -197,7 +197,7 @@ describe('ActionTooltip', () => {
     const desc = makeDescription({
       sections: [makeEffectsGroup()],
       limitUsage: [
-        { scope: 'turn', max: 2, current: 1 },
+        { id: 'action::turn::0', scope: 'turn', max: 2, current: 1 },
       ],
     });
 
@@ -457,7 +457,7 @@ describe('ActionTooltip', () => {
     it('does not render legacy limit footer when payload is present', () => {
       const desc = makeDescription({
         sections: [makeEffectsGroup()],
-        limitUsage: [{ scope: 'turn', max: 2, current: 1 }],
+        limitUsage: [{ id: 'action::turn::0', scope: 'turn', max: 2, current: 1 }],
         tooltipPayload: makePayload(),
       });
 

@@ -105,8 +105,8 @@ export function ActionTooltip({ description, anchorElement, onPointerEnter, onPo
           )}
           {description.limitUsage.length > 0 && (
             <div className={styles.limitFooter} data-testid="limit-footer">
-              {description.limitUsage.map((limit, i) => (
-                <div key={`${limit.scope}-${i}`} className={styles.limitRow}>
+              {description.limitUsage.map((limit) => (
+                <div key={limit.id} className={styles.limitRow}>
                   {capitalize(limit.scope)}: {limit.current} / {limit.max}
                 </div>
               ))}

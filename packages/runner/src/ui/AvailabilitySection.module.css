@@ -5,9 +5,16 @@
 
 .status {
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  font-size: var(--font-size-sm);
+}
+
+.statusSummary {
+  display: flex;
   align-items: center;
   gap: 6px;
-  font-size: var(--font-size-sm);
 }
 
 .dotAvailable,
@@ -37,8 +44,15 @@
   font-weight: 600;
 }
 
-.limit {
+.limitList {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 var(--space-md);
+}
+
+.limitItem {
   color: var(--text-muted);
+  line-height: 1.5;
 }
 
 .blockerList {

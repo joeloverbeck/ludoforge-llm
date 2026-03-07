@@ -191,6 +191,9 @@ const scopeToUsageField = (scope: 'turn' | 'phase' | 'game'): keyof ActionUsageR
   }
 };
 
+const buildLimitUsageId = (action: ActionDef, limitIndex: number, scope: 'turn' | 'phase' | 'game'): string =>
+  `${String(action.id)}::${scope}::${limitIndex}`;
+
 const annotateLimitsGroup = (
   group: DisplayGroupNode,
   action: ActionDef,
@@ -199,9 +202,9 @@ const annotateLimitsGroup = (
   const usage: ActionUsageRecord | undefined =
     state.actionUsage[String(action.id)] as ActionUsageRecord | undefined;
 
-  const limitUsage: LimitUsageInfo[] = action.limits.map((limit) => {
+  const limitUsage: LimitUsageInfo[] = action.limits.map((limit, limitIndex) => {
     const current = usage !== undefined ? usage[scopeToUsageField(limit.scope)] : 0;
-    return { ...limit, current };
+    return { ...limit, id: buildLimitUsageId(action, limitIndex, limit.scope), current };
   });
 
   const annotatedChildren = group.children.map((child, idx) => {
@@ -367,6 +370,7 @@ const buildRuleState = (
   // Limit usage summary
   const limitSummary = limitUsage.length > 0
     ? limitUsage.map((limit) => ({
+      id: limit.id,
       scope: limit.scope,
       used: limit.current,
       max: limit.max,

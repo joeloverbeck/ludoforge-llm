@@ -227,6 +227,7 @@ describe('describeAction (condition annotator)', () => {
     const result = describeAction(action, ctx);
 
     assert.equal(result.limitUsage.length, 1);
+    assert.equal(result.limitUsage[0]!.id, 'test::turn::0');
     assert.equal(result.limitUsage[0]!.scope, 'turn');
     assert.equal(result.limitUsage[0]!.max, 2);
     assert.equal(result.limitUsage[0]!.current, 1);
@@ -795,7 +796,7 @@ describe('describeAction (condition annotator)', () => {
     assert.equal(result.limitUsage.length, 1);
     // tooltipPayload is additive
     assert.ok(result.tooltipPayload !== undefined);
-    assert.deepEqual(result.tooltipPayload.ruleState.limitUsage, [{ scope: 'turn', used: 0, max: 3 }]);
+    assert.deepEqual(result.tooltipPayload.ruleState.limitUsage, [{ id: 'test::turn::0', scope: 'turn', used: 0, max: 3 }]);
   });
 
   it('surfaces all ruleState limit usage entries for multi-limit actions', () => {
@@ -818,8 +819,8 @@ describe('describeAction (condition annotator)', () => {
 
     assert.ok(result.tooltipPayload !== undefined);
     assert.deepEqual(result.tooltipPayload.ruleState.limitUsage, [
-      { scope: 'turn', used: 1, max: 1 },
-      { scope: 'game', used: 2, max: 3 },
+      { id: 'test::turn::0', scope: 'turn', used: 1, max: 1 },
+      { id: 'test::game::1', scope: 'game', used: 2, max: 3 },
     ]);
   });
 

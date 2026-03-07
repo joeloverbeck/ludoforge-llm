@@ -46,6 +46,7 @@ export interface RuleState {
   readonly blockers: readonly BlockerDetail[];
   readonly activeModifierIndices: readonly number[];
   readonly limitUsage?: readonly {
+    readonly id: string;
     readonly scope: 'turn' | 'phase' | 'game';
     readonly used: number;
     readonly max: number;

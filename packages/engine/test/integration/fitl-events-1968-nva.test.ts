@@ -182,14 +182,16 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
     assert.equal(card?.unshaded?.targets?.[0]?.id, '$targetSpace');
     assert.equal(card?.unshaded?.targets?.[0]?.selector.query, 'mapSpaces');
     assert.deepEqual(card?.unshaded?.targets?.[0]?.cardinality, { n: 2 });
+    assert.equal(card?.unshaded?.targets?.[0]?.application, 'each');
     const filterCondition = card?.unshaded?.targets?.[0]?.selector.filter?.condition as
       | { op?: string; args?: readonly unknown[] }
       | undefined;
     assert.equal(filterCondition?.op, 'and');
     assert.equal(filterCondition?.args?.length, 3);
-    const firstEffect = card?.unshaded?.effects?.[0];
-    assert.equal('forEach' in (firstEffect ?? {}), true, 'Card 41 should apply marker set per selected space');
-    assert.deepEqual(card?.unshaded?.effects?.[1], { addVar: { scope: 'global', var: 'patronage', delta: 2 } });
+    assert.deepEqual(card?.unshaded?.targets?.[0]?.effects, [
+      { setMarker: { space: '$targetSpace', marker: 'supportOpposition', state: 'passiveSupport' } },
+    ]);
+    assert.deepEqual(card?.unshaded?.effects?.[0], { addVar: { scope: 'global', var: 'patronage', delta: 2 } });
 
     const momentum = card?.unshaded?.lastingEffects?.find((effect) => effect.id === 'mom-bombing-pause');
     assert.notEqual(momentum, undefined);

@@ -83,41 +83,67 @@ export const resolveEventTargetDefs = (
 const synthesizeEventTargetDecisionId = (target: EventTargetDef, index: number): string =>
   `decision:eventTarget:${index}:${target.id}`;
 
-export const synthesizeEventTargetEffects = (targets: readonly EventTargetDef[]): readonly EffectAST[] =>
-  targets.map((target, index) => {
-    const internalDecisionId = synthesizeEventTargetDecisionId(target, index);
-    const cardinality = target.cardinality;
-    const shouldUseChooseOne = ('n' in cardinality && cardinality.n === 1)
-      || (!('n' in cardinality) && cardinality.max === 1);
-    if (shouldUseChooseOne) {
-      return {
-        chooseOne: {
-          internalDecisionId,
-          bind: target.id,
-          options: target.selector,
-        },
-      };
-    }
-    if ('n' in cardinality) {
-      return {
-        chooseN: {
-          internalDecisionId,
-          bind: target.id,
-          options: target.selector,
-          n: cardinality.n,
-        },
-      };
-    }
+const isSingleSelectTarget = (target: EventTargetDef): boolean => {
+  const cardinality = target.cardinality;
+  return ('n' in cardinality && cardinality.n === 1)
+    || (!('n' in cardinality) && cardinality.max === 1);
+};
+
+const synthesizeEventTargetSelectionEffect = (target: EventTargetDef, index: number): EffectAST => {
+  const internalDecisionId = synthesizeEventTargetDecisionId(target, index);
+  const cardinality = target.cardinality;
+  if (isSingleSelectTarget(target)) {
+    return {
+      chooseOne: {
+        internalDecisionId,
+        bind: target.id,
+        options: target.selector,
+      },
+    };
+  }
+  if ('n' in cardinality) {
     return {
       chooseN: {
         internalDecisionId,
         bind: target.id,
         options: target.selector,
-        ...(cardinality.min === undefined ? {} : { min: cardinality.min }),
-        max: cardinality.max,
+        n: cardinality.n,
       },
     };
-  });
+  }
+  return {
+    chooseN: {
+      internalDecisionId,
+      bind: target.id,
+      options: target.selector,
+      ...(cardinality.min === undefined ? {} : { min: cardinality.min }),
+      max: cardinality.max,
+    },
+  };
+};
+
+const synthesizeEventTargetApplicationEffects = (target: EventTargetDef): readonly EffectAST[] => {
+  const targetEffects = target.effects;
+  if (targetEffects === undefined || targetEffects.length === 0) {
+    return [];
+  }
+  if (target.application === 'aggregate' || isSingleSelectTarget(target)) {
+    return targetEffects;
+  }
+  return [{
+    forEach: {
+      bind: target.id,
+      over: { query: 'binding', name: target.id },
+      effects: targetEffects,
+    },
+  }];
+};
+
+export const synthesizeEventTargetEffects = (targets: readonly EventTargetDef[]): readonly EffectAST[] =>
+  targets.flatMap((target, index) => [
+    synthesizeEventTargetSelectionEffect(target, index),
+    ...synthesizeEventTargetApplicationEffects(target),
+  ]);
 
 const isTurnFlowLifecycleEntry = (
   entry: TriggerLogEntry,

@@ -139,6 +139,11 @@ describe('FITL card-41 Bombing Pause', () => {
     assert.equal(card?.shaded, undefined);
     assert.equal(card?.unshaded?.text, 'Set any two spaces to Passive Support. Patronage +2. No Air Strike until Coup. MOMENTUM');
     assert.deepEqual(card?.unshaded?.targets?.[0]?.cardinality, { n: 2 });
+    assert.equal(card?.unshaded?.targets?.[0]?.application, 'each');
+    assert.deepEqual(card?.unshaded?.targets?.[0]?.effects, [
+      { setMarker: { space: '$targetSpace', marker: 'supportOpposition', state: 'passiveSupport' } },
+    ]);
+    assert.deepEqual(card?.unshaded?.effects, [{ addVar: { scope: 'global', var: 'patronage', delta: 2 } }]);
   });
 
   it('rejects target selections that do not meet exact-two or options-domain constraints', () => {

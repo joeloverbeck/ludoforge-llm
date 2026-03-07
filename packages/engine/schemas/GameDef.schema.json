@@ -2661,12 +2661,32 @@
                                       "additionalProperties": false
                                     }
                                   ]
+                                },
+                                "application": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "const": "each"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "aggregate"
+                                    }
+                                  ]
+                                },
+                                "effects": {
+                                  "minItems": 1,
+                                  "type": "array",
+                                  "items": {
+                                    "$ref": "#/definitions/anon_3bfdbef9"
+                                  }
                                 }
                               },
                               "required": [
                                 "id",
                                 "selector",
-                                "cardinality"
+                                "cardinality",
+                                "application"
                               ],
                               "additionalProperties": false
                             }
@@ -2767,12 +2787,32 @@
                                 "additionalProperties": false
                               }
                             ]
+                          },
+                          "application": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "const": "each"
+                              },
+                              {
+                                "type": "string",
+                                "const": "aggregate"
+                              }
+                            ]
+                          },
+                          "effects": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/definitions/anon_3bfdbef9"
+                            }
                           }
                         },
                         "required": [
                           "id",
                           "selector",
-                          "cardinality"
+                          "cardinality",
+                          "application"
                         ],
                         "additionalProperties": false
                       }
@@ -3202,12 +3242,32 @@
                                       "additionalProperties": false
                                     }
                                   ]
+                                },
+                                "application": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "const": "each"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "aggregate"
+                                    }
+                                  ]
+                                },
+                                "effects": {
+                                  "minItems": 1,
+                                  "type": "array",
+                                  "items": {
+                                    "$ref": "#/definitions/anon_3bfdbef9"
+                                  }
                                 }
                               },
                               "required": [
                                 "id",
                                 "selector",
-                                "cardinality"
+                                "cardinality",
+                                "application"
                               ],
                               "additionalProperties": false
                             }
@@ -3308,12 +3368,32 @@
                                 "additionalProperties": false
                               }
                             ]
+                          },
+                          "application": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "const": "each"
+                              },
+                              {
+                                "type": "string",
+                                "const": "aggregate"
+                              }
+                            ]
+                          },
+                          "effects": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/definitions/anon_3bfdbef9"
+                            }
                           }
                         },
                         "required": [
                           "id",
                           "selector",
-                          "cardinality"
+                          "cardinality",
+                          "application"
                         ],
                         "additionalProperties": false
                       }

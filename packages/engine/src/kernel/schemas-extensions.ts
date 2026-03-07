@@ -46,8 +46,19 @@ export const EventCardTargetSchema = z
     id: StringSchema.min(1),
     selector: OptionsQuerySchema,
     cardinality: EventCardTargetCardinalitySchema,
+    application: z.union([z.literal('each'), z.literal('aggregate')]),
+    effects: z.array(EffectASTSchema).min(1).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.application === 'each' && value.effects === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Event target with application \"each\" must declare non-empty target effects.',
+        path: ['effects'],
+      });
+    }
+  });
 
 export const EventCardLastingEffectSchema = z
   .object({

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — move decision validation/classification path, legality diagnostics, integration tests
-**Deps**: tickets/FITLEVENTARCH-001-event-target-application-semantics.md, specs/29-fitl-event-card-encoding.md
+**Deps**: archive/tickets/FITLEVENTARCH-001-event-target-application-semantics.md, specs/29-fitl-event-card-encoding.md
 
 ## Problem
 

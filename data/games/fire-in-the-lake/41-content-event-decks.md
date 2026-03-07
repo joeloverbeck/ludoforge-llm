@@ -31,10 +31,12 @@ eventDecks:
                   selector:
                     query: players
                   cardinality: { max: 3 }
+                  application: aggregate
                 - id: arvn-out-of-play
                   selector:
                     query: players
                   cardinality: { max: 6 }
+                  application: aggregate
               effects:
                 - removeByPriority:
                     budget: 3
@@ -70,6 +72,7 @@ eventDecks:
               selector:
                 query: players
               cardinality: { max: 3 }
+              application: aggregate
           effects:
             - addVar: { scope: global, var: aid, delta: -9 }
       - id: card-64
@@ -263,6 +266,7 @@ eventDecks:
               selector:
                 query: mapSpaces
               cardinality: { max: 2 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 2
@@ -285,6 +289,7 @@ eventDecks:
               selector:
                 query: mapSpaces
               cardinality: { max: 2 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 2
@@ -335,6 +340,7 @@ eventDecks:
                     - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
                     - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
               cardinality: { max: 3 }
+              application: aggregate
           effects:
             - macro: shift-support-opposition
               args: { space: $targetSpace, deltaExpr: 1 }
@@ -352,6 +358,7 @@ eventDecks:
                     - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
                     - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
               cardinality: { max: 3 }
+              application: aggregate
           effects:
             - macro: shift-support-opposition
               args: { space: $targetSpace, deltaExpr: -1 }
@@ -371,6 +378,7 @@ eventDecks:
               selector:
                 query: mapSpaces
               cardinality: { max: 2 }
+              application: aggregate
           effects:
             - macro: shift-support-opposition
               args: { space: $targetSpace, deltaExpr: 1 }
@@ -381,6 +389,7 @@ eventDecks:
               selector:
                 query: mapSpaces
               cardinality: { max: 2 }
+              application: aggregate
           effects:
             - macro: shift-support-opposition
               args: { space: $targetSpace, deltaExpr: -1 }
@@ -423,6 +432,7 @@ eventDecks:
                   left: { ref: zoneProp, zone: $zone, prop: category }
                   right: city
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 2
@@ -451,6 +461,7 @@ eventDecks:
                   left: { ref: zoneProp, zone: $zone, prop: category }
                   right: city
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 1
@@ -521,10 +532,12 @@ eventDecks:
               selector:
                 query: mapSpaces
               cardinality: { max: 1 }
+              application: aggregate
             - id: $destSpace
               selector:
                 query: mapSpaces
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 2
@@ -546,6 +559,7 @@ eventDecks:
               selector:
                 query: mapSpaces
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 3
@@ -604,6 +618,7 @@ eventDecks:
                                   args:
                                     - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
                   cardinality: { max: 1 }
+                  application: aggregate
               effects:
                 - removeByPriority:
                     budget: 3
@@ -655,6 +670,7 @@ eventDecks:
                                   args:
                                     - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
                   cardinality: { max: 1 }
+                  application: aggregate
               effects:
                 - removeByPriority:
                     budget: 3
@@ -2119,6 +2135,7 @@ eventDecks:
                             - { prop: tunnel, eq: tunneled }
                   right: 0
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - rollRandom:
                 bind: $attleboroLossRoll
@@ -2227,6 +2244,7 @@ eventDecks:
                                     - { prop: type, eq: troops }
                           right: 0
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 99
@@ -2266,6 +2284,7 @@ eventDecks:
                                 - { prop: activity, eq: active }
                       right: 0
               cardinality: { max: 3 }
+              application: aggregate
           eligibilityOverrides:
             - { target: { kind: active }, eligible: true, windowId: remain-eligible }
           effects:
@@ -2713,6 +2732,7 @@ eventDecks:
                   selector:
                     query: players
                   cardinality: { max: 2 }
+                  application: aggregate
               effects:
                 - removeByPriority:
                     budget: 2
@@ -2736,6 +2756,7 @@ eventDecks:
                   selector:
                     query: players
                   cardinality: { max: 2 }
+                  application: aggregate
               effects:
                 - removeByPriority:
                     budget: 2
@@ -2852,6 +2873,7 @@ eventDecks:
                                 - { prop: type, eq: troops }
                       right: 0
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - rollRandom:
                 bind: $iaDrangLossRoll
@@ -2989,6 +3011,7 @@ eventDecks:
               selector:
                 query: mapSpaces
               cardinality: { max: 6 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 6
@@ -3011,6 +3034,7 @@ eventDecks:
               selector:
                 query: mapSpaces
               cardinality: { max: 3 }
+              application: aggregate
           effects:
             - shiftMarker:
                 space: $targetProvince
@@ -3200,6 +3224,7 @@ eventDecks:
                             filter: { op: and, args: [{ prop: faction, eq: VC }] }
                       right: 0
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - shiftMarker:
                 space: $targetCity
@@ -3256,6 +3281,7 @@ eventDecks:
                       left: { ref: zoneProp, zone: $zone, prop: category }
                       right: province
                   cardinality: { max: 1 }
+                  application: aggregate
               effects:
                 - removeByPriority:
                     budget: 2
@@ -3295,6 +3321,7 @@ eventDecks:
                                     - { prop: type, eq: troops }
                           right: 0
                   cardinality: { max: 1 }
+                  application: aggregate
               effects:
                 - removeByPriority:
                     budget: 99
@@ -3334,6 +3361,7 @@ eventDecks:
                                 - { prop: type, eq: guerrilla }
                       right: 2
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 2
@@ -3428,6 +3456,7 @@ eventDecks:
                                     - { prop: type, eq: troops }
                           right: 0
                   cardinality: { max: 1 }
+                  application: aggregate
               effects:
                 - removeByPriority:
                     budget: 99
@@ -3466,6 +3495,7 @@ eventDecks:
                                     - { prop: type, eq: troops }
                           right: 0
                   cardinality: { max: 1 }
+                  application: aggregate
               effects:
                 - removeByPriority:
                     budget: 99
@@ -3504,6 +3534,7 @@ eventDecks:
                                 - { prop: faction, eq: VC }
                       right: 0
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - rollRandom:
                 bind: $dieRoll
@@ -3565,6 +3596,7 @@ eventDecks:
               selector:
                 query: mapSpaces
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 99
@@ -3591,6 +3623,7 @@ eventDecks:
                   left: { ref: zoneProp, zone: $zone, prop: category }
                   right: province
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - forEach:
                 bind: $insurgentBase
@@ -3683,6 +3716,7 @@ eventDecks:
                                 - { prop: faction, eq: VC }
                       right: 0
               cardinality: { max: 4 }
+              application: aggregate
           effects:
             - macro: shift-support-opposition
               args: { space: $targetProvince, deltaExpr: 1 }
@@ -3710,6 +3744,7 @@ eventDecks:
                                 - { prop: type, eq: police }
                       right: 0
               cardinality: { max: 3 }
+              application: aggregate
           branches:
             - id: rural-pressure-plus-patronage
               order: 1
@@ -3746,6 +3781,7 @@ eventDecks:
                     - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
                     - { op: adjacent, left: $zone, right: saigon:none }
               cardinality: { max: 2 }
+              application: aggregate
           effects:
             - macro: shift-support-opposition
               args: { space: $targetProvince, deltaExpr: 1 }
@@ -3870,6 +3906,7 @@ eventDecks:
                   left: { ref: zoneProp, zone: $zone, prop: category }
                   right: city
               cardinality: { max: 3 }
+              application: aggregate
           effects:
             - setMarker:
                 space: $targetCity
@@ -3966,6 +4003,7 @@ eventDecks:
                   left: { ref: zoneProp, zone: $zone, prop: country }
                   right: southVietnam
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 3
@@ -4094,6 +4132,7 @@ eventDecks:
                                 - { prop: activity, eq: underground }
                       right: 0
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 1
@@ -5022,15 +5061,13 @@ eventDecks:
                     - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: southVietnam }
                     - { op: '>', left: { ref: zoneProp, zone: $zone, prop: population }, right: 0 }
               cardinality: { n: 2 }
+              application: each
+              effects:
+                - setMarker:
+                    space: $targetSpace
+                    marker: supportOpposition
+                    state: passiveSupport
           effects:
-            - forEach:
-                bind: $space
-                over: { query: binding, name: $targetSpace }
-                effects:
-                  - setMarker:
-                      space: $space
-                      marker: supportOpposition
-                      state: passiveSupport
             - macro: add-global-var-delta
               args: { varName: patronage, deltaExpr: 2 }
           lastingEffects:
@@ -6115,6 +6152,7 @@ eventDecks:
                             - { prop: faction, eq: NVA }
                   right: 0
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 3
@@ -6150,6 +6188,7 @@ eventDecks:
                             - { prop: faction, eq: VC }
                   right: 0
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 2
@@ -6181,6 +6220,7 @@ eventDecks:
               selector:
                 query: mapSpaces
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 3
@@ -6214,6 +6254,7 @@ eventDecks:
               selector:
                 query: mapSpaces
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 3
@@ -6290,6 +6331,7 @@ eventDecks:
               selector:
                 query: mapSpaces
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 2
@@ -6326,6 +6368,7 @@ eventDecks:
               selector:
                 query: mapSpaces
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 1
@@ -6488,6 +6531,7 @@ eventDecks:
               selector:
                 query: mapSpaces
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - addVar: { scope: global, var: aid, delta: 6 }
             - addVar: { scope: global, var: arvnResources, delta: 6 }
@@ -6502,6 +6546,7 @@ eventDecks:
               selector:
                 query: mapSpaces
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - shiftMarker:
                 space: $targetSpace
@@ -6524,6 +6569,7 @@ eventDecks:
               selector:
                 query: mapSpaces
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 3
@@ -6569,6 +6615,7 @@ eventDecks:
               selector:
                 query: mapSpaces
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 6
@@ -6623,6 +6670,7 @@ eventDecks:
               selector:
                 query: mapSpaces
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 2
@@ -6658,6 +6706,7 @@ eventDecks:
               selector:
                 query: mapSpaces
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - forEach:
                 bind: $insurgentGuerrilla
@@ -6703,6 +6752,7 @@ eventDecks:
               selector:
                 query: mapSpaces
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 3
@@ -6739,6 +6789,7 @@ eventDecks:
               selector:
                 query: mapSpaces
               cardinality: { max: 1 }
+              application: aggregate
           effects:
             - removeByPriority:
                 budget: 2

@@ -171,6 +171,35 @@ const enumerateCombinations = (
   walk(0, k);
 };
 
+const classifyProbeOutcomeLegality = (
+  probed: ChoiceRequest,
+  classification: DecisionSequenceSatisfiability | null,
+): { legality: ChoiceOption['legality']; illegalReason: ChoiceOption['illegalReason'] } => {
+  if (probed.kind === 'illegal' || classification === 'unsatisfiable') {
+    return {
+      legality: 'illegal',
+      illegalReason: probed.kind === 'illegal' ? probed.reason : null,
+    };
+  }
+
+  // Stay conservative under unresolved or stochastic probe outcomes.
+  if (
+    probed.kind === 'pendingStochastic'
+    || classification === 'unknown'
+    || (probed.kind === 'pending' && classification === null)
+  ) {
+    return {
+      legality: 'unknown',
+      illegalReason: null,
+    };
+  }
+
+  return {
+    legality: 'legal',
+    illegalReason: null,
+  };
+};
+
 const mapChooseNOptions = (
   evaluateProbeMove: (move: Move) => ChoiceRequest,
   classifyProbeMoveSatisfiability: (move: Move) => DecisionSequenceSatisfiability,
@@ -280,21 +309,22 @@ const mapChooseNOptions = (
           continue;
         }
 
-        if (classification === 'unknown') {
+        const next = classifyProbeOutcomeLegality(probed, classification);
+        if (next.legality === 'unknown') {
           status.legality = 'unknown';
           status.illegalReason = null;
           continue;
         }
 
-        if (probed.kind === 'illegal' || classification === 'unsatisfiable') {
-          if (status.illegalReason === null && probed.kind === 'illegal') {
-            status.illegalReason = probed.reason;
+        if (next.legality === 'illegal') {
+          if (status.legality === 'illegal' && status.illegalReason === null && next.illegalReason !== null) {
+            status.illegalReason = next.illegalReason;
           }
           continue;
         }
 
-        status.legality = 'legal';
-        status.illegalReason = null;
+        status.legality = next.legality;
+        status.illegalReason = next.illegalReason;
       }
     });
   }
@@ -350,7 +380,6 @@ const mapOptionsForPendingChoice = (
       };
     }
 
-    const illegalReason = probed.kind === 'illegal' ? probed.reason : null;
     let classification: DecisionSequenceSatisfiability | null = null;
     if (probed.kind === 'pending') {
       try {
@@ -370,16 +399,11 @@ const mapOptionsForPendingChoice = (
         classification = 'unknown';
       }
     }
+    const legality = classifyProbeOutcomeLegality(probed, classification);
     return {
       value: option.value,
-      legality: illegalReason !== null
-        ? 'illegal'
-        : classification === 'unsatisfiable'
-          ? 'illegal'
-          : classification === 'unknown'
-            ? 'unknown'
-            : 'legal',
-      illegalReason: illegalReason ?? null,
+      legality: legality.legality,
+      illegalReason: legality.illegalReason,
     };
   });
 };

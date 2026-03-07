@@ -1432,6 +1432,133 @@ phase: [asPhaseId('main')],
       ]);
     });
 
+    it('marks chooseOne option legality as unknown when probe outcome is pendingStochastic', () => {
+      const action: ActionDef = {
+        id: asActionId('chooseOneStochasticProbeOp'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [
+          {
+            chooseOne: {
+              internalDecisionId: 'decision:$mode',
+              bind: '$mode',
+              options: { query: 'enums', values: ['stochastic', 'safe'] },
+            },
+          } as EffectAST,
+          {
+            if: {
+              when: { op: '==', left: { ref: 'binding', name: '$mode' }, right: 'stochastic' },
+              then: [
+                {
+                  rollRandom: {
+                    bind: '$roll',
+                    min: 1,
+                    max: 2,
+                    in: [
+                      {
+                        chooseOne: {
+                          internalDecisionId: 'decision:$stochasticPick@{$roll}',
+                          bind: '$stochasticPick@{$roll}',
+                          options: { query: 'enums', values: ['x', 'y'] },
+                        },
+                      } as EffectAST,
+                    ],
+                  },
+                } as EffectAST,
+              ],
+              else: [],
+            },
+          } as EffectAST,
+        ],
+        limits: [],
+      };
+
+      const result = legalChoicesEvaluate(
+        makeBaseDef({ actions: [action] }),
+        makeBaseState(),
+        makeMove('chooseOneStochasticProbeOp'),
+      );
+
+      assert.equal(result.kind, 'pending');
+      assert.equal(result.type, 'chooseOne');
+      assert.equal(result.decisionId, 'decision:$mode');
+      assert.deepStrictEqual(result.options, [
+        { value: 'stochastic', legality: 'unknown', illegalReason: null },
+        { value: 'safe', legality: 'legal', illegalReason: null },
+      ]);
+    });
+
+    it('marks chooseN option legality as unknown when probe outcome is pendingStochastic', () => {
+      const action: ActionDef = {
+        id: asActionId('chooseNStochasticProbeOp'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [
+          {
+            chooseN: {
+              internalDecisionId: 'decision:$targets',
+              bind: '$targets',
+              options: { query: 'enums', values: ['a', 'b', 'c'] },
+              min: 1,
+              max: 1,
+            },
+          } as EffectAST,
+          {
+            if: {
+              when: {
+                op: 'in',
+                item: 'b',
+                set: { ref: 'binding', name: '$targets' },
+              },
+              then: [
+                {
+                  rollRandom: {
+                    bind: '$roll',
+                    min: 1,
+                    max: 2,
+                    in: [
+                      {
+                        chooseOne: {
+                          internalDecisionId: 'decision:$stochasticPick@{$roll}',
+                          bind: '$stochasticPick@{$roll}',
+                          options: { query: 'enums', values: ['x', 'y'] },
+                        },
+                      } as EffectAST,
+                    ],
+                  },
+                } as EffectAST,
+              ],
+              else: [],
+            },
+          } as EffectAST,
+        ],
+        limits: [],
+      };
+
+      const result = legalChoicesEvaluate(
+        makeBaseDef({ actions: [action] }),
+        makeBaseState(),
+        makeMove('chooseNStochasticProbeOp'),
+      );
+
+      assert.equal(result.kind, 'pending');
+      assert.equal(result.type, 'chooseN');
+      assert.equal(result.decisionId, 'decision:$targets');
+      assert.deepStrictEqual(result.options, [
+        { value: 'a', legality: 'legal', illegalReason: null },
+        { value: 'b', legality: 'unknown', illegalReason: null },
+        { value: 'c', legality: 'legal', illegalReason: null },
+      ]);
+    });
+
     it('prepares probe context once for a probed chooseN request', () => {
       const action: ActionDef = {
         id: asActionId('chooseNContextReuseOp'),

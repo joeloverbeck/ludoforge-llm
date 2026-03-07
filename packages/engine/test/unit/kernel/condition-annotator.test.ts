@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  annotateLimitsGroup,
   asPlayerId,
   asPhaseId,
   asZoneId,
@@ -292,6 +293,171 @@ describe('describeAction (condition annotator)', () => {
         used: limit.current,
       })),
       tooltipLimitUsage,
+    );
+  });
+
+  // -----------------------------------------------------------------------
+  // Invariant enforcement: missing/mismatched limit source identity
+  // -----------------------------------------------------------------------
+
+  it('annotates limit line with fail when sourceRef is missing', () => {
+    const lineWithoutSourceRef: DisplayLineNode = {
+      kind: 'line',
+      indent: 0,
+      children: [{ kind: 'keyword', text: 'orphan limit line' }],
+      // no sourceRef
+    };
+    const group: DisplayGroupNode = {
+      kind: 'group',
+      label: 'Limits',
+      children: [lineWithoutSourceRef],
+    };
+    const action = minimalActionDef({
+      limits: [{ id: 'test::turn::0', scope: 'turn', max: 2 }],
+    });
+    const state = makeState();
+
+    const { annotatedGroup, limitUsage } = annotateLimitsGroup(group, action, state);
+    const ln = asLine(annotatedGroup.children[0]!);
+    const failAnns = annotationsOfType(ln, 'fail');
+    assert.equal(failAnns.length, 1, 'Should have exactly one fail annotation');
+    assert.equal(failAnns[0]!.text, 'missing limit identity');
+    // limitUsage is still computed from action.limits
+    assert.equal(limitUsage.length, 1);
+  });
+
+  it('annotates limit line with fail when sourceRef id does not match any limit', () => {
+    const lineWithBadRef: DisplayLineNode = {
+      kind: 'line',
+      indent: 0,
+      children: [{ kind: 'keyword', text: 'mismatched limit' }],
+      sourceRef: { entity: 'limit', id: 'nonexistent-limit-id' },
+    };
+    const group: DisplayGroupNode = {
+      kind: 'group',
+      label: 'Limits',
+      children: [lineWithBadRef],
+    };
+    const action = minimalActionDef({
+      limits: [{ id: 'test::turn::0', scope: 'turn', max: 2 }],
+    });
+    const state = makeState();
+
+    const { annotatedGroup } = annotateLimitsGroup(group, action, state);
+    const ln = asLine(annotatedGroup.children[0]!);
+    const failAnns = annotationsOfType(ln, 'fail');
+    assert.equal(failAnns.length, 1, 'Should have exactly one fail annotation');
+    assert.equal(failAnns[0]!.text, 'unresolved limit identity');
+    const usageAnns = annotationsOfType(ln, 'usage');
+    assert.equal(usageAnns.length, 0, 'Should not have usage annotation for mismatched id');
+  });
+
+  it('handles mixed valid and invalid limit lines deterministically', () => {
+    const validLine: DisplayLineNode = {
+      kind: 'line',
+      indent: 0,
+      children: [{ kind: 'keyword', text: 'valid' }],
+      sourceRef: { entity: 'limit', id: 'test::turn::0' },
+    };
+    const orphanLine: DisplayLineNode = {
+      kind: 'line',
+      indent: 0,
+      children: [{ kind: 'keyword', text: 'orphan' }],
+    };
+    const mismatchLine: DisplayLineNode = {
+      kind: 'line',
+      indent: 0,
+      children: [{ kind: 'keyword', text: 'mismatch' }],
+      sourceRef: { entity: 'limit', id: 'bogus-id' },
+    };
+    const group: DisplayGroupNode = {
+      kind: 'group',
+      label: 'Limits',
+      children: [validLine, orphanLine, mismatchLine],
+    };
+    const action = minimalActionDef({
+      limits: [{ id: 'test::turn::0', scope: 'turn', max: 3 }],
+    });
+    const state = makeState({
+      actionUsage: { test: { turnCount: 2, phaseCount: 0, gameCount: 0 } },
+    });
+
+    const { annotatedGroup } = annotateLimitsGroup(group, action, state);
+
+    // First line: valid — usage annotation
+    const ln0 = asLine(annotatedGroup.children[0]!);
+    assert.equal(annotationsOfType(ln0, 'usage').length, 1);
+    assert.equal(annotationsOfType(ln0, 'usage')[0]!.text, '2/3');
+
+    // Second line: missing sourceRef — fail annotation
+    const ln1 = asLine(annotatedGroup.children[1]!);
+    assert.equal(annotationsOfType(ln1, 'fail').length, 1);
+    assert.equal(annotationsOfType(ln1, 'fail')[0]!.text, 'missing limit identity');
+
+    // Third line: mismatched sourceRef — fail annotation
+    const ln2 = asLine(annotatedGroup.children[2]!);
+    assert.equal(annotationsOfType(ln2, 'fail').length, 1);
+    assert.equal(annotationsOfType(ln2, 'fail')[0]!.text, 'unresolved limit identity');
+  });
+
+  it('describeAction never throws when limits group has invariant violations', () => {
+    const action = minimalActionDef({
+      limits: [
+        { id: 'limit-a', scope: 'turn', max: 1 },
+        { id: 'limit-b', scope: 'game', max: 5 },
+      ],
+    });
+    const ctx = makeContext();
+    const result = describeAction(action, ctx);
+
+    assert.ok(Array.isArray(result.sections));
+    assert.ok(Array.isArray(result.limitUsage));
+    assert.equal(result.limitUsage.length, 2);
+    const limitsGroup = findSection(result, 'Limits');
+    assert.ok(limitsGroup !== undefined);
+    for (const child of limitsGroup.children) {
+      if (child.kind === 'line') {
+        const usageAnns = annotationsOfType(child, 'usage');
+        assert.ok(usageAnns.length >= 1, 'Each limit line should have usage annotation');
+      }
+    }
+  });
+
+  // -----------------------------------------------------------------------
+  // Cross-surface consistency under invariant stress
+  // -----------------------------------------------------------------------
+
+  it('limitUsage and tooltipPayload.ruleState.limitUsage stay coherent when annotateLimitsGroup encounters mixed valid/invalid lines', () => {
+    // This tests the public describeAction path: even if internal invariant
+    // guards fire, limitUsage (from action.limits) and ruleState.limitUsage
+    // (from tooltip pipeline) must remain parity-aligned.
+    const action = minimalActionDef({
+      limits: [
+        { id: 'test::turn::0', scope: 'turn', max: 2 },
+        { id: 'test::game::1', scope: 'game', max: 5 },
+      ],
+      effects: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
+    });
+    const ctx = makeContext({
+      state: makeState({
+        actionUsage: {
+          test: { turnCount: 1, phaseCount: 0, gameCount: 3 },
+        },
+      }),
+    });
+
+    const result = describeAction(action, ctx);
+
+    // Both surfaces must report same limits
+    assert.ok(result.tooltipPayload !== undefined);
+    const descLimits = result.limitUsage;
+    const tooltipLimits = result.tooltipPayload.ruleState.limitUsage;
+    assert.ok(tooltipLimits !== undefined);
+
+    assert.deepEqual(
+      descLimits.map((l) => ({ id: l.id, scope: l.scope, max: l.max, used: l.current })),
+      tooltipLimits,
+      'Description limitUsage and tooltip ruleState.limitUsage must be parity-aligned',
     );
   });
 

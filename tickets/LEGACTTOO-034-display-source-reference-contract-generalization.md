@@ -40,8 +40,10 @@ Ensure display-node type/clone tests include line nodes with source references a
 
 - `packages/engine/src/kernel/display-node.ts` (modify)
 - `packages/engine/src/kernel/ast-to-display.ts` (modify)
+- `packages/engine/src/kernel/condition-annotator.ts` (modify — reads `sourceRef.kind === 'limit'`)
 - `packages/engine/test/unit/kernel/display-node.test.ts` (modify)
 - `packages/engine/test/unit/kernel/ast-to-display.test.ts` (modify)
+- `packages/engine/test/unit/kernel/condition-annotator.test.ts` (modify — verify sourceRef consumer)
 
 ## Out of Scope
 

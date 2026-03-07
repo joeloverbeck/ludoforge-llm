@@ -4955,11 +4955,48 @@ eventDecks:
         metadata:
           period: "1968"
           seatOrder: ["NVA", "US", "VC", "ARVN"]
-          flavorText: "Prisoner exchanges and detention politics alter casualty flows."
+          flavorText: "Release negotiations keep US at war."
         unshaded:
-          text: "Move selected Casualties and adjust resources based on exchange outcomes."
+          text: "Free Air Strike. 2 US Troops from Casualties to Available."
+          effectTiming: afterGrants
+          freeOperationGrants:
+            - seat: self
+              executeAsSeat: "us"
+              sequence: { chain: pows-free-airstrike, step: 0 }
+              operationClass: operation
+              actionIds: [airStrike]
+          effects:
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: $usCasualtyTroop
+                    over:
+                      query: tokensInZone
+                      zone: casualties-US:none
+                      filter:
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: troops }
+                    to:
+                      zoneExpr: available-US:none
         shaded:
-          text: "Captivity leverage deepens COIN attrition and slows force recovery."
+          text: "3 US Troops from Available to Casualties."
+          effects:
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: $usAvailableTroop
+                    over:
+                      query: tokensInZone
+                      zone: available-US:none
+                      filter:
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: troops }
+                    to:
+                      zoneExpr: casualties-US:none
       - id: card-41
         title: Bombing Pause
         sideMode: dual

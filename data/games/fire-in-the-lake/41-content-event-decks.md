@@ -1049,11 +1049,11 @@ eventDecks:
             - id: evt-aces-window
               duration: turn
               setupEffects:
-                - setVar: { scope: global, var: fitl_acesAirStrikeWindow, value: true }
+                - setVar: { scope: global, var: fitl_airStrikeWindowMode, value: 1 }
               teardownEffects:
-                - setVar: { scope: global, var: fitl_acesAirStrikeWindow, value: false }
+                - setVar: { scope: global, var: fitl_airStrikeWindowMode, value: 0 }
           effects:
-            - setVar: { scope: global, var: fitl_acesAirStrikeWindow, value: false }
+            - setVar: { scope: global, var: fitl_airStrikeWindowMode, value: 0 }
             - addVar: { scope: global, var: trail, delta: -2 }
         shaded:
           text: "MiG ace 'Colonel Tomb': 2 Available US Troops to Casualties. Improve Trail by 2 boxes."
@@ -4523,84 +4523,33 @@ eventDecks:
           flavorText: "Battleship fire support pounds coastal positions."
         unshaded:
           text: "US or ARVN free Air Strikes any 1-3 coastal spaces, removing up to 2 pieces per space (no die roll and no effect on Trail)."
+          branches:
+            - id: uss-new-jersey-execute-as-us
+              order: 1
+              freeOperationGrants:
+                - seat: self
+                  executeAsSeat: "us"
+                  sequence: { chain: uss-new-jersey-us, step: 0 }
+                  operationClass: operation
+                  actionIds: [airStrike]
+            - id: uss-new-jersey-execute-as-arvn
+              order: 2
+              freeOperationGrants:
+                - seat: self
+                  executeAsSeat: "arvn"
+                  sequence: { chain: uss-new-jersey-arvn, step: 0 }
+                  operationClass: operation
+                  actionIds: [airStrike]
+          effectTiming: afterGrants
+          lastingEffects:
+            - id: evt-uss-new-jersey-window
+              duration: turn
+              setupEffects:
+                - setVar: { scope: global, var: fitl_airStrikeWindowMode, value: 2 }
+              teardownEffects:
+                - setVar: { scope: global, var: fitl_airStrikeWindowMode, value: 0 }
           effects:
-            - chooseN:
-                bind: $coastalSpaces
-                options:
-                  query: mapSpaces
-                  filter: { op: '==', left: { ref: zoneProp, zone: $zone, prop: coastal }, right: true }
-                min: 1
-                max: 3
-            - forEach:
-                bind: $space
-                over: { query: binding, name: $coastalSpaces }
-                effects:
-                  - let:
-                      bind: $enemyBefore
-                      value:
-                        aggregate:
-                          op: count
-                          query:
-                            query: tokensInZone
-                            zone: $space
-                            filter:
-                              op: and
-                              args:
-                                - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                      in:
-                        - macro: us-sa-remove-insurgents
-                          args:
-                            space: $space
-                            budgetExpr: 2
-                            activeGuerrillasOnly: true
-                        - let:
-                            bind: $enemyAfter
-                            value:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: tokensInZone
-                                  zone: $space
-                                  filter:
-                                    op: and
-                                    args:
-                                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                            in:
-                              - let:
-                                  bind: $removedInSpace
-                                  value:
-                                    op: '-'
-                                    left: { ref: binding, name: $enemyBefore }
-                                    right: { ref: binding, name: $enemyAfter }
-                                  in:
-                                    - if:
-                                        when:
-                                          op: and
-                                          args:
-                                            - op: or
-                                              args:
-                                                - { op: '==', left: { ref: zoneProp, zone: $space, prop: category }, right: province }
-                                                - { op: '==', left: { ref: zoneProp, zone: $space, prop: category }, right: city }
-                                            - { op: '>', left: { ref: zoneProp, zone: $space, prop: population }, right: 0 }
-                                            - { op: '!=', left: { ref: markerState, space: $space, marker: supportOpposition }, right: activeOpposition }
-                                            - op: or
-                                              args:
-                                                - { op: '!=', left: { ref: globalMarkerState, marker: cap_lgbs }, right: unshaded }
-                                                - { op: '!=', left: { ref: binding, name: $removedInSpace }, right: 1 }
-                                        then:
-                                          - shiftMarker:
-                                              space: $space
-                                              marker: supportOpposition
-                                              delta:
-                                                if:
-                                                  when:
-                                                    op: and
-                                                    args:
-                                                      - { op: '==', left: { ref: globalMarkerState, marker: cap_arcLight }, right: shaded }
-                                                      - { op: '>', left: { ref: binding, name: $removedInSpace }, right: 1 }
-                                                  then: -2
-                                                  else: -1
-                                        else: []
+            - setVar: { scope: global, var: fitl_airStrikeWindowMode, value: 0 }
         shaded:
           text: "Shift 2 coastal Provinces with US Troops each 2 levels toward Active Opposition."
           effects:

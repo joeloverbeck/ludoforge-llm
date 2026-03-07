@@ -3187,7 +3187,7 @@ effectMacros:
       - setVar: { scope: global, var: mom_bodyCount, value: false }
       - setVar: { scope: global, var: mom_generalLansdale, value: false }
       - setVar: { scope: global, var: mom_typhoonKate, value: false }
-      - setVar: { scope: global, var: fitl_acesAirStrikeWindow, value: false }
+      - setVar: { scope: global, var: fitl_airStrikeWindowMode, value: 0 }
       - setVar: { scope: global, var: fitl_operationAttleboroTunnelOverride, value: false }
       - setGlobalMarker: { marker: leaderFlipped, state: normal }
 

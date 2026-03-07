@@ -115,7 +115,7 @@ describe('FITL card-6 Aces', () => {
     assert.equal(pendingAfterEvent[0]?.seat, 'us', 'Aces grant must belong to US seat');
     assert.deepEqual(pendingAfterEvent[0]?.actionIds, ['airStrike']);
     assert.equal(afterEvent.globalVars.trail, 3, 'Aces Trail degrade is deferred until free grant resolution');
-    assert.equal(afterEvent.globalVars.fitl_acesAirStrikeWindow, true, 'Aces targeting window should be enabled');
+    assert.equal(afterEvent.globalVars.fitl_airStrikeWindowMode, 1, 'Aces targeting window should be enabled');
 
     const grantReadyState: GameState = {
       ...afterEvent,
@@ -178,8 +178,8 @@ describe('FITL card-6 Aces', () => {
     );
     assert.equal(afterFreeStrike.globalVars.trail, 1, 'Aces should degrade Trail by 2 boxes total (not 3)');
     assert.equal(
-      afterFreeStrike.globalVars.fitl_acesAirStrikeWindow,
-      false,
+      afterFreeStrike.globalVars.fitl_airStrikeWindowMode,
+      0,
       'Aces targeting window should close after grant resolution',
     );
     assert.deepEqual(

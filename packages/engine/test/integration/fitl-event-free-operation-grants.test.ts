@@ -585,6 +585,106 @@ phase: [asPhaseId('main')],
     ],
   }) as unknown as GameDef;
 
+const createExecuteAsSeatSpecialActivityDef = (): GameDef =>
+  ({
+    metadata: { id: 'event-free-op-execute-as-special-activity-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+    seats: [{ id: 'US' }, { id: 'ARVN' }],
+    constants: {},
+    globalVars: [{ name: 'executeAsMarker', type: 'int', init: 0, min: 0, max: 999 }],
+    perPlayerVars: [],
+    zones: [],
+    tokenTypes: [],
+    setup: [],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    turnOrder: {
+      type: 'cardDriven',
+      config: {
+        turnFlow: {
+          cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          eligibility: {
+            seats: ['US', 'ARVN'],
+            overrideWindows: [],
+          },
+          actionClassByActionId: { airStrike: 'specialActivity' },
+          optionMatrix: [{ first: 'event', second: ['operationPlusSpecialActivity'] }],
+          passRewards: [],
+          freeOperationActionIds: ['airStrike'],
+          durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+        },
+      },
+    },
+    actions: [
+      {
+        id: asActionId('event'),
+capabilities: ['cardEvent'],
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+        params: [
+          { name: 'eventCardId', domain: { query: 'enums', values: ['card-13'] } },
+          { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
+          { name: 'branch', domain: { query: 'enums', values: ['none'] } },
+        ],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+      {
+        id: asActionId('airStrike'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+    ],
+    actionPipelines: [
+      {
+        id: 'air-strike-as-us',
+        actionId: asActionId('airStrike'),
+        applicability: { op: '==', left: { ref: 'activePlayer' }, right: 0 },
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [{ effects: [{ setVar: { scope: 'global', var: 'executeAsMarker', value: 300 } }] }],
+        atomicity: 'atomic',
+      },
+    ],
+    triggers: [],
+    terminal: { conditions: [] },
+    eventDecks: [
+      {
+        id: 'event-deck',
+        drawZone: 'deck:none',
+        discardZone: 'played:none',
+        cards: [
+          {
+            id: 'card-13',
+            title: 'Execute As Faction Special Activity',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Faction 1 executes Air Strike as if faction 0.',
+              freeOperationGrants: [
+                {
+                  seat: 'ARVN',
+                  executeAsSeat: 'US',
+                  sequence: { chain: 'execute-as-faction-sa', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['airStrike'],
+                },
+              ],
+            },
+          },
+        ],
+      } as EventDeckDef,
+    ],
+  }) as unknown as GameDef;
+
 const createMonsoonGrantBypassDef = (): GameDef => {
   const def = createDef() as unknown as {
     turnOrder: {
@@ -986,6 +1086,31 @@ describe('event free-operation grants integration', () => {
 
     const second = applyMove(def, first, { actionId: asActionId('operation'), params: {}, freeOperation: true }).state;
     assert.equal(second.globalVars.executeAsMarker, 100);
+    assert.deepEqual(requireCardDrivenRuntime(second).pendingFreeOperationGrants ?? [], []);
+  });
+
+  it('applies executeAsSeat free-operation grants to special-activity actionIds', () => {
+    const def = createExecuteAsSeatSpecialActivityDef();
+    const start = initialState(def, 34, 2).state;
+
+    const first = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-13', side: 'unshaded', branch: 'none' },
+    }).state;
+    assert.equal(first.activePlayer, asPlayerId(1));
+
+    const regularAirStrikeMoves = legalMoves(def, first).filter(
+      (move) => String(move.actionId) === 'airStrike' && move.freeOperation !== true,
+    );
+    const freeAirStrikeMoves = legalMoves(def, first).filter(
+      (move) => String(move.actionId) === 'airStrike' && move.freeOperation === true,
+    );
+
+    assert.equal(regularAirStrikeMoves.length, 0);
+    assert.equal(freeAirStrikeMoves.length > 0, true);
+
+    const second = applyMove(def, first, { actionId: asActionId('airStrike'), params: {}, freeOperation: true }).state;
+    assert.equal(second.globalVars.executeAsMarker, 300);
     assert.deepEqual(requireCardDrivenRuntime(second).pendingFreeOperationGrants ?? [], []);
   });
 

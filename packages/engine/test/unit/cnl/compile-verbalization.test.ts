@@ -36,6 +36,30 @@ describe('compileVerbalization', () => {
     assert.deepStrictEqual(result.suppressPatterns, ['*Count', '__*']);
   });
 
+  it('compiles stageDescriptions and modifierEffects', () => {
+    const raw: GameSpecVerbalization = {
+      stageDescriptions: {
+        'train-us-profile': {
+          selectSpaces: { label: 'Select target spaces', description: 'Provinces/Cities with US pieces' },
+        },
+      },
+      modifierEffects: {
+        cap_m48Patton: [
+          { condition: 'M48 Patton is Shaded', effect: 'Patrol costs 3 ARVN Resources' },
+        ],
+      },
+    };
+
+    const result = compileVerbalization(raw);
+
+    assert.deepStrictEqual(result.stageDescriptions['train-us-profile']!['selectSpaces'], {
+      label: 'Select target spaces',
+      description: 'Provinces/Cities with US pieces',
+    });
+    assert.equal(result.modifierEffects['cap_m48Patton']![0]!.condition, 'M48 Patton is Shaded');
+    assert.equal(result.modifierEffects['cap_m48Patton']![0]!.effect, 'Patrol costs 3 ARVN Resources');
+  });
+
   it('defaults null labels to empty record', () => {
     const raw: GameSpecVerbalization = {
       labels: null,
@@ -43,6 +67,8 @@ describe('compileVerbalization', () => {
       macros: null,
       sentencePlans: null,
       suppressPatterns: null,
+      stageDescriptions: null,
+      modifierEffects: null,
     };
 
     const result = compileVerbalization(raw);
@@ -52,6 +78,8 @@ describe('compileVerbalization', () => {
     assert.deepStrictEqual(result.macros, {});
     assert.deepStrictEqual(result.sentencePlans, {});
     assert.deepStrictEqual(result.suppressPatterns, []);
+    assert.deepStrictEqual(result.stageDescriptions, {});
+    assert.deepStrictEqual(result.modifierEffects, {});
   });
 
   it('defaults undefined fields to empty defaults', () => {
@@ -64,6 +92,8 @@ describe('compileVerbalization', () => {
     assert.deepStrictEqual(result.macros, {});
     assert.deepStrictEqual(result.sentencePlans, {});
     assert.deepStrictEqual(result.suppressPatterns, []);
+    assert.deepStrictEqual(result.stageDescriptions, {});
+    assert.deepStrictEqual(result.modifierEffects, {});
   });
 
   it('preserves macro slots when present', () => {

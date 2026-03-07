@@ -4160,6 +4160,58 @@
           "items": {
             "type": "string"
           }
+        },
+        "stageDescriptions": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "label"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "modifierEffects": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "condition": {
+                  "type": "string"
+                },
+                "effect": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "condition",
+                "effect"
+              ],
+              "additionalProperties": false
+            }
+          }
         }
       },
       "required": [
@@ -4167,7 +4219,9 @@
         "stages",
         "macros",
         "sentencePlans",
-        "suppressPatterns"
+        "suppressPatterns",
+        "stageDescriptions",
+        "modifierEffects"
       ],
       "additionalProperties": false
     }

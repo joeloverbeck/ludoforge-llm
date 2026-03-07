@@ -1053,6 +1053,8 @@ describe('tooltip-normalizer', () => {
           macros: { trainUs: { class: 'operation', summary: 'Place US forces and build support' } },
           sentencePlans: {},
           suppressPatterns: [],
+          stageDescriptions: {},
+          modifierEffects: {},
         },
         suppressPatterns: [],
       };
@@ -1100,6 +1102,8 @@ describe('tooltip-normalizer', () => {
           macros: { otherMacro: { class: 'operation', summary: 'Other summary' } },
           sentencePlans: {},
           suppressPatterns: [],
+          stageDescriptions: {},
+          modifierEffects: {},
         },
         suppressPatterns: [],
       };

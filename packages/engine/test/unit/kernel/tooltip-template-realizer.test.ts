@@ -38,13 +38,14 @@ const MOCK_VERB: VerbalizationDef = {
     },
   },
   suppressPatterns: [],
+  stageDescriptions: {},
+  modifierEffects: {},
 };
 
 const step = (messages: readonly TooltipMessage[], stepNumber = 1): ContentPlanStep => ({
   stepNumber,
   header: `Step ${stepNumber}`,
   messages,
-  collapsedCount: 0,
 });
 
 const plan = (messages: readonly TooltipMessage[], actionLabel = 'train', synopsisSource?: TooltipMessage): ContentPlan => ({
@@ -363,6 +364,8 @@ describe('realizeContentPlan', () => {
         macros: {},
         sentencePlans: {},
         suppressPatterns: [],
+        stageDescriptions: {},
+        modifierEffects: {},
       };
       const result = realizeContentPlan(plan([], 'train'), verb);
       assert.equal(result.synopsis, 'Train');
@@ -383,12 +386,12 @@ describe('realizeContentPlan', () => {
           stepNumber: 1,
           header: 'Step 1',
           messages: [outerMsg],
-          collapsedCount: 0,
+    
           subSteps: [{
             stepNumber: 1,
             header: 'Sub-step 1',
             messages: [innerMsg],
-            collapsedCount: 0,
+      
           }],
         }],
         modifiers: [],
@@ -439,12 +442,12 @@ describe('realizeContentPlan', () => {
           stepNumber: 1,
           header: 'Step 1',
           messages: [outerMsg],
-          collapsedCount: 0,
+    
           subSteps: [{
             stepNumber: 1,
             header: 'Sub-step 1',
             messages: [innerMsg],
-            collapsedCount: 0,
+      
           }],
         }],
         modifiers: [],
@@ -460,58 +463,6 @@ describe('realizeContentPlan', () => {
       const result = realizeContentPlan(plan([msg1, msg2]), MOCK_VERB);
       assert.equal(result.steps[0]!.lines.length, 1);
       assert.equal(result.steps[0]!.lines[0]!.astPath, 'root.effects[0]');
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // collapsedCount passthrough
-  // ---------------------------------------------------------------------------
-
-  describe('collapsedCount passthrough', () => {
-    it('carries non-zero collapsedCount through to ContentStep', () => {
-      const msg: TooltipMessage = { kind: 'gain', astPath: 'r', resource: 'aid', amount: 5 };
-      const planWithCollapsed: ContentPlan = {
-        actionLabel: 'train',
-        steps: [{
-          stepNumber: 1,
-          header: 'Step 1',
-          messages: [msg],
-          collapsedCount: 3,
-        }],
-        modifiers: [],
-      };
-      const result = realizeContentPlan(planWithCollapsed, MOCK_VERB);
-      assert.equal(result.steps[0]!.collapsedCount, 3);
-    });
-
-    it('omits collapsedCount when zero', () => {
-      const msg: TooltipMessage = { kind: 'gain', astPath: 'r', resource: 'aid', amount: 5 };
-      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
-      assert.equal(result.steps[0]!.collapsedCount, undefined);
-    });
-
-    it('carries collapsedCount in sub-steps', () => {
-      const innerMsg: TooltipMessage = { kind: 'pay', astPath: 'r.effects[0].in[0]', resource: 'aid', amount: 1 };
-      const outerMsg: TooltipMessage = { kind: 'gain', astPath: 'r', resource: 'aid', amount: 5 };
-      const planWithCollapsedSub: ContentPlan = {
-        actionLabel: 'train',
-        steps: [{
-          stepNumber: 1,
-          header: 'Step 1',
-          messages: [outerMsg],
-          collapsedCount: 0,
-          subSteps: [{
-            stepNumber: 1,
-            header: 'Sub-step 1',
-            messages: [innerMsg],
-            collapsedCount: 2,
-          }],
-        }],
-        modifiers: [],
-      };
-      const result = realizeContentPlan(planWithCollapsedSub, MOCK_VERB);
-      assert.equal(result.steps[0]!.collapsedCount, undefined);
-      assert.equal(result.steps[0]!.subSteps![0]!.collapsedCount, 2);
     });
   });
 

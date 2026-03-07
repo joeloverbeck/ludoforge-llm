@@ -865,6 +865,8 @@ describe('describeAction (condition annotator)', () => {
       macros: {},
       sentencePlans: {},
       suppressPatterns: [],
+      stageDescriptions: {},
+      modifierEffects: {},
     };
     const def = makeDef({
       actions: [action],
@@ -1113,6 +1115,8 @@ describe('describeAction (condition annotator)', () => {
       macros: {},
       sentencePlans: {},
       suppressPatterns: [],
+      stageDescriptions: {},
+      modifierEffects: {},
     };
     const action = minimalActionDef({
       effects: [{ addVar: { scope: 'global', var: 'gold', delta: 3 } }],

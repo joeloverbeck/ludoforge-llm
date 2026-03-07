@@ -14,10 +14,22 @@ export interface VerbalizationMacroEntry {
   readonly slots?: Readonly<Record<string, string>>;
 }
 
+export interface VerbalizationStageDescription {
+  readonly label: string;
+  readonly description?: string;
+}
+
+export interface VerbalizationModifierEffect {
+  readonly condition: string;
+  readonly effect: string;
+}
+
 export interface VerbalizationDef {
   readonly labels: Readonly<Record<string, string | VerbalizationLabelEntry>>;
   readonly stages: Readonly<Record<string, string>>;
   readonly macros: Readonly<Record<string, VerbalizationMacroEntry>>;
   readonly sentencePlans: Readonly<Record<string, Readonly<Record<string, Readonly<Record<string, string>>>>>>;
   readonly suppressPatterns: readonly string[];
+  readonly stageDescriptions: Readonly<Record<string, Readonly<Record<string, VerbalizationStageDescription>>>>;
+  readonly modifierEffects: Readonly<Record<string, readonly VerbalizationModifierEffect[]>>;
 }

@@ -231,8 +231,8 @@ describe('tooltip-content-planner', () => {
       assert.equal(plan.steps[0]!.subSteps![0]!.messages.length, 2); // place, gain
     });
 
-    it('collapses sub-steps beyond limit of 3', () => {
-      // 5 sub-step groups from 5 different forEach containers
+    it('keeps all sub-steps without truncation', () => {
+      // 5 sub-step groups from 5 different forEach containers — all kept
       const messages: readonly TooltipMessage[] = [
         makeSelect({ astPath: 'effects[0]' }),
         makePlace({ astPath: 'effects[1].forEach.effects[0]' }),
@@ -246,14 +246,12 @@ describe('tooltip-content-planner', () => {
       const step = plan.steps[0]!;
       assert.equal(step.messages.length, 1); // select
       assert.ok(step.subSteps !== undefined);
-      assert.equal(step.subSteps!.length, 3); // kept 3
-      assert.equal(step.collapsedCount, 2); // collapsed 2
+      assert.equal(step.subSteps!.length, 5); // all 5 kept
     });
 
-    // --- Rhetorical budget ---
+    // --- No budget enforcement (all messages preserved) ---
 
-    it('enforces budget by collapsing deepest sub-steps first', () => {
-      // Create an action with many messages that exceeds budget of 30
+    it('preserves all messages without budget truncation', () => {
       const msgs: TooltipMessage[] = [];
       for (let i = 0; i < 35; i++) {
         msgs.push(makePlace({
@@ -263,38 +261,41 @@ describe('tooltip-content-planner', () => {
       }
       const plan = planContent(msgs, 'ComplexAction');
 
-      const totalAfterBudget = countAllMessages(plan.steps);
-      assert.ok(totalAfterBudget <= 30, `Expected <= 30 messages, got ${totalAfterBudget}`);
+      const totalMessages = countAllMessages(plan.steps);
+      assert.equal(totalMessages, 35, 'All 35 messages should be preserved');
     });
 
-    it('applies simple budget (15) for actions with fewer than 3 stages', () => {
-      // 20 messages in 2 stages → simple budget of 15 should kick in
-      const msgs: TooltipMessage[] = [];
-      for (let i = 0; i < 20; i++) {
-        msgs.push(makePlace({
-          astPath: `effects[${i}]`,
-          stage: i < 10 ? 'stageA' : 'stageB',
-        }));
-      }
-      const plan = planContent(msgs, 'SimpleAction');
+    // --- Modifier deduplication ---
 
-      const totalAfterBudget = countAllMessages(plan.steps);
-      assert.ok(totalAfterBudget <= 15, `Expected <= 15 messages for simple action, got ${totalAfterBudget}`);
+    it('deduplicates modifiers with identical conditions', () => {
+      const messages: readonly TooltipMessage[] = [
+        makeSelect(),
+        makeModifier({ condition: 'monsoon === true', description: 'If monsoon: no air lift', astPath: 'effects[1]' }),
+        makeModifier({ condition: 'monsoon === true', description: 'If monsoon: no air lift', astPath: 'effects[2]' }),
+        makeModifier({ condition: 'shaded', description: 'If shaded: +1', astPath: 'effects[3]' }),
+        makeModifier({ condition: 'monsoon === true', description: 'If monsoon: no air lift', astPath: 'effects[4]' }),
+      ];
+      const plan = planContent(messages, 'Train');
+
+      assert.equal(plan.modifiers.length, 2);
+      assert.equal(plan.modifiers[0]!.condition, 'monsoon === true');
+      assert.equal(plan.modifiers[1]!.condition, 'shaded');
     });
 
-    it('applies complex budget (30) for actions with 3+ stages', () => {
-      // 25 messages in 3 stages → complex budget of 30 should NOT collapse
-      const msgs: TooltipMessage[] = [];
-      for (let i = 0; i < 25; i++) {
-        msgs.push(makePlace({
-          astPath: `effects[${i}]`,
-          stage: `stage${Math.floor(i / 9)}`,
-        }));
-      }
-      const plan = planContent(msgs, 'ComplexAction');
+    // --- Semantic sub-step headers ---
 
-      const totalAfterBudget = countAllMessages(plan.steps);
-      assert.equal(totalAfterBudget, 25, 'Should keep all 25 messages under complex budget of 30');
+    it('derives semantic sub-step headers from first message kind', () => {
+      const messages: readonly TooltipMessage[] = [
+        makeSelect({ astPath: 'effects[0]' }),
+        makePlace({ astPath: 'effects[1].forEach.effects[0]' }),
+        makeGain({ astPath: 'effects[2].forEach.effects[0]' }),
+      ];
+      const plan = planContent(messages, 'Train');
+
+      const step = plan.steps[0]!;
+      assert.ok(step.subSteps !== undefined);
+      assert.equal(step.subSteps![0]!.header, 'Place forces');
+      assert.equal(step.subSteps![1]!.header, 'Gain resources');
     });
 
     it('detects sub-steps from removeByPriority groups paths', () => {

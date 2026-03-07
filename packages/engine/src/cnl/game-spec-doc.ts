@@ -5,7 +5,7 @@ import type {
   ValueExpr,
 } from '../kernel/types.js';
 import type { VictoryStandingsDef } from '../kernel/types-core.js';
-import type { VerbalizationLabelEntry, VerbalizationMacroEntry } from '../kernel/verbalization-types.js';
+import type { VerbalizationLabelEntry, VerbalizationMacroEntry, VerbalizationStageDescription, VerbalizationModifierEffect } from '../kernel/verbalization-types.js';
 import type { TurnFlowActionClass } from '../contracts/index.js';
 
 export interface GameSpecMetadata {
@@ -466,6 +466,8 @@ export interface GameSpecVerbalization {
   readonly macros?: Readonly<Record<string, VerbalizationMacroEntry>> | null;
   readonly sentencePlans?: Readonly<Record<string, Readonly<Record<string, Readonly<Record<string, string>>>>>> | null;
   readonly suppressPatterns?: readonly string[] | null;
+  readonly stageDescriptions?: Readonly<Record<string, Readonly<Record<string, VerbalizationStageDescription>>>> | null;
+  readonly modifierEffects?: Readonly<Record<string, readonly VerbalizationModifierEffect[]>> | null;
 }
 
 export interface GameSpecPieceGenerateDimension {

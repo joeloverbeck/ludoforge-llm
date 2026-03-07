@@ -153,6 +153,8 @@ describe('VerbalizationDef types', () => {
         },
       },
       suppressPatterns: ['*Count', '*Tracker', '__*'],
+      stageDescriptions: {},
+      modifierEffects: {},
     };
     const usTroopsLabel = def.labels['usTroops'];
     assert.ok(usTroopsLabel !== undefined && typeof usTroopsLabel === 'object');
@@ -171,6 +173,8 @@ describe('VerbalizationDef types', () => {
       macros: {},
       sentencePlans: {},
       suppressPatterns: [],
+      stageDescriptions: {},
+      modifierEffects: {},
     };
 
     // Verify it can be used where GameDef['verbalization'] is expected

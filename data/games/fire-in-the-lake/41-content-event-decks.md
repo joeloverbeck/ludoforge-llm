@@ -4682,9 +4682,271 @@ eventDecks:
           seatOrder: ["NVA", "US", "VC", "ARVN"]
           flavorText: "Siege operations force major commitment and casualties."
         unshaded:
-          text: "Mass removal pressure in one contested area; route vulnerable US losses to Casualties."
+          text: "Select a US Base with US Troops. Remove 10 NVA Troops within 1 space of it."
+          effects:
+            - if:
+                when:
+                  op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      op: and
+                                      args:
+                                        - { prop: faction, eq: US }
+                                        - { prop: type, eq: base }
+                              right: 0
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      op: and
+                                      args:
+                                        - { prop: faction, eq: US }
+                                        - { prop: type, eq: troops }
+                              right: 0
+                  right: 0
+                then:
+                  - chooseOne:
+                      bind: $targetBaseSpace
+                      options:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      op: and
+                                      args:
+                                        - { prop: faction, eq: US }
+                                        - { prop: type, eq: base }
+                              right: 0
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      op: and
+                                      args:
+                                        - { prop: faction, eq: US }
+                                        - { prop: type, eq: troops }
+                              right: 0
+                  - chooseN:
+                      bind: $nvaTroopsToRemove
+                      min:
+                        op: min
+                        left: 10
+                        right:
+                          aggregate:
+                            op: count
+                            query:
+                              query: concat
+                              sources:
+                                - query: tokensInZone
+                                  zone: $targetBaseSpace
+                                  filter:
+                                    op: and
+                                    args:
+                                      - { prop: faction, eq: NVA }
+                                      - { prop: type, eq: troops }
+                                - query: tokensInAdjacentZones
+                                  zone: $targetBaseSpace
+                                  filter:
+                                    op: and
+                                    args:
+                                      - { prop: faction, eq: NVA }
+                                      - { prop: type, eq: troops }
+                      max:
+                        op: min
+                        left: 10
+                        right:
+                          aggregate:
+                            op: count
+                            query:
+                              query: concat
+                              sources:
+                                - query: tokensInZone
+                                  zone: $targetBaseSpace
+                                  filter:
+                                    op: and
+                                    args:
+                                      - { prop: faction, eq: NVA }
+                                      - { prop: type, eq: troops }
+                                - query: tokensInAdjacentZones
+                                  zone: $targetBaseSpace
+                                  filter:
+                                    op: and
+                                    args:
+                                      - { prop: faction, eq: NVA }
+                                      - { prop: type, eq: troops }
+                      options:
+                        query: concat
+                        sources:
+                          - query: tokensInZone
+                            zone: $targetBaseSpace
+                            filter:
+                              op: and
+                              args:
+                                - { prop: faction, eq: NVA }
+                                - { prop: type, eq: troops }
+                          - query: tokensInAdjacentZones
+                            zone: $targetBaseSpace
+                            filter:
+                              op: and
+                              args:
+                                - { prop: faction, eq: NVA }
+                                - { prop: type, eq: troops }
+                  - forEach:
+                      bind: $nvaTroop
+                      over:
+                        query: binding
+                        name: $nvaTroopsToRemove
+                      effects:
+                        - moveToken:
+                            token: $nvaTroop
+                            from:
+                              zoneExpr: { ref: tokenZone, token: $nvaTroop }
+                            to:
+                              zoneExpr: available-NVA:none
+                else: []
         shaded:
-          text: "Relief effort redistributes pieces and partially relieves siege pressure."
+          text: "Up to 3 US Troops in 1 space with NVA to Casualties. US Ineligible through next card."
+          eligibilityOverrides:
+            - { target: { kind: seat, seat: 'us' }, eligible: false, windowId: make-ineligible }
+          effects:
+            - if:
+                when:
+                  op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      op: and
+                                      args:
+                                        - { prop: faction, eq: US }
+                                        - { prop: type, eq: troops }
+                              right: 0
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      op: and
+                                      args:
+                                        - { prop: faction, eq: NVA }
+                              right: 0
+                  right: 0
+                then:
+                  - chooseOne:
+                      bind: $targetBattleSpace
+                      options:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      op: and
+                                      args:
+                                        - { prop: faction, eq: US }
+                                        - { prop: type, eq: troops }
+                              right: 0
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      op: and
+                                      args:
+                                        - { prop: faction, eq: NVA }
+                              right: 0
+                  - chooseN:
+                      bind: $usTroopsToCasualties
+                      min: 0
+                      max:
+                        op: min
+                        left: 3
+                        right:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $targetBattleSpace
+                              filter:
+                                op: and
+                                args:
+                                  - { prop: faction, eq: US }
+                                  - { prop: type, eq: troops }
+                      options:
+                        query: tokensInZone
+                        zone: $targetBattleSpace
+                        filter:
+                          op: and
+                          args:
+                            - { prop: faction, eq: US }
+                            - { prop: type, eq: troops }
+                  - forEach:
+                      bind: $usTroop
+                      over:
+                        query: binding
+                        name: $usTroopsToCasualties
+                      effects:
+                        - moveToken:
+                            token: $usTroop
+                            from:
+                              zoneExpr: { ref: tokenZone, token: $usTroop }
+                            to:
+                              zoneExpr: casualties-US:none
+                else: []
       - id: card-40
         title: PoWs
         sideMode: dual

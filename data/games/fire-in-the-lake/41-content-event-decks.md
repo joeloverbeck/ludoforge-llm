@@ -4314,77 +4314,152 @@ eventDecks:
           seatOrder: ["US", "VC", "ARVN", "NVA"]
           flavorText: "Highland loyalties shift under pressure."
         unshaded:
-          text: "Remove Insurgent Guerrillas, then replace with Irregulars."
-          targets:
-            - id: $targetSpace
-              selector:
-                query: mapSpaces
-              cardinality: { max: 1 }
+          text: "Remove any 4 Insurgent pieces total from spaces with Irregulars."
           effects:
             - removeByPriority:
-                budget: 3
+                budget: 4
                 groups:
-                  - bind: $insurgentGuerrilla
+                  - bind: $insurgentTroopOrGuerrilla
                     over:
-                      query: tokensInZone
-                      zone: $targetSpace
+                      query: tokensInMapSpaces
+                      spaceFilter:
+                        op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - { prop: faction, eq: US }
+                                  - { prop: type, eq: irregular }
+                        right: 0
                       filter:
                         op: and
                         args:
                           - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                          - { prop: type, eq: guerrilla }
+                          - { prop: type, op: in, value: [troops, guerrilla] }
                     to:
-                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentGuerrilla, prop: faction }, ':none'] }
-            - removeByPriority:
-                budget: 2
-                groups:
-                  - bind: $irregular
+                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentTroopOrGuerrilla, prop: faction }, ':none'] }
+                  - bind: $insurgentUntunneledBase
                     over:
-                      query: tokensInZone
-                      zone: available-US:none
+                      query: tokensInMapSpaces
+                      spaceFilter:
+                        op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - { prop: faction, eq: US }
+                                  - { prop: type, eq: irregular }
+                        right: 0
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: irregular }
+                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                          - { prop: type, eq: base }
+                          - { prop: tunnel, eq: untunneled }
                     to:
-                      zoneExpr: $targetSpace
+                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentUntunneledBase, prop: faction }, ':none'] }
         shaded:
-          text: "Montagnard backlash: remove Irregulars and infiltrate Guerrillas."
-          targets:
-            - id: $targetSpace
-              selector:
-                query: mapSpaces
-              cardinality: { max: 1 }
+          text: "Replace all Irregulars with VC Guerrillas. 1 Neutral Highland to Active Opposition. -3 Patronage."
           effects:
-            - removeByPriority:
-                budget: 2
-                groups:
-                  - bind: $irregular
-                    over:
-                      query: tokensInZone
-                      zone: $targetSpace
+            - let:
+                bind: $irregularsOnMapCount
+                value:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInMapSpaces
                       filter:
                         op: and
                         args:
                           - { prop: faction, eq: US }
                           - { prop: type, eq: irregular }
-                    to:
-                      zoneExpr: available-US:none
-            - removeByPriority:
-                budget: 2
-                groups:
-                  - bind: $nvaGuerrilla
-                    over:
-                      query: tokensInZone
-                      zone: available-NVA:none
+                in:
+                  - if:
+                      when: { op: '>', left: { ref: binding, name: $irregularsOnMapCount }, right: 0 }
+                      then:
+                        - chooseN:
+                            bind: $irregularsOnMap
+                            options:
+                              query: tokensInMapSpaces
+                              filter:
+                                op: and
+                                args:
+                                  - { prop: faction, eq: US }
+                                  - { prop: type, eq: irregular }
+                            min: { ref: binding, name: $irregularsOnMapCount }
+                            max: { ref: binding, name: $irregularsOnMapCount }
+                        - forEach:
+                            bind: $irregular
+                            over: { query: binding, name: $irregularsOnMap }
+                            effects:
+                              - removeByPriority:
+                                  budget: 1
+                                  groups:
+                                    - bind: $vcReplacementGuerrilla
+                                      over:
+                                        query: tokensInZone
+                                        zone: available-VC:none
+                                        filter:
+                                          op: and
+                                          args:
+                                            - { prop: faction, eq: VC }
+                                            - { prop: type, eq: guerrilla }
+                                      to: { zoneExpr: { ref: tokenZone, token: $irregular } }
+                              - moveToken:
+                                  token: $irregular
+                                  from: { zoneExpr: { ref: tokenZone, token: $irregular } }
+                                  to: { zoneExpr: available-US:none }
+                      else: []
+            - let:
+                bind: $neutralHighlandCount
+                value:
+                  aggregate:
+                    op: count
+                    query:
+                      query: mapSpaces
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: NVA }
-                          - { prop: type, eq: guerrilla }
-                    to:
-                      zoneExpr: $targetSpace
+                          - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: highland }
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: southVietnam }
+                          - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: neutral }
+                in:
+                  - if:
+                      when: { op: '>', left: { ref: binding, name: $neutralHighlandCount }, right: 0 }
+                      then:
+                        - chooseN:
+                            bind: $neutralHighlandToShift
+                            options:
+                              query: mapSpaces
+                              filter:
+                                op: and
+                                args:
+                                  - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: highland }
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: southVietnam }
+                                  - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: neutral }
+                            min: 1
+                            max: 1
+                        - forEach:
+                            bind: $highlandSpace
+                            over: { query: binding, name: $neutralHighlandToShift }
+                            effects:
+                              - setMarker:
+                                  space: $highlandSpace
+                                  marker: supportOpposition
+                                  state: activeOpposition
+                      else: []
+            - macro: add-global-var-delta
+              args: { varName: patronage, deltaExpr: -3 }
       - id: card-30
         title: USS New Jersey
         sideMode: dual

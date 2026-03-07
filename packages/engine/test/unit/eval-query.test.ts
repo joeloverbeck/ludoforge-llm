@@ -1497,6 +1497,34 @@ describe('evalQuery', () => {
     );
   });
 
+  it('rejects malformed token-like objects from tokenZones source at runtime boundary', () => {
+    const ctx = makeCtx({
+      bindings: {
+        $malformedTokenLike: [{ id: 42, type: 'piece', props: {} }],
+      },
+    });
+
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'tokenZones',
+            source: { query: 'binding', name: '$malformedTokenLike' },
+          },
+          ctx,
+        ),
+      (error: unknown) => {
+        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
+          return false;
+        }
+        assert.deepEqual(error.context?.source, { query: 'binding', name: '$malformedTokenLike' });
+        assert.deepEqual(error.context?.item, { id: 42, type: 'piece', props: {} });
+        assert.equal(error.context?.itemType, 'object');
+        return true;
+      },
+    );
+  });
+
   it('concatenates query sources left-to-right and preserves duplicates', () => {
     const ctx = makeCtx();
 

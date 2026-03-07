@@ -5,6 +5,7 @@ import {
   asPlayerId,
   asTokenId,
   initialState,
+  legalChoicesEvaluate,
   legalMoves,
   type GameDef,
   type GameState,
@@ -134,6 +135,21 @@ describe('FITL card-29 Tribesmen', () => {
 
     const move = findCard29Move(def, state, 'unshaded');
     assert.notEqual(move, undefined, 'Expected card-29 unshaded event move');
+
+    const pending = legalChoicesEvaluate(def, state, move!);
+    assert.equal(pending.kind, 'pending');
+    if (pending.kind !== 'pending') {
+      throw new Error('Expected pending choice request for card-29 unshaded.');
+    }
+    assert.equal(pending.type, 'chooseN');
+    assert.equal(pending.max, 4);
+    const optionIds = pending.options.map((option) => String(option.value)).sort();
+    assert.deepEqual(optionIds, [
+      'tribe-remove-nva-guerrilla',
+      'tribe-remove-nva-troop',
+      'tribe-remove-vc-guerrilla',
+      'tribe-remove-vc-untunneled-base',
+    ]);
 
     const final = applyMoveWithResolvedDecisionIds(def, state, move!).state;
 

@@ -4316,58 +4316,110 @@ eventDecks:
         unshaded:
           text: "Remove any 4 Insurgent pieces total from spaces with Irregulars."
           effects:
-            - removeByPriority:
-                budget: 4
-                groups:
-                  - bind: $insurgentTroopOrGuerrilla
-                    over:
-                      query: tokensInMapSpaces
-                      spaceFilter:
-                        op: '>'
-                        left:
-                          aggregate:
-                            op: count
-                            query:
-                              query: tokensInZone
-                              zone: $zone
-                              filter:
-                                op: and
-                                args:
-                                  - { prop: faction, eq: US }
-                                  - { prop: type, eq: irregular }
-                        right: 0
-                      filter:
-                        op: and
+            - chooseN:
+                bind: $insurgentPiecesToRemove
+                min:
+                  op: min
+                  left: 4
+                  right:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInMapSpaces
+                        spaceFilter:
+                          op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $zone
+                                filter:
+                                  op: and
+                                  args:
+                                    - { prop: faction, eq: US }
+                                    - { prop: type, eq: irregular }
+                          right: 0
+                        filter:
+                          op: and
+                          args:
+                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                            - op: or
+                              args:
+                                - { prop: type, op: in, value: [troops, guerrilla] }
+                                - op: and
+                                  args:
+                                    - { prop: type, eq: base }
+                                    - { prop: tunnel, eq: untunneled }
+                max:
+                  op: min
+                  left: 4
+                  right:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInMapSpaces
+                        spaceFilter:
+                          op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $zone
+                                filter:
+                                  op: and
+                                  args:
+                                    - { prop: faction, eq: US }
+                                    - { prop: type, eq: irregular }
+                          right: 0
+                        filter:
+                          op: and
+                          args:
+                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                            - op: or
+                              args:
+                                - { prop: type, op: in, value: [troops, guerrilla] }
+                                - op: and
+                                  args:
+                                    - { prop: type, eq: base }
+                                    - { prop: tunnel, eq: untunneled }
+                options:
+                  query: tokensInMapSpaces
+                  spaceFilter:
+                    op: '>'
+                    left:
+                      aggregate:
+                        op: count
+                        query:
+                          query: tokensInZone
+                          zone: $zone
+                          filter:
+                            op: and
+                            args:
+                              - { prop: faction, eq: US }
+                              - { prop: type, eq: irregular }
+                    right: 0
+                  filter:
+                    op: and
+                    args:
+                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                      - op: or
                         args:
-                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
                           - { prop: type, op: in, value: [troops, guerrilla] }
-                    to:
-                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentTroopOrGuerrilla, prop: faction }, ':none'] }
-                  - bind: $insurgentUntunneledBase
-                    over:
-                      query: tokensInMapSpaces
-                      spaceFilter:
-                        op: '>'
-                        left:
-                          aggregate:
-                            op: count
-                            query:
-                              query: tokensInZone
-                              zone: $zone
-                              filter:
-                                op: and
-                                args:
-                                  - { prop: faction, eq: US }
-                                  - { prop: type, eq: irregular }
-                        right: 0
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                          - { prop: type, eq: base }
-                          - { prop: tunnel, eq: untunneled }
-                    to:
-                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentUntunneledBase, prop: faction }, ':none'] }
+                          - op: and
+                            args:
+                              - { prop: type, eq: base }
+                              - { prop: tunnel, eq: untunneled }
+            - forEach:
+                bind: $insurgentPiece
+                over: { query: binding, name: $insurgentPiecesToRemove }
+                effects:
+                  - moveToken:
+                      token: $insurgentPiece
+                      from: { zoneExpr: { ref: tokenZone, token: $insurgentPiece } }
+                      to:
+                        zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentPiece, prop: faction }, ':none'] }
         shaded:
           text: "Replace all Irregulars with VC Guerrillas. 1 Neutral Highland to Active Opposition. -3 Patronage."
           effects:
@@ -5168,11 +5220,9 @@ eventDecks:
                       effects:
                         - if:
                             when:
-                              op: not
-                              arg:
-                                op: in
-                                item: { ref: binding, name: $troop }
-                                set: { ref: binding, name: $troopsToAnchor }
+                              op: '!='
+                              left: { ref: tokenZone, token: $troop }
+                              right: { ref: binding, name: $anchorSpace }
                             then:
                               - moveToken:
                                   token: $troop
@@ -5190,11 +5240,9 @@ eventDecks:
                       effects:
                         - if:
                             when:
-                              op: not
-                              arg:
-                                op: in
-                                item: { ref: binding, name: $troop }
-                                set: { ref: binding, name: $troopsToAnchor }
+                              op: '!='
+                              left: { ref: tokenZone, token: $troop }
+                              right: { ref: binding, name: $anchorSpace }
                             then:
                               - moveToken:
                                   token: $troop

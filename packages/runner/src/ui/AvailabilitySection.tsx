@@ -7,6 +7,17 @@ interface AvailabilitySectionProps {
   readonly ruleState: RuleState;
 }
 
+function scopeLabel(scope: 'turn' | 'phase' | 'game'): string {
+  switch (scope) {
+    case 'turn':
+      return 'this turn';
+    case 'phase':
+      return 'this phase';
+    case 'game':
+      return 'total';
+  }
+}
+
 export function AvailabilitySection({ ruleState }: AvailabilitySectionProps): ReactElement {
   const { available, blockers, limitUsage } = ruleState;
 
@@ -21,8 +32,12 @@ export function AvailabilitySection({ ruleState }: AvailabilitySectionProps): Re
           {available ? 'Available' : 'Blocked'}
         </span>
         {limitUsage !== undefined && limitUsage.length > 0 && (
-          <span className={styles.limit} data-testid="limit-usage">
-            ({Math.min(...limitUsage.map(l => l.max - l.used))} remaining this turn)
+          <span data-testid="limit-usage-list">
+            {limitUsage.map((limit, index) => (
+              <span key={`${limit.scope}-${limit.max}-${limit.used}-${index}`} className={styles.limit} data-testid="limit-usage-item">
+                ({limit.max - limit.used} remaining {scopeLabel(limit.scope)})
+              </span>
+            ))}
           </span>
         )}
       </div>

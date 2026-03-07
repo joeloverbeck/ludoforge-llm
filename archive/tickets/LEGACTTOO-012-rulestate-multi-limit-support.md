@@ -1,6 +1,6 @@
 # LEGACTTOO-012: RuleState Multi-Limit Support
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — modify `tooltip-rule-card.ts`, `condition-annotator.ts`
@@ -24,6 +24,7 @@ This means the runner tooltip cannot display per-scope usage for multi-limit act
 2. `LimitDef` has `scope: 'turn' | 'phase' | 'game'` and `max: number` — each limit has a distinct scope.
 3. `annotateLimitsGroup` already computes per-limit `LimitUsageInfo[]` (condition-annotator.ts:201-204) — the data exists, it's just not surfaced to `RuleState`.
 4. `RuleState.limitUsage` is `{ used: number; max: number }` — a single scalar. This was the original spec design (LEGACTTOO-004/005) but is insufficient for multi-limit actions.
+5. Current tests that directly assert `RuleState.limitUsage` shape are in `tooltip-rule-card.test.ts`; `tooltip-pipeline-integration.test.ts` currently validates core payload invariants but does not assert the limit usage shape.
 
 ## Architecture Check
 
@@ -55,14 +56,14 @@ const limitSummary = limitUsage.length > 0
 
 ### 3. Update tests
 
-Adjust unit tests (#20, #21) and integration tests that assert on `limitUsage` shape.
+Update unit tests that assert `RuleState` typing/shape and add a focused unit regression for multi-limit `RuleState.limitUsage` content.
 
 ## Files to Touch
 
 - `packages/engine/src/kernel/tooltip-rule-card.ts` (modify — change `limitUsage` type)
 - `packages/engine/src/kernel/condition-annotator.ts` (modify — update `buildRuleState`)
 - `packages/engine/test/unit/kernel/condition-annotator.test.ts` (modify — update assertions)
-- `packages/engine/test/integration/tooltip-pipeline-integration.test.ts` (modify — update assertions if needed)
+- `packages/engine/test/unit/kernel/tooltip-rule-card.test.ts` (modify — update `RuleState.limitUsage` type assertions)
 
 ## Out of Scope
 
@@ -87,10 +88,26 @@ Adjust unit tests (#20, #21) and integration tests that assert on `limitUsage` s
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/kernel/condition-annotator.test.ts` — update existing limit tests to assert array shape with scope.
-2. Add test for action with multiple limits (turn + game) producing correct per-scope usage.
+1. `packages/engine/test/unit/kernel/condition-annotator.test.ts` — add/update assertions to verify `ruleState.limitUsage` is an array with full per-scope entries.
+2. `packages/engine/test/unit/kernel/tooltip-rule-card.test.ts` — update the `RuleState` construction test to array form with scope.
+3. Add test for action with multiple limits (turn + game) producing correct per-scope usage.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/kernel/condition-annotator.test.js`
 2. `pnpm -F @ludoforge/engine test && pnpm turbo typecheck`
+
+## Outcome
+
+- Completion date: 2026-03-07
+- What changed:
+  - `RuleState.limitUsage` now uses a multi-entry array shape with `scope`, `used`, and `max`.
+  - `buildRuleState` now maps all computed limit usages instead of truncating to the first limit.
+  - Unit tests now cover array-shaped `RuleState.limitUsage` and multi-limit rule-state propagation.
+- Deviations from original plan:
+  - Did not modify `tooltip-pipeline-integration.test.ts` because it does not directly assert `ruleState.limitUsage` shape; targeted unit coverage was sufficient and lower-noise.
+- Verification results:
+  - Passed: `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/kernel/condition-annotator.test.js`
+  - Passed: `pnpm -F @ludoforge/engine test`
+  - Passed: `pnpm -F @ludoforge/engine lint`
+  - Passed: `pnpm turbo typecheck`

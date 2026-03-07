@@ -687,6 +687,32 @@ describe('describeAction (condition annotator)', () => {
     assert.equal(result.limitUsage.length, 1);
     // tooltipPayload is additive
     assert.ok(result.tooltipPayload !== undefined);
+    assert.deepEqual(result.tooltipPayload.ruleState.limitUsage, [{ scope: 'turn', used: 0, max: 3 }]);
+  });
+
+  it('surfaces all ruleState limit usage entries for multi-limit actions', () => {
+    const action = minimalActionDef({
+      limits: [
+        { scope: 'turn', max: 1 },
+        { scope: 'game', max: 3 },
+      ],
+      effects: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
+    });
+    const ctx = makeContext({
+      state: makeState({
+        actionUsage: {
+          test: { turnCount: 1, phaseCount: 0, gameCount: 2 },
+        },
+      }),
+    });
+
+    const result = describeAction(action, ctx);
+
+    assert.ok(result.tooltipPayload !== undefined);
+    assert.deepEqual(result.tooltipPayload.ruleState.limitUsage, [
+      { scope: 'turn', used: 1, max: 1 },
+      { scope: 'game', used: 2, max: 3 },
+    ]);
   });
 
   // -----------------------------------------------------------------------

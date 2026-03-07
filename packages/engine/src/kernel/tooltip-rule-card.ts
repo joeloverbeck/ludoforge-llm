@@ -45,7 +45,11 @@ export interface RuleState {
   readonly available: boolean;
   readonly blockers: readonly BlockerDetail[];
   readonly activeModifierIndices: readonly number[];
-  readonly limitUsage?: { readonly used: number; readonly max: number };
+  readonly limitUsage?: readonly {
+    readonly scope: 'turn' | 'phase' | 'game';
+    readonly used: number;
+    readonly max: number;
+  }[];
 }
 
 export interface ActionTooltipPayload {

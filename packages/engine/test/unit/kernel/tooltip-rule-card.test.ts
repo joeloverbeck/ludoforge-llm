@@ -97,10 +97,10 @@ describe('tooltip-rule-card types', () => {
       available: true,
       blockers: [],
       activeModifierIndices: [0],
-      limitUsage: { used: 1, max: 3 },
+      limitUsage: [{ scope: 'turn', used: 1, max: 3 }],
     };
     assert.equal(state.available, true);
-    assert.equal(state.limitUsage?.used, 1);
+    assert.equal(state.limitUsage?.[0]?.used, 1);
   });
 
   it('constructs RuleState without limit usage', () => {

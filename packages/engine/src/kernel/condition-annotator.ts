@@ -339,7 +339,11 @@ const buildRuleState = (
 
   // Limit usage summary
   const limitSummary = limitUsage.length > 0
-    ? { used: limitUsage[0]!.current, max: limitUsage[0]!.max }
+    ? limitUsage.map((limit) => ({
+      scope: limit.scope,
+      used: limit.current,
+      max: limit.max,
+    }))
     : undefined;
 
   return {

@@ -110,6 +110,149 @@ describe('tooltip pipeline integration', () => {
   });
 
   // -----------------------------------------------------------------------
+  // FITL golden tests — verbalization produces readable English
+  // -----------------------------------------------------------------------
+
+  it('FITL Train synopsis uses verbalized action label', () => {
+    const { compiled } = compileProductionSpec();
+    const def = compiled.gameDef!;
+    const runtime = createGameDefRuntime(def);
+    const { state } = initialState(def, 42);
+    const train = def.actions.find((a) => a.id === 'train');
+    assert.ok(train !== undefined, 'train action must exist');
+
+    const context: AnnotationContext = {
+      def, runtime, state,
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+    };
+    const result = describeAction(train, context);
+    assert.ok(result.tooltipPayload !== undefined);
+
+    const { synopsis } = result.tooltipPayload.ruleCard;
+    assert.ok(synopsis.includes('Train'), `Train synopsis "${synopsis}" must include "Train"`);
+    assert.ok(result.tooltipPayload.ruleCard.steps.length > 0, 'Train must have steps');
+  });
+
+  it('FITL Sweep synopsis uses verbalized action label', () => {
+    const { compiled } = compileProductionSpec();
+    const def = compiled.gameDef!;
+    const runtime = createGameDefRuntime(def);
+    const { state } = initialState(def, 42);
+    const sweep = def.actions.find((a) => a.id === 'sweep');
+    assert.ok(sweep !== undefined, 'sweep action must exist');
+
+    const context: AnnotationContext = {
+      def, runtime, state,
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+    };
+    const result = describeAction(sweep, context);
+    assert.ok(result.tooltipPayload !== undefined);
+
+    const { synopsis } = result.tooltipPayload.ruleCard;
+    assert.ok(synopsis.includes('Sweep'), `Sweep synopsis "${synopsis}" must include "Sweep"`);
+    assert.ok(result.tooltipPayload.ruleCard.steps.length > 0, 'Sweep must have steps');
+  });
+
+  it('FITL Rally synopsis uses verbalized action label', () => {
+    const { compiled } = compileProductionSpec();
+    const def = compiled.gameDef!;
+    const runtime = createGameDefRuntime(def);
+    const { state } = initialState(def, 42);
+    const rally = def.actions.find((a) => a.id === 'rally');
+    assert.ok(rally !== undefined, 'rally action must exist');
+
+    const context: AnnotationContext = {
+      def, runtime, state,
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+    };
+    const result = describeAction(rally, context);
+    assert.ok(result.tooltipPayload !== undefined);
+
+    const { synopsis } = result.tooltipPayload.ruleCard;
+    assert.ok(synopsis.includes('Rally'), `Rally synopsis "${synopsis}" must include "Rally"`);
+    assert.ok(result.tooltipPayload.ruleCard.steps.length > 0, 'Rally must have steps');
+  });
+
+  it('FITL verbalization labels cover all major action IDs', () => {
+    const { compiled } = compileProductionSpec();
+    const def = compiled.gameDef!;
+    assert.ok(def.verbalization !== undefined, 'FITL must have verbalization');
+
+    const labels = def.verbalization!.labels;
+    const expectedOps = ['train', 'patrol', 'sweep', 'assault', 'rally', 'march', 'attack', 'terror'];
+    const expectedSA = ['advise', 'airLift', 'airStrike', 'govern', 'transport', 'raid', 'infiltrate', 'bombard', 'tax', 'subvert'];
+
+    for (const id of [...expectedOps, ...expectedSA]) {
+      assert.ok(
+        labels[id] !== undefined,
+        `verbalization labels must include action "${id}"`,
+      );
+    }
+  });
+
+  it('FITL verbalization labels cover all zone IDs', () => {
+    const { compiled } = compileProductionSpec();
+    const def = compiled.gameDef!;
+    assert.ok(def.verbalization !== undefined);
+
+    const labels = def.verbalization!.labels;
+    // Sample key zones from the map
+    const sampleZones = ['saigon:none', 'hue:none', 'da-nang:none', 'available-US:none', 'casualties-US:none'];
+    for (const zoneId of sampleZones) {
+      assert.ok(
+        labels[zoneId] !== undefined,
+        `verbalization labels must include zone "${zoneId}"`,
+      );
+    }
+  });
+
+  it('FITL suppress patterns exclude telemetry variables', () => {
+    const { compiled } = compileProductionSpec();
+    const def = compiled.gameDef!;
+    assert.ok(def.verbalization !== undefined);
+
+    const patterns = def.verbalization!.suppressPatterns;
+    assert.ok(patterns.includes('*Count'), 'must suppress *Count');
+    assert.ok(patterns.includes('*Tracker'), 'must suppress *Tracker');
+    assert.ok(patterns.includes('__*'), 'must suppress __*');
+    assert.ok(patterns.includes('mom_*'), 'must suppress mom_*');
+    assert.ok(patterns.includes('fitl_*'), 'must suppress fitl_*');
+  });
+
+  it('FITL verbalization step text uses resolved labels not raw IDs', () => {
+    const { compiled } = compileProductionSpec();
+    const def = compiled.gameDef!;
+    const runtime = createGameDefRuntime(def);
+    const { state } = initialState(def, 42);
+    const rally = def.actions.find((a) => a.id === 'rally');
+    assert.ok(rally !== undefined);
+
+    const context: AnnotationContext = {
+      def, runtime, state,
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+    };
+    const result = describeAction(rally, context);
+    assert.ok(result.tooltipPayload !== undefined);
+
+    // Collect all step line texts
+    const allText = result.tooltipPayload.ruleCard.steps
+      .flatMap((s) => s.lines.map((l) => l.text))
+      .join(' ');
+
+    // Resource labels should be resolved — "NVA Resources" not "nvaResources"
+    if (allText.includes('NVA')) {
+      assert.ok(
+        allText.includes('NVA Resources') || allText.includes('NVA Resource'),
+        `step text should use "NVA Resources" not raw ID, got: "${allText}"`,
+      );
+    }
+  });
+
+  // -----------------------------------------------------------------------
   // Texas Hold'em production spec
   // -----------------------------------------------------------------------
 

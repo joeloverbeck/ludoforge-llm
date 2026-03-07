@@ -28,10 +28,10 @@ The FITL game spec has a starter verbalization block (from LEGACTTOO-002) but ne
 
 **Labels section** — comprehensive identifier-to-display-name mappings:
 - Faction names: `us` → "US", `arvn` → "ARVN", `nva` → "NVA", `vc` → "VC"
-- Token types: `usTroops` → {singular: "US Troop", plural: "US Troops"}, `nvaGuerrillas` → {singular: "NVA Guerrilla", plural: "NVA Guerrillas"}, etc. for all ~10 token types
-- Zone names: all named provinces, cities, LoCs (Saigon, Hue, Da Nang, etc.)
-- Supply zones: `available-us` → "US Available Forces", `available-arvn` → "ARVN Available Forces", etc.
-- Casualty zones: `casualties-us` → "US Casualties", etc.
+- Token types (kebab-case piece IDs): `us-troops` → {singular: "US Troop", plural: "US Troops"}, `nva-guerrillas` → {singular: "NVA Guerrilla", plural: "NVA Guerrillas"}, etc. for all ~12 piece types
+- Zone names (with `:none` suffix): `saigon:none` → "Saigon", `hue:none` → "Hue", `da-nang:none` → "Da Nang", etc. for all cities, provinces, LoCs
+- Supply zones: `available-US:none` → "US Available Forces", `available-ARVN:none` → "ARVN Available Forces", etc.
+- Casualty zones: `casualties-US:none` → "US Casualties"
 - Variables: `aid` → "Aid", `totalEcon` → "Total Econ", `patronage` → "Patronage", `trail` → "Trail"
 - Markers: `support` → "Support", `opposition` → "Opposition", `control` → "Control"
 
@@ -61,7 +61,7 @@ Verify all FITL actions produce readable English with the completed verbalizatio
 ## Files to Touch
 
 - `data/games/fire-in-the-lake/05-verbalization.md` (modify — complete verbalization content)
-- `packages/engine/test/integration/tooltip-golden.test.ts` (modify — update FITL golden expectations)
+- `packages/engine/test/integration/tooltip-pipeline-integration.test.ts` (modify — update FITL golden expectations)
 
 ## Out of Scope
 
@@ -92,7 +92,7 @@ Verify all FITL actions produce readable English with the completed verbalizatio
 
 ### New/Modified Tests
 
-1. `packages/engine/test/integration/tooltip-golden.test.ts` — update FITL golden test expectations with complete verbalization content. Add golden tests for additional FITL actions (Patrol, March, Attack, etc.) as coverage allows.
+1. `packages/engine/test/integration/tooltip-pipeline-integration.test.ts` — update FITL golden test expectations with complete verbalization content. Add golden tests for additional FITL actions (Patrol, March, Attack, etc.) as coverage allows.
 
 ### Commands
 

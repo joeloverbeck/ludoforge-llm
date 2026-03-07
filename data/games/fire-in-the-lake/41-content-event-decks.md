@@ -4522,9 +4522,118 @@ eventDecks:
           seatOrder: ["US", "VC", "ARVN", "NVA"]
           flavorText: "Battleship fire support pounds coastal positions."
         unshaded:
-          text: "US executes free Air Strikes in coastal spaces."
+          text: "US or ARVN free Air Strikes any 1-3 coastal spaces, removing up to 2 pieces per space (no die roll and no effect on Trail)."
+          effects:
+            - chooseN:
+                bind: $coastalSpaces
+                options:
+                  query: mapSpaces
+                  filter: { op: '==', left: { ref: zoneProp, zone: $zone, prop: coastal }, right: true }
+                min: 1
+                max: 3
+            - forEach:
+                bind: $space
+                over: { query: binding, name: $coastalSpaces }
+                effects:
+                  - let:
+                      bind: $enemyBefore
+                      value:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $space
+                            filter:
+                              op: and
+                              args:
+                                - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                      in:
+                        - macro: us-sa-remove-insurgents
+                          args:
+                            space: $space
+                            budgetExpr: 2
+                            activeGuerrillasOnly: true
+                        - let:
+                            bind: $enemyAfter
+                            value:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $space
+                                  filter:
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                            in:
+                              - let:
+                                  bind: $removedInSpace
+                                  value:
+                                    op: '-'
+                                    left: { ref: binding, name: $enemyBefore }
+                                    right: { ref: binding, name: $enemyAfter }
+                                  in:
+                                    - if:
+                                        when:
+                                          op: and
+                                          args:
+                                            - op: or
+                                              args:
+                                                - { op: '==', left: { ref: zoneProp, zone: $space, prop: category }, right: province }
+                                                - { op: '==', left: { ref: zoneProp, zone: $space, prop: category }, right: city }
+                                            - { op: '>', left: { ref: zoneProp, zone: $space, prop: population }, right: 0 }
+                                            - { op: '!=', left: { ref: markerState, space: $space, marker: supportOpposition }, right: activeOpposition }
+                                            - op: or
+                                              args:
+                                                - { op: '!=', left: { ref: globalMarkerState, marker: cap_lgbs }, right: unshaded }
+                                                - { op: '!=', left: { ref: binding, name: $removedInSpace }, right: 1 }
+                                        then:
+                                          - shiftMarker:
+                                              space: $space
+                                              marker: supportOpposition
+                                              delta:
+                                                if:
+                                                  when:
+                                                    op: and
+                                                    args:
+                                                      - { op: '==', left: { ref: globalMarkerState, marker: cap_arcLight }, right: shaded }
+                                                      - { op: '>', left: { ref: binding, name: $removedInSpace }, right: 1 }
+                                                  then: -2
+                                                  else: -1
+                                        else: []
         shaded:
-          text: "Counterfire and dispersion blunt naval bombardment."
+          text: "Shift 2 coastal Provinces with US Troops each 2 levels toward Active Opposition."
+          effects:
+            - chooseN:
+                bind: $targetProvinces
+                options:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: coastal }, right: true }
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - { prop: faction, eq: US }
+                                  - { prop: type, eq: troops }
+                        right: 0
+                min: 0
+                max: 2
+            - forEach:
+                bind: $targetProvince
+                over: { query: binding, name: $targetProvinces }
+                effects:
+                  - macro: shift-support-opposition
+                    args: { space: $targetProvince, deltaExpr: -2 }
       - id: card-31
         title: AAA
         sideMode: dual

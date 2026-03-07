@@ -464,6 +464,272 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     );
   });
 
+  it('Search and Destroy unshaded adds 1 underground removal only when US Assault would otherwise remove 0', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const space = 'kontum:none';
+    const start = clearAllZones(initialState(def, 22018, 4).state);
+
+    const zeroDamageSetup: GameState = {
+      ...start,
+      activePlayer: asPlayerId(0),
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_searchAndDestroy: 'unshaded',
+      },
+      zones: {
+        ...start.zones,
+        [space]: [
+          makeToken('snd-us-t-0', 'troops', 'US', { type: 'troops' }),
+          makeToken('snd-vc-u-0', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+        ],
+      },
+    };
+
+    const zeroDamageResult = applyMoveWithResolvedDecisionIds(def, zeroDamageSetup, {
+      actionId: asActionId('assault'),
+      params: {
+        $targetSpaces: [space],
+        $arvnFollowupSpaces: [],
+      },
+    }).state;
+
+    assert.equal(
+      countTokens(
+        zeroDamageResult,
+        space,
+        (token) => token.type === 'guerrilla' && token.props.faction === 'VC' && token.props.activity === 'underground',
+      ),
+      0,
+      'US unshaded should remove 1 underground guerrilla when normal US Assault removal in that space is 0',
+    );
+
+    const normalDamageSpace = 'saigon:none';
+    const normalDamageSetup: GameState = {
+      ...start,
+      activePlayer: asPlayerId(0),
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_searchAndDestroy: 'unshaded',
+      },
+      zones: {
+        ...start.zones,
+        [normalDamageSpace]: [
+          makeToken('snd-us-t-1', 'troops', 'US', { type: 'troops' }),
+          makeToken('snd-vc-a-1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('snd-vc-u-1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+        ],
+      },
+    };
+
+    const normalDamageResult = applyMoveWithResolvedDecisionIds(def, normalDamageSetup, {
+      actionId: asActionId('assault'),
+      params: {
+        $targetSpaces: [normalDamageSpace],
+        $arvnFollowupSpaces: [],
+      },
+    }).state;
+
+    assert.equal(
+      countTokens(
+        normalDamageResult,
+        normalDamageSpace,
+        (token) => token.type === 'guerrilla' && token.props.faction === 'VC' && token.props.activity === 'underground',
+      ),
+      1,
+      'US unshaded should not add extra underground removal when normal US Assault already removed pieces',
+    );
+    assert.equal(
+      countTokens(normalDamageResult, normalDamageSpace, (token) => token.props.faction === 'VC'),
+      1,
+      'US unshaded should preserve total removals when normal Assault damage is non-zero',
+    );
+  });
+
+  it('Search and Destroy unshaded does not affect ARVN Assault', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const space = 'kontum:none';
+    const start = clearAllZones(initialState(def, 22019, 4).state);
+    const setup: GameState = {
+      ...start,
+      activePlayer: asPlayerId(1),
+      globalVars: {
+        ...start.globalVars,
+        arvnResources: 3,
+        mom_bodyCount: false,
+      },
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_searchAndDestroy: 'unshaded',
+      },
+      zones: {
+        ...start.zones,
+        [space]: [
+          makeToken('snd-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('snd-arvn-vc-u', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+        ],
+      },
+    };
+
+    const final = applyMoveWithResolvedDecisionIds(def, setup, {
+      actionId: asActionId('assault'),
+      params: { $targetSpaces: [space] },
+    }).state;
+
+    assert.equal(
+      countTokens(final, space, (token) => token.type === 'guerrilla' && token.props.faction === 'VC' && token.props.activity === 'underground'),
+      1,
+      'ARVN Assault should ignore Search and Destroy unshaded underground-removal bonus',
+    );
+  });
+
+  it('Search and Destroy shaded applies only to Assault Provinces, not cities', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const province = 'quang-nam:none';
+    const city = 'hue:none';
+    const start = clearAllZones(initialState(def, 22020, 4).state);
+    const setup: GameState = {
+      ...start,
+      activePlayer: asPlayerId(0),
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_searchAndDestroy: 'shaded',
+      },
+      markers: {
+        ...start.markers,
+        [province]: {
+          ...(start.markers[province] ?? {}),
+          supportOpposition: 'neutral',
+        },
+        [city]: {
+          ...(start.markers[city] ?? {}),
+          supportOpposition: 'neutral',
+        },
+      },
+      zones: {
+        ...start.zones,
+        [province]: [
+          makeToken('snd-shade-us-prov', 'troops', 'US', { type: 'troops' }),
+          makeToken('snd-shade-vc-prov', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+        ],
+        [city]: [
+          makeToken('snd-shade-us-city', 'troops', 'US', { type: 'troops' }),
+          makeToken('snd-shade-vc-city', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+        ],
+      },
+    };
+
+    const final = applyMoveWithResolvedDecisionIds(def, setup, {
+      actionId: asActionId('assault'),
+      params: {
+        $targetSpaces: [province, city],
+        $arvnFollowupSpaces: [],
+      },
+    }).state;
+
+    assert.equal(final.markers[province]?.supportOpposition, 'passiveOpposition', 'Shaded should shift assaulted Province 1 level toward Active Opposition');
+    assert.equal(final.markers[city]?.supportOpposition, 'neutral', 'Shaded should not shift assaulted City');
+  });
+
+  it('Search and Destroy shaded applies to US-only, ARVN-only, and US+ARVN Assaults', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const usSpace = 'quang-nam:none';
+    const arvnSpace = 'binh-dinh:none';
+    const start = clearAllZones(initialState(def, 22021, 4).state);
+
+    const usSetup: GameState = {
+      ...start,
+      activePlayer: asPlayerId(0),
+      globalVars: {
+        ...start.globalVars,
+        arvnResources: 3,
+        mom_bodyCount: true,
+      },
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_searchAndDestroy: 'shaded',
+      },
+      markers: {
+        ...start.markers,
+        [usSpace]: {
+          ...(start.markers[usSpace] ?? {}),
+          supportOpposition: 'passiveSupport',
+        },
+      },
+      zones: {
+        ...start.zones,
+        [usSpace]: [
+          makeToken('snd-stack-us-t', 'troops', 'US', { type: 'troops' }),
+          makeToken('snd-stack-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('snd-stack-vc-a', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('snd-stack-vc-b', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+        ],
+      },
+    };
+
+    const usThenArvnFinal = applyMoveWithResolvedDecisionIds(def, usSetup, {
+      actionId: asActionId('assault'),
+      params: {
+        $targetSpaces: [usSpace],
+        $arvnFollowupSpaces: [usSpace],
+      },
+    }).state;
+
+    assert.equal(
+      usThenArvnFinal.markers[usSpace]?.supportOpposition,
+      'passiveOpposition',
+      'US Assault plus ARVN follow-up Assault in the same Province should shift twice total',
+    );
+
+    const arvnOnlySetup: GameState = {
+      ...start,
+      activePlayer: asPlayerId(1),
+      globalVars: {
+        ...start.globalVars,
+        arvnResources: 3,
+        mom_bodyCount: false,
+      },
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_searchAndDestroy: 'shaded',
+      },
+      markers: {
+        ...start.markers,
+        [arvnSpace]: {
+          ...(start.markers[arvnSpace] ?? {}),
+          supportOpposition: 'neutral',
+        },
+      },
+      zones: {
+        ...start.zones,
+        [arvnSpace]: [
+          makeToken('snd-arvn-only-t1', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('snd-arvn-only-t2', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('snd-arvn-only-vc', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+        ],
+      },
+    };
+
+    const arvnOnlyFinal = applyMoveWithResolvedDecisionIds(def, arvnOnlySetup, {
+      actionId: asActionId('assault'),
+      params: { $targetSpaces: [arvnSpace] },
+    }).state;
+
+    assert.equal(
+      arvnOnlyFinal.markers[arvnSpace]?.supportOpposition,
+      'passiveOpposition',
+      'ARVN-only Assault in a Province should shift 1 level toward Active Opposition',
+    );
+  });
+
   it('US Abrams shaded caps Assault space selection to max 2', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);

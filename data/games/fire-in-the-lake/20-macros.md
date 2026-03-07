@@ -1998,10 +1998,17 @@ effectMacros:
   - id: cap-assault-search-and-destroy
     params:
       - { name: space, type: zoneSelector }
+      - { name: actorFaction, type: { kind: enum, values: [US, ARVN] } }
+      - { name: assaultRemovedCount, type: value }
     exports: []
     effects:
       - if:
-          when: { op: '==', left: { ref: globalMarkerState, marker: cap_searchAndDestroy }, right: unshaded }
+          when:
+            op: and
+            args:
+              - { op: '==', left: { ref: globalMarkerState, marker: cap_searchAndDestroy }, right: unshaded }
+              - { op: '==', left: { param: actorFaction }, right: US }
+              - { op: '==', left: { param: assaultRemovedCount }, right: 0 }
           then:
             - forEach:
                 bind: $sndUnderground
@@ -2020,10 +2027,7 @@ effectMacros:
             op: and
             args:
               - { op: '==', left: { ref: globalMarkerState, marker: cap_searchAndDestroy }, right: shaded }
-              - op: or
-                args:
-                  - { op: '==', left: { ref: zoneProp, zone: { param: space }, prop: category }, right: province }
-                  - { op: '==', left: { ref: zoneProp, zone: { param: space }, prop: category }, right: city }
+              - { op: '==', left: { ref: zoneProp, zone: { param: space }, prop: category }, right: province }
               - { op: '>', left: { ref: zoneProp, zone: { param: space }, prop: population }, right: 0 }
               - { op: '!=', left: { ref: markerState, space: { param: space }, marker: supportOpposition }, right: activeOpposition }
           then:

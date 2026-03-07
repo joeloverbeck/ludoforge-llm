@@ -2412,50 +2412,63 @@ actionPipelines:
                   args:
                     space: $space
                 - let:
-                    bind: $usTroops
-                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'US' }, { prop: type, eq: troops }] } } } }
+                    bind: $insurgentBefore
+                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
                     in:
                       - let:
-                          bind: $hasUSBase
-                          value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'US' }, { prop: type, eq: base }] } } } }
+                          bind: $usTroops
+                          value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'US' }, { prop: type, eq: troops }] } } } }
                           in:
                             - let:
-                                bind: $damage
-                                value:
-                                  if:
-                                    when: { op: '>', left: { ref: binding, name: $hasUSBase }, right: 0 }
-                                    then: { op: '*', left: { ref: binding, name: $usTroops }, right: 2 }
-                                    else:
-                                      if:
-                                        when: { op: zonePropIncludes, zone: $space, prop: terrainTags, value: 'highland' }
-                                        then: { op: '/', left: { ref: binding, name: $usTroops }, right: 2 }
-                                        else: { ref: binding, name: $usTroops }
+                                bind: $hasUSBase
+                                value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'US' }, { prop: type, eq: base }] } } } }
                                 in:
-                                  - macro: coin-assault-removal-order
-                                    args:
-                                      space: $space
-                                      damageExpr: { ref: binding, name: $damage }
-                                      bodyCountEligible: true
-                                      forceUntunneledBaseFirst:
+                                  - let:
+                                      bind: $damage
+                                      value:
                                         if:
-                                          when:
-                                            op: in
-                                            item: { ref: binding, name: $space }
-                                            set: { ref: binding, name: $abramsSpace }
-                                          then: true
-                                          else: false
-                                      treatTunneledBasesAsUntunneled:
-                                        if:
-                                          when:
-                                            op: and
-                                            args:
-                                              - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
-                                              - { op: '==', left: { ref: gvar, var: fitl_operationAttleboroTunnelOverride }, right: true }
-                                          then: true
-                                          else: false
-                - macro: cap-assault-search-and-destroy
-                  args:
-                    space: $space
+                                          when: { op: '>', left: { ref: binding, name: $hasUSBase }, right: 0 }
+                                          then: { op: '*', left: { ref: binding, name: $usTroops }, right: 2 }
+                                          else:
+                                            if:
+                                              when: { op: zonePropIncludes, zone: $space, prop: terrainTags, value: 'highland' }
+                                              then: { op: '/', left: { ref: binding, name: $usTroops }, right: 2 }
+                                              else: { ref: binding, name: $usTroops }
+                                      in:
+                                        - macro: coin-assault-removal-order
+                                          args:
+                                            space: $space
+                                            damageExpr: { ref: binding, name: $damage }
+                                            bodyCountEligible: true
+                                            forceUntunneledBaseFirst:
+                                              if:
+                                                when:
+                                                  op: in
+                                                  item: { ref: binding, name: $space }
+                                                  set: { ref: binding, name: $abramsSpace }
+                                                then: true
+                                                else: false
+                                            treatTunneledBasesAsUntunneled:
+                                              if:
+                                                when:
+                                                  op: and
+                                                  args:
+                                                    - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                                                    - { op: '==', left: { ref: gvar, var: fitl_operationAttleboroTunnelOverride }, right: true }
+                                                then: true
+                                                else: false
+                                        - let:
+                                            bind: $insurgentAfter
+                                            value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
+                                            in:
+                                              - macro: cap-assault-search-and-destroy
+                                                args:
+                                                  space: $space
+                                                  actorFaction: US
+                                                  assaultRemovedCount:
+                                                    op: '-'
+                                                    left: { ref: binding, name: $insurgentBefore }
+                                                    right: { ref: binding, name: $insurgentAfter }
       - stage: cap-m48-patton-bonus-removal
         effects:
           - macro: cap-assault-m48-unshaded-bonus-removal
@@ -2491,24 +2504,40 @@ actionPipelines:
                                 then:
                                   - addVar: { scope: global, var: arvnResources, delta: -3 }
                       - let:
-                          bind: $arvnCubes
-                          value: { aggregate: { op: count, query: { query: tokensInZone, zone: $arvnSpace, filter: { op: and, args: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
+                          bind: $insurgentBefore
+                          value: { aggregate: { op: count, query: { query: tokensInZone, zone: $arvnSpace, filter: { op: and, args: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
                           in:
                             - let:
-                                bind: $arvnDamage
-                                value:
-                                  if:
-                                    when: { op: zonePropIncludes, zone: $arvnSpace, prop: terrainTags, value: 'highland' }
-                                    then: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 3 }
-                                    else: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 2 }
+                                bind: $arvnCubes
+                                value: { aggregate: { op: count, query: { query: tokensInZone, zone: $arvnSpace, filter: { op: and, args: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
                                 in:
-                                  - macro: coin-assault-removal-order
-                                    args:
-                                      space: $arvnSpace
-                                      damageExpr: { ref: binding, name: $arvnDamage }
-                                      bodyCountEligible: true
-                                      forceUntunneledBaseFirst: false
-                                      treatTunneledBasesAsUntunneled: false
+                                  - let:
+                                      bind: $arvnDamage
+                                      value:
+                                        if:
+                                          when: { op: zonePropIncludes, zone: $arvnSpace, prop: terrainTags, value: 'highland' }
+                                          then: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 3 }
+                                          else: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 2 }
+                                      in:
+                                        - macro: coin-assault-removal-order
+                                          args:
+                                            space: $arvnSpace
+                                            damageExpr: { ref: binding, name: $arvnDamage }
+                                            bodyCountEligible: true
+                                            forceUntunneledBaseFirst: false
+                                            treatTunneledBasesAsUntunneled: false
+                                        - let:
+                                            bind: $insurgentAfter
+                                            value: { aggregate: { op: count, query: { query: tokensInZone, zone: $arvnSpace, filter: { op: and, args: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
+                                            in:
+                                              - macro: cap-assault-search-and-destroy
+                                                args:
+                                                  space: $arvnSpace
+                                                  actorFaction: ARVN
+                                                  assaultRemovedCount:
+                                                    op: '-'
+                                                    left: { ref: binding, name: $insurgentBefore }
+                                                    right: { ref: binding, name: $insurgentAfter }
     atomicity: atomic
   - id: assault-arvn-profile
     actionId: assault
@@ -2584,39 +2613,52 @@ actionPipelines:
                     then:
                       - addVar: { scope: global, var: arvnResources, delta: -3 }
                 - let:
-                    bind: $isProvince
-                    value:
-                      if:
-                        when: { op: '==', left: { ref: zoneProp, zone: $space, prop: category }, right: 'province' }
-                        then: 1
-                        else: 0
+                    bind: $insurgentBefore
+                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
                     in:
                       - let:
-                          bind: $arvnCubes
+                          bind: $isProvince
                           value:
                             if:
-                              when: { op: '==', left: { ref: binding, name: $isProvince }, right: 1 }
-                              then: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'ARVN' }, { prop: type, eq: troops }] } } } }
-                              else: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
+                              when: { op: '==', left: { ref: zoneProp, zone: $space, prop: category }, right: 'province' }
+                              then: 1
+                              else: 0
                           in:
                             - let:
-                                bind: $damage
+                                bind: $arvnCubes
                                 value:
                                   if:
-                                    when: { op: zonePropIncludes, zone: $space, prop: terrainTags, value: 'highland' }
-                                    then: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 3 }
-                                    else: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 2 }
+                                    when: { op: '==', left: { ref: binding, name: $isProvince }, right: 1 }
+                                    then: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'ARVN' }, { prop: type, eq: troops }] } } } }
+                                    else: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
                                 in:
-                                  - macro: coin-assault-removal-order
-                                    args:
-                                      space: $space
-                                      damageExpr: { ref: binding, name: $damage }
-                                      bodyCountEligible: true
-                                      forceUntunneledBaseFirst: false
-                                      treatTunneledBasesAsUntunneled: false
-                - macro: cap-assault-search-and-destroy
-                  args:
-                    space: $space
+                                  - let:
+                                      bind: $damage
+                                      value:
+                                        if:
+                                          when: { op: zonePropIncludes, zone: $space, prop: terrainTags, value: 'highland' }
+                                          then: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 3 }
+                                          else: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 2 }
+                                      in:
+                                        - macro: coin-assault-removal-order
+                                          args:
+                                            space: $space
+                                            damageExpr: { ref: binding, name: $damage }
+                                            bodyCountEligible: true
+                                            forceUntunneledBaseFirst: false
+                                            treatTunneledBasesAsUntunneled: false
+                                        - let:
+                                            bind: $insurgentAfter
+                                            value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
+                                            in:
+                                              - macro: cap-assault-search-and-destroy
+                                                args:
+                                                  space: $space
+                                                  actorFaction: ARVN
+                                                  assaultRemovedCount:
+                                                    op: '-'
+                                                    left: { ref: binding, name: $insurgentBefore }
+                                                    right: { ref: binding, name: $insurgentAfter }
     atomicity: atomic
   # ── Insurgent profiles (rally) and remaining stubs (march, attack, terror) ──
   - id: rally-nva-profile

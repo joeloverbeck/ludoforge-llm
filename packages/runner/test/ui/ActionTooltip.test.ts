@@ -197,7 +197,7 @@ describe('ActionTooltip', () => {
     const desc = makeDescription({
       sections: [makeEffectsGroup()],
       limitUsage: [
-        { scope: 'turn', max: 2, current: 1 },
+        { id: 'action::turn::0', scope: 'turn', max: 2, current: 1 },
       ],
     });
 
@@ -283,9 +283,9 @@ describe('ActionTooltip', () => {
     expect(tooltipBlock).toContain('overflow-x: hidden;');
   });
 
-  it('enforces long-token wrapping on tooltip inline spans via CSS contract', () => {
+  it('enforces long-token wrapping on display-node inline spans via CSS contract', () => {
     const css = readFileSync(
-      resolve(process.cwd(), 'src/ui/ActionTooltip.module.css'),
+      resolve(process.cwd(), 'src/ui/DisplayNodeRenderers.module.css'),
       'utf-8',
     );
     const spanWrapBlock = css.match(/\.line\s*>\s*span\s*\{[^}]*\}/u)?.[0] ?? '';
@@ -457,7 +457,7 @@ describe('ActionTooltip', () => {
     it('does not render legacy limit footer when payload is present', () => {
       const desc = makeDescription({
         sections: [makeEffectsGroup()],
-        limitUsage: [{ scope: 'turn', max: 2, current: 1 }],
+        limitUsage: [{ id: 'action::turn::0', scope: 'turn', max: 2, current: 1 }],
         tooltipPayload: makePayload(),
       });
 

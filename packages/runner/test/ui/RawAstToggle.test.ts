@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { DisplayGroupNode, DisplayLineNode } from '@ludoforge/engine/runtime';
 
 /* ------------------------------------------------------------------ */
-/* Floating UI mock (needed by display-node-renderers → ActionTooltip.module.css) */
+/* Floating UI mock (kept aligned with shared tooltip test setup) */
 /* ------------------------------------------------------------------ */
 
 vi.mock('@floating-ui/react-dom', () => ({

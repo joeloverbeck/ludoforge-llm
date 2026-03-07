@@ -68,7 +68,7 @@ describe('AvailabilitySection', () => {
     render(createElement(AvailabilitySection, {
       ruleState: makeRuleState({
         available: true,
-        limitUsage: [{ scope: 'turn', used: 1, max: 3 }],
+        limitUsage: [{ id: 'a::turn::0', scope: 'turn', used: 1, max: 3 }],
       }),
     }));
     const limits = screen.getAllByTestId('limit-usage-item');
@@ -81,8 +81,8 @@ describe('AvailabilitySection', () => {
       ruleState: makeRuleState({
         available: true,
         limitUsage: [
-          { scope: 'phase', used: 1, max: 2 },
-          { scope: 'game', used: 2, max: 5 },
+          { id: 'a::phase::0', scope: 'phase', used: 1, max: 2 },
+          { id: 'a::game::1', scope: 'game', used: 2, max: 5 },
         ],
       }),
     }));
@@ -97,13 +97,17 @@ describe('AvailabilitySection', () => {
       ruleState: makeRuleState({
         available: true,
         limitUsage: [
-          { scope: 'turn', used: 0, max: 1 },
-          { scope: 'game', used: 2, max: 3 },
+          { id: 'a::turn::0', scope: 'turn', used: 0, max: 1 },
+          { id: 'a::game::1', scope: 'game', used: 2, max: 3 },
         ],
       }),
     }));
+    const list = screen.getByTestId('limit-usage-list');
+    expect(list.tagName).toBe('UL');
     const limits = screen.getAllByTestId('limit-usage-item');
     expect(limits).toHaveLength(2);
+    expect(limits[0]?.tagName).toBe('LI');
+    expect(limits[1]?.tagName).toBe('LI');
     expect(limits[0]?.textContent).toContain('1 remaining this turn');
     expect(limits[1]?.textContent).toContain('1 remaining total');
   });
@@ -115,12 +119,83 @@ describe('AvailabilitySection', () => {
     expect(screen.queryByTestId('limit-usage-item')).toBeNull();
   });
 
+  it('does not show limit usage when limit usage is empty array', () => {
+    render(createElement(AvailabilitySection, {
+      ruleState: makeRuleState({
+        available: true,
+        limitUsage: [],
+      }),
+    }));
+    expect(screen.queryByTestId('limit-usage-list')).toBeNull();
+    expect(screen.queryByTestId('limit-usage-item')).toBeNull();
+  });
+
+  it('keeps limit rows mounted when usage values change', () => {
+    const { rerender } = render(createElement(AvailabilitySection, {
+      ruleState: makeRuleState({
+        available: true,
+        limitUsage: [
+          { id: 'a::turn::0', scope: 'turn', used: 0, max: 1 },
+          { id: 'a::game::1', scope: 'game', used: 1, max: 3 },
+        ],
+      }),
+    }));
+    const before = screen.getAllByTestId('limit-usage-item');
+
+    rerender(createElement(AvailabilitySection, {
+      ruleState: makeRuleState({
+        available: true,
+        limitUsage: [
+          { id: 'a::turn::0', scope: 'turn', used: 1, max: 1 },
+          { id: 'a::game::1', scope: 'game', used: 2, max: 3 },
+        ],
+      }),
+    }));
+
+    const after = screen.getAllByTestId('limit-usage-item');
+    expect(after).toHaveLength(2);
+    expect(after[0]).toBe(before[0]);
+    expect(after[1]).toBe(before[1]);
+    expect(after[0]?.textContent).toContain('0 remaining this turn');
+    expect(after[1]?.textContent).toContain('1 remaining total');
+  });
+
+  it('keeps duplicate-scope limit rows mounted when each entry updates independently', () => {
+    const { rerender } = render(createElement(AvailabilitySection, {
+      ruleState: makeRuleState({
+        available: true,
+        limitUsage: [
+          { id: 'a::turn::0', scope: 'turn', used: 0, max: 1 },
+          { id: 'a::turn::1', scope: 'turn', used: 1, max: 3 },
+        ],
+      }),
+    }));
+    const before = screen.getAllByTestId('limit-usage-item');
+
+    rerender(createElement(AvailabilitySection, {
+      ruleState: makeRuleState({
+        available: true,
+        limitUsage: [
+          { id: 'a::turn::0', scope: 'turn', used: 1, max: 1 },
+          { id: 'a::turn::1', scope: 'turn', used: 2, max: 3 },
+        ],
+      }),
+    }));
+
+    const after = screen.getAllByTestId('limit-usage-item');
+    expect(after).toHaveLength(2);
+    expect(after[0]).toBe(before[0]);
+    expect(after[1]).toBe(before[1]);
+    expect(after[0]?.textContent).toContain('0 remaining this turn');
+    expect(after[1]?.textContent).toContain('1 remaining this turn');
+  });
+
   it('shows limit usage together with blocked state', () => {
     render(createElement(AvailabilitySection, {
       ruleState: makeRuleState({
         available: false,
         blockers: [{ astPath: 'root', description: 'Blocked reason' }],
-        limitUsage: [{ scope: 'turn', used: 2, max: 2 }],
+        limitUsage: [{ id: 'a::turn::0', scope: 'turn', used: 2, max: 2 }],
       }),
     }));
     const section = screen.getByTestId('availability-section');

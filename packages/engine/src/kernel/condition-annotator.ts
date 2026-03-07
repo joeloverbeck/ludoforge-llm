@@ -21,7 +21,7 @@ import type { ActionDef, ActionUsageRecord, ConditionAST, GameDef, GameState, Va
 import type { ActionPipelineDef } from './types-operations.js';
 import type { EffectAST } from './types-ast.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
-import type { ActionTooltipPayload, RuleCard, RuleState } from './tooltip-rule-card.js';
+import type { ActionTooltipPayload, RuleCard, RuleState, RuleStateLimitUsage } from './tooltip-rule-card.js';
 import { normalizeEffect, type NormalizerContext } from './tooltip-normalizer.js';
 import { planContent } from './tooltip-content-planner.js';
 import { realizeContentPlan } from './tooltip-template-realizer.js';
@@ -203,10 +203,13 @@ const annotateLimitsGroup = (
     const current = usage !== undefined ? usage[scopeToUsageField(limit.scope)] : 0;
     return { ...limit, current };
   });
+  const limitUsageById = new Map(limitUsage.map((limit) => [limit.id, limit] as const));
 
-  const annotatedChildren = group.children.map((child, idx) => {
-    const info = limitUsage[idx];
-    if (child.kind !== 'line' || info === undefined) return child;
+  const annotatedChildren = group.children.map((child) => {
+    if (child.kind !== 'line') return child;
+    const sourceRef = child.sourceRef;
+    const info = sourceRef?.kind === 'limit' ? limitUsageById.get(sourceRef.id) : undefined;
+    if (info === undefined) return child;
     const annotation: DisplayAnnotationNode = {
       kind: 'annotation',
       annotationType: 'usage',
@@ -365,8 +368,9 @@ const buildRuleState = (
   }
 
   // Limit usage summary
-  const limitSummary = limitUsage.length > 0
+  const limitSummary: readonly RuleStateLimitUsage[] | undefined = limitUsage.length > 0
     ? limitUsage.map((limit) => ({
+      id: limit.id,
       scope: limit.scope,
       used: limit.current,
       max: limit.max,

@@ -28,7 +28,7 @@ describe('hasDisplayableContent', () => {
 
   it('returns true when limitUsage is non-empty', () => {
     const desc = makeDescription({
-      limitUsage: [{ scope: 'turn', max: 2, current: 1 }],
+      limitUsage: [{ id: 'action::turn::0', scope: 'turn', max: 2, current: 1 }],
     });
     expect(hasDisplayableContent(desc)).toBe(true);
   });
@@ -36,7 +36,7 @@ describe('hasDisplayableContent', () => {
   it('returns true when both sections and limitUsage are non-empty', () => {
     const desc = makeDescription({
       sections: [{ kind: 'group', label: 'Effects', children: [] }],
-      limitUsage: [{ scope: 'turn', max: 2, current: 1 }],
+      limitUsage: [{ id: 'action::turn::0', scope: 'turn', max: 2, current: 1 }],
     });
     expect(hasDisplayableContent(desc)).toBe(true);
   });

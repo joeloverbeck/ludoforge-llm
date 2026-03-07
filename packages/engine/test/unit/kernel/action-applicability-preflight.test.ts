@@ -146,7 +146,7 @@ describe('resolveActionApplicabilityPreflight()', () => {
         pre: null,
         cost: [],
         effects: [],
-        limits: [{ scope: 'phase', max: 1 }],
+        limits: [{ id: 'limitedOp::phase::0', scope: 'phase', max: 1 }],
       },
     });
     const state = makeState({
@@ -466,7 +466,7 @@ describe('resolveActionApplicabilityPreflight()', () => {
     const def = makeDef();
     const state = makeState();
     const action = def.actions[0]!;
-    const malformedResources = { collector: 'not-an-object', queryRuntimeCache: {} };
+    const malformedResources = { collector: 'not-an-object' };
 
     assert.throws(
       () =>

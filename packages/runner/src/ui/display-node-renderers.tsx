@@ -6,7 +6,7 @@ import type {
   DisplayNode,
 } from '@ludoforge/engine/runtime';
 
-import styles from './ActionTooltip.module.css';
+import styles from './DisplayNodeRenderers.module.css';
 
 const INDENT_PX = 12;
 
@@ -56,8 +56,10 @@ export function renderNode(node: DisplayNode, key: string): ReactElement {
       return renderGroup(node, key);
     case 'line':
       return renderLine(node, key);
-    default:
-      return renderInlineNode(node as DisplayInlineNode, key);
+    default: {
+      const exhaustive: DisplayInlineNode = node;
+      return renderInlineNode(exhaustive, key);
+    }
   }
 }
 

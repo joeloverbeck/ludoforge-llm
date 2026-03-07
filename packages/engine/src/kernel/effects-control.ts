@@ -6,6 +6,7 @@ import { buildForEachTraceEntry, buildReduceTraceEntry } from './control-flow-tr
 import { effectRuntimeError } from './effect-error.js';
 import { emitTrace, emitWarning } from './execution-collector.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
+import { resolveRuntimeTokenBindingValue } from './token-binding.js';
 import { resolveTraceProvenance, withTracePath } from './trace-provenance.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, TriggerEvent } from './types.js';
@@ -292,9 +293,6 @@ const resolveRemovalBudget = (budgetExpr: unknown, effectType: string): number =
   return budgetExpr;
 };
 
-const isTokenLike = (value: unknown): value is { readonly id: string } =>
-  typeof value === 'object' && value !== null && 'id' in value && typeof (value as { id: unknown }).id === 'string';
-
 export const applyRemoveByPriority = (
   effect: Extract<EffectAST, { readonly removeByPriority: unknown }>,
   ctx: EffectContext,
@@ -322,7 +320,7 @@ export const applyRemoveByPriority = (
       const bounded = queried.slice(0, remainingBudget);
 
       for (const item of bounded) {
-        if (typeof item !== 'string' && !isTokenLike(item)) {
+        if (resolveRuntimeTokenBindingValue(item) === null) {
           throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CONTROL_FLOW_RUNTIME_VALIDATION_FAILED, 'removeByPriority groups must resolve to token items', {
             effectType: 'removeByPriority',
             bind: group.bind,

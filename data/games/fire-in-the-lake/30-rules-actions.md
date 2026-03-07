@@ -3546,7 +3546,7 @@ actionPipelines:
                 filter:
                   op: and
                   args:
-                    - { op: '!=', left: { ref: gvar, var: fitl_acesAirStrikeWindow }, right: true }
+                    - { op: '==', left: { ref: gvar, var: fitl_airStrikeWindowMode }, right: 0 }
                     - { op: '==', left: { ref: globalMarkerState, marker: cap_arcLight }, right: unshaded }
                     - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
                     - op: '=='
@@ -3567,7 +3567,7 @@ actionPipelines:
                   when:
                     op: and
                     args:
-                      - { op: '!=', left: { ref: gvar, var: fitl_acesAirStrikeWindow }, right: true }
+                      - { op: '==', left: { ref: gvar, var: fitl_airStrikeWindowMode }, right: 0 }
                       - { op: '==', left: { ref: globalMarkerState, marker: cap_arcLight }, right: unshaded }
                   then: 1
                   else: 0
@@ -3580,7 +3580,11 @@ actionPipelines:
                   args:
                     - op: and
                       args:
-                        - { op: '==', left: { ref: gvar, var: fitl_acesAirStrikeWindow }, right: true }
+                        - { op: '==', left: { ref: gvar, var: fitl_airStrikeWindowMode }, right: 2 }
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: coastal }, right: true }
+                    - op: and
+                      args:
+                        - { op: '==', left: { ref: gvar, var: fitl_airStrikeWindowMode }, right: 1 }
                         - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
                         - op: or
                           args:
@@ -3588,7 +3592,7 @@ actionPipelines:
                             - { conditionMacro: fitl-space-in-laos-cambodia, args: { spaceExpr: $zone } }
                     - op: and
                       args:
-                        - { op: '!=', left: { ref: gvar, var: fitl_acesAirStrikeWindow }, right: true }
+                        - { op: '==', left: { ref: gvar, var: fitl_airStrikeWindowMode }, right: 0 }
                         - op: '!='
                           left: { ref: zoneProp, zone: $zone, prop: country }
                           right: northVietnam
@@ -3606,17 +3610,25 @@ actionPipelines:
                           right: 0
               min:
                 if:
-                  when: { op: '==', left: { ref: gvar, var: fitl_acesAirStrikeWindow }, right: true }
-                  then: 1
-                  else: 0
-              max:
-                if:
-                  when: { op: '==', left: { ref: gvar, var: fitl_acesAirStrikeWindow }, right: true }
+                  when: { op: '==', left: { ref: gvar, var: fitl_airStrikeWindowMode }, right: 2 }
                   then: 1
                   else:
-                    op: '-'
-                    left: 6
-                    right: { aggregate: { op: count, query: { query: binding, name: $arcLightNoCoinProvinces } } }
+                    if:
+                      when: { op: '==', left: { ref: gvar, var: fitl_airStrikeWindowMode }, right: 1 }
+                      then: 1
+                      else: 0
+              max:
+                if:
+                  when: { op: '==', left: { ref: gvar, var: fitl_airStrikeWindowMode }, right: 2 }
+                  then: 3
+                  else:
+                    if:
+                      when: { op: '==', left: { ref: gvar, var: fitl_airStrikeWindowMode }, right: 1 }
+                      then: 1
+                      else:
+                        op: '-'
+                        left: 6
+                        right: { aggregate: { op: count, query: { query: binding, name: $arcLightNoCoinProvinces } } }
       - stage: remove-active-enemy-pieces
         effects:
           - setVar:
@@ -3658,7 +3670,15 @@ actionPipelines:
                             - macro: us-sa-remove-insurgents
                               args:
                                 space: $space
-                                budgetExpr: { ref: gvar, var: airStrikeRemaining }
+                                budgetExpr:
+                                  if:
+                                    when: { op: '==', left: { ref: gvar, var: fitl_airStrikeWindowMode }, right: 2 }
+                                    then:
+                                      if:
+                                        when: { op: '>', left: { ref: gvar, var: airStrikeRemaining }, right: 2 }
+                                        then: 2
+                                        else: { ref: gvar, var: airStrikeRemaining }
+                                    else: { ref: gvar, var: airStrikeRemaining }
                                 activeGuerrillasOnly: true
                       - let:
                           bind: $enemyAfter
@@ -3726,7 +3746,7 @@ actionPipelines:
                   - { op: '==', left: { ref: binding, name: $degradeTrail }, right: 'yes' }
                   - { op: '>', left: { ref: gvar, var: trail }, right: 0 }
                   - { op: '!=', left: { ref: gvar, var: mom_oriskany }, right: true }
-                  - { op: '!=', left: { ref: gvar, var: fitl_acesAirStrikeWindow }, right: true }
+                  - { op: '==', left: { ref: gvar, var: fitl_airStrikeWindowMode }, right: 0 }
                   - op: or
                     args:
                       - { op: '!=', left: { ref: gvar, var: mom_wildWeasels }, right: true }

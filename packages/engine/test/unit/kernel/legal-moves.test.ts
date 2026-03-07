@@ -890,7 +890,7 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [],
-      limits: [{ scope: 'turn', max: 1 }],
+      limits: [{ id: 'limitedOp::turn::0', scope: 'turn', max: 1 }],
     };
 
     const profile: ActionPipelineDef = {

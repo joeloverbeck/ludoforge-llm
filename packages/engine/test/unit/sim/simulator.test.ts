@@ -51,7 +51,7 @@ phase: [asPhaseId('p1')],
             pre: null,
             cost: [],
             effects: [{ addVar: { scope: 'global' as const, var: 'score', delta: 1 } }],
-            limits: [{ scope: 'turn' as const, max: 1 }],
+            limits: [{ id: 'step1::turn::0', scope: 'turn' as const, max: 1 }],
           },
           {
             id: asActionId('step2'),
@@ -62,7 +62,7 @@ phase: [asPhaseId('p2')],
             pre: null,
             cost: [],
             effects: [],
-            limits: [{ scope: 'turn' as const, max: 1 }],
+            limits: [{ id: 'step2::turn::0', scope: 'turn' as const, max: 1 }],
           },
         ]
       : [

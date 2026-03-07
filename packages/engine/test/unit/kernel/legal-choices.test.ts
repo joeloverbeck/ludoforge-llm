@@ -113,7 +113,7 @@ describe('legalChoicesDiscover()', () => {
       pre: null,
       cost: [],
       effects: [],
-      limits: [{ scope: 'phase', max: 1 }],
+      limits: [{ id: 'limitedAction::phase::0', scope: 'phase', max: 1 }],
     };
 
     const def = makeBaseDef({ actions: [action] });

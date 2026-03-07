@@ -44,10 +44,9 @@ describe('assertEvalRuntimeResourcesContract', () => {
     );
   });
 
-  it('ignores unrelated extra fields and enforces only collector runtime resources contract', () => {
+  it('fails when collector contains unknown keys', () => {
     const invalidResources = {
-      collector: { warnings: [], trace: {} },
-      queryRuntimeCache: 'legacy-extra-field',
+      collector: { warnings: [], trace: null, legacyTraceSink: [] },
     };
     assert.throws(
       () => {
@@ -55,7 +54,25 @@ describe('assertEvalRuntimeResourcesContract', () => {
       },
       (error: unknown) => {
         assert.equal((error as { code?: string }).code, 'RUNTIME_CONTRACT_INVALID');
-        assert.match((error as Error).message, /collector\.trace must be an array or null/);
+        assert.match((error as Error).message, /collector contains unknown key\(s\): legacyTraceSink/);
+        return true;
+      },
+    );
+  });
+
+  it('fails when runtime resources contains unknown top-level keys', () => {
+    const invalidResources = {
+      collector: createCollector({ trace: true }),
+      queryRuntimeCache: 'legacy-extra-field',
+    };
+
+    assert.throws(
+      () => {
+        assertEvalRuntimeResourcesContract(invalidResources, 'testBoundary evalRuntimeResources');
+      },
+      (error: unknown) => {
+        assert.equal((error as { code?: string }).code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match((error as Error).message, /contains unknown resource key\(s\): queryRuntimeCache/);
         return true;
       },
     );

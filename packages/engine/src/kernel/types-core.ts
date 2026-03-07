@@ -133,6 +133,7 @@ export interface ParamDef {
 }
 
 export interface LimitDef {
+  readonly id: string;
   readonly scope: 'turn' | 'phase' | 'game';
   readonly max: number;
 }

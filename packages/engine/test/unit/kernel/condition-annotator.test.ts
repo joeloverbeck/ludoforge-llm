@@ -215,7 +215,7 @@ describe('describeAction (condition annotator)', () => {
   // -----------------------------------------------------------------------
   it('reports limit usage from state actionUsage', () => {
     const action = minimalActionDef({
-      limits: [{ scope: 'turn', max: 2 }],
+      limits: [{ id: 'test::turn::0', scope: 'turn', max: 2 }],
     });
     const ctx = makeContext({
       state: makeState({
@@ -227,6 +227,7 @@ describe('describeAction (condition annotator)', () => {
     const result = describeAction(action, ctx);
 
     assert.equal(result.limitUsage.length, 1);
+    assert.equal(result.limitUsage[0]!.id, 'test::turn::0');
     assert.equal(result.limitUsage[0]!.scope, 'turn');
     assert.equal(result.limitUsage[0]!.max, 2);
     assert.equal(result.limitUsage[0]!.current, 1);
@@ -238,6 +239,60 @@ describe('describeAction (condition annotator)', () => {
     const usageAnns = annotationsOfType(ln, 'usage');
     assert.ok(usageAnns.length >= 1);
     assert.equal(usageAnns[0]!.text, '1/2');
+  });
+
+  it('preserves canonical limit ids from ActionDef without re-deriving', () => {
+    const action = minimalActionDef({
+      limits: [{ id: 'canonical-limit-id', scope: 'turn', max: 2 }],
+      effects: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
+    });
+    const ctx = makeContext({
+      state: makeState({
+        actionUsage: {
+          test: { turnCount: 1, phaseCount: 0, gameCount: 0 },
+        },
+      }),
+    });
+
+    const result = describeAction(action, ctx);
+    assert.equal(result.limitUsage.length, 1);
+    assert.equal(result.limitUsage[0]?.id, 'canonical-limit-id');
+    assert.equal(result.tooltipPayload?.ruleState.limitUsage?.[0]?.id, 'canonical-limit-id');
+  });
+
+  it('keeps duplicate-scope limit identities distinct and parity-aligned across surfaces', () => {
+    const action = minimalActionDef({
+      limits: [
+        { id: 'test::turn::0', scope: 'turn', max: 1 },
+        { id: 'test::turn::1', scope: 'turn', max: 3 },
+      ],
+      effects: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
+    });
+    const ctx = makeContext({
+      state: makeState({
+        actionUsage: {
+          test: { turnCount: 1, phaseCount: 0, gameCount: 0 },
+        },
+      }),
+    });
+
+    const result = describeAction(action, ctx);
+    assert.ok(result.tooltipPayload !== undefined);
+    const tooltipLimitUsage = result.tooltipPayload.ruleState.limitUsage;
+    assert.ok(tooltipLimitUsage !== undefined);
+
+    assert.equal(result.limitUsage.length, 2);
+    assert.equal(new Set(result.limitUsage.map((limit) => limit.id)).size, 2);
+
+    assert.deepEqual(
+      result.limitUsage.map((limit) => ({
+        id: limit.id,
+        scope: limit.scope,
+        max: limit.max,
+        used: limit.current,
+      })),
+      tooltipLimitUsage,
+    );
   });
 
   // -----------------------------------------------------------------------
@@ -331,7 +386,7 @@ describe('describeAction (condition annotator)', () => {
       left: { ref: 'gvar', var: 'gold' },
       right: 5,
     };
-    const action = minimalActionDef({ pre, limits: [{ scope: 'turn', max: 3 }] });
+    const action = minimalActionDef({ pre, limits: [{ id: 'test::turn::0', scope: 'turn', max: 3 }] });
     const ctx = makeContext();
     const result = describeAction(action, ctx);
 
@@ -352,7 +407,7 @@ describe('describeAction (condition annotator)', () => {
           { op: 'not', arg: true },
         ],
       },
-      limits: [{ scope: 'game', max: 1 }],
+      limits: [{ id: 'test::game::0', scope: 'game', max: 1 }],
     });
     const ctx = makeContext();
 
@@ -773,7 +828,7 @@ describe('describeAction (condition annotator)', () => {
     const action = minimalActionDef({
       pre,
       effects: [{ setVar: { scope: 'global', var: 'gold', value: 0 } }],
-      limits: [{ scope: 'turn', max: 3 }],
+      limits: [{ id: 'test::turn::0', scope: 'turn', max: 3 }],
     });
     const def = makeDef();
     const runtime = makeRuntime(def);
@@ -795,14 +850,14 @@ describe('describeAction (condition annotator)', () => {
     assert.equal(result.limitUsage.length, 1);
     // tooltipPayload is additive
     assert.ok(result.tooltipPayload !== undefined);
-    assert.deepEqual(result.tooltipPayload.ruleState.limitUsage, [{ scope: 'turn', used: 0, max: 3 }]);
+    assert.deepEqual(result.tooltipPayload.ruleState.limitUsage, [{ id: 'test::turn::0', scope: 'turn', used: 0, max: 3 }]);
   });
 
   it('surfaces all ruleState limit usage entries for multi-limit actions', () => {
     const action = minimalActionDef({
       limits: [
-        { scope: 'turn', max: 1 },
-        { scope: 'game', max: 3 },
+        { id: 'test::turn::0', scope: 'turn', max: 1 },
+        { id: 'test::game::1', scope: 'game', max: 3 },
       ],
       effects: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
     });
@@ -818,8 +873,8 @@ describe('describeAction (condition annotator)', () => {
 
     assert.ok(result.tooltipPayload !== undefined);
     assert.deepEqual(result.tooltipPayload.ruleState.limitUsage, [
-      { scope: 'turn', used: 1, max: 1 },
-      { scope: 'game', used: 2, max: 3 },
+      { id: 'test::turn::0', scope: 'turn', used: 1, max: 1 },
+      { id: 'test::game::1', scope: 'game', used: 2, max: 3 },
     ]);
   });
 

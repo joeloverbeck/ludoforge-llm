@@ -97,7 +97,7 @@ phase: ['main'],
       pre: { op: '==', left: 1, right: 1 },
       cost: [],
       effects: [{ draw: { from: 'deck:none', to: 'discard:none', count: 1 } }],
-      limits: [{ scope: 'turn', max: 1 }],
+      limits: [{ id: 'playCard::turn::0', scope: 'turn', max: 1 }],
     },
   ],
   triggers: [

@@ -144,9 +144,9 @@ describe('DisplayNode type system', () => {
   describe('AnnotatedActionDescription', () => {
     it('survives structuredClone with all fields populated', () => {
       const limitUsage: readonly LimitUsageInfo[] = [
-        { scope: 'turn', max: 1, current: 0 },
-        { scope: 'phase', max: 3, current: 2 },
-        { scope: 'game', max: 10, current: 7 },
+        { id: 'action::turn::0', scope: 'turn', max: 1, current: 0 },
+        { id: 'action::phase::1', scope: 'phase', max: 3, current: 2 },
+        { id: 'action::game::2', scope: 'game', max: 10, current: 7 },
       ];
 
       const description: AnnotatedActionDescription = {
@@ -171,7 +171,7 @@ describe('DisplayNode type system', () => {
 
   describe('LimitUsageInfo extends LimitDef', () => {
     it('has scope, max, and current fields', () => {
-      const info: LimitUsageInfo = { scope: 'turn', max: 2, current: 1 };
+      const info: LimitUsageInfo = { id: 'action::turn::0', scope: 'turn', max: 2, current: 1 };
       assert.equal(info.scope, 'turn');
       assert.equal(info.max, 2);
       assert.equal(info.current, 1);
@@ -182,7 +182,7 @@ describe('DisplayNode type system', () => {
     it('no node contains functions or class instances', () => {
       const description: AnnotatedActionDescription = {
         sections: [group],
-        limitUsage: [{ scope: 'game', max: 5, current: 3 }],
+        limitUsage: [{ id: 'action::game::0', scope: 'game', max: 5, current: 3 }],
       };
 
       const json = JSON.stringify(description);

@@ -248,7 +248,33 @@ describe('effects token lifecycle', () => {
 
     assert.throws(
       () => applyEffect({ destroyToken: { token: '$token' } }, ctx),
-      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('multiple zones'),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME')
+        && String(error).includes('Token appears in multiple zones: dup')
+        && String(error).includes('"zones":["deck:none","discard:none"]'),
+    );
+  });
+
+  it('destroyToken reports same-zone duplicate counts with zone-aware diagnostics', () => {
+    const dup = token('dup-same-zone');
+    const state = makeState();
+    const ctx = makeCtx({
+      state: {
+        ...state,
+        zones: {
+          ...state.zones,
+          'deck:none': [dup, dup, ...(state.zones['deck:none'] ?? [])],
+        },
+      },
+      bindings: { $token: dup.id },
+    });
+
+    assert.throws(
+      () => applyEffect({ destroyToken: { token: '$token' } }, ctx),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME')
+        && String(error).includes('Token appears multiple times in zone "deck:none": dup-same-zone')
+        && String(error).includes('"occurrenceCount":2'),
     );
   });
 });
@@ -375,6 +401,55 @@ describe('effects setTokenProp', () => {
       () => applyEffect({ setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } }, ctx),
       (error: unknown) =>
         isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('must resolve to Token or TokenId'),
+    );
+  });
+
+  it('setTokenProp throws when token appears in multiple zones', () => {
+    const dup = makeTokenWithProps('dup-prop', { faction: 'NVA', activity: 'underground' });
+    const state = makeState();
+    const ctx = makeCtx({
+      def: makePieceDef(),
+      state: {
+        ...state,
+        zones: {
+          ...state.zones,
+          'deck:none': [dup, ...(state.zones['deck:none'] ?? [])],
+          'discard:none': [dup, ...(state.zones['discard:none'] ?? [])],
+        },
+      },
+      bindings: { $unit: dup.id },
+    });
+
+    assert.throws(
+      () => applyEffect({ setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } }, ctx),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME')
+        && String(error).includes('Token appears in multiple zones: dup-prop')
+        && String(error).includes('"zones":["deck:none","discard:none"]'),
+    );
+  });
+
+  it('setTokenProp reports same-zone duplicate counts with zone-aware diagnostics', () => {
+    const dup = makeTokenWithProps('dup-prop-same-zone', { faction: 'NVA', activity: 'underground' });
+    const state = makeState();
+    const ctx = makeCtx({
+      def: makePieceDef(),
+      state: {
+        ...state,
+        zones: {
+          ...state.zones,
+          'deck:none': [dup, dup, ...(state.zones['deck:none'] ?? [])],
+        },
+      },
+      bindings: { $unit: dup.id },
+    });
+
+    assert.throws(
+      () => applyEffect({ setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } }, ctx),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME')
+        && String(error).includes('Token appears multiple times in zone "deck:none": dup-prop-same-zone')
+        && String(error).includes('"occurrenceCount":2'),
     );
   });
 

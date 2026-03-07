@@ -24,21 +24,23 @@ export function AvailabilitySection({ ruleState }: AvailabilitySectionProps): Re
   return (
     <div className={styles.section} data-testid="availability-section">
       <div className={styles.status}>
-        <span
-          className={available ? styles.dotAvailable : styles.dotBlocked}
-          data-testid="availability-dot"
-        />
-        <span className={available ? styles.labelAvailable : styles.labelBlocked}>
-          {available ? 'Available' : 'Blocked'}
+        <span className={styles.statusSummary}>
+          <span
+            className={available ? styles.dotAvailable : styles.dotBlocked}
+            data-testid="availability-dot"
+          />
+          <span className={available ? styles.labelAvailable : styles.labelBlocked}>
+            {available ? 'Available' : 'Blocked'}
+          </span>
         </span>
         {limitUsage !== undefined && limitUsage.length > 0 && (
-          <span data-testid="limit-usage-list">
-            {limitUsage.map((limit, index) => (
-              <span key={`${limit.scope}-${limit.max}-${limit.used}-${index}`} className={styles.limit} data-testid="limit-usage-item">
+          <ul className={styles.limitList} data-testid="limit-usage-list">
+            {limitUsage.map((limit) => (
+              <li key={limit.id} className={styles.limitItem} data-testid="limit-usage-item">
                 ({limit.max - limit.used} remaining {scopeLabel(limit.scope)})
-              </span>
+              </li>
             ))}
-          </span>
+          </ul>
         )}
       </div>
       {!available && blockers.length > 0 && (

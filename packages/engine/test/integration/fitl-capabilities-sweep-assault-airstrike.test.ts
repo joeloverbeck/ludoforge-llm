@@ -796,9 +796,11 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
 
     const mainSelectorUsesReducedCap = findDeep(profile.stages, (node: any) =>
       node?.chooseN?.bind === '$spaces' &&
-      node?.chooseN?.max?.if?.else?.op === '-' &&
-      node?.chooseN?.max?.if?.else?.left === 6 &&
-      node?.chooseN?.max?.if?.else?.right?.aggregate?.query?.name === '$arcLightNoCoinProvinces',
+      findDeep(node.chooseN.max, (maxNode: any) =>
+        maxNode?.op === '-' &&
+        maxNode?.left === 6 &&
+        maxNode?.right?.aggregate?.query?.name === '$arcLightNoCoinProvinces',
+      ).length >= 1,
     );
     assert.ok(mainSelectorUsesReducedCap.length >= 1, 'Expected main Air Strike selector max to subtract selected Arc Light no-COIN Provinces');
 

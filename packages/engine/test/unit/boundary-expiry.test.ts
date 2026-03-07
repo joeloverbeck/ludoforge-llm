@@ -99,7 +99,7 @@ describe('applyBoundaryExpiry', () => {
   it('fails fast with RUNTIME_CONTRACT_INVALID when evalRuntimeResources is malformed', () => {
     const def = makeDef();
     const state = makeState();
-    const malformedResources = { collector: 'not-an-object', queryRuntimeCache: {} };
+    const malformedResources = { collector: 'not-an-object' };
 
     assert.throws(
       () =>

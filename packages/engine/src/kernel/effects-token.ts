@@ -132,6 +132,35 @@ interface TokenOccurrence {
   readonly token: Token;
 }
 
+const buildDuplicateTokenOccurrenceError = (
+  effectType: 'moveToken' | 'destroyToken' | 'setTokenProp',
+  tokenId: string,
+  occurrenceCount: number,
+  occurrenceZoneIds: readonly string[],
+): EffectRuntimeError => {
+  const sortedZones = [...new Set(occurrenceZoneIds)].sort();
+  if (sortedZones.length === 1) {
+    const zoneId = sortedZones[0]!;
+    return effectRuntimeError(
+      EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED,
+      `Token appears multiple times in zone "${zoneId}": ${tokenId}`,
+      {
+        effectType,
+        tokenId,
+        zoneId,
+        occurrenceCount,
+      },
+    );
+  }
+
+  return effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token appears in multiple zones: ${tokenId}`, {
+    effectType,
+    tokenId,
+    occurrenceCount,
+    zones: sortedZones,
+  });
+};
+
 const resolveTokenOccurrence = (ctx: EffectContext, tokenId: string): {
   readonly occurrence: TokenOccurrence | null;
   readonly occurrenceCount: number;
@@ -228,11 +257,12 @@ export const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: 
   }
 
   if (resolvedOccurrence.occurrenceCount > 1) {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token appears in multiple zones: ${tokenId}`, {
-      effectType: 'moveToken',
+    throw buildDuplicateTokenOccurrenceError(
+      'moveToken',
       tokenId,
-      zones: [...resolvedOccurrence.occurrenceZoneIds].sort(),
-    });
+      resolvedOccurrence.occurrenceCount,
+      resolvedOccurrence.occurrenceZoneIds,
+    );
   }
 
   const occurrence = resolvedOccurrence.occurrence;
@@ -413,11 +443,12 @@ export const applyDestroyToken = (effect: Extract<EffectAST, { readonly destroyT
   }
 
   if (resolvedOccurrence.occurrenceCount > 1) {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token appears in multiple zones: ${tokenId}`, {
-      effectType: 'destroyToken',
+    throw buildDuplicateTokenOccurrenceError(
+      'destroyToken',
       tokenId,
-      zones: [...resolvedOccurrence.occurrenceZoneIds].sort(),
-    });
+      resolvedOccurrence.occurrenceCount,
+      resolvedOccurrence.occurrenceZoneIds,
+    );
   }
 
   const occurrence = resolvedOccurrence.occurrence;
@@ -457,11 +488,12 @@ export const applySetTokenProp = (effect: Extract<EffectAST, { readonly setToken
   }
 
   if (resolvedOccurrence.occurrenceCount > 1) {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token appears in multiple zones: ${tokenId}`, {
-      effectType: 'setTokenProp',
+    throw buildDuplicateTokenOccurrenceError(
+      'setTokenProp',
       tokenId,
-      zones: [...resolvedOccurrence.occurrenceZoneIds].sort(),
-    });
+      resolvedOccurrence.occurrenceCount,
+      resolvedOccurrence.occurrenceZoneIds,
+    );
   }
 
   const occurrence = resolvedOccurrence.occurrence;

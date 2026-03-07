@@ -1,6 +1,6 @@
 # LEGACTTOO-026: AvailabilitySection Limit Rendering Hardening
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -13,13 +13,13 @@
 1. Multi-limit entries render as adjacent inline spans with no explicit separator/line break, making output hard to read.
 2. Limit row keys are derived from mutable values (`used`, `max`) which can remount nodes on normal state updates.
 
-Additionally, tests do not explicitly cover the `limitUsage: []` path at component level, and do not lock a readable multi-limit formatting contract.
+Additionally, tests do not explicitly cover the `limitUsage: []` path at component level, and do not lock a semantic/readable multi-limit formatting contract.
 
 ## Assumption Reassessment (2026-03-07)
 
 1. `AvailabilitySection.tsx` renders `limitUsage` items inside a single wrapper span and each item as inline span. **Confirmed in `packages/runner/src/ui/AvailabilitySection.tsx`.**
 2. Current key uses `${limit.scope}-${limit.max}-${limit.used}-${index}` and therefore changes as usage updates. **Confirmed in same file.**
-3. `AvailabilitySection.test.ts` covers `limitUsage` undefined and populated arrays, but not explicit empty array rendering behavior and not formatting contract for separation/readability. **Confirmed in `packages/runner/test/ui/AvailabilitySection.test.ts`.**
+3. `AvailabilitySection.test.ts` covers `limitUsage` undefined and populated arrays, and includes a multi-limit test by name, but it only asserts text presence/count and does not enforce semantic row/list structure. It also does not explicitly cover `limitUsage: []`. **Confirmed in `packages/runner/test/ui/AvailabilitySection.test.ts`.**
 
 ## Architecture Check
 
@@ -29,7 +29,7 @@ Additionally, tests do not explicitly cover the `limitUsage: []` path at compone
 
 ## What to Change
 
-### 1. Make multi-limit rendering explicitly readable
+### 1. Make multi-limit rendering explicitly readable and semantic
 
 - Render limits as a semantic list (`ul/li`) or equivalent block rows so each limit appears on its own readable line.
 - Keep current scope wording contract (`this turn`, `this phase`, `total`) unless an explicit wording policy already exists elsewhere.
@@ -42,7 +42,7 @@ Additionally, tests do not explicitly cover the `limitUsage: []` path at compone
 ### 3. Strengthen component tests for edge-case and formatting contract
 
 - Add explicit `limitUsage: []` test asserting no limit rows rendered.
-- Add assertion that multi-limit renders as distinct rows/items (not just text inclusion).
+- Add assertion that multi-limit renders as distinct semantic rows/items (not just text inclusion/count).
 
 ## Files to Touch
 
@@ -74,10 +74,25 @@ Additionally, tests do not explicitly cover the `limitUsage: []` path at compone
 
 ### New/Modified Tests
 
-1. `packages/runner/test/ui/AvailabilitySection.test.ts` — assert explicit empty-array behavior and distinct multi-limit row rendering.
+1. `packages/runner/test/ui/AvailabilitySection.test.ts` — assert explicit empty-array behavior, semantic list/item structure for multi-limit rendering, and stable behavior when usage values update.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm -F @ludoforge/runner typecheck`
 3. `pnpm -F @ludoforge/runner lint`
+
+## Outcome (2026-03-07)
+
+Originally planned:
+- Semantic/readable multi-limit rendering.
+- Stable non-mutable keys for limit rows.
+- Stronger tests for empty array and formatting contract.
+
+Actually changed:
+- Implemented semantic limit rendering as `ul/li` rows in `AvailabilitySection`.
+- Replaced mutable-value keying with structural `scope + index` keying.
+- Added explicit `limitUsage: []` coverage.
+- Strengthened multi-limit test to assert semantic list/item structure.
+- Added rerender stability test proving rows remain mounted when `used` values change.
+- Verified runner test, typecheck, and lint all pass.

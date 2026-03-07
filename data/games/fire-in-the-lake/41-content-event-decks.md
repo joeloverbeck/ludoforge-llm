@@ -1049,11 +1049,11 @@ eventDecks:
             - id: evt-aces-window
               duration: turn
               setupEffects:
-                - setVar: { scope: global, var: fitl_acesAirStrikeWindow, value: true }
+                - setVar: { scope: global, var: fitl_airStrikeWindowMode, value: 1 }
               teardownEffects:
-                - setVar: { scope: global, var: fitl_acesAirStrikeWindow, value: false }
+                - setVar: { scope: global, var: fitl_airStrikeWindowMode, value: 0 }
           effects:
-            - setVar: { scope: global, var: fitl_acesAirStrikeWindow, value: false }
+            - setVar: { scope: global, var: fitl_airStrikeWindowMode, value: 0 }
             - addVar: { scope: global, var: trail, delta: -2 }
         shaded:
           text: "MiG ace 'Colonel Tomb': 2 Available US Troops to Casualties. Improve Trail by 2 boxes."
@@ -4522,9 +4522,67 @@ eventDecks:
           seatOrder: ["US", "VC", "ARVN", "NVA"]
           flavorText: "Battleship fire support pounds coastal positions."
         unshaded:
-          text: "US executes free Air Strikes in coastal spaces."
+          text: "US or ARVN free Air Strikes any 1-3 coastal spaces, removing up to 2 pieces per space (no die roll and no effect on Trail)."
+          branches:
+            - id: uss-new-jersey-execute-as-us
+              order: 1
+              freeOperationGrants:
+                - seat: self
+                  executeAsSeat: "us"
+                  sequence: { chain: uss-new-jersey-us, step: 0 }
+                  operationClass: operation
+                  actionIds: [airStrike]
+            - id: uss-new-jersey-execute-as-arvn
+              order: 2
+              freeOperationGrants:
+                - seat: self
+                  executeAsSeat: "arvn"
+                  sequence: { chain: uss-new-jersey-arvn, step: 0 }
+                  operationClass: operation
+                  actionIds: [airStrike]
+          effectTiming: afterGrants
+          lastingEffects:
+            - id: evt-uss-new-jersey-window
+              duration: turn
+              setupEffects:
+                - setVar: { scope: global, var: fitl_airStrikeWindowMode, value: 2 }
+              teardownEffects:
+                - setVar: { scope: global, var: fitl_airStrikeWindowMode, value: 0 }
+          effects:
+            - setVar: { scope: global, var: fitl_airStrikeWindowMode, value: 0 }
         shaded:
-          text: "Counterfire and dispersion blunt naval bombardment."
+          text: "Shift 2 coastal Provinces with US Troops each 2 levels toward Active Opposition."
+          effects:
+            - chooseN:
+                bind: $targetProvinces
+                options:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: coastal }, right: true }
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - { prop: faction, eq: US }
+                                  - { prop: type, eq: troops }
+                        right: 0
+                min: 0
+                max: 2
+            - forEach:
+                bind: $targetProvince
+                over: { query: binding, name: $targetProvinces }
+                effects:
+                  - macro: shift-support-opposition
+                    args: { space: $targetProvince, deltaExpr: -2 }
       - id: card-31
         title: AAA
         sideMode: dual

@@ -53,6 +53,10 @@ export interface DisplayLineNode {
   readonly kind: 'line';
   readonly indent: number;
   readonly children: readonly DisplayInlineNode[];
+  readonly sourceRef?: {
+    readonly kind: 'limit';
+    readonly id: string;
+  };
 }
 
 export interface DisplayGroupNode {

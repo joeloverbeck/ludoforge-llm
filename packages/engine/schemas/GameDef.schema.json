@@ -1692,6 +1692,9 @@
             "items": {
               "type": "object",
               "properties": {
+                "id": {
+                  "type": "string"
+                },
                 "scope": {
                   "anyOf": [
                     {
@@ -1713,6 +1716,7 @@
                 }
               },
               "required": [
+                "id",
                 "scope",
                 "max"
               ],

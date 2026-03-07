@@ -154,9 +154,11 @@ globalVars:
         - mom_typhoonKate
       type: boolean
       init: false
-  - name: fitl_acesAirStrikeWindow
-    type: boolean
-    init: false
+  - name: fitl_airStrikeWindowMode
+    type: int
+    init: 0
+    min: 0
+    max: 2
   - name: fitl_operationAttleboroTunnelOverride
     type: boolean
     init: false

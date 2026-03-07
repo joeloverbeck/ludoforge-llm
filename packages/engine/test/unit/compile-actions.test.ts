@@ -56,9 +56,42 @@ describe('compile actions', () => {
     assert.equal(action?.actor, 'active');
     assert.equal(action?.params[0]?.name, 'count');
     assert.deepEqual(action?.params[0]?.domain, { query: 'intsInRange', min: 1, max: 2 });
-    assert.deepEqual(action?.limits, [{ scope: 'turn', max: 1 }]);
+    assert.deepEqual(action?.limits, [{ id: 'play::turn::0', scope: 'turn', max: 1 }]);
     assert.deepEqual(action?.effects, [{ draw: { from: 'deck:none', to: 'hand:0', count: 1 } }]);
     assert.deepEqual(action?.phase, ['main']);
+  });
+
+  it('assigns deterministic canonical ids for multi-limit actions during lowering', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'action-limit-ids', players: { min: 2, max: 2 } },
+      zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [
+        {
+          id: 'limited',
+          actor: 'active',
+          executor: 'actor',
+          phase: ['main'],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [{ scope: 'turn', max: 1 }, { scope: 'game', max: 3 }],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 999 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assert.equal(result.gameDef !== null, true);
+    assertNoDiagnostics(result);
+
+    assert.deepEqual(result.gameDef?.actions[0]?.limits, [
+      { id: 'limited::turn::0', scope: 'turn', max: 1 },
+      { id: 'limited::game::1', scope: 'game', max: 3 },
+    ]);
   });
 
   it('rejects duplicate action phase ids during lowering', () => {

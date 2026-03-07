@@ -68,18 +68,51 @@ describe('AvailabilitySection', () => {
     render(createElement(AvailabilitySection, {
       ruleState: makeRuleState({
         available: true,
-        limitUsage: [{ scope: 'turn' as const, used: 1, max: 3 }],
+        limitUsage: [{ scope: 'turn', used: 1, max: 3 }],
       }),
     }));
-    const limit = screen.getByTestId('limit-usage');
-    expect(limit.textContent).toContain('2 remaining this turn');
+    const limits = screen.getAllByTestId('limit-usage-item');
+    expect(limits).toHaveLength(1);
+    expect(limits[0]?.textContent).toContain('2 remaining this turn');
+  });
+
+  it('renders phase and game scope labels for limit usage', () => {
+    render(createElement(AvailabilitySection, {
+      ruleState: makeRuleState({
+        available: true,
+        limitUsage: [
+          { scope: 'phase', used: 1, max: 2 },
+          { scope: 'game', used: 2, max: 5 },
+        ],
+      }),
+    }));
+    const limits = screen.getAllByTestId('limit-usage-item');
+    expect(limits).toHaveLength(2);
+    expect(limits[0]?.textContent).toContain('1 remaining this phase');
+    expect(limits[1]?.textContent).toContain('3 remaining total');
+  });
+
+  it('renders one line per limit for multi-limit actions', () => {
+    render(createElement(AvailabilitySection, {
+      ruleState: makeRuleState({
+        available: true,
+        limitUsage: [
+          { scope: 'turn', used: 0, max: 1 },
+          { scope: 'game', used: 2, max: 3 },
+        ],
+      }),
+    }));
+    const limits = screen.getAllByTestId('limit-usage-item');
+    expect(limits).toHaveLength(2);
+    expect(limits[0]?.textContent).toContain('1 remaining this turn');
+    expect(limits[1]?.textContent).toContain('1 remaining total');
   });
 
   it('does not show limit usage when absent', () => {
     render(createElement(AvailabilitySection, {
       ruleState: makeRuleState({ available: true }),
     }));
-    expect(screen.queryByTestId('limit-usage')).toBeNull();
+    expect(screen.queryByTestId('limit-usage-item')).toBeNull();
   });
 
   it('shows limit usage together with blocked state', () => {
@@ -87,7 +120,7 @@ describe('AvailabilitySection', () => {
       ruleState: makeRuleState({
         available: false,
         blockers: [{ astPath: 'root', description: 'Blocked reason' }],
-        limitUsage: [{ scope: 'turn' as const, used: 2, max: 2 }],
+        limitUsage: [{ scope: 'turn', used: 2, max: 2 }],
       }),
     }));
     const section = screen.getByTestId('availability-section');

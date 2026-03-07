@@ -219,6 +219,18 @@ describe('effects token lifecycle', () => {
     );
   });
 
+  it('destroyToken rejects malformed token-object bindings at runtime boundary', () => {
+    const ctx = makeCtx({
+      bindings: { $token: { id: asTokenId('d1') } as unknown },
+    });
+
+    assert.throws(
+      () => applyEffect({ destroyToken: { token: '$token' } }, ctx),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('must resolve to Token or TokenId'),
+    );
+  });
+
   it('destroyToken throws when token appears in multiple zones', () => {
     const dup = token('dup');
     const state = makeState();

@@ -656,12 +656,16 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
       const knownTokenIds = new Set(tokenStateIndex.keys());
 
       const zones = sourceItems.map((item) => {
-        const tokenId =
-          hasTokenRuntimeShapeKeys(item)
-            ? String(item.id)
-            : typeof item === 'string' && knownTokenIds.has(item)
-              ? item
-              : null;
+        let tokenId: string | null = null;
+        if (hasTokenRuntimeShapeKeys(item)) {
+          const candidateId = item.id;
+          const candidateType = item.type;
+          if (typeof candidateId === 'string' && typeof candidateType === 'string') {
+            tokenId = candidateId;
+          }
+        } else if (typeof item === 'string' && knownTokenIds.has(item)) {
+          tokenId = item;
+        }
         if (tokenId === null) {
           throw typeMismatchError('tokenZones source must produce tokens or token ids that exist in state', {
             query,

@@ -1,6 +1,6 @@
 # LEGACTTOO-021: AvailabilitySection Multi-Limit Scope Alignment
 
-**Status**: PENDING
+**Status**: COMPLETED (2026-03-07)
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -16,7 +16,7 @@
 
 ## Assumption Reassessment (2026-03-07)
 
-1. `RuleState.limitUsage` on main is `readonly { scope: 'turn' | 'phase' | 'game'; used: number; max: number }[]` after LEGACTTOO-012. **Confirmed via `git show f1b8ac52:packages/engine/src/kernel/tooltip-rule-card.ts`.**
+1. `RuleState.limitUsage` is `readonly { scope: 'turn' | 'phase' | 'game'; used: number; max: number }[]` in current engine runtime types. **Confirmed in `packages/engine/src/kernel/tooltip-rule-card.ts`.**
 2. `AvailabilitySection.tsx` in the worktree at line 25 reads `limitUsage.max - limitUsage.used` as scalar properties. **Confirmed in worktree source.**
 3. Hardcoded `"remaining this turn"` at line 26. **Confirmed in worktree source.**
 4. No other ticket covers the runner-side consumption of multi-limit data. LEGACTTOO-012 was engine-only.
@@ -84,3 +84,9 @@ Provide `limitUsage` as an array with scope in all test fixtures. Add a test for
 
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm -F @ludoforge/runner typecheck`
+
+## Outcome
+
+- Implemented runner-side `RuleState.limitUsage[]` consumption in `AvailabilitySection` and removed the obsolete scalar assumption.
+- Added scope-aware rendering for `turn`, `phase`, and `game` limits, including multi-limit display (one line per limit).
+- Updated and expanded `AvailabilitySection` tests to cover array shape, per-scope labels, and multi-limit rendering.

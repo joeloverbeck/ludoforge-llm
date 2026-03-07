@@ -7,7 +7,7 @@ import { resolveZoneWithNormalization, selectorResolutionFailurePolicyForMode } 
 import { checkStackingConstraints } from './stacking.js';
 import { EffectRuntimeError, effectRuntimeError } from './effect-error.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
-import { isRuntimeToken } from './token-shape.js';
+import { resolveRuntimeTokenBindingValue } from './token-binding.js';
 import { getTokenStateIndexEntry } from './token-state-index.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
@@ -113,12 +113,9 @@ const resolveBoundTokenId = (ctx: EffectContext, tokenBinding: string, effectTyp
     });
   }
 
-  if (typeof boundValue === 'string') {
-    return boundValue;
-  }
-
-  if (isRuntimeToken(boundValue)) {
-    return boundValue.id;
+  const resolved = resolveRuntimeTokenBindingValue(boundValue);
+  if (resolved !== null) {
+    return resolved.tokenId;
   }
 
   throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token binding ${tokenBinding} must resolve to Token or TokenId`, {

@@ -191,6 +191,22 @@ describe('effects moveToken and draw', () => {
     );
   });
 
+  it('moveToken rejects malformed token-object bindings at runtime boundary', () => {
+    const ctx = makeCtx({
+      bindings: { $token: { id: asTokenId('d1') } as unknown },
+    });
+
+    assert.throws(
+      () =>
+        applyEffect(
+          { moveToken: { token: '$token', from: 'deck:none', to: 'discard:none' } },
+          ctx,
+        ),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('must resolve to Token or TokenId'),
+    );
+  });
+
   it('moveToken throws when token appears in multiple zones', () => {
     const duplicate = token('dup');
     const state = makeState();

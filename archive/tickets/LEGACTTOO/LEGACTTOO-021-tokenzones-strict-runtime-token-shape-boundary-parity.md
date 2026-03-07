@@ -1,6 +1,6 @@
 # LEGACTTOO-021: tokenZones Strict Runtime Token-Shape Boundary Parity
 
-**Status**: PENDING
+**Status**: COMPLETED (2026-03-07)
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel query/effects runtime token binding validation + unit coverage
@@ -15,6 +15,7 @@
 1. `resolve-ref.ts` token bindings now validate strict runtime token shape via shared helper and reject malformed token-like objects with `TYPE_MISMATCH`. **Confirmed in `packages/engine/src/kernel/resolve-ref.ts` + tests.**
 2. `eval-query.ts` `tokenZones` currently classifies token objects via key-presence helper (`id/type/props` present) rather than strict typed shape, and then resolves `String(item.id)`. **Confirmed in `packages/engine/src/kernel/eval-query.ts`.**
 3. Current tests assert invalid `tokenZones` source item behavior for non-token domains (for example `zones` strings), but do not assert malformed token-like object source rejection at boundary. **Confirmed in `packages/engine/test/unit/eval-query.test.ts`.**
+4. `moveToken` token-binding runtime tests are located in `packages/engine/test/unit/effects-token-move-draw.test.ts` (not `effects-lifecycle.test.ts`). `destroyToken` tests are in `packages/engine/test/unit/effects-lifecycle.test.ts`. **Confirmed in current unit test layout.**
 
 ## Architecture Check
 
@@ -38,6 +39,7 @@
 
 - `packages/engine/src/kernel/eval-query.ts` (modify)
 - `packages/engine/test/unit/eval-query.test.ts` (modify)
+- `packages/engine/test/unit/effects-token-move-draw.test.ts` (modify)
 - `packages/engine/test/unit/effects-lifecycle.test.ts` (modify)
 
 ## Out of Scope
@@ -64,12 +66,21 @@
 ### New/Modified Tests
 
 1. `packages/engine/test/unit/eval-query.test.ts` — malformed token-like item in `tokenZones.source` yields boundary `TYPE_MISMATCH`.
-2. `packages/engine/test/unit/effects-lifecycle.test.ts` — malformed token-object binding rejection tests for `moveToken` and `destroyToken`.
+2. `packages/engine/test/unit/effects-token-move-draw.test.ts` — malformed token-object binding rejection test for `moveToken`.
+3. `packages/engine/test/unit/effects-lifecycle.test.ts` — malformed token-object binding rejection test for `destroyToken`.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build`
 2. `node --test packages/engine/dist/test/unit/eval-query.test.js`
-3. `node --test packages/engine/dist/test/unit/effects-lifecycle.test.js`
-4. `pnpm -F @ludoforge/engine test:unit`
-5. `pnpm -F @ludoforge/engine lint`
+3. `node --test packages/engine/dist/test/unit/effects-token-move-draw.test.js`
+4. `node --test packages/engine/dist/test/unit/effects-lifecycle.test.js`
+5. `pnpm -F @ludoforge/engine test:unit`
+6. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- Updated `tokenZones` runtime token handling to reject malformed token-like objects at the boundary (`TYPE_MISMATCH`) using strict `id/type` string validation on canonical token keys.
+- Kept existing token-zone lookup behavior, dedupe behavior, and cache-sensitive access patterns intact (no regression to existing token read-count tests).
+- Added targeted boundary tests for malformed token-object bindings in `moveToken` and `destroyToken`, and added malformed `tokenZones` source coverage in `eval-query`.
+- Corrected ticket scope assumptions before implementation: `moveToken` runtime tests live in `effects-token-move-draw.test.ts`, while `destroyToken` tests live in `effects-lifecycle.test.ts`.

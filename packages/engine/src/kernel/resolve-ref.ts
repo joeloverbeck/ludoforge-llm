@@ -12,26 +12,20 @@ import {
   runtimeTableIssueEvalError,
   runtimeTableRowBindingTypeEvalError,
 } from './runtime-table-eval-errors.js';
-import { isRuntimeToken } from './token-shape.js';
+import { resolveRuntimeTokenBindingValue } from './token-binding.js';
 import type { Reference, Token } from './types.js';
 
 function isScalarValue(value: unknown): value is number | boolean | string {
   return typeof value === 'number' || typeof value === 'boolean' || typeof value === 'string';
 }
 
-function isTokenBinding(value: unknown): value is Token {
-  return isRuntimeToken(value);
-}
-
 function resolveTokenBinding(bindingName: string, value: unknown, reference: Reference): {
   readonly tokenId: string;
   readonly tokenFromBinding: Token | null;
 } {
-  if (typeof value === 'string') {
-    return { tokenId: value, tokenFromBinding: null };
-  }
-  if (isTokenBinding(value)) {
-    return { tokenId: value.id, tokenFromBinding: value };
+  const resolved = resolveRuntimeTokenBindingValue(value);
+  if (resolved !== null) {
+    return resolved;
   }
   throw typeMismatchError(`Token binding ${bindingName} must resolve to a Token or token-id string`, {
     reference,

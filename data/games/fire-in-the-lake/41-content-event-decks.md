@@ -5052,9 +5052,70 @@ eventDecks:
           seatOrder: ["NVA", "ARVN", "US", "VC"]
           flavorText: "Chinese leverage links diplomacy to wartime resource shifts."
         unshaded:
-          text: "Resource shifts follow diplomatic signaling and die-based political momentum."
+          text: "NVA Resources -10. NVA must remove a die roll in Troops."
+          effects:
+            - addVar: { scope: global, var: nvaResources, delta: -10 }
+            - rollRandom:
+                bind: $chouEnLaiTroopLossRoll
+                min: 1
+                max: 6
+                in:
+                  - let:
+                      bind: $nvaTroopsOnMapCount
+                      value:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInMapSpaces
+                            filter:
+                              op: and
+                              args:
+                                - { prop: faction, eq: NVA }
+                                - { prop: type, eq: troops }
+                      in:
+                        - let:
+                            bind: $nvaTroopsToRemove
+                            value:
+                              op: min
+                              left: { ref: binding, name: $chouEnLaiTroopLossRoll }
+                              right: { ref: binding, name: $nvaTroopsOnMapCount }
+                            in:
+                              - if:
+                                  when: { op: '>', left: { ref: binding, name: $nvaTroopsToRemove }, right: 0 }
+                                  then:
+                                    - chooseN:
+                                        bind: $nvaTroopsChosenToRemove
+                                        chooser: nva
+                                        options:
+                                          query: tokensInMapSpaces
+                                          filter:
+                                            op: and
+                                            args:
+                                              - { prop: faction, eq: NVA }
+                                              - { prop: type, eq: troops }
+                                        min: { ref: binding, name: $nvaTroopsToRemove }
+                                        max: { ref: binding, name: $nvaTroopsToRemove }
+                                    - forEach:
+                                        bind: $nvaTroop
+                                        over: { query: binding, name: $nvaTroopsChosenToRemove }
+                                        effects:
+                                          - moveToken:
+                                              token: $nvaTroop
+                                              from: { zoneExpr: { ref: tokenZone, token: $nvaTroop } }
+                                              to: { zoneExpr: available-NVA:none }
+                                  else: []
         shaded:
-          text: "Diplomatic friction disrupts aid flows and rebalances insurgent support."
+          text: "Chinese boost aid to North: NVA add +10 Resources. VC add Trail value in Resources."
+          effects:
+            - addVar: { scope: global, var: nvaResources, delta: 10 }
+            - let:
+                bind: $trailValue
+                value: { ref: gvar, var: trail }
+                in:
+                  - addVar:
+                      scope: global
+                      var: vcResources
+                      delta: { ref: binding, name: $trailValue }
       - id: card-45
         title: PT-76
         sideMode: dual

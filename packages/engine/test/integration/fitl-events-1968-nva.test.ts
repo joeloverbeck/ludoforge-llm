@@ -198,6 +198,55 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
     assert.deepEqual(momentum?.teardownEffects, [{ setVar: { scope: 'global', var: 'mom_bombingPause', value: false } }]);
   });
 
+  it('encodes card 42 (Chou En Lai) with NVA-selected die-roll troop removal and shaded trail-value resource gain', () => {
+    const { parsed, compiled } = compileProductionSpec();
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-42');
+    assert.notEqual(card, undefined);
+    assert.equal(card?.title, 'Chou En Lai');
+    assert.equal(card?.unshaded?.text, 'NVA Resources -10. NVA must remove a die roll in Troops.');
+    assert.equal(
+      card?.shaded?.text,
+      'Chinese boost aid to North: NVA add +10 Resources. VC add Trail value in Resources.',
+    );
+
+    const unshadedEffects = card?.unshaded?.effects ?? [];
+    assert.deepEqual(unshadedEffects[0], { addVar: { scope: 'global', var: 'nvaResources', delta: -10 } });
+    const rollRandom = (unshadedEffects[1] as { rollRandom?: { bind?: string; min?: number; max?: number; in?: unknown[] } })?.rollRandom;
+    assert.equal(rollRandom?.bind, '$chouEnLaiTroopLossRoll');
+    assert.equal(rollRandom?.min, 1);
+    assert.equal(rollRandom?.max, 6);
+    const firstLet = (rollRandom?.in?.[0] as { let?: { bind?: string; in?: unknown[] } })?.let;
+    assert.equal(firstLet?.bind, '$nvaTroopsOnMapCount');
+    const secondLet = (firstLet?.in?.[0] as { let?: { bind?: string; in?: unknown[] } })?.let;
+    assert.equal(secondLet?.bind, '$nvaTroopsToRemove');
+    const guardedRemoval = (secondLet?.in?.[0] as { if?: { then?: unknown[] } })?.if;
+    const chooseN = (
+      guardedRemoval?.then?.[0] as { chooseN?: { bind?: string; chooser?: { id?: number }; min?: unknown; max?: unknown } }
+    )?.chooseN;
+    assert.equal(chooseN?.bind, '$nvaTroopsChosenToRemove');
+    assert.deepEqual(chooseN?.chooser, { id: 2 });
+    assert.equal(typeof chooseN?.min, 'object');
+    assert.equal(typeof chooseN?.max, 'object');
+    assert.equal(typeof (guardedRemoval?.then?.[1] as { forEach?: unknown })?.forEach, 'object');
+
+    const shadedEffects = card?.shaded?.effects ?? [];
+    assert.deepEqual(shadedEffects[0], { addVar: { scope: 'global', var: 'nvaResources', delta: 10 } });
+    const shadedTrailLet = (
+      shadedEffects[1] as { let?: { bind?: string; value?: unknown; in?: Array<{ addVar?: unknown }> } }
+    )?.let;
+    assert.equal(shadedTrailLet?.bind, '$trailValue');
+    assert.deepEqual(shadedTrailLet?.value, { ref: 'gvar', var: 'trail' });
+    assert.deepEqual(shadedTrailLet?.in?.[0]?.addVar, {
+      scope: 'global',
+      var: 'vcResources',
+      delta: { ref: 'binding', name: '$trailValue' },
+    });
+  });
+
   it('encodes card 52 (RAND) with generic capability-side flip over active global markers', () => {
     const { parsed, compiled } = compileProductionSpec();
 

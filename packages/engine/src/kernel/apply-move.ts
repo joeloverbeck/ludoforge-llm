@@ -28,9 +28,9 @@ import { buildAdjacencyGraph } from './spatial.js';
 import {
   applyTurnFlowEligibilityAfterMove,
   consumeTurnFlowFreeOperationGrant,
-  resolveFreeOperationDiscoveryAnalysis,
-  resolveTurnFlowActionClassMismatch,
 } from './turn-flow-eligibility.js';
+import { resolveFreeOperationDiscoveryAnalysis } from './free-operation-discovery-analysis.js';
+import { resolveTurnFlowActionClassMismatch } from './turn-flow-action-class.js';
 import { toFreeOperationDeniedCauseForLegality } from './free-operation-legality-policy.js';
 import { applyTurnFlowWindowFilters, isMoveAllowedByTurnFlowOptionMatrix } from './legal-moves-turn-order.js';
 import { isTurnFlowErrorCode } from './turn-flow-error.js';

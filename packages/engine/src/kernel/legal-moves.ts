@@ -11,7 +11,7 @@ import {
   isMoveAllowedByTurnFlowOptionMatrix,
   resolveConstrainedSecondEligibleActionClasses,
 } from './legal-moves-turn-order.js';
-import { resolveTurnFlowActionClass } from './turn-flow-eligibility.js';
+import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import type { TurnFlowActionClass } from './types-turn-flow.js';
 import { shouldEnumerateLegalMoveForOutcome } from './legality-outcome.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';

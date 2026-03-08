@@ -1240,11 +1240,26 @@ describe('event free-operation grants integration', () => {
   it('suppresses event moves when requireUsableForEventPlay grants are currently unusable', () => {
     const def = createGrantViabilityPolicyDef();
     const start = initialState(def, 111, 3).state;
+    const blockedEventMove = {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-require-usable-play', side: 'unshaded', branch: 'none' },
+    } as const;
 
     const moves = legalMoves(def, start).filter(
       (move) => String(move.actionId) === 'event' && move.params.eventCardId === 'card-require-usable-play',
     );
     assert.equal(moves.length, 0);
+
+    assert.throws(
+      () => applyMove(def, start, blockedEventMove),
+      (error: unknown) => {
+        if (!(error instanceof Error)) {
+          return false;
+        }
+        const details = error as Error & { readonly reason?: string };
+        return details.reason === ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE;
+      },
+    );
   });
 
   it('emits only currently-usable grants when requireUsableAtIssue is set', () => {

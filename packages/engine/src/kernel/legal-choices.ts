@@ -31,7 +31,7 @@ import {
 } from './free-operation-legality-policy.js';
 import {
   resolveFreeOperationDiscoveryAnalysis,
-} from './turn-flow-eligibility.js';
+} from './free-operation-discovery-analysis.js';
 import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { isCardEventActionId } from './action-capabilities.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';

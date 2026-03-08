@@ -44,9 +44,9 @@ describe('turn-flow action-class canonical contract guard', () => {
       readKernelSource('src/kernel/schemas-extensions.ts'),
       'schemas-extensions.ts',
     );
-    const eligibilitySource = parseTypeScriptSource(
-      readKernelSource('src/kernel/turn-flow-eligibility.ts'),
-      'turn-flow-eligibility.ts',
+    const actionClassSource = parseTypeScriptSource(
+      readKernelSource('src/kernel/turn-flow-action-class.ts'),
+      'turn-flow-action-class.ts',
     );
     const effectsSource = parseTypeScriptSource(
       readKernelSource('src/kernel/effects-turn-flow.ts'),
@@ -63,9 +63,9 @@ describe('turn-flow action-class canonical contract guard', () => {
       'schemas-extensions.ts must consume canonical action-class values',
     );
     assert.equal(
-      collectImportSpecifiers(eligibilitySource).includes('../contracts/index.js'),
+      collectImportSpecifiers(actionClassSource).includes('../contracts/index.js'),
       true,
-      'turn-flow-eligibility.ts must consume canonical runtime action-class guard',
+      'turn-flow-action-class.ts must consume canonical runtime action-class guard',
     );
     assert.equal(
       collectImportSpecifiers(effectsSource).includes('../contracts/index.js'),
@@ -83,7 +83,7 @@ describe('turn-flow action-class canonical contract guard', () => {
     const sources = [
       readKernelSource('src/kernel/types-turn-flow.ts'),
       readKernelSource('src/kernel/schemas-extensions.ts'),
-      readKernelSource('src/kernel/turn-flow-eligibility.ts'),
+      readKernelSource('src/kernel/turn-flow-action-class.ts'),
       readKernelSource('src/kernel/effects-turn-flow.ts'),
       readKernelSource('src/kernel/types-ast.ts'),
       readKernelSource('src/kernel/legal-moves-turn-order.ts'),

@@ -5,8 +5,10 @@ import {
   isFreeOperationApplicableForMove,
   isFreeOperationAllowedDuringMonsoonForMove,
   isFreeOperationGrantedForMove,
+} from './free-operation-discovery-analysis.js';
+import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
+import {
   isEventMovePlayableUnderGrantViabilityPolicy,
-  resolveTurnFlowActionClass,
 } from './turn-flow-eligibility.js';
 import { resolveEffectiveFreeOperationActionDomain, resolveTurnFlowDefaultFreeOperationActionDomain } from './free-operation-action-domain.js';
 import { toMoveIdentityKey } from './move-identity.js';

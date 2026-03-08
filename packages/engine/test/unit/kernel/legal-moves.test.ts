@@ -84,6 +84,32 @@ const makeBaseState = (overrides?: Partial<GameState>): GameState => ({
   ...overrides,
 });
 
+type CardDrivenTurnOrderState = Extract<GameState['turnOrderState'], { type: 'cardDriven' }>;
+type CardDrivenRuntime = CardDrivenTurnOrderState['runtime'];
+
+const makeCardDrivenRuntime = (overrides?: Partial<CardDrivenRuntime>): CardDrivenRuntime => ({
+  seatOrder: ['0', '1'],
+  eligibility: { '0': true, '1': true },
+  currentCard: {
+    firstEligible: '0',
+    secondEligible: '1',
+    actedSeats: [],
+    passedSeats: [],
+    nonPassCount: 0,
+    firstActionClass: null,
+  },
+  pendingEligibilityOverrides: [],
+  ...overrides,
+});
+
+const makeCardDrivenState = (runtimeOverrides?: Partial<CardDrivenRuntime>): GameState =>
+  makeBaseState({
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: makeCardDrivenRuntime(runtimeOverrides),
+    },
+  });
+
 const makeEventLegalMovesFixture = (card: EventCardDef): { def: GameDef; state: GameState; actionId: ReturnType<typeof asActionId> } => {
   const actionId = asActionId(`eventAction:${card.id}`);
   const eventAction: ActionDef = {
@@ -1875,32 +1901,16 @@ phase: [asPhaseId('main')],
       },
     } as unknown as GameDef;
 
-    const state = makeBaseState({
-      turnOrderState: {
-        type: 'cardDriven',
-        runtime: {
-          seatOrder: ['0', '1'],
-          eligibility: { '0': true, '1': true },
-          currentCard: {
-            firstEligible: '0',
-            secondEligible: '1',
-            actedSeats: [],
-            passedSeats: [],
-            nonPassCount: 0,
-            firstActionClass: null,
-          },
-          pendingEligibilityOverrides: [],
-          pendingFreeOperationGrants: [
-            {
-              grantId: 'grant-0',
-              seat: '0',
-              operationClass: 'operation',
-              actionIds: ['operation'],
-              remainingUses: 1,
-            },
-          ],
+    const state = makeCardDrivenState({
+      pendingFreeOperationGrants: [
+        {
+          grantId: 'grant-0',
+          seat: '0',
+          operationClass: 'operation',
+          actionIds: ['operation'],
+          remainingUses: 1,
         },
-      },
+      ],
     });
 
     const result = enumerateLegalMoves(def, state, { budgets: { maxDecisionProbeSteps: 0 } });
@@ -1966,38 +1976,235 @@ phase: [asPhaseId('main')],
       },
     } as unknown as GameDef;
 
-    const state = makeBaseState({
-      turnOrderState: {
-        type: 'cardDriven',
-        runtime: {
-          seatOrder: ['0', '1'],
-          eligibility: { '0': true, '1': true },
-          currentCard: {
-            firstEligible: '0',
-            secondEligible: '1',
-            actedSeats: [],
-            passedSeats: [],
-            nonPassCount: 0,
-            firstActionClass: null,
-          },
-          pendingEligibilityOverrides: [],
-          pendingFreeOperationGrants: [
-            {
-              grantId: 'grant-0',
-              seat: '0',
-              operationClass: 'operation',
-              actionIds: ['operation'],
-              remainingUses: 1,
-            },
-          ],
+    const state = makeCardDrivenState({
+      pendingFreeOperationGrants: [
+        {
+          grantId: 'grant-0',
+          seat: '0',
+          operationClass: 'operation',
+          actionIds: ['operation'],
+          remainingUses: 1,
         },
-      },
+      ],
     });
 
     assert.equal(
       legalMoves(def, state).some((move) => String(move.actionId) === 'operation' && move.freeOperation === true),
       false,
     );
+  });
+
+  it('24d. admits pipeline templates when decision probing hits deferrable missing bindings', () => {
+    const action: ActionDef = {
+      id: asActionId('pipelineDeferrableMissingBinding'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'pipelineDeferrableMissingBindingProfile',
+      actionId: action.id,
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              chooseOne: {
+                internalDecisionId: 'decision:$target',
+                bind: '$target',
+                options: { query: 'enums', values: ['a'] },
+              },
+            } as GameDef['actions'][number]['effects'][number],
+            {
+              if: {
+                when: { op: '==', left: { ref: 'binding', name: '$missingBinding' }, right: 1 },
+                then: [],
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const moves = legalMoves(makeBaseDef({ actions: [action], actionPipelines: [profile] }), makeBaseState());
+    assert.equal(moves.some((move) => String(move.actionId) === String(action.id)), true);
+  });
+
+  it('24e. rethrows non-deferrable pipeline decision-probing errors', () => {
+    const action: ActionDef = {
+      id: asActionId('pipelineNonDeferrableError'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'pipelineNonDeferrableErrorProfile',
+      actionId: action.id,
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              chooseOne: {
+                internalDecisionId: 'decision:$target',
+                bind: '$target',
+                options: { query: 'enums', values: ['a'] },
+              },
+            } as GameDef['actions'][number]['effects'][number],
+            {
+              if: {
+                when: { op: '==', left: { ref: 'gvar', var: 'missingVar' }, right: 1 },
+                then: [],
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    assert.throws(() => legalMoves(makeBaseDef({ actions: [action], actionPipelines: [profile] }), makeBaseState()));
+  });
+
+  it('24f. admits free-operation variants when decision probing hits deferrable missing bindings', () => {
+    const action: ActionDef = {
+      id: asActionId('freeOpDeferrableMissingBinding'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          chooseOne: {
+            internalDecisionId: 'decision:$target',
+            bind: '$target',
+            options: { query: 'enums', values: ['a'] },
+          },
+        } as GameDef['actions'][number]['effects'][number],
+        {
+          if: {
+            when: { op: '==', left: { ref: 'binding', name: '$missingBinding' }, right: 1 },
+            then: [],
+          },
+        } as GameDef['actions'][number]['effects'][number],
+      ],
+      limits: [],
+    };
+
+    const def = {
+      ...makeBaseDef({ actions: [action] }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['freeOpDeferrableMissingBinding'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeCardDrivenState({
+      pendingFreeOperationGrants: [
+        {
+          grantId: 'grant-deferrable',
+          seat: '0',
+          operationClass: 'operation',
+          actionIds: ['freeOpDeferrableMissingBinding'],
+          remainingUses: 1,
+        },
+      ],
+    });
+
+    const moves = legalMoves(def, state);
+    assert.equal(
+      moves.some((move) => String(move.actionId) === 'freeOpDeferrableMissingBinding' && move.freeOperation === true),
+      true,
+    );
+  });
+
+  it('24g. rethrows non-deferrable free-operation decision-probing errors', () => {
+    const action: ActionDef = {
+      id: asActionId('freeOpNonDeferrableError'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          chooseOne: {
+            internalDecisionId: 'decision:$target',
+            bind: '$target',
+            options: { query: 'enums', values: ['a'] },
+          },
+        } as GameDef['actions'][number]['effects'][number],
+        {
+          if: {
+            when: { op: '==', left: { ref: 'gvar', var: 'missingVar' }, right: 1 },
+            then: [],
+          },
+        } as GameDef['actions'][number]['effects'][number],
+      ],
+      limits: [],
+    };
+
+    const def = {
+      ...makeBaseDef({ actions: [action] }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['freeOpNonDeferrableError'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeCardDrivenState({
+      pendingFreeOperationGrants: [
+        {
+          grantId: 'grant-nondeferrable',
+          seat: '0',
+          operationClass: 'operation',
+          actionIds: ['freeOpNonDeferrableError'],
+          remainingUses: 1,
+        },
+      ],
+    });
+
+    assert.throws(() => legalMoves(def, state));
   });
 
   it('25. preserves class-distinct free-operation variants for same actionId and params', () => {

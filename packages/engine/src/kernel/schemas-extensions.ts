@@ -93,6 +93,9 @@ export const EventCardFreeOperationGrantSchema = z
     zoneFilter: ConditionASTSchema.optional(),
     allowDuringMonsoon: z.boolean().optional(),
     uses: IntegerSchema.min(1).optional(),
+    viabilityPolicy: z
+      .enum(['emitAlways', 'requireUsableAtIssue', 'requireUsableForEventPlay'])
+      .optional(),
   })
   .strict();
 

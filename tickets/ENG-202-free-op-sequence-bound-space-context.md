@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — turn-flow runtime grant sequencing and zone-filter evaluation
-**Deps**: tickets/ENG-201-free-op-grant-viability-gating.md, packages/engine/src/kernel/turn-flow-eligibility.ts, packages/engine/src/kernel/free-operation-zone-filter-probe.ts
+**Deps**: archive/tickets/FITLEVENTARCH/ENG-201-free-op-grant-viability-gating.md, packages/engine/src/kernel/turn-flow-eligibility.ts, packages/engine/src/kernel/free-operation-zone-filter-probe.ts
 
 ## Problem
 

@@ -5,6 +5,7 @@ import {
   isFreeOperationApplicableForMove,
   isFreeOperationAllowedDuringMonsoonForMove,
   isFreeOperationGrantedForMove,
+  isEventMovePlayableUnderGrantViabilityPolicy,
   resolveTurnFlowActionClass,
 } from './turn-flow-eligibility.js';
 import { resolveEffectiveFreeOperationActionDomain, resolveTurnFlowDefaultFreeOperationActionDomain } from './free-operation-action-domain.js';
@@ -250,6 +251,9 @@ export function applyTurnFlowWindowFilters(
   const interruptWinnerSeat =
     precedence.length > 0 && inPreActionWindow ? resolveInterruptWinnerSeat(state, precedence) : null;
   const filtered = moves.filter((move) => {
+    if (!isEventMovePlayableUnderGrantViabilityPolicy(def, state, move, seatResolution)) {
+      return false;
+    }
     const actionId = String(move.actionId);
     const isPivotal = pivotalActionIds.has(actionId);
     if (isPivotal) {

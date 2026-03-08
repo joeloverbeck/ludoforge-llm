@@ -341,8 +341,33 @@ describe('FITL card-44 Ia Drang', () => {
     assert.equal(shadedMove, undefined, 'Shaded should require a province with NVA Troops (not guerrillas/bases only)');
   });
 
-  it('unshaded remains playable with no NVA pieces but emits no free-operation grants', () => {
-    const def = compileDef();
+  it('unshaded is suppressed when strict grant viability is required and no usable grant exists', () => {
+    const baseDef = compileDef();
+    const def = (() => {
+      const mutable = structuredClone(baseDef) as unknown as Record<string, unknown>;
+      const primaryDeck = (mutable.eventDecks as Array<Record<string, unknown>> | undefined)?.[0];
+      if (primaryDeck === undefined) {
+        return baseDef;
+      }
+      primaryDeck.cards = ((primaryDeck.cards as Array<Record<string, unknown>> | undefined) ?? []).map((card) => {
+        const unshaded = card.unshaded as Record<string, unknown> | undefined;
+        const grants = unshaded?.freeOperationGrants as Array<Record<string, unknown>> | undefined;
+        if (card.id !== CARD_ID || grants === undefined) {
+          return card;
+        }
+        return {
+          ...card,
+          unshaded: {
+            ...unshaded,
+            freeOperationGrants: grants.map((grant) => ({
+              ...grant,
+              viabilityPolicy: 'requireUsableForEventPlay' as const,
+            })),
+          },
+        };
+      });
+      return mutable as unknown as GameDef;
+    })();
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined, 'Expected event deck');
 
@@ -358,40 +383,11 @@ describe('FITL card-44 Ia Drang', () => {
     };
 
     const unshadedMove = findCard44Move(def, setup, 'unshaded');
-    assert.notEqual(unshadedMove, undefined, 'Card event itself is still playable even if grants cannot be used');
-    const after = applyMove(def, setup, unshadedMove!).state;
-    assert.equal(after.turnOrderState.type, 'cardDriven');
-    if (after.turnOrderState.type === 'cardDriven') {
-      const grants = after.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
-      assert.equal(grants.length, 3, 'Ia Drang emits its chained grants even when later zone filters block usage');
-
-      const grantReadyNoNva: GameState = {
-        ...after,
-        activePlayer: asPlayerId(0),
-        turnOrderState: {
-          type: 'cardDriven',
-          runtime: {
-            ...after.turnOrderState.runtime,
-            currentCard: {
-              ...after.turnOrderState.runtime.currentCard,
-              firstEligible: 'us',
-              secondEligible: null,
-              actedSeats: [],
-              passedSeats: [],
-              nonPassCount: 0,
-              firstActionClass: null,
-            },
-          },
-        },
-      };
-
-      const freeMoves = legalMoves(def, grantReadyNoNva).filter(
-        (move) =>
-          move.freeOperation === true
-          && ['airLift', 'sweep', 'assault'].includes(String(move.actionId)),
-      );
-      assert.equal(freeMoves.length, 0, 'Without NVA pieces, all Ia Drang free grants should be blocked by zoneFilter');
-    }
+    assert.equal(
+      unshadedMove,
+      undefined,
+      'Ia Drang unshaded should be absent when every strict viability grant is unusable in current state',
+    );
   });
 
   it('rejects free Sweep before Air Lift sequence step resolves', () => {

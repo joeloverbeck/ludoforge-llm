@@ -2368,6 +2368,14 @@
                             "type": "integer",
                             "minimum": 1,
                             "maximum": 9007199254740991
+                          },
+                          "viabilityPolicy": {
+                            "type": "string",
+                            "enum": [
+                              "emitAlways",
+                              "requireUsableAtIssue",
+                              "requireUsableForEventPlay"
+                            ]
                           }
                         },
                         "required": [
@@ -2539,6 +2547,14 @@
                                   "type": "integer",
                                   "minimum": 1,
                                   "maximum": 9007199254740991
+                                },
+                                "viabilityPolicy": {
+                                  "type": "string",
+                                  "enum": [
+                                    "emitAlways",
+                                    "requireUsableAtIssue",
+                                    "requireUsableForEventPlay"
+                                  ]
                                 }
                               },
                               "required": [
@@ -3079,6 +3095,14 @@
                             "type": "integer",
                             "minimum": 1,
                             "maximum": 9007199254740991
+                          },
+                          "viabilityPolicy": {
+                            "type": "string",
+                            "enum": [
+                              "emitAlways",
+                              "requireUsableAtIssue",
+                              "requireUsableForEventPlay"
+                            ]
                           }
                         },
                         "required": [
@@ -3250,6 +3274,14 @@
                                   "type": "integer",
                                   "minimum": 1,
                                   "maximum": 9007199254740991
+                                },
+                                "viabilityPolicy": {
+                                  "type": "string",
+                                  "enum": [
+                                    "emitAlways",
+                                    "requireUsableAtIssue",
+                                    "requireUsableForEventPlay"
+                                  ]
                                 }
                               },
                               "required": [

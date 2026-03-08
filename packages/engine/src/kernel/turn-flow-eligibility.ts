@@ -1,4 +1,4 @@
-import { asPlayerId, asZoneId } from './branded.js';
+import { asActionId, asPlayerId, asZoneId } from './branded.js';
 import { createCollector } from './execution-collector.js';
 import {
   resolveBoundaryDurationsAtTurnEnd,
@@ -6,7 +6,8 @@ import {
   resolveEventFreeOperationGrants,
 } from './event-execution.js';
 import { evalCondition } from './eval-condition.js';
-import { shouldDeferFreeOperationZoneFilterFailure } from './missing-binding-policy.js';
+import { MISSING_BINDING_POLICY_CONTEXTS, shouldDeferFreeOperationZoneFilterFailure } from './missing-binding-policy.js';
+import { isMoveDecisionSequenceAdmittedForLegalMove, resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import {
   collectFreeOperationZoneFilterProbeRebindableAliases,
   evaluateFreeOperationZoneFilterProbe,
@@ -36,6 +37,7 @@ import { resolveGrantFreeOperationActionDomain } from './free-operation-action-d
 import type {
   ConditionAST,
   EventFreeOperationGrantDef,
+  EventFreeOperationGrantViabilityPolicy,
   GameDef,
   GameState,
   Move,
@@ -195,6 +197,147 @@ const resolveGrantSeat = (
   return resolveSeatId(token, seatOrder);
 };
 
+const DEFAULT_EVENT_FREE_OPERATION_GRANT_VIABILITY_POLICY: EventFreeOperationGrantViabilityPolicy = 'emitAlways';
+
+const resolveEventFreeOperationGrantViabilityPolicy = (
+  grant: EventFreeOperationGrantDef,
+): EventFreeOperationGrantViabilityPolicy =>
+  grant.viabilityPolicy ?? DEFAULT_EVENT_FREE_OPERATION_GRANT_VIABILITY_POLICY;
+
+const grantRequiresUsableProbe = (grant: EventFreeOperationGrantDef): boolean => {
+  const policy = resolveEventFreeOperationGrantViabilityPolicy(grant);
+  return policy === 'requireUsableAtIssue' || policy === 'requireUsableForEventPlay';
+};
+
+const isFreeOperationGrantUsableInCurrentState = (
+  def: GameDef,
+  state: GameState,
+  grant: EventFreeOperationGrantDef,
+  activeSeat: string,
+  seatOrder: readonly string[],
+  seatResolution: SeatResolutionContext,
+): boolean => {
+  const runtime = cardDrivenRuntime(state);
+  if (runtime === null) {
+    return false;
+  }
+
+  const seat = resolveGrantSeat(grant.seat, activeSeat, seatOrder);
+  if (seat === null) {
+    return false;
+  }
+
+  let executeAsSeat: string | undefined;
+  if (grant.executeAsSeat !== undefined) {
+    const resolvedExecuteAsSeat = resolveGrantSeat(grant.executeAsSeat, activeSeat, seatOrder);
+    if (resolvedExecuteAsSeat === null) {
+      return false;
+    }
+    executeAsSeat = resolvedExecuteAsSeat;
+  }
+
+  const probeGrant: TurnFlowPendingFreeOperationGrant = {
+    ...toPendingFreeOperationGrant(grant, '__probe__', '__probeBatch__'),
+    seat,
+    ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
+  };
+  const pendingProbeGrants = [...(runtime.pendingFreeOperationGrants ?? []), probeGrant];
+  const probeActivePlayerIndex = resolvePlayerIndexForTurnFlowSeat(seat, seatResolution.index);
+  const probeState: GameState = {
+    ...state,
+    ...(probeActivePlayerIndex === null ? {} : { activePlayer: asPlayerId(probeActivePlayerIndex) }),
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: {
+        ...runtime,
+        currentCard: {
+          ...runtime.currentCard,
+          firstEligible: seat,
+          secondEligible: null,
+          actedSeats: [],
+          passedSeats: [],
+          nonPassCount: 0,
+          firstActionClass: null,
+        },
+        pendingFreeOperationGrants: pendingProbeGrants,
+      },
+    },
+  };
+
+  const actionIds = resolveGrantFreeOperationActionDomain(def, probeGrant);
+  for (const actionId of actionIds) {
+    const probeMove: Move = {
+      actionId: asActionId(actionId),
+      params: {},
+      freeOperation: true,
+    };
+    if (!isFreeOperationApplicableForMove(def, probeState, probeMove, seatResolution)) {
+      continue;
+    }
+    const decisionProbe = resolveMoveDecisionSequence(def, probeState, probeMove, {
+      choose: () => undefined,
+    });
+    if (
+      decisionProbe.complete &&
+      isFreeOperationGrantedForMove(def, probeState, decisionProbe.move, seatResolution)
+    ) {
+      return true;
+    }
+    if (
+      !decisionProbe.complete &&
+      decisionProbe.illegal === undefined &&
+      isMoveDecisionSequenceAdmittedForLegalMove(
+        def,
+        probeState,
+        probeMove,
+        MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
+      )
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+const isEventMoveBlockedByGrantViabilityPolicy = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  activeSeat: string,
+  seatOrder: readonly string[],
+  seatResolution: SeatResolutionContext,
+): boolean => {
+  for (const grant of resolveEventFreeOperationGrants(def, state, move)) {
+    if (resolveEventFreeOperationGrantViabilityPolicy(grant) !== 'requireUsableForEventPlay') {
+      continue;
+    }
+    if (!isFreeOperationGrantUsableInCurrentState(def, state, grant, activeSeat, seatOrder, seatResolution)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+export const isEventMovePlayableUnderGrantViabilityPolicy = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  seatResolution: SeatResolutionContext,
+): boolean => {
+  const runtime = cardDrivenRuntime(state);
+  if (runtime === null) {
+    return true;
+  }
+  const activeSeat = requireCardDrivenActiveSeat(
+    def,
+    state,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.WINDOW_FILTER_APPLICATION,
+    seatResolution,
+  );
+  return !isEventMoveBlockedByGrantViabilityPolicy(def, state, move, activeSeat, runtime.seatOrder, seatResolution);
+};
+
 const extractPendingEligibilityOverrides = (
   def: GameDef,
   state: GameState,
@@ -278,11 +421,18 @@ const extractPendingFreeOperationGrants = (
   move: Move,
   activeSeat: string,
   seatOrder: readonly string[],
+  seatResolution: SeatResolutionContext,
   existingPendingFreeOperationGrants: readonly TurnFlowPendingFreeOperationGrant[],
 ): readonly TurnFlowPendingFreeOperationGrant[] => {
   const extracted: TurnFlowPendingFreeOperationGrant[] = [];
   const emittedBatchBaseId = pendingFreeOperationGrantBatchBaseId(state, move);
   for (const [grantIndex, grant] of resolveEventFreeOperationGrants(def, state, move).entries()) {
+    if (
+      grantRequiresUsableProbe(grant) &&
+      !isFreeOperationGrantUsableInCurrentState(def, state, grant, activeSeat, seatOrder, seatResolution)
+    ) {
+      continue;
+    }
     const seat = resolveGrantSeat(grant.seat, activeSeat, seatOrder);
     if (seat === null) {
       continue;
@@ -1078,6 +1228,7 @@ export const applyTurnFlowEligibilityAfterMove = (
     move,
     activeSeat,
     runtime.seatOrder,
+    seatResolution,
     existingPendingFreeOperationGrants,
   );
   const pendingOverrides = [...(runtime.pendingEligibilityOverrides ?? []), ...newOverrides];

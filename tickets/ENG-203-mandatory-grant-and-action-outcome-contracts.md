@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — event grants, turn-flow pass/eligibility controls, action execution validation
-**Deps**: tickets/ENG-201-free-op-grant-viability-gating.md, tickets/ENG-202-free-op-sequence-bound-space-context.md, packages/engine/src/kernel/apply-move.ts, packages/engine/src/kernel/turn-flow-eligibility.ts
+**Deps**: archive/tickets/FITLEVENTARCH/ENG-201-free-op-grant-viability-gating.md, tickets/ENG-202-free-op-sequence-bound-space-context.md, packages/engine/src/kernel/apply-move.ts, packages/engine/src/kernel/turn-flow-eligibility.ts
 
 ## Problem
 

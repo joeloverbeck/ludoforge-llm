@@ -42,7 +42,13 @@ export interface EventFreeOperationGrantDef {
   readonly zoneFilter?: ConditionAST;
   readonly allowDuringMonsoon?: boolean;
   readonly uses?: number;
+  readonly viabilityPolicy?: EventFreeOperationGrantViabilityPolicy;
 }
+
+export type EventFreeOperationGrantViabilityPolicy =
+  | 'emitAlways'
+  | 'requireUsableAtIssue'
+  | 'requireUsableForEventPlay';
 
 export interface EventEligibilityOverrideTargetActive {
   readonly kind: 'active';

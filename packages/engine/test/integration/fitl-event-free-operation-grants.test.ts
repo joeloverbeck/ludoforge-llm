@@ -585,6 +585,172 @@ phase: [asPhaseId('main')],
     ],
   }) as unknown as GameDef;
 
+const createGrantViabilityPolicyDef = (): GameDef =>
+  ({
+    metadata: { id: 'event-free-op-viability-policy-int', players: { min: 3, max: 3 }, maxTriggerDepth: 8 },
+    seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }],
+    constants: {},
+    globalVars: [],
+    perPlayerVars: [],
+    zones: [
+      {
+        id: 'boardCambodia:none',
+        owner: 'none',
+        visibility: 'public',
+        ordering: 'set',
+        category: 'province',
+        attributes: { population: 1, econ: 0, country: 'cambodia', coastal: false },
+      },
+      {
+        id: 'boardVietnam:none',
+        owner: 'none',
+        visibility: 'public',
+        ordering: 'set',
+        category: 'province',
+        attributes: { population: 1, econ: 0, country: 'southVietnam', coastal: false },
+      },
+    ],
+    tokenTypes: [],
+    setup: [],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    turnOrder: {
+      type: 'cardDriven',
+      config: {
+        turnFlow: {
+          cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          eligibility: {
+            seats: ['US', 'ARVN', 'NVA'],
+            overrideWindows: [],
+          },
+          optionMatrix: [{ first: 'event', second: ['operation'] }],
+          passRewards: [],
+          freeOperationActionIds: ['operation'],
+          durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+        },
+      },
+    },
+    actions: [
+      {
+        id: asActionId('event'),
+capabilities: ['cardEvent'],
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+        params: [
+          { name: 'eventCardId', domain: { query: 'enums', values: ['card-require-usable-play', 'card-require-usable-issue'] } },
+          { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
+          { name: 'branch', domain: { query: 'enums', values: ['none'] } },
+        ],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+      {
+        id: asActionId('operation'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+    ],
+    actionPipelines: [
+      {
+        id: 'operation-select-zone',
+        actionId: asActionId('operation'),
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [
+          {
+            effects: [
+              {
+                chooseOne: {
+                  internalDecisionId: 'decision:$zone',
+                  bind: '$zone',
+                  options: { query: 'zones' },
+                },
+              },
+            ],
+          },
+        ],
+        atomicity: 'partial',
+      },
+    ],
+    triggers: [],
+    terminal: { conditions: [] },
+    eventDecks: [
+      {
+        id: 'event-deck',
+        drawZone: 'deck:none',
+        discardZone: 'played:none',
+        cards: [
+          {
+            id: 'card-require-usable-play',
+            title: 'Play-time Viability Required',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Only playable when grant is usable.',
+              freeOperationGrants: [
+                {
+                  seat: 'self',
+                  sequence: { chain: 'nva-unusable', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  viabilityPolicy: 'requireUsableForEventPlay',
+                  zoneFilter: {
+                    op: '==',
+                    left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+                    right: 'laos',
+                  },
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-require-usable-issue',
+            title: 'Issue-time Viability Required',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Emit only the grants that are currently usable.',
+              freeOperationGrants: [
+                {
+                  seat: 'self',
+                  sequence: { chain: 'issue-usable', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  viabilityPolicy: 'requireUsableAtIssue',
+                  zoneFilter: {
+                    op: '==',
+                    left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+                    right: 'cambodia',
+                  },
+                },
+                {
+                  seat: 'self',
+                  sequence: { chain: 'issue-unusable', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  viabilityPolicy: 'requireUsableAtIssue',
+                  zoneFilter: {
+                    op: '==',
+                    left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+                    right: 'laos',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      } as EventDeckDef,
+    ],
+  }) as unknown as GameDef;
+
 const createExecuteAsSeatSpecialActivityDef = (): GameDef =>
   ({
     metadata: { id: 'event-free-op-execute-as-special-activity-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
@@ -1069,6 +1235,30 @@ describe('event free-operation grants integration', () => {
       freeOperation: true,
     }).state;
     assert.deepEqual(requireCardDrivenRuntime(third).pendingFreeOperationGrants ?? [], []);
+  });
+
+  it('suppresses event moves when requireUsableForEventPlay grants are currently unusable', () => {
+    const def = createGrantViabilityPolicyDef();
+    const start = initialState(def, 111, 3).state;
+
+    const moves = legalMoves(def, start).filter(
+      (move) => String(move.actionId) === 'event' && move.params.eventCardId === 'card-require-usable-play',
+    );
+    assert.equal(moves.length, 0);
+  });
+
+  it('emits only currently-usable grants when requireUsableAtIssue is set', () => {
+    const def = createGrantViabilityPolicyDef();
+    const start = initialState(def, 112, 3).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-require-usable-issue', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const grants = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 1);
+    assert.equal(grants[0]?.sequenceBatchId?.includes('issue-usable'), true);
   });
 
   it('applies free-operation grants with executeAsSeat using the overridden action profile', () => {

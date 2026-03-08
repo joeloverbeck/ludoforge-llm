@@ -116,7 +116,10 @@ describe('FITL card-27 Phoenix Program production spec', () => {
       'Add a Terror marker to any 2 spaces outside Saigon with COIN Control and VC. Set them to Active Opposition.',
     );
     assert.equal(phoenix?.unshaded?.targets, undefined);
-    assert.equal(phoenix?.shaded?.targets, undefined);
+    assert.notEqual(phoenix?.shaded?.targets, undefined, 'Shaded Phoenix should use canonical targets');
+    assert.equal(phoenix?.shaded?.targets?.length, 1, 'Shaded Phoenix should have one target selector');
+    assert.equal(phoenix?.shaded?.targets?.[0]?.id, '$targetSpace');
+    assert.equal(phoenix?.shaded?.targets?.[0]?.application, 'each');
 
     const unshadedChoose = phoenix?.unshaded?.effects?.[0];
     assert.ok(unshadedChoose !== undefined && 'chooseN' in unshadedChoose);
@@ -135,10 +138,6 @@ describe('FITL card-27 Phoenix Program production spec', () => {
     ) as { op?: string; args?: unknown[] } | undefined;
     assert.notEqual(tokenTypeClause, undefined);
     assert.equal(tokenTypeClause?.op, 'or');
-
-    const shadedChoose = phoenix?.shaded?.effects?.[0];
-    assert.ok(shadedChoose !== undefined && 'chooseN' in shadedChoose);
-    assert.equal('chooseN' in shadedChoose ? shadedChoose.chooseN.bind : '', '$targetSpaces');
   });
 
   it('unshaded removes selected VC guerrillas and unTunneled bases from COIN-controlled spaces only', () => {
@@ -276,7 +275,7 @@ describe('FITL card-27 Phoenix Program production spec', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.name === '$targetSpaces' || req.decisionId.includes('targetSpaces'),
+        when: (req) => req.name === '$targetSpace' || req.decisionId.includes('targetSpace'),
         value: ['hue:none', 'da-nang:none'],
       },
     ];
@@ -327,7 +326,7 @@ describe('FITL card-27 Phoenix Program production spec', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.name === '$targetSpaces' || req.decisionId.includes('targetSpaces'),
+        when: (req) => req.name === '$targetSpace' || req.decisionId.includes('targetSpace'),
         value: ['hue:none'],
       },
     ];

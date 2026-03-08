@@ -1,6 +1,6 @@
 # Spec 56: forEach Target-Semantics Audit and Canonicalization
 
-**Status**: Draft
+**Status**: COMPLETED
 **Priority**: P1
 **Complexity**: M
 **Dependencies**: Spec 29 (FITL Event Card Encoding), archive/tickets/FITLEVENTARCH-001-event-target-application-semantics.md, archive/tickets/FITLEVENTARCH-002-choice-validation-error-classification.md
@@ -170,3 +170,19 @@ Run at minimum:
 - Enforcement: warning first, then error once current migration set is complete.
 
 2. Prefer canonical target-contract assertions in integration tests over low-level AST loop-shape assertions.
+
+## Outcome
+
+- **Completion date**: 2026-03-08
+- **What changed**:
+  - Migrated 5 FITL event card sides in `data/games/fire-in-the-lake/41-content-event-decks.md` from manual `forEach` patterns to canonical `targets + application: each`:
+    - Card-21 (Americal, shaded): replaced `effects: [chooseN + forEach]` with `targets: [{application: each}]`
+    - Card-24 (Op Starlite, shaded): changed `application: aggregate` to `application: each`, removed redundant outer `forEach`
+    - Card-27 (Phoenix Program, shaded): replaced `effects: [chooseN + forEach]` with `targets: [{application: each}]`
+    - Card-30 (USS New Jersey, shaded): replaced `effects: [chooseN + forEach]` with `targets: [{application: each}]`
+    - Card-110 (No Contact, shaded): changed `application: aggregate` to `application: each` (single-select, no structural change needed)
+  - Updated 3 existing test files (`fitl-events-uss-new-jersey.test.ts`, `fitl-events-phoenix-program.test.ts`, `fitl-events-1968-us.test.ts`) to align structural assertions and decision overrides with canonical target shapes
+  - Created new test file `fitl-events-no-contact.test.ts` with 5 tests covering card-110 contract, unshaded casualty placement + flip limits, shaded flip + US troop casualty movement invariants
+- **Deviations from plan**:
+  - Did not add `min` to cardinality for cards where the original `chooseN` used expression-based min (e.g., `min(1, count)`), because `EventTargetCardinalityRange` only supports plain numbers. Tests use explicit decision overrides instead of relying on auto-resolution.
+- **Verification**: 4361 engine tests pass, lint clean, typecheck clean

@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import ts from 'typescript';
 import {
+  collectNamedImportsByLocalName,
   collectCallExpressionsByIdentifier,
   isPropertyAccessOnIdentifier,
   parseTypeScriptSource,
@@ -2295,6 +2296,55 @@ phase: [asPhaseId('main')],
     const moves = legalMoves(def, state);
     assert.equal(moves.some((move) => move.actionId === actionId && Object.keys(move.params).length === 0), false);
     assert.deepEqual(moves, []);
+  });
+
+  it('30. routes event decision admission through canonical move-decision helper', () => {
+    const source = readKernelSource('src/kernel/legal-moves.ts');
+    const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');
+    const imports = collectNamedImportsByLocalName(sourceFile, './move-decision-sequence.js');
+    assert.equal(
+      imports.get('isMoveDecisionSequenceAdmittedForLegalMove'),
+      'isMoveDecisionSequenceAdmittedForLegalMove',
+      'legal-moves.ts must import canonical legal-move decision admission helper',
+    );
+    assert.equal(
+      imports.has('classifyMoveDecisionSequenceSatisfiability'),
+      false,
+      'event-path decision-policy must not depend on inline classify API imports',
+    );
+
+    const helperCalls = collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceAdmittedForLegalMove');
+    assert.equal(
+      helperCalls.some((call) => {
+        if (call.arguments.length < 4) {
+          return false;
+        }
+        const contextArg = unwrapTypeScriptExpression(call.arguments[3]!);
+        return ts.isStringLiteral(contextArg) && contextArg.text === 'legalMoves.eventDecisionSequence';
+      }),
+      true,
+      'event-path admission must use canonical helper with legalMoves.eventDecisionSequence context',
+    );
+
+    const classifyCalls = collectCallExpressionsByIdentifier(sourceFile, 'classifyMoveDecisionSequenceSatisfiability');
+    assert.equal(
+      classifyCalls.length,
+      0,
+      'legal-moves.ts should not reintroduce inline classifyMoveDecisionSequenceSatisfiability admission logic',
+    );
+
+    const deferCalls = collectCallExpressionsByIdentifier(sourceFile, 'shouldDeferMissingBinding');
+    assert.equal(
+      deferCalls.some((call) => {
+        if (call.arguments.length < 2) {
+          return false;
+        }
+        const contextArg = unwrapTypeScriptExpression(call.arguments[1]!);
+        return ts.isStringLiteral(contextArg) && contextArg.text === 'legalMoves.eventDecisionSequence';
+      }),
+      false,
+      'event-path should not inline shouldDeferMissingBinding policy checks',
+    );
   });
 });
 

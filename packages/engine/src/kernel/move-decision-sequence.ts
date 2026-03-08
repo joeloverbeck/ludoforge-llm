@@ -5,6 +5,7 @@ import {
 } from './decision-sequence-satisfiability.js';
 import { pickDeterministicChoiceValue } from './choice-option-policy.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
+import { shouldDeferMissingBinding, type MissingBindingPolicyContext } from './missing-binding-policy.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import type {
   ChoiceIllegalRequest,
@@ -134,6 +135,21 @@ export const isMoveDecisionSequenceNotUnsatisfiable = (
   runtime?: GameDefRuntime,
 ): boolean => {
   return classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime).classification !== 'unsatisfiable';
+};
+
+export const isMoveDecisionSequenceAdmittedForLegalMove = (
+  def: GameDef,
+  state: GameState,
+  baseMove: Move,
+  context: MissingBindingPolicyContext,
+  options?: Omit<ResolveMoveDecisionSequenceOptions, 'choose'>,
+  runtime?: GameDefRuntime,
+): boolean => {
+  try {
+    return classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime).classification !== 'unsatisfiable';
+  } catch (error) {
+    return shouldDeferMissingBinding(error, context);
+  }
 };
 
 export const classifyMoveDecisionSequenceSatisfiability = (

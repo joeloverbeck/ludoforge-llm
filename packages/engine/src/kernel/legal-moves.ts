@@ -4,7 +4,7 @@ import { resolveActionApplicabilityPreflight } from './action-applicability-pref
 import { resolveDeclaredActionParamDomainOptions } from './declared-action-param-domain.js';
 import type { EvalContext, EvalRuntimeResources } from './eval-context.js';
 import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
-import { classifyMoveDecisionSequenceSatisfiability, isMoveDecisionSequenceNotUnsatisfiable } from './move-decision-sequence.js';
+import { isMoveDecisionSequenceAdmittedForLegalMove, isMoveDecisionSequenceNotUnsatisfiable } from './move-decision-sequence.js';
 import {
   applyPendingFreeOperationVariants,
   applyTurnFlowWindowFilters,
@@ -349,26 +349,19 @@ function enumerateCurrentEventMoves(
       continue;
     }
 
-    let classification: 'satisfiable' | 'unsatisfiable' | 'unknown';
-    try {
-      classification = classifyMoveDecisionSequenceSatisfiability(
+    if (
+      !isMoveDecisionSequenceAdmittedForLegalMove(
         def,
         state,
         move,
+        'legalMoves.eventDecisionSequence',
         {
           budgets: enumeration.budgets,
           onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
         },
         runtime,
-      ).classification;
-    } catch (error) {
-      if (shouldDeferMissingBinding(error, 'legalMoves.eventDecisionSequence')) {
-        classification = 'unknown';
-      } else {
-        throw error;
-      }
-    }
-    if (classification === 'unsatisfiable') {
+      )
+    ) {
       continue;
     }
     if (!tryPushOptionMatrixFilteredMove(enumeration, def, state, move, action)) {

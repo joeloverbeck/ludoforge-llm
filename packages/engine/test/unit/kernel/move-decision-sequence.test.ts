@@ -6,6 +6,7 @@ import {
   asPhaseId,
   asPlayerId,
   asZoneId,
+  isMoveDecisionSequenceAdmittedForLegalMove,
   isMoveDecisionSequenceNotUnsatisfiable,
   isMoveDecisionSequenceSatisfiable,
   pickDeterministicChoiceValue,
@@ -432,6 +433,101 @@ phase: [asPhaseId('main')],
       true,
     );
     assert.equal(result.warnings.some((warning) => warning.code === 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'), true);
+  });
+
+  it('legal-move admission helper excludes unsatisfiable decision sequences', () => {
+    const action: ActionDef = {
+      id: asActionId('unsat-admission-op'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'unsat-admission-profile',
+      actionId: asActionId('unsat-admission-op'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              chooseOne: {
+                internalDecisionId: 'decision:$target',
+                bind: '$target',
+                options: { query: 'enums', values: [] },
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    assert.equal(
+      isMoveDecisionSequenceAdmittedForLegalMove(
+        def,
+        makeBaseState(),
+        makeMove('unsat-admission-op'),
+        'legalMoves.eventDecisionSequence',
+      ),
+      false,
+    );
+  });
+
+  it('legal-move admission helper treats deferrable missing bindings as admissible unknowns', () => {
+    const action: ActionDef = {
+      id: asActionId('missing-binding-admission-op'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'missing-binding-admission-profile',
+      actionId: asActionId('missing-binding-admission-op'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              if: {
+                when: { op: '==', left: { ref: 'binding', name: '$missing' }, right: 1 },
+                then: [],
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    assert.equal(
+      isMoveDecisionSequenceAdmittedForLegalMove(
+        def,
+        makeBaseState(),
+        makeMove('missing-binding-admission-op'),
+        'legalMoves.eventDecisionSequence',
+      ),
+      true,
+    );
   });
 
   it('returns incomplete with warning when deferred predicate budget is exceeded', () => {

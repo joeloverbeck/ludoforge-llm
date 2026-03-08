@@ -1,6 +1,6 @@
 # HUMREAACTTOO-004: SummaryMessage + Macro Override
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new IR type, normalizer-compound update, content planner update, template realizer update

@@ -693,4 +693,24 @@ describe('realizeContentPlan', () => {
       assert.deepEqual(r1, r2);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // SummaryMessage
+  // ---------------------------------------------------------------------------
+
+  describe('summary message', () => {
+    it('realizeSummary returns msg.text unchanged', () => {
+      const msg: TooltipMessage = { kind: 'summary', astPath: 'r', text: 'Place guerrillas from Available' };
+      const p = plan([msg]);
+      const card = realizeContentPlan(p, MOCK_VERB);
+      assert.equal(card.steps[0]!.lines[0]!.text, 'Place guerrillas from Available');
+    });
+
+    it('realizeSummary preserves macroClass text verbatim', () => {
+      const msg: TooltipMessage = { kind: 'summary', astPath: 'r', text: 'Rally in selected space', macroClass: 'Rally' };
+      const p = plan([msg]);
+      const card = realizeContentPlan(p, MOCK_VERB);
+      assert.equal(card.steps[0]!.lines[0]!.text, 'Rally in selected space');
+    });
+  });
 });

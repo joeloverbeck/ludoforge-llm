@@ -420,3 +420,40 @@ function collectAllMessages(steps: readonly ContentPlanStep[]): readonly Tooltip
 function countAllMessages(steps: readonly ContentPlanStep[]): number {
   return collectAllMessages(steps).length;
 }
+
+// ---------------------------------------------------------------------------
+// SummaryMessage sub-step header
+// ---------------------------------------------------------------------------
+
+describe('planContent — SummaryMessage sub-step header', () => {
+  it('uses macroClass as sub-step header when present', () => {
+    const messages: TooltipMessage[] = [
+      makeSelect({ astPath: 'root.effects[0]' }),
+      {
+        kind: 'summary',
+        text: 'Place guerrillas',
+        macroClass: 'Rally',
+        astPath: 'root.effects[0].forEach.effects[0]',
+      },
+    ];
+    const plan = planContent(messages, 'train');
+    const step = plan.steps[0]!;
+    assert.ok(step.subSteps !== undefined && step.subSteps.length > 0);
+    assert.equal(step.subSteps![0]!.header, 'Rally');
+  });
+
+  it('uses generic Summary header when macroClass absent', () => {
+    const messages: TooltipMessage[] = [
+      makeSelect({ astPath: 'root.effects[0]' }),
+      {
+        kind: 'summary',
+        text: 'Place guerrillas',
+        astPath: 'root.effects[0].forEach.effects[0]',
+      },
+    ];
+    const plan = planContent(messages, 'train');
+    const step = plan.steps[0]!;
+    assert.ok(step.subSteps !== undefined && step.subSteps.length > 0);
+    assert.equal(step.subSteps![0]!.header, 'Summary');
+  });
+});

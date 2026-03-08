@@ -59,6 +59,7 @@ const SUB_STEP_HEADER_BY_KIND: Readonly<Record<string, string>> = {
   phase: 'Advance phase',
   grant: 'Grant operation',
   conceal: 'Conceal information',
+  summary: 'Summary',
 };
 
 // ---------------------------------------------------------------------------
@@ -141,8 +142,11 @@ function parentPathAtDepth(astPath: string, targetDepth: number): string {
  */
 function deriveSubStepHeader(messages: readonly TooltipMessage[], index: number): string {
   if (messages.length > 0) {
-    const firstKind = messages[0]!.kind;
-    const semantic = SUB_STEP_HEADER_BY_KIND[firstKind];
+    const first = messages[0]!;
+    if (first.kind === 'summary' && first.macroClass !== undefined) {
+      return first.macroClass;
+    }
+    const semantic = SUB_STEP_HEADER_BY_KIND[first.kind];
     if (semantic !== undefined) return semantic;
   }
   return `Sub-step ${index}`;

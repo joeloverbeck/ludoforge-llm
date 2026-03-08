@@ -32,6 +32,7 @@ import type {
   PhaseMessage,
   GrantMessage,
   ConcealMessage,
+  SummaryMessage,
 } from './tooltip-ir.js';
 import type { ContentStep, ContentModifier, RealizedLine, RuleCard } from './tooltip-rule-card.js';
 import type { VerbalizationDef } from './verbalization-types.js';
@@ -218,6 +219,8 @@ const realizeConceal = (msg: ConcealMessage, ctx: LabelContext): string => {
   return `Conceal ${target}`;
 };
 
+const realizeSummary = (msg: SummaryMessage): string => msg.text;
+
 // ---------------------------------------------------------------------------
 // Message dispatch
 // ---------------------------------------------------------------------------
@@ -247,6 +250,7 @@ const realizeMessage = (msg: TooltipMessage, ctx: LabelContext): string => {
     case 'phase': return realizePhase(msg, ctx);
     case 'grant': return realizeGrant(msg, ctx);
     case 'conceal': return realizeConceal(msg, ctx);
+    case 'summary': return realizeSummary(msg);
     case 'suppressed': return '';
   }
 };

@@ -278,5 +278,17 @@ export const tryMacroOverride = (
   if (macroId === undefined) return undefined;
   const macroEntry = ctx.verbalization.macros[macroId];
   if (macroEntry?.summary === undefined) return undefined;
-  return [{ kind: 'set', target: macroId, value: macroEntry.summary, macroOrigin: macroId, astPath }];
+  const text = macroEntry.slots !== undefined
+    ? Object.entries(macroEntry.slots).reduce(
+        (acc, [key, val]) => acc.replaceAll(`{${key}}`, val),
+        macroEntry.summary,
+      )
+    : macroEntry.summary;
+  return [{
+    kind: 'summary',
+    text,
+    macroClass: macroEntry.class,
+    macroOrigin: macroId,
+    astPath,
+  }];
 };

@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   normalizeChooseN,
+  tryMacroOverride,
   isSpaceQuery,
   isTokenQuery,
   isPlayerQuery,
@@ -12,7 +13,8 @@ import {
 } from '../../../src/kernel/tooltip-normalizer-compound.js';
 import type { EffectAST, OptionsQuery } from '../../../src/kernel/types-ast.js';
 import type { NormalizerContext } from '../../../src/kernel/tooltip-normalizer.js';
-import type { SelectMessage } from '../../../src/kernel/tooltip-ir.js';
+import type { SelectMessage, SummaryMessage } from '../../../src/kernel/tooltip-ir.js';
+import type { VerbalizationDef } from '../../../src/kernel/verbalization-types.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -193,5 +195,88 @@ describe('normalizeChooseN domain classification', () => {
     const msg = result[0] as SelectMessage;
     assert.equal(msg.target, 'items');
     assert.equal(msg.optionHints, undefined);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// tryMacroOverride — SummaryMessage production
+// ---------------------------------------------------------------------------
+
+describe('tryMacroOverride', () => {
+  const makeVerb = (macros: VerbalizationDef['macros']): VerbalizationDef => ({
+    labels: {},
+    stages: {},
+    macros,
+    sentencePlans: {},
+    suppressPatterns: [],
+    stageDescriptions: {},
+    modifierEffects: {},
+  });
+
+  const forEachWithMacro = (macroId: string): EffectAST => ({
+    forEach: {
+      over: { query: 'mapSpaces' },
+      bind: 'sp',
+      effects: [],
+      macroOrigin: { macroId, stem: macroId },
+    },
+  });
+
+  it('returns undefined when no verbalization context', () => {
+    const result = tryMacroOverride(forEachWithMacro('trainUs'), EMPTY_CTX, 'r');
+    assert.equal(result, undefined);
+  });
+
+  it('returns undefined when macro has no summary', () => {
+    const ctx: NormalizerContext = {
+      verbalization: makeVerb({ trainUs: { class: 'Train', summary: undefined as unknown as string } }),
+      suppressPatterns: [],
+    };
+    const result = tryMacroOverride(forEachWithMacro('trainUs'), ctx, 'r');
+    assert.equal(result, undefined);
+  });
+
+  it('produces SummaryMessage instead of SetMessage', () => {
+    const ctx: NormalizerContext = {
+      verbalization: makeVerb({ trainUs: { class: 'Train', summary: 'Place troops' } }),
+      suppressPatterns: [],
+    };
+    const result = tryMacroOverride(forEachWithMacro('trainUs'), ctx, 'r');
+    assert.ok(result !== undefined);
+    assert.equal(result!.length, 1);
+    const msg = result![0] as SummaryMessage;
+    assert.equal(msg.kind, 'summary');
+    assert.equal(msg.text, 'Place troops');
+    assert.equal(msg.macroClass, 'Train');
+    assert.equal(msg.macroOrigin, 'trainUs');
+  });
+
+  it('interpolates {slotName} placeholders from slots map', () => {
+    const ctx: NormalizerContext = {
+      verbalization: makeVerb({
+        placeGuerrillas: {
+          class: 'Rally',
+          summary: 'Place {piece} from {source}',
+          slots: { piece: 'guerrillas', source: 'Available' },
+        },
+      }),
+      suppressPatterns: [],
+    };
+    const result = tryMacroOverride(forEachWithMacro('placeGuerrillas'), ctx, 'r');
+    assert.ok(result !== undefined);
+    const msg = result![0] as SummaryMessage;
+    assert.equal(msg.text, 'Place guerrillas from Available');
+    assert.equal(msg.macroClass, 'Rally');
+  });
+
+  it('leaves text unchanged when no slots defined', () => {
+    const ctx: NormalizerContext = {
+      verbalization: makeVerb({ simple: { class: 'Op', summary: 'Do {thing}' } }),
+      suppressPatterns: [],
+    };
+    const result = tryMacroOverride(forEachWithMacro('simple'), ctx, 'r');
+    assert.ok(result !== undefined);
+    const msg = result![0] as SummaryMessage;
+    assert.equal(msg.text, 'Do {thing}');
   });
 });

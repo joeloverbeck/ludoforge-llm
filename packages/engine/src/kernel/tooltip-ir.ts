@@ -178,6 +178,12 @@ export interface ConcealMessage extends MessageBase {
   readonly target: string;
 }
 
+export interface SummaryMessage extends MessageBase {
+  readonly kind: 'summary';
+  readonly text: string;
+  readonly macroClass?: string;
+}
+
 export interface SuppressedMessage extends MessageBase {
   readonly kind: 'suppressed';
   readonly reason: string;
@@ -207,13 +213,14 @@ export type TooltipMessage =
   | PhaseMessage
   | GrantMessage
   | ConcealMessage
+  | SummaryMessage
   | SuppressedMessage;
 
 export const TOOLTIP_MESSAGE_KINDS = [
   'select', 'place', 'move', 'pay', 'gain', 'transfer', 'shift',
   'activate', 'deactivate', 'remove', 'create', 'destroy', 'reveal',
   'draw', 'shuffle', 'set', 'choose', 'roll', 'modifier', 'blocker',
-  'phase', 'grant', 'conceal', 'suppressed',
+  'phase', 'grant', 'conceal', 'summary', 'suppressed',
 ] as const;
 
 export type TooltipMessageKind = (typeof TOOLTIP_MESSAGE_KINDS)[number];

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Large
 **Engine Changes**: None — data-only
-**Deps**: LEGTOOLT-001 (schema extensions), LEGTOOLT-005 (template realizer consumes stageDescriptions/modifierEffects)
+**Deps**: LEGTOOLT-001 (schema extensions), archive/tickets/LEGTOOLT-005-template-realizer-improvements.md
 
 ## Problem
 

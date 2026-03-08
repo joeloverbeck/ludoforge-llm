@@ -1,6 +1,6 @@
 # LEGTOOLT-005: Template Realizer Improvements
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — tooltip-template-realizer.ts
@@ -96,3 +96,16 @@ The template realizer produces confusing output in several areas:
 
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern="tooltip-template-realizer"` (targeted)
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint` (full)
+
+## Outcome
+
+- **Completion date**: 2026-03-08
+- **What changed**:
+  - `tooltip-template-realizer.ts`: improved `realizeSelect()` bounds formatting (min=max, min=0, singular), added optional flag to `realizeChoose()`, enhanced `realizeModifier()` with condition+effect rendering, threaded `profileId` through `realizeContentPlan()` → `realizeStep()` → `resolveStepHeader()` for stageDescription resolution
+  - `tooltip-rule-card.ts`: added optional `description` field to `ContentStep`
+  - `tooltip-template-realizer.test.ts`: added 15 new tests (bounds formatting, optional choose, stage description resolution with fallbacks, modifier condition+effect, singular/plural filter labels)
+- **Deviations from plan**:
+  - `profileId` was added as an optional parameter to `realizeContentPlan()` rather than a field on `ContentPlan` — simpler, no content planner changes needed
+  - `tooltip-content-planner.ts` was NOT modified (ticket listed it as a file to touch)
+  - Post-review fix: `realizeSelect` filter labels now receive `count` for proper singular/plural resolution when min===max (not in original ticket)
+- **Verification**: 4327 tests pass, typecheck clean, lint clean

@@ -42,14 +42,36 @@ import { buildLabelContext, resolveLabel, resolveSentencePlan } from './tooltip-
 // Template functions — one per message kind
 // ---------------------------------------------------------------------------
 
+const singularTarget = (target: string): string => {
+  if (target === 'spaces') return 'space';
+  if (target === 'zones') return 'zone';
+  if (target === 'items') return 'item';
+  return target;
+};
+
 const realizeSelect = (msg: SelectMessage, ctx: LabelContext): string => {
-  const boundsStr = msg.bounds !== undefined
-    ? `${msg.bounds.min}-${msg.bounds.max} `
-    : '';
   const targetLabel = msg.filter !== undefined
     ? resolveLabel(msg.filter, ctx)
     : msg.target;
-  return `Select ${boundsStr}${targetLabel}`;
+
+  if (msg.bounds === undefined) {
+    return `Select ${targetLabel}`;
+  }
+
+  const { min, max } = msg.bounds;
+
+  if (min === max) {
+    const label = msg.filter !== undefined
+      ? resolveLabel(msg.filter, ctx, min)
+      : min === 1 ? singularTarget(msg.target) : msg.target;
+    return `Select ${min} ${label}`;
+  }
+
+  if (min === 0) {
+    return `Select up to ${max} ${targetLabel}`;
+  }
+
+  return `Select ${min}-${max} ${targetLabel}`;
 };
 
 const realizePlace = (msg: PlaceMessage, ctx: LabelContext): string => {
@@ -155,14 +177,18 @@ const realizeSet = (msg: SetMessage, ctx: LabelContext): string => {
 
 const realizeChoose = (msg: ChooseMessage, ctx: LabelContext): string => {
   const options = msg.options.map((o) => resolveLabel(o, ctx)).join(', ');
-  return `Choose: ${options}`;
+  const suffix = msg.optional === true ? ' (optional)' : '';
+  return `Choose: ${options}${suffix}`;
 };
 
 const realizeRoll = (msg: RollMessage): string =>
   `Roll ${msg.range.min}-${msg.range.max}`;
 
-const realizeModifier = (msg: ModifierMessage): string =>
-  msg.description;
+const realizeModifier = (msg: ModifierMessage): string => {
+  if (msg.description.length === 0) return msg.condition;
+  if (msg.description === msg.condition) return msg.description;
+  return `${msg.condition}: ${msg.description}`;
+};
 
 const realizeBlocker = (msg: BlockerMessage): string =>
   msg.reason;
@@ -220,9 +246,38 @@ const realizeMessage = (msg: TooltipMessage, ctx: LabelContext): string => {
 // Step conversion
 // ---------------------------------------------------------------------------
 
+const resolveStepHeader = (
+  header: string,
+  ctx: LabelContext,
+  profileId: string | undefined,
+): { readonly resolvedHeader: string; readonly description?: string } => {
+  if (ctx.verbalization !== undefined && profileId !== undefined) {
+    const profileDescs = ctx.verbalization.stageDescriptions[profileId];
+    if (profileDescs !== undefined) {
+      const entry = profileDescs[header];
+      if (entry !== undefined) {
+        return {
+          resolvedHeader: entry.label,
+          ...(entry.description !== undefined ? { description: entry.description } : {}),
+        };
+      }
+    }
+  }
+
+  if (ctx.verbalization !== undefined) {
+    const stageLabel = ctx.verbalization.stages[header];
+    if (stageLabel !== undefined) {
+      return { resolvedHeader: stageLabel };
+    }
+  }
+
+  return { resolvedHeader: resolveLabel(header, ctx) };
+};
+
 const realizeStep = (
   planStep: ContentPlanStep,
   ctx: LabelContext,
+  profileId: string | undefined,
 ): ContentStep => {
   const lines: RealizedLine[] = [];
   for (const m of planStep.messages) {
@@ -232,11 +287,13 @@ const realizeStep = (
     }
   }
   const subSteps = planStep.subSteps !== undefined
-    ? planStep.subSteps.map((s) => realizeStep(s, ctx))
+    ? planStep.subSteps.map((s) => realizeStep(s, ctx, profileId))
     : undefined;
+  const { resolvedHeader, description } = resolveStepHeader(planStep.header, ctx, profileId);
   return {
     stepNumber: planStep.stepNumber,
-    header: planStep.header,
+    header: resolvedHeader,
+    ...(description !== undefined ? { description } : {}),
     lines,
     ...(subSteps !== undefined && subSteps.length > 0 ? { subSteps } : {}),
   };
@@ -278,12 +335,13 @@ const realizeModifiers = (
 export const realizeContentPlan = (
   plan: ContentPlan,
   verbalization: VerbalizationDef | undefined,
+  profileId?: string,
 ): RuleCard => {
   const ctx = buildLabelContext(verbalization);
 
   return {
     synopsis: realizeSynopsis(plan, ctx),
-    steps: plan.steps.map((s) => realizeStep(s, ctx)),
+    steps: plan.steps.map((s) => realizeStep(s, ctx, profileId)),
     modifiers: realizeModifiers(plan),
   };
 };

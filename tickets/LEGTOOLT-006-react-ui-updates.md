@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: LEGTOOLT-004 (budget removal — `collapsedCount` removed from `ContentStep`), LEGTOOLT-005 (template realizer improvements)
+**Deps**: LEGTOOLT-004 (budget removal — `collapsedCount` removed from `ContentStep`), archive/tickets/LEGTOOLT-005-template-realizer-improvements.md
 
 ## Problem
 

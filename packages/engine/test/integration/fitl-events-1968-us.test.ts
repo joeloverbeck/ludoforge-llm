@@ -748,10 +748,10 @@ describe('FITL 1968 US-first event-card production spec', () => {
     assert.notEqual((unshadedEffects[2] as { chooseOne?: unknown }).chooseOne, undefined);
     assert.notEqual((unshadedEffects[3] as { if?: unknown }).if, undefined);
 
-    const shadedEffects = card?.shaded?.effects ?? [];
-    assert.equal(shadedEffects.length, 2, 'card-21 shaded should define province selection and per-province resolution');
-    assert.notEqual((shadedEffects[0] as { chooseN?: unknown }).chooseN, undefined);
-    assert.notEqual((shadedEffects[1] as { forEach?: unknown }).forEach, undefined);
+    const shadedTargets = card?.shaded?.targets ?? [];
+    assert.equal(shadedTargets.length, 1, 'card-21 shaded should use canonical target selector');
+    assert.equal(shadedTargets[0]?.id, '$targetProvince');
+    assert.equal(shadedTargets[0]?.application, 'each');
   });
 
   it('applies card-21 unshaded by moving up to 2 map troops and up to 2 out-of-play troops into one selected map space', () => {
@@ -938,7 +938,17 @@ describe('FITL 1968 US-first event-card production spec', () => {
     });
     const oneProvinceMove = findAmericalMove(def, oneProvinceSetup, 'shaded');
     assert.notEqual(oneProvinceMove, undefined, 'Expected shaded Americal move');
-    const oneProvinceFinal = applyMoveWithResolvedDecisionIds(def, oneProvinceSetup, oneProvinceMove!).state;
+    const oneProvinceOverrides: DecisionOverrideRule[] = [
+      {
+        when: (request) => request.name === '$targetProvince' || request.decisionId.includes('targetProvince'),
+        value: ['quang-tri-thua-thien:none'],
+      },
+      {
+        when: (request) => request.name.includes('vcPieceToRemove'),
+        value: [asTokenId('vc-qt-only')],
+      },
+    ];
+    const oneProvinceFinal = applyMoveWithResolvedDecisionIds(def, oneProvinceSetup, oneProvinceMove!, { overrides: oneProvinceOverrides }).state;
     assert.equal(
       countTokens(oneProvinceFinal, 'available-VC:none', (token) => token.props.faction === 'VC'),
       1,
@@ -980,7 +990,13 @@ describe('FITL 1968 US-first event-card production spec', () => {
     });
     const untunneledMove = findAmericalMove(def, untunneledSetup, 'shaded');
     assert.notEqual(untunneledMove, undefined, 'Expected shaded Americal move for untunneled-base test');
-    const untunneledFinal = applyMoveWithResolvedDecisionIds(def, untunneledSetup, untunneledMove!).state;
+    const untunneledOverrides: DecisionOverrideRule[] = [
+      {
+        when: (request) => request.name === '$targetProvince' || request.decisionId.includes('targetProvince'),
+        value: ['quang-tri-thua-thien:none'],
+      },
+    ];
+    const untunneledFinal = applyMoveWithResolvedDecisionIds(def, untunneledSetup, untunneledMove!, { overrides: untunneledOverrides }).state;
     assert.equal(
       countTokens(untunneledFinal, 'available-VC:none', (token) => token.id === asTokenId('vc-base-u')),
       1,
@@ -1329,6 +1345,8 @@ describe('FITL 1968 US-first event-card production spec', () => {
       'Add a Terror marker to any 2 spaces outside Saigon with COIN Control and VC. Set them to Active Opposition.',
     );
     assert.equal(card?.unshaded?.targets, undefined);
-    assert.equal(card?.shaded?.targets, undefined);
+    assert.notEqual(card?.shaded?.targets, undefined, 'Shaded Phoenix should use canonical targets');
+    assert.equal(card?.shaded?.targets?.[0]?.id, '$targetSpace');
+    assert.equal(card?.shaded?.targets?.[0]?.application, 'each');
   });
 });

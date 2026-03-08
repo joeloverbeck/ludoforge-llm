@@ -2601,307 +2601,184 @@ eventDecks:
                               zoneExpr: available-US:none
         shaded:
           text: In 1 or 2 Provinces with US Troops, remove 1 VC piece to set to Active Opposition.
-          effects:
-            - chooseN:
-                bind: $targetProvince
-                options:
-                  query: mapSpaces
-                  filter:
-                    op: and
-                    args:
-                      - op: ==
-                        left:
-                          ref: zoneProp
-                          zone: $zone
-                          prop: category
-                        right: province
-                      - op: ">"
-                        left:
-                          aggregate:
-                            op: count
-                            query:
-                              query: tokensInZone
-                              zone: $zone
-                              filter:
-                                op: and
-                                args:
-                                  - prop: faction
-                                    eq: US
-                                  - prop: type
-                                    eq: troops
-                        right: 0
-                      - op: ">"
-                        left:
-                          aggregate:
-                            op: count
-                            query:
-                              query: concat
-                              sources:
-                                - query: tokensInZone
-                                  zone: $zone
-                                  filter:
-                                    op: and
-                                    args:
-                                      - prop: faction
-                                        eq: VC
-                                      - prop: type
-                                        eq: guerrilla
-                                - query: tokensInZone
-                                  zone: $zone
-                                  filter:
-                                    op: and
-                                    args:
-                                      - prop: faction
-                                        eq: VC
-                                      - prop: type
-                                        eq: base
-                                      - prop: tunnel
-                                        eq: untunneled
-                        right: 0
-                      - op: or
-                        args:
-                          - op: ==
-                            left:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: mapSpaces
-                                  filter:
-                                    op: and
-                                    args:
-                                      - op: ==
-                                        left:
-                                          ref: zoneProp
-                                          zone: $zone
-                                          prop: category
-                                        right: province
-                                      - op: ">"
-                                        left:
-                                          aggregate:
-                                            op: count
-                                            query:
-                                              query: tokensInZone
-                                              zone: $zone
-                                              filter:
-                                                op: and
-                                                args:
-                                                  - prop: faction
-                                                    eq: US
-                                                  - prop: type
-                                                    eq: troops
-                                        right: 0
-                                      - op: ">"
-                                        left:
-                                          aggregate:
-                                            op: count
-                                            query:
-                                              query: concat
-                                              sources:
-                                                - query: tokensInZone
-                                                  zone: $zone
-                                                  filter:
-                                                    op: and
-                                                    args:
-                                                      - prop: faction
-                                                        eq: VC
-                                                      - prop: type
-                                                        eq: guerrilla
-                                                - query: tokensInZone
-                                                  zone: $zone
-                                                  filter:
-                                                    op: and
-                                                    args:
-                                                      - prop: faction
-                                                        eq: VC
-                                                      - prop: type
-                                                        eq: base
-                                                      - prop: tunnel
-                                                        eq: untunneled
-                                        right: 0
-                                      - op: "!="
-                                        left:
-                                          ref: markerState
-                                          space: $zone
-                                          marker: supportOpposition
-                                        right: activeOpposition
-                            right: 0
-                          - op: "!="
-                            left:
-                              ref: markerState
-                              space: $zone
-                              marker: supportOpposition
-                            right: activeOpposition
-                min:
-                  op: min
-                  left: 1
-                  right:
-                    aggregate:
-                      op: count
-                      query:
-                        query: mapSpaces
-                        filter:
-                          op: and
-                          args:
-                            - op: ==
-                              left:
-                                ref: zoneProp
-                                zone: $zone
-                                prop: category
-                              right: province
-                            - op: ">"
-                              left:
-                                aggregate:
-                                  op: count
-                                  query:
-                                    query: tokensInZone
-                                    zone: $zone
-                                    filter:
-                                      op: and
-                                      args:
-                                        - prop: faction
-                                          eq: US
-                                        - prop: type
-                                          eq: troops
-                              right: 0
-                            - op: ">"
-                              left:
-                                aggregate:
-                                  op: count
-                                  query:
-                                    query: concat
-                                    sources:
-                                      - query: tokensInZone
-                                        zone: $zone
-                                        filter:
-                                          op: and
-                                          args:
-                                            - prop: faction
-                                              eq: VC
-                                            - prop: type
-                                              eq: guerrilla
-                                      - query: tokensInZone
-                                        zone: $zone
-                                        filter:
-                                          op: and
-                                          args:
-                                            - prop: faction
-                                              eq: VC
-                                            - prop: type
-                                              eq: base
-                                            - prop: tunnel
-                                              eq: untunneled
-                              right: 0
-                max:
-                  op: min
-                  left: 2
-                  right:
-                    aggregate:
-                      op: count
-                      query:
-                        query: mapSpaces
-                        filter:
-                          op: and
-                          args:
-                            - op: ==
-                              left:
-                                ref: zoneProp
-                                zone: $zone
-                                prop: category
-                              right: province
-                            - op: ">"
-                              left:
-                                aggregate:
-                                  op: count
-                                  query:
-                                    query: tokensInZone
-                                    zone: $zone
-                                    filter:
-                                      op: and
-                                      args:
-                                        - prop: faction
-                                          eq: US
-                                        - prop: type
-                                          eq: troops
-                              right: 0
-                            - op: ">"
-                              left:
-                                aggregate:
-                                  op: count
-                                  query:
-                                    query: concat
-                                    sources:
-                                      - query: tokensInZone
-                                        zone: $zone
-                                        filter:
-                                          op: and
-                                          args:
-                                            - prop: faction
-                                              eq: VC
-                                            - prop: type
-                                              eq: guerrilla
-                                      - query: tokensInZone
-                                        zone: $zone
-                                        filter:
-                                          op: and
-                                          args:
-                                            - prop: faction
-                                              eq: VC
-                                            - prop: type
-                                              eq: base
-                                            - prop: tunnel
-                                              eq: untunneled
-                              right: 0
-            - forEach:
-                bind: $province
-                over:
-                  query: binding
-                  name: $targetProvince
-                effects:
-                  - chooseN:
-                      bind: $vcPieceToRemove@{$province}
-                      options:
-                        query: concat
-                        sources:
-                          - query: tokensInZone
-                            zone: $province
+          targets:
+            - id: $targetProvince
+              selector:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - op: ==
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: category
+                      right: province
+                    - op: ">"
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
                             filter:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: VC
+                                  eq: US
                                 - prop: type
-                                  eq: guerrilla
-                          - query: tokensInZone
-                            zone: $province
-                            filter:
-                              op: and
-                              args:
-                                - prop: faction
-                                  eq: VC
-                                - prop: type
-                                  eq: base
-                                - prop: tunnel
-                                  eq: untunneled
-                      min: 1
-                      max: 1
-                  - forEach:
-                      bind: $vcPiece
-                      over:
-                        query: binding
-                        name: $vcPieceToRemove@{$province}
-                      effects:
-                        - moveToken:
-                            token: $vcPiece
-                            from:
-                              zoneExpr:
-                                ref: tokenZone
-                                token: $vcPiece
-                            to:
-                              zoneExpr: available-VC:none
-                  - setMarker:
-                      space: $province
-                      marker: supportOpposition
-                      state: activeOpposition
+                                  eq: troops
+                      right: 0
+                    - op: ">"
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: concat
+                            sources:
+                              - query: tokensInZone
+                                zone: $zone
+                                filter:
+                                  op: and
+                                  args:
+                                    - prop: faction
+                                      eq: VC
+                                    - prop: type
+                                      eq: guerrilla
+                              - query: tokensInZone
+                                zone: $zone
+                                filter:
+                                  op: and
+                                  args:
+                                    - prop: faction
+                                      eq: VC
+                                    - prop: type
+                                      eq: base
+                                    - prop: tunnel
+                                      eq: untunneled
+                      right: 0
+                    - op: or
+                      args:
+                        - op: ==
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: mapSpaces
+                                filter:
+                                  op: and
+                                  args:
+                                    - op: ==
+                                      left:
+                                        ref: zoneProp
+                                        zone: $zone
+                                        prop: category
+                                      right: province
+                                    - op: ">"
+                                      left:
+                                        aggregate:
+                                          op: count
+                                          query:
+                                            query: tokensInZone
+                                            zone: $zone
+                                            filter:
+                                              op: and
+                                              args:
+                                                - prop: faction
+                                                  eq: US
+                                                - prop: type
+                                                  eq: troops
+                                      right: 0
+                                    - op: ">"
+                                      left:
+                                        aggregate:
+                                          op: count
+                                          query:
+                                            query: concat
+                                            sources:
+                                              - query: tokensInZone
+                                                zone: $zone
+                                                filter:
+                                                  op: and
+                                                  args:
+                                                    - prop: faction
+                                                      eq: VC
+                                                    - prop: type
+                                                      eq: guerrilla
+                                              - query: tokensInZone
+                                                zone: $zone
+                                                filter:
+                                                  op: and
+                                                  args:
+                                                    - prop: faction
+                                                      eq: VC
+                                                    - prop: type
+                                                      eq: base
+                                                    - prop: tunnel
+                                                      eq: untunneled
+                                      right: 0
+                                    - op: "!="
+                                      left:
+                                        ref: markerState
+                                        space: $zone
+                                        marker: supportOpposition
+                                      right: activeOpposition
+                          right: 0
+                        - op: "!="
+                          left:
+                            ref: markerState
+                            space: $zone
+                            marker: supportOpposition
+                          right: activeOpposition
+              cardinality:
+                max: 2
+              application: each
+              effects:
+                - chooseN:
+                    bind: $vcPieceToRemove@{$targetProvince}
+                    options:
+                      query: concat
+                      sources:
+                        - query: tokensInZone
+                          zone: $targetProvince
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: VC
+                              - prop: type
+                                eq: guerrilla
+                        - query: tokensInZone
+                          zone: $targetProvince
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: VC
+                              - prop: type
+                                eq: base
+                              - prop: tunnel
+                                eq: untunneled
+                    min: 1
+                    max: 1
+                - forEach:
+                    bind: $vcPiece
+                    over:
+                      query: binding
+                      name: $vcPieceToRemove@{$targetProvince}
+                    effects:
+                      - moveToken:
+                          token: $vcPiece
+                          from:
+                            zoneExpr:
+                              ref: tokenZone
+                              token: $vcPiece
+                          to:
+                            zoneExpr: available-VC:none
+                - setMarker:
+                    space: $targetProvince
+                    marker: supportOpposition
+                    state: activeOpposition
       - id: card-22
         title: Da Nang
         sideMode: dual
@@ -3317,33 +3194,27 @@ eventDecks:
                       right: 0
               cardinality:
                 max: 3
-              application: aggregate
+              application: each
               effects:
                 - forEach:
-                    bind: $province
+                    bind: $vcGuerrilla
                     over:
-                      query: binding
-                      name: $targetProvince
+                      query: tokensInZone
+                      zone: $targetProvince
+                      filter:
+                        op: and
+                        args:
+                          - prop: faction
+                            eq: VC
+                          - prop: type
+                            eq: guerrilla
+                          - prop: activity
+                            eq: active
                     effects:
-                      - forEach:
-                          bind: $vcGuerrilla
-                          over:
-                            query: tokensInZone
-                            zone: $province
-                            filter:
-                              op: and
-                              args:
-                                - prop: faction
-                                  eq: VC
-                                - prop: type
-                                  eq: guerrilla
-                                - prop: activity
-                                  eq: active
-                          effects:
-                            - setTokenProp:
-                                token: $vcGuerrilla
-                                prop: activity
-                                value: underground
+                      - setTokenProp:
+                          token: $vcGuerrilla
+                          prop: activity
+                          value: underground
           eligibilityOverrides:
             - target:
                 kind: active
@@ -3851,185 +3722,108 @@ eventDecks:
                         zoneExpr: available-VC:none
         shaded:
           text: Add a Terror marker to any 2 spaces outside Saigon with COIN Control and VC. Set them to Active Opposition.
-          effects:
-            - chooseN:
-                bind: $targetSpaces
-                options:
-                  query: mapSpaces
-                  filter:
-                    op: and
-                    args:
-                      - op: or
-                        args:
-                          - op: ==
-                            left:
-                              ref: zoneProp
-                              zone: $zone
-                              prop: category
-                            right: province
-                          - op: ==
-                            left:
-                              ref: zoneProp
-                              zone: $zone
-                              prop: category
-                            right: city
-                      - op: "!="
-                        left:
-                          ref: zoneProp
-                          zone: $zone
-                          prop: id
-                        right: saigon
-                      - op: ">"
-                        left:
-                          aggregate:
-                            op: count
-                            query:
-                              query: tokensInZone
-                              zone: $zone
-                              filter:
-                                op: and
-                                args:
-                                  - prop: faction
-                                    op: in
-                                    value:
-                                      - US
-                                      - ARVN
-                        right:
-                          aggregate:
-                            op: count
-                            query:
-                              query: tokensInZone
-                              zone: $zone
-                              filter:
-                                op: and
-                                args:
-                                  - prop: faction
-                                    op: in
-                                    value:
-                                      - NVA
-                                      - VC
-                      - op: ">"
-                        left:
-                          aggregate:
-                            op: count
-                            query:
-                              query: tokensInZone
-                              zone: $zone
-                              filter:
-                                op: and
-                                args:
-                                  - prop: faction
-                                    eq: VC
-                        right: 0
-                min: 0
-                max:
-                  op: min
-                  left: 2
-                  right:
-                    aggregate:
-                      op: count
-                      query:
-                        query: mapSpaces
-                        filter:
-                          op: and
-                          args:
-                            - op: or
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - op: or
+                      args:
+                        - op: ==
+                          left:
+                            ref: zoneProp
+                            zone: $zone
+                            prop: category
+                          right: province
+                        - op: ==
+                          left:
+                            ref: zoneProp
+                            zone: $zone
+                            prop: category
+                          right: city
+                    - op: "!="
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: id
+                      right: saigon
+                    - op: ">"
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              op: and
                               args:
-                                - op: ==
-                                  left:
-                                    ref: zoneProp
-                                    zone: $zone
-                                    prop: category
-                                  right: province
-                                - op: ==
-                                  left:
-                                    ref: zoneProp
-                                    zone: $zone
-                                    prop: category
-                                  right: city
-                            - op: "!="
-                              left:
-                                ref: zoneProp
-                                zone: $zone
-                                prop: id
-                              right: saigon
-                            - op: ">"
-                              left:
-                                aggregate:
-                                  op: count
-                                  query:
-                                    query: tokensInZone
-                                    zone: $zone
-                                    filter:
-                                      op: and
-                                      args:
-                                        - prop: faction
-                                          op: in
-                                          value:
-                                            - US
-                                            - ARVN
-                              right:
-                                aggregate:
-                                  op: count
-                                  query:
-                                    query: tokensInZone
-                                    zone: $zone
-                                    filter:
-                                      op: and
-                                      args:
-                                        - prop: faction
-                                          op: in
-                                          value:
-                                            - NVA
-                                            - VC
-                            - op: ">"
-                              left:
-                                aggregate:
-                                  op: count
-                                  query:
-                                    query: tokensInZone
-                                    zone: $zone
-                                    filter:
-                                      op: and
-                                      args:
-                                        - prop: faction
-                                          eq: VC
-                              right: 0
-            - forEach:
-                bind: $targetSpace
-                over:
-                  query: binding
-                  name: $targetSpaces
-                effects:
-                  - if:
-                      when:
-                        op: and
-                        args:
-                          - op: ==
-                            left:
-                              ref: zoneVar
-                              zone: $targetSpace
-                              var: terrorCount
-                            right: 0
-                          - op: <
-                            left:
-                              ref: gvar
-                              var: terrorSabotageMarkersPlaced
-                            right: 15
-                      then:
-                        - addVar:
-                            scope: zoneVar
+                                - prop: faction
+                                  op: in
+                                  value:
+                                    - US
+                                    - ARVN
+                      right:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  op: in
+                                  value:
+                                    - NVA
+                                    - VC
+                    - op: ">"
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  eq: VC
+                      right: 0
+              cardinality:
+                max: 2
+              application: each
+              effects:
+                - if:
+                    when:
+                      op: and
+                      args:
+                        - op: ==
+                          left:
+                            ref: zoneVar
                             zone: $targetSpace
                             var: terrorCount
-                            delta: 1
-                        - addVar:
-                            scope: global
+                          right: 0
+                        - op: <
+                          left:
+                            ref: gvar
                             var: terrorSabotageMarkersPlaced
-                            delta: 1
-                  - setMarker:
-                      space: $targetSpace
-                      marker: supportOpposition
-                      state: activeOpposition
+                          right: 15
+                    then:
+                      - addVar:
+                          scope: zoneVar
+                          zone: $targetSpace
+                          var: terrorCount
+                          delta: 1
+                      - addVar:
+                          scope: global
+                          var: terrorSabotageMarkersPlaced
+                          delta: 1
+                - setMarker:
+                    space: $targetSpace
+                    marker: supportOpposition
+                    state: activeOpposition
       - id: card-43
         title: Economic Aid
         sideMode: dual
@@ -6646,53 +6440,48 @@ eventDecks:
                 value: 0
         shaded:
           text: Shift 2 coastal Provinces with US Troops each 2 levels toward Active Opposition.
-          effects:
-            - chooseN:
-                bind: $targetProvinces
-                options:
-                  query: mapSpaces
-                  filter:
-                    op: and
-                    args:
-                      - op: ==
-                        left:
-                          ref: zoneProp
-                          zone: $zone
-                          prop: category
-                        right: province
-                      - op: ==
-                        left:
-                          ref: zoneProp
-                          zone: $zone
-                          prop: coastal
-                        right: true
-                      - op: ">"
-                        left:
-                          aggregate:
-                            op: count
-                            query:
-                              query: tokensInZone
-                              zone: $zone
-                              filter:
-                                op: and
-                                args:
-                                  - prop: faction
-                                    eq: US
-                                  - prop: type
-                                    eq: troops
-                        right: 0
-                min: 0
+          targets:
+            - id: $targetProvince
+              selector:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - op: ==
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: category
+                      right: province
+                    - op: ==
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: coastal
+                      right: true
+                    - op: ">"
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  eq: US
+                                - prop: type
+                                  eq: troops
+                      right: 0
+              cardinality:
                 max: 2
-            - forEach:
-                bind: $targetProvince
-                over:
-                  query: binding
-                  name: $targetProvinces
-                effects:
-                  - macro: shift-support-opposition
-                    args:
-                      space: $targetProvince
-                      deltaExpr: -2
+              application: each
+              effects:
+                - macro: shift-support-opposition
+                  args:
+                    space: $targetProvince
+                    deltaExpr: -2
       - id: card-31
         title: AAA
         sideMode: dual
@@ -9506,7 +9295,7 @@ eventDecks:
                 query: mapSpaces
               cardinality:
                 max: 1
-              application: aggregate
+              application: each
               effects:
                 - forEach:
                     bind: $insurgentGuerrilla

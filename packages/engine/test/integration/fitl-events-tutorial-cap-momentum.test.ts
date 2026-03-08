@@ -61,7 +61,7 @@ describe('FITL tutorial capability/momentum event-card production spec', () => {
       },
     ]);
 
-    const shadedRemovals = (card?.shaded?.effects ?? []).filter((effect) => 'removeByPriority' in effect);
+    const shadedRemovals = (card?.shaded?.effects ?? card?.shaded?.targets?.[0]?.effects ?? []).filter((effect) => 'removeByPriority' in effect);
     assert.equal(shadedRemovals.length, 2);
     const first = shadedRemovals[0];
     const second = shadedRemovals[1];

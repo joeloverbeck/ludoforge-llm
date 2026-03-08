@@ -1,6 +1,6 @@
 import { evalCondition } from './eval-condition.js';
 import type { EvalContext } from './eval-context.js';
-import { shouldDeferMissingBinding } from './missing-binding-policy.js';
+import { MISSING_BINDING_POLICY_CONTEXTS, shouldDeferMissingBinding } from './missing-binding-policy.js';
 import { pipelinePredicateEvaluationError } from './runtime-error.js';
 import type { ActionDef, ConditionAST } from './types.js';
 
@@ -31,7 +31,7 @@ export const evalActionPipelinePredicateForDiscovery = (
   try {
     return evalCondition(condition, ctx) ? 'passed' : 'failed';
   } catch (error) {
-    if (shouldDeferMissingBinding(error, 'pipeline.discoveryPredicate')) {
+    if (shouldDeferMissingBinding(error, MISSING_BINDING_POLICY_CONTEXTS.PIPELINE_DISCOVERY_PREDICATE)) {
       return 'deferred';
     }
     throw pipelinePredicateEvaluationError(action, profileId, predicate, error);

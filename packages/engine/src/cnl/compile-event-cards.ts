@@ -1,5 +1,12 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import type { EventCardDef, EventDeckDef, EventEligibilityOverrideDef, EventFreeOperationGrantDef } from '../kernel/types.js';
+import { hasBindingIdentifier, rankBindingIdentifierAlternatives } from '../contracts/index.js';
+import type {
+  EventCardDef,
+  EventDeckDef,
+  EventEligibilityOverrideDef,
+  EventFreeOperationGrantDef,
+  EventTargetDef,
+} from '../kernel/types.js';
 import { lowerConditionNode, lowerQueryNode } from './compile-conditions.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import { lowerEffectArray } from './compile-effects.js';
@@ -370,14 +377,16 @@ function lowerEventTargets(
   targets: NonNullable<EventCardDef['unshaded']>['targets'],
   diagnostics: Diagnostic[],
   pathPrefix: string,
-  context: ConditionLoweringSharedContext,
+  context: EffectLoweringSharedContext,
   bindingScope?: readonly string[],
 ): NonNullable<EventCardDef['unshaded']>['targets'] {
   if (targets === undefined) {
     return undefined;
   }
 
-  return targets.map((target, index) => {
+  const loweredTargets: EventTargetDef[] = [];
+  const accumulatedTargetBindings: string[] = [];
+  for (const [index, target] of targets.entries()) {
     const targetPath = `${pathPrefix}.${index}`;
     if (typeof target.id !== 'string' || target.id.trim() === '') {
       diagnostics.push(
@@ -388,24 +397,90 @@ function lowerEventTargets(
           ['non-empty string'],
         ),
       );
-      return target;
+      loweredTargets.push(target);
+      continue;
     }
 
+    const bindingScopes = buildOrderedTargetBindingScopes(
+      bindingScope,
+      accumulatedTargetBindings,
+      target.id,
+    );
     const selector = lowerQueryNode(
       target.selector,
-      buildConditionLoweringContext(context, bindingScope ?? []),
+      buildConditionLoweringContext(context, bindingScopes.selector),
       `${targetPath}.selector`,
     );
     diagnostics.push(...selector.diagnostics);
-    if (selector.value === null) {
-      return target;
+    const selectorScopeDiagnostic = bindingQueryScopeDiagnostic(
+      target.selector,
+      bindingScopes.selector,
+      `${targetPath}.selector`,
+    );
+    if (selectorScopeDiagnostic !== null) {
+      diagnostics.push(selectorScopeDiagnostic);
     }
+    const loweredEffects = lowerOptionalEffects(
+      target.effects,
+      diagnostics,
+      `${targetPath}.effects`,
+      context,
+      bindingScopes.effects,
+    );
 
-    return {
+    loweredTargets.push({
       ...target,
-      selector: selector.value,
-    };
-  });
+      ...(selector.value === null ? {} : { selector: selector.value }),
+      ...(loweredEffects === undefined ? {} : { effects: loweredEffects }),
+    });
+    accumulatedTargetBindings.push(target.id);
+  }
+  return loweredTargets;
+}
+
+function buildOrderedTargetBindingScopes(
+  outerScope: readonly string[] | undefined,
+  priorTargetBindings: readonly string[],
+  currentTargetId: string,
+): {
+  readonly selector: readonly string[];
+  readonly effects: readonly string[];
+} {
+  const orderedScope = [
+    ...(outerScope ?? []),
+    ...priorTargetBindings,
+  ];
+  return {
+    selector: orderedScope,
+    effects: [...orderedScope, currentTargetId],
+  };
+}
+
+function bindingQueryScopeDiagnostic(
+  selector: unknown,
+  bindingScope: readonly string[],
+  path: string,
+): Diagnostic | null {
+  if (selector === null || typeof selector !== 'object' || Array.isArray(selector)) {
+    return null;
+  }
+
+  const query = 'query' in selector ? selector.query : undefined;
+  if (query !== 'binding') {
+    return null;
+  }
+  const name = 'name' in selector ? selector.name : undefined;
+  if (typeof name !== 'string' || hasBindingIdentifier(name, bindingScope)) {
+    return null;
+  }
+  return {
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_BINDING_UNBOUND,
+    path: `${path}.name`,
+    severity: 'error',
+    message: `Unbound binding reference "${name}".`,
+    suggestion: 'Use a binding declared by action params or an in-scope effect binder.',
+    alternatives: rankBindingIdentifierAlternatives(name, bindingScope),
+  };
 }
 
 function lowerOptionalEffects(

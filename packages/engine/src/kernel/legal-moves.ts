@@ -4,7 +4,7 @@ import { resolveActionApplicabilityPreflight } from './action-applicability-pref
 import { resolveDeclaredActionParamDomainOptions } from './declared-action-param-domain.js';
 import type { EvalContext, EvalRuntimeResources } from './eval-context.js';
 import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
-import { classifyMoveDecisionSequenceSatisfiability, isMoveDecisionSequenceNotUnsatisfiable } from './move-decision-sequence.js';
+import { isMoveDecisionSequenceAdmittedForLegalMove } from './move-decision-sequence.js';
 import {
   applyPendingFreeOperationVariants,
   applyTurnFlowWindowFilters,
@@ -16,7 +16,7 @@ import type { TurnFlowActionClass } from './types-turn-flow.js';
 import { shouldEnumerateLegalMoveForOutcome } from './legality-outcome.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import { decideLegalMovesPipelineViability, evaluatePipelinePredicateStatus } from './pipeline-viability-policy.js';
-import { shouldDeferMissingBinding } from './missing-binding-policy.js';
+import { MISSING_BINDING_POLICY_CONTEXTS, shouldDeferMissingBinding } from './missing-binding-policy.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -210,7 +210,13 @@ function enumerateParams(
       return null;
     }
     if (resolution.kind === 'invalidSpec') {
-      if (allowPendingBinding && shouldDeferMissingBinding(resolution.error, 'legalMoves.executorDuringParamEnumeration')) {
+      if (
+        allowPendingBinding &&
+        shouldDeferMissingBinding(
+          resolution.error,
+          MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_EXECUTOR_DURING_PARAM_ENUMERATION,
+        )
+      ) {
         return state.activePlayer;
       }
       throw selectorInvalidSpecError('legalMoves', 'executor', action, resolution.error);
@@ -349,26 +355,19 @@ function enumerateCurrentEventMoves(
       continue;
     }
 
-    let classification: 'satisfiable' | 'unsatisfiable' | 'unknown';
-    try {
-      classification = classifyMoveDecisionSequenceSatisfiability(
+    if (
+      !isMoveDecisionSequenceAdmittedForLegalMove(
         def,
         state,
         move,
+        MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_EVENT_DECISION_SEQUENCE,
         {
           budgets: enumeration.budgets,
           onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
         },
         runtime,
-      ).classification;
-    } catch (error) {
-      if (shouldDeferMissingBinding(error, 'legalMoves.eventDecisionSequence')) {
-        classification = 'unknown';
-      } else {
-        throw error;
-      }
-    }
-    if (classification === 'unsatisfiable') {
+      )
+    ) {
       continue;
     }
     if (!tryPushOptionMatrixFilteredMove(enumeration, def, state, move, action)) {
@@ -481,10 +480,11 @@ export const enumerateLegalMoves = (
       }
 
       if (
-        !isMoveDecisionSequenceNotUnsatisfiable(
+        !isMoveDecisionSequenceAdmittedForLegalMove(
           def,
           state,
           { actionId: action.id, params: {} },
+          MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE,
           {
             budgets: enumeration.budgets,
             onWarning: (warning) => emitEnumerationWarning(enumeration, warning),

@@ -14,29 +14,28 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["ARVN", "VC", "US", "NVA"]
-          flavorText: "U.S. prestige is on the line."
+          seatOrder:
+            - ARVN
+            - VC
+            - US
+            - NVA
+          flavorText: U.S. prestige is on the line.
         unshaded:
-          text: "Aid and ARVN Resources each +9. Return pieces from Out of Play."
+          text: Aid and ARVN Resources each +9. Return pieces from Out of Play.
           branches:
             - id: resources-and-aid
               order: 2
               effects:
-                - addVar: { scope: global, var: arvnResources, delta: 9 }
-                - addVar: { scope: global, var: aid, delta: 9 }
+                - addVar:
+                    scope: global
+                    var: arvnResources
+                    delta: 9
+                - addVar:
+                    scope: global
+                    var: aid
+                    delta: 9
             - id: return-from-out-of-play
               order: 1
-              targets:
-                - id: us-out-of-play
-                  selector:
-                    query: players
-                  cardinality: { max: 3 }
-                  application: aggregate
-                - id: arvn-out-of-play
-                  selector:
-                    query: players
-                  cardinality: { max: 6 }
-                  application: aggregate
               effects:
                 - removeByPriority:
                     budget: 3
@@ -48,7 +47,8 @@ eventDecks:
                           filter:
                             op: and
                             args:
-                              - { prop: faction, eq: US }
+                              - prop: faction
+                                eq: US
                         to:
                           zoneExpr: available-US:none
                 - removeByPriority:
@@ -61,20 +61,28 @@ eventDecks:
                           filter:
                             op: and
                             args:
-                              - { prop: faction, eq: ARVN }
+                              - prop: faction
+                                eq: ARVN
                         to:
                           zoneExpr: available-ARVN:none
-                - addVar: { scope: global, var: aid, delta: 1 }
+                - addVar:
+                    scope: global
+                    var: aid
+                    delta: 1
         shaded:
           text: "Containment falters: Aid -9."
           targets:
             - id: us-troops-available
               selector:
                 query: players
-              cardinality: { max: 3 }
+              cardinality:
+                max: 3
               application: aggregate
-          effects:
-            - addVar: { scope: global, var: aid, delta: -9 }
+              effects:
+                - addVar:
+                    scope: global
+                    var: aid
+                    delta: -9
       - id: card-64
         title: Honolulu Conference
         sideMode: single
@@ -82,15 +90,23 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["ARVN", "US", "NVA", "VC"]
-          flavorText: "Summit signals renewed support for Saigon."
+          seatOrder:
+            - ARVN
+            - US
+            - NVA
+            - VC
+          flavorText: Summit signals renewed support for Saigon.
         unshaded:
-          text: "Aid and Patronage each +6."
+          text: Aid and Patronage each +6.
           effects:
             - macro: add-global-var-delta
-              args: { varName: aid, deltaExpr: 6 }
+              args:
+                varName: aid
+                deltaExpr: 6
             - macro: add-global-var-delta
-              args: { varName: patronage, deltaExpr: 6 }
+              args:
+                varName: patronage
+                deltaExpr: 6
       - id: card-67
         title: Amphib Landing
         sideMode: dual
@@ -98,19 +114,29 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["ARVN", "US", "VC", "NVA"]
-          flavorText: "Coastal insertion opens a fast COIN push."
+          seatOrder:
+            - ARVN
+            - US
+            - VC
+            - NVA
+          flavorText: Coastal insertion opens a fast COIN push.
         unshaded:
-          text: "Relocate ARVN Troops among coastal spaces; ARVN executes free Sweep then free Assault."
+          text: Relocate ARVN Troops among coastal spaces; ARVN executes free Sweep then free Assault.
           freeOperationGrants:
-            - seat: "arvn"
-              sequence: { chain: amphib-landing-arvn, step: 0 }
+            - seat: arvn
+              sequence:
+                chain: amphib-landing-arvn
+                step: 0
               operationClass: operation
-              actionIds: [sweep]
-            - seat: "arvn"
-              sequence: { chain: amphib-landing-arvn, step: 1 }
+              actionIds:
+                - sweep
+            - seat: arvn
+              sequence:
+                chain: amphib-landing-arvn
+                step: 1
               operationClass: operation
-              actionIds: [assault]
+              actionIds:
+                - assault
         shaded:
           text: "Insurgent response: Remove 2 ARVN Troops from coastal spaces."
       - id: card-69
@@ -120,13 +146,19 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["ARVN", "US", "VC", "NVA"]
-          flavorText: "Command integration accelerates ARVN tempo."
+          seatOrder:
+            - ARVN
+            - US
+            - VC
+            - NVA
+          flavorText: Command integration accelerates ARVN tempo.
         unshaded:
-          text: "ARVN executes free Special Activities."
+          text: ARVN executes free Special Activities.
           freeOperationGrants:
-            - seat: "arvn"
-              sequence: { chain: macv-arvn-special-activity, step: 0 }
+            - seat: arvn
+              sequence:
+                chain: macv-arvn-special-activity
+                step: 0
               operationClass: limitedOperation
       - id: card-70
         title: ROKs
@@ -135,45 +167,62 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["ARVN", "US", "VC", "NVA"]
-          flavorText: "Allied contingents strengthen ARVN offensive options."
+          seatOrder:
+            - ARVN
+            - US
+            - VC
+            - NVA
+          flavorText: Allied contingents strengthen ARVN offensive options.
         unshaded:
-          text: "ARVN Sweep/Assault in selected spaces as if US."
+          text: ARVN Sweep/Assault in selected spaces as if US.
           freeOperationGrants:
-            - seat: "arvn"
-              executeAsSeat: "us"
-              sequence: { chain: roks-arvn-as-us, step: 0 }
+            - seat: arvn
+              executeAsSeat: us
+              sequence:
+                chain: roks-arvn-as-us
+                step: 0
               operationClass: operation
-              actionIds: [sweep]
-            - seat: "arvn"
-              executeAsSeat: "us"
-              sequence: { chain: roks-arvn-as-us, step: 1 }
+              actionIds:
+                - sweep
+            - seat: arvn
+              executeAsSeat: us
+              sequence:
+                chain: roks-arvn-as-us
+                step: 1
               operationClass: operation
-              actionIds: [assault]
+              actionIds:
+                - assault
         shaded:
           text: "ARVN losses mount: remove 2 ARVN pieces."
       - id: card-72
         title: Body Count
         sideMode: dual
         order: 72
-        tags: [momentum]
+        tags:
+          - momentum
         metadata:
           period: "1965"
-          seatOrder: ["ARVN", "NVA", "US", "VC"]
-          flavorText: "Kill metrics begin to drive battlefield behavior."
+          seatOrder:
+            - ARVN
+            - NVA
+            - US
+            - VC
+          flavorText: Kill metrics begin to drive battlefield behavior.
         unshaded:
-          text: "US/ARVN operations prioritize attrition. MOMENTUM"
+          text: US/ARVN operations prioritize attrition. MOMENTUM
           lastingEffects:
             - id: mom-body-count
               duration: round
               setupEffects:
                 - macro: set-global-flag-true
-                  args: { varName: mom_bodyCount }
+                  args:
+                    varName: mom_bodyCount
               teardownEffects:
                 - macro: set-global-flag-false
-                  args: { varName: mom_bodyCount }
+                  args:
+                    varName: mom_bodyCount
         shaded:
-          text: "Insurgent adaptation blunts kill-ratio pressure."
+          text: Insurgent adaptation blunts kill-ratio pressure.
       - id: card-73
         title: Great Society
         sideMode: dual
@@ -181,12 +230,18 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["ARVN", "NVA", "US", "VC"]
-          flavorText: "LBJ advances social agenda."
+          seatOrder:
+            - ARVN
+            - NVA
+            - US
+            - VC
+          flavorText: LBJ advances social agenda.
         unshaded:
-          text: "Conduct a Commitment Phase."
+          text: Conduct a Commitment Phase.
           effects:
-            - pushInterruptPhase: { phase: commitment, resumePhase: main }
+            - pushInterruptPhase:
+                phase: commitment
+                resumePhase: main
         shaded:
           text: "War wrecks economy: US moves 3 pieces from Available to out of play."
           effects:
@@ -200,7 +255,8 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: US }
+                          - prop: faction
+                            eq: US
                     to:
                       zoneExpr: out-of-play-US:none
       - id: card-76
@@ -210,46 +266,67 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["ARVN", "NVA", "VC", "US"]
-          flavorText: "Regional instability strains Saigon's finances."
+          seatOrder:
+            - ARVN
+            - NVA
+            - VC
+            - US
+          flavorText: Regional instability strains Saigon's finances.
         unshaded:
-          text: "NVA and VC Resources each -3; Patronage +3."
+          text: NVA and VC Resources each -3; Patronage +3.
           effects:
             - macro: add-global-var-delta
-              args: { varName: nvaResources, deltaExpr: -3 }
+              args:
+                varName: nvaResources
+                deltaExpr: -3
             - macro: add-global-var-delta
-              args: { varName: vcResources, deltaExpr: -3 }
+              args:
+                varName: vcResources
+                deltaExpr: -3
             - macro: add-global-var-delta
-              args: { varName: patronage, deltaExpr: 3 }
+              args:
+                varName: patronage
+                deltaExpr: 3
         shaded:
-          text: "Patronage -3 and ARVN Resources -6."
+          text: Patronage -3 and ARVN Resources -6.
           effects:
             - macro: add-global-var-delta
-              args: { varName: patronage, deltaExpr: -3 }
+              args:
+                varName: patronage
+                deltaExpr: -3
             - macro: add-global-var-delta
-              args: { varName: arvnResources, deltaExpr: -6 }
+              args:
+                varName: arvnResources
+                deltaExpr: -6
       - id: card-78
         title: General Landsdale
         sideMode: dual
         order: 78
-        tags: [momentum]
+        tags:
+          - momentum
         metadata:
           period: "1965"
-          seatOrder: ["ARVN", "NVA", "VC", "US"]
-          flavorText: "Political warfare effort reshapes pacification tempo."
+          seatOrder:
+            - ARVN
+            - NVA
+            - VC
+            - US
+          flavorText: Political warfare effort reshapes pacification tempo.
         unshaded:
-          text: "Landsdale sidelined; no lasting momentum effect."
+          text: Landsdale sidelined; no lasting momentum effect.
         shaded:
-          text: "Political influence campaign takes hold. MOMENTUM"
+          text: Political influence campaign takes hold. MOMENTUM
           lastingEffects:
             - id: mom-general-landsdale
               duration: round
               setupEffects:
                 - macro: set-global-flag-true
-                  args: { varName: mom_generalLansdale }
+                  args:
+                    varName: mom_generalLansdale
               teardownEffects:
                 - macro: set-global-flag-false
-                  args: { varName: mom_generalLansdale }
+                  args:
+                    varName: mom_generalLansdale
       - id: card-81
         title: CIDG
         sideMode: dual
@@ -257,68 +334,80 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["ARVN", "VC", "US", "NVA"]
-          flavorText: "Civilian irregular networks are reorganized."
+          seatOrder:
+            - ARVN
+            - VC
+            - US
+            - NVA
+          flavorText: Civilian irregular networks are reorganized.
         unshaded:
-          text: "Replace ARVN pieces with Irregulars/Rangers in selected spaces."
+          text: Replace ARVN pieces with Irregulars/Rangers in selected spaces.
           targets:
             - id: $targetSpace
               selector:
                 query: mapSpaces
-              cardinality: { max: 2 }
+              cardinality:
+                max: 2
               application: aggregate
-          effects:
-            - removeByPriority:
-                budget: 2
-                groups:
-                  - bind: $irregular
-                    over:
-                      query: tokensInZone
-                      zone: available-US:none
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: irregular }
-                    to:
-                      zoneExpr: $targetSpace
+              effects:
+                - removeByPriority:
+                    budget: 2
+                    groups:
+                      - bind: $irregular
+                        over:
+                          query: tokensInZone
+                          zone: available-US:none
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: US
+                              - prop: type
+                                eq: irregular
+                        to:
+                          zoneExpr: $targetSpace
         shaded:
           text: "CIDG positions collapse: replace Irregulars with VC Guerrillas."
           targets:
             - id: $targetSpace
               selector:
                 query: mapSpaces
-              cardinality: { max: 2 }
+              cardinality:
+                max: 2
               application: aggregate
-          effects:
-            - removeByPriority:
-                budget: 2
-                groups:
-                  - bind: $irregular
-                    over:
-                      query: tokensInZone
-                      zone: $targetSpace
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: irregular }
-                    to:
-                      zoneExpr: available-US:none
-            - removeByPriority:
-                budget: 2
-                groups:
-                  - bind: $vcGuerrilla
-                    over:
-                      query: tokensInZone
-                      zone: available-VC:none
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: VC }
-                          - { prop: type, eq: guerrilla }
-                    to:
-                      zoneExpr: $targetSpace
+              effects:
+                - removeByPriority:
+                    budget: 2
+                    groups:
+                      - bind: $irregular
+                        over:
+                          query: tokensInZone
+                          zone: $targetSpace
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: US
+                              - prop: type
+                                eq: irregular
+                        to:
+                          zoneExpr: available-US:none
+                - removeByPriority:
+                    budget: 2
+                    groups:
+                      - bind: $vcGuerrilla
+                        over:
+                          query: tokensInZone
+                          zone: available-VC:none
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: VC
+                              - prop: type
+                                eq: guerrilla
+                        to:
+                          zoneExpr: $targetSpace
       - id: card-83
         title: Election
         sideMode: dual
@@ -326,10 +415,14 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["ARVN", "VC", "US", "NVA"]
-          flavorText: "Balloting reshapes control and aid expectations."
+          seatOrder:
+            - ARVN
+            - VC
+            - US
+            - NVA
+          flavorText: Balloting reshapes control and aid expectations.
         unshaded:
-          text: "Shift up to 3 spaces one level toward Active Support; Aid +6."
+          text: Shift up to 3 spaces one level toward Active Support; Aid +6.
           targets:
             - id: $targetSpace
               selector:
@@ -337,17 +430,32 @@ eventDecks:
                 filter:
                   op: or
                   args:
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-              cardinality: { max: 3 }
+                    - op: ==
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: category
+                      right: city
+                    - op: ==
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: category
+                      right: province
+              cardinality:
+                max: 3
               application: aggregate
-          effects:
-            - macro: shift-support-opposition
-              args: { space: $targetSpace, deltaExpr: 1 }
-            - macro: add-global-var-delta
-              args: { varName: aid, deltaExpr: 6 }
+              effects:
+                - macro: shift-support-opposition
+                  args:
+                    space: $targetSpace
+                    deltaExpr: 1
+                - macro: add-global-var-delta
+                  args:
+                    varName: aid
+                    deltaExpr: 6
         shaded:
-          text: "Shift up to 3 spaces one level toward Active Opposition."
+          text: Shift up to 3 spaces one level toward Active Opposition.
           targets:
             - id: $targetSpace
               selector:
@@ -355,13 +463,26 @@ eventDecks:
                 filter:
                   op: or
                   args:
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-              cardinality: { max: 3 }
+                    - op: ==
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: category
+                      right: city
+                    - op: ==
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: category
+                      right: province
+              cardinality:
+                max: 3
               application: aggregate
-          effects:
-            - macro: shift-support-opposition
-              args: { space: $targetSpace, deltaExpr: -1 }
+              effects:
+                - macro: shift-support-opposition
+                  args:
+                    space: $targetSpace
+                    deltaExpr: -1
       - id: card-85
         title: USAID
         sideMode: dual
@@ -369,49 +490,69 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["ARVN", "VC", "US", "NVA"]
-          flavorText: "Development spending competes with local capture."
+          seatOrder:
+            - ARVN
+            - VC
+            - US
+            - NVA
+          flavorText: Development spending competes with local capture.
         unshaded:
-          text: "Shift up to 2 spaces one level toward Active Support."
+          text: Shift up to 2 spaces one level toward Active Support.
           targets:
             - id: $targetSpace
               selector:
                 query: mapSpaces
-              cardinality: { max: 2 }
+              cardinality:
+                max: 2
               application: aggregate
-          effects:
-            - macro: shift-support-opposition
-              args: { space: $targetSpace, deltaExpr: 1 }
+              effects:
+                - macro: shift-support-opposition
+                  args:
+                    space: $targetSpace
+                    deltaExpr: 1
         shaded:
-          text: "Shift up to 2 spaces one level toward Active Opposition."
+          text: Shift up to 2 spaces one level toward Active Opposition.
           targets:
             - id: $targetSpace
               selector:
                 query: mapSpaces
-              cardinality: { max: 2 }
+              cardinality:
+                max: 2
               application: aggregate
-          effects:
-            - macro: shift-support-opposition
-              args: { space: $targetSpace, deltaExpr: -1 }
+              effects:
+                - macro: shift-support-opposition
+                  args:
+                    space: $targetSpace
+                    deltaExpr: -1
       - id: card-86
         title: Mandate of Heaven
         sideMode: dual
         order: 86
-        tags: [capability, ARVN]
+        tags:
+          - capability
+          - ARVN
         metadata:
           period: "1965"
-          seatOrder: ["ARVN", "VC", "NVA", "US"]
-          flavorText: "Legitimacy campaign rewrites ARVN governance limits."
+          seatOrder:
+            - ARVN
+            - VC
+            - NVA
+            - US
+          flavorText: Legitimacy campaign rewrites ARVN governance limits.
         unshaded:
           text: "Capability: ARVN Govern in one space without support shift."
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_mandateOfHeaven, markerState: unshaded }
+              args:
+                markerId: cap_mandateOfHeaven
+                markerState: unshaded
         shaded:
           text: "Capability: ARVN Govern may select only one space."
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_mandateOfHeaven, markerState: shaded }
+              args:
+                markerId: cap_mandateOfHeaven
+                markerState: shaded
       - id: card-87
         title: Nguyen Chanh Thi
         sideMode: dual
@@ -419,80 +560,102 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["ARVN", "VC", "NVA", "US"]
-          flavorText: "Regional command turnover drives sudden force shifts."
+          seatOrder:
+            - ARVN
+            - VC
+            - NVA
+            - US
+          flavorText: Regional command turnover drives sudden force shifts.
         unshaded:
-          text: "Place ARVN pieces and shift one selected city toward Support."
+          text: Place ARVN pieces and shift one selected city toward Support.
           targets:
             - id: $targetCity
               selector:
                 query: mapSpaces
                 filter:
-                  op: '=='
-                  left: { ref: zoneProp, zone: $zone, prop: category }
+                  op: ==
+                  left:
+                    ref: zoneProp
+                    zone: $zone
+                    prop: category
                   right: city
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - removeByPriority:
-                budget: 2
-                groups:
-                  - bind: $arvnTroop
-                    over:
-                      query: tokensInZone
-                      zone: available-ARVN:none
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: ARVN }
-                          - { prop: type, eq: troops }
-                    to:
-                      zoneExpr: $targetCity
-            - macro: shift-support-opposition
-              args: { space: $targetCity, deltaExpr: 1 }
+              effects:
+                - removeByPriority:
+                    budget: 2
+                    groups:
+                      - bind: $arvnTroop
+                        over:
+                          query: tokensInZone
+                          zone: available-ARVN:none
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: ARVN
+                              - prop: type
+                                eq: troops
+                        to:
+                          zoneExpr: $targetCity
+                - macro: shift-support-opposition
+                  args:
+                    space: $targetCity
+                    deltaExpr: 1
         shaded:
-          text: "Place VC/NVA pieces and shift one selected city toward Opposition."
+          text: Place VC/NVA pieces and shift one selected city toward Opposition.
           targets:
             - id: $targetCity
               selector:
                 query: mapSpaces
                 filter:
-                  op: '=='
-                  left: { ref: zoneProp, zone: $zone, prop: category }
+                  op: ==
+                  left:
+                    ref: zoneProp
+                    zone: $zone
+                    prop: category
                   right: city
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - removeByPriority:
-                budget: 1
-                groups:
-                  - bind: $vcGuerrilla
-                    over:
-                      query: tokensInZone
-                      zone: available-VC:none
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: VC }
-                          - { prop: type, eq: guerrilla }
-                    to:
-                      zoneExpr: $targetCity
-            - removeByPriority:
-                budget: 1
-                groups:
-                  - bind: $nvaGuerrilla
-                    over:
-                      query: tokensInZone
-                      zone: available-NVA:none
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: NVA }
-                          - { prop: type, eq: guerrilla }
-                    to:
-                      zoneExpr: $targetCity
-            - macro: shift-support-opposition
-              args: { space: $targetCity, deltaExpr: -1 }
+              effects:
+                - removeByPriority:
+                    budget: 1
+                    groups:
+                      - bind: $vcGuerrilla
+                        over:
+                          query: tokensInZone
+                          zone: available-VC:none
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: VC
+                              - prop: type
+                                eq: guerrilla
+                        to:
+                          zoneExpr: $targetCity
+                - removeByPriority:
+                    budget: 1
+                    groups:
+                      - bind: $nvaGuerrilla
+                        over:
+                          query: tokensInZone
+                          zone: available-NVA:none
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: NVA
+                              - prop: type
+                                eq: guerrilla
+                        to:
+                          zoneExpr: $targetCity
+                - macro: shift-support-opposition
+                  args:
+                    space: $targetCity
+                    deltaExpr: -1
       - id: card-89
         title: Tam Chau
         sideMode: dual
@@ -500,22 +663,34 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["ARVN", "VC", "NVA", "US"]
-          flavorText: "Buddhist political leverage expands in Saigon."
+          seatOrder:
+            - ARVN
+            - VC
+            - NVA
+            - US
+          flavorText: Buddhist political leverage expands in Saigon.
         unshaded:
-          text: "Shift Saigon one level toward Active Support; Patronage +3."
+          text: Shift Saigon one level toward Active Support; Patronage +3.
           effects:
             - macro: shift-support-opposition
-              args: { space: saigon:none, deltaExpr: 1 }
+              args:
+                space: saigon:none
+                deltaExpr: 1
             - macro: add-global-var-delta
-              args: { varName: patronage, deltaExpr: 3 }
+              args:
+                varName: patronage
+                deltaExpr: 3
         shaded:
-          text: "Shift Saigon one level toward Active Opposition; Patronage -3."
+          text: Shift Saigon one level toward Active Opposition; Patronage -3.
           effects:
             - macro: shift-support-opposition
-              args: { space: saigon:none, deltaExpr: -1 }
+              args:
+                space: saigon:none
+                deltaExpr: -1
             - macro: add-global-var-delta
-              args: { varName: patronage, deltaExpr: -3 }
+              args:
+                varName: patronage
+                deltaExpr: -3
       - id: card-90
         title: Walt Rostow
         sideMode: dual
@@ -523,57 +698,254 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["ARVN", "VC", "NVA", "US"]
-          flavorText: "Escalation planning accelerates deployment adjustments."
+          seatOrder:
+            - ARVN
+            - VC
+            - NVA
+            - US
+          flavorText: Escalation planning accelerates deployment adjustments.
         unshaded:
-          text: "Place and relocate COIN pieces among selected spaces."
-          targets:
-            - id: $sourceSpace
-              selector:
-                query: mapSpaces
-              cardinality: { max: 1 }
-              application: aggregate
-            - id: $destSpace
-              selector:
-                query: mapSpaces
-              cardinality: { max: 1 }
-              application: aggregate
+          text: Place any 2 ARVN pieces from anywhere (even out of play) into any COIN Control spaces.
           effects:
-            - removeByPriority:
-                budget: 2
-                groups:
-                  - bind: $coinPiece
-                    over:
-                      query: tokensInZone
-                      zone: $sourceSpace
+            - chooseN:
+                bind: $rostowArvnPieces
+                max:
+                  op: min
+                  left: 2
+                  right:
+                    aggregate:
+                      op: count
+                      query:
+                        query: concat
+                        sources:
+                          - query: tokensInMapSpaces
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  eq: ARVN
+                          - query: tokensInZone
+                            zone: available-ARVN:none
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  eq: ARVN
+                          - query: tokensInZone
+                            zone: out-of-play-ARVN:none
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  eq: ARVN
+                options:
+                  query: concat
+                  sources:
+                    - query: tokensInMapSpaces
                       filter:
                         op: and
                         args:
-                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                    to:
-                      zoneExpr: $destSpace
+                          - prop: faction
+                            eq: ARVN
+                    - query: tokensInZone
+                      zone: available-ARVN:none
+                      filter:
+                        op: and
+                        args:
+                          - prop: faction
+                            eq: ARVN
+                    - query: tokensInZone
+                      zone: out-of-play-ARVN:none
+                      filter:
+                        op: and
+                        args:
+                          - prop: faction
+                            eq: ARVN
+            - forEach:
+                bind: $rostowArvnPiece
+                over:
+                  query: binding
+                  name: $rostowArvnPieces
+                effects:
+                  - chooseOne:
+                      bind: '$rostowCoinControlDestination@{$rostowArvnPiece}'
+                      options:
+                        query: mapSpaces
+                        filter:
+                          conditionMacro: fitl-space-coin-controlled
+                          args:
+                            spaceExpr: $zone
+                  - moveToken:
+                      token: $rostowArvnPiece
+                      from:
+                        zoneExpr:
+                          ref: tokenZone
+                          token: $rostowArvnPiece
+                      to:
+                        zoneExpr:
+                          ref: binding
+                          name: '$rostowCoinControlDestination@{$rostowArvnPiece}'
         shaded:
-          text: "Redeploy selected COIN pieces to Available."
-          targets:
-            - id: $sourceSpace
-              selector:
-                query: mapSpaces
-              cardinality: { max: 1 }
-              application: aggregate
+          text: Place any 1 Guerrilla in each Province with ARVN. ARVN Troops Redeploy as if no Bases.
           effects:
-            - removeByPriority:
-                budget: 3
-                groups:
-                  - bind: $coinPiece
-                    over:
-                      query: tokensInZone
-                      zone: $sourceSpace
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                    to:
-                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $coinPiece, prop: faction }, ':none'] }
+            - forEach:
+                bind: $rostowProvinceWithArvn
+                over:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - op: ==
+                        left:
+                          ref: zoneProp
+                          zone: $zone
+                          prop: category
+                        right: province
+                      - op: ">"
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: ARVN
+                        right: 0
+                effects:
+                  - chooseN:
+                      bind: '$rostowGuerrillaToPlace@{$rostowProvinceWithArvn}'
+                      min:
+                        op: min
+                        left: 1
+                        right:
+                          aggregate:
+                            op: count
+                            query:
+                              query: concat
+                              sources:
+                                - query: tokensInZone
+                                  zone: available-VC:none
+                                  filter:
+                                    op: and
+                                    args:
+                                      - prop: faction
+                                        eq: VC
+                                      - prop: type
+                                        eq: guerrilla
+                                - query: tokensInZone
+                                  zone: available-NVA:none
+                                  filter:
+                                    op: and
+                                    args:
+                                      - prop: faction
+                                        eq: NVA
+                                      - prop: type
+                                        eq: guerrilla
+                      max: 1
+                      options:
+                        query: concat
+                        sources:
+                          - query: tokensInZone
+                            zone: available-VC:none
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  eq: VC
+                                - prop: type
+                                  eq: guerrilla
+                          - query: tokensInZone
+                            zone: available-NVA:none
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  eq: NVA
+                                - prop: type
+                                  eq: guerrilla
+                  - forEach:
+                      bind: $rostowPlacedGuerrilla
+                      over:
+                        query: binding
+                        name: '$rostowGuerrillaToPlace@{$rostowProvinceWithArvn}'
+                      effects:
+                        - moveToken:
+                            token: $rostowPlacedGuerrilla
+                            from:
+                              zoneExpr:
+                                ref: tokenZone
+                                token: $rostowPlacedGuerrilla
+                            to:
+                              zoneExpr:
+                                ref: binding
+                                name: $rostowProvinceWithArvn
+            - forEach:
+                bind: $rostowArvnTroopToRedeploy
+                over:
+                  query: tokensInMapSpaces
+                  spaceFilter:
+                    op: or
+                    args:
+                      - op: ==
+                        left:
+                          ref: zoneProp
+                          zone: $zone
+                          prop: category
+                        right: province
+                      - op: ==
+                        left:
+                          ref: zoneProp
+                          zone: $zone
+                          prop: category
+                        right: loc
+                  filter:
+                    op: and
+                    args:
+                      - prop: faction
+                        eq: ARVN
+                      - prop: type
+                        eq: troops
+                effects:
+                  - chooseN:
+                      bind: '$rostowRedeployDestination@{$rostowArvnTroopToRedeploy}'
+                      min:
+                        op: min
+                        left: 1
+                        right:
+                          aggregate:
+                            op: count
+                            query:
+                              query: mapSpaces
+                              filter:
+                                conditionMacro: fitl-arvn-redeploy-destination-no-bases
+                                args:
+                                  spaceExpr: $zone
+                      max: 1
+                      options:
+                        query: mapSpaces
+                        filter:
+                          conditionMacro: fitl-arvn-redeploy-destination-no-bases
+                          args:
+                            spaceExpr: $zone
+                  - forEach:
+                      bind: $rostowRedeploySpace
+                      over:
+                        query: binding
+                        name: '$rostowRedeployDestination@{$rostowArvnTroopToRedeploy}'
+                      effects:
+                        - moveToken:
+                            token: $rostowArvnTroopToRedeploy
+                            from:
+                              zoneExpr:
+                                ref: tokenZone
+                                token: $rostowArvnTroopToRedeploy
+                            to:
+                              zoneExpr:
+                                ref: binding
+                                name: $rostowRedeploySpace
       - id: card-68
         title: Green Berets
         sideMode: dual
@@ -581,10 +953,14 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          seatOrder: ["ARVN", "US", "VC", "NVA"]
-          flavorText: "Elite trainers."
+          seatOrder:
+            - ARVN
+            - US
+            - VC
+            - NVA
+          flavorText: Elite trainers.
         unshaded:
-          text: "Place 3 Irregulars or 3 Rangers in a Province without NVA Control. Set it to Active Support."
+          text: Place 3 Irregulars or 3 Rangers in a Province without NVA Control. Set it to Active Support.
           branches:
             - id: place-irregulars-and-support
               order: 1
@@ -595,49 +971,39 @@ eventDecks:
                     filter:
                       op: and
                       args:
-                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                        - op: <=
+                        - op: ==
                           left:
-                            aggregate:
-                              op: count
-                              query:
-                                query: tokensInZone
-                                zone: $zone
-                                filter:
-                                  op: and
-                                  args:
-                                    - { prop: faction, op: eq, value: 'NVA' }
-                          right:
-                            aggregate:
-                              op: count
-                              query:
-                                query: tokensInZone
-                                zone: $zone
-                                filter:
-                                  op: and
-                                  args:
-                                    - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
-                  cardinality: { max: 1 }
+                            ref: zoneProp
+                            zone: $zone
+                            prop: category
+                          right: province
+                        - conditionMacro: fitl-space-without-nva-control
+                          args:
+                            spaceExpr: $zone
+                  cardinality:
+                    max: 1
                   application: aggregate
-              effects:
-                - removeByPriority:
-                    budget: 3
-                    groups:
-                      - bind: $irregular
-                        over:
-                          query: tokensInZone
-                          zone: available-US:none
-                          filter:
-                            op: and
-                            args:
-                              - { prop: faction, eq: US }
-                              - { prop: type, eq: irregular }
-                        to:
-                          zoneExpr: $targetProvince
-                - setMarker:
-                    space: $targetProvince
-                    marker: supportOpposition
-                    state: activeSupport
+                  effects:
+                    - removeByPriority:
+                        budget: 3
+                        groups:
+                          - bind: $irregular
+                            over:
+                              query: tokensInZone
+                              zone: available-US:none
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: US
+                                  - prop: type
+                                    eq: irregular
+                            to:
+                              zoneExpr: $targetProvince
+                    - setMarker:
+                        space: $targetProvince
+                        marker: supportOpposition
+                        state: activeSupport
             - id: place-rangers-and-support
               order: 2
               targets:
@@ -647,7 +1013,12 @@ eventDecks:
                     filter:
                       op: and
                       args:
-                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                        - op: ==
+                          left:
+                            ref: zoneProp
+                            zone: $zone
+                            prop: category
+                          right: province
                         - op: <=
                           left:
                             aggregate:
@@ -658,7 +1029,9 @@ eventDecks:
                                 filter:
                                   op: and
                                   args:
-                                    - { prop: faction, op: eq, value: 'NVA' }
+                                    - prop: faction
+                                      op: eq
+                                      value: NVA
                           right:
                             aggregate:
                               op: count
@@ -668,34 +1041,42 @@ eventDecks:
                                 filter:
                                   op: and
                                   args:
-                                    - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
-                  cardinality: { max: 1 }
+                                    - prop: faction
+                                      op: in
+                                      value:
+                                        - US
+                                        - ARVN
+                                        - VC
+                  cardinality:
+                    max: 1
                   application: aggregate
-              effects:
-                - removeByPriority:
-                    budget: 3
-                    groups:
-                      - bind: $ranger
-                        over:
-                          query: tokensInZone
-                          zone: available-ARVN:none
-                          filter:
-                            op: and
-                            args:
-                              - { prop: faction, eq: ARVN }
-                              - { prop: type, eq: ranger }
-                        to:
-                          zoneExpr: $targetProvince
-                - setMarker:
-                    space: $targetProvince
-                    marker: supportOpposition
-                    state: activeSupport
+                  effects:
+                    - removeByPriority:
+                        budget: 3
+                        groups:
+                          - bind: $ranger
+                            over:
+                              query: tokensInZone
+                              zone: available-ARVN:none
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: ARVN
+                                  - prop: type
+                                    eq: ranger
+                            to:
+                              zoneExpr: $targetProvince
+                    - setMarker:
+                        space: $targetProvince
+                        marker: supportOpposition
+                        state: activeSupport
         shaded:
           text: "Reluctant trainees: Remove any 3 Irregulars to Available and set 1 of their Provinces to Active Opposition."
           effects:
             - if:
                 when:
-                  op: '>'
+                  op: ">"
                   left:
                     aggregate:
                       op: count
@@ -704,8 +1085,10 @@ eventDecks:
                         filter:
                           op: and
                           args:
-                            - { prop: faction, eq: US }
-                            - { prop: type, eq: irregular }
+                            - prop: faction
+                              eq: US
+                            - prop: type
+                              eq: irregular
                   right: 0
                 then:
                   - chooseN:
@@ -715,8 +1098,10 @@ eventDecks:
                         filter:
                           op: and
                           args:
-                            - { prop: faction, eq: US }
-                            - { prop: type, eq: irregular }
+                            - prop: faction
+                              eq: US
+                            - prop: type
+                              eq: irregular
                       min: 0
                       max: 3
                   - chooseOne:
@@ -726,8 +1111,13 @@ eventDecks:
                         filter:
                           op: and
                           args:
-                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                            - op: '>'
+                            - op: ==
+                              left:
+                                ref: zoneProp
+                                zone: $zone
+                                prop: category
+                              right: province
+                            - op: ">"
                               left:
                                 aggregate:
                                   op: count
@@ -737,17 +1127,25 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: faction, eq: US }
-                                        - { prop: type, eq: irregular }
+                                        - prop: faction
+                                          eq: US
+                                        - prop: type
+                                          eq: irregular
                               right: 0
                   - forEach:
                       bind: $irregular
-                      over: { query: binding, name: $irregularsToRemove }
+                      over:
+                        query: binding
+                        name: $irregularsToRemove
                       effects:
                         - moveToken:
                             token: $irregular
-                            from: { zoneExpr: { ref: tokenZone, token: $irregular } }
-                            to: { zoneExpr: available-US:none }
+                            from:
+                              zoneExpr:
+                                ref: tokenZone
+                                token: $irregular
+                            to:
+                              zoneExpr: available-US:none
                   - setMarker:
                       space: $oppositionProvince
                       marker: supportOpposition
@@ -760,17 +1158,24 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          seatOrder: ["US", "NVA", "ARVN", "VC"]
-          flavorText: "Escalation trigger."
+          seatOrder:
+            - US
+            - NVA
+            - ARVN
+            - VC
+          flavorText: Escalation trigger.
         unshaded:
-          text: "US free Air Strikes, then moves 6 US pieces from out-of-play to any Cities."
+          text: US free Air Strikes, then moves 6 US pieces from out-of-play to any Cities.
           effectTiming: afterGrants
           freeOperationGrants:
-            - seat: "nva"
-              executeAsSeat: "us"
-              sequence: { chain: gulf-of-tonkin-us-airstrike, step: 0 }
+            - seat: nva
+              executeAsSeat: us
+              sequence:
+                chain: gulf-of-tonkin-us-airstrike
+                step: 0
               operationClass: operation
-              actionIds: [airStrike]
+              actionIds:
+                - airStrike
           effects:
             - distributeTokens:
                 tokens:
@@ -779,13 +1184,17 @@ eventDecks:
                   filter:
                     op: and
                     args:
-                      - { prop: faction, eq: US }
+                      - prop: faction
+                        eq: US
                 destinations:
                   query: mapSpaces
                   filter:
-                    op: '=='
-                    left: { ref: zoneProp, zone: $zone, prop: category }
-                    right: 'city'
+                    op: ==
+                    left:
+                      ref: zoneProp
+                      zone: $zone
+                      prop: category
+                    right: city
                 max: 6
         shaded:
           text: "Congressional regrets: Aid -1 per Casualty. All Casualties out of play."
@@ -794,7 +1203,7 @@ eventDecks:
                 scope: global
                 var: aid
                 delta:
-                  op: '*'
+                  op: "*"
                   left:
                     aggregate:
                       op: count
@@ -804,7 +1213,8 @@ eventDecks:
                         filter:
                           op: and
                           args:
-                            - { prop: faction, eq: US }
+                            - prop: faction
+                              eq: US
                   right: -1
             - moveAll:
                 from: casualties-US:none
@@ -816,10 +1226,14 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["US", "NVA", "ARVN", "VC"]
-          flavorText: "Operation Menu."
+          seatOrder:
+            - US
+            - NVA
+            - ARVN
+            - VC
+          flavorText: Operation Menu.
         unshaded:
-          text: "Remove a die roll of Insurgent pieces total from Cambodia and Laos."
+          text: Remove a die roll of Insurgent pieces total from Cambodia and Laos.
           effects:
             - rollRandom:
                 bind: $dieRoll
@@ -834,36 +1248,65 @@ eventDecks:
                           - query: tokensInMapSpaces
                             spaceFilter:
                               conditionMacro: fitl-space-in-laos-cambodia
-                              args: { spaceExpr: $zone }
+                              args:
+                                spaceExpr: $zone
                             filter:
                               op: and
                               args:
-                                - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                                - { prop: type, op: in, value: [troops, guerrilla] }
+                                - prop: faction
+                                  op: in
+                                  value:
+                                    - NVA
+                                    - VC
+                                - prop: type
+                                  op: in
+                                  value:
+                                    - troops
+                                    - guerrilla
                           - query: tokensInMapSpaces
                             spaceFilter:
                               conditionMacro: fitl-space-in-laos-cambodia
-                              args: { spaceExpr: $zone }
+                              args:
+                                spaceExpr: $zone
                             filter:
                               op: and
                               args:
-                                - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                                - { prop: type, eq: base }
-                                - { prop: tunnel, eq: untunneled }
+                                - prop: faction
+                                  op: in
+                                  value:
+                                    - NVA
+                                    - VC
+                                - prop: type
+                                  eq: base
+                                - prop: tunnel
+                                  eq: untunneled
                       min: 0
-                      max: { ref: binding, name: $dieRoll }
+                      max:
+                        ref: binding
+                        name: $dieRoll
                   - forEach:
                       bind: $piece
-                      over: { query: binding, name: $insurgentPieces }
+                      over:
+                        query: binding
+                        name: $insurgentPieces
                       effects:
                         - moveToken:
                             token: $piece
-                            from: { zoneExpr: { ref: tokenZone, token: $piece } }
-                            to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $piece, prop: faction }, ':none'] } }
+                            from:
+                              zoneExpr:
+                                ref: tokenZone
+                                token: $piece
+                            to:
+                              zoneExpr:
+                                concat:
+                                  - available-
+                                  - ref: tokenProp
+                                    token: $piece
+                                    prop: faction
+                                  - :none
         shaded:
-          text: "NVA places 2 pieces in Cambodia. US moves any 2 US Troops to out of play. Aid -6."
+          text: NVA places 2 pieces in Cambodia. US moves any 2 US Troops to out of play. Aid -6.
           effects:
-            # 1. NVA places 2 pieces from Available into Cambodia
             - distributeTokens:
                 tokens:
                   query: tokensInZone
@@ -871,16 +1314,19 @@ eventDecks:
                   filter:
                     op: and
                     args:
-                      - { prop: faction, eq: NVA }
+                      - prop: faction
+                        eq: NVA
                 destinations:
                   query: mapSpaces
                   filter:
-                    op: '=='
-                    left: { ref: zoneProp, zone: $zone, prop: country }
+                    op: ==
+                    left:
+                      ref: zoneProp
+                      zone: $zone
+                      prop: country
                     right: cambodia
                 min: 0
                 max: 2
-            # 2. US moves any 2 US Troops to out of play (map, Available, or Casualties)
             - chooseN:
                 bind: $usTroops
                 options:
@@ -890,34 +1336,48 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: troops }
+                          - prop: faction
+                            eq: US
+                          - prop: type
+                            eq: troops
                     - query: tokensInZone
                       zone: available-US:none
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: troops }
+                          - prop: faction
+                            eq: US
+                          - prop: type
+                            eq: troops
                     - query: tokensInZone
                       zone: casualties-US:none
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: troops }
+                          - prop: faction
+                            eq: US
+                          - prop: type
+                            eq: troops
                 min: 0
                 max: 2
             - forEach:
                 bind: $usTroop
-                over: { query: binding, name: $usTroops }
+                over:
+                  query: binding
+                  name: $usTroops
                 effects:
                   - moveToken:
                       token: $usTroop
-                      from: { zoneExpr: { ref: tokenZone, token: $usTroop } }
-                      to: { zoneExpr: out-of-play-US:none }
-            # 3. Aid -6
-            - addVar: { scope: global, var: aid, delta: -6 }
+                      from:
+                        zoneExpr:
+                          ref: tokenZone
+                          token: $usTroop
+                      to:
+                        zoneExpr: out-of-play-US:none
+            - addVar:
+                scope: global
+                var: aid
+                delta: -6
       - id: card-3
         title: Peace Talks
         sideMode: dual
@@ -925,28 +1385,63 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["US", "NVA", "ARVN", "VC"]
-          flavorText: "Public negotiations mask battlefield pressure."
+          seatOrder:
+            - US
+            - NVA
+            - ARVN
+            - VC
+          flavorText: Public negotiations mask battlefield pressure.
         unshaded:
-          text: "NVA Resources -9. Linebacker II allowed when Support + Available US (Troops + Bases) > 25."
+          text: NVA Resources -9. Linebacker II allowed when Support + Available US (Troops + Bases) > 25.
           effects:
-            - addVar: { scope: global, var: nvaResources, delta: -9 }
-            - setVar: { scope: global, var: linebacker11SupportAvailable, value: 0 }
+            - addVar:
+                scope: global
+                var: nvaResources
+                delta: -9
+            - setVar:
+                scope: global
+                var: linebacker11SupportAvailable
+                value: 0
             - forEach:
                 bind: $space
-                over: { query: mapSpaces }
+                over:
+                  query: mapSpaces
                 effects:
                   - if:
-                      when: { op: '==', left: { ref: markerState, space: $space, marker: supportOpposition }, right: passiveSupport }
-                      then:
-                        - addVar: { scope: global, var: linebacker11SupportAvailable, delta: { ref: zoneProp, zone: $space, prop: population } }
-                  - if:
-                      when: { op: '==', left: { ref: markerState, space: $space, marker: supportOpposition }, right: activeSupport }
+                      when:
+                        op: ==
+                        left:
+                          ref: markerState
+                          space: $space
+                          marker: supportOpposition
+                        right: passiveSupport
                       then:
                         - addVar:
                             scope: global
                             var: linebacker11SupportAvailable
-                            delta: { op: '*', left: { ref: zoneProp, zone: $space, prop: population }, right: 2 }
+                            delta:
+                              ref: zoneProp
+                              zone: $space
+                              prop: population
+                  - if:
+                      when:
+                        op: ==
+                        left:
+                          ref: markerState
+                          space: $space
+                          marker: supportOpposition
+                        right: activeSupport
+                      then:
+                        - addVar:
+                            scope: global
+                            var: linebacker11SupportAvailable
+                            delta:
+                              op: "*"
+                              left:
+                                ref: zoneProp
+                                zone: $space
+                                prop: population
+                              right: 2
             - addVar:
                 scope: global
                 var: linebacker11SupportAvailable
@@ -959,8 +1454,10 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: troops }
+                          - prop: faction
+                            eq: US
+                          - prop: type
+                            eq: troops
             - addVar:
                 scope: global
                 var: linebacker11SupportAvailable
@@ -973,66 +1470,125 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: base }
+                          - prop: faction
+                            eq: US
+                          - prop: type
+                            eq: base
             - if:
-                when: { op: '>', left: { ref: gvar, var: linebacker11SupportAvailable }, right: 25 }
+                when:
+                  op: ">"
+                  left:
+                    ref: gvar
+                    var: linebacker11SupportAvailable
+                  right: 25
                 then:
-                  - setVar: { scope: global, var: linebacker11Allowed, value: true }
+                  - setVar:
+                      scope: global
+                      var: linebacker11Allowed
+                      value: true
                 else:
-                  - setVar: { scope: global, var: linebacker11Allowed, value: false }
+                  - setVar:
+                      scope: global
+                      var: linebacker11Allowed
+                      value: false
         shaded:
           text: "Bombing halt: NVA Resources +9. If Trail is 0-2, set Trail to 3."
           effects:
-            - addVar: { scope: global, var: nvaResources, delta: 9 }
+            - addVar:
+                scope: global
+                var: nvaResources
+                delta: 9
             - if:
-                when: { op: '<=', left: { ref: gvar, var: trail }, right: 2 }
+                when:
+                  op: <=
+                  left:
+                    ref: gvar
+                    var: trail
+                  right: 2
                 then:
-                  - setVar: { scope: global, var: trail, value: 3 }
+                  - setVar:
+                      scope: global
+                      var: trail
+                      value: 3
       - id: card-4
         title: Top Gun
         sideMode: dual
         order: 4
-        tags: [capability, US]
+        tags:
+          - capability
+          - US
         metadata:
           period: "1968"
-          seatOrder: ["US", "NVA", "ARVN", "VC"]
-          flavorText: "Naval aviators sharpen air-superiority tactics."
+          seatOrder:
+            - US
+            - NVA
+            - ARVN
+            - VC
+          flavorText: Naval aviators sharpen air-superiority tactics.
         unshaded:
-          text: "Cancel shaded MiGs. Air Strikes Degrade Trail 2 boxes. US CAPABILITY."
+          text: Cancel shaded MiGs. Air Strikes Degrade Trail 2 boxes. US CAPABILITY.
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_topGun, markerState: unshaded }
+              args:
+                markerId: cap_topGun
+                markerState: unshaded
             - if:
-                when: { op: '==', left: { ref: globalMarkerState, marker: cap_migs }, right: shaded }
+                when:
+                  op: ==
+                  left:
+                    ref: globalMarkerState
+                    marker: cap_migs
+                  right: shaded
                 then:
                   - macro: set-global-marker
-                    args: { markerId: cap_migs, markerState: inactive }
+                    args:
+                      markerId: cap_migs
+                      markerState: inactive
         shaded:
-          text: "Air Strike Degrades Trail after applying 2 hits only on die roll of 4-6."
+          text: Air Strike Degrades Trail after applying 2 hits only on die roll of 4-6.
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_topGun, markerState: shaded }
+              args:
+                markerId: cap_topGun
+                markerState: shaded
       - id: card-5
         title: Wild Weasels
         sideMode: dual
         order: 5
-        tags: [momentum]
+        tags:
+          - momentum
         metadata:
           period: "1965"
-          seatOrder: ["US", "NVA", "ARVN", "VC"]
-          flavorText: "Air defense suppression."
+          seatOrder:
+            - US
+            - NVA
+            - ARVN
+            - VC
+          flavorText: Air defense suppression.
         unshaded:
-          text: "Remove shaded SA-2s or, if no shaded SA-2s, Degrade Trail 2 boxes and NVA Resources -9."
+          text: Remove shaded SA-2s or, if no shaded SA-2s, Degrade Trail 2 boxes and NVA Resources -9.
           effects:
             - if:
-                when: { op: '==', left: { ref: globalMarkerState, marker: cap_sa2s }, right: shaded }
+                when:
+                  op: ==
+                  left:
+                    ref: globalMarkerState
+                    marker: cap_sa2s
+                  right: shaded
                 then:
                   - macro: set-global-marker
-                    args: { markerId: cap_sa2s, markerState: inactive }
+                    args:
+                      markerId: cap_sa2s
+                      markerState: inactive
                 else:
-                  - addVar: { scope: global, var: trail, delta: -2 }
-                  - addVar: { scope: global, var: nvaResources, delta: -9 }
+                  - addVar:
+                      scope: global
+                      var: trail
+                      delta: -2
+                  - addVar:
+                      scope: global
+                      var: nvaResources
+                      delta: -9
         shaded:
           text: "Complex strike packages: Until Coup, Air Strike either Degrades Trail or may remove just 1 piece (not 1-6). MOMENTUM"
           lastingEffects:
@@ -1040,10 +1596,12 @@ eventDecks:
               duration: round
               setupEffects:
                 - macro: set-global-flag-true
-                  args: { varName: mom_wildWeasels }
+                  args:
+                    varName: mom_wildWeasels
               teardownEffects:
                 - macro: set-global-flag-false
-                  args: { varName: mom_wildWeasels }
+                  args:
+                    varName: mom_wildWeasels
       - id: card-6
         title: Aces
         sideMode: dual
@@ -1051,26 +1609,45 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["US", "NVA", "VC", "ARVN"]
-          flavorText: "Robin Olds ambushes MiGs."
+          seatOrder:
+            - US
+            - NVA
+            - VC
+            - ARVN
+          flavorText: Robin Olds ambushes MiGs.
         unshaded:
-          text: "Free Air Strike any 1 space outside the South with 6 hits and Degrade Trail 2 boxes."
+          text: Free Air Strike any 1 space outside the South with 6 hits and Degrade Trail 2 boxes.
           effectTiming: afterGrants
           freeOperationGrants:
-            - seat: "us"
-              sequence: { chain: aces-us-airstrike, step: 0 }
+            - seat: us
+              sequence:
+                chain: aces-us-airstrike
+                step: 0
               operationClass: operation
-              actionIds: [airStrike]
+              actionIds:
+                - airStrike
           lastingEffects:
             - id: evt-aces-window
               duration: turn
               setupEffects:
-                - setVar: { scope: global, var: fitl_airStrikeWindowMode, value: 1 }
+                - setVar:
+                    scope: global
+                    var: fitl_airStrikeWindowMode
+                    value: 1
               teardownEffects:
-                - setVar: { scope: global, var: fitl_airStrikeWindowMode, value: 0 }
+                - setVar:
+                    scope: global
+                    var: fitl_airStrikeWindowMode
+                    value: 0
           effects:
-            - setVar: { scope: global, var: fitl_airStrikeWindowMode, value: 0 }
-            - addVar: { scope: global, var: trail, delta: -2 }
+            - setVar:
+                scope: global
+                var: fitl_airStrikeWindowMode
+                value: 0
+            - addVar:
+                scope: global
+                var: trail
+                delta: -2
         shaded:
           text: "MiG ace 'Colonel Tomb': 2 Available US Troops to Casualties. Improve Trail by 2 boxes."
           effects:
@@ -1084,59 +1661,95 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: troops }
+                          - prop: faction
+                            eq: US
+                          - prop: type
+                            eq: troops
                     to:
                       zoneExpr: casualties-US:none
-            - addVar: { scope: global, var: trail, delta: 2 }
+            - addVar:
+                scope: global
+                var: trail
+                delta: 2
       - id: card-7
         title: ADSID
         sideMode: dual
         order: 7
-        tags: [momentum]
+        tags:
+          - momentum
         metadata:
           period: "1965"
-          seatOrder: ["US", "NVA", "VC", "ARVN"]
-          flavorText: "Air-delivered seismic intrusion detector."
+          seatOrder:
+            - US
+            - NVA
+            - VC
+            - ARVN
+          flavorText: Air-delivered seismic intrusion detector.
         unshaded:
-          text: "Through Coup, -6 NVA Resources at any Trail# change. MOMENTUM"
+          text: Through Coup, -6 NVA Resources at any Trail# change. MOMENTUM
           lastingEffects:
             - id: mom-adsid
               duration: round
               setupEffects:
                 - macro: set-global-flag-true
-                  args: { varName: mom_adsid }
+                  args:
+                    varName: mom_adsid
               teardownEffects:
                 - macro: set-global-flag-false
-                  args: { varName: mom_adsid }
+                  args:
+                    varName: mom_adsid
         shaded:
           text: "Dubious technology: Improve Trail by 1 box and to a minimum of 2. ARVN Resources -9."
           effects:
-            - addVar: { scope: global, var: trail, delta: 1 }
+            - addVar:
+                scope: global
+                var: trail
+                delta: 1
             - if:
-                when: { op: '<', left: { ref: gvar, var: trail }, right: 2 }
+                when:
+                  op: <
+                  left:
+                    ref: gvar
+                    var: trail
+                  right: 2
                 then:
-                  - setVar: { scope: global, var: trail, value: 2 }
-            - addVar: { scope: global, var: arvnResources, delta: -9 }
+                  - setVar:
+                      scope: global
+                      var: trail
+                      value: 2
+            - addVar:
+                scope: global
+                var: arvnResources
+                delta: -9
       - id: card-8
         title: Arc Light
         sideMode: dual
         order: 8
-        tags: [capability, US]
+        tags:
+          - capability
+          - US
         metadata:
           period: "1965"
-          seatOrder: ["US", "NVA", "VC", "ARVN"]
-          flavorText: "Guided B-52 tactical bombing."
+          seatOrder:
+            - US
+            - NVA
+            - VC
+            - ARVN
+          flavorText: Guided B-52 tactical bombing.
         unshaded:
-          text: "1 space each Air Strike may be a Province without COIN pieces. US CAPABILITY."
+          text: 1 space each Air Strike may be a Province without COIN pieces. US CAPABILITY.
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_arcLight, markerState: unshaded }
+              args:
+                markerId: cap_arcLight
+                markerState: unshaded
         shaded:
-          text: "Air Strike spaces removing >1 piece shift 2 levels toward Active Opposition."
+          text: Air Strike spaces removing >1 piece shift 2 levels toward Active Opposition.
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_arcLight, markerState: shaded }
+              args:
+                markerId: cap_arcLight
+                markerState: shaded
       - id: card-9
         title: Psychedelic Cookie
         sideMode: dual
@@ -1144,10 +1757,14 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["US", "NVA", "VC", "ARVN"]
-          flavorText: "Field improvisation expands helicopter mobility."
+          seatOrder:
+            - US
+            - NVA
+            - VC
+            - ARVN
+          flavorText: Field improvisation expands helicopter mobility.
         unshaded:
-          text: "US moves up to 3 US Troops from out of play to Available or South Vietnam, or from the map to Available."
+          text: US moves up to 3 US Troops from out of play to Available or South Vietnam, or from the map to Available.
           effects:
             - chooseN:
                 bind: $usTroops
@@ -1159,53 +1776,90 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: troops }
+                          - prop: faction
+                            eq: US
+                          - prop: type
+                            eq: troops
                     - query: tokensInMapSpaces
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: troops }
+                          - prop: faction
+                            eq: US
+                          - prop: type
+                            eq: troops
                 min: 0
                 max: 3
             - forEach:
                 bind: $usTroop
-                over: { query: binding, name: $usTroops }
+                over:
+                  query: binding
+                  name: $usTroops
                 effects:
                   - if:
-                      when: { op: '==', left: { ref: tokenZone, token: $usTroop }, right: out-of-play-US:none }
+                      when:
+                        op: ==
+                        left:
+                          ref: tokenZone
+                          token: $usTroop
+                        right: out-of-play-US:none
                       then:
                         - chooseOne:
-                            bind: '$oopTroopDestination@{$usTroop}'
-                            options: { query: enums, values: ['available-US:none', 'south-vietnam-map'] }
+                            bind: $oopTroopDestination@{$usTroop}
+                            options:
+                              query: enums
+                              values:
+                                - available-US:none
+                                - south-vietnam-map
                         - if:
-                            when: { op: '==', left: { ref: binding, name: '$oopTroopDestination@{$usTroop}' }, right: 'available-US:none' }
+                            when:
+                              op: ==
+                              left:
+                                ref: binding
+                                name: $oopTroopDestination@{$usTroop}
+                              right: available-US:none
                             then:
                               - moveToken:
                                   token: $usTroop
-                                  from: { zoneExpr: { ref: tokenZone, token: $usTroop } }
-                                  to: { zoneExpr: available-US:none }
+                                  from:
+                                    zoneExpr:
+                                      ref: tokenZone
+                                      token: $usTroop
+                                  to:
+                                    zoneExpr: available-US:none
                             else:
                               - chooseOne:
-                                  bind: '$southVietnamSpace@{$usTroop}'
+                                  bind: $southVietnamSpace@{$usTroop}
                                   options:
                                     query: mapSpaces
                                     filter:
-                                      op: '=='
-                                      left: { ref: zoneProp, zone: $zone, prop: country }
+                                      op: ==
+                                      left:
+                                        ref: zoneProp
+                                        zone: $zone
+                                        prop: country
                                       right: southVietnam
                               - moveToken:
                                   token: $usTroop
-                                  from: { zoneExpr: { ref: tokenZone, token: $usTroop } }
-                                  to: { zoneExpr: { ref: binding, name: '$southVietnamSpace@{$usTroop}' } }
+                                  from:
+                                    zoneExpr:
+                                      ref: tokenZone
+                                      token: $usTroop
+                                  to:
+                                    zoneExpr:
+                                      ref: binding
+                                      name: $southVietnamSpace@{$usTroop}
                       else:
                         - moveToken:
                             token: $usTroop
-                            from: { zoneExpr: { ref: tokenZone, token: $usTroop } }
-                            to: { zoneExpr: available-US:none }
+                            from:
+                              zoneExpr:
+                                ref: tokenZone
+                                token: $usTroop
+                            to:
+                              zoneExpr: available-US:none
         shaded:
-          text: "US takes 3 of its Troops from the map out of play."
+          text: US takes 3 of its Troops from the map out of play.
           effects:
             - chooseN:
                 bind: $usMapTroops
@@ -1214,66 +1868,104 @@ eventDecks:
                   filter:
                     op: and
                     args:
-                      - { prop: faction, eq: US }
-                      - { prop: type, eq: troops }
+                      - prop: faction
+                        eq: US
+                      - prop: type
+                        eq: troops
                 min: 0
                 max: 3
             - forEach:
                 bind: $usTroop
-                over: { query: binding, name: $usMapTroops }
+                over:
+                  query: binding
+                  name: $usMapTroops
                 effects:
                   - moveToken:
                       token: $usTroop
-                      from: { zoneExpr: { ref: tokenZone, token: $usTroop } }
-                      to: { zoneExpr: out-of-play-US:none }
+                      from:
+                        zoneExpr:
+                          ref: tokenZone
+                          token: $usTroop
+                      to:
+                        zoneExpr: out-of-play-US:none
       - id: card-10
         title: Rolling Thunder
         sideMode: dual
         order: 10
-        tags: [momentum]
+        tags:
+          - momentum
         metadata:
           period: "1965"
-          seatOrder: ["US", "NVA", "VC", "ARVN"]
-          flavorText: "Sustained bombing."
+          seatOrder:
+            - US
+            - NVA
+            - VC
+            - ARVN
+          flavorText: Sustained bombing.
         unshaded:
-          text: "Degrade Trail 2 boxes. -9 NVA Resources. NVA Ineligible through next card."
+          text: Degrade Trail 2 boxes. -9 NVA Resources. NVA Ineligible through next card.
           eligibilityOverrides:
-            - { target: { kind: seat, seat: 'nva' }, eligible: false, windowId: make-ineligible }
+            - target:
+                kind: seat
+                seat: nva
+              eligible: false
+              windowId: make-ineligible
           effects:
-            - addVar: { scope: global, var: trail, delta: -2 }
-            - addVar: { scope: global, var: nvaResources, delta: -9 }
+            - addVar:
+                scope: global
+                var: trail
+                delta: -2
+            - addVar:
+                scope: global
+                var: nvaResources
+                delta: -9
         shaded:
           text: "Assets to restricted strategic air campaign: -5 ARVN Resources. No Air Strike until Coup. MOMENTUM"
           effects:
-            - addVar: { scope: global, var: arvnResources, delta: -5 }
+            - addVar:
+                scope: global
+                var: arvnResources
+                delta: -5
           lastingEffects:
             - id: mom-rolling-thunder
               duration: round
               setupEffects:
                 - macro: set-global-flag-true
-                  args: { varName: mom_rollingThunder }
+                  args:
+                    varName: mom_rollingThunder
               teardownEffects:
                 - macro: set-global-flag-false
-                  args: { varName: mom_rollingThunder }
+                  args:
+                    varName: mom_rollingThunder
       - id: card-11
         title: Abrams
         sideMode: dual
         order: 11
-        tags: [capability, US]
+        tags:
+          - capability
+          - US
         metadata:
           period: "1968"
-          seatOrder: ["US", "ARVN", "NVA", "VC"]
-          flavorText: "Command shift prioritizes selective base targeting."
+          seatOrder:
+            - US
+            - ARVN
+            - NVA
+            - VC
+          flavorText: Command shift prioritizes selective base targeting.
         unshaded:
-          text: "1 US Assault space may remove 1 enemy non-Tunnel Base first not last."
+          text: 1 US Assault space may remove 1 enemy non-Tunnel Base first not last.
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_abrams, markerState: unshaded }
+              args:
+                markerId: cap_abrams
+                markerState: unshaded
         shaded:
-          text: "US may select max 2 spaces per Assault."
+          text: US may select max 2 spaces per Assault.
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_abrams, markerState: shaded }
+              args:
+                markerId: cap_abrams
+                markerState: shaded
       - id: card-12
         title: Capt Buck Adams
         sideMode: dual
@@ -1281,10 +1973,14 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["US", "ARVN", "NVA", "VC"]
-          flavorText: "Strategic reconnaissance."
+          seatOrder:
+            - US
+            - ARVN
+            - NVA
+            - VC
+          flavorText: Strategic reconnaissance.
         unshaded:
-          text: "Outside the South, flip all Insurgents Active and remove 1 NVA Base."
+          text: Outside the South, flip all Insurgents Active and remove 1 NVA Base.
           effects:
             - forEach:
                 bind: $insurgentGuerrilla
@@ -1292,39 +1988,58 @@ eventDecks:
                   query: tokensInMapSpaces
                   spaceFilter:
                     conditionMacro: fitl-space-outside-south
-                    args: { spaceExpr: $zone }
+                    args:
+                      spaceExpr: $zone
                   filter:
                     op: and
                     args:
-                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                      - { prop: type, eq: guerrilla }
-                      - { prop: activity, eq: active }
+                      - prop: faction
+                        op: in
+                        value:
+                          - NVA
+                          - VC
+                      - prop: type
+                        eq: guerrilla
+                      - prop: activity
+                        eq: active
                 effects:
-                  - setTokenProp: { token: $insurgentGuerrilla, prop: activity, value: underground }
+                  - setTokenProp:
+                      token: $insurgentGuerrilla
+                      prop: activity
+                      value: underground
             - chooseN:
                 bind: $nvaBaseToRemove
                 options:
                   query: tokensInMapSpaces
                   spaceFilter:
                     conditionMacro: fitl-space-outside-south
-                    args: { spaceExpr: $zone }
+                    args:
+                      spaceExpr: $zone
                   filter:
                     op: and
                     args:
-                      - { prop: faction, eq: NVA }
-                      - { prop: type, eq: base }
+                      - prop: faction
+                        eq: NVA
+                      - prop: type
+                        eq: base
                 min: 0
                 max: 1
             - forEach:
                 bind: $nvaBase
-                over: { query: binding, name: $nvaBaseToRemove }
+                over:
+                  query: binding
+                  name: $nvaBaseToRemove
                 effects:
                   - moveToken:
                       token: $nvaBase
-                      from: { zoneExpr: { ref: tokenZone, token: $nvaBase } }
-                      to: { zoneExpr: available-NVA:none }
+                      from:
+                        zoneExpr:
+                          ref: tokenZone
+                          token: $nvaBase
+                      to:
+                        zoneExpr: available-NVA:none
         shaded:
-          text: "SR-71 pilot must outrun SA-2s. Place 1 NVA Base at NVA Control outside the South and flip any 3 NVA Guerrillas Underground."
+          text: SR-71 pilot must outrun SA-2s. Place 1 NVA Base at NVA Control outside the South and flip any 3 NVA Guerrillas Underground.
           effects:
             - chooseN:
                 bind: $nvaBaseFromAvailable
@@ -1334,15 +2049,17 @@ eventDecks:
                   filter:
                     op: and
                     args:
-                      - { prop: faction, eq: NVA }
-                      - { prop: type, eq: base }
+                      - prop: faction
+                        eq: NVA
+                      - prop: type
+                        eq: base
                 min: 0
                 max: 1
             - if:
                 when:
                   op: and
                   args:
-                    - op: '>'
+                    - op: ">"
                       left:
                         aggregate:
                           op: count
@@ -1350,7 +2067,7 @@ eventDecks:
                             query: binding
                             name: $nvaBaseFromAvailable
                       right: 0
-                    - op: '>'
+                    - op: ">"
                       left:
                         aggregate:
                           op: count
@@ -1360,8 +2077,9 @@ eventDecks:
                               op: and
                               args:
                                 - conditionMacro: fitl-space-outside-south-province
-                                  args: { spaceExpr: $zone }
-                                - op: '>'
+                                  args:
+                                    spaceExpr: $zone
+                                - op: ">"
                                   left:
                                     aggregate:
                                       op: count
@@ -1371,7 +2089,9 @@ eventDecks:
                                         filter:
                                           op: and
                                           args:
-                                            - { prop: faction, op: eq, value: NVA }
+                                            - prop: faction
+                                              op: eq
+                                              value: NVA
                                   right:
                                     aggregate:
                                       op: count
@@ -1381,8 +2101,13 @@ eventDecks:
                                         filter:
                                           op: and
                                           args:
-                                            - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
-                                - op: '<'
+                                            - prop: faction
+                                              op: in
+                                              value:
+                                                - US
+                                                - ARVN
+                                                - VC
+                                - op: <
                                   left:
                                     aggregate:
                                       op: count
@@ -1392,7 +2117,9 @@ eventDecks:
                                         filter:
                                           op: and
                                           args:
-                                            - { prop: type, op: eq, value: base }
+                                            - prop: type
+                                              op: eq
+                                              value: base
                                   right: 2
                       right: 0
                 then:
@@ -1404,8 +2131,9 @@ eventDecks:
                           op: and
                           args:
                             - conditionMacro: fitl-space-outside-south-province
-                              args: { spaceExpr: $zone }
-                            - op: '>'
+                              args:
+                                spaceExpr: $zone
+                            - op: ">"
                               left:
                                 aggregate:
                                   op: count
@@ -1415,7 +2143,9 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: faction, op: eq, value: NVA }
+                                        - prop: faction
+                                          op: eq
+                                          value: NVA
                               right:
                                 aggregate:
                                   op: count
@@ -1425,8 +2155,13 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
-                            - op: '<'
+                                        - prop: faction
+                                          op: in
+                                          value:
+                                            - US
+                                            - ARVN
+                                            - VC
+                            - op: <
                               left:
                                 aggregate:
                                   op: count
@@ -1436,16 +2171,22 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: type, op: eq, value: base }
+                                        - prop: type
+                                          op: eq
+                                          value: base
                               right: 2
                   - forEach:
                       bind: $nvaBase
-                      over: { query: binding, name: $nvaBaseFromAvailable }
+                      over:
+                        query: binding
+                        name: $nvaBaseFromAvailable
                       effects:
                         - moveToken:
                             token: $nvaBase
-                            from: { zoneExpr: available-NVA:none }
-                            to: { zoneExpr: $nvaBaseDestination }
+                            from:
+                              zoneExpr: available-NVA:none
+                            to:
+                              zoneExpr: $nvaBaseDestination
                 else: []
             - chooseN:
                 bind: $nvaGuerrillasToHide
@@ -1454,85 +2195,124 @@ eventDecks:
                   filter:
                     op: and
                     args:
-                      - { prop: faction, eq: NVA }
-                      - { prop: type, eq: guerrilla }
-                      - { prop: activity, eq: active }
+                      - prop: faction
+                        eq: NVA
+                      - prop: type
+                        eq: guerrilla
+                      - prop: activity
+                        eq: active
                 min: 0
                 max: 3
             - forEach:
                 bind: $nvaGuerrilla
-                over: { query: binding, name: $nvaGuerrillasToHide }
+                over:
+                  query: binding
+                  name: $nvaGuerrillasToHide
                 effects:
-                  - setTokenProp: { token: $nvaGuerrilla, prop: activity, value: underground }
+                  - setTokenProp:
+                      token: $nvaGuerrilla
+                      prop: activity
+                      value: underground
       - id: card-13
         title: Cobras
         sideMode: dual
         order: 13
-        tags: [capability, US]
+        tags:
+          - capability
+          - US
         metadata:
           period: "1968"
-          seatOrder: ["US", "ARVN", "NVA", "VC"]
-          flavorText: "Gunship support amplifies Sweep and complicates Assault."
+          seatOrder:
+            - US
+            - ARVN
+            - NVA
+            - VC
+          flavorText: Gunship support amplifies Sweep and complicates Assault.
         unshaded:
-          text: "2 US/ ARVN Sweep spaces each remove 1 Active unTunneled enemy (Troops first, Bases last). US CAPABILITY."
+          text: 2 US/ ARVN Sweep spaces each remove 1 Active unTunneled enemy (Troops first, Bases last). US CAPABILITY.
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_cobras, markerState: unshaded }
+              args:
+                markerId: cap_cobras
+                markerState: unshaded
         shaded:
-          text: "Each US Assault space, 1 US Troop to Casualties on a die roll of 1-3."
+          text: Each US Assault space, 1 US Troop to Casualties on a die roll of 1-3.
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_cobras, markerState: shaded }
+              args:
+                markerId: cap_cobras
+                markerState: shaded
       - id: card-14
         title: M-48 Patton
         sideMode: dual
         order: 14
-        tags: [capability, US]
+        tags:
+          - capability
+          - US
         metadata:
           period: "1965"
-          seatOrder: ["US", "ARVN", "NVA", "VC"]
-          flavorText: "Armored punch."
+          seatOrder:
+            - US
+            - ARVN
+            - NVA
+            - VC
+          flavorText: Armored punch.
         unshaded:
-          text: "2 non-Lowland US Assault spaces each remove 2 extra enemy pieces."
+          text: 2 non-Lowland US Assault spaces each remove 2 extra enemy pieces.
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_m48Patton, markerState: unshaded }
+              args:
+                markerId: cap_m48Patton
+                markerState: unshaded
         shaded:
           text: "RPGs: After US/ARVN Patrol, NVA removes up to 2 cubes that moved (US to Casualties)."
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_m48Patton, markerState: shaded }
+              args:
+                markerId: cap_m48Patton
+                markerState: shaded
       - id: card-16
         title: Blowtorch Komer
         sideMode: dual
         order: 16
-        tags: [momentum]
+        tags:
+          - momentum
         metadata:
           period: "1968"
-          seatOrder: ["US", "ARVN", "VC", "NVA"]
-          flavorText: "Pacification drive intensifies political pressure."
+          seatOrder:
+            - US
+            - ARVN
+            - VC
+            - NVA
+          flavorText: Pacification drive intensifies political pressure.
         unshaded:
-          text: "Aid +10. This Support phase, Pacify costs 1 Resource per step or Terror. MOMENTUM"
+          text: Aid +10. This Support phase, Pacify costs 1 Resource per step or Terror. MOMENTUM
           effects:
             - macro: add-global-var-delta
-              args: { varName: aid, deltaExpr: 10 }
+              args:
+                varName: aid
+                deltaExpr: 10
           lastingEffects:
             - id: mom-blowtorch-komer
               duration: round
               setupEffects:
                 - macro: set-global-flag-true
-                  args: { varName: mom_blowtorchKomer }
+                  args:
+                    varName: mom_blowtorchKomer
               teardownEffects:
                 - macro: set-global-flag-false
-                  args: { varName: mom_blowtorchKomer }
+                  args:
+                    varName: mom_blowtorchKomer
         shaded:
-          text: "Aid -10. Shift a space with Troops and Police 1 level toward Active Opposition."
+          text: Aid -10. Shift a space with Troops and Police 1 level toward Active Opposition.
           effects:
             - macro: add-global-var-delta
-              args: { varName: aid, deltaExpr: -10 }
+              args:
+                varName: aid
+                deltaExpr: -10
             - if:
                 when:
-                  op: '>'
+                  op: ">"
                   left:
                     aggregate:
                       op: count
@@ -1541,7 +2321,7 @@ eventDecks:
                         filter:
                           op: and
                           args:
-                            - op: '>'
+                            - op: ">"
                               left:
                                 aggregate:
                                   op: count
@@ -1551,9 +2331,10 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: type, eq: troops }
+                                        - prop: type
+                                          eq: troops
                               right: 0
-                            - op: '>'
+                            - op: ">"
                               left:
                                 aggregate:
                                   op: count
@@ -1563,7 +2344,8 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: type, eq: police }
+                                        - prop: type
+                                          eq: police
                               right: 0
                   right: 0
                 then:
@@ -1574,7 +2356,7 @@ eventDecks:
                         filter:
                           op: and
                           args:
-                            - op: '>'
+                            - op: ">"
                               left:
                                 aggregate:
                                   op: count
@@ -1584,9 +2366,10 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: type, eq: troops }
+                                        - prop: type
+                                          eq: troops
                               right: 0
-                            - op: '>'
+                            - op: ">"
                               left:
                                 aggregate:
                                   op: count
@@ -1596,66 +2379,103 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: type, eq: police }
+                                        - prop: type
+                                          eq: police
                               right: 0
-                  - shiftMarker: { space: { zoneExpr: { ref: binding, name: $targetSpace } }, marker: supportOpposition, delta: -1 }
+                  - shiftMarker:
+                      space:
+                        zoneExpr:
+                          ref: binding
+                          name: $targetSpace
+                      marker: supportOpposition
+                      delta: -1
       - id: card-18
         title: Combined Action Platoons
         sideMode: dual
         order: 18
-        tags: [capability, US]
+        tags:
+          - capability
+          - US
         metadata:
           period: "1965"
-          seatOrder: ["US", "ARVN", "VC", "NVA"]
-          flavorText: "Hamlet defense."
+          seatOrder:
+            - US
+            - ARVN
+            - VC
+            - NVA
+          flavorText: Hamlet defense.
         unshaded:
-          text: "US Training places or relocates an added Police into any 1 space with US Troops."
+          text: US Training places or relocates an added Police into any 1 space with US Troops.
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_caps, markerState: unshaded }
+              args:
+                markerId: cap_caps
+                markerState: unshaded
         shaded:
           text: "Passive posture: US may select max 2 spaces per Sweep."
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_caps, markerState: shaded }
+              args:
+                markerId: cap_caps
+                markerState: shaded
       - id: card-19
         title: CORDS
         sideMode: dual
         order: 19
-        tags: [capability, US]
+        tags:
+          - capability
+          - US
         metadata:
           period: "1968"
-          seatOrder: ["US", "ARVN", "VC", "NVA"]
-          flavorText: "Civil-military integration accelerates local governance."
+          seatOrder:
+            - US
+            - ARVN
+            - VC
+            - NVA
+          flavorText: Civil-military integration accelerates local governance.
         unshaded:
-          text: "US Training may Pacify in 2 selected spaces. US CAPABILITY."
+          text: US Training may Pacify in 2 selected spaces. US CAPABILITY.
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_cords, markerState: unshaded }
+              args:
+                markerId: cap_cords
+                markerState: unshaded
         shaded:
-          text: "US Training may Pacify only to Passive Support."
+          text: US Training may Pacify only to Passive Support.
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_cords, markerState: shaded }
+              args:
+                markerId: cap_cords
+                markerState: shaded
       - id: card-20
         title: Laser Guided Bombs
         sideMode: dual
         order: 20
-        tags: [capability, US]
+        tags:
+          - capability
+          - US
         metadata:
           period: "1968"
-          seatOrder: ["US", "ARVN", "VC", "NVA"]
-          flavorText: "Precision strike doctrine changes target priorities."
+          seatOrder:
+            - US
+            - ARVN
+            - VC
+            - NVA
+          flavorText: Precision strike doctrine changes target priorities.
         unshaded:
-          text: "Air Strike does not shift Support/Opposition in spaces where only 1 piece removed. US CAPABILITY."
+          text: Air Strike does not shift Support/Opposition in spaces where only 1 piece removed. US CAPABILITY.
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_lgbs, markerState: unshaded }
+              args:
+                markerId: cap_lgbs
+                markerState: unshaded
         shaded:
-          text: "Air Strike removes no more than 2 pieces."
+          text: Air Strike removes no more than 2 pieces.
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_lgbs, markerState: shaded }
+              args:
+                markerId: cap_lgbs
+                markerState: shaded
       - id: card-21
         title: Americal
         sideMode: dual
@@ -1663,10 +2483,14 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["US", "VC", "NVA", "ARVN"]
-          flavorText: "Rapid redeployment reshapes local balance."
+          seatOrder:
+            - US
+            - VC
+            - NVA
+            - ARVN
+          flavorText: Rapid redeployment reshapes local balance.
         unshaded:
-          text: "US moves up to 2 US Troops each from the map and out of play to any 1 space or Available."
+          text: US moves up to 2 US Troops each from the map and out of play to any 1 space or Available.
           effects:
             - chooseN:
                 bind: $usMapTroops
@@ -1675,8 +2499,10 @@ eventDecks:
                   filter:
                     op: and
                     args:
-                      - { prop: faction, eq: US }
-                      - { prop: type, eq: troops }
+                      - prop: faction
+                        eq: US
+                      - prop: type
+                        eq: troops
                 min: 0
                 max: 2
             - chooseN:
@@ -1687,17 +2513,26 @@ eventDecks:
                   filter:
                     op: and
                     args:
-                      - { prop: faction, eq: US }
-                      - { prop: type, eq: troops }
+                      - prop: faction
+                        eq: US
+                      - prop: type
+                        eq: troops
                 min: 0
                 max: 2
             - chooseOne:
                 bind: $americalDestinationType
                 options:
                   query: enums
-                  values: ['available-US:none', 'map-space']
+                  values:
+                    - available-US:none
+                    - map-space
             - if:
-                when: { op: '==', left: { ref: binding, name: $americalDestinationType }, right: 'map-space' }
+                when:
+                  op: ==
+                  left:
+                    ref: binding
+                    name: $americalDestinationType
+                  right: map-space
                 then:
                   - chooseOne:
                       bind: $americalDestinationSpace
@@ -1705,39 +2540,67 @@ eventDecks:
                         query: mapSpaces
                   - forEach:
                       bind: $usMapTroop
-                      over: { query: binding, name: $usMapTroops }
+                      over:
+                        query: binding
+                        name: $usMapTroops
                       effects:
                         - moveToken:
                             token: $usMapTroop
-                            from: { zoneExpr: { ref: tokenZone, token: $usMapTroop } }
-                            to: { zoneExpr: { ref: binding, name: $americalDestinationSpace } }
+                            from:
+                              zoneExpr:
+                                ref: tokenZone
+                                token: $usMapTroop
+                            to:
+                              zoneExpr:
+                                ref: binding
+                                name: $americalDestinationSpace
                   - forEach:
                       bind: $usOutOfPlayTroop
-                      over: { query: binding, name: $usOutOfPlayTroops }
+                      over:
+                        query: binding
+                        name: $usOutOfPlayTroops
                       effects:
                         - moveToken:
                             token: $usOutOfPlayTroop
-                            from: { zoneExpr: { ref: tokenZone, token: $usOutOfPlayTroop } }
-                            to: { zoneExpr: { ref: binding, name: $americalDestinationSpace } }
+                            from:
+                              zoneExpr:
+                                ref: tokenZone
+                                token: $usOutOfPlayTroop
+                            to:
+                              zoneExpr:
+                                ref: binding
+                                name: $americalDestinationSpace
                 else:
                   - forEach:
                       bind: $usMapTroop
-                      over: { query: binding, name: $usMapTroops }
+                      over:
+                        query: binding
+                        name: $usMapTroops
                       effects:
                         - moveToken:
                             token: $usMapTroop
-                            from: { zoneExpr: { ref: tokenZone, token: $usMapTroop } }
-                            to: { zoneExpr: available-US:none }
+                            from:
+                              zoneExpr:
+                                ref: tokenZone
+                                token: $usMapTroop
+                            to:
+                              zoneExpr: available-US:none
                   - forEach:
                       bind: $usOutOfPlayTroop
-                      over: { query: binding, name: $usOutOfPlayTroops }
+                      over:
+                        query: binding
+                        name: $usOutOfPlayTroops
                       effects:
                         - moveToken:
                             token: $usOutOfPlayTroop
-                            from: { zoneExpr: { ref: tokenZone, token: $usOutOfPlayTroop } }
-                            to: { zoneExpr: available-US:none }
+                            from:
+                              zoneExpr:
+                                ref: tokenZone
+                                token: $usOutOfPlayTroop
+                            to:
+                              zoneExpr: available-US:none
         shaded:
-          text: "In 1 or 2 Provinces with US Troops, remove 1 VC piece to set to Active Opposition."
+          text: In 1 or 2 Provinces with US Troops, remove 1 VC piece to set to Active Opposition.
           effects:
             - chooseN:
                 bind: $targetProvince
@@ -1746,8 +2609,13 @@ eventDecks:
                   filter:
                     op: and
                     args:
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                      - op: '>'
+                      - op: ==
+                        left:
+                          ref: zoneProp
+                          zone: $zone
+                          prop: category
+                        right: province
+                      - op: ">"
                         left:
                           aggregate:
                             op: count
@@ -1757,10 +2625,12 @@ eventDecks:
                               filter:
                                 op: and
                                 args:
-                                  - { prop: faction, eq: US }
-                                  - { prop: type, eq: troops }
+                                  - prop: faction
+                                    eq: US
+                                  - prop: type
+                                    eq: troops
                         right: 0
-                      - op: '>'
+                      - op: ">"
                         left:
                           aggregate:
                             op: count
@@ -1772,20 +2642,25 @@ eventDecks:
                                   filter:
                                     op: and
                                     args:
-                                      - { prop: faction, eq: VC }
-                                      - { prop: type, eq: guerrilla }
+                                      - prop: faction
+                                        eq: VC
+                                      - prop: type
+                                        eq: guerrilla
                                 - query: tokensInZone
                                   zone: $zone
                                   filter:
                                     op: and
                                     args:
-                                      - { prop: faction, eq: VC }
-                                      - { prop: type, eq: base }
-                                      - { prop: tunnel, eq: untunneled }
+                                      - prop: faction
+                                        eq: VC
+                                      - prop: type
+                                        eq: base
+                                      - prop: tunnel
+                                        eq: untunneled
                         right: 0
                       - op: or
                         args:
-                          - op: '=='
+                          - op: ==
                             left:
                               aggregate:
                                 op: count
@@ -1794,8 +2669,13 @@ eventDecks:
                                   filter:
                                     op: and
                                     args:
-                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                                      - op: '>'
+                                      - op: ==
+                                        left:
+                                          ref: zoneProp
+                                          zone: $zone
+                                          prop: category
+                                        right: province
+                                      - op: ">"
                                         left:
                                           aggregate:
                                             op: count
@@ -1805,10 +2685,12 @@ eventDecks:
                                               filter:
                                                 op: and
                                                 args:
-                                                  - { prop: faction, eq: US }
-                                                  - { prop: type, eq: troops }
+                                                  - prop: faction
+                                                    eq: US
+                                                  - prop: type
+                                                    eq: troops
                                         right: 0
-                                      - op: '>'
+                                      - op: ">"
                                         left:
                                           aggregate:
                                             op: count
@@ -1820,23 +2702,34 @@ eventDecks:
                                                   filter:
                                                     op: and
                                                     args:
-                                                      - { prop: faction, eq: VC }
-                                                      - { prop: type, eq: guerrilla }
+                                                      - prop: faction
+                                                        eq: VC
+                                                      - prop: type
+                                                        eq: guerrilla
                                                 - query: tokensInZone
                                                   zone: $zone
                                                   filter:
                                                     op: and
                                                     args:
-                                                      - { prop: faction, eq: VC }
-                                                      - { prop: type, eq: base }
-                                                      - { prop: tunnel, eq: untunneled }
+                                                      - prop: faction
+                                                        eq: VC
+                                                      - prop: type
+                                                        eq: base
+                                                      - prop: tunnel
+                                                        eq: untunneled
                                         right: 0
-                                      - op: '!='
-                                        left: { ref: markerState, space: $zone, marker: supportOpposition }
+                                      - op: "!="
+                                        left:
+                                          ref: markerState
+                                          space: $zone
+                                          marker: supportOpposition
                                         right: activeOpposition
                             right: 0
-                          - op: '!='
-                            left: { ref: markerState, space: $zone, marker: supportOpposition }
+                          - op: "!="
+                            left:
+                              ref: markerState
+                              space: $zone
+                              marker: supportOpposition
                             right: activeOpposition
                 min:
                   op: min
@@ -1849,8 +2742,13 @@ eventDecks:
                         filter:
                           op: and
                           args:
-                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                            - op: '>'
+                            - op: ==
+                              left:
+                                ref: zoneProp
+                                zone: $zone
+                                prop: category
+                              right: province
+                            - op: ">"
                               left:
                                 aggregate:
                                   op: count
@@ -1860,10 +2758,12 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: faction, eq: US }
-                                        - { prop: type, eq: troops }
+                                        - prop: faction
+                                          eq: US
+                                        - prop: type
+                                          eq: troops
                               right: 0
-                            - op: '>'
+                            - op: ">"
                               left:
                                 aggregate:
                                   op: count
@@ -1875,16 +2775,21 @@ eventDecks:
                                         filter:
                                           op: and
                                           args:
-                                            - { prop: faction, eq: VC }
-                                            - { prop: type, eq: guerrilla }
+                                            - prop: faction
+                                              eq: VC
+                                            - prop: type
+                                              eq: guerrilla
                                       - query: tokensInZone
                                         zone: $zone
                                         filter:
                                           op: and
                                           args:
-                                            - { prop: faction, eq: VC }
-                                            - { prop: type, eq: base }
-                                            - { prop: tunnel, eq: untunneled }
+                                            - prop: faction
+                                              eq: VC
+                                            - prop: type
+                                              eq: base
+                                            - prop: tunnel
+                                              eq: untunneled
                               right: 0
                 max:
                   op: min
@@ -1897,8 +2802,13 @@ eventDecks:
                         filter:
                           op: and
                           args:
-                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                            - op: '>'
+                            - op: ==
+                              left:
+                                ref: zoneProp
+                                zone: $zone
+                                prop: category
+                              right: province
+                            - op: ">"
                               left:
                                 aggregate:
                                   op: count
@@ -1908,10 +2818,12 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: faction, eq: US }
-                                        - { prop: type, eq: troops }
+                                        - prop: faction
+                                          eq: US
+                                        - prop: type
+                                          eq: troops
                               right: 0
-                            - op: '>'
+                            - op: ">"
                               left:
                                 aggregate:
                                   op: count
@@ -1923,23 +2835,30 @@ eventDecks:
                                         filter:
                                           op: and
                                           args:
-                                            - { prop: faction, eq: VC }
-                                            - { prop: type, eq: guerrilla }
+                                            - prop: faction
+                                              eq: VC
+                                            - prop: type
+                                              eq: guerrilla
                                       - query: tokensInZone
                                         zone: $zone
                                         filter:
                                           op: and
                                           args:
-                                            - { prop: faction, eq: VC }
-                                            - { prop: type, eq: base }
-                                            - { prop: tunnel, eq: untunneled }
+                                            - prop: faction
+                                              eq: VC
+                                            - prop: type
+                                              eq: base
+                                            - prop: tunnel
+                                              eq: untunneled
                               right: 0
             - forEach:
                 bind: $province
-                over: { query: binding, name: $targetProvince }
+                over:
+                  query: binding
+                  name: $targetProvince
                 effects:
                   - chooseN:
-                      bind: '$vcPieceToRemove@{$province}'
+                      bind: $vcPieceToRemove@{$province}
                       options:
                         query: concat
                         sources:
@@ -1948,26 +2867,37 @@ eventDecks:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: VC }
-                                - { prop: type, eq: guerrilla }
+                                - prop: faction
+                                  eq: VC
+                                - prop: type
+                                  eq: guerrilla
                           - query: tokensInZone
                             zone: $province
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: VC }
-                                - { prop: type, eq: base }
-                                - { prop: tunnel, eq: untunneled }
+                                - prop: faction
+                                  eq: VC
+                                - prop: type
+                                  eq: base
+                                - prop: tunnel
+                                  eq: untunneled
                       min: 1
                       max: 1
                   - forEach:
                       bind: $vcPiece
-                      over: { query: binding, name: '$vcPieceToRemove@{$province}' }
+                      over:
+                        query: binding
+                        name: $vcPieceToRemove@{$province}
                       effects:
                         - moveToken:
                             token: $vcPiece
-                            from: { zoneExpr: { ref: tokenZone, token: $vcPiece } }
-                            to: { zoneExpr: available-VC:none }
+                            from:
+                              zoneExpr:
+                                ref: tokenZone
+                                token: $vcPiece
+                            to:
+                              zoneExpr: available-VC:none
                   - setMarker:
                       space: $province
                       marker: supportOpposition
@@ -1976,13 +2906,18 @@ eventDecks:
         title: Da Nang
         sideMode: dual
         order: 22
-        tags: [momentum]
+        tags:
+          - momentum
         metadata:
           period: "1965"
-          seatOrder: ["US", "VC", "NVA", "ARVN"]
-          flavorText: "US Marines arrive."
+          seatOrder:
+            - US
+            - VC
+            - NVA
+            - ARVN
+          flavorText: US Marines arrive.
         unshaded:
-          text: "US places up to 6 Troops in Da Nang, up to 3 from out of play."
+          text: US places up to 6 Troops in Da Nang, up to 3 from out of play.
           effects:
             - removeByPriority:
                 budget: 3
@@ -1994,8 +2929,10 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: troops }
+                          - prop: faction
+                            eq: US
+                          - prop: type
+                            eq: troops
                     to:
                       zoneExpr: da-nang:none
             - removeByPriority:
@@ -2008,15 +2945,18 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: troops }
+                          - prop: faction
+                            eq: US
+                          - prop: type
+                            eq: troops
                     to:
                       zoneExpr: da-nang:none
         shaded:
           text: "VC fire closes air base: Remove all Support within 1 space of Da Nang. No Air Strike until Coup. MOMENTUM"
           effects:
             - macro: remove-support-from-space
-              args: { space: da-nang:none }
+              args:
+                space: da-nang:none
             - forEach:
                 bind: $adjacentToDaNang
                 over:
@@ -2024,16 +2964,19 @@ eventDecks:
                   zone: da-nang:none
                 effects:
                   - macro: remove-support-from-space
-                    args: { space: $adjacentToDaNang }
+                    args:
+                      space: $adjacentToDaNang
           lastingEffects:
             - id: mom-da-nang
               duration: round
               setupEffects:
                 - macro: set-global-flag-true
-                  args: { varName: mom_daNang }
+                  args:
+                    varName: mom_daNang
               teardownEffects:
                 - macro: set-global-flag-false
-                  args: { varName: mom_daNang }
+                  args:
+                    varName: mom_daNang
       - id: card-23
         title: Operation Attleboro
         sideMode: dual
@@ -2041,18 +2984,25 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["US", "VC", "NVA", "ARVN"]
-          flavorText: "Stab at Iron Triangle."
+          seatOrder:
+            - US
+            - VC
+            - NVA
+            - ARVN
+          flavorText: Stab at Iron Triangle.
         unshaded:
-          text: "US free Air Lifts into, Sweeps in, then Assaults a space with a Tunnel, removing Tunneled Bases as if no Tunnel."
+          text: US free Air Lifts into, Sweeps in, then Assaults a space with a Tunnel, removing Tunneled Bases as if no Tunnel.
           effectTiming: afterGrants
           freeOperationGrants:
-            - seat: "us"
-              sequence: { chain: operation-attleboro-us, step: 0 }
+            - seat: us
+              sequence:
+                chain: operation-attleboro-us
+                step: 0
               operationClass: operation
-              actionIds: [airLift]
+              actionIds:
+                - airLift
               zoneFilter:
-                op: '>'
+                op: ">"
                 left:
                   aggregate:
                     op: count
@@ -2062,16 +3012,25 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: type, eq: base }
-                          - { prop: faction, op: in, value: [NVA, VC] }
-                          - { prop: tunnel, eq: tunneled }
+                          - prop: type
+                            eq: base
+                          - prop: faction
+                            op: in
+                            value:
+                              - NVA
+                              - VC
+                          - prop: tunnel
+                            eq: tunneled
                 right: 0
-            - seat: "us"
-              sequence: { chain: operation-attleboro-us, step: 1 }
+            - seat: us
+              sequence:
+                chain: operation-attleboro-us
+                step: 1
               operationClass: operation
-              actionIds: [sweep]
+              actionIds:
+                - sweep
               zoneFilter:
-                op: '>'
+                op: ">"
                 left:
                   aggregate:
                     op: count
@@ -2081,16 +3040,25 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: type, eq: base }
-                          - { prop: faction, op: in, value: [NVA, VC] }
-                          - { prop: tunnel, eq: tunneled }
+                          - prop: type
+                            eq: base
+                          - prop: faction
+                            op: in
+                            value:
+                              - NVA
+                              - VC
+                          - prop: tunnel
+                            eq: tunneled
                 right: 0
-            - seat: "us"
-              sequence: { chain: operation-attleboro-us, step: 2 }
+            - seat: us
+              sequence:
+                chain: operation-attleboro-us
+                step: 2
               operationClass: operation
-              actionIds: [assault]
+              actionIds:
+                - assault
               zoneFilter:
-                op: '>'
+                op: ">"
                 left:
                   aggregate:
                     op: count
@@ -2100,19 +3068,34 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: type, eq: base }
-                          - { prop: faction, op: in, value: [NVA, VC] }
-                          - { prop: tunnel, eq: tunneled }
+                          - prop: type
+                            eq: base
+                          - prop: faction
+                            op: in
+                            value:
+                              - NVA
+                              - VC
+                          - prop: tunnel
+                            eq: tunneled
                 right: 0
           lastingEffects:
             - id: evt-operation-attleboro-tunnel-window
               duration: turn
               setupEffects:
-                - setVar: { scope: global, var: fitl_operationAttleboroTunnelOverride, value: true }
+                - setVar:
+                    scope: global
+                    var: fitl_operationAttleboroTunnelOverride
+                    value: true
               teardownEffects:
-                - setVar: { scope: global, var: fitl_operationAttleboroTunnelOverride, value: false }
+                - setVar:
+                    scope: global
+                    var: fitl_operationAttleboroTunnelOverride
+                    value: false
           effects:
-            - setVar: { scope: global, var: fitl_operationAttleboroTunnelOverride, value: false }
+            - setVar:
+                scope: global
+                var: fitl_operationAttleboroTunnelOverride
+                value: false
         shaded:
           text: "Heavy casualties, few results: Select a Tunnel space: remove a die roll of US Troops within 1 space of it to Casualties."
           targets:
@@ -2120,7 +3103,7 @@ eventDecks:
               selector:
                 query: mapSpaces
                 filter:
-                  op: '>'
+                  op: ">"
                   left:
                     aggregate:
                       op: count
@@ -2130,59 +3113,79 @@ eventDecks:
                         filter:
                           op: and
                           args:
-                            - { prop: type, eq: base }
-                            - { prop: faction, op: in, value: [NVA, VC] }
-                            - { prop: tunnel, eq: tunneled }
+                            - prop: type
+                              eq: base
+                            - prop: faction
+                              op: in
+                              value:
+                                - NVA
+                                - VC
+                            - prop: tunnel
+                              eq: tunneled
                   right: 0
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - rollRandom:
-                bind: $attleboroLossRoll
-                min: 1
-                max: 6
-                in:
-                  - removeByPriority:
-                      budget: { ref: binding, name: $attleboroLossRoll }
-                      remainingBind: $remainingLosses
-                      groups:
-                        - bind: $usTroopInTarget
-                          over:
-                            query: tokensInZone
-                            zone: $targetSpace
-                            filter:
-                              op: and
-                              args:
-                                - { prop: faction, eq: US }
-                                - { prop: type, eq: troops }
-                          to:
-                            zoneExpr: casualties-US:none
-                      in:
-                        - forEach:
-                            bind: $adjacentSpace
-                            over:
-                              query: adjacentZones
-                              zone: $targetSpace
-                            effects:
-                              - if:
-                                  when: { op: '>', left: { ref: binding, name: $remainingLosses }, right: 0 }
-                                  then:
-                                    - removeByPriority:
-                                        budget: { ref: binding, name: $remainingLosses }
-                                        remainingBind: $remainingLosses
-                                        groups:
-                                          - bind: $usTroopAdjacent
-                                            over:
-                                              query: tokensInZone
-                                              zone: $adjacentSpace
-                                              filter:
-                                                op: and
-                                                args:
-                                                  - { prop: faction, eq: US }
-                                                  - { prop: type, eq: troops }
-                                            to:
-                                              zoneExpr: casualties-US:none
-                                  else: []
+              effects:
+                - rollRandom:
+                    bind: $attleboroLossRoll
+                    min: 1
+                    max: 6
+                    in:
+                      - removeByPriority:
+                          budget:
+                            ref: binding
+                            name: $attleboroLossRoll
+                          remainingBind: $remainingLosses
+                          groups:
+                            - bind: $usTroopInTarget
+                              over:
+                                query: tokensInZone
+                                zone: $targetSpace
+                                filter:
+                                  op: and
+                                  args:
+                                    - prop: faction
+                                      eq: US
+                                    - prop: type
+                                      eq: troops
+                              to:
+                                zoneExpr: casualties-US:none
+                          in:
+                            - forEach:
+                                bind: $adjacentSpace
+                                over:
+                                  query: adjacentZones
+                                  zone: $targetSpace
+                                effects:
+                                  - if:
+                                      when:
+                                        op: ">"
+                                        left:
+                                          ref: binding
+                                          name: $remainingLosses
+                                        right: 0
+                                      then:
+                                        - removeByPriority:
+                                            budget:
+                                              ref: binding
+                                              name: $remainingLosses
+                                            remainingBind: $remainingLosses
+                                            groups:
+                                              - bind: $usTroopAdjacent
+                                                over:
+                                                  query: tokensInZone
+                                                  zone: $adjacentSpace
+                                                  filter:
+                                                    op: and
+                                                    args:
+                                                      - prop: faction
+                                                        eq: US
+                                                      - prop: type
+                                                        eq: troops
+                                                to:
+                                                  zoneExpr: casualties-US:none
+                                      else: []
       - id: card-24
         title: Operation Starlite
         sideMode: dual
@@ -2190,10 +3193,14 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["US", "VC", "NVA", "ARVN"]
-          flavorText: "VC caught off guard."
+          seatOrder:
+            - US
+            - VC
+            - NVA
+            - ARVN
+          flavorText: VC caught off guard.
         unshaded:
-          text: "Remove all VC from a coastal Province with or adjacent to US Troops."
+          text: Remove all VC from a coastal Province with or adjacent to US Troops.
           targets:
             - id: $targetProvince
               selector:
@@ -2201,9 +3208,19 @@ eventDecks:
                 filter:
                   op: and
                   args:
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: coastal }, right: true }
-                    - op: '>'
+                    - op: ==
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: category
+                      right: province
+                    - op: ==
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: coastal
+                      right: true
+                    - op: ">"
                       left:
                         aggregate:
                           op: count
@@ -2213,11 +3230,12 @@ eventDecks:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: VC }
+                                - prop: faction
+                                  eq: VC
                       right: 0
                     - op: or
                       args:
-                        - op: '>'
+                        - op: ">"
                           left:
                             aggregate:
                               op: count
@@ -2227,10 +3245,12 @@ eventDecks:
                                 filter:
                                   op: and
                                   args:
-                                    - { prop: faction, eq: US }
-                                    - { prop: type, eq: troops }
+                                    - prop: faction
+                                      eq: US
+                                    - prop: type
+                                      eq: troops
                           right: 0
-                        - op: '>'
+                        - op: ">"
                           left:
                             aggregate:
                               op: count
@@ -2240,25 +3260,29 @@ eventDecks:
                                 filter:
                                   op: and
                                   args:
-                                    - { prop: faction, eq: US }
-                                    - { prop: type, eq: troops }
+                                    - prop: faction
+                                      eq: US
+                                    - prop: type
+                                      eq: troops
                           right: 0
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - removeByPriority:
-                budget: 99
-                groups:
-                  - bind: $vcPiece
-                    over:
-                      query: tokensInZone
-                      zone: $targetProvince
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: VC }
-                    to:
-                      zoneExpr: available-VC:none
+              effects:
+                - removeByPriority:
+                    budget: 99
+                    groups:
+                      - bind: $vcPiece
+                        over:
+                          query: tokensInZone
+                          zone: $targetProvince
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: VC
+                        to:
+                          zoneExpr: available-VC:none
         shaded:
           text: "Slipped away: In up to 3 Provinces, flip all VC Guerrillas Underground. Stay Eligible."
           targets:
@@ -2268,8 +3292,13 @@ eventDecks:
                 filter:
                   op: and
                   args:
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                    - op: '>'
+                    - op: ==
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: category
+                      right: province
+                    - op: ">"
                       left:
                         aggregate:
                           op: count
@@ -2279,32 +3308,47 @@ eventDecks:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: VC }
-                                - { prop: type, eq: guerrilla }
-                                - { prop: activity, eq: active }
+                                - prop: faction
+                                  eq: VC
+                                - prop: type
+                                  eq: guerrilla
+                                - prop: activity
+                                  eq: active
                       right: 0
-              cardinality: { max: 3 }
+              cardinality:
+                max: 3
               application: aggregate
+              effects:
+                - forEach:
+                    bind: $province
+                    over:
+                      query: binding
+                      name: $targetProvince
+                    effects:
+                      - forEach:
+                          bind: $vcGuerrilla
+                          over:
+                            query: tokensInZone
+                            zone: $province
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  eq: VC
+                                - prop: type
+                                  eq: guerrilla
+                                - prop: activity
+                                  eq: active
+                          effects:
+                            - setTokenProp:
+                                token: $vcGuerrilla
+                                prop: activity
+                                value: underground
           eligibilityOverrides:
-            - { target: { kind: active }, eligible: true, windowId: remain-eligible }
-          effects:
-            - forEach:
-                bind: $province
-                over: { query: binding, name: $targetProvince }
-                effects:
-                  - forEach:
-                      bind: $vcGuerrilla
-                      over:
-                        query: tokensInZone
-                        zone: $province
-                        filter:
-                          op: and
-                          args:
-                            - { prop: faction, eq: VC }
-                            - { prop: type, eq: guerrilla }
-                            - { prop: activity, eq: active }
-                      effects:
-                        - setTokenProp: { token: $vcGuerrilla, prop: activity, value: underground }
+            - target:
+                kind: active
+              eligible: true
+              windowId: remain-eligible
       - id: card-25
         title: TF-116 Riverines
         sideMode: dual
@@ -2312,25 +3356,35 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["US", "VC", "NVA", "ARVN"]
-          flavorText: "Delta boats."
+          seatOrder:
+            - US
+            - VC
+            - NVA
+            - ARVN
+          flavorText: Delta boats.
         unshaded:
-          text: "Remove all NVA/VC from Mekong LoCs. US or ARVN free Sweep into/in then free Assault each Lowland touching Mekong."
+          text: Remove all NVA/VC from Mekong LoCs. US or ARVN free Sweep into/in then free Assault each Lowland touching Mekong.
           branches:
             - id: tf116-execute-as-us
               order: 1
               freeOperationGrants:
                 - seat: self
-                  executeAsSeat: "us"
-                  sequence: { chain: tf116-us, step: 0 }
+                  executeAsSeat: us
+                  sequence:
+                    chain: tf116-us
+                    step: 0
                   operationClass: operation
-                  actionIds: [sweep]
+                  actionIds:
+                    - sweep
                   allowDuringMonsoon: true
                   zoneFilter:
                     op: and
                     args:
-                      - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: lowland }
-                      - op: '>'
+                      - op: zonePropIncludes
+                        zone: $zone
+                        prop: terrainTags
+                        value: lowland
+                      - op: ">"
                         left:
                           aggregate:
                             op: count
@@ -2340,20 +3394,41 @@ eventDecks:
                               filter:
                                 op: or
                                 args:
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-chau-doc:none }
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-bac-lieu:none }
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-long-phu:none }
+                                  - op: ==
+                                    left:
+                                      ref: zoneProp
+                                      zone: $zone
+                                      prop: id
+                                    right: loc-can-tho-chau-doc:none
+                                  - op: ==
+                                    left:
+                                      ref: zoneProp
+                                      zone: $zone
+                                      prop: id
+                                    right: loc-can-tho-bac-lieu:none
+                                  - op: ==
+                                    left:
+                                      ref: zoneProp
+                                      zone: $zone
+                                      prop: id
+                                    right: loc-can-tho-long-phu:none
                         right: 0
                 - seat: self
-                  executeAsSeat: "us"
-                  sequence: { chain: tf116-us, step: 1 }
+                  executeAsSeat: us
+                  sequence:
+                    chain: tf116-us
+                    step: 1
                   operationClass: operation
-                  actionIds: [assault]
+                  actionIds:
+                    - assault
                   zoneFilter:
                     op: and
                     args:
-                      - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: lowland }
-                      - op: '>'
+                      - op: zonePropIncludes
+                        zone: $zone
+                        prop: terrainTags
+                        value: lowland
+                      - op: ">"
                         left:
                           aggregate:
                             op: count
@@ -2363,24 +3438,45 @@ eventDecks:
                               filter:
                                 op: or
                                 args:
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-chau-doc:none }
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-bac-lieu:none }
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-long-phu:none }
+                                  - op: ==
+                                    left:
+                                      ref: zoneProp
+                                      zone: $zone
+                                      prop: id
+                                    right: loc-can-tho-chau-doc:none
+                                  - op: ==
+                                    left:
+                                      ref: zoneProp
+                                      zone: $zone
+                                      prop: id
+                                    right: loc-can-tho-bac-lieu:none
+                                  - op: ==
+                                    left:
+                                      ref: zoneProp
+                                      zone: $zone
+                                      prop: id
+                                    right: loc-can-tho-long-phu:none
                         right: 0
             - id: tf116-execute-as-arvn
               order: 2
               freeOperationGrants:
                 - seat: self
-                  executeAsSeat: "arvn"
-                  sequence: { chain: tf116-arvn, step: 0 }
+                  executeAsSeat: arvn
+                  sequence:
+                    chain: tf116-arvn
+                    step: 0
                   operationClass: operation
-                  actionIds: [sweep]
+                  actionIds:
+                    - sweep
                   allowDuringMonsoon: true
                   zoneFilter:
                     op: and
                     args:
-                      - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: lowland }
-                      - op: '>'
+                      - op: zonePropIncludes
+                        zone: $zone
+                        prop: terrainTags
+                        value: lowland
+                      - op: ">"
                         left:
                           aggregate:
                             op: count
@@ -2390,20 +3486,41 @@ eventDecks:
                               filter:
                                 op: or
                                 args:
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-chau-doc:none }
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-bac-lieu:none }
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-long-phu:none }
+                                  - op: ==
+                                    left:
+                                      ref: zoneProp
+                                      zone: $zone
+                                      prop: id
+                                    right: loc-can-tho-chau-doc:none
+                                  - op: ==
+                                    left:
+                                      ref: zoneProp
+                                      zone: $zone
+                                      prop: id
+                                    right: loc-can-tho-bac-lieu:none
+                                  - op: ==
+                                    left:
+                                      ref: zoneProp
+                                      zone: $zone
+                                      prop: id
+                                    right: loc-can-tho-long-phu:none
                         right: 0
                 - seat: self
-                  executeAsSeat: "arvn"
-                  sequence: { chain: tf116-arvn, step: 1 }
+                  executeAsSeat: arvn
+                  sequence:
+                    chain: tf116-arvn
+                    step: 1
                   operationClass: operation
-                  actionIds: [assault]
+                  actionIds:
+                    - assault
                   zoneFilter:
                     op: and
                     args:
-                      - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: lowland }
-                      - op: '>'
+                      - op: zonePropIncludes
+                        zone: $zone
+                        prop: terrainTags
+                        value: lowland
+                      - op: ">"
                         left:
                           aggregate:
                             op: count
@@ -2413,9 +3530,24 @@ eventDecks:
                               filter:
                                 op: or
                                 args:
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-chau-doc:none }
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-bac-lieu:none }
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-long-phu:none }
+                                  - op: ==
+                                    left:
+                                      ref: zoneProp
+                                      zone: $zone
+                                      prop: id
+                                    right: loc-can-tho-chau-doc:none
+                                  - op: ==
+                                    left:
+                                      ref: zoneProp
+                                      zone: $zone
+                                      prop: id
+                                    right: loc-can-tho-bac-lieu:none
+                                  - op: ==
+                                    left:
+                                      ref: zoneProp
+                                      zone: $zone
+                                      prop: id
+                                    right: loc-can-tho-long-phu:none
                         right: 0
           effects:
             - forEach:
@@ -2425,9 +3557,24 @@ eventDecks:
                   filter:
                     op: or
                     args:
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-chau-doc:none }
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-bac-lieu:none }
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-long-phu:none }
+                      - op: ==
+                        left:
+                          ref: zoneProp
+                          zone: $zone
+                          prop: id
+                        right: loc-can-tho-chau-doc:none
+                      - op: ==
+                        left:
+                          ref: zoneProp
+                          zone: $zone
+                          prop: id
+                        right: loc-can-tho-bac-lieu:none
+                      - op: ==
+                        left:
+                          ref: zoneProp
+                          zone: $zone
+                          prop: id
+                        right: loc-can-tho-long-phu:none
                 effects:
                   - removeByPriority:
                       budget: 99
@@ -2439,9 +3586,19 @@ eventDecks:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                - prop: faction
+                                  op: in
+                                  value:
+                                    - NVA
+                                    - VC
                           to:
-                            zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentPiece, prop: faction }, ':none'] }
+                            zoneExpr:
+                              concat:
+                                - available-
+                                - ref: tokenProp
+                                  token: $insurgentPiece
+                                  prop: faction
+                                - :none
         shaded:
           text: "VC river fortifications: Place 2 VC Guerrillas per Mekong LoC space, then Sabotage each that has more VC than COIN."
           effects:
@@ -2452,9 +3609,24 @@ eventDecks:
                   filter:
                     op: or
                     args:
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-chau-doc:none }
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-bac-lieu:none }
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-long-phu:none }
+                      - op: ==
+                        left:
+                          ref: zoneProp
+                          zone: $zone
+                          prop: id
+                        right: loc-can-tho-chau-doc:none
+                      - op: ==
+                        left:
+                          ref: zoneProp
+                          zone: $zone
+                          prop: id
+                        right: loc-can-tho-bac-lieu:none
+                      - op: ==
+                        left:
+                          ref: zoneProp
+                          zone: $zone
+                          prop: id
+                        right: loc-can-tho-long-phu:none
                 effects:
                   - removeByPriority:
                       budget: 2
@@ -2466,8 +3638,10 @@ eventDecks:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: VC }
-                                - { prop: type, eq: guerrilla }
+                                - prop: faction
+                                  eq: VC
+                                - prop: type
+                                  eq: guerrilla
                           to:
                             zoneExpr: $mekongLoc
             - forEach:
@@ -2477,13 +3651,28 @@ eventDecks:
                   filter:
                     op: or
                     args:
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-chau-doc:none }
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-bac-lieu:none }
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-long-phu:none }
+                      - op: ==
+                        left:
+                          ref: zoneProp
+                          zone: $zone
+                          prop: id
+                        right: loc-can-tho-chau-doc:none
+                      - op: ==
+                        left:
+                          ref: zoneProp
+                          zone: $zone
+                          prop: id
+                        right: loc-can-tho-bac-lieu:none
+                      - op: ==
+                        left:
+                          ref: zoneProp
+                          zone: $zone
+                          prop: id
+                        right: loc-can-tho-long-phu:none
                 effects:
                   - if:
                       when:
-                        op: '>'
+                        op: ">"
                         left:
                           aggregate:
                             op: count
@@ -2493,7 +3682,8 @@ eventDecks:
                               filter:
                                 op: and
                                 args:
-                                  - { prop: faction, eq: VC }
+                                  - prop: faction
+                                    eq: VC
                         right:
                           aggregate:
                             op: count
@@ -2503,36 +3693,65 @@ eventDecks:
                               filter:
                                 op: and
                                 args:
-                                  - { prop: faction, op: in, value: [US, ARVN] }
+                                  - prop: faction
+                                    op: in
+                                    value:
+                                      - US
+                                      - ARVN
                       then:
                         - if:
                             when:
                               op: and
                               args:
-                                - { op: '!=', left: { ref: markerState, space: $mekongLoc, marker: sabotage }, right: sabotage }
-                                - { op: '<', left: { ref: gvar, var: terrorSabotageMarkersPlaced }, right: 15 }
+                                - op: "!="
+                                  left:
+                                    ref: markerState
+                                    space: $mekongLoc
+                                    marker: sabotage
+                                  right: sabotage
+                                - op: <
+                                  left:
+                                    ref: gvar
+                                    var: terrorSabotageMarkersPlaced
+                                  right: 15
                             then:
-                              - setMarker: { space: $mekongLoc, marker: sabotage, state: sabotage }
-                              - addVar: { scope: global, var: terrorSabotageMarkersPlaced, delta: 1 }
+                              - setMarker:
+                                  space: $mekongLoc
+                                  marker: sabotage
+                                  state: sabotage
+                              - addVar:
+                                  scope: global
+                                  var: terrorSabotageMarkersPlaced
+                                  delta: 1
       - id: card-28
         title: Search and Destroy
         sideMode: dual
         order: 28
-        tags: [capability, US]
+        tags:
+          - capability
+          - US
         metadata:
           period: "1965"
-          seatOrder: ["US", "VC", "ARVN", "NVA"]
-          flavorText: "Mobile counter-guerrilla ops."
+          seatOrder:
+            - US
+            - VC
+            - ARVN
+            - NVA
+          flavorText: Mobile counter-guerrilla ops.
         unshaded:
-          text: "Each US Assault space may remove 1 Underground Guerrilla."
+          text: Each US Assault space may remove 1 Underground Guerrilla.
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_searchAndDestroy, markerState: unshaded }
+              args:
+                markerId: cap_searchAndDestroy
+                markerState: unshaded
         shaded:
           text: "Villagers in the crossfire: Each US and ARVN Assault Province shifts by 1 level toward Active Opposition."
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_searchAndDestroy, markerState: shaded }
+              args:
+                markerId: cap_searchAndDestroy
+                markerState: shaded
       - id: card-27
         title: Phoenix Program
         sideMode: dual
@@ -2540,10 +3759,14 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["US", "VC", "ARVN", "NVA"]
-          flavorText: "Neutralization campaigns expand."
+          seatOrder:
+            - US
+            - VC
+            - ARVN
+            - NVA
+          flavorText: Neutralization campaigns expand.
         unshaded:
-          text: "Remove any 3 VC pieces total from any COIN Control spaces."
+          text: Remove any 3 VC pieces total from any COIN Control spaces.
           effects:
             - chooseN:
                 bind: $vcPiecesToRemove
@@ -2554,9 +3777,19 @@ eventDecks:
                     args:
                       - op: or
                         args:
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
-                      - op: '>'
+                          - op: ==
+                            left:
+                              ref: zoneProp
+                              zone: $zone
+                              prop: category
+                            right: province
+                          - op: ==
+                            left:
+                              ref: zoneProp
+                              zone: $zone
+                              prop: category
+                            right: city
+                      - op: ">"
                         left:
                           aggregate:
                             op: count
@@ -2566,7 +3799,11 @@ eventDecks:
                               filter:
                                 op: and
                                 args:
-                                  - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                  - prop: faction
+                                    op: in
+                                    value:
+                                      - US
+                                      - ARVN
                         right:
                           aggregate:
                             op: count
@@ -2576,30 +3813,44 @@ eventDecks:
                               filter:
                                 op: and
                                 args:
-                                  - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                  - prop: faction
+                                    op: in
+                                    value:
+                                      - NVA
+                                      - VC
                   filter:
                     op: and
                     args:
-                      - { prop: faction, eq: VC }
+                      - prop: faction
+                        eq: VC
                       - op: or
                         args:
-                          - { prop: type, eq: guerrilla }
+                          - prop: type
+                            eq: guerrilla
                           - op: and
                             args:
-                              - { prop: type, eq: base }
-                              - { prop: tunnel, eq: untunneled }
+                              - prop: type
+                                eq: base
+                              - prop: tunnel
+                                eq: untunneled
                 min: 0
                 max: 3
             - forEach:
                 bind: $vcPiece
-                over: { query: binding, name: $vcPiecesToRemove }
+                over:
+                  query: binding
+                  name: $vcPiecesToRemove
                 effects:
                   - moveToken:
                       token: $vcPiece
-                      from: { zoneExpr: { ref: tokenZone, token: $vcPiece } }
-                      to: { zoneExpr: available-VC:none }
+                      from:
+                        zoneExpr:
+                          ref: tokenZone
+                          token: $vcPiece
+                      to:
+                        zoneExpr: available-VC:none
         shaded:
-          text: "Add a Terror marker to any 2 spaces outside Saigon with COIN Control and VC. Set them to Active Opposition."
+          text: Add a Terror marker to any 2 spaces outside Saigon with COIN Control and VC. Set them to Active Opposition.
           effects:
             - chooseN:
                 bind: $targetSpaces
@@ -2610,10 +3861,25 @@ eventDecks:
                     args:
                       - op: or
                         args:
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
-                      - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon }
-                      - op: '>'
+                          - op: ==
+                            left:
+                              ref: zoneProp
+                              zone: $zone
+                              prop: category
+                            right: province
+                          - op: ==
+                            left:
+                              ref: zoneProp
+                              zone: $zone
+                              prop: category
+                            right: city
+                      - op: "!="
+                        left:
+                          ref: zoneProp
+                          zone: $zone
+                          prop: id
+                        right: saigon
+                      - op: ">"
                         left:
                           aggregate:
                             op: count
@@ -2623,7 +3889,11 @@ eventDecks:
                               filter:
                                 op: and
                                 args:
-                                  - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                  - prop: faction
+                                    op: in
+                                    value:
+                                      - US
+                                      - ARVN
                         right:
                           aggregate:
                             op: count
@@ -2633,8 +3903,12 @@ eventDecks:
                               filter:
                                 op: and
                                 args:
-                                  - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                      - op: '>'
+                                  - prop: faction
+                                    op: in
+                                    value:
+                                      - NVA
+                                      - VC
+                      - op: ">"
                         left:
                           aggregate:
                             op: count
@@ -2644,7 +3918,8 @@ eventDecks:
                               filter:
                                 op: and
                                 args:
-                                  - { prop: faction, eq: VC }
+                                  - prop: faction
+                                    eq: VC
                         right: 0
                 min: 0
                 max:
@@ -2660,10 +3935,25 @@ eventDecks:
                           args:
                             - op: or
                               args:
-                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
-                            - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon }
-                            - op: '>'
+                                - op: ==
+                                  left:
+                                    ref: zoneProp
+                                    zone: $zone
+                                    prop: category
+                                  right: province
+                                - op: ==
+                                  left:
+                                    ref: zoneProp
+                                    zone: $zone
+                                    prop: category
+                                  right: city
+                            - op: "!="
+                              left:
+                                ref: zoneProp
+                                zone: $zone
+                                prop: id
+                              right: saigon
+                            - op: ">"
                               left:
                                 aggregate:
                                   op: count
@@ -2673,7 +3963,11 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                        - prop: faction
+                                          op: in
+                                          value:
+                                            - US
+                                            - ARVN
                               right:
                                 aggregate:
                                   op: count
@@ -2683,8 +3977,12 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                            - op: '>'
+                                        - prop: faction
+                                          op: in
+                                          value:
+                                            - NVA
+                                            - VC
+                            - op: ">"
                               left:
                                 aggregate:
                                   op: count
@@ -2694,21 +3992,40 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: faction, eq: VC }
+                                        - prop: faction
+                                          eq: VC
                               right: 0
             - forEach:
                 bind: $targetSpace
-                over: { query: binding, name: $targetSpaces }
+                over:
+                  query: binding
+                  name: $targetSpaces
                 effects:
                   - if:
                       when:
                         op: and
                         args:
-                          - { op: '==', left: { ref: zoneVar, zone: $targetSpace, var: terrorCount }, right: 0 }
-                          - { op: '<', left: { ref: gvar, var: terrorSabotageMarkersPlaced }, right: 15 }
+                          - op: ==
+                            left:
+                              ref: zoneVar
+                              zone: $targetSpace
+                              var: terrorCount
+                            right: 0
+                          - op: <
+                            left:
+                              ref: gvar
+                              var: terrorSabotageMarkersPlaced
+                            right: 15
                       then:
-                        - addVar: { scope: zoneVar, zone: $targetSpace, var: terrorCount, delta: 1 }
-                        - addVar: { scope: global, var: terrorSabotageMarkersPlaced, delta: 1 }
+                        - addVar:
+                            scope: zoneVar
+                            zone: $targetSpace
+                            var: terrorCount
+                            delta: 1
+                        - addVar:
+                            scope: global
+                            var: terrorSabotageMarkersPlaced
+                            delta: 1
                   - setMarker:
                       space: $targetSpace
                       marker: supportOpposition
@@ -2720,10 +4037,14 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          seatOrder: ["NVA", "ARVN", "US", "VC"]
-          flavorText: "Free World aids Saigon."
+          seatOrder:
+            - NVA
+            - ARVN
+            - US
+            - VC
+          flavorText: Free World aids Saigon.
         unshaded:
-          text: "2 ARVN or 2 US Bases out-of-play to Available. Then ARVN Resources +6 or Aid +12."
+          text: 2 ARVN or 2 US Bases out-of-play to Available. Then ARVN Resources +6 or Aid +12.
           branches:
             - id: return-us-bases-and-aid
               order: 1
@@ -2731,61 +4052,85 @@ eventDecks:
                 - id: us-out-of-play-bases
                   selector:
                     query: players
-                  cardinality: { max: 2 }
+                  cardinality:
+                    max: 2
                   application: aggregate
-              effects:
-                - removeByPriority:
-                    budget: 2
-                    groups:
-                      - bind: $usBaseOutOfPlay
-                        over:
-                          query: tokensInZone
-                          zone: out-of-play-US:none
-                          filter:
-                            op: and
-                            args:
-                              - { prop: faction, eq: US }
-                              - { prop: type, eq: base }
-                        to:
-                          zoneExpr: available-US:none
-                - addVar: { scope: global, var: aid, delta: 12 }
+                  effects:
+                    - removeByPriority:
+                        budget: 2
+                        groups:
+                          - bind: $usBaseOutOfPlay
+                            over:
+                              query: tokensInZone
+                              zone: out-of-play-US:none
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: US
+                                  - prop: type
+                                    eq: base
+                            to:
+                              zoneExpr: available-US:none
+                    - addVar:
+                        scope: global
+                        var: aid
+                        delta: 12
             - id: return-arvn-bases-and-resources
               order: 2
               targets:
                 - id: arvn-out-of-play-bases
                   selector:
                     query: players
-                  cardinality: { max: 2 }
+                  cardinality:
+                    max: 2
                   application: aggregate
-              effects:
-                - removeByPriority:
-                    budget: 2
-                    groups:
-                      - bind: $arvnBaseOutOfPlay
-                        over:
-                          query: tokensInZone
-                          zone: out-of-play-ARVN:none
-                          filter:
-                            op: and
-                            args:
-                              - { prop: faction, eq: ARVN }
-                              - { prop: type, eq: base }
-                        to:
-                          zoneExpr: available-ARVN:none
-                - addVar: { scope: global, var: arvnResources, delta: 6 }
+                  effects:
+                    - removeByPriority:
+                        budget: 2
+                        groups:
+                          - bind: $arvnBaseOutOfPlay
+                            over:
+                              query: tokensInZone
+                              zone: out-of-play-ARVN:none
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: ARVN
+                                  - prop: type
+                                    eq: base
+                            to:
+                              zoneExpr: available-ARVN:none
+                    - addVar:
+                        scope: global
+                        var: arvnResources
+                        delta: 6
         shaded:
           text: "Moscow aids Hanoi: Improve the Trail 1 box. Then either Improve it 1 more box or add +10 NVA Resources."
           branches:
             - id: improve-trail-twice
               order: 1
               effects:
-                - addVar: { scope: global, var: trail, delta: 1 }
-                - addVar: { scope: global, var: trail, delta: 1 }
+                - addVar:
+                    scope: global
+                    var: trail
+                    delta: 1
+                - addVar:
+                    scope: global
+                    var: trail
+                    delta: 1
             - id: improve-trail-and-add-resources
               order: 2
               effects:
-                - addVar: { scope: global, var: trail, delta: 1 }
-                - addVar: { scope: global, var: nvaResources, delta: 10 }
+                - addVar:
+                    scope: global
+                    var: trail
+                    delta: 1
+                - addVar:
+                    scope: global
+                    var: nvaResources
+                    delta: 10
       - id: card-44
         title: Ia Drang
         sideMode: dual
@@ -2793,17 +4138,24 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["NVA", "ARVN", "US", "VC"]
-          flavorText: "Silver Bayonet."
+          seatOrder:
+            - NVA
+            - ARVN
+            - US
+            - VC
+          flavorText: Silver Bayonet.
         unshaded:
-          text: "US free Air Lifts into 1 space with any NVA piece, then free Sweeps and Assaults there."
+          text: US free Air Lifts into 1 space with any NVA piece, then free Sweeps and Assaults there.
           freeOperationGrants:
-            - seat: "us"
-              sequence: { chain: ia-drang-us, step: 0 }
+            - seat: us
+              sequence:
+                chain: ia-drang-us
+                step: 0
               operationClass: operation
-              actionIds: [airLift]
+              actionIds:
+                - airLift
               zoneFilter:
-                op: '>'
+                op: ">"
                 left:
                   aggregate:
                     op: count
@@ -2813,14 +4165,18 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: NVA }
+                          - prop: faction
+                            eq: NVA
                 right: 0
-            - seat: "us"
-              sequence: { chain: ia-drang-us, step: 1 }
+            - seat: us
+              sequence:
+                chain: ia-drang-us
+                step: 1
               operationClass: operation
-              actionIds: [sweep]
+              actionIds:
+                - sweep
               zoneFilter:
-                op: '>'
+                op: ">"
                 left:
                   aggregate:
                     op: count
@@ -2830,14 +4186,18 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: NVA }
+                          - prop: faction
+                            eq: NVA
                 right: 0
-            - seat: "us"
-              sequence: { chain: ia-drang-us, step: 2 }
+            - seat: us
+              sequence:
+                chain: ia-drang-us
+                step: 2
               operationClass: operation
-              actionIds: [assault]
+              actionIds:
+                - assault
               zoneFilter:
-                op: '>'
+                op: ">"
                 left:
                   aggregate:
                     op: count
@@ -2847,7 +4207,8 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: NVA }
+                          - prop: faction
+                            eq: NVA
                 right: 0
         shaded:
           text: "Dong Xuan campaign-hot LZs: Select a Province with NVA Troops then remove a die roll of US Troops within 1 space of it to Casualties."
@@ -2858,8 +4219,13 @@ eventDecks:
                 filter:
                   op: and
                   args:
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                    - op: '>'
+                    - op: ==
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: category
+                      right: province
+                    - op: ">"
                       left:
                         aggregate:
                           op: count
@@ -2869,58 +4235,74 @@ eventDecks:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: NVA }
-                                - { prop: type, eq: troops }
+                                - prop: faction
+                                  eq: NVA
+                                - prop: type
+                                  eq: troops
                       right: 0
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - rollRandom:
-                bind: $iaDrangLossRoll
-                min: 1
-                max: 6
-                in:
-                  - removeByPriority:
-                      budget: { ref: binding, name: $iaDrangLossRoll }
-                      remainingBind: $remainingLosses
-                      groups:
-                        - bind: $usTroopInProvince
-                          over:
-                            query: tokensInZone
-                            zone: $targetProvince
-                            filter:
-                              op: and
-                              args:
-                                - { prop: faction, eq: US }
-                                - { prop: type, eq: troops }
-                          to:
-                            zoneExpr: casualties-US:none
-                      in:
-                        - forEach:
-                            bind: $adjacentSpace
-                            over:
-                              query: adjacentZones
-                              zone: $targetProvince
-                            effects:
-                              - if:
-                                  when: { op: '>', left: { ref: binding, name: $remainingLosses }, right: 0 }
-                                  then:
-                                    - removeByPriority:
-                                        budget: { ref: binding, name: $remainingLosses }
-                                        remainingBind: $remainingLosses
-                                        groups:
-                                          - bind: $usTroopAdjacent
-                                            over:
-                                              query: tokensInZone
-                                              zone: $adjacentSpace
-                                              filter:
-                                                op: and
-                                                args:
-                                                  - { prop: faction, eq: US }
-                                                  - { prop: type, eq: troops }
-                                            to:
-                                              zoneExpr: casualties-US:none
-                                  else: []
+              effects:
+                - rollRandom:
+                    bind: $iaDrangLossRoll
+                    min: 1
+                    max: 6
+                    in:
+                      - removeByPriority:
+                          budget:
+                            ref: binding
+                            name: $iaDrangLossRoll
+                          remainingBind: $remainingLosses
+                          groups:
+                            - bind: $usTroopInProvince
+                              over:
+                                query: tokensInZone
+                                zone: $targetProvince
+                                filter:
+                                  op: and
+                                  args:
+                                    - prop: faction
+                                      eq: US
+                                    - prop: type
+                                      eq: troops
+                              to:
+                                zoneExpr: casualties-US:none
+                          in:
+                            - forEach:
+                                bind: $adjacentSpace
+                                over:
+                                  query: adjacentZones
+                                  zone: $targetProvince
+                                effects:
+                                  - if:
+                                      when:
+                                        op: ">"
+                                        left:
+                                          ref: binding
+                                          name: $remainingLosses
+                                        right: 0
+                                      then:
+                                        - removeByPriority:
+                                            budget:
+                                              ref: binding
+                                              name: $remainingLosses
+                                            remainingBind: $remainingLosses
+                                            groups:
+                                              - bind: $usTroopAdjacent
+                                                over:
+                                                  query: tokensInZone
+                                                  zone: $adjacentSpace
+                                                  filter:
+                                                    op: and
+                                                    args:
+                                                      - prop: faction
+                                                        eq: US
+                                                      - prop: type
+                                                        eq: troops
+                                                to:
+                                                  zoneExpr: casualties-US:none
+                                      else: []
       - id: card-79
         title: Henry Cabot Lodge
         sideMode: dual
@@ -2928,16 +4310,27 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          seatOrder: ["ARVN", "NVA", "VC", "US"]
-          flavorText: "Ambassador proposes US protectorate."
+          seatOrder:
+            - ARVN
+            - NVA
+            - VC
+            - US
+          flavorText: Ambassador proposes US protectorate.
         unshaded:
-          text: "Aid +20."
+          text: Aid +20.
           effects:
-            - addVar: { scope: global, var: aid, delta: 20 }
+            - addVar:
+                scope: global
+                var: aid
+                delta: 20
         shaded:
           text: "Internecine enabler: Remove up to 3 ARVN pieces. Patronage +2 for each. ARVN Ineligible through next card."
           eligibilityOverrides:
-            - { target: { kind: seat, seat: 'arvn' }, eligible: false, windowId: make-ineligible }
+            - target:
+                kind: seat
+                seat: arvn
+              eligible: false
+              windowId: make-ineligible
           effects:
             - chooseN:
                 bind: $arvnPiecesToRemove
@@ -2946,17 +4339,24 @@ eventDecks:
                   filter:
                     op: and
                     args:
-                      - { prop: faction, eq: ARVN }
+                      - prop: faction
+                        eq: ARVN
                 min: 0
                 max: 3
             - forEach:
                 bind: $arvnPiece
-                over: { query: binding, name: $arvnPiecesToRemove }
+                over:
+                  query: binding
+                  name: $arvnPiecesToRemove
                 effects:
                   - moveToken:
                       token: $arvnPiece
-                      from: { zoneExpr: { ref: tokenZone, token: $arvnPiece } }
-                      to: { zoneExpr: available-ARVN:none }
+                      from:
+                        zoneExpr:
+                          ref: tokenZone
+                          token: $arvnPiece
+                      to:
+                        zoneExpr: available-ARVN:none
                 countBind: $removedCount
                 in:
                   - addVar:
@@ -2965,7 +4365,9 @@ eventDecks:
                       delta:
                         op: "*"
                         left: 2
-                        right: { ref: binding, name: $removedCount }
+                        right:
+                          ref: binding
+                          name: $removedCount
       - id: card-107
         title: Burning Bonze
         sideMode: dual
@@ -2973,20 +4375,33 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          seatOrder: ["VC", "NVA", "ARVN", "US"]
-          flavorText: "Gruesome protests close elite ranks."
+          seatOrder:
+            - VC
+            - NVA
+            - ARVN
+            - US
+          flavorText: Gruesome protests close elite ranks.
         unshaded:
-          text: "Patronage +3 or, if Saigon at Active Support, +6."
+          text: Patronage +3 or, if Saigon at Active Support, +6.
           effects:
             - if:
                 when:
-                  op: "=="
-                  left: { ref: markerState, space: saigon:none, marker: supportOpposition }
+                  op: ==
+                  left:
+                    ref: markerState
+                    space: saigon:none
+                    marker: supportOpposition
                   right: activeSupport
                 then:
-                  - addVar: { scope: global, var: patronage, delta: 6 }
+                  - addVar:
+                      scope: global
+                      var: patronage
+                      delta: 6
                 else:
-                  - addVar: { scope: global, var: patronage, delta: 3 }
+                  - addVar:
+                      scope: global
+                      var: patronage
+                      delta: 3
         shaded:
           text: "Anti-regime self-immolation: Shift Saigon 1 level toward Active Opposition. Aid -12."
           effects:
@@ -2994,7 +4409,10 @@ eventDecks:
                 space: saigon:none
                 marker: supportOpposition
                 delta: -1
-            - addVar: { scope: global, var: aid, delta: -12 }
+            - addVar:
+                scope: global
+                var: aid
+                delta: -12
       - id: card-112
         title: Colonel Chau
         sideMode: dual
@@ -3002,58 +4420,68 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          seatOrder: ["VC", "ARVN", "US", "NVA"]
-          flavorText: "Census-grievance teams."
+          seatOrder:
+            - VC
+            - ARVN
+            - US
+            - NVA
+          flavorText: Census-grievance teams.
         unshaded:
-          text: "Place 1 Police into each of 6 Provinces."
+          text: Place 1 Police into each of 6 Provinces.
           targets:
             - id: $targetProvince
               selector:
                 query: mapSpaces
-              cardinality: { max: 6 }
+              cardinality:
+                max: 6
               application: aggregate
-          effects:
-            - removeByPriority:
-                budget: 6
-                groups:
-                  - bind: $police
-                    over:
-                      query: tokensInZone
-                      zone: available-ARVN:none
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: ARVN }
-                          - { prop: type, eq: police }
-                    to:
-                      zoneExpr: $targetProvince
+              effects:
+                - removeByPriority:
+                    budget: 6
+                    groups:
+                      - bind: $police
+                        over:
+                          query: tokensInZone
+                          zone: available-ARVN:none
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: ARVN
+                              - prop: type
+                                eq: police
+                        to:
+                          zoneExpr: $targetProvince
         shaded:
           text: "Local Viet Minh tradition: Shift 3 Provinces with ARVN each 1 level toward Active Opposition. Place a VC Guerrilla in each."
           targets:
             - id: $targetProvince
               selector:
                 query: mapSpaces
-              cardinality: { max: 3 }
+              cardinality:
+                max: 3
               application: aggregate
-          effects:
-            - shiftMarker:
-                space: $targetProvince
-                marker: supportOpposition
-                delta: -1
-            - removeByPriority:
-                budget: 3
-                groups:
-                  - bind: $guerrilla
-                    over:
-                      query: tokensInZone
-                      zone: available-VC:none
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: VC }
-                          - { prop: type, eq: guerrilla }
-                    to:
-                      zoneExpr: $targetProvince
+              effects:
+                - shiftMarker:
+                    space: $targetProvince
+                    marker: supportOpposition
+                    delta: -1
+                - removeByPriority:
+                    budget: 3
+                    groups:
+                      - bind: $guerrilla
+                        over:
+                          query: tokensInZone
+                          zone: available-VC:none
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: VC
+                              - prop: type
+                                eq: guerrilla
+                        to:
+                          zoneExpr: $targetProvince
       - id: card-55
         title: Trucks
         sideMode: dual
@@ -3061,95 +4489,143 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          seatOrder: ["NVA", "VC", "US", "ARVN"]
-          flavorText: "Logistics under pressure."
+          seatOrder:
+            - NVA
+            - VC
+            - US
+            - ARVN
+          flavorText: Logistics under pressure.
         unshaded:
-          text: "Degrade Trail 2 boxes. NVA selects and removes 4 of its pieces each from Laos and Cambodia."
+          text: Degrade Trail 2 boxes. NVA selects and removes 4 of its pieces each from Laos and Cambodia.
           effects:
-            # 1. Trail degrades 2 boxes
-            - addVar: { scope: global, var: trail, delta: -2 }
-            # 2. NVA selects up to 4 of its pieces from ALL Laos spaces
+            - addVar:
+                scope: global
+                var: trail
+                delta: -2
             - chooseN:
                 bind: $nvaLaosPieces
                 options:
                   query: tokensInMapSpaces
                   spaceFilter:
-                    op: '=='
-                    left: { ref: zoneProp, zone: $zone, prop: country }
+                    op: ==
+                    left:
+                      ref: zoneProp
+                      zone: $zone
+                      prop: country
                     right: laos
                   filter:
                     op: and
                     args:
-                      - { prop: faction, eq: NVA }
+                      - prop: faction
+                        eq: NVA
                 min: 0
                 max: 4
             - forEach:
                 bind: $nvaLaosPiece
-                over: { query: binding, name: $nvaLaosPieces }
+                over:
+                  query: binding
+                  name: $nvaLaosPieces
                 effects:
                   - moveToken:
                       token: $nvaLaosPiece
-                      from: { zoneExpr: { ref: tokenZone, token: $nvaLaosPiece } }
-                      to: { zoneExpr: available-NVA:none }
-            # 3. NVA selects up to 4 of its pieces from ALL Cambodia spaces
+                      from:
+                        zoneExpr:
+                          ref: tokenZone
+                          token: $nvaLaosPiece
+                      to:
+                        zoneExpr: available-NVA:none
             - chooseN:
                 bind: $nvaCambodiaPieces
                 options:
                   query: tokensInMapSpaces
                   spaceFilter:
-                    op: '=='
-                    left: { ref: zoneProp, zone: $zone, prop: country }
+                    op: ==
+                    left:
+                      ref: zoneProp
+                      zone: $zone
+                      prop: country
                     right: cambodia
                   filter:
                     op: and
                     args:
-                      - { prop: faction, eq: NVA }
+                      - prop: faction
+                        eq: NVA
                 min: 0
                 max: 4
             - forEach:
                 bind: $nvaCambodiaPiece
-                over: { query: binding, name: $nvaCambodiaPieces }
+                over:
+                  query: binding
+                  name: $nvaCambodiaPieces
                 effects:
                   - moveToken:
                       token: $nvaCambodiaPiece
-                      from: { zoneExpr: { ref: tokenZone, token: $nvaCambodiaPiece } }
-                      to: { zoneExpr: available-NVA:none }
+                      from:
+                        zoneExpr:
+                          ref: tokenZone
+                          token: $nvaCambodiaPiece
+                      to:
+                        zoneExpr: available-NVA:none
         shaded:
-          text: "Add twice Trail value to each NVA and VC Resources. NVA moves its unTunneled Bases anywhere within Laos/Cambodia."
+          text: Add twice Trail value to each NVA and VC Resources. NVA moves its unTunneled Bases anywhere within Laos/Cambodia.
           effects:
-            # 1. Add 2 * Trail to both NVA and VC Resources
             - let:
                 bind: $trailBonus
-                value: { op: '*', left: 2, right: { ref: gvar, var: trail } }
+                value:
+                  op: "*"
+                  left: 2
+                  right:
+                    ref: gvar
+                    var: trail
                 in:
-                  - addVar: { scope: global, var: nvaResources, delta: { ref: binding, name: $trailBonus } }
-                  - addVar: { scope: global, var: vcResources, delta: { ref: binding, name: $trailBonus } }
-            # 2. NVA repositions each unTunneled Base within Laos/Cambodia
+                  - addVar:
+                      scope: global
+                      var: nvaResources
+                      delta:
+                        ref: binding
+                        name: $trailBonus
+                  - addVar:
+                      scope: global
+                      var: vcResources
+                      delta:
+                        ref: binding
+                        name: $trailBonus
             - forEach:
                 bind: $nvaBase
                 over:
                   query: tokensInMapSpaces
                   spaceFilter:
                     conditionMacro: fitl-space-in-laos-cambodia
-                    args: { spaceExpr: $zone }
+                    args:
+                      spaceExpr: $zone
                   filter:
                     op: and
                     args:
-                      - { prop: faction, eq: NVA }
-                      - { prop: type, eq: base }
-                      - { prop: tunnel, eq: untunneled }
+                      - prop: faction
+                        eq: NVA
+                      - prop: type
+                        eq: base
+                      - prop: tunnel
+                        eq: untunneled
                 effects:
                   - chooseOne:
-                      bind: '$baseDestination@{$nvaBase}'
+                      bind: $baseDestination@{$nvaBase}
                       options:
                         query: mapSpaces
                         filter:
                           conditionMacro: fitl-space-in-laos-cambodia
-                          args: { spaceExpr: $zone }
+                          args:
+                            spaceExpr: $zone
                   - moveToken:
                       token: $nvaBase
-                      from: { zoneExpr: { ref: tokenZone, token: $nvaBase } }
-                      to: { zoneExpr: { ref: binding, name: '$baseDestination@{$nvaBase}' } }
+                      from:
+                        zoneExpr:
+                          ref: tokenZone
+                          token: $nvaBase
+                      to:
+                        zoneExpr:
+                          ref: binding
+                          name: $baseDestination@{$nvaBase}
       - id: card-97
         title: Brinks Hotel
         sideMode: dual
@@ -3157,22 +4633,33 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          seatOrder: ["VC", "US", "ARVN", "NVA"]
-          flavorText: "Saigon shaken."
+          seatOrder:
+            - VC
+            - US
+            - ARVN
+            - NVA
+          flavorText: Saigon shaken.
         unshaded:
           text: "Aid +10, or 4 Patronage to ARVN Resources. Flip any current RVN leader card: its text is ignored."
           branches:
             - id: aid-plus-ten-and-flip-leader
               order: 1
               effects:
-                - addVar: { scope: global, var: aid, delta: 10 }
+                - addVar:
+                    scope: global
+                    var: aid
+                    delta: 10
                 - if:
                     when:
-                      op: '!='
-                      left: { ref: globalMarkerState, marker: activeLeader }
+                      op: "!="
+                      left:
+                        ref: globalMarkerState
+                        marker: activeLeader
                       right: minh
                     then:
-                      - setGlobalMarker: { marker: leaderFlipped, state: flipped }
+                      - setGlobalMarker:
+                          marker: leaderFlipped
+                          state: flipped
             - id: transfer-patronage-to-aid-and-flip-leader
               order: 2
               effects:
@@ -3180,58 +4667,88 @@ eventDecks:
                     bind: $transfer
                     value:
                       if:
-                        when: { op: '>', left: { ref: gvar, var: patronage }, right: 4 }
+                        when:
+                          op: ">"
+                          left:
+                            ref: gvar
+                            var: patronage
+                          right: 4
                         then: 4
-                        else: { ref: gvar, var: patronage }
+                        else:
+                          ref: gvar
+                          var: patronage
                     in:
                       - addVar:
                           scope: global
                           var: patronage
                           delta:
-                            op: '-'
+                            op: "-"
                             left: 0
-                            right: { ref: binding, name: $transfer }
+                            right:
+                              ref: binding
+                              name: $transfer
                       - addVar:
                           scope: global
                           var: aid
-                          delta: { ref: binding, name: $transfer }
+                          delta:
+                            ref: binding
+                            name: $transfer
                 - if:
                     when:
-                      op: '!='
-                      left: { ref: globalMarkerState, marker: activeLeader }
+                      op: "!="
+                      left:
+                        ref: globalMarkerState
+                        marker: activeLeader
                       right: minh
                     then:
-                      - setGlobalMarker: { marker: leaderFlipped, state: flipped }
+                      - setGlobalMarker:
+                          marker: leaderFlipped
+                          state: flipped
         shaded:
-          text: "Shift a City that has VC by 2 levels toward Active Opposition and add a Terror marker there."
+          text: Shift a City that has VC by 2 levels toward Active Opposition and add a Terror marker there.
           targets:
             - id: $targetCity
               selector:
                 query: mapSpaces
                 filter:
-                  op: 'and'
+                  op: and
                   args:
-                    - op: '=='
-                      left: { ref: zoneProp, zone: $zone, prop: category }
+                    - op: ==
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: category
                       right: city
-                    - op: '>'
+                    - op: ">"
                       left:
                         aggregate:
                           op: count
                           query:
                             query: tokensInZone
                             zone: $zone
-                            filter: { op: and, args: [{ prop: faction, eq: VC }] }
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  eq: VC
                       right: 0
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - shiftMarker:
-                space: $targetCity
-                marker: supportOpposition
-                delta: -2
-            - addVar: { scope: zoneVar, zone: $targetCity, var: terrorCount, delta: 1 }
-            - addVar: { scope: global, var: terrorSabotageMarkersPlaced, delta: 1 }
+              effects:
+                - shiftMarker:
+                    space: $targetCity
+                    marker: supportOpposition
+                    delta: -2
+                - addVar:
+                    scope: zoneVar
+                    zone: $targetCity
+                    var: terrorCount
+                    delta: 1
+                - addVar:
+                    scope: global
+                    var: terrorSabotageMarkersPlaced
+                    delta: 1
       - id: card-95
         title: Westmoreland
         sideMode: dual
@@ -3239,23 +4756,37 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["VC", "US", "NVA", "ARVN"]
-          flavorText: "Root 'em out."
+          seatOrder:
+            - VC
+            - US
+            - NVA
+            - ARVN
+          flavorText: Root 'em out.
         unshaded:
-          text: "US free Air Lifts, then Sweeps (no moves) or Assaults (no ARVN) in 2 spaces, then Air Strikes."
+          text: US free Air Lifts, then Sweeps (no moves) or Assaults (no ARVN) in 2 spaces, then Air Strikes.
           freeOperationGrants:
-            - seat: "us"
-              sequence: { chain: westmoreland-us, step: 0 }
+            - seat: us
+              sequence:
+                chain: westmoreland-us
+                step: 0
               operationClass: operation
-              actionIds: [airLift]
-            - seat: "us"
-              sequence: { chain: westmoreland-us, step: 1 }
+              actionIds:
+                - airLift
+            - seat: us
+              sequence:
+                chain: westmoreland-us
+                step: 1
               operationClass: operation
-              actionIds: [sweep, assault]
-            - seat: "us"
-              sequence: { chain: westmoreland-us, step: 2 }
+              actionIds:
+                - sweep
+                - assault
+            - seat: us
+              sequence:
+                chain: westmoreland-us
+                step: 2
               operationClass: operation
-              actionIds: [airStrike]
+              actionIds:
+                - airStrike
         shaded:
           text: "Big-unit war bypasses population: Shift 3 Provinces with no Police each 2 levels toward Active Opposition."
       - id: card-98
@@ -3265,10 +4796,14 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["VC", "US", "ARVN", "NVA"]
-          flavorText: "Royal Australians."
+          seatOrder:
+            - VC
+            - US
+            - ARVN
+            - NVA
+          flavorText: Royal Australians.
         unshaded:
-          text: "Place 2 out-of-play US Troops into a Province or remove all Guerrillas from all Jungle with US Troops."
+          text: Place 2 out-of-play US Troops into a Province or remove all Guerrillas from all Jungle with US Troops.
           branches:
             - id: long-tan-place-us-troops
               order: 1
@@ -3277,26 +4812,32 @@ eventDecks:
                   selector:
                     query: mapSpaces
                     filter:
-                      op: '=='
-                      left: { ref: zoneProp, zone: $zone, prop: category }
+                      op: ==
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: category
                       right: province
-                  cardinality: { max: 1 }
+                  cardinality:
+                    max: 1
                   application: aggregate
-              effects:
-                - removeByPriority:
-                    budget: 2
-                    groups:
-                      - bind: $usTroop
-                        over:
-                          query: tokensInZone
-                          zone: out-of-play-US:none
-                          filter:
-                            op: and
-                            args:
-                              - { prop: faction, eq: US }
-                              - { prop: type, eq: troops }
-                        to:
-                          zoneExpr: $targetProvince
+                  effects:
+                    - removeByPriority:
+                        budget: 2
+                        groups:
+                          - bind: $usTroop
+                            over:
+                              query: tokensInZone
+                              zone: out-of-play-US:none
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: US
+                                  - prop: type
+                                    eq: troops
+                            to:
+                              zoneExpr: $targetProvince
             - id: long-tan-clear-jungle-guerrillas
               order: 2
               targets:
@@ -3306,8 +4847,11 @@ eventDecks:
                     filter:
                       op: and
                       args:
-                        - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: jungle }
-                        - op: '>'
+                        - op: zonePropIncludes
+                          zone: $zone
+                          prop: terrainTags
+                          value: jungle
+                        - op: ">"
                           left:
                             aggregate:
                               op: count
@@ -3317,26 +4861,40 @@ eventDecks:
                                 filter:
                                   op: and
                                   args:
-                                    - { prop: faction, eq: US }
-                                    - { prop: type, eq: troops }
+                                    - prop: faction
+                                      eq: US
+                                    - prop: type
+                                      eq: troops
                           right: 0
-                  cardinality: { max: 1 }
+                  cardinality:
+                    max: 1
                   application: aggregate
-              effects:
-                - removeByPriority:
-                    budget: 99
-                    groups:
-                      - bind: $insurgentGuerrilla
-                        over:
-                          query: tokensInZone
-                          zone: $targetJungle
-                          filter:
-                            op: and
-                            args:
-                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                              - { prop: type, eq: guerrilla }
-                        to:
-                          zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentGuerrilla, prop: faction }, ':none'] }
+                  effects:
+                    - removeByPriority:
+                        budget: 99
+                        groups:
+                          - bind: $insurgentGuerrilla
+                            over:
+                              query: tokensInZone
+                              zone: $targetJungle
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    op: in
+                                    value:
+                                      - NVA
+                                      - VC
+                                  - prop: type
+                                    eq: guerrilla
+                            to:
+                              zoneExpr:
+                                concat:
+                                  - available-
+                                  - ref: tokenProp
+                                    token: $insurgentGuerrilla
+                                    prop: faction
+                                  - :none
         shaded:
           text: "VC strike newly arrived troops: 1 US Base and 1 US Troop in a Jungle with 2+ VC Guerrillas to Casualties."
           targets:
@@ -3346,8 +4904,11 @@ eventDecks:
                 filter:
                   op: and
                   args:
-                    - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: jungle }
-                    - op: '>='
+                    - op: zonePropIncludes
+                      zone: $zone
+                      prop: terrainTags
+                      value: jungle
+                    - op: ">="
                       left:
                         aggregate:
                           op: count
@@ -3357,37 +4918,44 @@ eventDecks:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: VC }
-                                - { prop: type, eq: guerrilla }
+                                - prop: faction
+                                  eq: VC
+                                - prop: type
+                                  eq: guerrilla
                       right: 2
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - removeByPriority:
-                budget: 2
-                groups:
-                  - bind: $usBase
-                    over:
-                      query: tokensInZone
-                      zone: $targetJungle
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: base }
-                    to:
-                      zoneExpr: casualties-US:none
-                  - bind: $usTroop
-                    over:
-                      query: tokensInZone
-                      zone: $targetJungle
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: troops }
-                    to:
-                      zoneExpr: casualties-US:none
+              effects:
+                - removeByPriority:
+                    budget: 2
+                    groups:
+                      - bind: $usBase
+                        over:
+                          query: tokensInZone
+                          zone: $targetJungle
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: US
+                              - prop: type
+                                eq: base
+                        to:
+                          zoneExpr: casualties-US:none
+                      - bind: $usTroop
+                        over:
+                          query: tokensInZone
+                          zone: $targetJungle
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: US
+                              - prop: type
+                                eq: troops
+                        to:
+                          zoneExpr: casualties-US:none
       - id: card-99
         title: Masher/White Wing
         sideMode: dual
@@ -3395,29 +4963,45 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["VC", "US", "ARVN", "NVA"]
-          flavorText: "Sweep flushes enemy into kill zone."
+          seatOrder:
+            - VC
+            - US
+            - ARVN
+            - NVA
+          flavorText: Sweep flushes enemy into kill zone.
         unshaded:
-          text: "US or ARVN free Sweeps 1 non-Jungle space with US and ARVN Troops. They free Assault as US."
+          text: US or ARVN free Sweeps 1 non-Jungle space with US and ARVN Troops. They free Assault as US.
           freeOperationGrants:
-            - seat: "us"
-              sequence: { chain: masher-white-wing-us, step: 0 }
+            - seat: us
+              sequence:
+                chain: masher-white-wing-us
+                step: 0
               operationClass: operation
-              actionIds: [sweep]
-            - seat: "us"
-              sequence: { chain: masher-white-wing-us, step: 1 }
+              actionIds:
+                - sweep
+            - seat: us
+              sequence:
+                chain: masher-white-wing-us
+                step: 1
               operationClass: operation
-              actionIds: [assault]
-            - seat: "arvn"
-              executeAsSeat: "us"
-              sequence: { chain: masher-white-wing-arvn-as-us, step: 0 }
+              actionIds:
+                - assault
+            - seat: arvn
+              executeAsSeat: us
+              sequence:
+                chain: masher-white-wing-arvn-as-us
+                step: 0
               operationClass: operation
-              actionIds: [sweep]
-            - seat: "arvn"
-              executeAsSeat: "us"
-              sequence: { chain: masher-white-wing-arvn-as-us, step: 1 }
+              actionIds:
+                - sweep
+            - seat: arvn
+              executeAsSeat: us
+              sequence:
+                chain: masher-white-wing-arvn-as-us
+                step: 1
               operationClass: operation
-              actionIds: [assault]
+              actionIds:
+                - assault
         shaded:
           text: "Poor OPSEC: VC or NVA free March Guerrillas to any 3 spaces then free Ambush in each (even if Active)."
       - id: card-100
@@ -3427,10 +5011,14 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["VC", "US", "ARVN", "NVA"]
-          flavorText: "Riverines hunt Charlie."
+          seatOrder:
+            - VC
+            - US
+            - ARVN
+            - NVA
+          flavorText: Riverines hunt Charlie.
         unshaded:
-          text: "Remove all VC or all non-Troop NVA from a Lowland with US Troops."
+          text: Remove all VC or all non-Troop NVA from a Lowland with US Troops.
           branches:
             - id: rach-ba-rai-remove-vc
               order: 1
@@ -3441,8 +5029,11 @@ eventDecks:
                     filter:
                       op: and
                       args:
-                        - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: lowland }
-                        - op: '>'
+                        - op: zonePropIncludes
+                          zone: $zone
+                          prop: terrainTags
+                          value: lowland
+                        - op: ">"
                           left:
                             aggregate:
                               op: count
@@ -3452,25 +5043,29 @@ eventDecks:
                                 filter:
                                   op: and
                                   args:
-                                    - { prop: faction, eq: US }
-                                    - { prop: type, eq: troops }
+                                    - prop: faction
+                                      eq: US
+                                    - prop: type
+                                      eq: troops
                           right: 0
-                  cardinality: { max: 1 }
+                  cardinality:
+                    max: 1
                   application: aggregate
-              effects:
-                - removeByPriority:
-                    budget: 99
-                    groups:
-                      - bind: $vcPiece
-                        over:
-                          query: tokensInZone
-                          zone: $targetLowland
-                          filter:
-                            op: and
-                            args:
-                              - { prop: faction, eq: VC }
-                        to:
-                          zoneExpr: available-VC:none
+                  effects:
+                    - removeByPriority:
+                        budget: 99
+                        groups:
+                          - bind: $vcPiece
+                            over:
+                              query: tokensInZone
+                              zone: $targetLowland
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: VC
+                            to:
+                              zoneExpr: available-VC:none
             - id: rach-ba-rai-remove-nva-non-troops
               order: 2
               targets:
@@ -3480,8 +5075,11 @@ eventDecks:
                     filter:
                       op: and
                       args:
-                        - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: lowland }
-                        - op: '>'
+                        - op: zonePropIncludes
+                          zone: $zone
+                          prop: terrainTags
+                          value: lowland
+                        - op: ">"
                           left:
                             aggregate:
                               op: count
@@ -3491,26 +5089,34 @@ eventDecks:
                                 filter:
                                   op: and
                                   args:
-                                    - { prop: faction, eq: US }
-                                    - { prop: type, eq: troops }
+                                    - prop: faction
+                                      eq: US
+                                    - prop: type
+                                      eq: troops
                           right: 0
-                  cardinality: { max: 1 }
+                  cardinality:
+                    max: 1
                   application: aggregate
-              effects:
-                - removeByPriority:
-                    budget: 99
-                    groups:
-                      - bind: $nvaPiece
-                        over:
-                          query: tokensInZone
-                          zone: $targetLowland
-                          filter:
-                            op: and
-                            args:
-                              - { prop: faction, eq: NVA }
-                              - { prop: type, op: in, value: [base, guerrilla] }
-                        to:
-                          zoneExpr: available-NVA:none
+                  effects:
+                    - removeByPriority:
+                        budget: 99
+                        groups:
+                          - bind: $nvaPiece
+                            over:
+                              query: tokensInZone
+                              zone: $targetLowland
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: NVA
+                                  - prop: type
+                                    op: in
+                                    value:
+                                      - base
+                                      - guerrilla
+                            to:
+                              zoneExpr: available-NVA:none
         shaded:
           text: "VC river ambush: In a Lowland with any VC, remove a die roll of US/ARVN cubes (US to Casualties). Place 1 VC piece."
           targets:
@@ -3520,8 +5126,11 @@ eventDecks:
                 filter:
                   op: and
                   args:
-                    - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: lowland }
-                    - op: '>'
+                    - op: zonePropIncludes
+                      zone: $zone
+                      prop: terrainTags
+                      value: lowland
+                    - op: ">"
                       left:
                         aggregate:
                           op: count
@@ -3531,55 +5140,74 @@ eventDecks:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: VC }
+                                - prop: faction
+                                  eq: VC
                       right: 0
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - rollRandom:
-                bind: $dieRoll
-                min: 1
-                max: 6
-                in:
-                  - removeByPriority:
-                      budget: { ref: binding, name: $dieRoll }
-                      groups:
-                        - bind: $usCube
-                          over:
-                            query: tokensInZone
-                            zone: $targetLowland
-                            filter:
-                              op: and
-                              args:
-                                - { prop: faction, eq: US }
-                                - { prop: type, op: in, value: [troops, police] }
-                          to:
-                            zoneExpr: casualties-US:none
-                        - bind: $arvnCube
-                          over:
-                            query: tokensInZone
-                            zone: $targetLowland
-                            filter:
-                              op: and
-                              args:
-                                - { prop: faction, eq: ARVN }
-                                - { prop: type, op: in, value: [troops, police] }
-                          to:
-                            zoneExpr: available-ARVN:none
-            - removeByPriority:
-                budget: 1
-                groups:
-                  - bind: $vcPiece
-                    over:
-                      query: tokensInZone
-                      zone: available-VC:none
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: VC }
-                          - { prop: type, op: in, value: [base, guerrilla] }
-                    to:
-                      zoneExpr: $targetLowland
+              effects:
+                - rollRandom:
+                    bind: $dieRoll
+                    min: 1
+                    max: 6
+                    in:
+                      - removeByPriority:
+                          budget:
+                            ref: binding
+                            name: $dieRoll
+                          groups:
+                            - bind: $usCube
+                              over:
+                                query: tokensInZone
+                                zone: $targetLowland
+                                filter:
+                                  op: and
+                                  args:
+                                    - prop: faction
+                                      eq: US
+                                    - prop: type
+                                      op: in
+                                      value:
+                                        - troops
+                                        - police
+                              to:
+                                zoneExpr: casualties-US:none
+                            - bind: $arvnCube
+                              over:
+                                query: tokensInZone
+                                zone: $targetLowland
+                                filter:
+                                  op: and
+                                  args:
+                                    - prop: faction
+                                      eq: ARVN
+                                    - prop: type
+                                      op: in
+                                      value:
+                                        - troops
+                                        - police
+                              to:
+                                zoneExpr: available-ARVN:none
+                - removeByPriority:
+                    budget: 1
+                    groups:
+                      - bind: $vcPiece
+                        over:
+                          query: tokensInZone
+                          zone: available-VC:none
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: VC
+                              - prop: type
+                                op: in
+                                value:
+                                  - base
+                                  - guerrilla
+                        to:
+                          zoneExpr: $targetLowland
       - id: card-102
         title: Cu Chi
         sideMode: dual
@@ -3587,31 +5215,47 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["VC", "NVA", "US", "ARVN"]
-          flavorText: "Clear and secure."
+          seatOrder:
+            - VC
+            - NVA
+            - US
+            - ARVN
+          flavorText: Clear and secure.
         unshaded:
-          text: "Remove all Guerrillas from 1 space with a Tunnel and COIN Control."
+          text: Remove all Guerrillas from 1 space with a Tunnel and COIN Control.
           targets:
             - id: $targetSpace
               selector:
                 query: mapSpaces
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - removeByPriority:
-                budget: 99
-                groups:
-                  - bind: $insurgentGuerrilla
-                    over:
-                      query: tokensInZone
-                      zone: $targetSpace
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                          - { prop: type, eq: guerrilla }
-                    to:
-                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentGuerrilla, prop: faction }, ':none'] }
+              effects:
+                - removeByPriority:
+                    budget: 99
+                    groups:
+                      - bind: $insurgentGuerrilla
+                        over:
+                          query: tokensInZone
+                          zone: $targetSpace
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                op: in
+                                value:
+                                  - NVA
+                                  - VC
+                              - prop: type
+                                eq: guerrilla
+                        to:
+                          zoneExpr:
+                            concat:
+                              - available-
+                              - ref: tokenProp
+                                token: $insurgentGuerrilla
+                                prop: faction
+                              - :none
         shaded:
           text: "Iron Triangle: Place Tunnel markers on each Insurgent Base in 1 Province. Place 1 NVA and 1 VC Guerrilla there."
           targets:
@@ -3619,71 +5263,97 @@ eventDecks:
               selector:
                 query: mapSpaces
                 filter:
-                  op: '=='
-                  left: { ref: zoneProp, zone: $zone, prop: category }
+                  op: ==
+                  left:
+                    ref: zoneProp
+                    zone: $zone
+                    prop: category
                   right: province
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - forEach:
-                bind: $insurgentBase
-                over:
-                  query: tokensInZone
-                  zone: $targetProvince
-                  filter:
-                    op: and
-                    args:
-                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                      - { prop: type, eq: base }
-                effects:
-                  - setTokenProp: { token: $insurgentBase, prop: tunnel, value: tunneled }
-            - removeByPriority:
-                budget: 1
-                groups:
-                  - bind: $nvaGuerrilla
+              effects:
+                - forEach:
+                    bind: $insurgentBase
                     over:
                       query: tokensInZone
-                      zone: available-NVA:none
+                      zone: $targetProvince
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: NVA }
-                          - { prop: type, eq: guerrilla }
-                    to:
-                      zoneExpr: $targetProvince
-            - removeByPriority:
-                budget: 1
-                groups:
-                  - bind: $vcGuerrilla
-                    over:
-                      query: tokensInZone
-                      zone: available-VC:none
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: VC }
-                          - { prop: type, eq: guerrilla }
-                    to:
-                      zoneExpr: $targetProvince
+                          - prop: faction
+                            op: in
+                            value:
+                              - NVA
+                              - VC
+                          - prop: type
+                            eq: base
+                    effects:
+                      - setTokenProp:
+                          token: $insurgentBase
+                          prop: tunnel
+                          value: tunneled
+                - removeByPriority:
+                    budget: 1
+                    groups:
+                      - bind: $nvaGuerrilla
+                        over:
+                          query: tokensInZone
+                          zone: available-NVA:none
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: NVA
+                              - prop: type
+                                eq: guerrilla
+                        to:
+                          zoneExpr: $targetProvince
+                - removeByPriority:
+                    budget: 1
+                    groups:
+                      - bind: $vcGuerrilla
+                        over:
+                          query: tokensInZone
+                          zone: available-VC:none
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: VC
+                              - prop: type
+                                eq: guerrilla
+                        to:
+                          zoneExpr: $targetProvince
       - id: card-104
         title: Main Force Bns
         sideMode: dual
         order: 104
-        tags: [capability, VC]
+        tags:
+          - capability
+          - VC
         metadata:
           period: "1965"
-          seatOrder: ["VC", "NVA", "US", "ARVN"]
-          flavorText: "Larger footprints."
+          seatOrder:
+            - VC
+            - NVA
+            - US
+            - ARVN
+          flavorText: Larger footprints.
         unshaded:
           text: "Capability: March into Support/LoC Activates if moving plus non-Base COIN >1 (vice >3)."
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_mainForceBns, markerState: unshaded }
+              args:
+                markerId: cap_mainForceBns
+                markerState: unshaded
         shaded:
           text: "Capability: 1 VC Ambush space may remove 2 enemy pieces."
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_mainForceBns, markerState: shaded }
+              args:
+                markerId: cap_mainForceBns
+                markerState: shaded
       - id: card-105
         title: Rural Pressure
         sideMode: dual
@@ -3691,10 +5361,14 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["VC", "NVA", "US", "ARVN"]
-          flavorText: "Onerous VC taxation."
+          seatOrder:
+            - VC
+            - NVA
+            - US
+            - ARVN
+          flavorText: Onerous VC taxation.
         unshaded:
-          text: "Shift 4 Provinces with any VC each by 1 level toward Active Support."
+          text: Shift 4 Provinces with any VC each by 1 level toward Active Support.
           targets:
             - id: $targetProvince
               selector:
@@ -3702,8 +5376,13 @@ eventDecks:
                 filter:
                   op: and
                   args:
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                    - op: '>'
+                    - op: ==
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: category
+                      right: province
+                    - op: ">"
                       left:
                         aggregate:
                           op: count
@@ -3713,13 +5392,17 @@ eventDecks:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: VC }
+                                - prop: faction
+                                  eq: VC
                       right: 0
-              cardinality: { max: 4 }
+              cardinality:
+                max: 4
               application: aggregate
-          effects:
-            - macro: shift-support-opposition
-              args: { space: $targetProvince, deltaExpr: 1 }
+              effects:
+                - macro: shift-support-opposition
+                  args:
+                    space: $targetProvince
+                    deltaExpr: 1
         shaded:
           text: "Local government corruption: Shift 3 Provinces with Police each by 1 level toward Active Opposition. Patronage +6 or -6."
           targets:
@@ -3729,8 +5412,13 @@ eventDecks:
                 filter:
                   op: and
                   args:
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                    - op: '>'
+                    - op: ==
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: category
+                      right: province
+                    - op: ">"
                       left:
                         aggregate:
                           op: count
@@ -3740,26 +5428,34 @@ eventDecks:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: ARVN }
-                                - { prop: type, eq: police }
+                                - prop: faction
+                                  eq: ARVN
+                                - prop: type
+                                  eq: police
                       right: 0
-              cardinality: { max: 3 }
+              cardinality:
+                max: 3
               application: aggregate
+              effects:
+                - macro: shift-support-opposition
+                  args:
+                    space: $targetProvince
+                    deltaExpr: -1
           branches:
             - id: rural-pressure-plus-patronage
               order: 1
               effects:
-                - macro: shift-support-opposition
-                  args: { space: $targetProvince, deltaExpr: -1 }
                 - macro: add-global-var-delta
-                  args: { varName: patronage, deltaExpr: 6 }
+                  args:
+                    varName: patronage
+                    deltaExpr: 6
             - id: rural-pressure-minus-patronage
               order: 2
               effects:
-                - macro: shift-support-opposition
-                  args: { space: $targetProvince, deltaExpr: -1 }
                 - macro: add-global-var-delta
-                  args: { varName: patronage, deltaExpr: -6 }
+                  args:
+                    varName: patronage
+                    deltaExpr: -6
       - id: card-106
         title: Binh Duong
         sideMode: single
@@ -3767,10 +5463,14 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["VC", "NVA", "ARVN", "US"]
-          flavorText: "Revolutionary land reform seeks traction in prosperous districts."
+          seatOrder:
+            - VC
+            - NVA
+            - ARVN
+            - US
+          flavorText: Revolutionary land reform seeks traction in prosperous districts.
         unshaded:
-          text: "In each of 2 Provinces adjacent to Saigon, shift Support/Opposition 1 level either direction and place a VC Guerrilla or Police."
+          text: In each of 2 Provinces adjacent to Saigon, shift Support/Opposition 1 level either direction and place a VC Guerrilla or Police.
           targets:
             - id: $targetProvince
               selector:
@@ -3778,27 +5478,39 @@ eventDecks:
                 filter:
                   op: and
                   args:
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                    - { op: adjacent, left: $zone, right: saigon:none }
-              cardinality: { max: 2 }
+                    - op: ==
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: category
+                      right: province
+                    - op: adjacent
+                      left: $zone
+                      right: saigon:none
+              cardinality:
+                max: 2
               application: aggregate
-          effects:
-            - macro: shift-support-opposition
-              args: { space: $targetProvince, deltaExpr: 1 }
-            - removeByPriority:
-                budget: 1
-                groups:
-                  - bind: $vcGuerrilla
-                    over:
-                      query: tokensInZone
-                      zone: available-VC:none
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: VC }
-                          - { prop: type, eq: guerrilla }
-                    to:
-                      zoneExpr: $targetProvince
+              effects:
+                - macro: shift-support-opposition
+                  args:
+                    space: $targetProvince
+                    deltaExpr: 1
+                - removeByPriority:
+                    budget: 1
+                    groups:
+                      - bind: $vcGuerrilla
+                        over:
+                          query: tokensInZone
+                          zone: available-VC:none
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: VC
+                              - prop: type
+                                eq: guerrilla
+                        to:
+                          zoneExpr: $targetProvince
       - id: card-108
         title: Draft Dodgers
         sideMode: dual
@@ -3806,14 +5518,18 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["VC", "NVA", "ARVN", "US"]
-          flavorText: "Public furor sparks enlistment."
+          seatOrder:
+            - VC
+            - NVA
+            - ARVN
+            - US
+          flavorText: Public furor sparks enlistment.
         unshaded:
-          text: "If fewer than 3 Casualty pieces, 3 US Troops from out of play to Available."
+          text: If fewer than 3 Casualty pieces, 3 US Troops from out of play to Available.
           effects:
             - if:
                 when:
-                  op: '<'
+                  op: <
                   left:
                     aggregate:
                       op: count
@@ -3832,8 +5548,10 @@ eventDecks:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: US }
-                                - { prop: type, eq: troops }
+                                - prop: faction
+                                  eq: US
+                                - prop: type
+                                  eq: troops
                           to:
                             zoneExpr: available-US:none
                 else: []
@@ -3853,12 +5571,21 @@ eventDecks:
                       bind: $maxTroopsMoved
                       value:
                         if:
-                          when: { op: '>', left: { ref: binding, name: $casualtyCount }, right: 3 }
+                          when:
+                            op: ">"
+                            left:
+                              ref: binding
+                              name: $casualtyCount
+                            right: 3
                           then: 3
-                          else: { ref: binding, name: $casualtyCount }
+                          else:
+                            ref: binding
+                            name: $casualtyCount
                       in:
                         - removeByPriority:
-                            budget: { ref: binding, name: $maxTroopsMoved }
+                            budget:
+                              ref: binding
+                              name: $maxTroopsMoved
                             groups:
                               - bind: $usTroop
                                 over:
@@ -3867,8 +5594,10 @@ eventDecks:
                                   filter:
                                     op: and
                                     args:
-                                      - { prop: faction, eq: US }
-                                      - { prop: type, eq: troops }
+                                      - prop: faction
+                                        eq: US
+                                      - prop: type
+                                        eq: troops
                                 to:
                                   zoneExpr: out-of-play-US:none
       - id: card-109
@@ -3878,14 +5607,21 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["VC", "NVA", "ARVN", "US"]
-          flavorText: "Party control of NLF draws anti-communist reaction."
+          seatOrder:
+            - VC
+            - NVA
+            - ARVN
+            - US
+          flavorText: Party control of NLF draws anti-communist reaction.
         unshaded:
-          text: "Shift each City with VC 1 level toward Active Support."
+          text: Shift each City with VC 1 level toward Active Support.
         shaded:
           text: "National Liberation Front leader: Place a VC base and a VC Guerrilla in Saigon. Stay Eligible."
           eligibilityOverrides:
-            - { target: { kind: active }, eligible: true, windowId: remain-eligible }
+            - target:
+                kind: active
+              eligible: true
+              windowId: remain-eligible
       - id: card-114
         title: Tri Quang
         sideMode: dual
@@ -3893,34 +5629,48 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["VC", "ARVN", "US", "NVA"]
-          flavorText: "Buddhists counter Communists."
+          seatOrder:
+            - VC
+            - ARVN
+            - US
+            - NVA
+          flavorText: Buddhists counter Communists.
         unshaded:
-          text: "Set up to 3 Neutral or Opposition Cities to Passive Support."
+          text: Set up to 3 Neutral or Opposition Cities to Passive Support.
           targets:
             - id: $targetCity
               selector:
                 query: mapSpaces
                 filter:
-                  op: '=='
-                  left: { ref: zoneProp, zone: $zone, prop: category }
+                  op: ==
+                  left:
+                    ref: zoneProp
+                    zone: $zone
+                    prop: category
                   right: city
-              cardinality: { max: 3 }
+              cardinality:
+                max: 3
               application: aggregate
-          effects:
-            - setMarker:
-                space: $targetCity
-                marker: supportOpposition
-                state: passiveSupport
+              effects:
+                - setMarker:
+                    space: $targetCity
+                    marker: supportOpposition
+                    state: passiveSupport
         shaded:
           text: "People's Revolutionary Committee: Shift Hue, Da Nang, and Saigon 1 level toward Active Opposition. Place a VC piece in Saigon."
           effects:
             - macro: shift-support-opposition
-              args: { space: hue:none, deltaExpr: -1 }
+              args:
+                space: hue:none
+                deltaExpr: -1
             - macro: shift-support-opposition
-              args: { space: da-nang:none, deltaExpr: -1 }
+              args:
+                space: da-nang:none
+                deltaExpr: -1
             - macro: shift-support-opposition
-              args: { space: saigon:none, deltaExpr: -1 }
+              args:
+                space: saigon:none
+                deltaExpr: -1
             - removeByPriority:
                 budget: 1
                 groups:
@@ -3931,29 +5681,44 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: VC }
-                          - { prop: type, op: in, value: [base, guerrilla] }
+                          - prop: faction
+                            eq: VC
+                          - prop: type
+                            op: in
+                            value:
+                              - base
+                              - guerrilla
                     to:
                       zoneExpr: saigon:none
       - id: card-116
         title: Cadres
         sideMode: dual
         order: 116
-        tags: [capability, VC]
+        tags:
+          - capability
+          - VC
         metadata:
           period: "1964"
-          seatOrder: ["VC", "ARVN", "NVA", "US"]
-          flavorText: "Manpower to political sections."
+          seatOrder:
+            - VC
+            - ARVN
+            - NVA
+            - US
+          flavorText: Manpower to political sections.
         unshaded:
           text: "Capability: VC to Terror or Agitate must remove 2 VC Guerrillas per space."
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_cadres, markerState: unshaded }
+              args:
+                markerId: cap_cadres
+                markerState: unshaded
         shaded:
           text: "Capability: VC Rally in 1 space where VC already had a Base may Agitate as if Support Phase even if COIN Control."
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_cadres, markerState: shaded }
+              args:
+                markerId: cap_cadres
+                markerState: shaded
       - id: card-75
         title: Sihanouk
         sideMode: dual
@@ -3961,27 +5726,42 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          seatOrder: ["ARVN", "NVA", "US", "VC"]
-          flavorText: "Cambodian maneuvering."
+          seatOrder:
+            - ARVN
+            - NVA
+            - US
+            - VC
+          flavorText: Cambodian maneuvering.
         unshaded:
-          text: "ARVN free Sweep or Assault in Cambodia."
+          text: ARVN free Sweep or Assault in Cambodia.
           freeOperationGrants:
-            - seat: "arvn"
-              sequence: { chain: sihanouk-unshaded-arvn, step: 0 }
+            - seat: arvn
+              sequence:
+                chain: sihanouk-unshaded-arvn
+                step: 0
               operationClass: operation
-              actionIds: [sweep, assault]
+              actionIds:
+                - sweep
+                - assault
               zoneFilter:
-                op: '=='
-                left: { ref: zoneProp, zone: $zone, prop: country }
+                op: ==
+                left:
+                  ref: zoneProp
+                  zone: $zone
+                  prop: country
                 right: cambodia
         shaded:
-          text: "VC then NVA each get a free operation."
+          text: VC then NVA each get a free operation.
           freeOperationGrants:
-            - seat: "vc"
-              sequence: { chain: sihanouk-shaded-vc-nva, step: 0 }
+            - seat: vc
+              sequence:
+                chain: sihanouk-shaded-vc-nva
+                step: 0
               operationClass: operation
-            - seat: "nva"
-              sequence: { chain: sihanouk-shaded-vc-nva, step: 1 }
+            - seat: nva
+              sequence:
+                chain: sihanouk-shaded-vc-nva
+                step: 1
               operationClass: operation
       - id: card-51
         title: 301st Supply Bn
@@ -3990,61 +5770,78 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          seatOrder: ["NVA", "VC", "US", "ARVN"]
-          flavorText: "Throughput under strain."
+          seatOrder:
+            - NVA
+            - VC
+            - US
+            - ARVN
+          flavorText: Throughput under strain.
         unshaded:
-          text: "Remove non-base Insurgents outside South Vietnam."
+          text: Remove non-base Insurgents outside South Vietnam.
           targets:
             - id: $outsideSouthSpace
               selector:
                 query: mapSpaces
                 filter:
-                  op: '!='
-                  left: { ref: zoneProp, zone: $zone, prop: country }
+                  op: "!="
+                  left:
+                    ref: zoneProp
+                    zone: $zone
+                    prop: country
                   right: southVietnam
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - removeByPriority:
-                budget: 3
-                groups:
-                  - bind: $nvaTroops
-                    over:
-                      query: tokensInZone
-                      zone: $outsideSouthSpace
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: NVA }
-                          - { prop: type, eq: troops }
-                    to:
-                      zoneExpr: available-NVA:none
-                  - bind: $nvaGuerrilla
-                    over:
-                      query: tokensInZone
-                      zone: $outsideSouthSpace
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: NVA }
-                          - { prop: type, eq: guerrilla }
-                    to:
-                      zoneExpr: available-NVA:none
-                  - bind: $vcGuerrilla
-                    over:
-                      query: tokensInZone
-                      zone: $outsideSouthSpace
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: VC }
-                          - { prop: type, eq: guerrilla }
-                    to:
-                      zoneExpr: available-VC:none
+              effects:
+                - removeByPriority:
+                    budget: 3
+                    groups:
+                      - bind: $nvaTroops
+                        over:
+                          query: tokensInZone
+                          zone: $outsideSouthSpace
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: NVA
+                              - prop: type
+                                eq: troops
+                        to:
+                          zoneExpr: available-NVA:none
+                      - bind: $nvaGuerrilla
+                        over:
+                          query: tokensInZone
+                          zone: $outsideSouthSpace
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: NVA
+                              - prop: type
+                                eq: guerrilla
+                        to:
+                          zoneExpr: available-NVA:none
+                      - bind: $vcGuerrilla
+                        over:
+                          query: tokensInZone
+                          zone: $outsideSouthSpace
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: VC
+                              - prop: type
+                                eq: guerrilla
+                        to:
+                          zoneExpr: available-VC:none
         shaded:
-          text: "Improve Trail 1 box and add NVA Resources equal to a die roll."
+          text: Improve Trail 1 box and add NVA Resources equal to a die roll.
           effects:
-            - addVar: { scope: global, var: trail, delta: 1 }
+            - addVar:
+                scope: global
+                var: trail
+                delta: 1
             - rollRandom:
                 bind: $dieRoll
                 min: 1
@@ -4053,48 +5850,70 @@ eventDecks:
                   - addVar:
                       scope: global
                       var: nvaResources
-                      delta: { ref: binding, name: $dieRoll }
+                      delta:
+                        ref: binding
+                        name: $dieRoll
       - id: card-101
         title: Booby Traps
         sideMode: dual
         order: 101
-        tags: [capability, VC]
+        tags:
+          - capability
+          - VC
         metadata:
           period: "1964"
-          seatOrder: ["VC", "NVA", "US", "ARVN"]
-          flavorText: "Preparations tip off enemy."
+          seatOrder:
+            - VC
+            - NVA
+            - US
+            - ARVN
+          flavorText: Preparations tip off enemy.
         unshaded:
-          text: "VC and NVA Ambush in max 1 space."
+          text: VC and NVA Ambush in max 1 space.
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_boobyTraps, markerState: unshaded }
+              args:
+                markerId: cap_boobyTraps
+                markerState: unshaded
         shaded:
           text: "Mines and punji: each Sweep space risks 1 Sweeping Troop loss on roll 1-3."
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_boobyTraps, markerState: shaded }
+              args:
+                markerId: cap_boobyTraps
+                markerState: shaded
       - id: card-17
         title: Claymores
         sideMode: dual
         order: 17
-        tags: [momentum]
+        tags:
+          - momentum
         metadata:
           period: "1964"
-          seatOrder: ["US", "ARVN", "VC", "NVA"]
-          flavorText: "Perimeter."
+          seatOrder:
+            - US
+            - ARVN
+            - VC
+            - NVA
+          flavorText: Perimeter.
         unshaded:
-          text: "Stay Eligible. Until Coup, no Ambush; remove 1 Guerrilla from each Marching group that Activates. MOMENTUM"
+          text: Stay Eligible. Until Coup, no Ambush; remove 1 Guerrilla from each Marching group that Activates. MOMENTUM
           eligibilityOverrides:
-            - { target: { kind: active }, eligible: true, windowId: remain-eligible }
+            - target:
+                kind: active
+              eligible: true
+              windowId: remain-eligible
           lastingEffects:
             - id: mom-claymores
               duration: round
               setupEffects:
                 - macro: set-global-flag-true
-                  args: { varName: mom_claymores }
+                  args:
+                    varName: mom_claymores
               teardownEffects:
                 - macro: set-global-flag-false
-                  args: { varName: mom_claymores }
+                  args:
+                    varName: mom_claymores
         shaded:
           text: "Infiltrators turn mines around: remove 1 COIN Base and 1 Underground Insurgent from a space with both (US to Casualties)."
           targets:
@@ -4104,7 +5923,7 @@ eventDecks:
                 filter:
                   op: and
                   args:
-                    - op: '>'
+                    - op: ">"
                       left:
                         aggregate:
                           op: count
@@ -4114,10 +5933,15 @@ eventDecks:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                                - { prop: type, eq: base }
+                                - prop: faction
+                                  op: in
+                                  value:
+                                    - US
+                                    - ARVN
+                                - prop: type
+                                  eq: base
                       right: 0
-                    - op: '>'
+                    - op: ">"
                       left:
                         aggregate:
                           op: count
@@ -4127,82 +5951,121 @@ eventDecks:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                                - { prop: type, eq: guerrilla }
-                                - { prop: activity, eq: underground }
+                                - prop: faction
+                                  op: in
+                                  value:
+                                    - NVA
+                                    - VC
+                                - prop: type
+                                  eq: guerrilla
+                                - prop: activity
+                                  eq: underground
                       right: 0
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - removeByPriority:
-                budget: 1
-                groups:
-                  - bind: $targetCoinBase
-                    over:
-                      query: tokensInZone
-                      zone: $targetSpace
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                          - { prop: type, eq: base }
-                    to:
-                      zoneExpr:
-                        if:
-                          when:
-                            op: '=='
-                            left: { ref: tokenProp, token: $targetCoinBase, prop: faction }
-                            right: US
-                          then: casualties-US:none
-                          else: available-ARVN:none
-            - removeByPriority:
-                budget: 1
-                groups:
-                  - bind: $targetInsurgent
-                    over:
-                      query: tokensInZone
-                      zone: $targetSpace
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, op: in, value: ['VC', 'NVA'] }
-                          - { prop: type, eq: guerrilla }
-                          - { prop: activity, eq: underground }
-                    to:
-                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $targetInsurgent, prop: faction }, ':none'] }
+              effects:
+                - removeByPriority:
+                    budget: 1
+                    groups:
+                      - bind: $targetCoinBase
+                        over:
+                          query: tokensInZone
+                          zone: $targetSpace
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                op: in
+                                value:
+                                  - US
+                                  - ARVN
+                              - prop: type
+                                eq: base
+                        to:
+                          zoneExpr:
+                            if:
+                              when:
+                                op: ==
+                                left:
+                                  ref: tokenProp
+                                  token: $targetCoinBase
+                                  prop: faction
+                                right: US
+                              then: casualties-US:none
+                              else: available-ARVN:none
+                - removeByPriority:
+                    budget: 1
+                    groups:
+                      - bind: $targetInsurgent
+                        over:
+                          query: tokensInZone
+                          zone: $targetSpace
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                op: in
+                                value:
+                                  - VC
+                                  - NVA
+                              - prop: type
+                                eq: guerrilla
+                              - prop: activity
+                                eq: underground
+                        to:
+                          zoneExpr:
+                            concat:
+                              - available-
+                              - ref: tokenProp
+                                token: $targetInsurgent
+                                prop: faction
+                              - :none
       - id: card-15
         title: Medevac
         sideMode: dual
         order: 15
-        tags: [momentum]
+        tags:
+          - momentum
         metadata:
           period: "1964"
-          seatOrder: ["US", "ARVN", "NVA", "VC"]
-          flavorText: "Helicopter evacuation doctrine expands."
+          seatOrder:
+            - US
+            - ARVN
+            - NVA
+            - VC
+          flavorText: Helicopter evacuation doctrine expands.
         unshaded:
-          text: "This Commitment, all Troop Casualties Available. MOMENTUM"
+          text: This Commitment, all Troop Casualties Available. MOMENTUM
           lastingEffects:
             - id: mom-medevac-unshaded
               duration: round
               setupEffects:
                 - macro: set-global-flag-true
-                  args: { varName: mom_medevacUnshaded }
+                  args:
+                    varName: mom_medevacUnshaded
               teardownEffects:
                 - macro: set-global-flag-false
-                  args: { varName: mom_medevacUnshaded }
+                  args:
+                    varName: mom_medevacUnshaded
         shaded:
-          text: "Executing Faction remains Eligible. Until Coup, no Air Lift. MOMENTUM"
+          text: Executing Faction remains Eligible. Until Coup, no Air Lift. MOMENTUM
           eligibilityOverrides:
-            - { target: { kind: active }, eligible: true, windowId: remain-eligible }
+            - target:
+                kind: active
+              eligible: true
+              windowId: remain-eligible
           lastingEffects:
             - id: mom-medevac-shaded
               duration: round
               setupEffects:
                 - macro: set-global-flag-true
-                  args: { varName: mom_medevacShaded }
+                  args:
+                    varName: mom_medevacShaded
               teardownEffects:
                 - macro: set-global-flag-false
-                  args: { varName: mom_medevacShaded }
+                  args:
+                    varName: mom_medevacShaded
       - id: card-26
         title: LRRP
         sideMode: dual
@@ -4210,10 +6073,14 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          seatOrder: ["US", "VC", "ARVN", "NVA"]
-          flavorText: "Long Range Recon Patrol."
+          seatOrder:
+            - US
+            - VC
+            - ARVN
+            - NVA
+          flavorText: Long Range Recon Patrol.
         unshaded:
-          text: "US places 3 Irregulars outside the South then free Air Strikes."
+          text: US places 3 Irregulars outside the South then free Air Strikes.
           effects:
             - let:
                 bind: $availableIrregulars
@@ -4226,24 +6093,32 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: irregular }
+                          - prop: faction
+                            eq: US
+                          - prop: type
+                            eq: irregular
                 in:
                   - let:
                       bind: $irregularsToPlaceCount
                       value:
                         if:
                           when:
-                            op: '>'
-                            left: { ref: binding, name: $availableIrregulars }
+                            op: ">"
+                            left:
+                              ref: binding
+                              name: $availableIrregulars
                             right: 3
                           then: 3
-                          else: { ref: binding, name: $availableIrregulars }
+                          else:
+                            ref: binding
+                            name: $availableIrregulars
                       in:
                         - if:
                             when:
-                              op: '>'
-                              left: { ref: binding, name: $irregularsToPlaceCount }
+                              op: ">"
+                              left:
+                                ref: binding
+                                name: $irregularsToPlaceCount
                               right: 0
                             then:
                               - chooseN:
@@ -4254,26 +6129,43 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: faction, eq: US }
-                                        - { prop: type, eq: irregular }
-                                  min: { ref: binding, name: $irregularsToPlaceCount }
-                                  max: { ref: binding, name: $irregularsToPlaceCount }
+                                        - prop: faction
+                                          eq: US
+                                        - prop: type
+                                          eq: irregular
+                                  min:
+                                    ref: binding
+                                    name: $irregularsToPlaceCount
+                                  max:
+                                    ref: binding
+                                    name: $irregularsToPlaceCount
                               - forEach:
                                   bind: $irregular
-                                  over: { query: binding, name: $irregularsToPlace }
+                                  over:
+                                    query: binding
+                                    name: $irregularsToPlace
                                   effects:
                                     - macro: select-laos-cambodia-province
                                       args: {}
                                     - moveToken:
                                         token: $irregular
-                                        from: { zoneExpr: { ref: tokenZone, token: $irregular } }
-                                        to: { zoneExpr: { ref: binding, name: $laosCambodiaProvince } }
+                                        from:
+                                          zoneExpr:
+                                            ref: tokenZone
+                                            token: $irregular
+                                        to:
+                                          zoneExpr:
+                                            ref: binding
+                                            name: $laosCambodiaProvince
                             else: []
           freeOperationGrants:
-            - seat: "us"
-              sequence: { chain: lrrp-us-airstrike, step: 0 }
+            - seat: us
+              sequence:
+                chain: lrrp-us-airstrike
+                step: 0
               operationClass: operation
-              actionIds: [airStrike]
+              actionIds:
+                - airStrike
         shaded:
           text: "Patrols ambushed: 3 Irregulars map to Casualties. Shift each space they were in 1 level toward Active Opposition."
           effects:
@@ -4287,24 +6179,32 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: irregular }
+                          - prop: faction
+                            eq: US
+                          - prop: type
+                            eq: irregular
                 in:
                   - let:
                       bind: $irregularsToCasualtiesCount
                       value:
                         if:
                           when:
-                            op: '>'
-                            left: { ref: binding, name: $availableIrregularsOnMap }
+                            op: ">"
+                            left:
+                              ref: binding
+                              name: $availableIrregularsOnMap
                             right: 3
                           then: 3
-                          else: { ref: binding, name: $availableIrregularsOnMap }
+                          else:
+                            ref: binding
+                            name: $availableIrregularsOnMap
                       in:
                         - if:
                             when:
-                              op: '>'
-                              left: { ref: binding, name: $irregularsToCasualtiesCount }
+                              op: ">"
+                              left:
+                                ref: binding
+                                name: $irregularsToCasualtiesCount
                               right: 0
                             then:
                               - chooseN:
@@ -4314,34 +6214,60 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: faction, eq: US }
-                                        - { prop: type, eq: irregular }
-                                  min: { ref: binding, name: $irregularsToCasualtiesCount }
-                                  max: { ref: binding, name: $irregularsToCasualtiesCount }
+                                        - prop: faction
+                                          eq: US
+                                        - prop: type
+                                          eq: irregular
+                                  min:
+                                    ref: binding
+                                    name: $irregularsToCasualtiesCount
+                                  max:
+                                    ref: binding
+                                    name: $irregularsToCasualtiesCount
                               - forEach:
                                   bind: $sourceSpace
                                   over:
                                     query: tokenZones
-                                    source: { query: binding, name: $irregularsToCasualties }
+                                    source:
+                                      query: binding
+                                      name: $irregularsToCasualties
                                   effects:
                                     - if:
                                         when:
                                           op: or
                                           args:
-                                            - { op: '==', left: { ref: zoneProp, zone: $sourceSpace, prop: category }, right: city }
-                                            - { op: '==', left: { ref: zoneProp, zone: $sourceSpace, prop: category }, right: province }
+                                            - op: ==
+                                              left:
+                                                ref: zoneProp
+                                                zone: $sourceSpace
+                                                prop: category
+                                              right: city
+                                            - op: ==
+                                              left:
+                                                ref: zoneProp
+                                                zone: $sourceSpace
+                                                prop: category
+                                              right: province
                                         then:
                                           - macro: shift-support-opposition
-                                            args: { space: $sourceSpace, deltaExpr: -1 }
+                                            args:
+                                              space: $sourceSpace
+                                              deltaExpr: -1
                                         else: []
                               - forEach:
                                   bind: $irregular
-                                  over: { query: binding, name: $irregularsToCasualties }
+                                  over:
+                                    query: binding
+                                    name: $irregularsToCasualties
                                   effects:
                                     - moveToken:
                                         token: $irregular
-                                        from: { zoneExpr: { ref: tokenZone, token: $irregular } }
-                                        to: { zoneExpr: casualties-US:none }
+                                        from:
+                                          zoneExpr:
+                                            ref: tokenZone
+                                            token: $irregular
+                                        to:
+                                          zoneExpr: casualties-US:none
                             else: []
       - id: card-29
         title: Tribesmen
@@ -4350,10 +6276,14 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          seatOrder: ["US", "VC", "ARVN", "NVA"]
-          flavorText: "Highland loyalties shift under pressure."
+          seatOrder:
+            - US
+            - VC
+            - ARVN
+            - NVA
+          flavorText: Highland loyalties shift under pressure.
         unshaded:
-          text: "Remove any 4 Insurgent pieces total from spaces with Irregulars."
+          text: Remove any 4 Insurgent pieces total from spaces with Irregulars.
           effects:
             - chooseN:
                 bind: $insurgentPiecesToRemove
@@ -4366,7 +6296,7 @@ eventDecks:
                       query:
                         query: tokensInMapSpaces
                         spaceFilter:
-                          op: '>'
+                          op: ">"
                           left:
                             aggregate:
                               op: count
@@ -4376,20 +6306,32 @@ eventDecks:
                                 filter:
                                   op: and
                                   args:
-                                    - { prop: faction, eq: US }
-                                    - { prop: type, eq: irregular }
+                                    - prop: faction
+                                      eq: US
+                                    - prop: type
+                                      eq: irregular
                           right: 0
                         filter:
                           op: and
                           args:
-                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                            - prop: faction
+                              op: in
+                              value:
+                                - NVA
+                                - VC
                             - op: or
                               args:
-                                - { prop: type, op: in, value: [troops, guerrilla] }
+                                - prop: type
+                                  op: in
+                                  value:
+                                    - troops
+                                    - guerrilla
                                 - op: and
                                   args:
-                                    - { prop: type, eq: base }
-                                    - { prop: tunnel, eq: untunneled }
+                                    - prop: type
+                                      eq: base
+                                    - prop: tunnel
+                                      eq: untunneled
                 max:
                   op: min
                   left: 4
@@ -4399,7 +6341,7 @@ eventDecks:
                       query:
                         query: tokensInMapSpaces
                         spaceFilter:
-                          op: '>'
+                          op: ">"
                           left:
                             aggregate:
                               op: count
@@ -4409,24 +6351,36 @@ eventDecks:
                                 filter:
                                   op: and
                                   args:
-                                    - { prop: faction, eq: US }
-                                    - { prop: type, eq: irregular }
+                                    - prop: faction
+                                      eq: US
+                                    - prop: type
+                                      eq: irregular
                           right: 0
                         filter:
                           op: and
                           args:
-                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                            - prop: faction
+                              op: in
+                              value:
+                                - NVA
+                                - VC
                             - op: or
                               args:
-                                - { prop: type, op: in, value: [troops, guerrilla] }
+                                - prop: type
+                                  op: in
+                                  value:
+                                    - troops
+                                    - guerrilla
                                 - op: and
                                   args:
-                                    - { prop: type, eq: base }
-                                    - { prop: tunnel, eq: untunneled }
+                                    - prop: type
+                                      eq: base
+                                    - prop: tunnel
+                                      eq: untunneled
                 options:
                   query: tokensInMapSpaces
                   spaceFilter:
-                    op: '>'
+                    op: ">"
                     left:
                       aggregate:
                         op: count
@@ -4436,31 +6390,54 @@ eventDecks:
                           filter:
                             op: and
                             args:
-                              - { prop: faction, eq: US }
-                              - { prop: type, eq: irregular }
+                              - prop: faction
+                                eq: US
+                              - prop: type
+                                eq: irregular
                     right: 0
                   filter:
                     op: and
                     args:
-                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                      - prop: faction
+                        op: in
+                        value:
+                          - NVA
+                          - VC
                       - op: or
                         args:
-                          - { prop: type, op: in, value: [troops, guerrilla] }
+                          - prop: type
+                            op: in
+                            value:
+                              - troops
+                              - guerrilla
                           - op: and
                             args:
-                              - { prop: type, eq: base }
-                              - { prop: tunnel, eq: untunneled }
+                              - prop: type
+                                eq: base
+                              - prop: tunnel
+                                eq: untunneled
             - forEach:
                 bind: $insurgentPiece
-                over: { query: binding, name: $insurgentPiecesToRemove }
+                over:
+                  query: binding
+                  name: $insurgentPiecesToRemove
                 effects:
                   - moveToken:
                       token: $insurgentPiece
-                      from: { zoneExpr: { ref: tokenZone, token: $insurgentPiece } }
+                      from:
+                        zoneExpr:
+                          ref: tokenZone
+                          token: $insurgentPiece
                       to:
-                        zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentPiece, prop: faction }, ':none'] }
+                        zoneExpr:
+                          concat:
+                            - available-
+                            - ref: tokenProp
+                              token: $insurgentPiece
+                              prop: faction
+                            - :none
         shaded:
-          text: "Replace all Irregulars with VC Guerrillas. 1 Neutral Highland to Active Opposition. -3 Patronage."
+          text: Replace all Irregulars with VC Guerrillas. 1 Neutral Highland to Active Opposition. -3 Patronage.
           effects:
             - let:
                 bind: $irregularsOnMapCount
@@ -4472,11 +6449,18 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: irregular }
+                          - prop: faction
+                            eq: US
+                          - prop: type
+                            eq: irregular
                 in:
                   - if:
-                      when: { op: '>', left: { ref: binding, name: $irregularsOnMapCount }, right: 0 }
+                      when:
+                        op: ">"
+                        left:
+                          ref: binding
+                          name: $irregularsOnMapCount
+                        right: 0
                       then:
                         - chooseN:
                             bind: $irregularsOnMap
@@ -4485,13 +6469,21 @@ eventDecks:
                               filter:
                                 op: and
                                 args:
-                                  - { prop: faction, eq: US }
-                                  - { prop: type, eq: irregular }
-                            min: { ref: binding, name: $irregularsOnMapCount }
-                            max: { ref: binding, name: $irregularsOnMapCount }
+                                  - prop: faction
+                                    eq: US
+                                  - prop: type
+                                    eq: irregular
+                            min:
+                              ref: binding
+                              name: $irregularsOnMapCount
+                            max:
+                              ref: binding
+                              name: $irregularsOnMapCount
                         - forEach:
                             bind: $irregular
-                            over: { query: binding, name: $irregularsOnMap }
+                            over:
+                              query: binding
+                              name: $irregularsOnMap
                             effects:
                               - removeByPriority:
                                   budget: 1
@@ -4503,13 +6495,22 @@ eventDecks:
                                         filter:
                                           op: and
                                           args:
-                                            - { prop: faction, eq: VC }
-                                            - { prop: type, eq: guerrilla }
-                                      to: { zoneExpr: { ref: tokenZone, token: $irregular } }
+                                            - prop: faction
+                                              eq: VC
+                                            - prop: type
+                                              eq: guerrilla
+                                      to:
+                                        zoneExpr:
+                                          ref: tokenZone
+                                          token: $irregular
                               - moveToken:
                                   token: $irregular
-                                  from: { zoneExpr: { ref: tokenZone, token: $irregular } }
-                                  to: { zoneExpr: available-US:none }
+                                  from:
+                                    zoneExpr:
+                                      ref: tokenZone
+                                      token: $irregular
+                                  to:
+                                    zoneExpr: available-US:none
                       else: []
             - let:
                 bind: $neutralHighlandCount
@@ -4521,12 +6522,30 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: highland }
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: southVietnam }
-                          - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: neutral }
+                          - op: zonePropIncludes
+                            zone: $zone
+                            prop: terrainTags
+                            value: highland
+                          - op: ==
+                            left:
+                              ref: zoneProp
+                              zone: $zone
+                              prop: country
+                            right: southVietnam
+                          - op: ==
+                            left:
+                              ref: markerState
+                              space: $zone
+                              marker: supportOpposition
+                            right: neutral
                 in:
                   - if:
-                      when: { op: '>', left: { ref: binding, name: $neutralHighlandCount }, right: 0 }
+                      when:
+                        op: ">"
+                        left:
+                          ref: binding
+                          name: $neutralHighlandCount
+                        right: 0
                       then:
                         - chooseN:
                             bind: $neutralHighlandToShift
@@ -4535,14 +6554,29 @@ eventDecks:
                               filter:
                                 op: and
                                 args:
-                                  - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: highland }
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: southVietnam }
-                                  - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: neutral }
+                                  - op: zonePropIncludes
+                                    zone: $zone
+                                    prop: terrainTags
+                                    value: highland
+                                  - op: ==
+                                    left:
+                                      ref: zoneProp
+                                      zone: $zone
+                                      prop: country
+                                    right: southVietnam
+                                  - op: ==
+                                    left:
+                                      ref: markerState
+                                      space: $zone
+                                      marker: supportOpposition
+                                    right: neutral
                             min: 1
                             max: 1
                         - forEach:
                             bind: $highlandSpace
-                            over: { query: binding, name: $neutralHighlandToShift }
+                            over:
+                              query: binding
+                              name: $neutralHighlandToShift
                             effects:
                               - setMarker:
                                   space: $highlandSpace
@@ -4550,7 +6584,9 @@ eventDecks:
                                   state: activeOpposition
                       else: []
             - macro: add-global-var-delta
-              args: { varName: patronage, deltaExpr: -3 }
+              args:
+                varName: patronage
+                deltaExpr: -3
       - id: card-30
         title: USS New Jersey
         sideMode: dual
@@ -4558,39 +6594,58 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["US", "VC", "ARVN", "NVA"]
-          flavorText: "Battleship fire support pounds coastal positions."
+          seatOrder:
+            - US
+            - VC
+            - ARVN
+            - NVA
+          flavorText: Battleship fire support pounds coastal positions.
         unshaded:
-          text: "US or ARVN free Air Strikes any 1-3 coastal spaces, removing up to 2 pieces per space (no die roll and no effect on Trail)."
+          text: US or ARVN free Air Strikes any 1-3 coastal spaces, removing up to 2 pieces per space (no die roll and no effect on Trail).
           branches:
             - id: uss-new-jersey-execute-as-us
               order: 1
               freeOperationGrants:
                 - seat: self
-                  executeAsSeat: "us"
-                  sequence: { chain: uss-new-jersey-us, step: 0 }
+                  executeAsSeat: us
+                  sequence:
+                    chain: uss-new-jersey-us
+                    step: 0
                   operationClass: operation
-                  actionIds: [airStrike]
+                  actionIds:
+                    - airStrike
             - id: uss-new-jersey-execute-as-arvn
               order: 2
               freeOperationGrants:
                 - seat: self
-                  executeAsSeat: "arvn"
-                  sequence: { chain: uss-new-jersey-arvn, step: 0 }
+                  executeAsSeat: arvn
+                  sequence:
+                    chain: uss-new-jersey-arvn
+                    step: 0
                   operationClass: operation
-                  actionIds: [airStrike]
+                  actionIds:
+                    - airStrike
           effectTiming: afterGrants
           lastingEffects:
             - id: evt-uss-new-jersey-window
               duration: turn
               setupEffects:
-                - setVar: { scope: global, var: fitl_airStrikeWindowMode, value: 2 }
+                - setVar:
+                    scope: global
+                    var: fitl_airStrikeWindowMode
+                    value: 2
               teardownEffects:
-                - setVar: { scope: global, var: fitl_airStrikeWindowMode, value: 0 }
+                - setVar:
+                    scope: global
+                    var: fitl_airStrikeWindowMode
+                    value: 0
           effects:
-            - setVar: { scope: global, var: fitl_airStrikeWindowMode, value: 0 }
+            - setVar:
+                scope: global
+                var: fitl_airStrikeWindowMode
+                value: 0
         shaded:
-          text: "Shift 2 coastal Provinces with US Troops each 2 levels toward Active Opposition."
+          text: Shift 2 coastal Provinces with US Troops each 2 levels toward Active Opposition.
           effects:
             - chooseN:
                 bind: $targetProvinces
@@ -4599,9 +6654,19 @@ eventDecks:
                   filter:
                     op: and
                     args:
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: coastal }, right: true }
-                      - op: '>'
+                      - op: ==
+                        left:
+                          ref: zoneProp
+                          zone: $zone
+                          prop: category
+                        right: province
+                      - op: ==
+                        left:
+                          ref: zoneProp
+                          zone: $zone
+                          prop: coastal
+                        right: true
+                      - op: ">"
                         left:
                           aggregate:
                             op: count
@@ -4611,80 +6676,123 @@ eventDecks:
                               filter:
                                 op: and
                                 args:
-                                  - { prop: faction, eq: US }
-                                  - { prop: type, eq: troops }
+                                  - prop: faction
+                                    eq: US
+                                  - prop: type
+                                    eq: troops
                         right: 0
                 min: 0
                 max: 2
             - forEach:
                 bind: $targetProvince
-                over: { query: binding, name: $targetProvinces }
+                over:
+                  query: binding
+                  name: $targetProvinces
                 effects:
                   - macro: shift-support-opposition
-                    args: { space: $targetProvince, deltaExpr: -2 }
+                    args:
+                      space: $targetProvince
+                      deltaExpr: -2
       - id: card-31
         title: AAA
         sideMode: dual
         order: 31
-        tags: [capability, NVA]
+        tags:
+          - capability
+          - NVA
         metadata:
           period: "1964"
-          seatOrder: ["NVA", "US", "ARVN", "VC"]
-          flavorText: "Air defense guns thicken around infiltration routes."
+          seatOrder:
+            - NVA
+            - US
+            - ARVN
+            - VC
+          flavorText: Air defense guns thicken around infiltration routes.
         unshaded:
-          text: "Rally that Improves Trail may select 1 space only. NVA CAPABILITY."
+          text: Rally that Improves Trail may select 1 space only. NVA CAPABILITY.
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_aaa, markerState: unshaded }
+              args:
+                markerId: cap_aaa
+                markerState: unshaded
         shaded:
-          text: "Air Strike does not Degrade Trail below 2."
+          text: Air Strike does not Degrade Trail below 2.
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_aaa, markerState: shaded }
+              args:
+                markerId: cap_aaa
+                markerState: shaded
       - id: card-32
         title: Long Range Guns
         sideMode: dual
         order: 32
-        tags: [capability, NVA]
+        tags:
+          - capability
+          - NVA
         metadata:
           period: "1968"
-          seatOrder: ["NVA", "US", "ARVN", "VC"]
-          flavorText: "Long-range artillery extends pressure across contested routes."
+          seatOrder:
+            - NVA
+            - US
+            - ARVN
+            - VC
+          flavorText: Long-range artillery extends pressure across contested routes.
         unshaded:
-          text: "NVA Bombard max 1 space. NVA CAPABILITY. Other restrictions on Bombard apply normally (4.4.2)."
+          text: NVA Bombard max 1 space. NVA CAPABILITY. Other restrictions on Bombard apply normally (4.4.2).
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_longRangeGuns, markerState: unshaded }
+              args:
+                markerId: cap_longRangeGuns
+                markerState: unshaded
         shaded:
-          text: "NVA Bombard max 3 spaces. NVA CAPABILITY. Other restrictions on Bombard apply normally (4.4.2)."
+          text: NVA Bombard max 3 spaces. NVA CAPABILITY. Other restrictions on Bombard apply normally (4.4.2).
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_longRangeGuns, markerState: shaded }
+              args:
+                markerId: cap_longRangeGuns
+                markerState: shaded
       - id: card-33
         title: MiGs
         sideMode: dual
         order: 33
-        tags: [capability, NVA]
+        tags:
+          - capability
+          - NVA
         metadata:
           period: "1968"
-          seatOrder: ["NVA", "US", "ARVN", "VC"]
-          flavorText: "Interceptors contest US air power over the North."
+          seatOrder:
+            - NVA
+            - US
+            - ARVN
+            - VC
+          flavorText: Interceptors contest US air power over the North.
         unshaded:
-          text: "NVA Resources -6 each Reset. NVA CAPABILITY."
+          text: NVA Resources -6 each Reset. NVA CAPABILITY.
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_migs, markerState: unshaded }
+              args:
+                markerId: cap_migs
+                markerState: unshaded
         shaded:
-          text: "Unless unshaded Top Gun, whenever Air Strike Degrades Trail, US removes 1 Available Troop to Casualties."
+          text: Unless unshaded Top Gun, whenever Air Strike Degrades Trail, US removes 1 Available Troop to Casualties.
           effects:
             - if:
-                when: { op: '==', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
+                when:
+                  op: ==
+                  left:
+                    ref: globalMarkerState
+                    marker: cap_topGun
+                  right: unshaded
                 then:
                   - macro: set-global-marker
-                    args: { markerId: cap_migs, markerState: inactive }
+                    args:
+                      markerId: cap_migs
+                      markerState: inactive
                 else:
                   - macro: set-global-marker
-                    args: { markerId: cap_migs, markerState: shaded }
+                    args:
+                      markerId: cap_migs
+                      markerState: shaded
       - id: card-35
         title: Thanh Hoa
         sideMode: dual
@@ -4692,12 +6800,16 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["NVA", "US", "ARVN", "VC"]
-          flavorText: "Air-defense concentration blunts repeated bridge attacks."
+          seatOrder:
+            - NVA
+            - US
+            - ARVN
+            - VC
+          flavorText: Air-defense concentration blunts repeated bridge attacks.
         unshaded:
-          text: "NVA fortifies logistics corridor resilience around Trail adjustments."
+          text: NVA fortifies logistics corridor resilience around Trail adjustments.
         shaded:
-          text: "Strike disruption causes COIN losses and protects northern throughput."
+          text: Strike disruption causes COIN losses and protects northern throughput.
       - id: card-36
         title: Hamburger Hill
         sideMode: dual
@@ -4705,12 +6817,16 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["NVA", "US", "VC", "ARVN"]
-          flavorText: "A brutal highland battle drives force repositioning and tunnel pressure."
+          seatOrder:
+            - NVA
+            - US
+            - VC
+            - ARVN
+          flavorText: A brutal highland battle drives force repositioning and tunnel pressure.
         unshaded:
-          text: "Reposition selected NVA/VC forces and intensify pressure against exposed COIN units."
+          text: Reposition selected NVA/VC forces and intensify pressure against exposed COIN units.
         shaded:
-          text: "COIN assault gains ground but incurs attrition and tunnel-side effects."
+          text: COIN assault gains ground but incurs attrition and tunnel-side effects.
       - id: card-37
         title: Khe Sanh
         sideMode: dual
@@ -4718,14 +6834,18 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["NVA", "US", "VC", "ARVN"]
-          flavorText: "Siege operations force major commitment and casualties."
+          seatOrder:
+            - NVA
+            - US
+            - VC
+            - ARVN
+          flavorText: Siege operations force major commitment and casualties.
         unshaded:
-          text: "Select a US Base with US Troops. Remove 10 NVA Troops within 1 space of it."
+          text: Select a US Base with US Troops. Remove 10 NVA Troops within 1 space of it.
           effects:
             - if:
                 when:
-                  op: '>'
+                  op: ">"
                   left:
                     aggregate:
                       op: count
@@ -4734,7 +6854,7 @@ eventDecks:
                         filter:
                           op: and
                           args:
-                            - op: '>'
+                            - op: ">"
                               left:
                                 aggregate:
                                   op: count
@@ -4744,10 +6864,12 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: faction, eq: US }
-                                        - { prop: type, eq: base }
+                                        - prop: faction
+                                          eq: US
+                                        - prop: type
+                                          eq: base
                               right: 0
-                            - op: '>'
+                            - op: ">"
                               left:
                                 aggregate:
                                   op: count
@@ -4757,8 +6879,10 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: faction, eq: US }
-                                        - { prop: type, eq: troops }
+                                        - prop: faction
+                                          eq: US
+                                        - prop: type
+                                          eq: troops
                               right: 0
                   right: 0
                 then:
@@ -4769,7 +6893,7 @@ eventDecks:
                         filter:
                           op: and
                           args:
-                            - op: '>'
+                            - op: ">"
                               left:
                                 aggregate:
                                   op: count
@@ -4779,10 +6903,12 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: faction, eq: US }
-                                        - { prop: type, eq: base }
+                                        - prop: faction
+                                          eq: US
+                                        - prop: type
+                                          eq: base
                               right: 0
-                            - op: '>'
+                            - op: ">"
                               left:
                                 aggregate:
                                   op: count
@@ -4792,8 +6918,10 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: faction, eq: US }
-                                        - { prop: type, eq: troops }
+                                        - prop: faction
+                                          eq: US
+                                        - prop: type
+                                          eq: troops
                               right: 0
                   - chooseN:
                       bind: $nvaTroopsToRemove
@@ -4811,15 +6939,19 @@ eventDecks:
                                   filter:
                                     op: and
                                     args:
-                                      - { prop: faction, eq: NVA }
-                                      - { prop: type, eq: troops }
+                                      - prop: faction
+                                        eq: NVA
+                                      - prop: type
+                                        eq: troops
                                 - query: tokensInAdjacentZones
                                   zone: $targetBaseSpace
                                   filter:
                                     op: and
                                     args:
-                                      - { prop: faction, eq: NVA }
-                                      - { prop: type, eq: troops }
+                                      - prop: faction
+                                        eq: NVA
+                                      - prop: type
+                                        eq: troops
                       max:
                         op: min
                         left: 10
@@ -4834,15 +6966,19 @@ eventDecks:
                                   filter:
                                     op: and
                                     args:
-                                      - { prop: faction, eq: NVA }
-                                      - { prop: type, eq: troops }
+                                      - prop: faction
+                                        eq: NVA
+                                      - prop: type
+                                        eq: troops
                                 - query: tokensInAdjacentZones
                                   zone: $targetBaseSpace
                                   filter:
                                     op: and
                                     args:
-                                      - { prop: faction, eq: NVA }
-                                      - { prop: type, eq: troops }
+                                      - prop: faction
+                                        eq: NVA
+                                      - prop: type
+                                        eq: troops
                       options:
                         query: concat
                         sources:
@@ -4851,15 +6987,19 @@ eventDecks:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: NVA }
-                                - { prop: type, eq: troops }
+                                - prop: faction
+                                  eq: NVA
+                                - prop: type
+                                  eq: troops
                           - query: tokensInAdjacentZones
                             zone: $targetBaseSpace
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: NVA }
-                                - { prop: type, eq: troops }
+                                - prop: faction
+                                  eq: NVA
+                                - prop: type
+                                  eq: troops
                   - forEach:
                       bind: $nvaTroop
                       over:
@@ -4869,18 +7009,24 @@ eventDecks:
                         - moveToken:
                             token: $nvaTroop
                             from:
-                              zoneExpr: { ref: tokenZone, token: $nvaTroop }
+                              zoneExpr:
+                                ref: tokenZone
+                                token: $nvaTroop
                             to:
                               zoneExpr: available-NVA:none
                 else: []
         shaded:
-          text: "Up to 3 US Troops in 1 space with NVA to Casualties. US Ineligible through next card."
+          text: Up to 3 US Troops in 1 space with NVA to Casualties. US Ineligible through next card.
           eligibilityOverrides:
-            - { target: { kind: seat, seat: 'us' }, eligible: false, windowId: make-ineligible }
+            - target:
+                kind: seat
+                seat: us
+              eligible: false
+              windowId: make-ineligible
           effects:
             - if:
                 when:
-                  op: '>'
+                  op: ">"
                   left:
                     aggregate:
                       op: count
@@ -4889,7 +7035,7 @@ eventDecks:
                         filter:
                           op: and
                           args:
-                            - op: '>'
+                            - op: ">"
                               left:
                                 aggregate:
                                   op: count
@@ -4899,10 +7045,12 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: faction, eq: US }
-                                        - { prop: type, eq: troops }
+                                        - prop: faction
+                                          eq: US
+                                        - prop: type
+                                          eq: troops
                               right: 0
-                            - op: '>'
+                            - op: ">"
                               left:
                                 aggregate:
                                   op: count
@@ -4912,7 +7060,8 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: faction, eq: NVA }
+                                        - prop: faction
+                                          eq: NVA
                               right: 0
                   right: 0
                 then:
@@ -4923,7 +7072,7 @@ eventDecks:
                         filter:
                           op: and
                           args:
-                            - op: '>'
+                            - op: ">"
                               left:
                                 aggregate:
                                   op: count
@@ -4933,10 +7082,12 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: faction, eq: US }
-                                        - { prop: type, eq: troops }
+                                        - prop: faction
+                                          eq: US
+                                        - prop: type
+                                          eq: troops
                               right: 0
-                            - op: '>'
+                            - op: ">"
                               left:
                                 aggregate:
                                   op: count
@@ -4946,7 +7097,8 @@ eventDecks:
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: faction, eq: NVA }
+                                        - prop: faction
+                                          eq: NVA
                               right: 0
                   - chooseN:
                       bind: $usTroopsToCasualties
@@ -4963,16 +7115,20 @@ eventDecks:
                               filter:
                                 op: and
                                 args:
-                                  - { prop: faction, eq: US }
-                                  - { prop: type, eq: troops }
+                                  - prop: faction
+                                    eq: US
+                                  - prop: type
+                                    eq: troops
                       options:
                         query: tokensInZone
                         zone: $targetBattleSpace
                         filter:
                           op: and
                           args:
-                            - { prop: faction, eq: US }
-                            - { prop: type, eq: troops }
+                            - prop: faction
+                              eq: US
+                            - prop: type
+                              eq: troops
                   - forEach:
                       bind: $usTroop
                       over:
@@ -4982,7 +7138,9 @@ eventDecks:
                         - moveToken:
                             token: $usTroop
                             from:
-                              zoneExpr: { ref: tokenZone, token: $usTroop }
+                              zoneExpr:
+                                ref: tokenZone
+                                token: $usTroop
                             to:
                               zoneExpr: casualties-US:none
                 else: []
@@ -4993,17 +7151,24 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["NVA", "US", "VC", "ARVN"]
-          flavorText: "Release negotiations keep US at war."
+          seatOrder:
+            - NVA
+            - US
+            - VC
+            - ARVN
+          flavorText: Release negotiations keep US at war.
         unshaded:
-          text: "Free Air Strike. 2 US Troops from Casualties to Available."
+          text: Free Air Strike. 2 US Troops from Casualties to Available.
           effectTiming: afterGrants
           freeOperationGrants:
             - seat: self
-              executeAsSeat: "us"
-              sequence: { chain: pows-free-airstrike, step: 0 }
+              executeAsSeat: us
+              sequence:
+                chain: pows-free-airstrike
+                step: 0
               operationClass: operation
-              actionIds: [airStrike]
+              actionIds:
+                - airStrike
           effects:
             - removeByPriority:
                 budget: 2
@@ -5015,12 +7180,14 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: troops }
+                          - prop: faction
+                            eq: US
+                          - prop: type
+                            eq: troops
                     to:
                       zoneExpr: available-US:none
         shaded:
-          text: "3 US Troops from Available to Casualties."
+          text: 3 US Troops from Available to Casualties.
           effects:
             - removeByPriority:
                 budget: 3
@@ -5032,21 +7199,28 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: troops }
+                          - prop: faction
+                            eq: US
+                          - prop: type
+                            eq: troops
                     to:
                       zoneExpr: casualties-US:none
       - id: card-41
         title: Bombing Pause
         sideMode: single
         order: 41
-        tags: [momentum]
+        tags:
+          - momentum
         metadata:
           period: "1968"
-          seatOrder: ["NVA", "ARVN", "US", "VC"]
-          flavorText: "Air campaign pauses shift tempo across infiltration and support tracks."
+          seatOrder:
+            - NVA
+            - ARVN
+            - US
+            - VC
+          flavorText: Air campaign pauses shift tempo across infiltration and support tracks.
         unshaded:
-          text: "Set any two spaces to Passive Support. Patronage +2. No Air Strike until Coup. MOMENTUM"
+          text: Set any two spaces to Passive Support. Patronage +2. No Air Strike until Coup. MOMENTUM
           targets:
             - id: $targetSpace
               selector:
@@ -5056,11 +7230,32 @@ eventDecks:
                   args:
                     - op: or
                       args:
-                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
-                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: southVietnam }
-                    - { op: '>', left: { ref: zoneProp, zone: $zone, prop: population }, right: 0 }
-              cardinality: { n: 2 }
+                        - op: ==
+                          left:
+                            ref: zoneProp
+                            zone: $zone
+                            prop: category
+                          right: city
+                        - op: ==
+                          left:
+                            ref: zoneProp
+                            zone: $zone
+                            prop: category
+                          right: province
+                    - op: ==
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: country
+                      right: southVietnam
+                    - op: ">"
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: population
+                      right: 0
+              cardinality:
+                n: 2
               application: each
               effects:
                 - setMarker:
@@ -5069,16 +7264,20 @@ eventDecks:
                     state: passiveSupport
           effects:
             - macro: add-global-var-delta
-              args: { varName: patronage, deltaExpr: 2 }
+              args:
+                varName: patronage
+                deltaExpr: 2
           lastingEffects:
             - id: mom-bombing-pause
               duration: round
               setupEffects:
                 - macro: set-global-flag-true
-                  args: { varName: mom_bombingPause }
+                  args:
+                    varName: mom_bombingPause
               teardownEffects:
                 - macro: set-global-flag-false
-                  args: { varName: mom_bombingPause }
+                  args:
+                    varName: mom_bombingPause
       - id: card-42
         title: Chou En Lai
         sideMode: dual
@@ -5086,12 +7285,19 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["NVA", "ARVN", "US", "VC"]
-          flavorText: "Chinese leverage links diplomacy to wartime resource shifts."
+          seatOrder:
+            - NVA
+            - ARVN
+            - US
+            - VC
+          flavorText: Chinese leverage links diplomacy to wartime resource shifts.
         unshaded:
-          text: "NVA Resources -10. NVA must remove a die roll in Troops."
+          text: NVA Resources -10. NVA must remove a die roll in Troops.
           effects:
-            - addVar: { scope: global, var: nvaResources, delta: -10 }
+            - addVar:
+                scope: global
+                var: nvaResources
+                delta: -10
             - rollRandom:
                 bind: $chouEnLaiTroopLossRoll
                 min: 1
@@ -5107,18 +7313,29 @@ eventDecks:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: NVA }
-                                - { prop: type, eq: troops }
+                                - prop: faction
+                                  eq: NVA
+                                - prop: type
+                                  eq: troops
                       in:
                         - let:
                             bind: $nvaTroopsToRemove
                             value:
                               op: min
-                              left: { ref: binding, name: $chouEnLaiTroopLossRoll }
-                              right: { ref: binding, name: $nvaTroopsOnMapCount }
+                              left:
+                                ref: binding
+                                name: $chouEnLaiTroopLossRoll
+                              right:
+                                ref: binding
+                                name: $nvaTroopsOnMapCount
                             in:
                               - if:
-                                  when: { op: '>', left: { ref: binding, name: $nvaTroopsToRemove }, right: 0 }
+                                  when:
+                                    op: ">"
+                                    left:
+                                      ref: binding
+                                      name: $nvaTroopsToRemove
+                                    right: 0
                                   then:
                                     - chooseN:
                                         bind: $nvaTroopsChosenToRemove
@@ -5128,50 +7345,79 @@ eventDecks:
                                           filter:
                                             op: and
                                             args:
-                                              - { prop: faction, eq: NVA }
-                                              - { prop: type, eq: troops }
-                                        min: { ref: binding, name: $nvaTroopsToRemove }
-                                        max: { ref: binding, name: $nvaTroopsToRemove }
+                                              - prop: faction
+                                                eq: NVA
+                                              - prop: type
+                                                eq: troops
+                                        min:
+                                          ref: binding
+                                          name: $nvaTroopsToRemove
+                                        max:
+                                          ref: binding
+                                          name: $nvaTroopsToRemove
                                     - forEach:
                                         bind: $nvaTroop
-                                        over: { query: binding, name: $nvaTroopsChosenToRemove }
+                                        over:
+                                          query: binding
+                                          name: $nvaTroopsChosenToRemove
                                         effects:
                                           - moveToken:
                                               token: $nvaTroop
-                                              from: { zoneExpr: { ref: tokenZone, token: $nvaTroop } }
-                                              to: { zoneExpr: available-NVA:none }
+                                              from:
+                                                zoneExpr:
+                                                  ref: tokenZone
+                                                  token: $nvaTroop
+                                              to:
+                                                zoneExpr: available-NVA:none
                                   else: []
         shaded:
           text: "Chinese boost aid to North: NVA add +10 Resources. VC add Trail value in Resources."
           effects:
-            - addVar: { scope: global, var: nvaResources, delta: 10 }
+            - addVar:
+                scope: global
+                var: nvaResources
+                delta: 10
             - let:
                 bind: $trailValue
-                value: { ref: gvar, var: trail }
+                value:
+                  ref: gvar
+                  var: trail
                 in:
                   - addVar:
                       scope: global
                       var: vcResources
-                      delta: { ref: binding, name: $trailValue }
+                      delta:
+                        ref: binding
+                        name: $trailValue
       - id: card-45
         title: PT-76
         sideMode: dual
         order: 45
-        tags: [capability, NVA]
+        tags:
+          - capability
+          - NVA
         metadata:
           period: "1968"
-          seatOrder: ["NVA", "ARVN", "US", "VC"]
-          flavorText: "Amphibious armor expands NVA assault options in difficult terrain."
+          seatOrder:
+            - NVA
+            - ARVN
+            - US
+            - VC
+          flavorText: Amphibious armor expands NVA assault options in difficult terrain.
         unshaded:
           text: "NVA capability: selected Assaults gain armored removal pressure."
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_pt76, markerState: unshaded }
+              args:
+                markerId: cap_pt76
+                markerState: unshaded
         shaded:
           text: "NVA capability (shaded): armored commitments increase NVA troop exposure."
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_pt76, markerState: shaded }
+              args:
+                markerId: cap_pt76
+                markerState: shaded
       - id: card-49
         title: Russian Arms
         sideMode: dual
@@ -5179,12 +7425,16 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["NVA", "ARVN", "VC", "US"]
-          flavorText: "External materiel shipments increase insurgent placement flexibility."
+          seatOrder:
+            - NVA
+            - ARVN
+            - VC
+            - US
+          flavorText: External materiel shipments increase insurgent placement flexibility.
         unshaded:
-          text: "Place NVA/VC pieces into eligible spaces and improve insurgent posture."
+          text: Place NVA/VC pieces into eligible spaces and improve insurgent posture.
         shaded:
-          text: "Arms pipeline disruption limits placement and redirects strategic effort."
+          text: Arms pipeline disruption limits placement and redirects strategic effort.
       - id: card-52
         title: RAND
         sideMode: dual
@@ -5192,30 +7442,42 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["NVA", "VC", "US", "ARVN"]
-          flavorText: "Analyst leaks expose hidden assumptions and reverse perceived advantages."
+          seatOrder:
+            - NVA
+            - VC
+            - US
+            - ARVN
+          flavorText: Analyst leaks expose hidden assumptions and reverse perceived advantages.
         unshaded:
-          text: "Flip one currently active capability to its opposite side."
+          text: Flip one currently active capability to its opposite side.
           effects:
             - chooseOne:
                 bind: $randCapabilityMarker
                 options:
                   query: globalMarkers
-                  states: [unshaded, shaded]
+                  states:
+                    - unshaded
+                    - shaded
             - flipGlobalMarker:
-                marker: { ref: binding, name: $randCapabilityMarker }
+                marker:
+                  ref: binding
+                  name: $randCapabilityMarker
                 stateA: unshaded
                 stateB: shaded
         shaded:
-          text: "Flip one currently active capability to its opposite side."
+          text: Flip one currently active capability to its opposite side.
           effects:
             - chooseOne:
                 bind: $randCapabilityMarker
                 options:
                   query: globalMarkers
-                  states: [unshaded, shaded]
+                  states:
+                    - unshaded
+                    - shaded
             - flipGlobalMarker:
-                marker: { ref: binding, name: $randCapabilityMarker }
+                marker:
+                  ref: binding
+                  name: $randCapabilityMarker
                 stateA: unshaded
                 stateB: shaded
       - id: card-54
@@ -5225,12 +7487,16 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["NVA", "VC", "US", "ARVN"]
-          flavorText: "Raid planning reshapes near-term eligibility and initiative windows."
+          seatOrder:
+            - NVA
+            - VC
+            - US
+            - ARVN
+          flavorText: Raid planning reshapes near-term eligibility and initiative windows.
         unshaded:
-          text: "Adjust next-card eligibility to favor COIN follow-on operations."
+          text: Adjust next-card eligibility to favor COIN follow-on operations.
         shaded:
-          text: "Raid aftermath shifts eligibility toward insurgent initiative."
+          text: Raid aftermath shifts eligibility toward insurgent initiative.
       - id: card-57
         title: International Unrest
         sideMode: dual
@@ -5238,12 +7504,16 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["NVA", "VC", "ARVN", "US"]
-          flavorText: "Global pressure amplifies domestic war costs and casualty politics."
+          seatOrder:
+            - NVA
+            - VC
+            - ARVN
+            - US
+          flavorText: Global pressure amplifies domestic war costs and casualty politics.
         unshaded:
-          text: "Casualty-driven die roll reduces COIN political leverage."
+          text: Casualty-driven die roll reduces COIN political leverage.
         shaded:
-          text: "External backlash constrains insurgent options and forces resource tradeoffs."
+          text: External backlash constrains insurgent options and forces resource tradeoffs.
       - id: card-58
         title: Pathet Lao
         sideMode: dual
@@ -5251,12 +7521,16 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["NVA", "VC", "ARVN", "US"]
-          flavorText: "Laotian coordination alters trail security and redeployment pressure."
+          seatOrder:
+            - NVA
+            - VC
+            - ARVN
+            - US
+          flavorText: Laotian coordination alters trail security and redeployment pressure.
         unshaded:
-          text: "Conditionally improve Trail or trigger selective redeploy effects."
+          text: Conditionally improve Trail or trigger selective redeploy effects.
         shaded:
-          text: "Cross-border disruption degrades Trail tempo and complicates redeploy planning."
+          text: Cross-border disruption degrades Trail tempo and complicates redeploy planning.
       - id: card-60
         title: War Photographer
         sideMode: dual
@@ -5264,31 +7538,45 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["NVA", "VC", "ARVN", "US"]
-          flavorText: "Images from the front alter force posture and political appetite."
+          seatOrder:
+            - NVA
+            - VC
+            - ARVN
+            - US
+          flavorText: Images from the front alter force posture and political appetite.
         unshaded:
-          text: "Place pieces from Out of Play into selected spaces."
+          text: Place pieces from Out of Play into selected spaces.
         shaded:
-          text: "Media backlash moves selected forces back out of theater."
+          text: Media backlash moves selected forces back out of theater.
       - id: card-61
         title: Armored Cavalry
         sideMode: dual
         order: 61
-        tags: [capability, ARVN]
+        tags:
+          - capability
+          - ARVN
         metadata:
           period: "1968"
-          seatOrder: ["ARVN", "US", "NVA", "VC"]
-          flavorText: "Mechanized formations increase ARVN operational reach."
+          seatOrder:
+            - ARVN
+            - US
+            - NVA
+            - VC
+          flavorText: Mechanized formations increase ARVN operational reach.
         unshaded:
           text: "ARVN capability: Armored columns improve ARVN mobile operation efficiency."
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_armoredCavalry, markerState: unshaded }
+              args:
+                markerId: cap_armoredCavalry
+                markerState: unshaded
         shaded:
           text: "ARVN capability (shaded): armored commitments create vulnerabilities around ARVN moves."
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_armoredCavalry, markerState: shaded }
+              args:
+                markerId: cap_armoredCavalry
+                markerState: shaded
       - id: card-62
         title: Cambodian Civil War
         sideMode: dual
@@ -5296,10 +7584,14 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["ARVN", "US", "NVA", "VC"]
-          flavorText: "Border conflict opens corridors for rapid intervention and disruption."
+          seatOrder:
+            - ARVN
+            - US
+            - NVA
+            - VC
+          flavorText: Border conflict opens corridors for rapid intervention and disruption.
         unshaded:
-          text: "COIN executes free Air Lift then free Sweep; remove one insurgent Base from Cambodia."
+          text: COIN executes free Air Lift then free Sweep; remove one insurgent Base from Cambodia.
         shaded:
           text: "Regional escalation favors insurgents: remove one COIN Base from Cambodia."
       - id: card-65
@@ -5309,12 +7601,16 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["ARVN", "US", "NVA", "VC"]
-          flavorText: "External contingents alter force availability and aid posture."
+          seatOrder:
+            - ARVN
+            - US
+            - NVA
+            - VC
+          flavorText: External contingents alter force availability and aid posture.
         unshaded:
-          text: "Roll a die and move up to that many COIN pieces from Out of Play to Available."
+          text: Roll a die and move up to that many COIN pieces from Out of Play to Available.
         shaded:
-          text: "Roll a die and reduce Aid by result."
+          text: Roll a die and reduce Aid by result.
       - id: card-71
         title: An Loc
         sideMode: dual
@@ -5322,12 +7618,16 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["ARVN", "NVA", "US", "VC"]
-          flavorText: "Urban defense at An Loc forces troop losses and emergency repositioning."
+          seatOrder:
+            - ARVN
+            - NVA
+            - US
+            - VC
+          flavorText: Urban defense at An Loc forces troop losses and emergency repositioning.
         unshaded:
-          text: "Remove selected NVA Troops and place ARVN Troops in contested spaces."
+          text: Remove selected NVA Troops and place ARVN Troops in contested spaces.
         shaded:
-          text: "ARVN losses mount; redeploy NVA pressure around An Loc."
+          text: ARVN losses mount; redeploy NVA pressure around An Loc.
       - id: card-74
         title: Lam Son 719
         sideMode: dual
@@ -5335,10 +7635,14 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["ARVN", "NVA", "US", "VC"]
-          flavorText: "Cross-border incursion strains ARVN logistics and Trail stability."
+          seatOrder:
+            - ARVN
+            - NVA
+            - US
+            - VC
+          flavorText: Cross-border incursion strains ARVN logistics and Trail stability.
         unshaded:
-          text: "Place ARVN Troops in Laos/Cambodia and degrade Trail by 1."
+          text: Place ARVN Troops in Laos/Cambodia and degrade Trail by 1.
         shaded:
           text: "Operation falters: remove ARVN Troops and improve Trail by 1."
       - id: card-77
@@ -5348,38 +7652,72 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["ARVN", "NVA", "VC", "US"]
-          flavorText: "Great-power easing cools conflict intensity and shrinks wartime budgets."
+          seatOrder:
+            - ARVN
+            - NVA
+            - VC
+            - US
+          flavorText: Great-power easing cools conflict intensity and shrinks wartime budgets.
         unshaded:
-          text: "Cut ARVN, NVA, and VC Resources in half."
+          text: Cut ARVN, NVA, and VC Resources in half.
           effects:
             - setVar:
                 scope: global
                 var: arvnResources
-                value: { op: '/', left: { ref: gvar, var: arvnResources }, right: 2 }
+                value:
+                  op: /
+                  left:
+                    ref: gvar
+                    var: arvnResources
+                  right: 2
             - setVar:
                 scope: global
                 var: nvaResources
-                value: { op: '/', left: { ref: gvar, var: nvaResources }, right: 2 }
+                value:
+                  op: /
+                  left:
+                    ref: gvar
+                    var: nvaResources
+                  right: 2
             - setVar:
                 scope: global
                 var: vcResources
-                value: { op: '/', left: { ref: gvar, var: vcResources }, right: 2 }
+                value:
+                  op: /
+                  left:
+                    ref: gvar
+                    var: vcResources
+                  right: 2
         shaded:
-          text: "Cut ARVN, NVA, and VC Resources in half."
+          text: Cut ARVN, NVA, and VC Resources in half.
           effects:
             - setVar:
                 scope: global
                 var: arvnResources
-                value: { op: '/', left: { ref: gvar, var: arvnResources }, right: 2 }
+                value:
+                  op: /
+                  left:
+                    ref: gvar
+                    var: arvnResources
+                  right: 2
             - setVar:
                 scope: global
                 var: nvaResources
-                value: { op: '/', left: { ref: gvar, var: nvaResources }, right: 2 }
+                value:
+                  op: /
+                  left:
+                    ref: gvar
+                    var: nvaResources
+                  right: 2
             - setVar:
                 scope: global
                 var: vcResources
-                value: { op: '/', left: { ref: gvar, var: vcResources }, right: 2 }
+                value:
+                  op: /
+                  left:
+                    ref: gvar
+                    var: vcResources
+                  right: 2
       - id: card-80
         title: Light at the End of the Tunnel
         sideMode: single
@@ -5387,10 +7725,14 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["ARVN", "NVA", "VC", "US"]
-          flavorText: "War-weariness and optimism collide in piecemeal force adjustments."
+          seatOrder:
+            - ARVN
+            - NVA
+            - VC
+            - US
+          flavorText: War-weariness and optimism collide in piecemeal force adjustments.
         unshaded:
-          text: "Apply piece-by-piece force adjustments across factions as listed on the card."
+          text: Apply piece-by-piece force adjustments across factions as listed on the card.
       - id: card-84
         title: To Quoc
         sideMode: dual
@@ -5398,12 +7740,16 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["ARVN", "VC", "US", "NVA"]
-          flavorText: "Nationalist appeals drive local recruitment and police concentration."
+          seatOrder:
+            - ARVN
+            - VC
+            - US
+            - NVA
+          flavorText: Nationalist appeals drive local recruitment and police concentration.
         unshaded:
-          text: "Place ARVN pieces by space and shift support where ARVN presence expands."
+          text: Place ARVN pieces by space and shift support where ARVN presence expands.
         shaded:
-          text: "Insurgent counter-mobilization places guerrillas where ARVN policing is weak."
+          text: Insurgent counter-mobilization places guerrillas where ARVN policing is weak.
       - id: card-88
         title: Phan Quang Dan
         sideMode: dual
@@ -5411,12 +7757,16 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["ARVN", "VC", "NVA", "US"]
-          flavorText: "Political reforms in Saigon trade patronage for public support."
+          seatOrder:
+            - ARVN
+            - VC
+            - NVA
+            - US
+          flavorText: Political reforms in Saigon trade patronage for public support.
         unshaded:
-          text: "Shift Saigon toward Support and adjust Patronage."
+          text: Shift Saigon toward Support and adjust Patronage.
         shaded:
-          text: "Shift Saigon toward Opposition and adjust Patronage."
+          text: Shift Saigon toward Opposition and adjust Patronage.
       - id: card-91
         title: Bob Hope
         sideMode: dual
@@ -5424,12 +7774,16 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["VC", "US", "NVA", "ARVN"]
-          flavorText: "Show-tour logistics and media optics reshape force posture."
+          seatOrder:
+            - VC
+            - US
+            - NVA
+            - ARVN
+          flavorText: Show-tour logistics and media optics reshape force posture.
         unshaded:
-          text: "Relocate US Troops among selected spaces and move matching losses to Casualties."
+          text: Relocate US Troops among selected spaces and move matching losses to Casualties.
         shaded:
-          text: "Show backlash strains US posture and increases casualty pressure."
+          text: Show backlash strains US posture and increases casualty pressure.
       - id: card-92
         title: SEALORDS
         sideMode: dual
@@ -5437,12 +7791,16 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["VC", "US", "NVA", "ARVN"]
-          flavorText: "Riverine interdiction drives concentrated operations around the delta."
+          seatOrder:
+            - VC
+            - US
+            - NVA
+            - ARVN
+          flavorText: Riverine interdiction drives concentrated operations around the delta.
         unshaded:
-          text: "US executes free Sweep then free Assault in/adjacent to Can Tho."
+          text: US executes free Sweep then free Assault in/adjacent to Can Tho.
         shaded:
-          text: "Interdiction overreach opens gaps for insurgent movement."
+          text: Interdiction overreach opens gaps for insurgent movement.
       - id: card-94
         title: Tunnel Rats
         sideMode: single
@@ -5450,10 +7808,14 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["VC", "US", "NVA", "ARVN"]
-          flavorText: "Close-quarters tunnel fighting shifts subterranean control."
+          seatOrder:
+            - VC
+            - US
+            - NVA
+            - ARVN
+          flavorText: Close-quarters tunnel fighting shifts subterranean control.
         unshaded:
-          text: "Place or remove a Tunnel marker in one selected space."
+          text: Place or remove a Tunnel marker in one selected space.
       - id: card-96
         title: APC
         sideMode: dual
@@ -5461,16 +7823,20 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["VC", "US", "ARVN", "NVA"]
-          flavorText: "Mechanized pacification pressure collides with insurgent shock timing."
+          seatOrder:
+            - VC
+            - US
+            - ARVN
+            - NVA
+          flavorText: Mechanized pacification pressure collides with insurgent shock timing.
         unshaded:
-          text: "ARVN executes free Pacify in selected spaces."
+          text: ARVN executes free Pacify in selected spaces.
         shaded:
-          text: "If Tet Offensive has been played, return it to VC; otherwise VC executes General Uprising."
+          text: If Tet Offensive has been played, return it to VC; otherwise VC executes General Uprising.
           effects:
             - if:
                 when:
-                  op: '>'
+                  op: ">"
                   left:
                     aggregate:
                       op: count
@@ -5480,7 +7846,8 @@ eventDecks:
                         filter:
                           op: and
                           args:
-                            - { prop: cardId, eq: card-124 }
+                            - prop: cardId
+                              eq: card-124
                   right: 0
                 then:
                   - forEach:
@@ -5491,18 +7858,21 @@ eventDecks:
                         filter:
                           op: and
                           args:
-                            - { prop: cardId, eq: card-124 }
+                            - prop: cardId
+                              eq: card-124
                       limit: 1
                       effects:
                         - moveToken:
                             token: $tetCard
                             from: played:none
-                            to: { zoneExpr: leader:none }
+                            to:
+                              zoneExpr: leader:none
                 else:
                   - grantFreeOperation:
-                      seat: "vc"
+                      seat: vc
                       operationClass: operation
-                      actionIds: [operation]
+                      actionIds:
+                        - operation
       - id: card-103
         title: Kent State
         sideMode: dual
@@ -5510,12 +7880,16 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["VC", "NVA", "US", "ARVN"]
-          flavorText: "Domestic unrest converts battlefield casualties into political constraints."
+          seatOrder:
+            - VC
+            - NVA
+            - US
+            - ARVN
+          flavorText: Domestic unrest converts battlefield casualties into political constraints.
         unshaded:
-          text: "Move selected US Troops from map to Casualties."
+          text: Move selected US Troops from map to Casualties.
         shaded:
-          text: "US executes free Limited Operation under tightened domestic limits."
+          text: US executes free Limited Operation under tightened domestic limits.
       - id: card-111
         title: Agent Orange
         sideMode: dual
@@ -5523,12 +7897,16 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["VC", "ARVN", "US", "NVA"]
-          flavorText: "Defoliation campaigns reveal insurgent networks while escalating costs."
+          seatOrder:
+            - VC
+            - ARVN
+            - US
+            - NVA
+          flavorText: Defoliation campaigns reveal insurgent networks while escalating costs.
         unshaded:
-          text: "Flip selected Guerrillas to Active and execute free Air Strikes."
+          text: Flip selected Guerrillas to Active and execute free Air Strikes.
         shaded:
-          text: "Chemical warfare backlash suppresses COIN momentum and favors insurgent recovery."
+          text: Chemical warfare backlash suppresses COIN momentum and favors insurgent recovery.
       - id: card-113
         title: Ruff Puff
         sideMode: dual
@@ -5536,32 +7914,43 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["VC", "ARVN", "US", "NVA"]
-          flavorText: "Regional force restructuring shifts police and militia composition."
+          seatOrder:
+            - VC
+            - ARVN
+            - US
+            - NVA
+          flavorText: Regional force restructuring shifts police and militia composition.
         unshaded:
-          text: "Place ARVN Police in selected spaces."
+          text: Place ARVN Police in selected spaces.
         shaded:
-          text: "Replace selected ARVN pieces with Rangers in eligible spaces."
+          text: Replace selected ARVN pieces with Rangers in eligible spaces.
       - id: card-115
         title: Typhoon Kate
         sideMode: single
         order: 115
-        tags: [momentum]
+        tags:
+          - momentum
         metadata:
           period: "1968"
-          seatOrder: ["VC", "ARVN", "US", "NVA"]
-          flavorText: "Storm disruption constrains mobility and long-range support tempo."
+          seatOrder:
+            - VC
+            - ARVN
+            - US
+            - NVA
+          flavorText: Storm disruption constrains mobility and long-range support tempo.
         unshaded:
-          text: "No Air Lift, Transport, or Bombard; remaining SAs to 1 space until Coup. MOMENTUM"
+          text: No Air Lift, Transport, or Bombard; remaining SAs to 1 space until Coup. MOMENTUM
           lastingEffects:
             - id: mom-typhoon-kate
               duration: round
               setupEffects:
                 - macro: set-global-flag-true
-                  args: { varName: mom_typhoonKate }
+                  args:
+                    varName: mom_typhoonKate
               teardownEffects:
                 - macro: set-global-flag-false
-                  args: { varName: mom_typhoonKate }
+                  args:
+                    varName: mom_typhoonKate
       - id: card-117
         title: Corps Commanders
         sideMode: dual
@@ -5569,13 +7958,17 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["VC", "ARVN", "NVA", "US"]
-          flavorText: "Regional command intervention reallocates troops by political roll of the dice."
+          seatOrder:
+            - VC
+            - ARVN
+            - NVA
+            - US
+          flavorText: Regional command intervention reallocates troops by political roll of the dice.
         unshaded:
-          text: "ARVN places 3 of its Troops from out of play or Available into 1 or 2 adjacent spaces then free Sweeps each."
+          text: ARVN places 3 of its Troops from out of play or Available into 1 or 2 adjacent spaces then free Sweeps each.
           effects:
             - setActivePlayer:
-                player: "ARVN"
+                player: ARVN
             - chooseOne:
                 bind: $anchorSpace
                 options:
@@ -5602,15 +7995,19 @@ eventDecks:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: ARVN }
-                                - { prop: type, eq: troops }
+                                - prop: faction
+                                  eq: ARVN
+                                - prop: type
+                                  eq: troops
                           - query: tokensInZone
                             zone: out-of-play-ARVN:none
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: ARVN }
-                                - { prop: type, eq: troops }
+                                - prop: faction
+                                  eq: ARVN
+                                - prop: type
+                                  eq: troops
                 max:
                   op: min
                   left: 3
@@ -5625,15 +8022,19 @@ eventDecks:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: ARVN }
-                                - { prop: type, eq: troops }
+                                - prop: faction
+                                  eq: ARVN
+                                - prop: type
+                                  eq: troops
                           - query: tokensInZone
                             zone: out-of-play-ARVN:none
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: ARVN }
-                                - { prop: type, eq: troops }
+                                - prop: faction
+                                  eq: ARVN
+                                - prop: type
+                                  eq: troops
                 options:
                   query: concat
                   sources:
@@ -5642,15 +8043,19 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: ARVN }
-                          - { prop: type, eq: troops }
+                          - prop: faction
+                            eq: ARVN
+                          - prop: type
+                            eq: troops
                     - query: tokensInZone
                       zone: out-of-play-ARVN:none
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: ARVN }
-                          - { prop: type, eq: troops }
+                          - prop: faction
+                            eq: ARVN
+                          - prop: type
+                            eq: troops
             - chooseN:
                 bind: $troopsToAnchor
                 max:
@@ -5671,12 +8076,16 @@ eventDecks:
                   - moveToken:
                       token: $troopToAnchor
                       from:
-                        zoneExpr: { ref: tokenZone, token: $troopToAnchor }
+                        zoneExpr:
+                          ref: tokenZone
+                          token: $troopToAnchor
                       to:
-                        zoneExpr: { ref: binding, name: $anchorSpace }
+                        zoneExpr:
+                          ref: binding
+                          name: $anchorSpace
             - if:
                 when:
-                  op: '>'
+                  op: ">"
                   left:
                     aggregate:
                       op: count
@@ -5698,16 +8107,24 @@ eventDecks:
                       effects:
                         - if:
                             when:
-                              op: '!='
-                              left: { ref: tokenZone, token: $troop }
-                              right: { ref: binding, name: $anchorSpace }
+                              op: "!="
+                              left:
+                                ref: tokenZone
+                                token: $troop
+                              right:
+                                ref: binding
+                                name: $anchorSpace
                             then:
                               - moveToken:
                                   token: $troop
                                   from:
-                                    zoneExpr: { ref: tokenZone, token: $troop }
+                                    zoneExpr:
+                                      ref: tokenZone
+                                      token: $troop
                                   to:
-                                    zoneExpr: { ref: binding, name: $selectedAdjacent }
+                                    zoneExpr:
+                                      ref: binding
+                                      name: $selectedAdjacent
                             else: []
                 else:
                   - forEach:
@@ -5718,27 +8135,36 @@ eventDecks:
                       effects:
                         - if:
                             when:
-                              op: '!='
-                              left: { ref: tokenZone, token: $troop }
-                              right: { ref: binding, name: $anchorSpace }
+                              op: "!="
+                              left:
+                                ref: tokenZone
+                                token: $troop
+                              right:
+                                ref: binding
+                                name: $anchorSpace
                             then:
                               - moveToken:
                                   token: $troop
                                   from:
-                                    zoneExpr: { ref: tokenZone, token: $troop }
+                                    zoneExpr:
+                                      ref: tokenZone
+                                      token: $troop
                                   to:
-                                    zoneExpr: { ref: binding, name: $anchorSpace }
+                                    zoneExpr:
+                                      ref: binding
+                                      name: $anchorSpace
                             else: []
             - setActivePlayer:
                 player: actor
             - grantFreeOperation:
-                seat: "arvn"
+                seat: arvn
                 operationClass: operation
-                actionIds: [sweep]
+                actionIds:
+                  - sweep
                 zoneFilter:
-                  op: '=='
+                  op: ==
                   left: $zone
-                  right: '{$anchorSpace}'
+                  right: "{$anchorSpace}"
             - forEach:
                 bind: $adjSpace
                 over:
@@ -5746,17 +8172,22 @@ eventDecks:
                   name: $adjacentSpace
                 effects:
                   - grantFreeOperation:
-                      seat: "arvn"
+                      seat: arvn
                       operationClass: operation
-                      actionIds: [sweep]
+                      actionIds:
+                        - sweep
                       zoneFilter:
-                        op: '=='
+                        op: ==
                         left: $zone
-                        right: '{$adjSpace}'
+                        right: "{$adjSpace}"
         shaded:
-          text: "Remove a die roll of ARVN pieces from 1 or 2 adjacent spaces. ARVN Ineligible through next card."
+          text: Remove a die roll of ARVN pieces from 1 or 2 adjacent spaces. ARVN Ineligible through next card.
           eligibilityOverrides:
-            - { target: { kind: seat, seat: 'arvn' }, eligible: false, windowId: make-ineligible }
+            - target:
+                kind: seat
+                seat: arvn
+              eligible: false
+              windowId: make-ineligible
           effects:
             - chooseOne:
                 bind: $anchorSpace
@@ -5774,7 +8205,9 @@ eventDecks:
                 max: 6
                 in:
                   - removeByPriority:
-                      budget: { ref: binding, name: $lossRoll }
+                      budget:
+                        ref: binding
+                        name: $lossRoll
                       remainingBind: $remainingLosses
                       groups:
                         - bind: $arvnPieceInAnchor
@@ -5784,7 +8217,8 @@ eventDecks:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: ARVN }
+                                - prop: faction
+                                  eq: ARVN
                           to:
                             zoneExpr: available-ARVN:none
                       in:
@@ -5795,10 +8229,17 @@ eventDecks:
                               name: $adjacentSpace
                             effects:
                               - if:
-                                  when: { op: '>', left: { ref: binding, name: $remainingLosses }, right: 0 }
+                                  when:
+                                    op: ">"
+                                    left:
+                                      ref: binding
+                                      name: $remainingLosses
+                                    right: 0
                                   then:
                                     - removeByPriority:
-                                        budget: { ref: binding, name: $remainingLosses }
+                                        budget:
+                                          ref: binding
+                                          name: $remainingLosses
                                         remainingBind: $remainingLosses
                                         groups:
                                           - bind: $arvnPieceInAdjacent
@@ -5808,7 +8249,8 @@ eventDecks:
                                               filter:
                                                 op: and
                                                 args:
-                                                  - { prop: faction, eq: ARVN }
+                                                  - prop: faction
+                                                    eq: ARVN
                                             to:
                                               zoneExpr: available-ARVN:none
                                   else: []
@@ -5819,12 +8261,16 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["VC", "ARVN", "NVA", "US"]
-          flavorText: "Atrocity fallout drives opposition shifts and force repositioning."
+          seatOrder:
+            - VC
+            - ARVN
+            - NVA
+            - US
+          flavorText: Atrocity fallout drives opposition shifts and force repositioning.
         unshaded:
-          text: "Shift selected spaces toward Opposition and place VC pieces."
+          text: Shift selected spaces toward Opposition and place VC pieces.
         shaded:
-          text: "Backlash weakens insurgent narrative and repositions COIN forces."
+          text: Backlash weakens insurgent narrative and repositions COIN forces.
       - id: card-120
         title: US Press Corps
         sideMode: dual
@@ -5832,46 +8278,65 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          seatOrder: ["VC", "ARVN", "NVA", "US"]
-          flavorText: "Media access changes where pressure can be concentrated or withdrawn."
+          seatOrder:
+            - VC
+            - ARVN
+            - NVA
+            - US
+          flavorText: Media access changes where pressure can be concentrated or withdrawn.
         unshaded:
-          text: "Conditionally move US pieces among selected spaces."
+          text: Conditionally move US pieces among selected spaces.
         shaded:
-          text: "Media framing limits COIN movement and amplifies insurgent leverage."
+          text: Media framing limits COIN movement and amplifies insurgent leverage.
       - id: card-34
         title: SA-2s
         sideMode: dual
         order: 34
-        tags: [capability, NVA]
+        tags:
+          - capability
+          - NVA
         metadata:
           period: "1965"
-          seatOrder: ["NVA", "US", "ARVN", "VC"]
-          flavorText: "Surface-to-air missiles tighten the northern shield."
+          seatOrder:
+            - NVA
+            - US
+            - ARVN
+            - VC
+          flavorText: Surface-to-air missiles tighten the northern shield.
         unshaded:
           text: "NVA capability: Air Strike can remove only 2 pieces in one selected space."
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_sa2s, markerState: unshaded }
+              args:
+                markerId: cap_sa2s
+                markerState: unshaded
         shaded:
           text: "NVA capability (shaded): Air Strike losses can include US Troops when available."
           effects:
             - macro: set-global-marker
-              args: { markerId: cap_sa2s, markerState: shaded }
+              args:
+                markerId: cap_sa2s
+                markerState: shaded
       - id: card-38
         title: McNamara Line
         sideMode: single
         order: 38
-        tags: [momentum]
+        tags:
+          - momentum
         metadata:
           period: "1965"
-          seatOrder: ["NVA", "US", "VC", "ARVN"]
-          flavorText: "Barrier planning constrains infiltration routes."
+          seatOrder:
+            - NVA
+            - US
+            - VC
+            - ARVN
+          flavorText: Barrier planning constrains infiltration routes.
         unshaded:
-          text: "Redeploy all COIN forces outside Vietnam to COIN-Controlled Cities. ARVN Resources -12. No Infiltrate or Trail Improvement by Rally until Coup. MOMENTUM"
+          text: Redeploy all COIN forces outside Vietnam to COIN-Controlled Cities. ARVN Resources -12. No Infiltrate or Trail Improvement by Rally until Coup. MOMENTUM
           effects:
             - if:
                 when:
-                  op: '>'
+                  op: ">"
                   left:
                     aggregate:
                       op: count
@@ -5879,7 +8344,8 @@ eventDecks:
                         query: mapSpaces
                         filter:
                           conditionMacro: fitl-space-coin-controlled-city
-                          args: { spaceExpr: $zone }
+                          args:
+                            spaceExpr: $zone
                   right: 0
                 then:
                   - forEach:
@@ -5888,17 +8354,25 @@ eventDecks:
                         query: mapSpaces
                         filter:
                           conditionMacro: fitl-space-outside-vietnam-province
-                          args: { spaceExpr: $zone }
+                          args:
+                            spaceExpr: $zone
                       effects:
                         - forEach:
                             bind: $coinForceToRedeploy
                             over:
                               query: tokensInZone
-                              zone: { zoneExpr: { ref: binding, name: $outsideVietnamProvince } }
+                              zone:
+                                zoneExpr:
+                                  ref: binding
+                                  name: $outsideVietnamProvince
                               filter:
                                 op: and
                                 args:
-                                  - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                  - prop: faction
+                                    op: in
+                                    value:
+                                      - US
+                                      - ARVN
                             effects:
                               - chooseOne:
                                   bind: $mcnamaraCityDestination
@@ -5906,33 +8380,50 @@ eventDecks:
                                     query: mapSpaces
                                     filter:
                                       conditionMacro: fitl-space-coin-controlled-city
-                                      args: { spaceExpr: $zone }
+                                      args:
+                                        spaceExpr: $zone
                               - moveToken:
                                   token: $coinForceToRedeploy
-                                  from: { zoneExpr: { ref: tokenZone, token: $coinForceToRedeploy } }
-                                  to: { zoneExpr: { ref: binding, name: $mcnamaraCityDestination } }
+                                  from:
+                                    zoneExpr:
+                                      ref: tokenZone
+                                      token: $coinForceToRedeploy
+                                  to:
+                                    zoneExpr:
+                                      ref: binding
+                                      name: $mcnamaraCityDestination
                 else: []
-            - addVar: { scope: global, var: arvnResources, delta: -12 }
+            - addVar:
+                scope: global
+                var: arvnResources
+                delta: -12
           lastingEffects:
             - id: mom-mcnamara-line
               duration: round
               setupEffects:
                 - macro: set-global-flag-true
-                  args: { varName: mom_mcnamaraLine }
+                  args:
+                    varName: mom_mcnamaraLine
               teardownEffects:
                 - macro: set-global-flag-false
-                  args: { varName: mom_mcnamaraLine }
+                  args:
+                    varName: mom_mcnamaraLine
       - id: card-39
         title: Oriskany
         sideMode: dual
         order: 39
-        tags: [momentum]
+        tags:
+          - momentum
         metadata:
           period: "1965"
-          seatOrder: ["NVA", "US", "VC", "ARVN"]
-          flavorText: "Carrier deck fire disrupts strike tempo."
+          seatOrder:
+            - NVA
+            - US
+            - VC
+            - ARVN
+          flavorText: Carrier deck fire disrupts strike tempo.
         unshaded:
-          text: "Remove any 4 pieces from North Vietnam or, once none, Laos. Degrade Trail 2 boxes."
+          text: Remove any 4 pieces from North Vietnam or, once none, Laos. Degrade Trail 2 boxes.
           effects:
             - let:
                 bind: $northVietnamEligibleCount
@@ -5942,70 +8433,114 @@ eventDecks:
                     query:
                       query: tokensInMapSpaces
                       spaceFilter:
-                        op: '=='
-                        left: { ref: zoneProp, zone: $zone, prop: country }
+                        op: ==
+                        left:
+                          ref: zoneProp
+                          zone: $zone
+                          prop: country
                         right: northVietnam
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: NVA }
+                          - prop: faction
+                            eq: NVA
                           - op: or
                             args:
-                              - { prop: type, op: in, value: [troops, guerrilla] }
+                              - prop: type
+                                op: in
+                                value:
+                                  - troops
+                                  - guerrilla
                               - op: and
                                 args:
-                                  - { prop: type, eq: base }
-                                  - { prop: tunnel, eq: untunneled }
+                                  - prop: type
+                                    eq: base
+                                  - prop: tunnel
+                                    eq: untunneled
                 in:
                   - let:
                       bind: $northVietnamRemoveCount
                       value:
                         op: min
                         left: 4
-                        right: { ref: binding, name: $northVietnamEligibleCount }
+                        right:
+                          ref: binding
+                          name: $northVietnamEligibleCount
                       in:
                         - if:
-                            when: { op: '>', left: { ref: binding, name: $northVietnamRemoveCount }, right: 0 }
+                            when:
+                              op: ">"
+                              left:
+                                ref: binding
+                                name: $northVietnamRemoveCount
+                              right: 0
                             then:
                               - chooseN:
                                   bind: $northVietnamPiecesToRemove
                                   options:
                                     query: tokensInMapSpaces
                                     spaceFilter:
-                                      op: '=='
-                                      left: { ref: zoneProp, zone: $zone, prop: country }
+                                      op: ==
+                                      left:
+                                        ref: zoneProp
+                                        zone: $zone
+                                        prop: country
                                       right: northVietnam
                                     filter:
                                       op: and
                                       args:
-                                        - { prop: faction, eq: NVA }
+                                        - prop: faction
+                                          eq: NVA
                                         - op: or
                                           args:
-                                            - { prop: type, op: in, value: [troops, guerrilla] }
+                                            - prop: type
+                                              op: in
+                                              value:
+                                                - troops
+                                                - guerrilla
                                             - op: and
                                               args:
-                                                - { prop: type, eq: base }
-                                                - { prop: tunnel, eq: untunneled }
-                                  min: { ref: binding, name: $northVietnamRemoveCount }
-                                  max: { ref: binding, name: $northVietnamRemoveCount }
+                                                - prop: type
+                                                  eq: base
+                                                - prop: tunnel
+                                                  eq: untunneled
+                                  min:
+                                    ref: binding
+                                    name: $northVietnamRemoveCount
+                                  max:
+                                    ref: binding
+                                    name: $northVietnamRemoveCount
                               - forEach:
                                   bind: $piece
-                                  over: { query: binding, name: $northVietnamPiecesToRemove }
+                                  over:
+                                    query: binding
+                                    name: $northVietnamPiecesToRemove
                                   effects:
                                     - moveToken:
                                         token: $piece
-                                        from: { zoneExpr: { ref: tokenZone, token: $piece } }
-                                        to: { zoneExpr: available-NVA:none }
+                                        from:
+                                          zoneExpr:
+                                            ref: tokenZone
+                                            token: $piece
+                                        to:
+                                          zoneExpr: available-NVA:none
                             else: []
                         - let:
                             bind: $remainingToRemove
                             value:
-                              op: '-'
+                              op: "-"
                               left: 4
-                              right: { ref: binding, name: $northVietnamRemoveCount }
+                              right:
+                                ref: binding
+                                name: $northVietnamRemoveCount
                             in:
                               - if:
-                                  when: { op: '>', left: { ref: binding, name: $remainingToRemove }, right: 0 }
+                                  when:
+                                    op: ">"
+                                    left:
+                                      ref: binding
+                                      name: $remainingToRemove
+                                    right: 0
                                   then:
                                     - let:
                                         bind: $laosEligibleCount
@@ -6015,65 +8550,107 @@ eventDecks:
                                             query:
                                               query: tokensInMapSpaces
                                               spaceFilter:
-                                                op: '=='
-                                                left: { ref: zoneProp, zone: $zone, prop: country }
+                                                op: ==
+                                                left:
+                                                  ref: zoneProp
+                                                  zone: $zone
+                                                  prop: country
                                                 right: laos
                                               filter:
                                                 op: and
                                                 args:
-                                                  - { prop: faction, eq: NVA }
+                                                  - prop: faction
+                                                    eq: NVA
                                                   - op: or
                                                     args:
-                                                      - { prop: type, op: in, value: [troops, guerrilla] }
+                                                      - prop: type
+                                                        op: in
+                                                        value:
+                                                          - troops
+                                                          - guerrilla
                                                       - op: and
                                                         args:
-                                                          - { prop: type, eq: base }
-                                                          - { prop: tunnel, eq: untunneled }
+                                                          - prop: type
+                                                            eq: base
+                                                          - prop: tunnel
+                                                            eq: untunneled
                                         in:
                                           - let:
                                               bind: $laosRemoveCount
                                               value:
                                                 op: min
-                                                left: { ref: binding, name: $remainingToRemove }
-                                                right: { ref: binding, name: $laosEligibleCount }
+                                                left:
+                                                  ref: binding
+                                                  name: $remainingToRemove
+                                                right:
+                                                  ref: binding
+                                                  name: $laosEligibleCount
                                               in:
                                                 - if:
-                                                    when: { op: '>', left: { ref: binding, name: $laosRemoveCount }, right: 0 }
+                                                    when:
+                                                      op: ">"
+                                                      left:
+                                                        ref: binding
+                                                        name: $laosRemoveCount
+                                                      right: 0
                                                     then:
                                                       - chooseN:
                                                           bind: $laosPiecesToRemove
                                                           options:
                                                             query: tokensInMapSpaces
                                                             spaceFilter:
-                                                              op: '=='
-                                                              left: { ref: zoneProp, zone: $zone, prop: country }
+                                                              op: ==
+                                                              left:
+                                                                ref: zoneProp
+                                                                zone: $zone
+                                                                prop: country
                                                               right: laos
                                                             filter:
                                                               op: and
                                                               args:
-                                                                - { prop: faction, eq: NVA }
+                                                                - prop: faction
+                                                                  eq: NVA
                                                                 - op: or
                                                                   args:
-                                                                    - { prop: type, op: in, value: [troops, guerrilla] }
+                                                                    - prop: type
+                                                                      op: in
+                                                                      value:
+                                                                        - troops
+                                                                        - guerrilla
                                                                     - op: and
                                                                       args:
-                                                                        - { prop: type, eq: base }
-                                                                        - { prop: tunnel, eq: untunneled }
-                                                          min: { ref: binding, name: $laosRemoveCount }
-                                                          max: { ref: binding, name: $laosRemoveCount }
+                                                                        - prop: type
+                                                                          eq: base
+                                                                        - prop: tunnel
+                                                                          eq: untunneled
+                                                          min:
+                                                            ref: binding
+                                                            name: $laosRemoveCount
+                                                          max:
+                                                            ref: binding
+                                                            name: $laosRemoveCount
                                                       - forEach:
                                                           bind: $piece
-                                                          over: { query: binding, name: $laosPiecesToRemove }
+                                                          over:
+                                                            query: binding
+                                                            name: $laosPiecesToRemove
                                                           effects:
                                                             - moveToken:
                                                                 token: $piece
-                                                                from: { zoneExpr: { ref: tokenZone, token: $piece } }
-                                                                to: { zoneExpr: available-NVA:none }
+                                                                from:
+                                                                  zoneExpr:
+                                                                    ref: tokenZone
+                                                                    token: $piece
+                                                                to:
+                                                                  zoneExpr: available-NVA:none
                                                     else: []
                                   else: []
-            - addVar: { scope: global, var: trail, delta: -2 }
+            - addVar:
+                scope: global
+                var: trail
+                delta: -2
         shaded:
-          text: "1 Available US Troop out of play. Through next Coup, no Degrade of Trail. MOMENTUM"
+          text: 1 Available US Troop out of play. Through next Coup, no Degrade of Trail. MOMENTUM
           effects:
             - removeByPriority:
                 budget: 1
@@ -6085,8 +8662,10 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: troops }
+                          - prop: faction
+                            eq: US
+                          - prop: type
+                            eq: troops
                     to:
                       zoneExpr: out-of-play-US:none
           lastingEffects:
@@ -6094,35 +8673,50 @@ eventDecks:
               duration: round
               setupEffects:
                 - macro: set-global-flag-true
-                  args: { varName: mom_oriskany }
+                  args:
+                    varName: mom_oriskany
               teardownEffects:
                 - macro: set-global-flag-false
-                  args: { varName: mom_oriskany }
+                  args:
+                    varName: mom_oriskany
       - id: card-46
         title: 559th Transport Grp
         sideMode: dual
         order: 46
-        tags: [momentum]
+        tags:
+          - momentum
         metadata:
           period: "1965"
-          seatOrder: ["NVA", "ARVN", "VC", "US"]
-          flavorText: "Route command tightens corridor discipline."
+          seatOrder:
+            - NVA
+            - ARVN
+            - VC
+            - US
+          flavorText: Route command tightens corridor discipline.
         unshaded:
-          text: "NVA Infiltrate to only 1 destination space through Coup. MOMENTUM"
+          text: NVA Infiltrate to only 1 destination space through Coup. MOMENTUM
           lastingEffects:
             - id: mom-559th-transport-grp
               duration: round
               setupEffects:
                 - macro: set-global-flag-true
-                  args: { varName: mom_559thTransportGrp }
+                  args:
+                    varName: mom_559thTransportGrp
               teardownEffects:
                 - macro: set-global-flag-false
-                  args: { varName: mom_559thTransportGrp }
+                  args:
+                    varName: mom_559thTransportGrp
         shaded:
-          text: "US Aid -6 and NVA Resources +6."
+          text: US Aid -6 and NVA Resources +6.
           effects:
-            - addVar: { scope: global, var: aid, delta: -6 }
-            - addVar: { scope: global, var: nvaResources, delta: 6 }
+            - addVar:
+                scope: global
+                var: aid
+                delta: -6
+            - addVar:
+                scope: global
+                var: nvaResources
+                delta: 6
       - id: card-47
         title: Chu Luc
         sideMode: dual
@@ -6130,16 +8724,20 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["NVA", "ARVN", "VC", "US"]
-          flavorText: "Main-force concentration accelerates in contested provinces."
+          seatOrder:
+            - NVA
+            - ARVN
+            - VC
+            - US
+          flavorText: Main-force concentration accelerates in contested provinces.
         unshaded:
-          text: "Place 3 NVA Troops into any spaces with NVA pieces."
+          text: Place 3 NVA Troops into any spaces with NVA pieces.
           targets:
             - id: $targetSpace
               selector:
                 query: mapSpaces
                 filter:
-                  op: '>'
+                  op: ">"
                   left:
                     aggregate:
                       op: count
@@ -6149,33 +8747,37 @@ eventDecks:
                         filter:
                           op: and
                           args:
-                            - { prop: faction, eq: NVA }
+                            - prop: faction
+                              eq: NVA
                   right: 0
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - removeByPriority:
-                budget: 3
-                groups:
-                  - bind: $nvaTroop
-                    over:
-                      query: tokensInZone
-                      zone: available-NVA:none
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: NVA }
-                          - { prop: type, eq: troops }
-                    to:
-                      zoneExpr: $targetSpace
+              effects:
+                - removeByPriority:
+                    budget: 3
+                    groups:
+                      - bind: $nvaTroop
+                        over:
+                          query: tokensInZone
+                          zone: available-NVA:none
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: NVA
+                              - prop: type
+                                eq: troops
+                        to:
+                          zoneExpr: $targetSpace
         shaded:
-          text: "Place 2 VC Guerrillas into any spaces with VC pieces."
+          text: Place 2 VC Guerrillas into any spaces with VC pieces.
           targets:
             - id: $targetSpace
               selector:
                 query: mapSpaces
                 filter:
-                  op: '>'
+                  op: ">"
                   left:
                     aggregate:
                       op: count
@@ -6185,25 +8787,29 @@ eventDecks:
                         filter:
                           op: and
                           args:
-                            - { prop: faction, eq: VC }
+                            - prop: faction
+                              eq: VC
                   right: 0
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - removeByPriority:
-                budget: 2
-                groups:
-                  - bind: $vcGuerrilla
-                    over:
-                      query: tokensInZone
-                      zone: available-VC:none
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: VC }
-                          - { prop: type, eq: guerrilla }
-                    to:
-                      zoneExpr: $targetSpace
+              effects:
+                - removeByPriority:
+                    budget: 2
+                    groups:
+                      - bind: $vcGuerrilla
+                        over:
+                          query: tokensInZone
+                          zone: available-VC:none
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: VC
+                              - prop: type
+                                eq: guerrilla
+                        to:
+                          zoneExpr: $targetSpace
       - id: card-53
         title: Sappers
         sideMode: dual
@@ -6211,65 +8817,104 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["NVA", "VC", "US", "ARVN"]
-          flavorText: "Shock teams probe base perimeters."
+          seatOrder:
+            - NVA
+            - VC
+            - US
+            - ARVN
+          flavorText: Shock teams probe base perimeters.
         unshaded:
-          text: "Remove a COIN Base and up to 2 Troops from one selected space."
+          text: Remove a COIN Base and up to 2 Troops from one selected space.
           targets:
             - id: $targetSpace
               selector:
                 query: mapSpaces
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - removeByPriority:
-                budget: 3
-                groups:
-                  - bind: $coinBase
-                    over:
-                      query: tokensInZone
-                      zone: $targetSpace
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                          - { prop: type, eq: base }
-                    to:
-                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $coinBase, prop: faction }, ':none'] }
-                  - bind: $coinTroop
-                    over:
-                      query: tokensInZone
-                      zone: $targetSpace
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                          - { prop: type, eq: troops }
-                    to:
-                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $coinTroop, prop: faction }, ':none'] }
+              effects:
+                - removeByPriority:
+                    budget: 3
+                    groups:
+                      - bind: $coinBase
+                        over:
+                          query: tokensInZone
+                          zone: $targetSpace
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                op: in
+                                value:
+                                  - US
+                                  - ARVN
+                              - prop: type
+                                eq: base
+                        to:
+                          zoneExpr:
+                            concat:
+                              - available-
+                              - ref: tokenProp
+                                token: $coinBase
+                                prop: faction
+                              - :none
+                      - bind: $coinTroop
+                        over:
+                          query: tokensInZone
+                          zone: $targetSpace
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                op: in
+                                value:
+                                  - US
+                                  - ARVN
+                              - prop: type
+                                eq: troops
+                        to:
+                          zoneExpr:
+                            concat:
+                              - available-
+                              - ref: tokenProp
+                                token: $coinTroop
+                                prop: faction
+                              - :none
         shaded:
-          text: "Remove 3 NVA/VC Guerrillas from one selected space."
+          text: Remove 3 NVA/VC Guerrillas from one selected space.
           targets:
             - id: $targetSpace
               selector:
                 query: mapSpaces
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - removeByPriority:
-                budget: 3
-                groups:
-                  - bind: $insurgentGuerrilla
-                    over:
-                      query: tokensInZone
-                      zone: $targetSpace
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                          - { prop: type, eq: guerrilla }
-                    to:
-                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentGuerrilla, prop: faction }, ':none'] }
+              effects:
+                - removeByPriority:
+                    budget: 3
+                    groups:
+                      - bind: $insurgentGuerrilla
+                        over:
+                          query: tokensInZone
+                          zone: $targetSpace
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                op: in
+                                value:
+                                  - NVA
+                                  - VC
+                              - prop: type
+                                eq: guerrilla
+                        to:
+                          zoneExpr:
+                            concat:
+                              - available-
+                              - ref: tokenProp
+                                token: $insurgentGuerrilla
+                                prop: faction
+                              - :none
       - id: card-56
         title: Vo Nguyen Giap
         sideMode: dual
@@ -6277,21 +8922,31 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["NVA", "VC", "ARVN", "US"]
-          flavorText: "Operational tempo follows strategic concentration."
+          seatOrder:
+            - NVA
+            - VC
+            - ARVN
+            - US
+          flavorText: Operational tempo follows strategic concentration.
         unshaded:
-          text: "NVA execute free March then free Attack."
+          text: NVA execute free March then free Attack.
           freeOperationGrants:
-            - seat: "nva"
-              sequence: { chain: vo-nguyen-giap-nva, step: 0 }
+            - seat: nva
+              sequence:
+                chain: vo-nguyen-giap-nva
+                step: 0
               operationClass: operation
-              actionIds: [march]
-            - seat: "nva"
-              sequence: { chain: vo-nguyen-giap-nva, step: 1 }
+              actionIds:
+                - march
+            - seat: nva
+              sequence:
+                chain: vo-nguyen-giap-nva
+                step: 1
               operationClass: operation
-              actionIds: [attack]
+              actionIds:
+                - attack
         shaded:
-          text: "NVA execute free March in up to 3 spaces, then 1 free Op or Special Activity in each."
+          text: NVA execute free March in up to 3 spaces, then 1 free Op or Special Activity in each.
       - id: card-59
         title: Plei Mei
         sideMode: dual
@@ -6299,22 +8954,32 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          seatOrder: ["NVA", "VC", "ARVN", "US"]
-          flavorText: "Highland clashes force rapid tactical repositioning."
+          seatOrder:
+            - NVA
+            - VC
+            - ARVN
+            - US
+          flavorText: Highland clashes force rapid tactical repositioning.
         unshaded:
-          text: "Remove enemy pieces in one selected Highland and execute free March."
+          text: Remove enemy pieces in one selected Highland and execute free March.
           freeOperationGrants:
-            - seat: "nva"
-              sequence: { chain: plei-mei-nva, step: 0 }
+            - seat: nva
+              sequence:
+                chain: plei-mei-nva
+                step: 0
               operationClass: operation
-              actionIds: [march]
+              actionIds:
+                - march
         shaded:
-          text: "Remove COIN pieces in one selected Highland and execute free Attack."
+          text: Remove COIN pieces in one selected Highland and execute free Attack.
           freeOperationGrants:
-            - seat: "nva"
-              sequence: { chain: plei-mei-nva, step: 0 }
+            - seat: nva
+              sequence:
+                chain: plei-mei-nva
+                step: 0
               operationClass: operation
-              actionIds: [attack]
+              actionIds:
+                - attack
       - id: card-48
         title: Nam Dong
         sideMode: dual
@@ -6322,69 +8987,111 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          seatOrder: ["NVA", "ARVN", "VC", "US"]
-          flavorText: "A CIDG camp attack ripples across I Corps."
+          seatOrder:
+            - NVA
+            - ARVN
+            - VC
+            - US
+          flavorText: A CIDG camp attack ripples across I Corps.
         unshaded:
-          text: "Remove Guerrillas and a COIN Base in one space."
+          text: Remove Guerrillas and a COIN Base in one space.
           targets:
             - id: $targetSpace
               selector:
                 query: mapSpaces
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - removeByPriority:
-                budget: 2
-                groups:
-                  - bind: $insurgentGuerrilla
-                    over:
-                      query: tokensInZone
-                      zone: $targetSpace
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                          - { prop: type, eq: guerrilla }
-                    to:
-                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentGuerrilla, prop: faction }, ':none'] }
-            - removeByPriority:
-                budget: 1
-                groups:
-                  - bind: $coinBase
-                    over:
-                      query: tokensInZone
-                      zone: $targetSpace
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                          - { prop: type, eq: base }
-                    to:
-                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $coinBase, prop: faction }, ':none'] }
+              effects:
+                - removeByPriority:
+                    budget: 2
+                    groups:
+                      - bind: $insurgentGuerrilla
+                        over:
+                          query: tokensInZone
+                          zone: $targetSpace
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                op: in
+                                value:
+                                  - NVA
+                                  - VC
+                              - prop: type
+                                eq: guerrilla
+                        to:
+                          zoneExpr:
+                            concat:
+                              - available-
+                              - ref: tokenProp
+                                token: $insurgentGuerrilla
+                                prop: faction
+                              - :none
+                - removeByPriority:
+                    budget: 1
+                    groups:
+                      - bind: $coinBase
+                        over:
+                          query: tokensInZone
+                          zone: $targetSpace
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                op: in
+                                value:
+                                  - US
+                                  - ARVN
+                              - prop: type
+                                eq: base
+                        to:
+                          zoneExpr:
+                            concat:
+                              - available-
+                              - ref: tokenProp
+                                token: $coinBase
+                                prop: faction
+                              - :none
         shaded:
           text: "Propaganda aftermath: remove a COIN Base; NVA Resources +3."
           targets:
             - id: $targetSpace
               selector:
                 query: mapSpaces
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - removeByPriority:
-                budget: 1
-                groups:
-                  - bind: $coinBase
-                    over:
-                      query: tokensInZone
-                      zone: $targetSpace
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                          - { prop: type, eq: base }
-                    to:
-                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $coinBase, prop: faction }, ':none'] }
-            - addVar: { scope: global, var: nvaResources, delta: 3 }
+              effects:
+                - removeByPriority:
+                    budget: 1
+                    groups:
+                      - bind: $coinBase
+                        over:
+                          query: tokensInZone
+                          zone: $targetSpace
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                op: in
+                                value:
+                                  - US
+                                  - ARVN
+                              - prop: type
+                                eq: base
+                        to:
+                          zoneExpr:
+                            concat:
+                              - available-
+                              - ref: tokenProp
+                                token: $coinBase
+                                prop: faction
+                              - :none
+                - addVar:
+                    scope: global
+                    var: nvaResources
+                    delta: 3
       - id: card-50
         title: Uncle Ho
         sideMode: dual
@@ -6392,31 +9099,45 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          seatOrder: ["NVA", "ARVN", "VC", "US"]
-          flavorText: "Strategic guidance reshapes tempo of operations."
+          seatOrder:
+            - NVA
+            - ARVN
+            - VC
+            - US
+          flavorText: Strategic guidance reshapes tempo of operations.
         unshaded:
-          text: "Either ARVN executes 2 free Limited Operations, or VC then NVA execute 3 total."
+          text: Either ARVN executes 2 free Limited Operations, or VC then NVA execute 3 total.
           branches:
             - id: arvn-two-free-limited-ops
               order: 1
               freeOperationGrants:
-                - seat: "arvn"
-                  sequence: { chain: uncle-ho-unshaded-arvn-two, step: 0 }
+                - seat: arvn
+                  sequence:
+                    chain: uncle-ho-unshaded-arvn-two
+                    step: 0
                   operationClass: limitedOperation
-                - seat: "arvn"
-                  sequence: { chain: uncle-ho-unshaded-arvn-two, step: 1 }
+                - seat: arvn
+                  sequence:
+                    chain: uncle-ho-unshaded-arvn-two
+                    step: 1
                   operationClass: limitedOperation
             - id: vc-then-nva-three-free-limited-ops
               order: 2
               freeOperationGrants:
-                - seat: "vc"
-                  sequence: { chain: uncle-ho-unshaded-vc-nva-three, step: 0 }
+                - seat: vc
+                  sequence:
+                    chain: uncle-ho-unshaded-vc-nva-three
+                    step: 0
                   operationClass: limitedOperation
-                - seat: "vc"
-                  sequence: { chain: uncle-ho-unshaded-vc-nva-three, step: 1 }
+                - seat: vc
+                  sequence:
+                    chain: uncle-ho-unshaded-vc-nva-three
+                    step: 1
                   operationClass: limitedOperation
-                - seat: "nva"
-                  sequence: { chain: uncle-ho-unshaded-vc-nva-three, step: 2 }
+                - seat: nva
+                  sequence:
+                    chain: uncle-ho-unshaded-vc-nva-three
+                    step: 2
                   operationClass: limitedOperation
         shaded:
           text: "COIN initiative: US/ARVN execute 3 total free Limited Operations."
@@ -6424,23 +9145,33 @@ eventDecks:
             - id: us-then-arvn-three-free-limited-ops
               order: 1
               freeOperationGrants:
-                - seat: "us"
-                  sequence: { chain: uncle-ho-shaded-us-arvn-three, step: 0 }
+                - seat: us
+                  sequence:
+                    chain: uncle-ho-shaded-us-arvn-three
+                    step: 0
                   operationClass: limitedOperation
-                - seat: "arvn"
-                  sequence: { chain: uncle-ho-shaded-us-arvn-three, step: 1 }
+                - seat: arvn
+                  sequence:
+                    chain: uncle-ho-shaded-us-arvn-three
+                    step: 1
                   operationClass: limitedOperation
-                - seat: "arvn"
-                  sequence: { chain: uncle-ho-shaded-us-arvn-three, step: 2 }
+                - seat: arvn
+                  sequence:
+                    chain: uncle-ho-shaded-us-arvn-three
+                    step: 2
                   operationClass: limitedOperation
             - id: us-two-free-limited-ops
               order: 2
               freeOperationGrants:
-                - seat: "us"
-                  sequence: { chain: uncle-ho-shaded-us-two, step: 0 }
+                - seat: us
+                  sequence:
+                    chain: uncle-ho-shaded-us-two
+                    step: 0
                   operationClass: limitedOperation
-                - seat: "us"
-                  sequence: { chain: uncle-ho-shaded-us-two, step: 1 }
+                - seat: us
+                  sequence:
+                    chain: uncle-ho-shaded-us-two
+                    step: 1
                   operationClass: limitedOperation
       - id: card-63
         title: Fact Finding
@@ -6449,10 +9180,14 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          seatOrder: ["ARVN", "US", "NVA", "VC"]
-          flavorText: "Investigations expose gaps in pacification claims."
+          seatOrder:
+            - ARVN
+            - US
+            - NVA
+            - VC
+          flavorText: Investigations expose gaps in pacification claims.
         unshaded:
-          text: "Return pieces from Out of Play; transfer die-roll Patronage to Aid."
+          text: Return pieces from Out of Play; transfer die-roll Patronage to Aid.
           effects:
             - removeByPriority:
                 budget: 3
@@ -6464,7 +9199,8 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: US }
+                          - prop: faction
+                            eq: US
                     to:
                       zoneExpr: available-US:none
             - removeByPriority:
@@ -6477,7 +9213,8 @@ eventDecks:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: ARVN }
+                          - prop: faction
+                            eq: ARVN
                     to:
                       zoneExpr: available-ARVN:none
             - rollRandom:
@@ -6489,13 +9226,17 @@ eventDecks:
                       scope: global
                       var: patronage
                       delta:
-                        op: '*'
+                        op: "*"
                         left: -1
-                        right: { ref: binding, name: $dieRoll }
+                        right:
+                          ref: binding
+                          name: $dieRoll
                   - addVar:
                       scope: global
                       var: aid
-                      delta: { ref: binding, name: $dieRoll }
+                      delta:
+                        ref: binding
+                        name: $dieRoll
         shaded:
           text: "Scandal fallout: transfer die-roll Aid to Patronage."
           effects:
@@ -6508,13 +9249,17 @@ eventDecks:
                       scope: global
                       var: aid
                       delta:
-                        op: '*'
+                        op: "*"
                         left: -1
-                        right: { ref: binding, name: $dieRoll }
+                        right:
+                          ref: binding
+                          name: $dieRoll
                   - addVar:
                       scope: global
                       var: patronage
-                      delta: { ref: binding, name: $dieRoll }
+                      delta:
+                        ref: binding
+                        name: $dieRoll
       - id: card-66
         title: Ambassador Taylor
         sideMode: dual
@@ -6522,37 +9267,52 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          seatOrder: ["ARVN", "US", "VC", "NVA"]
-          flavorText: "Military envoy presses for tighter control."
+          seatOrder:
+            - ARVN
+            - US
+            - VC
+            - NVA
+          flavorText: Military envoy presses for tighter control.
         unshaded:
-          text: "Aid and ARVN Resources rise; remove a level of Support."
+          text: Aid and ARVN Resources rise; remove a level of Support.
           targets:
             - id: $targetSpace
               selector:
                 query: mapSpaces
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - addVar: { scope: global, var: aid, delta: 6 }
-            - addVar: { scope: global, var: arvnResources, delta: 6 }
-            - shiftMarker:
-                space: $targetSpace
-                marker: supportOpposition
-                delta: -1
+              effects:
+                - addVar:
+                    scope: global
+                    var: aid
+                    delta: 6
+                - addVar:
+                    scope: global
+                    var: arvnResources
+                    delta: 6
+                - shiftMarker:
+                    space: $targetSpace
+                    marker: supportOpposition
+                    delta: -1
         shaded:
           text: "Backlash empowers insurgents: shift toward Opposition; NVA Resources +6."
           targets:
             - id: $targetSpace
               selector:
                 query: mapSpaces
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - shiftMarker:
-                space: $targetSpace
-                marker: supportOpposition
-                delta: 1
-            - addVar: { scope: global, var: nvaResources, delta: 6 }
+              effects:
+                - shiftMarker:
+                    space: $targetSpace
+                    marker: supportOpposition
+                    delta: 1
+                - addVar:
+                    scope: global
+                    var: nvaResources
+                    delta: 6
       - id: card-93
         title: Senator Fulbright
         sideMode: dual
@@ -6560,100 +9320,124 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          seatOrder: ["VC", "US", "NVA", "ARVN"]
-          flavorText: "Congressional skepticism constrains intervention."
+          seatOrder:
+            - VC
+            - US
+            - NVA
+            - ARVN
+          flavorText: Congressional skepticism constrains intervention.
         unshaded:
-          text: "Move US pieces to Available and reduce Aid."
+          text: Move US pieces to Available and reduce Aid.
           targets:
             - id: $sourceSpace
               selector:
                 query: mapSpaces
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - removeByPriority:
-                budget: 3
-                groups:
-                  - bind: $usTroop
-                    over:
-                      query: tokensInZone
-                      zone: $sourceSpace
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: troops }
-                    to:
-                      zoneExpr: available-US:none
-                  - bind: $usIrregular
-                    over:
-                      query: tokensInZone
-                      zone: $sourceSpace
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: irregular }
-                    to:
-                      zoneExpr: available-US:none
-                  - bind: $usBase
-                    over:
-                      query: tokensInZone
-                      zone: $sourceSpace
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: base }
-                    to:
-                      zoneExpr: available-US:none
-            - addVar: { scope: global, var: aid, delta: -6 }
+              effects:
+                - removeByPriority:
+                    budget: 3
+                    groups:
+                      - bind: $usTroop
+                        over:
+                          query: tokensInZone
+                          zone: $sourceSpace
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: US
+                              - prop: type
+                                eq: troops
+                        to:
+                          zoneExpr: available-US:none
+                      - bind: $usIrregular
+                        over:
+                          query: tokensInZone
+                          zone: $sourceSpace
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: US
+                              - prop: type
+                                eq: irregular
+                        to:
+                          zoneExpr: available-US:none
+                      - bind: $usBase
+                        over:
+                          query: tokensInZone
+                          zone: $sourceSpace
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: US
+                              - prop: type
+                                eq: base
+                        to:
+                          zoneExpr: available-US:none
+                - addVar:
+                    scope: global
+                    var: aid
+                    delta: -6
         shaded:
           text: "Withdrawal pressure deepens: more US pieces to Available; Aid -12."
           targets:
             - id: $sourceSpace
               selector:
                 query: mapSpaces
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - removeByPriority:
-                budget: 6
-                groups:
-                  - bind: $usTroop
-                    over:
-                      query: tokensInZone
-                      zone: $sourceSpace
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: troops }
-                    to:
-                      zoneExpr: available-US:none
-                  - bind: $usIrregular
-                    over:
-                      query: tokensInZone
-                      zone: $sourceSpace
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: irregular }
-                    to:
-                      zoneExpr: available-US:none
-                  - bind: $usBase
-                    over:
-                      query: tokensInZone
-                      zone: $sourceSpace
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: base }
-                    to:
-                      zoneExpr: available-US:none
-            - addVar: { scope: global, var: aid, delta: -12 }
+              effects:
+                - removeByPriority:
+                    budget: 6
+                    groups:
+                      - bind: $usTroop
+                        over:
+                          query: tokensInZone
+                          zone: $sourceSpace
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: US
+                              - prop: type
+                                eq: troops
+                        to:
+                          zoneExpr: available-US:none
+                      - bind: $usIrregular
+                        over:
+                          query: tokensInZone
+                          zone: $sourceSpace
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: US
+                              - prop: type
+                                eq: irregular
+                        to:
+                          zoneExpr: available-US:none
+                      - bind: $usBase
+                        over:
+                          query: tokensInZone
+                          zone: $sourceSpace
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: US
+                              - prop: type
+                                eq: base
+                        to:
+                          zoneExpr: available-US:none
+                - addVar:
+                    scope: global
+                    var: aid
+                    delta: -12
       - id: card-110
         title: No Contact
         sideMode: dual
@@ -6661,81 +9445,108 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          seatOrder: ["VC", "NVA", "ARVN", "US"]
-          flavorText: "Fog of war creates sudden reversals."
+          seatOrder:
+            - VC
+            - NVA
+            - ARVN
+            - US
+          flavorText: Fog of war creates sudden reversals.
         unshaded:
-          text: "Place US Casualties on map; flip up to 2 Insurgent Guerrillas Active."
+          text: Place US Casualties on map; flip up to 2 Insurgent Guerrillas Active.
           targets:
             - id: $targetSpace
               selector:
                 query: mapSpaces
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - removeByPriority:
-                budget: 2
-                groups:
-                  - bind: $usCasualty
-                    over:
-                      query: tokensInZone
-                      zone: casualties-US:none
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: US }
-                    to:
-                      zoneExpr: $targetSpace
-            - forEach:
-                bind: $insurgentGuerrilla
-                over:
-                  query: tokensInZone
-                  zone: $targetSpace
-                  filter:
-                    op: and
-                    args:
-                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                      - { prop: type, eq: guerrilla }
-                      - { prop: activity, eq: underground }
-                limit: 2
-                effects:
-                  - setTokenProp: { token: $insurgentGuerrilla, prop: activity, value: active }
-        shaded:
-          text: "Counterdeception: flip up to 2 Active Insurgents Underground; move 2 US Troops to Casualties."
-          targets:
-            - id: $targetSpace
-              selector:
-                query: mapSpaces
-              cardinality: { max: 1 }
-              application: aggregate
-          effects:
-            - forEach:
-                bind: $insurgentGuerrilla
-                over:
-                  query: tokensInZone
-                  zone: $targetSpace
-                  filter:
-                    op: and
-                    args:
-                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                      - { prop: type, eq: guerrilla }
-                      - { prop: activity, eq: active }
-                limit: 2
-                effects:
-                  - setTokenProp: { token: $insurgentGuerrilla, prop: activity, value: underground }
-            - removeByPriority:
-                budget: 2
-                groups:
-                  - bind: $usTroop
+              effects:
+                - removeByPriority:
+                    budget: 2
+                    groups:
+                      - bind: $usCasualty
+                        over:
+                          query: tokensInZone
+                          zone: casualties-US:none
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: US
+                        to:
+                          zoneExpr: $targetSpace
+                - forEach:
+                    bind: $insurgentGuerrilla
                     over:
                       query: tokensInZone
                       zone: $targetSpace
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: troops }
-                    to:
-                      zoneExpr: casualties-US:none
+                          - prop: faction
+                            op: in
+                            value:
+                              - NVA
+                              - VC
+                          - prop: type
+                            eq: guerrilla
+                          - prop: activity
+                            eq: underground
+                    limit: 2
+                    effects:
+                      - setTokenProp:
+                          token: $insurgentGuerrilla
+                          prop: activity
+                          value: active
+        shaded:
+          text: "Counterdeception: flip up to 2 Active Insurgents Underground; move 2 US Troops to Casualties."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+              cardinality:
+                max: 1
+              application: aggregate
+              effects:
+                - forEach:
+                    bind: $insurgentGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: $targetSpace
+                      filter:
+                        op: and
+                        args:
+                          - prop: faction
+                            op: in
+                            value:
+                              - NVA
+                              - VC
+                          - prop: type
+                            eq: guerrilla
+                          - prop: activity
+                            eq: active
+                    limit: 2
+                    effects:
+                      - setTokenProp:
+                          token: $insurgentGuerrilla
+                          prop: activity
+                          value: underground
+                - removeByPriority:
+                    budget: 2
+                    groups:
+                      - bind: $usTroop
+                        over:
+                          query: tokensInZone
+                          zone: $targetSpace
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: US
+                              - prop: type
+                                eq: troops
+                        to:
+                          zoneExpr: casualties-US:none
       - id: card-118
         title: Korean War Arms
         sideMode: dual
@@ -6743,114 +9554,144 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          seatOrder: ["VC", "ARVN", "NVA", "US"]
-          flavorText: "Old stockpiles rearm southern insurgency."
+          seatOrder:
+            - VC
+            - ARVN
+            - NVA
+            - US
+          flavorText: Old stockpiles rearm southern insurgency.
         unshaded:
-          text: "VC remove Guerrillas, then place VC pieces."
+          text: VC remove Guerrillas, then place VC pieces.
           targets:
             - id: $targetSpace
               selector:
                 query: mapSpaces
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - removeByPriority:
-                budget: 3
-                groups:
-                  - bind: $vcGuerrilla
-                    over:
-                      query: tokensInZone
-                      zone: $targetSpace
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: VC }
-                          - { prop: type, eq: guerrilla }
-                    to:
-                      zoneExpr: available-VC:none
-            - removeByPriority:
-                budget: 2
-                groups:
-                  - bind: $vcGuerrilla
-                    over:
-                      query: tokensInZone
-                      zone: available-VC:none
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: VC }
-                          - { prop: type, eq: guerrilla }
-                    to:
-                      zoneExpr: $targetSpace
+              effects:
+                - removeByPriority:
+                    budget: 3
+                    groups:
+                      - bind: $vcGuerrilla
+                        over:
+                          query: tokensInZone
+                          zone: $targetSpace
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: VC
+                              - prop: type
+                                eq: guerrilla
+                        to:
+                          zoneExpr: available-VC:none
+                - removeByPriority:
+                    budget: 2
+                    groups:
+                      - bind: $vcGuerrilla
+                        over:
+                          query: tokensInZone
+                          zone: available-VC:none
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: VC
+                              - prop: type
+                                eq: guerrilla
+                        to:
+                          zoneExpr: $targetSpace
         shaded:
           text: "Cross-border infusion: place VC and NVA Guerrillas."
           targets:
             - id: $targetSpace
               selector:
                 query: mapSpaces
-              cardinality: { max: 1 }
+              cardinality:
+                max: 1
               application: aggregate
-          effects:
-            - removeByPriority:
-                budget: 2
-                groups:
-                  - bind: $vcGuerrilla
-                    over:
-                      query: tokensInZone
-                      zone: available-VC:none
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: VC }
-                          - { prop: type, eq: guerrilla }
-                    to:
-                      zoneExpr: $targetSpace
-            - removeByPriority:
-                budget: 1
-                groups:
-                  - bind: $nvaGuerrilla
-                    over:
-                      query: tokensInZone
-                      zone: available-NVA:none
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: NVA }
-                          - { prop: type, eq: guerrilla }
-                    to:
-                      zoneExpr: $targetSpace
+              effects:
+                - removeByPriority:
+                    budget: 2
+                    groups:
+                      - bind: $vcGuerrilla
+                        over:
+                          query: tokensInZone
+                          zone: available-VC:none
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: VC
+                              - prop: type
+                                eq: guerrilla
+                        to:
+                          zoneExpr: $targetSpace
+                - removeByPriority:
+                    budget: 1
+                    groups:
+                      - bind: $nvaGuerrilla
+                        over:
+                          query: tokensInZone
+                          zone: available-NVA:none
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: NVA
+                              - prop: type
+                                eq: guerrilla
+                        to:
+                          zoneExpr: $targetSpace
       - id: card-121
         title: Linebacker II
         sideMode: single
         order: 121
-        tags: [pivotal, US]
+        tags:
+          - pivotal
+          - US
         metadata:
-          seatOrder: ["US", "ARVN", "VC", "NVA"]
-          flavorText: "Unrestricted air war."
+          seatOrder:
+            - US
+            - ARVN
+            - VC
+            - NVA
+          flavorText: Unrestricted air war.
         playCondition:
           op: and
           args:
-            - { op: ">=", left: { ref: gvar, var: leaderBoxCardCount }, right: 2 }
+            - op: ">="
+              left:
+                ref: gvar
+                var: leaderBoxCardCount
+              right: 2
             - op: or
               args:
-                - op: '>'
+                - op: ">"
                   left:
-                    op: '+'
+                    op: +
                     left:
-                      op: '+'
+                      op: +
                       left:
                         aggregate:
                           op: sum
                           query:
                             query: mapSpaces
                             filter:
-                              op: '=='
-                              left: { ref: markerState, space: $zone, marker: supportOpposition }
+                              op: ==
+                              left:
+                                ref: markerState
+                                space: $zone
+                                marker: supportOpposition
                               right: passiveSupport
                           bind: $zone
-                          valueExpr: { ref: zoneProp, zone: $zone, prop: population }
+                          valueExpr:
+                            ref: zoneProp
+                            zone: $zone
+                            prop: population
                       right:
-                        op: '*'
+                        op: "*"
                         left: 2
                         right:
                           aggregate:
@@ -6858,11 +9699,17 @@ eventDecks:
                             query:
                               query: mapSpaces
                               filter:
-                                op: '=='
-                                left: { ref: markerState, space: $zone, marker: supportOpposition }
+                                op: ==
+                                left:
+                                  ref: markerState
+                                  space: $zone
+                                  marker: supportOpposition
                                 right: activeSupport
                             bind: $zone
-                            valueExpr: { ref: zoneProp, zone: $zone, prop: population }
+                            valueExpr:
+                              ref: zoneProp
+                              zone: $zone
+                              prop: population
                     right:
                       aggregate:
                         op: count
@@ -6872,25 +9719,44 @@ eventDecks:
                           filter:
                             op: and
                             args:
-                              - { prop: faction, eq: US }
-                              - { prop: type, op: in, value: [troops, base] }
+                              - prop: faction
+                                eq: US
+                              - prop: type
+                                op: in
+                                value:
+                                  - troops
+                                  - base
                   right: 40
-                - { op: '==', left: { ref: gvar, var: linebacker11Allowed }, right: true }
+                - op: ==
+                  left:
+                    ref: gvar
+                    var: linebacker11Allowed
+                  right: true
         unshaded:
           text: "Unrestricted air war: NVA removes 2 Bases, reduces Resources to half (round down), Ineligible through next card. 3 US Casualties to Available."
       - id: card-122
         title: Easter Offensive
         sideMode: single
         order: 122
-        tags: [pivotal, NVA]
+        tags:
+          - pivotal
+          - NVA
         metadata:
-          seatOrder: ["NVA", "VC", "ARVN", "US"]
-          flavorText: "Invasion."
+          seatOrder:
+            - NVA
+            - VC
+            - ARVN
+            - US
+          flavorText: Invasion.
         playCondition:
           op: and
           args:
-            - { op: ">=", left: { ref: gvar, var: leaderBoxCardCount }, right: 2 }
-            - op: '>'
+            - op: ">="
+              left:
+                ref: gvar
+                var: leaderBoxCardCount
+              right: 2
+            - op: ">"
               left:
                 aggregate:
                   op: count
@@ -6899,8 +9765,10 @@ eventDecks:
                     filter:
                       op: and
                       args:
-                        - { prop: faction, eq: NVA }
-                        - { prop: type, eq: troops }
+                        - prop: faction
+                          eq: NVA
+                        - prop: type
+                          eq: troops
               right:
                 aggregate:
                   op: count
@@ -6909,23 +9777,35 @@ eventDecks:
                     filter:
                       op: and
                       args:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: troops }
+                        - prop: faction
+                          eq: US
+                        - prop: type
+                          eq: troops
         unshaded:
           text: "Invasion: NVA free Marches. Then NVA Troops on LoCs with no US/ARVN may move 1 space. Then all NVA Troops free Attack."
       - id: card-123
         title: Vietnamization
         sideMode: single
         order: 123
-        tags: [pivotal, ARVN]
+        tags:
+          - pivotal
+          - ARVN
         metadata:
-          seatOrder: ["ARVN", "US", "NVA", "VC"]
-          flavorText: "Mechanization."
+          seatOrder:
+            - ARVN
+            - US
+            - NVA
+            - VC
+          flavorText: Mechanization.
         playCondition:
           op: and
           args:
-            - { op: ">=", left: { ref: gvar, var: leaderBoxCardCount }, right: 2 }
-            - op: '<'
+            - op: ">="
+              left:
+                ref: gvar
+                var: leaderBoxCardCount
+              right: 2
+            - op: <
               left:
                 aggregate:
                   op: count
@@ -6934,8 +9814,10 @@ eventDecks:
                     filter:
                       op: and
                       args:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: troops }
+                        - prop: faction
+                          eq: US
+                        - prop: type
+                          eq: troops
               right: 20
         unshaded:
           text: "Mechanization: +12 ARVN Resources. +12 Aid. All out-of-play ARVN Available. Place 4 ARVN cubes anywhere."
@@ -6943,29 +9825,44 @@ eventDecks:
         title: Tet Offensive
         sideMode: single
         order: 124
-        tags: [pivotal, VC]
+        tags:
+          - pivotal
+          - VC
         metadata:
-          seatOrder: ["VC", "NVA", "US", "ARVN"]
-          flavorText: "General uprising."
+          seatOrder:
+            - VC
+            - NVA
+            - US
+            - ARVN
+          flavorText: General uprising.
         playCondition:
           op: and
           args:
-            - { op: ">=", left: { ref: gvar, var: leaderBoxCardCount }, right: 2 }
-            - op: '>'
+            - op: ">="
+              left:
+                ref: gvar
+                var: leaderBoxCardCount
+              right: 2
+            - op: ">"
               left:
                 aggregate:
                   op: count
                   query:
                     query: tokensInMapSpaces
                     spaceFilter:
-                      op: '=='
-                      left: { ref: zoneProp, zone: $zone, prop: country }
+                      op: ==
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: country
                       right: southVietnam
                     filter:
                       op: and
                       args:
-                        - { prop: faction, eq: VC }
-                        - { prop: type, eq: guerrilla }
+                        - prop: faction
+                          eq: VC
+                        - prop: type
+                          eq: guerrilla
               right: 20
         unshaded:
           text: "General uprising: Free Terror with 1 Underground VC per space. Place 6 VC pieces in any cities. VC + NVA Guerrillas free Attack where enemies (remove VC first)."
@@ -6973,77 +9870,105 @@ eventDecks:
         title: Nguyen Khanh
         sideMode: single
         order: 125
-        tags: [coup]
+        tags:
+          - coup
         metadata:
-          flavorText: "Corps commanders ascendant."
+          flavorText: Corps commanders ascendant.
         unshaded:
-          text: "Transport uses max 1 LoC space."
+          text: Transport uses max 1 LoC space.
           effects:
-            - setGlobalMarker: { marker: activeLeader, state: khanh }
-            - addVar: { scope: global, var: leaderBoxCardCount, delta: 1 }
+            - setGlobalMarker:
+                marker: activeLeader
+                state: khanh
+            - addVar:
+                scope: global
+                var: leaderBoxCardCount
+                delta: 1
       - id: card-126
         title: Young Turks
         sideMode: single
         order: 126
-        tags: [coup]
+        tags:
+          - coup
         metadata:
-          flavorText: "Thi, Ky, & Thieu wag the US dog."
+          flavorText: Thi, Ky, & Thieu wag the US dog.
         unshaded:
-          text: "Each ARVN Govern Special Activity adds +2 Patronage."
+          text: Each ARVN Govern Special Activity adds +2 Patronage.
           effects:
-            - setGlobalMarker: { marker: activeLeader, state: youngTurks }
-            - addVar: { scope: global, var: leaderBoxCardCount, delta: 1 }
+            - setGlobalMarker:
+                marker: activeLeader
+                state: youngTurks
+            - addVar:
+                scope: global
+                var: leaderBoxCardCount
+                delta: 1
       - id: card-127
         title: Nguyen Cao Ky
         sideMode: single
         order: 127
-        tags: [coup]
+        tags:
+          - coup
         metadata:
-          flavorText: "Brash brass Ky."
+          flavorText: Brash brass Ky.
         unshaded:
-          text: "Pacification costs 4 Resources per Terror or level."
+          text: Pacification costs 4 Resources per Terror or level.
           effects:
-            - setGlobalMarker: { marker: activeLeader, state: ky }
-            - addVar: { scope: global, var: leaderBoxCardCount, delta: 1 }
+            - setGlobalMarker:
+                marker: activeLeader
+                state: ky
+            - addVar:
+                scope: global
+                var: leaderBoxCardCount
+                delta: 1
       - id: card-128
         title: Nguyen Van Thieu
         sideMode: single
         order: 128
-        tags: [coup]
+        tags:
+          - coup
         metadata:
-          flavorText: "Stabilizer."
+          flavorText: Stabilizer.
         unshaded:
-          text: "No effect."
+          text: No effect.
           effects:
-            - setGlobalMarker: { marker: activeLeader, state: thieu }
-            - addVar: { scope: global, var: leaderBoxCardCount, delta: 1 }
+            - setGlobalMarker:
+                marker: activeLeader
+                state: thieu
+            - addVar:
+                scope: global
+                var: leaderBoxCardCount
+                delta: 1
       - id: card-129
         title: Failed Attempt
         sideMode: single
         order: 129
-        tags: [coup]
+        tags:
+          - coup
         metadata:
-          flavorText: "Desertion."
+          flavorText: Desertion.
         unshaded:
-          text: "ARVN removes 1 in 3 of its cubes per space (round down). Place below any RVN Leader card."
+          text: ARVN removes 1 in 3 of its cubes per space (round down). Place below any RVN Leader card.
           effects:
-            - addVar: { scope: global, var: leaderBoxCardCount, delta: 1 }
+            - addVar:
+                scope: global
+                var: leaderBoxCardCount
+                delta: 1
             - macro: rvn-leader-failed-attempt-desertion
       - id: card-130
         title: Failed Attempt
         sideMode: single
         order: 130
-        tags: [coup]
+        tags:
+          - coup
         metadata:
-          flavorText: "Desertion."
+          flavorText: Desertion.
         unshaded:
-          text: "ARVN removes 1 in 3 of its cubes per space (round down). Place below any RVN Leader card."
+          text: ARVN removes 1 in 3 of its cubes per space (round down). Place below any RVN Leader card.
           effects:
-            - addVar: { scope: global, var: leaderBoxCardCount, delta: 1 }
+            - addVar:
+                scope: global
+                var: leaderBoxCardCount
+                delta: 1
             - macro: rvn-leader-failed-attempt-desertion
-
-# ══════════════════════════════════════════════════════════════════════════════
-# Pool Zones (piece availability pools — supplement map-derived board zones)
-# ══════════════════════════════════════════════════════════════════════════════
 
 ```

@@ -152,6 +152,6 @@ describe('FITL 1965 US-first event-card production spec', () => {
     ]);
 
     assert.deepEqual(card?.shaded?.targets?.[0]?.cardinality, { max: 1 });
-    assert.equal(typeof (card?.shaded?.effects?.[0] as { rollRandom?: unknown })?.rollRandom, 'object');
+    assert.equal(typeof (card?.shaded?.targets?.[0]?.effects?.[0] as { rollRandom?: unknown })?.rollRandom, 'object');
   });
 });

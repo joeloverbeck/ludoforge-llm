@@ -29,8 +29,7 @@ describe('FITL Domino Theory event-card production spec', () => {
     assert.deepEqual(unshadedBranchIds, ['return-from-out-of-play', 'resources-and-aid']);
 
     const returnBranchTargets = domino?.unshaded?.branches?.[0]?.targets;
-    assert.deepEqual(returnBranchTargets?.map((target) => target.id), ['us-out-of-play', 'arvn-out-of-play']);
-    assert.deepEqual(returnBranchTargets?.map((target) => target.cardinality), [{ max: 3 }, { max: 6 }]);
+    assert.equal(returnBranchTargets, undefined);
     const returnBranchEffects = domino?.unshaded?.branches?.[0]?.effects ?? [];
     const usReturn = returnBranchEffects.find((effect) => 'removeByPriority' in effect && effect.removeByPriority.budget === 3);
     const arvnReturn = returnBranchEffects.find((effect) => 'removeByPriority' in effect && effect.removeByPriority.budget === 6);
@@ -41,7 +40,7 @@ describe('FITL Domino Theory event-card production spec', () => {
     assert.equal(shadedTargets?.[0]?.id, 'us-troops-available');
     assert.deepEqual(shadedTargets?.[0]?.cardinality, { max: 3 });
 
-    const shadedAidEffect = domino?.shaded?.effects?.find((effect) => 'addVar' in effect);
+    const shadedAidEffect = domino?.shaded?.targets?.[0]?.effects?.find((effect) => 'addVar' in effect);
     assert.deepEqual(shadedAidEffect, {
       addVar: { scope: 'global', var: 'aid', delta: -9 },
     });

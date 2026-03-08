@@ -647,6 +647,41 @@ describe('json schema artifacts', () => {
     assert.equal(validate(gameDefWithModernEventDeck), true, JSON.stringify(validate.errors, null, 2));
   });
 
+  it('eventDeck target with application each and missing effects fails GameDef.schema.json validation', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(gameDefSchema);
+    const invalid = {
+      ...gameDefWithModernEventDeck,
+      eventDecks: [
+        {
+          ...gameDefWithModernEventDeck.eventDecks![0],
+          cards: [
+            {
+              ...gameDefWithModernEventDeck.eventDecks![0]!.cards[0],
+              unshaded: {
+                ...gameDefWithModernEventDeck.eventDecks![0]!.cards[0]!.unshaded!,
+                targets: [
+                  {
+                    id: 'target-1',
+                    selector: { query: 'players' },
+                    cardinality: { max: 1 },
+                    application: 'each',
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    assert.equal(validate(invalid), false);
+    assert.ok(
+      validate.errors?.some((error) => error.instancePath.includes('/eventDecks/0/cards/0/unshaded/targets/0')),
+      JSON.stringify(validate.errors, null, 2),
+    );
+  });
+
   it('game def with legacy event lastingEffects.effect fails GameDef.schema.json validation', () => {
     const ajv = new Ajv({ allErrors: true, strict: false });
     const validate = ajv.compile(gameDefSchema);

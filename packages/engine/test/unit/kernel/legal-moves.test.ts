@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import ts from 'typescript';
 import {
+  collectNamedImportsByLocalName,
   collectCallExpressionsByIdentifier,
   isPropertyAccessOnIdentifier,
   parseTypeScriptSource,
@@ -82,6 +83,32 @@ const makeBaseState = (overrides?: Partial<GameState>): GameState => ({
   markers: {},
   ...overrides,
 });
+
+type CardDrivenTurnOrderState = Extract<GameState['turnOrderState'], { type: 'cardDriven' }>;
+type CardDrivenRuntime = CardDrivenTurnOrderState['runtime'];
+
+const makeCardDrivenRuntime = (overrides?: Partial<CardDrivenRuntime>): CardDrivenRuntime => ({
+  seatOrder: ['0', '1'],
+  eligibility: { '0': true, '1': true },
+  currentCard: {
+    firstEligible: '0',
+    secondEligible: '1',
+    actedSeats: [],
+    passedSeats: [],
+    nonPassCount: 0,
+    firstActionClass: null,
+  },
+  pendingEligibilityOverrides: [],
+  ...overrides,
+});
+
+const makeCardDrivenState = (runtimeOverrides?: Partial<CardDrivenRuntime>): GameState =>
+  makeBaseState({
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: makeCardDrivenRuntime(runtimeOverrides),
+    },
+  });
 
 const makeEventLegalMovesFixture = (card: EventCardDef): { def: GameDef; state: GameState; actionId: ReturnType<typeof asActionId> } => {
   const actionId = asActionId(`eventAction:${card.id}`);
@@ -1874,32 +1901,16 @@ phase: [asPhaseId('main')],
       },
     } as unknown as GameDef;
 
-    const state = makeBaseState({
-      turnOrderState: {
-        type: 'cardDriven',
-        runtime: {
-          seatOrder: ['0', '1'],
-          eligibility: { '0': true, '1': true },
-          currentCard: {
-            firstEligible: '0',
-            secondEligible: '1',
-            actedSeats: [],
-            passedSeats: [],
-            nonPassCount: 0,
-            firstActionClass: null,
-          },
-          pendingEligibilityOverrides: [],
-          pendingFreeOperationGrants: [
-            {
-              grantId: 'grant-0',
-              seat: '0',
-              operationClass: 'operation',
-              actionIds: ['operation'],
-              remainingUses: 1,
-            },
-          ],
+    const state = makeCardDrivenState({
+      pendingFreeOperationGrants: [
+        {
+          grantId: 'grant-0',
+          seat: '0',
+          operationClass: 'operation',
+          actionIds: ['operation'],
+          remainingUses: 1,
         },
-      },
+      ],
     });
 
     const result = enumerateLegalMoves(def, state, { budgets: { maxDecisionProbeSteps: 0 } });
@@ -1965,38 +1976,235 @@ phase: [asPhaseId('main')],
       },
     } as unknown as GameDef;
 
-    const state = makeBaseState({
-      turnOrderState: {
-        type: 'cardDriven',
-        runtime: {
-          seatOrder: ['0', '1'],
-          eligibility: { '0': true, '1': true },
-          currentCard: {
-            firstEligible: '0',
-            secondEligible: '1',
-            actedSeats: [],
-            passedSeats: [],
-            nonPassCount: 0,
-            firstActionClass: null,
-          },
-          pendingEligibilityOverrides: [],
-          pendingFreeOperationGrants: [
-            {
-              grantId: 'grant-0',
-              seat: '0',
-              operationClass: 'operation',
-              actionIds: ['operation'],
-              remainingUses: 1,
-            },
-          ],
+    const state = makeCardDrivenState({
+      pendingFreeOperationGrants: [
+        {
+          grantId: 'grant-0',
+          seat: '0',
+          operationClass: 'operation',
+          actionIds: ['operation'],
+          remainingUses: 1,
         },
-      },
+      ],
     });
 
     assert.equal(
       legalMoves(def, state).some((move) => String(move.actionId) === 'operation' && move.freeOperation === true),
       false,
     );
+  });
+
+  it('24d. admits pipeline templates when decision probing hits deferrable missing bindings', () => {
+    const action: ActionDef = {
+      id: asActionId('pipelineDeferrableMissingBinding'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'pipelineDeferrableMissingBindingProfile',
+      actionId: action.id,
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              chooseOne: {
+                internalDecisionId: 'decision:$target',
+                bind: '$target',
+                options: { query: 'enums', values: ['a'] },
+              },
+            } as GameDef['actions'][number]['effects'][number],
+            {
+              if: {
+                when: { op: '==', left: { ref: 'binding', name: '$missingBinding' }, right: 1 },
+                then: [],
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const moves = legalMoves(makeBaseDef({ actions: [action], actionPipelines: [profile] }), makeBaseState());
+    assert.equal(moves.some((move) => String(move.actionId) === String(action.id)), true);
+  });
+
+  it('24e. rethrows non-deferrable pipeline decision-probing errors', () => {
+    const action: ActionDef = {
+      id: asActionId('pipelineNonDeferrableError'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'pipelineNonDeferrableErrorProfile',
+      actionId: action.id,
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              chooseOne: {
+                internalDecisionId: 'decision:$target',
+                bind: '$target',
+                options: { query: 'enums', values: ['a'] },
+              },
+            } as GameDef['actions'][number]['effects'][number],
+            {
+              if: {
+                when: { op: '==', left: { ref: 'gvar', var: 'missingVar' }, right: 1 },
+                then: [],
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    assert.throws(() => legalMoves(makeBaseDef({ actions: [action], actionPipelines: [profile] }), makeBaseState()));
+  });
+
+  it('24f. admits free-operation variants when decision probing hits deferrable missing bindings', () => {
+    const action: ActionDef = {
+      id: asActionId('freeOpDeferrableMissingBinding'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          chooseOne: {
+            internalDecisionId: 'decision:$target',
+            bind: '$target',
+            options: { query: 'enums', values: ['a'] },
+          },
+        } as GameDef['actions'][number]['effects'][number],
+        {
+          if: {
+            when: { op: '==', left: { ref: 'binding', name: '$missingBinding' }, right: 1 },
+            then: [],
+          },
+        } as GameDef['actions'][number]['effects'][number],
+      ],
+      limits: [],
+    };
+
+    const def = {
+      ...makeBaseDef({ actions: [action] }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['freeOpDeferrableMissingBinding'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeCardDrivenState({
+      pendingFreeOperationGrants: [
+        {
+          grantId: 'grant-deferrable',
+          seat: '0',
+          operationClass: 'operation',
+          actionIds: ['freeOpDeferrableMissingBinding'],
+          remainingUses: 1,
+        },
+      ],
+    });
+
+    const moves = legalMoves(def, state);
+    assert.equal(
+      moves.some((move) => String(move.actionId) === 'freeOpDeferrableMissingBinding' && move.freeOperation === true),
+      true,
+    );
+  });
+
+  it('24g. rethrows non-deferrable free-operation decision-probing errors', () => {
+    const action: ActionDef = {
+      id: asActionId('freeOpNonDeferrableError'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          chooseOne: {
+            internalDecisionId: 'decision:$target',
+            bind: '$target',
+            options: { query: 'enums', values: ['a'] },
+          },
+        } as GameDef['actions'][number]['effects'][number],
+        {
+          if: {
+            when: { op: '==', left: { ref: 'gvar', var: 'missingVar' }, right: 1 },
+            then: [],
+          },
+        } as GameDef['actions'][number]['effects'][number],
+      ],
+      limits: [],
+    };
+
+    const def = {
+      ...makeBaseDef({ actions: [action] }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['freeOpNonDeferrableError'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeCardDrivenState({
+      pendingFreeOperationGrants: [
+        {
+          grantId: 'grant-nondeferrable',
+          seat: '0',
+          operationClass: 'operation',
+          actionIds: ['freeOpNonDeferrableError'],
+          remainingUses: 1,
+        },
+      ],
+    });
+
+    assert.throws(() => legalMoves(def, state));
   });
 
   it('25. preserves class-distinct free-operation variants for same actionId and params', () => {
@@ -2278,7 +2486,27 @@ phase: [asPhaseId('main')],
     assert.deepEqual(legalMoves(def, state), []);
   });
 
-  it('29. does not fall back to generic template enumeration for card-event actions', () => {
+  it('29. rethrows non-deferrable event decision-sequence errors', () => {
+    const { def, state } = makeEventLegalMovesFixture({
+      id: 'event-nondeferrable-error',
+      title: 'Non-deferrable event',
+      sideMode: 'single',
+      unshaded: {
+        effects: [
+          {
+            if: {
+              when: { op: '==', left: { ref: 'gvar', var: 'missingVar' }, right: 1 },
+              then: [],
+            },
+          } as GameDef['actions'][number]['effects'][number],
+        ],
+      },
+    });
+
+    assert.throws(() => legalMoves(def, state));
+  });
+
+  it('30. does not fall back to generic template enumeration for card-event actions', () => {
     const { def, actionId } = makeEventLegalMovesFixture({
       id: 'event-no-current-card',
       title: 'No current card',
@@ -2295,6 +2523,99 @@ phase: [asPhaseId('main')],
     const moves = legalMoves(def, state);
     assert.equal(moves.some((move) => move.actionId === actionId && Object.keys(move.params).length === 0), false);
     assert.deepEqual(moves, []);
+  });
+
+  it('31. routes event/pipeline decision admission through canonical move-decision helper', () => {
+    const source = readKernelSource('src/kernel/legal-moves.ts');
+    const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');
+    const imports = collectNamedImportsByLocalName(sourceFile, './move-decision-sequence.js');
+    assert.equal(
+      imports.get('isMoveDecisionSequenceAdmittedForLegalMove'),
+      'isMoveDecisionSequenceAdmittedForLegalMove',
+      'legal-moves.ts must import canonical legal-move decision admission helper',
+    );
+    assert.equal(
+      imports.has('isMoveDecisionSequenceNotUnsatisfiable'),
+      false,
+      'legal-moves.ts must not import legacy unsatisfiable-only helper for legal-move admission',
+    );
+    assert.equal(
+      imports.has('classifyMoveDecisionSequenceSatisfiability'),
+      false,
+      'event-path decision-policy must not depend on inline classify API imports',
+    );
+    const missingBindingImports = collectNamedImportsByLocalName(sourceFile, './missing-binding-policy.js');
+    assert.equal(
+      missingBindingImports.get('MISSING_BINDING_POLICY_CONTEXTS'),
+      'MISSING_BINDING_POLICY_CONTEXTS',
+      'legal-moves.ts must import canonical missing-binding policy context identifiers',
+    );
+
+    const helperCalls = collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceAdmittedForLegalMove');
+    assert.equal(
+      helperCalls.some((call) => {
+        if (call.arguments.length < 4) {
+          return false;
+        }
+        const contextArg = unwrapTypeScriptExpression(call.arguments[3]!);
+        return (
+          ts.isPropertyAccessExpression(contextArg) &&
+          ts.isIdentifier(contextArg.expression) &&
+          contextArg.expression.text === 'MISSING_BINDING_POLICY_CONTEXTS' &&
+          contextArg.name.text === 'LEGAL_MOVES_EVENT_DECISION_SEQUENCE'
+        );
+      }),
+      true,
+      'event-path admission must use canonical helper with legalMoves.eventDecisionSequence context',
+    );
+    assert.equal(
+      helperCalls.some((call) => {
+        if (call.arguments.length < 4) {
+          return false;
+        }
+        const contextArg = unwrapTypeScriptExpression(call.arguments[3]!);
+        return (
+          ts.isPropertyAccessExpression(contextArg) &&
+          ts.isIdentifier(contextArg.expression) &&
+          contextArg.expression.text === 'MISSING_BINDING_POLICY_CONTEXTS' &&
+          contextArg.name.text === 'LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE'
+        );
+      }),
+      true,
+      'pipeline-path admission must use canonical helper with legalMoves.pipelineDecisionSequence context',
+    );
+
+    const classifyCalls = collectCallExpressionsByIdentifier(sourceFile, 'classifyMoveDecisionSequenceSatisfiability');
+    assert.equal(
+      classifyCalls.length,
+      0,
+      'legal-moves.ts should not reintroduce inline classifyMoveDecisionSequenceSatisfiability admission logic',
+    );
+
+    const deferCalls = collectCallExpressionsByIdentifier(sourceFile, 'shouldDeferMissingBinding');
+    assert.equal(
+      deferCalls.some((call) => {
+        if (call.arguments.length < 2) {
+          return false;
+        }
+        const contextArg = unwrapTypeScriptExpression(call.arguments[1]!);
+        return (
+          ts.isPropertyAccessExpression(contextArg) &&
+          ts.isIdentifier(contextArg.expression) &&
+          contextArg.expression.text === 'MISSING_BINDING_POLICY_CONTEXTS' &&
+          contextArg.name.text === 'LEGAL_MOVES_EVENT_DECISION_SEQUENCE'
+        );
+      }),
+      false,
+      'event-path should not inline shouldDeferMissingBinding policy checks',
+    );
+
+    const legacyAdmissionCalls = collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceNotUnsatisfiable');
+    assert.equal(
+      legacyAdmissionCalls.length,
+      0,
+      'legal-moves.ts should not use legacy unsatisfiable-only helper for legal-move admission',
+    );
   });
 });
 
@@ -2441,6 +2762,23 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
   it('requires legal-moves turn-order helpers to consume explicit seat-resolution context', () => {
     const source = readKernelSource('src/kernel/legal-moves-turn-order.ts');
     const sourceFile = parseTypeScriptSource(source, 'legal-moves-turn-order.ts');
+    const imports = collectNamedImportsByLocalName(sourceFile, './move-decision-sequence.js');
+    assert.equal(
+      imports.get('isMoveDecisionSequenceAdmittedForLegalMove'),
+      'isMoveDecisionSequenceAdmittedForLegalMove',
+      'legal-moves-turn-order.ts must import canonical legal-move decision admission helper',
+    );
+    assert.equal(
+      imports.has('isMoveDecisionSequenceNotUnsatisfiable'),
+      false,
+      'legal-moves-turn-order.ts must not import legacy unsatisfiable-only helper for admission',
+    );
+    const missingBindingImports = collectNamedImportsByLocalName(sourceFile, './missing-binding-policy.js');
+    assert.equal(
+      missingBindingImports.get('MISSING_BINDING_POLICY_CONTEXTS'),
+      'MISSING_BINDING_POLICY_CONTEXTS',
+      'legal-moves-turn-order.ts must import canonical missing-binding policy context identifiers',
+    );
 
     const activeSeatCalls = collectCallExpressionsByIdentifier(sourceFile, 'requireCardDrivenActiveSeat');
     assert.equal(activeSeatCalls.length >= 2, true, 'turn-order helpers should resolve active seat at guarded boundaries');
@@ -2480,6 +2818,31 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
       ),
       true,
       'applyPendingFreeOperationVariants must thread seatResolution into free-operation grant checks',
+    );
+
+    const admissionCalls = collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceAdmittedForLegalMove');
+    assert.equal(
+      admissionCalls.some((call) => {
+        if (call.arguments.length < 4) {
+          return false;
+        }
+        const contextArg = unwrapTypeScriptExpression(call.arguments[3]!);
+        return (
+          ts.isPropertyAccessExpression(contextArg) &&
+          ts.isIdentifier(contextArg.expression) &&
+          contextArg.expression.text === 'MISSING_BINDING_POLICY_CONTEXTS' &&
+          contextArg.name.text === 'LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE'
+        );
+      }),
+      true,
+      'free-operation unresolved admission must use canonical helper with legalMoves.freeOperationDecisionSequence context',
+    );
+
+    const legacyAdmissionCalls = collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceNotUnsatisfiable');
+    assert.equal(
+      legacyAdmissionCalls.length,
+      0,
+      'legal-moves-turn-order.ts should not use legacy unsatisfiable-only helper for admission',
     );
   });
 });

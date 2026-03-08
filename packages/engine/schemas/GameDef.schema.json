@@ -2616,79 +2616,144 @@
                           "targets": {
                             "type": "array",
                             "items": {
-                              "type": "object",
-                              "properties": {
-                                "id": {
-                                  "type": "string",
-                                  "minLength": 1
-                                },
-                                "selector": {
-                                  "$ref": "#/definitions/anon_25f09bc1"
-                                },
-                                "cardinality": {
-                                  "anyOf": [
-                                    {
-                                      "type": "object",
-                                      "properties": {
-                                        "n": {
-                                          "type": "integer",
-                                          "minimum": 0,
-                                          "maximum": 9007199254740991
-                                        }
-                                      },
-                                      "required": [
-                                        "n"
-                                      ],
-                                      "additionalProperties": false
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "minLength": 1
                                     },
-                                    {
-                                      "type": "object",
-                                      "properties": {
-                                        "min": {
-                                          "type": "integer",
-                                          "minimum": 0,
-                                          "maximum": 9007199254740991
+                                    "selector": {
+                                      "$ref": "#/definitions/anon_25f09bc1"
+                                    },
+                                    "cardinality": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "n": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 9007199254740991
+                                            }
+                                          },
+                                          "required": [
+                                            "n"
+                                          ],
+                                          "additionalProperties": false
                                         },
-                                        "max": {
-                                          "type": "integer",
-                                          "minimum": 0,
-                                          "maximum": 9007199254740991
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "min": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "max": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 9007199254740991
+                                            }
+                                          },
+                                          "required": [
+                                            "max"
+                                          ],
+                                          "additionalProperties": false
                                         }
-                                      },
-                                      "required": [
-                                        "max"
-                                      ],
-                                      "additionalProperties": false
-                                    }
-                                  ]
-                                },
-                                "application": {
-                                  "anyOf": [
-                                    {
+                                      ]
+                                    },
+                                    "application": {
                                       "type": "string",
                                       "const": "each"
                                     },
-                                    {
+                                    "effects": {
+                                      "minItems": 1,
+                                      "type": "array",
+                                      "items": {
+                                        "$ref": "#/definitions/anon_3bfdbef9"
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "selector",
+                                    "cardinality",
+                                    "application",
+                                    "effects"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "selector": {
+                                      "$ref": "#/definitions/anon_25f09bc1"
+                                    },
+                                    "cardinality": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "n": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 9007199254740991
+                                            }
+                                          },
+                                          "required": [
+                                            "n"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "min": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "max": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 9007199254740991
+                                            }
+                                          },
+                                          "required": [
+                                            "max"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      ]
+                                    },
+                                    "application": {
                                       "type": "string",
                                       "const": "aggregate"
+                                    },
+                                    "effects": {
+                                      "minItems": 1,
+                                      "type": "array",
+                                      "items": {
+                                        "$ref": "#/definitions/anon_3bfdbef9"
+                                      }
                                     }
-                                  ]
-                                },
-                                "effects": {
-                                  "minItems": 1,
-                                  "type": "array",
-                                  "items": {
-                                    "$ref": "#/definitions/anon_3bfdbef9"
-                                  }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "selector",
+                                    "cardinality",
+                                    "application",
+                                    "effects"
+                                  ],
+                                  "additionalProperties": false
                                 }
-                              },
-                              "required": [
-                                "id",
-                                "selector",
-                                "cardinality",
-                                "application"
-                              ],
-                              "additionalProperties": false
+                              ]
                             }
                           },
                           "lastingEffects": {
@@ -2742,79 +2807,144 @@
                     "targets": {
                       "type": "array",
                       "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "selector": {
-                            "$ref": "#/definitions/anon_25f09bc1"
-                          },
-                          "cardinality": {
-                            "anyOf": [
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "n": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
-                                  }
-                                },
-                                "required": [
-                                  "n"
-                                ],
-                                "additionalProperties": false
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
                               },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "min": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
+                              "selector": {
+                                "$ref": "#/definitions/anon_25f09bc1"
+                              },
+                              "cardinality": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "n": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "n"
+                                    ],
+                                    "additionalProperties": false
                                   },
-                                  "max": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "min": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "max": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "max"
+                                    ],
+                                    "additionalProperties": false
                                   }
-                                },
-                                "required": [
-                                  "max"
-                                ],
-                                "additionalProperties": false
-                              }
-                            ]
-                          },
-                          "application": {
-                            "anyOf": [
-                              {
+                                ]
+                              },
+                              "application": {
                                 "type": "string",
                                 "const": "each"
                               },
-                              {
+                              "effects": {
+                                "minItems": 1,
+                                "type": "array",
+                                "items": {
+                                  "$ref": "#/definitions/anon_3bfdbef9"
+                                }
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "selector",
+                              "cardinality",
+                              "application",
+                              "effects"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "selector": {
+                                "$ref": "#/definitions/anon_25f09bc1"
+                              },
+                              "cardinality": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "n": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "n"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "min": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "max": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "max"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "application": {
                                 "type": "string",
                                 "const": "aggregate"
+                              },
+                              "effects": {
+                                "minItems": 1,
+                                "type": "array",
+                                "items": {
+                                  "$ref": "#/definitions/anon_3bfdbef9"
+                                }
                               }
-                            ]
-                          },
-                          "effects": {
-                            "minItems": 1,
-                            "type": "array",
-                            "items": {
-                              "$ref": "#/definitions/anon_3bfdbef9"
-                            }
+                            },
+                            "required": [
+                              "id",
+                              "selector",
+                              "cardinality",
+                              "application",
+                              "effects"
+                            ],
+                            "additionalProperties": false
                           }
-                        },
-                        "required": [
-                          "id",
-                          "selector",
-                          "cardinality",
-                          "application"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     },
                     "lastingEffects": {
@@ -3197,79 +3327,144 @@
                           "targets": {
                             "type": "array",
                             "items": {
-                              "type": "object",
-                              "properties": {
-                                "id": {
-                                  "type": "string",
-                                  "minLength": 1
-                                },
-                                "selector": {
-                                  "$ref": "#/definitions/anon_25f09bc1"
-                                },
-                                "cardinality": {
-                                  "anyOf": [
-                                    {
-                                      "type": "object",
-                                      "properties": {
-                                        "n": {
-                                          "type": "integer",
-                                          "minimum": 0,
-                                          "maximum": 9007199254740991
-                                        }
-                                      },
-                                      "required": [
-                                        "n"
-                                      ],
-                                      "additionalProperties": false
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "minLength": 1
                                     },
-                                    {
-                                      "type": "object",
-                                      "properties": {
-                                        "min": {
-                                          "type": "integer",
-                                          "minimum": 0,
-                                          "maximum": 9007199254740991
+                                    "selector": {
+                                      "$ref": "#/definitions/anon_25f09bc1"
+                                    },
+                                    "cardinality": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "n": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 9007199254740991
+                                            }
+                                          },
+                                          "required": [
+                                            "n"
+                                          ],
+                                          "additionalProperties": false
                                         },
-                                        "max": {
-                                          "type": "integer",
-                                          "minimum": 0,
-                                          "maximum": 9007199254740991
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "min": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "max": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 9007199254740991
+                                            }
+                                          },
+                                          "required": [
+                                            "max"
+                                          ],
+                                          "additionalProperties": false
                                         }
-                                      },
-                                      "required": [
-                                        "max"
-                                      ],
-                                      "additionalProperties": false
-                                    }
-                                  ]
-                                },
-                                "application": {
-                                  "anyOf": [
-                                    {
+                                      ]
+                                    },
+                                    "application": {
                                       "type": "string",
                                       "const": "each"
                                     },
-                                    {
+                                    "effects": {
+                                      "minItems": 1,
+                                      "type": "array",
+                                      "items": {
+                                        "$ref": "#/definitions/anon_3bfdbef9"
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "selector",
+                                    "cardinality",
+                                    "application",
+                                    "effects"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "selector": {
+                                      "$ref": "#/definitions/anon_25f09bc1"
+                                    },
+                                    "cardinality": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "n": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 9007199254740991
+                                            }
+                                          },
+                                          "required": [
+                                            "n"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "min": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "max": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 9007199254740991
+                                            }
+                                          },
+                                          "required": [
+                                            "max"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      ]
+                                    },
+                                    "application": {
                                       "type": "string",
                                       "const": "aggregate"
+                                    },
+                                    "effects": {
+                                      "minItems": 1,
+                                      "type": "array",
+                                      "items": {
+                                        "$ref": "#/definitions/anon_3bfdbef9"
+                                      }
                                     }
-                                  ]
-                                },
-                                "effects": {
-                                  "minItems": 1,
-                                  "type": "array",
-                                  "items": {
-                                    "$ref": "#/definitions/anon_3bfdbef9"
-                                  }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "selector",
+                                    "cardinality",
+                                    "application",
+                                    "effects"
+                                  ],
+                                  "additionalProperties": false
                                 }
-                              },
-                              "required": [
-                                "id",
-                                "selector",
-                                "cardinality",
-                                "application"
-                              ],
-                              "additionalProperties": false
+                              ]
                             }
                           },
                           "lastingEffects": {
@@ -3323,79 +3518,144 @@
                     "targets": {
                       "type": "array",
                       "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "selector": {
-                            "$ref": "#/definitions/anon_25f09bc1"
-                          },
-                          "cardinality": {
-                            "anyOf": [
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "n": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
-                                  }
-                                },
-                                "required": [
-                                  "n"
-                                ],
-                                "additionalProperties": false
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
                               },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "min": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
+                              "selector": {
+                                "$ref": "#/definitions/anon_25f09bc1"
+                              },
+                              "cardinality": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "n": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "n"
+                                    ],
+                                    "additionalProperties": false
                                   },
-                                  "max": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "min": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "max": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "max"
+                                    ],
+                                    "additionalProperties": false
                                   }
-                                },
-                                "required": [
-                                  "max"
-                                ],
-                                "additionalProperties": false
-                              }
-                            ]
-                          },
-                          "application": {
-                            "anyOf": [
-                              {
+                                ]
+                              },
+                              "application": {
                                 "type": "string",
                                 "const": "each"
                               },
-                              {
+                              "effects": {
+                                "minItems": 1,
+                                "type": "array",
+                                "items": {
+                                  "$ref": "#/definitions/anon_3bfdbef9"
+                                }
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "selector",
+                              "cardinality",
+                              "application",
+                              "effects"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "selector": {
+                                "$ref": "#/definitions/anon_25f09bc1"
+                              },
+                              "cardinality": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "n": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "n"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "min": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "max": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "max"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "application": {
                                 "type": "string",
                                 "const": "aggregate"
+                              },
+                              "effects": {
+                                "minItems": 1,
+                                "type": "array",
+                                "items": {
+                                  "$ref": "#/definitions/anon_3bfdbef9"
+                                }
                               }
-                            ]
-                          },
-                          "effects": {
-                            "minItems": 1,
-                            "type": "array",
-                            "items": {
-                              "$ref": "#/definitions/anon_3bfdbef9"
-                            }
+                            },
+                            "required": [
+                              "id",
+                              "selector",
+                              "cardinality",
+                              "application",
+                              "effects"
+                            ],
+                            "additionalProperties": false
                           }
-                        },
-                        "required": [
-                          "id",
-                          "selector",
-                          "cardinality",
-                          "application"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     },
                     "lastingEffects": {

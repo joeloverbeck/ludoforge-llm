@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — event target schema contract hardening + event-data migration policy
-**Deps**: archive/tickets/FITLEVENTARCH-001-event-target-application-semantics.md, tickets/FITLEVENTARCH-004-event-target-executability-crossvalidate-parity.md
+**Deps**: archive/tickets/FITLEVENTARCH-001-event-target-application-semantics.md, archive/tickets/FITLEVENTARCH/FITLEVENTARCH-004-event-target-executability-crossvalidate-parity.md
 
 ## Problem
 

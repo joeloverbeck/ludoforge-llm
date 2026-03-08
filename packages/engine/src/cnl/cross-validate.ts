@@ -789,7 +789,7 @@ function validateEventCardSide(
     return;
   }
 
-  pushEventTargetExecutabilityDiagnostic(diagnostics, side.targets, side, pathPrefix, cardId);
+  pushEventTargetExecutabilityDiagnostic(diagnostics, side, pathPrefix, cardId);
 
   validateEventFreeOperationGrants(
     diagnostics,
@@ -826,7 +826,6 @@ function validateEventCardSide(
   for (const [branchIndex, branch] of (side.branches ?? []).entries()) {
     pushEventTargetExecutabilityDiagnostic(
       diagnostics,
-      branch.targets,
       branch,
       `${pathPrefix}.branches.${branchIndex}`,
       cardId,
@@ -898,8 +897,8 @@ function validateEventCardSide(
 
 function pushEventTargetExecutabilityDiagnostic(
   diagnostics: Diagnostic[],
-  targets: EventSideDef['targets'],
   scope: {
+    readonly targets?: EventSideDef['targets'];
     readonly effects?: EventSideDef['effects'];
     readonly branches?: EventSideDef['branches'];
     readonly lastingEffects?: EventSideDef['lastingEffects'];
@@ -907,10 +906,20 @@ function pushEventTargetExecutabilityDiagnostic(
   pathPrefix: string,
   cardId: string,
 ): void {
+  const targets = scope.targets;
   if (targets === undefined || targets.length === 0) {
     return;
   }
-  if (scope.effects !== undefined || scope.branches !== undefined || scope.lastingEffects !== undefined) {
+  const hasTargetExecutablePayload = targets.some((target) => {
+    const targetEffects = target.effects;
+    return targetEffects !== undefined && targetEffects.length > 0;
+  });
+  if (
+    hasTargetExecutablePayload
+    || scope.effects !== undefined
+    || scope.branches !== undefined
+    || scope.lastingEffects !== undefined
+  ) {
     return;
   }
 

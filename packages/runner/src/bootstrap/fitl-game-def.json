@@ -60851,114 +60851,90 @@
               {
                 "id": "return-us-bases-and-aid",
                 "order": 1,
-                "targets": [
+                "effects": [
                   {
-                    "id": "us-out-of-play-bases",
-                    "selector": {
-                      "query": "players"
-                    },
-                    "cardinality": {
-                      "max": 2
-                    },
-                    "application": "aggregate",
-                    "effects": [
-                      {
-                        "removeByPriority": {
-                          "budget": 2,
-                          "groups": [
-                            {
-                              "bind": "$usBaseOutOfPlay",
-                              "over": {
-                                "query": "tokensInZone",
-                                "zone": "out-of-play-US:none",
-                                "filter": {
-                                  "op": "and",
-                                  "args": [
-                                    {
-                                      "prop": "faction",
-                                      "op": "eq",
-                                      "value": "US"
-                                    },
-                                    {
-                                      "prop": "type",
-                                      "op": "eq",
-                                      "value": "base"
-                                    }
-                                  ]
+                    "removeByPriority": {
+                      "budget": 2,
+                      "groups": [
+                        {
+                          "bind": "$usBaseOutOfPlay",
+                          "over": {
+                            "query": "tokensInZone",
+                            "zone": "out-of-play-US:none",
+                            "filter": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "prop": "faction",
+                                  "op": "eq",
+                                  "value": "US"
+                                },
+                                {
+                                  "prop": "type",
+                                  "op": "eq",
+                                  "value": "base"
                                 }
-                              },
-                              "to": {
-                                "zoneExpr": "available-US:none"
-                              }
+                              ]
                             }
-                          ]
+                          },
+                          "to": {
+                            "zoneExpr": "available-US:none"
+                          }
                         }
-                      },
-                      {
-                        "addVar": {
-                          "scope": "global",
-                          "var": "aid",
-                          "delta": 12
-                        }
-                      }
-                    ]
+                      ]
+                    }
+                  },
+                  {
+                    "addVar": {
+                      "scope": "global",
+                      "var": "aid",
+                      "delta": 12
+                    }
                   }
                 ]
               },
               {
                 "id": "return-arvn-bases-and-resources",
                 "order": 2,
-                "targets": [
+                "effects": [
                   {
-                    "id": "arvn-out-of-play-bases",
-                    "selector": {
-                      "query": "players"
-                    },
-                    "cardinality": {
-                      "max": 2
-                    },
-                    "application": "aggregate",
-                    "effects": [
-                      {
-                        "removeByPriority": {
-                          "budget": 2,
-                          "groups": [
-                            {
-                              "bind": "$arvnBaseOutOfPlay",
-                              "over": {
-                                "query": "tokensInZone",
-                                "zone": "out-of-play-ARVN:none",
-                                "filter": {
-                                  "op": "and",
-                                  "args": [
-                                    {
-                                      "prop": "faction",
-                                      "op": "eq",
-                                      "value": "ARVN"
-                                    },
-                                    {
-                                      "prop": "type",
-                                      "op": "eq",
-                                      "value": "base"
-                                    }
-                                  ]
+                    "removeByPriority": {
+                      "budget": 2,
+                      "groups": [
+                        {
+                          "bind": "$arvnBaseOutOfPlay",
+                          "over": {
+                            "query": "tokensInZone",
+                            "zone": "out-of-play-ARVN:none",
+                            "filter": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "prop": "faction",
+                                  "op": "eq",
+                                  "value": "ARVN"
+                                },
+                                {
+                                  "prop": "type",
+                                  "op": "eq",
+                                  "value": "base"
                                 }
-                              },
-                              "to": {
-                                "zoneExpr": "available-ARVN:none"
-                              }
+                              ]
                             }
-                          ]
+                          },
+                          "to": {
+                            "zoneExpr": "available-ARVN:none"
+                          }
                         }
-                      },
-                      {
-                        "addVar": {
-                          "scope": "global",
-                          "var": "arvnResources",
-                          "delta": 6
-                        }
-                      }
-                    ]
+                      ]
+                    }
+                  },
+                  {
+                    "addVar": {
+                      "scope": "global",
+                      "var": "arvnResources",
+                      "delta": 6
+                    }
                   }
                 ]
               }
@@ -61068,6 +61044,7 @@
                 "actionIds": [
                   "sweep"
                 ],
+                "allowDuringMonsoon": true,
                 "zoneFilter": {
                   "op": ">",
                   "left": {

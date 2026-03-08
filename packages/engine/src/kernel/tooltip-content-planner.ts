@@ -72,6 +72,36 @@ function filterSuppressed(
   return messages.filter((m) => m.kind !== 'suppressed');
 }
 
+/**
+ * Compute a fingerprint for a TooltipMessage by serializing all fields
+ * **except** the metadata fields `astPath` and `macroOrigin`.
+ */
+function messageFingerprint(msg: TooltipMessage): string {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { astPath, macroOrigin, ...semanticFields } = msg;
+  return JSON.stringify(semanticFields);
+}
+
+/**
+ * Collapse structurally identical TooltipMessage entries that differ only
+ * in metadata (`astPath`, `macroOrigin`).  Keeps first occurrence, preserves
+ * ordering, does not mutate input.
+ */
+export function deduplicateMessages(
+  messages: readonly TooltipMessage[],
+): readonly TooltipMessage[] {
+  const seen = new Set<string>();
+  const result: TooltipMessage[] = [];
+  for (const m of messages) {
+    const fp = messageFingerprint(m);
+    if (!seen.has(fp)) {
+      seen.add(fp);
+      result.push(m);
+    }
+  }
+  return result;
+}
+
 function deduplicateModifiers(
   modifiers: readonly ModifierMessage[],
 ): readonly ModifierMessage[] {
@@ -252,7 +282,8 @@ export function planContent(
   actionLabel: string,
 ): ContentPlan {
   const filtered = filterSuppressed(messages);
-  const { modifiers, content } = extractModifiers(filtered);
+  const deduplicated = deduplicateMessages(filtered);
+  const { modifiers, content } = extractModifiers(deduplicated);
   const synopsisSource = findSynopsisSource(content);
   const stageGroups = groupByStage(content);
   const steps = buildSteps(stageGroups);

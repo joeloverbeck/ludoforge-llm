@@ -1,6 +1,6 @@
 # ACTTOOHUMGAP-004: Deduplicate structurally identical messages
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel tooltip pipeline

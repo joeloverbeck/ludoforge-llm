@@ -1,6 +1,6 @@
 # ACTTOOHUMGAP-003: Consistent macro binding sanitization
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel tooltip pipeline

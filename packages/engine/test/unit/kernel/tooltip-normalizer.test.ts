@@ -251,7 +251,7 @@ describe('tooltip-normalizer', () => {
       }
     });
 
-    it('addVar zoneVar with ZoneRef expression → scopeOwner is <expr>', () => {
+    it('addVar zoneVar with ZoneRef expression → scopeOwner is humanized binding name', () => {
       const effect: EffectAST = {
         addVar: {
           scope: 'zoneVar',
@@ -264,7 +264,7 @@ describe('tooltip-normalizer', () => {
       assert.equal(msg.kind, 'gain');
       if (msg.kind === 'gain') {
         assert.equal(msg.scope, 'zone');
-        assert.equal(msg.scopeOwner, '<expr>');
+        assert.equal(msg.scopeOwner, 'targetZone');
       }
     });
   });
@@ -491,7 +491,7 @@ describe('tooltip-normalizer', () => {
       }
     });
 
-    it('moveToken with ZoneRef expression → uses <expr>', () => {
+    it('moveToken with ZoneRef expression → uses humanized binding name', () => {
       const effect: EffectAST = {
         moveToken: {
           token: 'troop',
@@ -502,7 +502,7 @@ describe('tooltip-normalizer', () => {
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[18]'));
       assert.equal(msg.kind, 'move');
       if (msg.kind === 'move') {
-        assert.equal(msg.fromZone, '<expr>');
+        assert.equal(msg.fromZone, 'sourceZone');
       }
     });
   });

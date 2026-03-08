@@ -1,6 +1,6 @@
 # ACTTOOHUMGAP-001: Unify value humanization with LabelContext
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel tooltip pipeline
@@ -91,3 +91,15 @@ Verify `tooltip-label-resolver.ts` exports `LabelContext` type and any helper ne
 
 1. `cd .claude/worktrees/spec-57 && pnpm -F @ludoforge/engine test`
 2. `cd .claude/worktrees/spec-57 && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-08
+- **What changed**:
+  - Added `humanizeValueExpr(expr: ValueExpr, ctx: LabelContext): string` to `packages/engine/src/kernel/tooltip-value-stringifier.ts` — handles all ValueExpr shapes (primitives, all 12 Reference sub-types, arithmetic, aggregate, concat, conditional) with full label resolution. Never produces `<value>` placeholder.
+  - Deleted duplicate `humanizeValue()` from `packages/engine/src/kernel/tooltip-modifier-humanizer.ts` and rewired all 4 call-sites in `humanizeConditionInner` to use `humanizeValueExpr`.
+  - Added 27 new test cases in `packages/engine/test/unit/kernel/tooltip-value-stringifier.test.ts` covering every shape, label resolution, macro binding sanitization, and a sweep test confirming no `<value>` placeholder.
+- **Deviations from plan**:
+  - Binding ref handling: non-`__macro_` binding names use `resolveLabel` directly (matching old `humanizeValue` behavior), while `__macro_`-prefixed names go through `sanitizeBindingName`. The ticket didn't specify this distinction but the old code required it for correct label resolution.
+  - Aggregate bind field: same macro-prefix-aware routing applied to `agg.bind` for consistency.
+- **Verification**: 4496/4496 engine tests pass. `grep 'function humanizeValue\b'` returns no matches — duplicate eliminated.

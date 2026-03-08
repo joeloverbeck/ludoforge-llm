@@ -2318,7 +2318,7 @@ phase: [asPhaseId('main')],
     assert.deepEqual(moves, []);
   });
 
-  it('31. routes event decision admission through canonical move-decision helper', () => {
+  it('31. routes event/pipeline decision admission through canonical move-decision helper', () => {
     const source = readKernelSource('src/kernel/legal-moves.ts');
     const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');
     const imports = collectNamedImportsByLocalName(sourceFile, './move-decision-sequence.js');
@@ -2326,6 +2326,11 @@ phase: [asPhaseId('main')],
       imports.get('isMoveDecisionSequenceAdmittedForLegalMove'),
       'isMoveDecisionSequenceAdmittedForLegalMove',
       'legal-moves.ts must import canonical legal-move decision admission helper',
+    );
+    assert.equal(
+      imports.has('isMoveDecisionSequenceNotUnsatisfiable'),
+      false,
+      'legal-moves.ts must not import legacy unsatisfiable-only helper for legal-move admission',
     );
     assert.equal(
       imports.has('classifyMoveDecisionSequenceSatisfiability'),
@@ -2344,6 +2349,17 @@ phase: [asPhaseId('main')],
       }),
       true,
       'event-path admission must use canonical helper with legalMoves.eventDecisionSequence context',
+    );
+    assert.equal(
+      helperCalls.some((call) => {
+        if (call.arguments.length < 4) {
+          return false;
+        }
+        const contextArg = unwrapTypeScriptExpression(call.arguments[3]!);
+        return ts.isStringLiteral(contextArg) && contextArg.text === 'legalMoves.pipelineDecisionSequence';
+      }),
+      true,
+      'pipeline-path admission must use canonical helper with legalMoves.pipelineDecisionSequence context',
     );
 
     const classifyCalls = collectCallExpressionsByIdentifier(sourceFile, 'classifyMoveDecisionSequenceSatisfiability');
@@ -2364,6 +2380,13 @@ phase: [asPhaseId('main')],
       }),
       false,
       'event-path should not inline shouldDeferMissingBinding policy checks',
+    );
+
+    const legacyAdmissionCalls = collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceNotUnsatisfiable');
+    assert.equal(
+      legacyAdmissionCalls.length,
+      0,
+      'legal-moves.ts should not use legacy unsatisfiable-only helper for legal-move admission',
     );
   });
 });
@@ -2511,6 +2534,17 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
   it('requires legal-moves turn-order helpers to consume explicit seat-resolution context', () => {
     const source = readKernelSource('src/kernel/legal-moves-turn-order.ts');
     const sourceFile = parseTypeScriptSource(source, 'legal-moves-turn-order.ts');
+    const imports = collectNamedImportsByLocalName(sourceFile, './move-decision-sequence.js');
+    assert.equal(
+      imports.get('isMoveDecisionSequenceAdmittedForLegalMove'),
+      'isMoveDecisionSequenceAdmittedForLegalMove',
+      'legal-moves-turn-order.ts must import canonical legal-move decision admission helper',
+    );
+    assert.equal(
+      imports.has('isMoveDecisionSequenceNotUnsatisfiable'),
+      false,
+      'legal-moves-turn-order.ts must not import legacy unsatisfiable-only helper for admission',
+    );
 
     const activeSeatCalls = collectCallExpressionsByIdentifier(sourceFile, 'requireCardDrivenActiveSeat');
     assert.equal(activeSeatCalls.length >= 2, true, 'turn-order helpers should resolve active seat at guarded boundaries');
@@ -2550,6 +2584,26 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
       ),
       true,
       'applyPendingFreeOperationVariants must thread seatResolution into free-operation grant checks',
+    );
+
+    const admissionCalls = collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceAdmittedForLegalMove');
+    assert.equal(
+      admissionCalls.some((call) => {
+        if (call.arguments.length < 4) {
+          return false;
+        }
+        const contextArg = unwrapTypeScriptExpression(call.arguments[3]!);
+        return ts.isStringLiteral(contextArg) && contextArg.text === 'legalMoves.freeOperationDecisionSequence';
+      }),
+      true,
+      'free-operation unresolved admission must use canonical helper with legalMoves.freeOperationDecisionSequence context',
+    );
+
+    const legacyAdmissionCalls = collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceNotUnsatisfiable');
+    assert.equal(
+      legacyAdmissionCalls.length,
+      0,
+      'legal-moves-turn-order.ts should not use legacy unsatisfiable-only helper for admission',
     );
   });
 });

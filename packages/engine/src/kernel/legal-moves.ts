@@ -4,7 +4,7 @@ import { resolveActionApplicabilityPreflight } from './action-applicability-pref
 import { resolveDeclaredActionParamDomainOptions } from './declared-action-param-domain.js';
 import type { EvalContext, EvalRuntimeResources } from './eval-context.js';
 import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
-import { isMoveDecisionSequenceAdmittedForLegalMove, isMoveDecisionSequenceNotUnsatisfiable } from './move-decision-sequence.js';
+import { isMoveDecisionSequenceAdmittedForLegalMove } from './move-decision-sequence.js';
 import {
   applyPendingFreeOperationVariants,
   applyTurnFlowWindowFilters,
@@ -474,10 +474,11 @@ export const enumerateLegalMoves = (
       }
 
       if (
-        !isMoveDecisionSequenceNotUnsatisfiable(
+        !isMoveDecisionSequenceAdmittedForLegalMove(
           def,
           state,
           { actionId: action.id, params: {} },
+          'legalMoves.pipelineDecisionSequence',
           {
             budgets: enumeration.budgets,
             onWarning: (warning) => emitEnumerationWarning(enumeration, warning),

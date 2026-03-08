@@ -14,6 +14,8 @@ describe('shouldDeferMissingBinding()', () => {
     const missing = createEvalError('MISSING_BINDING', 'missing');
     assert.equal(shouldDeferMissingBinding(missing, 'pipeline.discoveryPredicate'), true);
     assert.equal(shouldDeferMissingBinding(missing, 'legalMoves.executorDuringParamEnumeration'), true);
+    assert.equal(shouldDeferMissingBinding(missing, 'legalMoves.pipelineDecisionSequence'), true);
+    assert.equal(shouldDeferMissingBinding(missing, 'legalMoves.freeOperationDecisionSequence'), true);
     assert.equal(shouldDeferMissingBinding(missing, 'legalChoices.freeOperationZoneFilterProbe'), true);
   });
 
@@ -21,6 +23,8 @@ describe('shouldDeferMissingBinding()', () => {
     const missingVar = createEvalError('MISSING_VAR', 'missing var');
     assert.equal(shouldDeferMissingBinding(missingVar, 'pipeline.discoveryPredicate'), false);
     assert.equal(shouldDeferMissingBinding(missingVar, 'legalMoves.executorDuringParamEnumeration'), false);
+    assert.equal(shouldDeferMissingBinding(missingVar, 'legalMoves.pipelineDecisionSequence'), false);
+    assert.equal(shouldDeferMissingBinding(missingVar, 'legalMoves.freeOperationDecisionSequence'), false);
     assert.equal(shouldDeferMissingBinding(missingVar, 'legalChoices.freeOperationZoneFilterProbe'), false);
   });
 
@@ -43,6 +47,8 @@ describe('shouldDeferMissingBinding()', () => {
     assert.equal(shouldDeferMissingBinding(selectorCardinality, 'legalMoves.eventDecisionSequence'), true);
     assert.equal(shouldDeferMissingBinding(selectorCardinality, 'pipeline.discoveryPredicate'), false);
     assert.equal(shouldDeferMissingBinding(selectorCardinality, 'legalMoves.executorDuringParamEnumeration'), false);
+    assert.equal(shouldDeferMissingBinding(selectorCardinality, 'legalMoves.pipelineDecisionSequence'), false);
+    assert.equal(shouldDeferMissingBinding(selectorCardinality, 'legalMoves.freeOperationDecisionSequence'), false);
   });
 
   it('does not defer selector-cardinality without structured unresolved-binding metadata', () => {

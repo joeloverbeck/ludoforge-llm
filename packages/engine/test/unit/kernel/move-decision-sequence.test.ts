@@ -6,8 +6,8 @@ import {
   asPhaseId,
   asPlayerId,
   asZoneId,
+  classifyMoveDecisionSequenceSatisfiability,
   isMoveDecisionSequenceAdmittedForLegalMove,
-  isMoveDecisionSequenceNotUnsatisfiable,
   isMoveDecisionSequenceSatisfiable,
   pickDeterministicChoiceValue,
   resolveMoveDecisionSequence,
@@ -270,7 +270,7 @@ phase: [asPhaseId('main')],
     assert.equal(result.nextDecision?.type, 'chooseN');
     assert.equal(result.nextDecision?.options.length ?? 0, 0);
     assert.equal(result.nextDecision?.min, 1);
-    assert.equal(isMoveDecisionSequenceNotUnsatisfiable(def, makeBaseState(), makeMove('unsat-op')), false);
+    assert.equal(classifyMoveDecisionSequenceSatisfiability(def, makeBaseState(), makeMove('unsat-op')).classification, 'unsatisfiable');
     assert.equal(isMoveDecisionSequenceSatisfiable(def, makeBaseState(), makeMove('unsat-op')), false);
   });
 
@@ -427,15 +427,15 @@ phase: [asPhaseId('main')],
     assert.equal(result.complete, false);
     assert.equal(result.nextDecision, undefined);
     assert.equal(
-      isMoveDecisionSequenceNotUnsatisfiable(def, makeBaseState(), makeMove('stuck-op'), {
+      classifyMoveDecisionSequenceSatisfiability(def, makeBaseState(), makeMove('stuck-op'), {
         budgets: { maxDecisionProbeSteps: 0 },
-      }),
-      true,
+      }).classification,
+      'unknown',
     );
     assert.equal(result.warnings.some((warning) => warning.code === 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'), true);
   });
 
-  it('legal-move admission helper excludes unsatisfiable decision sequences', () => {
+  it('legal-move admission helper excludes unsatisfiable decision sequences across admission contexts', () => {
     const action: ActionDef = {
       id: asActionId('unsat-admission-op'),
       actor: 'active',
@@ -472,18 +472,25 @@ phase: [asPhaseId('main')],
     };
 
     const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
-    assert.equal(
-      isMoveDecisionSequenceAdmittedForLegalMove(
-        def,
-        makeBaseState(),
-        makeMove('unsat-admission-op'),
-        'legalMoves.eventDecisionSequence',
-      ),
-      false,
-    );
+    const contexts = [
+      'legalMoves.eventDecisionSequence',
+      'legalMoves.pipelineDecisionSequence',
+      'legalMoves.freeOperationDecisionSequence',
+    ] as const;
+    for (const context of contexts) {
+      assert.equal(
+        isMoveDecisionSequenceAdmittedForLegalMove(
+          def,
+          makeBaseState(),
+          makeMove('unsat-admission-op'),
+          context,
+        ),
+        false,
+      );
+    }
   });
 
-  it('legal-move admission helper treats deferrable missing bindings as admissible unknowns', () => {
+  it('legal-move admission helper treats deferrable missing bindings as admissible unknowns across admission contexts', () => {
     const action: ActionDef = {
       id: asActionId('missing-binding-admission-op'),
       actor: 'active',
@@ -519,18 +526,25 @@ phase: [asPhaseId('main')],
     };
 
     const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
-    assert.equal(
-      isMoveDecisionSequenceAdmittedForLegalMove(
-        def,
-        makeBaseState(),
-        makeMove('missing-binding-admission-op'),
-        'legalMoves.eventDecisionSequence',
-      ),
-      true,
-    );
+    const contexts = [
+      'legalMoves.eventDecisionSequence',
+      'legalMoves.pipelineDecisionSequence',
+      'legalMoves.freeOperationDecisionSequence',
+    ] as const;
+    for (const context of contexts) {
+      assert.equal(
+        isMoveDecisionSequenceAdmittedForLegalMove(
+          def,
+          makeBaseState(),
+          makeMove('missing-binding-admission-op'),
+          context,
+        ),
+        true,
+      );
+    }
   });
 
-  it('legal-move admission helper rethrows non-deferrable decision-sequence errors', () => {
+  it('legal-move admission helper rethrows non-deferrable decision-sequence errors across admission contexts', () => {
     const action: ActionDef = {
       id: asActionId('nondeferrable-admission-op'),
       actor: 'active',
@@ -566,14 +580,21 @@ phase: [asPhaseId('main')],
     };
 
     const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
-    assert.throws(() =>
-      isMoveDecisionSequenceAdmittedForLegalMove(
-        def,
-        makeBaseState(),
-        makeMove('nondeferrable-admission-op'),
-        'legalMoves.eventDecisionSequence',
-      ),
-    );
+    const contexts = [
+      'legalMoves.eventDecisionSequence',
+      'legalMoves.pipelineDecisionSequence',
+      'legalMoves.freeOperationDecisionSequence',
+    ] as const;
+    for (const context of contexts) {
+      assert.throws(() =>
+        isMoveDecisionSequenceAdmittedForLegalMove(
+          def,
+          makeBaseState(),
+          makeMove('nondeferrable-admission-op'),
+          context,
+        ),
+      );
+    }
   });
 
   it('returns incomplete with warning when deferred predicate budget is exceeded', () => {

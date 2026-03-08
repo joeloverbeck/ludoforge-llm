@@ -6,6 +6,8 @@ import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filte
 export type MissingBindingPolicyContext =
   | 'legalMoves.executorDuringParamEnumeration'
   | 'legalMoves.eventDecisionSequence'
+  | 'legalMoves.pipelineDecisionSequence'
+  | 'legalMoves.freeOperationDecisionSequence'
   | 'legalChoices.freeOperationZoneFilterProbe'
   | 'pipeline.discoveryPredicate';
 
@@ -32,6 +34,8 @@ export const shouldDeferMissingBinding = (
   }
   switch (context) {
     case 'legalMoves.executorDuringParamEnumeration':
+    case 'legalMoves.pipelineDecisionSequence':
+    case 'legalMoves.freeOperationDecisionSequence':
     case 'legalChoices.freeOperationZoneFilterProbe':
     case 'pipeline.discoveryPredicate':
       return isMissingBinding;

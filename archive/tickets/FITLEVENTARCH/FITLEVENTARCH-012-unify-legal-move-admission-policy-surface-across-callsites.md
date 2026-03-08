@@ -1,6 +1,6 @@
 # FITLEVENTARCH-012: Unify legal-move admission policy surface across callsites
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — legal-move admission API unification in kernel callsites + architecture guards
@@ -18,7 +18,8 @@ Event callsites use the new canonical helper, but pipeline/free-operation unreso
 
 1. `packages/engine/src/kernel/legal-moves.ts` event enumeration now uses `isMoveDecisionSequenceAdmittedForLegalMove(...)`.
 2. Pipeline template gating in `legal-moves.ts` and free-operation unresolved gating in `legal-moves-turn-order.ts` still use `isMoveDecisionSequenceNotUnsatisfiable(...)` directly.
-3. Mismatch + correction: one canonical admission API should cover all legal-move admission branches to prevent policy divergence as defer/error contracts evolve.
+3. `packages/engine/test/unit/kernel/legal-moves.test.ts` already contains source-shape architecture guards for both `legal-moves.ts` and `legal-moves-turn-order.ts`; there is no separate `legal-moves-turn-order.test.ts` file at this time.
+4. Mismatch + correction: one canonical admission API should cover all legal-move admission branches to prevent policy divergence as defer/error contracts evolve.
 
 ## Architecture Check
 
@@ -34,7 +35,7 @@ Migrate unresolved legal-move admission callsites (event, pipeline, free-operati
 
 ### 2. Clarify policy contexts and ownership
 
-If needed, extend `MissingBindingPolicyContext` with explicit canonical contexts for pipeline/free-operation admission callsites instead of overloading event context strings.
+Extend `MissingBindingPolicyContext` with explicit canonical contexts for pipeline/free-operation admission callsites (do not reuse event context strings). Route each callsite through its own named context.
 
 ### 3. Add source-shape policy guards
 
@@ -46,6 +47,7 @@ Add/extend AST/source guards that fail if legal-move callsites reintroduce direc
 - `packages/engine/src/kernel/legal-moves.ts` (modify)
 - `packages/engine/src/kernel/legal-moves-turn-order.ts` (modify)
 - `packages/engine/src/kernel/missing-binding-policy.ts` (modify, if new contexts required)
+- `packages/engine/test/unit/kernel/missing-binding-policy.test.ts` (modify)
 - `packages/engine/test/unit/kernel/legal-moves.test.ts` (modify)
 - `packages/engine/test/unit/kernel/move-decision-sequence.test.ts` (modify)
 
@@ -74,7 +76,8 @@ Add/extend AST/source guards that fail if legal-move callsites reintroduce direc
 
 1. `packages/engine/test/unit/kernel/legal-moves.test.ts` — extend source-shape guards to assert pipeline/event admission callsites use canonical helper only.
 2. `packages/engine/test/unit/kernel/move-decision-sequence.test.ts` — extend canonical helper contract matrix coverage across satisfiable/unknown/unsatisfiable/defer/throw outcomes.
-3. `packages/engine/test/unit/kernel/legal-moves-turn-order.test.ts` (or nearest existing turn-order kernel test file) — assert free-operation unresolved admission path uses canonical helper contract.
+3. `packages/engine/test/unit/kernel/legal-moves.test.ts` — extend existing turn-order source-shape guard section to assert free-operation unresolved admission path uses canonical helper contract.
+4. `packages/engine/test/unit/kernel/missing-binding-policy.test.ts` — assert any new legal-move admission contexts preserve intended defer semantics.
 
 ### Commands
 
@@ -83,3 +86,25 @@ Add/extend AST/source guards that fail if legal-move callsites reintroduce direc
 3. `node --test packages/engine/dist/test/unit/kernel/legal-moves.test.js`
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm -F @ludoforge/engine lint && pnpm -F @ludoforge/engine typecheck`
+
+## Outcome
+
+- Outcome amended: 2026-03-08
+- Completion date: 2026-03-08
+- What actually changed:
+  - Replaced legacy `isMoveDecisionSequenceNotUnsatisfiable(...)` admission usage with canonical `isMoveDecisionSequenceAdmittedForLegalMove(...)` in pipeline template gating (`legal-moves.ts`) and free-operation unresolved admission (`legal-moves-turn-order.ts`).
+  - Added explicit missing-binding policy contexts: `legalMoves.pipelineDecisionSequence` and `legalMoves.freeOperationDecisionSequence`.
+  - Extended source-shape architecture guards in `legal-moves.test.ts` so event, pipeline, and turn-order free-operation admission paths must use canonical helper contexts and must not reintroduce legacy helper calls.
+  - Expanded helper contract coverage in `move-decision-sequence.test.ts` across all legal-move admission contexts for unsatisfiable exclusion, deferrable admission, and non-deferrable throw behavior.
+  - Extended `missing-binding-policy.test.ts` to lock defer behavior for newly added contexts.
+  - Follow-up refinement removed deprecated helper `isMoveDecisionSequenceNotUnsatisfiable(...)` from `move-decision-sequence.ts` to eliminate dual policy surfaces entirely.
+- Deviations from original plan:
+  - Follow-up refinement superseded the earlier “no `move-decision-sequence.ts` logic changes” note by removing deprecated helper surface after callsite migration was complete.
+  - No new standalone `legal-moves-turn-order` unit test file was introduced; existing architecture guard coverage in `legal-moves.test.ts` was expanded instead.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/kernel/move-decision-sequence.test.js` passed.
+  - `node --test packages/engine/dist/test/unit/kernel/legal-moves.test.js` passed.
+  - `node --test packages/engine/dist/test/unit/kernel/missing-binding-policy.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed (`435` tests, `0` failures).
+  - `pnpm -F @ludoforge/engine lint && pnpm -F @ludoforge/engine typecheck` passed.

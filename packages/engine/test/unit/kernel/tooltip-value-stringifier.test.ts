@@ -58,6 +58,13 @@ describe('tooltip-value-stringifier', () => {
       );
     });
 
+    it('binding with __macro_ name → sanitized semantic tail', () => {
+      assert.equal(
+        stringifyValueExpr({ ref: 'binding', name: '__macro_place_from_available__piece' }),
+        'Piece',
+      );
+    });
+
     it('globalMarkerState → expr.marker', () => {
       assert.equal(
         stringifyValueExpr({ ref: 'globalMarkerState', marker: 'trail' }),

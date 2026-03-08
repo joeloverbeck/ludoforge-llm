@@ -1,6 +1,6 @@
 # Spec 55: Legible Action Tooltips
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P1
 **Complexity**: XL
 **Dependencies**: Spec 39 (React DOM UI layer), Spec 42 (visual config), Spec 52 (choice UI legibility)
@@ -653,3 +653,10 @@ data/games/texas-holdem/*.md       — Add verbalization: block
 - `pnpm turbo typecheck` passes
 - Golden tests produce expected English for FITL Train/Sweep/Rally and Hold'em Raise
 - Manual visual check: run `pnpm -F @ludoforge/runner dev`, hover actions, verify readable tooltips with progressive disclosure
+
+## Outcome
+
+- **Completion date**: 2026-03-08
+- **What changed**: All 12 tickets (LEGACTTOO-001 through 012) implemented. Complete tooltip pipeline: EffectAST normalization, content planning with progressive disclosure, template realization with label resolution, macro overrides via verbalization, blocker extraction, suppression of scaffolding effects, and modifier humanization.
+- **Deviations from original plan**: None significant.
+- **Verification**: All engine tests pass. Typecheck clean.

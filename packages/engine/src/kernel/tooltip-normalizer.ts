@@ -9,7 +9,7 @@ import type { EffectAST, ZoneRef, NumericValueExpr, PlayerSel } from './types-as
 import type { VerbalizationDef } from './verbalization-types.js';
 import type { TooltipMessage, VarScope } from './tooltip-ir.js';
 import { isSuppressed, isScaffoldingEffect } from './tooltip-suppression.js';
-import { stringifyValueExpr, stringifyNumericExpr, stringifyZoneRef } from './tooltip-value-stringifier.js';
+import { stringifyValueExpr, stringifyNumericExpr, stringifyZoneRef, stripMacroBindingPrefix } from './tooltip-value-stringifier.js';
 import {
   normalizeChooseN,
   normalizeChooseOne,
@@ -137,7 +137,8 @@ const normalizeMoveToken = (
   payload: EffectOf<'moveToken'>,
   astPath: string,
 ): readonly TooltipMessage[] => {
-  const { token, from, to } = payload.moveToken;
+  const { token: rawToken, from, to } = payload.moveToken;
+  const token = stripMacroBindingPrefix(rawToken);
   const fromStr = stringifyZoneRef(from);
   const toStr = stringifyZoneRef(to);
 
@@ -156,7 +157,8 @@ const normalizeMoveTokenAdjacent = (
   payload: EffectOf<'moveTokenAdjacent'>,
   astPath: string,
 ): readonly TooltipMessage[] => {
-  const { token, from } = payload.moveTokenAdjacent;
+  const { token: rawToken, from } = payload.moveTokenAdjacent;
+  const token = stripMacroBindingPrefix(rawToken);
   return [{
     kind: 'move',
     tokenFilter: token,
@@ -191,7 +193,8 @@ const normalizeSetTokenProp = (
   payload: EffectOf<'setTokenProp'>,
   astPath: string,
 ): readonly TooltipMessage[] => {
-  const { token, prop, value } = payload.setTokenProp;
+  const { token: rawToken, prop, value } = payload.setTokenProp;
+  const token = stripMacroBindingPrefix(rawToken);
 
   if (prop === 'activity') {
     const valueStr = stringifyValueExpr(value);
@@ -215,7 +218,8 @@ const normalizeCreateToken = (
   payload: EffectOf<'createToken'>,
   astPath: string,
 ): readonly TooltipMessage[] => {
-  const { type, zone } = payload.createToken;
+  const { type: rawType, zone } = payload.createToken;
+  const type = stripMacroBindingPrefix(rawType);
   return [{ kind: 'create', tokenFilter: type, targetZone: stringifyZoneRef(zone), astPath }];
 };
 
@@ -223,7 +227,8 @@ const normalizeDestroyToken = (
   payload: EffectOf<'destroyToken'>,
   astPath: string,
 ): readonly TooltipMessage[] => {
-  const { token } = payload.destroyToken;
+  const { token: rawToken } = payload.destroyToken;
+  const token = stripMacroBindingPrefix(rawToken);
   return [{ kind: 'destroy', tokenFilter: token, fromZone: '', astPath }];
 };
 

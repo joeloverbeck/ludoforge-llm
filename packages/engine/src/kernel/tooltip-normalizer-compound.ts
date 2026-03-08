@@ -11,7 +11,7 @@ import type { EffectAST, ValueExpr, ConditionAST, OptionsQuery, TokenFilterExpr 
 import type { TooltipMessage, SelectMessage } from './tooltip-ir.js';
 import type { NormalizerContext } from './tooltip-normalizer.js';
 import { humanizeCondition } from './tooltip-modifier-humanizer.js';
-import { stringifyValueExpr, stringifyNumericExpr, stringifyZoneRef } from './tooltip-value-stringifier.js';
+import { stringifyValueExpr, stringifyNumericExpr, stringifyZoneRef, stripMacroBindingPrefix } from './tooltip-value-stringifier.js';
 
 /** Extract a single-key union member from EffectAST by its discriminant key. */
 type EffectOf<K extends string> = Extract<EffectAST, Record<K, unknown>>;
@@ -226,7 +226,7 @@ export const normalizeRemoveByPriority = (
   const budgetStr = stringifyNumericExpr(budget);
   const groupMessages: readonly TooltipMessage[] = groups.map((group, i): TooltipMessage => ({
     kind: 'remove',
-    tokenFilter: group.bind,
+    tokenFilter: stripMacroBindingPrefix(group.bind),
     fromZone: group.from !== undefined ? stringifyZoneRef(group.from) : '<priority>',
     destination: stringifyZoneRef(group.to),
     budget: budgetStr,

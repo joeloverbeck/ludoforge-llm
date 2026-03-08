@@ -1,6 +1,6 @@
 # HUMREAACTTOO-005: Binding Name Sanitization
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — new utility function, normalizer updates
@@ -90,3 +90,18 @@ In any location where binding names from macro expansion surface in `tokenFilter
 
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-08
+- **What changed**:
+  - Created two exported functions in `tooltip-value-stringifier.ts`:
+    - `stripMacroBindingPrefix(name)` — extracts raw semantic tail only (for normalizer tokenFilter fields where downstream `resolveLabel` handles display)
+    - `sanitizeBindingName(name, ctx?)` — extracts + humanizes (for `stringifyValueExpr` binding ref where no downstream label resolution exists)
+  - Applied `stripMacroBindingPrefix` in `tooltip-normalizer.ts` (5 functions: normalizeMoveToken, normalizeMoveTokenAdjacent, normalizeSetTokenProp, normalizeCreateToken, normalizeDestroyToken)
+  - Applied `stripMacroBindingPrefix` in `tooltip-normalizer-compound.ts` (`normalizeRemoveByPriority`)
+  - Applied `sanitizeBindingName` in `stringifyValueExpr` binding ref case
+  - Created `tooltip-binding-sanitizer.test.ts` with 25 unit tests
+  - Added 1 integration test to `tooltip-value-stringifier.test.ts`
+- **Deviations from original plan**: The ticket proposed a single `sanitizeBindingName()` for all locations. During review, a double-processing bug was identified: normalizer tokenFilter fields already go through `resolveLabel()` in the realizer, so humanizing the semantic tail in the normalizer would prevent label lookup (e.g., `piece` → `Piece` breaks `resolveLabel("Piece", ctx)` since labels are keyed by `piece`). Split into two functions to separate path extraction from display formatting.
+- **Verification**: 4449 engine tests pass, 0 failures. Typecheck clean.

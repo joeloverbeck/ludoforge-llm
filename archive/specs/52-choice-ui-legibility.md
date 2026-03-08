@@ -1,6 +1,6 @@
 # Spec 52: Choice UI Legibility Improvements
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P2
 **Complexity**: L
 **Dependencies**: Spec 39 (React DOM UI layer), Spec 42 (visual config)
@@ -556,3 +556,10 @@ Add `iterationGroupId` and `iterationLabel` to `RenderChoiceStep`. Detect consec
 | `data/games/fire-in-the-lake/visual-config.yaml` | L5 | Action labels |
 | `packages/engine/src/kernel/index.ts` | L4 | Barrel export |
 | `packages/engine/src/kernel/decision-id.ts` | L4 | No changes (already correct) |
+
+## Outcome
+
+- **Completion date**: 2026-03-08
+- **What changed**: All 9 tickets (CHOICEUI-001 through 009) implemented. Choice panel redesign with breadcrumb navigation, action toolbar humanization via visual-config labels, verbalization pipeline, tooltip pipeline with progressive disclosure, and FITL/Texas Hold'em integration.
+- **Deviations from original plan**: None significant.
+- **Verification**: All engine and runner tests pass. Typecheck clean.

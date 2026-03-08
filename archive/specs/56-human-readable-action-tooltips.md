@@ -1,6 +1,6 @@
 # Spec 56 — Human-Readable Action Tooltips
 
-**Status**: Active
+**Status**: ✅ COMPLETED
 **Depends on**: Spec 55 (Tooltip Pipeline)
 **Ticket prefix**: LEGACTTOOHUM
 
@@ -162,3 +162,10 @@ interface SummaryMessage extends MessageBase {
 ```bash
 pnpm turbo build && pnpm turbo test
 ```
+
+## Outcome
+
+- **Completion date**: 2026-03-08
+- **What changed**: All 5 tickets (HUMREAACTTOO-001 through 005) implemented. Canonical ValueExpr stringifier with all 12 ref types, condition humanization for all ref types, ChooseN domain context with expanded SelectMessage targets and optionHints, SummaryMessage + macro override with slot interpolation, and binding name sanitization with split `stripMacroBindingPrefix`/`sanitizeBindingName` functions.
+- **Deviations from original plan**: Ticket 005 split the proposed single `sanitizeBindingName` into two functions to avoid double-processing with downstream `resolveLabel` in the template realizer.
+- **Verification**: 4449 engine tests pass. Typecheck clean.

@@ -144,6 +144,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
         sequence: { chain: 'ia-drang-us', step: 1 },
         operationClass: 'operation',
         actionIds: ['sweep'],
+        allowDuringMonsoon: true,
         zoneFilter: {
           op: '>',
               left: {

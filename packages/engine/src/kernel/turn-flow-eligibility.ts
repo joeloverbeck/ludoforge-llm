@@ -983,11 +983,17 @@ export const isFreeOperationAllowedDuringMonsoonForMove = (
   state: GameState,
   move: Move,
   seatResolution: SeatResolutionContext,
+  options?: {
+    readonly zoneFilterErrorSurface?: FreeOperationZoneFilterSurface;
+  },
 ): boolean => {
   if (move.freeOperation !== true) {
     return false;
   }
-  const analysis = analyzeFreeOperationGrantMatch(def, state, move, seatResolution, { evaluateZoneFilters: true });
+  const analysis = analyzeFreeOperationGrantMatch(def, state, move, seatResolution, {
+    evaluateZoneFilters: true,
+    zoneFilterErrorSurface: options?.zoneFilterErrorSurface ?? 'turnFlowEligibility',
+  });
   if (analysis === null) {
     return false;
   }

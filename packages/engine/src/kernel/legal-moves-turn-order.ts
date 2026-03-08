@@ -277,7 +277,11 @@ export function applyTurnFlowWindowFilters(
     if (restriction === undefined) {
       return true;
     }
-    if (isFreeOperationAllowedDuringMonsoonForMove(def, state, move, seatResolution)) {
+    if (
+      isFreeOperationAllowedDuringMonsoonForMove(def, state, move, seatResolution, {
+        zoneFilterErrorSurface: 'legalChoices',
+      })
+    ) {
       return true;
     }
     if (hasOverrideToken(move, restriction.overrideToken)) {

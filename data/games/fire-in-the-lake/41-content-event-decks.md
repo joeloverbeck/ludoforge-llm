@@ -3955,6 +3955,7 @@ eventDecks:
               operationClass: operation
               actionIds:
                 - sweep
+              allowDuringMonsoon: true
               zoneFilter:
                 op: ">"
                 left:

@@ -420,6 +420,85 @@ describe('GreedyAgent core', () => {
     assert.equal(result.move.actionId, asActionId('stochastic'));
   });
 
+  it('stochastic fallback is deterministic for identical seeds', () => {
+    const stochasticActionA: ActionDef = {
+      id: asActionId('stochastic-a'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [phaseId],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const stochasticActionB: ActionDef = {
+      id: asActionId('stochastic-b'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [phaseId],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const makeProfile = (actionId: string): ActionPipelineDef => ({
+      id: `profile-${actionId}`,
+      actionId: asActionId(actionId),
+      legality: null,
+      costValidation: null, costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          stage: 'resolve',
+          effects: [
+            {
+              rollRandom: {
+                bind: '$roll',
+                min: 1,
+                max: 2,
+                in: [
+                  {
+                    if: {
+                      when: { op: '==' as const, left: { ref: 'binding' as const, name: '$roll' }, right: 1 },
+                      then: [{ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } }],
+                      else: [{ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['beta'] } } }],
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+      atomicity: 'atomic',
+    });
+
+    const def = createDefWithProfile(
+      [stochasticActionA, stochasticActionB],
+      [makeProfile('stochastic-a'), makeProfile('stochastic-b')],
+    );
+    const moves: Move[] = [
+      { actionId: asActionId('stochastic-a'), params: {} },
+      { actionId: asActionId('stochastic-b'), params: {} },
+    ];
+    const agent = new GreedyAgent();
+
+    const makeInput = () => ({
+      def,
+      state: stateStub,
+      playerId: asPlayerId(0),
+      legalMoves: moves,
+      rng: createRng(77n),
+    });
+
+    const first = agent.chooseMove(makeInput());
+    const second = agent.chooseMove(makeInput());
+
+    assert.deepEqual(first, second);
+  });
+
   it('prefers completed moves over stochastic-unresolved ones', () => {
     const stochasticAction: ActionDef = {
       id: asActionId('stochastic'),

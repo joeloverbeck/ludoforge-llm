@@ -4,6 +4,7 @@ import { completeTemplateMove } from '../kernel/move-completion.js';
 import { nextInt } from '../kernel/prng.js';
 import type { Agent, Move, Rng } from '../kernel/types.js';
 import { evaluateState } from './evaluate-state.js';
+import { selectStochasticFallback } from './agent-move-selection.js';
 import { selectCandidatesDeterministically } from './select-candidates.js';
 
 const DEFAULT_COMPLETIONS_PER_TEMPLATE = 5;
@@ -42,7 +43,7 @@ export class GreedyAgent implements Agent {
 
     // Expand template moves into concrete candidates
     const expandedMoves: Move[] = [];
-    const stochasticMoves: { move: Move; rng: Rng }[] = [];
+    const stochasticMoves: Move[] = [];
     let rng: Rng = input.rng;
 
     for (const move of input.legalMoves) {
@@ -58,7 +59,7 @@ export class GreedyAgent implements Agent {
           expandedMoves.push(result.move);
           rng = result.rng;
         } else if (result.kind === 'stochasticUnresolved') {
-          stochasticMoves.push({ move: result.move, rng: result.rng });
+          stochasticMoves.push(result.move);
           rng = result.rng;
           break;
         } else {
@@ -69,11 +70,7 @@ export class GreedyAgent implements Agent {
     }
 
     if (expandedMoves.length === 0 && stochasticMoves.length > 0) {
-      if (stochasticMoves.length === 1) {
-        return { move: stochasticMoves[0]!.move, rng };
-      }
-      const [index, nextRng] = nextInt(rng, 0, stochasticMoves.length - 1);
-      return { move: stochasticMoves[index]!.move, rng: nextRng };
+      return selectStochasticFallback(stochasticMoves, rng);
     }
 
     if (expandedMoves.length === 0) {

@@ -1,10 +1,10 @@
 # AGENTTMPL-002: Extract Shared Stochastic Fallback Helper
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — agent stochastic fallback logic extraction
-**Deps**: tickets/AGENTTMPL-001-remove-dead-rng-field-from-stochastic-move-tracking.md
+**Deps**: archive/tickets/AGENTTMPL/AGENTTMPL-001-remove-dead-rng-field-from-stochastic-move-tracking.md
 
 ## Problem
 
@@ -13,19 +13,19 @@ Both `RandomAgent` and `GreedyAgent` contain identical stochastic fallback block
 ```typescript
 if (completedMoves.length === 0 && stochasticMoves.length > 0) {
   if (stochasticMoves.length === 1) {
-    return { move: stochasticMoves[0]!.move, rng };
+    return { move: stochasticMoves[0]!, rng };
   }
   const [index, nextRng] = nextInt(rng, 0, stochasticMoves.length - 1);
-  return { move: stochasticMoves[index]!.move, rng: nextRng };
+  return { move: stochasticMoves[index]!, rng: nextRng };
 }
 ```
 
 This is a DRY violation. If the stochastic fallback policy changes (e.g., logging, weighting, more sophisticated selection), both agents need manual synchronization. The duplicated "pick one randomly from N" pattern also appears in the completed-move selection path.
 
-## Assumption Reassessment (2026-03-08)
+## Assumption Reassessment (2026-03-08, post-AGENTTMPL-001)
 
 1. `RandomAgent` stochastic fallback block at `random-agent.ts:26-32` is identical to `GreedyAgent` at `greedy-agent.ts:71-77`. — **Verified**.
-2. The "pick one from N with rng" pattern also appears at `random-agent.ts:42-47` (completed moves) and implicitly at `greedy-agent.ts:115` (tied moves). — **Verified**.
+2. The "pick one from N with rng" pattern also appears at `random-agent.ts:42-43` (completed moves) and at `greedy-agent.ts:115-120` (tied moves). — **Verified**.
 3. No existing shared agent utility module exists — agents import directly from kernel. — **Verified**: `packages/engine/src/agents/` contains only agent classes and `evaluate-state.ts`, `select-candidates.ts`.
 
 ## Architecture Check
@@ -56,7 +56,7 @@ export const selectStochasticFallback = (
 
 Replace the duplicated stochastic fallback blocks and the "pick one from N" patterns with calls to the shared helpers.
 
-### 3. Remove redundant out-of-range guard in RandomAgent
+### 3. Remove redundant out-of-range guard in RandomAgent completed-move selection
 
 `random-agent.ts:43-46` has a dead `undefined` check after `completedMoves[index]` that the stochastic path at line 31 does not have. After extracting `pickRandom`, this inconsistency disappears naturally.
 
@@ -96,3 +96,24 @@ Replace the duplicated stochastic fallback blocks and the "pick one from N" patt
 
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test`
 2. `pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-08
+- **What changed**:
+  - Added shared helper module `packages/engine/src/agents/agent-move-selection.ts` with:
+    - `pickRandom(items, rng)`
+    - `selectStochasticFallback(stochasticMoves, rng)`
+  - Refactored `RandomAgent` to use shared helpers for:
+    - stochastic fallback selection
+    - completed-move random selection
+  - Refactored `GreedyAgent` to use shared helper for stochastic fallback selection.
+  - Added new unit tests in `packages/engine/test/unit/agents/agent-move-selection.test.ts`.
+- **Deviations from original plan**:
+  - None.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - Targeted agent/helper tests passed via `node --test` on `agent-move-selection`, `random-agent`, and `greedy-agent-core` unit files.
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm turbo lint` passed.
+  - `pnpm turbo typecheck` passed.

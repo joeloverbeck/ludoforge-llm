@@ -1,6 +1,6 @@
 # ACTTOOHUMGAP-002: Enrich SelectMessage targets and fix grammar
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel tooltip pipeline
@@ -27,14 +27,16 @@
 
 ### 1. Expand `SelectMessage.target` union in `tooltip-ir.ts`
 
-Add `'options'` and `'tokens'` (and any other needed labels identified during implementation) to the `SelectMessage.target` discriminant union.
+Add `'options'` to the `SelectMessage.target` discriminant union. Reserve `'tokens'` in the union for future use but do not remap existing token query classifications (that would be a behavioral change beyond this ticket's scope).
 
 ### 2. Expand `classifyQueryTarget()` in `tooltip-normalizer-compound.ts`
 
 Add classification branches for:
 - Enum queries → `'options'`
-- Binding queries → appropriate contextual label
-- Concat queries → derive label from concatenated parts
+- Concat queries → derive label from concatenated sources (recursively classify; if all sources share a target, use that; otherwise `'items'`)
+- `nextInOrderByCondition` queries → derive label from the inner `source` query
+
+Note: The original ticket mentioned "binding queries" but no `binding` query type exists in `OptionsQuery`. All variants have a `query` discriminant. This deliverable was dropped.
 
 ### 3. Fix singular/plural grammar in `tooltip-template-realizer.ts`
 
@@ -63,8 +65,8 @@ Add classification branches for:
 ### Tests That Must Pass
 
 1. Enum query input to `classifyQueryTarget()` produces `'options'` (not `'items'`).
-2. Binding query input produces a descriptive target label (not `'items'`).
-3. Concat query input produces a descriptive target label (not `'items'`).
+2. Concat query input produces a descriptive target label derived from sources (not `'items'`).
+3. `nextInOrderByCondition` query input produces a label derived from its source (not `'items'`).
 4. "Select up to 1 ..." renders with singular noun form (e.g., "1 item", not "1 items").
 5. "Select up to 3 ..." renders with plural noun form (e.g., "3 items").
 6. All new target labels have corresponding singular/plural forms in the realizer.
@@ -80,7 +82,7 @@ Add classification branches for:
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/kernel/tooltip-normalizer-compound.test.ts` — add tests for enum, binding, concat query classification.
+1. `packages/engine/test/unit/kernel/tooltip-normalizer-compound.test.ts` — add tests for enum, concat, and nextInOrderByCondition query classification.
 2. `packages/engine/test/unit/kernel/tooltip-template-realizer.test.ts` — add tests for singular/plural edge cases.
 
 ### Commands

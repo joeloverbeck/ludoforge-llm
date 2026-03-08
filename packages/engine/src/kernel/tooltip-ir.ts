@@ -17,7 +17,7 @@ export type VarScope = 'global' | 'player' | 'zone';
 
 export interface SelectMessage extends MessageBase {
   readonly kind: 'select';
-  readonly target: 'spaces' | 'zones' | 'items' | 'players' | 'values' | 'markers' | 'rows';
+  readonly target: 'spaces' | 'zones' | 'items' | 'players' | 'values' | 'markers' | 'rows' | 'options' | 'tokens';
   readonly filter?: string;
   readonly bounds?: { readonly min: number; readonly max: number };
   readonly optionHints?: readonly string[];

@@ -73,6 +73,36 @@ describe('realizeContentPlan', () => {
       assert.equal(result.steps[0]!.lines[0]!.text, 'Select zones');
     });
 
+    it('realizes select(options) target label', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'options', bounds: { min: 1, max: 3 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1-3 options');
+    });
+
+    it('realizes select with singular when min === max === 1', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'options', bounds: { min: 1, max: 1 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1 option');
+    });
+
+    it('realizes "Select up to 1" with singular noun form', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'items', bounds: { min: 0, max: 1 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select up to 1 item');
+    });
+
+    it('realizes "Select up to 3" with plural noun form', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'items', bounds: { min: 0, max: 3 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select up to 3 items');
+    });
+
+    it('realizes "Select up to 1" with singular tokens target', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'tokens', bounds: { min: 0, max: 1 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select up to 1 token');
+    });
+
     it('realizes place', () => {
       const msg: TooltipMessage = { kind: 'place', astPath: 'r', tokenFilter: 'usTroops', targetZone: 'saigon' };
       const result = realizeContentPlan(plan([msg]), MOCK_VERB);

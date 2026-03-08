@@ -118,6 +118,13 @@ const classifyQueryTarget = (options: OptionsQuery): SelectMessage['target'] => 
   if (isValueQuery(options)) return 'values';
   if (isMarkerQuery(options)) return 'markers';
   if (isRowQuery(options)) return 'rows';
+  if (isEnumQuery(options)) return 'options';
+  if (options.query === 'concat') {
+    const sourceTargets = options.sources.map(classifyQueryTarget);
+    const unique = [...new Set(sourceTargets)];
+    return unique.length === 1 ? unique[0]! : 'items';
+  }
+  if (options.query === 'nextInOrderByCondition') return classifyQueryTarget(options.source);
   return 'items';
 };
 

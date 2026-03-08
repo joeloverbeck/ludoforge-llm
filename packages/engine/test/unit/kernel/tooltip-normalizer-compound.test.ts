@@ -133,7 +133,7 @@ describe('normalizeChooseN domain classification', () => {
     assert.equal(msg.target, 'rows');
   });
 
-  it('enums query produces target: items with optionHints', () => {
+  it('enums query produces target: options with optionHints', () => {
     const result = normalizeChooseN(
       chooseNPayload({ query: 'enums', values: ['Fold', 'Call', 'Raise'] }),
       EMPTY_CTX,
@@ -142,7 +142,7 @@ describe('normalizeChooseN domain classification', () => {
     assert.equal(result.length, 1);
     const msg = result[0] as SelectMessage;
     assert.equal(msg.kind, 'select');
-    assert.equal(msg.target, 'items');
+    assert.equal(msg.target, 'options');
     assert.deepEqual(msg.optionHints, ['Fold', 'Call', 'Raise']);
   });
 
@@ -184,6 +184,48 @@ describe('normalizeChooseN domain classification', () => {
     );
     const msg = result[0] as SelectMessage;
     assert.equal(msg.target, 'zones');
+  });
+
+  it('concat query with uniform sources derives target from sources', () => {
+    const result = normalizeChooseN(
+      chooseNPayload({
+        query: 'concat',
+        sources: [{ query: 'mapSpaces' }, { query: 'zones' }],
+      }),
+      EMPTY_CTX,
+      'r',
+    );
+    const msg = result[0] as SelectMessage;
+    assert.equal(msg.target, 'spaces');
+  });
+
+  it('concat query with mixed sources falls back to items', () => {
+    const result = normalizeChooseN(
+      chooseNPayload({
+        query: 'concat',
+        sources: [{ query: 'mapSpaces' }, { query: 'players' }],
+      }),
+      EMPTY_CTX,
+      'r',
+    );
+    const msg = result[0] as SelectMessage;
+    assert.equal(msg.target, 'items');
+  });
+
+  it('nextInOrderByCondition derives target from its source', () => {
+    const result = normalizeChooseN(
+      chooseNPayload({
+        query: 'nextInOrderByCondition',
+        source: { query: 'intsInRange', min: 0, max: 10 },
+        from: 0,
+        bind: 'v',
+        where: true,
+      }),
+      EMPTY_CTX,
+      'r',
+    );
+    const msg = result[0] as SelectMessage;
+    assert.equal(msg.target, 'values');
   });
 
   it('unknown query falls back to target: items without optionHints', () => {

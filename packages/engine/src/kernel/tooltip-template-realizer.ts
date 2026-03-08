@@ -51,6 +51,8 @@ const singularTarget = (target: string): string => {
   if (target === 'values') return 'value';
   if (target === 'markers') return 'marker';
   if (target === 'rows') return 'row';
+  if (target === 'options') return 'option';
+  if (target === 'tokens') return 'token';
   return target;
 };
 
@@ -78,7 +80,10 @@ const realizeSelect = (msg: SelectMessage, ctx: LabelContext): string => {
   }
 
   if (min === 0) {
-    return `Select up to ${max} ${targetLabel}`;
+    const label = max === 1
+      ? (msg.filter !== undefined ? resolveLabel(msg.filter, ctx, 1) : singularTarget(msg.target))
+      : targetLabel;
+    return `Select up to ${max} ${label}`;
   }
 
   return `Select ${min}-${max} ${targetLabel}`;

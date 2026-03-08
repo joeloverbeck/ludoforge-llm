@@ -717,7 +717,7 @@ describe('tooltip-normalizer', () => {
       }
     });
 
-    it('rule 29b: chooseN over enums → SelectMessage(items)', () => {
+    it('rule 29b: chooseN over enums → SelectMessage(options)', () => {
       const effect: EffectAST = {
         chooseN: {
           internalDecisionId: 'd4',
@@ -730,7 +730,7 @@ describe('tooltip-normalizer', () => {
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[1b]'));
       assert.equal(msg.kind, 'select');
       if (msg.kind === 'select') {
-        assert.equal(msg.target, 'items');
+        assert.equal(msg.target, 'options');
         assert.deepStrictEqual(msg.bounds, { min: 1, max: 2 });
       }
     });

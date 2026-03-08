@@ -851,7 +851,7 @@ describe('tooltip-normalizer', () => {
       assert.ok(messages.length >= 2, 'Should produce modifier + child messages');
       assert.equal(messages[0]!.kind, 'modifier');
       if (messages[0]!.kind === 'modifier') {
-        assert.ok(messages[0]!.condition.includes('monsoon'));
+        assert.ok(messages[0]!.condition.includes('Monsoon'));
       }
       assert.equal(messages[1]!.kind, 'pay');
     });
@@ -1120,6 +1120,196 @@ describe('tooltip-normalizer', () => {
       const messages = normalizeEffect(effect, ctx, 'macro[2]');
       assert.ok(messages.length >= 1);
       assert.equal(messages[0]!.kind, 'gain');
+    });
+  });
+
+  // --- LEGTOOLT-003: Normalizer improvements ---
+
+  describe('LEGTOOLT-003: optional choose detection', () => {
+    it('chooseOne with "None" option → optional: true, "None" filtered', () => {
+      const effect: EffectAST = {
+        chooseOne: {
+          internalDecisionId: 'opt1',
+          bind: 'action',
+          options: { query: 'enums', values: ['attack', 'None', 'defend'] },
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'opt[0]'));
+      assert.equal(msg.kind, 'choose');
+      if (msg.kind === 'choose') {
+        assert.equal(msg.optional, true);
+        assert.deepStrictEqual(msg.options, ['attack', 'defend']);
+      }
+    });
+
+    it('chooseOne with "none" (lowercase) → optional: true', () => {
+      const effect: EffectAST = {
+        chooseOne: {
+          internalDecisionId: 'opt2',
+          bind: 'action',
+          options: { query: 'enums', values: ['attack', 'none'] },
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'opt[1]'));
+      assert.equal(msg.kind, 'choose');
+      if (msg.kind === 'choose') {
+        assert.equal(msg.optional, true);
+        assert.deepStrictEqual(msg.options, ['attack']);
+      }
+    });
+
+    it('chooseOne without "None" → optional is undefined', () => {
+      const effect: EffectAST = {
+        chooseOne: {
+          internalDecisionId: 'opt3',
+          bind: 'action',
+          options: { query: 'enums', values: ['attack', 'defend'] },
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'opt[2]'));
+      assert.equal(msg.kind, 'choose');
+      if (msg.kind === 'choose') {
+        assert.equal(msg.optional, undefined);
+        assert.deepStrictEqual(msg.options, ['attack', 'defend']);
+      }
+    });
+  });
+
+  describe('LEGTOOLT-003: suppressed modifier conditions', () => {
+    it('if with __actionClass condition → SuppressedMessage', () => {
+      const effect: EffectAST = {
+        if: {
+          when: {
+            op: '==',
+            left: { ref: 'gvar', var: '__actionClass' },
+            right: 'limitedOperation',
+          },
+          then: [{ addVar: { scope: 'global', var: 'aid', delta: 1 } }],
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'sup[0]');
+      assert.equal(messages[0]!.kind, 'suppressed');
+      if (messages[0]!.kind === 'suppressed') {
+        assert.ok(messages[0]!.reason.includes('internal'));
+      }
+    });
+
+    it('if with $__macro_* condition → SuppressedMessage', () => {
+      const effect: EffectAST = {
+        if: {
+          when: {
+            op: '==',
+            left: { ref: 'gvar', var: '$__macro_trainActive' },
+            right: 1,
+          },
+          then: [{ addVar: { scope: 'global', var: 'aid', delta: 1 } }],
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'sup[1]');
+      assert.equal(messages[0]!.kind, 'suppressed');
+    });
+
+    it('if with normal condition → ModifierMessage with humanized string', () => {
+      const effect: EffectAST = {
+        if: {
+          when: {
+            op: '>=',
+            left: { ref: 'gvar', var: 'aid' },
+            right: 3,
+          },
+          then: [{ addVar: { scope: 'global', var: 'aid', delta: -1 } }],
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'sup[2]');
+      assert.equal(messages[0]!.kind, 'modifier');
+      if (messages[0]!.kind === 'modifier') {
+        // humanizeOperator('>=') → '≥', humanizeIdentifier('aid') → 'Aid'
+        assert.equal(messages[0]!.condition, 'Aid \u2265 3');
+        assert.equal(messages[0]!.description, 'If Aid \u2265 3');
+      }
+    });
+
+    it('if with suppressed condition still recurses into then/else', () => {
+      const effect: EffectAST = {
+        if: {
+          when: {
+            op: '==',
+            left: { ref: 'gvar', var: '__actionClass' },
+            right: 'limitedOperation',
+          },
+          then: [{ addVar: { scope: 'global', var: 'aid', delta: 1 } }],
+          else: [{ addVar: { scope: 'global', var: 'aid', delta: -1 } }],
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'sup[3]');
+      assert.equal(messages.length, 3); // suppressed + then child + else child
+      assert.equal(messages[0]!.kind, 'suppressed');
+      assert.equal(messages[1]!.kind, 'gain');
+      assert.equal(messages[2]!.kind, 'pay');
+    });
+  });
+
+  describe('LEGTOOLT-003: filter population on select messages', () => {
+    it('chooseN with mapSpaces filter → SelectMessage with filter', () => {
+      const effect: EffectAST = {
+        chooseN: {
+          internalDecisionId: 'f1',
+          bind: 'spaces',
+          options: {
+            query: 'mapSpaces',
+            filter: { condition: { op: '==', left: { ref: 'gvar', var: 'control' }, right: 'coin' } },
+          },
+          min: 1,
+          max: 3,
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'flt[0]'));
+      assert.equal(msg.kind, 'select');
+      if (msg.kind === 'select') {
+        assert.equal(msg.target, 'spaces');
+        assert.ok(msg.filter !== undefined);
+        assert.ok(msg.filter!.includes('Control'));
+      }
+    });
+
+    it('chooseN with tokensInZone filter → SelectMessage with filter', () => {
+      const effect: EffectAST = {
+        chooseN: {
+          internalDecisionId: 'f2',
+          bind: 'tokens',
+          options: {
+            query: 'tokensInZone',
+            zone: 'saigon',
+            filter: { prop: 'type', op: 'eq', value: 'guerrilla' },
+          },
+          min: 1,
+          max: 4,
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'flt[1]'));
+      assert.equal(msg.kind, 'select');
+      if (msg.kind === 'select') {
+        assert.equal(msg.target, 'zones');
+        assert.ok(msg.filter !== undefined);
+        assert.ok(msg.filter!.includes('type'));
+      }
+    });
+
+    it('chooseN without filter → SelectMessage with no filter', () => {
+      const effect: EffectAST = {
+        chooseN: {
+          internalDecisionId: 'f3',
+          bind: 'spaces',
+          options: { query: 'mapSpaces' },
+          min: 1,
+          max: 6,
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'flt[2]'));
+      assert.equal(msg.kind, 'select');
+      if (msg.kind === 'select') {
+        assert.equal(msg.filter, undefined);
+      }
     });
   });
 

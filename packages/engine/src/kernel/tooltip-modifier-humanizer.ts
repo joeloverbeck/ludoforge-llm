@@ -7,7 +7,6 @@
  */
 
 import type { ConditionAST, ValueExpr } from './types-ast.js';
-import type { VerbalizationModifierEffect } from './verbalization-types.js';
 import type { NormalizerContext } from './tooltip-normalizer.js';
 import type { LabelContext } from './tooltip-label-resolver.js';
 import { buildLabelContext, resolveLabel } from './tooltip-label-resolver.js';
@@ -158,11 +157,13 @@ export function resolveModifierEffect(
   const humanized = humanizeCondition(cond, ctx);
   if (humanized === null) return null;
 
-  // Try to find pre-authored text from modifierEffects
+  // Try to find pre-authored text from modifierEffects, narrowed by variable name
   if (ctx.verbalization !== undefined) {
     const modEffects = ctx.verbalization.modifierEffects;
-    for (const capId of Object.keys(modEffects)) {
-      const entries: readonly VerbalizationModifierEffect[] = modEffects[capId]!;
+    const condNames = extractConditionNames(cond);
+    for (const name of condNames) {
+      const entries = modEffects[name];
+      if (entries === undefined) continue;
       for (const entry of entries) {
         if (entry.condition === humanized) {
           return { condition: entry.condition, effect: entry.effect };

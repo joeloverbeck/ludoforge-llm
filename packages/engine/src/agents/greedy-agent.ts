@@ -1,10 +1,9 @@
 import { applyMove } from '../kernel/apply-move.js';
 import { legalChoicesEvaluate } from '../kernel/legal-choices.js';
 import { completeTemplateMove } from '../kernel/move-completion.js';
-import { nextInt } from '../kernel/prng.js';
 import type { Agent, Move, Rng } from '../kernel/types.js';
 import { evaluateState } from './evaluate-state.js';
-import { selectStochasticFallback } from './agent-move-selection.js';
+import { pickRandom, selectStochasticFallback } from './agent-move-selection.js';
 import { selectCandidatesDeterministically } from './select-candidates.js';
 
 const DEFAULT_COMPLETIONS_PER_TEMPLATE = 5;
@@ -109,11 +108,7 @@ export class GreedyAgent implements Agent {
       return { move: bestMove, rng: candidates.rng };
     }
 
-    const [selectedIndex, nextRng] = nextInt(candidates.rng, 0, tiedBestMoves.length - 1);
-    const selectedMove = tiedBestMoves[selectedIndex];
-    if (selectedMove === undefined) {
-      throw new Error(`GreedyAgent.chooseMove selected out-of-range tied move index ${selectedIndex}`);
-    }
+    const { item: selectedMove, rng: nextRng } = pickRandom(tiedBestMoves, candidates.rng);
     return { move: selectedMove, rng: nextRng };
   }
 }

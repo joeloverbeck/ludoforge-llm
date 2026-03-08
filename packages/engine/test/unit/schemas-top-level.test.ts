@@ -335,6 +335,27 @@ describe('top-level runtime schemas', () => {
     assert.ok(result.error.issues.some((issue: { path: readonly PropertyKey[] }) => issue.path.join('.') === 'cards.0.unshaded.targets.0.cardinality.min'));
   });
 
+  it('rejects event targets with application each and missing target-local effects', () => {
+    const result = EventDeckSchema.safeParse({
+      id: 'fitl-events-initial',
+      drawZone: 'leader:none',
+      discardZone: 'played:none',
+      cards: [
+        {
+          id: 'card-82',
+          title: 'Domino Theory',
+          sideMode: 'single',
+          unshaded: {
+            targets: [{ id: 'us-troops', selector: { query: 'players' }, cardinality: { max: 1 }, application: 'each' }],
+          },
+        },
+      ],
+    });
+
+    assert.equal(result.success, false);
+    assert.ok(result.error.issues.some((issue: { path: readonly PropertyKey[] }) => issue.path.join('.') === 'cards.0.unshaded.targets.0.effects'));
+  });
+
   it('rejects legacy opaque event effect payloads that are not EffectAST nodes', () => {
     const result = EventDeckSchema.safeParse({
       id: 'fitl-events-initial',

@@ -705,69 +705,247 @@ eventDecks:
             - US
           flavorText: Escalation planning accelerates deployment adjustments.
         unshaded:
-          text: Place and relocate COIN pieces among selected spaces.
-          targets:
-            - id: $sourceSpace
-              selector:
-                query: mapSpaces
-              cardinality:
-                max: 1
-              application: aggregate
-              effects:
-                - chooseOne:
-                    bind: $destSpace
-                    options:
-                      query: mapSpaces
-                - removeByPriority:
-                    budget: 2
-                    groups:
-                      - bind: $coinPiece
-                        over:
-                          query: tokensInZone
-                          zone: $sourceSpace
-                          filter:
-                            op: and
-                            args:
-                              - prop: faction
-                                op: in
-                                value:
-                                  - US
-                                  - ARVN
-                        to:
-                          zoneExpr: $destSpace
+          text: Place any 2 ARVN pieces from anywhere (even out of play) into any COIN Control spaces.
+          effects:
+            - chooseN:
+                bind: $rostowArvnPieces
+                max:
+                  op: min
+                  left: 2
+                  right:
+                    aggregate:
+                      op: count
+                      query:
+                        query: concat
+                        sources:
+                          - query: tokensInMapSpaces
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  eq: ARVN
+                          - query: tokensInZone
+                            zone: available-ARVN:none
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  eq: ARVN
+                          - query: tokensInZone
+                            zone: out-of-play-ARVN:none
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  eq: ARVN
+                options:
+                  query: concat
+                  sources:
+                    - query: tokensInMapSpaces
+                      filter:
+                        op: and
+                        args:
+                          - prop: faction
+                            eq: ARVN
+                    - query: tokensInZone
+                      zone: available-ARVN:none
+                      filter:
+                        op: and
+                        args:
+                          - prop: faction
+                            eq: ARVN
+                    - query: tokensInZone
+                      zone: out-of-play-ARVN:none
+                      filter:
+                        op: and
+                        args:
+                          - prop: faction
+                            eq: ARVN
+            - forEach:
+                bind: $rostowArvnPiece
+                over:
+                  query: binding
+                  name: $rostowArvnPieces
+                effects:
+                  - chooseOne:
+                      bind: '$rostowCoinControlDestination@{$rostowArvnPiece}'
+                      options:
+                        query: mapSpaces
+                        filter:
+                          conditionMacro: fitl-space-coin-controlled
+                          args:
+                            spaceExpr: $zone
+                  - moveToken:
+                      token: $rostowArvnPiece
+                      from:
+                        zoneExpr:
+                          ref: tokenZone
+                          token: $rostowArvnPiece
+                      to:
+                        zoneExpr:
+                          ref: binding
+                          name: '$rostowCoinControlDestination@{$rostowArvnPiece}'
         shaded:
-          text: Redeploy selected COIN pieces to Available.
-          targets:
-            - id: $sourceSpace
-              selector:
-                query: mapSpaces
-              cardinality:
-                max: 1
-              application: aggregate
-              effects:
-                - removeByPriority:
-                    budget: 3
-                    groups:
-                      - bind: $coinPiece
-                        over:
-                          query: tokensInZone
-                          zone: $sourceSpace
-                          filter:
-                            op: and
-                            args:
-                              - prop: faction
-                                op: in
-                                value:
-                                  - US
-                                  - ARVN
-                        to:
-                          zoneExpr:
-                            concat:
-                              - available-
-                              - ref: tokenProp
-                                token: $coinPiece
-                                prop: faction
-                              - :none
+          text: Place any 1 Guerrilla in each Province with ARVN. ARVN Troops Redeploy as if no Bases.
+          effects:
+            - forEach:
+                bind: $rostowProvinceWithArvn
+                over:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - op: ==
+                        left:
+                          ref: zoneProp
+                          zone: $zone
+                          prop: category
+                        right: province
+                      - op: ">"
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: ARVN
+                        right: 0
+                effects:
+                  - chooseN:
+                      bind: '$rostowGuerrillaToPlace@{$rostowProvinceWithArvn}'
+                      min:
+                        op: min
+                        left: 1
+                        right:
+                          aggregate:
+                            op: count
+                            query:
+                              query: concat
+                              sources:
+                                - query: tokensInZone
+                                  zone: available-VC:none
+                                  filter:
+                                    op: and
+                                    args:
+                                      - prop: faction
+                                        eq: VC
+                                      - prop: type
+                                        eq: guerrilla
+                                - query: tokensInZone
+                                  zone: available-NVA:none
+                                  filter:
+                                    op: and
+                                    args:
+                                      - prop: faction
+                                        eq: NVA
+                                      - prop: type
+                                        eq: guerrilla
+                      max: 1
+                      options:
+                        query: concat
+                        sources:
+                          - query: tokensInZone
+                            zone: available-VC:none
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  eq: VC
+                                - prop: type
+                                  eq: guerrilla
+                          - query: tokensInZone
+                            zone: available-NVA:none
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  eq: NVA
+                                - prop: type
+                                  eq: guerrilla
+                  - forEach:
+                      bind: $rostowPlacedGuerrilla
+                      over:
+                        query: binding
+                        name: '$rostowGuerrillaToPlace@{$rostowProvinceWithArvn}'
+                      effects:
+                        - moveToken:
+                            token: $rostowPlacedGuerrilla
+                            from:
+                              zoneExpr:
+                                ref: tokenZone
+                                token: $rostowPlacedGuerrilla
+                            to:
+                              zoneExpr:
+                                ref: binding
+                                name: $rostowProvinceWithArvn
+            - forEach:
+                bind: $rostowArvnTroopToRedeploy
+                over:
+                  query: tokensInMapSpaces
+                  spaceFilter:
+                    op: or
+                    args:
+                      - op: ==
+                        left:
+                          ref: zoneProp
+                          zone: $zone
+                          prop: category
+                        right: province
+                      - op: ==
+                        left:
+                          ref: zoneProp
+                          zone: $zone
+                          prop: category
+                        right: loc
+                  filter:
+                    op: and
+                    args:
+                      - prop: faction
+                        eq: ARVN
+                      - prop: type
+                        eq: troops
+                effects:
+                  - chooseN:
+                      bind: '$rostowRedeployDestination@{$rostowArvnTroopToRedeploy}'
+                      min:
+                        op: min
+                        left: 1
+                        right:
+                          aggregate:
+                            op: count
+                            query:
+                              query: mapSpaces
+                              filter:
+                                conditionMacro: fitl-arvn-redeploy-destination-no-bases
+                                args:
+                                  spaceExpr: $zone
+                      max: 1
+                      options:
+                        query: mapSpaces
+                        filter:
+                          conditionMacro: fitl-arvn-redeploy-destination-no-bases
+                          args:
+                            spaceExpr: $zone
+                  - forEach:
+                      bind: $rostowRedeploySpace
+                      over:
+                        query: binding
+                        name: '$rostowRedeployDestination@{$rostowArvnTroopToRedeploy}'
+                      effects:
+                        - moveToken:
+                            token: $rostowArvnTroopToRedeploy
+                            from:
+                              zoneExpr:
+                                ref: tokenZone
+                                token: $rostowArvnTroopToRedeploy
+                            to:
+                              zoneExpr:
+                                ref: binding
+                                name: $rostowRedeploySpace
       - id: card-68
         title: Green Berets
         sideMode: dual
@@ -799,34 +977,9 @@ eventDecks:
                             zone: $zone
                             prop: category
                           right: province
-                        - op: <=
-                          left:
-                            aggregate:
-                              op: count
-                              query:
-                                query: tokensInZone
-                                zone: $zone
-                                filter:
-                                  op: and
-                                  args:
-                                    - prop: faction
-                                      op: eq
-                                      value: NVA
-                          right:
-                            aggregate:
-                              op: count
-                              query:
-                                query: tokensInZone
-                                zone: $zone
-                                filter:
-                                  op: and
-                                  args:
-                                    - prop: faction
-                                      op: in
-                                      value:
-                                        - US
-                                        - ARVN
-                                        - VC
+                        - conditionMacro: fitl-space-without-nva-control
+                          args:
+                            spaceExpr: $zone
                   cardinality:
                     max: 1
                   application: aggregate

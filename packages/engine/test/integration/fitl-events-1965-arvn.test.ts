@@ -144,4 +144,32 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
       },
     ]);
   });
+
+  it('encodes card 90 (Walt Rostow) with anywhere-ARVN placement and immediate no-base redeploy structure', () => {
+    const { parsed, compiled } = compileProductionSpec();
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-90');
+    assert.notEqual(card, undefined);
+    assert.equal(
+      card?.unshaded?.text,
+      'Place any 2 ARVN pieces from anywhere (even out of play) into any COIN Control spaces.',
+    );
+    assert.equal(
+      card?.shaded?.text,
+      'Place any 1 Guerrilla in each Province with ARVN. ARVN Troops Redeploy as if no Bases.',
+    );
+
+    const unshadedEffects = card?.unshaded?.effects ?? [];
+    assert.equal(unshadedEffects.length, 2, 'card-90 unshaded should define selection + per-piece destination routing');
+    assert.notEqual((unshadedEffects[0] as { chooseN?: unknown }).chooseN, undefined);
+    assert.notEqual((unshadedEffects[1] as { forEach?: unknown }).forEach, undefined);
+
+    const shadedEffects = card?.shaded?.effects ?? [];
+    assert.equal(shadedEffects.length, 2, 'card-90 shaded should define province placement and troop redeploy passes');
+    assert.notEqual((shadedEffects[0] as { forEach?: unknown }).forEach, undefined);
+    assert.notEqual((shadedEffects[1] as { forEach?: unknown }).forEach, undefined);
+  });
 });

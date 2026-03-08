@@ -139,8 +139,10 @@ describe('FITL text-only card behavior backfill', () => {
     assert.equal((card89?.shaded?.effects?.[1] as { addVar?: { delta?: number } })?.addVar?.delta, -3);
 
     const card90 = cardById.get('card-90');
-    assert.equal((sideEffectsWithTargetFallback(card90?.unshaded)?.[1] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 2);
-    assert.equal((sideEffectsWithTargetFallback(card90?.shaded)?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 3);
+    assert.equal((card90?.unshaded?.effects?.[0] as { chooseN?: { bind?: string } })?.chooseN?.bind, '$rostowArvnPieces');
+    assert.equal(typeof (card90?.unshaded?.effects?.[1] as { forEach?: unknown })?.forEach, 'object');
+    assert.equal(typeof (card90?.shaded?.effects?.[0] as { forEach?: unknown })?.forEach, 'object');
+    assert.equal(typeof (card90?.shaded?.effects?.[1] as { forEach?: unknown })?.forEach, 'object');
 
     const card98 = cardById.get('card-98');
     assert.equal(card98?.unshaded?.branches?.length, 2);

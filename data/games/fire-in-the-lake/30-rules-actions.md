@@ -606,28 +606,10 @@ actions:
                           args:
                             - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
                             - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                            - conditionMacro: fitl-space-without-nva-control
+                              args:
+                                spaceExpr: $zone
                   right: 0
-                - op: '<='
-                  left:
-                    aggregate:
-                      op: count
-                      query:
-                        query: tokensInZone
-                        zone: { zoneExpr: { ref: binding, name: targetSpace } }
-                        filter:
-                          op: and
-                          args:
-                            - { prop: faction, eq: NVA }
-                  right:
-                    aggregate:
-                      op: count
-                      query:
-                        query: tokensInZone
-                        zone: { zoneExpr: { ref: binding, name: targetSpace } }
-                        filter:
-                          op: and
-                          args:
-                            - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
             - op: '>'
               left:
                 aggregate:
@@ -753,28 +735,10 @@ actions:
                           args:
                             - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
                             - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                            - conditionMacro: fitl-space-without-nva-control
+                              args:
+                                spaceExpr: $zone
                   right: 0
-                - op: '<='
-                  left:
-                    aggregate:
-                      op: count
-                      query:
-                        query: tokensInZone
-                        zone: { zoneExpr: { ref: binding, name: targetSpace } }
-                        filter:
-                          op: and
-                          args:
-                            - { prop: faction, eq: NVA }
-                  right:
-                    aggregate:
-                      op: count
-                      query:
-                        query: tokensInZone
-                        zone: { zoneExpr: { ref: binding, name: targetSpace } }
-                        filter:
-                          op: and
-                          args:
-                            - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
             - op: '>'
               left:
                 aggregate:
@@ -1525,28 +1489,9 @@ actionPipelines:
                             args:
                               - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                               - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                          # Without NVA Control (NVA pieces <= COIN+VC pieces)
-                          - op: <=
-                            left:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: tokensInZone
-                                  zone: $zone
-                                  filter:
-                                    op: and
-                                    args:
-                                      - { prop: faction, op: eq, value: 'NVA' }
-                            right:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: tokensInZone
-                                  zone: $zone
-                                  filter:
-                                    op: and
-                                    args:
-                                      - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
+                          - conditionMacro: fitl-space-without-nva-control
+                            args:
+                              spaceExpr: $zone
                     min: 1
                     max: 1
               else:
@@ -1561,27 +1506,9 @@ actionPipelines:
                             args:
                               - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                               - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                          - op: <=
-                            left:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: tokensInZone
-                                  zone: $zone
-                                  filter:
-                                    op: and
-                                    args:
-                                      - { prop: faction, op: eq, value: 'NVA' }
-                            right:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: tokensInZone
-                                  zone: $zone
-                                  filter:
-                                    op: and
-                                    args:
-                                      - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
+                          - conditionMacro: fitl-space-without-nva-control
+                            args:
+                              spaceExpr: $zone
                     min: 1
                     max: 99
 

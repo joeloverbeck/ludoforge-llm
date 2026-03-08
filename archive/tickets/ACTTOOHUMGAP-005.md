@@ -1,6 +1,6 @@
 # ACTTOOHUMGAP-005: Structured conditions on SelectMessage
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — kernel tooltip pipeline
@@ -102,3 +102,18 @@ Create and export `humanizeConditionWithLabels(ast: ConditionAST, ctx: LabelCont
 
 1. `cd .claude/worktrees/spec-57 && pnpm -F @ludoforge/engine test`
 2. `cd .claude/worktrees/spec-57 && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-08
+- **What changed**:
+  - `tooltip-ir.ts`: Added optional `conditionAST?: ConditionAST` field to `SelectMessage`.
+  - `tooltip-normalizer-compound.ts`: Introduced `ExtractedFilter` interface; `extractQueryFilter` now returns both `filter` string and raw `conditionAST`; `buildSelectMessage` spreads both fields; `conditionAST` is only stored when the condition is not suppressed.
+  - `tooltip-template-realizer.ts`: Added `resolveSelectFilter` helper with "prefer AST, fall back to string" strategy; all `realizeSelect` branches use it.
+  - `tooltip-modifier-humanizer.ts`: Exported `humanizeConditionWithLabels(cond, ctx, count?)` wrapping the private `humanizeConditionInner`; threaded `count` through for singular/plural label resolution.
+  - `tooltip-value-stringifier.ts`: Added optional `count` parameter to `humanizeValueExpr`, forwarded to all `resolveLabel` calls.
+  - Tests: 18 new tests across tooltip-ir, tooltip-normalizer-compound, tooltip-template-realizer, and tooltip-modifier-humanizer test files.
+- **Deviations from plan**:
+  - `conditionAST` is gated on non-suppressed conditions (not stored when `humanizeCondition` returns null) to prevent `humanizeConditionWithLabels` (which bypasses suppression) from leaking `__*` variables into output.
+  - `count` parameter threaded through the entire humanization chain (not in original ticket scope) to fix an asymmetry where the AST path ignored singular/plural label forms.
+- **Verification**: All 4545 engine tests pass, typecheck clean.

@@ -66,33 +66,33 @@ function extractValueNames(expr: ValueExpr): readonly string[] {
 // Humanize a ConditionAST into a display string
 // ---------------------------------------------------------------------------
 
-function humanizeConditionInner(cond: ConditionAST, ctx: LabelContext): string {
+function humanizeConditionInner(cond: ConditionAST, ctx: LabelContext, count?: number): string {
   if (typeof cond === 'boolean') return String(cond);
   const c = cond as Record<string, unknown>;
 
   if (c.op === 'and') {
-    return (c.args as ConditionAST[]).map((a) => humanizeConditionInner(a, ctx)).join(' and ');
+    return (c.args as ConditionAST[]).map((a) => humanizeConditionInner(a, ctx, count)).join(' and ');
   }
   if (c.op === 'or') {
-    return (c.args as ConditionAST[]).map((a) => humanizeConditionInner(a, ctx)).join(' or ');
+    return (c.args as ConditionAST[]).map((a) => humanizeConditionInner(a, ctx, count)).join(' or ');
   }
   if (c.op === 'not') {
-    return `not ${humanizeConditionInner(c.arg as ConditionAST, ctx)}`;
+    return `not ${humanizeConditionInner(c.arg as ConditionAST, ctx, count)}`;
   }
   if (c.op === 'in') {
-    return `${humanizeValueExpr(c.item as ValueExpr, ctx)} in ${humanizeValueExpr(c.set as ValueExpr, ctx)}`;
+    return `${humanizeValueExpr(c.item as ValueExpr, ctx, count)} in ${humanizeValueExpr(c.set as ValueExpr, ctx, count)}`;
   }
   if (c.op === 'adjacent' || c.op === 'connected') {
     return String(c.op);
   }
   if (c.op === 'zonePropIncludes') {
-    return `${resolveLabel(c.prop as string, ctx)} includes ${humanizeValueExpr(c.value as ValueExpr, ctx)}`;
+    return `${resolveLabel(c.prop as string, ctx, count)} includes ${humanizeValueExpr(c.value as ValueExpr, ctx, count)}`;
   }
 
   // Comparison operators
   if (c.left !== undefined && c.right !== undefined) {
-    const left = humanizeValueExpr(c.left as ValueExpr, ctx);
-    const right = humanizeValueExpr(c.right as ValueExpr, ctx);
+    const left = humanizeValueExpr(c.left as ValueExpr, ctx, count);
+    const right = humanizeValueExpr(c.right as ValueExpr, ctx, count);
     const op = humanizeOperator(c.op as string);
     return `${left} ${op} ${right}`;
   }
@@ -115,6 +115,20 @@ function humanizeOperator(op: string): string {
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
+
+/**
+ * Humanize a ConditionAST with a pre-built LabelContext (no suppression check).
+ * Used by the realizer to re-render conditions on SelectMessage with full
+ * label resolution, when the raw AST is available alongside the pre-rendered
+ * filter string.
+ */
+export function humanizeConditionWithLabels(
+  cond: ConditionAST,
+  ctx: LabelContext,
+  count?: number,
+): string {
+  return humanizeConditionInner(cond, ctx, count);
+}
 
 /**
  * Humanize a ConditionAST for display in modifier tooltips.

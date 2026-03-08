@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { humanizeCondition, resolveModifierEffect } from '../../../src/kernel/tooltip-modifier-humanizer.js';
+import { humanizeCondition, humanizeConditionWithLabels, resolveModifierEffect } from '../../../src/kernel/tooltip-modifier-humanizer.js';
+import { buildLabelContext } from '../../../src/kernel/tooltip-label-resolver.js';
 import type { NormalizerContext } from '../../../src/kernel/tooltip-normalizer.js';
 import type { ConditionAST } from '../../../src/kernel/types-ast.js';
 import type { VerbalizationDef } from '../../../src/kernel/verbalization-types.js';
@@ -329,6 +330,76 @@ describe('tooltip-modifier-humanizer', () => {
       assert.ok(result !== null);
       assert.ok(result!.condition.includes('Aid'));
       assert.equal(result!.effect, '');
+    });
+  });
+
+  // --- humanizeConditionWithLabels (ACTTOOHUMGAP-005) ---
+
+  describe('humanizeConditionWithLabels', () => {
+
+    it('resolves zone IDs to display names via LabelContext', () => {
+      const cond: ConditionAST = {
+        op: '>=',
+        left: { ref: 'zoneCount', zone: 'hanoi' },
+        right: 3,
+      };
+      const ctx = buildLabelContext({
+        ...baseVerb,
+        labels: { ...baseVerb.labels, hanoi: 'Hanoi' },
+      });
+      const result = humanizeConditionWithLabels(cond, ctx);
+      assert.equal(result, 'pieces in Hanoi ≥ 3');
+    });
+
+    it('resolves player references to display names via LabelContext', () => {
+      const cond: ConditionAST = {
+        op: '==',
+        left: { ref: 'activePlayer' },
+        right: 'us',
+      };
+      const ctx = buildLabelContext({
+        ...baseVerb,
+        labels: { ...baseVerb.labels, us: 'US' },
+      });
+      const result = humanizeConditionWithLabels(cond, ctx);
+      assert.equal(result, 'active player is US');
+    });
+
+    it('delegates embedded ValueExpr nodes to humanizeValueExpr', () => {
+      const cond: ConditionAST = {
+        op: '>=',
+        left: { ref: 'gvar', var: 'aid' },
+        right: 5,
+      };
+      const ctx = buildLabelContext(baseVerb);
+      const result = humanizeConditionWithLabels(cond, ctx);
+      assert.equal(result, 'Aid ≥ 5');
+    });
+
+    it('handles AND conditions', () => {
+      const cond: ConditionAST = {
+        op: 'and',
+        args: [
+          { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 },
+          { op: '==', left: { ref: 'gvar', var: 'resources' }, right: 0 },
+        ],
+      };
+      const ctx = buildLabelContext(baseVerb);
+      const result = humanizeConditionWithLabels(cond, ctx);
+      assert.equal(result, 'Aid ≥ 3 and Resources is 0');
+    });
+
+    it('does not perform suppression (no NormalizerContext needed)', () => {
+      // __actionClass would be suppressed by humanizeCondition, but not by humanizeConditionWithLabels
+      const cond: ConditionAST = {
+        op: '==',
+        left: { ref: 'gvar', var: '__actionClass' },
+        right: 'limitedOperation',
+      };
+      const ctx = buildLabelContext(undefined);
+      const result = humanizeConditionWithLabels(cond, ctx);
+      assert.ok(typeof result === 'string');
+      assert.ok(result.length > 0);
     });
   });
 });

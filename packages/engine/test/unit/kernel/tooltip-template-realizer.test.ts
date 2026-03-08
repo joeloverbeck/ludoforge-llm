@@ -711,6 +711,90 @@ describe('realizeContentPlan', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // conditionAST re-rendering (ACTTOOHUMGAP-005)
+  // ---------------------------------------------------------------------------
+
+  describe('conditionAST re-rendering on SelectMessage', () => {
+    it('uses re-rendered condition text when conditionAST is present', () => {
+      const msg: TooltipMessage = {
+        kind: 'select',
+        astPath: 'r',
+        target: 'spaces',
+        bounds: { min: 1, max: 3 },
+        filter: 'aid >= 3',
+        conditionAST: { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 },
+      };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      // With conditionAST + verbalization, should re-render using label "Aid" not raw "aid >= 3"
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1-3 Aid ≥ 3');
+    });
+
+    it('falls back to pre-rendered filter string when conditionAST is absent', () => {
+      const msg: TooltipMessage = {
+        kind: 'select',
+        astPath: 'r',
+        target: 'spaces',
+        bounds: { min: 1, max: 3 },
+        filter: 'usTroops',
+      };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1-3 US Troops');
+    });
+
+    it('falls back to target label when neither conditionAST nor filter is present', () => {
+      const msg: TooltipMessage = {
+        kind: 'select',
+        astPath: 'r',
+        target: 'spaces',
+        bounds: { min: 1, max: 3 },
+      };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1-3 spaces');
+    });
+
+    it('re-renders condition with count-aware label for min===max', () => {
+      const msg: TooltipMessage = {
+        kind: 'select',
+        astPath: 'r',
+        target: 'spaces',
+        bounds: { min: 1, max: 1 },
+        filter: 'aid >= 3',
+        conditionAST: { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 },
+      };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1 Aid ≥ 3');
+    });
+
+    it('re-renders condition for "Select up to N" with conditionAST', () => {
+      const msg: TooltipMessage = {
+        kind: 'select',
+        astPath: 'r',
+        target: 'spaces',
+        bounds: { min: 0, max: 3 },
+        filter: 'aid >= 3',
+        conditionAST: { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 },
+      };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select up to 3 Aid ≥ 3');
+    });
+
+    it('works without verbalization (humanize fallback)', () => {
+      const msg: TooltipMessage = {
+        kind: 'select',
+        astPath: 'r',
+        target: 'spaces',
+        bounds: { min: 1, max: 3 },
+        filter: 'old filter',
+        conditionAST: { op: '>=', left: { ref: 'gvar', var: 'playerGold' }, right: 5 },
+      };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      // Without verbalization, humanizeConditionWithLabels still produces a string
+      assert.ok(result.steps[0]!.lines[0]!.text.includes('5'));
+      assert.ok(!result.steps[0]!.lines[0]!.text.includes('old filter'));
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // Determinism
   // ---------------------------------------------------------------------------
 

@@ -25,14 +25,15 @@ import type {
   BlockerMessage,
   PhaseMessage,
   GrantMessage,
+  SummaryMessage,
   SuppressedMessage,
 } from '../../../src/kernel/index.js';
 
 import { TOOLTIP_MESSAGE_KINDS } from '../../../src/kernel/index.js';
 
 describe('TooltipIR types', () => {
-  it('TOOLTIP_MESSAGE_KINDS contains all 24 kinds', () => {
-    assert.equal(TOOLTIP_MESSAGE_KINDS.length, 24);
+  it('TOOLTIP_MESSAGE_KINDS contains all 25 kinds', () => {
+    assert.equal(TOOLTIP_MESSAGE_KINDS.length, 25);
   });
 
   it('constructs SelectMessage', () => {
@@ -260,6 +261,28 @@ describe('TooltipIR types', () => {
       targetPlayer: 'arvn',
     };
     assert.equal(msg.kind, 'grant');
+  });
+
+  it('constructs SummaryMessage with text and optional macroClass', () => {
+    const msg: SummaryMessage = {
+      kind: 'summary',
+      astPath: 'root.effects[23]',
+      text: 'Place guerrillas from Available',
+      macroClass: 'Rally',
+    };
+    assert.equal(msg.kind, 'summary');
+    assert.equal(msg.text, 'Place guerrillas from Available');
+    assert.equal(msg.macroClass, 'Rally');
+  });
+
+  it('constructs SummaryMessage without macroClass', () => {
+    const msg: SummaryMessage = {
+      kind: 'summary',
+      astPath: 'root.effects[24]',
+      text: 'Activate guerrillas',
+    };
+    assert.equal(msg.kind, 'summary');
+    assert.equal(msg.macroClass, undefined);
   });
 
   it('constructs SuppressedMessage', () => {

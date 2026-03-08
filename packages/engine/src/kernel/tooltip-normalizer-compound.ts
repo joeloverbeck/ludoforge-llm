@@ -7,10 +7,11 @@
  * avoid circular module imports.
  */
 
-import type { EffectAST, ValueExpr, ConditionAST, OptionsQuery, NumericValueExpr, ZoneRef, TokenFilterExpr } from './types-ast.js';
-import type { TooltipMessage } from './tooltip-ir.js';
+import type { EffectAST, ValueExpr, ConditionAST, OptionsQuery, TokenFilterExpr } from './types-ast.js';
+import type { TooltipMessage, SelectMessage } from './tooltip-ir.js';
 import type { NormalizerContext } from './tooltip-normalizer.js';
 import { humanizeCondition } from './tooltip-modifier-humanizer.js';
+import { stringifyValueExpr, stringifyNumericExpr, stringifyZoneRef, stripMacroBindingPrefix } from './tooltip-value-stringifier.js';
 
 /** Extract a single-key union member from EffectAST by its discriminant key. */
 type EffectOf<K extends string> = Extract<EffectAST, Record<K, unknown>>;
@@ -26,32 +27,6 @@ export type EffectRecurse = (
   basePath: string,
 ) => readonly TooltipMessage[];
 
-// --- Re-use stringifiers from parent via import-free local copies ---
-// These are intentionally kept minimal; the canonical copies live in
-// tooltip-normalizer.ts but are not exported (module-private). Duplicating
-// these tiny helpers avoids exporting internal utilities.
-
-const stringifyValueExpr = (expr: ValueExpr): string => {
-  if (typeof expr === 'number' || typeof expr === 'boolean') return String(expr);
-  if (typeof expr === 'string') return expr;
-  if ('ref' in expr) {
-    if (expr.ref === 'binding') return expr.name;
-    if (expr.ref === 'gvar') return expr.var;
-    if (expr.ref === 'pvar') return expr.var;
-    if (expr.ref === 'globalMarkerState') return expr.marker;
-    return '<ref>';
-  }
-  return '<expr>';
-};
-
-const stringifyNumericExpr = (expr: NumericValueExpr): string => {
-  if (typeof expr === 'number') return String(expr);
-  return stringifyValueExpr(expr as ValueExpr);
-};
-
-const stringifyZoneRef = (ref: ZoneRef): string =>
-  typeof ref === 'string' ? ref : '<expr>';
-
 // --- Helpers ---
 
 export const getChooseNBounds = (p: EffectOf<'chooseN'>['chooseN']): { readonly min: number; readonly max: number } => {
@@ -62,15 +37,35 @@ export const getChooseNBounds = (p: EffectOf<'chooseN'>['chooseN']): { readonly 
 };
 
 export const isSpaceQuery = (q: OptionsQuery): boolean =>
-  'query' in q && (q.query === 'mapSpaces' || q.query === 'zones' || q.query === 'adjacentZones');
+  'query' in q && (q.query === 'mapSpaces' || q.query === 'zones' || q.query === 'adjacentZones' || q.query === 'connectedZones' || q.query === 'tokenZones');
 
 export const isTokenQuery = (q: OptionsQuery): boolean =>
   'query' in q && (q.query === 'tokensInZone' || q.query === 'tokensInMapSpaces' || q.query === 'tokensInAdjacentZones');
 
+export const isPlayerQuery = (q: OptionsQuery): boolean =>
+  'query' in q && q.query === 'players';
+
+export const isValueQuery = (q: OptionsQuery): boolean =>
+  'query' in q && (q.query === 'intsInRange' || q.query === 'intsInVarRange');
+
+export const isMarkerQuery = (q: OptionsQuery): boolean =>
+  'query' in q && q.query === 'globalMarkers';
+
+export const isRowQuery = (q: OptionsQuery): boolean =>
+  'query' in q && q.query === 'assetRows';
+
+export const isEnumQuery = (q: OptionsQuery): boolean =>
+  'query' in q && q.query === 'enums';
+
 // --- Filter stringifiers ---
 
+const stringifyPredicateValue = (value: ValueExpr | readonly (string | number | boolean)[]): string => {
+  if (Array.isArray(value)) return (value as readonly (string | number | boolean)[]).join(', ');
+  return stringifyValueExpr(value as ValueExpr);
+};
+
 const stringifyTokenFilter = (filter: TokenFilterExpr): string => {
-  if ('prop' in filter) return `${filter.prop} ${filter.op} ${stringifyValueExpr(filter.value as ValueExpr)}`;
+  if ('prop' in filter) return `${filter.prop} ${filter.op} ${stringifyPredicateValue(filter.value)}`;
   if (filter.op === 'not') return `NOT ${stringifyTokenFilter(filter.arg)}`;
   return (filter.args as readonly TokenFilterExpr[]).map(stringifyTokenFilter).join(` ${filter.op.toUpperCase()} `);
 };
@@ -98,6 +93,34 @@ const extractQueryFilter = (options: OptionsQuery, ctx: NormalizerContext): stri
 
 // --- Compound rules (28-35, 41) ---
 
+const buildSelectMessage = (
+  target: SelectMessage['target'],
+  bounds: { readonly min: number; readonly max: number },
+  filter: string | undefined,
+  astPath: string,
+  optionHints?: readonly string[],
+): readonly TooltipMessage[] => [
+  {
+    kind: 'select',
+    target,
+    bounds,
+    ...(filter !== undefined ? { filter } : {}),
+    ...(optionHints !== undefined ? { optionHints } : {}),
+    astPath,
+  },
+];
+
+const classifyQueryTarget = (options: OptionsQuery): SelectMessage['target'] => {
+  if (!('query' in options)) return 'items';
+  if (isSpaceQuery(options)) return 'spaces';
+  if (isTokenQuery(options)) return 'zones';
+  if (isPlayerQuery(options)) return 'players';
+  if (isValueQuery(options)) return 'values';
+  if (isMarkerQuery(options)) return 'markers';
+  if (isRowQuery(options)) return 'rows';
+  return 'items';
+};
+
 export const normalizeChooseN = (
   payload: EffectOf<'chooseN'>,
   ctx: NormalizerContext,
@@ -106,16 +129,13 @@ export const normalizeChooseN = (
   const p = payload.chooseN;
   const bounds = getChooseNBounds(p);
   const filter = extractQueryFilter(p.options, ctx);
+  const target = classifyQueryTarget(p.options);
 
-  if (isSpaceQuery(p.options)) {
-    return [{ kind: 'select', target: 'spaces', bounds, ...(filter !== undefined ? { filter } : {}), astPath }];
-  }
+  const optionHints = isEnumQuery(p.options)
+    ? (p.options as { readonly query: 'enums'; readonly values: readonly string[] }).values
+    : undefined;
 
-  if (isTokenQuery(p.options)) {
-    return [{ kind: 'select', target: 'zones', bounds, ...(filter !== undefined ? { filter } : {}), astPath }];
-  }
-
-  return [{ kind: 'select', target: 'items', bounds, ...(filter !== undefined ? { filter } : {}), astPath }];
+  return buildSelectMessage(target, bounds, filter, astPath, optionHints);
 };
 
 export const normalizeChooseOne = (
@@ -206,7 +226,7 @@ export const normalizeRemoveByPriority = (
   const budgetStr = stringifyNumericExpr(budget);
   const groupMessages: readonly TooltipMessage[] = groups.map((group, i): TooltipMessage => ({
     kind: 'remove',
-    tokenFilter: group.bind,
+    tokenFilter: stripMacroBindingPrefix(group.bind),
     fromZone: group.from !== undefined ? stringifyZoneRef(group.from) : '<priority>',
     destination: stringifyZoneRef(group.to),
     budget: budgetStr,
@@ -258,5 +278,17 @@ export const tryMacroOverride = (
   if (macroId === undefined) return undefined;
   const macroEntry = ctx.verbalization.macros[macroId];
   if (macroEntry?.summary === undefined) return undefined;
-  return [{ kind: 'set', target: macroId, value: macroEntry.summary, macroOrigin: macroId, astPath }];
+  const text = macroEntry.slots !== undefined
+    ? Object.entries(macroEntry.slots).reduce(
+        (acc, [key, val]) => acc.replaceAll(`{${key}}`, val),
+        macroEntry.summary,
+      )
+    : macroEntry.summary;
+  return [{
+    kind: 'summary',
+    text,
+    macroClass: macroEntry.class,
+    macroOrigin: macroId,
+    astPath,
+  }];
 };

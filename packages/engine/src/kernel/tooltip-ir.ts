@@ -17,9 +17,10 @@ export type VarScope = 'global' | 'player' | 'zone';
 
 export interface SelectMessage extends MessageBase {
   readonly kind: 'select';
-  readonly target: 'spaces' | 'zones' | 'items';
+  readonly target: 'spaces' | 'zones' | 'items' | 'players' | 'values' | 'markers' | 'rows';
   readonly filter?: string;
   readonly bounds?: { readonly min: number; readonly max: number };
+  readonly optionHints?: readonly string[];
 }
 
 export interface PlaceMessage extends MessageBase {
@@ -177,6 +178,12 @@ export interface ConcealMessage extends MessageBase {
   readonly target: string;
 }
 
+export interface SummaryMessage extends MessageBase {
+  readonly kind: 'summary';
+  readonly text: string;
+  readonly macroClass?: string;
+}
+
 export interface SuppressedMessage extends MessageBase {
   readonly kind: 'suppressed';
   readonly reason: string;
@@ -206,13 +213,14 @@ export type TooltipMessage =
   | PhaseMessage
   | GrantMessage
   | ConcealMessage
+  | SummaryMessage
   | SuppressedMessage;
 
 export const TOOLTIP_MESSAGE_KINDS = [
   'select', 'place', 'move', 'pay', 'gain', 'transfer', 'shift',
   'activate', 'deactivate', 'remove', 'create', 'destroy', 'reveal',
   'draw', 'shuffle', 'set', 'choose', 'roll', 'modifier', 'blocker',
-  'phase', 'grant', 'conceal', 'suppressed',
+  'phase', 'grant', 'conceal', 'summary', 'suppressed',
 ] as const;
 
 export type TooltipMessageKind = (typeof TOOLTIP_MESSAGE_KINDS)[number];

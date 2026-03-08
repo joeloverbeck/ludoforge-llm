@@ -32,6 +32,7 @@ import type {
   PhaseMessage,
   GrantMessage,
   ConcealMessage,
+  SummaryMessage,
 } from './tooltip-ir.js';
 import type { ContentStep, ContentModifier, RealizedLine, RuleCard } from './tooltip-rule-card.js';
 import type { VerbalizationDef } from './verbalization-types.js';
@@ -46,10 +47,19 @@ const singularTarget = (target: string): string => {
   if (target === 'spaces') return 'space';
   if (target === 'zones') return 'zone';
   if (target === 'items') return 'item';
+  if (target === 'players') return 'player';
+  if (target === 'values') return 'value';
+  if (target === 'markers') return 'marker';
+  if (target === 'rows') return 'row';
   return target;
 };
 
 const realizeSelect = (msg: SelectMessage, ctx: LabelContext): string => {
+  if (msg.optionHints !== undefined && msg.optionHints.length > 0 && msg.optionHints.length <= 5) {
+    const options = msg.optionHints.map((h) => resolveLabel(h, ctx)).join(', ');
+    return `Choose from: ${options}`;
+  }
+
   const targetLabel = msg.filter !== undefined
     ? resolveLabel(msg.filter, ctx)
     : msg.target;
@@ -209,6 +219,8 @@ const realizeConceal = (msg: ConcealMessage, ctx: LabelContext): string => {
   return `Conceal ${target}`;
 };
 
+const realizeSummary = (msg: SummaryMessage): string => msg.text;
+
 // ---------------------------------------------------------------------------
 // Message dispatch
 // ---------------------------------------------------------------------------
@@ -238,6 +250,7 @@ const realizeMessage = (msg: TooltipMessage, ctx: LabelContext): string => {
     case 'phase': return realizePhase(msg, ctx);
     case 'grant': return realizeGrant(msg, ctx);
     case 'conceal': return realizeConceal(msg, ctx);
+    case 'summary': return realizeSummary(msg);
     case 'suppressed': return '';
   }
 };

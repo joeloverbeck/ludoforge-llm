@@ -49,6 +49,14 @@ function extractValueNames(expr: ValueExpr): readonly string[] {
     if (expr.ref === 'pvar') return [expr.var];
     if (expr.ref === 'binding') return [expr.name];
     if (expr.ref === 'globalMarkerState') return [expr.marker];
+    if (expr.ref === 'markerState') return [expr.marker, expr.space];
+    if (expr.ref === 'zoneCount') return [expr.zone];
+    if (expr.ref === 'tokenProp') return [expr.token, expr.prop];
+    if (expr.ref === 'assetField') return [expr.field];
+    if (expr.ref === 'zoneProp') return [expr.zone, expr.prop];
+    if (expr.ref === 'activePlayer') return [];
+    if (expr.ref === 'tokenZone') return [expr.token];
+    if (expr.ref === 'zoneVar') return [expr.zone, expr.var];
   }
   return [];
 }
@@ -65,6 +73,14 @@ function humanizeValue(expr: ValueExpr, ctx: LabelContext): string {
     if (expr.ref === 'pvar') return resolveLabel(expr.var, ctx);
     if (expr.ref === 'binding') return resolveLabel(expr.name, ctx);
     if (expr.ref === 'globalMarkerState') return resolveLabel(expr.marker, ctx);
+    if (expr.ref === 'markerState') return `${resolveLabel(expr.marker, ctx)} of ${resolveLabel(expr.space, ctx)}`;
+    if (expr.ref === 'zoneCount') return `pieces in ${resolveLabel(expr.zone, ctx)}`;
+    if (expr.ref === 'tokenProp') return `${resolveLabel(expr.token, ctx)}.${resolveLabel(expr.prop, ctx)}`;
+    if (expr.ref === 'assetField') return resolveLabel(expr.field, ctx);
+    if (expr.ref === 'zoneProp') return `${resolveLabel(expr.zone, ctx)}.${resolveLabel(expr.prop, ctx)}`;
+    if (expr.ref === 'activePlayer') return 'active player';
+    if (expr.ref === 'tokenZone') return `zone of ${resolveLabel(expr.token, ctx)}`;
+    if (expr.ref === 'zoneVar') return `${resolveLabel(expr.var, ctx)} of ${resolveLabel(expr.zone, ctx)}`;
   }
   return '<value>';
 }

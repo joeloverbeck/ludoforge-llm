@@ -735,7 +735,7 @@ describe('tooltip-normalizer', () => {
       }
     });
 
-    it('rule 29b: chooseN over intsInRange → SelectMessage(items)', () => {
+    it('rule 29b: chooseN over intsInRange → SelectMessage(values)', () => {
       const effect: EffectAST = {
         chooseN: {
           internalDecisionId: 'd4b',
@@ -748,7 +748,7 @@ describe('tooltip-normalizer', () => {
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[1c]'));
       assert.equal(msg.kind, 'select');
       if (msg.kind === 'select') {
-        assert.equal(msg.target, 'items');
+        assert.equal(msg.target, 'values');
       }
     });
 
@@ -1071,10 +1071,11 @@ describe('tooltip-normalizer', () => {
       };
       const messages = normalizeEffect(effect, ctx, 'macro[0]');
       assert.equal(messages.length, 1, 'Macro override should produce exactly 1 message');
-      assert.equal(messages[0]!.kind, 'set');
-      if (messages[0]!.kind === 'set') {
-        assert.equal(messages[0]!.value, 'Place US forces and build support');
+      assert.equal(messages[0]!.kind, 'summary');
+      if (messages[0]!.kind === 'summary') {
+        assert.equal(messages[0]!.text, 'Place US forces and build support');
         assert.equal(messages[0]!.macroOrigin, 'trainUs');
+        assert.equal(messages[0]!.macroClass, 'operation');
       }
     });
 

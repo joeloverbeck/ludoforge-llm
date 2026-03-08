@@ -1,10 +1,10 @@
 # LEGTOOLT-006: React UI Updates
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: LEGTOOLT-004 (budget removal — `collapsedCount` removed from `ContentStep`), archive/tickets/LEGTOOLT-005-template-realizer-improvements.md
+**Deps**: LEGTOOLT-004 (budget removal — `collapsedCount` removed from `ContentStep`), LEGTOOLT-005 (template realizer improvements)
 
 ## Problem
 
@@ -15,13 +15,14 @@ The React UI layer has several issues after the engine-side tooltip improvements
 - `ModifiersSection.tsx` shows condition and description as separate spans but doesn't visually distinguish pre-authored "Condition: Effect" format from raw fallback text.
 - `.collapsedHint` CSS class is dead code after `collapsedCount` removal.
 
-## Assumption Reassessment (2026-03-07)
+## Assumption Reassessment (2026-03-08)
 
-1. `ActionTooltip.tsx:81-85` references `step.collapsedCount` — this property was removed from `ContentStep` in LEGTOOLT-004. The runner will fail to typecheck until this is fixed.
-2. `ActionTooltip.tsx:72-79` renders sub-steps but only shows `sub.header` in a `<span>`, ignoring `sub.lines`.
-3. `ModifiersSection.tsx:47-49` renders `mod.condition` and `mod.description` as separate spans. After LEGTOOLT-005, modifiers will have meaningful condition+effect pairs that should be rendered as tag+description.
-4. `ActionTooltip.module.css:56-61` has `.collapsedHint` class — dead code to remove.
-5. Runner uses Vitest for testing, not node --test.
+1. ~~`ActionTooltip.tsx:81-85` references `step.collapsedCount`~~ — **ALREADY DONE**: `collapsedCount` references were already removed from `ActionTooltip.tsx` in a prior ticket. No type error exists.
+2. `ActionTooltip.tsx:72-79` renders sub-steps but only shows `sub.header` in a `<span>`, ignoring `sub.lines`. **CONFIRMED**.
+3. `ModifiersSection.tsx:48-49` already renders `mod.condition` with `.condition` (bold) and `mod.description` with `.description` (normal weight). The visual distinction already exists. **Remaining work**: handle empty `mod.description` (skip the colon and description span when empty).
+4. ~~`ActionTooltip.module.css:56-61` has `.collapsedHint` class~~ — **ALREADY DONE**: `.collapsedHint` is not present in the CSS file.
+5. Runner uses Vitest for testing, not node --test. **CONFIRMED**.
+6. **No existing test files** for `ActionTooltip` or `ModifiersSection` — tests must be **created**, not updated.
 
 ## Architecture Check
 
@@ -31,10 +32,9 @@ The React UI layer has several issues after the engine-side tooltip improvements
 
 ## What to Change
 
-### 1. Remove `collapsedCount` references in `ActionTooltip.tsx`
+### 1. ~~Remove `collapsedCount` references~~ — ALREADY DONE
 
-- Delete the block at lines 81-85 that checks `step.collapsedCount` and renders the "and N more..." hint.
-- This is the immediate type-error fix.
+No action needed. References were already removed.
 
 ### 2. Render sub-step lines (not just headers)
 
@@ -46,16 +46,15 @@ The React UI layer has several issues after the engine-side tooltip improvements
 - This allows users to collapse individual steps for complex tooltips.
 - Add `.stepDetails` and `.stepSummary` CSS classes.
 
-### 4. Update `ModifiersSection.tsx` for condition+effect display
+### 4. Handle empty modifier descriptions in `ModifiersSection.tsx`
 
-- Render modifier condition as a badge/tag element and effect as description text.
-- When `mod.description` is empty, show only the condition.
-- When `mod.description` is non-empty, show "Condition: Effect" with visual distinction (condition in bold tag, effect in normal weight).
-- Add `.effectTag` and `.effectDescription` CSS classes to `ModifiersSection.module.css`.
+- Keep existing `.condition`/`.description` class names (they already provide visual distinction).
+- When `mod.description` is empty, show only the condition without the trailing colon.
+- When `mod.description` is non-empty, show "Condition: Effect" as currently rendered.
 
-### 5. Remove dead CSS
+### 5. ~~Remove dead CSS~~ — ALREADY DONE
 
-- Delete `.collapsedHint` class from `ActionTooltip.module.css`.
+No action needed. `.collapsedHint` is not present.
 
 ## Files to Touch
 
@@ -91,13 +90,28 @@ The React UI layer has several issues after the engine-side tooltip improvements
 
 ## Test Plan
 
-### New/Modified Tests
+### New Tests (no existing test files)
 
-1. `packages/runner/test/ui/ActionTooltip.test.tsx` — update existing tests to remove collapsedCount assertions; add tests for sub-step line rendering and `<details>` disclosure
-2. `packages/runner/test/ui/ModifiersSection.test.tsx` — add tests for condition+effect rendering, empty-effect case
+1. `packages/runner/test/ui/ActionTooltip.test.tsx` — **create**: tests for sub-step line rendering and `<details>` disclosure
+2. `packages/runner/test/ui/ModifiersSection.test.tsx` — **create**: tests for condition+effect rendering, empty-description case
 
 ### Commands
 
 1. `pnpm -F @ludoforge/runner test` (targeted)
 2. `pnpm -F @ludoforge/runner typecheck` (type safety)
 3. `pnpm turbo build && pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint` (full)
+
+## Outcome
+
+- **Completion date**: 2026-03-08
+- **What changed**:
+  - `ActionTooltip.tsx`: Sub-steps now render `sub.lines` (not just headers); top-level steps wrapped in `<details open>` with `<summary>` for collapsible disclosure
+  - `ActionTooltip.module.css`: Added `.stepDetails` and `.stepSummary` CSS classes
+  - `ModifiersSection.tsx`: Condition omits trailing colon and description `<span>` when `mod.description` is empty
+  - `ActionTooltip.test.ts`: 4 new tests (sub-step lines, empty sub-steps, `<details>` wrapping, open-by-default)
+  - `ModifiersSection.test.ts`: 3 new tests (colon with description, no colon without, no description span when empty)
+- **Deviations from original plan**:
+  - Tasks 1 and 5 (`collapsedCount` removal, `.collapsedHint` CSS removal) were already done — skipped
+  - Task 4 kept existing `.condition`/`.description` class names instead of renaming to `.effectTag`/`.effectDescription` — existing names were more descriptive and already provided visual distinction
+  - Test files already existed (`.test.ts`, not `.test.tsx`) — added new tests to existing files rather than creating new ones
+- **Verification**: `pnpm -F @ludoforge/runner test` (150 files, 1497 tests pass), `typecheck` clean, `lint` clean

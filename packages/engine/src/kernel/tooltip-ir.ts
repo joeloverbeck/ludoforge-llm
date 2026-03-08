@@ -17,8 +17,10 @@ export type VarScope = 'global' | 'player' | 'zone';
 
 export interface SelectMessage extends MessageBase {
   readonly kind: 'select';
-  readonly target: 'spaces' | 'zones' | 'items' | 'players' | 'values' | 'markers' | 'rows';
+  readonly target: 'spaces' | 'zones' | 'items' | 'players' | 'values' | 'markers' | 'rows' | 'options' | 'tokens';
   readonly filter?: string;
+  /** Raw condition AST for re-rendering with full LabelContext in the realizer */
+  readonly conditionAST?: import('./types-ast.js').ConditionAST;
   readonly bounds?: { readonly min: number; readonly max: number };
   readonly optionHints?: readonly string[];
 }

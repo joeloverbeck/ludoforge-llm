@@ -30,9 +30,9 @@ export interface NormalizerContext {
 type EffectOf<K extends string> = Extract<EffectAST, Record<K, unknown>>;
 
 const stringifyPlayerSel = (sel: PlayerSel): string => {
-  if (typeof sel === 'string') return sel;
+  if (typeof sel === 'string') return stripMacroBindingPrefix(sel);
   if ('id' in sel) return String(sel.id);
-  if ('chosen' in sel) return sel.chosen;
+  if ('chosen' in sel) return stripMacroBindingPrefix(sel.chosen);
   if ('relative' in sel) return sel.relative;
   return '<player>';
 };

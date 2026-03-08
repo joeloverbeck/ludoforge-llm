@@ -70,25 +70,38 @@ const stringifyTokenFilter = (filter: TokenFilterExpr): string => {
   return (filter.args as readonly TokenFilterExpr[]).map(stringifyTokenFilter).join(` ${filter.op.toUpperCase()} `);
 };
 
-const extractQueryFilter = (options: OptionsQuery, ctx: NormalizerContext): string | undefined => {
-  if (!('query' in options)) return undefined;
+interface ExtractedFilter {
+  readonly filter?: string;
+  readonly conditionAST?: ConditionAST;
+}
+
+const extractQueryFilter = (options: OptionsQuery, ctx: NormalizerContext): ExtractedFilter => {
+  if (!('query' in options)) return {};
   const q = options as Record<string, unknown>;
 
   // Space queries: mapSpaces, zones, adjacentZones — filter has { condition? }
   if (options.query === 'mapSpaces' || options.query === 'zones' || options.query === 'adjacentZones') {
     const f = q.filter as { readonly condition?: ConditionAST } | undefined;
-    if (f?.condition !== undefined) return humanizeCondition(f.condition, ctx) ?? undefined;
-    return undefined;
+    if (f?.condition !== undefined) {
+      const humanized = humanizeCondition(f.condition, ctx);
+      // Only store conditionAST when the condition is not suppressed —
+      // otherwise the realizer would re-render suppressed variables into output.
+      if (humanized !== null) {
+        return { filter: humanized, conditionAST: f.condition };
+      }
+      return {};
+    }
+    return {};
   }
 
   // Token queries: tokensInZone, tokensInMapSpaces, tokensInAdjacentZones — filter is TokenFilterExpr
   if (options.query === 'tokensInZone' || options.query === 'tokensInMapSpaces' || options.query === 'tokensInAdjacentZones') {
     const f = q.filter as TokenFilterExpr | undefined;
-    if (f !== undefined) return stringifyTokenFilter(f);
-    return undefined;
+    if (f !== undefined) return { filter: stringifyTokenFilter(f) };
+    return {};
   }
 
-  return undefined;
+  return {};
 };
 
 // --- Compound rules (28-35, 41) ---
@@ -96,7 +109,7 @@ const extractQueryFilter = (options: OptionsQuery, ctx: NormalizerContext): stri
 const buildSelectMessage = (
   target: SelectMessage['target'],
   bounds: { readonly min: number; readonly max: number },
-  filter: string | undefined,
+  extracted: ExtractedFilter,
   astPath: string,
   optionHints?: readonly string[],
 ): readonly TooltipMessage[] => [
@@ -104,7 +117,8 @@ const buildSelectMessage = (
     kind: 'select',
     target,
     bounds,
-    ...(filter !== undefined ? { filter } : {}),
+    ...(extracted.filter !== undefined ? { filter: extracted.filter } : {}),
+    ...(extracted.conditionAST !== undefined ? { conditionAST: extracted.conditionAST } : {}),
     ...(optionHints !== undefined ? { optionHints } : {}),
     astPath,
   },
@@ -118,6 +132,13 @@ const classifyQueryTarget = (options: OptionsQuery): SelectMessage['target'] => 
   if (isValueQuery(options)) return 'values';
   if (isMarkerQuery(options)) return 'markers';
   if (isRowQuery(options)) return 'rows';
+  if (isEnumQuery(options)) return 'options';
+  if (options.query === 'concat') {
+    const sourceTargets = options.sources.map(classifyQueryTarget);
+    const unique = [...new Set(sourceTargets)];
+    return unique.length === 1 ? unique[0]! : 'items';
+  }
+  if (options.query === 'nextInOrderByCondition') return classifyQueryTarget(options.source);
   return 'items';
 };
 
@@ -128,14 +149,14 @@ export const normalizeChooseN = (
 ): readonly TooltipMessage[] => {
   const p = payload.chooseN;
   const bounds = getChooseNBounds(p);
-  const filter = extractQueryFilter(p.options, ctx);
+  const extracted = extractQueryFilter(p.options, ctx);
   const target = classifyQueryTarget(p.options);
 
   const optionHints = isEnumQuery(p.options)
     ? (p.options as { readonly query: 'enums'; readonly values: readonly string[] }).values
     : undefined;
 
-  return buildSelectMessage(target, bounds, filter, astPath, optionHints);
+  return buildSelectMessage(target, bounds, extracted, astPath, optionHints);
 };
 
 export const normalizeChooseOne = (

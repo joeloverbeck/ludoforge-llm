@@ -47,6 +47,31 @@ describe('TooltipIR types', () => {
     assert.equal(msg.target, 'spaces');
   });
 
+  it('constructs SelectMessage with optional conditionAST', () => {
+    const msg: SelectMessage = {
+      kind: 'select',
+      astPath: 'root.effects[0]',
+      target: 'spaces',
+      bounds: { min: 1, max: 3 },
+      filter: 'aid ≥ 3',
+      conditionAST: { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 },
+    };
+    assert.equal(msg.kind, 'select');
+    assert.ok(msg.conditionAST !== undefined);
+    assert.equal(msg.filter, 'aid ≥ 3');
+  });
+
+  it('constructs SelectMessage without conditionAST (backwards compatible)', () => {
+    const msg: SelectMessage = {
+      kind: 'select',
+      astPath: 'root.effects[0]',
+      target: 'zones',
+      filter: 'some filter',
+    };
+    assert.equal(msg.conditionAST, undefined);
+    assert.equal(msg.filter, 'some filter');
+  });
+
   it('constructs PlaceMessage', () => {
     const msg: PlaceMessage = {
       kind: 'place',

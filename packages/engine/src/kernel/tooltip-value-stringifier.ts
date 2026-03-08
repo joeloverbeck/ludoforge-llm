@@ -62,8 +62,12 @@ export const sanitizeBindingName = (
   return humanizeIdentifier(semantic);
 };
 
-export const stringifyZoneRef = (ref: ZoneRef): string =>
-  typeof ref === 'string' ? ref : '<expr>';
+export const stringifyZoneRef = (ref: ZoneRef): string => {
+  if (typeof ref === 'string') return sanitizeBindingName(ref);
+  // { zoneExpr: ValueExpr } — delegate to value stringifier (handles binding refs)
+  if ('zoneExpr' in ref) return stringifyValueExpr(ref.zoneExpr);
+  return '<expr>';
+};
 
 export const stringifyValueExpr = (expr: ValueExpr): string => {
   if (typeof expr === 'number' || typeof expr === 'boolean') return String(expr);
@@ -111,6 +115,94 @@ export const stringifyValueExpr = (expr: ValueExpr): string => {
   }
 
   return '<expr>';
+};
+
+// ---------------------------------------------------------------------------
+// Label-aware value humanization (authoritative — all shapes)
+// ---------------------------------------------------------------------------
+
+/**
+ * Humanize a `ValueExpr` into a human-readable string with full label
+ * resolution via `LabelContext`. Handles every discriminant shape:
+ *
+ *   - primitives (number, boolean, string)
+ *   - Reference (all 12 sub-types)
+ *   - arithmetic (recursive)
+ *   - aggregate (count, sum, min, max)
+ *   - concat
+ *   - conditional
+ *
+ * Never produces a raw `<value>` placeholder.
+ */
+export const humanizeValueExpr = (
+  expr: ValueExpr,
+  ctx: LabelContext,
+  count?: number,
+): string => {
+  // Primitives
+  if (typeof expr === 'number' || typeof expr === 'boolean') return String(expr);
+  if (typeof expr === 'string') return resolveLabel(expr, ctx, count);
+
+  // Reference types (all 12)
+  if ('ref' in expr) {
+    switch (expr.ref) {
+      case 'gvar': return resolveLabel(expr.var, ctx, count);
+      case 'pvar': return resolveLabel(expr.var, ctx, count);
+      case 'binding': {
+        const raw = expr.displayName ?? expr.name;
+        return raw.startsWith(MACRO_PREFIX)
+          ? sanitizeBindingName(raw, ctx)
+          : resolveLabel(raw, ctx, count);
+      }
+      case 'globalMarkerState': return resolveLabel(expr.marker, ctx, count);
+      case 'markerState': return `${resolveLabel(expr.marker, ctx, count)} of ${resolveLabel(expr.space as string, ctx, count)}`;
+      case 'zoneCount': return `pieces in ${resolveLabel(expr.zone as string, ctx, count)}`;
+      case 'tokenProp': return `${resolveLabel(expr.token as string, ctx, count)}.${resolveLabel(expr.prop, ctx, count)}`;
+      case 'assetField': return resolveLabel(expr.field, ctx, count);
+      case 'zoneProp': return `${resolveLabel(expr.zone as string, ctx, count)}.${resolveLabel(expr.prop, ctx, count)}`;
+      case 'activePlayer': return 'active player';
+      case 'tokenZone': return `zone of ${resolveLabel(expr.token as string, ctx, count)}`;
+      case 'zoneVar': return `${resolveLabel(expr.var, ctx, count)} of ${resolveLabel(expr.zone as string, ctx, count)}`;
+      default: return 'value';
+    }
+  }
+
+  // Arithmetic expression
+  if ('op' in expr && 'left' in expr && 'right' in expr) {
+    const left = humanizeValueExpr(expr.left, ctx, count);
+    const right = humanizeValueExpr(expr.right, ctx, count);
+    return `${left} ${expr.op} ${right}`;
+  }
+
+  // Aggregate expression
+  if ('aggregate' in expr) {
+    const agg = expr.aggregate;
+    if (agg.op === 'count') {
+      return 'number of matching items';
+    }
+    // sum/min/max with bind + valueExpr
+    const rawBind = agg.bind;
+    const field = rawBind.startsWith(MACRO_PREFIX)
+      ? sanitizeBindingName(rawBind, ctx)
+      : resolveLabel(rawBind, ctx, count);
+    return `${agg.op} of ${field}`;
+  }
+
+  // Concat expression
+  if ('concat' in expr && Array.isArray(expr.concat)) {
+    return (expr.concat as readonly ValueExpr[])
+      .map((part) => humanizeValueExpr(part, ctx, count))
+      .join(' ');
+  }
+
+  // Conditional expression
+  if ('if' in expr) {
+    const thenText = humanizeValueExpr(expr.if.then, ctx, count);
+    const elseText = humanizeValueExpr(expr.if.else, ctx, count);
+    return `${thenText} if condition met, otherwise ${elseText}`;
+  }
+
+  return 'value';
 };
 
 export const stringifyNumericExpr = (expr: NumericValueExpr): string => {

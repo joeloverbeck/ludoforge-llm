@@ -38,6 +38,7 @@ import type { ContentStep, ContentModifier, RealizedLine, RuleCard } from './too
 import type { VerbalizationDef } from './verbalization-types.js';
 import type { LabelContext } from './tooltip-label-resolver.js';
 import { buildLabelContext, resolveLabel, resolveSentencePlan } from './tooltip-label-resolver.js';
+import { humanizeConditionWithLabels } from './tooltip-modifier-humanizer.js';
 
 // ---------------------------------------------------------------------------
 // Template functions — one per message kind
@@ -51,7 +52,17 @@ const singularTarget = (target: string): string => {
   if (target === 'values') return 'value';
   if (target === 'markers') return 'marker';
   if (target === 'rows') return 'row';
+  if (target === 'options') return 'option';
+  if (target === 'tokens') return 'token';
   return target;
+};
+
+const resolveSelectFilter = (msg: SelectMessage, ctx: LabelContext, count?: number): string | undefined => {
+  // Prefer re-rendered condition from raw AST when available
+  if (msg.conditionAST !== undefined) return humanizeConditionWithLabels(msg.conditionAST, ctx, count);
+  // Fall back to pre-rendered filter string with label resolution
+  if (msg.filter !== undefined) return resolveLabel(msg.filter, ctx, count);
+  return undefined;
 };
 
 const realizeSelect = (msg: SelectMessage, ctx: LabelContext): string => {
@@ -60,9 +71,7 @@ const realizeSelect = (msg: SelectMessage, ctx: LabelContext): string => {
     return `Choose from: ${options}`;
   }
 
-  const targetLabel = msg.filter !== undefined
-    ? resolveLabel(msg.filter, ctx)
-    : msg.target;
+  const targetLabel = resolveSelectFilter(msg, ctx) ?? msg.target;
 
   if (msg.bounds === undefined) {
     return `Select ${targetLabel}`;
@@ -70,15 +79,20 @@ const realizeSelect = (msg: SelectMessage, ctx: LabelContext): string => {
 
   const { min, max } = msg.bounds;
 
+  const hasFilter = msg.conditionAST !== undefined || msg.filter !== undefined;
+
   if (min === max) {
-    const label = msg.filter !== undefined
-      ? resolveLabel(msg.filter, ctx, min)
+    const label = hasFilter
+      ? (resolveSelectFilter(msg, ctx, min) ?? msg.target)
       : min === 1 ? singularTarget(msg.target) : msg.target;
     return `Select ${min} ${label}`;
   }
 
   if (min === 0) {
-    return `Select up to ${max} ${targetLabel}`;
+    const label = max === 1
+      ? (hasFilter ? (resolveSelectFilter(msg, ctx, 1) ?? singularTarget(msg.target)) : singularTarget(msg.target))
+      : targetLabel;
+    return `Select up to ${max} ${label}`;
   }
 
   return `Select ${min}-${max} ${targetLabel}`;

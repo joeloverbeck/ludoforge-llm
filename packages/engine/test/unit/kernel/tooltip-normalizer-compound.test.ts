@@ -133,7 +133,7 @@ describe('normalizeChooseN domain classification', () => {
     assert.equal(msg.target, 'rows');
   });
 
-  it('enums query produces target: items with optionHints', () => {
+  it('enums query produces target: options with optionHints', () => {
     const result = normalizeChooseN(
       chooseNPayload({ query: 'enums', values: ['Fold', 'Call', 'Raise'] }),
       EMPTY_CTX,
@@ -142,7 +142,7 @@ describe('normalizeChooseN domain classification', () => {
     assert.equal(result.length, 1);
     const msg = result[0] as SelectMessage;
     assert.equal(msg.kind, 'select');
-    assert.equal(msg.target, 'items');
+    assert.equal(msg.target, 'options');
     assert.deepEqual(msg.optionHints, ['Fold', 'Call', 'Raise']);
   });
 
@@ -186,6 +186,48 @@ describe('normalizeChooseN domain classification', () => {
     assert.equal(msg.target, 'zones');
   });
 
+  it('concat query with uniform sources derives target from sources', () => {
+    const result = normalizeChooseN(
+      chooseNPayload({
+        query: 'concat',
+        sources: [{ query: 'mapSpaces' }, { query: 'zones' }],
+      }),
+      EMPTY_CTX,
+      'r',
+    );
+    const msg = result[0] as SelectMessage;
+    assert.equal(msg.target, 'spaces');
+  });
+
+  it('concat query with mixed sources falls back to items', () => {
+    const result = normalizeChooseN(
+      chooseNPayload({
+        query: 'concat',
+        sources: [{ query: 'mapSpaces' }, { query: 'players' }],
+      }),
+      EMPTY_CTX,
+      'r',
+    );
+    const msg = result[0] as SelectMessage;
+    assert.equal(msg.target, 'items');
+  });
+
+  it('nextInOrderByCondition derives target from its source', () => {
+    const result = normalizeChooseN(
+      chooseNPayload({
+        query: 'nextInOrderByCondition',
+        source: { query: 'intsInRange', min: 0, max: 10 },
+        from: 0,
+        bind: 'v',
+        where: true,
+      }),
+      EMPTY_CTX,
+      'r',
+    );
+    const msg = result[0] as SelectMessage;
+    assert.equal(msg.target, 'values');
+  });
+
   it('unknown query falls back to target: items without optionHints', () => {
     const result = normalizeChooseN(
       chooseNPayload({ query: 'binding', name: 'x' } as OptionsQuery),
@@ -195,6 +237,77 @@ describe('normalizeChooseN domain classification', () => {
     const msg = result[0] as SelectMessage;
     assert.equal(msg.target, 'items');
     assert.equal(msg.optionHints, undefined);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// conditionAST population on SelectMessage (ACTTOOHUMGAP-005)
+// ---------------------------------------------------------------------------
+
+describe('SelectMessage conditionAST population', () => {
+  it('populates conditionAST for mapSpaces query with condition filter', () => {
+    const condition = { op: '>=', left: { ref: 'gvar', var: 'population' }, right: 1 } as const;
+    const result = normalizeChooseN(
+      chooseNPayload({
+        query: 'mapSpaces',
+        filter: { condition },
+      } as OptionsQuery),
+      EMPTY_CTX,
+      'r',
+    );
+    const msg = result[0] as SelectMessage;
+    assert.equal(msg.kind, 'select');
+    assert.deepEqual(msg.conditionAST, condition);
+    assert.ok(msg.filter !== undefined, 'filter string should also be present');
+  });
+
+  it('populates conditionAST for zones query with condition filter', () => {
+    const condition = { op: '==', left: { ref: 'gvar', var: 'terrain' }, right: 'city' } as const;
+    const result = normalizeChooseN(
+      chooseNPayload({
+        query: 'zones',
+        filter: { condition },
+      } as OptionsQuery),
+      EMPTY_CTX,
+      'r',
+    );
+    const msg = result[0] as SelectMessage;
+    assert.deepEqual(msg.conditionAST, condition);
+  });
+
+  it('leaves conditionAST undefined for queries without conditions', () => {
+    const result = normalizeChooseN(
+      chooseNPayload({ query: 'mapSpaces' }),
+      EMPTY_CTX,
+      'r',
+    );
+    const msg = result[0] as SelectMessage;
+    assert.equal(msg.conditionAST, undefined);
+  });
+
+  it('leaves conditionAST undefined for token queries (TokenFilterExpr, not ConditionAST)', () => {
+    const result = normalizeChooseN(
+      chooseNPayload({
+        query: 'tokensInZone',
+        zone: 'hand',
+        filter: { prop: 'type', op: 'eq', value: 'troop' },
+      } as OptionsQuery),
+      EMPTY_CTX,
+      'r',
+    );
+    const msg = result[0] as SelectMessage;
+    assert.equal(msg.conditionAST, undefined);
+    assert.ok(msg.filter !== undefined, 'filter string should still be present for token queries');
+  });
+
+  it('leaves conditionAST undefined for enum queries', () => {
+    const result = normalizeChooseN(
+      chooseNPayload({ query: 'enums', values: ['a', 'b'] }),
+      EMPTY_CTX,
+      'r',
+    );
+    const msg = result[0] as SelectMessage;
+    assert.equal(msg.conditionAST, undefined);
   });
 });
 

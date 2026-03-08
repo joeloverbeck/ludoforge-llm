@@ -251,7 +251,7 @@ describe('tooltip-normalizer', () => {
       }
     });
 
-    it('addVar zoneVar with ZoneRef expression → scopeOwner is <expr>', () => {
+    it('addVar zoneVar with ZoneRef expression → scopeOwner is humanized binding name', () => {
       const effect: EffectAST = {
         addVar: {
           scope: 'zoneVar',
@@ -264,7 +264,7 @@ describe('tooltip-normalizer', () => {
       assert.equal(msg.kind, 'gain');
       if (msg.kind === 'gain') {
         assert.equal(msg.scope, 'zone');
-        assert.equal(msg.scopeOwner, '<expr>');
+        assert.equal(msg.scopeOwner, 'targetZone');
       }
     });
   });
@@ -491,7 +491,7 @@ describe('tooltip-normalizer', () => {
       }
     });
 
-    it('moveToken with ZoneRef expression → uses <expr>', () => {
+    it('moveToken with ZoneRef expression → uses humanized binding name', () => {
       const effect: EffectAST = {
         moveToken: {
           token: 'troop',
@@ -502,7 +502,7 @@ describe('tooltip-normalizer', () => {
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[18]'));
       assert.equal(msg.kind, 'move');
       if (msg.kind === 'move') {
-        assert.equal(msg.fromZone, '<expr>');
+        assert.equal(msg.fromZone, 'sourceZone');
       }
     });
   });
@@ -717,7 +717,7 @@ describe('tooltip-normalizer', () => {
       }
     });
 
-    it('rule 29b: chooseN over enums → SelectMessage(items)', () => {
+    it('rule 29b: chooseN over enums → SelectMessage(options)', () => {
       const effect: EffectAST = {
         chooseN: {
           internalDecisionId: 'd4',
@@ -730,7 +730,7 @@ describe('tooltip-normalizer', () => {
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[1b]'));
       assert.equal(msg.kind, 'select');
       if (msg.kind === 'select') {
-        assert.equal(msg.target, 'items');
+        assert.equal(msg.target, 'options');
         assert.deepStrictEqual(msg.bounds, { min: 1, max: 2 });
       }
     });
@@ -1310,6 +1310,96 @@ describe('tooltip-normalizer', () => {
       assert.equal(msg.kind, 'select');
       if (msg.kind === 'select') {
         assert.equal(msg.filter, undefined);
+      }
+    });
+  });
+
+  // --- ACTTOOHUMGAP-003: macro binding sanitization ---
+
+  describe('ACTTOOHUMGAP-003: no __macro_ leaks in normalizer output', () => {
+    it('moveToken with __macro_ zone refs → sanitized output', () => {
+      const effect: EffectAST = {
+        moveToken: { token: 'guerrilla', from: '__macro_sweep__sourceZone', to: '__macro_sweep__destZone' },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'mac[0]');
+      assert.ok(messages.length >= 1);
+      for (const msg of messages) {
+        const json = JSON.stringify(msg);
+        assert.ok(!json.includes('__macro_'), `__macro_ leaked in moveToken output: ${json}`);
+      }
+    });
+
+    it('moveAll with __macro_ zone refs → sanitized output', () => {
+      const effect: EffectAST = {
+        moveAll: { from: '__macro_rally__fromZone', to: '__macro_rally__toZone' },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'mac[1]');
+      for (const msg of messages) {
+        const json = JSON.stringify(msg);
+        assert.ok(!json.includes('__macro_'), `__macro_ leaked in moveAll output: ${json}`);
+      }
+    });
+
+    it('createToken with __macro_ zone ref → sanitized output', () => {
+      const effect: EffectAST = {
+        createToken: { type: 'guerrilla', zone: '__macro_place__targetZone' },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'mac[2]');
+      for (const msg of messages) {
+        const json = JSON.stringify(msg);
+        assert.ok(!json.includes('__macro_'), `__macro_ leaked in createToken output: ${json}`);
+      }
+    });
+
+    it('draw with __macro_ zone ref → sanitized output', () => {
+      const effect: EffectAST = {
+        draw: { from: '__macro_deal__deckZone', to: 'hand', count: 2 },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'mac[3]');
+      for (const msg of messages) {
+        const json = JSON.stringify(msg);
+        assert.ok(!json.includes('__macro_'), `__macro_ leaked in draw output: ${json}`);
+      }
+    });
+
+    it('reveal/conceal/shuffle with __macro_ zone ref → sanitized output', () => {
+      const effects: EffectAST[] = [
+        { reveal: { zone: '__macro_intel__revealZone', to: 'all' as const } },
+        { conceal: { zone: '__macro_intel__concealZone' } },
+        { shuffle: { zone: '__macro_deal__deckZone' } },
+      ];
+      for (const [i, effect] of effects.entries()) {
+        const messages = normalizeEffect(effect, EMPTY_CTX, `mac[4.${i}]`);
+        for (const msg of messages) {
+          const json = JSON.stringify(msg);
+          assert.ok(!json.includes('__macro_'), `__macro_ leaked in output: ${json}`);
+        }
+      }
+    });
+
+    it('setVar with zoneVar scope and __macro_ zone → sanitized output', () => {
+      const effect: EffectAST = {
+        setVar: { scope: 'zoneVar', var: 'support', zone: '__macro_pacify__targetZone', value: 2 },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'mac[5]');
+      for (const msg of messages) {
+        const json = JSON.stringify(msg);
+        assert.ok(!json.includes('__macro_'), `__macro_ leaked in setVar output: ${json}`);
+      }
+    });
+
+    it('moveToken with __macro_ token and __macro_ zones → all sanitized', () => {
+      const effect: EffectAST = {
+        moveToken: {
+          token: '__macro_sweep__guerrilla',
+          from: '__macro_sweep__source',
+          to: '__macro_sweep__dest',
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'mac[6]');
+      for (const msg of messages) {
+        const json = JSON.stringify(msg);
+        assert.ok(!json.includes('__macro_'), `__macro_ leaked in combined output: ${json}`);
       }
     });
   });

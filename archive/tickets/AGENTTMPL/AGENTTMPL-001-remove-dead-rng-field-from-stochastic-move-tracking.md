@@ -1,6 +1,6 @@
 # AGENTTMPL-001: Remove Dead rng Field from Stochastic Move Tracking
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — agent stochastic fallback data structures
@@ -15,6 +15,7 @@ Both `RandomAgent` and `GreedyAgent` store `{ move: Move; rng: Rng }` in their `
 1. `RandomAgent` stores `stochasticMoves: { move: Move; rng: Rng }[]` at `random-agent.ts:12` but only reads `.move` at lines 28 and 31; `.rng` is never accessed. — **Verified**.
 2. `GreedyAgent` stores the same shape at `greedy-agent.ts:45` and only reads `.move` at lines 73 and 76; `.rng` is never accessed. — **Verified**.
 3. Both agents return the outer `rng` cursor, not any per-entry rng. — **Verified** at `random-agent.ts:28,30` and `greedy-agent.ts:73,75`.
+4. Test coverage already validates stochastic fallback for both agents, but `GreedyAgent` lacks a focused assertion for multi-option stochastic fallback determinism/rng advancement parity with `RandomAgent`. — **Verified discrepancy**.
 
 ## Architecture Check
 
@@ -50,10 +51,15 @@ return { move: stochasticMoves[index]!, rng: nextRng };
 
 After simplification, check whether `Rng` is still needed in `random-agent.ts` imports (it will no longer be needed there).
 
+### 3. Strengthen `GreedyAgent` stochastic fallback test coverage
+
+Add a focused unit test that exercises the `expandedMoves.length === 0 && stochasticMoves.length > 1` path and asserts deterministic output for identical seeds, including returned rng parity across repeated runs.
+
 ## Files to Touch
 
 - `packages/engine/src/agents/random-agent.ts` (modify)
 - `packages/engine/src/agents/greedy-agent.ts` (modify)
+- `packages/engine/test/unit/agents/greedy-agent-core.test.ts` (modify)
 
 ## Out of Scope
 
@@ -76,9 +82,25 @@ After simplification, check whether `Rng` is still needed in `random-agent.ts` i
 
 ### New/Modified Tests
 
-None — this is a pure internal refactor with no behavioral change. Existing tests cover the behavior.
+- `packages/engine/test/unit/agents/greedy-agent-core.test.ts`
+  - Add deterministic stochastic-fallback test for multiple unresolved template moves.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test`
 2. `pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-08
+- **What changed**:
+  - Simplified `RandomAgent` stochastic fallback accumulation from `{ move, rng }[]` to `Move[]`.
+  - Simplified `GreedyAgent` stochastic fallback accumulation from `{ move, rng }[]` to `Move[]`.
+  - Removed now-unused `Rng` type import from `random-agent.ts`.
+  - Added focused `GreedyAgent` unit test coverage for deterministic multi-option stochastic fallback under identical seeds.
+- **Deviations from original plan**:
+  - Original ticket planned no test changes; scope was corrected to include one targeted test to strengthen stochastic fallback invariants for `GreedyAgent`.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test` passed.
+  - `pnpm turbo lint` passed.
+  - `pnpm turbo typecheck` passed.

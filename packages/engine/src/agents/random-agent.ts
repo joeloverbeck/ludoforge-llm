@@ -1,6 +1,6 @@
-import { nextInt } from '../kernel/prng.js';
-import type { Agent, Move, Rng } from '../kernel/types.js';
+import type { Agent, Move } from '../kernel/types.js';
 import { completeTemplateMove } from '../kernel/move-completion.js';
+import { pickRandom, selectStochasticFallback } from './agent-move-selection.js';
 
 export class RandomAgent implements Agent {
   chooseMove(input: Parameters<Agent['chooseMove']>[0]): ReturnType<Agent['chooseMove']> {
@@ -9,7 +9,7 @@ export class RandomAgent implements Agent {
     }
 
     const completedMoves: Move[] = [];
-    const stochasticMoves: { move: Move; rng: Rng }[] = [];
+    const stochasticMoves: Move[] = [];
     let rng = input.rng;
 
     for (const move of input.legalMoves) {
@@ -18,32 +18,20 @@ export class RandomAgent implements Agent {
         completedMoves.push(result.move);
         rng = result.rng;
       } else if (result.kind === 'stochasticUnresolved') {
-        stochasticMoves.push({ move: result.move, rng: result.rng });
+        stochasticMoves.push(result.move);
         rng = result.rng;
       }
     }
 
     if (completedMoves.length === 0 && stochasticMoves.length > 0) {
-      if (stochasticMoves.length === 1) {
-        return { move: stochasticMoves[0]!.move, rng };
-      }
-      const [index, nextRng] = nextInt(rng, 0, stochasticMoves.length - 1);
-      return { move: stochasticMoves[index]!.move, rng: nextRng };
+      return selectStochasticFallback(stochasticMoves, rng);
     }
 
     if (completedMoves.length === 0) {
       throw new Error('RandomAgent.chooseMove: no playable moves after template completion');
     }
 
-    if (completedMoves.length === 1) {
-      return { move: completedMoves[0]!, rng };
-    }
-
-    const [index, nextRng] = nextInt(rng, 0, completedMoves.length - 1);
-    const selected = completedMoves[index];
-    if (selected === undefined) {
-      throw new Error(`RandomAgent.chooseMove selected out-of-range index ${index}`);
-    }
+    const { item: selected, rng: nextRng } = pickRandom(completedMoves, rng);
     return { move: selected, rng: nextRng };
   }
 }

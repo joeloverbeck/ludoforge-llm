@@ -1,6 +1,6 @@
 # ACTTOOHUMGAP-006: Consolidate blocker-extractor value humanization into canonical humanizeValueExpr
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel tooltip pipeline
@@ -78,3 +78,11 @@ Document the decision in the PR.
 
 1. `cd .claude/worktrees/spec-57 && pnpm -F @ludoforge/engine test`
 2. `cd .claude/worktrees/spec-57 && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-08
+- **What changed**: Deleted local `stringifyValueExpr` (22 lines) and `stringifyZoneSel` (2 lines) from `tooltip-blocker-extractor.ts`. Replaced all 20+ call-sites with canonical `humanizeValueExpr` imported from `tooltip-value-stringifier.ts`. Updated 1 test expectation (`count(Saigon)` → `pieces in Saigon`).
+- **Design decision**: Option (a) — canonical `humanizeValueExpr` output is acceptable for blockers without a wrapper. The canonical output is strictly more readable (e.g., full arithmetic rendering vs `expression`, descriptive aggregates vs `aggregate`).
+- **Deviations**: None.
+- **Verification**: 35/35 blocker-extractor tests pass, 507/507 tooltip tests pass, typecheck clean.

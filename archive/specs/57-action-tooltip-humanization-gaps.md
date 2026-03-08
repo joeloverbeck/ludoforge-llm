@@ -1,6 +1,6 @@
 # Spec 57 — Action Tooltip Humanization Gaps
 
-## Status: Active
+## Status: COMPLETED
 
 ## Problem
 
@@ -200,3 +200,10 @@ Macro expansion can produce structurally identical `TooltipMessage` entries (sam
 - [ ] Falls back to pre-rendered `filter` string when AST is absent (backwards compatibility).
 - [ ] `humanizeConditionWithLabels` uses `humanizeValueExpr` for embedded value nodes.
 - [ ] Unit tests verify label resolution produces human-readable condition text.
+
+## Outcome
+
+- **Completion date**: 2026-03-08
+- **What changed**: All 5 tooltip humanization gaps closed (ACTTOOHUMGAP-001 through 006). Canonical `humanizeValueExpr` unified value humanization with LabelContext. Select targets enriched with grammar fixes. Macro binding sanitization made consistent. Dedup pass added to content planner. Structured conditions on SelectMessage implemented. Blocker-extractor consolidated to use canonical humanizer.
+- **Deviations**: ACTTOOHUMGAP-006 (blocker consolidation) was added during implementation as a natural follow-on to close the last duplicate value humanizer.
+- **Verification**: 507/507 tooltip tests pass, typecheck clean, no `<value>` placeholders or `__macro_` leaks in output.

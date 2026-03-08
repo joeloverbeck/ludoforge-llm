@@ -8,7 +8,7 @@
  */
 
 import type { EffectAST, ValueExpr, ConditionAST, OptionsQuery, TokenFilterExpr } from './types-ast.js';
-import type { TooltipMessage } from './tooltip-ir.js';
+import type { TooltipMessage, SelectMessage } from './tooltip-ir.js';
 import type { NormalizerContext } from './tooltip-normalizer.js';
 import { humanizeCondition } from './tooltip-modifier-humanizer.js';
 import { stringifyValueExpr, stringifyNumericExpr, stringifyZoneRef } from './tooltip-value-stringifier.js';
@@ -37,10 +37,25 @@ export const getChooseNBounds = (p: EffectOf<'chooseN'>['chooseN']): { readonly 
 };
 
 export const isSpaceQuery = (q: OptionsQuery): boolean =>
-  'query' in q && (q.query === 'mapSpaces' || q.query === 'zones' || q.query === 'adjacentZones');
+  'query' in q && (q.query === 'mapSpaces' || q.query === 'zones' || q.query === 'adjacentZones' || q.query === 'connectedZones' || q.query === 'tokenZones');
 
 export const isTokenQuery = (q: OptionsQuery): boolean =>
   'query' in q && (q.query === 'tokensInZone' || q.query === 'tokensInMapSpaces' || q.query === 'tokensInAdjacentZones');
+
+export const isPlayerQuery = (q: OptionsQuery): boolean =>
+  'query' in q && q.query === 'players';
+
+export const isValueQuery = (q: OptionsQuery): boolean =>
+  'query' in q && (q.query === 'intsInRange' || q.query === 'intsInVarRange');
+
+export const isMarkerQuery = (q: OptionsQuery): boolean =>
+  'query' in q && q.query === 'globalMarkers';
+
+export const isRowQuery = (q: OptionsQuery): boolean =>
+  'query' in q && q.query === 'assetRows';
+
+export const isEnumQuery = (q: OptionsQuery): boolean =>
+  'query' in q && q.query === 'enums';
 
 // --- Filter stringifiers ---
 
@@ -78,6 +93,34 @@ const extractQueryFilter = (options: OptionsQuery, ctx: NormalizerContext): stri
 
 // --- Compound rules (28-35, 41) ---
 
+const buildSelectMessage = (
+  target: SelectMessage['target'],
+  bounds: { readonly min: number; readonly max: number },
+  filter: string | undefined,
+  astPath: string,
+  optionHints?: readonly string[],
+): readonly TooltipMessage[] => [
+  {
+    kind: 'select',
+    target,
+    bounds,
+    ...(filter !== undefined ? { filter } : {}),
+    ...(optionHints !== undefined ? { optionHints } : {}),
+    astPath,
+  },
+];
+
+const classifyQueryTarget = (options: OptionsQuery): SelectMessage['target'] => {
+  if (!('query' in options)) return 'items';
+  if (isSpaceQuery(options)) return 'spaces';
+  if (isTokenQuery(options)) return 'zones';
+  if (isPlayerQuery(options)) return 'players';
+  if (isValueQuery(options)) return 'values';
+  if (isMarkerQuery(options)) return 'markers';
+  if (isRowQuery(options)) return 'rows';
+  return 'items';
+};
+
 export const normalizeChooseN = (
   payload: EffectOf<'chooseN'>,
   ctx: NormalizerContext,
@@ -86,16 +129,13 @@ export const normalizeChooseN = (
   const p = payload.chooseN;
   const bounds = getChooseNBounds(p);
   const filter = extractQueryFilter(p.options, ctx);
+  const target = classifyQueryTarget(p.options);
 
-  if (isSpaceQuery(p.options)) {
-    return [{ kind: 'select', target: 'spaces', bounds, ...(filter !== undefined ? { filter } : {}), astPath }];
-  }
+  const optionHints = isEnumQuery(p.options)
+    ? (p.options as { readonly query: 'enums'; readonly values: readonly string[] }).values
+    : undefined;
 
-  if (isTokenQuery(p.options)) {
-    return [{ kind: 'select', target: 'zones', bounds, ...(filter !== undefined ? { filter } : {}), astPath }];
-  }
-
-  return [{ kind: 'select', target: 'items', bounds, ...(filter !== undefined ? { filter } : {}), astPath }];
+  return buildSelectMessage(target, bounds, filter, astPath, optionHints);
 };
 
 export const normalizeChooseOne = (

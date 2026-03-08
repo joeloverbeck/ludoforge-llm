@@ -735,7 +735,7 @@ describe('tooltip-normalizer', () => {
       }
     });
 
-    it('rule 29b: chooseN over intsInRange → SelectMessage(items)', () => {
+    it('rule 29b: chooseN over intsInRange → SelectMessage(values)', () => {
       const effect: EffectAST = {
         chooseN: {
           internalDecisionId: 'd4b',
@@ -748,7 +748,7 @@ describe('tooltip-normalizer', () => {
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[1c]'));
       assert.equal(msg.kind, 'select');
       if (msg.kind === 'select') {
-        assert.equal(msg.target, 'items');
+        assert.equal(msg.target, 'values');
       }
     });
 

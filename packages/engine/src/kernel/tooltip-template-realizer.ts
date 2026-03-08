@@ -46,10 +46,19 @@ const singularTarget = (target: string): string => {
   if (target === 'spaces') return 'space';
   if (target === 'zones') return 'zone';
   if (target === 'items') return 'item';
+  if (target === 'players') return 'player';
+  if (target === 'values') return 'value';
+  if (target === 'markers') return 'marker';
+  if (target === 'rows') return 'row';
   return target;
 };
 
 const realizeSelect = (msg: SelectMessage, ctx: LabelContext): string => {
+  if (msg.optionHints !== undefined && msg.optionHints.length > 0 && msg.optionHints.length <= 5) {
+    const options = msg.optionHints.map((h) => resolveLabel(h, ctx)).join(', ');
+    return `Choose from: ${options}`;
+  }
+
   const targetLabel = msg.filter !== undefined
     ? resolveLabel(msg.filter, ctx)
     : msg.target;

@@ -1,6 +1,6 @@
 # HUMREAACTTOO-003: ChooseN Domain Context
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — tooltip IR type change, normalizer-compound update, template realizer update

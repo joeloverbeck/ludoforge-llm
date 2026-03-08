@@ -255,6 +255,48 @@ describe('realizeContentPlan', () => {
       assert.equal(result.steps[0]!.lines[0]!.text, 'Conceal Saigon');
     });
 
+    it('realizes select with target: players', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'players', bounds: { min: 1, max: 1 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1 player');
+    });
+
+    it('realizes select with target: values', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'values', bounds: { min: 0, max: 100 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select up to 100 values');
+    });
+
+    it('realizes select with target: markers', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'markers', bounds: { min: 1, max: 3 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1-3 markers');
+    });
+
+    it('realizes select with target: rows', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'rows', bounds: { min: 1, max: 1 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1 row');
+    });
+
+    it('realizes select with optionHints (<=5 items)', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'items', bounds: { min: 1, max: 1 }, optionHints: ['Fold', 'Call', 'Raise'] };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Choose from: Fold, Call, Raise');
+    });
+
+    it('realizes select with optionHints resolving labels through verbalization', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'items', bounds: { min: 1, max: 1 }, optionHints: ['sweep', 'operations'] };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Choose from: Sweep, Operations');
+    });
+
+    it('realizes select without optionHints when >5 items', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'items', bounds: { min: 0, max: 3 }, optionHints: ['a', 'b', 'c', 'd', 'e', 'f'] };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select up to 3 items');
+    });
+
     it('filters out suppressed messages', () => {
       const msg: TooltipMessage = { kind: 'suppressed', astPath: 'r', reason: 'internal' };
       const result = realizeContentPlan(plan([msg]), undefined);

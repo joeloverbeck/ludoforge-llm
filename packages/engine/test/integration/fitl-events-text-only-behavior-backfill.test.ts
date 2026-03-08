@@ -47,11 +47,6 @@ const hasBehavior = (side: unknown): boolean => {
   );
 };
 
-const sideEffectsWithTargetFallback = (
-  side: { effects?: readonly unknown[]; targets?: ReadonlyArray<{ effects?: readonly unknown[] }> } | undefined,
-): readonly unknown[] =>
-  side?.effects ?? side?.targets?.[0]?.effects ?? [];
-
 describe('FITL text-only card behavior backfill', () => {
   it('ensures all ticketed cards now carry executable behavior payloads', () => {
     const { parsed, compiled } = compileProductionSpec();
@@ -82,16 +77,20 @@ describe('FITL text-only card behavior backfill', () => {
 
     const card47 = cardById.get('card-47');
     assert.equal((card47?.unshaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 1);
-    assert.equal((sideEffectsWithTargetFallback(card47?.unshaded)?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 3);
+    assert.equal(card47?.unshaded?.effects, undefined);
+    assert.equal((card47?.unshaded?.targets?.[0]?.effects?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 3);
 
     const card44 = cardById.get('card-44');
     assert.deepEqual(card44?.unshaded?.freeOperationGrants?.map((grant) => grant.actionIds?.[0]), ['airLift', 'sweep', 'assault']);
     assert.equal((card44?.shaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 1);
-    assert.equal(typeof (sideEffectsWithTargetFallback(card44?.shaded)?.[0] as { rollRandom?: unknown })?.rollRandom, 'object');
+    assert.equal(card44?.shaded?.effects, undefined);
+    assert.equal(typeof (card44?.shaded?.targets?.[0]?.effects?.[0] as { rollRandom?: unknown })?.rollRandom, 'object');
 
     const card53 = cardById.get('card-53');
-    assert.equal((sideEffectsWithTargetFallback(card53?.unshaded)?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 3);
-    assert.equal((sideEffectsWithTargetFallback(card53?.shaded)?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 3);
+    assert.equal(card53?.unshaded?.effects, undefined);
+    assert.equal(card53?.shaded?.effects, undefined);
+    assert.equal((card53?.unshaded?.targets?.[0]?.effects?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 3);
+    assert.equal((card53?.shaded?.targets?.[0]?.effects?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 3);
 
     const card64 = cardById.get('card-64');
     assert.deepEqual(card64?.unshaded?.effects, [
@@ -123,16 +122,21 @@ describe('FITL text-only card behavior backfill', () => {
 
     const card83 = cardById.get('card-83');
     assert.equal((card83?.unshaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 3);
-    assert.equal((sideEffectsWithTargetFallback(card83?.unshaded)?.[1] as { addVar?: { var?: string; delta?: number } })?.addVar?.var, 'aid');
+    assert.equal(card83?.unshaded?.effects, undefined);
+    assert.equal((card83?.unshaded?.targets?.[0]?.effects?.[1] as { addVar?: { var?: string; delta?: number } })?.addVar?.var, 'aid');
 
     const card85 = cardById.get('card-85');
     assert.equal((card85?.unshaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 2);
-    assert.equal((sideEffectsWithTargetFallback(card85?.unshaded)?.[0] as { shiftMarker?: { delta?: number } })?.shiftMarker?.delta, 1);
-    assert.equal((sideEffectsWithTargetFallback(card85?.shaded)?.[0] as { shiftMarker?: { delta?: number } })?.shiftMarker?.delta, -1);
+    assert.equal(card85?.unshaded?.effects, undefined);
+    assert.equal(card85?.shaded?.effects, undefined);
+    assert.equal((card85?.unshaded?.targets?.[0]?.effects?.[0] as { shiftMarker?: { delta?: number } })?.shiftMarker?.delta, 1);
+    assert.equal((card85?.shaded?.targets?.[0]?.effects?.[0] as { shiftMarker?: { delta?: number } })?.shiftMarker?.delta, -1);
 
     const card87 = cardById.get('card-87');
-    assert.equal((sideEffectsWithTargetFallback(card87?.unshaded)?.[1] as { shiftMarker?: { delta?: number } })?.shiftMarker?.delta, 1);
-    assert.equal((sideEffectsWithTargetFallback(card87?.shaded)?.[2] as { shiftMarker?: { delta?: number } })?.shiftMarker?.delta, -1);
+    assert.equal(card87?.unshaded?.effects, undefined);
+    assert.equal(card87?.shaded?.effects, undefined);
+    assert.equal((card87?.unshaded?.targets?.[0]?.effects?.[1] as { shiftMarker?: { delta?: number } })?.shiftMarker?.delta, 1);
+    assert.equal((card87?.shaded?.targets?.[0]?.effects?.[2] as { shiftMarker?: { delta?: number } })?.shiftMarker?.delta, -1);
 
     const card89 = cardById.get('card-89');
     assert.equal((card89?.unshaded?.effects?.[1] as { addVar?: { delta?: number } })?.addVar?.delta, 3);
@@ -146,19 +150,23 @@ describe('FITL text-only card behavior backfill', () => {
 
     const card98 = cardById.get('card-98');
     assert.equal(card98?.unshaded?.branches?.length, 2);
-    assert.equal((sideEffectsWithTargetFallback(card98?.shaded)?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 2);
+    assert.equal(card98?.shaded?.effects, undefined);
+    assert.equal((card98?.shaded?.targets?.[0]?.effects?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 2);
 
     const card100 = cardById.get('card-100');
     assert.equal(card100?.unshaded?.branches?.length, 2);
+    assert.equal(card100?.shaded?.effects, undefined);
     assert.equal(
-      typeof (sideEffectsWithTargetFallback(card100?.shaded)?.[0] as { rollRandom?: unknown })?.rollRandom,
+      typeof (card100?.shaded?.targets?.[0]?.effects?.[0] as { rollRandom?: unknown })?.rollRandom,
       'object',
       'card-100 shaded must include die-roll removal logic',
     );
 
     const card102 = cardById.get('card-102');
-    assert.equal((sideEffectsWithTargetFallback(card102?.unshaded)?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 99);
-    assert.equal(typeof (sideEffectsWithTargetFallback(card102?.shaded)?.[0] as { forEach?: unknown })?.forEach, 'object');
+    assert.equal(card102?.unshaded?.effects, undefined);
+    assert.equal(card102?.shaded?.effects, undefined);
+    assert.equal((card102?.unshaded?.targets?.[0]?.effects?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 99);
+    assert.equal(typeof (card102?.shaded?.targets?.[0]?.effects?.[0] as { forEach?: unknown })?.forEach, 'object');
 
     const card105 = cardById.get('card-105');
     assert.equal((card105?.unshaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 4);
@@ -173,8 +181,9 @@ describe('FITL text-only card behavior backfill', () => {
     assert.equal(typeof (card108?.shaded?.effects?.[0] as { let?: unknown })?.let, 'object');
 
     const card114 = cardById.get('card-114');
-    assert.equal((sideEffectsWithTargetFallback(card114?.unshaded)?.[0] as { setMarker?: { state?: string } })?.setMarker?.state, 'passiveSupport');
-    assert.equal((sideEffectsWithTargetFallback(card114?.shaded)?.[0] as { shiftMarker?: { space?: string } })?.shiftMarker?.space, 'hue:none');
-    assert.equal((sideEffectsWithTargetFallback(card114?.shaded)?.[3] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 1);
+    assert.equal(card114?.unshaded?.effects, undefined);
+    assert.equal((card114?.unshaded?.targets?.[0]?.effects?.[0] as { setMarker?: { state?: string } })?.setMarker?.state, 'passiveSupport');
+    assert.equal((card114?.shaded?.effects?.[0] as { shiftMarker?: { space?: string } })?.shiftMarker?.space, 'hue:none');
+    assert.equal((card114?.shaded?.effects?.[3] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 1);
   });
 });

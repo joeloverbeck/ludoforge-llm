@@ -48,6 +48,7 @@ describe('FITL tutorial capability/momentum event-card production spec', () => {
       card?.shaded?.text,
       'Infiltrators turn mines around: remove 1 COIN Base and 1 Underground Insurgent from a space with both (US to Casualties).',
     );
+    assert.equal(card?.shaded?.effects, undefined);
 
     assert.deepEqual(card?.unshaded?.eligibilityOverrides, [
       { target: { kind: 'active' }, eligible: true, windowId: 'remain-eligible' },
@@ -61,7 +62,7 @@ describe('FITL tutorial capability/momentum event-card production spec', () => {
       },
     ]);
 
-    const shadedRemovals = (card?.shaded?.effects ?? card?.shaded?.targets?.[0]?.effects ?? []).filter((effect) => 'removeByPriority' in effect);
+    const shadedRemovals = (card?.shaded?.targets?.[0]?.effects ?? []).filter((effect) => 'removeByPriority' in effect);
     assert.equal(shadedRemovals.length, 2);
     const first = shadedRemovals[0];
     const second = shadedRemovals[1];

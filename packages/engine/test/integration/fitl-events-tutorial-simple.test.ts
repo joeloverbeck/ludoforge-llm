@@ -56,13 +56,15 @@ describe('FITL tutorial simple event-card production spec', () => {
       card?.unshaded?.branches?.map((branch) => branch.id),
       ['return-us-bases-and-aid', 'return-arvn-bases-and-resources'],
     );
-    const unshadedAid = (card?.unshaded?.branches?.[0]?.effects ?? card?.unshaded?.branches?.[0]?.targets?.[0]?.effects)?.find((effect) => 'addVar' in effect);
+    assert.equal(card?.unshaded?.branches?.[0]?.effects, undefined);
+    assert.equal(card?.unshaded?.branches?.[1]?.effects, undefined);
+    const unshadedAid = card?.unshaded?.branches?.[0]?.targets?.[0]?.effects?.find((effect) => 'addVar' in effect);
     assert.deepEqual(unshadedAid, { addVar: { scope: 'global', var: 'aid', delta: 12 } });
-    const unshadedUsReturn = (card?.unshaded?.branches?.[0]?.effects ?? card?.unshaded?.branches?.[0]?.targets?.[0]?.effects)?.find((effect) => 'removeByPriority' in effect);
+    const unshadedUsReturn = card?.unshaded?.branches?.[0]?.targets?.[0]?.effects?.find((effect) => 'removeByPriority' in effect);
     assert.notEqual(unshadedUsReturn, undefined);
-    const unshadedResources = (card?.unshaded?.branches?.[1]?.effects ?? card?.unshaded?.branches?.[1]?.targets?.[0]?.effects)?.find((effect) => 'addVar' in effect);
+    const unshadedResources = card?.unshaded?.branches?.[1]?.targets?.[0]?.effects?.find((effect) => 'addVar' in effect);
     assert.deepEqual(unshadedResources, { addVar: { scope: 'global', var: 'arvnResources', delta: 6 } });
-    const unshadedArvnReturn = (card?.unshaded?.branches?.[1]?.effects ?? card?.unshaded?.branches?.[1]?.targets?.[0]?.effects)?.find((effect) => 'removeByPriority' in effect);
+    const unshadedArvnReturn = card?.unshaded?.branches?.[1]?.targets?.[0]?.effects?.find((effect) => 'removeByPriority' in effect);
     assert.notEqual(unshadedArvnReturn, undefined);
 
     assert.deepEqual(
@@ -145,18 +147,20 @@ describe('FITL tutorial simple event-card production spec', () => {
     const unshadedTarget = card?.unshaded?.targets?.[0];
     assert.equal(unshadedTarget?.selector?.query, 'mapSpaces');
     assert.deepEqual(unshadedTarget?.cardinality, { max: 6 });
-    const unshadedPlace = (card?.unshaded?.effects ?? card?.unshaded?.targets?.[0]?.effects)?.find((effect) => 'removeByPriority' in effect);
+    assert.equal(card?.unshaded?.effects, undefined);
+    const unshadedPlace = card?.unshaded?.targets?.[0]?.effects?.find((effect) => 'removeByPriority' in effect);
     assert.notEqual(unshadedPlace, undefined);
     assert.equal(unshadedPlace?.removeByPriority.budget, 6);
 
     const shadedTarget = card?.shaded?.targets?.[0];
     assert.equal(shadedTarget?.selector?.query, 'mapSpaces');
     assert.deepEqual(shadedTarget?.cardinality, { max: 3 });
-    const shadedShift = (card?.shaded?.effects ?? card?.shaded?.targets?.[0]?.effects)?.find((effect) => 'shiftMarker' in effect);
+    assert.equal(card?.shaded?.effects, undefined);
+    const shadedShift = card?.shaded?.targets?.[0]?.effects?.find((effect) => 'shiftMarker' in effect);
     assert.deepEqual(shadedShift, {
       shiftMarker: { space: '$targetProvince', marker: 'supportOpposition', delta: -1 },
     });
-    const shadedPlace = (card?.shaded?.effects ?? card?.shaded?.targets?.[0]?.effects)?.find((effect) => 'removeByPriority' in effect);
+    const shadedPlace = card?.shaded?.targets?.[0]?.effects?.find((effect) => 'removeByPriority' in effect);
     assert.notEqual(shadedPlace, undefined);
     assert.equal(shadedPlace?.removeByPriority.budget, 3);
   });

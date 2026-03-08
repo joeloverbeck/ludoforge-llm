@@ -1,9 +1,9 @@
 # FITLEVENTARCH-013: Enforce canonical decision-sequence export surface
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
-**Engine Changes**: Yes — kernel decision-sequence surface guard + regression tests
+**Engine Changes**: Yes — kernel decision-sequence export-surface guard (dedicated source-contract test)
 **Deps**: archive/tickets/FITLEVENTARCH/FITLEVENTARCH-012-unify-legal-move-admission-policy-surface-across-callsites.md
 
 ## Problem
@@ -15,8 +15,8 @@ Without a module-level contract test, future changes could silently re-add polic
 ## Assumption Reassessment (2026-03-08)
 
 1. `packages/engine/src/kernel/move-decision-sequence.ts` now exposes canonical surfaces (`classify...`, `is...Satisfiable`, `is...AdmittedForLegalMove`) and no longer exports `isMoveDecisionSequenceNotUnsatisfiable(...)`.
-2. Existing source-shape guards in `packages/engine/test/unit/kernel/legal-moves.test.ts` protect callsites, not the decision-sequence module export shape directly.
-3. Mismatch + correction: add a direct module-level guard so canonical surface ownership is enforced at the source of truth, not only downstream callsites.
+2. Existing source-shape guards in `packages/engine/test/unit/kernel/legal-moves.test.ts` already protect callsites/import usage, but they do not assert the export surface of `move-decision-sequence.ts` directly.
+3. Mismatch + correction: enforce module-level export ownership using a dedicated guard test file rather than extending behavior-focused `move-decision-sequence.test.ts`.
 
 ## Architecture Check
 
@@ -26,9 +26,9 @@ Without a module-level contract test, future changes could silently re-add polic
 
 ## What to Change
 
-### 1. Add decision-sequence surface guard test
+### 1. Add dedicated decision-sequence export-surface guard test
 
-Add a source-shape test that parses `move-decision-sequence.ts` and enforces canonical helper ownership.
+Add a focused source-shape contract test that parses `move-decision-sequence.ts` and enforces canonical helper ownership.
 
 ### 2. Assert no legacy helper reintroduction
 
@@ -36,7 +36,7 @@ Fail if `isMoveDecisionSequenceNotUnsatisfiable` or any equivalent unsatisfiable
 
 ## Files to Touch
 
-- `packages/engine/test/unit/kernel/move-decision-sequence.test.ts` (modify)
+- `packages/engine/test/unit/kernel/move-decision-sequence-export-surface-guard.test.ts` (new)
 
 ## Out of Scope
 
@@ -61,11 +61,26 @@ Fail if `isMoveDecisionSequenceNotUnsatisfiable` or any equivalent unsatisfiable
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/kernel/move-decision-sequence.test.ts` — add AST/source-shape contract assertions for canonical exports and forbidden legacy helper names.
+1. `packages/engine/test/unit/kernel/move-decision-sequence-export-surface-guard.test.ts` — AST/source-shape contract assertions for canonical exports and forbidden legacy helper names.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build`
-2. `node --test packages/engine/dist/test/unit/kernel/move-decision-sequence.test.js`
+2. `node --test packages/engine/dist/test/unit/kernel/move-decision-sequence-export-surface-guard.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint && pnpm -F @ludoforge/engine typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-08
+- **What changed**:
+  - Added dedicated source-contract guard test: `packages/engine/test/unit/kernel/move-decision-sequence-export-surface-guard.test.ts`.
+  - Enforced exact named export contract for `src/kernel/move-decision-sequence.ts`.
+  - Added explicit guard that legacy helper name `isMoveDecisionSequenceNotUnsatisfiable` is not reintroduced.
+- **Deviations from original plan**:
+  - Instead of modifying `move-decision-sequence.test.ts`, implemented a standalone guard test file to keep behavior tests separate from module API contract checks.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine build` ✅
+  - `node --test packages/engine/dist/test/unit/kernel/move-decision-sequence-export-surface-guard.test.js` ✅
+  - `pnpm -F @ludoforge/engine test` ✅
+  - `pnpm -F @ludoforge/engine lint && pnpm -F @ludoforge/engine typecheck` ✅

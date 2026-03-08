@@ -12703,6 +12703,8 @@
       "oddChipRemainder",
       "actedSinceLastFullRaise",
       "seatIndex"
-    ]
+    ],
+    "stageDescriptions": {},
+    "modifierEffects": {}
   }
 }

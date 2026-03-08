@@ -2337,6 +2337,12 @@ phase: [asPhaseId('main')],
       false,
       'event-path decision-policy must not depend on inline classify API imports',
     );
+    const missingBindingImports = collectNamedImportsByLocalName(sourceFile, './missing-binding-policy.js');
+    assert.equal(
+      missingBindingImports.get('MISSING_BINDING_POLICY_CONTEXTS'),
+      'MISSING_BINDING_POLICY_CONTEXTS',
+      'legal-moves.ts must import canonical missing-binding policy context identifiers',
+    );
 
     const helperCalls = collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceAdmittedForLegalMove');
     assert.equal(
@@ -2345,7 +2351,12 @@ phase: [asPhaseId('main')],
           return false;
         }
         const contextArg = unwrapTypeScriptExpression(call.arguments[3]!);
-        return ts.isStringLiteral(contextArg) && contextArg.text === 'legalMoves.eventDecisionSequence';
+        return (
+          ts.isPropertyAccessExpression(contextArg) &&
+          ts.isIdentifier(contextArg.expression) &&
+          contextArg.expression.text === 'MISSING_BINDING_POLICY_CONTEXTS' &&
+          contextArg.name.text === 'LEGAL_MOVES_EVENT_DECISION_SEQUENCE'
+        );
       }),
       true,
       'event-path admission must use canonical helper with legalMoves.eventDecisionSequence context',
@@ -2356,7 +2367,12 @@ phase: [asPhaseId('main')],
           return false;
         }
         const contextArg = unwrapTypeScriptExpression(call.arguments[3]!);
-        return ts.isStringLiteral(contextArg) && contextArg.text === 'legalMoves.pipelineDecisionSequence';
+        return (
+          ts.isPropertyAccessExpression(contextArg) &&
+          ts.isIdentifier(contextArg.expression) &&
+          contextArg.expression.text === 'MISSING_BINDING_POLICY_CONTEXTS' &&
+          contextArg.name.text === 'LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE'
+        );
       }),
       true,
       'pipeline-path admission must use canonical helper with legalMoves.pipelineDecisionSequence context',
@@ -2376,7 +2392,12 @@ phase: [asPhaseId('main')],
           return false;
         }
         const contextArg = unwrapTypeScriptExpression(call.arguments[1]!);
-        return ts.isStringLiteral(contextArg) && contextArg.text === 'legalMoves.eventDecisionSequence';
+        return (
+          ts.isPropertyAccessExpression(contextArg) &&
+          ts.isIdentifier(contextArg.expression) &&
+          contextArg.expression.text === 'MISSING_BINDING_POLICY_CONTEXTS' &&
+          contextArg.name.text === 'LEGAL_MOVES_EVENT_DECISION_SEQUENCE'
+        );
       }),
       false,
       'event-path should not inline shouldDeferMissingBinding policy checks',
@@ -2545,6 +2566,12 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
       false,
       'legal-moves-turn-order.ts must not import legacy unsatisfiable-only helper for admission',
     );
+    const missingBindingImports = collectNamedImportsByLocalName(sourceFile, './missing-binding-policy.js');
+    assert.equal(
+      missingBindingImports.get('MISSING_BINDING_POLICY_CONTEXTS'),
+      'MISSING_BINDING_POLICY_CONTEXTS',
+      'legal-moves-turn-order.ts must import canonical missing-binding policy context identifiers',
+    );
 
     const activeSeatCalls = collectCallExpressionsByIdentifier(sourceFile, 'requireCardDrivenActiveSeat');
     assert.equal(activeSeatCalls.length >= 2, true, 'turn-order helpers should resolve active seat at guarded boundaries');
@@ -2593,7 +2620,12 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
           return false;
         }
         const contextArg = unwrapTypeScriptExpression(call.arguments[3]!);
-        return ts.isStringLiteral(contextArg) && contextArg.text === 'legalMoves.freeOperationDecisionSequence';
+        return (
+          ts.isPropertyAccessExpression(contextArg) &&
+          ts.isIdentifier(contextArg.expression) &&
+          contextArg.expression.text === 'MISSING_BINDING_POLICY_CONTEXTS' &&
+          contextArg.name.text === 'LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE'
+        );
       }),
       true,
       'free-operation unresolved admission must use canonical helper with legalMoves.freeOperationDecisionSequence context',

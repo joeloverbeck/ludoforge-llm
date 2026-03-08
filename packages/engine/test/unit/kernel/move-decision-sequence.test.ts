@@ -9,6 +9,7 @@ import {
   classifyMoveDecisionSequenceSatisfiability,
   isMoveDecisionSequenceAdmittedForLegalMove,
   isMoveDecisionSequenceSatisfiable,
+  MISSING_BINDING_POLICY_CONTEXTS,
   pickDeterministicChoiceValue,
   resolveMoveDecisionSequence,
   type ChoicePendingRequest,
@@ -473,9 +474,9 @@ phase: [asPhaseId('main')],
 
     const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
     const contexts = [
-      'legalMoves.eventDecisionSequence',
-      'legalMoves.pipelineDecisionSequence',
-      'legalMoves.freeOperationDecisionSequence',
+      MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_EVENT_DECISION_SEQUENCE,
+      MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE,
+      MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
     ] as const;
     for (const context of contexts) {
       assert.equal(
@@ -527,9 +528,9 @@ phase: [asPhaseId('main')],
 
     const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
     const contexts = [
-      'legalMoves.eventDecisionSequence',
-      'legalMoves.pipelineDecisionSequence',
-      'legalMoves.freeOperationDecisionSequence',
+      MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_EVENT_DECISION_SEQUENCE,
+      MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE,
+      MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
     ] as const;
     for (const context of contexts) {
       assert.equal(
@@ -581,9 +582,9 @@ phase: [asPhaseId('main')],
 
     const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
     const contexts = [
-      'legalMoves.eventDecisionSequence',
-      'legalMoves.pipelineDecisionSequence',
-      'legalMoves.freeOperationDecisionSequence',
+      MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_EVENT_DECISION_SEQUENCE,
+      MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE,
+      MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
     ] as const;
     for (const context of contexts) {
       assert.throws(() =>

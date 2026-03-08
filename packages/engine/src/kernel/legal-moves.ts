@@ -16,7 +16,7 @@ import type { TurnFlowActionClass } from './types-turn-flow.js';
 import { shouldEnumerateLegalMoveForOutcome } from './legality-outcome.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import { decideLegalMovesPipelineViability, evaluatePipelinePredicateStatus } from './pipeline-viability-policy.js';
-import { shouldDeferMissingBinding } from './missing-binding-policy.js';
+import { MISSING_BINDING_POLICY_CONTEXTS, shouldDeferMissingBinding } from './missing-binding-policy.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -210,7 +210,13 @@ function enumerateParams(
       return null;
     }
     if (resolution.kind === 'invalidSpec') {
-      if (allowPendingBinding && shouldDeferMissingBinding(resolution.error, 'legalMoves.executorDuringParamEnumeration')) {
+      if (
+        allowPendingBinding &&
+        shouldDeferMissingBinding(
+          resolution.error,
+          MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_EXECUTOR_DURING_PARAM_ENUMERATION,
+        )
+      ) {
         return state.activePlayer;
       }
       throw selectorInvalidSpecError('legalMoves', 'executor', action, resolution.error);
@@ -354,7 +360,7 @@ function enumerateCurrentEventMoves(
         def,
         state,
         move,
-        'legalMoves.eventDecisionSequence',
+        MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_EVENT_DECISION_SEQUENCE,
         {
           budgets: enumeration.budgets,
           onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
@@ -478,7 +484,7 @@ export const enumerateLegalMoves = (
           def,
           state,
           { actionId: action.id, params: {} },
-          'legalMoves.pipelineDecisionSequence',
+          MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE,
           {
             budgets: enumeration.budgets,
             onWarning: (warning) => emitEnumerationWarning(enumeration, warning),

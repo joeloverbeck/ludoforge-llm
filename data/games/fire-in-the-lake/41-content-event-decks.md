@@ -3842,64 +3842,50 @@ eventDecks:
           branches:
             - id: return-us-bases-and-aid
               order: 1
-              targets:
-                - id: us-out-of-play-bases
-                  selector:
-                    query: players
-                  cardinality:
-                    max: 2
-                  application: aggregate
-                  effects:
-                    - removeByPriority:
-                        budget: 2
-                        groups:
-                          - bind: $usBaseOutOfPlay
-                            over:
-                              query: tokensInZone
-                              zone: out-of-play-US:none
-                              filter:
-                                op: and
-                                args:
-                                  - prop: faction
-                                    eq: US
-                                  - prop: type
-                                    eq: base
-                            to:
-                              zoneExpr: available-US:none
-                    - addVar:
-                        scope: global
-                        var: aid
-                        delta: 12
+              effects:
+                - removeByPriority:
+                    budget: 2
+                    groups:
+                      - bind: $usBaseOutOfPlay
+                        over:
+                          query: tokensInZone
+                          zone: out-of-play-US:none
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: US
+                              - prop: type
+                                eq: base
+                        to:
+                          zoneExpr: available-US:none
+                - addVar:
+                    scope: global
+                    var: aid
+                    delta: 12
             - id: return-arvn-bases-and-resources
               order: 2
-              targets:
-                - id: arvn-out-of-play-bases
-                  selector:
-                    query: players
-                  cardinality:
-                    max: 2
-                  application: aggregate
-                  effects:
-                    - removeByPriority:
-                        budget: 2
-                        groups:
-                          - bind: $arvnBaseOutOfPlay
-                            over:
-                              query: tokensInZone
-                              zone: out-of-play-ARVN:none
-                              filter:
-                                op: and
-                                args:
-                                  - prop: faction
-                                    eq: ARVN
-                                  - prop: type
-                                    eq: base
-                            to:
-                              zoneExpr: available-ARVN:none
-                    - addVar:
-                        scope: global
-                        var: arvnResources
-                        delta: 6
+              effects:
+                - removeByPriority:
+                    budget: 2
+                    groups:
+                      - bind: $arvnBaseOutOfPlay
+                        over:
+                          query: tokensInZone
+                          zone: out-of-play-ARVN:none
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                eq: ARVN
+                              - prop: type
+                                eq: base
+                        to:
+                          zoneExpr: available-ARVN:none
+                - addVar:
+                    scope: global
+                    var: arvnResources
+                    delta: 6
         shaded:
           text: "Moscow aids Hanoi: Improve the Trail 1 box. Then either Improve it 1 more box or add +10 NVA Resources."
           branches:

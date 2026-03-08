@@ -56,15 +56,13 @@ describe('FITL tutorial simple event-card production spec', () => {
       card?.unshaded?.branches?.map((branch) => branch.id),
       ['return-us-bases-and-aid', 'return-arvn-bases-and-resources'],
     );
-    assert.equal(card?.unshaded?.branches?.[0]?.effects, undefined);
-    assert.equal(card?.unshaded?.branches?.[1]?.effects, undefined);
-    const unshadedAid = card?.unshaded?.branches?.[0]?.targets?.[0]?.effects?.find((effect) => 'addVar' in effect);
+    const unshadedAid = card?.unshaded?.branches?.[0]?.effects?.find((effect) => 'addVar' in effect);
     assert.deepEqual(unshadedAid, { addVar: { scope: 'global', var: 'aid', delta: 12 } });
-    const unshadedUsReturn = card?.unshaded?.branches?.[0]?.targets?.[0]?.effects?.find((effect) => 'removeByPriority' in effect);
+    const unshadedUsReturn = card?.unshaded?.branches?.[0]?.effects?.find((effect) => 'removeByPriority' in effect);
     assert.notEqual(unshadedUsReturn, undefined);
-    const unshadedResources = card?.unshaded?.branches?.[1]?.targets?.[0]?.effects?.find((effect) => 'addVar' in effect);
+    const unshadedResources = card?.unshaded?.branches?.[1]?.effects?.find((effect) => 'addVar' in effect);
     assert.deepEqual(unshadedResources, { addVar: { scope: 'global', var: 'arvnResources', delta: 6 } });
-    const unshadedArvnReturn = card?.unshaded?.branches?.[1]?.targets?.[0]?.effects?.find((effect) => 'removeByPriority' in effect);
+    const unshadedArvnReturn = card?.unshaded?.branches?.[1]?.effects?.find((effect) => 'removeByPriority' in effect);
     assert.notEqual(unshadedArvnReturn, undefined);
 
     assert.deepEqual(

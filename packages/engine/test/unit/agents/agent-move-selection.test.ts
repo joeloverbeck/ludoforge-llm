@@ -41,6 +41,15 @@ describe('agent-move-selection helpers', () => {
     }
   });
 
+  it('pickRandom throws for empty candidates with stable message', () => {
+    const rng = createRng(17n);
+
+    assert.throws(
+      () => pickRandom([], rng),
+      /pickRandom requires at least one item/,
+    );
+  });
+
   it('selectStochasticFallback returns deterministic move + rng for identical seed', () => {
     const stochasticMoves = createMoves(3);
     const first = selectStochasticFallback(stochasticMoves, createRng(222n));
@@ -58,5 +67,13 @@ describe('agent-move-selection helpers', () => {
     assert.equal(result.move, stochasticMoves[0]);
     assert.equal(result.rng, rng);
   });
-});
 
+  it('selectStochasticFallback rejects empty stochastic move sets', () => {
+    const rng = createRng(29n);
+
+    assert.throws(
+      () => selectStochasticFallback([], rng),
+      /pickRandom requires at least one item/,
+    );
+  });
+});

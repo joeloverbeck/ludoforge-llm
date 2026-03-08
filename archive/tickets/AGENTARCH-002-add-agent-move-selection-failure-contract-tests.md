@@ -1,6 +1,6 @@
 # AGENTARCH-002: Add Agent Move Selection Failure-Contract Tests
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: Yes — agent helper test coverage only
@@ -14,13 +14,20 @@
 
 1. `pickRandom` throws `Error('pickRandom requires at least one item')` for empty arrays in `packages/engine/src/agents/agent-move-selection.ts`. — Verified.
 2. `packages/engine/test/unit/agents/agent-move-selection.test.ts` currently lacks empty-input failure assertions. — Verified.
-3. No active ticket in `tickets/*` currently covers failure-contract tests for this helper. — Verified mismatch; scope corrected to include this gap.
+3. No active ticket in `tickets/*` currently covers failure-contract tests for this helper. — Verified.
+
+## Scope Reassessment (2026-03-08)
+
+1. Scope remains test-only in `packages/engine/test/unit/agents/agent-move-selection.test.ts`.
+2. No runtime changes are required because the helper already enforces empty-input failure contracts.
+3. The ticket should validate exact error semantics for `pickRandom` and propagated rejection semantics for `selectStochasticFallback`.
 
 ## Architecture Check
 
-1. Explicit failure-contract tests make helper behavior robust and safe for future reuse across agent strategies.
+1. Explicit failure-contract tests harden the existing architecture by locking helper preconditions in a shared, reusable contract.
 2. Tests are purely game-agnostic helper contracts and do not introduce any game-specific logic into `GameDef`/sim/runtime layers.
-3. No backwards-compatibility or alias paths; this is strict contract hardening.
+3. This is more beneficial than the current test posture because it prevents accidental weakening of foundational agent selection behavior without changing runtime architecture.
+4. No backwards-compatibility or alias paths; this is strict contract hardening.
 
 ## What to Change
 
@@ -64,3 +71,19 @@ Add a test asserting fallback selection also throws for empty move lists (either
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/agents/agent-move-selection.test.js`
 2. `pnpm -F @ludoforge/engine test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-08
+- **What changed**:
+  - Added `pickRandom` empty-input failure-contract test asserting the stable message contract.
+  - Added `selectStochasticFallback` empty-input failure-contract test asserting propagated rejection.
+  - Corrected ticket assumption/scope wording before implementation to match actual repository state.
+- **Deviations from original plan**:
+  - Added an extra workspace-level verification run with `pnpm turbo test` in addition to the planned commands.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/agents/agent-move-selection.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm turbo test` passed.
+  - `pnpm turbo lint` passed.
+  - `pnpm turbo typecheck` passed.

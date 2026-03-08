@@ -14,8 +14,38 @@ describe('tooltip-value-stringifier', () => {
       assert.equal(stringifyZoneRef('saigon'), 'saigon');
     });
 
-    it('returns <expr> for zone expressions', () => {
-      assert.equal(stringifyZoneRef({ zoneExpr: { ref: 'binding', name: 'x' } }), '<expr>');
+    it('returns binding name for zone expressions with binding ref', () => {
+      assert.equal(stringifyZoneRef({ zoneExpr: { ref: 'binding', name: 'x' } }), 'x');
+    });
+
+    it('strips __macro_ prefix from string zone refs and humanizes', () => {
+      assert.equal(stringifyZoneRef('__macro_targetZone'), 'Target Zone');
+    });
+
+    it('strips __macro_ with double-underscore segments to semantic tail', () => {
+      assert.equal(
+        stringifyZoneRef('__macro_place_from_available__piece'),
+        'Piece',
+      );
+    });
+
+    it('humanizes __macro_ binding in zoneExpr', () => {
+      assert.equal(
+        stringifyZoneRef({ zoneExpr: { ref: 'binding', name: '__macro_foo__zone' } }),
+        'Zone',
+      );
+    });
+
+    it('never returns <expr> for a binding ref zoneExpr', () => {
+      const result = stringifyZoneRef({ zoneExpr: { ref: 'binding', name: '__macro_bar__dest' } });
+      assert.ok(!result.includes('<expr>'), `Got <expr> for binding ref: "${result}"`);
+    });
+
+    it('delegates non-binding zoneExpr to stringifyValueExpr', () => {
+      assert.equal(
+        stringifyZoneRef({ zoneExpr: { ref: 'gvar', var: 'targetZone' } }),
+        'targetZone',
+      );
     });
   });
 

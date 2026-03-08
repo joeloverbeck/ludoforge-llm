@@ -62,8 +62,12 @@ export const sanitizeBindingName = (
   return humanizeIdentifier(semantic);
 };
 
-export const stringifyZoneRef = (ref: ZoneRef): string =>
-  typeof ref === 'string' ? ref : '<expr>';
+export const stringifyZoneRef = (ref: ZoneRef): string => {
+  if (typeof ref === 'string') return sanitizeBindingName(ref);
+  // { zoneExpr: ValueExpr } — delegate to value stringifier (handles binding refs)
+  if ('zoneExpr' in ref) return stringifyValueExpr(ref.zoneExpr);
+  return '<expr>';
+};
 
 export const stringifyValueExpr = (expr: ValueExpr): string => {
   if (typeof expr === 'number' || typeof expr === 'boolean') return String(expr);

@@ -1,4 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
+import { hasBindingIdentifier, rankBindingIdentifierAlternatives } from '../contracts/index.js';
 import type {
   EventCardDef,
   EventDeckDef,
@@ -400,23 +401,31 @@ function lowerEventTargets(
       continue;
     }
 
+    const bindingScopes = buildOrderedTargetBindingScopes(
+      bindingScope,
+      accumulatedTargetBindings,
+      target.id,
+    );
     const selector = lowerQueryNode(
       target.selector,
-      buildConditionLoweringContext(context, bindingScope ?? []),
+      buildConditionLoweringContext(context, bindingScopes.selector),
       `${targetPath}.selector`,
     );
     diagnostics.push(...selector.diagnostics);
-    const targetBindingScope = [
-      ...(bindingScope ?? []),
-      ...accumulatedTargetBindings,
-      target.id,
-    ];
+    const selectorScopeDiagnostic = bindingQueryScopeDiagnostic(
+      target.selector,
+      bindingScopes.selector,
+      `${targetPath}.selector`,
+    );
+    if (selectorScopeDiagnostic !== null) {
+      diagnostics.push(selectorScopeDiagnostic);
+    }
     const loweredEffects = lowerOptionalEffects(
       target.effects,
       diagnostics,
       `${targetPath}.effects`,
       context,
-      targetBindingScope,
+      bindingScopes.effects,
     );
 
     loweredTargets.push({
@@ -427,6 +436,51 @@ function lowerEventTargets(
     accumulatedTargetBindings.push(target.id);
   }
   return loweredTargets;
+}
+
+function buildOrderedTargetBindingScopes(
+  outerScope: readonly string[] | undefined,
+  priorTargetBindings: readonly string[],
+  currentTargetId: string,
+): {
+  readonly selector: readonly string[];
+  readonly effects: readonly string[];
+} {
+  const orderedScope = [
+    ...(outerScope ?? []),
+    ...priorTargetBindings,
+  ];
+  return {
+    selector: orderedScope,
+    effects: [...orderedScope, currentTargetId],
+  };
+}
+
+function bindingQueryScopeDiagnostic(
+  selector: unknown,
+  bindingScope: readonly string[],
+  path: string,
+): Diagnostic | null {
+  if (selector === null || typeof selector !== 'object' || Array.isArray(selector)) {
+    return null;
+  }
+
+  const query = 'query' in selector ? selector.query : undefined;
+  if (query !== 'binding') {
+    return null;
+  }
+  const name = 'name' in selector ? selector.name : undefined;
+  if (typeof name !== 'string' || hasBindingIdentifier(name, bindingScope)) {
+    return null;
+  }
+  return {
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_BINDING_UNBOUND,
+    path: `${path}.name`,
+    severity: 'error',
+    message: `Unbound binding reference "${name}".`,
+    suggestion: 'Use a binding declared by action params or an in-scope effect binder.',
+    alternatives: rankBindingIdentifierAlternatives(name, bindingScope),
+  };
 }
 
 function lowerOptionalEffects(

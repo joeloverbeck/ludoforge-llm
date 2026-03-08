@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — FITL data shape migration + integration behavior assertions
-**Deps**: tickets/FITLEVECARENC-022-enable-dependent-target-selectors-in-event-card-compilation.md, archive/tickets/FITLEVENTARCH-006-event-target-canonical-payload-ownership.md, specs/29-fitl-event-card-encoding.md, data/games/fire-in-the-lake/41-content-event-decks.md
+**Deps**: archive/tickets/FITLEVECARENC-022-enable-dependent-target-selectors-in-event-card-compilation.md, archive/tickets/FITLEVENTARCH-006-event-target-canonical-payload-ownership.md, specs/29-fitl-event-card-encoding.md, data/games/fire-in-the-lake/41-content-event-decks.md
 
 ## Problem
 

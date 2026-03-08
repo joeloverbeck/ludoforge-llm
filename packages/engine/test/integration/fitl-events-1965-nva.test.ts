@@ -174,6 +174,6 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
     ]);
 
     assert.equal((card?.shaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 1);
-    assert.equal(typeof (card?.shaded?.effects?.[0] as { rollRandom?: unknown })?.rollRandom, 'object');
+    assert.equal(typeof (card?.shaded?.targets?.[0]?.effects?.[0] as { rollRandom?: unknown })?.rollRandom, 'object');
   });
 });

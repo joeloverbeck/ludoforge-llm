@@ -2748,7 +2748,8 @@
                                     "id",
                                     "selector",
                                     "cardinality",
-                                    "application"
+                                    "application",
+                                    "effects"
                                   ],
                                   "additionalProperties": false
                                 }
@@ -2938,7 +2939,8 @@
                               "id",
                               "selector",
                               "cardinality",
-                              "application"
+                              "application",
+                              "effects"
                             ],
                             "additionalProperties": false
                           }
@@ -3457,7 +3459,8 @@
                                     "id",
                                     "selector",
                                     "cardinality",
-                                    "application"
+                                    "application",
+                                    "effects"
                                   ],
                                   "additionalProperties": false
                                 }
@@ -3647,7 +3650,8 @@
                               "id",
                               "selector",
                               "cardinality",
-                              "application"
+                              "application",
+                              "effects"
                             ],
                             "additionalProperties": false
                           }

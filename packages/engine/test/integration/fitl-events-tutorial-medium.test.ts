@@ -61,13 +61,13 @@ describe('FITL tutorial medium event-card production spec', () => {
       assert.equal(hasLeaderFlip, true, `Expected leaderFlipped marker in ${branch.id}`);
     }
 
-    const shadedShift = card?.shaded?.effects?.find((effect) => 'shiftMarker' in effect);
+    const shadedShift = (card?.shaded?.effects ?? card?.shaded?.targets?.[0]?.effects)?.find((effect) => 'shiftMarker' in effect);
     assert.deepEqual(shadedShift, {
       shiftMarker: { space: '$targetCity', marker: 'supportOpposition', delta: -2 },
     });
 
     // Terror placement via zoneVar + global counter sync
-    const shadedTerror = card?.shaded?.effects?.filter((effect) => 'addVar' in effect);
+    const shadedTerror = (card?.shaded?.effects ?? card?.shaded?.targets?.[0]?.effects)?.filter((effect) => 'addVar' in effect);
     assert.equal(shadedTerror?.length, 2, 'Expected 2 addVar effects (zoneVar terrorCount + global counter)');
     const zoneVarTerror = shadedTerror?.find(
       (effect) => effect.addVar.scope === 'zoneVar' && effect.addVar.var === 'terrorCount',
@@ -124,7 +124,7 @@ describe('FITL tutorial medium event-card production spec', () => {
     assert.equal(card?.metadata?.period, '1964');
     assert.deepEqual(card?.metadata?.seatOrder, ['NVA', 'VC', 'US', 'ARVN']);
 
-    const unshadedRemoval = card?.unshaded?.effects?.find((effect) => 'removeByPriority' in effect);
+    const unshadedRemoval = (card?.unshaded?.effects ?? card?.unshaded?.targets?.[0]?.effects)?.find((effect) => 'removeByPriority' in effect);
     assert.notEqual(unshadedRemoval, undefined);
 
     const shadedTrail = card?.shaded?.effects?.find((effect) => 'addVar' in effect && effect.addVar.var === 'trail');

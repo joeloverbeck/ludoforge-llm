@@ -789,8 +789,6 @@ function validateEventCardSide(
     return;
   }
 
-  pushEventTargetExecutabilityDiagnostic(diagnostics, side, pathPrefix, cardId);
-
   validateEventFreeOperationGrants(
     diagnostics,
     side.freeOperationGrants,
@@ -824,13 +822,6 @@ function validateEventCardSide(
   }
 
   for (const [branchIndex, branch] of (side.branches ?? []).entries()) {
-    pushEventTargetExecutabilityDiagnostic(
-      diagnostics,
-      branch,
-      `${pathPrefix}.branches.${branchIndex}`,
-      cardId,
-    );
-
     validateEventFreeOperationGrants(
       diagnostics,
       branch.freeOperationGrants,
@@ -893,43 +884,6 @@ function validateEventCardSide(
       );
     }
   }
-}
-
-function pushEventTargetExecutabilityDiagnostic(
-  diagnostics: Diagnostic[],
-  scope: {
-    readonly targets?: EventSideDef['targets'];
-    readonly effects?: EventSideDef['effects'];
-    readonly branches?: EventSideDef['branches'];
-    readonly lastingEffects?: EventSideDef['lastingEffects'];
-  },
-  pathPrefix: string,
-  cardId: string,
-): void {
-  const targets = scope.targets;
-  if (targets === undefined || targets.length === 0) {
-    return;
-  }
-  const hasTargetExecutablePayload = targets.some((target) => {
-    const targetEffects = target.effects;
-    return targetEffects !== undefined && targetEffects.length > 0;
-  });
-  if (
-    hasTargetExecutablePayload
-    || scope.effects !== undefined
-    || scope.branches !== undefined
-    || scope.lastingEffects !== undefined
-  ) {
-    return;
-  }
-
-  diagnostics.push({
-    code: CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_EVENT_DECK_TARGETS_EXECUTABILITY_MISSING,
-    path: `${pathPrefix}.targets`,
-    severity: 'error',
-    message: `Event card "${cardId}" declares targets without executable gameplay payload at this scope.`,
-    suggestion: 'Add effects/branches/lastingEffects for this target declaration, or remove targets.',
-  });
 }
 
 function validateEventFreeOperationGrants(

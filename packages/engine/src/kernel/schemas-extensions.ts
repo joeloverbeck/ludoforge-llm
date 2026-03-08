@@ -59,7 +59,7 @@ const EventCardAggregateTargetSchema = z
   .object({
     ...EventCardTargetBaseShape,
     application: z.literal('aggregate'),
-    effects: z.array(EffectASTSchema).min(1).optional(),
+    effects: z.array(EffectASTSchema).min(1),
   })
   .strict();
 

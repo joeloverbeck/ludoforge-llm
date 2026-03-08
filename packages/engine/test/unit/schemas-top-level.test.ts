@@ -298,7 +298,15 @@ describe('top-level runtime schemas', () => {
             ],
           },
           shaded: {
-            targets: [{ id: 'us-troops', selector: { query: 'players' }, cardinality: { max: 3 }, application: 'aggregate' }],
+            targets: [
+              {
+                id: 'us-troops',
+                selector: { query: 'players' },
+                cardinality: { max: 3 },
+                application: 'aggregate',
+                effects: [{ shuffle: { zone: 'played:none' } }],
+              },
+            ],
             lastingEffects: [
               {
                 id: 'aid-mod',
@@ -347,6 +355,27 @@ describe('top-level runtime schemas', () => {
           sideMode: 'single',
           unshaded: {
             targets: [{ id: 'us-troops', selector: { query: 'players' }, cardinality: { max: 1 }, application: 'each' }],
+          },
+        },
+      ],
+    });
+
+    assert.equal(result.success, false);
+    assert.ok(result.error.issues.some((issue: { path: readonly PropertyKey[] }) => issue.path.join('.') === 'cards.0.unshaded.targets.0.effects'));
+  });
+
+  it('rejects event targets with application aggregate and missing target-local effects', () => {
+    const result = EventDeckSchema.safeParse({
+      id: 'fitl-events-initial',
+      drawZone: 'leader:none',
+      discardZone: 'played:none',
+      cards: [
+        {
+          id: 'card-82',
+          title: 'Domino Theory',
+          sideMode: 'single',
+          unshaded: {
+            targets: [{ id: 'us-troops', selector: { query: 'players' }, cardinality: { max: 1 }, application: 'aggregate' }],
           },
         },
       ],

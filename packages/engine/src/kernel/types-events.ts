@@ -19,7 +19,7 @@ export interface EventTargetDef {
   readonly selector: OptionsQuery;
   readonly cardinality: EventTargetCardinality;
   readonly application: EventTargetApplication;
-  readonly effects?: readonly EffectAST[];
+  readonly effects: readonly EffectAST[];
 }
 
 export interface EventLastingEffectDef {

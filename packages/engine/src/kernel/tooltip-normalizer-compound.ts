@@ -7,10 +7,11 @@
  * avoid circular module imports.
  */
 
-import type { EffectAST, ValueExpr, ConditionAST, OptionsQuery, NumericValueExpr, ZoneRef, TokenFilterExpr } from './types-ast.js';
+import type { EffectAST, ValueExpr, ConditionAST, OptionsQuery, TokenFilterExpr } from './types-ast.js';
 import type { TooltipMessage } from './tooltip-ir.js';
 import type { NormalizerContext } from './tooltip-normalizer.js';
 import { humanizeCondition } from './tooltip-modifier-humanizer.js';
+import { stringifyValueExpr, stringifyNumericExpr, stringifyZoneRef } from './tooltip-value-stringifier.js';
 
 /** Extract a single-key union member from EffectAST by its discriminant key. */
 type EffectOf<K extends string> = Extract<EffectAST, Record<K, unknown>>;
@@ -25,32 +26,6 @@ export type EffectRecurse = (
   ctx: NormalizerContext,
   basePath: string,
 ) => readonly TooltipMessage[];
-
-// --- Re-use stringifiers from parent via import-free local copies ---
-// These are intentionally kept minimal; the canonical copies live in
-// tooltip-normalizer.ts but are not exported (module-private). Duplicating
-// these tiny helpers avoids exporting internal utilities.
-
-const stringifyValueExpr = (expr: ValueExpr): string => {
-  if (typeof expr === 'number' || typeof expr === 'boolean') return String(expr);
-  if (typeof expr === 'string') return expr;
-  if ('ref' in expr) {
-    if (expr.ref === 'binding') return expr.name;
-    if (expr.ref === 'gvar') return expr.var;
-    if (expr.ref === 'pvar') return expr.var;
-    if (expr.ref === 'globalMarkerState') return expr.marker;
-    return '<ref>';
-  }
-  return '<expr>';
-};
-
-const stringifyNumericExpr = (expr: NumericValueExpr): string => {
-  if (typeof expr === 'number') return String(expr);
-  return stringifyValueExpr(expr as ValueExpr);
-};
-
-const stringifyZoneRef = (ref: ZoneRef): string =>
-  typeof ref === 'string' ? ref : '<expr>';
 
 // --- Helpers ---
 
@@ -69,8 +44,13 @@ export const isTokenQuery = (q: OptionsQuery): boolean =>
 
 // --- Filter stringifiers ---
 
+const stringifyPredicateValue = (value: ValueExpr | readonly (string | number | boolean)[]): string => {
+  if (Array.isArray(value)) return (value as readonly (string | number | boolean)[]).join(', ');
+  return stringifyValueExpr(value as ValueExpr);
+};
+
 const stringifyTokenFilter = (filter: TokenFilterExpr): string => {
-  if ('prop' in filter) return `${filter.prop} ${filter.op} ${stringifyValueExpr(filter.value as ValueExpr)}`;
+  if ('prop' in filter) return `${filter.prop} ${filter.op} ${stringifyPredicateValue(filter.value)}`;
   if (filter.op === 'not') return `NOT ${stringifyTokenFilter(filter.arg)}`;
   return (filter.args as readonly TokenFilterExpr[]).map(stringifyTokenFilter).join(` ${filter.op.toUpperCase()} `);
 };

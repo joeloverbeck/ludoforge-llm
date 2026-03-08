@@ -1,6 +1,6 @@
 # HUMREAACTTOO-001: Canonical ValueExpr Stringification
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new kernel module, refactor two normalizer modules
@@ -95,3 +95,16 @@ Remove the local copies of `stringifyValueExpr`, `stringifyNumericExpr`, `string
 
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-08
+- **What changed**:
+  - Created `packages/engine/src/kernel/tooltip-value-stringifier.ts` — canonical exported `stringifyValueExpr`, `stringifyNumericExpr`, `stringifyZoneRef` handling all 12 Reference types + arithmetic + aggregate + concat + conditional expressions.
+  - Updated `packages/engine/src/kernel/tooltip-normalizer.ts` — removed local stringifier copies, imports from new module.
+  - Updated `packages/engine/src/kernel/tooltip-normalizer-compound.ts` — removed local stringifier copies, imports from new module. Also fixed pre-existing unsafe `as ValueExpr` cast in `stringifyTokenFilter` by introducing `stringifyPredicateValue` that properly handles `ValueExpr | readonly (string | number | boolean)[]`.
+  - Created `packages/engine/test/unit/kernel/tooltip-value-stringifier.test.ts` — 30 unit tests.
+- **Deviations from plan**:
+  - Added `Array.isArray` guard on the `concat` branch of `stringifyValueExpr` to prevent collision with `Array.prototype.concat` when non-ValueExpr objects pass through (discovered via patrol action crash in integration tests).
+  - Added `stringifyPredicateValue` helper in compound normalizer to fix pre-existing unsafe cast of `TokenFilterPredicate.value` (which is `ValueExpr | readonly (string | number | boolean)[]`, not just `ValueExpr`). Array values now render as `"a, b, c"` instead of `<expr>`.
+- **Verification**: 4370/4370 engine tests pass, typecheck clean (3/3 packages).

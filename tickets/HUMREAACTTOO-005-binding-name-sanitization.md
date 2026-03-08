@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — new utility function, normalizer updates
-**Deps**: HUMREAACTTOO-001 (value stringifier must exist so sanitization can be applied there)
+**Deps**: None
 
 ## Problem
 

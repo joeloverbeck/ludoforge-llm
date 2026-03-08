@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — tooltip IR type change, normalizer-compound update, template realizer update
-**Deps**: None (independent of HUMREAACTTOO-001/002)
+**Deps**: None
 
 ## Problem
 

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new IR type, normalizer-compound update, content planner update, template realizer update
-**Deps**: None (independent of HUMREAACTTOO-001/002/003)
+**Deps**: None
 
 ## Problem
 

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — tooltip-modifier-humanizer updates
-**Deps**: HUMREAACTTOO-001 (canonical value stringifier must exist first)
+**Deps**: None
 
 ## Problem
 

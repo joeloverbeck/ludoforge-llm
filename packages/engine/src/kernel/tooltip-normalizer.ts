@@ -5,10 +5,11 @@
  * and macro override to tooltip-normalizer-compound.ts.
  */
 
-import type { EffectAST, ValueExpr, ZoneRef, NumericValueExpr, PlayerSel } from './types-ast.js';
+import type { EffectAST, ZoneRef, NumericValueExpr, PlayerSel } from './types-ast.js';
 import type { VerbalizationDef } from './verbalization-types.js';
 import type { TooltipMessage, VarScope } from './tooltip-ir.js';
 import { isSuppressed, isScaffoldingEffect } from './tooltip-suppression.js';
+import { stringifyValueExpr, stringifyNumericExpr, stringifyZoneRef } from './tooltip-value-stringifier.js';
 import {
   normalizeChooseN,
   normalizeChooseOne,
@@ -28,33 +29,12 @@ export interface NormalizerContext {
 /** Extract a single-key union member from EffectAST by its discriminant key. */
 type EffectOf<K extends string> = Extract<EffectAST, Record<K, unknown>>;
 
-const stringifyZoneRef = (ref: ZoneRef): string =>
-  typeof ref === 'string' ? ref : '<expr>';
-
 const stringifyPlayerSel = (sel: PlayerSel): string => {
   if (typeof sel === 'string') return sel;
   if ('id' in sel) return String(sel.id);
   if ('chosen' in sel) return sel.chosen;
   if ('relative' in sel) return sel.relative;
   return '<player>';
-};
-
-const stringifyValueExpr = (expr: ValueExpr): string => {
-  if (typeof expr === 'number' || typeof expr === 'boolean') return String(expr);
-  if (typeof expr === 'string') return expr;
-  if ('ref' in expr) {
-    if (expr.ref === 'binding') return expr.name;
-    if (expr.ref === 'gvar') return expr.var;
-    if (expr.ref === 'pvar') return expr.var;
-    if (expr.ref === 'globalMarkerState') return expr.marker;
-    return '<ref>';
-  }
-  return '<expr>';
-};
-
-const stringifyNumericExpr = (expr: NumericValueExpr): string => {
-  if (typeof expr === 'number') return String(expr);
-  return stringifyValueExpr(expr as ValueExpr);
 };
 
 type ScopeFields = {

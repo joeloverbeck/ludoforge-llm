@@ -116,4 +116,51 @@ describe('ModifiersSection', () => {
     fireEvent.click(toggle);
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
   });
+
+  it('renders condition with colon when description is non-empty', () => {
+    const modifiers: ContentModifier[] = [
+      { condition: 'Shaded', description: '+1 Troop per space' },
+    ];
+    render(createElement(ModifiersSection, {
+      modifiers,
+      activeModifierIndices: [],
+    }));
+
+    const list = screen.getByTestId('modifiers-list');
+    expect(list.textContent).toContain('Shaded:');
+    expect(list.textContent).toContain('+1 Troop per space');
+  });
+
+  it('renders condition without colon when description is empty', () => {
+    const modifiers: ContentModifier[] = [
+      { condition: 'Monsoon', description: '' },
+    ];
+    render(createElement(ModifiersSection, {
+      modifiers,
+      activeModifierIndices: [],
+    }));
+
+    const list = screen.getByTestId('modifiers-list');
+    expect(list.textContent).toContain('Monsoon');
+    expect(list.textContent).not.toContain('Monsoon:');
+  });
+
+  it('does not render description span when description is empty', () => {
+    const modifiers: ContentModifier[] = [
+      { condition: 'Monsoon', description: '' },
+    ];
+    const { container } = render(createElement(ModifiersSection, {
+      modifiers,
+      activeModifierIndices: [],
+    }));
+
+    const li = container.querySelector('li');
+    const spans = li!.querySelectorAll('span');
+    // Should have only the condition span (no description span, possibly checkmark)
+    const spanTexts = Array.from(spans).map((s) => s.textContent);
+    expect(spanTexts).not.toContain('');
+    // Verify no description class span exists with empty content
+    const descSpans = Array.from(spans).filter((s) => s.className.includes('description'));
+    expect(descSpans).toHaveLength(0);
+  });
 });

@@ -138,6 +138,7 @@ export interface ChooseMessage extends MessageBase {
   readonly kind: 'choose';
   readonly options: readonly string[];
   readonly paramName: string;
+  readonly optional?: boolean;
 }
 
 export interface RollMessage extends MessageBase {

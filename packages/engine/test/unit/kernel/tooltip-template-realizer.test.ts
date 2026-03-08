@@ -223,12 +223,12 @@ describe('realizeContentPlan', () => {
       assert.equal(result.steps[0]!.lines[0]!.text, 'Roll 1-6');
     });
 
-    it('realizes modifier', () => {
+    it('realizes modifier with condition+effect', () => {
       const msg: TooltipMessage = { kind: 'modifier', astPath: 'r', condition: 'monsoon', description: 'No air lift during Monsoon' };
       const result = realizeContentPlan(plan([msg]), undefined);
       // Modifiers are extracted to the plan's modifiers array by the content planner,
-      // but if one appears in messages, the realizer just outputs its description
-      assert.equal(result.steps[0]!.lines[0]!.text, 'No air lift during Monsoon');
+      // but if one appears in messages, the realizer outputs "condition: description"
+      assert.equal(result.steps[0]!.lines[0]!.text, 'monsoon: No air lift during Monsoon');
     });
 
     it('realizes blocker', () => {
@@ -463,6 +463,178 @@ describe('realizeContentPlan', () => {
       const result = realizeContentPlan(plan([msg1, msg2]), MOCK_VERB);
       assert.equal(result.steps[0]!.lines.length, 1);
       assert.equal(result.steps[0]!.lines[0]!.astPath, 'root.effects[0]');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Select bounds formatting (LEGTOOLT-005)
+  // ---------------------------------------------------------------------------
+
+  describe('select bounds formatting', () => {
+    it('min === max produces "Select N target" (not "Select N-N")', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'spaces', bounds: { min: 3, max: 3 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 3 spaces');
+    });
+
+    it('min === 1 and max === 1 produces singular "Select 1 target"', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'spaces', bounds: { min: 1, max: 1 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1 space');
+    });
+
+    it('min === 0 produces "Select up to max target"', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'spaces', bounds: { min: 0, max: 2 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select up to 2 spaces');
+    });
+
+    it('general range keeps "Select min-max target"', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'spaces', bounds: { min: 2, max: 5 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 2-5 spaces');
+    });
+
+    it('min === 0 with filter resolves filter through resolveLabel', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'spaces', bounds: { min: 0, max: 3 }, filter: 'usTroops' };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select up to 3 US Troops');
+    });
+
+    it('min === max === 1 with singular/plural filter uses singular', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'spaces', bounds: { min: 1, max: 1 }, filter: 'usTroops' };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1 US Troop');
+    });
+
+    it('min === max > 1 with singular/plural filter uses plural', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'spaces', bounds: { min: 3, max: 3 }, filter: 'usTroops' };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 3 US Troops');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Choose optional flag (LEGTOOLT-005)
+  // ---------------------------------------------------------------------------
+
+  describe('choose optional flag', () => {
+    it('appends "(optional)" when msg.optional is true', () => {
+      const msg: TooltipMessage = { kind: 'choose', astPath: 'r', options: ['sweep', 'operations'], paramName: 'action', optional: true };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Choose: Sweep, Operations (optional)');
+    });
+
+    it('does not append "(optional)" when optional is absent', () => {
+      const msg: TooltipMessage = { kind: 'choose', astPath: 'r', options: ['sweep', 'operations'], paramName: 'action' };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Choose: Sweep, Operations');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Stage description resolution (LEGTOOLT-005)
+  // ---------------------------------------------------------------------------
+
+  describe('stage description resolution', () => {
+    const VERB_WITH_STAGES: VerbalizationDef = {
+      ...MOCK_VERB,
+      stages: { train: 'Training Phase' },
+      stageDescriptions: {
+        us: {
+          train: { label: 'US Training', description: 'Deploy troops and build bases' },
+        },
+      },
+    };
+
+    it('resolves header through stageDescriptions when profileId matches', () => {
+      const p: ContentPlan = {
+        actionLabel: 'train',
+        steps: [{ stepNumber: 1, header: 'train', messages: [] }],
+        modifiers: [],
+      };
+      const result = realizeContentPlan(p, VERB_WITH_STAGES, 'us');
+      assert.equal(result.steps[0]!.header, 'US Training');
+    });
+
+    it('falls back to stages map when profileId has no matching entry', () => {
+      const p: ContentPlan = {
+        actionLabel: 'train',
+        steps: [{ stepNumber: 1, header: 'train', messages: [] }],
+        modifiers: [],
+      };
+      const result = realizeContentPlan(p, VERB_WITH_STAGES, 'nva');
+      assert.equal(result.steps[0]!.header, 'Training Phase');
+    });
+
+    it('falls back to resolveLabel when no stages match', () => {
+      const p: ContentPlan = {
+        actionLabel: 'train',
+        steps: [{ stepNumber: 1, header: 'unknownStage', messages: [] }],
+        modifiers: [],
+      };
+      const result = realizeContentPlan(p, VERB_WITH_STAGES, 'us');
+      assert.equal(result.steps[0]!.header, 'Unknown Stage');
+    });
+
+    it('falls back to resolveLabel when no profileId is provided', () => {
+      const p: ContentPlan = {
+        actionLabel: 'train',
+        steps: [{ stepNumber: 1, header: 'train', messages: [] }],
+        modifiers: [],
+      };
+      const result = realizeContentPlan(p, VERB_WITH_STAGES);
+      assert.equal(result.steps[0]!.header, 'Training Phase');
+    });
+
+    it('includes description as subtitle when available', () => {
+      const p: ContentPlan = {
+        actionLabel: 'train',
+        steps: [{ stepNumber: 1, header: 'train', messages: [] }],
+        modifiers: [],
+      };
+      const result = realizeContentPlan(p, VERB_WITH_STAGES, 'us');
+      assert.equal(result.steps[0]!.description, 'Deploy troops and build bases');
+    });
+
+    it('omits description when stageDescription has no description field', () => {
+      const verbNoDesc: VerbalizationDef = {
+        ...MOCK_VERB,
+        stageDescriptions: {
+          us: { train: { label: 'US Training' } },
+        },
+      };
+      const p: ContentPlan = {
+        actionLabel: 'train',
+        steps: [{ stepNumber: 1, header: 'train', messages: [] }],
+        modifiers: [],
+      };
+      const result = realizeContentPlan(p, verbNoDesc, 'us');
+      assert.equal(result.steps[0]!.description, undefined);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Modifier condition+effect (LEGTOOLT-005)
+  // ---------------------------------------------------------------------------
+
+  describe('modifier condition+effect realization', () => {
+    it('shows "condition: description" when description is non-empty and differs from condition', () => {
+      const msg: TooltipMessage = { kind: 'modifier', astPath: 'r', condition: 'monsoon', description: 'No air lift during Monsoon' };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'monsoon: No air lift during Monsoon');
+    });
+
+    it('shows just description when it equals condition', () => {
+      const msg: TooltipMessage = { kind: 'modifier', astPath: 'r', condition: 'same text', description: 'same text' };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'same text');
+    });
+
+    it('shows just condition when description is empty', () => {
+      const msg: TooltipMessage = { kind: 'modifier', astPath: 'r', condition: 'monsoon', description: '' };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'monsoon');
     });
   });
 

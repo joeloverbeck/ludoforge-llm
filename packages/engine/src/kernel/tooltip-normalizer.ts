@@ -397,7 +397,7 @@ export const normalizeEffect = (
   if ('shiftGlobalMarker' in effect) return normalizeShiftGlobalMarker(effect, astPath);
 
   // Compound / control-flow rules (28-35) — delegated, with DI recurse callback
-  if ('chooseN' in effect) return normalizeChooseN(effect, astPath);
+  if ('chooseN' in effect) return normalizeChooseN(effect, ctx, astPath);
   if ('chooseOne' in effect) return normalizeChooseOne(effect, astPath);
   if ('forEach' in effect) return normalizeForEach(effect, ctx, astPath, normalizeEffectList);
   if ('if' in effect) return normalizeIf(effect, ctx, astPath, normalizeEffectList);

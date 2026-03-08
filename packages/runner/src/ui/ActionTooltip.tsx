@@ -59,25 +59,36 @@ export function ActionTooltip({ description, anchorElement, onPointerEnter, onPo
             <ol className={styles.stepsList} data-testid="tooltip-steps">
               {tooltipPayload.ruleCard.steps.map((step) => (
                 <li key={step.stepNumber} className={styles.stepItem}>
-                  <span className={styles.stepHeader}>{step.header}</span>
-                  {step.lines.length > 0 && (
-                    <ul className={styles.stepLines}>
-                      {step.lines.map((line, li) => (
-                        <li key={`${step.stepNumber}-${li}`} className={styles.stepLine}>
-                          {line.text}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {step.subSteps !== undefined && step.subSteps.length > 0 && (
-                    <ol className={styles.subSteps}>
-                      {step.subSteps.map((sub) => (
-                        <li key={sub.stepNumber} className={styles.stepItem}>
-                          <span className={styles.stepHeader}>{sub.header}</span>
-                        </li>
-                      ))}
-                    </ol>
-                  )}
+                  <details open className={styles.stepDetails}>
+                    <summary className={styles.stepSummary}>{step.header}</summary>
+                    {step.lines.length > 0 && (
+                      <ul className={styles.stepLines}>
+                        {step.lines.map((line, li) => (
+                          <li key={`${step.stepNumber}-${li}`} className={styles.stepLine}>
+                            {line.text}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {step.subSteps !== undefined && step.subSteps.length > 0 && (
+                      <ol className={styles.subSteps}>
+                        {step.subSteps.map((sub) => (
+                          <li key={sub.stepNumber} className={styles.stepItem}>
+                            <span className={styles.stepHeader}>{sub.header}</span>
+                            {sub.lines.length > 0 && (
+                              <ul className={styles.stepLines}>
+                                {sub.lines.map((line, li) => (
+                                  <li key={`sub-${sub.stepNumber}-${li}`} className={styles.stepLine}>
+                                    {line.text}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                  </details>
                 </li>
               ))}
             </ol>

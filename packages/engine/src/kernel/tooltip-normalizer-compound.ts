@@ -7,9 +7,10 @@
  * avoid circular module imports.
  */
 
-import type { EffectAST, ValueExpr, ConditionAST, OptionsQuery, NumericValueExpr, ZoneRef } from './types-ast.js';
+import type { EffectAST, ValueExpr, ConditionAST, OptionsQuery, NumericValueExpr, ZoneRef, TokenFilterExpr } from './types-ast.js';
 import type { TooltipMessage } from './tooltip-ir.js';
 import type { NormalizerContext } from './tooltip-normalizer.js';
+import { humanizeCondition } from './tooltip-modifier-humanizer.js';
 
 /** Extract a single-key union member from EffectAST by its discriminant key. */
 type EffectOf<K extends string> = Extract<EffectAST, Record<K, unknown>>;
@@ -51,21 +52,6 @@ const stringifyNumericExpr = (expr: NumericValueExpr): string => {
 const stringifyZoneRef = (ref: ZoneRef): string =>
   typeof ref === 'string' ? ref : '<expr>';
 
-// --- Condition stringifier ---
-
-export const stringifyCondition = (cond: ConditionAST): string => {
-  if (typeof cond === 'boolean') return String(cond);
-  const c = cond as Record<string, unknown>;
-  if (c.op === 'and') return (c.args as ConditionAST[]).map(stringifyCondition).join(' AND ');
-  if (c.op === 'or') return (c.args as ConditionAST[]).map(stringifyCondition).join(' OR ');
-  if (c.op === 'not') return `NOT ${stringifyCondition(c.arg as ConditionAST)}`;
-  if (c.op === 'in') return `${stringifyValueExpr(c.item as ValueExpr)} in ${stringifyValueExpr(c.set as ValueExpr)}`;
-  if (c.op === 'adjacent' || c.op === 'connected') return String(c.op);
-  if (c.op === 'zonePropIncludes') return `${c.prop as string} includes ${stringifyValueExpr(c.value as ValueExpr)}`;
-  if (c.left !== undefined && c.right !== undefined) return `${stringifyValueExpr(c.left as ValueExpr)} ${c.op as string} ${stringifyValueExpr(c.right as ValueExpr)}`;
-  return '<condition>';
-};
-
 // --- Helpers ---
 
 export const getChooseNBounds = (p: EffectOf<'chooseN'>['chooseN']): { readonly min: number; readonly max: number } => {
@@ -81,24 +67,55 @@ export const isSpaceQuery = (q: OptionsQuery): boolean =>
 export const isTokenQuery = (q: OptionsQuery): boolean =>
   'query' in q && (q.query === 'tokensInZone' || q.query === 'tokensInMapSpaces' || q.query === 'tokensInAdjacentZones');
 
+// --- Filter stringifiers ---
+
+const stringifyTokenFilter = (filter: TokenFilterExpr): string => {
+  if ('prop' in filter) return `${filter.prop} ${filter.op} ${stringifyValueExpr(filter.value as ValueExpr)}`;
+  if (filter.op === 'not') return `NOT ${stringifyTokenFilter(filter.arg)}`;
+  return (filter.args as readonly TokenFilterExpr[]).map(stringifyTokenFilter).join(` ${filter.op.toUpperCase()} `);
+};
+
+const extractQueryFilter = (options: OptionsQuery, ctx: NormalizerContext): string | undefined => {
+  if (!('query' in options)) return undefined;
+  const q = options as Record<string, unknown>;
+
+  // Space queries: mapSpaces, zones, adjacentZones — filter has { condition? }
+  if (options.query === 'mapSpaces' || options.query === 'zones' || options.query === 'adjacentZones') {
+    const f = q.filter as { readonly condition?: ConditionAST } | undefined;
+    if (f?.condition !== undefined) return humanizeCondition(f.condition, ctx) ?? undefined;
+    return undefined;
+  }
+
+  // Token queries: tokensInZone, tokensInMapSpaces, tokensInAdjacentZones — filter is TokenFilterExpr
+  if (options.query === 'tokensInZone' || options.query === 'tokensInMapSpaces' || options.query === 'tokensInAdjacentZones') {
+    const f = q.filter as TokenFilterExpr | undefined;
+    if (f !== undefined) return stringifyTokenFilter(f);
+    return undefined;
+  }
+
+  return undefined;
+};
+
 // --- Compound rules (28-35, 41) ---
 
 export const normalizeChooseN = (
   payload: EffectOf<'chooseN'>,
+  ctx: NormalizerContext,
   astPath: string,
 ): readonly TooltipMessage[] => {
   const p = payload.chooseN;
   const bounds = getChooseNBounds(p);
+  const filter = extractQueryFilter(p.options, ctx);
 
   if (isSpaceQuery(p.options)) {
-    return [{ kind: 'select', target: 'spaces', bounds, astPath }];
+    return [{ kind: 'select', target: 'spaces', bounds, ...(filter !== undefined ? { filter } : {}), astPath }];
   }
 
   if (isTokenQuery(p.options)) {
-    return [{ kind: 'select', target: 'zones', bounds, astPath }];
+    return [{ kind: 'select', target: 'zones', bounds, ...(filter !== undefined ? { filter } : {}), astPath }];
   }
 
-  return [{ kind: 'select', target: 'items', bounds, astPath }];
+  return [{ kind: 'select', target: 'items', bounds, ...(filter !== undefined ? { filter } : {}), astPath }];
 };
 
 export const normalizeChooseOne = (
@@ -108,7 +125,17 @@ export const normalizeChooseOne = (
   const p = payload.chooseOne;
 
   if ('query' in p.options && p.options.query === 'enums') {
-    return [{ kind: 'choose', options: p.options.values, paramName: p.bind, astPath }];
+    const hasNone = p.options.values.some((v) => v.toLowerCase() === 'none');
+    const filteredOptions = hasNone
+      ? p.options.values.filter((v) => v.toLowerCase() !== 'none')
+      : p.options.values;
+    return [{
+      kind: 'choose',
+      options: filteredOptions,
+      paramName: p.bind,
+      ...(hasNone ? { optional: true } : {}),
+      astPath,
+    }];
   }
 
   return [{ kind: 'choose', options: [], paramName: p.bind, astPath }];
@@ -137,15 +164,20 @@ export const normalizeIf = (
   const { when, then: thenEffects } = payload.if;
   const elseEffects = payload.if.else;
 
-  const condStr = stringifyCondition(when);
+  const humanized = humanizeCondition(when, ctx);
 
   const thenMessages = recurse(thenEffects, ctx, `${astPath}.then`);
-
-  const modifier: TooltipMessage = { kind: 'modifier', condition: condStr, description: `If ${condStr}`, conditionAST: when, astPath };
 
   const elseMessages = elseEffects !== undefined
     ? recurse(elseEffects, ctx, `${astPath}.else`)
     : [];
+
+  if (humanized === null) {
+    const suppressed: TooltipMessage = { kind: 'suppressed', reason: 'internal condition', astPath };
+    return [suppressed, ...thenMessages, ...elseMessages];
+  }
+
+  const modifier: TooltipMessage = { kind: 'modifier', condition: humanized, description: `If ${humanized}`, conditionAST: when, astPath };
 
   return [modifier, ...thenMessages, ...elseMessages];
 };

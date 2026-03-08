@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Large
 **Engine Changes**: None — data-only
-**Deps**: LEGTOOLT-001 (schema extensions), LEGTOOLT-005 (template realizer consumes stageDescriptions/modifierEffects)
+**Deps**: LEGTOOLT-001 (schema extensions), archive/tickets/LEGTOOLT-005-template-realizer-improvements.md
 
 ## Problem
 
@@ -29,10 +29,10 @@ The FITL verbalization file (`data/games/fire-in-the-lake/05-verbalization.md`) 
 ### 1. Add `stageDescriptions` for US operation profiles
 
 Add `stageDescriptions` section to `05-verbalization.md` with entries for:
-- `train-us-profile`: selectSpaces, placeForces, etc.
-- `patrol-us-profile`: selectSpaces, moveForces, activateGuerrillas
-- `sweep-us-profile`: selectSpaces, activateGuerrillas
-- `assault-us-profile`: selectSpaces, removeEnemyPieces
+- `train-us-profile`: `select-spaces`, `resolve-per-space`, `cap-caps-bonus-police`, `sub-action`
+- `patrol-us-profile`: `select-locs`, `move-cubes`, `activate-guerrillas`, `free-assault`, `cap-m48-patrol-penalty`
+- `sweep-us-profile`: `select-spaces`, `move-troops`, `activate-guerrillas`, `cap-cobras-bonus-removal`, `cap-booby-traps-troop-cost`
+- `assault-us-profile`: `select-spaces`, `abrams-select-space`, `resolve-per-space`, `cap-m48-patton-bonus-removal`, `arvn-followup`
 
 Each entry has `label` (human-readable stage name) and optional `description` (what happens in that stage).
 
@@ -60,9 +60,9 @@ Add `$__macro_*` to the existing `suppressPatterns` list to suppress compiler-ge
 ### 4. Add US special activity stage descriptions
 
 Add `stageDescriptions` for:
-- `advise-us-profile`
-- `air-lift-us-profile`
-- `air-strike-us-profile`
+- `advise-profile`: `select-spaces`, `resolve-per-space`
+- `air-lift-profile`: `select-spaces`, `move-us-troops`, `move-coin-lift-pieces`, `air-lift-telemetry`
+- `air-strike-profile`: `select-spaces`, `remove-active-enemy-pieces`, `optional-trail-degrade`
 
 ## Files to Touch
 

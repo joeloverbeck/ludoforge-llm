@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — kernel boundary refactor for free-operation viability probing
-**Deps**: tickets/ENG-208-harden-free-operation-discovery-api-surface.md, tickets/ENG-209-strengthen-kernel-boundary-cycle-guards.md, packages/engine/src/kernel/turn-flow-eligibility.ts, packages/engine/src/kernel/effects-turn-flow.ts
+**Deps**: archive/tickets/ENG/ENG-208-harden-free-operation-discovery-api-surface.md, tickets/ENG-209-strengthen-kernel-boundary-cycle-guards.md, packages/engine/src/kernel/turn-flow-eligibility.ts, packages/engine/src/kernel/effects-turn-flow.ts
 
 ## Problem
 

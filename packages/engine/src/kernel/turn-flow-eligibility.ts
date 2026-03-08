@@ -17,7 +17,11 @@ import {
   type SeatResolutionContext,
 } from './seat-resolution.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
-import { doesGrantAuthorizeMove, isFreeOperationApplicableForMove } from './free-operation-discovery-analysis.js';
+import {
+  doesGrantAuthorizeMove,
+  isPendingFreeOperationGrantSequenceReady,
+} from './free-operation-grant-authorization.js';
+import { isFreeOperationApplicableForMove } from './free-operation-discovery-analysis.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
@@ -209,6 +213,9 @@ export const isFreeOperationGrantUsableInCurrentState = (
       },
     },
   };
+  if (!isPendingFreeOperationGrantSequenceReady(pendingProbeGrants, probeGrant)) {
+    return false;
+  }
 
   const actionIds = resolveGrantFreeOperationActionDomain(def, probeGrant);
   for (const actionId of actionIds) {

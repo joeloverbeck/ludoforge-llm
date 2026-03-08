@@ -55,6 +55,28 @@ const makeUniqueGrantId = (
   return candidate;
 };
 
+const buildSequenceProbeBlockers = (
+  grant: Extract<EffectAST, { readonly grantFreeOperation: unknown }>['grantFreeOperation'],
+  activeSeat: string,
+): readonly TurnFlowPendingFreeOperationGrant[] => {
+  const step = grant.sequence?.step;
+  if (step === undefined || step <= 0) {
+    return [];
+  }
+  return Array.from({ length: step }, (_, index) => ({
+    grantId: `__probe_blocker__:${grant.sequence!.chain}:${index}`,
+    seat: activeSeat,
+    operationClass: grant.operationClass,
+    ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
+    ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
+    ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
+    ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
+    remainingUses: 1,
+    sequenceBatchId: '__probeBatch__',
+    sequenceIndex: index,
+  }));
+};
+
 const consumePhaseTransitionBudget = (ctx: EffectContext, effectType: string): boolean => {
   const budget = ctx.phaseTransitionBudget;
   if (budget === undefined) {
@@ -202,6 +224,7 @@ export const applyGrantFreeOperation = (
       activeSeat,
       runtime.seatOrder,
       seatResolution,
+      { sequenceProbeBlockers: buildSequenceProbeBlockers(resolvedGrant, activeSeat) },
     )
   ) {
     return {

@@ -254,6 +254,43 @@ describe('applyGrantFreeOperation', () => {
       isEffectErrorCode(err, 'EFFECT_RUNTIME'),
     );
   });
+
+  it('keeps explicit viabilityPolicy on emitted pending grants', () => {
+    const ctx = makeCtx();
+    const effect = {
+      grantFreeOperation: {
+        seat: 'self',
+        operationClass: 'operation',
+        viabilityPolicy: 'emitAlways',
+      },
+    } as unknown as Extract<EffectAST, { readonly grantFreeOperation: unknown }>;
+
+    const result = applyGrantFreeOperation(effect, ctx);
+    const tos = result.state.turnOrderState;
+    if (tos.type !== 'cardDriven') throw new Error('Expected cardDriven');
+    const grants = tos.runtime.pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 1);
+    assert.equal(grants[0]?.viabilityPolicy, 'emitAlways');
+  });
+
+  it('suppresses effect-issued grants when viabilityPolicy requires current usability and probe fails', () => {
+    const ctx = makeCtx();
+    const effect = {
+      grantFreeOperation: {
+        seat: 'self',
+        operationClass: 'operation',
+        actionIds: ['attack'],
+        viabilityPolicy: 'requireUsableAtIssue',
+        zoneFilter: { op: '==', left: 1, right: 2 },
+      },
+    } as unknown as Extract<EffectAST, { readonly grantFreeOperation: unknown }>;
+
+    const result = applyGrantFreeOperation(effect, ctx);
+    const tos = result.state.turnOrderState;
+    if (tos.type !== 'cardDriven') throw new Error('Expected cardDriven');
+    const grants = tos.runtime.pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 0);
+  });
 });
 
 describe('applyGotoPhaseExact', () => {

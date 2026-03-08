@@ -3030,6 +3030,17 @@
                                     }
                                   ]
                                 },
+                                "allowDuringMonsoon": {
+                                  "type": "boolean"
+                                },
+                                "viabilityPolicy": {
+                                  "type": "string",
+                                  "enum": [
+                                    "emitAlways",
+                                    "requireUsableAtIssue",
+                                    "requireUsableForEventPlay"
+                                  ]
+                                },
                                 "remainingUses": {
                                   "type": "integer",
                                   "minimum": 1,
@@ -3073,7 +3084,7 @@
                                 "effects": {
                                   "type": "array",
                                   "items": {
-                                    "$ref": "#/definitions/anon_e772efcf"
+                                    "$ref": "#/definitions/anon_cc14512d"
                                   }
                                 },
                                 "moveParams": {
@@ -3375,13 +3386,13 @@
                     "setupEffects": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/definitions/anon_e772efcf"
+                        "$ref": "#/definitions/anon_cc14512d"
                       }
                     },
                     "teardownEffects": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/definitions/anon_e772efcf"
+                        "$ref": "#/definitions/anon_cc14512d"
                       }
                     },
                     "remainingTurnBoundaries": {
@@ -5253,7 +5264,7 @@
         }
       ]
     },
-    "anon_e772efcf": {
+    "anon_cc14512d": {
       "anyOf": [
         {
           "type": "object",
@@ -6645,13 +6656,13 @@
                 "then": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_e772efcf"
+                    "$ref": "#/definitions/anon_cc14512d"
                   }
                 },
                 "else": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_e772efcf"
+                    "$ref": "#/definitions/anon_cc14512d"
                   }
                 }
               },
@@ -6699,7 +6710,7 @@
                 "effects": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_e772efcf"
+                    "$ref": "#/definitions/anon_cc14512d"
                   }
                 },
                 "limit": {
@@ -6716,7 +6727,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_e772efcf"
+                    "$ref": "#/definitions/anon_cc14512d"
                   }
                 }
               },
@@ -6818,7 +6829,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_e772efcf"
+                    "$ref": "#/definitions/anon_cc14512d"
                   }
                 }
               },
@@ -6934,7 +6945,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_e772efcf"
+                    "$ref": "#/definitions/anon_cc14512d"
                   }
                 },
                 "macroOrigin": {
@@ -6982,7 +6993,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_e772efcf"
+                    "$ref": "#/definitions/anon_cc14512d"
                   }
                 },
                 "macroOrigin": {
@@ -7076,7 +7087,7 @@
                 "compute": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_e772efcf"
+                    "$ref": "#/definitions/anon_cc14512d"
                   }
                 },
                 "scoreExpr": {
@@ -7093,7 +7104,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_e772efcf"
+                    "$ref": "#/definitions/anon_cc14512d"
                   }
                 },
                 "macroOrigin": {
@@ -7498,7 +7509,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_e772efcf"
+                    "$ref": "#/definitions/anon_cc14512d"
                   }
                 },
                 "macroOrigin": {
@@ -7745,6 +7756,14 @@
                 },
                 "uses": {
                   "type": "number"
+                },
+                "viabilityPolicy": {
+                  "type": "string",
+                  "enum": [
+                    "emitAlways",
+                    "requireUsableAtIssue",
+                    "requireUsableForEventPlay"
+                  ]
                 },
                 "sequence": {
                   "type": "object",

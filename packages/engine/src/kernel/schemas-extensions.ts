@@ -12,6 +12,7 @@ import {
 import {
   TURN_FLOW_INTERRUPT_SELECTOR_EMPTY_MESSAGE,
   TURN_FLOW_ACTION_CLASS_VALUES,
+  TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
   TURN_FLOW_DURATION_VALUES,
   hasTurnFlowInterruptSelectorMatchField,
 } from '../contracts/index.js';
@@ -93,9 +94,7 @@ export const EventCardFreeOperationGrantSchema = z
     zoneFilter: ConditionASTSchema.optional(),
     allowDuringMonsoon: z.boolean().optional(),
     uses: IntegerSchema.min(1).optional(),
-    viabilityPolicy: z
-      .enum(['emitAlways', 'requireUsableAtIssue', 'requireUsableForEventPlay'])
-      .optional(),
+    viabilityPolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES).optional(),
   })
   .strict();
 
@@ -509,6 +508,8 @@ export const TurnFlowRuntimeStateSchema = z
             operationClass: TurnFlowActionClassSchema,
             actionIds: z.array(StringSchema.min(1)).min(1).optional(),
             zoneFilter: ConditionASTSchema.optional(),
+            allowDuringMonsoon: BooleanSchema.optional(),
+            viabilityPolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES).optional(),
             remainingUses: IntegerSchema.min(1),
             sequenceBatchId: StringSchema.min(1).optional(),
             sequenceIndex: IntegerSchema.min(0).optional(),

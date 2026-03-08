@@ -16,5 +16,6 @@ export * from './predicate-op-contract.js';
 export * from './token-filter-prop-contract.js';
 export * from './turn-flow-action-class-contract.js';
 export * from './turn-flow-contract.js';
+export * from './turn-flow-free-operation-grant-contract.js';
 export * from './turn-flow-interrupt-selector-contract.js';
 export * from './turn-flow-linked-window-contract.js';

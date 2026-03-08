@@ -1,7 +1,10 @@
 import type { PlayerId, TokenId, ZoneId } from './branded.js';
 import type { PredicateOp } from '../contracts/index.js';
 import type { ScopedVarEndpointContract, ScopedVarPayloadContract } from './scoped-var-contract.js';
-import type { TurnFlowActionClass } from '../contracts/index.js';
+import type {
+  TurnFlowActionClass,
+  TurnFlowFreeOperationGrantViabilityPolicy,
+} from '../contracts/index.js';
 
 export type NonEmptyReadonlyArray<T> = readonly [T, ...T[]];
 
@@ -489,6 +492,7 @@ export type EffectAST =
         readonly zoneFilter?: ConditionAST;
         readonly allowDuringMonsoon?: boolean;
         readonly uses?: number;
+        readonly viabilityPolicy?: TurnFlowFreeOperationGrantViabilityPolicy;
         readonly sequence?: {
           readonly chain: string;
           readonly step: number;

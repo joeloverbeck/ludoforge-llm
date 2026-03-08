@@ -7,10 +7,12 @@ import {
 } from '../kernel/choice-options-runtime-shape-diagnostic.js';
 import {
   TURN_FLOW_ACTION_CLASS_VALUES,
+  TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
   collectDeclaredBinderCandidatesFromEffectNode,
   hasBindingIdentifier,
   isCanonicalBindingIdentifier,
   isTurnFlowActionClass,
+  isTurnFlowFreeOperationGrantViabilityPolicy,
   rankBindingIdentifierAlternatives,
 } from '../contracts/index.js';
 import type {
@@ -1629,7 +1631,7 @@ function lowerGrantFreeOperationEffect(
 ): EffectLoweringResult<EffectAST> {
   if (typeof source.seat !== 'string') {
     return missingCapability(path, 'grantFreeOperation effect', source, [
-      '{ grantFreeOperation: { seat, operationClass, actionIds?, executeAsSeat?, zoneFilter?, allowDuringMonsoon?, uses?, id?, sequence? } }',
+      '{ grantFreeOperation: { seat, operationClass, actionIds?, executeAsSeat?, zoneFilter?, allowDuringMonsoon?, uses?, viabilityPolicy?, id?, sequence? } }',
     ]);
   }
   if (typeof source.operationClass !== 'string' || !isTurnFlowActionClass(source.operationClass)) {
@@ -1695,6 +1697,21 @@ function lowerGrantFreeOperationEffect(
     allowDuringMonsoon = source.allowDuringMonsoon;
   }
 
+  let viabilityPolicy: import('../contracts/index.js').TurnFlowFreeOperationGrantViabilityPolicy | undefined;
+  if (
+    source.viabilityPolicy !== undefined
+    && (typeof source.viabilityPolicy !== 'string' || !isTurnFlowFreeOperationGrantViabilityPolicy(source.viabilityPolicy))
+  ) {
+    diagnostics.push(...missingCapability(
+      `${path}.viabilityPolicy`,
+      'grantFreeOperation viabilityPolicy',
+      source.viabilityPolicy,
+      [...TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES],
+    ).diagnostics);
+  } else if (typeof source.viabilityPolicy === 'string') {
+    viabilityPolicy = source.viabilityPolicy;
+  }
+
   let loweredSequence: { readonly chain: string; readonly step: number } | undefined;
   if (source.sequence !== undefined) {
     if (!isRecord(source.sequence) || typeof source.sequence.chain !== 'string' || !isInteger(source.sequence.step) || source.sequence.step < 0) {
@@ -1726,6 +1743,7 @@ function lowerGrantFreeOperationEffect(
         ...(loweredZoneFilter === undefined ? {} : { zoneFilter: loweredZoneFilter }),
         ...(allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon }),
         ...(uses === undefined ? {} : { uses }),
+        ...(viabilityPolicy === undefined ? {} : { viabilityPolicy }),
         ...(loweredSequence === undefined ? {} : { sequence: loweredSequence }),
       },
     },

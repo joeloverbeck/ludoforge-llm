@@ -7,9 +7,16 @@ import { advancePhase, buildAdvancePhaseRequest } from './phase-advance.js';
 import { findPhaseDef } from './phase-lookup.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { resolveBindingTemplate } from './binding-template.js';
-import { isTurnFlowActionClass } from '../contracts/index.js';
+import {
+  isTurnFlowActionClass,
+  isTurnFlowFreeOperationGrantViabilityPolicy,
+} from '../contracts/index.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { createEvalRuntimeResources } from './eval-context.js';
+import {
+  grantRequiresUsableProbe,
+  isFreeOperationGrantUsableInCurrentState,
+} from './turn-flow-eligibility.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, GameState, TurnFlowPendingFreeOperationGrant } from './types.js';
@@ -150,6 +157,19 @@ export const applyGrantFreeOperation = (
       uses,
     });
   }
+  if (
+    grant.viabilityPolicy !== undefined
+    && !isTurnFlowFreeOperationGrantViabilityPolicy(grant.viabilityPolicy)
+  ) {
+    throw effectRuntimeError(
+      EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
+      'grantFreeOperation.viabilityPolicy is invalid',
+      {
+        effectType: 'grantFreeOperation',
+        viabilityPolicy: grant.viabilityPolicy,
+      },
+    );
+  }
 
   const existing = runtime.pendingFreeOperationGrants ?? [];
   const fallbackBaseId = `freeOpEffect:${ctx.state.turnCount}:${activeSeat}:${existing.length}`;
@@ -163,14 +183,42 @@ export const applyGrantFreeOperation = (
     });
   }
 
+  const resolvedZoneFilter = grant.zoneFilter === undefined
+    ? undefined
+    : resolveTemplateTree(grant.zoneFilter, ctx.bindings);
+  const resolvedGrant = resolvedZoneFilter === undefined
+    ? grant
+    : {
+      ...grant,
+      zoneFilter: resolvedZoneFilter,
+    };
+
+  if (
+    grantRequiresUsableProbe(resolvedGrant)
+    && !isFreeOperationGrantUsableInCurrentState(
+      ctx.def,
+      ctx.state,
+      resolvedGrant,
+      activeSeat,
+      runtime.seatOrder,
+      seatResolution,
+    )
+  ) {
+    return {
+      state: ctx.state,
+      rng: ctx.rng,
+    };
+  }
+
   const appended: TurnFlowPendingFreeOperationGrant = {
     grantId,
     seat,
     ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
     operationClass: grant.operationClass,
     ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
-    ...(grant.zoneFilter === undefined ? {} : { zoneFilter: resolveTemplateTree(grant.zoneFilter, ctx.bindings) }),
+    ...(resolvedZoneFilter === undefined ? {} : { zoneFilter: resolvedZoneFilter }),
     ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
+    ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
     remainingUses: uses,
     ...(sequenceBatchId === undefined ? {} : { sequenceBatchId }),
     ...(sequenceIndex === undefined ? {} : { sequenceIndex }),

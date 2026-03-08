@@ -637,7 +637,18 @@ actor: 'active',
 executor: 'actor',
 phase: [asPhaseId('main')],
         params: [
-          { name: 'eventCardId', domain: { query: 'enums', values: ['card-require-usable-play', 'card-require-usable-issue'] } },
+          {
+            name: 'eventCardId',
+            domain: {
+              query: 'enums',
+              values: [
+                'card-require-usable-play',
+                'card-require-usable-issue',
+                'card-effect-require-usable-issue',
+                'card-effect-require-usable-issue-sequence',
+              ],
+            },
+          },
           { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
           { name: 'branch', domain: { query: 'enums', values: ['none'] } },
         ],
@@ -741,6 +752,67 @@ phase: [asPhaseId('main')],
                     op: '==',
                     left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
                     right: 'laos',
+                  },
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-effect-require-usable-issue',
+            title: 'Effect Issue-time Viability Required',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Effect-issued grants emit only when currently usable.',
+              effects: [
+                {
+                  grantFreeOperation: {
+                    seat: 'self',
+                    operationClass: 'operation',
+                    actionIds: ['operation'],
+                    viabilityPolicy: 'requireUsableAtIssue',
+                    zoneFilter: {
+                      op: '==',
+                      left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+                      right: 'cambodia',
+                    },
+                  },
+                },
+                {
+                  grantFreeOperation: {
+                    seat: 'self',
+                    operationClass: 'operation',
+                    actionIds: ['operation'],
+                    viabilityPolicy: 'requireUsableAtIssue',
+                    zoneFilter: { op: '==', left: 1, right: 2 },
+                  },
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-effect-require-usable-issue-sequence',
+            title: 'Effect Issue-time Viability Sequence Required',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Later sequence steps are not emitted when earlier steps are currently unusable.',
+              effects: [
+                {
+                  grantFreeOperation: {
+                    seat: 'self',
+                    operationClass: 'operation',
+                    actionIds: ['operation'],
+                    sequence: { chain: 'effect-issue-seq', step: 0 },
+                    viabilityPolicy: 'requireUsableAtIssue',
+                    zoneFilter: { op: '==', left: 1, right: 2 },
+                  },
+                },
+                {
+                  grantFreeOperation: {
+                    seat: 'self',
+                    operationClass: 'operation',
+                    actionIds: ['operation'],
+                    sequence: { chain: 'effect-issue-seq', step: 1 },
+                    viabilityPolicy: 'requireUsableAtIssue',
                   },
                 },
               ],
@@ -1274,6 +1346,33 @@ describe('event free-operation grants integration', () => {
     const grants = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
     assert.equal(grants.length, 1);
     assert.equal(grants[0]?.sequenceBatchId?.includes('issue-usable'), true);
+  });
+
+  it('applies requireUsableAtIssue parity for effect-issued grants', () => {
+    const def = createGrantViabilityPolicyDef();
+    const start = initialState(def, 113, 3).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-effect-require-usable-issue', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const grants = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 1);
+    assert.equal(grants.every((grant) => grant.viabilityPolicy === 'requireUsableAtIssue'), true);
+  });
+
+  it('does not emit sequence-later effect grants when earlier requireUsableAtIssue steps are currently unusable', () => {
+    const def = createGrantViabilityPolicyDef();
+    const start = initialState(def, 114, 3).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-effect-require-usable-issue-sequence', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const grants = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 0);
   });
 
   it('applies free-operation grants with executeAsSeat using the overridden action profile', () => {

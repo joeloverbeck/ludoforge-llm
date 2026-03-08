@@ -32,6 +32,7 @@ import {
   isCanonicalBindingIdentifier,
   tokenFilterPropAlternatives,
   TURN_FLOW_ACTION_CLASS_VALUES,
+  TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
 } from '../contracts/index.js';
 import {
   type ValidationContext,
@@ -1842,6 +1843,18 @@ export const validateEffectAst = (
         severity: 'error',
         message: 'grantFreeOperation.uses must be a positive integer.',
         suggestion: 'Set uses to an integer >= 1.',
+      });
+    }
+    if (
+      grant.viabilityPolicy !== undefined
+      && !(TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES as readonly string[]).includes(grant.viabilityPolicy)
+    ) {
+      diagnostics.push({
+        code: 'EFFECT_GRANT_FREE_OPERATION_VIABILITY_POLICY_INVALID',
+        path: `${path}.grantFreeOperation.viabilityPolicy`,
+        severity: 'error',
+        message: `grantFreeOperation.viabilityPolicy is invalid: "${grant.viabilityPolicy}".`,
+        suggestion: `Use one of: ${TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES.join('|')}.`,
       });
     }
     if (

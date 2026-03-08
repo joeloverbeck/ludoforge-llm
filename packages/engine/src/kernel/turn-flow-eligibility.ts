@@ -4,8 +4,11 @@ import {
   resolveEventEligibilityOverrides,
   resolveEventFreeOperationGrants,
 } from './event-execution.js';
-import { MISSING_BINDING_POLICY_CONTEXTS } from './missing-binding-policy.js';
-import { isMoveDecisionSequenceAdmittedForLegalMove, resolveMoveDecisionSequence } from './move-decision-sequence.js';
+import { MISSING_BINDING_POLICY_CONTEXTS, shouldDeferMissingBinding } from './missing-binding-policy.js';
+import {
+  isMoveDecisionSequenceSatisfiable,
+  resolveMoveDecisionSequence,
+} from './move-decision-sequence.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import {
   createSeatResolutionContext,
@@ -14,7 +17,7 @@ import {
   type SeatResolutionContext,
 } from './seat-resolution.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
-import { doesGrantAuthorizeMove, isFreeOperationApplicableForMove, isFreeOperationGrantedForMove } from './free-operation-discovery-analysis.js';
+import { doesGrantAuthorizeMove, isFreeOperationApplicableForMove } from './free-operation-discovery-analysis.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
@@ -25,10 +28,11 @@ import {
 import { resolveGrantFreeOperationActionDomain } from './free-operation-action-domain.js';
 import type {
   EventFreeOperationGrantDef,
-  EventFreeOperationGrantViabilityPolicy,
   GameDef,
   GameState,
   Move,
+  TurnFlowFreeOperationGrantContract,
+  TurnFlowFreeOperationGrantViabilityPolicy,
   TriggerLogEntry,
   TurnFlowDuration,
   TurnFlowDeferredEventEffectPayload,
@@ -136,25 +140,28 @@ const resolveGrantSeat = (
   return resolveSeatId(token, seatOrder);
 };
 
-const DEFAULT_EVENT_FREE_OPERATION_GRANT_VIABILITY_POLICY: EventFreeOperationGrantViabilityPolicy = 'emitAlways';
+export const DEFAULT_FREE_OPERATION_GRANT_VIABILITY_POLICY: TurnFlowFreeOperationGrantViabilityPolicy = 'emitAlways';
 
-const resolveEventFreeOperationGrantViabilityPolicy = (
-  grant: EventFreeOperationGrantDef,
-): EventFreeOperationGrantViabilityPolicy =>
-  grant.viabilityPolicy ?? DEFAULT_EVENT_FREE_OPERATION_GRANT_VIABILITY_POLICY;
+export const resolveFreeOperationGrantViabilityPolicy = (
+  grant: Pick<TurnFlowFreeOperationGrantContract, 'viabilityPolicy'>,
+): TurnFlowFreeOperationGrantViabilityPolicy =>
+  grant.viabilityPolicy ?? DEFAULT_FREE_OPERATION_GRANT_VIABILITY_POLICY;
 
-const grantRequiresUsableProbe = (grant: EventFreeOperationGrantDef): boolean => {
-  const policy = resolveEventFreeOperationGrantViabilityPolicy(grant);
+export const grantRequiresUsableProbe = (grant: Pick<TurnFlowFreeOperationGrantContract, 'viabilityPolicy'>): boolean => {
+  const policy = resolveFreeOperationGrantViabilityPolicy(grant);
   return policy === 'requireUsableAtIssue' || policy === 'requireUsableForEventPlay';
 };
 
-const isFreeOperationGrantUsableInCurrentState = (
+export const isFreeOperationGrantUsableInCurrentState = (
   def: GameDef,
   state: GameState,
-  grant: EventFreeOperationGrantDef,
+  grant: TurnFlowFreeOperationGrantContract,
   activeSeat: string,
   seatOrder: readonly string[],
   seatResolution: SeatResolutionContext,
+  options?: {
+    readonly sequenceProbeBlockers?: readonly TurnFlowPendingFreeOperationGrant[];
+  },
 ): boolean => {
   const runtime = cardDrivenRuntime(state);
   if (runtime === null) {
@@ -176,11 +183,11 @@ const isFreeOperationGrantUsableInCurrentState = (
   }
 
   const probeGrant: TurnFlowPendingFreeOperationGrant = {
-    ...toPendingFreeOperationGrant(grant, '__probe__', '__probeBatch__'),
+    ...toPendingFreeOperationGrant(grant, '__probe__', grant.sequence === undefined ? undefined : '__probeBatch__'),
     seat,
     ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
   };
-  const pendingProbeGrants = [...(runtime.pendingFreeOperationGrants ?? []), probeGrant];
+  const pendingProbeGrants = [...(options?.sequenceProbeBlockers ?? []), probeGrant];
   const probeActivePlayerIndex = resolvePlayerIndexForTurnFlowSeat(seat, seatResolution.index);
   const probeState: GameState = {
     ...state,
@@ -218,21 +225,23 @@ const isFreeOperationGrantUsableInCurrentState = (
     });
     if (
       decisionProbe.complete &&
-      isFreeOperationGrantedForMove(def, probeState, decisionProbe.move, seatResolution)
+      doesGrantAuthorizeMove(def, probeState, pendingProbeGrants, probeGrant, decisionProbe.move)
     ) {
       return true;
     }
     if (
       !decisionProbe.complete &&
-      decisionProbe.illegal === undefined &&
-      isMoveDecisionSequenceAdmittedForLegalMove(
-        def,
-        probeState,
-        probeMove,
-        MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
-      )
+      decisionProbe.illegal === undefined
     ) {
-      return true;
+      try {
+        if (isMoveDecisionSequenceSatisfiable(def, probeState, probeMove)) {
+          return true;
+        }
+      } catch (error) {
+        if (!shouldDeferMissingBinding(error, MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE)) {
+          throw error;
+        }
+      }
     }
   }
 
@@ -248,7 +257,7 @@ const isEventMoveBlockedByGrantViabilityPolicy = (
   seatResolution: SeatResolutionContext,
 ): boolean => {
   for (const grant of resolveEventFreeOperationGrants(def, state, move)) {
-    if (resolveEventFreeOperationGrantViabilityPolicy(grant) !== 'requireUsableForEventPlay') {
+    if (resolveFreeOperationGrantViabilityPolicy(grant) !== 'requireUsableForEventPlay') {
       continue;
     }
     if (!isFreeOperationGrantUsableInCurrentState(def, state, grant, activeSeat, seatOrder, seatResolution)) {
@@ -307,9 +316,9 @@ const extractPendingEligibilityOverrides = (
 };
 
 const toPendingFreeOperationGrant = (
-  grant: EventFreeOperationGrantDef,
+  grant: TurnFlowFreeOperationGrantContract,
   grantId: string,
-  sequenceBatchId: string,
+  sequenceBatchId: string | undefined,
 ): TurnFlowPendingFreeOperationGrant => ({
   grantId,
   seat: grant.seat,
@@ -318,9 +327,10 @@ const toPendingFreeOperationGrant = (
   ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
   ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
   ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
+  ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
   remainingUses: grant.uses ?? 1,
-  sequenceBatchId,
-  sequenceIndex: grant.sequence.step,
+  ...(sequenceBatchId === undefined ? {} : { sequenceBatchId }),
+  ...(grant.sequence === undefined ? {} : { sequenceIndex: grant.sequence.step }),
 });
 
 const pendingFreeOperationGrantBaseId = (
@@ -365,10 +375,24 @@ const extractPendingFreeOperationGrants = (
 ): readonly TurnFlowPendingFreeOperationGrant[] => {
   const extracted: TurnFlowPendingFreeOperationGrant[] = [];
   const emittedBatchBaseId = pendingFreeOperationGrantBatchBaseId(state, move);
-  for (const [grantIndex, grant] of resolveEventFreeOperationGrants(def, state, move).entries()) {
+  const declaredGrants = resolveEventFreeOperationGrants(def, state, move);
+  for (const [grantIndex, grant] of declaredGrants.entries()) {
+    const sequenceProbeBlockers = grant.sequence === undefined
+      ? []
+      : declaredGrants
+        .filter(
+          (candidate) =>
+            candidate.sequence !== undefined
+            && candidate.sequence.chain === grant.sequence.chain
+            && candidate.sequence.step < grant.sequence.step,
+        )
+        .map((candidate, blockerIndex) => ({
+          ...toPendingFreeOperationGrant(candidate, `__probe_blocker__:${grantIndex}:${blockerIndex}`, '__probeBatch__'),
+          seat: activeSeat,
+        }));
     if (
       grantRequiresUsableProbe(grant) &&
-      !isFreeOperationGrantUsableInCurrentState(def, state, grant, activeSeat, seatOrder, seatResolution)
+      !isFreeOperationGrantUsableInCurrentState(def, state, grant, activeSeat, seatOrder, seatResolution, { sequenceProbeBlockers })
     ) {
       continue;
     }

@@ -4,6 +4,25 @@ export type TurnFlowDuration = 'turn' | 'nextTurn' | 'round' | 'cycle';
 
 export type TurnFlowActionClass = CanonicalTurnFlowActionClass;
 
+export type TurnFlowFreeOperationGrantViabilityPolicy =
+  import('../contracts/index.js').TurnFlowFreeOperationGrantViabilityPolicy;
+
+export interface TurnFlowFreeOperationGrantContract {
+  readonly id?: string;
+  readonly seat: string;
+  readonly executeAsSeat?: string;
+  readonly operationClass: TurnFlowActionClass;
+  readonly actionIds?: readonly string[];
+  readonly zoneFilter?: import('./types-ast.js').ConditionAST;
+  readonly allowDuringMonsoon?: boolean;
+  readonly uses?: number;
+  readonly sequence?: {
+    readonly chain: string;
+    readonly step: number;
+  };
+  readonly viabilityPolicy?: TurnFlowFreeOperationGrantViabilityPolicy;
+}
+
 export interface TurnFlowCardLifecycleDef {
   readonly played: string;
   readonly lookahead: string;
@@ -137,6 +156,7 @@ export interface TurnFlowPendingFreeOperationGrant {
   readonly actionIds?: readonly string[];
   readonly zoneFilter?: import('./types-ast.js').ConditionAST;
   readonly allowDuringMonsoon?: boolean;
+  readonly viabilityPolicy?: TurnFlowFreeOperationGrantViabilityPolicy;
   readonly remainingUses: number;
   readonly sequenceBatchId?: string;
   readonly sequenceIndex?: number;

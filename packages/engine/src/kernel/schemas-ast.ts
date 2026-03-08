@@ -3,6 +3,7 @@ import {
   CANONICAL_BINDING_IDENTIFIER_MESSAGE,
   CANONICAL_BINDING_IDENTIFIER_PATTERN,
   TURN_FLOW_ACTION_CLASS_VALUES,
+  TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
 } from '../contracts/index.js';
 import { PREDICATE_OPERATORS } from '../contracts/index.js';
 import { AST_SCOPED_VAR_SCOPES, createScopedVarContractSchema } from './scoped-var-contract.js';
@@ -789,6 +790,7 @@ effectAstSchemaInternal = z.union([
           zoneFilter: ConditionASTSchema.optional(),
           allowDuringMonsoon: z.boolean().optional(),
           uses: NumberSchema.optional(),
+          viabilityPolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES).optional(),
           sequence: z
             .object({
               chain: StringSchema,

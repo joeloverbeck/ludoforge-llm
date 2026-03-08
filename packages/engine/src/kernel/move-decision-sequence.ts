@@ -148,7 +148,10 @@ export const isMoveDecisionSequenceAdmittedForLegalMove = (
   try {
     return classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime).classification !== 'unsatisfiable';
   } catch (error) {
-    return shouldDeferMissingBinding(error, context);
+    if (shouldDeferMissingBinding(error, context)) {
+      return true;
+    }
+    throw error;
   }
 };
 

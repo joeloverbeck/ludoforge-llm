@@ -2279,7 +2279,27 @@ phase: [asPhaseId('main')],
     assert.deepEqual(legalMoves(def, state), []);
   });
 
-  it('29. does not fall back to generic template enumeration for card-event actions', () => {
+  it('29. rethrows non-deferrable event decision-sequence errors', () => {
+    const { def, state } = makeEventLegalMovesFixture({
+      id: 'event-nondeferrable-error',
+      title: 'Non-deferrable event',
+      sideMode: 'single',
+      unshaded: {
+        effects: [
+          {
+            if: {
+              when: { op: '==', left: { ref: 'gvar', var: 'missingVar' }, right: 1 },
+              then: [],
+            },
+          } as GameDef['actions'][number]['effects'][number],
+        ],
+      },
+    });
+
+    assert.throws(() => legalMoves(def, state));
+  });
+
+  it('30. does not fall back to generic template enumeration for card-event actions', () => {
     const { def, actionId } = makeEventLegalMovesFixture({
       id: 'event-no-current-card',
       title: 'No current card',
@@ -2298,7 +2318,7 @@ phase: [asPhaseId('main')],
     assert.deepEqual(moves, []);
   });
 
-  it('30. routes event decision admission through canonical move-decision helper', () => {
+  it('31. routes event decision admission through canonical move-decision helper', () => {
     const source = readKernelSource('src/kernel/legal-moves.ts');
     const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');
     const imports = collectNamedImportsByLocalName(sourceFile, './move-decision-sequence.js');

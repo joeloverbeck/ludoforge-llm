@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — legal-move admission API unification in kernel callsites + architecture guards
-**Deps**: tickets/FITLEVENTARCH-011-preserve-fail-fast-on-nondefer-legal-move-admission-errors.md
+**Deps**: archive/tickets/FITLEVENTARCH/FITLEVENTARCH-011-preserve-fail-fast-on-nondefer-legal-move-admission-errors.md
 
 ## Problem
 

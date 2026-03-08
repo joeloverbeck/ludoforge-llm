@@ -530,6 +530,52 @@ phase: [asPhaseId('main')],
     );
   });
 
+  it('legal-move admission helper rethrows non-deferrable decision-sequence errors', () => {
+    const action: ActionDef = {
+      id: asActionId('nondeferrable-admission-op'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'nondeferrable-admission-profile',
+      actionId: asActionId('nondeferrable-admission-op'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              if: {
+                when: { op: '==', left: { ref: 'gvar', var: 'missingVar' }, right: 1 },
+                then: [],
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    assert.throws(() =>
+      isMoveDecisionSequenceAdmittedForLegalMove(
+        def,
+        makeBaseState(),
+        makeMove('nondeferrable-admission-op'),
+        'legalMoves.eventDecisionSequence',
+      ),
+    );
+  });
+
   it('returns incomplete with warning when deferred predicate budget is exceeded', () => {
     const action: ActionDef = {
       id: asActionId('deferred-op'),

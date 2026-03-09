@@ -1870,6 +1870,29 @@ export const validateEffectAst = (
         suggestion: 'Set sequence.step to an integer >= 0.',
       });
     }
+    if (grant.sequenceContext !== undefined) {
+      if (
+        grant.sequenceContext.captureMoveZoneCandidatesAs === undefined
+        && grant.sequenceContext.requireMoveZoneCandidatesFrom === undefined
+      ) {
+        diagnostics.push({
+          code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID',
+          path: `${path}.grantFreeOperation.sequenceContext`,
+          severity: 'error',
+          message: 'grantFreeOperation.sequenceContext must declare at least one capture/require key.',
+          suggestion: 'Set captureMoveZoneCandidatesAs and/or requireMoveZoneCandidatesFrom to non-empty strings.',
+        });
+      }
+      if (grant.sequence === undefined) {
+        diagnostics.push({
+          code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID',
+          path: `${path}.grantFreeOperation.sequenceContext`,
+          severity: 'error',
+          message: 'grantFreeOperation.sequenceContext requires grantFreeOperation.sequence.',
+          suggestion: 'Declare sequence.chain and sequence.step when using sequenceContext.',
+        });
+      }
+    }
     if (grant.zoneFilter !== undefined) {
       validateConditionAst(
         diagnostics,

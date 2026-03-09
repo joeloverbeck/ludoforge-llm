@@ -2,6 +2,7 @@ import { asPlayerId } from './branded.js';
 import type { FreeOperationBlockExplanation } from './free-operation-denial-contract.js';
 import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
 import {
+  doesGrantRequireSequenceContextMatch,
   evaluateZoneFilterForMove,
   grantActionIds,
   isGrantOperationClassCompatible,
@@ -29,6 +30,7 @@ interface FreeOperationGrantAnalysis {
   readonly sequenceReadyGrants: readonly TurnFlowPendingFreeOperationGrant[];
   readonly actionClassMatchedGrants: readonly TurnFlowPendingFreeOperationGrant[];
   readonly actionMatchedGrants: readonly TurnFlowPendingFreeOperationGrant[];
+  readonly contextMatchedGrants: readonly TurnFlowPendingFreeOperationGrant[];
   readonly zoneMatchedGrants: readonly TurnFlowPendingFreeOperationGrant[];
 }
 
@@ -58,8 +60,15 @@ const analyzeFreeOperationGrantMatch = (
   const sequenceReadyGrants = activeGrants.filter((grant) => isPendingFreeOperationGrantSequenceReady(pending, grant));
   const actionClassMatchedGrants = sequenceReadyGrants.filter((grant) => isGrantOperationClassCompatible(grant.operationClass, actionClass));
   const actionMatchedGrants = actionClassMatchedGrants.filter((grant) => grantActionIds(def, grant).includes(actionId));
+  const contextMatchedGrants = actionMatchedGrants.filter((grant) => doesGrantRequireSequenceContextMatch(
+    def,
+    state,
+    grant,
+    move,
+    { allowUnresolvedMoveZones: true },
+  ));
   const zoneMatchedGrants = options?.evaluateZoneFilters === true
-    ? actionMatchedGrants.filter(
+    ? contextMatchedGrants.filter(
         (grant) => grant.zoneFilter === undefined || evaluateZoneFilterForMove(
           def,
           state,
@@ -78,6 +87,7 @@ const analyzeFreeOperationGrantMatch = (
     sequenceReadyGrants,
     actionClassMatchedGrants,
     actionMatchedGrants,
+    contextMatchedGrants,
     zoneMatchedGrants,
   };
 };
@@ -113,6 +123,7 @@ const explainFreeOperationBlockFromAnalysis = (
     sequenceReadyGrants,
     actionClassMatchedGrants,
     actionMatchedGrants,
+    contextMatchedGrants,
     zoneMatchedGrants,
   } = analysis;
 
@@ -155,13 +166,24 @@ const explainFreeOperationBlockFromAnalysis = (
     };
   }
 
-  if (zoneMatchedGrants.length === 0) {
+  if (contextMatchedGrants.length === 0) {
     return {
       cause: 'zoneFilterMismatch',
       activeSeat,
       actionClass,
       actionId,
       matchingGrantIds: actionMatchedGrants.map((grant) => grant.grantId),
+      sequenceContextMismatchGrantIds: actionMatchedGrants.map((grant) => grant.grantId),
+    };
+  }
+
+  if (zoneMatchedGrants.length === 0) {
+    return {
+      cause: 'zoneFilterMismatch',
+      activeSeat,
+      actionClass,
+      actionId,
+      matchingGrantIds: contextMatchedGrants.map((grant) => grant.grantId),
     };
   }
 
@@ -215,7 +237,7 @@ export const resolveFreeOperationDiscoveryAnalysis = (
     };
   }
 
-  const applicable = analysis.actionMatchedGrants;
+  const applicable = analysis.contextMatchedGrants;
   const prioritized = applicable.find((grant) => grant.executeAsSeat !== undefined) ?? applicable[0];
   const executionSeat = prioritized?.executeAsSeat ?? prioritized?.seat;
   const executionPlayer = executionSeat === undefined
@@ -247,7 +269,7 @@ export const isFreeOperationApplicableForMove = (
   if (move.freeOperation !== true) {
     return true;
   }
-  return (analyzeFreeOperationGrantMatch(def, state, move, seatResolution)?.actionMatchedGrants.length ?? 0) > 0;
+  return (analyzeFreeOperationGrantMatch(def, state, move, seatResolution)?.contextMatchedGrants.length ?? 0) > 0;
 };
 
 export const isFreeOperationAllowedDuringMonsoonForMove = (

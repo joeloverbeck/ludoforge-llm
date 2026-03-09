@@ -475,6 +475,144 @@ phase: [asPhaseId('main')],
     ],
   }) as unknown as GameDef;
 
+const createSequenceContextDef = (): GameDef =>
+  ({
+    metadata: { id: 'event-free-op-sequence-context-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+    seats: [{ id: 'US' }, { id: 'NVA' }],
+    constants: {},
+    globalVars: [],
+    perPlayerVars: [],
+    zones: [
+      {
+        id: 'boardCambodia:none',
+        owner: 'none',
+        visibility: 'public',
+        ordering: 'set',
+        category: 'province',
+        attributes: { population: 1, econ: 0, country: 'cambodia', coastal: false },
+      },
+      {
+        id: 'boardVietnam:none',
+        owner: 'none',
+        visibility: 'public',
+        ordering: 'set',
+        category: 'province',
+        attributes: { population: 1, econ: 0, country: 'southVietnam', coastal: false },
+      },
+    ],
+    tokenTypes: [],
+    setup: [],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    turnOrder: {
+      type: 'cardDriven',
+      config: {
+        turnFlow: {
+          cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          eligibility: {
+            seats: ['US', 'NVA'],
+            overrideWindows: [],
+          },
+          optionMatrix: [{ first: 'event', second: ['operation'] }],
+          passRewards: [],
+          freeOperationActionIds: ['operation'],
+          durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+        },
+      },
+    },
+    actions: [
+      {
+        id: asActionId('event'),
+capabilities: ['cardEvent'],
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+        params: [
+          { name: 'eventCardId', domain: { query: 'enums', values: ['card-sequence-context'] } },
+          { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
+          { name: 'branch', domain: { query: 'enums', values: ['none'] } },
+        ],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+      {
+        id: asActionId('operation'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+    ],
+    actionPipelines: [
+      {
+        id: 'operation-select-zone',
+        actionId: asActionId('operation'),
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [
+          {
+            effects: [
+              {
+                chooseOne: {
+                  internalDecisionId: 'decision:$zone',
+                  bind: '$zone',
+                  options: { query: 'zones' },
+                },
+              },
+            ],
+          },
+        ],
+        atomicity: 'partial',
+      },
+    ],
+    triggers: [],
+    terminal: { conditions: [] },
+    eventDecks: [
+      {
+        id: 'event-deck',
+        drawZone: 'deck:none',
+        discardZone: 'played:none',
+        cards: [
+          {
+            id: 'card-sequence-context',
+            title: 'Sequence Context Capture',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Capture first free-op space; require second free-op in same space.',
+              freeOperationGrants: [
+                {
+                  seat: 'NVA',
+                  sequence: { chain: 'nva-sequence-context', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  sequenceContext: {
+                    captureMoveZoneCandidatesAs: 'selected-space',
+                  },
+                },
+                {
+                  seat: 'NVA',
+                  sequence: { chain: 'nva-sequence-context', step: 1 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  sequenceContext: {
+                    requireMoveZoneCandidatesFrom: 'selected-space',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      } as EventDeckDef,
+    ],
+  }) as unknown as GameDef;
+
 const createExecuteAsSeatDef = (): GameDef =>
   ({
     metadata: { id: 'event-free-op-execute-as-faction-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
@@ -1419,6 +1557,88 @@ describe('event free-operation grants integration', () => {
       freeOperation: true,
     }).state;
     assert.deepEqual(requireCardDrivenRuntime(third).pendingFreeOperationGrants ?? [], []);
+  });
+
+  it('captures sequence context from consumed free operation and enforces same-zone follow-up grants', () => {
+    const def = createSequenceContextDef();
+    const start = initialState(def, 121, 2).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-sequence-context', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const grantReadyState: GameState = {
+      ...afterEvent,
+      activePlayer: asPlayerId(1),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...requireCardDrivenRuntime(afterEvent),
+          currentCard: {
+            ...requireCardDrivenRuntime(afterEvent).currentCard,
+            firstEligible: 'NVA',
+            secondEligible: null,
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+        },
+      },
+    };
+
+    const afterFirstFreeOp = applyMove(def, grantReadyState, {
+      actionId: asActionId('operation'),
+      params: { 'decision:$zone': 'boardCambodia:none' },
+      freeOperation: true,
+    }).state;
+
+    const runtimeAfterFirst = requireCardDrivenRuntime(afterFirstFreeOp);
+    assert.equal(runtimeAfterFirst.pendingFreeOperationGrants?.length, 1);
+    const sequenceBatchId = runtimeAfterFirst.pendingFreeOperationGrants?.[0]?.sequenceBatchId;
+    assert.notEqual(sequenceBatchId, undefined);
+    assert.deepEqual(
+      runtimeAfterFirst.freeOperationSequenceContexts?.[sequenceBatchId!]?.capturedMoveZonesByKey?.['selected-space'],
+      ['boardCambodia:none'],
+    );
+
+    assert.throws(
+      () =>
+        applyMove(def, afterFirstFreeOp, {
+          actionId: asActionId('operation'),
+          params: { 'decision:$zone': 'boardVietnam:none' },
+          freeOperation: true,
+        }),
+      (error: unknown) => {
+        if (!(error instanceof Error)) {
+          return false;
+        }
+        const details = error as Error & {
+          readonly reason?: string;
+          readonly context?: {
+            readonly freeOperationDenial?: {
+              readonly cause?: string;
+              readonly sequenceContextMismatchGrantIds?: readonly string[];
+            };
+          };
+        };
+        return (
+          details.reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED
+          && details.context?.freeOperationDenial?.cause === 'zoneFilterMismatch'
+          && (details.context?.freeOperationDenial?.sequenceContextMismatchGrantIds?.length ?? 0) > 0
+        );
+      },
+    );
+
+    const afterSecondFreeOp = applyMove(def, afterFirstFreeOp, {
+      actionId: asActionId('operation'),
+      params: { 'decision:$zone': 'boardCambodia:none' },
+      freeOperation: true,
+    }).state;
+    const runtimeAfterSecond = requireCardDrivenRuntime(afterSecondFreeOp);
+    assert.deepEqual(runtimeAfterSecond.pendingFreeOperationGrants ?? [], []);
+    assert.equal(runtimeAfterSecond.freeOperationSequenceContexts, undefined);
   });
 
   it('suppresses event moves when requireUsableForEventPlay grants are currently unusable', () => {

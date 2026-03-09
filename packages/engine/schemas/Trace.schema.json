@@ -2993,6 +2993,20 @@
                             "type": "integer",
                             "minimum": 0,
                             "maximum": 9007199254740991
+                          },
+                          "sequenceContext": {
+                            "type": "object",
+                            "properties": {
+                              "captureMoveZoneCandidatesAs": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "requireMoveZoneCandidatesFrom": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            },
+                            "additionalProperties": false
                           }
                         },
                         "required": [
@@ -3000,6 +3014,36 @@
                           "seat",
                           "operationClass",
                           "remainingUses"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "freeOperationSequenceContexts": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "capturedMoveZonesByKey": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "additionalProperties": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            }
+                          }
+                        },
+                        "required": [
+                          "capturedMoveZonesByKey"
                         ],
                         "additionalProperties": false
                       }
@@ -3023,7 +3067,7 @@
                           "effects": {
                             "type": "array",
                             "items": {
-                              "$ref": "#/definitions/anon_cc14512d"
+                              "$ref": "#/definitions/anon_c06bf623"
                             }
                           },
                           "moveParams": {
@@ -3325,13 +3369,13 @@
               "setupEffects": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/anon_cc14512d"
+                  "$ref": "#/definitions/anon_c06bf623"
                 }
               },
               "teardownEffects": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/anon_cc14512d"
+                  "$ref": "#/definitions/anon_c06bf623"
                 }
               },
               "remainingTurnBoundaries": {
@@ -5192,7 +5236,7 @@
         }
       ]
     },
-    "anon_cc14512d": {
+    "anon_c06bf623": {
       "anyOf": [
         {
           "type": "object",
@@ -6584,13 +6628,13 @@
                 "then": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_cc14512d"
+                    "$ref": "#/definitions/anon_c06bf623"
                   }
                 },
                 "else": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_cc14512d"
+                    "$ref": "#/definitions/anon_c06bf623"
                   }
                 }
               },
@@ -6638,7 +6682,7 @@
                 "effects": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_cc14512d"
+                    "$ref": "#/definitions/anon_c06bf623"
                   }
                 },
                 "limit": {
@@ -6655,7 +6699,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_cc14512d"
+                    "$ref": "#/definitions/anon_c06bf623"
                   }
                 }
               },
@@ -6757,7 +6801,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_cc14512d"
+                    "$ref": "#/definitions/anon_c06bf623"
                   }
                 }
               },
@@ -6873,7 +6917,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_cc14512d"
+                    "$ref": "#/definitions/anon_c06bf623"
                   }
                 },
                 "macroOrigin": {
@@ -6921,7 +6965,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_cc14512d"
+                    "$ref": "#/definitions/anon_c06bf623"
                   }
                 },
                 "macroOrigin": {
@@ -7015,7 +7059,7 @@
                 "compute": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_cc14512d"
+                    "$ref": "#/definitions/anon_c06bf623"
                   }
                 },
                 "scoreExpr": {
@@ -7032,7 +7076,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_cc14512d"
+                    "$ref": "#/definitions/anon_c06bf623"
                   }
                 },
                 "macroOrigin": {
@@ -7437,7 +7481,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_cc14512d"
+                    "$ref": "#/definitions/anon_c06bf623"
                   }
                 },
                 "macroOrigin": {
@@ -7707,6 +7751,20 @@
                     "chain",
                     "step"
                   ],
+                  "additionalProperties": false
+                },
+                "sequenceContext": {
+                  "type": "object",
+                  "properties": {
+                    "captureMoveZoneCandidatesAs": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "requireMoveZoneCandidatesFrom": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
                   "additionalProperties": false
                 }
               },

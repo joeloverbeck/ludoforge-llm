@@ -497,6 +497,10 @@ export type EffectAST =
           readonly chain: string;
           readonly step: number;
         };
+        readonly sequenceContext?: {
+          readonly captureMoveZoneCandidatesAs?: string;
+          readonly requireMoveZoneCandidatesFrom?: string;
+        };
       };
     }
   | {

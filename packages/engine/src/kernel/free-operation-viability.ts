@@ -34,6 +34,7 @@ const toPendingFreeOperationGrant = (
   operationClass: grant.operationClass,
   ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
   ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
+  ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),
   ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
   ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
   remainingUses: grant.uses ?? 1,

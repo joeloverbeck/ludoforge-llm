@@ -84,6 +84,20 @@ export const ValueExprSchema = z.lazy(() => valueExprSchemaInternal);
 export const NumericValueExprSchema = z.lazy(() => numericValueExprSchemaInternal);
 export const EffectASTSchema = z.lazy(() => effectAstSchemaInternal);
 export const TokenFilterExprSchema = z.lazy(() => tokenFilterExprSchemaInternal);
+const FreeOperationSequenceContextSchema = z
+  .object({
+    captureMoveZoneCandidatesAs: StringSchema.min(1).optional(),
+    requireMoveZoneCandidatesFrom: StringSchema.min(1).optional(),
+  })
+  .strict()
+  .refine(
+    (value) =>
+      value.captureMoveZoneCandidatesAs !== undefined
+      || value.requireMoveZoneCandidatesFrom !== undefined,
+    {
+      message: 'sequenceContext must include captureMoveZoneCandidatesAs or requireMoveZoneCandidatesFrom.',
+    },
+  );
 const IntDomainBoundSchema = z
   .union([IntegerSchema, NumericValueExprSchema])
   .refine((value) => typeof value !== 'number' || Number.isSafeInteger(value), {
@@ -798,6 +812,7 @@ effectAstSchemaInternal = z.union([
             })
             .strict()
             .optional(),
+          sequenceContext: FreeOperationSequenceContextSchema.optional(),
         })
         .strict(),
     })

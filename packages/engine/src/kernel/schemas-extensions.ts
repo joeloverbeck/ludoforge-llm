@@ -78,6 +78,21 @@ export const EventCardLastingEffectSchema = z
   })
   .strict();
 
+const FreeOperationSequenceContextSchema = z
+  .object({
+    captureMoveZoneCandidatesAs: StringSchema.min(1).optional(),
+    requireMoveZoneCandidatesFrom: StringSchema.min(1).optional(),
+  })
+  .strict()
+  .refine(
+    (value) =>
+      value.captureMoveZoneCandidatesAs !== undefined
+      || value.requireMoveZoneCandidatesFrom !== undefined,
+    {
+      message: 'sequenceContext must include captureMoveZoneCandidatesAs or requireMoveZoneCandidatesFrom.',
+    },
+  );
+
 export const EventCardFreeOperationGrantSchema = z
   .object({
     sequence: z
@@ -94,6 +109,7 @@ export const EventCardFreeOperationGrantSchema = z
     zoneFilter: ConditionASTSchema.optional(),
     allowDuringMonsoon: z.boolean().optional(),
     uses: IntegerSchema.min(1).optional(),
+    sequenceContext: FreeOperationSequenceContextSchema.optional(),
     viabilityPolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES).optional(),
   })
   .strict();
@@ -513,6 +529,17 @@ export const TurnFlowRuntimeStateSchema = z
             remainingUses: IntegerSchema.min(1),
             sequenceBatchId: StringSchema.min(1).optional(),
             sequenceIndex: IntegerSchema.min(0).optional(),
+            sequenceContext: FreeOperationSequenceContextSchema.optional(),
+          })
+          .strict(),
+      )
+      .optional(),
+    freeOperationSequenceContexts: z
+      .record(
+        StringSchema.min(1),
+        z
+          .object({
+            capturedMoveZonesByKey: z.record(StringSchema.min(1), z.array(StringSchema.min(1))),
           })
           .strict(),
       )

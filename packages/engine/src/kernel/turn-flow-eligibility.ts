@@ -12,7 +12,10 @@ import {
   type SeatResolutionContext,
 } from './seat-resolution.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
-import { doesGrantAuthorizeMove } from './free-operation-grant-authorization.js';
+import {
+  collectMoveZoneCandidates,
+  doesGrantAuthorizeMove,
+} from './free-operation-grant-authorization.js';
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
@@ -207,6 +210,7 @@ const toPendingFreeOperationGrant = (
   ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
   ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
   ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
+  ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),
   ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
   remainingUses: grant.uses ?? 1,
   ...(sequenceBatchId === undefined ? {} : { sequenceBatchId }),
@@ -335,6 +339,36 @@ const withPendingDeferredEventEffects = (
     delete (nextRuntime as { pendingDeferredEventEffects?: readonly TurnFlowPendingDeferredEventEffect[] }).pendingDeferredEventEffects;
   }
   return nextRuntime;
+};
+
+const withFreeOperationSequenceContexts = (
+  runtime: TurnFlowRuntimeState,
+  contexts: TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined,
+) => {
+  const nextRuntime = {
+    ...runtime,
+    ...(contexts === undefined ? {} : { freeOperationSequenceContexts: contexts }),
+  };
+  if (contexts === undefined) {
+    delete (nextRuntime as { freeOperationSequenceContexts?: TurnFlowRuntimeState['freeOperationSequenceContexts'] }).freeOperationSequenceContexts;
+  }
+  return nextRuntime;
+};
+
+const trimFreeOperationSequenceContextsToPendingBatches = (
+  contexts: TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined,
+  pending: readonly TurnFlowPendingFreeOperationGrant[],
+): TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined => {
+  if (contexts === undefined) {
+    return undefined;
+  }
+  const pendingBatchIds = new Set(
+    pending
+      .map((grant) => grant.sequenceBatchId)
+      .filter((batchId): batchId is string => typeof batchId === 'string' && batchId.length > 0),
+  );
+  const kept = Object.entries(contexts).filter(([batchId]) => pendingBatchIds.has(batchId));
+  return kept.length === 0 ? undefined : Object.fromEntries(kept);
 };
 
 const uniqueBatchIds = (
@@ -835,6 +869,21 @@ export const consumeTurnFlowFreeOperationGrant = (
         },
         ...pending.slice(consumedIndex + 1),
       ];
+  const captureKey = consumed.sequenceContext?.captureMoveZoneCandidatesAs;
+  const capturedZones = captureKey === undefined ? [] : collectMoveZoneCandidates(def, move);
+  const capturedBatchId = consumed.sequenceBatchId;
+  const baseSequenceContexts = runtime.freeOperationSequenceContexts;
+  const nextSequenceContexts = captureKey === undefined || capturedBatchId === undefined
+    ? trimFreeOperationSequenceContextsToPendingBatches(baseSequenceContexts, nextPending)
+    : trimFreeOperationSequenceContextsToPendingBatches({
+        ...(baseSequenceContexts ?? {}),
+        [capturedBatchId]: {
+          capturedMoveZonesByKey: {
+            ...(baseSequenceContexts?.[capturedBatchId]?.capturedMoveZonesByKey ?? {}),
+            [captureKey]: [...capturedZones],
+          },
+        },
+      }, nextPending);
   const splitDeferred = splitReadyDeferredEventEffects(runtime.pendingDeferredEventEffects ?? [], nextPending);
   const normalizedPendingFreeOperationGrants = toPendingFreeOperationGrants(nextPending);
   const normalizedPendingDeferredEventEffects = toPendingDeferredEventEffects(splitDeferred.remaining);
@@ -846,7 +895,10 @@ export const consumeTurnFlowFreeOperationGrant = (
       turnOrderState: {
         type: 'cardDriven',
         runtime: withPendingDeferredEventEffects(
-          withPendingFreeOperationGrants(runtime, normalizedPendingFreeOperationGrants),
+          withFreeOperationSequenceContexts(
+            withPendingFreeOperationGrants(runtime, normalizedPendingFreeOperationGrants),
+            nextSequenceContexts,
+          ),
           normalizedPendingDeferredEventEffects,
         ),
       },

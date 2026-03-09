@@ -181,6 +181,31 @@ export const applyGrantFreeOperation = (
       },
     );
   }
+  if (
+    grant.sequenceContext !== undefined
+    && grant.sequence === undefined
+  ) {
+    throw effectRuntimeError(
+      EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
+      'grantFreeOperation.sequenceContext requires grantFreeOperation.sequence',
+      {
+        effectType: 'grantFreeOperation',
+      },
+    );
+  }
+  if (
+    grant.sequenceContext !== undefined
+    && grant.sequenceContext.captureMoveZoneCandidatesAs === undefined
+    && grant.sequenceContext.requireMoveZoneCandidatesFrom === undefined
+  ) {
+    throw effectRuntimeError(
+      EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
+      'grantFreeOperation.sequenceContext must include captureMoveZoneCandidatesAs or requireMoveZoneCandidatesFrom',
+      {
+        effectType: 'grantFreeOperation',
+      },
+    );
+  }
 
   const existing = runtime.pendingFreeOperationGrants ?? [];
   const fallbackBaseId = `freeOpEffect:${ctx.state.turnCount}:${activeSeat}:${existing.length}`;
@@ -230,6 +255,7 @@ export const applyGrantFreeOperation = (
     operationClass: grant.operationClass,
     ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
     ...(resolvedZoneFilter === undefined ? {} : { zoneFilter: resolvedZoneFilter }),
+    ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),
     ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
     ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
     remainingUses: uses,

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — data/test migration on top of new engine capabilities
-**Deps**: archive/tickets/FITLEVENTARCH/ENG-201-free-op-grant-viability-gating.md, tickets/ENG-202-free-op-sequence-bound-space-context.md, tickets/ENG-203-mandatory-grant-and-action-outcome-contracts.md, data/games/fire-in-the-lake/41-content-event-decks.md
+**Deps**: archive/tickets/FITLEVENTARCH/ENG-201-free-op-grant-viability-gating.md, archive/tickets/ENG/ENG-202-free-op-sequence-bound-space-context.md, tickets/ENG-203-mandatory-grant-and-action-outcome-contracts.md, data/games/fire-in-the-lake/41-content-event-decks.md
 
 ## Problem
 

@@ -7,6 +7,11 @@ export type TurnFlowActionClass = CanonicalTurnFlowActionClass;
 export type TurnFlowFreeOperationGrantViabilityPolicy =
   import('../contracts/index.js').TurnFlowFreeOperationGrantViabilityPolicy;
 
+export interface TurnFlowFreeOperationSequenceContextContract {
+  readonly captureMoveZoneCandidatesAs?: string;
+  readonly requireMoveZoneCandidatesFrom?: string;
+}
+
 export interface TurnFlowFreeOperationGrantContract {
   readonly id?: string;
   readonly seat: string;
@@ -20,6 +25,7 @@ export interface TurnFlowFreeOperationGrantContract {
     readonly chain: string;
     readonly step: number;
   };
+  readonly sequenceContext?: TurnFlowFreeOperationSequenceContextContract;
   readonly viabilityPolicy?: TurnFlowFreeOperationGrantViabilityPolicy;
 }
 
@@ -160,6 +166,11 @@ export interface TurnFlowPendingFreeOperationGrant {
   readonly remainingUses: number;
   readonly sequenceBatchId?: string;
   readonly sequenceIndex?: number;
+  readonly sequenceContext?: TurnFlowFreeOperationSequenceContextContract;
+}
+
+export interface TurnFlowFreeOperationSequenceBatchContext {
+  readonly capturedMoveZonesByKey: Readonly<Record<string, readonly string[]>>;
 }
 
 export interface TurnFlowDeferredEventEffectPayload {
@@ -211,6 +222,7 @@ export interface TurnFlowRuntimeState {
   readonly currentCard: TurnFlowRuntimeCardState;
   readonly pendingEligibilityOverrides?: readonly TurnFlowPendingEligibilityOverride[];
   readonly pendingFreeOperationGrants?: readonly TurnFlowPendingFreeOperationGrant[];
+  readonly freeOperationSequenceContexts?: Readonly<Record<string, TurnFlowFreeOperationSequenceBatchContext>>;
   readonly pendingDeferredEventEffects?: readonly TurnFlowPendingDeferredEventEffect[];
   readonly consecutiveCoupRounds?: number;
   readonly compoundAction?: CompoundActionState;

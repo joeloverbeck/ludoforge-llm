@@ -3934,6 +3934,8 @@ eventDecks:
               operationClass: operation
               actionIds:
                 - airLift
+              sequenceContext:
+                captureMoveZoneCandidatesAs: ia-drang-space
               zoneFilter:
                 op: ">"
                 left:
@@ -3956,20 +3958,8 @@ eventDecks:
               actionIds:
                 - sweep
               allowDuringMonsoon: true
-              zoneFilter:
-                op: ">"
-                left:
-                  aggregate:
-                    op: count
-                    query:
-                      query: tokensInZone
-                      zone: $zone
-                      filter:
-                        op: and
-                        args:
-                          - prop: faction
-                            eq: NVA
-                right: 0
+              sequenceContext:
+                requireMoveZoneCandidatesFrom: ia-drang-space
             - seat: us
               sequence:
                 chain: ia-drang-us
@@ -3977,20 +3967,8 @@ eventDecks:
               operationClass: operation
               actionIds:
                 - assault
-              zoneFilter:
-                op: ">"
-                left:
-                  aggregate:
-                    op: count
-                    query:
-                      query: tokensInZone
-                      zone: $zone
-                      filter:
-                        op: and
-                        args:
-                          - prop: faction
-                            eq: NVA
-                right: 0
+              sequenceContext:
+                requireMoveZoneCandidatesFrom: ia-drang-space
         shaded:
           text: "Dong Xuan campaign-hot LZs: Select a Province with NVA Troops then remove a die roll of US Troops within 1 space of it to Casualties."
           targets:

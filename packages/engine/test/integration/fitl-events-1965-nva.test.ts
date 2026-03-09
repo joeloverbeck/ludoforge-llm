@@ -128,6 +128,9 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
         sequence: { chain: 'ia-drang-us', step: 0 },
         operationClass: 'operation',
         actionIds: ['airLift'],
+        sequenceContext: {
+          captureMoveZoneCandidatesAs: 'ia-drang-space',
+        },
         zoneFilter: {
           op: '>',
               left: {
@@ -145,15 +148,8 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
         operationClass: 'operation',
         actionIds: ['sweep'],
         allowDuringMonsoon: true,
-        zoneFilter: {
-          op: '>',
-              left: {
-                aggregate: {
-                  op: 'count',
-                      query: { query: 'tokensInZone', zone: '$zone', filter: { prop: 'faction', op: 'eq', value: 'NVA' } },
-                },
-              },
-          right: 0,
+        sequenceContext: {
+          requireMoveZoneCandidatesFrom: 'ia-drang-space',
         },
       },
       {
@@ -161,15 +157,8 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
         sequence: { chain: 'ia-drang-us', step: 2 },
         operationClass: 'operation',
         actionIds: ['assault'],
-        zoneFilter: {
-          op: '>',
-              left: {
-                aggregate: {
-                  op: 'count',
-                      query: { query: 'tokensInZone', zone: '$zone', filter: { prop: 'faction', op: 'eq', value: 'NVA' } },
-                },
-              },
-          right: 0,
+        sequenceContext: {
+          requireMoveZoneCandidatesFrom: 'ia-drang-space',
         },
       },
     ]);

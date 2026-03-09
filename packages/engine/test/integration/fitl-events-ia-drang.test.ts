@@ -126,7 +126,10 @@ describe('FITL card-44 Ia Drang', () => {
         ...(lookaheadZone === null
           ? {}
           : { [lookaheadZone]: [makeToken('ia-drang-monsoon-lookahead', 'card', 'none', { isCoup: true })] }),
-        [ADJACENT_CITY]: [makeToken('ia-drang-us-lift', 'troops', 'US', { type: 'troops' })],
+        [ADJACENT_CITY]: [
+          makeToken('ia-drang-us-lift', 'troops', 'US', { type: 'troops' }),
+          makeToken('ia-drang-nva-alt-space', 'troops', 'NVA', { type: 'troops' }),
+        ],
         [TARGET_PROVINCE]: [
           makeToken('ia-drang-us-in-target', 'troops', 'US', { type: 'troops' }),
           makeToken('ia-drang-arvn-troop', 'troops', 'ARVN', { type: 'troops' }),
@@ -198,6 +201,35 @@ describe('FITL card-44 Ia Drang', () => {
       sweepMoves.some((move) => move.freeOperation !== true),
       false,
       'During Monsoon, only the grant-marked Sweep should be legal',
+    );
+    assert.throws(
+      () =>
+        applyMove(def, afterAirLift, {
+          actionId: asActionId('sweep'),
+          freeOperation: true,
+          params: {
+            $targetSpaces: [ADJACENT_CITY],
+            $movingAdjacentTroops: [],
+          },
+        }),
+      (error: unknown) => {
+        if (!(error instanceof Error)) {
+          return false;
+        }
+        const details = error as Error & {
+          readonly context?: {
+            readonly freeOperationDenial?: {
+              readonly cause?: string;
+              readonly sequenceContextMismatchGrantIds?: readonly string[];
+            };
+          };
+        };
+        return (
+          details.context?.freeOperationDenial?.cause === 'zoneFilterMismatch'
+          && (details.context?.freeOperationDenial?.sequenceContextMismatchGrantIds?.length ?? 0) > 0
+        );
+      },
+      'Ia Drang follow-up free Sweep should be denied outside the Air Lift-selected space context',
     );
 
     const afterSweep = applyMoveWithResolvedDecisionIds(def, afterAirLift, {

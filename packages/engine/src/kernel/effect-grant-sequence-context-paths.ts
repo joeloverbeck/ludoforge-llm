@@ -116,8 +116,10 @@ const walkEffectExecutionPaths = (
 
   if ('if' in effect) {
     const nestedScopes = getNestedEffectSequenceContextScopes(effect, scope);
-    const thenScope = nestedScopes.find((nestedScope) => nestedScope.pathSuffix === '.if.then');
-    const elseScope = nestedScopes.find((nestedScope) => nestedScope.pathSuffix === '.if.else');
+    const thenScope = nestedScopes.find((nestedScope) =>
+      nestedScope.traversal.kind === 'alternative' && nestedScope.traversal.branch === 'then');
+    const elseScope = nestedScopes.find((nestedScope) =>
+      nestedScope.traversal.kind === 'alternative' && nestedScope.traversal.branch === 'else');
     const thenPaths = thenScope === undefined
       ? incoming
       : walkEffectArrayExecutionPaths(thenScope.effects, `${path}${thenScope.pathSuffix}`, incoming, thenScope.scope);
@@ -129,8 +131,8 @@ const walkEffectExecutionPaths = (
 
   if ('forEach' in effect) {
     const nestedScopes = getNestedEffectSequenceContextScopes(effect, scope);
-    const loopBodyScope = nestedScopes.find((nestedScope) => nestedScope.pathSuffix === '.forEach.effects');
-    const continuationScope = nestedScopes.find((nestedScope) => nestedScope.pathSuffix === '.forEach.in');
+    const loopBodyScope = nestedScopes.find((nestedScope) => nestedScope.traversal.kind === 'loop-body');
+    const continuationScope = nestedScopes.find((nestedScope) => nestedScope.traversal.kind === 'loop-continuation');
     const loopBodyPaths = loopBodyScope === undefined
       ? incoming
       : walkEffectArrayExecutionPaths(
@@ -154,14 +156,16 @@ const walkEffectExecutionPaths = (
   const nestedScopes = getNestedEffectSequenceContextScopes(effect, scope);
   if (nestedScopes.length > 0) {
     let current = incoming;
-    nestedScopes.forEach((nestedScope) => {
+    nestedScopes
+      .filter((nestedScope) => nestedScope.traversal.kind === 'sequential')
+      .forEach((nestedScope) => {
       current = walkEffectArrayExecutionPaths(
         nestedScope.effects,
         `${path}${nestedScope.pathSuffix}`,
         current,
         nestedScope.scope,
       );
-    });
+      });
     return current;
   }
 

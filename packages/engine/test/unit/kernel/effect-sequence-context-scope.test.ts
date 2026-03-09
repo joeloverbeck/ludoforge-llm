@@ -31,6 +31,7 @@ const summarizeNestedScopes = (effect: EffectAST) =>
   getNestedEffectSequenceContextScopes(effect, ROOT_EFFECT_SEQUENCE_CONTEXT_SCOPE).map((nestedScope) => ({
     pathSuffix: nestedScope.pathSuffix,
     allowsPersistentSequenceContextGrants: nestedScope.scope.allowsPersistentSequenceContextGrants,
+    traversal: nestedScope.traversal,
   }));
 
 const captureReference = (chain: string, step: number, path: string) => ({
@@ -55,6 +56,11 @@ describe('effect sequence-context scope policy', () => {
       readonly expected: ReadonlyArray<{
         readonly pathSuffix: string;
         readonly allowsPersistentSequenceContextGrants: boolean;
+        readonly traversal:
+          | { readonly kind: 'sequential'; readonly slot: string }
+          | { readonly kind: 'alternative'; readonly branch: 'then' | 'else' }
+          | { readonly kind: 'loop-body' }
+          | { readonly kind: 'loop-continuation' };
       }>;
     }> = [
       {
@@ -70,10 +76,12 @@ describe('effect sequence-context scope policy', () => {
           {
             pathSuffix: '.if.then',
             allowsPersistentSequenceContextGrants: true,
+            traversal: { kind: 'alternative', branch: 'then' },
           },
           {
             pathSuffix: '.if.else',
             allowsPersistentSequenceContextGrants: true,
+            traversal: { kind: 'alternative', branch: 'else' },
           },
         ],
       },
@@ -90,6 +98,7 @@ describe('effect sequence-context scope policy', () => {
           {
             pathSuffix: '.let.in',
             allowsPersistentSequenceContextGrants: true,
+            traversal: { kind: 'sequential', slot: 'let.in' },
           },
         ],
       },
@@ -108,10 +117,12 @@ describe('effect sequence-context scope policy', () => {
           {
             pathSuffix: '.forEach.effects',
             allowsPersistentSequenceContextGrants: true,
+            traversal: { kind: 'loop-body' },
           },
           {
             pathSuffix: '.forEach.in',
             allowsPersistentSequenceContextGrants: true,
+            traversal: { kind: 'loop-continuation' },
           },
         ],
       },
@@ -132,6 +143,7 @@ describe('effect sequence-context scope policy', () => {
           {
             pathSuffix: '.reduce.in',
             allowsPersistentSequenceContextGrants: true,
+            traversal: { kind: 'sequential', slot: 'reduce.in' },
           },
         ],
       },
@@ -154,6 +166,7 @@ describe('effect sequence-context scope policy', () => {
           {
             pathSuffix: '.removeByPriority.in',
             allowsPersistentSequenceContextGrants: true,
+            traversal: { kind: 'sequential', slot: 'removeByPriority.in' },
           },
         ],
       },
@@ -174,10 +187,12 @@ describe('effect sequence-context scope policy', () => {
           {
             pathSuffix: '.evaluateSubset.compute',
             allowsPersistentSequenceContextGrants: false,
+            traversal: { kind: 'sequential', slot: 'evaluateSubset.compute' },
           },
           {
             pathSuffix: '.evaluateSubset.in',
             allowsPersistentSequenceContextGrants: true,
+            traversal: { kind: 'sequential', slot: 'evaluateSubset.in' },
           },
         ],
       },
@@ -195,6 +210,7 @@ describe('effect sequence-context scope policy', () => {
           {
             pathSuffix: '.rollRandom.in',
             allowsPersistentSequenceContextGrants: true,
+            traversal: { kind: 'sequential', slot: 'rollRandom.in' },
           },
         ],
       },
@@ -233,6 +249,7 @@ describe('effect sequence-context scope policy', () => {
         {
           pathSuffix: '.forEach.effects',
           allowsPersistentSequenceContextGrants: true,
+          traversal: { kind: 'loop-body' },
         },
       ],
     );

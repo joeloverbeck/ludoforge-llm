@@ -6,6 +6,7 @@ import {
   TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
 } from '../contracts/index.js';
 import { PREDICATE_OPERATORS } from '../contracts/index.js';
+import { FreeOperationSequenceContextSchema } from './free-operation-sequence-context-schema.js';
 import { AST_SCOPED_VAR_SCOPES, createScopedVarContractSchema } from './scoped-var-contract.js';
 
 export const OBJECT_STRICTNESS_POLICY = 'strict' as const;
@@ -84,20 +85,6 @@ export const ValueExprSchema = z.lazy(() => valueExprSchemaInternal);
 export const NumericValueExprSchema = z.lazy(() => numericValueExprSchemaInternal);
 export const EffectASTSchema = z.lazy(() => effectAstSchemaInternal);
 export const TokenFilterExprSchema = z.lazy(() => tokenFilterExprSchemaInternal);
-const FreeOperationSequenceContextSchema = z
-  .object({
-    captureMoveZoneCandidatesAs: StringSchema.min(1).optional(),
-    requireMoveZoneCandidatesFrom: StringSchema.min(1).optional(),
-  })
-  .strict()
-  .refine(
-    (value) =>
-      value.captureMoveZoneCandidatesAs !== undefined
-      || value.requireMoveZoneCandidatesFrom !== undefined,
-    {
-      message: 'sequenceContext must include captureMoveZoneCandidatesAs or requireMoveZoneCandidatesFrom.',
-    },
-  );
 const IntDomainBoundSchema = z
   .union([IntegerSchema, NumericValueExprSchema])
   .refine((value) => typeof value !== 'number' || Number.isSafeInteger(value), {

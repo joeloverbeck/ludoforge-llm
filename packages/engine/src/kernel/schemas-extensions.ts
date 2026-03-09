@@ -16,6 +16,7 @@ import {
   TURN_FLOW_DURATION_VALUES,
   hasTurnFlowInterruptSelectorMatchField,
 } from '../contracts/index.js';
+import { FreeOperationSequenceContextSchema } from './free-operation-sequence-context-schema.js';
 
 export const TurnFlowDurationSchema = z.enum(TURN_FLOW_DURATION_VALUES);
 
@@ -77,21 +78,6 @@ export const EventCardLastingEffectSchema = z
     teardownEffects: z.array(EffectASTSchema).min(1).optional(),
   })
   .strict();
-
-const FreeOperationSequenceContextSchema = z
-  .object({
-    captureMoveZoneCandidatesAs: StringSchema.min(1).optional(),
-    requireMoveZoneCandidatesFrom: StringSchema.min(1).optional(),
-  })
-  .strict()
-  .refine(
-    (value) =>
-      value.captureMoveZoneCandidatesAs !== undefined
-      || value.requireMoveZoneCandidatesFrom !== undefined,
-    {
-      message: 'sequenceContext must include captureMoveZoneCandidatesAs or requireMoveZoneCandidatesFrom.',
-    },
-  );
 
 export const EventCardFreeOperationGrantSchema = z
   .object({

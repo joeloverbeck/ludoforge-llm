@@ -357,6 +357,36 @@ describe('AST and selector schemas', () => {
         }
       });
     }
+
+    it('parses grantFreeOperation sequenceContext when at least one canonical key is present', () => {
+      const effect = {
+        grantFreeOperation: {
+          seat: '3',
+          operationClass: 'operation',
+          sequence: { chain: 'ctx-chain', step: 0 },
+          sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+        },
+      } as const;
+
+      assert.deepEqual(EffectASTSchema.parse(effect), effect);
+    });
+
+    it('rejects grantFreeOperation sequenceContext when both canonical keys are absent', () => {
+      const result = EffectASTSchema.safeParse({
+        grantFreeOperation: {
+          seat: '3',
+          operationClass: 'operation',
+          sequence: { chain: 'ctx-chain', step: 0 },
+          sequenceContext: {},
+        },
+      });
+
+      assert.equal(result.success, false);
+      assert.equal(
+        result.error.issues.some((issue) => issue.message.includes('sequenceContext must include captureMoveZoneCandidatesAs or requireMoveZoneCandidatesFrom.')),
+        true,
+      );
+    });
   });
 
   it('enforces canonical bind fields for removeByPriority', () => {

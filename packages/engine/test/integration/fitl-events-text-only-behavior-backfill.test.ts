@@ -79,7 +79,11 @@ describe('FITL text-only card behavior backfill', () => {
     const card47 = cardById.get('card-47');
     assert.equal(typeof (card47?.unshaded?.effects?.[0] as { if?: unknown } | undefined)?.if, 'object');
     assert.equal(typeof (card47?.unshaded?.effects?.[1] as { forEach?: unknown } | undefined)?.forEach, 'object');
+    assert.equal(card47?.unshaded?.freeOperationGrants, undefined);
+    const serializedCompiledCard47Unshaded = JSON.stringify(card47?.unshaded?.effects ?? []);
     const serializedCard47Unshaded = JSON.stringify(parsedCardById.get('card-47')?.unshaded?.effects ?? []);
+    assert.match(serializedCompiledCard47Unshaded, /coin-assault-removal-order/);
+    assert.doesNotMatch(serializedCompiledCard47Unshaded, /coin-assault-removal-order-single-faction/);
     assert.match(serializedCard47Unshaded, /targetFactions/);
     assert.doesNotMatch(serializedCard47Unshaded, /targetFactionMode/);
     assert.equal((card47?.shaded?.effects?.[0] as { chooseN?: { bind?: string } } | undefined)?.chooseN?.bind, '$nvaTroopsToPlace');

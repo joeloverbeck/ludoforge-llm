@@ -48,7 +48,8 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: US
+                                op: eq
+                                value: US
                         to:
                           zoneExpr: available-US:none
                 - removeByPriority:
@@ -62,7 +63,8 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: ARVN
+                                op: eq
+                                value: ARVN
                         to:
                           zoneExpr: available-ARVN:none
                 - addVar:
@@ -256,7 +258,8 @@ eventDecks:
                         op: and
                         args:
                           - prop: faction
-                            eq: US
+                            op: eq
+                            value: US
                     to:
                       zoneExpr: out-of-play-US:none
       - id: card-76
@@ -361,9 +364,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: US
+                                op: eq
+                                value: US
                               - prop: type
-                                eq: irregular
+                                op: eq
+                                value: irregular
                         to:
                           zoneExpr: $targetSpace
         shaded:
@@ -387,9 +392,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: US
+                                op: eq
+                                value: US
                               - prop: type
-                                eq: irregular
+                                op: eq
+                                value: irregular
                         to:
                           zoneExpr: available-US:none
                 - removeByPriority:
@@ -403,9 +410,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: VC
+                                op: eq
+                                value: VC
                               - prop: type
-                                eq: guerrilla
+                                op: eq
+                                value: guerrilla
                         to:
                           zoneExpr: $targetSpace
       - id: card-83
@@ -594,9 +603,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: ARVN
+                                op: eq
+                                value: ARVN
                               - prop: type
-                                eq: troops
+                                op: eq
+                                value: troops
                         to:
                           zoneExpr: $targetCity
                 - macro: shift-support-opposition
@@ -631,9 +642,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: VC
+                                op: eq
+                                value: VC
                               - prop: type
-                                eq: guerrilla
+                                op: eq
+                                value: guerrilla
                         to:
                           zoneExpr: $targetCity
                 - removeByPriority:
@@ -647,9 +660,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: NVA
+                                op: eq
+                                value: NVA
                               - prop: type
-                                eq: guerrilla
+                                op: eq
+                                value: guerrilla
                         to:
                           zoneExpr: $targetCity
                 - macro: shift-support-opposition
@@ -723,21 +738,24 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: ARVN
+                                  op: eq
+                                  value: ARVN
                           - query: tokensInZone
                             zone: available-ARVN:none
                             filter:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: ARVN
+                                  op: eq
+                                  value: ARVN
                           - query: tokensInZone
                             zone: out-of-play-ARVN:none
                             filter:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: ARVN
+                                  op: eq
+                                  value: ARVN
                 options:
                   query: concat
                   sources:
@@ -746,21 +764,24 @@ eventDecks:
                         op: and
                         args:
                           - prop: faction
-                            eq: ARVN
+                            op: eq
+                            value: ARVN
                     - query: tokensInZone
                       zone: available-ARVN:none
                       filter:
                         op: and
                         args:
                           - prop: faction
-                            eq: ARVN
+                            op: eq
+                            value: ARVN
                     - query: tokensInZone
                       zone: out-of-play-ARVN:none
                       filter:
                         op: and
                         args:
                           - prop: faction
-                            eq: ARVN
+                            op: eq
+                            value: ARVN
             - forEach:
                 bind: $rostowArvnPiece
                 over:
@@ -812,7 +833,8 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: ARVN
+                                    op: eq
+                                    value: ARVN
                         right: 0
                 effects:
                   - chooseN:
@@ -832,18 +854,22 @@ eventDecks:
                                     op: and
                                     args:
                                       - prop: faction
-                                        eq: VC
+                                        op: eq
+                                        value: VC
                                       - prop: type
-                                        eq: guerrilla
+                                        op: eq
+                                        value: guerrilla
                                 - query: tokensInZone
                                   zone: available-NVA:none
                                   filter:
                                     op: and
                                     args:
                                       - prop: faction
-                                        eq: NVA
+                                        op: eq
+                                        value: NVA
                                       - prop: type
-                                        eq: guerrilla
+                                        op: eq
+                                        value: guerrilla
                       max: 1
                       options:
                         query: concat
@@ -854,18 +880,22 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: VC
+                                  op: eq
+                                  value: VC
                                 - prop: type
-                                  eq: guerrilla
+                                  op: eq
+                                  value: guerrilla
                           - query: tokensInZone
                             zone: available-NVA:none
                             filter:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: NVA
+                                  op: eq
+                                  value: NVA
                                 - prop: type
-                                  eq: guerrilla
+                                  op: eq
+                                  value: guerrilla
                   - forEach:
                       bind: $rostowPlacedGuerrilla
                       over:
@@ -905,9 +935,11 @@ eventDecks:
                     op: and
                     args:
                       - prop: faction
-                        eq: ARVN
+                        op: eq
+                        value: ARVN
                       - prop: type
-                        eq: troops
+                        op: eq
+                        value: troops
                 effects:
                   - chooseN:
                       bind: '$rostowRedeployDestination@{$rostowArvnTroopToRedeploy}'
@@ -995,9 +1027,11 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: US
+                                    op: eq
+                                    value: US
                                   - prop: type
-                                    eq: irregular
+                                    op: eq
+                                    value: irregular
                             to:
                               zoneExpr: $targetProvince
                     - setMarker:
@@ -1062,9 +1096,11 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: ARVN
+                                    op: eq
+                                    value: ARVN
                                   - prop: type
-                                    eq: ranger
+                                    op: eq
+                                    value: ranger
                             to:
                               zoneExpr: $targetProvince
                     - setMarker:
@@ -1086,9 +1122,11 @@ eventDecks:
                           op: and
                           args:
                             - prop: faction
-                              eq: US
+                              op: eq
+                              value: US
                             - prop: type
-                              eq: irregular
+                              op: eq
+                              value: irregular
                   right: 0
                 then:
                   - chooseN:
@@ -1099,9 +1137,11 @@ eventDecks:
                           op: and
                           args:
                             - prop: faction
-                              eq: US
+                              op: eq
+                              value: US
                             - prop: type
-                              eq: irregular
+                              op: eq
+                              value: irregular
                       min: 0
                       max: 3
                   - chooseOne:
@@ -1128,9 +1168,11 @@ eventDecks:
                                       op: and
                                       args:
                                         - prop: faction
-                                          eq: US
+                                          op: eq
+                                          value: US
                                         - prop: type
-                                          eq: irregular
+                                          op: eq
+                                          value: irregular
                               right: 0
                   - forEach:
                       bind: $irregular
@@ -1185,7 +1227,8 @@ eventDecks:
                     op: and
                     args:
                       - prop: faction
-                        eq: US
+                        op: eq
+                        value: US
                 destinations:
                   query: mapSpaces
                   filter:
@@ -1214,7 +1257,8 @@ eventDecks:
                           op: and
                           args:
                             - prop: faction
-                              eq: US
+                              op: eq
+                              value: US
                   right: -1
             - moveAll:
                 from: casualties-US:none
@@ -1277,9 +1321,11 @@ eventDecks:
                                     - NVA
                                     - VC
                                 - prop: type
-                                  eq: base
+                                  op: eq
+                                  value: base
                                 - prop: tunnel
-                                  eq: untunneled
+                                  op: eq
+                                  value: untunneled
                       min: 0
                       max:
                         ref: binding
@@ -1315,7 +1361,8 @@ eventDecks:
                     op: and
                     args:
                       - prop: faction
-                        eq: NVA
+                        op: eq
+                        value: NVA
                 destinations:
                   query: mapSpaces
                   filter:
@@ -1337,27 +1384,33 @@ eventDecks:
                         op: and
                         args:
                           - prop: faction
-                            eq: US
+                            op: eq
+                            value: US
                           - prop: type
-                            eq: troops
+                            op: eq
+                            value: troops
                     - query: tokensInZone
                       zone: available-US:none
                       filter:
                         op: and
                         args:
                           - prop: faction
-                            eq: US
+                            op: eq
+                            value: US
                           - prop: type
-                            eq: troops
+                            op: eq
+                            value: troops
                     - query: tokensInZone
                       zone: casualties-US:none
                       filter:
                         op: and
                         args:
                           - prop: faction
-                            eq: US
+                            op: eq
+                            value: US
                           - prop: type
-                            eq: troops
+                            op: eq
+                            value: troops
                 min: 0
                 max: 2
             - forEach:
@@ -1455,9 +1508,11 @@ eventDecks:
                         op: and
                         args:
                           - prop: faction
-                            eq: US
+                            op: eq
+                            value: US
                           - prop: type
-                            eq: troops
+                            op: eq
+                            value: troops
             - addVar:
                 scope: global
                 var: linebacker11SupportAvailable
@@ -1471,9 +1526,11 @@ eventDecks:
                         op: and
                         args:
                           - prop: faction
-                            eq: US
+                            op: eq
+                            value: US
                           - prop: type
-                            eq: base
+                            op: eq
+                            value: base
             - if:
                 when:
                   op: ">"
@@ -1662,9 +1719,11 @@ eventDecks:
                         op: and
                         args:
                           - prop: faction
-                            eq: US
+                            op: eq
+                            value: US
                           - prop: type
-                            eq: troops
+                            op: eq
+                            value: troops
                     to:
                       zoneExpr: casualties-US:none
             - addVar:
@@ -1777,17 +1836,21 @@ eventDecks:
                         op: and
                         args:
                           - prop: faction
-                            eq: US
+                            op: eq
+                            value: US
                           - prop: type
-                            eq: troops
+                            op: eq
+                            value: troops
                     - query: tokensInMapSpaces
                       filter:
                         op: and
                         args:
                           - prop: faction
-                            eq: US
+                            op: eq
+                            value: US
                           - prop: type
-                            eq: troops
+                            op: eq
+                            value: troops
                 min: 0
                 max: 3
             - forEach:
@@ -1869,9 +1932,11 @@ eventDecks:
                     op: and
                     args:
                       - prop: faction
-                        eq: US
+                        op: eq
+                        value: US
                       - prop: type
-                        eq: troops
+                        op: eq
+                        value: troops
                 min: 0
                 max: 3
             - forEach:
@@ -1999,9 +2064,11 @@ eventDecks:
                           - NVA
                           - VC
                       - prop: type
-                        eq: guerrilla
+                        op: eq
+                        value: guerrilla
                       - prop: activity
-                        eq: active
+                        op: eq
+                        value: active
                 effects:
                   - setTokenProp:
                       token: $insurgentGuerrilla
@@ -2019,9 +2086,11 @@ eventDecks:
                     op: and
                     args:
                       - prop: faction
-                        eq: NVA
+                        op: eq
+                        value: NVA
                       - prop: type
-                        eq: base
+                        op: eq
+                        value: base
                 min: 0
                 max: 1
             - forEach:
@@ -2050,9 +2119,11 @@ eventDecks:
                     op: and
                     args:
                       - prop: faction
-                        eq: NVA
+                        op: eq
+                        value: NVA
                       - prop: type
-                        eq: base
+                        op: eq
+                        value: base
                 min: 0
                 max: 1
             - if:
@@ -2196,11 +2267,14 @@ eventDecks:
                     op: and
                     args:
                       - prop: faction
-                        eq: NVA
+                        op: eq
+                        value: NVA
                       - prop: type
-                        eq: guerrilla
+                        op: eq
+                        value: guerrilla
                       - prop: activity
-                        eq: active
+                        op: eq
+                        value: active
                 min: 0
                 max: 3
             - forEach:
@@ -2332,7 +2406,8 @@ eventDecks:
                                       op: and
                                       args:
                                         - prop: type
-                                          eq: troops
+                                          op: eq
+                                          value: troops
                               right: 0
                             - op: ">"
                               left:
@@ -2345,7 +2420,8 @@ eventDecks:
                                       op: and
                                       args:
                                         - prop: type
-                                          eq: police
+                                          op: eq
+                                          value: police
                               right: 0
                   right: 0
                 then:
@@ -2367,7 +2443,8 @@ eventDecks:
                                       op: and
                                       args:
                                         - prop: type
-                                          eq: troops
+                                          op: eq
+                                          value: troops
                               right: 0
                             - op: ">"
                               left:
@@ -2380,7 +2457,8 @@ eventDecks:
                                       op: and
                                       args:
                                         - prop: type
-                                          eq: police
+                                          op: eq
+                                          value: police
                               right: 0
                   - shiftMarker:
                       space:
@@ -2500,9 +2578,11 @@ eventDecks:
                     op: and
                     args:
                       - prop: faction
-                        eq: US
+                        op: eq
+                        value: US
                       - prop: type
-                        eq: troops
+                        op: eq
+                        value: troops
                 min: 0
                 max: 2
             - chooseN:
@@ -2514,9 +2594,11 @@ eventDecks:
                     op: and
                     args:
                       - prop: faction
-                        eq: US
+                        op: eq
+                        value: US
                       - prop: type
-                        eq: troops
+                        op: eq
+                        value: troops
                 min: 0
                 max: 2
             - chooseOne:
@@ -2625,9 +2707,11 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: US
+                                  op: eq
+                                  value: US
                                 - prop: type
-                                  eq: troops
+                                  op: eq
+                                  value: troops
                       right: 0
                     - op: ">"
                       left:
@@ -2642,20 +2726,25 @@ eventDecks:
                                   op: and
                                   args:
                                     - prop: faction
-                                      eq: VC
+                                      op: eq
+                                      value: VC
                                     - prop: type
-                                      eq: guerrilla
+                                      op: eq
+                                      value: guerrilla
                               - query: tokensInZone
                                 zone: $zone
                                 filter:
                                   op: and
                                   args:
                                     - prop: faction
-                                      eq: VC
+                                      op: eq
+                                      value: VC
                                     - prop: type
-                                      eq: base
+                                      op: eq
+                                      value: base
                                     - prop: tunnel
-                                      eq: untunneled
+                                      op: eq
+                                      value: untunneled
                       right: 0
                     - op: or
                       args:
@@ -2685,9 +2774,11 @@ eventDecks:
                                               op: and
                                               args:
                                                 - prop: faction
-                                                  eq: US
+                                                  op: eq
+                                                  value: US
                                                 - prop: type
-                                                  eq: troops
+                                                  op: eq
+                                                  value: troops
                                       right: 0
                                     - op: ">"
                                       left:
@@ -2702,20 +2793,25 @@ eventDecks:
                                                   op: and
                                                   args:
                                                     - prop: faction
-                                                      eq: VC
+                                                      op: eq
+                                                      value: VC
                                                     - prop: type
-                                                      eq: guerrilla
+                                                      op: eq
+                                                      value: guerrilla
                                               - query: tokensInZone
                                                 zone: $zone
                                                 filter:
                                                   op: and
                                                   args:
                                                     - prop: faction
-                                                      eq: VC
+                                                      op: eq
+                                                      value: VC
                                                     - prop: type
-                                                      eq: base
+                                                      op: eq
+                                                      value: base
                                                     - prop: tunnel
-                                                      eq: untunneled
+                                                      op: eq
+                                                      value: untunneled
                                       right: 0
                                     - op: "!="
                                       left:
@@ -2745,20 +2841,25 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: VC
+                                op: eq
+                                value: VC
                               - prop: type
-                                eq: guerrilla
+                                op: eq
+                                value: guerrilla
                         - query: tokensInZone
                           zone: $targetProvince
                           filter:
                             op: and
                             args:
                               - prop: faction
-                                eq: VC
+                                op: eq
+                                value: VC
                               - prop: type
-                                eq: base
+                                op: eq
+                                value: base
                               - prop: tunnel
-                                eq: untunneled
+                                op: eq
+                                value: untunneled
                     min: 1
                     max: 1
                 - forEach:
@@ -2807,9 +2908,11 @@ eventDecks:
                         op: and
                         args:
                           - prop: faction
-                            eq: US
+                            op: eq
+                            value: US
                           - prop: type
-                            eq: troops
+                            op: eq
+                            value: troops
                     to:
                       zoneExpr: da-nang:none
             - removeByPriority:
@@ -2823,9 +2926,11 @@ eventDecks:
                         op: and
                         args:
                           - prop: faction
-                            eq: US
+                            op: eq
+                            value: US
                           - prop: type
-                            eq: troops
+                            op: eq
+                            value: troops
                     to:
                       zoneExpr: da-nang:none
         shaded:
@@ -2890,14 +2995,16 @@ eventDecks:
                         op: and
                         args:
                           - prop: type
-                            eq: base
+                            op: eq
+                            value: base
                           - prop: faction
                             op: in
                             value:
                               - NVA
                               - VC
                           - prop: tunnel
-                            eq: tunneled
+                            op: eq
+                            value: tunneled
                 right: 0
             - seat: us
               sequence:
@@ -2918,14 +3025,16 @@ eventDecks:
                         op: and
                         args:
                           - prop: type
-                            eq: base
+                            op: eq
+                            value: base
                           - prop: faction
                             op: in
                             value:
                               - NVA
                               - VC
                           - prop: tunnel
-                            eq: tunneled
+                            op: eq
+                            value: tunneled
                 right: 0
             - seat: us
               sequence:
@@ -2946,14 +3055,16 @@ eventDecks:
                         op: and
                         args:
                           - prop: type
-                            eq: base
+                            op: eq
+                            value: base
                           - prop: faction
                             op: in
                             value:
                               - NVA
                               - VC
                           - prop: tunnel
-                            eq: tunneled
+                            op: eq
+                            value: tunneled
                 right: 0
           lastingEffects:
             - id: evt-operation-attleboro-tunnel-window
@@ -2991,14 +3102,16 @@ eventDecks:
                           op: and
                           args:
                             - prop: type
-                              eq: base
+                              op: eq
+                              value: base
                             - prop: faction
                               op: in
                               value:
                                 - NVA
                                 - VC
                             - prop: tunnel
-                              eq: tunneled
+                              op: eq
+                              value: tunneled
                   right: 0
               cardinality:
                 max: 1
@@ -3023,9 +3136,11 @@ eventDecks:
                                   op: and
                                   args:
                                     - prop: faction
-                                      eq: US
+                                      op: eq
+                                      value: US
                                     - prop: type
-                                      eq: troops
+                                      op: eq
+                                      value: troops
                               to:
                                 zoneExpr: casualties-US:none
                           in:
@@ -3057,9 +3172,11 @@ eventDecks:
                                                     op: and
                                                     args:
                                                       - prop: faction
-                                                        eq: US
+                                                        op: eq
+                                                        value: US
                                                       - prop: type
-                                                        eq: troops
+                                                        op: eq
+                                                        value: troops
                                                 to:
                                                   zoneExpr: casualties-US:none
                                       else: []
@@ -3108,7 +3225,8 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: VC
+                                  op: eq
+                                  value: VC
                       right: 0
                     - op: or
                       args:
@@ -3123,9 +3241,11 @@ eventDecks:
                                   op: and
                                   args:
                                     - prop: faction
-                                      eq: US
+                                      op: eq
+                                      value: US
                                     - prop: type
-                                      eq: troops
+                                      op: eq
+                                      value: troops
                           right: 0
                         - op: ">"
                           left:
@@ -3138,9 +3258,11 @@ eventDecks:
                                   op: and
                                   args:
                                     - prop: faction
-                                      eq: US
+                                      op: eq
+                                      value: US
                                     - prop: type
-                                      eq: troops
+                                      op: eq
+                                      value: troops
                           right: 0
               cardinality:
                 max: 1
@@ -3157,7 +3279,8 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: VC
+                                op: eq
+                                value: VC
                         to:
                           zoneExpr: available-VC:none
         shaded:
@@ -3186,11 +3309,14 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: VC
+                                  op: eq
+                                  value: VC
                                 - prop: type
-                                  eq: guerrilla
+                                  op: eq
+                                  value: guerrilla
                                 - prop: activity
-                                  eq: active
+                                  op: eq
+                                  value: active
                       right: 0
               cardinality:
                 max: 3
@@ -3205,11 +3331,14 @@ eventDecks:
                         op: and
                         args:
                           - prop: faction
-                            eq: VC
+                            op: eq
+                            value: VC
                           - prop: type
-                            eq: guerrilla
+                            op: eq
+                            value: guerrilla
                           - prop: activity
-                            eq: active
+                            op: eq
+                            value: active
                     effects:
                       - setTokenProp:
                           token: $vcGuerrilla
@@ -3510,9 +3639,11 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: VC
+                                  op: eq
+                                  value: VC
                                 - prop: type
-                                  eq: guerrilla
+                                  op: eq
+                                  value: guerrilla
                           to:
                             zoneExpr: $mekongLoc
             - forEach:
@@ -3554,7 +3685,8 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: VC
+                                    op: eq
+                                    value: VC
                         right:
                           aggregate:
                             op: count
@@ -3693,17 +3825,21 @@ eventDecks:
                     op: and
                     args:
                       - prop: faction
-                        eq: VC
+                        op: eq
+                        value: VC
                       - op: or
                         args:
                           - prop: type
-                            eq: guerrilla
+                            op: eq
+                            value: guerrilla
                           - op: and
                             args:
                               - prop: type
-                                eq: base
+                                op: eq
+                                value: base
                               - prop: tunnel
-                                eq: untunneled
+                                op: eq
+                                value: untunneled
                 min: 0
                 max: 3
             - forEach:
@@ -3789,7 +3925,8 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: VC
+                                  op: eq
+                                  value: VC
                       right: 0
               cardinality:
                 max: 2
@@ -3854,9 +3991,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: US
+                                op: eq
+                                value: US
                               - prop: type
-                                eq: base
+                                op: eq
+                                value: base
                         to:
                           zoneExpr: available-US:none
                 - addVar:
@@ -3877,9 +4016,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: ARVN
+                                op: eq
+                                value: ARVN
                               - prop: type
-                                eq: base
+                                op: eq
+                                value: base
                         to:
                           zoneExpr: available-ARVN:none
                 - addVar:
@@ -3959,7 +4100,8 @@ eventDecks:
                         op: and
                         args:
                           - prop: faction
-                            eq: NVA
+                            op: eq
+                            value: NVA
                 right: 0
             - seat: us
               sequence:
@@ -4014,9 +4156,11 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: NVA
+                                  op: eq
+                                  value: NVA
                                 - prop: type
-                                  eq: troops
+                                  op: eq
+                                  value: troops
                       right: 0
               cardinality:
                 max: 1
@@ -4041,9 +4185,11 @@ eventDecks:
                                   op: and
                                   args:
                                     - prop: faction
-                                      eq: US
+                                      op: eq
+                                      value: US
                                     - prop: type
-                                      eq: troops
+                                      op: eq
+                                      value: troops
                               to:
                                 zoneExpr: casualties-US:none
                           in:
@@ -4075,9 +4221,11 @@ eventDecks:
                                                     op: and
                                                     args:
                                                       - prop: faction
-                                                        eq: US
+                                                        op: eq
+                                                        value: US
                                                       - prop: type
-                                                        eq: troops
+                                                        op: eq
+                                                        value: troops
                                                 to:
                                                   zoneExpr: casualties-US:none
                                       else: []
@@ -4118,7 +4266,8 @@ eventDecks:
                     op: and
                     args:
                       - prop: faction
-                        eq: ARVN
+                        op: eq
+                        value: ARVN
                 min: 0
                 max: 3
             - forEach:
@@ -4225,9 +4374,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: ARVN
+                                op: eq
+                                value: ARVN
                               - prop: type
-                                eq: police
+                                op: eq
+                                value: police
                         to:
                           zoneExpr: $targetProvince
         shaded:
@@ -4255,9 +4406,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: VC
+                                op: eq
+                                value: VC
                               - prop: type
-                                eq: guerrilla
+                                op: eq
+                                value: guerrilla
                         to:
                           zoneExpr: $targetProvince
       - id: card-55
@@ -4295,7 +4448,8 @@ eventDecks:
                     op: and
                     args:
                       - prop: faction
-                        eq: NVA
+                        op: eq
+                        value: NVA
                 min: 0
                 max: 4
             - forEach:
@@ -4327,7 +4481,8 @@ eventDecks:
                     op: and
                     args:
                       - prop: faction
-                        eq: NVA
+                        op: eq
+                        value: NVA
                 min: 0
                 max: 4
             - forEach:
@@ -4380,11 +4535,14 @@ eventDecks:
                     op: and
                     args:
                       - prop: faction
-                        eq: NVA
+                        op: eq
+                        value: NVA
                       - prop: type
-                        eq: base
+                        op: eq
+                        value: base
                       - prop: tunnel
-                        eq: untunneled
+                        op: eq
+                        value: untunneled
                 effects:
                   - chooseOne:
                       bind: $baseDestination@{$nvaBase}
@@ -4508,7 +4666,8 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: VC
+                                  op: eq
+                                  value: VC
                       right: 0
               cardinality:
                 max: 1
@@ -4611,9 +4770,11 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: US
+                                    op: eq
+                                    value: US
                                   - prop: type
-                                    eq: troops
+                                    op: eq
+                                    value: troops
                             to:
                               zoneExpr: $targetProvince
             - id: long-tan-clear-jungle-guerrillas
@@ -4640,9 +4801,11 @@ eventDecks:
                                   op: and
                                   args:
                                     - prop: faction
-                                      eq: US
+                                      op: eq
+                                      value: US
                                     - prop: type
-                                      eq: troops
+                                      op: eq
+                                      value: troops
                           right: 0
                   cardinality:
                     max: 1
@@ -4664,7 +4827,8 @@ eventDecks:
                                       - NVA
                                       - VC
                                   - prop: type
-                                    eq: guerrilla
+                                    op: eq
+                                    value: guerrilla
                             to:
                               zoneExpr:
                                 concat:
@@ -4697,9 +4861,11 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: VC
+                                  op: eq
+                                  value: VC
                                 - prop: type
-                                  eq: guerrilla
+                                  op: eq
+                                  value: guerrilla
                       right: 2
               cardinality:
                 max: 1
@@ -4716,9 +4882,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: US
+                                op: eq
+                                value: US
                               - prop: type
-                                eq: base
+                                op: eq
+                                value: base
                         to:
                           zoneExpr: casualties-US:none
                       - bind: $usTroop
@@ -4729,9 +4897,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: US
+                                op: eq
+                                value: US
                               - prop: type
-                                eq: troops
+                                op: eq
+                                value: troops
                         to:
                           zoneExpr: casualties-US:none
       - id: card-99
@@ -4822,9 +4992,11 @@ eventDecks:
                                   op: and
                                   args:
                                     - prop: faction
-                                      eq: US
+                                      op: eq
+                                      value: US
                                     - prop: type
-                                      eq: troops
+                                      op: eq
+                                      value: troops
                           right: 0
                   cardinality:
                     max: 1
@@ -4841,7 +5013,8 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: VC
+                                    op: eq
+                                    value: VC
                             to:
                               zoneExpr: available-VC:none
             - id: rach-ba-rai-remove-nva-non-troops
@@ -4868,9 +5041,11 @@ eventDecks:
                                   op: and
                                   args:
                                     - prop: faction
-                                      eq: US
+                                      op: eq
+                                      value: US
                                     - prop: type
-                                      eq: troops
+                                      op: eq
+                                      value: troops
                           right: 0
                   cardinality:
                     max: 1
@@ -4887,7 +5062,8 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: NVA
+                                    op: eq
+                                    value: NVA
                                   - prop: type
                                     op: in
                                     value:
@@ -4919,7 +5095,8 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: VC
+                                  op: eq
+                                  value: VC
                       right: 0
               cardinality:
                 max: 1
@@ -4943,7 +5120,8 @@ eventDecks:
                                   op: and
                                   args:
                                     - prop: faction
-                                      eq: US
+                                      op: eq
+                                      value: US
                                     - prop: type
                                       op: in
                                       value:
@@ -4959,7 +5137,8 @@ eventDecks:
                                   op: and
                                   args:
                                     - prop: faction
-                                      eq: ARVN
+                                      op: eq
+                                      value: ARVN
                                     - prop: type
                                       op: in
                                       value:
@@ -4978,7 +5157,8 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: VC
+                                op: eq
+                                value: VC
                               - prop: type
                                 op: in
                                 value:
@@ -5025,7 +5205,8 @@ eventDecks:
                                   - NVA
                                   - VC
                               - prop: type
-                                eq: guerrilla
+                                op: eq
+                                value: guerrilla
                         to:
                           zoneExpr:
                             concat:
@@ -5065,7 +5246,8 @@ eventDecks:
                               - NVA
                               - VC
                           - prop: type
-                            eq: base
+                            op: eq
+                            value: base
                     effects:
                       - setTokenProp:
                           token: $insurgentBase
@@ -5082,9 +5264,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: NVA
+                                op: eq
+                                value: NVA
                               - prop: type
-                                eq: guerrilla
+                                op: eq
+                                value: guerrilla
                         to:
                           zoneExpr: $targetProvince
                 - removeByPriority:
@@ -5098,9 +5282,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: VC
+                                op: eq
+                                value: VC
                               - prop: type
-                                eq: guerrilla
+                                op: eq
+                                value: guerrilla
                         to:
                           zoneExpr: $targetProvince
       - id: card-104
@@ -5171,7 +5357,8 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: VC
+                                  op: eq
+                                  value: VC
                       right: 0
               cardinality:
                 max: 4
@@ -5207,9 +5394,11 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: ARVN
+                                  op: eq
+                                  value: ARVN
                                 - prop: type
-                                  eq: police
+                                  op: eq
+                                  value: police
                       right: 0
               cardinality:
                 max: 3
@@ -5284,9 +5473,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: VC
+                                op: eq
+                                value: VC
                               - prop: type
-                                eq: guerrilla
+                                op: eq
+                                value: guerrilla
                         to:
                           zoneExpr: $targetProvince
       - id: card-108
@@ -5327,9 +5518,11 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: US
+                                  op: eq
+                                  value: US
                                 - prop: type
-                                  eq: troops
+                                  op: eq
+                                  value: troops
                           to:
                             zoneExpr: available-US:none
                 else: []
@@ -5373,9 +5566,11 @@ eventDecks:
                                     op: and
                                     args:
                                       - prop: faction
-                                        eq: US
+                                        op: eq
+                                        value: US
                                       - prop: type
-                                        eq: troops
+                                        op: eq
+                                        value: troops
                                 to:
                                   zoneExpr: out-of-play-US:none
       - id: card-109
@@ -5460,7 +5655,8 @@ eventDecks:
                         op: and
                         args:
                           - prop: faction
-                            eq: VC
+                            op: eq
+                            value: VC
                           - prop: type
                             op: in
                             value:
@@ -5582,9 +5778,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: NVA
+                                op: eq
+                                value: NVA
                               - prop: type
-                                eq: troops
+                                op: eq
+                                value: troops
                         to:
                           zoneExpr: available-NVA:none
                       - bind: $nvaGuerrilla
@@ -5595,9 +5793,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: NVA
+                                op: eq
+                                value: NVA
                               - prop: type
-                                eq: guerrilla
+                                op: eq
+                                value: guerrilla
                         to:
                           zoneExpr: available-NVA:none
                       - bind: $vcGuerrilla
@@ -5608,9 +5808,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: VC
+                                op: eq
+                                value: VC
                               - prop: type
-                                eq: guerrilla
+                                op: eq
+                                value: guerrilla
                         to:
                           zoneExpr: available-VC:none
         shaded:
@@ -5717,7 +5919,8 @@ eventDecks:
                                     - US
                                     - ARVN
                                 - prop: type
-                                  eq: base
+                                  op: eq
+                                  value: base
                       right: 0
                     - op: ">"
                       left:
@@ -5735,9 +5938,11 @@ eventDecks:
                                     - NVA
                                     - VC
                                 - prop: type
-                                  eq: guerrilla
+                                  op: eq
+                                  value: guerrilla
                                 - prop: activity
-                                  eq: underground
+                                  op: eq
+                                  value: underground
                       right: 0
               cardinality:
                 max: 1
@@ -5759,7 +5964,8 @@ eventDecks:
                                   - US
                                   - ARVN
                               - prop: type
-                                eq: base
+                                op: eq
+                                value: base
                         to:
                           zoneExpr:
                             if:
@@ -5788,9 +5994,11 @@ eventDecks:
                                   - VC
                                   - NVA
                               - prop: type
-                                eq: guerrilla
+                                op: eq
+                                value: guerrilla
                               - prop: activity
-                                eq: underground
+                                op: eq
+                                value: underground
                         to:
                           zoneExpr:
                             concat:
@@ -5872,9 +6080,11 @@ eventDecks:
                         op: and
                         args:
                           - prop: faction
-                            eq: US
+                            op: eq
+                            value: US
                           - prop: type
-                            eq: irregular
+                            op: eq
+                            value: irregular
                 in:
                   - let:
                       bind: $irregularsToPlaceCount
@@ -5908,9 +6118,11 @@ eventDecks:
                                       op: and
                                       args:
                                         - prop: faction
-                                          eq: US
+                                          op: eq
+                                          value: US
                                         - prop: type
-                                          eq: irregular
+                                          op: eq
+                                          value: irregular
                                   min:
                                     ref: binding
                                     name: $irregularsToPlaceCount
@@ -5958,9 +6170,11 @@ eventDecks:
                         op: and
                         args:
                           - prop: faction
-                            eq: US
+                            op: eq
+                            value: US
                           - prop: type
-                            eq: irregular
+                            op: eq
+                            value: irregular
                 in:
                   - let:
                       bind: $irregularsToCasualtiesCount
@@ -5993,9 +6207,11 @@ eventDecks:
                                       op: and
                                       args:
                                         - prop: faction
-                                          eq: US
+                                          op: eq
+                                          value: US
                                         - prop: type
-                                          eq: irregular
+                                          op: eq
+                                          value: irregular
                                   min:
                                     ref: binding
                                     name: $irregularsToCasualtiesCount
@@ -6085,9 +6301,11 @@ eventDecks:
                                   op: and
                                   args:
                                     - prop: faction
-                                      eq: US
+                                      op: eq
+                                      value: US
                                     - prop: type
-                                      eq: irregular
+                                      op: eq
+                                      value: irregular
                           right: 0
                         filter:
                           op: and
@@ -6107,9 +6325,11 @@ eventDecks:
                                 - op: and
                                   args:
                                     - prop: type
-                                      eq: base
+                                      op: eq
+                                      value: base
                                     - prop: tunnel
-                                      eq: untunneled
+                                      op: eq
+                                      value: untunneled
                 max:
                   op: min
                   left: 4
@@ -6130,9 +6350,11 @@ eventDecks:
                                   op: and
                                   args:
                                     - prop: faction
-                                      eq: US
+                                      op: eq
+                                      value: US
                                     - prop: type
-                                      eq: irregular
+                                      op: eq
+                                      value: irregular
                           right: 0
                         filter:
                           op: and
@@ -6152,9 +6374,11 @@ eventDecks:
                                 - op: and
                                   args:
                                     - prop: type
-                                      eq: base
+                                      op: eq
+                                      value: base
                                     - prop: tunnel
-                                      eq: untunneled
+                                      op: eq
+                                      value: untunneled
                 options:
                   query: tokensInMapSpaces
                   spaceFilter:
@@ -6169,9 +6393,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: US
+                                op: eq
+                                value: US
                               - prop: type
-                                eq: irregular
+                                op: eq
+                                value: irregular
                     right: 0
                   filter:
                     op: and
@@ -6191,9 +6417,11 @@ eventDecks:
                           - op: and
                             args:
                               - prop: type
-                                eq: base
+                                op: eq
+                                value: base
                               - prop: tunnel
-                                eq: untunneled
+                                op: eq
+                                value: untunneled
             - forEach:
                 bind: $insurgentPiece
                 over:
@@ -6228,9 +6456,11 @@ eventDecks:
                         op: and
                         args:
                           - prop: faction
-                            eq: US
+                            op: eq
+                            value: US
                           - prop: type
-                            eq: irregular
+                            op: eq
+                            value: irregular
                 in:
                   - if:
                       when:
@@ -6248,9 +6478,11 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: US
+                                    op: eq
+                                    value: US
                                   - prop: type
-                                    eq: irregular
+                                    op: eq
+                                    value: irregular
                             min:
                               ref: binding
                               name: $irregularsOnMapCount
@@ -6274,9 +6506,11 @@ eventDecks:
                                           op: and
                                           args:
                                             - prop: faction
-                                              eq: VC
+                                              op: eq
+                                              value: VC
                                             - prop: type
-                                              eq: guerrilla
+                                              op: eq
+                                              value: guerrilla
                                       to:
                                         zoneExpr:
                                           ref: tokenZone
@@ -6454,9 +6688,11 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: US
+                                  op: eq
+                                  value: US
                                 - prop: type
-                                  eq: troops
+                                  op: eq
+                                  value: troops
                       right: 0
               cardinality:
                 max: 2
@@ -6638,9 +6874,11 @@ eventDecks:
                                       op: and
                                       args:
                                         - prop: faction
-                                          eq: US
+                                          op: eq
+                                          value: US
                                         - prop: type
-                                          eq: base
+                                          op: eq
+                                          value: base
                               right: 0
                             - op: ">"
                               left:
@@ -6653,9 +6891,11 @@ eventDecks:
                                       op: and
                                       args:
                                         - prop: faction
-                                          eq: US
+                                          op: eq
+                                          value: US
                                         - prop: type
-                                          eq: troops
+                                          op: eq
+                                          value: troops
                               right: 0
                   right: 0
                 then:
@@ -6677,9 +6917,11 @@ eventDecks:
                                       op: and
                                       args:
                                         - prop: faction
-                                          eq: US
+                                          op: eq
+                                          value: US
                                         - prop: type
-                                          eq: base
+                                          op: eq
+                                          value: base
                               right: 0
                             - op: ">"
                               left:
@@ -6692,9 +6934,11 @@ eventDecks:
                                       op: and
                                       args:
                                         - prop: faction
-                                          eq: US
+                                          op: eq
+                                          value: US
                                         - prop: type
-                                          eq: troops
+                                          op: eq
+                                          value: troops
                               right: 0
                   - chooseN:
                       bind: $nvaTroopsToRemove
@@ -6713,18 +6957,22 @@ eventDecks:
                                     op: and
                                     args:
                                       - prop: faction
-                                        eq: NVA
+                                        op: eq
+                                        value: NVA
                                       - prop: type
-                                        eq: troops
+                                        op: eq
+                                        value: troops
                                 - query: tokensInAdjacentZones
                                   zone: $targetBaseSpace
                                   filter:
                                     op: and
                                     args:
                                       - prop: faction
-                                        eq: NVA
+                                        op: eq
+                                        value: NVA
                                       - prop: type
-                                        eq: troops
+                                        op: eq
+                                        value: troops
                       max:
                         op: min
                         left: 10
@@ -6740,18 +6988,22 @@ eventDecks:
                                     op: and
                                     args:
                                       - prop: faction
-                                        eq: NVA
+                                        op: eq
+                                        value: NVA
                                       - prop: type
-                                        eq: troops
+                                        op: eq
+                                        value: troops
                                 - query: tokensInAdjacentZones
                                   zone: $targetBaseSpace
                                   filter:
                                     op: and
                                     args:
                                       - prop: faction
-                                        eq: NVA
+                                        op: eq
+                                        value: NVA
                                       - prop: type
-                                        eq: troops
+                                        op: eq
+                                        value: troops
                       options:
                         query: concat
                         sources:
@@ -6761,18 +7013,22 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: NVA
+                                  op: eq
+                                  value: NVA
                                 - prop: type
-                                  eq: troops
+                                  op: eq
+                                  value: troops
                           - query: tokensInAdjacentZones
                             zone: $targetBaseSpace
                             filter:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: NVA
+                                  op: eq
+                                  value: NVA
                                 - prop: type
-                                  eq: troops
+                                  op: eq
+                                  value: troops
                   - forEach:
                       bind: $nvaTroop
                       over:
@@ -6819,9 +7075,11 @@ eventDecks:
                                       op: and
                                       args:
                                         - prop: faction
-                                          eq: US
+                                          op: eq
+                                          value: US
                                         - prop: type
-                                          eq: troops
+                                          op: eq
+                                          value: troops
                               right: 0
                             - op: ">"
                               left:
@@ -6834,7 +7092,8 @@ eventDecks:
                                       op: and
                                       args:
                                         - prop: faction
-                                          eq: NVA
+                                          op: eq
+                                          value: NVA
                               right: 0
                   right: 0
                 then:
@@ -6856,9 +7115,11 @@ eventDecks:
                                       op: and
                                       args:
                                         - prop: faction
-                                          eq: US
+                                          op: eq
+                                          value: US
                                         - prop: type
-                                          eq: troops
+                                          op: eq
+                                          value: troops
                               right: 0
                             - op: ">"
                               left:
@@ -6871,7 +7132,8 @@ eventDecks:
                                       op: and
                                       args:
                                         - prop: faction
-                                          eq: NVA
+                                          op: eq
+                                          value: NVA
                               right: 0
                   - chooseN:
                       bind: $usTroopsToCasualties
@@ -6889,9 +7151,11 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: US
+                                    op: eq
+                                    value: US
                                   - prop: type
-                                    eq: troops
+                                    op: eq
+                                    value: troops
                       options:
                         query: tokensInZone
                         zone: $targetBattleSpace
@@ -6899,9 +7163,11 @@ eventDecks:
                           op: and
                           args:
                             - prop: faction
-                              eq: US
+                              op: eq
+                              value: US
                             - prop: type
-                              eq: troops
+                              op: eq
+                              value: troops
                   - forEach:
                       bind: $usTroop
                       over:
@@ -6954,9 +7220,11 @@ eventDecks:
                         op: and
                         args:
                           - prop: faction
-                            eq: US
+                            op: eq
+                            value: US
                           - prop: type
-                            eq: troops
+                            op: eq
+                            value: troops
                     to:
                       zoneExpr: available-US:none
         shaded:
@@ -6973,9 +7241,11 @@ eventDecks:
                         op: and
                         args:
                           - prop: faction
-                            eq: US
+                            op: eq
+                            value: US
                           - prop: type
-                            eq: troops
+                            op: eq
+                            value: troops
                     to:
                       zoneExpr: casualties-US:none
       - id: card-41
@@ -7087,9 +7357,11 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: NVA
+                                  op: eq
+                                  value: NVA
                                 - prop: type
-                                  eq: troops
+                                  op: eq
+                                  value: troops
                       in:
                         - let:
                             bind: $nvaTroopsToRemove
@@ -7119,9 +7391,11 @@ eventDecks:
                                             op: and
                                             args:
                                               - prop: faction
-                                                eq: NVA
+                                                op: eq
+                                                value: NVA
                                               - prop: type
-                                                eq: troops
+                                                op: eq
+                                                value: troops
                                         min:
                                           ref: binding
                                           name: $nvaTroopsToRemove
@@ -7214,7 +7488,8 @@ eventDecks:
                   zone: available-ARVN:none
                   filter:
                     prop: faction
-                    eq: ARVN
+                    op: eq
+                    value: ARVN
                 min:
                   op: min
                   left: 6
@@ -7226,7 +7501,8 @@ eventDecks:
                         zone: available-ARVN:none
                         filter:
                           prop: faction
-                          eq: ARVN
+                          op: eq
+                          value: ARVN
                 max:
                   op: min
                   left: 6
@@ -7238,7 +7514,8 @@ eventDecks:
                         zone: available-ARVN:none
                         filter:
                           prop: faction
-                          eq: ARVN
+                          op: eq
+                          value: ARVN
             - forEach:
                 bind: $arvnPiece
                 over:
@@ -7276,7 +7553,8 @@ eventDecks:
                                           zone: $zone
                                           filter:
                                             prop: type
-                                            eq: base
+                                            op: eq
+                                            value: base
                                     right: 2
                         - moveToken:
                             token: $arvnPiece
@@ -7340,9 +7618,11 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: NVA
+                                    op: eq
+                                    value: NVA
                                   - prop: type
-                                    eq: troops
+                                    op: eq
+                                    value: troops
                         right: 0
                       - op: <=
                         left:
@@ -7355,9 +7635,11 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: NVA
+                                    op: eq
+                                    value: NVA
                                   - prop: type
-                                    eq: troops
+                                    op: eq
+                                    value: troops
                         right:
                           aggregate:
                             op: count
@@ -7368,9 +7650,11 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: NVA
+                                    op: eq
+                                    value: NVA
                                   - prop: type
-                                    eq: troops
+                                    op: eq
+                                    value: troops
                 min: 0
                 max: 1
             - forEach:
@@ -7391,9 +7675,11 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: NVA
+                                  op: eq
+                                  value: NVA
                                 - prop: type
-                                  eq: troops
+                                  op: eq
+                                  value: troops
                       in:
                         - forEach:
                             bind: $nvaTroop
@@ -7404,9 +7690,11 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: NVA
+                                    op: eq
+                                    value: NVA
                                   - prop: type
-                                    eq: troops
+                                    op: eq
+                                    value: troops
                             limit:
                               ref: binding
                               name: $russianArmsTroopsToAdd
@@ -7438,9 +7726,11 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: NVA
+                                    op: eq
+                                    value: NVA
                                   - prop: type
-                                    eq: troops
+                                    op: eq
+                                    value: troops
                         right: 0
                       - op: <=
                         left:
@@ -7453,9 +7743,11 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: NVA
+                                    op: eq
+                                    value: NVA
                                   - prop: type
-                                    eq: troops
+                                    op: eq
+                                    value: troops
                         right:
                           aggregate:
                             op: count
@@ -7466,9 +7758,11 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: NVA
+                                    op: eq
+                                    value: NVA
                                   - prop: type
-                                    eq: troops
+                                    op: eq
+                                    value: troops
                       - op: not
                         arg:
                           op: in
@@ -7499,9 +7793,11 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: NVA
+                                  op: eq
+                                  value: NVA
                                 - prop: type
-                                  eq: troops
+                                  op: eq
+                                  value: troops
                       in:
                         - forEach:
                             bind: $nvaTroop
@@ -7512,9 +7808,11 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: NVA
+                                    op: eq
+                                    value: NVA
                                   - prop: type
-                                    eq: troops
+                                    op: eq
+                                    value: troops
                             limit:
                               ref: binding
                               name: $russianArmsTroopsToAdd
@@ -7546,9 +7844,11 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: NVA
+                                    op: eq
+                                    value: NVA
                                   - prop: type
-                                    eq: troops
+                                    op: eq
+                                    value: troops
                         right: 0
                       - op: <=
                         left:
@@ -7561,9 +7861,11 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: NVA
+                                    op: eq
+                                    value: NVA
                                   - prop: type
-                                    eq: troops
+                                    op: eq
+                                    value: troops
                         right:
                           aggregate:
                             op: count
@@ -7574,9 +7876,11 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: NVA
+                                    op: eq
+                                    value: NVA
                                   - prop: type
-                                    eq: troops
+                                    op: eq
+                                    value: troops
                       - op: not
                         arg:
                           op: in
@@ -7617,9 +7921,11 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: NVA
+                                  op: eq
+                                  value: NVA
                                 - prop: type
-                                  eq: troops
+                                  op: eq
+                                  value: troops
                       in:
                         - forEach:
                             bind: $nvaTroop
@@ -7630,9 +7936,11 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: NVA
+                                    op: eq
+                                    value: NVA
                                   - prop: type
-                                    eq: troops
+                                    op: eq
+                                    value: troops
                             limit:
                               ref: binding
                               name: $russianArmsTroopsToAdd
@@ -8057,7 +8365,8 @@ eventDecks:
                           op: and
                           args:
                             - prop: cardId
-                              eq: card-124
+                              op: eq
+                              value: card-124
                   right: 0
                 then:
                   - forEach:
@@ -8069,7 +8378,8 @@ eventDecks:
                           op: and
                           args:
                             - prop: cardId
-                              eq: card-124
+                              op: eq
+                              value: card-124
                       limit: 1
                       effects:
                         - moveToken:
@@ -8206,18 +8516,22 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: ARVN
+                                  op: eq
+                                  value: ARVN
                                 - prop: type
-                                  eq: troops
+                                  op: eq
+                                  value: troops
                           - query: tokensInZone
                             zone: out-of-play-ARVN:none
                             filter:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: ARVN
+                                  op: eq
+                                  value: ARVN
                                 - prop: type
-                                  eq: troops
+                                  op: eq
+                                  value: troops
                 max:
                   op: min
                   left: 3
@@ -8233,18 +8547,22 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: ARVN
+                                  op: eq
+                                  value: ARVN
                                 - prop: type
-                                  eq: troops
+                                  op: eq
+                                  value: troops
                           - query: tokensInZone
                             zone: out-of-play-ARVN:none
                             filter:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: ARVN
+                                  op: eq
+                                  value: ARVN
                                 - prop: type
-                                  eq: troops
+                                  op: eq
+                                  value: troops
                 options:
                   query: concat
                   sources:
@@ -8254,18 +8572,22 @@ eventDecks:
                         op: and
                         args:
                           - prop: faction
-                            eq: ARVN
+                            op: eq
+                            value: ARVN
                           - prop: type
-                            eq: troops
+                            op: eq
+                            value: troops
                     - query: tokensInZone
                       zone: out-of-play-ARVN:none
                       filter:
                         op: and
                         args:
                           - prop: faction
-                            eq: ARVN
+                            op: eq
+                            value: ARVN
                           - prop: type
-                            eq: troops
+                            op: eq
+                            value: troops
             - chooseN:
                 bind: $troopsToAnchor
                 max:
@@ -8428,7 +8750,8 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: ARVN
+                                  op: eq
+                                  value: ARVN
                           to:
                             zoneExpr: available-ARVN:none
                       in:
@@ -8460,7 +8783,8 @@ eventDecks:
                                                 op: and
                                                 args:
                                                   - prop: faction
-                                                    eq: ARVN
+                                                    op: eq
+                                                    value: ARVN
                                             to:
                                               zoneExpr: available-ARVN:none
                                   else: []
@@ -8653,7 +8977,8 @@ eventDecks:
                         op: and
                         args:
                           - prop: faction
-                            eq: NVA
+                            op: eq
+                            value: NVA
                           - op: or
                             args:
                               - prop: type
@@ -8664,9 +8989,11 @@ eventDecks:
                               - op: and
                                 args:
                                   - prop: type
-                                    eq: base
+                                    op: eq
+                                    value: base
                                   - prop: tunnel
-                                    eq: untunneled
+                                    op: eq
+                                    value: untunneled
                 in:
                   - let:
                       bind: $northVietnamRemoveCount
@@ -8700,7 +9027,8 @@ eventDecks:
                                       op: and
                                       args:
                                         - prop: faction
-                                          eq: NVA
+                                          op: eq
+                                          value: NVA
                                         - op: or
                                           args:
                                             - prop: type
@@ -8711,9 +9039,11 @@ eventDecks:
                                             - op: and
                                               args:
                                                 - prop: type
-                                                  eq: base
+                                                  op: eq
+                                                  value: base
                                                 - prop: tunnel
-                                                  eq: untunneled
+                                                  op: eq
+                                                  value: untunneled
                                   min:
                                     ref: binding
                                     name: $northVietnamRemoveCount
@@ -8770,7 +9100,8 @@ eventDecks:
                                                 op: and
                                                 args:
                                                   - prop: faction
-                                                    eq: NVA
+                                                    op: eq
+                                                    value: NVA
                                                   - op: or
                                                     args:
                                                       - prop: type
@@ -8781,9 +9112,11 @@ eventDecks:
                                                       - op: and
                                                         args:
                                                           - prop: type
-                                                            eq: base
+                                                            op: eq
+                                                            value: base
                                                           - prop: tunnel
-                                                            eq: untunneled
+                                                            op: eq
+                                                            value: untunneled
                                         in:
                                           - let:
                                               bind: $laosRemoveCount
@@ -8819,7 +9152,8 @@ eventDecks:
                                                               op: and
                                                               args:
                                                                 - prop: faction
-                                                                  eq: NVA
+                                                                  op: eq
+                                                                  value: NVA
                                                                 - op: or
                                                                   args:
                                                                     - prop: type
@@ -8830,9 +9164,11 @@ eventDecks:
                                                                     - op: and
                                                                       args:
                                                                         - prop: type
-                                                                          eq: base
+                                                                          op: eq
+                                                                          value: base
                                                                         - prop: tunnel
-                                                                          eq: untunneled
+                                                                          op: eq
+                                                                          value: untunneled
                                                           min:
                                                             ref: binding
                                                             name: $laosRemoveCount
@@ -8873,9 +9209,11 @@ eventDecks:
                         op: and
                         args:
                           - prop: faction
-                            eq: US
+                            op: eq
+                            value: US
                           - prop: type
-                            eq: troops
+                            op: eq
+                            value: troops
                     to:
                       zoneExpr: out-of-play-US:none
           lastingEffects:
@@ -8998,7 +9336,8 @@ eventDecks:
                                       op: and
                                       args:
                                         - prop: faction
-                                          eq: ARVN
+                                          op: eq
+                                          value: ARVN
                               right: 0
                             - op: ">"
                               left:
@@ -9011,7 +9350,8 @@ eventDecks:
                                       op: and
                                       args:
                                         - prop: faction
-                                          eq: NVA
+                                          op: eq
+                                          value: NVA
                               right: 0
                   right: 0
                 then:
@@ -9033,7 +9373,8 @@ eventDecks:
                                       op: and
                                       args:
                                         - prop: faction
-                                          eq: ARVN
+                                          op: eq
+                                          value: ARVN
                               right: 0
                             - op: ">"
                               left:
@@ -9046,7 +9387,8 @@ eventDecks:
                                       op: and
                                       args:
                                         - prop: faction
-                                          eq: NVA
+                                          op: eq
+                                          value: NVA
                               right: 0
                   - let:
                       bind: $arvnPieceCount
@@ -9060,7 +9402,8 @@ eventDecks:
                               op: and
                               args:
                                 - prop: faction
-                                  eq: ARVN
+                                  op: eq
+                                  value: ARVN
                       in:
                         - removeByPriority:
                             budget:
@@ -9075,9 +9418,11 @@ eventDecks:
                                     op: and
                                     args:
                                       - prop: faction
-                                        eq: ARVN
+                                        op: eq
+                                        value: ARVN
                                       - prop: type
-                                        eq: troops
+                                        op: eq
+                                        value: troops
                                 to:
                                   zoneExpr: $doublingSpace
                 else: []
@@ -9099,7 +9444,8 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: ARVN
+                                    op: eq
+                                    value: ARVN
                         right: 0
                       - op: or
                         args:
@@ -9114,9 +9460,11 @@ eventDecks:
                                     op: and
                                     args:
                                       - prop: faction
-                                        eq: NVA
+                                        op: eq
+                                        value: NVA
                                       - prop: type
-                                        eq: troops
+                                        op: eq
+                                        value: troops
                             right: 0
                           - op: ">"
                             left:
@@ -9129,11 +9477,14 @@ eventDecks:
                                     op: and
                                     args:
                                       - prop: faction
-                                        eq: NVA
+                                        op: eq
+                                        value: NVA
                                       - prop: type
-                                        eq: guerrilla
+                                        op: eq
+                                        value: guerrilla
                                       - prop: activity
-                                        eq: active
+                                        op: eq
+                                        value: active
                             right: 0
                 effects:
                   - let:
@@ -9170,9 +9521,11 @@ eventDecks:
                                         op: and
                                         args:
                                           - prop: faction
-                                            eq: ARVN
+                                            op: eq
+                                            value: ARVN
                                           - prop: type
-                                            eq: troops
+                                            op: eq
+                                            value: troops
                                 else:
                                   aggregate:
                                     op: count
@@ -9183,7 +9536,8 @@ eventDecks:
                                         op: and
                                         args:
                                           - prop: faction
-                                            eq: ARVN
+                                            op: eq
+                                            value: ARVN
                                           - prop: type
                                             op: in
                                             value:
@@ -9234,9 +9588,11 @@ eventDecks:
                     op: and
                     args:
                       - prop: faction
-                        eq: NVA
+                        op: eq
+                        value: NVA
                       - prop: type
-                        eq: troops
+                        op: eq
+                        value: troops
                 min: 0
                 max:
                   op: min
@@ -9251,9 +9607,11 @@ eventDecks:
                           op: and
                           args:
                             - prop: faction
-                              eq: NVA
+                              op: eq
+                              value: NVA
                             - prop: type
-                              eq: troops
+                              op: eq
+                              value: troops
             - forEach:
                 bind: $nvaTroop
                 over:
@@ -9315,7 +9673,8 @@ eventDecks:
                                   - US
                                   - ARVN
                               - prop: type
-                                eq: base
+                                op: eq
+                                value: base
                         to:
                           zoneExpr:
                             concat:
@@ -9337,7 +9696,8 @@ eventDecks:
                                   - US
                                   - ARVN
                               - prop: type
-                                eq: troops
+                                op: eq
+                                value: troops
                         to:
                           zoneExpr:
                             concat:
@@ -9372,7 +9732,8 @@ eventDecks:
                                   - NVA
                                   - VC
                               - prop: type
-                                eq: guerrilla
+                                op: eq
+                                value: guerrilla
                         to:
                           zoneExpr:
                             concat:
@@ -9490,7 +9851,8 @@ eventDecks:
                                     - US
                                     - ARVN
                                 - prop: type
-                                  eq: base
+                                  op: eq
+                                  value: base
                       right: 0
               cardinality:
                 max: 1
@@ -9510,7 +9872,8 @@ eventDecks:
                               - NVA
                               - VC
                           - prop: type
-                            eq: guerrilla
+                            op: eq
+                            value: guerrilla
                     min: 0
                     max: 3
                 - forEach:
@@ -9568,7 +9931,8 @@ eventDecks:
                                     - US
                                     - ARVN
                                 - prop: type
-                                  eq: base
+                                  op: eq
+                                  value: base
                       right: 0
                     - op: <=
                       left:
@@ -9583,7 +9947,8 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: US
+                                    op: eq
+                                    value: US
                                   - prop: type
                                     op: in
                                     value:
@@ -9599,7 +9964,8 @@ eventDecks:
                                 op: and
                                 args:
                                   - prop: faction
-                                    eq: ARVN
+                                    op: eq
+                                    value: ARVN
                                   - prop: type
                                     op: in
                                     value:
@@ -9624,7 +9990,8 @@ eventDecks:
                               - US
                               - ARVN
                           - prop: type
-                            eq: base
+                            op: eq
+                            value: base
                 - moveToken:
                     token: $coinBaseToRemove
                     from:
@@ -9755,7 +10122,8 @@ eventDecks:
                         op: and
                         args:
                           - prop: faction
-                            eq: US
+                            op: eq
+                            value: US
                     to:
                       zoneExpr: available-US:none
             - removeByPriority:
@@ -9769,7 +10137,8 @@ eventDecks:
                         op: and
                         args:
                           - prop: faction
-                            eq: ARVN
+                            op: eq
+                            value: ARVN
                     to:
                       zoneExpr: available-ARVN:none
             - rollRandom:
@@ -9902,9 +10271,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: US
+                                op: eq
+                                value: US
                               - prop: type
-                                eq: troops
+                                op: eq
+                                value: troops
                         to:
                           zoneExpr: available-US:none
                       - bind: $usIrregular
@@ -9915,9 +10286,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: US
+                                op: eq
+                                value: US
                               - prop: type
-                                eq: irregular
+                                op: eq
+                                value: irregular
                         to:
                           zoneExpr: available-US:none
                       - bind: $usBase
@@ -9928,9 +10301,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: US
+                                op: eq
+                                value: US
                               - prop: type
-                                eq: base
+                                op: eq
+                                value: base
                         to:
                           zoneExpr: available-US:none
                 - addVar:
@@ -9958,9 +10333,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: US
+                                op: eq
+                                value: US
                               - prop: type
-                                eq: troops
+                                op: eq
+                                value: troops
                         to:
                           zoneExpr: available-US:none
                       - bind: $usIrregular
@@ -9971,9 +10348,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: US
+                                op: eq
+                                value: US
                               - prop: type
-                                eq: irregular
+                                op: eq
+                                value: irregular
                         to:
                           zoneExpr: available-US:none
                       - bind: $usBase
@@ -9984,9 +10363,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: US
+                                op: eq
+                                value: US
                               - prop: type
-                                eq: base
+                                op: eq
+                                value: base
                         to:
                           zoneExpr: available-US:none
                 - addVar:
@@ -10027,7 +10408,8 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: US
+                                op: eq
+                                value: US
                         to:
                           zoneExpr: $targetSpace
                 - forEach:
@@ -10044,9 +10426,11 @@ eventDecks:
                               - NVA
                               - VC
                           - prop: type
-                            eq: guerrilla
+                            op: eq
+                            value: guerrilla
                           - prop: activity
-                            eq: underground
+                            op: eq
+                            value: underground
                     limit: 2
                     effects:
                       - setTokenProp:
@@ -10077,9 +10461,11 @@ eventDecks:
                               - NVA
                               - VC
                           - prop: type
-                            eq: guerrilla
+                            op: eq
+                            value: guerrilla
                           - prop: activity
-                            eq: active
+                            op: eq
+                            value: active
                     limit: 2
                     effects:
                       - setTokenProp:
@@ -10097,9 +10483,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: US
+                                op: eq
+                                value: US
                               - prop: type
-                                eq: troops
+                                op: eq
+                                value: troops
                         to:
                           zoneExpr: casualties-US:none
       - id: card-118
@@ -10136,9 +10524,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: VC
+                                op: eq
+                                value: VC
                               - prop: type
-                                eq: guerrilla
+                                op: eq
+                                value: guerrilla
                         to:
                           zoneExpr: available-VC:none
                 - removeByPriority:
@@ -10152,9 +10542,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: VC
+                                op: eq
+                                value: VC
                               - prop: type
-                                eq: guerrilla
+                                op: eq
+                                value: guerrilla
                         to:
                           zoneExpr: $targetSpace
         shaded:
@@ -10178,9 +10570,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: VC
+                                op: eq
+                                value: VC
                               - prop: type
-                                eq: guerrilla
+                                op: eq
+                                value: guerrilla
                         to:
                           zoneExpr: $targetSpace
                 - removeByPriority:
@@ -10194,9 +10588,11 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: NVA
+                                op: eq
+                                value: NVA
                               - prop: type
-                                eq: guerrilla
+                                op: eq
+                                value: guerrilla
                         to:
                           zoneExpr: $targetSpace
       - id: card-121
@@ -10275,7 +10671,8 @@ eventDecks:
                             op: and
                             args:
                               - prop: faction
-                                eq: US
+                                op: eq
+                                value: US
                               - prop: type
                                 op: in
                                 value:
@@ -10321,9 +10718,11 @@ eventDecks:
                       op: and
                       args:
                         - prop: faction
-                          eq: NVA
+                          op: eq
+                          value: NVA
                         - prop: type
-                          eq: troops
+                          op: eq
+                          value: troops
               right:
                 aggregate:
                   op: count
@@ -10333,9 +10732,11 @@ eventDecks:
                       op: and
                       args:
                         - prop: faction
-                          eq: US
+                          op: eq
+                          value: US
                         - prop: type
-                          eq: troops
+                          op: eq
+                          value: troops
         unshaded:
           text: "Invasion: NVA free Marches. Then NVA Troops on LoCs with no US/ARVN may move 1 space. Then all NVA Troops free Attack."
       - id: card-123
@@ -10370,9 +10771,11 @@ eventDecks:
                       op: and
                       args:
                         - prop: faction
-                          eq: US
+                          op: eq
+                          value: US
                         - prop: type
-                          eq: troops
+                          op: eq
+                          value: troops
               right: 20
         unshaded:
           text: "Mechanization: +12 ARVN Resources. +12 Aid. All out-of-play ARVN Available. Place 4 ARVN cubes anywhere."
@@ -10415,9 +10818,11 @@ eventDecks:
                       op: and
                       args:
                         - prop: faction
-                          eq: VC
+                          op: eq
+                          value: VC
                         - prop: type
-                          eq: guerrilla
+                          op: eq
+                          value: guerrilla
               right: 20
         unshaded:
           text: "General uprising: Free Terror with 1 Underground VC per space. Place 6 VC pieces in any cities. VC + NVA Guerrillas free Attack where enemies (remove VC first)."

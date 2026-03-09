@@ -335,7 +335,7 @@ describe('FITL RVN leader lingering effects', () => {
     const hasThirdsRemoval = findDeep(desertionMacro.effects, (node) =>
       node?.forEach?.limit?.op === '/' &&
       node?.forEach?.limit?.right === 3 &&
-      findDeep(node.forEach?.over ?? {}, (child) => child?.prop === 'faction' && child?.eq === 'ARVN').length > 0,
+      findDeep(node.forEach?.over ?? {}, (child) => child?.prop === 'faction' && child?.op === 'eq' && child?.value === 'ARVN').length > 0,
     );
     assert.ok(hasThirdsRemoval.length >= 1, 'Expected Desertion helper to remove floor(ARVN cubes/3) per space');
   });

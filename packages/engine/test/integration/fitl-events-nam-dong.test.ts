@@ -23,7 +23,6 @@ import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 const CARD_ID = 'card-48';
 const QUANG_NAM = 'quang-nam:none';
 const QUANG_TIN = 'quang-tin-quang-ngai:none';
-const PLEIKU = 'pleiku-darlac:none';
 
 const makeToken = (
   id: string,

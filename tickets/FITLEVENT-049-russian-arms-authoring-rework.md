@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — depends on prior generic engine work
-**Deps**: tickets/GAMESPECAUTH-001-expression-token-filters.md, tickets/GAMESPECAUTH-002-control-flow-limit-binding-scope.md, data/games/fire-in-the-lake/41-content-event-decks.md, packages/engine/test/integration/fitl-events-russian-arms.test.ts
+**Deps**: archive/tickets/GAMESPECAUTH-001-remove-predicate-alias-shorthand-from-authored-filters.md, tickets/GAMESPECAUTH-002-control-flow-limit-binding-scope.md, data/games/fire-in-the-lake/41-content-event-decks.md, packages/engine/test/integration/fitl-events-russian-arms.test.ts
 
 ## Problem
 

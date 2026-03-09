@@ -4,7 +4,8 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — depends on stage-level pipeline predicates from ENGINEARCH-006, plus FITL data/test updates
-**Deps**: `tickets/README.md`, `tickets/_TEMPLATE.md`, `tickets/ENGINEARCH-006-stage-level-pipeline-predicates.md`, `archive/tickets/FITLCAPMOMRVNLEA-004-capability-branches-march-attack-bombard.md`, `data/games/fire-in-the-lake/20-macros.md`, `data/games/fire-in-the-lake/30-rules-actions.md`, `packages/engine/test/integration/fitl-capabilities-march-attack-bombard.test.ts`
+**Deps**: `tickets/README.md`, `tickets/_TEMPLATE.md`, `archive/tickets/ENGINEARCH-006-stage-level-pipeline-predicates.md`, `archive/tickets/FITLCAPMOMRVNLEA-004-capability-branches-march-attack-bombard.md`, `data/games/fire-in-the-lake/20-macros.md`, `data/games/fire-in-the-lake/30-rules-actions.md`, `packages/engine/test/integration/fitl-capabilities-march-attack-bombard.test.ts`
+
 
 ## Problem
 

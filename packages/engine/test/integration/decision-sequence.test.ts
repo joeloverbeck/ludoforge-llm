@@ -274,6 +274,94 @@ describe('decision sequence integration', () => {
     ]);
   });
 
+  it('keeps stage-bound cost validation aligned between evaluated choices and execution', () => {
+    const actionId = asActionId('stageGatedDeploy');
+    const def = {
+      metadata: { id: 'decision-sequence-stage-gated-int', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 100 }],
+      perPlayerVars: [],
+      zones: [{ id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' }],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actionPipelines: [
+        {
+          id: 'stageGatedDeployProfile',
+          actionId,
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [
+            {
+              effects: [
+                {
+                  chooseN: {
+                    internalDecisionId: 'decision:probe::$targets',
+                    bind: '$targets',
+                    options: { query: 'enums', values: ['a', 'b', 'c'] },
+                    min: 1,
+                    max: 2,
+                  },
+                },
+              ],
+            },
+            {
+              costValidation: {
+                op: 'not',
+                arg: {
+                  op: 'in',
+                  item: 'b',
+                  set: { ref: 'binding', name: '$targets' },
+                },
+              },
+              effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }],
+            },
+          ],
+          atomicity: 'atomic',
+        },
+      ],
+      actions: [
+        {
+          id: actionId,
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('main')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+
+    const state = initialState(def, 123, 2).state;
+    const evaluated = legalChoicesEvaluate(def, state, { actionId, params: {} });
+    assert.equal(evaluated.kind, 'pending');
+    if (evaluated.kind !== 'pending') {
+      throw new Error('Expected pending evaluated choices.');
+    }
+    assert.deepEqual(evaluated.options, [
+      { value: 'a', legality: 'legal', illegalReason: null },
+      { value: 'b', legality: 'illegal', illegalReason: 'pipelineAtomicCostValidationFailed' },
+      { value: 'c', legality: 'legal', illegalReason: null },
+    ]);
+
+    assert.throws(
+      () => applyMove(def, state, { actionId, params: { 'decision:probe::$targets': ['b'] } }),
+      (error: unknown) => {
+        const details = error as Error & { reason?: unknown; context?: Record<string, unknown> };
+        assert.equal(details.reason, 'moveNotLegalInCurrentState');
+        assert.equal(details.context?.detail, 'pipelineAtomicCostValidationFailed');
+        return true;
+      },
+    );
+  });
+
   it('legalMoves returns template move for profiled action and full move for simple action', () => {
     const def = createDecisionSequenceDef();
     const state = initialState(def, 42, 2).state;

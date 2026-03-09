@@ -11,7 +11,11 @@ import { createExecutionEffectContext } from './effect-context.js';
 import { applyEffects } from './effects.js';
 import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import { resolveMoveEnumerationBudgets } from './move-enumeration-budgets.js';
-import { decideApplyMovePipelineViability, evaluatePipelinePredicateStatus } from './pipeline-viability-policy.js';
+import {
+  decideApplyMovePipelineViability,
+  evaluatePipelinePredicateStatus,
+  evaluateStagePredicateStatus,
+} from './pipeline-viability-policy.js';
 import { resolvePlayerIndexForTurnFlowSeat, type SeatResolutionContext } from './seat-resolution.js';
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import {
@@ -21,12 +25,16 @@ import {
 } from './free-operation-discovery-analysis.js';
 import { resolveGrantFreeOperationActionDomain } from './free-operation-action-domain.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
-import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
-import { collectDecisionBindingsFromEffects, deriveDecisionBindingsFromMoveParams } from './move-runtime-bindings.js';
+import {
+  buildMoveRuntimeBindings,
+  deriveDecisionBindingsFromMoveParams,
+  resolvePipelineDecisionBindingsForMove,
+} from './move-runtime-bindings.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { materialGameplayStateProjection } from './material-gameplay-state.js';
 import type {
+  ActionPipelineDef,
   ChoicePendingRequest,
   GameDef,
   GameState,
@@ -294,26 +302,12 @@ const selectableDecisionValues = (
 };
 
 const decisionBindingsForMove = (
-  executionProfile: ReturnType<typeof toExecutionPipeline> | undefined,
+  pipeline: ActionPipelineDef | undefined,
   moveParams: Move['params'],
 ): Readonly<Record<string, MoveParamValue>> => {
-  const bindings: Record<string, MoveParamValue> = {
-    ...deriveDecisionBindingsFromMoveParams(moveParams),
-  };
-  if (executionProfile === undefined) {
-    return bindings;
-  }
-  const decisionBindings = new Map<string, string>();
-  collectDecisionBindingsFromEffects(executionProfile.costSpend, decisionBindings);
-  for (const stage of executionProfile.resolutionStages) {
-    collectDecisionBindingsFromEffects(stage, decisionBindings);
-  }
-  for (const [decisionId, bind] of decisionBindings.entries()) {
-    if (Object.prototype.hasOwnProperty.call(moveParams, decisionId)) {
-      bindings[bind] = moveParams[decisionId] as MoveParamValue;
-    }
-  }
-  return bindings;
+  return pipeline === undefined
+    ? deriveDecisionBindingsFromMoveParams(moveParams)
+    : resolvePipelineDecisionBindingsForMove(pipeline, moveParams);
 };
 
 const isCompletedProbeMoveCurrentlyLegal = (
@@ -407,7 +401,10 @@ const doesCompletedProbeMoveChangeGameplayState = (
   const executionProfile = preflight.pipelineDispatch.kind === 'matched'
     ? toExecutionPipeline(action, preflight.pipelineDispatch.profile)
     : undefined;
-  const resolvedDecisionBindings = decisionBindingsForMove(executionProfile, move.params);
+  const resolvedDecisionBindings = decisionBindingsForMove(
+    preflight.pipelineDispatch.kind === 'matched' ? preflight.pipelineDispatch.profile : undefined,
+    move.params,
+  );
   const runtimeMoveParams = {
     ...move.params,
     ...resolvedDecisionBindings,
@@ -435,10 +432,30 @@ const doesCompletedProbeMoveChangeGameplayState = (
       },
       effectPath: '',
     })).state
-    : executionProfile.resolutionStages.reduce(
-      (currentState, stageEffects, stageIdx) =>
-        applyEffects(stageEffects, createExecutionEffectContext({
+    : (() => {
+      let currentState = state;
+      let currentBindings: Readonly<Record<string, unknown>> = effectCtxBase.bindings;
+      for (const [stageIdx, stage] of executionProfile.resolutionStages.entries()) {
+        const stageEvalCtx = {
+          ...preflight.evalCtx,
+          state: currentState,
+          bindings: currentBindings,
+        };
+        const status = evaluateStagePredicateStatus(
+          action,
+          executionProfile.profileId,
+          stage,
+          executionProfile.partialMode,
+          stageEvalCtx,
+          { includeCostValidation: move.freeOperation !== true },
+        );
+        const viability = decideApplyMovePipelineViability(status, { isFreeOperation: move.freeOperation === true });
+        if (viability.kind === 'illegalMove' || !viability.costValidationPassed) {
+          continue;
+        }
+        const result = applyEffects(stage.effects, createExecutionEffectContext({
           ...effectCtxBase,
+          bindings: currentBindings,
           state: currentState,
           rng: { state: currentState.rng },
           traceContext: {
@@ -447,9 +464,12 @@ const doesCompletedProbeMoveChangeGameplayState = (
             effectPathRoot: `action:${String(action.id)}.stages[${stageIdx}]`,
           },
           effectPath: '',
-        })).state,
-      state,
-    );
+        }));
+        currentState = result.state;
+        currentBindings = result.bindings ?? currentBindings;
+      }
+      return currentState;
+    })();
 
   return !deepEqual(
     materialGameplayStateProjection(def, state),

@@ -991,6 +991,44 @@ describe('validateGameDef reference checks', () => {
         }) as unknown as GameDef,
       },
       {
+        name: 'actionPipelines.stages.legality',
+        expectedPath: `${appendActionPipelineConditionSurfacePath('actionPipelines[0].stages[0]', CONDITION_SURFACE_SUFFIX.actionPipeline.legality)}.args`,
+        buildDef: (seed) => ({
+          ...seed,
+          actionPipelines: [
+            {
+              id: 'profile-a',
+              actionId: 'playCard',
+              legality: null,
+              costValidation: null,
+              costEffects: [],
+              targeting: {},
+              stages: [{ legality: { op: 'and', args: [] }, effects: [] }],
+              atomicity: 'atomic',
+            },
+          ],
+        }) as unknown as GameDef,
+      },
+      {
+        name: 'actionPipelines.stages.costValidation',
+        expectedPath: `${appendActionPipelineConditionSurfacePath('actionPipelines[0].stages[0]', CONDITION_SURFACE_SUFFIX.actionPipeline.costValidation)}.args`,
+        buildDef: (seed) => ({
+          ...seed,
+          actionPipelines: [
+            {
+              id: 'profile-a',
+              actionId: 'playCard',
+              legality: null,
+              costValidation: null,
+              costEffects: [],
+              targeting: {},
+              stages: [{ costValidation: { op: 'and', args: [] }, effects: [] }],
+              atomicity: 'atomic',
+            },
+          ],
+        }) as unknown as GameDef,
+      },
+      {
         name: 'terminal.checkpoints.when',
         expectedPath: `${conditionSurfacePathForTerminalCheckpointWhen(0)}.args`,
         buildDef: (seed) => ({

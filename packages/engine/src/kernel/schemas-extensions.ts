@@ -378,6 +378,8 @@ export const ActionPipelineTargetingSchema = z
 export const ActionPipelineStageSchema = z
   .object({
     stage: StringSchema.optional(),
+    legality: ConditionASTSchema.nullable().optional(),
+    costValidation: ConditionASTSchema.nullable().optional(),
     effects: z.array(EffectASTSchema),
   })
   .strict();

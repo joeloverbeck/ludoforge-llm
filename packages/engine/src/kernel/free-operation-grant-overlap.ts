@@ -20,6 +20,7 @@ type FreeOperationGrantOverlapComparable = {
   readonly outcomePolicy?: string;
   readonly postResolutionTurnFlow?: string;
   readonly sequenceContext?: unknown;
+  readonly executionContext?: unknown;
 };
 
 type FreeOperationGrantClassificationOptions = {
@@ -71,6 +72,7 @@ export const freeOperationGrantEquivalenceKey = (
   withOptional(surface, 'completionPolicy', grant.completionPolicy);
   withOptional(surface, 'outcomePolicy', grant.outcomePolicy);
   withOptional(surface, 'postResolutionTurnFlow', grant.postResolutionTurnFlow);
+  withOptional(surface, 'executionContext', grant.executionContext);
   if (options?.additionalFields !== undefined) {
     Object.assign(surface, options.additionalFields);
   }

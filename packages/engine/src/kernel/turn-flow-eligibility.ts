@@ -1,9 +1,11 @@
 import { asPlayerId } from './branded.js';
+import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
 import {
   resolveBoundaryDurationsAtTurnEnd,
   resolveEventEligibilityOverrides,
   resolveEventFreeOperationGrants,
 } from './event-execution.js';
+import { resolveFreeOperationExecutionContext } from './free-operation-execution-context.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import {
   createSeatResolutionContext,
@@ -19,6 +21,8 @@ import {
   resolveAuthorizedPendingFreeOperationGrants,
 } from './free-operation-grant-authorization.js';
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
+import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
+import { buildAdjacencyGraph } from './spatial.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
@@ -187,11 +191,20 @@ const isEventMoveBlockedByGrantViabilityPolicy = (
   seatOrder: readonly string[],
   seatResolution: SeatResolutionContext,
 ): boolean => {
+  const grantEvalContext = createEvalContext({
+    def,
+    adjacencyGraph: buildAdjacencyGraph(def.zones),
+    state,
+    activePlayer: state.activePlayer,
+    actorPlayer: state.activePlayer,
+    bindings: buildMoveRuntimeBindings(move),
+    resources: createEvalRuntimeResources(),
+  });
   for (const grant of resolveEventFreeOperationGrants(def, state, move)) {
     if (resolveFreeOperationGrantViabilityPolicy(grant) !== 'requireUsableForEventPlay') {
       continue;
     }
-    if (!isFreeOperationGrantUsableInCurrentState(def, state, grant, activeSeat, seatOrder, seatResolution)) {
+    if (!isFreeOperationGrantUsableInCurrentState(def, state, grant, activeSeat, seatOrder, seatResolution, { evalContext: grantEvalContext })) {
       return true;
     }
   }
@@ -250,6 +263,7 @@ const toPendingFreeOperationGrant = (
   grant: TurnFlowFreeOperationGrantContract,
   grantId: string,
   sequenceBatchId: string | undefined,
+  executionContext?: TurnFlowPendingFreeOperationGrant['executionContext'],
 ): TurnFlowPendingFreeOperationGrant => ({
   grantId,
   seat: grant.seat,
@@ -261,6 +275,7 @@ const toPendingFreeOperationGrant = (
   ...(grant.moveZoneProbeBindings === undefined ? {} : { moveZoneProbeBindings: [...grant.moveZoneProbeBindings] }),
   ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
   ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),
+  ...(executionContext === undefined ? {} : { executionContext }),
   ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
   ...(grant.completionPolicy === undefined ? {} : { completionPolicy: grant.completionPolicy }),
   ...(grant.outcomePolicy === undefined ? {} : { outcomePolicy: grant.outcomePolicy }),
@@ -313,6 +328,16 @@ const extractPendingFreeOperationGrants = (
   const extracted: TurnFlowPendingFreeOperationGrant[] = [];
   const emittedBatchBaseId = pendingFreeOperationGrantBatchBaseId(state, move);
   const declaredGrants = resolveEventFreeOperationGrants(def, state, move);
+  const adjacencyGraph = buildAdjacencyGraph(def.zones);
+  const grantEvalContext = createEvalContext({
+    def,
+    adjacencyGraph,
+    state,
+    activePlayer: state.activePlayer,
+    actorPlayer: state.activePlayer,
+    bindings: buildMoveRuntimeBindings(move),
+    resources: createEvalRuntimeResources(),
+  });
   for (const [grantIndex, grant] of declaredGrants.entries()) {
     const sequenceProbeCandidates = grant.sequence === undefined
       ? []
@@ -325,7 +350,10 @@ const extractPendingFreeOperationGrants = (
         );
     if (
       grantRequiresUsableProbe(grant) &&
-      !isFreeOperationGrantUsableInCurrentState(def, state, grant, activeSeat, seatOrder, seatResolution, { sequenceProbeCandidates })
+      !isFreeOperationGrantUsableInCurrentState(def, state, grant, activeSeat, seatOrder, seatResolution, {
+        sequenceProbeCandidates,
+        evalContext: grantEvalContext,
+      })
     ) {
       continue;
     }
@@ -348,7 +376,12 @@ const extractPendingFreeOperationGrants = (
     );
     const sequenceBatchId = `${emittedBatchBaseId}:${grant.sequence.chain}`;
     extracted.push({
-      ...toPendingFreeOperationGrant(grant, grantId, sequenceBatchId),
+      ...toPendingFreeOperationGrant(
+        grant,
+        grantId,
+        sequenceBatchId,
+        resolveFreeOperationExecutionContext(grant.executionContext, grantEvalContext),
+      ),
       seat,
       ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
     });

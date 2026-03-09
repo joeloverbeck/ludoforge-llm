@@ -114,6 +114,7 @@ const collectZoneSelectorAliasesFromQuery = (query: OptionsQuery, aliases: Set<s
     case 'globalMarkers':
     case 'players':
     case 'binding':
+    case 'grantContext':
       return;
     default: {
       const exhaustive: never = query;
@@ -144,6 +145,7 @@ export const collectZoneSelectorAliasesFromValueExpr = (
       case 'tokenProp':
       case 'assetField':
       case 'binding':
+      case 'grantContext':
       case 'globalMarkerState':
       case 'tokenZone':
       case 'activePlayer':

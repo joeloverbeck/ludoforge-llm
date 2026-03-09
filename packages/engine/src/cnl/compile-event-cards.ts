@@ -9,7 +9,7 @@ import type {
 } from '../kernel/types.js';
 import { lowerConditionNode, lowerQueryNode } from './compile-conditions.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
-import { lowerEffectArray } from './compile-effects.js';
+import { lowerEffectArray, lowerFreeOperationExecutionContextNode } from './compile-effects.js';
 import {
   buildConditionLoweringContext,
   buildEffectLoweringContext,
@@ -357,18 +357,32 @@ function lowerEventFreeOperationGrants(
   }
   return grants.map((grant, index) => {
     const path = `${pathPrefix}.${index}`;
-    if (grant.zoneFilter === undefined) {
+    const loweringContext = buildConditionLoweringContext(context);
+    const loweredZoneFilter = grant.zoneFilter === undefined
+      ? undefined
+      : lowerConditionNode(
+        grant.zoneFilter,
+        loweringContext,
+        `${path}.zoneFilter`,
+      );
+    const loweredExecutionContext = grant.executionContext === undefined
+      ? undefined
+      : lowerFreeOperationExecutionContextNode(
+        grant.executionContext,
+        loweringContext,
+        `${path}.executionContext`,
+      );
+    diagnostics.push(...(loweredZoneFilter?.diagnostics ?? []));
+    diagnostics.push(...(loweredExecutionContext?.diagnostics ?? []));
+    if (loweredZoneFilter === undefined && loweredExecutionContext === undefined) {
       return grant;
     }
-    const loweredZoneFilter = lowerConditionNode(
-      grant.zoneFilter,
-      buildConditionLoweringContext(context),
-      `${path}.zoneFilter`,
-    );
-    diagnostics.push(...loweredZoneFilter.diagnostics);
     return {
       ...grant,
-      ...(loweredZoneFilter.value === null ? {} : { zoneFilter: loweredZoneFilter.value }),
+      ...(loweredZoneFilter === undefined || loweredZoneFilter.value === null ? {} : { zoneFilter: loweredZoneFilter.value }),
+      ...(loweredExecutionContext === undefined || loweredExecutionContext.value === null
+        ? {}
+        : { executionContext: loweredExecutionContext.value }),
     };
   });
 }

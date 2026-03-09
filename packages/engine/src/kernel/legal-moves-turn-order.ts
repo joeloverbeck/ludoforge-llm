@@ -377,7 +377,7 @@ export function applyPendingFreeOperationVariants(
   const seen = new Set(moves.map((move) => toMoveIdentityKey(def, move)));
   const turnFlowDefaults = resolveTurnFlowDefaultFreeOperationActionDomain(def);
   const pendingActionIds = pendingGrants
-    .filter((grant) => grant.seat === activeSeat)
+    .filter((grant) => grant.seat === activeSeat && grant.executionContext === undefined)
     .flatMap((grant) => resolveEffectiveFreeOperationActionDomain(grant.actionIds, turnFlowDefaults));
   const extraBaseMoves: Move[] = pendingActionIds.map((actionId) => ({ actionId: asActionId(actionId), params: {} }));
 

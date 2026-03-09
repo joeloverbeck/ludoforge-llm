@@ -16,6 +16,7 @@ const PREFLIGHT_CONTRACT_VIOLATION_CODES = new Set<TurnFlowFreeOperationGrantCon
   'postResolutionTurnFlowInvalid',
   'requiredPostResolutionTurnFlowMissing',
   'postResolutionTurnFlowRequiresRequiredCompletionPolicy',
+  'executionContextInvalid',
 ]);
 
 export const createTurnFlowFreeOperationGrantSchema = <Shape extends z.ZodRawShape>(

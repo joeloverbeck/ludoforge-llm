@@ -33,8 +33,8 @@ import { getTokenStateIndex } from './token-state-index.js';
 import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterExpr, TokenFilterPredicate, ValueExpr } from './types.js';
 
 type AssetRow = Readonly<Record<string, unknown>>;
-type QueryResult = Token | AssetRow | number | string | PlayerId | ZoneId;
-type RuntimeQueryShape = 'token' | 'object' | 'number' | 'string' | 'empty' | 'mixed';
+type QueryResult = Token | AssetRow | number | string | boolean | PlayerId | ZoneId;
+type RuntimeQueryShape = 'token' | 'object' | 'number' | 'string' | 'boolean' | 'empty' | 'mixed';
 
 function resolveIntDomainBound(bound: NumericValueExpr, ctx: EvalContext): number | null {
   let value: number | boolean | string;
@@ -261,6 +261,17 @@ function resolvePredicateValue(
   return resolved;
 }
 
+function resolveGrantContextQuery(
+  key: string,
+  ctx: EvalContext,
+): readonly (string | number | boolean)[] {
+  const value = ctx.freeOperationOverlay?.grantContext?.[key];
+  if (value === undefined) {
+    return [];
+  }
+  return Array.isArray(value) ? value : [value as string | number | boolean];
+}
+
 function applyTokenFilter(tokens: readonly Token[], filter: TokenFilterExpr, ctx: EvalContext): readonly Token[] {
   return filterTokensByExpr(tokens, filter, (value) => resolvePredicateValue(value, ctx));
 }
@@ -294,7 +305,7 @@ function extractOwnerQualifier(zoneId: ZoneId): string | null {
 type ZoneQueryFilter = Extract<OptionsQuery, { readonly query: 'zones' }>['filter'];
 
 const evaluateFreeOperationZoneFilterForZone = (
-  freeOperationZoneFilter: NonNullable<EvalContext['freeOperationZoneFilter']>,
+  freeOperationZoneFilter: NonNullable<NonNullable<EvalContext['freeOperationOverlay']>['zoneFilter']>,
   rebindableAliases: ReadonlySet<string>,
   zoneId: ZoneId,
   ctx: EvalContext,
@@ -317,7 +328,7 @@ function applyZonesFilter(
 ): readonly ZoneId[] {
   let filteredZones = [...zones];
   const queryCondition = queryFilter?.condition;
-  const freeOperationZoneFilter = ctx.freeOperationZoneFilter;
+  const freeOperationZoneFilter = ctx.freeOperationOverlay?.zoneFilter;
 
   if (queryFilter?.owner !== undefined) {
     const owners = new Set(resolvePlayerSel(queryFilter.owner, ctx));
@@ -354,7 +365,7 @@ function applyZonesFilter(
       try {
         return evaluateFreeOperationZoneFilterForZone(freeOperationZoneFilter, rebindableAliases, zone.id, ctx);
       } catch (cause) {
-        const diagnostics = ctx.freeOperationZoneFilterDiagnostics;
+        const diagnostics = ctx.freeOperationOverlay?.zoneFilterDiagnostics;
         if (diagnostics !== undefined) {
           if (shouldDeferFreeOperationZoneFilterFailure(diagnostics.source, cause)) {
             return true;
@@ -511,6 +522,9 @@ function classifyResultItem(item: QueryResult): Exclude<RuntimeQueryShape, 'empt
   }
   if (typeof item === 'string') {
     return 'string';
+  }
+  if (typeof item === 'boolean') {
+    return 'boolean';
   }
   if (hasTokenRuntimeShapeKeys(item)) {
     return 'token';
@@ -861,6 +875,12 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
 
       assertWithinBounds(boundValue.length, query, maxQueryResults);
       return boundValue as readonly QueryResult[];
+    }
+
+    case 'grantContext': {
+      const values = resolveGrantContextQuery(query.key, ctx);
+      assertWithinBounds(values.length, query, maxQueryResults);
+      return values;
     }
 
     default: {

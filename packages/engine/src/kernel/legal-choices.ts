@@ -90,10 +90,7 @@ const buildDiscoveryEffectContextBase = (
   traceContext: { eventContext: 'actionEffect', actionId: String(move.actionId), effectPathRoot: 'legalChoices.effects' },
   effectPath: '',
   ...(evalCtx.runtimeTableIndex === undefined ? {} : { runtimeTableIndex: evalCtx.runtimeTableIndex }),
-  ...(evalCtx.freeOperationZoneFilter === undefined ? {} : { freeOperationZoneFilter: evalCtx.freeOperationZoneFilter }),
-  ...(evalCtx.freeOperationZoneFilterDiagnostics === undefined
-    ? {}
-    : { freeOperationZoneFilterDiagnostics: evalCtx.freeOperationZoneFilterDiagnostics }),
+  ...(evalCtx.freeOperationOverlay === undefined ? {} : { freeOperationOverlay: evalCtx.freeOperationOverlay }),
   ...(evalCtx.maxQueryResults === undefined ? {} : { maxQueryResults: evalCtx.maxQueryResults }),
 });
 

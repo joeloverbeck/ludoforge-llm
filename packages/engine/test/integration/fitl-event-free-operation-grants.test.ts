@@ -437,6 +437,7 @@ const createActionIdMismatchDef = (): GameDef => {
     effects: [],
     limits: [],
   });
+
   def.actionPipelines.push({
     id: 'operation-alt-profile',
     actionId: asActionId('operation-alt'),
@@ -473,6 +474,146 @@ const createActionIdMismatchDef = (): GameDef => {
   }
   return def as unknown as GameDef;
 };
+
+const createExecutionContextGrantDef = (): GameDef => ({
+  metadata: { id: 'event-turn-flow-grant-execution-context', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+  seats: [{ id: 'US' }, { id: 'NVA' }],
+  constants: {},
+  globalVars: [
+    { name: 'effectCode', type: 'int', init: 0, min: 0, max: 99 },
+    { name: 'selectedTarget', type: 'int', init: 0, min: 0, max: 99 },
+  ],
+  perPlayerVars: [],
+  zones: [],
+  tokenTypes: [],
+  setup: [],
+  turnStructure: { phases: [{ id: asPhaseId('main') }] },
+  turnOrder: {
+    type: 'cardDriven',
+    config: {
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        eligibility: {
+          seats: ['US', 'NVA'],
+          overrideWindows: [],
+        },
+        actionClassByActionId: { event: 'event', operation: 'operation' },
+        optionMatrix: [{ first: 'event', second: ['operation'] }],
+        passRewards: [],
+        freeOperationActionIds: ['operation'],
+        durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+      },
+    },
+  },
+  actions: [
+    {
+      id: asActionId('event'),
+      capabilities: ['cardEvent'],
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [
+        { name: 'eventCardId', domain: { query: 'enums', values: ['card-context', 'card-context-effect'] } },
+        { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
+        { name: 'branch', domain: { query: 'enums', values: ['none'] } },
+      ],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    },
+    {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [{ name: 'target', domain: { query: 'intsInRange', min: 1, max: 2 } }],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    },
+  ],
+  actionPipelines: [
+    {
+      id: 'operation-with-grant-context',
+      actionId: asActionId('operation'),
+      legality: {
+        op: 'in',
+        item: { ref: 'binding', name: 'target' },
+        set: { ref: 'grantContext', key: 'allowedTargets' },
+      },
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            { setVar: { scope: 'global', var: 'effectCode', value: { ref: 'grantContext', key: 'effectCode' } } },
+            { setVar: { scope: 'global', var: 'selectedTarget', value: { ref: 'binding', name: 'target' } } },
+          ],
+        },
+      ],
+      atomicity: 'atomic',
+    },
+  ],
+  triggers: [],
+  terminal: { conditions: [] },
+  eventDecks: [
+    {
+      id: 'event-deck',
+      drawZone: 'deck:none',
+      discardZone: 'played:none',
+      cards: [
+        {
+          id: 'card-context',
+          title: 'Declarative Context Grant',
+          sideMode: 'single',
+          unshaded: {
+            text: 'Grant US a context-scoped free operation.',
+            freeOperationGrants: [
+              {
+                seat: 'US',
+                sequence: { chain: 'context', step: 0 },
+                operationClass: 'operation',
+                actionIds: ['operation'],
+                completionPolicy: 'required',
+                postResolutionTurnFlow: 'resumeCardFlow',
+                executionContext: {
+                  allowedTargets: [2],
+                  effectCode: 7,
+                },
+              },
+            ],
+          },
+        },
+        {
+          id: 'card-context-effect',
+          title: 'Effect Context Grant',
+          sideMode: 'single',
+          unshaded: {
+            text: 'Grant US a context-scoped free operation from an effect.',
+            effects: [
+              {
+                grantFreeOperation: {
+                  seat: 'self',
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  completionPolicy: 'required',
+                  postResolutionTurnFlow: 'resumeCardFlow',
+                  executionContext: {
+                    allowedTargets: [1],
+                    effectCode: { op: '+', left: 4, right: 5 },
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  ],
+});
 
 const assertFreeOperationDenial = (error: unknown, expectedCause: string): boolean => {
   if (!(error instanceof Error)) {
@@ -2583,6 +2724,103 @@ describe('event free-operation grants integration', () => {
       followupMoves.some((move) => String(move.actionId) === 'operation' && move.freeOperation === true),
       false,
       'after resolution the next card should expose only ordinary moves',
+    );
+  });
+
+  it('threads declarative grant executionContext into free-operation legality and effects', () => {
+    const def = createExecutionContextGrantDef();
+    const start = initialState(def, 501, 2).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-context', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const runtime = requireCardDrivenRuntime(afterEvent);
+    assert.deepEqual(runtime.pendingFreeOperationGrants?.[0]?.executionContext, {
+      allowedTargets: [2],
+      effectCode: 7,
+    });
+
+    const freeMoves = legalMoves(def, afterEvent).filter(
+      (move) => String(move.actionId) === 'operation' && move.freeOperation === true,
+    );
+    assert.deepEqual(freeMoves.map((move) => move.params.target), [2]);
+
+    const afterOperation = applyMove(def, afterEvent, {
+      actionId: asActionId('operation'),
+      params: { target: 2 },
+      freeOperation: true,
+    }).state;
+
+    assert.equal(afterOperation.globalVars.effectCode, 7);
+    assert.equal(afterOperation.globalVars.selectedTarget, 2);
+  });
+
+  it('resolves effect-issued grant executionContext expressions before the free operation executes', () => {
+    const def = createExecutionContextGrantDef();
+    const start = initialState(def, 502, 2).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-context-effect', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const runtime = requireCardDrivenRuntime(afterEvent);
+    assert.deepEqual(runtime.pendingFreeOperationGrants?.[0]?.executionContext, {
+      allowedTargets: [1],
+      effectCode: 9,
+    });
+
+    const freeMoves = legalMoves(def, afterEvent).filter(
+      (move) => String(move.actionId) === 'operation' && move.freeOperation === true,
+    );
+    assert.deepEqual(freeMoves.map((move) => move.params.target), [1]);
+
+    const afterOperation = applyMove(def, afterEvent, {
+      actionId: asActionId('operation'),
+      params: { target: 1 },
+      freeOperation: true,
+    }).state;
+
+    assert.equal(afterOperation.globalVars.effectCode, 9);
+    assert.equal(afterOperation.globalVars.selectedTarget, 1);
+  });
+
+  it('rejects overlapping declarative grants that differ only by executionContext', () => {
+    const def = createExecutionContextGrantDef();
+    const invalidDecks = (def.eventDecks ?? []).map((deck) => ({
+      ...deck,
+      cards: deck.cards.map((card) =>
+        card.id !== 'card-context'
+          ? card
+          : {
+              ...card,
+              unshaded: {
+                ...card.unshaded!,
+                freeOperationGrants: [
+                  {
+                    seat: 'US',
+                    sequence: { chain: 'context-a', step: 0 },
+                    operationClass: 'operation',
+                    actionIds: ['operation'],
+                    executionContext: { allowedTargets: [1], effectCode: 3 },
+                  },
+                  {
+                    seat: 'US',
+                    sequence: { chain: 'context-b', step: 0 },
+                    operationClass: 'operation',
+                    actionIds: ['operation'],
+                    executionContext: { allowedTargets: [2], effectCode: 4 },
+                  },
+                ],
+              },
+            }),
+    })) as readonly EventDeckDef[];
+
+    assert.throws(
+      () => initialState({ ...def, eventDecks: invalidDecks }, 503, 2),
+      /FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS/,
     );
   });
 

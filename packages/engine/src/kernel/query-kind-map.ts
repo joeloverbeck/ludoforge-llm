@@ -104,6 +104,7 @@ export const OPTIONS_QUERY_KIND_CONTRACT_MAP = {
   tokensInAdjacentZones: { partition: 'leaf', domain: 'token', runtimeShape: 'token' },
   connectedZones: { partition: 'leaf', domain: 'zone', runtimeShape: 'string' },
   binding: { partition: 'leaf', domain: 'other', runtimeShape: 'unknown' },
+  grantContext: { partition: 'leaf', domain: 'other', runtimeShape: 'unknown' },
 } as const satisfies OptionsQueryKindContractMap;
 
 export type LeafOptionsQueryKindFromContractMap = keyof LeafQueryKindContractView<typeof OPTIONS_QUERY_KIND_CONTRACT_MAP>;

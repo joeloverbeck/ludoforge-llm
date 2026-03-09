@@ -415,6 +415,36 @@ describe('AST and selector schemas', () => {
       assert.equal(result.error.issues.some((issue) => issue.path.join('.') === 'grantFreeOperation.moveZoneBindings'), true);
     });
 
+    it('parses grantFreeOperation executionContext with scalar, array, and ValueExpr entries', () => {
+      const effect = {
+        grantFreeOperation: {
+          seat: '3',
+          operationClass: 'operation',
+          executionContext: {
+            effectCode: 7,
+            allowedTargets: [1, 2],
+            computed: { op: '+', left: 4, right: 5 },
+          },
+        },
+      } as const;
+
+      assert.deepEqual(EffectASTSchema.parse(effect), effect);
+    });
+
+    it('rejects grantFreeOperation executionContext arrays with non-scalar entries', () => {
+      const result = EffectASTSchema.safeParse({
+        grantFreeOperation: {
+          seat: '3',
+          operationClass: 'operation',
+          executionContext: {
+            allowedTargets: [{ ref: 'binding', name: '$target' }],
+          },
+        },
+      });
+
+      assert.equal(result.success, false);
+    });
+
     it('rejects grantFreeOperation required completion without postResolutionTurnFlow', () => {
       const result = EffectASTSchema.safeParse({
         grantFreeOperation: {

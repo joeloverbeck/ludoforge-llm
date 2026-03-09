@@ -6,9 +6,10 @@ import { selectChoiceOptionValuesByLegalityPrecedence, selectUniqueChoiceOptionV
 import { isDeclaredActionParamValueInDomain } from './declared-action-param-domain.js';
 import { deepEqual } from './deep-equal.js';
 import { evalCondition } from './eval-condition.js';
-import { createEvalRuntimeResources } from './eval-context.js';
+import { createEvalRuntimeResources, type EvalContext } from './eval-context.js';
 import { createExecutionEffectContext } from './effect-context.js';
 import { applyEffects } from './effects.js';
+import { isEffectRuntimeReason } from './effect-error.js';
 import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import { resolveMoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import {
@@ -24,6 +25,7 @@ import {
   isFreeOperationGrantedForMove,
 } from './free-operation-discovery-analysis.js';
 import { resolveGrantFreeOperationActionDomain } from './free-operation-action-domain.js';
+import { resolveFreeOperationExecutionContext } from './free-operation-execution-context.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import {
   buildMoveRuntimeBindings,
@@ -33,6 +35,7 @@ import {
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { materialGameplayStateProjection } from './material-gameplay-state.js';
+import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type {
   ActionPipelineDef,
   ChoicePendingRequest,
@@ -53,6 +56,7 @@ const toPendingFreeOperationGrant = (
   grant: TurnFlowFreeOperationGrantContract,
   grantId: string,
   sequenceBatchId: string | undefined,
+  executionContext?: TurnFlowPendingFreeOperationGrant['executionContext'],
 ): TurnFlowPendingFreeOperationGrant => ({
   grantId,
   seat: grant.seat,
@@ -63,6 +67,7 @@ const toPendingFreeOperationGrant = (
   ...(grant.moveZoneBindings === undefined ? {} : { moveZoneBindings: [...grant.moveZoneBindings] }),
   ...(grant.moveZoneProbeBindings === undefined ? {} : { moveZoneProbeBindings: [...grant.moveZoneProbeBindings] }),
   ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),
+  ...(executionContext === undefined ? {} : { executionContext }),
   ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
   ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
   ...(grant.completionPolicy === undefined ? {} : { completionPolicy: grant.completionPolicy }),
@@ -99,13 +104,19 @@ const toResolvedProbePendingGrant = (
   activeSeat: string,
   seatOrder: readonly string[],
   grantId: string,
+  evalContext?: EvalContext,
 ): TurnFlowPendingFreeOperationGrant | null => {
   const resolvedSeats = resolveProbeGrantSeats(grant, activeSeat, seatOrder);
   if (resolvedSeats === null) {
     return null;
   }
   return {
-    ...toPendingFreeOperationGrant(grant, grantId, grant.sequence === undefined ? undefined : '__probeBatch__'),
+    ...toPendingFreeOperationGrant(
+      grant,
+      grantId,
+      grant.sequence === undefined ? undefined : '__probeBatch__',
+      evalContext === undefined ? undefined : resolveFreeOperationExecutionContext(grant.executionContext, evalContext),
+    ),
     seat: resolvedSeats.seat,
     ...(resolvedSeats.executeAsSeat === undefined ? {} : { executeAsSeat: resolvedSeats.executeAsSeat }),
   };
@@ -120,6 +131,7 @@ const resolveUnusableSequenceProbeBlockers = (
   seatResolution: SeatResolutionContext,
   baseBlockers: readonly TurnFlowPendingFreeOperationGrant[],
   candidates: readonly TurnFlowFreeOperationGrantContract[],
+  evalContext?: EvalContext,
 ): readonly TurnFlowPendingFreeOperationGrant[] => {
   const sequence = grant.sequence;
   if (sequence === undefined) {
@@ -144,7 +156,10 @@ const resolveUnusableSequenceProbeBlockers = (
       activeSeat,
       seatOrder,
       seatResolution,
-      { sequenceProbeBlockers: derivedBlockers },
+      {
+        sequenceProbeBlockers: derivedBlockers,
+        ...(evalContext === undefined ? {} : { evalContext }),
+      },
     );
     if (candidateUsable) {
       continue;
@@ -154,6 +169,7 @@ const resolveUnusableSequenceProbeBlockers = (
       activeSeat,
       seatOrder,
       `__probe_blocker__:${sequence.chain}:${candidate.sequence!.step}:${index}`,
+      evalContext,
     );
     if (blocker !== null) {
       derivedBlockers.push(blocker);
@@ -310,6 +326,75 @@ const decisionBindingsForMove = (
     : resolvePipelineDecisionBindingsForMove(pipeline, moveParams);
 };
 
+const hasTransportLikeStateChangeFallback = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+): boolean => {
+  const zoneIds = new Set(def.zones.map((zone) => String(zone.id)));
+  const tokenZoneById = new Map<string, string>(
+    Object.entries(state.zones).flatMap(([zoneId, tokens]) => tokens.map((token) => [String(token.id), zoneId] as const)),
+  );
+  let sawExplicitDestinationBinding = false;
+
+  for (const [paramName, value] of Object.entries(move.params)) {
+    if (typeof value !== 'string' || !zoneIds.has(value)) {
+      continue;
+    }
+    const delimiter = paramName.lastIndexOf('@');
+    if (delimiter < 0 || delimiter === paramName.length - 1) {
+      continue;
+    }
+    sawExplicitDestinationBinding = true;
+    const tokenId = paramName.slice(delimiter + 1);
+    const currentZone = tokenZoneById.get(tokenId);
+    if (currentZone !== undefined && currentZone !== value) {
+      return true;
+    }
+  }
+  if (sawExplicitDestinationBinding) {
+    return false;
+  }
+
+  const tokenIds = new Set(tokenZoneById.keys());
+  const selectedZones = new Set<string>();
+  let selectedTokens = 0;
+
+  const visitValue = (value: MoveParamValue | undefined): void => {
+    if (value === undefined) {
+      return;
+    }
+    if (typeof value === 'string') {
+      if (zoneIds.has(value)) {
+        selectedZones.add(value);
+      }
+      if (tokenIds.has(value)) {
+        selectedTokens += 1;
+      }
+      return;
+    }
+    if (Array.isArray(value)) {
+      for (const entry of value) {
+        if (typeof entry !== 'string') {
+          continue;
+        }
+        if (zoneIds.has(entry)) {
+          selectedZones.add(entry);
+        }
+        if (tokenIds.has(entry)) {
+          selectedTokens += 1;
+        }
+      }
+    }
+  };
+
+  for (const value of Object.values(move.params)) {
+    visitValue(value);
+  }
+
+  return selectedTokens > 0 && selectedZones.size > 1;
+};
+
 const isCompletedProbeMoveCurrentlyLegal = (
   def: GameDef,
   state: GameState,
@@ -409,6 +494,11 @@ const doesCompletedProbeMoveChangeGameplayState = (
     ...move.params,
     ...resolvedDecisionBindings,
   };
+  const freeOperationOverlay = buildFreeOperationPreflightOverlay(
+    freeOperationAnalysis,
+    move,
+    'turnFlowEligibility',
+  );
   const effectCtxBase = {
     def,
     adjacencyGraph,
@@ -420,56 +510,67 @@ const doesCompletedProbeMoveChangeGameplayState = (
     resources,
     state,
     rng: { state: state.rng },
+    ...(freeOperationOverlay.freeOperationOverlay === undefined
+      ? {}
+      : { freeOperationOverlay: freeOperationOverlay.freeOperationOverlay }),
   } as const;
 
-  const afterActionState = executionProfile === undefined
-    ? applyEffects(action.effects, createExecutionEffectContext({
-      ...effectCtxBase,
-      traceContext: {
-        eventContext: 'actionEffect',
-        actionId: String(action.id),
-        effectPathRoot: `action:${String(action.id)}.effects`,
-      },
-      effectPath: '',
-    })).state
-    : (() => {
-      let currentState = state;
-      let currentBindings: Readonly<Record<string, unknown>> = effectCtxBase.bindings;
-      for (const [stageIdx, stage] of executionProfile.resolutionStages.entries()) {
-        const stageEvalCtx = {
-          ...preflight.evalCtx,
-          state: currentState,
-          bindings: currentBindings,
-        };
-        const status = evaluateStagePredicateStatus(
-          action,
-          executionProfile.profileId,
-          stage,
-          executionProfile.partialMode,
-          stageEvalCtx,
-          { includeCostValidation: move.freeOperation !== true },
-        );
-        const viability = decideApplyMovePipelineViability(status, { isFreeOperation: move.freeOperation === true });
-        if (viability.kind === 'illegalMove' || !viability.costValidationPassed) {
-          continue;
+  let afterActionState: GameState;
+  try {
+    afterActionState = executionProfile === undefined
+      ? applyEffects(action.effects, createExecutionEffectContext({
+        ...effectCtxBase,
+        traceContext: {
+          eventContext: 'actionEffect',
+          actionId: String(action.id),
+          effectPathRoot: `action:${String(action.id)}.effects`,
+        },
+        effectPath: '',
+      })).state
+      : (() => {
+        let currentState = state;
+        let currentBindings: Readonly<Record<string, unknown>> = effectCtxBase.bindings;
+        for (const [stageIdx, stage] of executionProfile.resolutionStages.entries()) {
+          const stageEvalCtx = {
+            ...preflight.evalCtx,
+            state: currentState,
+            bindings: currentBindings,
+          };
+          const status = evaluateStagePredicateStatus(
+            action,
+            executionProfile.profileId,
+            stage,
+            executionProfile.partialMode,
+            stageEvalCtx,
+            { includeCostValidation: move.freeOperation !== true },
+          );
+          const viability = decideApplyMovePipelineViability(status, { isFreeOperation: move.freeOperation === true });
+          if (viability.kind === 'illegalMove' || !viability.costValidationPassed) {
+            continue;
+          }
+          const result = applyEffects(stage.effects, createExecutionEffectContext({
+            ...effectCtxBase,
+            bindings: currentBindings,
+            state: currentState,
+            rng: { state: currentState.rng },
+            traceContext: {
+              eventContext: 'actionEffect',
+              actionId: String(action.id),
+              effectPathRoot: `action:${String(action.id)}.stages[${stageIdx}]`,
+            },
+            effectPath: '',
+          }));
+          currentState = result.state;
+          currentBindings = result.bindings ?? currentBindings;
         }
-        const result = applyEffects(stage.effects, createExecutionEffectContext({
-          ...effectCtxBase,
-          bindings: currentBindings,
-          state: currentState,
-          rng: { state: currentState.rng },
-          traceContext: {
-            eventContext: 'actionEffect',
-            actionId: String(action.id),
-            effectPathRoot: `action:${String(action.id)}.stages[${stageIdx}]`,
-          },
-          effectPath: '',
-        }));
-        currentState = result.state;
-        currentBindings = result.bindings ?? currentBindings;
-      }
-      return currentState;
-    })();
+        return currentState;
+      })();
+  } catch (error) {
+    if (isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED)) {
+      return hasTransportLikeStateChangeFallback(def, state, move);
+    }
+    throw error;
+  }
 
   return !deepEqual(
     materialGameplayStateProjection(def, state),
@@ -571,6 +672,7 @@ export const isFreeOperationGrantUsableInCurrentState = (
   options?: {
     readonly sequenceProbeBlockers?: readonly TurnFlowPendingFreeOperationGrant[];
     readonly sequenceProbeCandidates?: readonly TurnFlowFreeOperationGrantContract[];
+    readonly evalContext?: EvalContext;
   },
 ): boolean => {
   const runtime = cardDrivenRuntime(state);
@@ -585,7 +687,14 @@ export const isFreeOperationGrantUsableInCurrentState = (
   const { seat, executeAsSeat } = resolvedSeats;
 
   const probeGrant: TurnFlowPendingFreeOperationGrant = {
-    ...toPendingFreeOperationGrant(grant, '__probe__', grant.sequence === undefined ? undefined : '__probeBatch__'),
+    ...toPendingFreeOperationGrant(
+      grant,
+      '__probe__',
+      grant.sequence === undefined ? undefined : '__probeBatch__',
+      options?.evalContext === undefined
+        ? undefined
+        : resolveFreeOperationExecutionContext(grant.executionContext, options.evalContext),
+    ),
     seat,
     ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
   };
@@ -598,6 +707,7 @@ export const isFreeOperationGrantUsableInCurrentState = (
     seatResolution,
     options?.sequenceProbeBlockers ?? [],
     options?.sequenceProbeCandidates ?? [],
+    options?.evalContext,
   );
   const pendingProbeGrants = [...probeBlockers, probeGrant];
   const probeActivePlayerIndex = resolvePlayerIndexForTurnFlowSeat(seat, seatResolution.index);

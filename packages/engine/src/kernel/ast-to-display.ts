@@ -148,6 +148,8 @@ const referenceToInlineNodes = (r: Reference): DisplayInlineNode[] => {
       return [ref(r.zone, 'zone'), DOT, ref(r.prop, 'prop')];
     case 'activePlayer':
       return [ref('activePlayer', 'player')];
+    case 'grantContext':
+      return [kw('grantCtx'), LPAREN, ref(r.key, 'binding'), RPAREN];
     default: {
       const _exhaustive: never = r;
       return [kw(String((_exhaustive as Reference).ref))];
@@ -251,6 +253,8 @@ export const optionsQueryToInlineNodes = (query: OptionsQuery): DisplayInlineNod
       return spaced(kw('connected'), kw('to'), ...zoneRefToInlineNodes(query.zone));
     case 'binding':
       return [ref(query.displayName ?? query.name, 'binding')];
+    case 'grantContext':
+      return [kw('grantCtx'), LPAREN, ref(query.key, 'binding'), RPAREN];
     case 'concat':
       return [
         kw('concat'),

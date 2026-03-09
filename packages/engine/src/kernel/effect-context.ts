@@ -3,7 +3,7 @@ import type {
   DecisionAuthorityProbeContext,
   DecisionAuthorityStrictContext,
 } from './types-core.js';
-import type { FreeOperationZoneFilterDiagnostics } from './eval-context.js';
+import type { FreeOperationExecutionOverlay } from './free-operation-overlay.js';
 import {
   type EvalRuntimeResources,
 } from './eval-context.js';
@@ -12,7 +12,6 @@ import type { AdjacencyGraph } from './spatial.js';
 import type {
   ChoicePendingRequest,
   ChoiceStochasticPendingRequest,
-  ConditionAST,
   EffectTraceEventContext,
   ExecutionCollector,
   GameDef,
@@ -54,8 +53,7 @@ interface EffectContextBase {
   readonly effectPath?: string;
   readonly maxEffectOps?: number;
   readonly freeOperation?: boolean;
-  readonly freeOperationZoneFilter?: ConditionAST;
-  readonly freeOperationZoneFilterDiagnostics?: FreeOperationZoneFilterDiagnostics;
+  readonly freeOperationOverlay?: FreeOperationExecutionOverlay;
   readonly maxQueryResults?: number;
   readonly collector: ExecutionCollector;
   readonly phaseTransitionBudget?: PhaseTransitionBudget;

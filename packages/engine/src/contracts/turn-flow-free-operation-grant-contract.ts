@@ -82,7 +82,22 @@ export type TurnFlowFreeOperationGrantContractCandidate = {
     readonly captureMoveZoneCandidatesAs?: unknown;
     readonly requireMoveZoneCandidatesFrom?: unknown;
   } | null;
+  readonly executionContext?: Readonly<Record<string, unknown>> | null;
 };
+
+const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const isScalar = (value: unknown): value is string | number | boolean =>
+  typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+
+const isExecutionContextValueCandidate = (value: unknown): boolean =>
+  isScalar(value)
+  || (
+    Array.isArray(value)
+    && value.every((entry) => isScalar(entry))
+  )
+  || isRecord(value);
 
 export const turnFlowFreeOperationGrantPolicyRank = (
   grant: Pick<
@@ -129,7 +144,8 @@ export type TurnFlowFreeOperationGrantContractViolationCode =
   | 'postResolutionTurnFlowRequiresRequiredCompletionPolicy'
   | 'sequenceStepInvalid'
   | 'sequenceContextInvalid'
-  | 'sequenceContextRequiresSequence';
+  | 'sequenceContextRequiresSequence'
+  | 'executionContextInvalid';
 
 export type TurnFlowFreeOperationGrantContractViolation = {
   readonly code: TurnFlowFreeOperationGrantContractViolationCode;
@@ -139,6 +155,8 @@ export type TurnFlowFreeOperationGrantContractViolation = {
 
 export const TURN_FLOW_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID_MESSAGE =
   'sequenceContext must declare at least one capture/require key.';
+export const TURN_FLOW_FREE_OPERATION_EXECUTION_CONTEXT_INVALID_MESSAGE =
+  'executionContext must be an object whose values are scalar literals, scalar arrays, or ValueExpr-compatible objects.';
 
 export type TurnFlowFreeOperationGrantContractSurfaceViolation = {
   readonly path: string;
@@ -320,6 +338,21 @@ export const collectTurnFlowFreeOperationGrantContractViolations = (
         message: 'sequenceContext requires sequence.',
       });
     }
+  }
+
+  if (
+    grant.executionContext !== undefined
+    && grant.executionContext !== null
+    && (
+      !isRecord(grant.executionContext)
+      || Object.entries(grant.executionContext).some(([key, value]) => key.length === 0 || !isExecutionContextValueCandidate(value))
+    )
+  ) {
+    violations.push({
+      code: 'executionContextInvalid',
+      path: ['executionContext'],
+      message: TURN_FLOW_FREE_OPERATION_EXECUTION_CONTEXT_INVALID_MESSAGE,
+    });
   }
 
   return violations;

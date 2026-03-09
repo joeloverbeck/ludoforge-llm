@@ -13,12 +13,13 @@ import {
   renderTurnFlowFreeOperationGrantContractViolation,
 } from '../contracts/index.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
-import { createEvalRuntimeResources } from './eval-context.js';
+import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
 import {
   grantRequiresUsableProbe,
   isFreeOperationGrantUsableInCurrentState,
 } from './free-operation-viability.js';
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
+import { resolveFreeOperationExecutionContext } from './free-operation-execution-context.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type {
@@ -180,6 +181,7 @@ export const applyGrantFreeOperation = (
     ...(grant.postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow: grant.postResolutionTurnFlow }),
     ...(grant.sequence === undefined ? {} : { sequence: grant.sequence }),
     ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),
+    ...(grant.executionContext === undefined ? {} : { executionContext: grant.executionContext }),
   })) {
     if (
       violation.code === 'viabilityPolicyInvalid'
@@ -193,6 +195,7 @@ export const applyGrantFreeOperation = (
       || violation.code === 'sequenceStepInvalid'
       || violation.code === 'sequenceContextInvalid'
       || violation.code === 'sequenceContextRequiresSequence'
+      || violation.code === 'executionContextInvalid'
     ) {
       const surface = renderTurnFlowFreeOperationGrantContractViolation(violation);
       throw effectRuntimeError(
@@ -206,6 +209,7 @@ export const applyGrantFreeOperation = (
           ...(grant.completionPolicy === undefined ? {} : { completionPolicy: grant.completionPolicy }),
           ...(grant.outcomePolicy === undefined ? {} : { outcomePolicy: grant.outcomePolicy }),
           ...(grant.postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow: grant.postResolutionTurnFlow }),
+          ...(grant.executionContext === undefined ? {} : { executionContext: grant.executionContext }),
         },
       );
     }
@@ -226,6 +230,22 @@ export const applyGrantFreeOperation = (
       ...grant,
       zoneFilter: resolvedZoneFilter,
     };
+  const grantEvalContext = createEvalContext({
+    def: ctx.def,
+    adjacencyGraph: ctx.adjacencyGraph,
+    state: ctx.state,
+    activePlayer: ctx.activePlayer,
+    actorPlayer: ctx.actorPlayer,
+    bindings: ctx.bindings,
+    resources: ctx.resources,
+    ...(ctx.runtimeTableIndex === undefined ? {} : { runtimeTableIndex: ctx.runtimeTableIndex }),
+    ...(ctx.freeOperationOverlay === undefined ? {} : { freeOperationOverlay: ctx.freeOperationOverlay }),
+    ...(ctx.maxQueryResults === undefined ? {} : { maxQueryResults: ctx.maxQueryResults }),
+  });
+  const resolvedExecutionContext = resolveFreeOperationExecutionContext(
+    grant.executionContext,
+    grantEvalContext,
+  );
   ctx.freeOperationProbeScope?.priorGrantDefinitions.push(resolvedGrant);
 
   if (
@@ -237,7 +257,10 @@ export const applyGrantFreeOperation = (
       activeSeat,
       runtime.seatOrder,
       seatResolution,
-      { sequenceProbeCandidates: buildSequenceProbeCandidates(ctx, resolvedGrant) },
+      {
+        sequenceProbeCandidates: buildSequenceProbeCandidates(ctx, resolvedGrant),
+        evalContext: grantEvalContext,
+      },
     )
   ) {
     return {
@@ -256,6 +279,7 @@ export const applyGrantFreeOperation = (
     ...(grant.moveZoneBindings === undefined ? {} : { moveZoneBindings: [...grant.moveZoneBindings] }),
     ...(grant.moveZoneProbeBindings === undefined ? {} : { moveZoneProbeBindings: [...grant.moveZoneProbeBindings] }),
     ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),
+    ...(resolvedExecutionContext === undefined ? {} : { executionContext: resolvedExecutionContext }),
     ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
     ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
     ...(grant.completionPolicy === undefined ? {} : { completionPolicy: grant.completionPolicy }),

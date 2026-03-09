@@ -11,11 +11,20 @@ import {
   isMoveAllowedByTurnFlowOptionMatrix,
   resolveConstrainedSecondEligibleActionClasses,
 } from './legal-moves-turn-order.js';
+import {
+  grantActionIds,
+  isPendingFreeOperationGrantSequenceReady,
+} from './free-operation-grant-authorization.js';
+import { resolveTurnFlowDefaultFreeOperationActionDomain } from './free-operation-action-domain.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import type { TurnFlowActionClass } from './types-turn-flow.js';
 import { shouldEnumerateLegalMoveForOutcome } from './legality-outcome.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
-import { decideLegalMovesPipelineViability, evaluatePipelinePredicateStatus } from './pipeline-viability-policy.js';
+import {
+  decideDiscoveryLegalChoicesPipelineViability,
+  decideDiscoveryLegalMovesPipelineViability,
+  evaluateDiscoveryPipelinePredicateStatus,
+} from './pipeline-viability-policy.js';
 import { MISSING_BINDING_POLICY_CONTEXTS, shouldDeferMissingBinding } from './missing-binding-policy.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import type { AdjacencyGraph } from './spatial.js';
@@ -26,11 +35,24 @@ import { resolveCurrentEventCardState } from './event-execution.js';
 import { isCardEventAction } from './action-capabilities.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
+import type { FreeOperationExecutionOverlay } from './free-operation-overlay.js';
 import { kernelRuntimeError } from './runtime-error.js';
-import { createSeatResolutionContext } from './seat-resolution.js';
-import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
+import { asPlayerId } from './branded.js';
+import { createSeatResolutionContext, resolvePlayerIndexForTurnFlowSeat } from './seat-resolution.js';
+import { requireCardDrivenActiveSeat, validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
+import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { findPhaseDef } from './phase-lookup.js';
-import type { ActionDef, GameDef, GameState, Move, MoveParamValue, PhaseDef, RuntimeWarning } from './types.js';
+import type {
+  ActionDef,
+  ActionPipelineDef,
+  GameDef,
+  GameState,
+  Move,
+  MoveParamValue,
+  PhaseDef,
+  RuntimeWarning,
+  TurnFlowPendingFreeOperationGrant,
+} from './types.js';
 
 export interface LegalMoveEnumerationOptions {
   readonly budgets?: Partial<MoveEnumerationBudgets>;
@@ -166,6 +188,9 @@ function makeEvalContext(
   state: GameState,
   executionPlayer: GameState['activePlayer'],
   bindings: Readonly<Record<string, unknown>>,
+  options?: {
+    readonly freeOperationOverlay?: FreeOperationExecutionOverlay;
+  },
 ): EvalContext {
   return createEvalContext({
     def,
@@ -176,6 +201,7 @@ function makeEvalContext(
     bindings,
     runtimeTableIndex,
     resources: evalRuntimeResources,
+    ...(options?.freeOperationOverlay === undefined ? {} : { freeOperationOverlay: options.freeOperationOverlay }),
   });
 }
 
@@ -190,12 +216,21 @@ function enumerateParams(
   bindings: Readonly<Record<string, unknown>>,
   enumeration: MoveEnumerationState,
   currentPhaseDef: PhaseDef | undefined,
+  options?: {
+    readonly pipeline?: ActionPipelineDef;
+    readonly executionPlayerOverride?: GameState['activePlayer'];
+    readonly freeOperationOverlay?: FreeOperationExecutionOverlay;
+    readonly moveOverrides?: Partial<Move>;
+  },
 ): void {
   if (enumeration.paramExpansionBudgetExceeded || enumeration.templateBudgetExceeded) {
     return;
   }
 
   const resolveExecutionPlayerForBindings = (allowPendingBinding: boolean): GameState['activePlayer'] | null => {
+    if (options?.executionPlayerOverride !== undefined) {
+      return options.executionPlayerOverride;
+    }
     const resolution = resolveActionExecutor({
       def,
       state,
@@ -229,7 +264,9 @@ function enumerateParams(
     if (executionPlayer === null) {
       return;
     }
-    const ctx = makeEvalContext(def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, executionPlayer, bindings);
+    const ctx = makeEvalContext(def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, executionPlayer, bindings, {
+      ...(options?.freeOperationOverlay === undefined ? {} : { freeOperationOverlay: options.freeOperationOverlay }),
+    });
     if (currentPhaseDef?.actionDefaults?.pre !== undefined) {
       if (!evalCondition(currentPhaseDef.actionDefaults.pre, ctx)) {
         return;
@@ -239,12 +276,23 @@ function enumerateParams(
       return;
     }
 
+    if (options?.pipeline !== undefined) {
+      const status = evaluateDiscoveryPipelinePredicateStatus(action, options.pipeline, ctx, {
+        includeCostValidation: options.pipeline.atomicity === 'atomic',
+      });
+      const viabilityDecision = decideDiscoveryLegalChoicesPipelineViability(status);
+      if (viabilityDecision.kind === 'illegalChoice') {
+        return;
+      }
+    }
+
     const params = Object.fromEntries(
       action.params.map((param) => [param.name, bindings[param.name] as MoveParamValue]),
     );
     const move: Move = {
       actionId: action.id,
       params,
+      ...(options?.moveOverrides ?? {}),
     };
     tryPushOptionMatrixFilteredMove(enumeration, def, state, move, action);
     return;
@@ -287,9 +335,157 @@ function enumerateParams(
       { ...bindings, [param.name]: value },
       enumeration,
       currentPhaseDef,
+      options,
     );
     if (enumeration.paramExpansionBudgetExceeded || enumeration.templateBudgetExceeded) {
       return;
+    }
+  }
+}
+
+function resolveGrantExecutionPlayer(
+  grant: TurnFlowPendingFreeOperationGrant,
+  seatResolution: ReturnType<typeof createSeatResolutionContext>,
+): GameState['activePlayer'] | null {
+  const executionSeat = grant.executeAsSeat ?? grant.seat;
+  const playerIndex = resolvePlayerIndexForTurnFlowSeat(executionSeat, seatResolution.index);
+  return playerIndex === null ? null : asPlayerId(playerIndex);
+}
+
+function enumeratePendingFreeOperationMoves(
+  def: GameDef,
+  state: GameState,
+  enumeration: MoveEnumerationState,
+  adjacencyGraph: AdjacencyGraph,
+  runtimeTableIndex: RuntimeTableIndex,
+  evalRuntimeResources: EvalRuntimeResources,
+  currentPhaseDef: PhaseDef | undefined,
+  seatResolution: ReturnType<typeof createSeatResolutionContext>,
+): void {
+  if (state.turnOrderState.type !== 'cardDriven') {
+    return;
+  }
+
+  const pending = state.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
+  if (pending.length === 0) {
+    return;
+  }
+
+  const activeSeat = requireCardDrivenActiveSeat(
+    def,
+    state,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.PENDING_FREE_OPERATION_VARIANT_APPLICATION,
+    seatResolution,
+  );
+  const readyGrants = pending.filter(
+    (grant) =>
+      grant.seat === activeSeat &&
+      grant.executionContext !== undefined &&
+      isPendingFreeOperationGrantSequenceReady(pending, grant),
+  );
+  if (readyGrants.length === 0) {
+    return;
+  }
+
+  const seenGrantMoveKeys = new Set<string>();
+  const defaultActionDomain = resolveTurnFlowDefaultFreeOperationActionDomain(def);
+
+  for (const grant of readyGrants) {
+    const executionPlayer = resolveGrantExecutionPlayer(grant, seatResolution);
+    if (executionPlayer === null) {
+      continue;
+    }
+
+    for (const actionId of grantActionIds(def, grant).length > 0 ? grantActionIds(def, grant) : defaultActionDomain) {
+      const grantMoveKey = `${grant.grantId}:${actionId}`;
+      if (seenGrantMoveKeys.has(grantMoveKey)) {
+        continue;
+      }
+      seenGrantMoveKeys.add(grantMoveKey);
+
+      const action = def.actions.find((candidate) => String(candidate.id) === actionId);
+      if (action === undefined) {
+        continue;
+      }
+
+      const hasActionPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
+      const preflight = resolveActionApplicabilityPreflight({
+        def,
+        state,
+        action,
+        adjacencyGraph,
+        decisionPlayer: state.activePlayer,
+        bindings: buildMoveRuntimeBindings({ actionId: action.id, params: {} }),
+        runtimeTableIndex,
+        evalRuntimeResources,
+        skipExecutorCheck: !hasActionPipeline,
+        skipPipelineDispatch: !hasActionPipeline,
+        executionPlayerOverride: executionPlayer,
+        ...((grant.zoneFilter === undefined && grant.executionContext === undefined)
+          ? {}
+          : {
+              freeOperationOverlay: {
+                ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
+                ...(grant.executionContext === undefined ? {} : { grantContext: grant.executionContext }),
+              },
+            }),
+      });
+      if (preflight.kind === 'notApplicable') {
+        continue;
+      }
+      if (preflight.kind === 'invalidSpec') {
+        throw selectorInvalidSpecError(
+          'legalMoves',
+          preflight.selector,
+          action,
+          preflight.error,
+          preflight.selectorContractViolations,
+        );
+      }
+
+      if (
+        !isMoveDecisionSequenceAdmittedForLegalMove(
+          def,
+          state,
+          { actionId: action.id, params: {}, freeOperation: true },
+          MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
+          {
+            budgets: enumeration.budgets,
+            onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
+          },
+        )
+      ) {
+        continue;
+      }
+
+      enumerateParams(
+        action,
+        def,
+        adjacencyGraph,
+        runtimeTableIndex,
+        evalRuntimeResources,
+        state,
+        0,
+        {},
+        enumeration,
+        currentPhaseDef,
+        {
+          ...(preflight.pipelineDispatch.kind === 'matched' ? { pipeline: preflight.pipelineDispatch.profile } : {}),
+          executionPlayerOverride: executionPlayer,
+          ...((grant.zoneFilter === undefined && grant.executionContext === undefined)
+            ? {}
+            : {
+                freeOperationOverlay: {
+                  ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
+                  ...(grant.executionContext === undefined ? {} : { grantContext: grant.executionContext }),
+                },
+              }),
+          moveOverrides: { freeOperation: true },
+        },
+      );
+      if (enumeration.paramExpansionBudgetExceeded || enumeration.templateBudgetExceeded) {
+        return;
+      }
     }
   }
 }
@@ -465,10 +661,10 @@ export const enumerateLegalMoves = (
 
     if (preflight.pipelineDispatch.kind === 'matched') {
       const pipeline = preflight.pipelineDispatch.profile;
-      const status = evaluatePipelinePredicateStatus(action, pipeline, preflight.evalCtx, {
+      const status = evaluateDiscoveryPipelinePredicateStatus(action, pipeline, preflight.evalCtx, {
         includeCostValidation: pipeline.atomicity === 'atomic',
       });
-      const viabilityDecision = decideLegalMovesPipelineViability(status);
+      const viabilityDecision = decideDiscoveryLegalMovesPipelineViability(status);
       if (viabilityDecision.kind === 'excludeTemplate') {
         if (viabilityDecision.outcome === 'pipelineLegalityFailed') {
           if (!shouldEnumerateLegalMoveForOutcome(viabilityDecision.outcome)) {
@@ -499,6 +695,17 @@ export const enumerateLegalMoves = (
       continue;
     }
   }
+
+  enumeratePendingFreeOperationMoves(
+    def,
+    state,
+    enumeration,
+    adjacencyGraph,
+    runtimeTableIndex,
+    evalRuntimeResources,
+    currentPhaseDef,
+    seatResolution,
+  );
 
   const variantExpandedMoves = applyPendingFreeOperationVariants(def, state, enumeration.moves, seatResolution, {
     budgets: enumeration.budgets,

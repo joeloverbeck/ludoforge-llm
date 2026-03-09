@@ -8,13 +8,12 @@ import {
   type PhaseTransitionBudget,
 } from '../../src/kernel/effect-context.js';
 import { createCollector } from '../../src/kernel/execution-collector.js';
+import type { FreeOperationExecutionOverlay } from '../../src/kernel/free-operation-overlay.js';
 import { createRng } from '../../src/kernel/prng.js';
 import { buildAdjacencyGraph } from '../../src/kernel/spatial.js';
-import type { FreeOperationZoneFilterDiagnostics } from '../../src/kernel/eval-context.js';
 import type { RuntimeTableIndex } from '../../src/kernel/runtime-table-index.js';
 import type { AdjacencyGraph } from '../../src/kernel/spatial.js';
 import type {
-  ConditionAST,
   ExecutionCollector,
   GameDef,
   GameState,
@@ -40,8 +39,7 @@ interface EffectContextTestOptions {
   readonly effectPath?: string;
   readonly maxEffectOps?: number;
   readonly freeOperation?: boolean;
-  readonly freeOperationZoneFilter?: ConditionAST;
-  readonly freeOperationZoneFilterDiagnostics?: FreeOperationZoneFilterDiagnostics;
+  readonly freeOperationOverlay?: FreeOperationExecutionOverlay;
   readonly maxQueryResults?: number;
   readonly collector?: ExecutionCollector;
   readonly resources?: RuntimeEffectContextOptions['resources'];
@@ -70,8 +68,7 @@ const makeRuntimeEffectContextOptions = ({
   effectPath,
   maxEffectOps,
   freeOperation,
-  freeOperationZoneFilter,
-  freeOperationZoneFilterDiagnostics,
+  freeOperationOverlay,
   maxQueryResults,
   phaseTransitionBudget,
   iterationPath,
@@ -90,8 +87,7 @@ const makeRuntimeEffectContextOptions = ({
   ...(effectPath === undefined ? {} : { effectPath }),
   ...(maxEffectOps === undefined ? {} : { maxEffectOps }),
   ...(freeOperation === undefined ? {} : { freeOperation }),
-  ...(freeOperationZoneFilter === undefined ? {} : { freeOperationZoneFilter }),
-  ...(freeOperationZoneFilterDiagnostics === undefined ? {} : { freeOperationZoneFilterDiagnostics }),
+  ...(freeOperationOverlay === undefined ? {} : { freeOperationOverlay }),
   ...(maxQueryResults === undefined ? {} : { maxQueryResults }),
   resources: resources ?? makeEvalRuntimeResources({ collector }),
   ...(phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget }),

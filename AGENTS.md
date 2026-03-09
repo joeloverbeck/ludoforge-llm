@@ -97,6 +97,7 @@ Do not duplicate or drift this procedure in other files; update `docs/archival-w
 
 This project is indexed by GitNexus as **ludoforge-llm** (8677 symbols, 24932 relationships, 300 execution flows).
 
+
 ## Always Start Here
 
 1. **Read `gitnexus://repo/{name}/context`** — codebase overview + check index freshness

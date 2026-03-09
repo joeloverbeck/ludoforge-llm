@@ -773,6 +773,55 @@ describe('evalQuery', () => {
     );
   });
 
+  it('evaluates assetRows membership predicates against numeric literal sets', () => {
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        runtimeDataAssets: [
+          {
+            id: 'tournament-standard',
+            kind: 'scenario',
+            payload: {
+              blindSchedule: {
+                levels: [
+                  { level: 1, smallBlind: 10, phase: 'early' },
+                  { level: 2, smallBlind: 20, phase: 'mid' },
+                  { level: 3, smallBlind: 40, phase: 'late' },
+                ],
+              },
+            },
+          },
+        ],
+        tableContracts: [
+          {
+            id: 'tournament-standard::blindSchedule.levels',
+            assetId: 'tournament-standard',
+            tablePath: 'blindSchedule.levels',
+            fields: [
+              { field: 'level', type: 'int' },
+              { field: 'phase', type: 'string' },
+              { field: 'smallBlind', type: 'int' },
+            ],
+          },
+        ],
+      },
+    });
+
+    const filtered = evalQuery(
+      {
+        query: 'assetRows',
+        tableId: 'tournament-standard::blindSchedule.levels',
+        where: [{ field: 'level', op: 'in', value: [1, 3] }],
+      },
+      ctx,
+    );
+
+    assert.deepEqual(
+      filtered.map((row) => (row as Record<string, unknown>).smallBlind),
+      [10, 40],
+    );
+  });
+
   it('throws dedicated data-asset runtime errors for missing assetRows assets and invalid table paths', () => {
     const ctx = makeCtx({
       def: {
@@ -1758,6 +1807,45 @@ describe('evalQuery', () => {
     assert.deepEqual(
       tokens.map((token) => (token as Token).id),
       [asTokenId('us-troop-1'), asTokenId('us-troop-2'), asTokenId('arvn-troop-1')],
+    );
+  });
+
+  it('evaluates token-filter membership predicates against boolean literal sets', () => {
+    const readyToken = (id: string, ready: boolean): Token => ({
+      id: asTokenId(id),
+      type: 'piece',
+      props: { ready },
+    });
+    const baseState = makeState();
+    const ctx = makeCtx({
+      state: {
+        ...baseState,
+        zones: {
+          ...baseState.zones,
+          'battlefield:none': [
+            readyToken('ready-1', true),
+            readyToken('ready-2', false),
+            readyToken('ready-3', true),
+          ],
+        },
+      },
+    });
+
+    const tokens = evalQuery(
+      {
+        query: 'tokensInZone',
+        zone: 'battlefield:none',
+        filter: {
+          op: 'and',
+          args: [{ prop: 'ready', op: 'in', value: [true] }],
+        },
+      },
+      ctx,
+    );
+
+    assert.deepEqual(
+      tokens.map((token) => (token as Token).id),
+      [asTokenId('ready-1'), asTokenId('ready-3')],
     );
   });
 

@@ -5732,6 +5732,106 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
       true,
     );
   });
+
+  it('rejects nested sequence-context grants inside evaluateSubset.compute descendants', () => {
+    const def = withEventCardSideConfig({
+      effects: [
+        {
+          evaluateSubset: {
+            source: { query: 'players' },
+            subsetSize: 1,
+            subsetBind: '$subset',
+            compute: [
+              {
+                if: {
+                  when: { op: '==', left: 1, right: 1 },
+                  then: [
+                    {
+                      grantFreeOperation: {
+                        seat: '0',
+                        sequence: { chain: 'ctx-effect-evaluate-subset-compute-nested-chain', step: 0 },
+                        operationClass: 'operation',
+                        actionIds: ['playCard'],
+                        sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+            scoreExpr: 1,
+            resultBind: '$score',
+            in: [],
+          },
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_SCOPE_UNSUPPORTED'
+          && diag.path
+            === 'eventDecks[0].cards[0].unshaded.effects[0].evaluateSubset.compute[0].if.then[0].grantFreeOperation.sequenceContext',
+      ),
+      true,
+    );
+  });
+
+  it('accepts nested sequence-context grants inside evaluateSubset.in descendants', () => {
+    const def = withEventCardSideConfig({
+      effects: [
+        {
+          evaluateSubset: {
+            source: { query: 'players' },
+            subsetSize: 1,
+            subsetBind: '$subset',
+            compute: [],
+            scoreExpr: 1,
+            resultBind: '$score',
+            in: [
+              {
+                if: {
+                  when: { op: '==', left: 1, right: 1 },
+                  then: [
+                    {
+                      grantFreeOperation: {
+                        seat: '0',
+                        sequence: { chain: 'ctx-effect-evaluate-subset-in-nested-chain', step: 0 },
+                        operationClass: 'operation',
+                        actionIds: ['playCard'],
+                        sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                      },
+                    },
+                    {
+                      grantFreeOperation: {
+                        seat: '0',
+                        sequence: { chain: 'ctx-effect-evaluate-subset-in-nested-chain', step: 1 },
+                        operationClass: 'operation',
+                        actionIds: ['playCard'],
+                        sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code === 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_SCOPE_UNSUPPORTED'),
+      false,
+    );
+    assert.equal(
+      diagnostics.some((diag) => diag.code.startsWith('FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_')),
+      false,
+    );
+  });
 });
 
 describe('validated GameDef boundary', () => {

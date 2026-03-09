@@ -1,4 +1,9 @@
 import type { FreeOperationSequenceContextGrantLike } from './free-operation-sequence-context-contract.js';
+import {
+  getNestedEffectSequenceContextScopes,
+  ROOT_EFFECT_SEQUENCE_CONTEXT_SCOPE,
+  type EffectSequenceContextScope,
+} from './effect-sequence-context-scope.js';
 import type { EffectAST } from './types.js';
 
 export interface SequenceContextLinkageGrantReference {
@@ -22,45 +27,16 @@ const dedupeExecutionPaths = (
 };
 
 const effectArrayContainsSequenceContextGrant = (effects: readonly EffectAST[]): boolean =>
-  effects.some((effect) => effectContainsSequenceContextGrant(effect));
+  effects.some((effect) => effectContainsSequenceContextGrant(effect, ROOT_EFFECT_SEQUENCE_CONTEXT_SCOPE));
 
-const effectContainsSequenceContextGrant = (effect: EffectAST): boolean => {
+const effectContainsSequenceContextGrant = (effect: EffectAST, scope: EffectSequenceContextScope): boolean => {
   if ('grantFreeOperation' in effect) {
-    return collectSequenceContextLinkageGrantReference(effect.grantFreeOperation, '') !== null;
+    return scope.allowsPersistentSequenceContextGrants
+      && collectSequenceContextLinkageGrantReference(effect.grantFreeOperation, '') !== null;
   }
 
-  if ('if' in effect) {
-    return effectArrayContainsSequenceContextGrant(effect.if.then)
-      || (effect.if.else !== undefined && effectArrayContainsSequenceContextGrant(effect.if.else));
-  }
-
-  if ('let' in effect) {
-    return effectArrayContainsSequenceContextGrant(effect.let.in);
-  }
-
-  if ('forEach' in effect) {
-    return effectArrayContainsSequenceContextGrant(effect.forEach.effects)
-      || (effect.forEach.in !== undefined && effectArrayContainsSequenceContextGrant(effect.forEach.in));
-  }
-
-  if ('reduce' in effect) {
-    return effectArrayContainsSequenceContextGrant(effect.reduce.in);
-  }
-
-  if ('removeByPriority' in effect) {
-    return effect.removeByPriority.in !== undefined
-      && effectArrayContainsSequenceContextGrant(effect.removeByPriority.in);
-  }
-
-  if ('evaluateSubset' in effect) {
-    return effectArrayContainsSequenceContextGrant(effect.evaluateSubset.in);
-  }
-
-  if ('rollRandom' in effect) {
-    return effectArrayContainsSequenceContextGrant(effect.rollRandom.in);
-  }
-
-  return false;
+  return getNestedEffectSequenceContextScopes(effect, scope).some((nestedScope) =>
+    nestedScope.effects.some((entry) => effectContainsSequenceContextGrant(entry, nestedScope.scope)));
 };
 
 const collectSequenceContextLinkageGrantReference = (
@@ -112,10 +88,11 @@ const walkEffectArrayExecutionPaths = (
   effects: readonly EffectAST[],
   path: string,
   incoming: readonly SequenceContextLinkagePathState[],
+  scope: EffectSequenceContextScope,
 ): readonly SequenceContextLinkagePathState[] => {
   let current = incoming;
   effects.forEach((effect, index) => {
-    current = walkEffectExecutionPaths(effect, `${path}[${index}]`, current);
+    current = walkEffectExecutionPaths(effect, `${path}[${index}]`, current, scope);
   });
   return current;
 };
@@ -124,8 +101,12 @@ const walkEffectExecutionPaths = (
   effect: EffectAST,
   path: string,
   incoming: readonly SequenceContextLinkagePathState[],
+  scope: EffectSequenceContextScope,
 ): readonly SequenceContextLinkagePathState[] => {
   if ('grantFreeOperation' in effect) {
+    if (!scope.allowsPersistentSequenceContextGrants) {
+      return incoming;
+    }
     const reference = collectSequenceContextLinkageGrantReference(
       effect.grantFreeOperation,
       `${path}.grantFreeOperation`,
@@ -134,42 +115,54 @@ const walkEffectExecutionPaths = (
   }
 
   if ('if' in effect) {
-    const thenPaths = walkEffectArrayExecutionPaths(effect.if.then, `${path}.if.then`, incoming);
-    const elsePaths = effect.if.else === undefined
+    const nestedScopes = getNestedEffectSequenceContextScopes(effect, scope);
+    const thenScope = nestedScopes.find((nestedScope) => nestedScope.pathSuffix === '.if.then');
+    const elseScope = nestedScopes.find((nestedScope) => nestedScope.pathSuffix === '.if.else');
+    const thenPaths = thenScope === undefined
       ? incoming
-      : walkEffectArrayExecutionPaths(effect.if.else, `${path}.if.else`, incoming);
+      : walkEffectArrayExecutionPaths(thenScope.effects, `${path}${thenScope.pathSuffix}`, incoming, thenScope.scope);
+    const elsePaths = elseScope === undefined
+      ? incoming
+      : walkEffectArrayExecutionPaths(elseScope.effects, `${path}${elseScope.pathSuffix}`, incoming, elseScope.scope);
     return [...thenPaths, ...elsePaths];
   }
 
-  if ('let' in effect) {
-    return walkEffectArrayExecutionPaths(effect.let.in, `${path}.let.in`, incoming);
-  }
-
-  if ('reduce' in effect) {
-    return walkEffectArrayExecutionPaths(effect.reduce.in, `${path}.reduce.in`, incoming);
-  }
-
-  if ('removeByPriority' in effect) {
-    return effect.removeByPriority.in === undefined
-      ? incoming
-      : walkEffectArrayExecutionPaths(effect.removeByPriority.in, `${path}.removeByPriority.in`, incoming);
-  }
-
-  if ('rollRandom' in effect) {
-    return walkEffectArrayExecutionPaths(effect.rollRandom.in, `${path}.rollRandom.in`, incoming);
-  }
-
   if ('forEach' in effect) {
-    const loopBodyPaths = walkEffectArrayExecutionPaths(effect.forEach.effects, `${path}.forEach.effects`, incoming);
+    const nestedScopes = getNestedEffectSequenceContextScopes(effect, scope);
+    const loopBodyScope = nestedScopes.find((nestedScope) => nestedScope.pathSuffix === '.forEach.effects');
+    const continuationScope = nestedScopes.find((nestedScope) => nestedScope.pathSuffix === '.forEach.in');
+    const loopBodyPaths = loopBodyScope === undefined
+      ? incoming
+      : walkEffectArrayExecutionPaths(
+          loopBodyScope.effects,
+          `${path}${loopBodyScope.pathSuffix}`,
+          incoming,
+          loopBodyScope.scope,
+        );
     const continuationIncoming = dedupeExecutionPaths([...incoming, ...loopBodyPaths]);
-    if (effect.forEach.countBind === undefined || effect.forEach.in === undefined) {
+    if (effect.forEach.countBind === undefined || continuationScope === undefined) {
       return continuationIncoming;
     }
-    return walkEffectArrayExecutionPaths(effect.forEach.in, `${path}.forEach.in`, continuationIncoming);
+    return walkEffectArrayExecutionPaths(
+      continuationScope.effects,
+      `${path}${continuationScope.pathSuffix}`,
+      continuationIncoming,
+      continuationScope.scope,
+    );
   }
 
-  if ('evaluateSubset' in effect) {
-    return walkEffectArrayExecutionPaths(effect.evaluateSubset.in, `${path}.evaluateSubset.in`, incoming);
+  const nestedScopes = getNestedEffectSequenceContextScopes(effect, scope);
+  if (nestedScopes.length > 0) {
+    let current = incoming;
+    nestedScopes.forEach((nestedScope) => {
+      current = walkEffectArrayExecutionPaths(
+        nestedScope.effects,
+        `${path}${nestedScope.pathSuffix}`,
+        current,
+        nestedScope.scope,
+      );
+    });
+    return current;
   }
 
   return incoming;
@@ -180,5 +173,5 @@ export const collectEffectGrantSequenceContextExecutionPaths = (
   path: string,
 ): readonly SequenceContextLinkagePathState[] =>
   effectArrayContainsSequenceContextGrant(effects)
-    ? walkEffectArrayExecutionPaths(effects, path, [[]])
+    ? walkEffectArrayExecutionPaths(effects, path, [[]], ROOT_EFFECT_SEQUENCE_CONTEXT_SCOPE)
     : [[]];

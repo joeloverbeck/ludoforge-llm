@@ -72,6 +72,11 @@ import {
   collectEffectGrantSequenceContextExecutionPaths,
   type SequenceContextLinkageGrantReference,
 } from './effect-grant-sequence-context-paths.js';
+import {
+  getNestedEffectSequenceContextScopes,
+  ROOT_EFFECT_SEQUENCE_CONTEXT_SCOPE,
+  type EffectSequenceContextScope,
+} from './effect-sequence-context-scope.js';
 
 function validateStaticMapSpaceSelector(
   diagnostics: Diagnostic[],
@@ -249,8 +254,7 @@ function normalizeDeclaredBinderDiagnosticPath(path: string): string {
   return path.replace(/\.([0-9]+)(?=\.|$)/g, '[$1]');
 }
 
-const isUnsupportedSequenceContextGrantPath = (path: string): boolean =>
-  /\.evaluateSubset\.compute\[\d+\]$/.test(path);
+const DEFAULT_EFFECT_VALIDATION_SCOPE = ROOT_EFFECT_SEQUENCE_CONTEXT_SCOPE;
 
 type FreeOperationGrantValidationTarget = {
   readonly operationClass: string;
@@ -1474,6 +1478,7 @@ export const validateEffectAst = (
   effect: EffectAST,
   path: string,
   context: ValidationContext,
+  scope: EffectSequenceContextScope = DEFAULT_EFFECT_VALIDATION_SCOPE,
 ): void => {
   validateDeclaredCanonicalBindingsOnEffect(diagnostics, effect, path);
 
@@ -1692,25 +1697,23 @@ export const validateEffectAst = (
       appendEffectConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.effect.ifWhen),
       context,
     );
-    effect.if.then.forEach((entry, index) => {
-      validateEffectAst(diagnostics, entry, `${path}.if.then[${index}]`, context);
-    });
-    effect.if.else?.forEach((entry, index) => {
-      validateEffectAst(diagnostics, entry, `${path}.if.else[${index}]`, context);
+    getNestedEffectSequenceContextScopes(effect, scope).forEach((nestedScope) => {
+      nestedScope.effects.forEach((entry, index) => {
+        validateEffectAst(diagnostics, entry, `${path}${nestedScope.pathSuffix}[${index}]`, context, nestedScope.scope);
+      });
     });
     return;
   }
 
   if ('forEach' in effect) {
     validateOptionsQuery(diagnostics, effect.forEach.over, `${path}.forEach.over`, context);
-    effect.forEach.effects.forEach((entry, index) => {
-      validateEffectAst(diagnostics, entry, `${path}.forEach.effects[${index}]`, context);
-    });
     if (effect.forEach.limit !== undefined) {
       validateNumericValueExpr(diagnostics, effect.forEach.limit, `${path}.forEach.limit`, context);
     }
-    effect.forEach.in?.forEach((entry, index) => {
-      validateEffectAst(diagnostics, entry, `${path}.forEach.in[${index}]`, context);
+    getNestedEffectSequenceContextScopes(effect, scope).forEach((nestedScope) => {
+      nestedScope.effects.forEach((entry, index) => {
+        validateEffectAst(diagnostics, entry, `${path}${nestedScope.pathSuffix}[${index}]`, context, nestedScope.scope);
+      });
     });
     return;
   }
@@ -1735,8 +1738,10 @@ export const validateEffectAst = (
         suggestion: 'Use unique binding names for item, accumulator, and reduced result.',
       });
     }
-    effect.reduce.in.forEach((entry, index) => {
-      validateEffectAst(diagnostics, entry, `${path}.reduce.in[${index}]`, context);
+    getNestedEffectSequenceContextScopes(effect, scope).forEach((nestedScope) => {
+      nestedScope.effects.forEach((entry, index) => {
+        validateEffectAst(diagnostics, entry, `${path}${nestedScope.pathSuffix}[${index}]`, context, nestedScope.scope);
+      });
     });
     return;
   }
@@ -1744,12 +1749,11 @@ export const validateEffectAst = (
   if ('evaluateSubset' in effect) {
     validateOptionsQuery(diagnostics, effect.evaluateSubset.source, `${path}.evaluateSubset.source`, context);
     validateNumericValueExpr(diagnostics, effect.evaluateSubset.subsetSize, `${path}.evaluateSubset.subsetSize`, context);
-    effect.evaluateSubset.compute.forEach((entry, index) => {
-      validateEffectAst(diagnostics, entry, `${path}.evaluateSubset.compute[${index}]`, context);
-    });
     validateNumericValueExpr(diagnostics, effect.evaluateSubset.scoreExpr, `${path}.evaluateSubset.scoreExpr`, context);
-    effect.evaluateSubset.in.forEach((entry, index) => {
-      validateEffectAst(diagnostics, entry, `${path}.evaluateSubset.in[${index}]`, context);
+    getNestedEffectSequenceContextScopes(effect, scope).forEach((nestedScope) => {
+      nestedScope.effects.forEach((entry, index) => {
+        validateEffectAst(diagnostics, entry, `${path}${nestedScope.pathSuffix}[${index}]`, context, nestedScope.scope);
+      });
     });
     return;
   }
@@ -1764,17 +1768,20 @@ export const validateEffectAst = (
         validateZoneRef(diagnostics, group.from, `${groupPath}.from`, context);
       }
     });
-
-    effect.removeByPriority.in?.forEach((entry, index) => {
-      validateEffectAst(diagnostics, entry, `${path}.removeByPriority.in[${index}]`, context);
+    getNestedEffectSequenceContextScopes(effect, scope).forEach((nestedScope) => {
+      nestedScope.effects.forEach((entry, index) => {
+        validateEffectAst(diagnostics, entry, `${path}${nestedScope.pathSuffix}[${index}]`, context, nestedScope.scope);
+      });
     });
     return;
   }
 
   if ('let' in effect) {
     validateValueExpr(diagnostics, effect.let.value, `${path}.let.value`, context);
-    effect.let.in.forEach((entry, index) => {
-      validateEffectAst(diagnostics, entry, `${path}.let.in[${index}]`, context);
+    getNestedEffectSequenceContextScopes(effect, scope).forEach((nestedScope) => {
+      nestedScope.effects.forEach((entry, index) => {
+        validateEffectAst(diagnostics, entry, `${path}${nestedScope.pathSuffix}[${index}]`, context, nestedScope.scope);
+      });
     });
     return;
   }
@@ -1802,8 +1809,10 @@ export const validateEffectAst = (
   if ('rollRandom' in effect) {
     validateNumericValueExpr(diagnostics, effect.rollRandom.min, `${path}.rollRandom.min`, context);
     validateNumericValueExpr(diagnostics, effect.rollRandom.max, `${path}.rollRandom.max`, context);
-    effect.rollRandom.in.forEach((entry, index) => {
-      validateEffectAst(diagnostics, entry, `${path}.rollRandom.in[${index}]`, context);
+    getNestedEffectSequenceContextScopes(effect, scope).forEach((nestedScope) => {
+      nestedScope.effects.forEach((entry, index) => {
+        validateEffectAst(diagnostics, entry, `${path}${nestedScope.pathSuffix}[${index}]`, context, nestedScope.scope);
+      });
     });
     return;
   }
@@ -1951,7 +1960,7 @@ export const validateEffectAst = (
         context,
       );
     }
-    if (grant.sequenceContext !== undefined && isUnsupportedSequenceContextGrantPath(path)) {
+    if (grant.sequenceContext !== undefined && !scope.allowsPersistentSequenceContextGrants) {
       diagnostics.push({
         code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_SCOPE_UNSUPPORTED',
         path: `${path}.grantFreeOperation.sequenceContext`,

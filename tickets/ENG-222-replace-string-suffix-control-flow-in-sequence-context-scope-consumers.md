@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — kernel control-flow metadata shape for sequence-context scope consumers
-**Deps**: packages/engine/src/kernel/effect-sequence-context-scope.ts, packages/engine/src/kernel/effect-grant-sequence-context-paths.ts, packages/engine/src/kernel/validate-gamedef-behavior.ts, tickets/ENG-221-effect-sequence-context-scope-matrix-coverage.md, archive/tickets/ENG/ENG-219-reject-nested-sequence-context-grants-in-evaluate-subset-compute.md
+**Deps**: packages/engine/src/kernel/effect-sequence-context-scope.ts, packages/engine/src/kernel/effect-grant-sequence-context-paths.ts, packages/engine/src/kernel/validate-gamedef-behavior.ts, archive/tickets/ENG/ENG-221-effect-sequence-context-scope-matrix-coverage.md, archive/tickets/ENG/ENG-219-reject-nested-sequence-context-grants-in-evaluate-subset-compute.md
 
 ## Problem
 

@@ -852,7 +852,7 @@ describe('json schema artifacts', () => {
                 seat: '0',
                 operationClass: 'operation',
                 executionContext: {
-                  allowedTargets: [1, 2],
+                  allowedTargets: { scalarArray: [1, 2] },
                   effectCode: { op: '+', left: 3, right: 4 },
                 },
               },

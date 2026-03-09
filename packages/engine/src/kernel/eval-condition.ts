@@ -6,10 +6,10 @@ import { resolvePredicateValue } from './predicate-value-resolution.js';
 import { resolveMapSpaceId, resolveSingleZoneSel } from './resolve-selectors.js';
 import { queryConnectedZones } from './spatial.js';
 import { matchesMembership } from './query-predicate.js';
-import type { ConditionAST } from './types.js';
+import type { ConditionAST, ScalarArrayValue, ScalarValue } from './types.js';
 
 function expectOrderingNumber(
-  value: number | boolean | string,
+  value: ScalarValue | ScalarArrayValue,
   side: 'left' | 'right',
   cond: ConditionAST,
 ): number {

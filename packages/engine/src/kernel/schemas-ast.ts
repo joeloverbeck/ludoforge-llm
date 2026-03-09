@@ -21,6 +21,25 @@ const CanonicalBindingIdentifierSchema = StringSchema.regex(CANONICAL_BINDING_ID
   message: CANONICAL_BINDING_IDENTIFIER_MESSAGE,
 });
 const PredicateScalarLiteralSchema = z.union([StringSchema, NumberSchema, BooleanSchema]);
+const ScalarValueArraySchema = z
+  .array(PredicateScalarLiteralSchema)
+  .superRefine((value, refinementCtx) => {
+    let expectedType: 'string' | 'number' | 'boolean' | null = null;
+    for (let index = 0; index < value.length; index += 1) {
+      const entryType = typeof value[index] as 'string' | 'number' | 'boolean';
+      if (expectedType === null) {
+        expectedType = entryType;
+        continue;
+      }
+      if (entryType !== expectedType) {
+        refinementCtx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Scalar arrays must not mix string, number, and boolean values.',
+          path: [index],
+        });
+      }
+    }
+  });
 const PredicateOperatorSchema = z.enum(PREDICATE_OPERATORS);
 
 const PlayerIdSchema = IntegerSchema;
@@ -90,7 +109,7 @@ export const EffectASTSchema = z.lazy(() => effectAstSchemaInternal);
 export const TokenFilterExprSchema = z.lazy(() => tokenFilterExprSchemaInternal);
 export const FreeOperationExecutionContextSchema: z.ZodTypeAny = z.lazy(() => z.record(
   StringSchema,
-  z.union([ValueExprSchema, z.array(PredicateScalarLiteralSchema)]),
+  ValueExprSchema,
 ));
 const IntDomainBoundSchema = z
   .union([IntegerSchema, NumericValueExprSchema])
@@ -102,7 +121,7 @@ export const TokenFilterPredicateSchema = z
   .object({
     prop: StringSchema,
     op: PredicateOperatorSchema,
-    value: z.union([ValueExprSchema, z.array(PredicateScalarLiteralSchema)]),
+    value: z.union([ValueExprSchema, ScalarValueArraySchema]),
   })
   .strict();
 
@@ -110,7 +129,7 @@ export const AssetRowPredicateSchema = z
   .object({
     field: StringSchema,
     op: PredicateOperatorSchema,
-    value: z.union([ValueExprSchema, z.array(PredicateScalarLiteralSchema)]),
+    value: z.union([ValueExprSchema, ScalarValueArraySchema]),
   })
   .strict();
 
@@ -294,6 +313,7 @@ valueExprSchemaInternal = z.union([
   NumberSchema,
   BooleanSchema,
   StringSchema,
+  z.object({ scalarArray: ScalarValueArraySchema }).strict(),
   ReferenceSchema,
   z
     .object({

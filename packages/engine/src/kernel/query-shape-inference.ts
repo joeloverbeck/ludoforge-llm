@@ -102,6 +102,10 @@ export function inferValueRuntimeShapes(
     return ['unknown'];
   }
 
+  if ('scalarArray' in valueExpr) {
+    return ['unknown'];
+  }
+
   if ('concat' in valueExpr) {
     return ['string'];
   }

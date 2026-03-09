@@ -677,6 +677,9 @@ export const validateValueExpr = (
   if (typeof valueExpr === 'number' || typeof valueExpr === 'boolean' || typeof valueExpr === 'string') {
     return;
   }
+  if ('scalarArray' in valueExpr) {
+    return;
+  }
 
   if ('ref' in valueExpr) {
     validateReference(diagnostics, valueExpr, path, context);

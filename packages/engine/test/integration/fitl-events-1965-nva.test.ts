@@ -186,11 +186,16 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
     assert.notEqual(compiled.gameDef, null);
 
     const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-47');
+    const parsedCard = parsed.doc.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-47');
     assert.notEqual(card, undefined);
+    assert.notEqual(parsedCard, undefined);
     assert.equal(card?.unshaded?.text, 'Add ARVN Troops to double the ARVN pieces in a space with NVA. All ARVN free Assault NVA.');
     assert.equal(card?.shaded?.text, 'Place up to 10 NVA Troops anywhere within 1 space of North Vietnam.');
     assert.equal(typeof (card?.unshaded?.effects?.[0] as { if?: unknown } | undefined)?.if, 'object');
     assert.equal(typeof (card?.unshaded?.effects?.[1] as { forEach?: unknown } | undefined)?.forEach, 'object');
+    const serializedParsedUnshaded = JSON.stringify(parsedCard?.unshaded?.effects ?? []);
+    assert.match(serializedParsedUnshaded, /targetFactions/, 'Card 47 should encode its targeted assault via targetFactions');
+    assert.doesNotMatch(serializedParsedUnshaded, /targetFactionMode/, 'Card 47 should not retain the legacy targetFactionMode alias');
     assert.equal((card?.shaded?.effects?.[0] as { chooseN?: { bind?: string } } | undefined)?.chooseN?.bind, '$nvaTroopsToPlace');
     assert.equal(typeof (card?.shaded?.effects?.[1] as { forEach?: unknown } | undefined)?.forEach, 'object');
   });

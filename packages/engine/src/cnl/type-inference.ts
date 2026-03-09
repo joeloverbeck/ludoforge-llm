@@ -19,6 +19,9 @@ export function inferValueExprType(expr: ValueExpr, ctx: TypeInferenceContext): 
   if (typeof expr === 'string') {
     return 'string';
   }
+  if ('scalarArray' in expr) {
+    return 'unknown';
+  }
 
   if ('ref' in expr) {
     return inferReferenceType(expr, ctx);

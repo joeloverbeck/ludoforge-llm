@@ -207,7 +207,7 @@ effectMacros:
       - { name: damageExpr, type: value }
       - { name: bodyCountEligible, type: value }
       - { name: treatTunneledBasesAsUntunneled, type: value }
-      - { name: targetFactionMode, type: value }
+      - { name: targetFactions, type: { kind: tokenTraitValues, prop: faction } }
     exports: [$damage, $targetFactionFirst]
     effects:
       - let:
@@ -217,192 +217,148 @@ effectMacros:
             - if:
                 when: { op: '>', left: { ref: binding, name: $damage }, right: 0 }
                 then:
-                  - if:
-                      when: { op: '==', left: { param: targetFactionMode }, right: all }
-                      then:
+                  - let:
+                      bind: $targetFactionOptions
+                      value: { param: targetFactions }
+                      in:
                         - chooseOne:
                             bind: $targetFactionFirst
-                            options: { query: enums, values: ['NVA', 'VC'] }
-                        - let:
-                            bind: $targetFactionSecond
-                            value: { if: { when: { op: '==', left: { ref: binding, name: $targetFactionFirst }, right: 'NVA' }, then: 'VC', else: 'NVA' } }
-                            in:
-                              - removeByPriority:
-                                  budget: { ref: binding, name: $damage }
-                                  groups:
-                                    - bind: $target
-                                      over: { query: tokensInZone, zone: { param: space }, filter: { op: and, args: [{ prop: type, eq: troops }, { prop: faction, op: in, value: ['NVA', 'VC'] }] } }
-                                      to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
-                                      countBind: $troopsRemoved
-                                    - bind: $target
-                                      over: { query: tokensInZone, zone: { param: space }, filter: { op: and, args: [{ prop: type, eq: guerrilla }, { prop: faction, eq: { ref: binding, name: $targetFactionFirst } }, { prop: activity, eq: active }] } }
-                                      to: { zoneExpr: { concat: ['available-', { ref: binding, name: $targetFactionFirst }, ':none'] } }
-                                      countBind: $guerrillas1Removed
-                                    - bind: $target
-                                      over: { query: tokensInZone, zone: { param: space }, filter: { op: and, args: [{ prop: type, eq: guerrilla }, { prop: faction, eq: { ref: binding, name: $targetFactionSecond } }, { prop: activity, eq: active }] } }
-                                      to: { zoneExpr: { concat: ['available-', { ref: binding, name: $targetFactionSecond }, ':none'] } }
-                                      countBind: $guerrillas2Removed
-                                  remainingBind: $remainingDamage
-                                  in:
-                                    - let:
-                                        bind: $guerrillasRemoved
-                                        value:
-                                          op: '+'
-                                          left: { ref: binding, name: $guerrillas1Removed }
-                                          right: { ref: binding, name: $guerrillas2Removed }
-                                        in:
+                            options: { query: binding, name: $targetFactionOptions }
+                        - macro: piece-removal-ordering-targeted-pipeline
+                          args:
+                            space: { param: space }
+                            damageExpr: { ref: binding, name: $damage }
+                            bodyCountEligible: { param: bodyCountEligible }
+                            treatTunneledBasesAsUntunneled: { param: treatTunneledBasesAsUntunneled }
+                            targetFactions: { ref: binding, name: $targetFactionOptions }
+                            targetFactionFirst: { ref: binding, name: $targetFactionFirst }
+
+  # ── piece-removal-ordering-targeted-pipeline ──────────────────────────────
+  # Shared targeted removal body for COIN Assault variants once the first
+  # guerrilla faction has already been selected or derived.
+  - id: piece-removal-ordering-targeted-pipeline
+    params:
+      - { name: space, type: zoneSelector }
+      - { name: damageExpr, type: value }
+      - { name: bodyCountEligible, type: value }
+      - { name: treatTunneledBasesAsUntunneled, type: value }
+      - { name: targetFactions, type: { kind: tokenTraitValues, prop: faction } }
+      - { name: targetFactionFirst, type: { kind: tokenTraitValue, prop: faction } }
+    exports: []
+    effects:
+      - removeByPriority:
+          budget: { param: damageExpr }
+          groups:
+            - bind: $target
+              over:
+                query: tokensInZone
+                zone: { param: space }
+                filter:
+                  op: and
+                  args:
+                    - { prop: type, eq: troops }
+                    - { prop: faction, op: in, value: { param: targetFactions } }
+              to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
+              countBind: $troopsRemoved
+            - bind: $target
+              over:
+                query: tokensInZone
+                zone: { param: space }
+                filter:
+                  op: and
+                  args:
+                    - { prop: type, eq: guerrilla }
+                    - { prop: faction, eq: { param: targetFactionFirst } }
+                    - { prop: activity, eq: active }
+              to: { zoneExpr: { concat: ['available-', { param: targetFactionFirst }, ':none'] } }
+              countBind: $guerrillas1Removed
+            - bind: $target
+              over:
+                query: tokensInZone
+                zone: { param: space }
+                filter:
+                  op: and
+                  args:
+                    - { prop: type, eq: guerrilla }
+                    - { prop: faction, op: in, value: { param: targetFactions } }
+                    - { prop: faction, neq: { param: targetFactionFirst } }
+                    - { prop: activity, eq: active }
+              to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
+              countBind: $guerrillas2Removed
+          remainingBind: $remainingDamage
+          in:
+            - let:
+                bind: $guerrillasRemoved
+                value:
+                  op: '+'
+                  left: { ref: binding, name: $guerrillas1Removed }
+                  right: { ref: binding, name: $guerrillas2Removed }
+                in:
+                  - if:
+                      when:
+                        op: and
+                        args:
+                          - { op: '==', left: { param: bodyCountEligible }, right: true }
+                          - { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
+                      then:
+                        - addVar:
+                            scope: global
+                            var: aid
+                            delta:
+                              op: '*'
+                              left: { ref: binding, name: $guerrillasRemoved }
+                              right: 3
+            - if:
+                when: { op: '>', left: { ref: binding, name: $remainingDamage }, right: 0 }
+                then:
+                  - let:
+                      bind: $guerrillasRemaining
+                      value:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: { param: space }
+                            filter:
+                              op: and
+                              args:
+                                - { prop: type, eq: guerrilla }
+                                - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                      in:
+                        - if:
+                            when: { op: '==', left: { ref: binding, name: $guerrillasRemaining }, right: 0 }
+                            then:
+                              - forEach:
+                                  bind: $baseTarget
+                                  over:
+                                    query: tokensInZone
+                                    zone: { param: space }
+                                    filter:
+                                      op: and
+                                      args:
+                                        - { prop: type, eq: base }
+                                        - { prop: faction, op: in, value: { param: targetFactions } }
+                                  limit: { ref: binding, name: $remainingDamage }
+                                  effects:
+                                    - if:
+                                        when: { op: '==', left: { ref: tokenProp, token: $baseTarget, prop: tunnel }, right: 'tunneled' }
+                                        then:
                                           - if:
-                                              when:
-                                                op: and
-                                                args:
-                                                  - { op: '==', left: { param: bodyCountEligible }, right: true }
-                                                  - { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
+                                              when: { op: '==', left: { param: treatTunneledBasesAsUntunneled }, right: true }
                                               then:
-                                                - addVar:
-                                                    scope: global
-                                                    var: aid
-                                                    delta:
-                                                      op: '*'
-                                                      left: { ref: binding, name: $guerrillasRemoved }
-                                                      right: 3
-                                    - if:
-                                        when: { op: '>', left: { ref: binding, name: $remainingDamage }, right: 0 }
-                                        then:
-                                          - let:
-                                              bind: $guerrillasRemaining
-                                              value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: { op: and, args: [{ prop: type, eq: guerrilla }, { prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
-                                              in:
-                                                - if:
-                                                    when: { op: '==', left: { ref: binding, name: $guerrillasRemaining }, right: 0 }
-                                                    then:
-                                                      - forEach:
-                                                          bind: $baseTarget
-                                                          over: { query: tokensInZone, zone: { param: space }, filter: { op: and, args: [{ prop: type, eq: base }, { prop: faction, op: in, value: ['NVA', 'VC'] }] } }
-                                                          limit: { ref: binding, name: $remainingDamage }
-                                                          effects:
-                                                            - if:
-                                                                when: { op: '==', left: { ref: tokenProp, token: $baseTarget, prop: tunnel }, right: 'tunneled' }
-                                                                then:
-                                                                  - if:
-                                                                      when: { op: '==', left: { param: treatTunneledBasesAsUntunneled }, right: true }
-                                                                      then:
-                                                                        - moveToken: { token: $baseTarget, from: { param: space }, to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $baseTarget, prop: faction }, ':none'] } } }
-                                                                      else:
-                                                                        - rollRandom:
-                                                                            bind: $dieRoll
-                                                                            min: 1
-                                                                            max: 6
-                                                                            in:
-                                                                              - if:
-                                                                                  when: { op: '>=', left: { ref: binding, name: $dieRoll }, right: 4 }
-                                                                                  then:
-                                                                                    - setTokenProp: { token: $baseTarget, prop: tunnel, value: 'untunneled' }
-                                                                else:
-                                                                  - moveToken: { token: $baseTarget, from: { param: space }, to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $baseTarget, prop: faction }, ':none'] } } }
-                      else:
-                        - let:
-                            bind: $targetFactionFirst
-                            value: { param: targetFactionMode }
-                            in:
-                              - removeByPriority:
-                                  budget: { ref: binding, name: $damage }
-                                  groups:
-                                    - bind: $target
-                                      over:
-                                        query: tokensInZone
-                                        zone: { param: space }
-                                        filter:
-                                          op: and
-                                          args:
-                                            - { prop: type, eq: troops }
-                                            - { prop: faction, eq: { ref: binding, name: $targetFactionFirst } }
-                                      to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
-                                      countBind: $troopsRemoved
-                                    - bind: $target
-                                      over:
-                                        query: tokensInZone
-                                        zone: { param: space }
-                                        filter:
-                                          op: and
-                                          args:
-                                            - { prop: type, eq: guerrilla }
-                                            - { prop: faction, eq: { ref: binding, name: $targetFactionFirst } }
-                                            - { prop: activity, eq: active }
-                                      to: { zoneExpr: { concat: ['available-', { ref: binding, name: $targetFactionFirst }, ':none'] } }
-                                      countBind: $guerrillasRemoved
-                                  remainingBind: $remainingDamage
-                                  in:
-                                    - if:
-                                        when:
-                                          op: and
-                                          args:
-                                            - { op: '==', left: { param: bodyCountEligible }, right: true }
-                                            - { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
-                                        then:
-                                          - addVar:
-                                              scope: global
-                                              var: aid
-                                              delta:
-                                                op: '*'
-                                                left: { ref: binding, name: $guerrillasRemoved }
-                                                right: 3
-                                    - if:
-                                        when: { op: '>', left: { ref: binding, name: $remainingDamage }, right: 0 }
-                                        then:
-                                          - let:
-                                              bind: $guerrillasRemaining
-                                              value:
-                                                aggregate:
-                                                  op: count
-                                                  query:
-                                                    query: tokensInZone
-                                                    zone: { param: space }
-                                                    filter:
-                                                      op: and
-                                                      args:
-                                                        - { prop: type, eq: guerrilla }
-                                                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                                              in:
-                                                - if:
-                                                    when: { op: '==', left: { ref: binding, name: $guerrillasRemaining }, right: 0 }
-                                                    then:
-                                                      - forEach:
-                                                          bind: $baseTarget
-                                                          over:
-                                                            query: tokensInZone
-                                                            zone: { param: space }
-                                                            filter:
-                                                              op: and
-                                                              args:
-                                                                - { prop: type, eq: base }
-                                                                - { prop: faction, eq: { ref: binding, name: $targetFactionFirst } }
-                                                          limit: { ref: binding, name: $remainingDamage }
-                                                          effects:
-                                                            - if:
-                                                                when: { op: '==', left: { ref: tokenProp, token: $baseTarget, prop: tunnel }, right: tunneled }
-                                                                then:
-                                                                  - if:
-                                                                      when: { op: '==', left: { param: treatTunneledBasesAsUntunneled }, right: true }
-                                                                      then:
-                                                                        - moveToken:
-                                                                            token: $baseTarget
-                                                                            from: { param: space }
-                                                                            to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $baseTarget, prop: faction }, ':none'] } }
-                                                                      else:
-                                                                        - rollRandom:
-                                                                            bind: $dieRoll
-                                                                            min: 1
-                                                                            max: 6
-                                                                            in:
-                                                                              - if:
-                                                                                  when: { op: '>=', left: { ref: binding, name: $dieRoll }, right: 4 }
-                                                                                  then:
-                                                                                    - setTokenProp: { token: $baseTarget, prop: tunnel, value: untunneled }
-                                                                else:
-                                                                  - moveToken:
-                                                                      token: $baseTarget
-                                                                      from: { param: space }
-                                                                      to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $baseTarget, prop: faction }, ':none'] } }
+                                                - moveToken: { token: $baseTarget, from: { param: space }, to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $baseTarget, prop: faction }, ':none'] } } }
+                                              else:
+                                                - rollRandom:
+                                                    bind: $dieRoll
+                                                    min: 1
+                                                    max: 6
+                                                    in:
+                                                      - if:
+                                                          when: { op: '>=', left: { ref: binding, name: $dieRoll }, right: 4 }
+                                                          then:
+                                                            - setTokenProp: { token: $baseTarget, prop: tunnel, value: 'untunneled' }
+                                        else:
+                                          - moveToken: { token: $baseTarget, from: { param: space }, to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $baseTarget, prop: faction }, ':none'] } } }
 
   # ── coin-assault-removal-order ─────────────────────────────────────────────
   # Wraps piece-removal-ordering with COIN-specific behavior:
@@ -414,193 +370,107 @@ effectMacros:
       - { name: bodyCountEligible, type: value }
       - { name: forceUntunneledBaseFirst, type: value }
       - { name: treatTunneledBasesAsUntunneled, type: value }
-      - { name: targetFactionMode, type: { kind: enum, values: [all, NVA, VC] } }
+      - { name: targetFactions, type: { kind: tokenTraitValues, prop: faction } }
     exports: []
     effects:
-      - if:
-          when: { op: '==', left: { param: targetFactionMode }, right: all }
-          then:
+      - let:
+          bind: $basesBefore
+          value:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { param: space }
+                filter:
+                  op: and
+                  args:
+                    - { prop: type, eq: base }
+                    - { prop: faction, op: in, value: { param: targetFactions } }
+          in:
             - let:
-                bind: $basesBefore
-                value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: { op: and, args: [{ prop: type, eq: base }, { prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
-                in:
-                  - let:
-                      bind: $forcedBaseRemoved
-                      value:
-                        if:
-                          when:
-                            op: and
-                            args:
-                              - { op: '==', left: { param: forceUntunneledBaseFirst }, right: true }
-                              - { op: '>', left: { param: damageExpr }, right: 0 }
-                              - op: '>'
-                                left:
-                                  aggregate:
-                                    op: count
-                                    query:
-                                      query: tokensInZone
-                                      zone: { param: space }
-                                      filter:
-                                        op: and
-                                        args:
-                                          - { prop: type, eq: base }
-                                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                                          - { prop: tunnel, eq: untunneled }
-                                right: 0
-                          then: 1
-                          else: 0
-                      in:
-                        - if:
-                            when:
-                              op: and
-                              args:
-                                - { op: '==', left: { ref: binding, name: $forcedBaseRemoved }, right: 1 }
-                            then:
-                              - forEach:
-                                  bind: $forcedBase
-                                  over:
-                                    query: tokensInZone
-                                    zone: { param: space }
-                                    filter:
-                                      op: and
-                                      args:
-                                        - { prop: type, eq: base }
-                                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                                        - { prop: tunnel, eq: untunneled }
-                                  limit: 1
-                                  effects:
-                                    - moveToken:
-                                        token: $forcedBase
-                                        from: { param: space }
-                                        to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $forcedBase, prop: faction }, ':none'] } }
-                        - macro: piece-removal-ordering
-                          args:
-                            space: { param: space }
-                            damageExpr:
-                              op: '-'
-                              left: { param: damageExpr }
-                              right: { ref: binding, name: $forcedBaseRemoved }
-                            bodyCountEligible: { param: bodyCountEligible }
-                            treatTunneledBasesAsUntunneled: { param: treatTunneledBasesAsUntunneled }
-                            targetFactionMode: { param: targetFactionMode }
-                  - let:
-                      bind: $basesAfter
-                      value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: { op: and, args: [{ prop: type, eq: base }, { prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
-                      in:
-                        - let:
-                            bind: $basesRemoved
-                            value: { op: '-', left: { ref: binding, name: $basesBefore }, right: { ref: binding, name: $basesAfter } }
-                            in:
-                              - if:
-                                  when: { op: '>', left: { ref: binding, name: $basesRemoved }, right: 0 }
-                                  then:
-                                    - addVar:
-                                        scope: global
-                                        var: aid
-                                        delta: { op: '*', left: { ref: binding, name: $basesRemoved }, right: 6 }
-          else:
-            - let:
-                bind: $singleTargetFaction
-                value: { param: targetFactionMode }
-                in:
-                  - let:
-                      bind: $basesBefore
-                      value:
-                        aggregate:
-                          op: count
-                          query:
-                            query: tokensInZone
-                            zone: { param: space }
-                            filter:
-                              op: and
-                              args:
-                                - { prop: type, eq: base }
-                                - { prop: faction, eq: { ref: binding, name: $singleTargetFaction } }
-                      in:
-                        - let:
-                            bind: $forcedBaseRemoved
-                            value:
-                              if:
-                                when:
+                bind: $forcedBaseRemoved
+                value:
+                  if:
+                    when:
+                      op: and
+                      args:
+                        - { op: '==', left: { param: forceUntunneledBaseFirst }, right: true }
+                        - { op: '>', left: { param: damageExpr }, right: 0 }
+                        - op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: { param: space }
+                                filter:
                                   op: and
                                   args:
-                                    - { op: '==', left: { param: forceUntunneledBaseFirst }, right: true }
-                                    - { op: '>', left: { param: damageExpr }, right: 0 }
-                                    - op: '>'
-                                      left:
-                                        aggregate:
-                                          op: count
-                                          query:
-                                            query: tokensInZone
-                                            zone: { param: space }
-                                            filter:
-                                              op: and
-                                              args:
-                                                - { prop: type, eq: base }
-                                                - { prop: faction, eq: { ref: binding, name: $singleTargetFaction } }
-                                                - { prop: tunnel, eq: untunneled }
-                                      right: 0
-                                then: 1
-                                else: 0
-                            in:
-                              - if:
-                                  when:
-                                    op: and
-                                    args:
-                                      - { op: '==', left: { ref: binding, name: $forcedBaseRemoved }, right: 1 }
-                                  then:
-                                    - forEach:
-                                        bind: $forcedBase
-                                        over:
-                                          query: tokensInZone
-                                          zone: { param: space }
-                                          filter:
-                                            op: and
-                                            args:
-                                              - { prop: type, eq: base }
-                                              - { prop: faction, eq: { ref: binding, name: $singleTargetFaction } }
-                                              - { prop: tunnel, eq: untunneled }
-                                        limit: 1
-                                        effects:
-                                          - moveToken:
-                                              token: $forcedBase
-                                              from: { param: space }
-                                              to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $forcedBase, prop: faction }, ':none'] } }
-                              - macro: piece-removal-ordering
+                                    - { prop: type, eq: base }
+                                    - { prop: faction, op: in, value: { param: targetFactions } }
+                                    - { prop: tunnel, eq: untunneled }
+                          right: 0
+                    then: 1
+                    else: 0
+                in:
+                  - if:
+                      when:
+                        op: and
+                        args:
+                          - { op: '==', left: { ref: binding, name: $forcedBaseRemoved }, right: 1 }
+                      then:
+                        - forEach:
+                            bind: $forcedBase
+                            over:
+                              query: tokensInZone
+                              zone: { param: space }
+                              filter:
+                                op: and
                                 args:
-                                  space: { param: space }
-                                  damageExpr:
-                                    op: '-'
-                                    left: { param: damageExpr }
-                                    right: { ref: binding, name: $forcedBaseRemoved }
-                                  bodyCountEligible: { param: bodyCountEligible }
-                                  treatTunneledBasesAsUntunneled: { param: treatTunneledBasesAsUntunneled }
-                                  targetFactionMode: { ref: binding, name: $singleTargetFaction }
-                        - let:
-                            bind: $basesAfter
-                            value:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: tokensInZone
-                                  zone: { param: space }
-                                  filter:
-                                    op: and
-                                    args:
-                                      - { prop: type, eq: base }
-                                      - { prop: faction, eq: { ref: binding, name: $singleTargetFaction } }
-                            in:
-                              - let:
-                                  bind: $basesRemoved
-                                  value: { op: '-', left: { ref: binding, name: $basesBefore }, right: { ref: binding, name: $basesAfter } }
-                                  in:
-                                    - if:
-                                        when: { op: '>', left: { ref: binding, name: $basesRemoved }, right: 0 }
-                                        then:
-                                          - addVar:
-                                              scope: global
-                                              var: aid
-                                              delta: { op: '*', left: { ref: binding, name: $basesRemoved }, right: 6 }
+                                  - { prop: type, eq: base }
+                                  - { prop: faction, op: in, value: { param: targetFactions } }
+                                  - { prop: tunnel, eq: untunneled }
+                            limit: 1
+                            effects:
+                              - moveToken:
+                                  token: $forcedBase
+                                  from: { param: space }
+                                  to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $forcedBase, prop: faction }, ':none'] } }
+                  - macro: piece-removal-ordering
+                    args:
+                      space: { param: space }
+                      damageExpr:
+                        op: '-'
+                        left: { param: damageExpr }
+                        right: { ref: binding, name: $forcedBaseRemoved }
+                      bodyCountEligible: { param: bodyCountEligible }
+                      treatTunneledBasesAsUntunneled: { param: treatTunneledBasesAsUntunneled }
+                      targetFactions: { param: targetFactions }
+            - let:
+                bind: $basesAfter
+                value:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInZone
+                      zone: { param: space }
+                      filter:
+                        op: and
+                        args:
+                          - { prop: type, eq: base }
+                          - { prop: faction, op: in, value: { param: targetFactions } }
+                in:
+                  - let:
+                      bind: $basesRemoved
+                      value: { op: '-', left: { ref: binding, name: $basesBefore }, right: { ref: binding, name: $basesAfter } }
+                      in:
+                        - if:
+                            when: { op: '>', left: { ref: binding, name: $basesRemoved }, right: 0 }
+                            then:
+                              - addVar:
+                                  scope: global
+                                  var: aid
+                                  delta: { op: '*', left: { ref: binding, name: $basesRemoved }, right: 6 }
 
   # ── insurgent-attack-removal-order ─────────────────────────────────────────
   # Wraps piece-removal-ordering with Attack-specific behavior:
@@ -2292,7 +2162,7 @@ effectMacros:
                       bodyCountEligible: false
                       forceUntunneledBaseFirst: false
                       treatTunneledBasesAsUntunneled: false
-                      targetFactionMode: all
+                      targetFactions: [NVA, VC]
 
   # ── cap-train-caps-unshaded-bonus-police ─────────────────────────────────
   # CAPs unshaded: once per US Train operation, place/relocate +1 ARVN Police

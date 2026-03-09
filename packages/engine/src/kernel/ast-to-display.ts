@@ -186,7 +186,10 @@ export const valueExprToInlineNodes = (expr: ValueExpr): DisplayInlineNode[] => 
       RPAREN,
     ];
   }
-  if ('concat' in expr) {
+  if ('scalarArray' in expr) {
+    return [kw('array'), LPAREN, ...commaSeparated(expr.scalarArray.map((entry) => [val(String(entry))])), RPAREN];
+  }
+  if (!Array.isArray(expr) && 'concat' in expr) {
     return [kw('concat'), LPAREN, ...commaSeparated(expr.concat.map(valueExprToInlineNodes)), RPAREN];
   }
   if ('if' in expr) {

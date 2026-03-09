@@ -13,10 +13,14 @@ import {
   runtimeTableRowBindingTypeEvalError,
 } from './runtime-table-eval-errors.js';
 import { resolveRuntimeTokenBindingValue } from './token-binding.js';
-import type { Reference, Token } from './types.js';
+import type { Reference, ScalarArrayValue, Token } from './types.js';
 
 function isScalarValue(value: unknown): value is number | boolean | string {
   return typeof value === 'number' || typeof value === 'boolean' || typeof value === 'string';
+}
+
+function isScalarArrayValue(value: unknown): value is ScalarArrayValue {
+  return Array.isArray(value) && value.every((entry) => isScalarValue(entry));
 }
 
 function resolveTokenBinding(bindingName: string, value: unknown, reference: Reference): {
@@ -43,7 +47,7 @@ function findTokenByIdInZones(ctx: EvalContext, tokenId: string): Token | null {
   return getTokenStateIndexEntry(ctx.state, tokenId)?.token ?? null;
 }
 
-export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean | string {
+export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean | string | ScalarArrayValue {
   if (ref.ref === 'gvar') {
     const value = ctx.state.globalVars[ref.var];
     if (value === undefined) {
@@ -245,8 +249,8 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
         availableGrantContextKeys: Object.keys(ctx.freeOperationOverlay?.grantContext ?? {}).sort(),
       });
     }
-    if (!isScalarValue(value)) {
-      throw typeMismatchError(`Free-operation grant context ${ref.key} must resolve to a scalar in this position`, {
+    if (!isScalarValue(value) && !isScalarArrayValue(value)) {
+      throw typeMismatchError(`Free-operation grant context ${ref.key} must resolve to a scalar or scalar array in this position`, {
         reference: ref,
         key: ref.key,
         actualType: Array.isArray(value) ? 'array' : typeof value,
@@ -405,12 +409,12 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
     });
   }
 
-  if (!isScalarValue(value)) {
-    throw typeMismatchError(`Binding ${resolvedName} must resolve to number | boolean | string`, {
+  if (!isScalarValue(value) && !isScalarArrayValue(value)) {
+    throw typeMismatchError(`Binding ${resolvedName} must resolve to number | boolean | string | scalar-array`, {
       reference: ref,
       binding: resolvedName,
       bindingTemplate: ref.name,
-      actualType: typeof value,
+      actualType: Array.isArray(value) ? 'array' : typeof value,
       value,
     });
   }

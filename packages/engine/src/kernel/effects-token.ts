@@ -18,6 +18,26 @@ const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unkn
   ...ctx.bindings,
 });
 
+const expectScalarTokenPropValue = (
+  value: unknown,
+  effectType: 'createToken' | 'setTokenProp',
+  context: Readonly<Record<string, unknown>>,
+): string | number | boolean => {
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return value;
+  }
+  throw effectRuntimeError(
+    EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED,
+    `${effectType} token property values must resolve to scalars`,
+    {
+      effectType,
+      actualType: Array.isArray(value) ? 'array' : typeof value,
+      value,
+      ...context,
+    },
+  );
+};
+
 const enforceStacking = (ctx: EffectContext, zoneId: string, zoneContentsAfter: readonly Token[], effectType: string): void => {
   const constraints = ctx.def.stackingConstraints;
   if (constraints === undefined || constraints.length === 0) {
@@ -398,7 +418,11 @@ export const applyCreateToken = (effect: Extract<EffectAST, { readonly createTok
   const evaluatedProps: Record<string, number | string | boolean> = {};
   if (effect.createToken.props !== undefined) {
     for (const [propName, valueExpr] of Object.entries(effect.createToken.props)) {
-      evaluatedProps[propName] = evalValue(valueExpr, evalCtx);
+      evaluatedProps[propName] = expectScalarTokenPropValue(
+        evalValue(valueExpr, evalCtx),
+        'createToken',
+        { prop: propName, tokenType: effect.createToken.type },
+      );
     }
   }
 
@@ -513,7 +537,11 @@ export const applySetTokenProp = (effect: Extract<EffectAST, { readonly setToken
   }
 
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const evaluatedValue = evalValue(value, evalCtx);
+  const evaluatedValue = expectScalarTokenPropValue(
+    evalValue(value, evalCtx),
+    'setTokenProp',
+    { tokenId, prop },
+  );
 
   if (tokenTypeDef?.transitions !== undefined && tokenTypeDef.transitions.length > 0) {
     const transitionsForProp = tokenTypeDef.transitions.filter((t) => t.prop === prop);

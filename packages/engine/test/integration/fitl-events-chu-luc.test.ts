@@ -109,7 +109,10 @@ describe('FITL card-47 Chu Luc', () => {
     const serializedParsedUnshaded = JSON.stringify(parsedCard?.unshaded?.effects ?? []);
     assert.match(serializedUnshaded, /coin-assault-removal-order/, 'Chu Luc unshaded should use the shared assault removal helper');
     assert.doesNotMatch(serializedUnshaded, /coin-assault-removal-order-single-faction/, 'Chu Luc unshaded should not depend on the removed single-faction helper');
-    assert.match(serializedParsedUnshaded, /targetFactionMode/, 'Chu Luc unshaded should specify targeted shared-assault mode explicitly in authored data');
+    assert.match(serializedParsedUnshaded, /targetFactions/, 'Chu Luc unshaded should specify targeted shared-assault factions explicitly in authored data');
+    assert.doesNotMatch(serializedParsedUnshaded, /chooseTargetFactionFirst/, 'Chu Luc unshaded should derive first-faction handling from targetFactions alone');
+    assert.doesNotMatch(serializedParsedUnshaded, /fixedTargetFactionFirst/, 'Chu Luc unshaded should not retain fixed first-faction control arguments');
+    assert.doesNotMatch(serializedParsedUnshaded, /targetFactionMode/, 'Chu Luc unshaded should not keep the legacy targetFactionMode alias');
   });
 
   it('unshaded doubles ARVN pieces in the chosen space, then assaults NVA only in every eligible space', () => {

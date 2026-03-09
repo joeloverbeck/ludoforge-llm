@@ -1841,7 +1841,7 @@ actionPipelines:
                                       bodyCountEligible: true
                                       forceUntunneledBaseFirst: false
                                       treatTunneledBasesAsUntunneled: false
-                                      targetFactionMode: all
+                                      targetFactions: [NVA, VC]
       - stage: cap-m48-patrol-penalty
         effects:
           - macro: cap-patrol-m48-shaded-moved-cube-penalty
@@ -2003,7 +2003,7 @@ actionPipelines:
                                 bodyCountEligible: true
                                 forceUntunneledBaseFirst: false
                                 treatTunneledBasesAsUntunneled: false
-                                targetFactionMode: all
+                                targetFactions: [NVA, VC]
       - stage: cap-m48-patrol-penalty
         effects:
           - macro: cap-patrol-m48-shaded-moved-cube-penalty
@@ -2386,7 +2386,7 @@ actionPipelines:
                                                     - { op: '==', left: { ref: gvar, var: fitl_operationAttleboroTunnelOverride }, right: true }
                                                 then: true
                                                 else: false
-                                            targetFactionMode: all
+                                            targetFactions: [NVA, VC]
                                         - let:
                                             bind: $insurgentAfter
                                             value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
@@ -2456,7 +2456,7 @@ actionPipelines:
                                             bodyCountEligible: true
                                             forceUntunneledBaseFirst: false
                                             treatTunneledBasesAsUntunneled: false
-                                            targetFactionMode: all
+                                            targetFactions: [NVA, VC]
                                         - let:
                                             bind: $insurgentAfter
                                             value: { aggregate: { op: count, query: { query: tokensInZone, zone: $arvnSpace, filter: { op: and, args: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
@@ -2578,7 +2578,7 @@ actionPipelines:
                                             bodyCountEligible: true
                                             forceUntunneledBaseFirst: false
                                             treatTunneledBasesAsUntunneled: false
-                                            targetFactionMode: all
+                                            targetFactions: [NVA, VC]
                                         - let:
                                             bind: $insurgentAfter
                                             value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
@@ -3499,7 +3499,7 @@ actionPipelines:
                                             bodyCountEligible: false
                                             forceUntunneledBaseFirst: false
                                             treatTunneledBasesAsUntunneled: false
-                                            targetFactionMode: all
+                                            targetFactions: [NVA, VC]
                 - if:
                     when: { op: '==', left: { ref: binding, name: '$adviseMode@{$space}' }, right: activate-remove }
                     then:

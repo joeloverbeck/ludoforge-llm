@@ -3,7 +3,7 @@ import { evalCondition } from './eval-condition.js';
 import { divisionByZeroError, typeMismatchError } from './eval-error.js';
 import { evalQuery } from './eval-query.js';
 import { resolveRef } from './resolve-ref.js';
-import type { ValueExpr } from './types.js';
+import type { ScalarArrayValue, ScalarValue, ValueExpr } from './types.js';
 
 function isSafeIntegerNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && Number.isSafeInteger(value);
@@ -17,16 +17,19 @@ function expectSafeInteger(value: unknown, message: string, context: Readonly<Re
   return value;
 }
 
-export function evalValue(expr: ValueExpr, ctx: EvalContext): number | boolean | string {
+export function evalValue(expr: ValueExpr, ctx: EvalContext): ScalarValue | ScalarArrayValue {
   if (typeof expr === 'number' || typeof expr === 'boolean' || typeof expr === 'string') {
     return expr;
+  }
+  if ('scalarArray' in expr) {
+    return expr.scalarArray;
   }
 
   if ('ref' in expr) {
     return resolveRef(expr, ctx);
   }
 
-  if ('concat' in expr) {
+  if (!Array.isArray(expr) && 'concat' in expr) {
     return expr.concat.map((child) => String(evalValue(child, ctx))).join('');
   }
 
@@ -76,6 +79,10 @@ export function evalValue(expr: ValueExpr, ctx: EvalContext): number | boolean |
     }
 
     return Math.max(...values);
+  }
+
+  if (!('op' in expr)) {
+    return expr;
   }
 
   const left = expectSafeInteger(evalValue(expr.left, ctx), 'Arithmetic operands must be finite safe integers', {

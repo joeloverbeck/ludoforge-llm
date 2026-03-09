@@ -152,10 +152,14 @@ describe('resolveRef', () => {
     );
   });
 
-  it('resolves binding and rejects missing or non-scalar binding values', () => {
+  it('resolves binding scalars and scalar arrays, and rejects unsupported binding values', () => {
     const ctx = makeCtx();
 
     assert.equal(resolveRef({ ref: 'binding', name: '$x' }, ctx), 42);
+    assert.deepEqual(
+      resolveRef({ ref: 'binding', name: '$targetFactions' }, makeCtx({ bindings: { '$targetFactions': ['NVA', 'VC'] } })),
+      ['NVA', 'VC'],
+    );
 
     assert.throws(() => resolveRef({ ref: 'binding', name: '$missing' }, ctx), (error: unknown) =>
       isEvalErrorCode(error, 'MISSING_BINDING') &&

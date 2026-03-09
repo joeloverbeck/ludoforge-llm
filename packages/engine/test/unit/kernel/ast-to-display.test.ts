@@ -842,6 +842,27 @@ describe('actionPipelineDefToDisplayTree', () => {
     assert.equal((result.children[0] as DisplayGroupNode).label, 'Legality');
   });
 
+  it('renders stage-level legality and cost validation inside the stage group', () => {
+    const pipeline = minimalPipeline({
+      stages: [
+        {
+          stage: 'resolution',
+          legality: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 1 },
+          costValidation: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 2 },
+          effects: [{ advancePhase: {} }],
+        },
+      ],
+    });
+    const result = actionPipelineDefToDisplayTree(pipeline);
+    const stageGroup = result.children[0] as DisplayGroupNode;
+
+    assert.equal(stageGroup.label, 'Stage: resolution');
+    assert.deepEqual(
+      stageGroup.children.slice(0, 2).map((child) => (child as DisplayGroupNode).label),
+      ['Legality', 'Cost Validation'],
+    );
+  });
+
   it('produces multiple stage sub-groups', () => {
     const pipeline = minimalPipeline({
       stages: [

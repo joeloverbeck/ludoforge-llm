@@ -1368,6 +1368,116 @@ phase: [asPhaseId('main')],
       );
     });
 
+    it('computes chooseN option legality from a downstream stage cost validation checkpoint', () => {
+      const action: ActionDef = {
+        id: asActionId('stageChooseNCostValidationOp'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      };
+
+      const profile: ActionPipelineDef = {
+        id: 'stageChooseNCostValidationProfile',
+        actionId: asActionId('stageChooseNCostValidationOp'),
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [
+          {
+            effects: [
+              {
+                chooseN: {
+                  internalDecisionId: 'decision:probe::$targets',
+                  bind: '$targets',
+                  options: { query: 'enums', values: ['a', 'b', 'c'] },
+                  min: 1,
+                  max: 2,
+                },
+              } as EffectAST,
+            ],
+          },
+          {
+            costValidation: {
+              op: 'not',
+              arg: {
+                op: 'in',
+                item: 'b',
+                set: { ref: 'binding', name: '$targets' },
+              },
+            },
+            effects: [],
+          },
+        ],
+        atomicity: 'atomic',
+      };
+
+      const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+      const state = makeBaseState();
+
+      const result = legalChoicesEvaluate(def, state, makeMove('stageChooseNCostValidationOp'));
+      assert.equal(result.complete, false);
+      assert.equal(result.kind, 'pending');
+      assert.equal(result.type, 'chooseN');
+      assert.equal(result.decisionId, 'decision:probe::$targets');
+      assert.deepStrictEqual(result.options, [
+        { value: 'a', legality: 'legal', illegalReason: null },
+        { value: 'b', legality: 'illegal', illegalReason: 'pipelineAtomicCostValidationFailed' },
+        { value: 'c', legality: 'legal', illegalReason: null },
+      ]);
+    });
+
+    it('allows later stage predicates to consume transient bindings exported by earlier stage effects', () => {
+      const action: ActionDef = {
+        id: asActionId('stageTransientBindingOp'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      };
+
+      const profile: ActionPipelineDef = {
+        id: 'stageTransientBindingProfile',
+        actionId: asActionId('stageTransientBindingOp'),
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [
+          {
+            effects: [
+              {
+                bindValue: {
+                  bind: '$mode',
+                  value: 'blocked',
+                },
+              } as EffectAST,
+            ],
+          },
+          {
+            legality: { op: '==', left: { ref: 'binding', name: '$mode' }, right: 'allowed' },
+            effects: [],
+          },
+        ],
+        atomicity: 'atomic',
+      };
+
+      const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+      const state = makeBaseState();
+
+      const result = legalChoicesEvaluate(def, state, makeMove('stageTransientBindingOp'));
+      assert.deepStrictEqual(result, { kind: 'illegal', complete: false, reason: 'pipelineLegalityFailed' });
+    });
+
     it('marks chooseOne options illegal when downstream decision sequence is unsatisfiable', () => {
       const action: ActionDef = {
         id: asActionId('nestedUnsatLegalityOp'),

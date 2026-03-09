@@ -457,18 +457,35 @@ export const validateActionPipelines = (
     }
     stages.forEach((stage, stageIndex) => {
       const stageCandidate = stage as unknown;
+      const stageBasePath = `${basePath}.stages[${stageIndex}]`;
       if (typeof stageCandidate !== 'object' || stageCandidate === null || Array.isArray(stageCandidate)) {
         diagnostics.push({
           code: 'ACTION_PIPELINE_STAGE_INVALID',
-          path: `${basePath}.stages[${stageIndex}]`,
+          path: stageBasePath,
           severity: 'error',
           message: 'Action pipeline stage entries must be objects.',
           suggestion: 'Declare each stage as an object with optional stage id and effects array.',
         });
         return;
       }
+      if (stage.legality !== null && stage.legality !== undefined) {
+        validateConditionAst(
+          diagnostics,
+          stage.legality,
+          appendActionPipelineConditionSurfacePath(stageBasePath, CONDITION_SURFACE_SUFFIX.actionPipeline.legality),
+          context,
+        );
+      }
+      if (stage.costValidation !== null && stage.costValidation !== undefined) {
+        validateConditionAst(
+          diagnostics,
+          stage.costValidation,
+          appendActionPipelineConditionSurfacePath(stageBasePath, CONDITION_SURFACE_SUFFIX.actionPipeline.costValidation),
+          context,
+        );
+      }
       forEachDefined(stage.effects, (effect, effectIndex) => {
-        validateEffectAst(diagnostics, effect, `${basePath}.stages[${stageIndex}].effects[${effectIndex}]`, context);
+        validateEffectAst(diagnostics, effect, `${stageBasePath}.effects[${effectIndex}]`, context);
       });
     });
   });

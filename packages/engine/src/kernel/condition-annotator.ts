@@ -277,9 +277,21 @@ const buildAnnotatedPipelineSection = (
   }
 
   for (const stage of pipeline.stages) {
+    const stageChildren: DisplayGroupNode[] = [];
+    if (stage.legality != null) {
+      const raw = displayGroup('Legality', conditionToDisplayNodes(stage.legality, 0), 'check');
+      stageChildren.push(annotateConditionGroup(raw, stage.legality, evalCtx));
+    }
+    if (stage.costValidation != null) {
+      const raw = displayGroup('Cost Validation', conditionToDisplayNodes(stage.costValidation, 0), 'check');
+      stageChildren.push(annotateConditionGroup(raw, stage.costValidation, evalCtx));
+    }
     if (stage.effects.length > 0) {
+      stageChildren.push(...stage.effects.flatMap((e) => effectToDisplayNodes(e, 0)) as DisplayGroupNode[]);
+    }
+    if (stageChildren.length > 0) {
       const label = stage.stage !== undefined ? `Stage: ${stage.stage}` : 'Effects';
-      children.push(displayGroup(label, stage.effects.flatMap((e) => effectToDisplayNodes(e, 0))));
+      children.push(displayGroup(label, stageChildren));
     }
   }
 

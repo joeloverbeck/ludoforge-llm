@@ -11,6 +11,8 @@ export interface ActionTargetingDef {
 
 export interface ActionResolutionStageDef {
   readonly stage?: string;
+  readonly legality?: ConditionAST | null;
+  readonly costValidation?: ConditionAST | null;
   readonly effects: readonly EffectAST[];
 }
 

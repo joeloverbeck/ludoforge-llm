@@ -676,9 +676,19 @@ export const actionPipelineDefToDisplayTree = (pipeline: ActionPipelineDef): Dis
   }
 
   for (const stage of pipeline.stages) {
+    const stageChildren: DisplayNode[] = [];
+    if (stage.legality != null) {
+      stageChildren.push(group('Legality', conditionToDisplayNodes(stage.legality, 0), 'check'));
+    }
+    if (stage.costValidation != null) {
+      stageChildren.push(group('Cost Validation', conditionToDisplayNodes(stage.costValidation, 0), 'check'));
+    }
     if (stage.effects.length > 0) {
+      stageChildren.push(...stage.effects.flatMap((e) => effectToDisplayNodes(e, 0)));
+    }
+    if (stageChildren.length > 0) {
       const label = stage.stage !== undefined ? `Stage: ${stage.stage}` : 'Effects';
-      children.push(group(label, stage.effects.flatMap((e) => effectToDisplayNodes(e, 0))));
+      children.push(group(label, stageChildren));
     }
   }
 

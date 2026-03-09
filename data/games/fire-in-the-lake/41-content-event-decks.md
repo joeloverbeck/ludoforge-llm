@@ -9023,104 +9023,193 @@ eventDecks:
             - US
           flavorText: A CIDG camp attack ripples across I Corps.
         unshaded:
-          text: Remove Guerrillas and a COIN Base in one space.
+          text: Remove up to 3 Guerrillas from a Province with a COIN Base. Set the space to Active Support.
           targets:
-            - id: $targetSpace
+            - id: $targetProvince
               selector:
                 query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - op: ==
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: category
+                      right: province
+                    - op: ">"
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  op: in
+                                  value:
+                                    - US
+                                    - ARVN
+                                - prop: type
+                                  eq: base
+                      right: 0
               cardinality:
                 max: 1
               application: aggregate
               effects:
-                - removeByPriority:
-                    budget: 2
-                    groups:
-                      - bind: $insurgentGuerrilla
-                        over:
-                          query: tokensInZone
-                          zone: $targetSpace
-                          filter:
-                            op: and
-                            args:
-                              - prop: faction
-                                op: in
-                                value:
-                                  - NVA
-                                  - VC
-                              - prop: type
-                                eq: guerrilla
-                        to:
-                          zoneExpr:
-                            concat:
-                              - available-
-                              - ref: tokenProp
-                                token: $insurgentGuerrilla
-                                prop: faction
-                              - :none
-                - removeByPriority:
-                    budget: 1
-                    groups:
-                      - bind: $coinBase
-                        over:
-                          query: tokensInZone
-                          zone: $targetSpace
-                          filter:
-                            op: and
-                            args:
-                              - prop: faction
-                                op: in
-                                value:
-                                  - US
-                                  - ARVN
-                              - prop: type
-                                eq: base
-                        to:
-                          zoneExpr:
-                            concat:
-                              - available-
-                              - ref: tokenProp
-                                token: $coinBase
-                                prop: faction
-                              - :none
+                - chooseN:
+                    bind: $guerrillasToRemove
+                    options:
+                      query: tokensInZone
+                      zone: $targetProvince
+                      filter:
+                        op: and
+                        args:
+                          - prop: faction
+                            op: in
+                            value:
+                              - NVA
+                              - VC
+                          - prop: type
+                            eq: guerrilla
+                    min: 0
+                    max: 3
+                - forEach:
+                    bind: $guerrillaToRemove
+                    over:
+                      query: binding
+                      name: $guerrillasToRemove
+                    effects:
+                      - moveToken:
+                          token: $guerrillaToRemove
+                          from:
+                            zoneExpr:
+                              ref: tokenZone
+                              token: $guerrillaToRemove
+                          to:
+                            zoneExpr:
+                              concat:
+                                - available-
+                                - ref: tokenProp
+                                  token: $guerrillaToRemove
+                                  prop: faction
+                                - :none
+                - setMarker:
+                    space: $targetProvince
+                    marker: supportOpposition
+                    state: activeSupport
         shaded:
-          text: "Propaganda aftermath: remove a COIN Base; NVA Resources +3."
+          text: Remove a COIN Base from a Province with 0-2 COIN cubes (US to Casualties) and set it to Active Opposition.
           targets:
-            - id: $targetSpace
+            - id: $targetProvince
               selector:
                 query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - op: ==
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: category
+                      right: province
+                    - op: ">"
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  op: in
+                                  value:
+                                    - US
+                                    - ARVN
+                                - prop: type
+                                  eq: base
+                      right: 0
+                    - op: <=
+                      left:
+                        op: "+"
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: US
+                                  - prop: type
+                                    op: in
+                                    value:
+                                      - troops
+                                      - police
+                        right:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: ARVN
+                                  - prop: type
+                                    op: in
+                                    value:
+                                      - troops
+                                      - police
+                      right: 2
               cardinality:
                 max: 1
               application: aggregate
               effects:
-                - removeByPriority:
-                    budget: 1
-                    groups:
-                      - bind: $coinBase
-                        over:
-                          query: tokensInZone
-                          zone: $targetSpace
-                          filter:
-                            op: and
-                            args:
-                              - prop: faction
-                                op: in
-                                value:
-                                  - US
-                                  - ARVN
-                              - prop: type
-                                eq: base
-                        to:
-                          zoneExpr:
-                            concat:
-                              - available-
-                              - ref: tokenProp
-                                token: $coinBase
-                                prop: faction
-                              - :none
-                - addVar:
-                    scope: global
-                    var: nvaResources
-                    delta: 3
+                - chooseOne:
+                    bind: $coinBaseToRemove
+                    options:
+                      query: tokensInZone
+                      zone: $targetProvince
+                      filter:
+                        op: and
+                        args:
+                          - prop: faction
+                            op: in
+                            value:
+                              - US
+                              - ARVN
+                          - prop: type
+                            eq: base
+                - moveToken:
+                    token: $coinBaseToRemove
+                    from:
+                      zoneExpr:
+                        ref: tokenZone
+                        token: $coinBaseToRemove
+                    to:
+                      zoneExpr:
+                        if:
+                          when:
+                            op: ==
+                            left:
+                              ref: tokenProp
+                              token: $coinBaseToRemove
+                              prop: faction
+                            right: US
+                          then: casualties-US:none
+                          else: available-ARVN:none
+                - setMarker:
+                    space: $targetProvince
+                    marker: supportOpposition
+                    state: activeOpposition
       - id: card-50
         title: Uncle Ho
         sideMode: dual

@@ -71,6 +71,40 @@ describe('token-filter', () => {
     assert.equal(resolved, true);
   });
 
+  it('rejects caller-provided scalar membership set resolution', () => {
+    const token = makeToken('card-4b', { faction: 'ARVN' });
+    const predicate: TokenFilterPredicate = {
+      prop: 'faction',
+      op: 'in',
+      value: { ref: 'binding', name: '$targetFactions' },
+    };
+
+    assert.throws(
+      () =>
+        matchesTokenFilterPredicate(token, predicate, (value) =>
+          typeof value === 'object' && value !== null && 'ref' in value ? 'ARVN' : null,
+        ),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
+  it('rejects caller-provided mixed membership set resolution', () => {
+    const token = makeToken('card-4c', { faction: 'ARVN' });
+    const predicate: TokenFilterPredicate = {
+      prop: 'faction',
+      op: 'in',
+      value: { ref: 'binding', name: '$targetFactions' },
+    };
+
+    assert.throws(
+      () =>
+        matchesTokenFilterPredicate(token, predicate, (value) =>
+          typeof value === 'object' && value !== null && 'ref' in value ? ['ARVN', 1] : null,
+        ),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
   it('filters token lists by expression filters', () => {
     const tokens: readonly Token[] = [
       makeToken('a', { suit: 'hearts' }),

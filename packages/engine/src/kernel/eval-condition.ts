@@ -1,25 +1,12 @@
 import type { EvalContext } from './eval-context.js';
 import { typeMismatchError, zonePropNotFoundError } from './eval-error.js';
-import { resolveBindingTemplate } from './binding-template.js';
 import { booleanArityMessage, isNonEmptyArray } from './boolean-arity-policy.js';
 import { evalValue } from './eval-value.js';
+import { resolvePredicateValue } from './predicate-value-resolution.js';
 import { resolveMapSpaceId, resolveSingleZoneSel } from './resolve-selectors.js';
 import { queryConnectedZones } from './spatial.js';
 import { matchesMembership } from './query-predicate.js';
-import type { ConditionAST, ValueExpr } from './types.js';
-
-function evalMembershipSet(setExpr: ValueExpr, ctx: EvalContext): unknown {
-  if (typeof setExpr === 'object' && setExpr !== null && 'ref' in setExpr && setExpr.ref === 'binding') {
-    const resolvedName = resolveBindingTemplate(setExpr.name, ctx.bindings);
-    if (Object.prototype.hasOwnProperty.call(ctx.bindings, resolvedName)) {
-      return ctx.bindings[resolvedName];
-    }
-  }
-  if (typeof setExpr === 'object' && setExpr !== null && 'ref' in setExpr && setExpr.ref === 'grantContext') {
-    return ctx.freeOperationOverlay?.grantContext?.[setExpr.key] ?? [];
-  }
-  return evalValue(setExpr, ctx);
-}
+import type { ConditionAST } from './types.js';
 
 function expectOrderingNumber(
   value: number | boolean | string,
@@ -98,7 +85,10 @@ export function evalCondition(cond: ConditionAST, ctx: EvalContext): boolean {
 
     case 'in': {
       const item = evalValue(cond.item, ctx);
-      const setValues = evalMembershipSet(cond.set, ctx);
+      const setValues = resolvePredicateValue(cond.set, ctx, {
+        missingBinding: 'bindingError',
+        missingGrantContext: 'emptySet',
+      });
       return matchesMembership(item, setValues, {
         cond,
         setExpr: cond.set,

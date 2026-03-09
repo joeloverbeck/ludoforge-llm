@@ -2383,6 +2383,23 @@ describe('evalQuery', () => {
     );
   });
 
+  it('rejects token membership filters with missing runtime-selected binding sets', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'tokensInZone',
+            zone: 'battlefield:none',
+            filter: { op: 'and', args: [{ prop: 'faction', op: 'in', value: { ref: 'binding', name: '$targetFactions' } }] },
+          },
+          ctx,
+        ),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
+    );
+  });
+
   it('rejects token filters with unsupported predicate operators', () => {
     const ctx = makeCtx();
 
@@ -2449,6 +2466,118 @@ describe('evalQuery', () => {
             query: 'assetRows',
             tableId: 'tournament-standard::blindSchedule.levels',
             where: [{ field: 'phase', op: 'in', value: ['early', 2] }],
+          },
+          ctx,
+        ),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
+  it('rejects assetRows membership predicates with missing grantContext sets', () => {
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        runtimeDataAssets: [
+          {
+            id: 'tournament-standard',
+            kind: 'scenario',
+            payload: {
+              blindSchedule: {
+                levels: [{ level: 1, phase: 'early' }],
+              },
+            },
+          },
+        ],
+        tableContracts: [
+          {
+            id: 'tournament-standard::blindSchedule.levels',
+            assetId: 'tournament-standard',
+            tablePath: 'blindSchedule.levels',
+            fields: [
+              { field: 'level', type: 'int' },
+              { field: 'phase', type: 'string' },
+            ],
+          },
+        ],
+      },
+    });
+
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'assetRows',
+            tableId: 'tournament-standard::blindSchedule.levels',
+            where: [{ field: 'phase', op: 'in', value: { ref: 'grantContext', key: 'allowedPhases' } }],
+          },
+          ctx,
+        ),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
+    );
+  });
+
+  it('rejects assetRows membership predicates with scalar grantContext sets', () => {
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        runtimeDataAssets: [
+          {
+            id: 'tournament-standard',
+            kind: 'scenario',
+            payload: {
+              blindSchedule: {
+                levels: [{ level: 1, phase: 'early' }],
+              },
+            },
+          },
+        ],
+        tableContracts: [
+          {
+            id: 'tournament-standard::blindSchedule.levels',
+            assetId: 'tournament-standard',
+            tablePath: 'blindSchedule.levels',
+            fields: [
+              { field: 'level', type: 'int' },
+              { field: 'phase', type: 'string' },
+            ],
+          },
+        ],
+      },
+      freeOperationOverlay: {
+        grantContext: {
+          allowedPhases: 'early',
+        },
+      },
+    });
+
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'assetRows',
+            tableId: 'tournament-standard::blindSchedule.levels',
+            where: [{ field: 'phase', op: 'in', value: { ref: 'grantContext', key: 'allowedPhases' } }],
+          },
+          ctx,
+        ),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
+  it('rejects token membership filters with mixed runtime-selected binding sets', () => {
+    const ctx = makeCtx({
+      bindings: {
+        $targetFactions: ['US', 1],
+      },
+    });
+
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'tokensInZone',
+            zone: 'battlefield:none',
+            filter: { op: 'and', args: [{ prop: 'faction', op: 'in', value: { ref: 'binding', name: '$targetFactions' } }] },
           },
           ctx,
         ),

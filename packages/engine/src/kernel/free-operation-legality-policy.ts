@@ -15,6 +15,7 @@ export const toFreeOperationDeniedCauseForLegality = (
     case 'actionIdMismatch':
     case 'sequenceContextMismatch':
     case 'zoneFilterMismatch':
+    case 'ambiguousOverlap':
       return cause;
     case 'granted':
     case 'nonCardDrivenTurnOrder':
@@ -34,7 +35,8 @@ export const toFreeOperationChoiceIllegalReason = (
   | 'freeOperationActionClassMismatch'
   | 'freeOperationActionIdMismatch'
   | 'freeOperationSequenceContextMismatch'
-  | 'freeOperationZoneFilterMismatch' => {
+  | 'freeOperationZoneFilterMismatch'
+  | 'freeOperationAmbiguousOverlap' => {
   switch (cause) {
     case 'noActiveSeatGrant':
       return 'freeOperationNoActiveSeatGrant';
@@ -48,6 +50,8 @@ export const toFreeOperationChoiceIllegalReason = (
       return 'freeOperationSequenceContextMismatch';
     case 'zoneFilterMismatch':
       return 'freeOperationZoneFilterMismatch';
+    case 'ambiguousOverlap':
+      return 'freeOperationAmbiguousOverlap';
     default: {
       const unreachable: never = cause;
       return unreachable;

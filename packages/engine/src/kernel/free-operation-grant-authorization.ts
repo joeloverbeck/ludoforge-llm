@@ -246,29 +246,46 @@ const authorizedPendingFreeOperationGrantEquivalenceKey = (
   grant: TurnFlowPendingFreeOperationGrant,
 ): string => pendingFreeOperationGrantEquivalenceKey(def, state, grant);
 
+export interface AuthorizedPendingFreeOperationGrantOverlapAmbiguity {
+  readonly strongestGrantIds: readonly string[];
+}
+
+export const resolveAuthorizedPendingFreeOperationGrantOverlapAmbiguity = (
+  def: GameDef,
+  state: GameState,
+  matchingGrants: readonly TurnFlowPendingFreeOperationGrant[],
+): AuthorizedPendingFreeOperationGrantOverlapAmbiguity | null => {
+  if (matchingGrants.length <= 1) {
+    return null;
+  }
+  const canonicalGrant = selectCanonicalPendingFreeOperationGrant(matchingGrants);
+  if (canonicalGrant === null) {
+    return null;
+  }
+  const strongestMatches = matchingGrants.filter(
+    (grant) => compareAuthorizedPendingFreeOperationGrantPriority(canonicalGrant, grant) === 0,
+  );
+  if (strongestMatches.length <= 1) {
+    return null;
+  }
+  const equivalenceKeys = new Set(
+    strongestMatches.map((grant) => authorizedPendingFreeOperationGrantEquivalenceKey(def, state, grant)),
+  );
+  if (equivalenceKeys.size <= 1) {
+    return null;
+  }
+  return {
+    strongestGrantIds: strongestMatches.map((grant) => grant.grantId),
+  };
+};
+
 const assertNoAmbiguousAuthorizedPendingFreeOperationGrantOverlap = (
   def: GameDef,
   state: GameState,
   matchingGrants: readonly TurnFlowPendingFreeOperationGrant[],
   move: Move,
 ): void => {
-  if (matchingGrants.length <= 1) {
-    return;
-  }
-  const canonicalGrant = selectCanonicalPendingFreeOperationGrant(matchingGrants);
-  if (canonicalGrant === null) {
-    return;
-  }
-  const strongestMatches = matchingGrants.filter(
-    (grant) => compareAuthorizedPendingFreeOperationGrantPriority(canonicalGrant, grant) === 0,
-  );
-  if (strongestMatches.length <= 1) {
-    return;
-  }
-  const equivalenceKeys = new Set(
-    strongestMatches.map((grant) => authorizedPendingFreeOperationGrantEquivalenceKey(def, state, grant)),
-  );
-  if (equivalenceKeys.size <= 1) {
+  if (resolveAuthorizedPendingFreeOperationGrantOverlapAmbiguity(def, state, matchingGrants) === null) {
     return;
   }
   throw kernelRuntimeError(
@@ -293,6 +310,7 @@ export interface AuthorizedPendingFreeOperationGrantResolution {
   readonly matchingGrants: readonly TurnFlowPendingFreeOperationGrant[];
   readonly canonicalGrant: TurnFlowPendingFreeOperationGrant | null;
   readonly strongestOutcomeGrant: TurnFlowPendingFreeOperationGrant | null;
+  readonly ambiguity: AuthorizedPendingFreeOperationGrantOverlapAmbiguity | null;
 }
 
 export const resolveAuthorizedPendingFreeOperationGrants = (
@@ -301,18 +319,27 @@ export const resolveAuthorizedPendingFreeOperationGrants = (
   pending: readonly TurnFlowPendingFreeOperationGrant[],
   activeSeat: string,
   move: Move,
+  options?: {
+    readonly ambiguityMode?: 'throw' | 'report';
+  },
 ): AuthorizedPendingFreeOperationGrantResolution => {
   const matchingGrants = pending.filter(
     (grant) => grant.seat === activeSeat && doesGrantAuthorizeMove(def, state, pending, grant, move),
   );
-  assertNoAmbiguousAuthorizedPendingFreeOperationGrantOverlap(def, state, matchingGrants, move);
-  const canonicalGrant = selectCanonicalPendingFreeOperationGrant(matchingGrants);
-  const strongestOutcomeGrant = selectCanonicalPendingFreeOperationGrant(
-    matchingGrants.filter((grant) => grant.outcomePolicy === 'mustChangeGameplayState'),
-  );
+  const ambiguity = resolveAuthorizedPendingFreeOperationGrantOverlapAmbiguity(def, state, matchingGrants);
+  if (ambiguity !== null && options?.ambiguityMode !== 'report') {
+    assertNoAmbiguousAuthorizedPendingFreeOperationGrantOverlap(def, state, matchingGrants, move);
+  }
+  const canonicalGrant = ambiguity === null ? selectCanonicalPendingFreeOperationGrant(matchingGrants) : null;
+  const strongestOutcomeGrant = ambiguity === null
+    ? selectCanonicalPendingFreeOperationGrant(
+      matchingGrants.filter((grant) => grant.outcomePolicy === 'mustChangeGameplayState'),
+    )
+    : null;
   return {
     matchingGrants,
     canonicalGrant,
     strongestOutcomeGrant,
+    ambiguity,
   };
 };

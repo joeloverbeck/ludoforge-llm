@@ -23,6 +23,7 @@ export const FREE_OPERATION_CHOICE_ILLEGAL_REASONS = [
   'freeOperationActionIdMismatch',
   'freeOperationSequenceContextMismatch',
   'freeOperationZoneFilterMismatch',
+  'freeOperationAmbiguousOverlap',
 ] as const;
 
 export type FreeOperationChoiceIllegalReason = (typeof FREE_OPERATION_CHOICE_ILLEGAL_REASONS)[number];

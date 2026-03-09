@@ -1349,7 +1349,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
     }
   });
 
-  it('rejects ambiguous top-ranked overlapping grants when they are not contract-equivalent', () => {
+  it('rejects ambiguous top-ranked overlapping grants as denied free operations', () => {
     const action: ActionDef = {
       id: asActionId('operation'),
       actor: 'active',
@@ -1416,16 +1416,19 @@ describe('applyMove() required free-operation grant enforcement', () => {
       },
     });
 
-    assert.throws(
-      () => applyMove(def, state, { actionId: asActionId('operation'), params: {}, freeOperation: true }),
-      (error: unknown) => {
-        assert.ok(error instanceof Error);
-        const details = error as Error & { readonly code?: string };
-        assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
-        assert.match(details.message, /Ambiguous overlapping free-operation grants matched actionId=operation/);
-        return true;
-      },
-    );
+    assert.throws(() => applyMove(def, state, { actionId: asActionId('operation'), params: {}, freeOperation: true }), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & {
+        readonly code?: string;
+        readonly reason?: string;
+        readonly context?: { readonly freeOperationDenial?: { readonly cause?: string; readonly ambiguousGrantIds?: readonly string[] } };
+      };
+      assert.equal(details.code, 'ILLEGAL_MOVE');
+      assert.equal(details.reason, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED);
+      assert.equal(details.context?.freeOperationDenial?.cause, 'ambiguousOverlap');
+      assert.deepEqual(details.context?.freeOperationDenial?.ambiguousGrantIds, ['grant-a', 'grant-b']);
+      return true;
+    });
   });
 
   it('allows top-ranked overlapping grants when they are contract-equivalent duplicates', () => {

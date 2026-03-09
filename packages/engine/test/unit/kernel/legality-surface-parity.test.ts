@@ -305,7 +305,8 @@ describe('legality surface parity', () => {
       | 'freeOperationSequenceLocked'
       | 'freeOperationActionClassMismatch'
       | 'freeOperationActionIdMismatch'
-      | 'freeOperationZoneFilterMismatch'>;
+      | 'freeOperationZoneFilterMismatch'
+      | 'freeOperationAmbiguousOverlap'>;
       readonly buildState: () => GameState;
     }
   >> = {
@@ -475,6 +476,44 @@ describe('legality surface parity', () => {
                     right: 1,
                   },
                   remainingUses: 1,
+                },
+              ],
+            },
+          },
+        }),
+    },
+    ambiguousOverlap: {
+      choiceReason: 'freeOperationAmbiguousOverlap',
+      buildState: () =>
+        makeState({
+          turnOrderState: {
+            type: 'cardDriven',
+            runtime: {
+              seatOrder: ['0', '1'],
+              eligibility: { '0': true, '1': true },
+              currentCard: {
+                firstEligible: '0',
+                secondEligible: '1',
+                actedSeats: [],
+                passedSeats: [],
+                nonPassCount: 0,
+                firstActionClass: null,
+              },
+              pendingEligibilityOverrides: [],
+              pendingFreeOperationGrants: [
+                {
+                  grantId: 'grant-a',
+                  seat: '0',
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  remainingUses: 1,
+                },
+                {
+                  grantId: 'grant-b',
+                  seat: '0',
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  remainingUses: 2,
                 },
               ],
             },

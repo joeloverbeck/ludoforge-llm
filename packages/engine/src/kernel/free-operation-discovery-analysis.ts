@@ -8,6 +8,7 @@ import {
   isGrantOperationClassCompatible,
   isPendingFreeOperationGrantSequenceReady,
   moveOperationClass,
+  resolveAuthorizedPendingFreeOperationGrantOverlapAmbiguity,
 } from './free-operation-grant-authorization.js';
 import { resolvePlayerIndexForTurnFlowSeat, type SeatResolutionContext } from './seat-resolution.js';
 import type { ResolvedTurnFlowActionClass } from './turn-flow-action-class.js';
@@ -32,6 +33,7 @@ interface FreeOperationGrantAnalysis {
   readonly actionMatchedGrants: readonly TurnFlowPendingFreeOperationGrant[];
   readonly contextMatchedGrants: readonly TurnFlowPendingFreeOperationGrant[];
   readonly zoneMatchedGrants: readonly TurnFlowPendingFreeOperationGrant[];
+  readonly ambiguousGrantIds: readonly string[];
 }
 
 const analyzeFreeOperationGrantMatch = (
@@ -78,6 +80,9 @@ const analyzeFreeOperationGrantMatch = (
         ),
       )
     : actionMatchedGrants;
+  const ambiguousGrantIds = options?.evaluateZoneFilters === true
+    ? (resolveAuthorizedPendingFreeOperationGrantOverlapAmbiguity(def, state, zoneMatchedGrants)?.strongestGrantIds ?? [])
+    : [];
   return {
     activeSeat,
     actionClass,
@@ -89,6 +94,7 @@ const analyzeFreeOperationGrantMatch = (
     actionMatchedGrants,
     contextMatchedGrants,
     zoneMatchedGrants,
+    ambiguousGrantIds,
   };
 };
 
@@ -125,6 +131,7 @@ const explainFreeOperationBlockFromAnalysis = (
     actionMatchedGrants,
     contextMatchedGrants,
     zoneMatchedGrants,
+    ambiguousGrantIds,
   } = analysis;
 
   if (activeGrants.length === 0) {
@@ -184,6 +191,17 @@ const explainFreeOperationBlockFromAnalysis = (
       actionClass,
       actionId,
       matchingGrantIds: contextMatchedGrants.map((grant) => grant.grantId),
+    };
+  }
+
+  if (ambiguousGrantIds.length > 0) {
+    return {
+      cause: 'ambiguousOverlap',
+      activeSeat,
+      actionClass,
+      actionId,
+      matchingGrantIds: zoneMatchedGrants.map((grant) => grant.grantId),
+      ambiguousGrantIds,
     };
   }
 

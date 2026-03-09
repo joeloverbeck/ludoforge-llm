@@ -9,6 +9,7 @@ export type FreeOperationBlockCause =
   | 'actionIdMismatch'
   | 'sequenceContextMismatch'
   | 'zoneFilterMismatch'
+  | 'ambiguousOverlap'
   | 'granted';
 
 export interface FreeOperationBlockExplanation {
@@ -19,4 +20,5 @@ export interface FreeOperationBlockExplanation {
   readonly matchingGrantIds?: readonly string[];
   readonly sequenceLockBlockingGrantIds?: readonly string[];
   readonly sequenceContextMismatchGrantIds?: readonly string[];
+  readonly ambiguousGrantIds?: readonly string[];
 }

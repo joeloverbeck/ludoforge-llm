@@ -12,9 +12,14 @@ const importsModule = (sourcePath: string, modulePath: string): boolean => {
 describe('kernel boundary cycle guard', () => {
   it('enforces expected forward edges and forbids legacy back-edge in turn-flow legality chain', () => {
     assert.equal(
-      importsModule('src/kernel/turn-flow-eligibility.ts', './move-decision-sequence.js'),
+      importsModule('src/kernel/free-operation-viability.ts', './move-decision-sequence.js'),
       true,
-      'turn-flow-eligibility.ts must import move-decision-sequence.ts',
+      'free-operation-viability.ts must import move-decision-sequence.ts',
+    );
+    assert.equal(
+      importsModule('src/kernel/turn-flow-eligibility.ts', './free-operation-viability.js'),
+      true,
+      'turn-flow-eligibility.ts must import free-operation-viability.ts',
     );
     assert.equal(
       importsModule('src/kernel/move-decision-sequence.ts', './legal-choices.js'),

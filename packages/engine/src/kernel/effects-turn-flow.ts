@@ -16,7 +16,8 @@ import { createEvalRuntimeResources } from './eval-context.js';
 import {
   grantRequiresUsableProbe,
   isFreeOperationGrantUsableInCurrentState,
-} from './turn-flow-eligibility.js';
+} from './free-operation-viability.js';
+import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, GameState, TurnFlowPendingFreeOperationGrant } from './types.js';
@@ -26,17 +27,6 @@ import {
   makeActiveSeatUnresolvableInvariantContext,
 } from './turn-flow-invariant-contracts.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
-
-const resolveGrantSeat = (
-  token: string,
-  activeSeat: string,
-  seatOrder: readonly string[],
-): string | null => {
-  if (token === 'self') {
-    return activeSeat;
-  }
-  return seatOrder.includes(token) ? token : null;
-};
 
 const makeUniqueGrantId = (
   grants: readonly TurnFlowPendingFreeOperationGrant[],
@@ -150,7 +140,7 @@ export const applyGrantFreeOperation = (
       makeTurnFlowActiveSeatUnresolvableEffectRuntimeContext(activeSeatInvariant),
     );
   }
-  const seat = resolveGrantSeat(grant.seat, activeSeat, runtime.seatOrder);
+  const seat = resolveFreeOperationGrantSeatToken(grant.seat, activeSeat, runtime.seatOrder);
   if (seat === null) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, `grantFreeOperation.seat is unknown: ${grant.seat}`, {
       effectType: 'grantFreeOperation',
@@ -161,7 +151,7 @@ export const applyGrantFreeOperation = (
 
   let executeAsSeat: string | undefined;
   if (grant.executeAsSeat !== undefined) {
-    const resolvedExecuteAs = resolveGrantSeat(grant.executeAsSeat, activeSeat, runtime.seatOrder);
+    const resolvedExecuteAs = resolveFreeOperationGrantSeatToken(grant.executeAsSeat, activeSeat, runtime.seatOrder);
     if (resolvedExecuteAs === null) {
       throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, `grantFreeOperation.executeAsSeat is unknown: ${grant.executeAsSeat}`, {
         effectType: 'grantFreeOperation',

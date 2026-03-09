@@ -100,13 +100,13 @@ describe('FITL removal ordering macros', () => {
 
       assert.deepEqual(
         pieceRemovalOrdering.params.map((param) => param.name),
-        ['space', 'damageExpr', 'bodyCountEligible', 'treatTunneledBasesAsUntunneled', 'targetFactionMode'],
-        'Expected piece-removal-ordering params to expose explicit Body Count, tunneled-base override, and target-faction controls',
+        ['space', 'damageExpr', 'bodyCountEligible', 'treatTunneledBasesAsUntunneled', 'targetFactions'],
+        'Expected piece-removal-ordering params to expose only canonical target-faction sets plus generic removal controls',
       );
       assert.deepEqual(
         coinAssaultRemoval.params.map((param) => param.name),
-        ['space', 'damageExpr', 'bodyCountEligible', 'forceUntunneledBaseFirst', 'treatTunneledBasesAsUntunneled', 'targetFactionMode'],
-        'Expected coin-assault-removal-order to keep explicit bodyCount/base-first/tunnel-override controls plus target-faction mode without actorFaction threading',
+        ['space', 'damageExpr', 'bodyCountEligible', 'forceUntunneledBaseFirst', 'treatTunneledBasesAsUntunneled', 'targetFactions'],
+        'Expected coin-assault-removal-order to keep explicit bodyCount/base-first/tunnel-override controls plus canonical target-faction sets without actorFaction threading',
       );
       assert.deepEqual(
         insurgentAttackRemoval.params.map((param) => param.name),
@@ -173,9 +173,9 @@ describe('FITL removal ordering macros', () => {
         const args = asRecord(node.args);
         return args !== null && Object.hasOwn(args, 'bodyCountEligible');
       };
-      const hasTargetFactionModeArg = (node: Record<string, unknown>): boolean => {
+      const hasTargetFactionsArg = (node: Record<string, unknown>): boolean => {
         const args = asRecord(node.args);
-        return args !== null && Object.hasOwn(args, 'targetFactionMode');
+        return args !== null && Object.hasOwn(args, 'targetFactions');
       };
 
       const coinCalls = flatten(coinAssaultRemoval.effects).filter((node) => node.macro === 'piece-removal-ordering');
@@ -196,9 +196,9 @@ describe('FITL removal ordering macros', () => {
         'Expected coin-assault-removal-order to forward explicit bodyCountEligible arg into piece-removal-ordering',
       );
       assert.equal(
-        coinCalls.every(hasTargetFactionModeArg),
+        coinCalls.every(hasTargetFactionsArg),
         true,
-        'Expected coin-assault-removal-order to forward explicit targetFactionMode into piece-removal-ordering',
+        'Expected coin-assault-removal-order to forward explicit targetFactions into piece-removal-ordering',
       );
       assert.equal(
         insurgentCalls.some(hasActorFactionArg),
@@ -222,6 +222,11 @@ describe('FITL removal ordering macros', () => {
         /targetFactionFirst/,
         'Expected insurgent-attack-removal-order to avoid hidden target-faction choice bindings',
       );
+      const coinSerialized = JSON.stringify(coinAssaultRemoval.effects);
+      assert.match(coinSerialized, /targetFactions/, 'Expected shared COIN assault helper to use targetFactions');
+      assert.doesNotMatch(coinSerialized, /chooseTargetFactionFirst/, 'Expected shared COIN assault helper to derive first-faction choice from targetFactions');
+      assert.doesNotMatch(coinSerialized, /fixedTargetFactionFirst/, 'Expected shared COIN assault helper to avoid fixed-order control aliases');
+      assert.doesNotMatch(coinSerialized, /targetFactionMode/, 'Expected legacy targetFactionMode alias to be removed');
     });
   });
 

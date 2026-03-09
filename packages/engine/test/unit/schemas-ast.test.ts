@@ -91,6 +91,12 @@ describe('AST and selector schemas', () => {
     }
   });
 
+  it('parses homogeneous scalar-array ValueExpr literals and rejects mixed arrays', () => {
+    assert.deepEqual(ValueExprSchema.parse({ scalarArray: ['NVA', 'VC'] }), { scalarArray: ['NVA', 'VC'] });
+    assert.deepEqual(ValueExprSchema.parse({ scalarArray: [1, 3, 5] }), { scalarArray: [1, 3, 5] });
+    assert.equal(ValueExprSchema.safeParse({ scalarArray: [1, 'VC'] }).success, false);
+  });
+
   it('parses value-level conditional ValueExpr', () => {
     const expression = {
       if: {
@@ -422,7 +428,7 @@ describe('AST and selector schemas', () => {
           operationClass: 'operation',
           executionContext: {
             effectCode: 7,
-            allowedTargets: [1, 2],
+            allowedTargets: { scalarArray: [1, 2] },
             computed: { op: '+', left: 4, right: 5 },
           },
         },
@@ -437,7 +443,7 @@ describe('AST and selector schemas', () => {
           seat: '3',
           operationClass: 'operation',
           executionContext: {
-            allowedTargets: [{ ref: 'binding', name: '$target' }],
+            allowedTargets: { scalarArray: [{ ref: 'binding', name: '$target' }] },
           },
         },
       });

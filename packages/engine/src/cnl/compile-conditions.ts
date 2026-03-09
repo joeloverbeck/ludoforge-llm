@@ -275,6 +275,22 @@ export function lowerValueNode(
     return { value: source, diagnostics: [] };
   }
 
+  if (Array.isArray(source)) {
+    const loweredArray = lowerScalarMembershipLiteral(
+      source,
+      path,
+      'value expression',
+      ['homogeneous (string|number|boolean)[]'],
+    );
+    if (loweredArray.value === null) {
+      return { value: null, diagnostics: loweredArray.diagnostics };
+    }
+    return {
+      value: { scalarArray: loweredArray.value },
+      diagnostics: loweredArray.diagnostics,
+    };
+  }
+
   if (!isRecord(source)) {
     return missingCapability(path, 'value expression', source);
   }
@@ -355,6 +371,7 @@ export function lowerValueNode(
     'number',
     'boolean',
     'string',
+    'homogeneous (string|number|boolean)[]',
     '{ ref: ... }',
     '{ op: "+|-|*|/|floorDiv|ceilDiv|min|max", left, right }',
     '{ aggregate: { op: "count", query } }',

@@ -8784,7 +8784,7 @@ eventDecks:
                                         bodyCountEligible: true
                                         forceUntunneledBaseFirst: false
                                         treatTunneledBasesAsUntunneled: false
-                                        targetFactionMode: NVA
+                                        targetFactions: [NVA]
         shaded:
           text: Place up to 10 NVA Troops anywhere within 1 space of North Vietnam.
           effects:

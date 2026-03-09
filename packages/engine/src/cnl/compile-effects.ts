@@ -85,7 +85,7 @@ export function lowerFreeOperationExecutionContextNode(
   }
 
   const diagnostics: Diagnostic[] = [];
-  const loweredEntries: Array<readonly [string, ValueExpr | readonly (string | number | boolean)[]]> = [];
+  const loweredEntries: Array<readonly [string, ValueExpr]> = [];
   for (const [key, value] of Object.entries(source)) {
     if (key.length === 0) {
       diagnostics.push(...missingCapability(`${path}.${key}`, 'grantFreeOperation executionContext key', key, ['non-empty string']).diagnostics);
@@ -100,7 +100,7 @@ export function lowerFreeOperationExecutionContextNode(
         ]).diagnostics);
         continue;
       }
-      loweredEntries.push([key, [...value]]);
+      loweredEntries.push([key, { scalarArray: [...value] }]);
       continue;
     }
 

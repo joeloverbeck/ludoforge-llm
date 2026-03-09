@@ -192,6 +192,51 @@ describe('compile-effects binding scope validation', () => {
     );
   });
 
+  it('lowers scalar-array literals through let bindings for later membership use', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          let: {
+            bind: '$targetFactions',
+            value: ['NVA', 'VC'],
+            in: [
+              {
+                if: {
+                  when: { op: 'in', item: 'NVA', set: { ref: 'binding', name: '$targetFactions' } },
+                  then: [],
+                },
+              },
+            ],
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value !== null, true);
+    assert.deepEqual(
+      result.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'),
+      [],
+    );
+    assert.deepEqual(result.value, [
+      {
+        let: {
+          bind: '$targetFactions',
+          value: { scalarArray: ['NVA', 'VC'] },
+          in: [
+            {
+              if: {
+                when: { op: 'in', item: 'NVA', set: { ref: 'binding', name: '$targetFactions' } },
+                then: [],
+              },
+            },
+          ],
+        },
+      },
+    ]);
+  });
+
   it('allows then-only binders inside later if branches guarded by the same condition', () => {
     const result = lowerEffectArray(
       [

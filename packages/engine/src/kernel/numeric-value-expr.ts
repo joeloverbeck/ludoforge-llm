@@ -7,6 +7,9 @@ export function isNumericValueExpr(expr: ValueExpr): expr is NumericValueExpr {
   if (typeof expr === 'boolean' || typeof expr === 'string') {
     return false;
   }
+  if ('scalarArray' in expr) {
+    return false;
+  }
   if ('ref' in expr) {
     return true;
   }

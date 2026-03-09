@@ -84,9 +84,28 @@ describe('evalValue', () => {
     assert.equal(evalValue('ok', ctx), 'ok');
   });
 
+  it('passes through homogeneous scalar-array values', () => {
+    const ctx = makeCtx();
+    assert.deepEqual(evalValue({ scalarArray: ['NVA', 'VC'] }, ctx), ['NVA', 'VC']);
+  });
+
   it('delegates reference evaluation to resolveRef', () => {
     const ctx = makeCtx();
     assert.equal(evalValue({ ref: 'gvar', var: 'a' }, ctx), 3);
+  });
+
+  it('resolves binding and grantContext refs that carry scalar arrays', () => {
+    const bindingCtx = makeCtx({ bindings: { '$targetFactions': ['NVA', 'VC'] } });
+    assert.deepEqual(evalValue({ ref: 'binding', name: '$targetFactions' }, bindingCtx), ['NVA', 'VC']);
+
+    const grantCtx = makeCtx({
+      freeOperationOverlay: {
+        grantContext: {
+          allowedTargets: ['NVA', 'VC'],
+        },
+      },
+    });
+    assert.deepEqual(evalValue({ ref: 'grantContext', key: 'allowedTargets' }, grantCtx), ['NVA', 'VC']);
   });
 
   it('evaluates integer arithmetic (+, -, *, /, floorDiv, ceilDiv, min, max)', () => {

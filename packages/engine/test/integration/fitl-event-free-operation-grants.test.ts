@@ -580,7 +580,7 @@ const createExecutionContextGrantDef = (): GameDef => ({
                 completionPolicy: 'required',
                 postResolutionTurnFlow: 'resumeCardFlow',
                 executionContext: {
-                  allowedTargets: [2],
+                  allowedTargets: { scalarArray: [2] },
                   effectCode: 7,
                 },
               },
@@ -602,7 +602,7 @@ const createExecutionContextGrantDef = (): GameDef => ({
                   completionPolicy: 'required',
                   postResolutionTurnFlow: 'resumeCardFlow',
                   executionContext: {
-                    allowedTargets: [1],
+                    allowedTargets: { scalarArray: [1] },
                     effectCode: { op: '+', left: 4, right: 5 },
                   },
                 },

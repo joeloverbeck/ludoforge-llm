@@ -38,7 +38,7 @@ type QueryResult = Token | AssetRow | number | string | boolean | PlayerId | Zon
 type RuntimeQueryShape = 'token' | 'object' | 'number' | 'string' | 'boolean' | 'empty' | 'mixed';
 
 function resolveIntDomainBound(bound: NumericValueExpr, ctx: EvalContext): number | null {
-  let value: number | boolean | string;
+  let value: unknown;
   try {
     value = typeof bound === 'number' ? bound : evalValue(bound, ctx);
   } catch (error) {
@@ -446,7 +446,7 @@ function evalNextInOrderByConditionQuery(
     return [];
   }
 
-  let anchor: number | boolean | string;
+  let anchor: unknown;
   try {
     anchor = evalValue(query.from, ctx);
   } catch (error) {

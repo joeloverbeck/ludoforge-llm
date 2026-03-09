@@ -168,6 +168,9 @@ export const collectZoneSelectorAliasesFromValueExpr = (
     }
     return aliases;
   }
+  if ('scalarArray' in value) {
+    return aliases;
+  }
   if ('concat' in value) {
     for (const entry of value.concat) {
       collectZoneSelectorAliasesFromValueExpr(entry, aliases);

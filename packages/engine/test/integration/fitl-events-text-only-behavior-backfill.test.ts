@@ -74,10 +74,14 @@ describe('FITL text-only card behavior backfill', () => {
     assert.notEqual(compiled.gameDef, null);
 
     const cardById = new Map((compiled.gameDef?.eventDecks?.[0]?.cards ?? []).map((card) => [card.id, card] as const));
+    const parsedCardById = new Map((parsed.doc.eventDecks?.[0]?.cards ?? []).map((card) => [card.id, card] as const));
 
     const card47 = cardById.get('card-47');
     assert.equal(typeof (card47?.unshaded?.effects?.[0] as { if?: unknown } | undefined)?.if, 'object');
     assert.equal(typeof (card47?.unshaded?.effects?.[1] as { forEach?: unknown } | undefined)?.forEach, 'object');
+    const serializedCard47Unshaded = JSON.stringify(parsedCardById.get('card-47')?.unshaded?.effects ?? []);
+    assert.match(serializedCard47Unshaded, /targetFactions/);
+    assert.doesNotMatch(serializedCard47Unshaded, /targetFactionMode/);
     assert.equal((card47?.shaded?.effects?.[0] as { chooseN?: { bind?: string } } | undefined)?.chooseN?.bind, '$nvaTroopsToPlace');
 
     const card44 = cardById.get('card-44');

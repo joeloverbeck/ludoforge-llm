@@ -256,7 +256,7 @@ actor: 'active',
           operationClass: 'operation',
           executionContext: {
             effectCode: 7,
-            allowedTargets: [1, 2],
+            allowedTargets: { scalarArray: [1, 2] },
             computed: { op: '+', left: 4, right: 5 },
           },
         },

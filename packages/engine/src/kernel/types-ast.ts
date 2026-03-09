@@ -29,6 +29,8 @@ export type ZoneSel = string;
 export type ZoneRef = ZoneSel | { readonly zoneExpr: ValueExpr };
 export type TokenSel = string;
 export type FreeOperationExecutionContextScalar = string | number | boolean;
+export type ScalarValue = FreeOperationExecutionContextScalar;
+export type ScalarArrayValue = readonly ScalarValue[];
 
 export interface EffectMacroOrigin {
   readonly macroId: string;
@@ -54,6 +56,7 @@ export type ValueExpr =
   | number
   | boolean
   | string
+  | { readonly scalarArray: ScalarArrayValue }
   | Reference
   | {
       readonly op: '+' | '-' | '*' | '/' | 'floorDiv' | 'ceilDiv' | 'min' | 'max';
@@ -83,7 +86,7 @@ export type ValueExpr =
       };
     };
 
-export type FreeOperationExecutionContextValue = ValueExpr | readonly FreeOperationExecutionContextScalar[];
+export type FreeOperationExecutionContextValue = ValueExpr;
 export type FreeOperationExecutionContext = Readonly<Record<string, FreeOperationExecutionContextValue>>;
 
 export type NumericValueExpr =

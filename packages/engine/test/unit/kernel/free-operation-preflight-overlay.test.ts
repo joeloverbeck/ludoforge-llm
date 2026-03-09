@@ -51,13 +51,34 @@ describe('free-operation preflight overlay builder', () => {
       assert.deepEqual(overlay, {
         executionPlayerOverride: asPlayerId(0),
         skipPhaseCheck: true,
-        freeOperationZoneFilter: zoneFilter,
-        freeOperationZoneFilterDiagnostics: {
-          source: surface,
-          actionId: 'operation:free',
-          moveParams,
+        freeOperationOverlay: {
+          zoneFilter,
+          zoneFilterDiagnostics: {
+            source: surface,
+            actionId: 'operation:free',
+            moveParams,
+          },
         },
       });
     }
+  });
+
+  it('threads grantContext payloads inside the overlay object', () => {
+    const overlay = buildFreeOperationPreflightOverlay(
+      { executionPlayer: asPlayerId(0), executionContext: { allowedTargets: [2], effectCode: 7 } },
+      { actionId: asActionId('operation:free'), params: { target: 2 } },
+      'turnFlowEligibility',
+    );
+
+    assert.deepEqual(overlay, {
+      executionPlayerOverride: asPlayerId(0),
+      skipPhaseCheck: true,
+      freeOperationOverlay: {
+        grantContext: {
+          allowedTargets: [2],
+          effectCode: 7,
+        },
+      },
+    });
   });
 });

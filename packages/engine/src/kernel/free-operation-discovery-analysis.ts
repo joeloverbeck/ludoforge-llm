@@ -219,6 +219,7 @@ export interface FreeOperationDiscoveryAnalysisResult {
   readonly denial: FreeOperationBlockExplanation;
   readonly executionPlayer: ReturnType<typeof asPlayerId>;
   readonly zoneFilter?: ConditionAST;
+  readonly executionContext?: TurnFlowPendingFreeOperationGrant['executionContext'] | undefined;
 }
 
 const parsePlayerId = (
@@ -256,7 +257,7 @@ export const resolveFreeOperationDiscoveryAnalysis = (
     };
   }
 
-  const applicable = analysis.contextMatchedGrants;
+  const applicable = analysis.zoneMatchedGrants.length > 0 ? analysis.zoneMatchedGrants : analysis.contextMatchedGrants;
   const prioritized = applicable.find((grant) => grant.executeAsSeat !== undefined) ?? applicable[0];
   const executionSeat = prioritized?.executeAsSeat ?? prioritized?.seat;
   const executionPlayer = executionSeat === undefined
@@ -276,6 +277,7 @@ export const resolveFreeOperationDiscoveryAnalysis = (
     denial: explainFreeOperationBlockFromAnalysis(analysis),
     executionPlayer,
     ...(zoneFilter === undefined ? {} : { zoneFilter }),
+    ...(prioritized?.executionContext === undefined ? {} : { executionContext: prioritized.executionContext }),
   };
 };
 

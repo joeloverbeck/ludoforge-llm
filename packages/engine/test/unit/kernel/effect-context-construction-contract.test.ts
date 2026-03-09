@@ -76,12 +76,7 @@ const makeRuntimeEffectContextOptions = (
     ...(overrides.effectPath === undefined ? {} : { effectPath: overrides.effectPath }),
     ...(overrides.maxEffectOps === undefined ? {} : { maxEffectOps: overrides.maxEffectOps }),
     ...(overrides.freeOperation === undefined ? {} : { freeOperation: overrides.freeOperation }),
-    ...(overrides.freeOperationZoneFilter === undefined
-      ? {}
-      : { freeOperationZoneFilter: overrides.freeOperationZoneFilter }),
-    ...(overrides.freeOperationZoneFilterDiagnostics === undefined
-      ? {}
-      : { freeOperationZoneFilterDiagnostics: overrides.freeOperationZoneFilterDiagnostics }),
+    ...(overrides.freeOperationOverlay === undefined ? {} : { freeOperationOverlay: overrides.freeOperationOverlay }),
     ...(overrides.maxQueryResults === undefined ? {} : { maxQueryResults: overrides.maxQueryResults }),
     ...(overrides.phaseTransitionBudget === undefined
       ? {}
@@ -167,5 +162,30 @@ describe('effect-context construction contract', () => {
       false,
       'effect-context module must expose only explicit discovery constructors',
     );
+  });
+
+  it('preserves free-operation overlay payloads as one object', () => {
+    const options = makeRuntimeEffectContextOptions({
+      freeOperationOverlay: {
+        zoneFilter: {
+          op: '==',
+          left: { ref: 'zoneProp', zone: '$zone', prop: 'category' },
+          right: 'board',
+        },
+        zoneFilterDiagnostics: {
+          source: 'turnFlowEligibility',
+          actionId: 'operation',
+          moveParams: { zone: 'board:none' },
+        },
+        grantContext: {
+          allowedTargets: [2],
+          effectCode: 7,
+        },
+      },
+    });
+
+    const context = createExecutionEffectContext(options);
+
+    assert.deepEqual(context.freeOperationOverlay, options.freeOperationOverlay);
   });
 });

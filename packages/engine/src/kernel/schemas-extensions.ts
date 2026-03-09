@@ -3,6 +3,7 @@ import {
   BooleanSchema,
   ConditionASTSchema,
   EffectASTSchema,
+  FreeOperationExecutionContextSchema,
   IntegerSchema,
   NumberSchema,
   OptionsQuerySchema,
@@ -99,6 +100,7 @@ export const EventCardFreeOperationGrantSchema = createTurnFlowFreeOperationGran
   allowDuringMonsoon: z.boolean().optional(),
   uses: IntegerSchema.min(1).optional(),
   sequenceContext: FreeOperationSequenceContextSchema.optional(),
+  executionContext: FreeOperationExecutionContextSchema.optional(),
   viabilityPolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES).optional(),
   outcomePolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES).optional(),
 });
@@ -523,6 +525,7 @@ export const TurnFlowRuntimeStateSchema = z
           sequenceBatchId: StringSchema.min(1).optional(),
           sequenceIndex: IntegerSchema.min(0).optional(),
           sequenceContext: FreeOperationSequenceContextSchema.optional(),
+          executionContext: z.record(StringSchema.min(1), z.union([StringSchema, IntegerSchema, BooleanSchema, z.array(z.union([StringSchema, IntegerSchema, BooleanSchema]))])).optional(),
         }),
       )
       .optional(),

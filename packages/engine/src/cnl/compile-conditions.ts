@@ -94,6 +94,7 @@ const SUPPORTED_QUERY_KINDS = [
   'tokensInAdjacentZones',
   'connectedZones',
   'binding',
+  'grantContext',
 ];
 const SUPPORTED_REFERENCE_KINDS = [
   'gvar',
@@ -108,6 +109,7 @@ const SUPPORTED_REFERENCE_KINDS = [
   'zoneProp',
   'zoneVar',
   'activePlayer',
+  'grantContext',
 ];
 const PREDICATE_ALIAS_KEYS = Object.freeze({
   eq: true,
@@ -1249,6 +1251,14 @@ export function lowerQueryNode(
         diagnostics: [],
       };
     }
+    case 'grantContext':
+      if (typeof source.key === 'string') {
+        return {
+          value: { query: 'grantContext', key: source.key },
+          diagnostics: [],
+        };
+      }
+      return missingCapability(path, 'grantContext query', source, ['{ query: "grantContext", key: string }']);
     default:
       return missingCapability(path, 'query kind', source.query, SUPPORTED_QUERY_KINDS);
   }
@@ -1593,6 +1603,14 @@ function lowerReference(
         };
       }
       return missingCapability(path, 'binding reference', source, ['{ ref: "binding", name: string }']);
+    case 'grantContext':
+      if (typeof source.key === 'string') {
+        return {
+          value: { ref: 'grantContext', key: source.key },
+          diagnostics: [],
+        };
+      }
+      return missingCapability(path, 'grantContext reference', source, ['{ ref: "grantContext", key: string }']);
     default:
       return missingCapability(path, 'reference kind', source.ref, SUPPORTED_REFERENCE_KINDS);
   }

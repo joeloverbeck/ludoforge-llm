@@ -195,6 +195,12 @@ describe('evalCondition', () => {
     );
   });
 
+  it('treats missing grantContext membership refs as an empty set', () => {
+    const ctx = makeCtx();
+
+    assert.equal(evalCondition({ op: 'in', item: 3, set: { ref: 'grantContext', key: 'allowedTargets' } }, ctx), false);
+  });
+
   it('evaluates zonePropIncludes for array properties', () => {
     const ctx = makeCtx({
       def: {

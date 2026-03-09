@@ -22,6 +22,7 @@ import {
 import type {
   ConditionAST,
   EffectAST,
+  FreeOperationExecutionContext,
   MacroOrigin,
   NumericValueExpr,
   OptionsQuery,
@@ -67,6 +68,57 @@ export interface EffectLoweringContext {
 export interface EffectLoweringResult<TValue> {
   readonly value: TValue | null;
   readonly diagnostics: readonly Diagnostic[];
+}
+
+const isExecutionContextScalar = (value: unknown): value is string | number | boolean =>
+  typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+
+export function lowerFreeOperationExecutionContextNode(
+  source: unknown,
+  context: ConditionLoweringContext,
+  path: string,
+): EffectLoweringResult<FreeOperationExecutionContext> {
+  if (!isRecord(source)) {
+    return missingCapability(path, 'grantFreeOperation executionContext', source, [
+      '{ key: <ValueExpr-compatible scalar or scalar[]> }',
+    ]);
+  }
+
+  const diagnostics: Diagnostic[] = [];
+  const loweredEntries: Array<readonly [string, ValueExpr | readonly (string | number | boolean)[]]> = [];
+  for (const [key, value] of Object.entries(source)) {
+    if (key.length === 0) {
+      diagnostics.push(...missingCapability(`${path}.${key}`, 'grantFreeOperation executionContext key', key, ['non-empty string']).diagnostics);
+      continue;
+    }
+    if (Array.isArray(value)) {
+      if (!value.every((entry) => isExecutionContextScalar(entry))) {
+        diagnostics.push(...missingCapability(`${path}.${key}`, 'grantFreeOperation executionContext value', value, [
+          'scalar literal',
+          'scalar literal array',
+          'ValueExpr-compatible object',
+        ]).diagnostics);
+        continue;
+      }
+      loweredEntries.push([key, [...value]]);
+      continue;
+    }
+
+    const loweredValue = lowerValueNode(value, context, `${path}.${key}`);
+    diagnostics.push(...loweredValue.diagnostics);
+    if (loweredValue.value !== null) {
+      loweredEntries.push([key, loweredValue.value]);
+    }
+  }
+
+  if (diagnostics.some((diagnostic) => diagnostic.severity === 'error')) {
+    return { value: null, diagnostics };
+  }
+
+  return {
+    value: Object.fromEntries(loweredEntries),
+    diagnostics,
+  };
 }
 
 const toInternalDecisionId = (path: string): string => `decision:${path}`;
@@ -1843,6 +1895,19 @@ function lowerGrantFreeOperationEffect(
     }
   }
 
+  let loweredExecutionContext: FreeOperationExecutionContext | undefined;
+  if (source.executionContext !== undefined) {
+    const executionContext = lowerFreeOperationExecutionContextNode(
+      source.executionContext,
+      context,
+      `${path}.executionContext`,
+    );
+    diagnostics.push(...executionContext.diagnostics);
+    if (executionContext.value !== null) {
+      loweredExecutionContext = executionContext.value;
+    }
+  }
+
   for (const violation of collectTurnFlowFreeOperationGrantContractViolations({
     operationClass: source.operationClass,
     ...(uses === undefined ? {} : { uses }),
@@ -1854,6 +1919,7 @@ function lowerGrantFreeOperationEffect(
     ...(postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow }),
     ...(loweredSequence === undefined ? {} : { sequence: loweredSequence }),
     ...(loweredSequenceContext === undefined ? {} : { sequenceContext: loweredSequenceContext }),
+    ...(loweredExecutionContext === undefined ? {} : { executionContext: loweredExecutionContext }),
   })) {
     const surface = renderTurnFlowFreeOperationGrantContractViolation(violation, {
       basePath: path,
@@ -1908,6 +1974,7 @@ function lowerGrantFreeOperationEffect(
         ...(postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow }),
         ...(loweredSequence === undefined ? {} : { sequence: loweredSequence }),
         ...(loweredSequenceContext === undefined ? {} : { sequenceContext: loweredSequenceContext }),
+        ...(loweredExecutionContext === undefined ? {} : { executionContext: loweredExecutionContext }),
       },
     },
     diagnostics,

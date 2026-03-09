@@ -33,6 +33,7 @@ export interface TurnFlowFreeOperationGrantContract {
     readonly step: number;
   };
   readonly sequenceContext?: FreeOperationSequenceContextContract;
+  readonly executionContext?: import('./types-ast.js').FreeOperationExecutionContext;
   readonly viabilityPolicy?: TurnFlowFreeOperationGrantViabilityPolicy;
 }
 
@@ -179,6 +180,7 @@ export interface TurnFlowPendingFreeOperationGrant {
   readonly sequenceBatchId?: string;
   readonly sequenceIndex?: number;
   readonly sequenceContext?: FreeOperationSequenceContextContract;
+  readonly executionContext?: import('./types-ast.js').ResolvedFreeOperationExecutionContext;
 }
 
 export interface TurnFlowSuspendedCardEnd {

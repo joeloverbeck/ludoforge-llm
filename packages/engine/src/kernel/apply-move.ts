@@ -181,12 +181,9 @@ const resolveMatchedPipelineForMove = (
     actorPlayer: executionPlayer,
     bindings: runtimeBindingsForMove(move, undefined),
     resources: evalRuntimeResources,
-    ...(freeOperationPreflightOverlay.freeOperationZoneFilter === undefined
+    ...(freeOperationPreflightOverlay.freeOperationOverlay === undefined
       ? {}
-      : { freeOperationZoneFilter: freeOperationPreflightOverlay.freeOperationZoneFilter }),
-    ...(freeOperationPreflightOverlay.freeOperationZoneFilterDiagnostics === undefined
-      ? {}
-      : { freeOperationZoneFilterDiagnostics: freeOperationPreflightOverlay.freeOperationZoneFilterDiagnostics }),
+      : { freeOperationOverlay: freeOperationPreflightOverlay.freeOperationOverlay }),
   }));
   if (dispatch.kind !== 'matched') {
     return undefined;
@@ -559,6 +556,11 @@ const resolveMovePreflightContext = (
           }
           return resolution.executionPlayer;
         })();
+      const freeOperationPreflightOverlay = buildFreeOperationPreflightOverlay(
+        resolvedFreeOperationAnalysis,
+        move,
+        'turnFlowEligibility',
+      );
       const evalCtx = createEvalContext({
         def,
         adjacencyGraph,
@@ -568,6 +570,9 @@ const resolveMovePreflightContext = (
         actorPlayer: executionPlayer,
         bindings: baseBindings,
         resources: evalRuntimeResources,
+        ...(freeOperationPreflightOverlay.freeOperationOverlay === undefined
+          ? {}
+          : { freeOperationOverlay: freeOperationPreflightOverlay.freeOperationOverlay }),
       });
       const pipelineDispatch = resolveActionPipelineDispatch(def, action, evalCtx);
       if (pipelineDispatch.kind === 'configuredNoMatch') {
@@ -791,10 +796,20 @@ const executeMoveAction = (
     ...move.params,
     ...resolvedDecisionBindings,
   };
+  const freeOperationOverlay = buildFreeOperationPreflightOverlay(
+    move.freeOperation === true
+      ? (freeOperationAnalysis ?? resolveMoveFreeOperationAnalysis(def, state, move, seatResolution))
+      : null,
+    move,
+    'turnFlowEligibility',
+  );
   const effectCtx = {
     ...effectCtxBase,
     bindings: buildMoveRuntimeBindings(move, resolvedDecisionBindings),
     moveParams: runtimeMoveParams,
+    ...(freeOperationOverlay.freeOperationOverlay === undefined
+      ? {}
+      : { freeOperationOverlay: freeOperationOverlay.freeOperationOverlay }),
   } as const;
   let progressedBindings: Readonly<Record<string, unknown>> = effectCtx.bindings;
 

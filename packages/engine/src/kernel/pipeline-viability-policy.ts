@@ -149,6 +149,18 @@ export const decideLegalMovesPipelineViability = (status: PipelinePredicateStatu
   return { kind: 'includeTemplate' };
 };
 
+export const decideDiscoveryLegalMovesPipelineViability = (
+  status: DiscoveryPipelinePredicateStatus,
+): LegalMovesPipelineDecision => {
+  if (status.legality === 'failed') {
+    return { kind: 'excludeTemplate', outcome: 'pipelineLegalityFailed' };
+  }
+  if (status.atomicity === 'atomic' && status.costValidation === 'failed') {
+    return { kind: 'excludeTemplate', outcome: 'pipelineAtomicCostValidationFailed' };
+  }
+  return { kind: 'includeTemplate' };
+};
+
 export const decideLegalChoicesPipelineViability = (status: PipelinePredicateStatus): LegalChoicesPipelineDecision => {
   if (!status.legalityPassed) {
     return { kind: 'illegalChoice', outcome: 'pipelineLegalityFailed' };

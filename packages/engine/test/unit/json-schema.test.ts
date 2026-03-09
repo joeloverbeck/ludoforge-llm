@@ -332,6 +332,42 @@ describe('json schema artifacts', () => {
     assert.equal(validate(serializedTrace), true, JSON.stringify(validate.errors, null, 2));
   });
 
+  it('serialized trace with pending free-operation grant executionContext validates against Trace.schema.json', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(traceSchema);
+    const baseSerializedTrace = serializeTrace(validRuntimeTrace);
+    const cardDrivenTurnOrderState = baseSerializedTrace.finalState.turnOrderState as Extract<
+      typeof baseSerializedTrace.finalState.turnOrderState,
+      { type: 'cardDriven' }
+    >;
+    const serializedTrace = {
+      ...baseSerializedTrace,
+      finalState: {
+        ...baseSerializedTrace.finalState,
+        turnOrderState: {
+          ...cardDrivenTurnOrderState,
+          runtime: {
+            ...cardDrivenTurnOrderState.runtime,
+            pendingFreeOperationGrants: [
+              {
+                grantId: 'grant-ctx',
+                seat: '0',
+                operationClass: 'operation',
+                executionContext: {
+                  allowedTargets: [1, 2],
+                  effectCode: 7,
+                },
+                remainingUses: 1,
+              },
+            ],
+          },
+        },
+      },
+    };
+
+    assert.equal(validate(serializedTrace), true, JSON.stringify(validate.errors, null, 2));
+  });
+
   it('Trace.schema.json rejects pending required free-operation grants without postResolutionTurnFlow', () => {
     const ajv = new Ajv({ allErrors: true, strict: false });
     const validate = ajv.compile(traceSchema);
@@ -792,6 +828,33 @@ describe('json schema artifacts', () => {
                 operationClass: 'operation',
                 completionPolicy: 'required',
                 postResolutionTurnFlow: 'resumeCardFlow',
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    assert.equal(validate(valid), true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  it('GameDef.schema.json accepts grantFreeOperation executionContext payloads', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(gameDefSchema);
+    const valid = {
+      ...fullGameDef,
+      actions: [
+        {
+          ...fullGameDef.actions[0],
+          effects: [
+            {
+              grantFreeOperation: {
+                seat: '0',
+                operationClass: 'operation',
+                executionContext: {
+                  allowedTargets: [1, 2],
+                  effectCode: { op: '+', left: 3, right: 4 },
+                },
               },
             },
           ],

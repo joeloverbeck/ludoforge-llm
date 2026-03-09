@@ -5,6 +5,12 @@ import type { PlayerSeat } from './store-types.js';
 export type AiSeat = Extract<PlayerSeat, 'ai-random' | 'ai-greedy'>;
 export type AiPlaybackSpeed = '1x' | '2x' | '4x';
 
+export interface AiMoveSelectionResult {
+  readonly move: Move;
+  readonly selectedIndex: number;
+  readonly candidateCount: number;
+}
+
 const MIN_RANDOM = 0;
 const MAX_RANDOM = 0.999_999_999;
 const BASE_STEP_DELAY_MS = 500;
@@ -25,18 +31,27 @@ export function selectAiMove(
   seat: AiSeat,
   legalMoves: readonly Move[],
   random: () => number = Math.random,
-): Move | null {
+): AiMoveSelectionResult | null {
   if (legalMoves.length === 0) {
     return null;
   }
 
   if (seat === 'ai-greedy') {
-    return legalMoves[0] ?? null;
+    return {
+      move: legalMoves[0]!,
+      selectedIndex: 0,
+      candidateCount: legalMoves.length,
+    };
   }
 
   const normalized = clampRandom(random());
   const index = Math.floor(normalized * legalMoves.length);
-  return legalMoves[index] ?? legalMoves[0] ?? null;
+  const move = legalMoves[index] ?? legalMoves[0]!;
+  return {
+    move,
+    selectedIndex: index,
+    candidateCount: legalMoves.length,
+  };
 }
 
 export function resolveAiSeat(seat: PlayerSeat | undefined): AiSeat {

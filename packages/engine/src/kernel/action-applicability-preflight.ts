@@ -7,6 +7,7 @@ import {
 } from '../contracts/index.js';
 import { createEvalContext, createEvalRuntimeResources, type EvalContext, type EvalRuntimeResources } from './eval-context.js';
 import { assertEvalRuntimeResourcesContract } from './eval-runtime-resources-contract.js';
+import type { FreeOperationExecutionOverlay } from './free-operation-overlay.js';
 import type { ActionApplicabilityNotApplicableReason } from './legality-reasons.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
 import type { AdjacencyGraph } from './spatial.js';
@@ -43,8 +44,7 @@ interface ActionApplicabilityPreflightInput {
   readonly skipActionLimitCheck?: boolean;
   readonly skipPipelineDispatch?: boolean;
   readonly executionPlayerOverride?: GameState['activePlayer'];
-  readonly freeOperationZoneFilter?: EvalContext['freeOperationZoneFilter'];
-  readonly freeOperationZoneFilterDiagnostics?: EvalContext['freeOperationZoneFilterDiagnostics'];
+  readonly freeOperationOverlay?: FreeOperationExecutionOverlay;
   readonly maxQueryResults?: number;
   readonly evalRuntimeResources?: EvalRuntimeResources;
 }
@@ -78,8 +78,7 @@ export const resolveActionApplicabilityPreflight = ({
   skipActionLimitCheck = false,
   skipPipelineDispatch = false,
   executionPlayerOverride,
-  freeOperationZoneFilter,
-  freeOperationZoneFilterDiagnostics,
+  freeOperationOverlay,
   maxQueryResults,
   evalRuntimeResources: providedEvalRuntimeResources,
 }: ActionApplicabilityPreflightInput): ActionApplicabilityPreflightResult => {
@@ -169,8 +168,7 @@ export const resolveActionApplicabilityPreflight = ({
     bindings,
     runtimeTableIndex,
     resources: evalRuntimeResources,
-    ...(freeOperationZoneFilter === undefined ? {} : { freeOperationZoneFilter }),
-    ...(freeOperationZoneFilterDiagnostics === undefined ? {} : { freeOperationZoneFilterDiagnostics }),
+    ...(freeOperationOverlay === undefined ? {} : { freeOperationOverlay }),
     ...(maxQueryResults === undefined ? {} : { maxQueryResults }),
   });
 

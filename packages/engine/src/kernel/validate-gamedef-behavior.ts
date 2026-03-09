@@ -286,6 +286,7 @@ type FreeOperationGrantValidationTarget = {
     readonly captureMoveZoneCandidatesAs?: unknown;
     readonly requireMoveZoneCandidatesFrom?: unknown;
   };
+  readonly executionContext?: Readonly<Record<string, unknown>>;
   readonly zoneFilter?: ConditionAST;
 };
 
@@ -357,6 +358,10 @@ const FREE_OPERATION_GRANT_DIAGNOSTIC_BY_VIOLATION_CODE = {
     code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID',
     suggestion: () => 'Declare sequence.chain and sequence.step when using sequenceContext.',
   },
+  executionContextInvalid: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_EXECUTION_CONTEXT_INVALID',
+    suggestion: () => 'Set executionContext to an object whose values are scalar literals, scalar arrays, or ValueExpr-compatible objects.',
+  },
 } satisfies Record<TurnFlowFreeOperationGrantContractViolationCode, {
   readonly code: string;
   readonly suggestion: (label: string) => string;
@@ -385,6 +390,17 @@ const validateFreeOperationGrantContract = (
       message: surface.message,
       suggestion: diagnostic.suggestion(label),
     });
+  }
+  if (grant.executionContext !== undefined) {
+    for (const [key, value] of Object.entries(grant.executionContext)) {
+      if (
+        value !== null
+        && typeof value === 'object'
+        && !Array.isArray(value)
+      ) {
+        validateValueExpr(diagnostics, value as ValueExpr, `${path}.executionContext.${key}`, context);
+      }
+    }
   }
 };
 
@@ -441,7 +457,7 @@ const validateAmbiguousFreeOperationGrantOverlap = <TGrant extends {
           `freeOperationGrant overlaps ambiguously with ${right.path}; top-ranked overlapping grants must be `
           + 'contract-equivalent duplicates or differ by deterministic grant semantics.',
         suggestion:
-          'Differentiate the grants by policy strength, actionIds, zoneFilter, moveZoneBindings, moveZoneProbeBindings, or sequenceContext, or collapse them '
+          'Differentiate the grants by policy strength, actionIds, zoneFilter, moveZoneBindings, moveZoneProbeBindings, sequenceContext, or executionContext, or collapse them '
           + 'into equivalent duplicates.',
       });
       diagnostics.push({
@@ -452,7 +468,7 @@ const validateAmbiguousFreeOperationGrantOverlap = <TGrant extends {
           `freeOperationGrant overlaps ambiguously with ${left.path}; top-ranked overlapping grants must be `
           + 'contract-equivalent duplicates or differ by deterministic grant semantics.',
         suggestion:
-          'Differentiate the grants by policy strength, actionIds, zoneFilter, moveZoneBindings, moveZoneProbeBindings, or sequenceContext, or collapse them '
+          'Differentiate the grants by policy strength, actionIds, zoneFilter, moveZoneBindings, moveZoneProbeBindings, sequenceContext, or executionContext, or collapse them '
           + 'into equivalent duplicates.',
       });
     }
@@ -1514,7 +1530,8 @@ export const validateOptionsQuery = (
       return;
     }
     case 'enums':
-    case 'players': {
+    case 'players':
+    case 'grantContext': {
       return;
     }
     case 'globalMarkers': {

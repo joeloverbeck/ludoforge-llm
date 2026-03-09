@@ -25,6 +25,7 @@ import type { PartialChoice, PlayerSeat, RenderContext } from './store-types.js'
 import type { AnimationDetailLevel, AnimationPlaybackSpeed } from '../animation/animation-types.js';
 import { resolveAiPlaybackDelayMs, resolveAiSeat, selectAiMove, type AiPlaybackSpeed } from './ai-move-policy.js';
 import type { GameWorkerAPI, OperationStamp, WorkerError } from '../worker/game-worker-api.js';
+import type { AiDecisionTrace, TraceBus } from '@ludoforge/engine/trace';
 
 interface GameStoreState {
   readonly gameDef: GameDef | null;
@@ -139,6 +140,7 @@ interface MutationTransitionInputs {
 
 interface CreateGameStoreOptions {
   readonly onMoveApplied?: (move: Move) => void;
+  readonly traceBus?: TraceBus;
 }
 
 type ChoiceActionType = ChoicePendingRequest['type'];
@@ -716,8 +718,8 @@ export function createGameStore(
 
         const legalMoveResult = state.legalMoveResult ?? await bridge.enumerateLegalMoves();
         const activeSeat = resolveAiSeat(state.playerSeats.get(state.renderModel.activePlayerID));
-        const aiMove = selectAiMove(activeSeat, legalMoveResult.moves);
-        if (aiMove === null) {
+        const aiSelection = selectAiMove(activeSeat, legalMoveResult.moves);
+        if (aiSelection === null) {
           guardSetAndDerive(ctx, {
             legalMoveResult,
             error: null,
@@ -725,7 +727,7 @@ export function createGameStore(
           return 'no-legal-moves';
         }
 
-        const templateMoveResult = await bridge.applyTemplateMove(aiMove, undefined, toOperationStamp(ctx));
+        const templateMoveResult = await bridge.applyTemplateMove(aiSelection.move, undefined, toOperationStamp(ctx));
         if (templateMoveResult.outcome === 'uncompletable') {
           const nextDiagnosticSequence = state.orchestrationDiagnosticSequence + 1;
           guardSetAndDerive(ctx, {
@@ -733,7 +735,7 @@ export function createGameStore(
             orchestrationDiagnosticSequence: nextDiagnosticSequence,
             orchestrationDiagnostic: buildUncompletableTemplateDiagnostic(
               nextDiagnosticSequence,
-              aiMove,
+              aiSelection.move,
               state.renderModel?.activePlayerID ?? null,
               legalMoveResult.moves.length,
             ),
@@ -774,6 +776,33 @@ export function createGameStore(
           return 'no-op';
         }
         options?.onMoveApplied?.(completedMove);
+
+        if (options?.traceBus !== undefined) {
+          const aiDecision: AiDecisionTrace = {
+            seatType: activeSeat,
+            candidateCount: aiSelection.candidateCount,
+            selectedIndex: aiSelection.selectedIndex,
+          };
+          options.traceBus.emit({
+            kind: 'move-applied',
+            turnCount: mutationInputs.gameState.turnCount,
+            player: state.renderModel.activePlayerID,
+            move: completedMove,
+            deltas: [],
+            triggerFirings: result.triggerFirings,
+            effectTrace: result.effectTrace ?? [],
+            aiDecision,
+          });
+
+          if (mutationInputs.terminal !== null) {
+            options.traceBus.emit({
+              kind: 'game-terminal',
+              result: mutationInputs.terminal,
+              turnCount: mutationInputs.gameState.turnCount,
+            });
+          }
+        }
+
         return 'advanced';
       };
 
@@ -801,6 +830,15 @@ export function createGameStore(
               'initGame:success',
             );
             guardSetAndDerive(operation, buildInitSuccessState(def, gameState, playerConfig, legalMoveResult, terminal, lifecycle, setupTrace));
+
+            if (options?.traceBus !== undefined) {
+              options.traceBus.emit({
+                kind: 'game-initialized',
+                seed,
+                playerCount: playerConfig.length,
+                phase: String(gameState.currentPhase),
+              });
+            }
           } catch (error) {
             const lifecycle = assertLifecycleTransition(get().gameLifecycle, 'idle', 'initGame:failure');
             guardSetAndDerive(operation, buildInitFailureState(error, lifecycle));
@@ -923,6 +961,26 @@ export function createGameStore(
             });
             if (wasApplied) {
               options?.onMoveApplied?.(move);
+
+              if (options?.traceBus !== undefined) {
+                options.traceBus.emit({
+                  kind: 'move-applied',
+                  turnCount: mutationInputs.gameState.turnCount,
+                  player: state.renderModel?.activePlayerID ?? state.playerID!,
+                  move,
+                  deltas: [],
+                  triggerFirings: result.triggerFirings,
+                  effectTrace: result.effectTrace ?? [],
+                });
+
+                if (mutationInputs.terminal !== null) {
+                  options.traceBus.emit({
+                    kind: 'game-terminal',
+                    result: mutationInputs.terminal,
+                    turnCount: mutationInputs.gameState.turnCount,
+                  });
+                }
+              }
             }
           });
         },

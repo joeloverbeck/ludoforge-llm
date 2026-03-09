@@ -237,6 +237,25 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
     return rowValue;
   }
 
+  if (ref.ref === 'grantContext') {
+    const value = ctx.freeOperationOverlay?.grantContext?.[ref.key];
+    if (value === undefined) {
+      throw missingVarError(`Free-operation grant context key not found: ${ref.key}`, {
+        reference: ref,
+        availableGrantContextKeys: Object.keys(ctx.freeOperationOverlay?.grantContext ?? {}).sort(),
+      });
+    }
+    if (!isScalarValue(value)) {
+      throw typeMismatchError(`Free-operation grant context ${ref.key} must resolve to a scalar in this position`, {
+        reference: ref,
+        key: ref.key,
+        actualType: Array.isArray(value) ? 'array' : typeof value,
+        value,
+      });
+    }
+    return value;
+  }
+
   if (ref.ref === 'tokenZone') {
     const boundToken = ctx.bindings[ref.token];
     if (boundToken === undefined) {

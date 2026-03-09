@@ -72,6 +72,7 @@ export const ReferenceSchema = z.union([
   z.object({ ref: z.literal('tokenZone'), token: TokenSelSchema }).strict(),
   z.object({ ref: z.literal('zoneProp'), zone: ZoneSelSchema, prop: StringSchema }).strict(),
   z.object({ ref: z.literal('activePlayer') }).strict(),
+  z.object({ ref: z.literal('grantContext'), key: StringSchema }).strict(),
 ]);
 
 let conditionAstSchemaInternal: z.ZodTypeAny;
@@ -87,6 +88,10 @@ export const ValueExprSchema = z.lazy(() => valueExprSchemaInternal);
 export const NumericValueExprSchema = z.lazy(() => numericValueExprSchemaInternal);
 export const EffectASTSchema = z.lazy(() => effectAstSchemaInternal);
 export const TokenFilterExprSchema = z.lazy(() => tokenFilterExprSchemaInternal);
+export const FreeOperationExecutionContextSchema: z.ZodTypeAny = z.lazy(() => z.record(
+  StringSchema,
+  z.union([ValueExprSchema, z.array(PredicateScalarLiteralSchema)]),
+));
 const IntDomainBoundSchema = z
   .union([IntegerSchema, NumericValueExprSchema])
   .refine((value) => typeof value !== 'number' || Number.isSafeInteger(value), {
@@ -282,6 +287,7 @@ optionsQuerySchemaInternal = z.union([
     })
     .strict(),
   z.object({ query: z.literal('binding'), name: StringSchema, displayName: StringSchema.optional() }).strict(),
+  z.object({ query: z.literal('grantContext'), key: StringSchema }).strict(),
 ]);
 
 valueExprSchemaInternal = z.union([
@@ -804,6 +810,7 @@ effectAstSchemaInternal = z.union([
           .strict()
           .optional(),
         sequenceContext: FreeOperationSequenceContextSchema.optional(),
+        executionContext: FreeOperationExecutionContextSchema.optional(),
       }),
     })
     .strict(),

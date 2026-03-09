@@ -28,6 +28,7 @@ export type ActionExecutorSel =
 export type ZoneSel = string;
 export type ZoneRef = ZoneSel | { readonly zoneExpr: ValueExpr };
 export type TokenSel = string;
+export type FreeOperationExecutionContextScalar = string | number | boolean;
 
 export interface EffectMacroOrigin {
   readonly macroId: string;
@@ -46,7 +47,8 @@ export type Reference =
   | { readonly ref: 'globalMarkerState'; readonly marker: string }
   | { readonly ref: 'tokenZone'; readonly token: TokenSel }
   | { readonly ref: 'zoneProp'; readonly zone: ZoneSel; readonly prop: string }
-  | { readonly ref: 'activePlayer' };
+  | { readonly ref: 'activePlayer' }
+  | { readonly ref: 'grantContext'; readonly key: string };
 
 export type ValueExpr =
   | number
@@ -80,6 +82,9 @@ export type ValueExpr =
         readonly else: ValueExpr;
       };
     };
+
+export type FreeOperationExecutionContextValue = ValueExpr | readonly FreeOperationExecutionContextScalar[];
+export type FreeOperationExecutionContext = Readonly<Record<string, FreeOperationExecutionContextValue>>;
 
 export type NumericValueExpr =
   | number
@@ -216,7 +221,8 @@ export type OptionsQuery =
       readonly includeStart?: boolean;
       readonly maxDepth?: number;
     }
-  | { readonly query: 'binding'; readonly name: string; readonly displayName?: string };
+  | { readonly query: 'binding'; readonly name: string; readonly displayName?: string }
+  | { readonly query: 'grantContext'; readonly key: string };
 
 export type TransferVarEndpoint = ScopedVarEndpointContract<
   'global',
@@ -504,6 +510,7 @@ export type EffectAST =
           readonly step: number;
         };
         readonly sequenceContext?: FreeOperationSequenceContextContract;
+        readonly executionContext?: FreeOperationExecutionContext;
       };
     }
   | {
@@ -526,3 +533,5 @@ export type EffectAST =
 
 export type MoveParamScalar = number | string | boolean | TokenId | ZoneId | PlayerId;
 export type MoveParamValue = MoveParamScalar | readonly MoveParamScalar[];
+export type ResolvedFreeOperationExecutionContextValue = MoveParamValue;
+export type ResolvedFreeOperationExecutionContext = Readonly<Record<string, ResolvedFreeOperationExecutionContextValue>>;

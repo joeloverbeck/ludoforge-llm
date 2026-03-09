@@ -15,6 +15,9 @@ function evalMembershipSet(setExpr: ValueExpr, ctx: EvalContext): unknown {
       return ctx.bindings[resolvedName];
     }
   }
+  if (typeof setExpr === 'object' && setExpr !== null && 'ref' in setExpr && setExpr.ref === 'grantContext') {
+    return ctx.freeOperationOverlay?.grantContext?.[setExpr.key] ?? [];
+  }
   return evalValue(setExpr, ctx);
 }
 

@@ -2,16 +2,16 @@
 
 ## US Train
 
-Train — Select 1 zone Category is City or zone Category is Province and number of matching items > 0
+Train — Select 1 zone Category is City or zone Category is Province and number of US pieces > 0
 Step 1
-Select 1 zone Category is City or zone Category is Province and number of matching items > 0
-Select 1-99 zone Category is City or zone Category is Province and number of matching items > 0
+Select 1 zone Category is City or zone Category is Province and number of US pieces > 0
+Select 1-99 zone Category is City or zone Category is Province and number of US pieces > 0
 Choose: Place Irregulars, Place At Base
-Select up to 2 Unshaded
-Select up to 1 Unshaded
+Select up to 2 items
+Select up to 1 item
 Choose: Pacify, Saigon Transfer (optional)
-Select 1 zone Category is City or zone Category is Province and number of matching items ≤ number of matching items
-Select 1-99 zone Category is City or zone Category is Province and number of matching items ≤ number of matching items
+Select 1 zone Category is City or zone Category is Province and number of NVA pieces ≤ number of US/ARVN/VC pieces
+Select 1-99 zone Category is City or zone Category is Province and number of NVA pieces ≤ number of US/ARVN/VC pieces
 Choose: Rangers, ARVN Cubes
 Choose: Pacify, Replace Cubes With Base (optional)
 Gain 5 Aid
@@ -45,14 +45,6 @@ Remove Cube from Sub Space to ARVN Available Forces
 Place forces
 Place __macro_place_from_available_or_map_action Pipelines_1__stages_2__effects_1__for Each_effects_2__if_then_2__piece in Sub Space
 
-▾
-Modifiers (2 active)
-✓active player is 0
-CAPS is Unshaded: Train: place free Police in training spaces with US base
-CORDS is Unshaded: Train: pacify in up to 2 selected spaces instead of 1
-active player is 1
-CORDS is Shaded: Train: pacification shifts only to Passive Support
-Support/Opposition of Sub Space is Neutral
-Support/Opposition of Sub Space is not Passive Support and Support/Opposition of Sub Space is not Active Support and Support/Opposition of Sub Space is not Neutral
-✓Active Leader is Duong Van Minh
+▸
+Modifiers (0 active)
 Available

@@ -332,22 +332,28 @@ const buildRuleCard = (
   action: ActionDef,
   def: GameDef,
   runtime: GameDefRuntime,
+  evalCtx: EvalContext,
 ): RuleCard => {
-  const actionId = String(action.id);
-  const cached = runtime.ruleCardCache.get(actionId);
+  // Extract __actionClass from runtime bindings to enable context-aware branch selection
+  const actionClassBinding = evalCtx.bindings.__actionClass as string | undefined;
+
+  // Cache key includes action class so LimOp and FullOp variants are cached separately
+  const cacheKey = `${String(action.id)}:${actionClassBinding ?? 'static'}`;
+  const cached = runtime.ruleCardCache.get(cacheKey);
   if (cached !== undefined) return cached;
 
   const normCtx: NormalizerContext = {
     verbalization: def.verbalization,
     suppressPatterns: def.verbalization?.suppressPatterns ?? [],
+    ...(actionClassBinding !== undefined ? { actionClassBinding } : {}),
   };
 
   const normalizedEffects = collectRuleCardEffects(action, def);
   const messages = normalizedEffects.flatMap((e, i) => normalizeEffect(e, normCtx, `root[${i}]`));
-  const plan = planContent(messages, actionId);
+  const plan = planContent(messages, String(action.id));
   const ruleCard = realizeContentPlan(plan, def.verbalization);
 
-  runtime.ruleCardCache.set(actionId, ruleCard);
+  runtime.ruleCardCache.set(cacheKey, ruleCard);
   return ruleCard;
 };
 
@@ -411,7 +417,7 @@ const buildTooltipPayload = (
   limitUsage: readonly LimitUsageInfo[],
 ): ActionTooltipPayload | undefined => {
   try {
-    const ruleCard = buildRuleCard(action, context.def, context.runtime);
+    const ruleCard = buildRuleCard(action, context.def, context.runtime, evalCtx);
     const ruleState = buildRuleState(action, ruleCard, evalCtx, limitUsage, context.def);
     return { ruleCard, ruleState };
   } catch {

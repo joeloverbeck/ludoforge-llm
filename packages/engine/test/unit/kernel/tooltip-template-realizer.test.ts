@@ -309,22 +309,28 @@ describe('realizeContentPlan', () => {
       assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1 row');
     });
 
-    it('realizes select with optionHints (<=5 items)', () => {
+    it('realizes select with optionHints (<=5 items) and bounds for items target', () => {
       const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'items', bounds: { min: 1, max: 1 }, optionHints: ['Fold', 'Call', 'Raise'] };
       const result = realizeContentPlan(plan([msg]), undefined);
-      assert.equal(result.steps[0]!.lines[0]!.text, 'Choose from: Fold, Call, Raise');
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1 from: Fold, Call, Raise');
     });
 
     it('realizes select with optionHints resolving labels through verbalization', () => {
       const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'items', bounds: { min: 1, max: 1 }, optionHints: ['sweep', 'operations'] };
       const result = realizeContentPlan(plan([msg]), MOCK_VERB);
-      assert.equal(result.steps[0]!.lines[0]!.text, 'Choose from: Sweep, Operations');
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1 from: Sweep, Operations');
     });
 
-    it('realizes select without optionHints when >5 items', () => {
+    it('realizes select with optionHints (<=5) using Choose when target is not items', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'options', bounds: { min: 1, max: 1 }, optionHints: ['Fold', 'Call', 'Raise'] };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Choose from: Fold, Call, Raise');
+    });
+
+    it('realizes select with >5 optionHints showing first 5 with ellipsis', () => {
       const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'items', bounds: { min: 0, max: 3 }, optionHints: ['a', 'b', 'c', 'd', 'e', 'f'] };
       const result = realizeContentPlan(plan([msg]), undefined);
-      assert.equal(result.steps[0]!.lines[0]!.text, 'Select up to 3 items');
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select up to 3 items from: A, B, C, D, E...');
     });
 
     it('filters out suppressed messages', () => {

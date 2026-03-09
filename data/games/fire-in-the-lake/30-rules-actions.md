@@ -3010,7 +3010,6 @@ actionPipelines:
           - macro: insurgent-attack-select-spaces
             args:
               faction: 'NVA'
-              resourceVar: nvaResources
               paidMinExpr:
                 if:
                   when:
@@ -3073,56 +3072,38 @@ actionPipelines:
               paidMaxExpr:
                 if:
                   when: { op: '==', left: { ref: globalMarkerState, marker: cap_pt76 }, right: unshaded }
-                  then:
-                    op: +
-                    left: { ref: gvar, var: nvaResources }
-                    right:
-                      aggregate:
-                        op: count
-                        query:
-                          query: mapSpaces
-                          filter:
-                            op: and
-                            args:
-                              - op: '>'
-                                left:
-                                  aggregate:
-                                    op: count
-                                    query:
-                                      query: tokensInZone
-                                      zone: $zone
-                                      filter:
-                                        op: and
-                                        args:
-                                          - { prop: faction, eq: 'NVA' }
-                                right: 0
-                              - op: '>'
-                                left:
-                                  aggregate:
-                                    op: count
-                                    query:
-                                      query: tokensInZone
-                                      zone: $zone
-                                      filter:
-                                        op: and
-                                        args:
-                                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                                right: 0
-                              - op: '>'
-                                left:
-                                  aggregate:
-                                    op: count
-                                    query:
-                                      query: tokensInZone
-                                      zone: $zone
-                                      filter:
-                                        op: and
-                                        args:
-                                          - { prop: faction, eq: 'NVA' }
-                                          - { prop: type, eq: troops }
-                                right: 0
+                  then: 99
                   else: { ref: gvar, var: nvaResources }
       - stage: cost-per-space
+        costValidation:
+          op: or
+          args:
+            - { op: '!=', left: { ref: globalMarkerState, marker: cap_pt76 }, right: unshaded }
+            - op: <=
+              left:
+                aggregate:
+                  op: sum
+                  query: { query: binding, name: $targetSpaces }
+                  bind: $space
+                  valueExpr:
+                    if:
+                      when:
+                        op: '=='
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: { zoneExpr: { ref: binding, name: $space } }
+                              filter:
+                                op: and
+                                args:
+                                  - { prop: faction, eq: NVA }
+                                  - { prop: type, eq: troops }
+                        right: 0
+                      then: 1
+                      else: 0
+              right: { ref: gvar, var: nvaResources }
         effects:
           - forEach:
               bind: $space
@@ -3313,7 +3294,6 @@ actionPipelines:
           - macro: insurgent-attack-select-spaces
             args:
               faction: 'VC'
-              resourceVar: vcResources
               paidMinExpr:
                 if:
                   when: { op: '>', left: { ref: gvar, var: vcResources }, right: 0 }

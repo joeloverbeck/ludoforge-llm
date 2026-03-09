@@ -104,8 +104,8 @@ describe('FITL insurgent operations integration', () => {
 
   it('uses shared attack selector/removal macros in both NVA and VC attack profiles', () => {
     for (const expected of [
-      { id: 'attack-nva-profile', faction: 'NVA', resourceVar: 'nvaResources' },
-      { id: 'attack-vc-profile', faction: 'VC', resourceVar: 'vcResources' },
+      { id: 'attack-nva-profile', faction: 'NVA' },
+      { id: 'attack-vc-profile', faction: 'VC' },
     ]) {
       const profile = parseProfile(expected.id);
       const selectSpaces = profile.stages.find((stage: { stage: string }) => stage.stage === 'select-spaces');
@@ -115,8 +115,7 @@ describe('FITL insurgent operations integration', () => {
 
       const selectorMacros = findDeep(selectSpaces.effects, (node) =>
         node?.macro === 'insurgent-attack-select-spaces' &&
-        node?.args?.faction === expected.faction &&
-        node?.args?.resourceVar === expected.resourceVar,
+        node?.args?.faction === expected.faction,
       );
       assert.ok(selectorMacros.length >= 1, `${expected.id} should call insurgent-attack-select-spaces macro`);
 

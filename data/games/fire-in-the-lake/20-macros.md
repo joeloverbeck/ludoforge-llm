@@ -828,7 +828,6 @@ effectMacros:
   - id: insurgent-attack-select-spaces
     params:
       - { name: faction, type: { kind: enum, values: [NVA, VC] } }
-      - { name: resourceVar, type: string }
       - { name: paidMinExpr, type: value }
       - { name: paidMaxExpr, type: value }
     exports: [$targetSpaces]

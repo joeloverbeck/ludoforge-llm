@@ -12,6 +12,7 @@ type AttackMode = 'guerrilla-attack' | 'troops-attack';
 
 const ATTACK_SPACE = 'quang-tri-thua-thien:none';
 const SECOND_ATTACK_SPACE = 'quang-nam:none';
+const THIRD_ATTACK_SPACE = 'quang-tin-quang-ngai:none';
 const LOC_SPACE = 'loc-hue-da-nang:none';
 const MARCH_ORIGIN = 'quang-nam:none';
 const BOMBARD_SPACE_1 = 'quang-tri-thua-thien:none';
@@ -356,6 +357,77 @@ describe('FITL capability branches (March/Attack/Bombard)', () => {
       countTokensInZone(unshaded, 'available-NVA:none', (token) => token.props.faction === 'NVA' && token.type === 'troops'),
       2,
       'Unshaded PT-76 should remove one NVA troop from each selected Attack space that can pay the cost',
+    );
+  });
+
+  it('rejects unshaded PT-76 selections whose chosen no-troop spaces exceed NVA resources even when another eligible troop-paying space exists', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    let setup = makePt76State(def, 'unshaded', 3205, 1);
+    setup = addTokensToZone(setup, ATTACK_SPACE, [
+      makeToken('pt76-exact-illegal-nva-g-1', 'guerrilla', 'NVA', { activity: 'underground' }),
+      makeToken('pt76-exact-illegal-us-1', 'troops', 'US'),
+    ]);
+    setup = addTokensToZone(setup, SECOND_ATTACK_SPACE, [
+      makeToken('pt76-exact-illegal-nva-g-2', 'guerrilla', 'NVA', { activity: 'underground' }),
+      makeToken('pt76-exact-illegal-arvn-2', 'troops', 'ARVN'),
+    ]);
+    setup = addTokensToZone(setup, THIRD_ATTACK_SPACE, [
+      makeToken('pt76-exact-illegal-nva-t-3', 'troops', 'NVA'),
+      makeToken('pt76-exact-illegal-us-3', 'troops', 'US'),
+    ]);
+
+    assert.throws(
+      () =>
+        runNvaAttack(
+          def,
+          setup,
+          [ATTACK_SPACE, SECOND_ATTACK_SPACE],
+          { [ATTACK_SPACE]: 'guerrilla-attack', [SECOND_ATTACK_SPACE]: 'guerrilla-attack' },
+        ),
+      /(?:Illegal move|choiceRuntimeValidationFailed|cost validation failed|ACTION_PIPELINE_COST_VALIDATION_FAILED)/,
+      'Unshaded PT-76 should reject subsets whose selected no-troop spaces need more resources than are actually available',
+    );
+  });
+
+  it('allows unshaded PT-76 mixed payment only when the selected subset itself is fundable', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    let setup = makePt76State(def, 'unshaded', 3206, 1);
+    setup = addTokensToZone(setup, ATTACK_SPACE, [
+      makeToken('pt76-exact-legal-nva-g-1', 'guerrilla', 'NVA', { activity: 'underground' }),
+      makeToken('pt76-exact-legal-us-1', 'troops', 'US'),
+    ]);
+    setup = addTokensToZone(setup, THIRD_ATTACK_SPACE, [
+      makeToken('pt76-exact-legal-nva-t-3', 'troops', 'NVA'),
+      makeToken('pt76-exact-legal-arvn-3', 'troops', 'ARVN'),
+    ]);
+    setup = addTokensToZone(setup, SECOND_ATTACK_SPACE, [
+      makeToken('pt76-exact-legal-nva-g-2', 'guerrilla', 'NVA', { activity: 'underground' }),
+      makeToken('pt76-exact-legal-us-2', 'troops', 'US'),
+    ]);
+
+    const final = runNvaAttack(
+      def,
+      setup,
+      [ATTACK_SPACE, THIRD_ATTACK_SPACE],
+      { [ATTACK_SPACE]: 'guerrilla-attack', [THIRD_ATTACK_SPACE]: 'troops-attack' },
+    );
+
+    assert.equal(final.globalVars.nvaResources, 0, 'One selected no-troop space should spend the single NVA resource');
+    assert.equal(
+      countTokensInZone(final, 'available-NVA:none', (token) => token.id === asTokenId('pt76-exact-legal-nva-t-3')),
+      1,
+      'The selected troop-paying PT-76 space should still self-fund by removing one NVA troop',
+    );
+    assert.equal(
+      countTokensInZone(final, THIRD_ATTACK_SPACE, (token) => token.id === asTokenId('pt76-exact-legal-nva-t-3')),
+      0,
+      'The selected troop-paying PT-76 troop should leave the space during cost payment',
     );
   });
 

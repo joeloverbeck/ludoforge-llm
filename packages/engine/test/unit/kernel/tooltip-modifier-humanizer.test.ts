@@ -200,7 +200,7 @@ describe('tooltip-modifier-humanizer', () => {
         labels: { ...baseVerb.labels, saigon: 'Saigon', terrain: 'Terrain' },
       });
       const result = humanizeCondition(cond, ctx);
-      assert.equal(result, 'Saigon.Terrain is City');
+      assert.equal(result, 'Saigon Terrain is City');
     });
 
     it('humanizes activePlayer ref as "active player"', () => {

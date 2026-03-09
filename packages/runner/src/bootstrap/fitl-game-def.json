@@ -70707,6 +70707,19 @@
           "effect": "VC Rally: free agitate in 1 Rally space"
         }
       ]
+    },
+    "modifierClassification": {
+      "choiceFlowPatterns": [
+        "*Choice",
+        "*Mode",
+        "*Action",
+        "*Aid",
+        "Sub Action*",
+        "subAction*"
+      ],
+      "leaderPatterns": [
+        "Active Leader*"
+      ]
     }
   }
 }

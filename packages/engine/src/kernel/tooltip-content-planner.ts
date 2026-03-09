@@ -123,7 +123,10 @@ function extractModifiers(
   const content: TooltipMessage[] = [];
   for (const m of messages) {
     if (m.kind === 'modifier') {
-      modifiers.push(m);
+      // Suppress choice-flow conditionals from the Modifiers section entirely
+      if (m.modifierRole !== 'choiceFlow') {
+        modifiers.push(m);
+      }
     } else {
       content.push(m);
     }

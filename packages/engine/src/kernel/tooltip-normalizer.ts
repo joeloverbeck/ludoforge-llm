@@ -24,6 +24,8 @@ import {
 export interface NormalizerContext {
   readonly verbalization: VerbalizationDef | undefined;
   readonly suppressPatterns: readonly string[];
+  /** Label from a parent chooseOne branch, propagated to child chooseN for contextual "Select up to N X" */
+  readonly choiceBranchLabel?: string;
 }
 
 /** Extract a single-key union member from EffectAST by its discriminant key. */

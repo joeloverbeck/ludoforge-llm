@@ -1225,8 +1225,9 @@ describe('tooltip-normalizer', () => {
       assert.equal(messages[0]!.kind, 'modifier');
       if (messages[0]!.kind === 'modifier') {
         // humanizeOperator('>=') → '≥', humanizeIdentifier('aid') → 'Aid'
+        // resolveModifierEffect returns { condition, effect: '' } when no pre-authored text
         assert.equal(messages[0]!.condition, 'Aid \u2265 3');
-        assert.equal(messages[0]!.description, 'If Aid \u2265 3');
+        assert.equal(messages[0]!.description, '');
       }
     });
 

@@ -10,7 +10,7 @@
 import type { EffectAST, ValueExpr, ConditionAST, OptionsQuery, TokenFilterExpr } from './types-ast.js';
 import type { TooltipMessage, SelectMessage } from './tooltip-ir.js';
 import type { NormalizerContext } from './tooltip-normalizer.js';
-import { humanizeCondition } from './tooltip-modifier-humanizer.js';
+import { humanizeCondition, resolveModifierEffect, classifyModifierRole } from './tooltip-modifier-humanizer.js';
 import { stringifyValueExpr, stringifyNumericExpr, stringifyZoneRef, stripMacroBindingPrefix } from './tooltip-value-stringifier.js';
 
 /** Extract a single-key union member from EffectAST by its discriminant key. */
@@ -156,7 +156,18 @@ export const normalizeChooseN = (
     ? (p.options as { readonly query: 'enums'; readonly values: readonly string[] }).values
     : undefined;
 
-  return buildSelectMessage(target, bounds, extracted, astPath, optionHints);
+  const msgs = buildSelectMessage(target, bounds, extracted, astPath, optionHints);
+
+  // Propagate choiceBranchLabel to SelectMessage when target is generic 'items'
+  if (target === 'items' && ctx.choiceBranchLabel !== undefined && msgs.length > 0) {
+    return msgs.map((m) =>
+      m.kind === 'select'
+        ? { ...m, choiceBranchLabel: ctx.choiceBranchLabel } as typeof m
+        : m,
+    );
+  }
+
+  return msgs;
 };
 
 export const normalizeChooseOne = (
@@ -196,6 +207,19 @@ export const normalizeForEach = (
   return all.length > 0 ? all : [{ kind: 'suppressed', reason: 'empty forEach', astPath }];
 };
 
+/**
+ * Extract a branch label from a simple equality condition (e.g., "Train Choice == Place Irregulars").
+ * Returns the right-hand string value, which contextualizes child chooseN selections.
+ */
+const extractBranchLabel = (cond: ConditionAST): string | undefined => {
+  if (typeof cond === 'boolean') return undefined;
+  const c = cond as Record<string, unknown>;
+  if (c.op === '==' && c.right !== undefined && typeof c.right === 'string') {
+    return c.right;
+  }
+  return undefined;
+};
+
 export const normalizeIf = (
   payload: EffectOf<'if'>,
   ctx: NormalizerContext,
@@ -205,20 +229,33 @@ export const normalizeIf = (
   const { when, then: thenEffects } = payload.if;
   const elseEffects = payload.if.else;
 
-  const humanized = humanizeCondition(when, ctx);
+  const resolved = resolveModifierEffect(when, ctx);
 
-  const thenMessages = recurse(thenEffects, ctx, `${astPath}.then`);
+  // Propagate branch label from equality conditions (e.g., "Choice is Place Irregulars")
+  const branchLabel = extractBranchLabel(when);
+  const childCtx = branchLabel !== undefined ? { ...ctx, choiceBranchLabel: branchLabel } : ctx;
+
+  const thenMessages = recurse(thenEffects, childCtx, `${astPath}.then`);
 
   const elseMessages = elseEffects !== undefined
-    ? recurse(elseEffects, ctx, `${astPath}.else`)
+    ? recurse(elseEffects, childCtx, `${astPath}.else`)
     : [];
 
-  if (humanized === null) {
+  if (resolved === null) {
     const suppressed: TooltipMessage = { kind: 'suppressed', reason: 'internal condition', astPath };
     return [suppressed, ...thenMessages, ...elseMessages];
   }
 
-  const modifier: TooltipMessage = { kind: 'modifier', condition: humanized, description: `If ${humanized}`, conditionAST: when, astPath };
+  const role = classifyModifierRole(when, ctx);
+
+  const modifier: TooltipMessage = {
+    kind: 'modifier',
+    condition: resolved.condition,
+    description: resolved.effect,
+    conditionAST: when,
+    modifierRole: role,
+    astPath,
+  };
 
   return [modifier, ...thenMessages, ...elseMessages];
 };

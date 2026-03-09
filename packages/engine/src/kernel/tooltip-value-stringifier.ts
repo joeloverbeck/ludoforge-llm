@@ -27,8 +27,12 @@ const MACRO_PREFIX = '__macro_';
  */
 const extractSemanticTail = (name: string): string => {
   const stripped = name.slice(MACRO_PREFIX.length);
-  const lastDoubleUnderscore = stripped.lastIndexOf('__');
-  return lastDoubleUnderscore >= 0 ? stripped.slice(lastDoubleUnderscore + 2) : stripped;
+  // Handle space-separated segments (e.g. "__macro_place_from_available_or_map_action Pipelines_0__stages_1__effects_0__piece")
+  // Take the last space-separated segment first, then extract the double-underscore tail from it.
+  const spaceIdx = stripped.lastIndexOf(' ');
+  const segment = spaceIdx >= 0 ? stripped.slice(spaceIdx + 1) : stripped;
+  const lastDoubleUnderscore = segment.lastIndexOf('__');
+  return lastDoubleUnderscore >= 0 ? segment.slice(lastDoubleUnderscore + 2) : segment;
 };
 
 /**
@@ -66,7 +70,9 @@ export const stringifyZoneRef = (ref: ZoneRef): string => {
   if (typeof ref === 'string') return sanitizeBindingName(ref);
   // { zoneExpr: ValueExpr } — delegate to value stringifier (handles binding refs)
   if ('zoneExpr' in ref) return stringifyValueExpr(ref.zoneExpr);
-  return '<expr>';
+  // Best-effort: stringify any remaining object shape by its keys
+  const keys = Object.keys(ref as Record<string, unknown>);
+  return keys.length > 0 ? `zone(${keys.join(', ')})` : 'zone';
 };
 
 export const stringifyValueExpr = (expr: ValueExpr): string => {
@@ -84,7 +90,10 @@ export const stringifyValueExpr = (expr: ValueExpr): string => {
       case 'zoneCount': return `pieces in ${expr.zone}`;
       case 'tokenProp': return `${expr.token}.${expr.prop}`;
       case 'assetField': return expr.field;
-      case 'zoneProp': return `${expr.zone}.${expr.prop}`;
+      case 'zoneProp': {
+        if (typeof expr.zone === 'string' && expr.zone.startsWith('$')) return `zone ${expr.prop}`;
+        return `${expr.zone}.${expr.prop}`;
+      }
       case 'activePlayer': return 'activePlayer';
       case 'tokenZone': return `zone of ${expr.token}`;
       case 'zoneVar': return `${expr.var} of ${expr.zone}`;
@@ -114,7 +123,9 @@ export const stringifyValueExpr = (expr: ValueExpr): string => {
     return `${stringifyValueExpr(expr.if.then)} or ${stringifyValueExpr(expr.if.else)}`;
   }
 
-  return '<expr>';
+  // Best-effort: describe by keys for debugging
+  const keys = Object.keys(expr as Record<string, unknown>);
+  return keys.length > 0 ? `expr(${keys.join(', ')})` : 'expression';
 };
 
 // ---------------------------------------------------------------------------
@@ -159,11 +170,22 @@ export const humanizeValueExpr = (
       case 'zoneCount': return `pieces in ${resolveLabel(expr.zone as string, ctx, count)}`;
       case 'tokenProp': return `${resolveLabel(expr.token as string, ctx, count)}.${resolveLabel(expr.prop, ctx, count)}`;
       case 'assetField': return resolveLabel(expr.field, ctx, count);
-      case 'zoneProp': return `${resolveLabel(expr.zone as string, ctx, count)}.${resolveLabel(expr.prop, ctx, count)}`;
+      case 'zoneProp': {
+        const zoneName = resolveLabel(expr.zone as string, ctx, count);
+        const propName = resolveLabel(expr.prop, ctx, count);
+        // For binding-like zones (e.g. $space), render as "zone property" instead of "$space.property"
+        if (expr.zone.startsWith('$')) return `zone ${propName}`;
+        return `${zoneName} ${propName}`;
+      }
       case 'activePlayer': return 'active player';
       case 'tokenZone': return `zone of ${resolveLabel(expr.token as string, ctx, count)}`;
       case 'zoneVar': return `${resolveLabel(expr.var, ctx, count)} of ${resolveLabel(expr.zone as string, ctx, count)}`;
-      default: return 'value';
+      default: {
+        // Exhaustive — all 12 ref types are handled above. This guards
+        // against future additions; render the ref type for debugging.
+        const refType = (expr as { readonly ref: string }).ref;
+        return refType !== undefined ? `ref(${refType})` : 'value';
+      }
     }
   }
 
@@ -202,7 +224,9 @@ export const humanizeValueExpr = (
     return `${thenText} if condition met, otherwise ${elseText}`;
   }
 
-  return 'value';
+  // Best-effort: describe by keys for debugging instead of opaque 'value'
+  const keys = Object.keys(expr as Record<string, unknown>);
+  return keys.length > 0 ? `expr(${keys.join(', ')})` : 'value';
 };
 
 export const stringifyNumericExpr = (expr: NumericValueExpr): string => {

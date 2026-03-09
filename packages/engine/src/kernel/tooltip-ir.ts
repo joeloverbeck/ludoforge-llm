@@ -23,6 +23,8 @@ export interface SelectMessage extends MessageBase {
   readonly conditionAST?: import('./types-ast.js').ConditionAST;
   readonly bounds?: { readonly min: number; readonly max: number };
   readonly optionHints?: readonly string[];
+  /** Label propagated from a parent chooseOne branch, used to contextualize "Select up to N items" */
+  readonly choiceBranchLabel?: string;
 }
 
 export interface PlaceMessage extends MessageBase {
@@ -150,12 +152,16 @@ export interface RollMessage extends MessageBase {
   readonly bindTo: string;
 }
 
+export type ModifierRole = 'capability' | 'leader' | 'choiceFlow' | 'state';
+
 export interface ModifierMessage extends MessageBase {
   readonly kind: 'modifier';
   readonly condition: string;
   readonly description: string;
   /** Original AST for runtime evaluation of active/inactive state */
   readonly conditionAST?: import('./types-ast.js').ConditionAST;
+  /** Semantic role — choiceFlow modifiers are filtered out of display */
+  readonly modifierRole?: ModifierRole;
 }
 
 export interface BlockerMessage extends MessageBase {

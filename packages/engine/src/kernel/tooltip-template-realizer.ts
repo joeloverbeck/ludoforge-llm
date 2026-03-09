@@ -71,7 +71,12 @@ const realizeSelect = (msg: SelectMessage, ctx: LabelContext): string => {
     return `Choose from: ${options}`;
   }
 
-  const targetLabel = resolveSelectFilter(msg, ctx) ?? msg.target;
+  // Use choiceBranchLabel when target is generic 'items' and a branch label is available
+  const branchResolved = msg.target === 'items' && msg.choiceBranchLabel !== undefined
+    ? resolveLabel(msg.choiceBranchLabel, ctx)
+    : undefined;
+
+  const targetLabel = branchResolved ?? resolveSelectFilter(msg, ctx) ?? msg.target;
 
   if (msg.bounds === undefined) {
     return `Select ${targetLabel}`;
@@ -80,17 +85,18 @@ const realizeSelect = (msg: SelectMessage, ctx: LabelContext): string => {
   const { min, max } = msg.bounds;
 
   const hasFilter = msg.conditionAST !== undefined || msg.filter !== undefined;
+  const hasContext = branchResolved !== undefined || hasFilter;
 
   if (min === max) {
-    const label = hasFilter
-      ? (resolveSelectFilter(msg, ctx, min) ?? msg.target)
+    const label = hasContext
+      ? (branchResolved ?? resolveSelectFilter(msg, ctx, min) ?? msg.target)
       : min === 1 ? singularTarget(msg.target) : msg.target;
     return `Select ${min} ${label}`;
   }
 
   if (min === 0) {
     const label = max === 1
-      ? (hasFilter ? (resolveSelectFilter(msg, ctx, 1) ?? singularTarget(msg.target)) : singularTarget(msg.target))
+      ? (hasContext ? (branchResolved ?? resolveSelectFilter(msg, ctx, 1) ?? singularTarget(msg.target)) : singularTarget(msg.target))
       : targetLabel;
     return `Select up to ${max} ${label}`;
   }
@@ -209,8 +215,11 @@ const realizeRoll = (msg: RollMessage): string =>
   `Roll ${msg.range.min}-${msg.range.max}`;
 
 const realizeModifier = (msg: ModifierMessage): string => {
+  // When description is empty (no pre-authored effect text), render just the condition
   if (msg.description.length === 0) return msg.condition;
+  // When description duplicates the condition, render just once
   if (msg.description === msg.condition) return msg.description;
+  // Render "condition: effect description" (no "If " prefix — condition is already clean)
   return `${msg.condition}: ${msg.description}`;
 };
 

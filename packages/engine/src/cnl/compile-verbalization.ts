@@ -19,5 +19,6 @@ export function compileVerbalization(raw: GameSpecVerbalization): VerbalizationD
     suppressPatterns: raw.suppressPatterns ?? EMPTY_ARRAY,
     stageDescriptions: raw.stageDescriptions ?? EMPTY_RECORD,
     modifierEffects: raw.modifierEffects ?? EMPTY_RECORD,
+    ...(raw.modifierClassification != null ? { modifierClassification: raw.modifierClassification } : {}),
   };
 }

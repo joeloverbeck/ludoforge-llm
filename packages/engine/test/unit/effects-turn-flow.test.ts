@@ -150,6 +150,26 @@ describe('applyGrantFreeOperation', () => {
     );
   });
 
+  it('throws for invalid viabilityPolicy', () => {
+    const ctx = makeCtx();
+    const effect = {
+      grantFreeOperation: {
+        seat: 'self',
+        operationClass: 'operation',
+        viabilityPolicy: 'invalidPolicy',
+      },
+    } as unknown as Extract<EffectAST, { readonly grantFreeOperation: unknown }>;
+
+    assert.throws(() => applyGrantFreeOperation(effect, ctx), (err: unknown) => {
+      if (!isEffectErrorCode(err, 'EFFECT_RUNTIME')) {
+        return false;
+      }
+      assert.equal(err.context?.effectType, 'grantFreeOperation');
+      assert.match(String(err.message), /grantFreeOperation\.viabilityPolicy is invalid/i);
+      return true;
+    });
+  });
+
   it('resolves "self" seat to active player', () => {
     const ctx = makeCtx();
     const effect = {

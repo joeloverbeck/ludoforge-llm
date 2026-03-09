@@ -30,6 +30,7 @@ import {
   conditionSurfacePathForTriggerWhen,
   isAllowedTokenFilterProp,
   isCanonicalBindingIdentifier,
+  isTurnFlowFreeOperationGrantViabilityPolicy,
   tokenFilterPropAlternatives,
   TURN_FLOW_ACTION_CLASS_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
@@ -1847,7 +1848,7 @@ export const validateEffectAst = (
     }
     if (
       grant.viabilityPolicy !== undefined
-      && !(TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES as readonly string[]).includes(grant.viabilityPolicy)
+      && !isTurnFlowFreeOperationGrantViabilityPolicy(grant.viabilityPolicy)
     ) {
       diagnostics.push({
         code: 'EFFECT_GRANT_FREE_OPERATION_VIABILITY_POLICY_INVALID',

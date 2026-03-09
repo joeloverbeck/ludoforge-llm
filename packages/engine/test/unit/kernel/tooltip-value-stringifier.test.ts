@@ -371,7 +371,7 @@ describe('tooltip-value-stringifier', () => {
             { ref: 'zoneProp', zone: 'saigon', prop: 'population' },
             withLabels,
           ),
-          'Saigon.Population',
+          'Saigon Population',
         );
       });
 

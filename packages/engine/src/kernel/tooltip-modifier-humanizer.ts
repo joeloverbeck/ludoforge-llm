@@ -7,6 +7,7 @@
  */
 
 import type { ConditionAST, ValueExpr } from './types-ast.js';
+import type { ModifierRole } from './tooltip-ir.js';
 import type { NormalizerContext } from './tooltip-normalizer.js';
 import type { LabelContext } from './tooltip-label-resolver.js';
 import { buildLabelContext, resolveLabel } from './tooltip-label-resolver.js';
@@ -180,4 +181,62 @@ export function resolveModifierEffect(
   }
 
   return { condition: humanized, effect: '' };
+}
+
+// ---------------------------------------------------------------------------
+// Modifier role classification
+// ---------------------------------------------------------------------------
+
+/**
+ * Match a name against a glob-like pattern with leading/trailing wildcards.
+ * Supports patterns like `*Choice`, `Active Leader*`, `*Mode*`.
+ */
+function matchesGlobPattern(name: string, pattern: string): boolean {
+  const startsWild = pattern.startsWith('*');
+  const endsWild = pattern.endsWith('*');
+  const core = pattern.replace(/^\*|\*$/g, '');
+  if (startsWild && endsWild) return name.includes(core);
+  if (startsWild) return name.endsWith(core);
+  if (endsWild) return name.startsWith(core);
+  return name === pattern;
+}
+
+/**
+ * Classify a modifier's semantic role based on condition variable names
+ * and the verbalization configuration. Game-agnostic — patterns are
+ * defined in VerbalizationDef.modifierClassification.
+ */
+export function classifyModifierRole(
+  cond: ConditionAST,
+  ctx: NormalizerContext,
+): ModifierRole {
+  if (ctx.verbalization === undefined) return 'state';
+
+  const names = extractConditionNames(cond);
+  const modEffects = ctx.verbalization.modifierEffects;
+  const classification = ctx.verbalization.modifierClassification;
+
+  // 1. If condition variable matches a key in modifierEffects → 'capability'
+  for (const name of names) {
+    if (modEffects[name] !== undefined) return 'capability';
+  }
+
+  if (classification !== undefined) {
+    // 2. choiceFlowPatterns
+    for (const name of names) {
+      for (const pattern of classification.choiceFlowPatterns) {
+        if (matchesGlobPattern(name, pattern)) return 'choiceFlow';
+      }
+    }
+
+    // 3. leaderPatterns
+    for (const name of names) {
+      for (const pattern of classification.leaderPatterns) {
+        if (matchesGlobPattern(name, pattern)) return 'leader';
+      }
+    }
+  }
+
+  // 4. Fallback
+  return 'state';
 }

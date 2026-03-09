@@ -658,6 +658,18 @@ verbalization:
       - condition: "Cadres is Shaded"
         effect: "VC Rally: free agitate in 1 Rally space"
 
+  # ── Modifier classification ──────────────────────────────────────────
+  modifierClassification:
+    choiceFlowPatterns:
+      - "*Choice"
+      - "*Mode"
+      - "*Action"
+      - "*Aid"
+      - "Sub Action*"
+      - "subAction*"
+    leaderPatterns:
+      - "Active Leader*"
+
   # ── Suppress patterns ─────────────────────────────────────────────────
   suppressPatterns:
     - "*Count"

@@ -11,9 +11,12 @@ import {
   decideApplyMovePipelineViability,
   decideLegalChoicesPipelineViability,
   decideLegalMovesPipelineViability,
+  evaluateDiscoveryStagePredicateStatus,
   evaluatePipelinePredicateStatus,
+  evaluateStagePredicateStatus,
   type ActionDef,
   type ActionPipelineDef,
+  type ActionResolutionStageDef,
   type EvalContext,
   type GameDef,
   type GameState,
@@ -250,5 +253,58 @@ describe('evaluateDiscoveryPipelinePredicateStatus()', () => {
         return true;
       },
     );
+  });
+});
+
+describe('stage checkpoint predicate evaluation', () => {
+  it('reuses pipeline viability outcomes for atomic stage cost validation', () => {
+    const action = makeAction();
+    const stage: ActionResolutionStageDef = {
+      costValidation: { op: '>=', left: { ref: 'binding', name: '$cost' }, right: 2 },
+      effects: [],
+    };
+    const def = makeDef(action, {
+      id: 'profile',
+      actionId: action.id,
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [stage],
+      atomicity: 'atomic',
+    });
+    const status = evaluateStagePredicateStatus(action, 'profile', stage, 'atomic', makeEvalCtx(def, makeState(3), { '$cost': 1 }));
+
+    assert.equal(status.costValidationPassed, false);
+    assert.deepStrictEqual(decideApplyMovePipelineViability(status), {
+      kind: 'illegalMove',
+      costValidationPassed: false,
+      outcome: 'pipelineAtomicCostValidationFailed',
+      metadataCode: 'OPERATION_COST_BLOCKED',
+    });
+  });
+
+  it('defers recoverable missing bindings for stage discovery checkpoints', () => {
+    const action = makeAction();
+    const stage: ActionResolutionStageDef = {
+      legality: { op: '==', left: { ref: 'binding', name: '$choice' }, right: 'a' },
+      effects: [],
+    };
+    const def = makeDef(action, {
+      id: 'profile',
+      actionId: action.id,
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [stage],
+      atomicity: 'partial',
+    });
+    const status = evaluateDiscoveryStagePredicateStatus(action, 'profile', stage, 'partial', makeEvalCtx(def, makeState(3)));
+
+    assert.equal(status.legality, 'deferred');
+    assert.deepStrictEqual(decideDiscoveryLegalChoicesPipelineViability(status), {
+      kind: 'allowChoiceResolution',
+    });
   });
 });

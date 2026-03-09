@@ -12,15 +12,19 @@ import { createCollector } from './execution-collector.js';
 import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import { resolveActionPipelineDispatch, toExecutionPipeline } from './apply-move-pipeline.js';
 import { toApplyMoveIllegalReason } from './legality-outcome.js';
-import { decideApplyMovePipelineViability, evaluatePipelinePredicateStatus } from './pipeline-viability-policy.js';
+import {
+  decideApplyMovePipelineViability,
+  evaluatePipelinePredicateStatus,
+  evaluateStagePredicateStatus,
+} from './pipeline-viability-policy.js';
 import { resolveActionExecutor } from './action-executor.js';
 import { evalCondition } from './eval-condition.js';
 import { isDeclaredActionParamValueInDomain } from './declared-action-param-domain.js';
 import { createEvalContext, createEvalRuntimeResources, type EvalContext, type EvalRuntimeResources } from './eval-context.js';
 import {
   buildMoveRuntimeBindings,
-  collectDecisionBindingsFromEffects,
   deriveDecisionBindingsFromMoveParams,
+  resolvePipelineDecisionBindingsForMove,
 } from './move-runtime-bindings.js';
 import { EFFECT_RUNTIME_REASONS, ILLEGAL_MOVE_REASONS } from './runtime-reasons.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
@@ -77,36 +81,20 @@ const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undef
   def.actions.find((action) => action.id === actionId);
 
 const decisionBindingsForMove = (
-  executionProfile: ReturnType<typeof toExecutionPipeline> | undefined,
+  actionPipeline: ActionPipelineDef | undefined,
   moveParams: Move['params'],
 ): Readonly<Record<string, MoveParamValue>> => {
-  const bindings: Record<string, MoveParamValue> = {
-    ...deriveDecisionBindingsFromMoveParams(moveParams),
-  };
-
-  if (executionProfile === undefined) {
-    return bindings;
+  if (actionPipeline === undefined) {
+    return deriveDecisionBindingsFromMoveParams(moveParams);
   }
-
-  const decisionBindings = new Map<string, string>();
-  collectDecisionBindingsFromEffects(executionProfile.costSpend, decisionBindings);
-  for (const stage of executionProfile.resolutionStages) {
-    collectDecisionBindingsFromEffects(stage, decisionBindings);
-  }
-
-  for (const [decisionId, bind] of decisionBindings.entries()) {
-    if (Object.prototype.hasOwnProperty.call(moveParams, decisionId)) {
-      bindings[bind] = moveParams[decisionId] as MoveParamValue;
-    }
-  }
-  return bindings;
+  return resolvePipelineDecisionBindingsForMove(actionPipeline, moveParams);
 };
 
 const runtimeBindingsForMove = (
   move: Move,
-  executionProfile: ReturnType<typeof toExecutionPipeline> | undefined,
+  actionPipeline: ActionPipelineDef | undefined,
 ): Readonly<Record<string, MoveParamValue | boolean | string>> =>
-  buildMoveRuntimeBindings(move, decisionBindingsForMove(executionProfile, move.params));
+  buildMoveRuntimeBindings(move, decisionBindingsForMove(actionPipeline, move.params));
 
 const validateFreeOperationOutcomePolicy = (
   def: GameDef,
@@ -780,6 +768,7 @@ const executeMoveAction = (
     action,
     executionPlayer,
     baseBindings,
+    actionPipeline,
     executionProfile,
     costValidationPassed,
     isFreeOperationPipeline,
@@ -797,7 +786,7 @@ const executeMoveAction = (
     resources: shared.evalRuntimeResources,
     ...(shared.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: shared.phaseTransitionBudget }),
   } as const;
-  const resolvedDecisionBindings = decisionBindingsForMove(executionProfile, move.params);
+  const resolvedDecisionBindings = decisionBindingsForMove(actionPipeline, move.params);
   const runtimeMoveParams = {
     ...move.params,
     ...resolvedDecisionBindings,
@@ -807,6 +796,7 @@ const executeMoveAction = (
     bindings: buildMoveRuntimeBindings(move, resolvedDecisionBindings),
     moveParams: runtimeMoveParams,
   } as const;
+  let progressedBindings: Readonly<Record<string, unknown>> = effectCtx.bindings;
 
   const shouldSpendCost = !isFreeOperationPipeline && (
     executionProfile === undefined ||
@@ -890,9 +880,38 @@ const executeMoveAction = (
     }
   } else {
     const insertAfter = move.compound?.timing === 'during' ? (move.compound.insertAfterStage ?? 0) : -1;
-    for (const [stageIdx, stageEffects] of executionProfile.resolutionStages.entries()) {
-      const stageResult = applyEffects(stageEffects, createExecutionEffectContext({
+    for (const [stageIdx, stage] of executionProfile.resolutionStages.entries()) {
+      const stageEvalCtx: EvalContext = {
+        ...preflight.evalCtx,
+        state: effectState,
+        bindings: progressedBindings,
+      };
+      const stageStatus = evaluateStagePredicateStatus(
+        action,
+        executionProfile.profileId,
+        stage,
+        executionProfile.partialMode,
+        stageEvalCtx,
+        { includeCostValidation: !isFreeOperationPipeline },
+      );
+      const stageViability = decideApplyMovePipelineViability(stageStatus, {
+        isFreeOperation: isFreeOperationPipeline,
+      });
+      if (stageViability.kind === 'illegalMove') {
+        throw illegalMoveError(
+          move,
+          toApplyMoveIllegalReason(stageViability.outcome),
+          stageViability.outcome === 'pipelineAtomicCostValidationFailed'
+            ? { profileId: executionProfile.profileId, partialExecutionMode: executionProfile.partialMode }
+            : { profileId: executionProfile.profileId },
+        );
+      }
+      if (!stageViability.costValidationPassed) {
+        continue;
+      }
+      const stageResult = applyEffects(stage.effects, createExecutionEffectContext({
         ...effectCtx,
+        bindings: progressedBindings,
         state: effectState,
         rng: effectRng,
         traceContext: {
@@ -904,6 +923,7 @@ const executeMoveAction = (
       }));
       effectState = stageResult.state;
       effectRng = stageResult.rng;
+      progressedBindings = stageResult.bindings ?? progressedBindings;
       if (stageResult.emittedEvents !== undefined) {
         emittedEvents.push(...stageResult.emittedEvents);
       }

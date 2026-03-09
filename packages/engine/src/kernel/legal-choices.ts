@@ -9,10 +9,11 @@ import {
 import { createDiscoveryProbeEffectContext, createDiscoveryStrictEffectContext } from './effect-context.js';
 import type { EvalContext } from './eval-context.js';
 import { resolveEventEffectList } from './event-execution.js';
-import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
+import { buildMoveRuntimeBindings, resolvePipelineDecisionBindingsForMove } from './move-runtime-bindings.js';
 import {
   decideDiscoveryLegalChoicesPipelineViability,
   evaluateDiscoveryPipelinePredicateStatus,
+  evaluateDiscoveryStagePredicateStatus,
 } from './pipeline-viability-policy.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { toChoiceIllegalReason } from './legality-outcome.js';
@@ -67,6 +68,12 @@ interface LegalChoicesPreparedContext {
   readonly seatResolution: SeatResolutionContext;
 }
 
+interface DiscoveryEffectExecutionResult {
+  readonly request: ChoiceRequest;
+  readonly state: GameState;
+  readonly bindings: Readonly<Record<string, unknown>>;
+}
+
 const buildDiscoveryEffectContextBase = (
   evalCtx: EvalContext,
   move: Move,
@@ -94,14 +101,22 @@ const executeDiscoveryEffectsStrict = (
   effects: readonly EffectAST[],
   evalCtx: EvalContext,
   move: Move,
-): ChoiceRequest => {
+): DiscoveryEffectExecutionResult => {
   const baseContext = buildDiscoveryEffectContextBase(evalCtx, move);
   try {
     const result = applyEffects(effects, createDiscoveryStrictEffectContext(baseContext));
-    return result.pendingChoice ?? COMPLETE;
+    return {
+      request: result.pendingChoice ?? COMPLETE,
+      state: result.state,
+      bindings: result.bindings ?? evalCtx.bindings,
+    };
   } catch (error: unknown) {
     if (isEffectErrorCode(error, 'STACKING_VIOLATION')) {
-      return { kind: 'illegal', complete: false, reason: 'pipelineLegalityFailed' };
+      return {
+        request: { kind: 'illegal', complete: false, reason: 'pipelineLegalityFailed' },
+        state: evalCtx.state,
+        bindings: evalCtx.bindings,
+      };
     }
     throw error;
   }
@@ -111,14 +126,22 @@ const executeDiscoveryEffectsProbe = (
   effects: readonly EffectAST[],
   evalCtx: EvalContext,
   move: Move,
-): ChoiceRequest => {
+): DiscoveryEffectExecutionResult => {
   const baseContext = buildDiscoveryEffectContextBase(evalCtx, move);
   try {
     const result = applyEffects(effects, createDiscoveryProbeEffectContext(baseContext));
-    return result.pendingChoice ?? COMPLETE;
+    return {
+      request: result.pendingChoice ?? COMPLETE,
+      state: result.state,
+      bindings: result.bindings ?? evalCtx.bindings,
+    };
   } catch (error: unknown) {
     if (isEffectErrorCode(error, 'STACKING_VIOLATION')) {
-      return { kind: 'illegal', complete: false, reason: 'pipelineLegalityFailed' };
+      return {
+        request: { kind: 'illegal', complete: false, reason: 'pipelineLegalityFailed' },
+        state: evalCtx.state,
+        bindings: evalCtx.bindings,
+      };
     }
     throw error;
   }
@@ -475,7 +498,7 @@ type ExecuteDiscoveryEffects = (
   effects: readonly EffectAST[],
   evalCtx: EvalContext,
   move: Move,
-) => ChoiceRequest;
+) => DiscoveryEffectExecutionResult;
 
 type ProbeLegalityEvaluator = (move: Move, options?: LegalChoicesRuntimeOptions) => ChoiceRequest;
 
@@ -577,7 +600,15 @@ const legalChoicesWithPreparedContextInternal = (
     : [];
   if (pipelineDispatch.kind === 'matched') {
     const pipeline = pipelineDispatch.profile;
-    const status = evaluateDiscoveryPipelinePredicateStatus(action, pipeline, evalCtx, {
+    const pipelineBindings = buildMoveRuntimeBindings(
+      partialMove,
+      resolvePipelineDecisionBindingsForMove(pipeline, partialMove.params),
+    );
+    const pipelineEvalCtx: EvalContext = {
+      ...evalCtx,
+      bindings: pipelineBindings,
+    };
+    const status = evaluateDiscoveryPipelinePredicateStatus(action, pipeline, pipelineEvalCtx, {
       includeCostValidation: partialMove.freeOperation !== true,
     });
     const deferredCount = (status.legality === 'deferred' ? 1 : 0) + (status.costValidation === 'deferred' ? 1 : 0);
@@ -588,15 +619,53 @@ const legalChoicesWithPreparedContextInternal = (
     if (viabilityDecision.kind === 'illegalChoice') {
       return { kind: 'illegal', complete: false, reason: toChoiceIllegalReason(viabilityDecision.outcome) };
     }
-    const resolutionEffects: readonly EffectAST[] =
-      pipeline.stages.length > 0
-        ? pipeline.stages.flatMap((stage) => stage.effects)
-        : action.effects;
-    const request = executeDiscoveryEffects(
-      [...resolutionEffects, ...eventEffects],
-      evalCtx,
-      partialMove,
-    );
+    let stageState = state;
+    let stageBindings = pipelineEvalCtx.bindings;
+    for (const stage of pipeline.stages) {
+      const stageEvalCtx: EvalContext = {
+        ...pipelineEvalCtx,
+        state: stageState,
+        bindings: stageBindings,
+      };
+      const stageStatus = evaluateDiscoveryStagePredicateStatus(
+        action,
+        pipeline.id,
+        stage,
+        pipeline.atomicity,
+        stageEvalCtx,
+        { includeCostValidation: partialMove.freeOperation !== true },
+      );
+      const stageDeferredCount = (stageStatus.legality === 'deferred' ? 1 : 0) + (stageStatus.costValidation === 'deferred' ? 1 : 0);
+      if (stageDeferredCount > 0) {
+        options?.onDeferredPredicatesEvaluated?.(stageDeferredCount);
+      }
+      const stageDecision = decideDiscoveryLegalChoicesPipelineViability(stageStatus);
+      if (stageDecision.kind === 'illegalChoice') {
+        return { kind: 'illegal', complete: false, reason: toChoiceIllegalReason(stageDecision.outcome) };
+      }
+      if (stageStatus.atomicity === 'partial' && stageStatus.costValidation === 'failed') {
+        continue;
+      }
+      const stageResult = executeDiscoveryEffects(stage.effects, stageEvalCtx, partialMove);
+      stageState = stageResult.state;
+      stageBindings = stageResult.bindings;
+      if (!shouldEvaluateOptionLegality || stageResult.request.kind !== 'pending') {
+        if (stageResult.request.kind !== 'complete') {
+          return stageResult.request;
+        }
+      } else {
+        return {
+          ...stageResult.request,
+          options: mapPendingChoiceOptions(partialMove, stageResult.request, options, evaluateProbeLegality),
+        };
+      }
+    }
+    const eventEvalCtx: EvalContext = {
+      ...pipelineEvalCtx,
+      state: stageState,
+      bindings: stageBindings,
+    };
+    const request = executeDiscoveryEffects(eventEffects, eventEvalCtx, partialMove).request;
     if (!shouldEvaluateOptionLegality || request.kind !== 'pending') {
       return request;
     }
@@ -611,7 +680,7 @@ const legalChoicesWithPreparedContextInternal = (
     [...action.effects, ...eventEffects],
     evalCtx,
     partialMove,
-  );
+  ).request;
   if (!shouldEvaluateOptionLegality || request.kind !== 'pending') {
     return request;
   }

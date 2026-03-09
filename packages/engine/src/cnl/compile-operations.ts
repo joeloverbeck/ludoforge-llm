@@ -292,6 +292,32 @@ export function lowerActionPipelines(
     let accumulatedBindings: readonly string[] = ACTION_PIPELINE_RUNTIME_BINDINGS;
     for (const [stageIdx, rawStage] of (rawPipeline.stages as Record<string, unknown>[]).entries()) {
       const stagePath = `${basePath}.stages[${stageIdx}]`;
+      let stageLegality: ConditionAST | null = null;
+      if (rawStage.legality !== undefined) {
+        const loweredStageLegality = lowerOptionalCondition(
+          rawStage.legality,
+          diagnostics,
+          `${stagePath}.legality`,
+          conditionContext,
+          accumulatedBindings,
+        );
+        if (loweredStageLegality !== undefined) {
+          stageLegality = loweredStageLegality;
+        }
+      }
+      let stageCostValidation: ConditionAST | null = null;
+      if (rawStage.costValidation !== undefined) {
+        const loweredStageCostValidation = lowerOptionalCondition(
+          rawStage.costValidation,
+          diagnostics,
+          `${stagePath}.costValidation`,
+          conditionContext,
+          accumulatedBindings,
+        );
+        if (loweredStageCostValidation !== undefined) {
+          stageCostValidation = loweredStageCostValidation;
+        }
+      }
       const loweredEffects = lowerEffectsWithDiagnostics(
         rawStage.effects ?? [],
         diagnostics,
@@ -306,6 +332,8 @@ export function lowerActionPipelines(
       accumulatedBindings = [...accumulatedBindings, ...stageBindings];
       stages.push({
         ...(typeof rawStage.stage === 'string' ? { stage: rawStage.stage } : {}),
+        legality: stageLegality,
+        costValidation: stageCostValidation,
         effects: loweredEffects,
       });
     }

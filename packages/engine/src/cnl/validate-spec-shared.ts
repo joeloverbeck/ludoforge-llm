@@ -47,6 +47,7 @@ export const ACTION_PIPELINE_KEYS = [
   'atomicity',
   'linkedWindows',
 ] as const;
+export const ACTION_PIPELINE_STAGE_KEYS = ['stage', 'legality', 'costValidation', 'effects'] as const;
 export const ACTION_PIPELINE_ATOMICITY_VALUES: readonly string[] = ['atomic', 'partial'];
 export const PHASE_KEYS = ['id', 'onEnter', 'onExit', 'actionDefaults'] as const;
 export const FROM_TEMPLATE_PHASE_KEYS = ['fromTemplate', 'args'] as const;

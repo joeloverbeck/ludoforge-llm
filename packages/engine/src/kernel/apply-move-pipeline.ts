@@ -1,14 +1,14 @@
 import { evalCondition } from './eval-condition.js';
 import type { EvalContext } from './eval-context.js';
 import { pipelineApplicabilityEvaluationError } from './runtime-error.js';
-import type { ActionDef, ConditionAST, EffectAST, GameDef, ActionPipelineDef } from './types.js';
+import type { ActionDef, ActionPipelineDef, ActionResolutionStageDef, ConditionAST, EffectAST, GameDef } from './types.js';
 
 export interface ExecutionPipeline {
   readonly profileId: string;
   readonly legality: ConditionAST | null;
   readonly costValidation: ConditionAST | null;
   readonly costSpend: readonly EffectAST[];
-  readonly resolutionStages: readonly (readonly EffectAST[])[];
+  readonly resolutionStages: readonly ActionResolutionStageDef[];
   readonly partialMode: 'atomic' | 'partial';
 }
 
@@ -53,7 +53,7 @@ export const toExecutionPipeline = (
   costValidation: profile.costValidation,
   costSpend: profile.costEffects,
   resolutionStages: profile.stages.length > 0
-    ? profile.stages.map((stage) => stage.effects)
-    : [_action.effects],
+    ? profile.stages
+    : [{ legality: null, costValidation: null, effects: _action.effects }],
   partialMode: profile.atomicity,
 });

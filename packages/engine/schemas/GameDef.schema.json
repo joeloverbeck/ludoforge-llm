@@ -1352,6 +1352,26 @@
                 "stage": {
                   "type": "string"
                 },
+                "legality": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/anon_5df423fc"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "costValidation": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/anon_5df423fc"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
                 "effects": {
                   "type": "array",
                   "items": {

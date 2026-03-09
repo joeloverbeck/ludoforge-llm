@@ -6,6 +6,7 @@ import { SEAT_REFERENCE_SELECTED_CATALOG_FALLBACK_SUGGESTION } from './seat-refe
 import {
   ACTION_PIPELINE_ATOMICITY_VALUES,
   ACTION_PIPELINE_KEYS,
+  ACTION_PIPELINE_STAGE_KEYS,
   DATA_ASSET_KEYS,
   TURN_ORDER_KEYS,
   TURN_ORDER_TYPE_VALUES,
@@ -1191,6 +1192,40 @@ export function validateActionPipelines(
             severity: 'error',
             message: 'Each stages stage must be an object.',
             suggestion: 'Replace non-object stages with explicit stage objects.',
+          });
+          continue;
+        }
+        validateUnknownKeys(stage, ACTION_PIPELINE_STAGE_KEYS, `${basePath}.stages.${stageIndex}`, diagnostics, 'action pipeline stage');
+        if (stage.legality !== null && stage.legality !== undefined && !isRecord(stage.legality) && typeof stage.legality !== 'boolean') {
+          diagnostics.push({
+            code: 'CNL_VALIDATOR_ACTION_PIPELINE_REQUIRED_FIELD_INVALID',
+            path: `${basePath}.stages.${stageIndex}.legality`,
+            severity: 'error',
+            message: 'action pipeline stage legality must be a Condition AST object, boolean, or null.',
+            suggestion: 'Provide a Condition AST, boolean literal, or null.',
+          });
+        }
+        if (
+          stage.costValidation !== null
+          && stage.costValidation !== undefined
+          && !isRecord(stage.costValidation)
+          && typeof stage.costValidation !== 'boolean'
+        ) {
+          diagnostics.push({
+            code: 'CNL_VALIDATOR_ACTION_PIPELINE_REQUIRED_FIELD_INVALID',
+            path: `${basePath}.stages.${stageIndex}.costValidation`,
+            severity: 'error',
+            message: 'action pipeline stage costValidation must be a Condition AST object, boolean, or null.',
+            suggestion: 'Provide a Condition AST, boolean literal, or null.',
+          });
+        }
+        if (stage.effects !== undefined && !Array.isArray(stage.effects)) {
+          diagnostics.push({
+            code: 'CNL_VALIDATOR_ACTION_PIPELINE_REQUIRED_FIELD_INVALID',
+            path: `${basePath}.stages.${stageIndex}.effects`,
+            severity: 'error',
+            message: 'action pipeline stage effects must be an array when provided.',
+            suggestion: 'Provide an array of Effect AST entries.',
           });
         }
       }

@@ -314,6 +314,13 @@ export interface GameSpecTurnFlow {
   readonly pivotal?: GameSpecTurnFlowPivotal;
 }
 
+export interface GameSpecActionPipelineStageDef {
+  readonly stage?: string;
+  readonly legality?: unknown;
+  readonly costValidation?: unknown;
+  readonly effects?: readonly unknown[];
+}
+
 export interface GameSpecActionPipelineDef {
   readonly id: string;
   readonly actionId: string;
@@ -328,7 +335,7 @@ export interface GameSpecActionPipelineDef {
   readonly costValidation: unknown;
   readonly costEffects: readonly unknown[];
   readonly targeting: Readonly<Record<string, unknown>>;
-  readonly stages: readonly Readonly<Record<string, unknown>>[];
+  readonly stages: readonly GameSpecActionPipelineStageDef[];
   readonly atomicity: 'atomic' | 'partial';
   readonly linkedWindows?: readonly string[];
 }

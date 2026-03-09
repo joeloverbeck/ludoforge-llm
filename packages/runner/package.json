@@ -15,7 +15,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@floating-ui/react-dom": "^2.1.6",
+    "@floating-ui/react-dom": "^2.1.8",
     "@ludoforge/engine": "workspace:*",
     "@pixi/react": "^8.0.0",
     "comlink": "^4.4.2",

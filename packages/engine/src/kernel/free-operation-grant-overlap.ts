@@ -1,6 +1,11 @@
 import { resolveGrantFreeOperationActionDomain } from './free-operation-action-domain.js';
 import type { EventFreeOperationGrantDef } from './types-events.js';
-import type { GameDef, GameState, TurnFlowPendingFreeOperationGrant } from './types.js';
+import type { EffectAST, GameDef, GameState, TurnFlowPendingFreeOperationGrant } from './types.js';
+
+type EffectIssuedFreeOperationGrantDef = Extract<
+  EffectAST,
+  { readonly grantFreeOperation: unknown }
+>['grantFreeOperation'];
 
 type FreeOperationGrantOverlapComparable = {
   readonly seat: string;
@@ -113,6 +118,27 @@ export const eventFreeOperationGrantEquivalenceKey = (
   {
     additionalFields: {
       uses: grant.uses ?? 1,
+      ...(grant.sequenceContext === undefined ? {} : { sequence: grant.sequence }),
+    },
+  },
+);
+
+export const effectIssuedFreeOperationGrantOverlapSurfaceKey = (
+  def: GameDef,
+  grant: EffectIssuedFreeOperationGrantDef,
+): string => freeOperationGrantOverlapSurfaceKey(
+  grant,
+  resolveGrantFreeOperationActionDomain(def, grant),
+);
+
+export const effectIssuedFreeOperationGrantEquivalenceKey = (
+  def: GameDef,
+  grant: EffectIssuedFreeOperationGrantDef,
+): string => freeOperationGrantEquivalenceKey(
+  grant,
+  resolveGrantFreeOperationActionDomain(def, grant),
+  {
+    additionalFields: {
       ...(grant.sequenceContext === undefined ? {} : { sequence: grant.sequence }),
     },
   },

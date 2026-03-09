@@ -2407,6 +2407,100 @@ describe('event free-operation grants integration', () => {
     );
   });
 
+  it('rejects ambiguous effect-issued event free-operation grants before play starts', () => {
+    const def = createDef();
+    const invalidDecks = (def.eventDecks ?? []).map((deck) => ({
+      ...deck,
+      cards: deck.cards.map((card) =>
+        card.id !== 'card-1'
+          ? card
+          : {
+              ...card,
+              unshaded: {
+                ...card.unshaded!,
+                effects: [
+                  {
+                    grantFreeOperation: {
+                      seat: 'VC',
+                      sequence: { chain: 'invalid-effect-overlap-a', step: 0 },
+                      operationClass: 'operation',
+                      actionIds: ['operation'],
+                      sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                    },
+                  },
+                  {
+                    grantFreeOperation: {
+                      seat: 'VC',
+                      sequence: { chain: 'invalid-effect-overlap-b', step: 0 },
+                      operationClass: 'operation',
+                      actionIds: ['operation'],
+                      sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                    },
+                  },
+                ],
+              },
+            }),
+    })) as readonly EventDeckDef[];
+
+    assert.throws(
+      () => initialState({
+        ...def,
+        eventDecks: invalidDecks,
+      }, 125, 4),
+      /FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS/,
+    );
+  });
+
+  it('accepts effect-issued free-operation grants that only appear on mutually exclusive event paths', () => {
+    const def = createDef();
+    const validDecks = (def.eventDecks ?? []).map((deck) => ({
+      ...deck,
+      cards: deck.cards.map((card) =>
+        card.id !== 'card-1'
+          ? card
+          : {
+              ...card,
+              unshaded: {
+                ...card.unshaded!,
+                effects: [
+                  {
+                    if: {
+                      when: { op: '==', left: 1, right: 1 },
+                      then: [
+                        {
+                          grantFreeOperation: {
+                            seat: 'VC',
+                            sequence: { chain: 'exclusive-effect-overlap-then', step: 0 },
+                            operationClass: 'operation',
+                            actionIds: ['operation'],
+                            sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                          },
+                        },
+                      ],
+                      else: [
+                        {
+                          grantFreeOperation: {
+                            seat: 'VC',
+                            sequence: { chain: 'exclusive-effect-overlap-else', step: 0 },
+                            operationClass: 'operation',
+                            actionIds: ['operation'],
+                            sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+    })) as readonly EventDeckDef[];
+
+    assert.doesNotThrow(() => initialState({
+      ...def,
+      eventDecks: validDecks,
+    }, 126, 4));
+  });
+
   it('resumes turn flow after a successful required free operation and advances to the next card candidates', () => {
     const def = createRequiredGrantResumeDef();
     const start = initialState(def, 89, 4).state;

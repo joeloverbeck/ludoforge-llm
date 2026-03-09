@@ -4,7 +4,10 @@ import {
   getNestedEffectSequenceContextScopes,
   ROOT_EFFECT_SEQUENCE_CONTEXT_SCOPE,
 } from '../../../src/kernel/effect-sequence-context-scope.js';
-import { collectEffectGrantSequenceContextExecutionPaths } from '../../../src/kernel/effect-grant-sequence-context-paths.js';
+import {
+  collectEffectGrantExecutionPaths as collectGenericEffectGrantExecutionPaths,
+  collectEffectGrantSequenceContextExecutionPaths,
+} from '../../../src/kernel/effect-grant-execution-paths.js';
 import type { EffectAST } from '../../../src/kernel/types.js';
 
 const captureGrant = (chain: string, step: number): EffectAST => ({
@@ -435,5 +438,32 @@ describe('effect sequence-context scope policy', () => {
     const executionPaths = collectEffectGrantSequenceContextExecutionPaths(effects, 'effects');
 
     assert.deepEqual(executionPaths, [[]]);
+  });
+
+  it('exposes grant execution paths through the generic collector without rewalking control flow differently', () => {
+    const effects: readonly EffectAST[] = [
+      {
+        if: {
+          when: { op: '==', left: 1, right: 1 },
+          then: [captureGrant('generic-then-chain', 0)],
+          else: [requireGrant('generic-else-chain', 1)],
+        },
+      },
+    ];
+
+    const executionPaths = collectGenericEffectGrantExecutionPaths(
+      effects,
+      'effects',
+      (grant, path) => ({
+        chain: grant.sequence?.chain,
+        step: grant.sequence?.step,
+        path,
+      }),
+    );
+
+    assert.deepEqual(executionPaths, [
+      [{ chain: 'generic-then-chain', step: 0, path: 'effects[0].if.then[0].grantFreeOperation' }],
+      [{ chain: 'generic-else-chain', step: 1, path: 'effects[0].if.else[0].grantFreeOperation' }],
+    ]);
   });
 });

@@ -9,64 +9,85 @@ import {
 } from './sequence-context-linkage-grant-reference.js';
 import type { EffectAST } from './types.js';
 
-type SequenceContextLinkagePathState = readonly SequenceContextLinkageGrantReference[];
+type GrantFreeOperationEffect = Extract<
+  EffectAST,
+  { readonly grantFreeOperation: unknown }
+>['grantFreeOperation'];
 
-const dedupeExecutionPaths = (
-  paths: readonly SequenceContextLinkagePathState[],
-): readonly SequenceContextLinkagePathState[] => {
-  const unique = new Map<string, SequenceContextLinkagePathState>();
+type SequenceContextLinkagePathState = readonly SequenceContextLinkageGrantReference[];
+type EffectGrantExecutionPathCollector<TGrant> = (
+  grant: GrantFreeOperationEffect,
+  path: string,
+) => TGrant | null;
+
+const dedupeExecutionPaths = <TGrant>(
+  paths: readonly (readonly TGrant[])[],
+): readonly (readonly TGrant[])[] => {
+  const unique = new Map<string, readonly TGrant[]>();
   paths.forEach((path) => {
     unique.set(JSON.stringify(path), path);
   });
   return [...unique.values()];
 };
 
-const effectArrayContainsSequenceContextGrant = (effects: readonly EffectAST[]): boolean =>
-  effects.some((effect) => effectContainsSequenceContextGrant(effect, ROOT_EFFECT_SEQUENCE_CONTEXT_SCOPE));
+const effectArrayContainsCollectedGrant = <TGrant>(
+  effects: readonly EffectAST[],
+  collectGrant: EffectGrantExecutionPathCollector<TGrant>,
+): boolean => effects.some((effect) => effectContainsCollectedGrant(
+  effect,
+  ROOT_EFFECT_SEQUENCE_CONTEXT_SCOPE,
+  collectGrant,
+));
 
-const effectContainsSequenceContextGrant = (effect: EffectAST, scope: EffectSequenceContextScope): boolean => {
+const effectContainsCollectedGrant = <TGrant>(
+  effect: EffectAST,
+  scope: EffectSequenceContextScope,
+  collectGrant: EffectGrantExecutionPathCollector<TGrant>,
+): boolean => {
   if ('grantFreeOperation' in effect) {
     return scope.allowsPersistentSequenceContextGrants
-      && collectSequenceContextLinkageGrantReference(effect.grantFreeOperation, '') !== null;
+      && collectGrant(effect.grantFreeOperation, '') !== null;
   }
 
   return getNestedEffectSequenceContextScopes(effect, scope).some((nestedScope) =>
-    nestedScope.effects.some((entry) => effectContainsSequenceContextGrant(entry, nestedScope.scope)));
+    nestedScope.effects.some((entry) => effectContainsCollectedGrant(entry, nestedScope.scope, collectGrant)));
 };
 
-const appendGrantReference = (
-  paths: readonly SequenceContextLinkagePathState[],
-  reference: SequenceContextLinkageGrantReference,
-): readonly SequenceContextLinkagePathState[] => paths.map((path) => [...path, reference]);
+const appendCollectedGrant = <TGrant>(
+  paths: readonly (readonly TGrant[])[],
+  grant: TGrant,
+): readonly (readonly TGrant[])[] => paths.map((path) => [...path, grant]);
 
-const walkEffectArrayExecutionPaths = (
+const walkEffectArrayExecutionPaths = <TGrant>(
   effects: readonly EffectAST[],
   path: string,
-  incoming: readonly SequenceContextLinkagePathState[],
+  incoming: readonly (readonly TGrant[])[],
   scope: EffectSequenceContextScope,
-): readonly SequenceContextLinkagePathState[] => {
+  collectGrant: EffectGrantExecutionPathCollector<TGrant>,
+): readonly (readonly TGrant[])[] => {
   let current = incoming;
   effects.forEach((effect, index) => {
-    current = walkEffectExecutionPaths(effect, `${path}[${index}]`, current, scope);
+    current = walkEffectExecutionPaths(effect, `${path}[${index}]`, current, scope, collectGrant);
   });
   return current;
 };
 
-const walkEffectExecutionPaths = (
+const walkEffectExecutionPaths = <TGrant>(
   effect: EffectAST,
   path: string,
-  incoming: readonly SequenceContextLinkagePathState[],
+  incoming: readonly (readonly TGrant[])[],
   scope: EffectSequenceContextScope,
-): readonly SequenceContextLinkagePathState[] => {
+  collectGrant: EffectGrantExecutionPathCollector<TGrant>,
+): readonly (readonly TGrant[])[] => {
   if ('grantFreeOperation' in effect) {
     if (!scope.allowsPersistentSequenceContextGrants) {
       return incoming;
     }
-    const reference = collectSequenceContextLinkageGrantReference(
+    const grant = collectGrant(
       effect.grantFreeOperation,
       `${path}.grantFreeOperation`,
     );
-    return reference === null ? incoming : appendGrantReference(incoming, reference);
+    return grant === null ? incoming : appendCollectedGrant(incoming, grant);
   }
 
   if ('if' in effect) {
@@ -77,10 +98,22 @@ const walkEffectExecutionPaths = (
       nestedScope.traversal.kind === 'alternative' && nestedScope.traversal.branch === 'else');
     const thenPaths = thenScope === undefined
       ? incoming
-      : walkEffectArrayExecutionPaths(thenScope.effects, `${path}${thenScope.pathSuffix}`, incoming, thenScope.scope);
+      : walkEffectArrayExecutionPaths(
+          thenScope.effects,
+          `${path}${thenScope.pathSuffix}`,
+          incoming,
+          thenScope.scope,
+          collectGrant,
+        );
     const elsePaths = elseScope === undefined
       ? incoming
-      : walkEffectArrayExecutionPaths(elseScope.effects, `${path}${elseScope.pathSuffix}`, incoming, elseScope.scope);
+      : walkEffectArrayExecutionPaths(
+          elseScope.effects,
+          `${path}${elseScope.pathSuffix}`,
+          incoming,
+          elseScope.scope,
+          collectGrant,
+        );
     return [...thenPaths, ...elsePaths];
   }
 
@@ -95,6 +128,7 @@ const walkEffectExecutionPaths = (
           `${path}${loopBodyScope.pathSuffix}`,
           incoming,
           loopBodyScope.scope,
+          collectGrant,
         );
     const continuationIncoming = dedupeExecutionPaths([...incoming, ...loopBodyPaths]);
     if (effect.forEach.countBind === undefined || continuationScope === undefined) {
@@ -105,6 +139,7 @@ const walkEffectExecutionPaths = (
       `${path}${continuationScope.pathSuffix}`,
       continuationIncoming,
       continuationScope.scope,
+      collectGrant,
     );
   }
 
@@ -119,6 +154,7 @@ const walkEffectExecutionPaths = (
         `${path}${nestedScope.pathSuffix}`,
         current,
         nestedScope.scope,
+        collectGrant,
       );
       });
     return current;
@@ -127,10 +163,21 @@ const walkEffectExecutionPaths = (
   return incoming;
 };
 
+export const collectEffectGrantExecutionPaths = <TGrant>(
+  effects: readonly EffectAST[],
+  path: string,
+  collectGrant: EffectGrantExecutionPathCollector<TGrant>,
+): readonly (readonly TGrant[])[] =>
+  effectArrayContainsCollectedGrant(effects, collectGrant)
+    ? walkEffectArrayExecutionPaths(effects, path, [[]], ROOT_EFFECT_SEQUENCE_CONTEXT_SCOPE, collectGrant)
+    : [[]];
+
 export const collectEffectGrantSequenceContextExecutionPaths = (
   effects: readonly EffectAST[],
   path: string,
 ): readonly SequenceContextLinkagePathState[] =>
-  effectArrayContainsSequenceContextGrant(effects)
-    ? walkEffectArrayExecutionPaths(effects, path, [[]], ROOT_EFFECT_SEQUENCE_CONTEXT_SCOPE)
-    : [[]];
+  collectEffectGrantExecutionPaths(
+    effects,
+    path,
+    collectSequenceContextLinkageGrantReference,
+  );

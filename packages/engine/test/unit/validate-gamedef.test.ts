@@ -6073,6 +6073,139 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
     );
   });
 
+  it('rejects ambiguous overlapping effect-issued free-operation grants on the same execution path', () => {
+    const def = withEventCardSideConfig({
+      effects: [
+        {
+          grantFreeOperation: {
+            seat: '0',
+            sequence: { chain: 'effect-overlap-a', step: 0 },
+            operationClass: 'operation',
+            actionIds: ['playCard'],
+            sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+          },
+        },
+        {
+          grantFreeOperation: {
+            seat: '0',
+            sequence: { chain: 'effect-overlap-b', step: 0 },
+            operationClass: 'operation',
+            actionIds: ['playCard'],
+            sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+          },
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.effects[0].grantFreeOperation',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.effects[1].grantFreeOperation',
+      ),
+      true,
+    );
+  });
+
+  it('rejects ambiguous overlapping effect-issued free-operation grants across side and branch execution scope', () => {
+    const def = withEventCardSideConfig({
+      effects: [
+        {
+          grantFreeOperation: {
+            seat: '0',
+            sequence: { chain: 'effect-side-branch-overlap-a', step: 0 },
+            operationClass: 'operation',
+            actionIds: ['playCard'],
+            sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+          },
+        },
+      ],
+      branches: [
+        {
+          id: 'branch-1',
+          effects: [
+            {
+              grantFreeOperation: {
+                seat: '0',
+                sequence: { chain: 'effect-side-branch-overlap-b', step: 0 },
+                operationClass: 'operation',
+                actionIds: ['playCard'],
+                sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.effects[0].grantFreeOperation',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.branches[0].effects[0].grantFreeOperation',
+      ),
+      true,
+    );
+  });
+
+  it('accepts overlapping-looking effect-issued free-operation grants when they are on mutually exclusive if branches', () => {
+    const def = withEventCardSideConfig({
+      effects: [
+        {
+          if: {
+            when: { op: '==', left: 1, right: 1 },
+            then: [
+              {
+                grantFreeOperation: {
+                  seat: '0',
+                  sequence: { chain: 'effect-exclusive-then', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['playCard'],
+                  sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                },
+              },
+            ],
+            else: [
+              {
+                grantFreeOperation: {
+                  seat: '0',
+                  sequence: { chain: 'effect-exclusive-else', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['playCard'],
+                  sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'),
+      false,
+    );
+  });
+
   it('rejects sequence-context grants inside evaluateSubset.compute because the scope is non-persistent', () => {
     const def = withEventCardSideConfig({
       effects: [

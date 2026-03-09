@@ -80,9 +80,12 @@ import {
   type SequenceContextLinkageGrantReference,
 } from './sequence-context-linkage-grant-reference.js';
 import {
+  collectEffectGrantExecutionPaths,
   collectEffectGrantSequenceContextExecutionPaths,
-} from './effect-grant-sequence-context-paths.js';
+} from './effect-grant-execution-paths.js';
 import {
+  effectIssuedFreeOperationGrantEquivalenceKey,
+  effectIssuedFreeOperationGrantOverlapSurfaceKey,
   eventFreeOperationGrantEquivalenceKey,
   eventFreeOperationGrantOverlapSurfaceKey,
 } from './free-operation-grant-overlap.js';
@@ -289,6 +292,16 @@ type EventFreeOperationGrantValidationScopeEntry = Readonly<{
   readonly path: string;
 }>;
 
+type EffectIssuedFreeOperationGrantDef = Extract<
+  EffectAST,
+  { readonly grantFreeOperation: unknown }
+>['grantFreeOperation'];
+
+type EffectFreeOperationGrantValidationScopeEntry = Readonly<{
+  readonly grant: EffectIssuedFreeOperationGrantDef;
+  readonly path: string;
+}>;
+
 const FREE_OPERATION_GRANT_DIAGNOSTIC_BY_VIOLATION_CODE = {
   operationClassInvalid: {
     code: 'EFFECT_GRANT_FREE_OPERATION_CLASS_INVALID',
@@ -365,15 +378,28 @@ const validateFreeOperationGrantContract = (
   }
 };
 
-const eventFreeOperationGrantsCanCoissue = (
-  left: EventFreeOperationGrantDef,
-  right: EventFreeOperationGrantDef,
-): boolean => left.sequence.chain !== right.sequence.chain || left.sequence.step === right.sequence.step;
+const freeOperationGrantsCanCoissue = (
+  left: { readonly sequence?: { readonly chain?: unknown; readonly step?: unknown } },
+  right: { readonly sequence?: { readonly chain?: unknown; readonly step?: unknown } },
+): boolean => {
+  if (left.sequence === undefined || right.sequence === undefined) {
+    return true;
+  }
+  return left.sequence.chain !== right.sequence.chain || left.sequence.step === right.sequence.step;
+};
 
-const validateAmbiguousEventFreeOperationGrantOverlap = (
+const validateAmbiguousFreeOperationGrantOverlap = <TGrant extends {
+  readonly sequence?: { readonly chain?: unknown; readonly step?: unknown };
+  readonly completionPolicy?: string | null;
+  readonly outcomePolicy?: string | null;
+  readonly postResolutionTurnFlow?: string | null;
+}>(
   diagnostics: Diagnostic[],
-  def: GameDef,
-  grants: readonly EventFreeOperationGrantValidationScopeEntry[],
+  grants: readonly Readonly<{ readonly grant: TGrant; readonly path: string }>[],
+  options: {
+    readonly overlapSurfaceKey: (grant: TGrant) => string;
+    readonly equivalenceKey: (grant: TGrant) => string;
+  },
 ): void => {
   for (let leftIndex = 0; leftIndex < grants.length; leftIndex += 1) {
     const left = grants[leftIndex];
@@ -385,19 +411,16 @@ const validateAmbiguousEventFreeOperationGrantOverlap = (
       if (right === undefined) {
         continue;
       }
-      if (!eventFreeOperationGrantsCanCoissue(left.grant, right.grant)) {
+      if (!freeOperationGrantsCanCoissue(left.grant, right.grant)) {
         continue;
       }
-      if (
-        eventFreeOperationGrantOverlapSurfaceKey(def, left.grant)
-        !== eventFreeOperationGrantOverlapSurfaceKey(def, right.grant)
-      ) {
+      if (options.overlapSurfaceKey(left.grant) !== options.overlapSurfaceKey(right.grant)) {
         continue;
       }
       if (compareTurnFlowFreeOperationGrantPriority(left.grant, right.grant) !== 0) {
         continue;
       }
-      if (eventFreeOperationGrantEquivalenceKey(def, left.grant) === eventFreeOperationGrantEquivalenceKey(def, right.grant)) {
+      if (options.equivalenceKey(left.grant) === options.equivalenceKey(right.grant)) {
         continue;
       }
       diagnostics.push({
@@ -424,6 +447,28 @@ const validateAmbiguousEventFreeOperationGrantOverlap = (
       });
     }
   }
+};
+
+const validateAmbiguousEventFreeOperationGrantOverlap = (
+  diagnostics: Diagnostic[],
+  def: GameDef,
+  grants: readonly EventFreeOperationGrantValidationScopeEntry[],
+): void => {
+  validateAmbiguousFreeOperationGrantOverlap(diagnostics, grants, {
+    overlapSurfaceKey: (grant) => eventFreeOperationGrantOverlapSurfaceKey(def, grant),
+    equivalenceKey: (grant) => eventFreeOperationGrantEquivalenceKey(def, grant),
+  });
+};
+
+const validateAmbiguousEffectIssuedFreeOperationGrantOverlap = (
+  diagnostics: Diagnostic[],
+  def: GameDef,
+  grants: readonly EffectFreeOperationGrantValidationScopeEntry[],
+): void => {
+  validateAmbiguousFreeOperationGrantOverlap(diagnostics, grants, {
+    overlapSurfaceKey: (grant) => effectIssuedFreeOperationGrantOverlapSurfaceKey(def, grant),
+    equivalenceKey: (grant) => effectIssuedFreeOperationGrantEquivalenceKey(def, grant),
+  });
 };
 
 const validateDeclaredCanonicalBindingsOnEffect = (
@@ -2555,6 +2600,7 @@ const validateFreeOperationGrantSequenceContextLinkage = (
     scopes: readonly SequenceContextLinkageScope[],
   ): void => {
     let executionPaths: readonly (readonly SequenceContextLinkageGrantReference[])[] = [[]];
+    let overlapValidationPaths: readonly (readonly EffectFreeOperationGrantValidationScopeEntry[])[] = [[]];
     scopes.forEach(({ value, path }) => {
       if (!Array.isArray(value)) {
         return;
@@ -2566,9 +2612,23 @@ const validateFreeOperationGrantSequenceContextLinkage = (
       executionPaths = executionPaths.flatMap((existingPath) =>
         scopeExecutionPaths.map((scopePath) => [...existingPath, ...scopePath]),
       );
+      const scopeOverlapValidationPaths = collectEffectGrantExecutionPaths(
+        value as readonly EffectAST[],
+        path,
+        (grant, grantPath) => ({
+          grant,
+          path: grantPath,
+        }),
+      );
+      overlapValidationPaths = overlapValidationPaths.flatMap((existingPath) =>
+        scopeOverlapValidationPaths.map((scopePath) => [...existingPath, ...scopePath]),
+      );
     });
     executionPaths.forEach((references) => {
       validateSequenceContextLinkageForReferences(diagnostics, references);
+    });
+    overlapValidationPaths.forEach((grants) => {
+      validateAmbiguousEffectIssuedFreeOperationGrantOverlap(diagnostics, def, grants);
     });
   };
 

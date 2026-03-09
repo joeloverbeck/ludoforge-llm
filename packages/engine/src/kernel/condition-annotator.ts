@@ -277,9 +277,21 @@ const buildAnnotatedPipelineSection = (
   }
 
   for (const stage of pipeline.stages) {
+    const stageChildren: DisplayGroupNode[] = [];
+    if (stage.legality != null) {
+      const raw = displayGroup('Legality', conditionToDisplayNodes(stage.legality, 0), 'check');
+      stageChildren.push(annotateConditionGroup(raw, stage.legality, evalCtx));
+    }
+    if (stage.costValidation != null) {
+      const raw = displayGroup('Cost Validation', conditionToDisplayNodes(stage.costValidation, 0), 'check');
+      stageChildren.push(annotateConditionGroup(raw, stage.costValidation, evalCtx));
+    }
     if (stage.effects.length > 0) {
+      stageChildren.push(...stage.effects.flatMap((e) => effectToDisplayNodes(e, 0)) as DisplayGroupNode[]);
+    }
+    if (stageChildren.length > 0) {
       const label = stage.stage !== undefined ? `Stage: ${stage.stage}` : 'Effects';
-      children.push(displayGroup(label, stage.effects.flatMap((e) => effectToDisplayNodes(e, 0))));
+      children.push(displayGroup(label, stageChildren));
     }
   }
 
@@ -332,22 +344,28 @@ const buildRuleCard = (
   action: ActionDef,
   def: GameDef,
   runtime: GameDefRuntime,
+  evalCtx: EvalContext,
 ): RuleCard => {
-  const actionId = String(action.id);
-  const cached = runtime.ruleCardCache.get(actionId);
+  // Extract __actionClass from runtime bindings to enable context-aware branch selection
+  const actionClassBinding = evalCtx.bindings.__actionClass as string | undefined;
+
+  // Cache key includes action class so LimOp and FullOp variants are cached separately
+  const cacheKey = `${String(action.id)}:${actionClassBinding ?? 'static'}`;
+  const cached = runtime.ruleCardCache.get(cacheKey);
   if (cached !== undefined) return cached;
 
   const normCtx: NormalizerContext = {
     verbalization: def.verbalization,
     suppressPatterns: def.verbalization?.suppressPatterns ?? [],
+    ...(actionClassBinding !== undefined ? { actionClassBinding } : {}),
   };
 
   const normalizedEffects = collectRuleCardEffects(action, def);
   const messages = normalizedEffects.flatMap((e, i) => normalizeEffect(e, normCtx, `root[${i}]`));
-  const plan = planContent(messages, actionId);
+  const plan = planContent(messages, String(action.id));
   const ruleCard = realizeContentPlan(plan, def.verbalization);
 
-  runtime.ruleCardCache.set(actionId, ruleCard);
+  runtime.ruleCardCache.set(cacheKey, ruleCard);
   return ruleCard;
 };
 
@@ -411,7 +429,7 @@ const buildTooltipPayload = (
   limitUsage: readonly LimitUsageInfo[],
 ): ActionTooltipPayload | undefined => {
   try {
-    const ruleCard = buildRuleCard(action, context.def, context.runtime);
+    const ruleCard = buildRuleCard(action, context.def, context.runtime, evalCtx);
     const ruleState = buildRuleState(action, ruleCard, evalCtx, limitUsage, context.def);
     return { ruleCard, ruleState };
   } catch {

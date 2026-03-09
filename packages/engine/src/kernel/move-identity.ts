@@ -1,4 +1,4 @@
-import { resolveTurnFlowActionClass } from './turn-flow-eligibility.js';
+import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import type { GameDef, Move } from './types.js';
 
 export interface MoveIdentityKeyOptions {

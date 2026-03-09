@@ -7,10 +7,11 @@
  */
 
 import type { ConditionAST, ValueExpr } from './types-ast.js';
-import type { VerbalizationModifierEffect } from './verbalization-types.js';
+import type { ModifierRole } from './tooltip-ir.js';
 import type { NormalizerContext } from './tooltip-normalizer.js';
 import type { LabelContext } from './tooltip-label-resolver.js';
 import { buildLabelContext, resolveLabel } from './tooltip-label-resolver.js';
+import { humanizeValueExpr } from './tooltip-value-stringifier.js';
 import { isSuppressed } from './tooltip-suppression.js';
 
 // ---------------------------------------------------------------------------
@@ -50,57 +51,49 @@ function extractValueNames(expr: ValueExpr): readonly string[] {
     if (expr.ref === 'pvar') return [expr.var];
     if (expr.ref === 'binding') return [expr.name];
     if (expr.ref === 'globalMarkerState') return [expr.marker];
+    if (expr.ref === 'markerState') return [expr.marker, expr.space];
+    if (expr.ref === 'zoneCount') return [expr.zone];
+    if (expr.ref === 'tokenProp') return [expr.token, expr.prop];
+    if (expr.ref === 'assetField') return [expr.field];
+    if (expr.ref === 'zoneProp') return [expr.zone, expr.prop];
+    if (expr.ref === 'activePlayer') return [];
+    if (expr.ref === 'tokenZone') return [expr.token];
+    if (expr.ref === 'zoneVar') return [expr.zone, expr.var];
   }
   return [];
-}
-
-// ---------------------------------------------------------------------------
-// Humanize a single value expression
-// ---------------------------------------------------------------------------
-
-function humanizeValue(expr: ValueExpr, ctx: LabelContext): string {
-  if (typeof expr === 'number' || typeof expr === 'boolean') return String(expr);
-  if (typeof expr === 'string') return resolveLabel(expr, ctx);
-  if ('ref' in expr) {
-    if (expr.ref === 'gvar') return resolveLabel(expr.var, ctx);
-    if (expr.ref === 'pvar') return resolveLabel(expr.var, ctx);
-    if (expr.ref === 'binding') return resolveLabel(expr.name, ctx);
-    if (expr.ref === 'globalMarkerState') return resolveLabel(expr.marker, ctx);
-  }
-  return '<value>';
 }
 
 // ---------------------------------------------------------------------------
 // Humanize a ConditionAST into a display string
 // ---------------------------------------------------------------------------
 
-function humanizeConditionInner(cond: ConditionAST, ctx: LabelContext): string {
+function humanizeConditionInner(cond: ConditionAST, ctx: LabelContext, count?: number): string {
   if (typeof cond === 'boolean') return String(cond);
   const c = cond as Record<string, unknown>;
 
   if (c.op === 'and') {
-    return (c.args as ConditionAST[]).map((a) => humanizeConditionInner(a, ctx)).join(' and ');
+    return (c.args as ConditionAST[]).map((a) => humanizeConditionInner(a, ctx, count)).join(' and ');
   }
   if (c.op === 'or') {
-    return (c.args as ConditionAST[]).map((a) => humanizeConditionInner(a, ctx)).join(' or ');
+    return (c.args as ConditionAST[]).map((a) => humanizeConditionInner(a, ctx, count)).join(' or ');
   }
   if (c.op === 'not') {
-    return `not ${humanizeConditionInner(c.arg as ConditionAST, ctx)}`;
+    return `not ${humanizeConditionInner(c.arg as ConditionAST, ctx, count)}`;
   }
   if (c.op === 'in') {
-    return `${humanizeValue(c.item as ValueExpr, ctx)} in ${humanizeValue(c.set as ValueExpr, ctx)}`;
+    return `${humanizeValueExpr(c.item as ValueExpr, ctx, count)} in ${humanizeValueExpr(c.set as ValueExpr, ctx, count)}`;
   }
   if (c.op === 'adjacent' || c.op === 'connected') {
     return String(c.op);
   }
   if (c.op === 'zonePropIncludes') {
-    return `${resolveLabel(c.prop as string, ctx)} includes ${humanizeValue(c.value as ValueExpr, ctx)}`;
+    return `${resolveLabel(c.prop as string, ctx, count)} includes ${humanizeValueExpr(c.value as ValueExpr, ctx, count)}`;
   }
 
   // Comparison operators
   if (c.left !== undefined && c.right !== undefined) {
-    const left = humanizeValue(c.left as ValueExpr, ctx);
-    const right = humanizeValue(c.right as ValueExpr, ctx);
+    const left = humanizeValueExpr(c.left as ValueExpr, ctx, count);
+    const right = humanizeValueExpr(c.right as ValueExpr, ctx, count);
     const op = humanizeOperator(c.op as string);
     return `${left} ${op} ${right}`;
   }
@@ -123,6 +116,20 @@ function humanizeOperator(op: string): string {
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
+
+/**
+ * Humanize a ConditionAST with a pre-built LabelContext (no suppression check).
+ * Used by the realizer to re-render conditions on SelectMessage with full
+ * label resolution, when the raw AST is available alongside the pre-rendered
+ * filter string.
+ */
+export function humanizeConditionWithLabels(
+  cond: ConditionAST,
+  ctx: LabelContext,
+  count?: number,
+): string {
+  return humanizeConditionInner(cond, ctx, count);
+}
 
 /**
  * Humanize a ConditionAST for display in modifier tooltips.
@@ -158,11 +165,13 @@ export function resolveModifierEffect(
   const humanized = humanizeCondition(cond, ctx);
   if (humanized === null) return null;
 
-  // Try to find pre-authored text from modifierEffects
+  // Try to find pre-authored text from modifierEffects, narrowed by variable name
   if (ctx.verbalization !== undefined) {
     const modEffects = ctx.verbalization.modifierEffects;
-    for (const capId of Object.keys(modEffects)) {
-      const entries: readonly VerbalizationModifierEffect[] = modEffects[capId]!;
+    const condNames = extractConditionNames(cond);
+    for (const name of condNames) {
+      const entries = modEffects[name];
+      if (entries === undefined) continue;
       for (const entry of entries) {
         if (entry.condition === humanized) {
           return { condition: entry.condition, effect: entry.effect };
@@ -172,4 +181,62 @@ export function resolveModifierEffect(
   }
 
   return { condition: humanized, effect: '' };
+}
+
+// ---------------------------------------------------------------------------
+// Modifier role classification
+// ---------------------------------------------------------------------------
+
+/**
+ * Match a name against a glob-like pattern with leading/trailing wildcards.
+ * Supports patterns like `*Choice`, `Active Leader*`, `*Mode*`.
+ */
+export function matchesGlobPattern(name: string, pattern: string): boolean {
+  const startsWild = pattern.startsWith('*');
+  const endsWild = pattern.endsWith('*');
+  const core = pattern.replace(/^\*|\*$/g, '');
+  if (startsWild && endsWild) return name.includes(core);
+  if (startsWild) return name.endsWith(core);
+  if (endsWild) return name.startsWith(core);
+  return name === pattern;
+}
+
+/**
+ * Classify a modifier's semantic role based on condition variable names
+ * and the verbalization configuration. Game-agnostic — patterns are
+ * defined in VerbalizationDef.modifierClassification.
+ */
+export function classifyModifierRole(
+  cond: ConditionAST,
+  ctx: NormalizerContext,
+): ModifierRole | undefined {
+  if (ctx.verbalization === undefined) return undefined;
+
+  const names = extractConditionNames(cond);
+  const modEffects = ctx.verbalization.modifierEffects;
+  const classification = ctx.verbalization.modifierClassification;
+
+  // 1. If condition variable matches a key in modifierEffects → 'capability'
+  for (const name of names) {
+    if (modEffects[name] !== undefined) return 'capability';
+  }
+
+  if (classification !== undefined) {
+    // 2. choiceFlowPatterns
+    for (const name of names) {
+      for (const pattern of classification.choiceFlowPatterns) {
+        if (matchesGlobPattern(name, pattern)) return 'choiceFlow';
+      }
+    }
+
+    // 3. leaderPatterns
+    for (const name of names) {
+      for (const pattern of classification.leaderPatterns) {
+        if (matchesGlobPattern(name, pattern)) return 'leader';
+      }
+    }
+  }
+
+  // 4. Fallback
+  return 'state';
 }

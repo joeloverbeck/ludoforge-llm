@@ -7,6 +7,11 @@ import { hasErrorDiagnosticAtPathSince } from './diagnostic-path-policy.js';
 import type {
   ConditionAST,
   EffectAST,
+  EventBranchDef,
+  EventFreeOperationGrantDef,
+  EventLastingEffectDef,
+  EventSideDef,
+  EventTargetDef,
   GameDef,
   NumericValueExpr,
   OptionsQuery,
@@ -17,9 +22,11 @@ import type {
   ZoneRef,
 } from './types.js';
 import type { AstScopedVarScope } from './scoped-var-contract.js';
+import type { FreeOperationSequenceContextGrantLike } from './free-operation-sequence-context-contract.js';
 import { isNumericValueExpr } from './numeric-value-expr.js';
 import { booleanArityMessage, booleanAritySuggestion, isNonEmptyArray } from './boolean-arity-policy.js';
 import {
+  appendEventConditionSurfacePath,
   appendEffectConditionSurfacePath,
   appendQueryConditionSurfacePath,
   appendValueExprConditionSurfacePath,
@@ -28,10 +35,18 @@ import {
   conditionSurfacePathForTerminalConditionWhen,
   conditionSurfacePathForTriggerMatch,
   conditionSurfacePathForTriggerWhen,
+  compareTurnFlowFreeOperationGrantPriority,
+  collectTurnFlowFreeOperationGrantContractViolations,
   isAllowedTokenFilterProp,
   isCanonicalBindingIdentifier,
+  renderTurnFlowFreeOperationGrantContractViolation,
   tokenFilterPropAlternatives,
   TURN_FLOW_ACTION_CLASS_VALUES,
+  TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES,
+  TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES,
+  TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES,
+  TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
+  type TurnFlowFreeOperationGrantContractViolationCode,
 } from '../contracts/index.js';
 import {
   type ValidationContext,
@@ -60,6 +75,25 @@ import {
   tokenFilterTraversalValidatorSuggestion,
 } from './token-filter-validator-boundary.js';
 import { isPredicateOp, PREDICATE_OPERATORS } from '../contracts/index.js';
+import {
+  collectSequenceContextLinkageGrantReference,
+  type SequenceContextLinkageGrantReference,
+} from './sequence-context-linkage-grant-reference.js';
+import {
+  collectEffectGrantExecutionPaths,
+  collectEffectGrantSequenceContextExecutionPaths,
+} from './effect-grant-execution-paths.js';
+import {
+  effectIssuedFreeOperationGrantEquivalenceKey,
+  effectIssuedFreeOperationGrantOverlapSurfaceKey,
+  eventFreeOperationGrantEquivalenceKey,
+  eventFreeOperationGrantOverlapSurfaceKey,
+} from './free-operation-grant-overlap.js';
+import {
+  getNestedEffectSequenceContextScopes,
+  ROOT_EFFECT_SEQUENCE_CONTEXT_SCOPE,
+  type EffectSequenceContextScope,
+} from './effect-sequence-context-scope.js';
 
 function validateStaticMapSpaceSelector(
   diagnostics: Diagnostic[],
@@ -236,6 +270,216 @@ export function collectEffectDeclaredBinderPolicyPatternsForTest(): readonly str
 function normalizeDeclaredBinderDiagnosticPath(path: string): string {
   return path.replace(/\.([0-9]+)(?=\.|$)/g, '[$1]');
 }
+
+const DEFAULT_EFFECT_VALIDATION_SCOPE = ROOT_EFFECT_SEQUENCE_CONTEXT_SCOPE;
+
+type FreeOperationGrantValidationTarget = {
+  readonly operationClass: string;
+  readonly uses?: number;
+  readonly viabilityPolicy?: string | null;
+  readonly moveZoneBindings?: readonly unknown[] | null;
+  readonly moveZoneProbeBindings?: readonly unknown[] | null;
+  readonly sequence?: {
+    readonly step?: unknown;
+  };
+  readonly sequenceContext?: {
+    readonly captureMoveZoneCandidatesAs?: unknown;
+    readonly requireMoveZoneCandidatesFrom?: unknown;
+  };
+  readonly zoneFilter?: ConditionAST;
+};
+
+type EventFreeOperationGrantValidationScopeEntry = Readonly<{
+  readonly grant: EventFreeOperationGrantDef;
+  readonly path: string;
+}>;
+
+type EffectIssuedFreeOperationGrantDef = Extract<
+  EffectAST,
+  { readonly grantFreeOperation: unknown }
+>['grantFreeOperation'];
+
+type EffectFreeOperationGrantValidationScopeEntry = Readonly<{
+  readonly grant: EffectIssuedFreeOperationGrantDef;
+  readonly path: string;
+}>;
+
+const FREE_OPERATION_GRANT_DIAGNOSTIC_BY_VIOLATION_CODE = {
+  operationClassInvalid: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_CLASS_INVALID',
+    suggestion: () => `Use one of: ${TURN_FLOW_ACTION_CLASS_VALUES.join('|')}.`,
+  },
+  usesInvalid: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_USES_INVALID',
+    suggestion: () => 'Set uses to an integer >= 1.',
+  },
+  viabilityPolicyInvalid: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_VIABILITY_POLICY_INVALID',
+    suggestion: () => `Use one of: ${TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES.join('|')}.`,
+  },
+  moveZoneBindingsInvalid: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_MOVE_ZONE_BINDINGS_INVALID',
+    suggestion: () => 'Set moveZoneBindings to a non-empty string array of bound move-zone names.',
+  },
+  moveZoneProbeBindingsInvalid: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_MOVE_ZONE_PROBE_BINDINGS_INVALID',
+    suggestion: () => 'Set moveZoneProbeBindings to a non-empty string array of bound move-zone names.',
+  },
+  completionPolicyInvalid: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_COMPLETION_POLICY_INVALID',
+    suggestion: () => `Use one of: ${TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES.join('|')}.`,
+  },
+  outcomePolicyInvalid: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_OUTCOME_POLICY_INVALID',
+    suggestion: () => `Use one of: ${TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES.join('|')}.`,
+  },
+  postResolutionTurnFlowInvalid: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_POST_RESOLUTION_TURN_FLOW_INVALID',
+    suggestion: () => `Use one of: ${TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES.join('|')}.`,
+  },
+  requiredPostResolutionTurnFlowMissing: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_POST_RESOLUTION_TURN_FLOW_REQUIRED',
+    suggestion: (label: string) => `Set ${label}.postResolutionTurnFlow to ${TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES.join('|')}.`,
+  },
+  postResolutionTurnFlowRequiresRequiredCompletionPolicy: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_COMPLETION_POLICY_REQUIRED',
+    suggestion: (label: string) => `Set ${label}.completionPolicy to ${TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES.join('|')}.`,
+  },
+  sequenceStepInvalid: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_INVALID',
+    suggestion: () => 'Set sequence.step to an integer >= 0.',
+  },
+  sequenceContextInvalid: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID',
+    suggestion: () => 'Set captureMoveZoneCandidatesAs and/or requireMoveZoneCandidatesFrom to non-empty strings.',
+  },
+  sequenceContextRequiresSequence: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID',
+    suggestion: () => 'Declare sequence.chain and sequence.step when using sequenceContext.',
+  },
+} satisfies Record<TurnFlowFreeOperationGrantContractViolationCode, {
+  readonly code: string;
+  readonly suggestion: (label: string) => string;
+}>;
+
+const validateFreeOperationGrantContract = (
+  diagnostics: Diagnostic[],
+  grant: FreeOperationGrantValidationTarget,
+  path: string,
+  context: ValidationContext,
+  options?: {
+    readonly label?: string;
+  },
+): void => {
+  const label = options?.label ?? 'grantFreeOperation';
+  for (const violation of collectTurnFlowFreeOperationGrantContractViolations(grant)) {
+    const surface = renderTurnFlowFreeOperationGrantContractViolation(violation, {
+      basePath: path,
+      label,
+    });
+    const diagnostic = FREE_OPERATION_GRANT_DIAGNOSTIC_BY_VIOLATION_CODE[violation.code];
+    diagnostics.push({
+      code: diagnostic.code,
+      path: surface.path,
+      severity: 'error',
+      message: surface.message,
+      suggestion: diagnostic.suggestion(label),
+    });
+  }
+};
+
+const freeOperationGrantsCanCoissue = (
+  left: { readonly sequence?: { readonly chain?: unknown; readonly step?: unknown } },
+  right: { readonly sequence?: { readonly chain?: unknown; readonly step?: unknown } },
+): boolean => {
+  if (left.sequence === undefined || right.sequence === undefined) {
+    return true;
+  }
+  return left.sequence.chain !== right.sequence.chain || left.sequence.step === right.sequence.step;
+};
+
+const validateAmbiguousFreeOperationGrantOverlap = <TGrant extends {
+  readonly sequence?: { readonly chain?: unknown; readonly step?: unknown };
+  readonly completionPolicy?: string | null;
+  readonly outcomePolicy?: string | null;
+  readonly postResolutionTurnFlow?: string | null;
+}>(
+  diagnostics: Diagnostic[],
+  grants: readonly Readonly<{ readonly grant: TGrant; readonly path: string }>[],
+  options: {
+    readonly overlapSurfaceKey: (grant: TGrant) => string;
+    readonly equivalenceKey: (grant: TGrant) => string;
+  },
+): void => {
+  for (let leftIndex = 0; leftIndex < grants.length; leftIndex += 1) {
+    const left = grants[leftIndex];
+    if (left === undefined) {
+      continue;
+    }
+    for (let rightIndex = leftIndex + 1; rightIndex < grants.length; rightIndex += 1) {
+      const right = grants[rightIndex];
+      if (right === undefined) {
+        continue;
+      }
+      if (!freeOperationGrantsCanCoissue(left.grant, right.grant)) {
+        continue;
+      }
+      if (options.overlapSurfaceKey(left.grant) !== options.overlapSurfaceKey(right.grant)) {
+        continue;
+      }
+      if (compareTurnFlowFreeOperationGrantPriority(left.grant, right.grant) !== 0) {
+        continue;
+      }
+      if (options.equivalenceKey(left.grant) === options.equivalenceKey(right.grant)) {
+        continue;
+      }
+      diagnostics.push({
+        code: 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS',
+        path: left.path,
+        severity: 'error',
+        message:
+          `freeOperationGrant overlaps ambiguously with ${right.path}; top-ranked overlapping grants must be `
+          + 'contract-equivalent duplicates or differ by deterministic grant semantics.',
+        suggestion:
+          'Differentiate the grants by policy strength, actionIds, zoneFilter, moveZoneBindings, moveZoneProbeBindings, or sequenceContext, or collapse them '
+          + 'into equivalent duplicates.',
+      });
+      diagnostics.push({
+        code: 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS',
+        path: right.path,
+        severity: 'error',
+        message:
+          `freeOperationGrant overlaps ambiguously with ${left.path}; top-ranked overlapping grants must be `
+          + 'contract-equivalent duplicates or differ by deterministic grant semantics.',
+        suggestion:
+          'Differentiate the grants by policy strength, actionIds, zoneFilter, moveZoneBindings, moveZoneProbeBindings, or sequenceContext, or collapse them '
+          + 'into equivalent duplicates.',
+      });
+    }
+  }
+};
+
+const validateAmbiguousEventFreeOperationGrantOverlap = (
+  diagnostics: Diagnostic[],
+  def: GameDef,
+  grants: readonly EventFreeOperationGrantValidationScopeEntry[],
+): void => {
+  validateAmbiguousFreeOperationGrantOverlap(diagnostics, grants, {
+    overlapSurfaceKey: (grant) => eventFreeOperationGrantOverlapSurfaceKey(def, grant),
+    equivalenceKey: (grant) => eventFreeOperationGrantEquivalenceKey(def, grant),
+  });
+};
+
+const validateAmbiguousEffectIssuedFreeOperationGrantOverlap = (
+  diagnostics: Diagnostic[],
+  def: GameDef,
+  grants: readonly EffectFreeOperationGrantValidationScopeEntry[],
+): void => {
+  validateAmbiguousFreeOperationGrantOverlap(diagnostics, grants, {
+    overlapSurfaceKey: (grant) => effectIssuedFreeOperationGrantOverlapSurfaceKey(def, grant),
+    equivalenceKey: (grant) => effectIssuedFreeOperationGrantEquivalenceKey(def, grant),
+  });
+};
 
 const validateDeclaredCanonicalBindingsOnEffect = (
   diagnostics: Diagnostic[],
@@ -690,6 +934,28 @@ const validateChoiceOptionsRuntimeShape = (
     return;
   }
   diagnostics.push(diagnostic);
+};
+
+const validateChoiceOptionsQueryContract = (
+  diagnostics: Diagnostic[],
+  query: OptionsQuery,
+  path: string,
+  context: ValidationContext,
+  effectName: 'chooseOne' | 'chooseN',
+): void => {
+  const diagnosticsBeforeQueryValidation = diagnostics.length;
+  validateOptionsQuery(diagnostics, query, path, context);
+  if (!hasErrorDiagnosticAtPathSince(diagnostics, diagnosticsBeforeQueryValidation, path)) {
+    validateChoiceOptionsRuntimeShape(diagnostics, query, path, effectName);
+  }
+};
+
+const eventTargetChoiceEffectName = (target: EventTargetDef): 'chooseOne' | 'chooseN' => {
+  const cardinality = target.cardinality;
+  return ('n' in cardinality && cardinality.n === 1)
+    || (!('n' in cardinality) && cardinality.max === 1)
+    ? 'chooseOne'
+    : 'chooseN';
 };
 
 const uniqueKeyTupleToLabel = (tuple: readonly string[]): string => `[${tuple.join(', ')}]`;
@@ -1366,6 +1632,7 @@ export const validateEffectAst = (
   effect: EffectAST,
   path: string,
   context: ValidationContext,
+  scope: EffectSequenceContextScope = DEFAULT_EFFECT_VALIDATION_SCOPE,
 ): void => {
   validateDeclaredCanonicalBindingsOnEffect(diagnostics, effect, path);
 
@@ -1584,25 +1851,23 @@ export const validateEffectAst = (
       appendEffectConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.effect.ifWhen),
       context,
     );
-    effect.if.then.forEach((entry, index) => {
-      validateEffectAst(diagnostics, entry, `${path}.if.then[${index}]`, context);
-    });
-    effect.if.else?.forEach((entry, index) => {
-      validateEffectAst(diagnostics, entry, `${path}.if.else[${index}]`, context);
+    getNestedEffectSequenceContextScopes(effect, scope).forEach((nestedScope) => {
+      nestedScope.effects.forEach((entry, index) => {
+        validateEffectAst(diagnostics, entry, `${path}${nestedScope.pathSuffix}[${index}]`, context, nestedScope.scope);
+      });
     });
     return;
   }
 
   if ('forEach' in effect) {
     validateOptionsQuery(diagnostics, effect.forEach.over, `${path}.forEach.over`, context);
-    effect.forEach.effects.forEach((entry, index) => {
-      validateEffectAst(diagnostics, entry, `${path}.forEach.effects[${index}]`, context);
-    });
     if (effect.forEach.limit !== undefined) {
       validateNumericValueExpr(diagnostics, effect.forEach.limit, `${path}.forEach.limit`, context);
     }
-    effect.forEach.in?.forEach((entry, index) => {
-      validateEffectAst(diagnostics, entry, `${path}.forEach.in[${index}]`, context);
+    getNestedEffectSequenceContextScopes(effect, scope).forEach((nestedScope) => {
+      nestedScope.effects.forEach((entry, index) => {
+        validateEffectAst(diagnostics, entry, `${path}${nestedScope.pathSuffix}[${index}]`, context, nestedScope.scope);
+      });
     });
     return;
   }
@@ -1627,8 +1892,10 @@ export const validateEffectAst = (
         suggestion: 'Use unique binding names for item, accumulator, and reduced result.',
       });
     }
-    effect.reduce.in.forEach((entry, index) => {
-      validateEffectAst(diagnostics, entry, `${path}.reduce.in[${index}]`, context);
+    getNestedEffectSequenceContextScopes(effect, scope).forEach((nestedScope) => {
+      nestedScope.effects.forEach((entry, index) => {
+        validateEffectAst(diagnostics, entry, `${path}${nestedScope.pathSuffix}[${index}]`, context, nestedScope.scope);
+      });
     });
     return;
   }
@@ -1636,12 +1903,11 @@ export const validateEffectAst = (
   if ('evaluateSubset' in effect) {
     validateOptionsQuery(diagnostics, effect.evaluateSubset.source, `${path}.evaluateSubset.source`, context);
     validateNumericValueExpr(diagnostics, effect.evaluateSubset.subsetSize, `${path}.evaluateSubset.subsetSize`, context);
-    effect.evaluateSubset.compute.forEach((entry, index) => {
-      validateEffectAst(diagnostics, entry, `${path}.evaluateSubset.compute[${index}]`, context);
-    });
     validateNumericValueExpr(diagnostics, effect.evaluateSubset.scoreExpr, `${path}.evaluateSubset.scoreExpr`, context);
-    effect.evaluateSubset.in.forEach((entry, index) => {
-      validateEffectAst(diagnostics, entry, `${path}.evaluateSubset.in[${index}]`, context);
+    getNestedEffectSequenceContextScopes(effect, scope).forEach((nestedScope) => {
+      nestedScope.effects.forEach((entry, index) => {
+        validateEffectAst(diagnostics, entry, `${path}${nestedScope.pathSuffix}[${index}]`, context, nestedScope.scope);
+      });
     });
     return;
   }
@@ -1656,17 +1922,20 @@ export const validateEffectAst = (
         validateZoneRef(diagnostics, group.from, `${groupPath}.from`, context);
       }
     });
-
-    effect.removeByPriority.in?.forEach((entry, index) => {
-      validateEffectAst(diagnostics, entry, `${path}.removeByPriority.in[${index}]`, context);
+    getNestedEffectSequenceContextScopes(effect, scope).forEach((nestedScope) => {
+      nestedScope.effects.forEach((entry, index) => {
+        validateEffectAst(diagnostics, entry, `${path}${nestedScope.pathSuffix}[${index}]`, context, nestedScope.scope);
+      });
     });
     return;
   }
 
   if ('let' in effect) {
     validateValueExpr(diagnostics, effect.let.value, `${path}.let.value`, context);
-    effect.let.in.forEach((entry, index) => {
-      validateEffectAst(diagnostics, entry, `${path}.let.in[${index}]`, context);
+    getNestedEffectSequenceContextScopes(effect, scope).forEach((nestedScope) => {
+      nestedScope.effects.forEach((entry, index) => {
+        validateEffectAst(diagnostics, entry, `${path}${nestedScope.pathSuffix}[${index}]`, context, nestedScope.scope);
+      });
     });
     return;
   }
@@ -1678,11 +1947,7 @@ export const validateEffectAst = (
 
   if ('chooseOne' in effect) {
     const optionsPath = `${path}.chooseOne.options`;
-    const diagnosticsBeforeQueryValidation = diagnostics.length;
-    validateOptionsQuery(diagnostics, effect.chooseOne.options, optionsPath, context);
-    if (!hasErrorDiagnosticAtPathSince(diagnostics, diagnosticsBeforeQueryValidation, optionsPath)) {
-      validateChoiceOptionsRuntimeShape(diagnostics, effect.chooseOne.options, optionsPath, 'chooseOne');
-    }
+    validateChoiceOptionsQueryContract(diagnostics, effect.chooseOne.options, optionsPath, context, 'chooseOne');
     return;
   }
 
@@ -1694,8 +1959,10 @@ export const validateEffectAst = (
   if ('rollRandom' in effect) {
     validateNumericValueExpr(diagnostics, effect.rollRandom.min, `${path}.rollRandom.min`, context);
     validateNumericValueExpr(diagnostics, effect.rollRandom.max, `${path}.rollRandom.max`, context);
-    effect.rollRandom.in.forEach((entry, index) => {
-      validateEffectAst(diagnostics, entry, `${path}.rollRandom.in[${index}]`, context);
+    getNestedEffectSequenceContextScopes(effect, scope).forEach((nestedScope) => {
+      nestedScope.effects.forEach((entry, index) => {
+        validateEffectAst(diagnostics, entry, `${path}${nestedScope.pathSuffix}[${index}]`, context, nestedScope.scope);
+      });
     });
     return;
   }
@@ -1826,36 +2093,15 @@ export const validateEffectAst = (
 
   if ('grantFreeOperation' in effect) {
     const grant = effect.grantFreeOperation;
-    if (!(TURN_FLOW_ACTION_CLASS_VALUES as readonly string[]).includes(grant.operationClass)) {
-      diagnostics.push({
-        code: 'EFFECT_GRANT_FREE_OPERATION_CLASS_INVALID',
-        path: `${path}.grantFreeOperation.operationClass`,
-        severity: 'error',
-        message: `grantFreeOperation.operationClass is invalid: \"${grant.operationClass}\".`,
-        suggestion: `Use one of: ${TURN_FLOW_ACTION_CLASS_VALUES.join('|')}.`,
-      });
-    }
-    if (grant.uses !== undefined && (!Number.isSafeInteger(grant.uses) || grant.uses <= 0)) {
-      diagnostics.push({
-        code: 'EFFECT_GRANT_FREE_OPERATION_USES_INVALID',
-        path: `${path}.grantFreeOperation.uses`,
-        severity: 'error',
-        message: 'grantFreeOperation.uses must be a positive integer.',
-        suggestion: 'Set uses to an integer >= 1.',
-      });
-    }
-    if (
-      grant.sequence !== undefined &&
-      (!Number.isSafeInteger(grant.sequence.step) || grant.sequence.step < 0)
-    ) {
-      diagnostics.push({
-        code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_INVALID',
-        path: `${path}.grantFreeOperation.sequence.step`,
-        severity: 'error',
-        message: 'grantFreeOperation.sequence.step must be a non-negative integer.',
-        suggestion: 'Set sequence.step to an integer >= 0.',
-      });
-    }
+    validateFreeOperationGrantContract(
+      diagnostics,
+      grant,
+      `${path}.grantFreeOperation`,
+      context,
+      {
+        label: 'grantFreeOperation',
+      },
+    );
     if (grant.zoneFilter !== undefined) {
       validateConditionAst(
         diagnostics,
@@ -1863,6 +2109,15 @@ export const validateEffectAst = (
         appendEffectConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.effect.grantFreeOperationZoneFilter),
         context,
       );
+    }
+    if (grant.sequenceContext !== undefined && !scope.allowsPersistentSequenceContextGrants) {
+      diagnostics.push({
+        code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_SCOPE_UNSUPPORTED',
+        path: `${path}.grantFreeOperation.sequenceContext`,
+        severity: 'error',
+        message: 'grantFreeOperation.sequenceContext is not supported inside evaluateSubset.compute because compute-state grants are not persistent.',
+        suggestion: 'Move the sequence-context grant to a persistent effect scope such as evaluateSubset.in or another enclosing effect list.',
+      });
     }
     return;
   }
@@ -1975,11 +2230,7 @@ export const validateEffectAst = (
   }
 
   const optionsPath = `${path}.chooseN.options`;
-  const diagnosticsBeforeQueryValidation = diagnostics.length;
-  validateOptionsQuery(diagnostics, effect.chooseN.options, optionsPath, context);
-  if (!hasErrorDiagnosticAtPathSince(diagnostics, diagnosticsBeforeQueryValidation, optionsPath)) {
-    validateChoiceOptionsRuntimeShape(diagnostics, effect.chooseN.options, optionsPath, 'chooseN');
-  }
+  validateChoiceOptionsQueryContract(diagnostics, effect.chooseN.options, optionsPath, context, 'chooseN');
 };
 
 export const validatePostAdjacencyBehavior = (
@@ -1989,6 +2240,151 @@ export const validatePostAdjacencyBehavior = (
   phaseCandidates: readonly string[],
   actionCandidates: readonly string[],
 ): void => {
+  const validateEventTargets = (
+    targets: readonly EventTargetDef[] | undefined,
+    path: string,
+  ): void => {
+    targets?.forEach((target, targetIndex) => {
+      const selectorPath = `${path}.targets[${targetIndex}].selector`;
+      validateChoiceOptionsQueryContract(
+        diagnostics,
+        target.selector,
+        selectorPath,
+        context,
+        eventTargetChoiceEffectName(target),
+      );
+      target.effects.forEach((effect, effectIndex) => {
+        validateEffectAst(diagnostics, effect, `${path}.targets[${targetIndex}].effects[${effectIndex}]`, context);
+      });
+    });
+  };
+
+  const validateEventLastingEffects = (
+    lastingEffects: readonly EventLastingEffectDef[] | undefined,
+    path: string,
+  ): void => {
+    lastingEffects?.forEach((lastingEffect, lastingEffectIndex) => {
+      lastingEffect.setupEffects.forEach((effect, effectIndex) => {
+        validateEffectAst(
+          diagnostics,
+          effect,
+          `${path}.lastingEffects[${lastingEffectIndex}].setupEffects[${effectIndex}]`,
+          context,
+        );
+      });
+      lastingEffect.teardownEffects?.forEach((effect, effectIndex) => {
+        validateEffectAst(
+          diagnostics,
+          effect,
+          `${path}.lastingEffects[${lastingEffectIndex}].teardownEffects[${effectIndex}]`,
+          context,
+        );
+      });
+    });
+  };
+
+  const validateEventBranchBehavior = (
+    branch: EventBranchDef,
+    path: string,
+  ): void => {
+    branch.freeOperationGrants?.forEach((grant, grantIndex) => {
+      validateFreeOperationGrantContract(
+        diagnostics,
+        grant,
+        `${path}.freeOperationGrants[${grantIndex}]`,
+        context,
+        { label: 'freeOperationGrant' },
+      );
+      if (grant.zoneFilter !== undefined) {
+        validateConditionAst(
+          diagnostics,
+          grant.zoneFilter,
+          appendEventConditionSurfacePath(
+            `${path}.freeOperationGrants[${grantIndex}]`,
+            CONDITION_SURFACE_SUFFIX.event.freeOperationGrantZoneFilter,
+          ),
+          context,
+        );
+      }
+    });
+    if (branch.freeOperationGrants !== undefined) {
+      validateAmbiguousEventFreeOperationGrantOverlap(
+        diagnostics,
+        def,
+        branch.freeOperationGrants.map((grant, grantIndex) => ({
+          grant,
+          path: `${path}.freeOperationGrants[${grantIndex}]`,
+        })),
+      );
+    }
+    branch.effects?.forEach((effect, effectIndex) => {
+      validateEffectAst(diagnostics, effect, `${path}.effects[${effectIndex}]`, context);
+    });
+    validateEventTargets(branch.targets, path);
+    validateEventLastingEffects(branch.lastingEffects, path);
+  };
+
+  const validateEventSideBehavior = (
+    side: EventSideDef,
+    path: string,
+  ): void => {
+    side.freeOperationGrants?.forEach((grant, grantIndex) => {
+      validateFreeOperationGrantContract(
+        diagnostics,
+        grant,
+        `${path}.freeOperationGrants[${grantIndex}]`,
+        context,
+        { label: 'freeOperationGrant' },
+      );
+      if (grant.zoneFilter !== undefined) {
+        validateConditionAst(
+          diagnostics,
+          grant.zoneFilter,
+          appendEventConditionSurfacePath(
+            `${path}.freeOperationGrants[${grantIndex}]`,
+            CONDITION_SURFACE_SUFFIX.event.freeOperationGrantZoneFilter,
+          ),
+          context,
+        );
+      }
+    });
+    if (side.freeOperationGrants !== undefined) {
+      validateAmbiguousEventFreeOperationGrantOverlap(
+        diagnostics,
+        def,
+        side.freeOperationGrants.map((grant, grantIndex) => ({
+          grant,
+          path: `${path}.freeOperationGrants[${grantIndex}]`,
+        })),
+      );
+    }
+    side.effects?.forEach((effect, effectIndex) => {
+      validateEffectAst(diagnostics, effect, `${path}.effects[${effectIndex}]`, context);
+    });
+    validateEventTargets(side.targets, path);
+    validateEventLastingEffects(side.lastingEffects, path);
+    side.branches?.forEach((branch, branchIndex) => {
+      const branchPath = `${path}.branches[${branchIndex}]`;
+      validateEventBranchBehavior(branch, branchPath);
+      if (side.freeOperationGrants !== undefined && branch.freeOperationGrants !== undefined) {
+        validateAmbiguousEventFreeOperationGrantOverlap(
+          diagnostics,
+          def,
+          [
+            ...side.freeOperationGrants.map((grant, grantIndex) => ({
+              grant,
+              path: `${path}.freeOperationGrants[${grantIndex}]`,
+            })),
+            ...branch.freeOperationGrants.map((grant, grantIndex) => ({
+              grant,
+              path: `${branchPath}.freeOperationGrants[${grantIndex}]`,
+            })),
+          ],
+        );
+      }
+    });
+  };
+
   def.turnStructure.phases.forEach((phase, phaseIndex) => {
     phase.onEnter?.forEach((effect, effectIndex) => {
       validateEffectAst(diagnostics, effect, `turnStructure.phases[${phaseIndex}].onEnter[${effectIndex}]`, context);
@@ -2073,6 +2469,34 @@ export const validatePostAdjacencyBehavior = (
     });
   });
 
+  (def.eventDecks ?? []).forEach((deck, deckIndex) => {
+    deck.cards.forEach((card, cardIndex) => {
+      if (card.playCondition !== undefined) {
+        validateConditionAst(
+          diagnostics,
+          card.playCondition,
+          appendEventConditionSurfacePath(
+            `eventDecks[${deckIndex}].cards[${cardIndex}]`,
+            CONDITION_SURFACE_SUFFIX.event.playCondition,
+          ),
+          context,
+        );
+      }
+      const sides = [
+        ['unshaded', card.unshaded],
+        ['shaded', card.shaded],
+      ] as const;
+      for (const [sideId, side] of sides) {
+        if (side === undefined) {
+          continue;
+        }
+        validateEventSideBehavior(side, `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}`);
+      }
+    });
+  });
+
+  validateFreeOperationGrantSequenceContextLinkage(diagnostics, def);
+
   const terminal = def.terminal;
   if (!terminal) {
     return;
@@ -2113,4 +2537,253 @@ export const validatePostAdjacencyBehavior = (
       });
     }
   }
+};
+
+const validateSequenceContextLinkageForReferences = (
+  diagnostics: Diagnostic[],
+  references: readonly SequenceContextLinkageGrantReference[],
+): void => {
+  for (const reference of references) {
+    const requireKey = reference.requireKey;
+    if (requireKey === undefined) {
+      continue;
+    }
+
+    const matchingCaptures = references.filter(
+      (candidate) =>
+        candidate.chain === reference.chain
+        && candidate.captureKey === requireKey,
+    );
+    if (matchingCaptures.some((candidate) => candidate.step < reference.step)) {
+      continue;
+    }
+
+    const code = matchingCaptures.some((candidate) => candidate.step >= reference.step)
+      ? 'FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_ORDER_INVALID'
+      : 'FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_MISSING';
+    const message = code === 'FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_ORDER_INVALID'
+      ? `requireMoveZoneCandidatesFrom "${requireKey}" in sequence chain "${reference.chain}" must reference a capture from an earlier sequence.step.`
+      : `requireMoveZoneCandidatesFrom "${requireKey}" in sequence chain "${reference.chain}" has no matching captureMoveZoneCandidatesAs.`;
+    diagnostics.push({
+      code,
+      path: `${reference.path}.sequenceContext.requireMoveZoneCandidatesFrom`,
+      severity: 'error',
+      message,
+      suggestion:
+        code === 'FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_ORDER_INVALID'
+          ? `Move captureMoveZoneCandidatesAs "${requireKey}" to a lower step in chain "${reference.chain}", or change the required key.`
+          : `Add an earlier captureMoveZoneCandidatesAs "${requireKey}" step in chain "${reference.chain}", or change the required key.`,
+    });
+  }
+};
+
+const validateFreeOperationGrantSequenceContextLinkage = (
+  diagnostics: Diagnostic[],
+  def: GameDef,
+): void => {
+  type SequenceContextLinkageScope = {
+    readonly value: unknown;
+    readonly path: string;
+  };
+
+  const validateEventGrantScope = (
+    scopes: readonly SequenceContextLinkageScope[],
+  ): void => {
+    const references: SequenceContextLinkageGrantReference[] = [];
+    scopes.forEach(({ value, path }) => {
+      if (!Array.isArray(value)) {
+        return;
+      }
+      value.forEach((grant, grantIndex) => {
+        const reference = collectSequenceContextLinkageGrantReference(
+          grant as FreeOperationSequenceContextGrantLike,
+          `${path}[${grantIndex}]`,
+        );
+        if (reference !== null) {
+          references.push(reference);
+        }
+      });
+    });
+    validateSequenceContextLinkageForReferences(diagnostics, references);
+  };
+  const validateEffectGrantScope = (
+    scopes: readonly SequenceContextLinkageScope[],
+  ): void => {
+    let executionPaths: readonly (readonly SequenceContextLinkageGrantReference[])[] = [[]];
+    let overlapValidationPaths: readonly (readonly EffectFreeOperationGrantValidationScopeEntry[])[] = [[]];
+    scopes.forEach(({ value, path }) => {
+      if (!Array.isArray(value)) {
+        return;
+      }
+      const scopeExecutionPaths = collectEffectGrantSequenceContextExecutionPaths(
+        value as readonly EffectAST[],
+        path,
+      );
+      executionPaths = executionPaths.flatMap((existingPath) =>
+        scopeExecutionPaths.map((scopePath) => [...existingPath, ...scopePath]),
+      );
+      const scopeOverlapValidationPaths = collectEffectGrantExecutionPaths(
+        value as readonly EffectAST[],
+        path,
+        (grant, grantPath) => ({
+          grant,
+          path: grantPath,
+        }),
+      );
+      overlapValidationPaths = overlapValidationPaths.flatMap((existingPath) =>
+        scopeOverlapValidationPaths.map((scopePath) => [...existingPath, ...scopePath]),
+      );
+    });
+    executionPaths.forEach((references) => {
+      validateSequenceContextLinkageForReferences(diagnostics, references);
+    });
+    overlapValidationPaths.forEach((grants) => {
+      validateAmbiguousEffectIssuedFreeOperationGrantOverlap(diagnostics, def, grants);
+    });
+  };
+
+  (def.eventDecks ?? []).forEach((deck, deckIndex) => {
+    deck.cards.forEach((card, cardIndex) => {
+      const sides = [
+        ['unshaded', card.unshaded],
+        ['shaded', card.shaded],
+      ] as const;
+      for (const [sideId, side] of sides) {
+        if (side === undefined) {
+          continue;
+        }
+        const sideGrantScopes = [
+          {
+            value: side.freeOperationGrants,
+            path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.freeOperationGrants`,
+          },
+        ] as const;
+        validateEventGrantScope(sideGrantScopes);
+        side.branches?.forEach((branch, branchIndex) => {
+          validateEventGrantScope([
+            ...sideGrantScopes,
+            {
+              value: branch.freeOperationGrants,
+              path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.branches[${branchIndex}].freeOperationGrants`,
+            },
+          ]);
+        });
+      }
+    });
+  });
+
+  validateEffectGrantScope([{ value: def.setup, path: 'setup' }]);
+  def.actions.forEach((action, actionIndex) => {
+    const actionRecord = action as unknown as Readonly<Record<string, unknown>>;
+    validateEffectGrantScope([{ value: actionRecord.cost, path: `actions[${actionIndex}].cost` }]);
+    validateEffectGrantScope([{ value: actionRecord.effects, path: `actions[${actionIndex}].effects` }]);
+  });
+  (def.actionPipelines ?? []).forEach((pipeline, pipelineIndex) => {
+    const pipelineRecord = pipeline as unknown as Readonly<Record<string, unknown>>;
+    validateEffectGrantScope([
+      {
+        value: pipelineRecord.costEffects,
+        path: `actionPipelines[${pipelineIndex}].costEffects`,
+      },
+    ]);
+    const stages = pipelineRecord.stages;
+    if (!Array.isArray(stages)) {
+      return;
+    }
+    stages.forEach((stage, stageIndex) => {
+      const stageRecord =
+        typeof stage === 'object' && stage !== null
+          ? stage as Readonly<Record<string, unknown>>
+          : {};
+      validateEffectGrantScope([
+        {
+          value: stageRecord.effects,
+          path: `actionPipelines[${pipelineIndex}].stages[${stageIndex}].effects`,
+        },
+      ]);
+    });
+  });
+  def.turnStructure.phases.forEach((phase, phaseIndex) => {
+    validateEffectGrantScope([{ value: phase.onEnter, path: `turnStructure.phases[${phaseIndex}].onEnter` }]);
+    validateEffectGrantScope([{ value: phase.onExit, path: `turnStructure.phases[${phaseIndex}].onExit` }]);
+  });
+  (def.turnStructure.interrupts ?? []).forEach((interrupt, interruptIndex) => {
+    validateEffectGrantScope([{ value: interrupt.onEnter, path: `turnStructure.interrupts[${interruptIndex}].onEnter` }]);
+    validateEffectGrantScope([{ value: interrupt.onExit, path: `turnStructure.interrupts[${interruptIndex}].onExit` }]);
+  });
+  def.triggers.forEach((trigger, triggerIndex) => {
+    validateEffectGrantScope([{ value: trigger.effects, path: `triggers[${triggerIndex}].effects` }]);
+  });
+  (def.eventDecks ?? []).forEach((deck, deckIndex) => {
+    deck.cards.forEach((card, cardIndex) => {
+      const sides = [
+        ['unshaded', card.unshaded],
+        ['shaded', card.shaded],
+      ] as const;
+      for (const [sideId, side] of sides) {
+        if (side === undefined) {
+          continue;
+        }
+        const sideEventEffectScopes: SequenceContextLinkageScope[] = [
+          ...(side.targets?.map((target, targetIndex) => ({
+            value: target.effects,
+            path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.targets[${targetIndex}].effects`,
+          })) ?? []),
+          {
+            value: side.effects,
+            path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.effects`,
+          },
+        ];
+        validateEffectGrantScope(sideEventEffectScopes);
+        side.lastingEffects?.forEach((lastingEffect, lastingEffectIndex) => {
+          validateEffectGrantScope([
+            {
+              value: lastingEffect.setupEffects,
+              path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.lastingEffects[${lastingEffectIndex}].setupEffects`,
+            },
+          ]);
+          validateEffectGrantScope([
+            {
+              value: lastingEffect.teardownEffects,
+              path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.lastingEffects[${lastingEffectIndex}].teardownEffects`,
+            },
+          ]);
+        });
+        side.branches?.forEach((branch, branchIndex) => {
+          validateEffectGrantScope([
+            ...(side.targets?.map((target, targetIndex) => ({
+              value: target.effects,
+              path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.targets[${targetIndex}].effects`,
+            })) ?? []),
+            ...(branch.targets?.map((target, targetIndex) => ({
+              value: target.effects,
+              path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.branches[${branchIndex}].targets[${targetIndex}].effects`,
+            })) ?? []),
+            {
+              value: side.effects,
+              path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.effects`,
+            },
+            {
+              value: branch.effects,
+              path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.branches[${branchIndex}].effects`,
+            },
+          ]);
+          branch.lastingEffects?.forEach((lastingEffect, lastingEffectIndex) => {
+            validateEffectGrantScope([
+              {
+                value: lastingEffect.setupEffects,
+                path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.branches[${branchIndex}].lastingEffects[${lastingEffectIndex}].setupEffects`,
+              },
+            ]);
+            validateEffectGrantScope([
+              {
+                value: lastingEffect.teardownEffects,
+                path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.branches[${branchIndex}].lastingEffects[${lastingEffectIndex}].teardownEffects`,
+              },
+            ]);
+          });
+        });
+      }
+    });
+  });
 };

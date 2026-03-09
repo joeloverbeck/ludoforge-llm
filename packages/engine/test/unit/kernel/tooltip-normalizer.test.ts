@@ -251,7 +251,7 @@ describe('tooltip-normalizer', () => {
       }
     });
 
-    it('addVar zoneVar with ZoneRef expression → scopeOwner is <expr>', () => {
+    it('addVar zoneVar with ZoneRef expression → scopeOwner is humanized binding name', () => {
       const effect: EffectAST = {
         addVar: {
           scope: 'zoneVar',
@@ -264,7 +264,7 @@ describe('tooltip-normalizer', () => {
       assert.equal(msg.kind, 'gain');
       if (msg.kind === 'gain') {
         assert.equal(msg.scope, 'zone');
-        assert.equal(msg.scopeOwner, '<expr>');
+        assert.equal(msg.scopeOwner, 'targetZone');
       }
     });
   });
@@ -491,7 +491,7 @@ describe('tooltip-normalizer', () => {
       }
     });
 
-    it('moveToken with ZoneRef expression → uses <expr>', () => {
+    it('moveToken with ZoneRef expression → uses humanized binding name', () => {
       const effect: EffectAST = {
         moveToken: {
           token: 'troop',
@@ -502,7 +502,7 @@ describe('tooltip-normalizer', () => {
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[18]'));
       assert.equal(msg.kind, 'move');
       if (msg.kind === 'move') {
-        assert.equal(msg.fromZone, '<expr>');
+        assert.equal(msg.fromZone, 'sourceZone');
       }
     });
   });
@@ -717,7 +717,7 @@ describe('tooltip-normalizer', () => {
       }
     });
 
-    it('rule 29b: chooseN over enums → SelectMessage(items)', () => {
+    it('rule 29b: chooseN over enums → SelectMessage(options)', () => {
       const effect: EffectAST = {
         chooseN: {
           internalDecisionId: 'd4',
@@ -730,12 +730,12 @@ describe('tooltip-normalizer', () => {
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[1b]'));
       assert.equal(msg.kind, 'select');
       if (msg.kind === 'select') {
-        assert.equal(msg.target, 'items');
+        assert.equal(msg.target, 'options');
         assert.deepStrictEqual(msg.bounds, { min: 1, max: 2 });
       }
     });
 
-    it('rule 29b: chooseN over intsInRange → SelectMessage(items)', () => {
+    it('rule 29b: chooseN over intsInRange → SelectMessage(values)', () => {
       const effect: EffectAST = {
         chooseN: {
           internalDecisionId: 'd4b',
@@ -748,7 +748,7 @@ describe('tooltip-normalizer', () => {
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[1c]'));
       assert.equal(msg.kind, 'select');
       if (msg.kind === 'select') {
-        assert.equal(msg.target, 'items');
+        assert.equal(msg.target, 'values');
       }
     });
 
@@ -851,7 +851,7 @@ describe('tooltip-normalizer', () => {
       assert.ok(messages.length >= 2, 'Should produce modifier + child messages');
       assert.equal(messages[0]!.kind, 'modifier');
       if (messages[0]!.kind === 'modifier') {
-        assert.ok(messages[0]!.condition.includes('monsoon'));
+        assert.ok(messages[0]!.condition.includes('Monsoon'));
       }
       assert.equal(messages[1]!.kind, 'pay');
     });
@@ -1071,10 +1071,11 @@ describe('tooltip-normalizer', () => {
       };
       const messages = normalizeEffect(effect, ctx, 'macro[0]');
       assert.equal(messages.length, 1, 'Macro override should produce exactly 1 message');
-      assert.equal(messages[0]!.kind, 'set');
-      if (messages[0]!.kind === 'set') {
-        assert.equal(messages[0]!.value, 'Place US forces and build support');
+      assert.equal(messages[0]!.kind, 'summary');
+      if (messages[0]!.kind === 'summary') {
+        assert.equal(messages[0]!.text, 'Place US forces and build support');
         assert.equal(messages[0]!.macroOrigin, 'trainUs');
+        assert.equal(messages[0]!.macroClass, 'operation');
       }
     });
 
@@ -1094,7 +1095,7 @@ describe('tooltip-normalizer', () => {
       assert.equal(messages[0]!.kind, 'gain');
     });
 
-    it('effect with macroOrigin but macro has no summary → normal processing', () => {
+    it('effect with macroOrigin but macro has no summary → humanized fallback', () => {
       const ctx: NormalizerContext = {
         verbalization: {
           labels: {},
@@ -1118,8 +1119,374 @@ describe('tooltip-normalizer', () => {
         },
       };
       const messages = normalizeEffect(effect, ctx, 'macro[2]');
+      assert.equal(messages.length, 1, 'Fallback should produce exactly 1 summary');
+      assert.equal(messages[0]!.kind, 'summary');
+      if (messages[0]!.kind === 'summary') {
+        assert.equal(messages[0]!.text, 'Train Us');
+        assert.equal(messages[0]!.macroOrigin, 'trainUs');
+      }
+    });
+  });
+
+  // --- LEGTOOLT-003: Normalizer improvements ---
+
+  describe('LEGTOOLT-003: optional choose detection', () => {
+    it('chooseOne with "None" option → optional: true, "None" filtered', () => {
+      const effect: EffectAST = {
+        chooseOne: {
+          internalDecisionId: 'opt1',
+          bind: 'action',
+          options: { query: 'enums', values: ['attack', 'None', 'defend'] },
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'opt[0]'));
+      assert.equal(msg.kind, 'choose');
+      if (msg.kind === 'choose') {
+        assert.equal(msg.optional, true);
+        assert.deepStrictEqual(msg.options, ['attack', 'defend']);
+      }
+    });
+
+    it('chooseOne with "none" (lowercase) → optional: true', () => {
+      const effect: EffectAST = {
+        chooseOne: {
+          internalDecisionId: 'opt2',
+          bind: 'action',
+          options: { query: 'enums', values: ['attack', 'none'] },
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'opt[1]'));
+      assert.equal(msg.kind, 'choose');
+      if (msg.kind === 'choose') {
+        assert.equal(msg.optional, true);
+        assert.deepStrictEqual(msg.options, ['attack']);
+      }
+    });
+
+    it('chooseOne without "None" → optional is undefined', () => {
+      const effect: EffectAST = {
+        chooseOne: {
+          internalDecisionId: 'opt3',
+          bind: 'action',
+          options: { query: 'enums', values: ['attack', 'defend'] },
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'opt[2]'));
+      assert.equal(msg.kind, 'choose');
+      if (msg.kind === 'choose') {
+        assert.equal(msg.optional, undefined);
+        assert.deepStrictEqual(msg.options, ['attack', 'defend']);
+      }
+    });
+  });
+
+  describe('LEGTOOLT-003: suppressed modifier conditions', () => {
+    it('if with __actionClass condition → SuppressedMessage', () => {
+      const effect: EffectAST = {
+        if: {
+          when: {
+            op: '==',
+            left: { ref: 'gvar', var: '__actionClass' },
+            right: 'limitedOperation',
+          },
+          then: [{ addVar: { scope: 'global', var: 'aid', delta: 1 } }],
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'sup[0]');
+      assert.equal(messages[0]!.kind, 'suppressed');
+      if (messages[0]!.kind === 'suppressed') {
+        assert.ok(messages[0]!.reason.includes('internal'));
+      }
+    });
+
+    it('if with $__macro_* condition → SuppressedMessage', () => {
+      const effect: EffectAST = {
+        if: {
+          when: {
+            op: '==',
+            left: { ref: 'gvar', var: '$__macro_trainActive' },
+            right: 1,
+          },
+          then: [{ addVar: { scope: 'global', var: 'aid', delta: 1 } }],
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'sup[1]');
+      assert.equal(messages[0]!.kind, 'suppressed');
+    });
+
+    it('if with normal condition → ModifierMessage with humanized string', () => {
+      const effect: EffectAST = {
+        if: {
+          when: {
+            op: '>=',
+            left: { ref: 'gvar', var: 'aid' },
+            right: 3,
+          },
+          then: [{ addVar: { scope: 'global', var: 'aid', delta: -1 } }],
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'sup[2]');
+      assert.equal(messages[0]!.kind, 'modifier');
+      if (messages[0]!.kind === 'modifier') {
+        // humanizeOperator('>=') → '≥', humanizeIdentifier('aid') → 'Aid'
+        // resolveModifierEffect returns { condition, effect: '' } when no pre-authored text
+        assert.equal(messages[0]!.condition, 'Aid \u2265 3');
+        assert.equal(messages[0]!.description, '');
+      }
+    });
+
+    it('if with suppressed condition still recurses into then/else', () => {
+      const effect: EffectAST = {
+        if: {
+          when: {
+            op: '==',
+            left: { ref: 'gvar', var: '__actionClass' },
+            right: 'limitedOperation',
+          },
+          then: [{ addVar: { scope: 'global', var: 'aid', delta: 1 } }],
+          else: [{ addVar: { scope: 'global', var: 'aid', delta: -1 } }],
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'sup[3]');
+      assert.equal(messages.length, 3); // suppressed + then child + else child
+      assert.equal(messages[0]!.kind, 'suppressed');
+      assert.equal(messages[1]!.kind, 'gain');
+      assert.equal(messages[2]!.kind, 'pay');
+    });
+  });
+
+  describe('LEGTOOLT-003: filter population on select messages', () => {
+    it('chooseN with mapSpaces filter → SelectMessage with filter', () => {
+      const effect: EffectAST = {
+        chooseN: {
+          internalDecisionId: 'f1',
+          bind: 'spaces',
+          options: {
+            query: 'mapSpaces',
+            filter: { condition: { op: '==', left: { ref: 'gvar', var: 'control' }, right: 'coin' } },
+          },
+          min: 1,
+          max: 3,
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'flt[0]'));
+      assert.equal(msg.kind, 'select');
+      if (msg.kind === 'select') {
+        assert.equal(msg.target, 'spaces');
+        assert.ok(msg.filter !== undefined);
+        assert.ok(msg.filter!.includes('Control'));
+      }
+    });
+
+    it('chooseN with tokensInZone filter → SelectMessage with filter', () => {
+      const effect: EffectAST = {
+        chooseN: {
+          internalDecisionId: 'f2',
+          bind: 'tokens',
+          options: {
+            query: 'tokensInZone',
+            zone: 'saigon',
+            filter: { prop: 'type', op: 'eq', value: 'guerrilla' },
+          },
+          min: 1,
+          max: 4,
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'flt[1]'));
+      assert.equal(msg.kind, 'select');
+      if (msg.kind === 'select') {
+        assert.equal(msg.target, 'zones');
+        assert.ok(msg.filter !== undefined);
+        assert.ok(msg.filter!.includes('type'));
+      }
+    });
+
+    it('chooseN without filter → SelectMessage with no filter', () => {
+      const effect: EffectAST = {
+        chooseN: {
+          internalDecisionId: 'f3',
+          bind: 'spaces',
+          options: { query: 'mapSpaces' },
+          min: 1,
+          max: 6,
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'flt[2]'));
+      assert.equal(msg.kind, 'select');
+      if (msg.kind === 'select') {
+        assert.equal(msg.filter, undefined);
+      }
+    });
+  });
+
+  // --- ACTTOOHUMGAP-003: macro binding sanitization ---
+
+  describe('ACTTOOHUMGAP-003: no __macro_ leaks in normalizer output', () => {
+    it('moveToken with __macro_ zone refs → sanitized output', () => {
+      const effect: EffectAST = {
+        moveToken: { token: 'guerrilla', from: '__macro_sweep__sourceZone', to: '__macro_sweep__destZone' },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'mac[0]');
       assert.ok(messages.length >= 1);
-      assert.equal(messages[0]!.kind, 'gain');
+      for (const msg of messages) {
+        const json = JSON.stringify(msg);
+        assert.ok(!json.includes('__macro_'), `__macro_ leaked in moveToken output: ${json}`);
+      }
+    });
+
+    it('moveAll with __macro_ zone refs → sanitized output', () => {
+      const effect: EffectAST = {
+        moveAll: { from: '__macro_rally__fromZone', to: '__macro_rally__toZone' },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'mac[1]');
+      for (const msg of messages) {
+        const json = JSON.stringify(msg);
+        assert.ok(!json.includes('__macro_'), `__macro_ leaked in moveAll output: ${json}`);
+      }
+    });
+
+    it('createToken with __macro_ zone ref → sanitized output', () => {
+      const effect: EffectAST = {
+        createToken: { type: 'guerrilla', zone: '__macro_place__targetZone' },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'mac[2]');
+      for (const msg of messages) {
+        const json = JSON.stringify(msg);
+        assert.ok(!json.includes('__macro_'), `__macro_ leaked in createToken output: ${json}`);
+      }
+    });
+
+    it('draw with __macro_ zone ref → sanitized output', () => {
+      const effect: EffectAST = {
+        draw: { from: '__macro_deal__deckZone', to: 'hand', count: 2 },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'mac[3]');
+      for (const msg of messages) {
+        const json = JSON.stringify(msg);
+        assert.ok(!json.includes('__macro_'), `__macro_ leaked in draw output: ${json}`);
+      }
+    });
+
+    it('reveal/conceal/shuffle with __macro_ zone ref → sanitized output', () => {
+      const effects: EffectAST[] = [
+        { reveal: { zone: '__macro_intel__revealZone', to: 'all' as const } },
+        { conceal: { zone: '__macro_intel__concealZone' } },
+        { shuffle: { zone: '__macro_deal__deckZone' } },
+      ];
+      for (const [i, effect] of effects.entries()) {
+        const messages = normalizeEffect(effect, EMPTY_CTX, `mac[4.${i}]`);
+        for (const msg of messages) {
+          const json = JSON.stringify(msg);
+          assert.ok(!json.includes('__macro_'), `__macro_ leaked in output: ${json}`);
+        }
+      }
+    });
+
+    it('setVar with zoneVar scope and __macro_ zone → sanitized output', () => {
+      const effect: EffectAST = {
+        setVar: { scope: 'zoneVar', var: 'support', zone: '__macro_pacify__targetZone', value: 2 },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'mac[5]');
+      for (const msg of messages) {
+        const json = JSON.stringify(msg);
+        assert.ok(!json.includes('__macro_'), `__macro_ leaked in setVar output: ${json}`);
+      }
+    });
+
+    it('moveToken with __macro_ token and __macro_ zones → all sanitized', () => {
+      const effect: EffectAST = {
+        moveToken: {
+          token: '__macro_sweep__guerrilla',
+          from: '__macro_sweep__source',
+          to: '__macro_sweep__dest',
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'mac[6]');
+      for (const msg of messages) {
+        const json = JSON.stringify(msg);
+        assert.ok(!json.includes('__macro_'), `__macro_ leaked in combined output: ${json}`);
+      }
+    });
+  });
+
+  // --- Leaf macro override (Fix 4) ---
+
+  describe('leaf macro override', () => {
+    it('moveToken with __macro_ token + matching verbalization → SummaryMessage', () => {
+      const ctx: NormalizerContext = {
+        verbalization: {
+          labels: {},
+          stages: {},
+          macros: {
+            place_from_available_or_map_action: {
+              class: 'utility',
+              summary: 'Place piece from Available (or from map if non-primary)',
+            },
+          },
+          sentencePlans: {},
+          suppressPatterns: [],
+          stageDescriptions: {},
+          modifierEffects: {},
+        },
+        suppressPatterns: [],
+      };
+      const effect: EffectAST = {
+        moveToken: {
+          token: '__macro_place_from_available_or_map_action Pipelines_0__piece',
+          from: 'available-alpha',
+          to: 'saigon',
+        },
+      };
+      const messages = normalizeEffect(effect, ctx, 'leaf[0]');
+      assert.equal(messages.length, 1);
+      assert.equal(messages[0]!.kind, 'summary');
+      if (messages[0]!.kind === 'summary') {
+        assert.equal(messages[0]!.text, 'Place piece from Available (or from map if non-primary)');
+        assert.equal(messages[0]!.macroClass, 'utility');
+        assert.equal(messages[0]!.macroOrigin, 'place_from_available_or_map_action');
+      }
+    });
+
+    it('moveToken with __macro_ token but no verbalization entry → humanized fallback summary', () => {
+      const ctx: NormalizerContext = {
+        verbalization: {
+          labels: {},
+          stages: {},
+          macros: {},
+          sentencePlans: {},
+          suppressPatterns: [],
+          stageDescriptions: {},
+          modifierEffects: {},
+        },
+        suppressPatterns: [],
+      };
+      const effect: EffectAST = {
+        moveToken: {
+          token: '__macro_place_from_available_or_map_action Pipelines_0__piece',
+          from: 'available-alpha',
+          to: 'saigon',
+        },
+      };
+      const messages = normalizeEffect(effect, ctx, 'leaf[1]');
+      assert.equal(messages.length, 1);
+      assert.equal(messages[0]!.kind, 'summary');
+      if (messages[0]!.kind === 'summary') {
+        assert.equal(messages[0]!.text, 'Place From Available Or Map');
+        assert.equal(messages[0]!.macroOrigin, 'place_from_available_or_map_action');
+      }
+    });
+
+    it('moveToken with __macro_ token but no verbalization at all → falls through', () => {
+      const effect: EffectAST = {
+        moveToken: {
+          token: '__macro_place_from_available_or_map_action Pipelines_0__piece',
+          from: 'available-alpha',
+          to: 'saigon',
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'leaf[2]');
+      assert.equal(messages.length, 1);
+      assert.equal(messages[0]!.kind, 'place');
     });
   });
 

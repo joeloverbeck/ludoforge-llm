@@ -18,6 +18,7 @@ import {
   type GameDef,
   type GameState,
   type Move,
+  type EffectAST,
   type OperationFreeTraceEntry,
   type TriggerLogEntry,
 } from '../../src/kernel/index.js';
@@ -1609,6 +1610,229 @@ phase: [asPhaseId('main')],
       step: 'costSpendSkipped',
       reason: 'costValidationFailed',
     });
+  });
+
+  it('rejects execution when a downstream stage cost validation checkpoint fails in atomic mode', () => {
+    const def: GameDef = {
+      metadata: { id: 'operation-stage-cost-atomic', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [
+        { name: 'energy', type: 'int', init: 0, min: 0, max: 20 },
+        { name: 'score', type: 'int', init: 0, min: 0, max: 20 },
+      ],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actionPipelines: [
+        {
+          id: 'operate-profile',
+          actionId: asActionId('operate'),
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [
+            {
+              effects: [
+                {
+                  chooseOne: {
+                    internalDecisionId: 'decision:probe::$target',
+                    bind: '$target',
+                    options: { query: 'enums', values: ['a', 'b'] },
+                  },
+                } as EffectAST,
+              ],
+            },
+            {
+              costValidation: { op: '==', left: { ref: 'binding', name: '$target' }, right: 'a' },
+              effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }],
+            },
+          ],
+          atomicity: 'atomic',
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('operate'),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('main')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+    const state: GameState = {
+      ...createState(),
+      globalVars: { energy: 1, score: 0, triggered: 0 },
+      actionUsage: {},
+    };
+    const snapshot = structuredClone(state);
+
+    assert.throws(
+      () => applyMove(def, state, {
+        actionId: asActionId('operate'),
+        params: { 'decision:probe::$target': 'b' },
+      }),
+      (error: unknown) => {
+        const details = error as Error & { reason?: unknown; context?: Record<string, unknown> };
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE);
+        assert.equal(details.context?.detail, 'pipelineAtomicCostValidationFailed');
+        return true;
+      },
+    );
+    assert.deepEqual(state, snapshot);
+  });
+
+  it('skips a stage when its cost validation checkpoint fails in partial mode', () => {
+    const def: GameDef = {
+      metadata: { id: 'operation-stage-cost-partial', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 20 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actionPipelines: [
+        {
+          id: 'operate-profile',
+          actionId: asActionId('operate'),
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [
+            {
+              effects: [
+                {
+                  chooseOne: {
+                    internalDecisionId: 'decision:probe::$target',
+                    bind: '$target',
+                    options: { query: 'enums', values: ['a', 'b'] },
+                  },
+                } as EffectAST,
+              ],
+            },
+            {
+              stage: 'gated-score',
+              costValidation: { op: '==', left: { ref: 'binding', name: '$target' }, right: 'a' },
+              effects: [{ addVar: { scope: 'global', var: 'score', delta: 10 } }],
+            },
+            {
+              stage: 'always-score',
+              effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }],
+            },
+          ],
+          atomicity: 'partial',
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('operate'),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('main')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+    const state: GameState = {
+      ...createState(),
+      globalVars: { score: 0, triggered: 0 },
+      actionUsage: {},
+    };
+
+    const result = applyMove(def, state, {
+      actionId: asActionId('operate'),
+      params: { 'decision:probe::$target': 'b' },
+    });
+    assert.equal(result.state.globalVars.score, 1);
+  });
+
+  it('makes transient bindings from one stage available to later stage effects', () => {
+    const def: GameDef = {
+      metadata: { id: 'operation-stage-transient-binding', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 20 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actionPipelines: [
+        {
+          id: 'operate-profile',
+          actionId: asActionId('operate'),
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [
+            {
+              stage: 'compute',
+              effects: [
+                {
+                  bindValue: {
+                    bind: '$computed',
+                    value: 7,
+                  },
+                } as EffectAST,
+              ],
+            },
+            {
+              stage: 'consume',
+              effects: [
+                {
+                  setVar: {
+                    scope: 'global',
+                    var: 'score',
+                    value: { ref: 'binding', name: '$computed' },
+                  },
+                },
+              ],
+            },
+          ],
+          atomicity: 'atomic',
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('operate'),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('main')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+    const state: GameState = {
+      ...createState(),
+      globalVars: { score: 0, triggered: 0 },
+      actionUsage: {},
+    };
+
+    const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
+    assert.equal(result.state.globalVars.score, 7);
   });
 
   it('skips RNG-consuming cost spend in allow mode when cost validation fails', () => {

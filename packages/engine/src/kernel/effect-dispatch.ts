@@ -1,4 +1,4 @@
-import { getMaxEffectOps, type EffectContext, type EffectResult } from './effect-context.js';
+import { getMaxEffectOps, type EffectContext, type EffectResult, type FreeOperationProbeScope } from './effect-context.js';
 import {
   EffectBudgetExceededError,
   effectRuntimeError,
@@ -283,7 +283,8 @@ const applyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContex
 export function applyEffect(effect: EffectAST, ctx: EffectContext): EffectResult {
   assertEffectContextEntryInvariant(ctx);
   const budget = createBudgetState(ctx);
-  const result = applyEffectWithBudget(effect, ctx, budget);
+  const freeOperationProbeScope: FreeOperationProbeScope = ctx.freeOperationProbeScope ?? { priorGrantDefinitions: [] };
+  const result = applyEffectWithBudget(effect, { ...ctx, freeOperationProbeScope }, budget);
   return {
     state: result.state,
     rng: result.rng,
@@ -296,7 +297,8 @@ export function applyEffect(effect: EffectAST, ctx: EffectContext): EffectResult
 export function applyEffects(effects: readonly EffectAST[], ctx: EffectContext): EffectResult {
   assertEffectContextEntryInvariant(ctx);
   const budget = createBudgetState(ctx);
-  const result = applyEffectsWithBudget(effects, ctx, budget);
+  const freeOperationProbeScope: FreeOperationProbeScope = ctx.freeOperationProbeScope ?? { priorGrantDefinitions: [] };
+  const result = applyEffectsWithBudget(effects, { ...ctx, freeOperationProbeScope }, budget);
   return {
     state: result.state,
     rng: result.rng,

@@ -298,6 +298,106 @@ describe('json schema artifacts', () => {
     assert.equal(validate(serializedTrace), true, JSON.stringify(validate.errors, null, 2));
   });
 
+  it('serialized trace with pending required free-operation grant validates against Trace.schema.json', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(traceSchema);
+    const baseSerializedTrace = serializeTrace(validRuntimeTrace);
+    const cardDrivenTurnOrderState = baseSerializedTrace.finalState.turnOrderState as Extract<
+      typeof baseSerializedTrace.finalState.turnOrderState,
+      { type: 'cardDriven' }
+    >;
+    const serializedTrace = {
+      ...baseSerializedTrace,
+      finalState: {
+        ...baseSerializedTrace.finalState,
+        turnOrderState: {
+          ...cardDrivenTurnOrderState,
+          runtime: {
+            ...cardDrivenTurnOrderState.runtime,
+            pendingFreeOperationGrants: [
+              {
+                grantId: 'grant-1',
+                seat: '0',
+                operationClass: 'operation',
+                completionPolicy: 'required',
+                postResolutionTurnFlow: 'resumeCardFlow',
+                remainingUses: 1,
+              },
+            ],
+          },
+        },
+      },
+    };
+
+    assert.equal(validate(serializedTrace), true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  it('Trace.schema.json rejects pending required free-operation grants without postResolutionTurnFlow', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(traceSchema);
+    const baseSerializedTrace = serializeTrace(validRuntimeTrace);
+    const cardDrivenTurnOrderState = baseSerializedTrace.finalState.turnOrderState as Extract<
+      typeof baseSerializedTrace.finalState.turnOrderState,
+      { type: 'cardDriven' }
+    >;
+    const serializedTrace = {
+      ...baseSerializedTrace,
+      finalState: {
+        ...baseSerializedTrace.finalState,
+        turnOrderState: {
+          ...cardDrivenTurnOrderState,
+          runtime: {
+            ...cardDrivenTurnOrderState.runtime,
+            pendingFreeOperationGrants: [
+              {
+                grantId: 'grant-1',
+                seat: '0',
+                operationClass: 'operation',
+                completionPolicy: 'required',
+                remainingUses: 1,
+              },
+            ],
+          },
+        },
+      },
+    };
+
+    assert.equal(validate(serializedTrace), false);
+  });
+
+  it('Trace.schema.json rejects pending free-operation grants that set postResolutionTurnFlow without required completionPolicy', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(traceSchema);
+    const baseSerializedTrace = serializeTrace(validRuntimeTrace);
+    const cardDrivenTurnOrderState = baseSerializedTrace.finalState.turnOrderState as Extract<
+      typeof baseSerializedTrace.finalState.turnOrderState,
+      { type: 'cardDriven' }
+    >;
+    const serializedTrace = {
+      ...baseSerializedTrace,
+      finalState: {
+        ...baseSerializedTrace.finalState,
+        turnOrderState: {
+          ...cardDrivenTurnOrderState,
+          runtime: {
+            ...cardDrivenTurnOrderState.runtime,
+            pendingFreeOperationGrants: [
+              {
+                grantId: 'grant-1',
+                seat: '0',
+                operationClass: 'operation',
+                postResolutionTurnFlow: 'resumeCardFlow',
+                remainingUses: 1,
+              },
+            ],
+          },
+        },
+      },
+    };
+
+    assert.equal(validate(serializedTrace), false);
+  });
+
   it('serialized trace with reveal/conceal effect entries validates against Trace.schema.json', () => {
     const ajv = new Ajv({ allErrors: true, strict: false });
     const validate = ajv.compile(traceSchema);
@@ -645,6 +745,202 @@ describe('json schema artifacts', () => {
     const validate = ajv.compile(gameDefSchema);
 
     assert.equal(validate(gameDefWithModernEventDeck), true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  it('eventDeck freeOperationGrants accept the explicit required completion contract shape', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(gameDefSchema);
+    const valid = {
+      ...gameDefWithModernEventDeck,
+      eventDecks: [
+        {
+          ...gameDefWithModernEventDeck.eventDecks![0],
+          cards: [
+            {
+              ...gameDefWithModernEventDeck.eventDecks![0]!.cards[0],
+              unshaded: {
+                ...gameDefWithModernEventDeck.eventDecks![0]!.cards[0]!.unshaded!,
+                freeOperationGrants: [
+                  {
+                    ...gameDefWithModernEventDeck.eventDecks![0]!.cards[0]!.unshaded!.freeOperationGrants![0],
+                    completionPolicy: 'required',
+                    postResolutionTurnFlow: 'resumeCardFlow',
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    assert.equal(validate(valid), true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  it('grantFreeOperation effects accept the explicit required completion contract shape', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(gameDefSchema);
+    const valid = {
+      ...fullGameDef,
+      actions: [
+        {
+          ...fullGameDef.actions[0],
+          effects: [
+            {
+              grantFreeOperation: {
+                seat: '0',
+                operationClass: 'operation',
+                completionPolicy: 'required',
+                postResolutionTurnFlow: 'resumeCardFlow',
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    assert.equal(validate(valid), true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  it('GameDef.schema.json rejects eventDeck freeOperationGrants that require completion without postResolutionTurnFlow', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(gameDefSchema);
+    const invalid = {
+      ...gameDefWithModernEventDeck,
+      eventDecks: [
+        {
+          ...gameDefWithModernEventDeck.eventDecks![0],
+          cards: [
+            {
+              ...gameDefWithModernEventDeck.eventDecks![0]!.cards[0],
+              unshaded: {
+                ...gameDefWithModernEventDeck.eventDecks![0]!.cards[0]!.unshaded!,
+                freeOperationGrants: [
+                  {
+                    ...gameDefWithModernEventDeck.eventDecks![0]!.cards[0]!.unshaded!.freeOperationGrants![0],
+                    completionPolicy: 'required',
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    assert.equal(validate(invalid), false);
+  });
+
+  it('GameDef.schema.json rejects eventDeck freeOperationGrants that set postResolutionTurnFlow without required completionPolicy', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(gameDefSchema);
+    const invalid = {
+      ...gameDefWithModernEventDeck,
+      eventDecks: [
+        {
+          ...gameDefWithModernEventDeck.eventDecks![0],
+          cards: [
+            {
+              ...gameDefWithModernEventDeck.eventDecks![0]!.cards[0],
+              unshaded: {
+                ...gameDefWithModernEventDeck.eventDecks![0]!.cards[0]!.unshaded!,
+                freeOperationGrants: [
+                  {
+                    ...gameDefWithModernEventDeck.eventDecks![0]!.cards[0]!.unshaded!.freeOperationGrants![0],
+                    postResolutionTurnFlow: 'resumeCardFlow',
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    assert.equal(validate(invalid), false);
+  });
+
+  it('GameDef.schema.json rejects grantFreeOperation effects that require completion without postResolutionTurnFlow', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(gameDefSchema);
+    const invalid = {
+      ...fullGameDef,
+      actions: [
+        {
+          ...fullGameDef.actions[0],
+          effects: [
+            {
+              grantFreeOperation: {
+                seat: '0',
+                operationClass: 'operation',
+                completionPolicy: 'required',
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    assert.equal(validate(invalid), false);
+  });
+
+  it('GameDef.schema.json rejects grantFreeOperation effects that set postResolutionTurnFlow without required completionPolicy', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(gameDefSchema);
+    const invalid = {
+      ...fullGameDef,
+      actions: [
+        {
+          ...fullGameDef.actions[0],
+          effects: [
+            {
+              grantFreeOperation: {
+                seat: '0',
+                operationClass: 'operation',
+                postResolutionTurnFlow: 'resumeCardFlow',
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    assert.equal(validate(invalid), false);
+  });
+
+  it('eventDeck target with application each and missing effects fails GameDef.schema.json validation', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(gameDefSchema);
+    const invalid = {
+      ...gameDefWithModernEventDeck,
+      eventDecks: [
+        {
+          ...gameDefWithModernEventDeck.eventDecks![0],
+          cards: [
+            {
+              ...gameDefWithModernEventDeck.eventDecks![0]!.cards[0],
+              unshaded: {
+                ...gameDefWithModernEventDeck.eventDecks![0]!.cards[0]!.unshaded!,
+                targets: [
+                  {
+                    id: 'target-1',
+                    selector: { query: 'players' },
+                    cardinality: { max: 1 },
+                    application: 'each',
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    assert.equal(validate(invalid), false);
+    assert.ok(
+      validate.errors?.some((error) => error.instancePath.includes('/eventDecks/0/cards/0/unshaded/targets/0')),
+      JSON.stringify(validate.errors, null, 2),
+    );
   });
 
   it('game def with legacy event lastingEffects.effect fails GameDef.schema.json validation', () => {

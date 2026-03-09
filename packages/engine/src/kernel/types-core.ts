@@ -61,12 +61,14 @@ export interface IntVariableDef {
   readonly init: number;
   readonly min: number;
   readonly max: number;
+  readonly material?: boolean;
 }
 
 export interface BooleanVariableDef {
   readonly name: string;
   readonly type: 'boolean';
   readonly init: boolean;
+  readonly material?: boolean;
 }
 
 export type VariableDef = IntVariableDef | BooleanVariableDef;

@@ -1,9 +1,9 @@
 import { applyMove } from '../kernel/apply-move.js';
 import { legalChoicesEvaluate } from '../kernel/legal-choices.js';
 import { completeTemplateMove } from '../kernel/move-completion.js';
-import { nextInt } from '../kernel/prng.js';
 import type { Agent, Move, Rng } from '../kernel/types.js';
 import { evaluateState } from './evaluate-state.js';
+import { pickRandom, selectStochasticFallback } from './agent-move-selection.js';
 import { selectCandidatesDeterministically } from './select-candidates.js';
 
 const DEFAULT_COMPLETIONS_PER_TEMPLATE = 5;
@@ -42,7 +42,7 @@ export class GreedyAgent implements Agent {
 
     // Expand template moves into concrete candidates
     const expandedMoves: Move[] = [];
-    const stochasticMoves: { move: Move; rng: Rng }[] = [];
+    const stochasticMoves: Move[] = [];
     let rng: Rng = input.rng;
 
     for (const move of input.legalMoves) {
@@ -58,7 +58,7 @@ export class GreedyAgent implements Agent {
           expandedMoves.push(result.move);
           rng = result.rng;
         } else if (result.kind === 'stochasticUnresolved') {
-          stochasticMoves.push({ move: result.move, rng: result.rng });
+          stochasticMoves.push(result.move);
           rng = result.rng;
           break;
         } else {
@@ -69,11 +69,7 @@ export class GreedyAgent implements Agent {
     }
 
     if (expandedMoves.length === 0 && stochasticMoves.length > 0) {
-      if (stochasticMoves.length === 1) {
-        return { move: stochasticMoves[0]!.move, rng };
-      }
-      const [index, nextRng] = nextInt(rng, 0, stochasticMoves.length - 1);
-      return { move: stochasticMoves[index]!.move, rng: nextRng };
+      return selectStochasticFallback(stochasticMoves, rng);
     }
 
     if (expandedMoves.length === 0) {
@@ -112,11 +108,7 @@ export class GreedyAgent implements Agent {
       return { move: bestMove, rng: candidates.rng };
     }
 
-    const [selectedIndex, nextRng] = nextInt(candidates.rng, 0, tiedBestMoves.length - 1);
-    const selectedMove = tiedBestMoves[selectedIndex];
-    if (selectedMove === undefined) {
-      throw new Error(`GreedyAgent.chooseMove selected out-of-range tied move index ${selectedIndex}`);
-    }
+    const { item: selectedMove, rng: nextRng } = pickRandom(tiedBestMoves, candidates.rng);
     return { move: selectedMove, rng: nextRng };
   }
 }

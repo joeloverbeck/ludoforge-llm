@@ -125,9 +125,18 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
     assert.deepEqual(card?.unshaded?.freeOperationGrants, [
       {
         seat: 'us',
+        viabilityPolicy: 'requireUsableForEventPlay',
         sequence: { chain: 'ia-drang-us', step: 0 },
+        completionPolicy: 'required',
+        outcomePolicy: 'mustChangeGameplayState',
+        postResolutionTurnFlow: 'resumeCardFlow',
         operationClass: 'operation',
         actionIds: ['airLift'],
+        moveZoneBindings: ['$usLiftDestination', '$coinLiftDestination'],
+        moveZoneProbeBindings: ['$spaces', '$usLiftDestination', '$coinLiftDestination'],
+        sequenceContext: {
+          captureMoveZoneCandidatesAs: 'ia-drang-space',
+        },
         zoneFilter: {
           op: '>',
               left: {
@@ -142,38 +151,31 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
       {
         seat: 'us',
         sequence: { chain: 'ia-drang-us', step: 1 },
+        completionPolicy: 'required',
+        postResolutionTurnFlow: 'resumeCardFlow',
         operationClass: 'operation',
         actionIds: ['sweep'],
-        zoneFilter: {
-          op: '>',
-              left: {
-                aggregate: {
-                  op: 'count',
-                      query: { query: 'tokensInZone', zone: '$zone', filter: { prop: 'faction', op: 'eq', value: 'NVA' } },
-                },
-              },
-          right: 0,
+        moveZoneBindings: ['$targetSpaces'],
+        allowDuringMonsoon: true,
+        sequenceContext: {
+          requireMoveZoneCandidatesFrom: 'ia-drang-space',
         },
       },
       {
         seat: 'us',
         sequence: { chain: 'ia-drang-us', step: 2 },
+        completionPolicy: 'required',
+        postResolutionTurnFlow: 'resumeCardFlow',
         operationClass: 'operation',
         actionIds: ['assault'],
-        zoneFilter: {
-          op: '>',
-              left: {
-                aggregate: {
-                  op: 'count',
-                      query: { query: 'tokensInZone', zone: '$zone', filter: { prop: 'faction', op: 'eq', value: 'NVA' } },
-                },
-              },
-          right: 0,
+        moveZoneBindings: ['$targetSpaces'],
+        sequenceContext: {
+          requireMoveZoneCandidatesFrom: 'ia-drang-space',
         },
       },
     ]);
 
     assert.equal((card?.shaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 1);
-    assert.equal(typeof (card?.shaded?.effects?.[0] as { rollRandom?: unknown })?.rollRandom, 'object');
+    assert.equal(typeof (card?.shaded?.targets?.[0]?.effects?.[0] as { rollRandom?: unknown })?.rollRandom, 'object');
   });
 });

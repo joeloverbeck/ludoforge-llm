@@ -6,8 +6,10 @@ import {
   asPhaseId,
   asPlayerId,
   asZoneId,
-  isMoveDecisionSequenceNotUnsatisfiable,
+  classifyMoveDecisionSequenceSatisfiability,
+  isMoveDecisionSequenceAdmittedForLegalMove,
   isMoveDecisionSequenceSatisfiable,
+  MISSING_BINDING_POLICY_CONTEXTS,
   pickDeterministicChoiceValue,
   resolveMoveDecisionSequence,
   type ChoicePendingRequest,
@@ -22,6 +24,12 @@ import {
   ownershipSelection,
   type ChoiceOwnershipPrimitive,
 } from '../../helpers/choice-ownership-parity-helpers.js';
+import {
+  SEQUENCE_CONTEXT_DENIED_ZONE_ID,
+  createSequenceContextMismatchTurnOrderState,
+  createSequenceContextMismatchZoneState,
+  createSequenceContextMismatchZones,
+} from '../../helpers/free-operation-sequence-context-fixtures.js';
 
 const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
@@ -269,7 +277,7 @@ phase: [asPhaseId('main')],
     assert.equal(result.nextDecision?.type, 'chooseN');
     assert.equal(result.nextDecision?.options.length ?? 0, 0);
     assert.equal(result.nextDecision?.min, 1);
-    assert.equal(isMoveDecisionSequenceNotUnsatisfiable(def, makeBaseState(), makeMove('unsat-op')), false);
+    assert.equal(classifyMoveDecisionSequenceSatisfiability(def, makeBaseState(), makeMove('unsat-op')).classification, 'unsatisfiable');
     assert.equal(isMoveDecisionSequenceSatisfiable(def, makeBaseState(), makeMove('unsat-op')), false);
   });
 
@@ -426,12 +434,174 @@ phase: [asPhaseId('main')],
     assert.equal(result.complete, false);
     assert.equal(result.nextDecision, undefined);
     assert.equal(
-      isMoveDecisionSequenceNotUnsatisfiable(def, makeBaseState(), makeMove('stuck-op'), {
+      classifyMoveDecisionSequenceSatisfiability(def, makeBaseState(), makeMove('stuck-op'), {
         budgets: { maxDecisionProbeSteps: 0 },
-      }),
-      true,
+      }).classification,
+      'unknown',
     );
     assert.equal(result.warnings.some((warning) => warning.code === 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'), true);
+  });
+
+  it('legal-move admission helper excludes unsatisfiable decision sequences across admission contexts', () => {
+    const action: ActionDef = {
+      id: asActionId('unsat-admission-op'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'unsat-admission-profile',
+      actionId: asActionId('unsat-admission-op'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              chooseOne: {
+                internalDecisionId: 'decision:$target',
+                bind: '$target',
+                options: { query: 'enums', values: [] },
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    const contexts = [
+      MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_EVENT_DECISION_SEQUENCE,
+      MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE,
+      MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
+    ] as const;
+    for (const context of contexts) {
+      assert.equal(
+        isMoveDecisionSequenceAdmittedForLegalMove(
+          def,
+          makeBaseState(),
+          makeMove('unsat-admission-op'),
+          context,
+        ),
+        false,
+      );
+    }
+  });
+
+  it('legal-move admission helper treats deferrable missing bindings as admissible unknowns across admission contexts', () => {
+    const action: ActionDef = {
+      id: asActionId('missing-binding-admission-op'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'missing-binding-admission-profile',
+      actionId: asActionId('missing-binding-admission-op'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              if: {
+                when: { op: '==', left: { ref: 'binding', name: '$missing' }, right: 1 },
+                then: [],
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    const contexts = [
+      MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_EVENT_DECISION_SEQUENCE,
+      MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE,
+      MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
+    ] as const;
+    for (const context of contexts) {
+      assert.equal(
+        isMoveDecisionSequenceAdmittedForLegalMove(
+          def,
+          makeBaseState(),
+          makeMove('missing-binding-admission-op'),
+          context,
+        ),
+        true,
+      );
+    }
+  });
+
+  it('legal-move admission helper rethrows non-deferrable decision-sequence errors across admission contexts', () => {
+    const action: ActionDef = {
+      id: asActionId('nondeferrable-admission-op'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'nondeferrable-admission-profile',
+      actionId: asActionId('nondeferrable-admission-op'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              if: {
+                when: { op: '==', left: { ref: 'gvar', var: 'missingVar' }, right: 1 },
+                then: [],
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    const contexts = [
+      MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_EVENT_DECISION_SEQUENCE,
+      MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE,
+      MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
+    ] as const;
+    for (const context of contexts) {
+      assert.throws(() =>
+        isMoveDecisionSequenceAdmittedForLegalMove(
+          def,
+          makeBaseState(),
+          makeMove('nondeferrable-admission-op'),
+          context,
+        ),
+      );
+    }
   });
 
   it('returns incomplete with warning when deferred predicate budget is exceeded', () => {
@@ -613,10 +783,7 @@ phase: [asPhaseId('main')],
 
     const def: GameDef = {
       ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
-      zones: [
-        { id: asZoneId('board:cambodia'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'cambodia', coastal: false }, adjacentTo: [] },
-        { id: asZoneId('board:vietnam'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false }, adjacentTo: [] },
-      ],
+      zones: createSequenceContextMismatchZones({ includeAdjacency: true }),
       turnOrder: {
         type: 'cardDriven',
         config: {
@@ -1098,6 +1265,81 @@ phase: [asPhaseId('main')],
       kind: 'illegal',
       complete: false,
       reason: 'freeOperationZoneFilterMismatch',
+    });
+  });
+
+  it('rejects decision selections outside the captured free-operation sequence context', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'operation-profile',
+      actionId: asActionId('operation'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              chooseOne: {
+                internalDecisionId: 'decision:$zone',
+                bind: '$zone',
+                options: { query: 'zones' },
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def: GameDef = {
+      ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
+      zones: [
+        { id: asZoneId('board:cambodia'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'cambodia', coastal: false }, adjacentTo: [] },
+        { id: asZoneId('board:vietnam'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false }, adjacentTo: [] },
+      ],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      zones: createSequenceContextMismatchZoneState(),
+      turnOrderState: createSequenceContextMismatchTurnOrderState(),
+    });
+
+    const result = resolveMoveDecisionSequence(def, state, {
+      actionId: asActionId('operation'),
+      params: { 'decision:$zone': SEQUENCE_CONTEXT_DENIED_ZONE_ID },
+      freeOperation: true,
+    });
+    assert.equal(result.complete, false);
+    assert.deepEqual(result.illegal, {
+      kind: 'illegal',
+      complete: false,
+      reason: 'freeOperationSequenceContextMismatch',
     });
   });
 

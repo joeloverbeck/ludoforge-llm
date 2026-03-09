@@ -782,6 +782,158 @@ describe('compile top-level actions/triggers/end conditions', () => {
     );
   });
 
+  it('emits sequence viability warning for target-local event-deck effects with disjoint explicit/default action domains', () => {
+    const result = compileGameSpecToGameDef(
+      createEventDeckSequenceParityDocForCard(['operation'], {
+        id: 'c1',
+        title: 'C1',
+        sideMode: 'single' as const,
+        unshaded: {
+          targets: [
+            {
+              id: '$targetSpace',
+              selector: { query: 'mapSpaces' },
+              cardinality: { max: 1 },
+              application: 'aggregate',
+              effects: [
+                {
+                  grantFreeOperation: {
+                    seat: 'us',
+                    operationClass: 'operation' as const,
+                    actionIds: ['limitedOp'],
+                    sequence: { chain: 'event-deck-chain-target', step: 0 },
+                  },
+                },
+                {
+                  grantFreeOperation: {
+                    seat: 'us',
+                    operationClass: 'operation' as const,
+                    sequence: { chain: 'event-deck-chain-target', step: 1 },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+
+    assert.notEqual(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK'
+          && diagnostic.path === 'doc.eventDecks.0.cards.0.unshaded.targets.0.effects.1.grantFreeOperation.sequence'
+          && diagnostic.message.includes('non-overlapping actionIds'),
+      ),
+      true,
+    );
+  });
+
+  it('allows later event-card target selectors to reference earlier same-scope target bindings', () => {
+    const result = compileGameSpecToGameDef(
+      createEventDeckSequenceParityDocForCard(['operation'], {
+        id: 'c1',
+        title: 'C1',
+        sideMode: 'single' as const,
+        unshaded: {
+          targets: [
+            {
+              id: '$sourceSpace',
+              selector: { query: 'mapSpaces' },
+              cardinality: { max: 1 },
+              application: 'aggregate',
+              effects: [],
+            },
+            {
+              id: '$destSpace',
+              selector: { query: 'binding', name: '$sourceSpace' },
+              cardinality: { max: 1 },
+              application: 'aggregate',
+              effects: [],
+            },
+          ],
+        },
+      }),
+    );
+
+    assert.notEqual(result.gameDef, null);
+    assertNoDiagnostics(result);
+    assert.deepEqual(
+      result.gameDef?.eventDecks?.[0]?.cards?.[0]?.unshaded?.targets?.[1]?.selector,
+      { query: 'binding', name: '$sourceSpace' },
+    );
+  });
+
+  it('rejects forward references in event-card target selectors', () => {
+    const result = compileGameSpecToGameDef(
+      createEventDeckSequenceParityDocForCard(['operation'], {
+        id: 'c1',
+        title: 'C1',
+        sideMode: 'single' as const,
+        unshaded: {
+          targets: [
+            {
+              id: '$sourceSpace',
+              selector: { query: 'binding', name: '$destSpace' },
+              cardinality: { max: 1 },
+              application: 'aggregate',
+              effects: [],
+            },
+            {
+              id: '$destSpace',
+              selector: { query: 'mapSpaces' },
+              cardinality: { max: 1 },
+              application: 'aggregate',
+              effects: [],
+            },
+          ],
+        },
+      }),
+    );
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_BINDING_UNBOUND'
+          && diagnostic.path === 'doc.eventDecks.0.cards.0.unshaded.targets.0.selector.name',
+      ),
+      true,
+    );
+  });
+
+  it('rejects self references in event-card target selectors', () => {
+    const result = compileGameSpecToGameDef(
+      createEventDeckSequenceParityDocForCard(['operation'], {
+        id: 'c1',
+        title: 'C1',
+        sideMode: 'single' as const,
+        unshaded: {
+          targets: [
+            {
+              id: '$space',
+              selector: { query: 'binding', name: '$space' },
+              cardinality: { max: 1 },
+              application: 'aggregate',
+              effects: [],
+            },
+          ],
+        },
+      }),
+    );
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_BINDING_UNBOUND'
+          && diagnostic.path === 'doc.eventDecks.0.cards.0.unshaded.targets.0.selector.name',
+      ),
+      true,
+    );
+  });
+
   it('does not emit sequence viability warning for overlapping event-deck explicit/default action domains', () => {
     const result = compileGameSpecToGameDef(createEventDeckSequenceParityDoc(['operation', 'limitedOp']));
 

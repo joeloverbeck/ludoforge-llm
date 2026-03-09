@@ -1,5 +1,5 @@
 import { extractResolvedBindFromDecisionId } from './decision-id.js';
-import type { EffectAST, Move, MoveParamValue } from './types.js';
+import type { ActionPipelineDef, EffectAST, Move, MoveParamValue } from './types.js';
 
 export const RUNTIME_RESERVED_MOVE_BINDING_NAMES = ['__freeOperation', '__actionClass'] as const;
 export const DEFAULT_MOVE_ACTION_CLASS = 'operation';
@@ -73,3 +73,30 @@ export const buildMoveRuntimeBindings = (
   __freeOperation: move.freeOperation ?? false,
   __actionClass: move.actionClass ?? DEFAULT_MOVE_ACTION_CLASS,
 });
+
+export const resolvePipelineDecisionBindingsForMove = (
+  pipeline: ActionPipelineDef | undefined,
+  moveParams: Move['params'],
+): Readonly<Record<string, MoveParamValue>> => {
+  const bindings: Record<string, MoveParamValue> = {
+    ...deriveDecisionBindingsFromMoveParams(moveParams),
+  };
+
+  if (pipeline === undefined) {
+    return bindings;
+  }
+
+  const decisionBindings = new Map<string, string>();
+  collectDecisionBindingsFromEffects(pipeline.costEffects, decisionBindings);
+  for (const stage of pipeline.stages) {
+    collectDecisionBindingsFromEffects(stage.effects, decisionBindings);
+  }
+
+  for (const [decisionId, bind] of decisionBindings.entries()) {
+    if (Object.prototype.hasOwnProperty.call(moveParams, decisionId)) {
+      bindings[bind] = moveParams[decisionId] as MoveParamValue;
+    }
+  }
+
+  return bindings;
+};

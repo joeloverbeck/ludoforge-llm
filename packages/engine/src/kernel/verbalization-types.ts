@@ -24,6 +24,11 @@ export interface VerbalizationModifierEffect {
   readonly effect: string;
 }
 
+export interface VerbalizationModifierClassification {
+  readonly choiceFlowPatterns: readonly string[];
+  readonly leaderPatterns: readonly string[];
+}
+
 export interface VerbalizationDef {
   readonly labels: Readonly<Record<string, string | VerbalizationLabelEntry>>;
   readonly stages: Readonly<Record<string, string>>;
@@ -32,4 +37,5 @@ export interface VerbalizationDef {
   readonly suppressPatterns: readonly string[];
   readonly stageDescriptions: Readonly<Record<string, Readonly<Record<string, VerbalizationStageDescription>>>>;
   readonly modifierEffects: Readonly<Record<string, readonly VerbalizationModifierEffect[]>>;
+  readonly modifierClassification?: VerbalizationModifierClassification;
 }

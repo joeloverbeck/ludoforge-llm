@@ -489,5 +489,107 @@ describe('ActionTooltip', () => {
       const tooltip = screen.getByTestId('action-tooltip');
       expect(tooltip.getAttribute('role')).toBe('tooltip');
     });
+
+    it('renders sub-step lines, not just headers', () => {
+      const desc = makeDescription({
+        tooltipPayload: makePayload({
+          ruleCard: {
+            synopsis: 'Test action',
+            steps: [
+              {
+                stepNumber: 1,
+                header: 'Main step',
+                lines: [],
+                subSteps: [
+                  {
+                    stepNumber: 1,
+                    header: 'Sub-step header',
+                    lines: [
+                      { text: 'Sub-step detail line', astPath: 'root.0.sub.0' },
+                      { text: 'Another sub detail', astPath: 'root.0.sub.1' },
+                    ],
+                  },
+                ],
+              },
+            ],
+            modifiers: [],
+          },
+        }),
+      });
+
+      render(createElement(ActionTooltip, { description: desc, anchorElement: makeAnchor() }));
+
+      const tooltip = screen.getByTestId('action-tooltip');
+      expect(tooltip.textContent).toContain('Sub-step header');
+      expect(tooltip.textContent).toContain('Sub-step detail line');
+      expect(tooltip.textContent).toContain('Another sub detail');
+    });
+
+    it('does not render sub-step lines list when sub-step has no lines', () => {
+      const desc = makeDescription({
+        tooltipPayload: makePayload({
+          ruleCard: {
+            synopsis: 'Test action',
+            steps: [
+              {
+                stepNumber: 1,
+                header: 'Main step',
+                lines: [],
+                subSteps: [
+                  { stepNumber: 1, header: 'Empty sub-step', lines: [] },
+                ],
+              },
+            ],
+            modifiers: [],
+          },
+        }),
+      });
+
+      const { container } = render(
+        createElement(ActionTooltip, { description: desc, anchorElement: makeAnchor() }),
+      );
+
+      // Sub-step header is visible
+      expect(container.textContent).toContain('Empty sub-step');
+      // No nested <ul> inside the sub-step <li>
+      const subStepOl = container.querySelector('ol ol');
+      expect(subStepOl).toBeTruthy();
+      const subStepLi = subStepOl!.querySelector('li');
+      expect(subStepLi!.querySelector('ul')).toBeNull();
+    });
+
+    it('wraps top-level steps in <details> elements', () => {
+      const desc = makeDescription({
+        tooltipPayload: makePayload(),
+      });
+
+      const { container } = render(
+        createElement(ActionTooltip, { description: desc, anchorElement: makeAnchor() }),
+      );
+
+      const detailsElements = container.querySelectorAll('details');
+      expect(detailsElements.length).toBe(2); // Two steps in makePayload
+
+      // Each <details> should have a <summary> with the step header
+      const summaries = container.querySelectorAll('summary');
+      expect(summaries.length).toBe(2);
+      expect(summaries[0]!.textContent).toBe('Select target spaces');
+      expect(summaries[1]!.textContent).toBe('Place forces');
+    });
+
+    it('renders <details> elements open by default', () => {
+      const desc = makeDescription({
+        tooltipPayload: makePayload(),
+      });
+
+      const { container } = render(
+        createElement(ActionTooltip, { description: desc, anchorElement: makeAnchor() }),
+      );
+
+      const detailsElements = container.querySelectorAll('details');
+      for (const details of detailsElements) {
+        expect(details.hasAttribute('open')).toBe(true);
+      }
+    });
   });
 });

@@ -50,10 +50,10 @@ describe('FITL Green Berets event-card production spec', () => {
       // Second arg: NVA count <= (US+ARVN+VC) count
       assert.equal(args?.[1]?.op, '<=');
 
-      const removeEffect = branch.effects?.find((effect) => 'removeByPriority' in effect);
+      const removeEffect = branch.targets?.[0]?.effects?.find((effect) => 'removeByPriority' in effect);
       assert.notEqual(removeEffect, undefined);
       assert.equal(removeEffect?.removeByPriority.budget, 3);
-      const supportEffect = branch.effects?.find((effect) => 'setMarker' in effect);
+      const supportEffect = branch.targets?.[0]?.effects?.find((effect) => 'setMarker' in effect);
       assert.deepEqual(supportEffect, {
         setMarker: {
           space: '$targetProvince',

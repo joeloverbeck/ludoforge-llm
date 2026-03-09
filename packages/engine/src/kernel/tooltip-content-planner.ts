@@ -59,6 +59,7 @@ const SUB_STEP_HEADER_BY_KIND: Readonly<Record<string, string>> = {
   phase: 'Advance phase',
   grant: 'Grant operation',
   conceal: 'Conceal information',
+  summary: 'Summary',
 };
 
 // ---------------------------------------------------------------------------
@@ -69,6 +70,36 @@ function filterSuppressed(
   messages: readonly TooltipMessage[],
 ): readonly TooltipMessage[] {
   return messages.filter((m) => m.kind !== 'suppressed');
+}
+
+/**
+ * Compute a fingerprint for a TooltipMessage by serializing all fields
+ * **except** the metadata fields `astPath` and `macroOrigin`.
+ */
+function messageFingerprint(msg: TooltipMessage): string {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { astPath, macroOrigin, ...semanticFields } = msg;
+  return JSON.stringify(semanticFields);
+}
+
+/**
+ * Collapse structurally identical TooltipMessage entries that differ only
+ * in metadata (`astPath`, `macroOrigin`).  Keeps first occurrence, preserves
+ * ordering, does not mutate input.
+ */
+export function deduplicateMessages(
+  messages: readonly TooltipMessage[],
+): readonly TooltipMessage[] {
+  const seen = new Set<string>();
+  const result: TooltipMessage[] = [];
+  for (const m of messages) {
+    const fp = messageFingerprint(m);
+    if (!seen.has(fp)) {
+      seen.add(fp);
+      result.push(m);
+    }
+  }
+  return result;
 }
 
 function deduplicateModifiers(
@@ -92,7 +123,12 @@ function extractModifiers(
   const content: TooltipMessage[] = [];
   for (const m of messages) {
     if (m.kind === 'modifier') {
-      modifiers.push(m);
+      // Include capability, leader, and unclassified (undefined) modifiers.
+      // Suppress choiceFlow (internal branching) and state-role modifiers
+      // (runtime conditions that aren't player-facing game modifiers).
+      if (m.modifierRole !== 'choiceFlow' && m.modifierRole !== 'state') {
+        modifiers.push(m);
+      }
     } else {
       content.push(m);
     }
@@ -141,8 +177,11 @@ function parentPathAtDepth(astPath: string, targetDepth: number): string {
  */
 function deriveSubStepHeader(messages: readonly TooltipMessage[], index: number): string {
   if (messages.length > 0) {
-    const firstKind = messages[0]!.kind;
-    const semantic = SUB_STEP_HEADER_BY_KIND[firstKind];
+    const first = messages[0]!;
+    if (first.kind === 'summary' && first.macroClass !== undefined) {
+      return first.macroClass;
+    }
+    const semantic = SUB_STEP_HEADER_BY_KIND[first.kind];
     if (semantic !== undefined) return semantic;
   }
   return `Sub-step ${index}`;
@@ -248,7 +287,8 @@ export function planContent(
   actionLabel: string,
 ): ContentPlan {
   const filtered = filterSuppressed(messages);
-  const { modifiers, content } = extractModifiers(filtered);
+  const deduplicated = deduplicateMessages(filtered);
+  const { modifiers, content } = extractModifiers(deduplicated);
   const synopsisSource = findSynopsisSource(content);
   const stageGroups = groupByStage(content);
   const steps = buildSteps(stageGroups);

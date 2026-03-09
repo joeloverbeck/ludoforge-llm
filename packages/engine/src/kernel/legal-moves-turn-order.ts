@@ -1,10 +1,15 @@
-import { isMoveDecisionSequenceNotUnsatisfiable, resolveMoveDecisionSequence } from './move-decision-sequence.js';
+import { isMoveDecisionSequenceAdmittedForLegalMove, resolveMoveDecisionSequence } from './move-decision-sequence.js';
+import { MISSING_BINDING_POLICY_CONTEXTS } from './missing-binding-policy.js';
 import type { MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import {
   isFreeOperationApplicableForMove,
   isFreeOperationAllowedDuringMonsoonForMove,
   isFreeOperationGrantedForMove,
-  resolveTurnFlowActionClass,
+} from './free-operation-discovery-analysis.js';
+import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
+import {
+  isMoveAllowedByRequiredPendingFreeOperationGrant,
+  isEventMovePlayableUnderGrantViabilityPolicy,
 } from './turn-flow-eligibility.js';
 import { resolveEffectiveFreeOperationActionDomain, resolveTurnFlowDefaultFreeOperationActionDomain } from './free-operation-action-domain.js';
 import { toMoveIdentityKey } from './move-identity.js';
@@ -249,6 +254,9 @@ export function applyTurnFlowWindowFilters(
   const interruptWinnerSeat =
     precedence.length > 0 && inPreActionWindow ? resolveInterruptWinnerSeat(state, precedence) : null;
   const filtered = moves.filter((move) => {
+    if (!isEventMovePlayableUnderGrantViabilityPolicy(def, state, move, seatResolution)) {
+      return false;
+    }
     const actionId = String(move.actionId);
     const isPivotal = pivotalActionIds.has(actionId);
     if (isPivotal) {
@@ -276,7 +284,11 @@ export function applyTurnFlowWindowFilters(
     if (restriction === undefined) {
       return true;
     }
-    if (isFreeOperationAllowedDuringMonsoonForMove(def, state, move, seatResolution)) {
+    if (
+      isFreeOperationAllowedDuringMonsoonForMove(def, state, move, seatResolution, {
+        zoneFilterErrorSurface: 'legalChoices',
+      })
+    ) {
       return true;
     }
     if (hasOverrideToken(move, restriction.overrideToken)) {
@@ -310,7 +322,7 @@ export function applyTurnFlowWindowFilters(
 
   const cancellationRules = turnFlow.pivotal?.interrupt?.cancellation;
   if (cancellationRules === undefined || cancellationRules.length === 0) {
-    return filtered;
+    return filtered.filter((move) => isMoveAllowedByRequiredPendingFreeOperationGrant(def, state, move, seatResolution));
   }
 
   const canceledMoves = new Set<Move>();
@@ -328,9 +340,11 @@ export function applyTurnFlowWindowFilters(
   }
 
   if (canceledMoves.size === 0) {
-    return filtered;
+    return filtered.filter((move) => isMoveAllowedByRequiredPendingFreeOperationGrant(def, state, move, seatResolution));
   }
-  return filtered.filter((move) => !canceledMoves.has(move));
+  return filtered
+    .filter((move) => !canceledMoves.has(move))
+    .filter((move) => isMoveAllowedByRequiredPendingFreeOperationGrant(def, state, move, seatResolution));
 }
 
 export function applyPendingFreeOperationVariants(
@@ -385,10 +399,16 @@ export function applyPendingFreeOperationVariants(
     }).complete;
     const unresolvedDecisionCheckpoint = !checkpoint;
     if (unresolvedDecisionCheckpoint) {
-      if (!isMoveDecisionSequenceNotUnsatisfiable(def, state, candidate, {
-        ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
-        ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
-      })) {
+      if (!isMoveDecisionSequenceAdmittedForLegalMove(
+        def,
+        state,
+        candidate,
+        MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
+        {
+          ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
+          ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
+        },
+      )) {
         continue;
       }
     }

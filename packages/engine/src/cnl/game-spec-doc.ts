@@ -5,7 +5,7 @@ import type {
   ValueExpr,
 } from '../kernel/types.js';
 import type { VictoryStandingsDef } from '../kernel/types-core.js';
-import type { VerbalizationLabelEntry, VerbalizationMacroEntry, VerbalizationStageDescription, VerbalizationModifierEffect } from '../kernel/verbalization-types.js';
+import type { VerbalizationLabelEntry, VerbalizationMacroEntry, VerbalizationStageDescription, VerbalizationModifierEffect, VerbalizationModifierClassification } from '../kernel/verbalization-types.js';
 import type { TurnFlowActionClass } from '../contracts/index.js';
 
 export interface GameSpecMetadata {
@@ -24,6 +24,7 @@ export interface GameSpecVarDef {
   readonly init: unknown;
   readonly min?: unknown;
   readonly max?: unknown;
+  readonly material?: unknown;
 }
 
 export interface GameSpecGlobalMarkerLatticeDef {
@@ -47,6 +48,7 @@ export interface GameSpecBatchVarDef {
     readonly init: unknown;
     readonly min?: unknown;
     readonly max?: unknown;
+    readonly material?: unknown;
   };
 }
 
@@ -312,6 +314,13 @@ export interface GameSpecTurnFlow {
   readonly pivotal?: GameSpecTurnFlowPivotal;
 }
 
+export interface GameSpecActionPipelineStageDef {
+  readonly stage?: string;
+  readonly legality?: unknown;
+  readonly costValidation?: unknown;
+  readonly effects?: readonly unknown[];
+}
+
 export interface GameSpecActionPipelineDef {
   readonly id: string;
   readonly actionId: string;
@@ -326,7 +335,7 @@ export interface GameSpecActionPipelineDef {
   readonly costValidation: unknown;
   readonly costEffects: readonly unknown[];
   readonly targeting: Readonly<Record<string, unknown>>;
-  readonly stages: readonly Readonly<Record<string, unknown>>[];
+  readonly stages: readonly GameSpecActionPipelineStageDef[];
   readonly atomicity: 'atomic' | 'partial';
   readonly linkedWindows?: readonly string[];
 }
@@ -468,6 +477,7 @@ export interface GameSpecVerbalization {
   readonly suppressPatterns?: readonly string[] | null;
   readonly stageDescriptions?: Readonly<Record<string, Readonly<Record<string, VerbalizationStageDescription>>>> | null;
   readonly modifierEffects?: Readonly<Record<string, readonly VerbalizationModifierEffect[]>> | null;
+  readonly modifierClassification?: VerbalizationModifierClassification | null;
 }
 
 export interface GameSpecPieceGenerateDimension {

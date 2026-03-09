@@ -1,5 +1,8 @@
 import type { ConditionAST, EffectAST, OptionsQuery } from './types-ast.js';
-import type { TurnFlowActionClass, TurnFlowDuration } from './types-turn-flow.js';
+import type {
+  TurnFlowDuration,
+  TurnFlowFreeOperationGrantContract,
+} from './types-turn-flow.js';
 
 export interface EventTargetCardinalityExact {
   readonly n: number;
@@ -19,7 +22,7 @@ export interface EventTargetDef {
   readonly selector: OptionsQuery;
   readonly cardinality: EventTargetCardinality;
   readonly application: EventTargetApplication;
-  readonly effects?: readonly EffectAST[];
+  readonly effects: readonly EffectAST[];
 }
 
 export interface EventLastingEffectDef {
@@ -29,19 +32,11 @@ export interface EventLastingEffectDef {
   readonly teardownEffects?: readonly EffectAST[];
 }
 
-export interface EventFreeOperationGrantDef {
+export interface EventFreeOperationGrantDef extends TurnFlowFreeOperationGrantContract {
   readonly sequence: {
     readonly chain: string;
     readonly step: number;
   };
-  readonly id?: string;
-  readonly seat: string;
-  readonly executeAsSeat?: string;
-  readonly operationClass: TurnFlowActionClass;
-  readonly actionIds?: readonly string[];
-  readonly zoneFilter?: ConditionAST;
-  readonly allowDuringMonsoon?: boolean;
-  readonly uses?: number;
 }
 
 export interface EventEligibilityOverrideTargetActive {

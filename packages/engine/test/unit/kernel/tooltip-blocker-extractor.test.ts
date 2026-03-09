@@ -383,7 +383,7 @@ describe('extractBlockers', () => {
     it('resolves zoneCount reference', () => {
       const cond: ConditionAST = { op: '>=', left: { ref: 'zoneCount', zone: 'saigon' }, right: 1 };
       const result = extractBlockers(cond, () => false, MOCK_VERB);
-      assert.ok(result.blockers[0]!.description.includes('count(Saigon)'));
+      assert.ok(result.blockers[0]!.description.includes('pieces in Saigon'));
     });
 
     it('resolves binding reference', () => {

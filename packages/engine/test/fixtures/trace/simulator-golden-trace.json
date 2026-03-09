@@ -3,7 +3,7 @@
   "seed": 13,
   "moves": [
     {
-      "stateHash": "0x80cd8e7501969e76",
+      "stateHash": "0xc15f8ede56ce9c08",
       "player": 0,
       "move": {
         "actionId": "step1",
@@ -26,7 +26,7 @@
       "warnings": []
     },
     {
-      "stateHash": "0x3aba1ede8ca74ff",
+      "stateHash": "0x5f3e6c010fbc17e3",
       "player": 0,
       "move": {
         "actionId": "step2",
@@ -54,7 +54,7 @@
       "warnings": []
     },
     {
-      "stateHash": "0x3aba5ede8ca78d9",
+      "stateHash": "0x5f3e6c010fbc1595",
       "player": 1,
       "move": {
         "actionId": "step1",
@@ -77,7 +77,7 @@
       "warnings": []
     },
     {
-      "stateHash": "0x3aba6ede8ca700c",
+      "stateHash": "0x5f3e6f010fbc0a7c",
       "player": 1,
       "move": {
         "actionId": "step2",
@@ -105,7 +105,7 @@
       "warnings": []
     },
     {
-      "stateHash": "0x3abacede8ca77ac",
+      "stateHash": "0x5f3e65010fbc02b4",
       "player": 0,
       "move": {
         "actionId": "step1",
@@ -146,7 +146,7 @@
         "0xda3e39cb94b95bc1"
       ]
     },
-    "stateHash": "0x3abacede8ca77ac",
+    "stateHash": "0x5f3e65010fbc02b4",
     "actionUsage": {
       "step1": {
         "turnCount": 1,

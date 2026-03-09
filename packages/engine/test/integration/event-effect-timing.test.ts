@@ -141,8 +141,8 @@ const createDef = (): GameDef =>
               effectTiming: 'afterGrants',
               freeOperationGrants: [
                 {
-                  seat: '3',
-                  sequence: { chain: 'vc-after-2', step: 0 },
+                  seat: '2',
+                  sequence: { chain: 'nva-after-2', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                 },
@@ -470,7 +470,7 @@ describe('event effect timing integration', () => {
       actionId: asActionId('event'),
       params: { eventCardId: 'card-after', side: 'unshaded', branch: 'none' },
     });
-    const secondEventWindow = advanceToVc(def, firstEventResult.state);
+    const secondEventWindow = advanceToSeat(def, firstEventResult.state, 2);
     const secondEventResult = applyMove(def, secondEventWindow, {
       actionId: asActionId('event'),
       params: { eventCardId: 'card-after-2', side: 'unshaded', branch: 'none' },
@@ -481,7 +481,7 @@ describe('event effect timing integration', () => {
       params: {},
       freeOperation: true,
     });
-    const secondFreeWindow = advanceToVc(def, firstFreeResult.state);
+    const secondFreeWindow = advanceToSeat(def, firstFreeResult.state, 2);
     const secondFreeResult = applyMove(def, secondFreeWindow, {
       actionId: asActionId('operation'),
       params: {},

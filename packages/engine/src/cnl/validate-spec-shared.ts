@@ -22,7 +22,7 @@ export {
 export const METADATA_KEYS = ['id', 'name', 'description', 'players', 'maxTriggerDepth', 'defaultScenarioAssetId', 'namedSets'] as const;
 export const PLAYERS_KEYS = ['min', 'max'] as const;
 export const DATA_ASSET_KEYS = ['id', 'kind', 'payload', 'tableContracts'] as const;
-export const VARIABLE_KEYS = ['name', 'type', 'init', 'min', 'max'] as const;
+export const VARIABLE_KEYS = ['name', 'type', 'init', 'min', 'max', 'material'] as const;
 export const ZONE_KEYS = ['id', 'zoneKind', 'isInternal', 'owner', 'visibility', 'ordering', 'adjacentTo', 'behavior'] as const;
 export const ACTION_KEYS = ['id', 'actor', 'executor', 'phase', 'capabilities', 'params', 'pre', 'cost', 'effects', 'limits'] as const;
 export const TURN_STRUCTURE_KEYS = ['phases', 'interrupts'] as const;
@@ -47,6 +47,7 @@ export const ACTION_PIPELINE_KEYS = [
   'atomicity',
   'linkedWindows',
 ] as const;
+export const ACTION_PIPELINE_STAGE_KEYS = ['stage', 'legality', 'costValidation', 'effects'] as const;
 export const ACTION_PIPELINE_ATOMICITY_VALUES: readonly string[] = ['atomic', 'partial'];
 export const PHASE_KEYS = ['id', 'onEnter', 'onExit', 'actionDefaults'] as const;
 export const FROM_TEMPLATE_PHASE_KEYS = ['fromTemplate', 'args'] as const;

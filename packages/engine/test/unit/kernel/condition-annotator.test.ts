@@ -644,6 +644,39 @@ describe('describeAction (condition annotator)', () => {
     assert.ok(passAnns.length >= 1, 'Legality should have pass annotation');
   });
 
+  it('annotates stage-level pipeline predicates inside the stage group', () => {
+    const action = minimalActionDef();
+    const pipeline: ActionPipelineDef = {
+      id: 'pipeline-stage-annotated',
+      actionId: action.id,
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          stage: 'resolution',
+          legality: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 5 },
+          costValidation: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 2 },
+          effects: [{ advancePhase: {} }],
+        },
+      ],
+      atomicity: 'atomic',
+    };
+    const def = makeDef({ actionPipelines: [pipeline] });
+    const ctx = makeContext({ def, state: makeState({ globalVars: { gold: 10 } }) });
+    const result = describeAction(action, ctx);
+
+    const pipelineGroup = result.sections.find((s) => s.label === 'Pipeline: pipeline-stage-annotated')!;
+    const stageGroup = pipelineGroup.children.find(
+      (c): c is DisplayGroupNode => c.kind === 'group' && c.label === 'Stage: resolution',
+    )!;
+    const stageChildLabels = stageGroup.children
+      .filter((c): c is DisplayGroupNode => c.kind === 'group')
+      .map((c) => c.label);
+    assert.deepEqual(stageChildLabels, ['Legality', 'Cost Validation']);
+  });
+
   // -----------------------------------------------------------------------
   // 13. Only applicable pipelines are included
   // -----------------------------------------------------------------------

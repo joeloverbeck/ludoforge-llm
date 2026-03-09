@@ -124,9 +124,6 @@ const synthesizeEventTargetSelectionEffect = (target: EventTargetDef, index: num
 
 const synthesizeEventTargetApplicationEffects = (target: EventTargetDef): readonly EffectAST[] => {
   const targetEffects = target.effects;
-  if (targetEffects === undefined || targetEffects.length === 0) {
-    return [];
-  }
   if (target.application === 'aggregate' || isSingleSelectTarget(target)) {
     return targetEffects;
   }
@@ -140,10 +137,10 @@ const synthesizeEventTargetApplicationEffects = (target: EventTargetDef): readon
 };
 
 export const synthesizeEventTargetEffects = (targets: readonly EventTargetDef[]): readonly EffectAST[] =>
-  targets.flatMap((target, index) => [
-    synthesizeEventTargetSelectionEffect(target, index),
-    ...synthesizeEventTargetApplicationEffects(target),
-  ]);
+  [
+    ...targets.map((target, index) => synthesizeEventTargetSelectionEffect(target, index)),
+    ...targets.flatMap((target) => synthesizeEventTargetApplicationEffects(target)),
+  ];
 
 const isTurnFlowLifecycleEntry = (
   entry: TriggerLogEntry,

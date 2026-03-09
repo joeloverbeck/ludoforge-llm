@@ -3,8 +3,12 @@ import {
   CANONICAL_BINDING_IDENTIFIER_MESSAGE,
   CANONICAL_BINDING_IDENTIFIER_PATTERN,
   TURN_FLOW_ACTION_CLASS_VALUES,
+  TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES,
+  TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
 } from '../contracts/index.js';
 import { PREDICATE_OPERATORS } from '../contracts/index.js';
+import { FreeOperationSequenceContextSchema } from './free-operation-sequence-context-schema.js';
+import { createTurnFlowFreeOperationGrantSchema } from './free-operation-grant-zod.js';
 import { AST_SCOPED_VAR_SCOPES, createScopedVarContractSchema } from './scoped-var-contract.js';
 
 export const OBJECT_STRICTNESS_POLICY = 'strict' as const;
@@ -779,25 +783,28 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
-      grantFreeOperation: z
-        .object({
-          id: StringSchema.optional(),
-          seat: StringSchema,
-          executeAsSeat: StringSchema.optional(),
-          operationClass: z.enum(TURN_FLOW_ACTION_CLASS_VALUES),
-          actionIds: z.array(StringSchema).optional(),
-          zoneFilter: ConditionASTSchema.optional(),
-          allowDuringMonsoon: z.boolean().optional(),
-          uses: NumberSchema.optional(),
-          sequence: z
-            .object({
-              chain: StringSchema,
-              step: NumberSchema,
-            })
-            .strict()
-            .optional(),
-        })
-        .strict(),
+      grantFreeOperation: createTurnFlowFreeOperationGrantSchema({
+        id: StringSchema.optional(),
+        seat: StringSchema,
+        executeAsSeat: StringSchema.optional(),
+        operationClass: z.enum(TURN_FLOW_ACTION_CLASS_VALUES),
+        actionIds: z.array(StringSchema).optional(),
+        zoneFilter: ConditionASTSchema.optional(),
+        moveZoneBindings: z.array(StringSchema).min(1).optional(),
+        moveZoneProbeBindings: z.array(StringSchema).min(1).optional(),
+        allowDuringMonsoon: z.boolean().optional(),
+        uses: NumberSchema.optional(),
+        viabilityPolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES).optional(),
+        outcomePolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES).optional(),
+        sequence: z
+          .object({
+            chain: StringSchema,
+            step: NumberSchema,
+          })
+          .strict()
+          .optional(),
+        sequenceContext: FreeOperationSequenceContextSchema.optional(),
+      }),
     })
     .strict(),
   z

@@ -86,9 +86,34 @@ describe('FITL card-42 Chou En Lai', () => {
     const move = findChouEnLaiMove(def, setup, 'unshaded');
     assert.notEqual(move, undefined, 'Expected card-42 unshaded event move');
 
-    const resolved = resolveMoveDecisionSequence(def, setup, move!, {
+    let assertedNvaOwnedTroopRemoval = false;
+    const pendingProbe = resolveMoveDecisionSequence(def, setup, move!, {
       choose: (request): MoveParamValue | undefined => {
         if (request.type === 'chooseN') {
+          assert.equal(
+            request.decisionPlayer,
+            2,
+            'Expected Chou En Lai unshaded troop-removal choice to be routed to NVA (player 2)',
+          );
+          assertedNvaOwnedTroopRemoval = true;
+          return undefined;
+        }
+        return pickDeterministicChoiceValue(request);
+      },
+    });
+    assert.equal(pendingProbe.complete, false, 'Expected unresolved pending choice before explicit unshaded troop-removal selection');
+    assert.equal(pendingProbe.nextDecision?.type, 'chooseN', 'Expected pending chooseN troop-removal decision');
+    assert.equal(pendingProbe.nextDecision?.decisionPlayer, 2, 'Expected pending decision owner to be NVA (player 2)');
+    assert.equal(assertedNvaOwnedTroopRemoval, true, 'Expected unshaded discovery to surface NVA-owned troop-removal choice');
+
+    const resolved = resolveMoveDecisionSequence(def, setup, pendingProbe.move, {
+      choose: (request): MoveParamValue | undefined => {
+        if (request.type === 'chooseN') {
+          assert.equal(
+            request.decisionPlayer,
+            2,
+            'Expected Chou En Lai unshaded troop-removal choice to stay routed to NVA (player 2)',
+          );
           const required = Math.max(1, request.min ?? 0);
           if (request.options.length < required) {
             return undefined;

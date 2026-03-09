@@ -11,6 +11,7 @@ export interface RealizedLine {
 export interface ContentStep {
   readonly stepNumber: number;
   readonly header: string;
+  readonly description?: string;
   readonly lines: readonly RealizedLine[];
   readonly subSteps?: readonly ContentStep[];
 }

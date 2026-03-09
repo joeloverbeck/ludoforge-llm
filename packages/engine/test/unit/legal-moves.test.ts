@@ -17,7 +17,7 @@ import {
 } from '../../src/kernel/index.js';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '../../src/cnl/index.js';
 import { applyTurnFlowWindowFilters } from '../../src/kernel/legal-moves-turn-order.js';
-import { resolveTurnFlowActionClass } from '../../src/kernel/turn-flow-eligibility.js';
+import { resolveTurnFlowActionClass } from '../../src/kernel/turn-flow-action-class.js';
 
 const createDef = (): GameDef =>
   ({

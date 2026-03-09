@@ -330,7 +330,8 @@ describe('FITL production data integration compilation', () => {
     );
 
     // Batch-expanded operation counters must all exist as compiled globalVars
-    const compiledGlobalVarNames = new Set((compiled.gameDef?.globalVars ?? []).map((v) => v.name));
+    const compiledGlobalVars = compiled.gameDef?.globalVars ?? [];
+    const compiledGlobalVarNames = new Set(compiledGlobalVars.map((v) => v.name));
     const expectedOpCounters = [
       'trainCount', 'patrolCount', 'sweepCount', 'assaultCount', 'rallyCount',
       'marchCount', 'attackCount', 'adviseCount', 'airLiftCount', 'airStrikeCount',
@@ -339,6 +340,10 @@ describe('FITL production data integration compilation', () => {
     ];
     for (const name of expectedOpCounters) {
       assert.equal(compiledGlobalVarNames.has(name), true, `Expected batch-expanded operation counter "${name}" in compiled globalVars`);
+    }
+    for (const name of expectedOpCounters) {
+      const counterVar = compiledGlobalVars.find((variable) => variable.name === name);
+      assert.equal(counterVar?.material, false, `Expected operation counter "${name}" to be marked non-material in compiled globalVars`);
     }
 
     // Batch-expanded momentum flags must all exist as compiled globalVars

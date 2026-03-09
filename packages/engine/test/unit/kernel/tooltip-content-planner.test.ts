@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   planContent,
+  deduplicateMessages,
 } from '../../../src/kernel/index.js';
 import type {
   TooltipMessage,
@@ -11,6 +12,7 @@ import type {
   SuppressedMessage,
   PlaceMessage,
   GainMessage,
+  MoveMessage,
   ChooseMessage,
   ContentPlanStep,
 } from '../../../src/kernel/index.js';
@@ -54,6 +56,7 @@ function makeModifier(overrides?: Partial<ModifierMessage>): ModifierMessage {
     kind: 'modifier',
     condition: 'monsoon === true',
     description: 'If monsoon: no air lift',
+    modifierRole: 'capability',
     astPath: 'effects[4]',
     ...overrides,
   };
@@ -233,13 +236,14 @@ describe('tooltip-content-planner', () => {
 
     it('keeps all sub-steps without truncation', () => {
       // 5 sub-step groups from 5 different forEach containers — all kept
+      // Each place message is semantically distinct (different targetZone)
       const messages: readonly TooltipMessage[] = [
         makeSelect({ astPath: 'effects[0]' }),
-        makePlace({ astPath: 'effects[1].forEach.effects[0]' }),
-        makePlace({ astPath: 'effects[2].forEach.effects[0]' }),
-        makePlace({ astPath: 'effects[3].forEach.effects[0]' }),
-        makePlace({ astPath: 'effects[4].forEach.effects[0]' }),
-        makePlace({ astPath: 'effects[5].forEach.effects[0]' }),
+        makePlace({ astPath: 'effects[1].forEach.effects[0]', targetZone: 'zone_a' }),
+        makePlace({ astPath: 'effects[2].forEach.effects[0]', targetZone: 'zone_b' }),
+        makePlace({ astPath: 'effects[3].forEach.effects[0]', targetZone: 'zone_c' }),
+        makePlace({ astPath: 'effects[4].forEach.effects[0]', targetZone: 'zone_d' }),
+        makePlace({ astPath: 'effects[5].forEach.effects[0]', targetZone: 'zone_e' }),
       ];
       const plan = planContent(messages, 'Train');
 
@@ -254,9 +258,11 @@ describe('tooltip-content-planner', () => {
     it('preserves all messages without budget truncation', () => {
       const msgs: TooltipMessage[] = [];
       for (let i = 0; i < 35; i++) {
+        // Each message is semantically distinct (unique targetZone)
         msgs.push(makePlace({
           astPath: `effects[${i}]`,
           stage: `stage${Math.floor(i / 10)}`,
+          targetZone: `zone_${i}`,
         }));
       }
       const plan = planContent(msgs, 'ComplexAction');
@@ -331,6 +337,21 @@ describe('tooltip-content-planner', () => {
     it('preserves action label', () => {
       const plan = planContent([makeSelect()], 'Train');
       assert.equal(plan.actionLabel, 'Train');
+    });
+
+    // --- Message deduplication in pipeline ---
+
+    it('deduplicates structurally identical messages in the pipeline', () => {
+      const messages: readonly TooltipMessage[] = [
+        makePlace({ astPath: 'effects[0]', tokenFilter: 'usTroops', targetZone: 'saigon' }),
+        makePlace({ astPath: 'effects[1]', tokenFilter: 'usTroops', targetZone: 'saigon' }),
+        makeGain({ astPath: 'effects[2]' }),
+        makeGain({ astPath: 'effects[3]' }),
+      ];
+      const plan = planContent(messages, 'Train');
+
+      const allMessages = collectAllMessages(plan.steps);
+      assert.equal(allMessages.length, 2); // one place, one gain
     });
 
     // --- Purity ---
@@ -420,3 +441,216 @@ function collectAllMessages(steps: readonly ContentPlanStep[]): readonly Tooltip
 function countAllMessages(steps: readonly ContentPlanStep[]): number {
   return collectAllMessages(steps).length;
 }
+
+// ---------------------------------------------------------------------------
+// Modifier role filtering (Fix 1 / Issue 5)
+// ---------------------------------------------------------------------------
+
+describe('planContent — modifier role filtering', () => {
+  it('excludes state-role modifiers from display', () => {
+    const messages: readonly TooltipMessage[] = [
+      makeSelect(),
+      makeModifier({ modifierRole: 'state', condition: 'active player is 0', astPath: 'effects[1]' }),
+    ];
+    const plan = planContent(messages, 'Train');
+    assert.equal(plan.modifiers.length, 0);
+  });
+
+  it('excludes choiceFlow-role modifiers from display', () => {
+    const messages: readonly TooltipMessage[] = [
+      makeSelect(),
+      makeModifier({ modifierRole: 'choiceFlow', condition: 'Choice is X', astPath: 'effects[1]' }),
+    ];
+    const plan = planContent(messages, 'Train');
+    assert.equal(plan.modifiers.length, 0);
+  });
+
+  it('preserves capability-role modifiers', () => {
+    const messages: readonly TooltipMessage[] = [
+      makeSelect(),
+      makeModifier({ modifierRole: 'capability', condition: 'has ability', astPath: 'effects[1]' }),
+    ];
+    const plan = planContent(messages, 'Train');
+    assert.equal(plan.modifiers.length, 1);
+    assert.equal(plan.modifiers[0]!.condition, 'has ability');
+  });
+
+  it('preserves leader-role modifiers', () => {
+    const messages: readonly TooltipMessage[] = [
+      makeSelect(),
+      makeModifier({ modifierRole: 'leader', condition: 'is leader', astPath: 'effects[1]' }),
+    ];
+    const plan = planContent(messages, 'Train');
+    assert.equal(plan.modifiers.length, 1);
+  });
+
+  it('preserves modifiers with undefined role (unclassified)', () => {
+    const messages: readonly TooltipMessage[] = [
+      makeSelect(),
+      {
+        kind: 'modifier' as const,
+        condition: 'gold >= 5',
+        description: '',
+        astPath: 'effects[1]',
+      },
+    ];
+    const plan = planContent(messages, 'Train');
+    assert.equal(plan.modifiers.length, 1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SummaryMessage sub-step header
+// ---------------------------------------------------------------------------
+
+describe('planContent — SummaryMessage sub-step header', () => {
+  it('uses macroClass as sub-step header when present', () => {
+    const messages: TooltipMessage[] = [
+      makeSelect({ astPath: 'root.effects[0]' }),
+      {
+        kind: 'summary',
+        text: 'Place guerrillas',
+        macroClass: 'Rally',
+        astPath: 'root.effects[0].forEach.effects[0]',
+      },
+    ];
+    const plan = planContent(messages, 'train');
+    const step = plan.steps[0]!;
+    assert.ok(step.subSteps !== undefined && step.subSteps.length > 0);
+    assert.equal(step.subSteps![0]!.header, 'Rally');
+  });
+
+  it('uses generic Summary header when macroClass absent', () => {
+    const messages: TooltipMessage[] = [
+      makeSelect({ astPath: 'root.effects[0]' }),
+      {
+        kind: 'summary',
+        text: 'Place guerrillas',
+        astPath: 'root.effects[0].forEach.effects[0]',
+      },
+    ];
+    const plan = planContent(messages, 'train');
+    const step = plan.steps[0]!;
+    assert.ok(step.subSteps !== undefined && step.subSteps.length > 0);
+    assert.equal(step.subSteps![0]!.header, 'Summary');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// deduplicateMessages
+// ---------------------------------------------------------------------------
+
+function makeMove(overrides?: Partial<MoveMessage>): MoveMessage {
+  return {
+    kind: 'move',
+    tokenFilter: 'usTroops',
+    fromZone: 'saigon',
+    toZone: 'hue',
+    astPath: 'effects[3]',
+    ...overrides,
+  };
+}
+
+describe('deduplicateMessages', () => {
+
+  it('collapses messages identical except for astPath', () => {
+    const messages: readonly TooltipMessage[] = [
+      makePlace({ astPath: 'effects[0]' }),
+      makePlace({ astPath: 'effects[1]' }),
+    ];
+    const result = deduplicateMessages(messages);
+    assert.equal(result.length, 1);
+    assert.equal(result[0]!.kind, 'place');
+  });
+
+  it('collapses messages identical except for macroOrigin', () => {
+    const messages: readonly TooltipMessage[] = [
+      makePlace({ astPath: 'effects[0]', macroOrigin: 'macro_a' }),
+      makePlace({ astPath: 'effects[0]', macroOrigin: 'macro_b' }),
+    ];
+    const result = deduplicateMessages(messages);
+    assert.equal(result.length, 1);
+  });
+
+  it('collapses messages identical except for both astPath and macroOrigin', () => {
+    const messages: readonly TooltipMessage[] = [
+      makePlace({ astPath: 'effects[0]', macroOrigin: 'macro_a' }),
+      makePlace({ astPath: 'effects[1]', macroOrigin: 'macro_b' }),
+      makePlace({ astPath: 'effects[2]' }),
+    ];
+    const result = deduplicateMessages(messages);
+    assert.equal(result.length, 1);
+  });
+
+  it('preserves messages with different semantic content', () => {
+    const messages: readonly TooltipMessage[] = [
+      makePlace({ astPath: 'effects[0]', tokenFilter: 'usTroops', targetZone: 'saigon' }),
+      makePlace({ astPath: 'effects[1]', tokenFilter: 'nvaGuerrillas', targetZone: 'hue' }),
+    ];
+    const result = deduplicateMessages(messages);
+    assert.equal(result.length, 2);
+  });
+
+  it('preserves near-duplicates with subtle differences (different target zones)', () => {
+    const messages: readonly TooltipMessage[] = [
+      makePlace({ astPath: 'effects[0]', targetZone: 'saigon' }),
+      makePlace({ astPath: 'effects[1]', targetZone: 'hue' }),
+    ];
+    const result = deduplicateMessages(messages);
+    assert.equal(result.length, 2);
+  });
+
+  it('returns same count when no duplicates exist', () => {
+    const messages: readonly TooltipMessage[] = [
+      makeSelect({ astPath: 'effects[0]' }),
+      makePlace({ astPath: 'effects[1]' }),
+      makeGain({ astPath: 'effects[2]' }),
+      makeMove({ astPath: 'effects[3]' }),
+    ];
+    const result = deduplicateMessages(messages);
+    assert.equal(result.length, 4);
+  });
+
+  it('returns empty array for empty input', () => {
+    const result = deduplicateMessages([]);
+    assert.equal(result.length, 0);
+  });
+
+  it('does not mutate the input array', () => {
+    const messages: readonly TooltipMessage[] = [
+      makePlace({ astPath: 'effects[0]' }),
+      makePlace({ astPath: 'effects[1]' }),
+      makeGain({ astPath: 'effects[2]' }),
+    ];
+    const copy = [...messages];
+    deduplicateMessages(messages);
+    assert.equal(messages.length, copy.length);
+    for (let i = 0; i < messages.length; i++) {
+      assert.deepEqual(messages[i], copy[i]);
+    }
+  });
+
+  it('preserves first occurrence ordering', () => {
+    const messages: readonly TooltipMessage[] = [
+      makePlace({ astPath: 'effects[0]', tokenFilter: 'alpha' }),
+      makeGain({ astPath: 'effects[1]' }),
+      makePlace({ astPath: 'effects[2]', tokenFilter: 'alpha' }),
+    ];
+    const result = deduplicateMessages(messages);
+    assert.equal(result.length, 2);
+    assert.equal(result[0]!.kind, 'place');
+    assert.equal(result[1]!.kind, 'gain');
+  });
+
+  it('handles mixed message kinds with duplicates among some', () => {
+    const messages: readonly TooltipMessage[] = [
+      makeSelect({ astPath: 'effects[0]' }),
+      makeGain({ astPath: 'effects[1]' }),
+      makeSelect({ astPath: 'effects[2]' }),
+      makePlace({ astPath: 'effects[3]' }),
+      makeGain({ astPath: 'effects[4]' }),
+    ];
+    const result = deduplicateMessages(messages);
+    assert.equal(result.length, 3); // select, gain, place
+  });
+});

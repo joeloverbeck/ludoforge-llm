@@ -1,4 +1,5 @@
 import { incrementActionUsage } from './action-usage.js';
+import { deepEqual } from './deep-equal.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { applyBoundaryExpiry } from './boundary-expiry.js';
 import { isEffectRuntimeReason } from './effect-error.js';
@@ -11,15 +12,19 @@ import { createCollector } from './execution-collector.js';
 import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import { resolveActionPipelineDispatch, toExecutionPipeline } from './apply-move-pipeline.js';
 import { toApplyMoveIllegalReason } from './legality-outcome.js';
-import { decideApplyMovePipelineViability, evaluatePipelinePredicateStatus } from './pipeline-viability-policy.js';
+import {
+  decideApplyMovePipelineViability,
+  evaluatePipelinePredicateStatus,
+  evaluateStagePredicateStatus,
+} from './pipeline-viability-policy.js';
 import { resolveActionExecutor } from './action-executor.js';
 import { evalCondition } from './eval-condition.js';
 import { isDeclaredActionParamValueInDomain } from './declared-action-param-domain.js';
 import { createEvalContext, createEvalRuntimeResources, type EvalContext, type EvalRuntimeResources } from './eval-context.js';
 import {
   buildMoveRuntimeBindings,
-  collectDecisionBindingsFromEffects,
   deriveDecisionBindingsFromMoveParams,
+  resolvePipelineDecisionBindingsForMove,
 } from './move-runtime-bindings.js';
 import { EFFECT_RUNTIME_REASONS, ILLEGAL_MOVE_REASONS } from './runtime-reasons.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
@@ -28,9 +33,12 @@ import { buildAdjacencyGraph } from './spatial.js';
 import {
   applyTurnFlowEligibilityAfterMove,
   consumeTurnFlowFreeOperationGrant,
-  resolveFreeOperationDiscoveryAnalysis,
-  resolveTurnFlowActionClassMismatch,
+  hasActiveSeatRequiredPendingFreeOperationGrant,
+  isMoveAllowedByRequiredPendingFreeOperationGrant,
 } from './turn-flow-eligibility.js';
+import { resolveAuthorizedPendingFreeOperationGrants } from './free-operation-grant-authorization.js';
+import { resolveFreeOperationDiscoveryAnalysis } from './free-operation-discovery-analysis.js';
+import { resolveTurnFlowActionClassMismatch } from './turn-flow-action-class.js';
 import { toFreeOperationDeniedCauseForLegality } from './free-operation-legality-policy.js';
 import { applyTurnFlowWindowFilters, isMoveAllowedByTurnFlowOptionMatrix } from './legal-moves-turn-order.js';
 import { isTurnFlowErrorCode } from './turn-flow-error.js';
@@ -41,9 +49,12 @@ import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { toMoveExecutionPolicy } from './execution-policy.js';
 import { createSeatResolutionContext } from './seat-resolution.js';
 import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
+import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
+import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { createExecutionEffectContext, type PhaseTransitionBudget } from './effect-context.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
+import { materialGameplayStateProjection } from './material-gameplay-state.js';
 import type {
   ActionDef,
   ActionPipelineDef,
@@ -70,36 +81,52 @@ const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undef
   def.actions.find((action) => action.id === actionId);
 
 const decisionBindingsForMove = (
-  executionProfile: ReturnType<typeof toExecutionPipeline> | undefined,
+  actionPipeline: ActionPipelineDef | undefined,
   moveParams: Move['params'],
 ): Readonly<Record<string, MoveParamValue>> => {
-  const bindings: Record<string, MoveParamValue> = {
-    ...deriveDecisionBindingsFromMoveParams(moveParams),
-  };
-
-  if (executionProfile === undefined) {
-    return bindings;
+  if (actionPipeline === undefined) {
+    return deriveDecisionBindingsFromMoveParams(moveParams);
   }
-
-  const decisionBindings = new Map<string, string>();
-  collectDecisionBindingsFromEffects(executionProfile.costSpend, decisionBindings);
-  for (const stage of executionProfile.resolutionStages) {
-    collectDecisionBindingsFromEffects(stage, decisionBindings);
-  }
-
-  for (const [decisionId, bind] of decisionBindings.entries()) {
-    if (Object.prototype.hasOwnProperty.call(moveParams, decisionId)) {
-      bindings[bind] = moveParams[decisionId] as MoveParamValue;
-    }
-  }
-  return bindings;
+  return resolvePipelineDecisionBindingsForMove(actionPipeline, moveParams);
 };
 
 const runtimeBindingsForMove = (
   move: Move,
-  executionProfile: ReturnType<typeof toExecutionPipeline> | undefined,
+  actionPipeline: ActionPipelineDef | undefined,
 ): Readonly<Record<string, MoveParamValue | boolean | string>> =>
-  buildMoveRuntimeBindings(move, decisionBindingsForMove(executionProfile, move.params));
+  buildMoveRuntimeBindings(move, decisionBindingsForMove(actionPipeline, move.params));
+
+const validateFreeOperationOutcomePolicy = (
+  def: GameDef,
+  beforeState: GameState,
+  afterActionState: GameState,
+  move: Move,
+  seatResolution: ReturnType<typeof createSeatResolutionContext>,
+): void => {
+  if (move.freeOperation !== true || beforeState.turnOrderState.type !== 'cardDriven') {
+    return;
+  }
+  const activeSeat = requireCardDrivenActiveSeat(
+    def,
+    beforeState,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_CONSUMPTION,
+    seatResolution,
+  );
+  const pending = beforeState.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
+  const authorized = resolveAuthorizedPendingFreeOperationGrants(def, beforeState, pending, activeSeat, move);
+  if (authorized.strongestOutcomeGrant === null) {
+    return;
+  }
+  if (deepEqual(
+    materialGameplayStateProjection(def, beforeState),
+    materialGameplayStateProjection(def, afterActionState),
+  )) {
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED, {
+      grantId: authorized.strongestOutcomeGrant.grantId,
+      outcomePolicy: 'mustChangeGameplayState',
+    });
+  }
+};
 
 const resolveMatchedPipelineForMove = (
   def: GameDef,
@@ -605,6 +632,14 @@ const validateMove = (
       freeOperationDenial: freeOperationAnalysis.denial,
     });
   }
+  if (
+    hasActiveSeatRequiredPendingFreeOperationGrant(def, state, seatResolution)
+    && !isMoveAllowedByRequiredPendingFreeOperationGrant(def, state, move, seatResolution)
+  ) {
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
+      detail: 'active seat has unresolved required free-operation grants',
+    });
+  }
   const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const preflight = resolveMovePreflightContext(
@@ -733,6 +768,7 @@ const executeMoveAction = (
     action,
     executionPlayer,
     baseBindings,
+    actionPipeline,
     executionProfile,
     costValidationPassed,
     isFreeOperationPipeline,
@@ -750,7 +786,7 @@ const executeMoveAction = (
     resources: shared.evalRuntimeResources,
     ...(shared.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: shared.phaseTransitionBudget }),
   } as const;
-  const resolvedDecisionBindings = decisionBindingsForMove(executionProfile, move.params);
+  const resolvedDecisionBindings = decisionBindingsForMove(actionPipeline, move.params);
   const runtimeMoveParams = {
     ...move.params,
     ...resolvedDecisionBindings,
@@ -760,6 +796,7 @@ const executeMoveAction = (
     bindings: buildMoveRuntimeBindings(move, resolvedDecisionBindings),
     moveParams: runtimeMoveParams,
   } as const;
+  let progressedBindings: Readonly<Record<string, unknown>> = effectCtx.bindings;
 
   const shouldSpendCost = !isFreeOperationPipeline && (
     executionProfile === undefined ||
@@ -843,9 +880,38 @@ const executeMoveAction = (
     }
   } else {
     const insertAfter = move.compound?.timing === 'during' ? (move.compound.insertAfterStage ?? 0) : -1;
-    for (const [stageIdx, stageEffects] of executionProfile.resolutionStages.entries()) {
-      const stageResult = applyEffects(stageEffects, createExecutionEffectContext({
+    for (const [stageIdx, stage] of executionProfile.resolutionStages.entries()) {
+      const stageEvalCtx: EvalContext = {
+        ...preflight.evalCtx,
+        state: effectState,
+        bindings: progressedBindings,
+      };
+      const stageStatus = evaluateStagePredicateStatus(
+        action,
+        executionProfile.profileId,
+        stage,
+        executionProfile.partialMode,
+        stageEvalCtx,
+        { includeCostValidation: !isFreeOperationPipeline },
+      );
+      const stageViability = decideApplyMovePipelineViability(stageStatus, {
+        isFreeOperation: isFreeOperationPipeline,
+      });
+      if (stageViability.kind === 'illegalMove') {
+        throw illegalMoveError(
+          move,
+          toApplyMoveIllegalReason(stageViability.outcome),
+          stageViability.outcome === 'pipelineAtomicCostValidationFailed'
+            ? { profileId: executionProfile.profileId, partialExecutionMode: executionProfile.partialMode }
+            : { profileId: executionProfile.profileId },
+        );
+      }
+      if (!stageViability.costValidationPassed) {
+        continue;
+      }
+      const stageResult = applyEffects(stage.effects, createExecutionEffectContext({
         ...effectCtx,
+        bindings: progressedBindings,
         state: effectState,
         rng: effectRng,
         traceContext: {
@@ -857,6 +923,7 @@ const executeMoveAction = (
       }));
       effectState = stageResult.state;
       effectRng = stageResult.rng;
+      progressedBindings = stageResult.bindings ?? progressedBindings;
       if (stageResult.emittedEvents !== undefined) {
         emittedEvents.push(...stageResult.emittedEvents);
       }
@@ -1076,14 +1143,27 @@ const applyMoveCore = (
   const seatResolution = createSeatResolutionContext(def, state.playerCount);
 
   const executed = executeMoveAction(def, state, move, seatResolution, options, coreOptions, shared, cachedRuntime);
+  validateFreeOperationOutcomePolicy(def, state, executed.stateWithRng, move, seatResolution);
   const turnFlowResult = move.freeOperation === true
     ? (() => {
       const consumed = consumeTurnFlowFreeOperationGrant(def, executed.stateWithRng, move, seatResolution);
+      if (consumed.consumedGrant?.postResolutionTurnFlow !== 'resumeCardFlow') {
+        return {
+          state: consumed.state,
+          traceEntries: consumed.traceEntries,
+          boundaryDurations: undefined,
+          releasedDeferredEventEffects: consumed.releasedDeferredEventEffects,
+        };
+      }
+      const progressed = applyTurnFlowEligibilityAfterMove(def, consumed.state, move);
       return {
-        state: consumed.state,
-        traceEntries: consumed.traceEntries,
-        boundaryDurations: undefined,
-        releasedDeferredEventEffects: consumed.releasedDeferredEventEffects,
+        state: progressed.state,
+        traceEntries: [...consumed.traceEntries, ...progressed.traceEntries],
+        boundaryDurations: progressed.boundaryDurations,
+        releasedDeferredEventEffects: [
+          ...consumed.releasedDeferredEventEffects,
+          ...(progressed.releasedDeferredEventEffects ?? []),
+        ],
       };
     })()
     : applyTurnFlowEligibilityAfterMove(def, executed.stateWithRng, move, executed.deferredEventEffect);

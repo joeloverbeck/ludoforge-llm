@@ -408,6 +408,9 @@ verbalization:
     shift-support-opposition:
       class: utility
       summary: "Shift support/opposition marker"
+    place_from_available_or_map_action:
+      class: utility
+      summary: "Place piece from Available (or from map if non-US)"
 
   # ── Sentence plans ────────────────────────────────────────────────────
   sentencePlans:
@@ -458,6 +461,218 @@ verbalization:
         "1": "Set Trail to 1"
         "3": "Set Trail to 3"
 
+  # ── Stage descriptions (per-profile stage labels) ─────────────────────
+  stageDescriptions:
+    # ── US Operations ────────────────────────────────────────────────────
+    train-us-profile:
+      select-spaces:
+        label: "Select training spaces"
+        description: "Choose Provinces/Cities with US pieces for training"
+      resolve-per-space:
+        label: "Resolve training"
+        description: "Place Irregulars or at-Base Rangers/ARVN cubes per space"
+      cap-caps-bonus-police:
+        label: "CAPS bonus"
+        description: "CAPS unshaded: place free Police in training spaces"
+      sub-action:
+        label: "Pacification"
+        description: "Pacify or transfer Patronage in selected spaces"
+
+    patrol-us-profile:
+      select-locs:
+        label: "Select patrol routes"
+        description: "Choose Lines of Communication for patrol"
+      move-cubes:
+        label: "Move cubes"
+        description: "Move US Troops along selected LoCs"
+      activate-guerrillas:
+        label: "Activate guerrillas"
+        description: "Activate underground guerrillas equal to US cubes present"
+      free-assault:
+        label: "Free assault"
+        description: "Assault in each patrolled LoC at no cost"
+      cap-m48-patrol-penalty:
+        label: "M48 Patton penalty"
+        description: "M48 Patton shaded: pay 3 ARVN Resources for patrolled cubes"
+
+    sweep-us-profile:
+      select-spaces:
+        label: "Select sweep spaces"
+        description: "Choose Provinces/Cities for sweep operations"
+      move-troops:
+        label: "Move troops"
+        description: "Move US Troops into selected spaces via adjacent LoCs"
+      activate-guerrillas:
+        label: "Activate guerrillas"
+        description: "Activate underground guerrillas equal to sweeping cubes"
+      cap-cobras-bonus-removal:
+        label: "Cobras bonus"
+        description: "Cobras unshaded: remove 1 active enemy piece in up to 2 spaces"
+      cap-booby-traps-troop-cost:
+        label: "Booby Traps cost"
+        description: "Booby Traps shaded: risk losing 1 sweeping Troop per space"
+
+    assault-us-profile:
+      select-spaces:
+        label: "Select assault spaces"
+        description: "Choose spaces with US Troops and enemy pieces"
+      abrams-select-space:
+        label: "Abrams bonus space"
+        description: "Abrams unshaded: select 1 extra assault space"
+      resolve-per-space:
+        label: "Remove enemy pieces"
+        description: "Remove enemy pieces up to US Troop count per space"
+      cap-m48-patton-bonus-removal:
+        label: "M48 Patton bonus"
+        description: "M48 Patton unshaded: +2 removals in up to 2 non-Lowland spaces"
+      arvn-followup:
+        label: "ARVN follow-up"
+        description: "ARVN Troops may assault in same spaces at ARVN cost"
+
+    # ── US Special Activities ────────────────────────────────────────────
+    advise-profile:
+      select-spaces:
+        label: "Select advise spaces"
+        description: "Choose spaces with ARVN cubes for US advising"
+      resolve-per-space:
+        label: "Resolve advising"
+        description: "Assault or activate-and-remove in each advised space"
+
+    air-lift-profile:
+      select-spaces:
+        label: "Select spaces"
+        description: "Choose up to 4 spaces for air transport"
+      move-us-troops:
+        label: "Move US Troops"
+        description: "Redistribute US Troops among selected spaces"
+      move-coin-lift-pieces:
+        label: "Move COIN pieces"
+        description: "Move up to 4 ARVN Troops/Rangers/Irregulars among selected spaces"
+      air-lift-telemetry:
+        label: "Air Lift tracking"
+        description: "Record Air Lift usage for the turn"
+
+    air-strike-profile:
+      select-spaces:
+        label: "Select strike spaces"
+        description: "Choose spaces with COIN pieces for air strikes"
+      remove-active-enemy-pieces:
+        label: "Remove enemy pieces"
+        description: "Remove up to 6 active enemy pieces across selected spaces"
+      optional-trail-degrade:
+        label: "Degrade Trail"
+        description: "Optionally degrade the Ho Chi Minh Trail by 1"
+
+  # ── Modifier effects (capability shaded/unshaded descriptions) ───────
+  modifierEffects:
+    cap_topGun:
+      - condition: "Top Gun is Unshaded"
+        effect: "No US pieces lost to Trail degradation during Air Strike"
+      - condition: "Top Gun is Shaded"
+        effect: "US loses 2 pieces to Available after Trail degradation"
+    cap_arcLight:
+      - condition: "Arc Light is Unshaded"
+        effect: "Air Strike 1 Province without COIN pieces (no opposition shift)"
+      - condition: "Arc Light is Shaded"
+        effect: "Air Strike shifts 2 levels toward opposition if >1 piece removed"
+    cap_abrams:
+      - condition: "Abrams is Unshaded"
+        effect: "+1 Assault space selection"
+      - condition: "Abrams is Shaded"
+        effect: "Assault spaces must have US base or 3+ US Troops"
+    cap_cobras:
+      - condition: "Cobras is Unshaded"
+        effect: "Sweep: remove 1 active enemy in up to 2 spaces"
+      - condition: "Cobras is Shaded"
+        effect: "Assault: risk losing 1 US Troop to Casualties per space (roll 1-3)"
+    cap_m48Patton:
+      - condition: "M48 Patton is Unshaded"
+        effect: "Assault: +2 removals in up to 2 non-Lowland spaces"
+      - condition: "M48 Patton is Shaded"
+        effect: "Patrol: pay 3 ARVN Resources for each cube that moved"
+    cap_caps:
+      - condition: "CAPS is Unshaded"
+        effect: "Train: place free Police in training spaces with US base"
+      - condition: "CAPS is Shaded"
+        effect: "Train/Sweep: limited to spaces without NVA control"
+    cap_cords:
+      - condition: "CORDS is Unshaded"
+        effect: "Train: pacify in up to 2 selected spaces instead of 1"
+      - condition: "CORDS is Shaded"
+        effect: "Train: pacification shifts only to Passive Support"
+    cap_lgbs:
+      - condition: "LGBs is Unshaded"
+        effect: "Air Strike: no opposition shift if only 1 piece removed"
+      - condition: "LGBs is Shaded"
+        effect: "Air Strike: maximum 2 removals total"
+    cap_searchAndDestroy:
+      - condition: "Search and Destroy is Unshaded"
+        effect: "Assault: remove 1 underground guerrilla if no active enemy removed"
+      - condition: "Search and Destroy is Shaded"
+        effect: "Assault: shift 1 level toward opposition in Provinces with population"
+    cap_aaa:
+      - condition: "AAA is Unshaded"
+        effect: "NVA Rally: place guerrillas equal to population +1 in spaces with base"
+      - condition: "AAA is Shaded"
+        effect: "Air Strike: lose 1 removal from budget"
+    cap_longRangeGuns:
+      - condition: "Long Range Guns is Unshaded"
+        effect: "Bombard: remove 2 enemy pieces per selected space"
+      - condition: "Long Range Guns is Shaded"
+        effect: "Bombard: remove only 1 enemy piece per space"
+    cap_migs:
+      - condition: "MiGs is Unshaded"
+        effect: "No effect on operations"
+      - condition: "MiGs is Shaded"
+        effect: "Air Strike Trail degradation: US loses 2 pieces to Available"
+    cap_sa2s:
+      - condition: "SA-2s is Unshaded"
+        effect: "Air Strike Trail degradation: US loses 1 piece to Casualties"
+      - condition: "SA-2s is Shaded"
+        effect: "NVA Rally: Trail improvement by +1 in spaces with NVA base"
+    cap_pt76:
+      - condition: "PT-76 is Unshaded"
+        effect: "NVA Attack: each Attack space removes 1 NVA Troop first when possible; otherwise pay normal Resource cost"
+      - condition: "PT-76 is Shaded"
+        effect: "NVA Attack: 1 chosen Attack space removes 1 enemy per NVA Troop there"
+    cap_armoredCavalry:
+      - condition: "Armored Cavalry is Unshaded"
+        effect: "Transport: move ARVN pieces from Cities (not just LoCs)"
+      - condition: "Armored Cavalry is Shaded"
+        effect: "No additional effect"
+    cap_mandateOfHeaven:
+      - condition: "Mandate of Heaven is Unshaded"
+        effect: "Govern: shift 2 levels toward Active Support per Pacify step"
+      - condition: "Mandate of Heaven is Shaded"
+        effect: "Govern: costs +3 ARVN Resources per space"
+    cap_boobyTraps:
+      - condition: "Booby Traps is Unshaded"
+        effect: "Sweep/Assault: VC remove 1 sweeping/assaulting Troop per space (roll 1-3)"
+      - condition: "Booby Traps is Shaded"
+        effect: "No additional effect"
+    cap_mainForceBns:
+      - condition: "Main Force Bns is Unshaded"
+        effect: "NVA Attack: flip 1 NVA guerrilla to underground after combat"
+      - condition: "Main Force Bns is Shaded"
+        effect: "Attack: untunneled enemy bases treated as exposed (removable)"
+    cap_cadres:
+      - condition: "Cadres is Unshaded"
+        effect: "No additional effect"
+      - condition: "Cadres is Shaded"
+        effect: "VC Rally: free agitate in 1 Rally space"
+
+  # ── Modifier classification ──────────────────────────────────────────
+  modifierClassification:
+    choiceFlowPatterns:
+      - "*Choice"
+      - "*Mode"
+      - "*Action"
+      - "*Aid"
+      - "Sub Action*"
+      - "subAction*"
+    leaderPatterns:
+      - "Active Leader*"
+
   # ── Suppress patterns ─────────────────────────────────────────────────
   suppressPatterns:
     - "*Count"
@@ -466,4 +681,5 @@ verbalization:
     - "temp*"
     - "mom_*"
     - "fitl_*"
+    - "$__macro_*"
 ```

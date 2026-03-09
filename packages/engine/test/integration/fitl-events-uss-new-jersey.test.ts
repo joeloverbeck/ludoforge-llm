@@ -101,7 +101,7 @@ describe('FITL card-30 USS New Jersey', () => {
     assert.equal(Array.isArray(card?.unshaded?.freeOperationGrants), false);
     assert.equal(Array.isArray(card?.unshaded?.effects), true);
     assert.equal(card?.unshaded?.effects?.some((effect) => 'setVar' in effect), true);
-    assert.equal(Array.isArray(card?.shaded?.effects), true);
+    assert.equal(Array.isArray(card?.shaded?.targets), true);
   });
 
   it('unshaded grants execute-as free Air Strike with coastal 1..3 targeting, max-2-per-space removal, and no Trail degrade', () => {
@@ -267,7 +267,7 @@ describe('FITL card-30 USS New Jersey', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$targetProvinces' || request.decisionId.includes('targetProvinces'),
+        when: (request) => request.name === '$targetProvince' || request.decisionId.includes('targetProvince'),
         value: [SHADED_PROVINCE_A, SHADED_PROVINCE_B],
       },
     ];

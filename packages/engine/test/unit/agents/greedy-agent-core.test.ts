@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { pickRandom } from '../../../src/agents/agent-move-selection.js';
 import { GreedyAgent } from '../../../src/agents/greedy-agent.js';
 import {
   createTemplateChooseNDuplicatesAction,
@@ -15,7 +16,6 @@ import {
   createRng,
   initialState,
   legalMoves,
-  nextInt,
   type ActionDef,
   type EndCondition,
   type GameDef,
@@ -213,7 +213,7 @@ describe('GreedyAgent core', () => {
     assert.deepEqual(first, second);
   });
 
-  it('breaks equal-score ties via nextInt and advances rng exactly once', () => {
+  it('breaks equal-score ties via shared random selector and advances rng exactly once', () => {
     const def = createDef([
       createAction('a', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } }]),
       createAction('b', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } }]),
@@ -221,7 +221,7 @@ describe('GreedyAgent core', () => {
     const state = initialState(def, 14, 2).state;
     const moves = legalMoves(def, state);
     const rng = createRng(123n);
-    const [expectedIndex, expectedRng] = nextInt(rng, 0, moves.length - 1);
+    const expected = pickRandom(moves, rng);
     const agent = new GreedyAgent();
     const result = agent.chooseMove({
       def,
@@ -231,8 +231,8 @@ describe('GreedyAgent core', () => {
       rng,
     });
 
-    assert.equal(result.move.actionId, moves[expectedIndex]?.actionId);
-    assert.deepEqual(result.rng, expectedRng);
+    assert.equal(result.move.actionId, expected.item.actionId);
+    assert.deepEqual(result.rng, expected.rng);
   });
 
   it('does not draw tie-break rng when no tie exists', () => {
@@ -418,6 +418,85 @@ describe('GreedyAgent core', () => {
     });
 
     assert.equal(result.move.actionId, asActionId('stochastic'));
+  });
+
+  it('stochastic fallback is deterministic for identical seeds', () => {
+    const stochasticActionA: ActionDef = {
+      id: asActionId('stochastic-a'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [phaseId],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const stochasticActionB: ActionDef = {
+      id: asActionId('stochastic-b'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [phaseId],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const makeProfile = (actionId: string): ActionPipelineDef => ({
+      id: `profile-${actionId}`,
+      actionId: asActionId(actionId),
+      legality: null,
+      costValidation: null, costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          stage: 'resolve',
+          effects: [
+            {
+              rollRandom: {
+                bind: '$roll',
+                min: 1,
+                max: 2,
+                in: [
+                  {
+                    if: {
+                      when: { op: '==' as const, left: { ref: 'binding' as const, name: '$roll' }, right: 1 },
+                      then: [{ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } }],
+                      else: [{ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['beta'] } } }],
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+      atomicity: 'atomic',
+    });
+
+    const def = createDefWithProfile(
+      [stochasticActionA, stochasticActionB],
+      [makeProfile('stochastic-a'), makeProfile('stochastic-b')],
+    );
+    const moves: Move[] = [
+      { actionId: asActionId('stochastic-a'), params: {} },
+      { actionId: asActionId('stochastic-b'), params: {} },
+    ];
+    const agent = new GreedyAgent();
+
+    const makeInput = () => ({
+      def,
+      state: stateStub,
+      playerId: asPlayerId(0),
+      legalMoves: moves,
+      rng: createRng(77n),
+    });
+
+    const first = agent.chooseMove(makeInput());
+    const second = agent.chooseMove(makeInput());
+
+    assert.deepEqual(first, second);
   });
 
   it('prefers completed moves over stochastic-unresolved ones', () => {

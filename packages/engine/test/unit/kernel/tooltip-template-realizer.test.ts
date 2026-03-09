@@ -73,6 +73,36 @@ describe('realizeContentPlan', () => {
       assert.equal(result.steps[0]!.lines[0]!.text, 'Select zones');
     });
 
+    it('realizes select(options) target label', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'options', bounds: { min: 1, max: 3 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1-3 options');
+    });
+
+    it('realizes select with singular when min === max === 1', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'options', bounds: { min: 1, max: 1 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1 option');
+    });
+
+    it('realizes "Select up to 1" with singular noun form', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'items', bounds: { min: 0, max: 1 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select up to 1 item');
+    });
+
+    it('realizes "Select up to 3" with plural noun form', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'items', bounds: { min: 0, max: 3 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select up to 3 items');
+    });
+
+    it('realizes "Select up to 1" with singular tokens target', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'tokens', bounds: { min: 0, max: 1 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select up to 1 token');
+    });
+
     it('realizes place', () => {
       const msg: TooltipMessage = { kind: 'place', astPath: 'r', tokenFilter: 'usTroops', targetZone: 'saigon' };
       const result = realizeContentPlan(plan([msg]), MOCK_VERB);
@@ -223,12 +253,12 @@ describe('realizeContentPlan', () => {
       assert.equal(result.steps[0]!.lines[0]!.text, 'Roll 1-6');
     });
 
-    it('realizes modifier', () => {
+    it('realizes modifier with condition+effect', () => {
       const msg: TooltipMessage = { kind: 'modifier', astPath: 'r', condition: 'monsoon', description: 'No air lift during Monsoon' };
       const result = realizeContentPlan(plan([msg]), undefined);
       // Modifiers are extracted to the plan's modifiers array by the content planner,
-      // but if one appears in messages, the realizer just outputs its description
-      assert.equal(result.steps[0]!.lines[0]!.text, 'No air lift during Monsoon');
+      // but if one appears in messages, the realizer outputs "condition: description"
+      assert.equal(result.steps[0]!.lines[0]!.text, 'monsoon: No air lift during Monsoon');
     });
 
     it('realizes blocker', () => {
@@ -253,6 +283,54 @@ describe('realizeContentPlan', () => {
       const msg: TooltipMessage = { kind: 'conceal', astPath: 'r', target: 'saigon' };
       const result = realizeContentPlan(plan([msg]), MOCK_VERB);
       assert.equal(result.steps[0]!.lines[0]!.text, 'Conceal Saigon');
+    });
+
+    it('realizes select with target: players', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'players', bounds: { min: 1, max: 1 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1 player');
+    });
+
+    it('realizes select with target: values', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'values', bounds: { min: 0, max: 100 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select up to 100 values');
+    });
+
+    it('realizes select with target: markers', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'markers', bounds: { min: 1, max: 3 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1-3 markers');
+    });
+
+    it('realizes select with target: rows', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'rows', bounds: { min: 1, max: 1 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1 row');
+    });
+
+    it('realizes select with optionHints (<=5 items) and bounds for items target', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'items', bounds: { min: 1, max: 1 }, optionHints: ['Fold', 'Call', 'Raise'] };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1 from: Fold, Call, Raise');
+    });
+
+    it('realizes select with optionHints resolving labels through verbalization', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'items', bounds: { min: 1, max: 1 }, optionHints: ['sweep', 'operations'] };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1 from: Sweep, Operations');
+    });
+
+    it('realizes select with optionHints (<=5) using Choose when target is not items', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'options', bounds: { min: 1, max: 1 }, optionHints: ['Fold', 'Call', 'Raise'] };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Choose from: Fold, Call, Raise');
+    });
+
+    it('realizes select with >5 optionHints showing first 5 with ellipsis', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'items', bounds: { min: 0, max: 3 }, optionHints: ['a', 'b', 'c', 'd', 'e', 'f'] };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select up to 3 items from: A, B, C, D, E...');
     });
 
     it('filters out suppressed messages', () => {
@@ -467,6 +545,262 @@ describe('realizeContentPlan', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // Select bounds formatting (LEGTOOLT-005)
+  // ---------------------------------------------------------------------------
+
+  describe('select bounds formatting', () => {
+    it('min === max produces "Select N target" (not "Select N-N")', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'spaces', bounds: { min: 3, max: 3 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 3 spaces');
+    });
+
+    it('min === 1 and max === 1 produces singular "Select 1 target"', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'spaces', bounds: { min: 1, max: 1 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1 space');
+    });
+
+    it('min === 0 produces "Select up to max target"', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'spaces', bounds: { min: 0, max: 2 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select up to 2 spaces');
+    });
+
+    it('general range keeps "Select min-max target"', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'spaces', bounds: { min: 2, max: 5 } };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 2-5 spaces');
+    });
+
+    it('min === 0 with filter resolves filter through resolveLabel', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'spaces', bounds: { min: 0, max: 3 }, filter: 'usTroops' };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select up to 3 US Troops');
+    });
+
+    it('min === max === 1 with singular/plural filter uses singular', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'spaces', bounds: { min: 1, max: 1 }, filter: 'usTroops' };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1 US Troop');
+    });
+
+    it('min === max > 1 with singular/plural filter uses plural', () => {
+      const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'spaces', bounds: { min: 3, max: 3 }, filter: 'usTroops' };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 3 US Troops');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Choose optional flag (LEGTOOLT-005)
+  // ---------------------------------------------------------------------------
+
+  describe('choose optional flag', () => {
+    it('appends "(optional)" when msg.optional is true', () => {
+      const msg: TooltipMessage = { kind: 'choose', astPath: 'r', options: ['sweep', 'operations'], paramName: 'action', optional: true };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Choose: Sweep, Operations (optional)');
+    });
+
+    it('does not append "(optional)" when optional is absent', () => {
+      const msg: TooltipMessage = { kind: 'choose', astPath: 'r', options: ['sweep', 'operations'], paramName: 'action' };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Choose: Sweep, Operations');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Stage description resolution (LEGTOOLT-005)
+  // ---------------------------------------------------------------------------
+
+  describe('stage description resolution', () => {
+    const VERB_WITH_STAGES: VerbalizationDef = {
+      ...MOCK_VERB,
+      stages: { train: 'Training Phase' },
+      stageDescriptions: {
+        us: {
+          train: { label: 'US Training', description: 'Deploy troops and build bases' },
+        },
+      },
+    };
+
+    it('resolves header through stageDescriptions when profileId matches', () => {
+      const p: ContentPlan = {
+        actionLabel: 'train',
+        steps: [{ stepNumber: 1, header: 'train', messages: [] }],
+        modifiers: [],
+      };
+      const result = realizeContentPlan(p, VERB_WITH_STAGES, 'us');
+      assert.equal(result.steps[0]!.header, 'US Training');
+    });
+
+    it('falls back to stages map when profileId has no matching entry', () => {
+      const p: ContentPlan = {
+        actionLabel: 'train',
+        steps: [{ stepNumber: 1, header: 'train', messages: [] }],
+        modifiers: [],
+      };
+      const result = realizeContentPlan(p, VERB_WITH_STAGES, 'nva');
+      assert.equal(result.steps[0]!.header, 'Training Phase');
+    });
+
+    it('falls back to resolveLabel when no stages match', () => {
+      const p: ContentPlan = {
+        actionLabel: 'train',
+        steps: [{ stepNumber: 1, header: 'unknownStage', messages: [] }],
+        modifiers: [],
+      };
+      const result = realizeContentPlan(p, VERB_WITH_STAGES, 'us');
+      assert.equal(result.steps[0]!.header, 'Unknown Stage');
+    });
+
+    it('falls back to resolveLabel when no profileId is provided', () => {
+      const p: ContentPlan = {
+        actionLabel: 'train',
+        steps: [{ stepNumber: 1, header: 'train', messages: [] }],
+        modifiers: [],
+      };
+      const result = realizeContentPlan(p, VERB_WITH_STAGES);
+      assert.equal(result.steps[0]!.header, 'Training Phase');
+    });
+
+    it('includes description as subtitle when available', () => {
+      const p: ContentPlan = {
+        actionLabel: 'train',
+        steps: [{ stepNumber: 1, header: 'train', messages: [] }],
+        modifiers: [],
+      };
+      const result = realizeContentPlan(p, VERB_WITH_STAGES, 'us');
+      assert.equal(result.steps[0]!.description, 'Deploy troops and build bases');
+    });
+
+    it('omits description when stageDescription has no description field', () => {
+      const verbNoDesc: VerbalizationDef = {
+        ...MOCK_VERB,
+        stageDescriptions: {
+          us: { train: { label: 'US Training' } },
+        },
+      };
+      const p: ContentPlan = {
+        actionLabel: 'train',
+        steps: [{ stepNumber: 1, header: 'train', messages: [] }],
+        modifiers: [],
+      };
+      const result = realizeContentPlan(p, verbNoDesc, 'us');
+      assert.equal(result.steps[0]!.description, undefined);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Modifier condition+effect (LEGTOOLT-005)
+  // ---------------------------------------------------------------------------
+
+  describe('modifier condition+effect realization', () => {
+    it('shows "condition: description" when description is non-empty and differs from condition', () => {
+      const msg: TooltipMessage = { kind: 'modifier', astPath: 'r', condition: 'monsoon', description: 'No air lift during Monsoon' };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'monsoon: No air lift during Monsoon');
+    });
+
+    it('shows just description when it equals condition', () => {
+      const msg: TooltipMessage = { kind: 'modifier', astPath: 'r', condition: 'same text', description: 'same text' };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'same text');
+    });
+
+    it('shows just condition when description is empty', () => {
+      const msg: TooltipMessage = { kind: 'modifier', astPath: 'r', condition: 'monsoon', description: '' };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'monsoon');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // conditionAST re-rendering (ACTTOOHUMGAP-005)
+  // ---------------------------------------------------------------------------
+
+  describe('conditionAST re-rendering on SelectMessage', () => {
+    it('uses re-rendered condition text when conditionAST is present', () => {
+      const msg: TooltipMessage = {
+        kind: 'select',
+        astPath: 'r',
+        target: 'spaces',
+        bounds: { min: 1, max: 3 },
+        filter: 'aid >= 3',
+        conditionAST: { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 },
+      };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      // With conditionAST + verbalization, should re-render using label "Aid" not raw "aid >= 3"
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1-3 Aid ≥ 3');
+    });
+
+    it('falls back to pre-rendered filter string when conditionAST is absent', () => {
+      const msg: TooltipMessage = {
+        kind: 'select',
+        astPath: 'r',
+        target: 'spaces',
+        bounds: { min: 1, max: 3 },
+        filter: 'usTroops',
+      };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1-3 US Troops');
+    });
+
+    it('falls back to target label when neither conditionAST nor filter is present', () => {
+      const msg: TooltipMessage = {
+        kind: 'select',
+        astPath: 'r',
+        target: 'spaces',
+        bounds: { min: 1, max: 3 },
+      };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1-3 spaces');
+    });
+
+    it('re-renders condition with count-aware label for min===max', () => {
+      const msg: TooltipMessage = {
+        kind: 'select',
+        astPath: 'r',
+        target: 'spaces',
+        bounds: { min: 1, max: 1 },
+        filter: 'aid >= 3',
+        conditionAST: { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 },
+      };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1 Aid ≥ 3');
+    });
+
+    it('re-renders condition for "Select up to N" with conditionAST', () => {
+      const msg: TooltipMessage = {
+        kind: 'select',
+        astPath: 'r',
+        target: 'spaces',
+        bounds: { min: 0, max: 3 },
+        filter: 'aid >= 3',
+        conditionAST: { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 },
+      };
+      const result = realizeContentPlan(plan([msg]), MOCK_VERB);
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select up to 3 Aid ≥ 3');
+    });
+
+    it('works without verbalization (humanize fallback)', () => {
+      const msg: TooltipMessage = {
+        kind: 'select',
+        astPath: 'r',
+        target: 'spaces',
+        bounds: { min: 1, max: 3 },
+        filter: 'old filter',
+        conditionAST: { op: '>=', left: { ref: 'gvar', var: 'playerGold' }, right: 5 },
+      };
+      const result = realizeContentPlan(plan([msg]), undefined);
+      // Without verbalization, humanizeConditionWithLabels still produces a string
+      assert.ok(result.steps[0]!.lines[0]!.text.includes('5'));
+      assert.ok(!result.steps[0]!.lines[0]!.text.includes('old filter'));
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // Determinism
   // ---------------------------------------------------------------------------
 
@@ -477,6 +811,26 @@ describe('realizeContentPlan', () => {
       const r1 = realizeContentPlan(p, MOCK_VERB);
       const r2 = realizeContentPlan(p, MOCK_VERB);
       assert.deepEqual(r1, r2);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // SummaryMessage
+  // ---------------------------------------------------------------------------
+
+  describe('summary message', () => {
+    it('realizeSummary returns msg.text unchanged', () => {
+      const msg: TooltipMessage = { kind: 'summary', astPath: 'r', text: 'Place guerrillas from Available' };
+      const p = plan([msg]);
+      const card = realizeContentPlan(p, MOCK_VERB);
+      assert.equal(card.steps[0]!.lines[0]!.text, 'Place guerrillas from Available');
+    });
+
+    it('realizeSummary preserves macroClass text verbatim', () => {
+      const msg: TooltipMessage = { kind: 'summary', astPath: 'r', text: 'Rally in selected space', macroClass: 'Rally' };
+      const p = plan([msg]);
+      const card = realizeContentPlan(p, MOCK_VERB);
+      assert.equal(card.steps[0]!.lines[0]!.text, 'Rally in selected space');
     });
   });
 });

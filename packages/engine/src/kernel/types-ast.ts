@@ -1,7 +1,11 @@
 import type { PlayerId, TokenId, ZoneId } from './branded.js';
 import type { PredicateOp } from '../contracts/index.js';
+import type { FreeOperationSequenceContextContract } from './free-operation-sequence-context-contract.js';
 import type { ScopedVarEndpointContract, ScopedVarPayloadContract } from './scoped-var-contract.js';
-import type { TurnFlowActionClass } from '../contracts/index.js';
+import type {
+  TurnFlowActionClass,
+  TurnFlowFreeOperationGrantViabilityPolicy,
+} from '../contracts/index.js';
 
 export type NonEmptyReadonlyArray<T> = readonly [T, ...T[]];
 
@@ -487,12 +491,19 @@ export type EffectAST =
         readonly operationClass: TurnFlowActionClass;
         readonly actionIds?: readonly string[];
         readonly zoneFilter?: ConditionAST;
+        readonly moveZoneBindings?: readonly string[];
+        readonly moveZoneProbeBindings?: readonly string[];
         readonly allowDuringMonsoon?: boolean;
         readonly uses?: number;
+        readonly viabilityPolicy?: TurnFlowFreeOperationGrantViabilityPolicy;
+        readonly completionPolicy?: import('../contracts/index.js').TurnFlowFreeOperationGrantCompletionPolicy;
+        readonly outcomePolicy?: import('../contracts/index.js').TurnFlowFreeOperationGrantOutcomePolicy;
+        readonly postResolutionTurnFlow?: import('../contracts/index.js').TurnFlowFreeOperationGrantPostResolutionTurnFlow;
         readonly sequence?: {
           readonly chain: string;
           readonly step: number;
         };
+        readonly sequenceContext?: FreeOperationSequenceContextContract;
       };
     }
   | {

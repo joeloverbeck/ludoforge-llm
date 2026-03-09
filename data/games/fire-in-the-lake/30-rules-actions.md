@@ -606,28 +606,10 @@ actions:
                           args:
                             - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
                             - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                            - conditionMacro: fitl-space-without-nva-control
+                              args:
+                                spaceExpr: $zone
                   right: 0
-                - op: '<='
-                  left:
-                    aggregate:
-                      op: count
-                      query:
-                        query: tokensInZone
-                        zone: { zoneExpr: { ref: binding, name: targetSpace } }
-                        filter:
-                          op: and
-                          args:
-                            - { prop: faction, eq: NVA }
-                  right:
-                    aggregate:
-                      op: count
-                      query:
-                        query: tokensInZone
-                        zone: { zoneExpr: { ref: binding, name: targetSpace } }
-                        filter:
-                          op: and
-                          args:
-                            - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
             - op: '>'
               left:
                 aggregate:
@@ -753,28 +735,10 @@ actions:
                           args:
                             - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
                             - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                            - conditionMacro: fitl-space-without-nva-control
+                              args:
+                                spaceExpr: $zone
                   right: 0
-                - op: '<='
-                  left:
-                    aggregate:
-                      op: count
-                      query:
-                        query: tokensInZone
-                        zone: { zoneExpr: { ref: binding, name: targetSpace } }
-                        filter:
-                          op: and
-                          args:
-                            - { prop: faction, eq: NVA }
-                  right:
-                    aggregate:
-                      op: count
-                      query:
-                        query: tokensInZone
-                        zone: { zoneExpr: { ref: binding, name: targetSpace } }
-                        filter:
-                          op: and
-                          args:
-                            - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
             - op: '>'
               left:
                 aggregate:
@@ -1525,28 +1489,9 @@ actionPipelines:
                             args:
                               - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                               - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                          # Without NVA Control (NVA pieces <= COIN+VC pieces)
-                          - op: <=
-                            left:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: tokensInZone
-                                  zone: $zone
-                                  filter:
-                                    op: and
-                                    args:
-                                      - { prop: faction, op: eq, value: 'NVA' }
-                            right:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: tokensInZone
-                                  zone: $zone
-                                  filter:
-                                    op: and
-                                    args:
-                                      - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
+                          - conditionMacro: fitl-space-without-nva-control
+                            args:
+                              spaceExpr: $zone
                     min: 1
                     max: 1
               else:
@@ -1561,27 +1506,9 @@ actionPipelines:
                             args:
                               - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                               - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                          - op: <=
-                            left:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: tokensInZone
-                                  zone: $zone
-                                  filter:
-                                    op: and
-                                    args:
-                                      - { prop: faction, op: eq, value: 'NVA' }
-                            right:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: tokensInZone
-                                  zone: $zone
-                                  filter:
-                                    op: and
-                                    args:
-                                      - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
+                          - conditionMacro: fitl-space-without-nva-control
+                            args:
+                              spaceExpr: $zone
                     min: 1
                     max: 99
 
@@ -3084,6 +3011,117 @@ actionPipelines:
             args:
               faction: 'NVA'
               resourceVar: nvaResources
+              paidMinExpr:
+                if:
+                  when:
+                    op: and
+                    args:
+                      - { op: '==', left: { ref: globalMarkerState, marker: cap_pt76 }, right: unshaded }
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: mapSpaces
+                              filter:
+                                op: and
+                                args:
+                                  - op: '>'
+                                    left:
+                                      aggregate:
+                                        op: count
+                                        query:
+                                          query: tokensInZone
+                                          zone: $zone
+                                          filter:
+                                            op: and
+                                            args:
+                                              - { prop: faction, eq: 'NVA' }
+                                    right: 0
+                                  - op: '>'
+                                    left:
+                                      aggregate:
+                                        op: count
+                                        query:
+                                          query: tokensInZone
+                                          zone: $zone
+                                          filter:
+                                            op: and
+                                            args:
+                                              - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                    right: 0
+                                  - op: '>'
+                                    left:
+                                      aggregate:
+                                        op: count
+                                        query:
+                                          query: tokensInZone
+                                          zone: $zone
+                                          filter:
+                                            op: and
+                                            args:
+                                              - { prop: faction, eq: 'NVA' }
+                                              - { prop: type, eq: troops }
+                                    right: 0
+                        right: 0
+                  then: 1
+                  else:
+                    if:
+                      when: { op: '>', left: { ref: gvar, var: nvaResources }, right: 0 }
+                      then: 1
+                      else: 0
+              paidMaxExpr:
+                if:
+                  when: { op: '==', left: { ref: globalMarkerState, marker: cap_pt76 }, right: unshaded }
+                  then:
+                    op: +
+                    left: { ref: gvar, var: nvaResources }
+                    right:
+                      aggregate:
+                        op: count
+                        query:
+                          query: mapSpaces
+                          filter:
+                            op: and
+                            args:
+                              - op: '>'
+                                left:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInZone
+                                      zone: $zone
+                                      filter:
+                                        op: and
+                                        args:
+                                          - { prop: faction, eq: 'NVA' }
+                                right: 0
+                              - op: '>'
+                                left:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInZone
+                                      zone: $zone
+                                      filter:
+                                        op: and
+                                        args:
+                                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                right: 0
+                              - op: '>'
+                                left:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInZone
+                                      zone: $zone
+                                      filter:
+                                        op: and
+                                        args:
+                                          - { prop: faction, eq: 'NVA' }
+                                          - { prop: type, eq: troops }
+                                right: 0
+                  else: { ref: gvar, var: nvaResources }
       - stage: cost-per-space
         effects:
           - forEach:
@@ -3096,11 +3134,12 @@ actionPipelines:
                       - if:
                           when: { op: '==', left: { ref: globalMarkerState, marker: cap_pt76 }, right: unshaded }
                           then:
-                            - removeByPriority:
-                                budget: 1
-                                groups:
-                                  - bind: $pt76CostTroop
-                                    over:
+                            - let:
+                                bind: $pt76CostTroopCount
+                                value:
+                                  aggregate:
+                                    op: count
+                                    query:
                                       query: tokensInZone
                                       zone: $space
                                       filter:
@@ -3108,67 +3147,158 @@ actionPipelines:
                                         args:
                                           - { prop: faction, eq: NVA }
                                           - { prop: type, eq: troops }
-                                    to:
-                                      zoneExpr: 'available-NVA:none'
+                                in:
+                                  - if:
+                                      when: { op: '>', left: { ref: binding, name: $pt76CostTroopCount }, right: 0 }
+                                      then:
+                                        - removeByPriority:
+                                            budget: 1
+                                            groups:
+                                              - bind: $pt76CostTroop
+                                                over:
+                                                  query: tokensInZone
+                                                  zone: $space
+                                                  filter:
+                                                    op: and
+                                                    args:
+                                                      - { prop: faction, eq: NVA }
+                                                      - { prop: type, eq: troops }
+                                                to:
+                                                  zoneExpr: 'available-NVA:none'
+                                      else:
+                                        - addVar: { scope: global, var: nvaResources, delta: -1 }
                           else:
                             - addVar: { scope: global, var: nvaResources, delta: -1 }
       - stage: resolve-per-space
         effects:
-          - forEach:
-              bind: $space
-              over: { query: binding, name: $targetSpaces }
-              effects:
-                - chooseOne:
-                    bind: $attackMode
-                    options: { query: enums, values: ['guerrilla-attack', 'troops-attack'] }
-                - if:
-                    when: { op: '==', left: { ref: binding, name: $attackMode }, right: 'guerrilla-attack' }
-                    then:
-                      - forEach:
-                          bind: $g
-                          over:
-                            query: tokensInZone
-                            zone: $space
-                            filter: { op: and, args: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: guerrilla }] }
-                          effects:
-                            - setTokenProp: { token: $g, prop: activity, value: active }
-                      - let:
-                          bind: $guerrillaCount
-                          value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: guerrilla }] } } } }
-                          in:
-                            - rollRandom:
-                                bind: $dieRoll
-                                min: 1
-                                max: 6
-                                in:
-                                  - if:
-                                      when: { op: '<=', left: { ref: binding, name: $dieRoll }, right: { ref: binding, name: $guerrillaCount } }
-                                      then:
-                                        - macro: insurgent-attack-removal-order
-                                          args:
-                                            space: $space
-                                            damageExpr: 2
-                                            attackerFaction: 'NVA'
-                - if:
-                    when: { op: '==', left: { ref: binding, name: $attackMode }, right: 'troops-attack' }
-                    then:
+          - if:
+              when: { op: '==', left: { ref: globalMarkerState, marker: cap_pt76 }, right: shaded }
+              then:
+                - macro: pt76-select-enhanced-space
+                - forEach:
+                    bind: $space
+                    over: { query: binding, name: $targetSpaces }
+                    effects:
                       - let:
                           bind: $nvaTroops
                           value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: troops }] } } } }
                           in:
-                            - let:
-                                bind: $damage
-                                value:
-                                  if:
-                                    when: { op: '==', left: { ref: globalMarkerState, marker: cap_pt76 }, right: shaded }
-                                    then: { ref: binding, name: $nvaTroops }
-                                    else: { op: '/', left: { ref: binding, name: $nvaTroops }, right: 2 }
-                                in:
-                                  - macro: insurgent-attack-removal-order
-                                    args:
-                                      space: $space
-                                      damageExpr: { ref: binding, name: $damage }
-                                      attackerFaction: 'NVA'
+                            - chooseOne:
+                                bind: $attackMode
+                                options: { query: enums, values: ['guerrilla-attack', 'troops-attack'] }
+                            - if:
+                                when: { op: '==', left: { ref: binding, name: $attackMode }, right: 'guerrilla-attack' }
+                                then:
+                                  - forEach:
+                                      bind: $g
+                                      over:
+                                        query: tokensInZone
+                                        zone: $space
+                                        filter: { op: and, args: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: guerrilla }] }
+                                      effects:
+                                        - setTokenProp: { token: $g, prop: activity, value: active }
+                                  - if:
+                                      when:
+                                        op: and
+                                        args:
+                                          - { op: '==', left: { ref: binding, name: $space }, right: { ref: binding, name: $pt76EnhancedSpace } }
+                                          - { op: '>', left: { ref: binding, name: $nvaTroops }, right: 0 }
+                                      then:
+                                        - macro: insurgent-attack-removal-order
+                                          args:
+                                            space: $space
+                                            damageExpr: { ref: binding, name: $nvaTroops }
+                                            attackerFaction: 'NVA'
+                                      else:
+                                        - let:
+                                            bind: $guerrillaCount
+                                            value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: guerrilla }] } } } }
+                                            in:
+                                              - rollRandom:
+                                                  bind: $dieRoll
+                                                  min: 1
+                                                  max: 6
+                                                  in:
+                                                    - if:
+                                                        when: { op: '<=', left: { ref: binding, name: $dieRoll }, right: { ref: binding, name: $guerrillaCount } }
+                                                        then:
+                                                          - macro: insurgent-attack-removal-order
+                                                            args:
+                                                              space: $space
+                                                              damageExpr: 2
+                                                              attackerFaction: 'NVA'
+                            - if:
+                                when: { op: '==', left: { ref: binding, name: $attackMode }, right: 'troops-attack' }
+                                then:
+                                  - let:
+                                      bind: $damage
+                                      value:
+                                        if:
+                                          when:
+                                            op: and
+                                            args:
+                                              - { op: '==', left: { ref: binding, name: $space }, right: { ref: binding, name: $pt76EnhancedSpace } }
+                                              - { op: '>', left: { ref: binding, name: $nvaTroops }, right: 0 }
+                                          then: { ref: binding, name: $nvaTroops }
+                                          else: { op: '/', left: { ref: binding, name: $nvaTroops }, right: 2 }
+                                      in:
+                                        - macro: insurgent-attack-removal-order
+                                          args:
+                                            space: $space
+                                            damageExpr: { ref: binding, name: $damage }
+                                            attackerFaction: 'NVA'
+              else:
+                - forEach:
+                    bind: $space
+                    over: { query: binding, name: $targetSpaces }
+                    effects:
+                      - let:
+                          bind: $nvaTroops
+                          value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: troops }] } } } }
+                          in:
+                            - chooseOne:
+                                bind: $attackMode
+                                options: { query: enums, values: ['guerrilla-attack', 'troops-attack'] }
+                            - if:
+                                when: { op: '==', left: { ref: binding, name: $attackMode }, right: 'guerrilla-attack' }
+                                then:
+                                  - forEach:
+                                      bind: $g
+                                      over:
+                                        query: tokensInZone
+                                        zone: $space
+                                        filter: { op: and, args: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: guerrilla }] }
+                                      effects:
+                                        - setTokenProp: { token: $g, prop: activity, value: active }
+                                  - let:
+                                      bind: $guerrillaCount
+                                      value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: guerrilla }] } } } }
+                                      in:
+                                        - rollRandom:
+                                            bind: $dieRoll
+                                            min: 1
+                                            max: 6
+                                            in:
+                                              - if:
+                                                  when: { op: '<=', left: { ref: binding, name: $dieRoll }, right: { ref: binding, name: $guerrillaCount } }
+                                                  then:
+                                                    - macro: insurgent-attack-removal-order
+                                                      args:
+                                                        space: $space
+                                                        damageExpr: 2
+                                                        attackerFaction: 'NVA'
+                            - if:
+                                when: { op: '==', left: { ref: binding, name: $attackMode }, right: 'troops-attack' }
+                                then:
+                                  - let:
+                                      bind: $damage
+                                      value: { op: '/', left: { ref: binding, name: $nvaTroops }, right: 2 }
+                                      in:
+                                        - macro: insurgent-attack-removal-order
+                                          args:
+                                            space: $space
+                                            damageExpr: { ref: binding, name: $damage }
+                                            attackerFaction: 'NVA'
     atomicity: atomic
   - id: attack-vc-profile
     actionId: attack
@@ -3184,6 +3314,12 @@ actionPipelines:
             args:
               faction: 'VC'
               resourceVar: vcResources
+              paidMinExpr:
+                if:
+                  when: { op: '>', left: { ref: gvar, var: vcResources }, right: 0 }
+                  then: 1
+                  else: 0
+              paidMaxExpr: { ref: gvar, var: vcResources }
       - stage: cost-per-space
         effects:
           - forEach:

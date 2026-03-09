@@ -145,18 +145,20 @@ describe('FITL tutorial simple event-card production spec', () => {
     const unshadedTarget = card?.unshaded?.targets?.[0];
     assert.equal(unshadedTarget?.selector?.query, 'mapSpaces');
     assert.deepEqual(unshadedTarget?.cardinality, { max: 6 });
-    const unshadedPlace = card?.unshaded?.effects?.find((effect) => 'removeByPriority' in effect);
+    assert.equal(card?.unshaded?.effects, undefined);
+    const unshadedPlace = card?.unshaded?.targets?.[0]?.effects?.find((effect) => 'removeByPriority' in effect);
     assert.notEqual(unshadedPlace, undefined);
     assert.equal(unshadedPlace?.removeByPriority.budget, 6);
 
     const shadedTarget = card?.shaded?.targets?.[0];
     assert.equal(shadedTarget?.selector?.query, 'mapSpaces');
     assert.deepEqual(shadedTarget?.cardinality, { max: 3 });
-    const shadedShift = card?.shaded?.effects?.find((effect) => 'shiftMarker' in effect);
+    assert.equal(card?.shaded?.effects, undefined);
+    const shadedShift = card?.shaded?.targets?.[0]?.effects?.find((effect) => 'shiftMarker' in effect);
     assert.deepEqual(shadedShift, {
       shiftMarker: { space: '$targetProvince', marker: 'supportOpposition', delta: -1 },
     });
-    const shadedPlace = card?.shaded?.effects?.find((effect) => 'removeByPriority' in effect);
+    const shadedPlace = card?.shaded?.targets?.[0]?.effects?.find((effect) => 'removeByPriority' in effect);
     assert.notEqual(shadedPlace, undefined);
     assert.equal(shadedPlace?.removeByPriority.budget, 3);
   });

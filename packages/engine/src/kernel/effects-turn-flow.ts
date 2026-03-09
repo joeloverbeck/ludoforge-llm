@@ -7,29 +7,32 @@ import { advancePhase, buildAdvancePhaseRequest } from './phase-advance.js';
 import { findPhaseDef } from './phase-lookup.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { resolveBindingTemplate } from './binding-template.js';
-import { isTurnFlowActionClass } from '../contracts/index.js';
+import {
+  collectTurnFlowFreeOperationGrantContractViolations,
+  isTurnFlowActionClass,
+  renderTurnFlowFreeOperationGrantContractViolation,
+} from '../contracts/index.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { createEvalRuntimeResources } from './eval-context.js';
+import {
+  grantRequiresUsableProbe,
+  isFreeOperationGrantUsableInCurrentState,
+} from './free-operation-viability.js';
+import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
-import type { EffectAST, GameState, TurnFlowPendingFreeOperationGrant } from './types.js';
+import type {
+  EffectAST,
+  GameState,
+  TurnFlowFreeOperationGrantContract,
+  TurnFlowPendingFreeOperationGrant,
+} from './types.js';
 import { createSeatResolutionContext, resolveTurnFlowSeatForPlayerIndex } from './seat-resolution.js';
 import {
   activeSeatUnresolvableInvariantMessage,
   makeActiveSeatUnresolvableInvariantContext,
 } from './turn-flow-invariant-contracts.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
-
-const resolveGrantSeat = (
-  token: string,
-  activeSeat: string,
-  seatOrder: readonly string[],
-): string | null => {
-  if (token === 'self') {
-    return activeSeat;
-  }
-  return seatOrder.includes(token) ? token : null;
-};
 
 const makeUniqueGrantId = (
   grants: readonly TurnFlowPendingFreeOperationGrant[],
@@ -46,6 +49,22 @@ const makeUniqueGrantId = (
     candidate = `${baseId}#${suffix}`;
   }
   return candidate;
+};
+
+const buildSequenceProbeCandidates = (
+  ctx: EffectContext,
+  grant: Extract<EffectAST, { readonly grantFreeOperation: unknown }>['grantFreeOperation'],
+): readonly TurnFlowFreeOperationGrantContract[] => {
+  const step = grant.sequence?.step;
+  if (step === undefined || step <= 0) {
+    return [];
+  }
+  return (ctx.freeOperationProbeScope?.priorGrantDefinitions ?? []).filter(
+    (candidate) =>
+      candidate.sequence !== undefined
+      && candidate.sequence.chain === grant.sequence!.chain
+      && candidate.sequence.step < step,
+  );
 };
 
 const consumePhaseTransitionBudget = (ctx: EffectContext, effectType: string): boolean => {
@@ -121,7 +140,7 @@ export const applyGrantFreeOperation = (
       makeTurnFlowActiveSeatUnresolvableEffectRuntimeContext(activeSeatInvariant),
     );
   }
-  const seat = resolveGrantSeat(grant.seat, activeSeat, runtime.seatOrder);
+  const seat = resolveFreeOperationGrantSeatToken(grant.seat, activeSeat, runtime.seatOrder);
   if (seat === null) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, `grantFreeOperation.seat is unknown: ${grant.seat}`, {
       effectType: 'grantFreeOperation',
@@ -132,7 +151,7 @@ export const applyGrantFreeOperation = (
 
   let executeAsSeat: string | undefined;
   if (grant.executeAsSeat !== undefined) {
-    const resolvedExecuteAs = resolveGrantSeat(grant.executeAsSeat, activeSeat, runtime.seatOrder);
+    const resolvedExecuteAs = resolveFreeOperationGrantSeatToken(grant.executeAsSeat, activeSeat, runtime.seatOrder);
     if (resolvedExecuteAs === null) {
       throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, `grantFreeOperation.executeAsSeat is unknown: ${grant.executeAsSeat}`, {
         effectType: 'grantFreeOperation',
@@ -150,17 +169,81 @@ export const applyGrantFreeOperation = (
       uses,
     });
   }
+  for (const violation of collectTurnFlowFreeOperationGrantContractViolations({
+    operationClass: grant.operationClass,
+    ...(grant.uses === undefined ? {} : { uses: grant.uses }),
+    ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
+    ...(grant.moveZoneBindings === undefined ? {} : { moveZoneBindings: grant.moveZoneBindings }),
+    ...(grant.moveZoneProbeBindings === undefined ? {} : { moveZoneProbeBindings: grant.moveZoneProbeBindings }),
+    ...(grant.completionPolicy === undefined ? {} : { completionPolicy: grant.completionPolicy }),
+    ...(grant.outcomePolicy === undefined ? {} : { outcomePolicy: grant.outcomePolicy }),
+    ...(grant.postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow: grant.postResolutionTurnFlow }),
+    ...(grant.sequence === undefined ? {} : { sequence: grant.sequence }),
+    ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),
+  })) {
+    if (
+      violation.code === 'viabilityPolicyInvalid'
+      || violation.code === 'moveZoneBindingsInvalid'
+      || violation.code === 'moveZoneProbeBindingsInvalid'
+      || violation.code === 'completionPolicyInvalid'
+      || violation.code === 'outcomePolicyInvalid'
+      || violation.code === 'postResolutionTurnFlowInvalid'
+      || violation.code === 'requiredPostResolutionTurnFlowMissing'
+      || violation.code === 'postResolutionTurnFlowRequiresRequiredCompletionPolicy'
+      || violation.code === 'sequenceStepInvalid'
+      || violation.code === 'sequenceContextInvalid'
+      || violation.code === 'sequenceContextRequiresSequence'
+    ) {
+      const surface = renderTurnFlowFreeOperationGrantContractViolation(violation);
+      throw effectRuntimeError(
+        EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
+        surface.message,
+        {
+          effectType: 'grantFreeOperation',
+          ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
+          ...(grant.moveZoneBindings === undefined ? {} : { moveZoneBindings: grant.moveZoneBindings }),
+          ...(grant.moveZoneProbeBindings === undefined ? {} : { moveZoneProbeBindings: grant.moveZoneProbeBindings }),
+          ...(grant.completionPolicy === undefined ? {} : { completionPolicy: grant.completionPolicy }),
+          ...(grant.outcomePolicy === undefined ? {} : { outcomePolicy: grant.outcomePolicy }),
+          ...(grant.postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow: grant.postResolutionTurnFlow }),
+        },
+      );
+    }
+  }
 
   const existing = runtime.pendingFreeOperationGrants ?? [];
   const fallbackBaseId = `freeOpEffect:${ctx.state.turnCount}:${activeSeat}:${existing.length}`;
   const grantId = makeUniqueGrantId(existing, grant.id ?? fallbackBaseId);
   const sequenceBatchId = grant.sequence === undefined ? undefined : `${grantId}:${grant.sequence.chain}`;
   const sequenceIndex = grant.sequence?.step;
-  if (sequenceIndex !== undefined && (!Number.isSafeInteger(sequenceIndex) || sequenceIndex < 0)) {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, 'grantFreeOperation.sequence.step must be a non-negative integer', {
-      effectType: 'grantFreeOperation',
-      sequenceStep: sequenceIndex,
-    });
+
+  const resolvedZoneFilter = grant.zoneFilter === undefined
+    ? undefined
+    : resolveTemplateTree(grant.zoneFilter, ctx.bindings);
+  const resolvedGrant = resolvedZoneFilter === undefined
+    ? grant
+    : {
+      ...grant,
+      zoneFilter: resolvedZoneFilter,
+    };
+  ctx.freeOperationProbeScope?.priorGrantDefinitions.push(resolvedGrant);
+
+  if (
+    grantRequiresUsableProbe(resolvedGrant)
+    && !isFreeOperationGrantUsableInCurrentState(
+      ctx.def,
+      ctx.state,
+      resolvedGrant,
+      activeSeat,
+      runtime.seatOrder,
+      seatResolution,
+      { sequenceProbeCandidates: buildSequenceProbeCandidates(ctx, resolvedGrant) },
+    )
+  ) {
+    return {
+      state: ctx.state,
+      rng: ctx.rng,
+    };
   }
 
   const appended: TurnFlowPendingFreeOperationGrant = {
@@ -169,8 +252,15 @@ export const applyGrantFreeOperation = (
     ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
     operationClass: grant.operationClass,
     ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
-    ...(grant.zoneFilter === undefined ? {} : { zoneFilter: resolveTemplateTree(grant.zoneFilter, ctx.bindings) }),
+    ...(resolvedZoneFilter === undefined ? {} : { zoneFilter: resolvedZoneFilter }),
+    ...(grant.moveZoneBindings === undefined ? {} : { moveZoneBindings: [...grant.moveZoneBindings] }),
+    ...(grant.moveZoneProbeBindings === undefined ? {} : { moveZoneProbeBindings: [...grant.moveZoneProbeBindings] }),
+    ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),
     ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
+    ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
+    ...(grant.completionPolicy === undefined ? {} : { completionPolicy: grant.completionPolicy }),
+    ...(grant.outcomePolicy === undefined ? {} : { outcomePolicy: grant.outcomePolicy }),
+    ...(grant.postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow: grant.postResolutionTurnFlow }),
     remainingUses: uses,
     ...(sequenceBatchId === undefined ? {} : { sequenceBatchId }),
     ...(sequenceIndex === undefined ? {} : { sequenceIndex }),

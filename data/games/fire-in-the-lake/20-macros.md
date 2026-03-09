@@ -829,6 +829,8 @@ effectMacros:
     params:
       - { name: faction, type: { kind: enum, values: [NVA, VC] } }
       - { name: resourceVar, type: string }
+      - { name: paidMinExpr, type: value }
+      - { name: paidMaxExpr, type: value }
     exports: [$targetSpaces]
     effects:
       - if:
@@ -867,16 +869,23 @@ effectMacros:
                   if:
                     when: { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
                     then: 1
-                    else:
-                      if:
-                        when: { op: '>', left: { ref: gvar, var: { param: resourceVar } }, right: 0 }
-                        then: 1
-                        else: 0
+                    else: { param: paidMinExpr }
                 max:
                   if:
                     when: { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
                     then: 99
-                    else: { ref: gvar, var: { param: resourceVar } }
+                    else: { param: paidMaxExpr }
+
+  # ── pt76-select-enhanced-space ────────────────────────────────────────────
+  # PT-76 shaded chooses exactly one already-selected Attack space to receive
+  # the per-NVA-Troop damage replacement.
+  - id: pt76-select-enhanced-space
+    params: []
+    exports: [$pt76EnhancedSpace]
+    effects:
+      - chooseOne:
+          bind: $pt76EnhancedSpace
+          options: { query: binding, name: $targetSpaces }
 
   # ── insurgent-terror-select-spaces ────────────────────────────────────────
   # Shared insurgent Terror map-space selector:
@@ -3239,6 +3248,73 @@ conditionMacros:
         - { op: '==', left: { ref: zoneProp, zone: { param: spaceExpr }, prop: category }, right: province }
         - { conditionMacro: fitl-space-in-laos-cambodia, args: { spaceExpr: { param: spaceExpr } } }
 
+  # Shared control predicate: map space without NVA Control.
+  # Rule semantics: NVA piece count is less than or equal to COIN+VC piece count.
+  - id: fitl-space-without-nva-control
+    params:
+      - { name: spaceExpr, type: value }
+    condition:
+      op: <=
+      left:
+        aggregate:
+          op: count
+          query:
+            query: tokensInZone
+            zone: { param: spaceExpr }
+            filter:
+              op: and
+              args:
+                - { prop: faction, eq: NVA }
+      right:
+        aggregate:
+          op: count
+          query:
+            query: tokensInZone
+            zone: { param: spaceExpr }
+            filter:
+              op: and
+              args:
+                - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
+
+  # Shared control predicate: COIN-controlled map space.
+  - id: fitl-space-coin-controlled
+    params:
+      - { name: spaceExpr, type: value }
+    condition:
+      op: '>'
+      left:
+        aggregate:
+          op: count
+          query:
+            query: tokensInZone
+            zone: { param: spaceExpr }
+            filter:
+              op: and
+              args:
+                - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
+      right:
+        aggregate:
+          op: count
+          query:
+            query: tokensInZone
+            zone: { param: spaceExpr }
+            filter:
+              op: and
+              args:
+                - { prop: faction, eq: NVA }
+
+  # Shared control predicate: city without NVA Control.
+  - id: fitl-space-city-without-nva-control
+    params:
+      - { name: spaceExpr, type: value }
+    condition:
+      op: and
+      args:
+        - { op: '==', left: { ref: zoneProp, zone: { param: spaceExpr }, prop: category }, right: city }
+        - conditionMacro: fitl-space-without-nva-control
+          args:
+            spaceExpr: { param: spaceExpr }
+
   # Shared control predicate: COIN-controlled city (US+ARVN+VC strictly greater than NVA).
   - id: fitl-space-coin-controlled-city
     params:
@@ -3247,27 +3323,22 @@ conditionMacros:
       op: and
       args:
         - { op: '==', left: { ref: zoneProp, zone: { param: spaceExpr }, prop: category }, right: city }
-        - op: '>'
-          left:
-            aggregate:
-              op: count
-              query:
-                query: tokensInZone
-                zone: { param: spaceExpr }
-                filter:
-                  op: and
-                  args:
-                    - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
-          right:
-            aggregate:
-              op: count
-              query:
-                query: tokensInZone
-                zone: { param: spaceExpr }
-                filter:
-                  op: and
-                  args:
-                    - { prop: faction, eq: NVA }
+        - conditionMacro: fitl-space-coin-controlled
+          args:
+            spaceExpr: { param: spaceExpr }
+
+  # Rule 6.4.2 destination check with card-90 override ("as if no Bases"):
+  # destination must be Saigon or a city without NVA Control.
+  - id: fitl-arvn-redeploy-destination-no-bases
+    params:
+      - { name: spaceExpr, type: value }
+    condition:
+      op: or
+      args:
+        - conditionMacro: fitl-space-city-without-nva-control
+          args:
+            spaceExpr: { param: spaceExpr }
+        - { op: '==', left: { ref: zoneProp, zone: { param: spaceExpr }, prop: id }, right: saigon:none }
 
   # Shared Rule 1.8.1 predicate:
   # US may spend ARVN Resources only if post-spend resource does not drop below totalEcon.

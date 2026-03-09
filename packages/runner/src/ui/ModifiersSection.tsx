@@ -45,8 +45,10 @@ export function ModifiersSection({ modifiers, activeModifierIndices }: Modifiers
                 data-testid={isActive ? 'modifier-active' : 'modifier-inactive'}
               >
                 {isActive && <span className={styles.checkmark} aria-label="active">{'\u2713'}</span>}
-                <span className={styles.condition}>{mod.condition}:</span>{' '}
-                <span className={styles.description}>{mod.description}</span>
+                <span className={styles.condition}>{mod.condition}{mod.description !== '' ? ':' : ''}</span>
+                {mod.description !== '' && (
+                  <>{' '}<span className={styles.description}>{mod.description}</span></>
+                )}
               </li>
             );
           })}

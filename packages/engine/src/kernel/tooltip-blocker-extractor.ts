@@ -9,44 +9,12 @@
  * - Leaf comparisons: format as "Need {left} {op} {right}"
  */
 
-import type { ConditionAST, ValueExpr, ZoneSel } from './types-ast.js';
+import type { ConditionAST } from './types-ast.js';
 import type { BlockerDetail, BlockerInfo } from './tooltip-rule-card.js';
 import type { VerbalizationDef } from './verbalization-types.js';
 import type { LabelContext } from './tooltip-label-resolver.js';
-import { buildLabelContext, resolveLabel } from './tooltip-label-resolver.js';
-
-// ---------------------------------------------------------------------------
-// ValueExpr stringification
-// ---------------------------------------------------------------------------
-
-const stringifyValueExpr = (expr: ValueExpr, ctx: LabelContext): string => {
-  if (typeof expr === 'number' || typeof expr === 'boolean') return String(expr);
-  if (typeof expr === 'string') return resolveLabel(expr, ctx);
-  if ('ref' in expr) {
-    switch (expr.ref) {
-      case 'gvar': return resolveLabel(expr.var, ctx);
-      case 'pvar': return resolveLabel(expr.var, ctx);
-      case 'zoneVar': return `${stringifyZoneSel(expr.zone, ctx)}.${resolveLabel(expr.var, ctx)}`;
-      case 'zoneCount': return `count(${stringifyZoneSel(expr.zone, ctx)})`;
-      case 'tokenProp': return `${resolveLabel(expr.token, ctx)}.${expr.prop}`;
-      case 'assetField': return `${expr.tableId}.${expr.field}`;
-      case 'binding': return resolveLabel(expr.name, ctx);
-      case 'markerState': return `${stringifyZoneSel(expr.space, ctx)}.${resolveLabel(expr.marker, ctx)}`;
-      case 'globalMarkerState': return resolveLabel(expr.marker, ctx);
-      case 'tokenZone': return `zone of ${resolveLabel(expr.token, ctx)}`;
-      case 'zoneProp': return `${stringifyZoneSel(expr.zone, ctx)}.${expr.prop}`;
-      case 'activePlayer': return 'active player';
-    }
-  }
-  if ('aggregate' in expr) return `aggregate`;
-  if ('op' in expr) return `expression`;
-  if ('concat' in expr) return `concatenation`;
-  if ('if' in expr) return `conditional`;
-  return 'value';
-};
-
-const stringifyZoneSel = (zone: ZoneSel, ctx: LabelContext): string =>
-  resolveLabel(zone, ctx);
+import { buildLabelContext } from './tooltip-label-resolver.js';
+import { humanizeValueExpr } from './tooltip-value-stringifier.js';
 
 // ---------------------------------------------------------------------------
 // Condition size (for `or` minimal selection)
@@ -151,8 +119,8 @@ const describeLeafBlocker = (
     case '<=':
     case '>':
     case '>=': {
-      const left = stringifyValueExpr(cond.left, ctx);
-      const right = stringifyValueExpr(cond.right, ctx);
+      const left = humanizeValueExpr(cond.left, ctx);
+      const right = humanizeValueExpr(cond.right, ctx);
       const opDisplay = OP_DISPLAY[cond.op] ?? cond.op;
       return {
         astPath: path,
@@ -161,22 +129,22 @@ const describeLeafBlocker = (
       };
     }
     case 'in': {
-      const item = stringifyValueExpr(cond.item, ctx);
+      const item = humanizeValueExpr(cond.item, ctx);
       return { astPath: path, description: `Need ${item} in set` };
     }
     case 'adjacent': {
-      const left = stringifyZoneSel(cond.left, ctx);
-      const right = stringifyZoneSel(cond.right, ctx);
+      const left = humanizeValueExpr(cond.left, ctx);
+      const right = humanizeValueExpr(cond.right, ctx);
       return { astPath: path, description: `Need ${left} adjacent to ${right}` };
     }
     case 'connected': {
-      const from = stringifyZoneSel(cond.from, ctx);
-      const to = stringifyZoneSel(cond.to, ctx);
+      const from = humanizeValueExpr(cond.from, ctx);
+      const to = humanizeValueExpr(cond.to, ctx);
       return { astPath: path, description: `Need ${from} connected to ${to}` };
     }
     case 'zonePropIncludes': {
-      const zone = stringifyZoneSel(cond.zone, ctx);
-      const value = stringifyValueExpr(cond.value, ctx);
+      const zone = humanizeValueExpr(cond.zone, ctx);
+      const value = humanizeValueExpr(cond.value, ctx);
       return { astPath: path, description: `Need ${zone}.${cond.prop} to include ${value}` };
     }
     default: {
@@ -212,28 +180,28 @@ const describeNotBlocker = (
     case '<=':
     case '>':
     case '>=': {
-      const left = stringifyValueExpr(inner.left, ctx);
-      const right = stringifyValueExpr(inner.right, ctx);
+      const left = humanizeValueExpr(inner.left, ctx);
+      const right = humanizeValueExpr(inner.right, ctx);
       const opDisplay = INVERTED_OP_DISPLAY[inner.op] ?? inner.op;
       return `Need ${left} ${opDisplay} ${right}`;
     }
     case 'in': {
-      const item = stringifyValueExpr(inner.item, ctx);
+      const item = humanizeValueExpr(inner.item, ctx);
       return `Need ${item} not in set`;
     }
     case 'adjacent': {
-      const left = stringifyZoneSel(inner.left, ctx);
-      const right = stringifyZoneSel(inner.right, ctx);
+      const left = humanizeValueExpr(inner.left, ctx);
+      const right = humanizeValueExpr(inner.right, ctx);
       return `Need ${left} not adjacent to ${right}`;
     }
     case 'connected': {
-      const from = stringifyZoneSel(inner.from, ctx);
-      const to = stringifyZoneSel(inner.to, ctx);
+      const from = humanizeValueExpr(inner.from, ctx);
+      const to = humanizeValueExpr(inner.to, ctx);
       return `Need ${from} not connected to ${to}`;
     }
     case 'zonePropIncludes': {
-      const zone = stringifyZoneSel(inner.zone, ctx);
-      const value = stringifyValueExpr(inner.value, ctx);
+      const zone = humanizeValueExpr(inner.zone, ctx);
+      const value = humanizeValueExpr(inner.value, ctx);
       return `Need ${zone}.${inner.prop} to not include ${value}`;
     }
     case 'and':

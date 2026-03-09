@@ -6,11 +6,17 @@ import {
   CHOICE_OPTIONS_RUNTIME_SHAPE_DIAGNOSTIC_CODES,
 } from '../kernel/choice-options-runtime-shape-diagnostic.js';
 import {
+  collectTurnFlowFreeOperationGrantContractViolations,
+  renderTurnFlowFreeOperationGrantContractViolation,
   TURN_FLOW_ACTION_CLASS_VALUES,
+  TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES,
+  TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES,
+  TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
   collectDeclaredBinderCandidatesFromEffectNode,
   hasBindingIdentifier,
   isCanonicalBindingIdentifier,
   isTurnFlowActionClass,
+  isTurnFlowFreeOperationGrantViabilityPolicy,
   rankBindingIdentifierAlternatives,
 } from '../contracts/index.js';
 import type {
@@ -25,6 +31,7 @@ import type {
   ValueExpr,
   ZoneRef,
 } from '../kernel/types.js';
+import { FreeOperationSequenceContextSchema } from '../kernel/free-operation-sequence-context-schema.js';
 import { inferQueryDomainKinds, type QueryDomainKind } from '../kernel/query-domain-kinds.js';
 import { collectDeclaredBinderCandidates, collectSequentialBindings } from './binder-surface-registry.js';
 import {
@@ -1629,7 +1636,7 @@ function lowerGrantFreeOperationEffect(
 ): EffectLoweringResult<EffectAST> {
   if (typeof source.seat !== 'string') {
     return missingCapability(path, 'grantFreeOperation effect', source, [
-      '{ grantFreeOperation: { seat, operationClass, actionIds?, executeAsSeat?, zoneFilter?, allowDuringMonsoon?, uses?, id?, sequence? } }',
+      '{ grantFreeOperation: { seat, operationClass, actionIds?, executeAsSeat?, zoneFilter?, moveZoneBindings?, moveZoneProbeBindings?, allowDuringMonsoon?, uses?, viabilityPolicy?, id?, sequence? } }',
     ]);
   }
   if (typeof source.operationClass !== 'string' || !isTurnFlowActionClass(source.operationClass)) {
@@ -1683,6 +1690,36 @@ function lowerGrantFreeOperationEffect(
     loweredZoneFilter = lowered.value;
   }
 
+  let moveZoneBindings: string[] | undefined;
+  if (
+    source.moveZoneBindings !== undefined
+    && (!Array.isArray(source.moveZoneBindings) || source.moveZoneBindings.some((entry) => typeof entry !== 'string' || entry.length === 0))
+  ) {
+    diagnostics.push(...missingCapability(
+      `${path}.moveZoneBindings`,
+      'grantFreeOperation moveZoneBindings',
+      source.moveZoneBindings,
+      ['non-empty string[]'],
+    ).diagnostics);
+  } else if (Array.isArray(source.moveZoneBindings)) {
+    moveZoneBindings = [...source.moveZoneBindings] as string[];
+  }
+
+  let moveZoneProbeBindings: string[] | undefined;
+  if (
+    source.moveZoneProbeBindings !== undefined
+    && (!Array.isArray(source.moveZoneProbeBindings) || source.moveZoneProbeBindings.some((entry) => typeof entry !== 'string' || entry.length === 0))
+  ) {
+    diagnostics.push(...missingCapability(
+      `${path}.moveZoneProbeBindings`,
+      'grantFreeOperation moveZoneProbeBindings',
+      source.moveZoneProbeBindings,
+      ['non-empty string[]'],
+    ).diagnostics);
+  } else if (Array.isArray(source.moveZoneProbeBindings)) {
+    moveZoneProbeBindings = [...source.moveZoneProbeBindings] as string[];
+  }
+
   let allowDuringMonsoon: boolean | undefined;
   if (source.allowDuringMonsoon !== undefined && typeof source.allowDuringMonsoon !== 'boolean') {
     diagnostics.push(...missingCapability(
@@ -1693,6 +1730,71 @@ function lowerGrantFreeOperationEffect(
     ).diagnostics);
   } else if (typeof source.allowDuringMonsoon === 'boolean') {
     allowDuringMonsoon = source.allowDuringMonsoon;
+  }
+
+  let viabilityPolicy: import('../contracts/index.js').TurnFlowFreeOperationGrantViabilityPolicy | undefined;
+  if (
+    source.viabilityPolicy !== undefined
+    && (typeof source.viabilityPolicy !== 'string' || !isTurnFlowFreeOperationGrantViabilityPolicy(source.viabilityPolicy))
+  ) {
+    diagnostics.push(...missingCapability(
+      `${path}.viabilityPolicy`,
+      'grantFreeOperation viabilityPolicy',
+      source.viabilityPolicy,
+      [...TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES],
+    ).diagnostics);
+  } else if (typeof source.viabilityPolicy === 'string') {
+    viabilityPolicy = source.viabilityPolicy;
+  }
+
+  let completionPolicy: import('../contracts/index.js').TurnFlowFreeOperationGrantCompletionPolicy | undefined;
+  if (
+    source.completionPolicy !== undefined
+    && (typeof source.completionPolicy !== 'string' || source.completionPolicy !== 'required')
+  ) {
+    diagnostics.push(...missingCapability(
+      `${path}.completionPolicy`,
+      'grantFreeOperation completionPolicy',
+      source.completionPolicy,
+      ['required'],
+    ).diagnostics);
+  } else if (typeof source.completionPolicy === 'string') {
+    completionPolicy = source.completionPolicy;
+  }
+
+  let outcomePolicy: import('../contracts/index.js').TurnFlowFreeOperationGrantOutcomePolicy | undefined;
+  if (
+    source.outcomePolicy !== undefined
+    && (typeof source.outcomePolicy !== 'string' || source.outcomePolicy !== 'mustChangeGameplayState')
+  ) {
+    diagnostics.push(...missingCapability(
+      `${path}.outcomePolicy`,
+      'grantFreeOperation outcomePolicy',
+      source.outcomePolicy,
+      ['mustChangeGameplayState'],
+    ).diagnostics);
+  } else if (typeof source.outcomePolicy === 'string') {
+    outcomePolicy = source.outcomePolicy;
+  }
+
+  let postResolutionTurnFlow: import('../contracts/index.js').TurnFlowFreeOperationGrantPostResolutionTurnFlow | undefined;
+  if (
+    source.postResolutionTurnFlow !== undefined
+    && (
+      typeof source.postResolutionTurnFlow !== 'string'
+      || !TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES.includes(
+        source.postResolutionTurnFlow as import('../contracts/index.js').TurnFlowFreeOperationGrantPostResolutionTurnFlow,
+      )
+    )
+  ) {
+    diagnostics.push(...missingCapability(
+      `${path}.postResolutionTurnFlow`,
+      'grantFreeOperation postResolutionTurnFlow',
+      source.postResolutionTurnFlow,
+      [...TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES],
+    ).diagnostics);
+  } else if (typeof source.postResolutionTurnFlow === 'string') {
+    postResolutionTurnFlow = source.postResolutionTurnFlow as import('../contracts/index.js').TurnFlowFreeOperationGrantPostResolutionTurnFlow;
   }
 
   let loweredSequence: { readonly chain: string; readonly step: number } | undefined;
@@ -1711,6 +1813,78 @@ function lowerGrantFreeOperationEffect(
     }
   }
 
+  let loweredSequenceContext: import('../kernel/free-operation-sequence-context-contract.js').FreeOperationSequenceContextContract | undefined;
+  if (source.sequenceContext !== undefined) {
+    const parsedSequenceContext = FreeOperationSequenceContextSchema.safeParse(source.sequenceContext);
+    if (!parsedSequenceContext.success) {
+      const primaryIssue = parsedSequenceContext.error.issues[0];
+      const issueSuffix = primaryIssue?.path.length ? `.${primaryIssue.path.join('.')}` : '';
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
+        path: `${path}.sequenceContext${issueSuffix}`,
+        severity: 'error',
+        message: `Cannot lower grantFreeOperation sequenceContext to kernel AST: ${primaryIssue?.message ?? formatValue(source.sequenceContext)}`,
+        suggestion: 'Rewrite this node to the canonical sequenceContext shape.',
+        alternatives: [
+          '{ captureMoveZoneCandidatesAs: string }',
+          '{ requireMoveZoneCandidatesFrom: string }',
+          '{ captureMoveZoneCandidatesAs: string, requireMoveZoneCandidatesFrom: string }',
+        ],
+      });
+    } else {
+      loweredSequenceContext = {
+        ...(parsedSequenceContext.data.captureMoveZoneCandidatesAs === undefined
+          ? {}
+          : { captureMoveZoneCandidatesAs: parsedSequenceContext.data.captureMoveZoneCandidatesAs }),
+        ...(parsedSequenceContext.data.requireMoveZoneCandidatesFrom === undefined
+          ? {}
+          : { requireMoveZoneCandidatesFrom: parsedSequenceContext.data.requireMoveZoneCandidatesFrom }),
+      };
+    }
+  }
+
+  for (const violation of collectTurnFlowFreeOperationGrantContractViolations({
+    operationClass: source.operationClass,
+    ...(uses === undefined ? {} : { uses }),
+    ...(viabilityPolicy === undefined ? {} : { viabilityPolicy }),
+    ...(moveZoneBindings === undefined ? {} : { moveZoneBindings }),
+    ...(moveZoneProbeBindings === undefined ? {} : { moveZoneProbeBindings }),
+    ...(completionPolicy === undefined ? {} : { completionPolicy }),
+    ...(outcomePolicy === undefined ? {} : { outcomePolicy }),
+    ...(postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow }),
+    ...(loweredSequence === undefined ? {} : { sequence: loweredSequence }),
+    ...(loweredSequenceContext === undefined ? {} : { sequenceContext: loweredSequenceContext }),
+  })) {
+    const surface = renderTurnFlowFreeOperationGrantContractViolation(violation, {
+      basePath: path,
+    });
+    if (violation.code === 'requiredPostResolutionTurnFlowMissing') {
+      diagnostics.push(...missingCapability(
+        surface.path,
+        'grantFreeOperation postResolutionTurnFlow',
+        source.postResolutionTurnFlow,
+        [...TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES],
+      ).diagnostics);
+    }
+    if (violation.code === 'postResolutionTurnFlowRequiresRequiredCompletionPolicy') {
+      diagnostics.push(...missingCapability(
+        surface.path,
+        'grantFreeOperation completionPolicy',
+        source.completionPolicy,
+        [...TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES],
+      ).diagnostics);
+    }
+    if (violation.code === 'sequenceContextRequiresSequence') {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
+        path: surface.path,
+        severity: 'error',
+        message: surface.message,
+        suggestion: 'Declare sequence.chain and sequence.step when using sequenceContext.',
+      });
+    }
+  }
+
   if (diagnostics.some((diagnostic) => diagnostic.severity === 'error')) {
     return { value: null, diagnostics };
   }
@@ -1724,9 +1898,16 @@ function lowerGrantFreeOperationEffect(
         ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
         ...(actionIds === undefined ? {} : { actionIds }),
         ...(loweredZoneFilter === undefined ? {} : { zoneFilter: loweredZoneFilter }),
+        ...(moveZoneBindings === undefined ? {} : { moveZoneBindings }),
+        ...(moveZoneProbeBindings === undefined ? {} : { moveZoneProbeBindings }),
         ...(allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon }),
         ...(uses === undefined ? {} : { uses }),
+        ...(viabilityPolicy === undefined ? {} : { viabilityPolicy }),
+        ...(completionPolicy === undefined ? {} : { completionPolicy }),
+        ...(outcomePolicy === undefined ? {} : { outcomePolicy }),
+        ...(postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow }),
         ...(loweredSequence === undefined ? {} : { sequence: loweredSequence }),
+        ...(loweredSequenceContext === undefined ? {} : { sequenceContext: loweredSequenceContext }),
       },
     },
     diagnostics,

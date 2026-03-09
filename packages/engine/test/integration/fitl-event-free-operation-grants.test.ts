@@ -52,7 +52,7 @@ actor: 'active',
 executor: 'actor',
 phase: [asPhaseId('main')],
         params: [
-          { name: 'eventCardId', domain: { query: 'enums', values: ['card-1', 'card-2', 'card-3', 'card-4', 'card-5', 'card-6', 'card-7', 'card-9'] } },
+          { name: 'eventCardId', domain: { query: 'enums', values: ['card-1', 'card-2', 'card-3', 'card-4', 'card-5', 'card-6', 'card-7', 'card-9', 'card-required-outcome', 'card-overlap-required-outcome'] } },
           { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
           { name: 'branch', domain: { query: 'enums', values: ['branch-grant-nva', 'none'] } },
         ],
@@ -209,6 +209,50 @@ phase: [asPhaseId('main')],
               effects: [{ grantFreeOperation: { seat: 'VC', operationClass: 'operation', actionIds: ['operation'] } }],
             },
           },
+          {
+            id: 'card-required-outcome',
+            title: 'Required Self Grant',
+            sideMode: 'single',
+            unshaded: {
+              text: 'US must take a free operation that changes gameplay state.',
+              freeOperationGrants: [
+                {
+                  seat: 'US',
+                  sequence: { chain: 'required-self', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  completionPolicy: 'required',
+                  outcomePolicy: 'mustChangeGameplayState',
+                  postResolutionTurnFlow: 'resumeCardFlow',
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-overlap-required-outcome',
+            title: 'Overlapping Required Self Grant',
+            sideMode: 'single',
+            unshaded: {
+              text: 'US receives overlapping free operations, one of which must change gameplay state.',
+              freeOperationGrants: [
+                {
+                  seat: 'US',
+                  sequence: { chain: 'overlap-self-weaker', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                },
+                {
+                  seat: 'US',
+                  sequence: { chain: 'overlap-self-required', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  completionPolicy: 'required',
+                  outcomePolicy: 'mustChangeGameplayState',
+                  postResolutionTurnFlow: 'resumeCardFlow',
+                },
+              ],
+            },
+          },
         ],
       } as EventDeckDef,
     ],
@@ -255,6 +299,106 @@ const createClassAwareDedupDef = (): GameDef => {
 
   return def as unknown as GameDef;
 };
+
+const createRequiredGrantResumeDef = (): GameDef =>
+  ({
+    metadata: { id: 'event-required-grant-resume-int', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
+    seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }, { id: 'VC' }],
+    constants: {},
+    globalVars: [{ name: 'opCount', type: 'int', init: 0, min: 0, max: 10 }],
+    perPlayerVars: [],
+    zones: [],
+    tokenTypes: [],
+    setup: [],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    turnOrder: {
+      type: 'cardDriven',
+      config: {
+        turnFlow: {
+          cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          eligibility: {
+            seats: ['US', 'ARVN', 'NVA', 'VC'],
+            overrideWindows: [],
+          },
+          optionMatrix: [{ first: 'event', second: ['operation'] }],
+          passRewards: [],
+          freeOperationActionIds: ['operation'],
+          durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          actionClassByActionId: { event: 'event', operation: 'operation' },
+        },
+      },
+    },
+    actions: [
+      {
+        id: asActionId('event'),
+        capabilities: ['cardEvent'],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [
+          { name: 'eventCardId', domain: { query: 'enums', values: ['card-required-resume'] } },
+          { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
+          { name: 'branch', domain: { query: 'enums', values: ['none'] } },
+        ],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+      {
+        id: asActionId('operation'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+    ],
+    actionPipelines: [
+      {
+        id: 'operation-profile',
+        actionId: asActionId('operation'),
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [{ effects: [{ addVar: { scope: 'global', var: 'opCount', delta: 1 } }] }],
+        atomicity: 'atomic',
+      },
+    ],
+    triggers: [],
+    terminal: { conditions: [] },
+    eventDecks: [
+      {
+        id: 'event-deck',
+        drawZone: 'deck:none',
+        discardZone: 'played:none',
+        cards: [
+          {
+            id: 'card-required-resume',
+            title: 'Required Follow-Up',
+            sideMode: 'single',
+            unshaded: {
+              text: 'US event requires ARVN to take a free operation.',
+              freeOperationGrants: [
+                {
+                  seat: 'ARVN',
+                  sequence: { chain: 'resume-chain', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  completionPolicy: 'required',
+                  postResolutionTurnFlow: 'resumeCardFlow',
+                },
+              ],
+            },
+          },
+        ],
+      } as EventDeckDef,
+    ],
+  }) as unknown as GameDef;
 
 const createActionIdMismatchDef = (): GameDef => {
   const def = createDef() as unknown as {
@@ -475,6 +619,224 @@ phase: [asPhaseId('main')],
     ],
   }) as unknown as GameDef;
 
+const createSequenceContextDef = (): GameDef =>
+  ({
+    metadata: { id: 'event-free-op-sequence-context-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+    seats: [{ id: 'US' }, { id: 'NVA' }],
+    constants: {},
+    globalVars: [],
+    perPlayerVars: [],
+    zones: [
+      {
+        id: 'boardCambodia:none',
+        owner: 'none',
+        visibility: 'public',
+        ordering: 'set',
+        category: 'province',
+        attributes: { population: 1, econ: 0, country: 'cambodia', coastal: false },
+      },
+      {
+        id: 'boardVietnam:none',
+        owner: 'none',
+        visibility: 'public',
+        ordering: 'set',
+        category: 'province',
+        attributes: { population: 1, econ: 0, country: 'southVietnam', coastal: false },
+      },
+    ],
+    tokenTypes: [],
+    setup: [],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    turnOrder: {
+      type: 'cardDriven',
+      config: {
+        turnFlow: {
+          cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          eligibility: {
+            seats: ['US', 'NVA'],
+            overrideWindows: [],
+          },
+          optionMatrix: [{ first: 'event', second: ['operation'] }],
+          passRewards: [],
+          freeOperationActionIds: ['operation'],
+          durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+        },
+      },
+    },
+    actions: [
+      {
+        id: asActionId('event'),
+capabilities: ['cardEvent'],
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+        params: [
+          {
+            name: 'eventCardId',
+            domain: {
+              query: 'enums',
+              values: ['card-sequence-context', 'card-sequence-context-branch', 'card-sequence-context-effect-branch'],
+            },
+          },
+          { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
+          { name: 'branch', domain: { query: 'enums', values: ['branch-follow-up', 'branch-effect-follow-up', 'none'] } },
+        ],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+      {
+        id: asActionId('operation'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+    ],
+    actionPipelines: [
+      {
+        id: 'operation-select-zone',
+        actionId: asActionId('operation'),
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [
+          {
+            effects: [
+              {
+                chooseOne: {
+                  internalDecisionId: 'decision:$zone',
+                  bind: '$zone',
+                  options: { query: 'zones' },
+                },
+              },
+            ],
+          },
+        ],
+        atomicity: 'partial',
+      },
+    ],
+    triggers: [],
+    terminal: { conditions: [] },
+    eventDecks: [
+      {
+        id: 'event-deck',
+        drawZone: 'deck:none',
+        discardZone: 'played:none',
+        cards: [
+          {
+            id: 'card-sequence-context',
+            title: 'Sequence Context Capture',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Capture first free-op space; require second free-op in same space.',
+              freeOperationGrants: [
+                {
+                  seat: 'NVA',
+                  sequence: { chain: 'nva-sequence-context', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  sequenceContext: {
+                    captureMoveZoneCandidatesAs: 'selected-space',
+                  },
+                },
+                {
+                  seat: 'NVA',
+                  sequence: { chain: 'nva-sequence-context', step: 1 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  sequenceContext: {
+                    requireMoveZoneCandidatesFrom: 'selected-space',
+                  },
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-sequence-context-branch',
+            title: 'Sequence Context Capture With Branch Follow-Up',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Capture from side grant; require from selected branch grant.',
+              freeOperationGrants: [
+                {
+                  seat: 'NVA',
+                  sequence: { chain: 'nva-sequence-context-branch', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  sequenceContext: {
+                    captureMoveZoneCandidatesAs: 'selected-space',
+                  },
+                },
+              ],
+              branches: [
+                {
+                  id: 'branch-follow-up',
+                  freeOperationGrants: [
+                    {
+                      seat: 'NVA',
+                      sequence: { chain: 'nva-sequence-context-branch', step: 1 },
+                      operationClass: 'operation',
+                      actionIds: ['operation'],
+                      sequenceContext: {
+                        requireMoveZoneCandidatesFrom: 'selected-space',
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-sequence-context-effect-branch',
+            title: 'Sequence Context Effect Capture With Branch Follow-Up',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Capture from side effect grant; require from selected branch effect grant.',
+              effects: [
+                {
+                  grantFreeOperation: {
+                    seat: 'NVA',
+                    sequence: { chain: 'nva-sequence-context-effect-branch', step: 0 },
+                    operationClass: 'operation',
+                    actionIds: ['operation'],
+                    sequenceContext: {
+                      captureMoveZoneCandidatesAs: 'selected-space',
+                    },
+                  },
+                },
+              ],
+              branches: [
+                {
+                  id: 'branch-effect-follow-up',
+                  effects: [
+                    {
+                      grantFreeOperation: {
+                        seat: 'NVA',
+                        sequence: { chain: 'nva-sequence-context-effect-branch', step: 1 },
+                        operationClass: 'operation',
+                        actionIds: ['operation'],
+                        sequenceContext: {
+                          requireMoveZoneCandidatesFrom: 'selected-space',
+                        },
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      } as EventDeckDef,
+    ],
+  }) as unknown as GameDef;
+
 const createExecuteAsSeatDef = (): GameDef =>
   ({
     metadata: { id: 'event-free-op-execute-as-faction-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
@@ -576,6 +938,382 @@ phase: [asPhaseId('main')],
                   sequence: { chain: 'execute-as-faction', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
+                },
+              ],
+            },
+          },
+        ],
+      } as EventDeckDef,
+    ],
+  }) as unknown as GameDef;
+
+const createGrantViabilityPolicyDef = (): GameDef =>
+  ({
+    metadata: { id: 'event-free-op-viability-policy-int', players: { min: 3, max: 3 }, maxTriggerDepth: 8 },
+    seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }],
+    constants: {},
+    globalVars: [],
+    perPlayerVars: [],
+    zones: [
+      {
+        id: 'boardCambodia:none',
+        owner: 'none',
+        visibility: 'public',
+        ordering: 'set',
+        category: 'province',
+        attributes: { population: 1, econ: 0, country: 'cambodia', coastal: false },
+      },
+      {
+        id: 'boardVietnam:none',
+        owner: 'none',
+        visibility: 'public',
+        ordering: 'set',
+        category: 'province',
+        attributes: { population: 1, econ: 0, country: 'southVietnam', coastal: false },
+      },
+    ],
+    tokenTypes: [],
+    setup: [],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    turnOrder: {
+      type: 'cardDriven',
+      config: {
+        turnFlow: {
+          cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          eligibility: {
+            seats: ['US', 'ARVN', 'NVA'],
+            overrideWindows: [],
+          },
+          optionMatrix: [{ first: 'event', second: ['operation'] }],
+          passRewards: [],
+          freeOperationActionIds: ['operation'],
+          durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+        },
+      },
+    },
+    actions: [
+      {
+        id: asActionId('event'),
+capabilities: ['cardEvent'],
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+        params: [
+          {
+            name: 'eventCardId',
+            domain: {
+              query: 'enums',
+              values: [
+                'card-require-usable-play',
+                'card-require-usable-play-outcome',
+                'card-require-usable-issue',
+                'card-effect-require-usable-issue',
+                'card-effect-require-usable-issue-sequence',
+                'card-effect-require-usable-issue-sequence-usable',
+                'card-effect-require-usable-issue-sequence-nested',
+                'card-effect-require-usable-issue-sequence-nested-usable',
+              ],
+            },
+          },
+          { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
+          { name: 'branch', domain: { query: 'enums', values: ['none'] } },
+        ],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+      {
+        id: asActionId('operation'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+    ],
+    actionPipelines: [
+      {
+        id: 'operation-select-zone',
+        actionId: asActionId('operation'),
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [
+          {
+            effects: [
+              {
+                chooseOne: {
+                  internalDecisionId: 'decision:$zone',
+                  bind: '$zone',
+                  options: { query: 'zones' },
+                },
+              },
+            ],
+          },
+        ],
+        atomicity: 'partial',
+      },
+    ],
+    triggers: [],
+    terminal: { conditions: [] },
+    eventDecks: [
+      {
+        id: 'event-deck',
+        drawZone: 'deck:none',
+        discardZone: 'played:none',
+        cards: [
+          {
+            id: 'card-require-usable-play',
+            title: 'Play-time Viability Required',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Only playable when grant is usable.',
+              freeOperationGrants: [
+                {
+                  seat: 'self',
+                  sequence: { chain: 'nva-unusable', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  viabilityPolicy: 'requireUsableForEventPlay',
+                  zoneFilter: {
+                    op: '==',
+                    left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+                    right: 'laos',
+                  },
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-require-usable-play-outcome',
+            title: 'Play-time Viability Requires Non-Noop Completion',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Only playable when grant can complete with a gameplay-state change.',
+              freeOperationGrants: [
+                {
+                  seat: 'self',
+                  sequence: { chain: 'outcome-unusable', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  viabilityPolicy: 'requireUsableForEventPlay',
+                  completionPolicy: 'required',
+                  outcomePolicy: 'mustChangeGameplayState',
+                  postResolutionTurnFlow: 'resumeCardFlow',
+                  zoneFilter: {
+                    op: '==',
+                    left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+                    right: 'cambodia',
+                  },
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-require-usable-issue',
+            title: 'Issue-time Viability Required',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Emit only the grants that are currently usable.',
+              freeOperationGrants: [
+                {
+                  seat: 'self',
+                  sequence: { chain: 'issue-usable', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  viabilityPolicy: 'requireUsableAtIssue',
+                  zoneFilter: {
+                    op: '==',
+                    left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+                    right: 'cambodia',
+                  },
+                },
+                {
+                  seat: 'self',
+                  sequence: { chain: 'issue-unusable', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  viabilityPolicy: 'requireUsableAtIssue',
+                  zoneFilter: {
+                    op: '==',
+                    left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+                    right: 'laos',
+                  },
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-effect-require-usable-issue',
+            title: 'Effect Issue-time Viability Required',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Effect-issued grants emit only when currently usable.',
+              effects: [
+                {
+                  grantFreeOperation: {
+                    seat: 'self',
+                    operationClass: 'operation',
+                    actionIds: ['operation'],
+                    viabilityPolicy: 'requireUsableAtIssue',
+                    zoneFilter: {
+                      op: '==',
+                      left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+                      right: 'cambodia',
+                    },
+                  },
+                },
+                {
+                  grantFreeOperation: {
+                    seat: 'self',
+                    operationClass: 'operation',
+                    actionIds: ['operation'],
+                    viabilityPolicy: 'requireUsableAtIssue',
+                    zoneFilter: { op: '==', left: 1, right: 2 },
+                  },
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-effect-require-usable-issue-sequence',
+            title: 'Effect Issue-time Viability Sequence Required',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Later sequence steps are not emitted when earlier steps are currently unusable.',
+              effects: [
+                {
+                  grantFreeOperation: {
+                    seat: 'self',
+                    operationClass: 'operation',
+                    actionIds: ['operation'],
+                    sequence: { chain: 'effect-issue-seq', step: 0 },
+                    viabilityPolicy: 'requireUsableAtIssue',
+                    zoneFilter: { op: '==', left: 1, right: 2 },
+                  },
+                },
+                {
+                  grantFreeOperation: {
+                    seat: 'self',
+                    operationClass: 'operation',
+                    actionIds: ['operation'],
+                    sequence: { chain: 'effect-issue-seq', step: 1 },
+                    viabilityPolicy: 'requireUsableAtIssue',
+                  },
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-effect-require-usable-issue-sequence-usable',
+            title: 'Effect Issue-time Viability Sequence Usable',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Later sequence steps are emitted when earlier steps are currently usable.',
+              effects: [
+                {
+                  grantFreeOperation: {
+                    seat: 'self',
+                    operationClass: 'operation',
+                    actionIds: ['operation'],
+                    sequence: { chain: 'effect-issue-seq-usable', step: 0 },
+                    viabilityPolicy: 'requireUsableAtIssue',
+                    zoneFilter: {
+                      op: '==',
+                      left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+                      right: 'cambodia',
+                    },
+                  },
+                },
+                {
+                  grantFreeOperation: {
+                    seat: 'self',
+                    operationClass: 'operation',
+                    actionIds: ['operation'],
+                    sequence: { chain: 'effect-issue-seq-usable', step: 1 },
+                    viabilityPolicy: 'requireUsableAtIssue',
+                  },
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-effect-require-usable-issue-sequence-nested',
+            title: 'Effect Issue-time Viability Sequence Nested Required',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Nested later sequence steps are not emitted when earlier nested steps are currently unusable.',
+              effects: [
+                {
+                  if: {
+                    when: { op: '==', left: 1, right: 1 },
+                    then: [
+                      {
+                        grantFreeOperation: {
+                          seat: 'self',
+                          operationClass: 'operation',
+                          actionIds: ['operation'],
+                          sequence: { chain: 'effect-issue-seq-nested', step: 0 },
+                          viabilityPolicy: 'requireUsableAtIssue',
+                          zoneFilter: { op: '==', left: 1, right: 2 },
+                        },
+                      },
+                      {
+                        grantFreeOperation: {
+                          seat: 'self',
+                          operationClass: 'operation',
+                          actionIds: ['operation'],
+                          sequence: { chain: 'effect-issue-seq-nested', step: 1 },
+                          viabilityPolicy: 'requireUsableAtIssue',
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-effect-require-usable-issue-sequence-nested-usable',
+            title: 'Effect Issue-time Viability Sequence Nested Usable',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Nested later sequence steps are emitted when earlier nested steps are currently usable.',
+              effects: [
+                {
+                  if: {
+                    when: { op: '==', left: 1, right: 1 },
+                    then: [
+                      {
+                        grantFreeOperation: {
+                          seat: 'self',
+                          operationClass: 'operation',
+                          actionIds: ['operation'],
+                          sequence: { chain: 'effect-issue-seq-nested-usable', step: 0 },
+                          viabilityPolicy: 'requireUsableAtIssue',
+                          zoneFilter: {
+                            op: '==',
+                            left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+                            right: 'cambodia',
+                          },
+                        },
+                      },
+                      {
+                        grantFreeOperation: {
+                          seat: 'self',
+                          operationClass: 'operation',
+                          actionIds: ['operation'],
+                          sequence: { chain: 'effect-issue-seq-nested-usable', step: 1 },
+                          viabilityPolicy: 'requireUsableAtIssue',
+                        },
+                      },
+                    ],
+                  },
                 },
               ],
             },
@@ -1071,6 +1809,390 @@ describe('event free-operation grants integration', () => {
     assert.deepEqual(requireCardDrivenRuntime(third).pendingFreeOperationGrants ?? [], []);
   });
 
+  it('captures sequence context from consumed free operation and enforces same-zone follow-up grants', () => {
+    const def = createSequenceContextDef();
+    const start = initialState(def, 121, 2).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-sequence-context', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const grantReadyState: GameState = {
+      ...afterEvent,
+      activePlayer: asPlayerId(1),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...requireCardDrivenRuntime(afterEvent),
+          currentCard: {
+            ...requireCardDrivenRuntime(afterEvent).currentCard,
+            firstEligible: 'NVA',
+            secondEligible: null,
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+        },
+      },
+    };
+
+    const afterFirstFreeOp = applyMove(def, grantReadyState, {
+      actionId: asActionId('operation'),
+      params: { 'decision:$zone': 'boardCambodia:none' },
+      freeOperation: true,
+    }).state;
+
+    const runtimeAfterFirst = requireCardDrivenRuntime(afterFirstFreeOp);
+    assert.equal(runtimeAfterFirst.pendingFreeOperationGrants?.length, 1);
+    const sequenceBatchId = runtimeAfterFirst.pendingFreeOperationGrants?.[0]?.sequenceBatchId;
+    assert.notEqual(sequenceBatchId, undefined);
+    assert.deepEqual(
+      runtimeAfterFirst.freeOperationSequenceContexts?.[sequenceBatchId!]?.capturedMoveZonesByKey?.['selected-space'],
+      ['boardCambodia:none'],
+    );
+
+    assert.throws(
+      () =>
+        applyMove(def, afterFirstFreeOp, {
+          actionId: asActionId('operation'),
+          params: { 'decision:$zone': 'boardVietnam:none' },
+          freeOperation: true,
+        }),
+      (error: unknown) => {
+        if (!(error instanceof Error)) {
+          return false;
+        }
+        const details = error as Error & {
+          readonly reason?: string;
+          readonly context?: {
+            readonly freeOperationDenial?: {
+              readonly cause?: string;
+              readonly sequenceContextMismatchGrantIds?: readonly string[];
+            };
+          };
+        };
+        return (
+          details.reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED
+          && details.context?.freeOperationDenial?.cause === 'sequenceContextMismatch'
+          && (details.context?.freeOperationDenial?.sequenceContextMismatchGrantIds?.length ?? 0) > 0
+        );
+      },
+    );
+
+    const afterSecondFreeOp = applyMove(def, afterFirstFreeOp, {
+      actionId: asActionId('operation'),
+      params: { 'decision:$zone': 'boardCambodia:none' },
+      freeOperation: true,
+    }).state;
+    const runtimeAfterSecond = requireCardDrivenRuntime(afterSecondFreeOp);
+    assert.deepEqual(runtimeAfterSecond.pendingFreeOperationGrants ?? [], []);
+    assert.equal(runtimeAfterSecond.freeOperationSequenceContexts, undefined);
+  });
+
+  it('accepts side capture plus branch require for event free-operation grants and enforces the captured zone at runtime', () => {
+    const def = createSequenceContextDef();
+    const start = initialState(def, 122, 2).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-sequence-context-branch', side: 'unshaded', branch: 'branch-follow-up' },
+    }).state;
+
+    const grantReadyState: GameState = {
+      ...afterEvent,
+      activePlayer: asPlayerId(1),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...requireCardDrivenRuntime(afterEvent),
+          currentCard: {
+            ...requireCardDrivenRuntime(afterEvent).currentCard,
+            firstEligible: 'NVA',
+            secondEligible: null,
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+        },
+      },
+    };
+
+    const afterFirstFreeOp = applyMove(def, grantReadyState, {
+      actionId: asActionId('operation'),
+      params: { 'decision:$zone': 'boardCambodia:none' },
+      freeOperation: true,
+    }).state;
+
+    assert.throws(
+      () =>
+        applyMove(def, afterFirstFreeOp, {
+          actionId: asActionId('operation'),
+          params: { 'decision:$zone': 'boardVietnam:none' },
+          freeOperation: true,
+        }),
+      (error: unknown) => assertFreeOperationDenial(error, 'sequenceContextMismatch'),
+    );
+
+    const afterSecondFreeOp = applyMove(def, afterFirstFreeOp, {
+      actionId: asActionId('operation'),
+      params: { 'decision:$zone': 'boardCambodia:none' },
+      freeOperation: true,
+    }).state;
+
+    const runtimeAfterSecond = requireCardDrivenRuntime(afterSecondFreeOp);
+    assert.deepEqual(runtimeAfterSecond.pendingFreeOperationGrants ?? [], []);
+    assert.equal(runtimeAfterSecond.freeOperationSequenceContexts, undefined);
+  });
+
+  it('accepts side effect-issued capture plus branch effect-issued require and issues both grants from the selected branch scope', () => {
+    const def = createSequenceContextDef();
+    const start = initialState(def, 123, 2).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: {
+        eventCardId: 'card-sequence-context-effect-branch',
+        side: 'unshaded',
+        branch: 'branch-effect-follow-up',
+      },
+    }).state;
+
+    const runtime = requireCardDrivenRuntime(afterEvent);
+    const grants = runtime.pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 2);
+    assert.deepEqual(grants.map((grant) => grant.sequenceIndex), [0, 1]);
+  });
+
+  it('rejects nested effect-issued sequence context requires without an earlier capture', () => {
+    const base = createGrantViabilityPolicyDef();
+    const def = {
+      ...base,
+      eventDecks: base.eventDecks?.map((deck) => ({
+        ...deck,
+        cards: deck.cards.map((card) => {
+          if (card.id !== 'card-effect-require-usable-issue-sequence-nested' || card.unshaded === undefined) {
+            return card;
+          }
+          const effects = card.unshaded.effects ?? [];
+          const rewrittenEffects = effects.map((effect) => {
+            if (!('if' in effect)) {
+              return effect;
+            }
+            return {
+              if: {
+                ...effect.if,
+                then: effect.if.then.map((nestedEffect, nestedIndex) => {
+                  if (!('grantFreeOperation' in nestedEffect) || nestedIndex !== 1) {
+                    return nestedEffect;
+                  }
+                  return {
+                    grantFreeOperation: {
+                      ...nestedEffect.grantFreeOperation,
+                      sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+                    },
+                  };
+                }),
+              },
+            };
+          });
+          return {
+            ...card,
+            unshaded: {
+              ...card.unshaded,
+              effects: rewrittenEffects,
+            },
+          };
+        }),
+      })),
+    } as GameDef;
+
+    assert.throws(
+      () => initialState(def, 111, 3),
+      /FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_MISSING/,
+    );
+  });
+
+  it('rejects nested effect-issued sequence context requires when capture exists only in sibling if.then path', () => {
+    const base = createGrantViabilityPolicyDef();
+    const def = {
+      ...base,
+      eventDecks: base.eventDecks?.map((deck) => ({
+        ...deck,
+        cards: deck.cards.map((card) => {
+          if (card.id !== 'card-effect-require-usable-issue-sequence-nested' || card.unshaded === undefined) {
+            return card;
+          }
+          const effects = card.unshaded.effects ?? [];
+          const rewrittenEffects = effects.map((effect) => {
+            if (!('if' in effect)) {
+              return effect;
+            }
+            return {
+              if: {
+                ...effect.if,
+                then: effect.if.then.map((nestedEffect, nestedIndex) => {
+                  if (!('grantFreeOperation' in nestedEffect) || nestedIndex !== 0) {
+                    return nestedEffect;
+                  }
+                  return {
+                    grantFreeOperation: {
+                      ...nestedEffect.grantFreeOperation,
+                      sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                    },
+                  };
+                }),
+                else: [
+                  {
+                    grantFreeOperation: {
+                      seat: 'self',
+                      operationClass: 'operation',
+                      actionIds: ['operation'],
+                      sequence: { chain: 'effect-issue-seq-nested', step: 1 },
+                      viabilityPolicy: 'requireUsableAtIssue',
+                      sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+                    },
+                  },
+                ],
+              },
+            };
+          });
+          return {
+            ...card,
+            unshaded: {
+              ...card.unshaded,
+              effects: rewrittenEffects,
+            },
+          };
+        }),
+      })),
+    } as GameDef;
+
+    assert.throws(
+      () => initialState(def, 111, 3),
+      /FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_MISSING/,
+    );
+  });
+
+  it('suppresses event moves when requireUsableForEventPlay grants are currently unusable', () => {
+    const def = createGrantViabilityPolicyDef();
+    const start = initialState(def, 111, 3).state;
+    const blockedEventMove = {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-require-usable-play', side: 'unshaded', branch: 'none' },
+    } as const;
+
+    const moves = legalMoves(def, start).filter(
+      (move) => String(move.actionId) === 'event' && move.params.eventCardId === 'card-require-usable-play',
+    );
+    assert.equal(moves.length, 0);
+
+    assert.throws(
+      () => applyMove(def, start, blockedEventMove),
+      (error: unknown) => {
+        if (!(error instanceof Error)) {
+          return false;
+        }
+        const details = error as Error & { readonly reason?: string };
+        return details.reason === ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE;
+      },
+    );
+  });
+
+  it('suppresses event moves when requireUsableForEventPlay cannot satisfy a required non-noop outcome', () => {
+    const def = createGrantViabilityPolicyDef();
+    const start = initialState(def, 211, 3).state;
+
+    const moves = legalMoves(def, start).filter(
+      (move) => String(move.actionId) === 'event' && move.params.eventCardId === 'card-require-usable-play-outcome',
+    );
+    assert.equal(moves.length, 0);
+  });
+
+  it('emits only currently-usable grants when requireUsableAtIssue is set', () => {
+    const def = createGrantViabilityPolicyDef();
+    const start = initialState(def, 112, 3).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-require-usable-issue', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const grants = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 1);
+    assert.equal(grants[0]?.sequenceBatchId?.includes('issue-usable'), true);
+  });
+
+  it('applies requireUsableAtIssue parity for effect-issued grants', () => {
+    const def = createGrantViabilityPolicyDef();
+    const start = initialState(def, 113, 3).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-effect-require-usable-issue', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const grants = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 1);
+    assert.equal(grants.every((grant) => grant.viabilityPolicy === 'requireUsableAtIssue'), true);
+  });
+
+  it('does not emit sequence-later effect grants when earlier requireUsableAtIssue steps are currently unusable', () => {
+    const def = createGrantViabilityPolicyDef();
+    const start = initialState(def, 114, 3).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-effect-require-usable-issue-sequence', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const grants = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 0);
+  });
+
+  it('emits sequence-later effect grants when earlier requireUsableAtIssue steps are currently usable', () => {
+    const def = createGrantViabilityPolicyDef();
+    const start = initialState(def, 115, 3).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-effect-require-usable-issue-sequence-usable', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const grants = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 2);
+    assert.deepEqual(grants.map((grant) => grant.sequenceIndex), [0, 1]);
+  });
+
+  it('does not emit nested sequence-later effect grants when earlier nested requireUsableAtIssue steps are currently unusable', () => {
+    const def = createGrantViabilityPolicyDef();
+    const start = initialState(def, 116, 3).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-effect-require-usable-issue-sequence-nested', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const grants = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 0);
+  });
+
+  it('emits nested sequence-later effect grants when earlier nested requireUsableAtIssue steps are currently usable', () => {
+    const def = createGrantViabilityPolicyDef();
+    const start = initialState(def, 117, 3).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-effect-require-usable-issue-sequence-nested-usable', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const grants = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 2);
+    assert.deepEqual(grants.map((grant) => grant.sequenceIndex), [0, 1]);
+  });
+
   it('applies free-operation grants with executeAsSeat using the overridden action profile', () => {
     const def = createExecuteAsSeatDef();
     const start = initialState(def, 33, 2).state;
@@ -1181,4 +2303,287 @@ describe('event free-operation grants integration', () => {
     assert.equal(allowedFree.length > 0, true, 'Grant-marked free operation should bypass monsoon restriction');
     assert.equal(blockedFree.length, 0, 'Free operation should be blocked when grant lacks monsoon allowance');
   });
+
+  it('blocks pass during required grant windows and rejects free operations that fail outcome policy', () => {
+    const def = createDef();
+    const start = initialState(def, 88, 4).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-required-outcome', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    assert.equal(afterEvent.activePlayer, asPlayerId(0));
+    const moves = legalMoves(def, afterEvent);
+    assert.equal(
+      moves.some((move) => String(move.actionId) === 'pass'),
+      false,
+      'required pending grants should suppress pass during the obligation window',
+    );
+    assert.equal(
+      moves.some((move) => String(move.actionId) === 'operation' && move.freeOperation === true),
+      true,
+      'required pending grants should still expose the matching free operation',
+    );
+    assert.equal(
+      moves.some((move) => String(move.actionId) === 'operation' && move.freeOperation !== true),
+      false,
+      'required pending grants should suppress unrelated non-free actions',
+    );
+
+    assert.throws(
+      () => applyMove(def, afterEvent, { actionId: asActionId('operation'), params: {}, freeOperation: true }),
+      (error: unknown) => {
+        if (!(error instanceof Error)) {
+          return false;
+        }
+        const details = error as Error & {
+          readonly reason?: string;
+          readonly context?: {
+            readonly grantId?: string;
+            readonly outcomePolicy?: string;
+          };
+        };
+        return (
+          details.reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED
+          && typeof details.context?.grantId === 'string'
+          && details.context?.outcomePolicy === 'mustChangeGameplayState'
+        );
+      },
+    );
+  });
+
+  it('rejects overlapping free operations that fail required outcome policy even when pending grants are reordered', () => {
+    const def = createDef();
+    const start = initialState(def, 90, 4).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-overlap-required-outcome', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    assert.equal(afterEvent.turnOrderState.type, 'cardDriven');
+    const emittedGrants = afterEvent.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
+    assert.equal(emittedGrants.length, 2);
+
+    for (const state of [
+      afterEvent,
+      {
+        ...afterEvent,
+        turnOrderState: {
+          type: 'cardDriven' as const,
+          runtime: {
+            ...afterEvent.turnOrderState.runtime,
+            pendingFreeOperationGrants: [...emittedGrants].reverse(),
+          },
+        },
+      },
+    ]) {
+      assert.throws(
+        () => applyMove(def, state, { actionId: asActionId('operation'), params: {}, freeOperation: true }),
+        (error: unknown) => {
+          if (!(error instanceof Error)) {
+            return false;
+          }
+          const details = error as Error & {
+            readonly reason?: string;
+            readonly context?: {
+              readonly grantId?: string;
+              readonly outcomePolicy?: string;
+            };
+          };
+          return (
+            details.reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED
+            && typeof details.context?.grantId === 'string'
+            && details.context?.grantId.includes('freeOp:')
+            && details.context?.outcomePolicy === 'mustChangeGameplayState'
+          );
+        },
+      );
+    }
+  });
+
+  it('rejects ambiguous declarative event free-operation grants before play starts', () => {
+    const def = createDef();
+    const invalidDecks = (def.eventDecks ?? []).map((deck) => ({
+      ...deck,
+      cards: deck.cards.map((card) =>
+        card.id !== 'card-1'
+          ? card
+          : {
+              ...card,
+              unshaded: {
+                ...card.unshaded!,
+                freeOperationGrants: [
+                  {
+                    seat: 'VC',
+                    sequence: { chain: 'invalid-overlap-a', step: 0 },
+                    operationClass: 'operation',
+                    actionIds: ['operation'],
+                    uses: 1,
+                  },
+                  {
+                    seat: 'VC',
+                    sequence: { chain: 'invalid-overlap-b', step: 0 },
+                    operationClass: 'operation',
+                    actionIds: ['operation'],
+                    uses: 2,
+                  },
+                ],
+              },
+            }),
+    })) as readonly EventDeckDef[];
+
+    assert.throws(
+      () => initialState({
+        ...def,
+        eventDecks: invalidDecks,
+      }, 124, 4),
+      /FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS/,
+    );
+  });
+
+  it('rejects ambiguous effect-issued event free-operation grants before play starts', () => {
+    const def = createDef();
+    const invalidDecks = (def.eventDecks ?? []).map((deck) => ({
+      ...deck,
+      cards: deck.cards.map((card) =>
+        card.id !== 'card-1'
+          ? card
+          : {
+              ...card,
+              unshaded: {
+                ...card.unshaded!,
+                effects: [
+                  {
+                    grantFreeOperation: {
+                      seat: 'VC',
+                      sequence: { chain: 'invalid-effect-overlap-a', step: 0 },
+                      operationClass: 'operation',
+                      actionIds: ['operation'],
+                      sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                    },
+                  },
+                  {
+                    grantFreeOperation: {
+                      seat: 'VC',
+                      sequence: { chain: 'invalid-effect-overlap-b', step: 0 },
+                      operationClass: 'operation',
+                      actionIds: ['operation'],
+                      sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                    },
+                  },
+                ],
+              },
+            }),
+    })) as readonly EventDeckDef[];
+
+    assert.throws(
+      () => initialState({
+        ...def,
+        eventDecks: invalidDecks,
+      }, 125, 4),
+      /FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS/,
+    );
+  });
+
+  it('accepts effect-issued free-operation grants that only appear on mutually exclusive event paths', () => {
+    const def = createDef();
+    const validDecks = (def.eventDecks ?? []).map((deck) => ({
+      ...deck,
+      cards: deck.cards.map((card) =>
+        card.id !== 'card-1'
+          ? card
+          : {
+              ...card,
+              unshaded: {
+                ...card.unshaded!,
+                effects: [
+                  {
+                    if: {
+                      when: { op: '==', left: 1, right: 1 },
+                      then: [
+                        {
+                          grantFreeOperation: {
+                            seat: 'VC',
+                            sequence: { chain: 'exclusive-effect-overlap-then', step: 0 },
+                            operationClass: 'operation',
+                            actionIds: ['operation'],
+                            sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                          },
+                        },
+                      ],
+                      else: [
+                        {
+                          grantFreeOperation: {
+                            seat: 'VC',
+                            sequence: { chain: 'exclusive-effect-overlap-else', step: 0 },
+                            operationClass: 'operation',
+                            actionIds: ['operation'],
+                            sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+    })) as readonly EventDeckDef[];
+
+    assert.doesNotThrow(() => initialState({
+      ...def,
+      eventDecks: validDecks,
+    }, 126, 4));
+  });
+
+  it('resumes turn flow after a successful required free operation and advances to the next card candidates', () => {
+    const def = createRequiredGrantResumeDef();
+    const start = initialState(def, 89, 4).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-required-resume', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    assert.equal(afterEvent.activePlayer, asPlayerId(1));
+    const forcedMoves = legalMoves(def, afterEvent);
+    assert.equal(
+      forcedMoves.some((move) => String(move.actionId) === 'operation' && move.freeOperation === true),
+      true,
+      'required grant window should force the granted free operation',
+    );
+    assert.equal(
+      forcedMoves.some((move) => String(move.actionId) === 'operation' && move.freeOperation !== true),
+      false,
+      'required grant window should suppress regular operations until resolution',
+    );
+
+    const afterRequiredOperation = applyMove(def, afterEvent, {
+      actionId: asActionId('operation'),
+      params: {},
+      freeOperation: true,
+    }).state;
+
+    const runtime = requireCardDrivenRuntime(afterRequiredOperation);
+    assert.equal(afterRequiredOperation.globalVars['opCount'], 1);
+    assert.deepEqual(runtime.pendingFreeOperationGrants ?? [], []);
+    assert.equal(afterRequiredOperation.activePlayer, asPlayerId(2));
+    assert.deepEqual(runtime.currentCard, {
+      firstEligible: 'NVA',
+      secondEligible: 'VC',
+      actedSeats: [],
+      passedSeats: [],
+      nonPassCount: 0,
+      firstActionClass: null,
+    });
+
+    const followupMoves = legalMoves(def, afterRequiredOperation);
+    assert.equal(
+      followupMoves.some((move) => String(move.actionId) === 'operation' && move.freeOperation === true),
+      false,
+      'after resolution the next card should expose only ordinary moves',
+    );
+  });
+
 });

@@ -991,6 +991,7 @@ function mergeTrackGlobalVars(
       init: trackInitOverrides.get(track.id) ?? track.initial,
       min: track.min,
       max: track.max,
+      material: true,
     };
   });
 

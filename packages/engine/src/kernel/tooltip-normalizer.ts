@@ -5,10 +5,11 @@
  * and macro override to tooltip-normalizer-compound.ts.
  */
 
-import type { EffectAST, ValueExpr, ZoneRef, NumericValueExpr, PlayerSel } from './types-ast.js';
+import type { EffectAST, ZoneRef, NumericValueExpr, PlayerSel } from './types-ast.js';
 import type { VerbalizationDef } from './verbalization-types.js';
 import type { TooltipMessage, VarScope } from './tooltip-ir.js';
 import { isSuppressed, isScaffoldingEffect } from './tooltip-suppression.js';
+import { stringifyValueExpr, stringifyNumericExpr, stringifyZoneRef, stripMacroBindingPrefix, humanizeMacroId } from './tooltip-value-stringifier.js';
 import {
   normalizeChooseN,
   normalizeChooseOne,
@@ -18,43 +19,29 @@ import {
   normalizeRemoveByPriority,
   normalizeGrantFreeOperation,
   tryMacroOverride,
+  extractMacroIdFromBinding,
 } from './tooltip-normalizer-compound.js';
 
 export interface NormalizerContext {
   readonly verbalization: VerbalizationDef | undefined;
   readonly suppressPatterns: readonly string[];
+  /** Label from a parent chooseOne branch, propagated to child chooseN for contextual "Select up to N X" */
+  readonly choiceBranchLabel?: string;
+  /** Runtime value of `__actionClass` binding (e.g., 'limitedOperation' or 'fullOperation').
+   *  When set, `normalizeIf` evaluates `__actionClass == '...'` conditions statically
+   *  and emits only the matching branch, eliminating duplicate LimOp/FullOp display. */
+  readonly actionClassBinding?: string;
 }
 
 /** Extract a single-key union member from EffectAST by its discriminant key. */
 type EffectOf<K extends string> = Extract<EffectAST, Record<K, unknown>>;
 
-const stringifyZoneRef = (ref: ZoneRef): string =>
-  typeof ref === 'string' ? ref : '<expr>';
-
 const stringifyPlayerSel = (sel: PlayerSel): string => {
-  if (typeof sel === 'string') return sel;
+  if (typeof sel === 'string') return stripMacroBindingPrefix(sel);
   if ('id' in sel) return String(sel.id);
-  if ('chosen' in sel) return sel.chosen;
+  if ('chosen' in sel) return stripMacroBindingPrefix(sel.chosen);
   if ('relative' in sel) return sel.relative;
   return '<player>';
-};
-
-const stringifyValueExpr = (expr: ValueExpr): string => {
-  if (typeof expr === 'number' || typeof expr === 'boolean') return String(expr);
-  if (typeof expr === 'string') return expr;
-  if ('ref' in expr) {
-    if (expr.ref === 'binding') return expr.name;
-    if (expr.ref === 'gvar') return expr.var;
-    if (expr.ref === 'pvar') return expr.var;
-    if (expr.ref === 'globalMarkerState') return expr.marker;
-    return '<ref>';
-  }
-  return '<expr>';
-};
-
-const stringifyNumericExpr = (expr: NumericValueExpr): string => {
-  if (typeof expr === 'number') return String(expr);
-  return stringifyValueExpr(expr as ValueExpr);
 };
 
 type ScopeFields = {
@@ -157,7 +144,8 @@ const normalizeMoveToken = (
   payload: EffectOf<'moveToken'>,
   astPath: string,
 ): readonly TooltipMessage[] => {
-  const { token, from, to } = payload.moveToken;
+  const { token: rawToken, from, to } = payload.moveToken;
+  const token = stripMacroBindingPrefix(rawToken);
   const fromStr = stringifyZoneRef(from);
   const toStr = stringifyZoneRef(to);
 
@@ -176,7 +164,8 @@ const normalizeMoveTokenAdjacent = (
   payload: EffectOf<'moveTokenAdjacent'>,
   astPath: string,
 ): readonly TooltipMessage[] => {
-  const { token, from } = payload.moveTokenAdjacent;
+  const { token: rawToken, from } = payload.moveTokenAdjacent;
+  const token = stripMacroBindingPrefix(rawToken);
   return [{
     kind: 'move',
     tokenFilter: token,
@@ -211,7 +200,8 @@ const normalizeSetTokenProp = (
   payload: EffectOf<'setTokenProp'>,
   astPath: string,
 ): readonly TooltipMessage[] => {
-  const { token, prop, value } = payload.setTokenProp;
+  const { token: rawToken, prop, value } = payload.setTokenProp;
+  const token = stripMacroBindingPrefix(rawToken);
 
   if (prop === 'activity') {
     const valueStr = stringifyValueExpr(value);
@@ -235,7 +225,8 @@ const normalizeCreateToken = (
   payload: EffectOf<'createToken'>,
   astPath: string,
 ): readonly TooltipMessage[] => {
-  const { type, zone } = payload.createToken;
+  const { type: rawType, zone } = payload.createToken;
+  const type = stripMacroBindingPrefix(rawType);
   return [{ kind: 'create', tokenFilter: type, targetZone: stringifyZoneRef(zone), astPath }];
 };
 
@@ -243,7 +234,8 @@ const normalizeDestroyToken = (
   payload: EffectOf<'destroyToken'>,
   astPath: string,
 ): readonly TooltipMessage[] => {
-  const { token } = payload.destroyToken;
+  const { token: rawToken } = payload.destroyToken;
+  const token = stripMacroBindingPrefix(rawToken);
   return [{ kind: 'destroy', tokenFilter: token, fromZone: '', astPath }];
 };
 
@@ -345,6 +337,60 @@ const normalizeShiftGlobalMarker = (
   }];
 };
 
+// --- Leaf macro override ---
+
+/**
+ * Scan leaf effect fields for `__macro_` binding names. If found, extract the
+ * macro ID and look up a summary in verbalization macros. Returns a SummaryMessage
+ * if a match is found, undefined otherwise (falls through to normal normalization).
+ */
+const tryLeafMacroOverride = (
+  effect: EffectAST,
+  ctx: NormalizerContext,
+  astPath: string,
+): readonly TooltipMessage[] | undefined => {
+  if (ctx.verbalization === undefined) return undefined;
+
+  // Scan string-valued fields in the effect payload for __macro_ bindings
+  const key = Object.keys(effect)[0];
+  if (key === undefined) return undefined;
+  const payload = (effect as Record<string, Record<string, unknown>>)[key]!;
+
+  for (const val of Object.values(payload)) {
+    if (typeof val !== 'string' || !val.startsWith('__macro_')) continue;
+    const macroId = extractMacroIdFromBinding(val);
+    if (macroId === undefined) continue;
+
+    // Try verbalization summary first
+    const macroEntry = ctx.verbalization.macros[macroId];
+    if (macroEntry?.summary !== undefined) {
+      const text = macroEntry.slots !== undefined
+        ? Object.entries(macroEntry.slots).reduce(
+            (acc, [k, v]) => acc.replaceAll(`{${k}}`, v),
+            macroEntry.summary,
+          )
+        : macroEntry.summary;
+      return [{
+        kind: 'summary',
+        text,
+        macroClass: macroEntry.class,
+        macroOrigin: macroId,
+        astPath,
+      }];
+    }
+
+    // Fallback: derive human-readable text from the macro ID
+    // when verbalization exists but this specific macro has no summary
+    return [{
+      kind: 'summary',
+      text: humanizeMacroId(macroId),
+      macroOrigin: macroId,
+      astPath,
+    }];
+  }
+  return undefined;
+};
+
 // --- Recursive helper (injected into compound normalizers) ---
 
 const normalizeEffectList = (
@@ -372,6 +418,10 @@ export const normalizeEffect = (
   const macroResult = tryMacroOverride(effect, ctx, astPath);
   if (macroResult !== undefined) return macroResult;
 
+  // Leaf macro override: binding names with __macro_ prefix
+  const leafMacroResult = tryLeafMacroOverride(effect, ctx, astPath);
+  if (leafMacroResult !== undefined) return leafMacroResult;
+
   // Variable effects (rules 1-8)
   if ('addVar' in effect) return normalizeAddVar(effect, ctx, astPath);
   if ('setVar' in effect) return normalizeSetVar(effect, ctx, astPath);
@@ -397,7 +447,7 @@ export const normalizeEffect = (
   if ('shiftGlobalMarker' in effect) return normalizeShiftGlobalMarker(effect, astPath);
 
   // Compound / control-flow rules (28-35) — delegated, with DI recurse callback
-  if ('chooseN' in effect) return normalizeChooseN(effect, astPath);
+  if ('chooseN' in effect) return normalizeChooseN(effect, ctx, astPath);
   if ('chooseOne' in effect) return normalizeChooseOne(effect, astPath);
   if ('forEach' in effect) return normalizeForEach(effect, ctx, astPath, normalizeEffectList);
   if ('if' in effect) return normalizeIf(effect, ctx, astPath, normalizeEffectList);

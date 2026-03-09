@@ -17,9 +17,14 @@ export type VarScope = 'global' | 'player' | 'zone';
 
 export interface SelectMessage extends MessageBase {
   readonly kind: 'select';
-  readonly target: 'spaces' | 'zones' | 'items';
+  readonly target: 'spaces' | 'zones' | 'items' | 'players' | 'values' | 'markers' | 'rows' | 'options' | 'tokens';
   readonly filter?: string;
+  /** Raw condition AST for re-rendering with full LabelContext in the realizer */
+  readonly conditionAST?: import('./types-ast.js').ConditionAST;
   readonly bounds?: { readonly min: number; readonly max: number };
+  readonly optionHints?: readonly string[];
+  /** Label propagated from a parent chooseOne branch, used to contextualize "Select up to N items" */
+  readonly choiceBranchLabel?: string;
 }
 
 export interface PlaceMessage extends MessageBase {
@@ -138,6 +143,7 @@ export interface ChooseMessage extends MessageBase {
   readonly kind: 'choose';
   readonly options: readonly string[];
   readonly paramName: string;
+  readonly optional?: boolean;
 }
 
 export interface RollMessage extends MessageBase {
@@ -146,12 +152,16 @@ export interface RollMessage extends MessageBase {
   readonly bindTo: string;
 }
 
+export type ModifierRole = 'capability' | 'leader' | 'choiceFlow' | 'state';
+
 export interface ModifierMessage extends MessageBase {
   readonly kind: 'modifier';
   readonly condition: string;
   readonly description: string;
   /** Original AST for runtime evaluation of active/inactive state */
   readonly conditionAST?: import('./types-ast.js').ConditionAST;
+  /** Semantic role — choiceFlow modifiers are filtered out of display */
+  readonly modifierRole?: ModifierRole;
 }
 
 export interface BlockerMessage extends MessageBase {
@@ -174,6 +184,12 @@ export interface GrantMessage extends MessageBase {
 export interface ConcealMessage extends MessageBase {
   readonly kind: 'conceal';
   readonly target: string;
+}
+
+export interface SummaryMessage extends MessageBase {
+  readonly kind: 'summary';
+  readonly text: string;
+  readonly macroClass?: string;
 }
 
 export interface SuppressedMessage extends MessageBase {
@@ -205,13 +221,14 @@ export type TooltipMessage =
   | PhaseMessage
   | GrantMessage
   | ConcealMessage
+  | SummaryMessage
   | SuppressedMessage;
 
 export const TOOLTIP_MESSAGE_KINDS = [
   'select', 'place', 'move', 'pay', 'gain', 'transfer', 'shift',
   'activate', 'deactivate', 'remove', 'create', 'destroy', 'reveal',
   'draw', 'shuffle', 'set', 'choose', 'roll', 'modifier', 'blocker',
-  'phase', 'grant', 'conceal', 'suppressed',
+  'phase', 'grant', 'conceal', 'summary', 'suppressed',
 ] as const;
 
 export type TooltipMessageKind = (typeof TOOLTIP_MESSAGE_KINDS)[number];

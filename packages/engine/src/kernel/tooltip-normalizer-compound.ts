@@ -11,7 +11,7 @@ import type { EffectAST, ValueExpr, ConditionAST, OptionsQuery, TokenFilterExpr 
 import type { TooltipMessage, SelectMessage } from './tooltip-ir.js';
 import type { NormalizerContext } from './tooltip-normalizer.js';
 import { humanizeCondition, resolveModifierEffect, classifyModifierRole, matchesGlobPattern } from './tooltip-modifier-humanizer.js';
-import { stringifyNumericExpr, stringifyZoneRef, stripMacroBindingPrefix, stringifyTokenFilter } from './tooltip-value-stringifier.js';
+import { stringifyNumericExpr, stringifyZoneRef, stripMacroBindingPrefix, stringifyTokenFilter, humanizeMacroId } from './tooltip-value-stringifier.js';
 
 /** Extract a single-key union member from EffectAST by its discriminant key. */
 type EffectOf<K extends string> = Extract<EffectAST, Record<K, unknown>>;
@@ -131,6 +131,30 @@ const classifyQueryTarget = (options: OptionsQuery): SelectMessage['target'] => 
   return 'items';
 };
 
+/**
+ * Derive a human-readable context label from an OptionsQuery when the
+ * classifyQueryTarget returns 'items'. Returns undefined if no meaningful
+ * label can be derived.
+ */
+const deriveQueryContextLabel = (options: OptionsQuery): string | undefined => {
+  if (!('query' in options)) return undefined;
+
+  if (options.query === 'binding') {
+    const name = (options as { readonly query: 'binding'; readonly name: string }).name;
+    return stripMacroBindingPrefix(name);
+  }
+
+  if (options.query === 'concat') {
+    const sourceLabels = options.sources
+      .map((s) => deriveQueryContextLabel(s))
+      .filter((l): l is string => l !== undefined);
+    const unique = [...new Set(sourceLabels)];
+    if (unique.length > 0) return unique.join(' or ');
+  }
+
+  return undefined;
+};
+
 export const normalizeChooseN = (
   payload: EffectOf<'chooseN'>,
   ctx: NormalizerContext,
@@ -148,12 +172,16 @@ export const normalizeChooseN = (
   const msgs = buildSelectMessage(target, bounds, extracted, astPath, optionHints);
 
   // Propagate choiceBranchLabel to SelectMessage when target is generic 'items'
-  if (target === 'items' && ctx.choiceBranchLabel !== undefined && msgs.length > 0) {
-    return msgs.map((m) =>
-      m.kind === 'select'
-        ? { ...m, choiceBranchLabel: ctx.choiceBranchLabel } as typeof m
-        : m,
-    );
+  if (target === 'items' && msgs.length > 0) {
+    // Prefer parent choiceBranchLabel, fall back to query-derived context
+    const label = ctx.choiceBranchLabel ?? deriveQueryContextLabel(p.options);
+    if (label !== undefined) {
+      return msgs.map((m) =>
+        m.kind === 'select'
+          ? { ...m, choiceBranchLabel: label } as typeof m
+          : m,
+      );
+    }
   }
 
   return msgs;
@@ -237,6 +265,32 @@ const extractBranchLabel = (cond: ConditionAST, ctx: NormalizerContext): string 
   return c.right;
 };
 
+/**
+ * Detect an `__actionClass == '<value>'` condition pattern.
+ * Returns the string literal from the RHS if matched, undefined otherwise.
+ */
+const extractActionClassConditionValue = (cond: ConditionAST): string | undefined => {
+  if (typeof cond === 'boolean') return undefined;
+  const c = cond as Record<string, unknown>;
+  if (c.op !== '==') return undefined;
+  const left = c.left as ValueExpr | undefined;
+  if (left === undefined) return undefined;
+  // Check if LHS is a binding or gvar ref named '__actionClass'
+  if (typeof left === 'object' && left !== null && 'ref' in left) {
+    const isActionClass =
+      (left.ref === 'binding' && left.name === '__actionClass') ||
+      (left.ref === 'gvar' && left.var === '__actionClass');
+    if (isActionClass) {
+      return typeof c.right === 'string' ? c.right : undefined;
+    }
+  }
+  // Also handle direct string LHS (less common but possible)
+  if (typeof left === 'string' && left === '__actionClass') {
+    return typeof c.right === 'string' ? c.right : undefined;
+  }
+  return undefined;
+};
+
 export const normalizeIf = (
   payload: EffectOf<'if'>,
   ctx: NormalizerContext,
@@ -245,6 +299,22 @@ export const normalizeIf = (
 ): readonly TooltipMessage[] => {
   const { when, then: thenEffects } = payload.if;
   const elseEffects = payload.if.else;
+
+  // Early check: if this is an __actionClass branch and we know the runtime value,
+  // emit only the matching branch to avoid showing duplicate LimOp/FullOp content.
+  if (ctx.actionClassBinding !== undefined) {
+    const condValue = extractActionClassConditionValue(when);
+    if (condValue !== undefined) {
+      const isMatch = condValue === ctx.actionClassBinding;
+      if (isMatch) {
+        return recurse(thenEffects, ctx, `${astPath}.then`);
+      }
+      // Not a match — process the else branch if it exists
+      return elseEffects !== undefined
+        ? recurse(elseEffects, ctx, `${astPath}.else`)
+        : [];
+    }
+  }
 
   const resolved = resolveModifierEffect(when, ctx);
 
@@ -365,18 +435,30 @@ export const tryMacroOverride = (
   if (ctx.verbalization === undefined) return undefined;
   const macroId = extractMacroId(effect);
   if (macroId === undefined) return undefined;
+
+  // Try verbalization summary first
   const macroEntry = ctx.verbalization.macros[macroId];
-  if (macroEntry?.summary === undefined) return undefined;
-  const text = macroEntry.slots !== undefined
-    ? Object.entries(macroEntry.slots).reduce(
-        (acc, [key, val]) => acc.replaceAll(`{${key}}`, val),
-        macroEntry.summary,
-      )
-    : macroEntry.summary;
+  if (macroEntry?.summary !== undefined) {
+    const text = macroEntry.slots !== undefined
+      ? Object.entries(macroEntry.slots).reduce(
+          (acc, [key, val]) => acc.replaceAll(`{${key}}`, val),
+          macroEntry.summary,
+        )
+      : macroEntry.summary;
+    return [{
+      kind: 'summary',
+      text,
+      macroClass: macroEntry.class,
+      macroOrigin: macroId,
+      astPath,
+    }];
+  }
+
+  // Fallback: derive human-readable text from the macro ID itself
+  // when verbalization exists but this specific macro has no summary entry
   return [{
     kind: 'summary',
-    text,
-    macroClass: macroEntry.class,
+    text: humanizeMacroId(macroId),
     macroOrigin: macroId,
     astPath,
   }];

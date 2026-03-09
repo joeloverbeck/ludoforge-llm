@@ -9,6 +9,7 @@ import type {
   DisplayReferenceNode,
   DisplayValueNode,
 } from './display-node.js';
+import { humanizeMacroId } from './tooltip-value-stringifier.js';
 import type {
   ActionDef,
   LimitDef,
@@ -48,7 +49,15 @@ const line = (indent: number, children: readonly DisplayInlineNode[]): DisplayLi
   children,
 });
 
-const bindDisplay = (bind: string, macroOrigin?: EffectMacroOrigin): string => macroOrigin?.stem ?? bind;
+const bindDisplay = (bind: string, macroOrigin?: EffectMacroOrigin): string => {
+  const stem = macroOrigin?.stem ?? bind;
+  // When the stem is a raw internal path (e.g., "Pipelines_0__stages_1__..."),
+  // fall back to the macro ID humanized form for readability.
+  if ((stem.includes('Pipelines_') || stem.includes('__')) && macroOrigin?.macroId !== undefined) {
+    return humanizeMacroId(macroOrigin.macroId);
+  }
+  return stem;
+};
 
 export const displayGroup = (label: string, children: readonly DisplayNode[], icon?: string): DisplayGroupNode =>
   icon === undefined ? { kind: 'group', label, children } : { kind: 'group', label, icon, children };

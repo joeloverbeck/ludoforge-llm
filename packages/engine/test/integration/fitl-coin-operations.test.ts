@@ -963,6 +963,7 @@ describe('FITL COIN operations integration', () => {
       );
       assert.ok(macroCall.length >= 1, 'Expected coin-assault-removal-order call');
       assert.equal(macroCall.some((node: any) => node?.args?.actorFaction !== undefined), false, 'Expected no actorFaction arg');
+      assert.equal(macroCall.every((node: any) => node?.args?.targetFactionMode === 'all'), true, 'Expected default US Assault to target all insurgents explicitly');
     });
 
     it('AC8/AC9: ARVN follow-up is optional, costs 3, and uses ARVN highland/non-highland formulas', () => {
@@ -1001,6 +1002,7 @@ describe('FITL COIN operations integration', () => {
       );
       assert.ok(macroCall.length >= 1, 'Expected ARVN follow-up to call coin-assault-removal-order');
       assert.equal(macroCall.some((node: any) => node?.args?.actorFaction !== undefined), false, 'Expected no actorFaction arg');
+      assert.equal(macroCall.every((node: any) => node?.args?.targetFactionMode === 'all'), true, 'Expected default ARVN follow-up Assault to target all insurgents explicitly');
     });
 
     it('runtime: highland without US Base uses floor(usTroops / 2)', () => {
@@ -1343,6 +1345,7 @@ describe('FITL COIN operations integration', () => {
 
       const macroCall = findDeep(resolvePerSpace.effects, (node: any) => node?.macro === 'coin-assault-removal-order');
       assert.ok(macroCall.length >= 1, 'Expected coin-assault-removal-order usage');
+      assert.equal(macroCall.every((node: any) => node?.args?.targetFactionMode === 'all'), true, 'Expected default ARVN Assault to target all insurgents explicitly');
     });
 
     it('AC4/AC9: runtime province assault excludes police from damage and free operation skips cost', () => {
@@ -1842,6 +1845,7 @@ describe('FITL COIN operations integration', () => {
       );
       assert.ok(macroRef.length >= 1, 'Expected coin-assault-removal-order in ARVN free-assault');
       assert.equal(macroRef.some((node: any) => node?.args?.actorFaction !== undefined), false, 'Expected no actorFaction arg');
+      assert.equal(macroRef.every((node: any) => node?.args?.targetFactionMode === 'all'), true, 'Expected ARVN Patrol free-assault to target all insurgents explicitly');
     });
 
     it('AC7: LimOp variant limits destination selection to max 1 LoC', () => {

@@ -8775,15 +8775,16 @@ eventDecks:
                                           name: $arvnCubes
                                         right: 2
                                   in:
-                                    - macro: coin-assault-removal-order-single-faction
+                                    - macro: coin-assault-removal-order
                                       args:
                                         space: $assaultSpace
                                         damageExpr:
                                           ref: binding
                                           name: $damage
                                         bodyCountEligible: true
+                                        forceUntunneledBaseFirst: false
                                         treatTunneledBasesAsUntunneled: false
-                                        targetFaction: NVA
+                                        targetFactionMode: NVA
         shaded:
           text: Place up to 10 NVA Troops anywhere within 1 space of North Vietnam.
           effects:

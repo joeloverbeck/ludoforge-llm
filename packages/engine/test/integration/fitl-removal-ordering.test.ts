@@ -90,21 +90,23 @@ describe('FITL removal ordering macros', () => {
       const macroById = (id: string): EffectMacroDef | undefined => macros.find((macro) => macro.id === id);
       const pieceRemovalOrdering = macroById('piece-removal-ordering');
       const coinAssaultRemoval = macroById('coin-assault-removal-order');
+      const coinAssaultRemovalSingleFaction = macroById('coin-assault-removal-order-single-faction');
       const insurgentAttackRemoval = macroById('insurgent-attack-removal-order');
 
       assert.ok(pieceRemovalOrdering, 'Expected piece-removal-ordering macro');
       assert.ok(coinAssaultRemoval, 'Expected coin-assault-removal-order macro');
+      assert.equal(coinAssaultRemovalSingleFaction, undefined, 'Expected bespoke single-faction assault helper to be removed');
       assert.ok(insurgentAttackRemoval, 'Expected insurgent-attack-removal-order macro');
 
       assert.deepEqual(
         pieceRemovalOrdering.params.map((param) => param.name),
-        ['space', 'damageExpr', 'bodyCountEligible', 'treatTunneledBasesAsUntunneled'],
-        'Expected piece-removal-ordering params to expose explicit Body Count and tunneled-base override inputs',
+        ['space', 'damageExpr', 'bodyCountEligible', 'treatTunneledBasesAsUntunneled', 'targetFactionMode'],
+        'Expected piece-removal-ordering params to expose explicit Body Count, tunneled-base override, and target-faction controls',
       );
       assert.deepEqual(
         coinAssaultRemoval.params.map((param) => param.name),
-        ['space', 'damageExpr', 'bodyCountEligible', 'forceUntunneledBaseFirst', 'treatTunneledBasesAsUntunneled'],
-        'Expected coin-assault-removal-order to keep explicit bodyCount/base-first/tunnel-override controls without actorFaction threading',
+        ['space', 'damageExpr', 'bodyCountEligible', 'forceUntunneledBaseFirst', 'treatTunneledBasesAsUntunneled', 'targetFactionMode'],
+        'Expected coin-assault-removal-order to keep explicit bodyCount/base-first/tunnel-override controls plus target-faction mode without actorFaction threading',
       );
       assert.deepEqual(
         insurgentAttackRemoval.params.map((param) => param.name),
@@ -171,6 +173,10 @@ describe('FITL removal ordering macros', () => {
         const args = asRecord(node.args);
         return args !== null && Object.hasOwn(args, 'bodyCountEligible');
       };
+      const hasTargetFactionModeArg = (node: Record<string, unknown>): boolean => {
+        const args = asRecord(node.args);
+        return args !== null && Object.hasOwn(args, 'targetFactionMode');
+      };
 
       const coinCalls = flatten(coinAssaultRemoval.effects).filter((node) => node.macro === 'piece-removal-ordering');
       const insurgentCalls = flatten(insurgentAttackRemoval.effects).filter((node) => node.macro === 'piece-removal-ordering');
@@ -188,6 +194,11 @@ describe('FITL removal ordering macros', () => {
         coinCalls.every(hasBodyCountEligibleArg),
         true,
         'Expected coin-assault-removal-order to forward explicit bodyCountEligible arg into piece-removal-ordering',
+      );
+      assert.equal(
+        coinCalls.every(hasTargetFactionModeArg),
+        true,
+        'Expected coin-assault-removal-order to forward explicit targetFactionMode into piece-removal-ordering',
       );
       assert.equal(
         insurgentCalls.some(hasActorFactionArg),

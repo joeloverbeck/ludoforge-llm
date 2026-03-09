@@ -5217,6 +5217,109 @@ describe('validateGameDef arithmetic diagnostics', () => {
   });
 });
 
+describe('validateGameDef free-operation sequence-context linkage diagnostics', () => {
+  const withEventFreeOperationGrants = (freeOperationGrants: readonly unknown[]): GameDef => {
+    const base = createValidGameDef();
+    return {
+      ...base,
+      eventDecks: [
+        {
+          id: 'deck',
+          drawZone: 'deck:none',
+          discardZone: 'market:none',
+          cards: [
+            {
+              id: 'card-1',
+              title: 'Sequence Context Linkage',
+              sideMode: 'single',
+              unshaded: {
+                text: 'sequence context test',
+                freeOperationGrants,
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+  };
+
+  it('rejects requireMoveZoneCandidatesFrom when no matching capture exists in the chain', () => {
+    const def = withEventFreeOperationGrants([
+      {
+        seat: '0',
+        sequence: { chain: 'ctx-chain', step: 1 },
+        operationClass: 'operation',
+        actionIds: ['playCard'],
+        sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+      },
+    ]);
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_MISSING'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0].sequenceContext.requireMoveZoneCandidatesFrom',
+      ),
+      true,
+    );
+  });
+
+  it('rejects requireMoveZoneCandidatesFrom when matching capture is at same or later sequence step', () => {
+    const def = withEventFreeOperationGrants([
+      {
+        seat: '0',
+        sequence: { chain: 'ctx-chain', step: 1 },
+        operationClass: 'operation',
+        actionIds: ['playCard'],
+        sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+      },
+      {
+        seat: '0',
+        sequence: { chain: 'ctx-chain', step: 1 },
+        operationClass: 'operation',
+        actionIds: ['playCard'],
+        sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+      },
+    ]);
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_ORDER_INVALID'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0].sequenceContext.requireMoveZoneCandidatesFrom',
+      ),
+      true,
+    );
+  });
+
+  it('accepts requireMoveZoneCandidatesFrom when matching capture exists at an earlier sequence step', () => {
+    const def = withEventFreeOperationGrants([
+      {
+        seat: '0',
+        sequence: { chain: 'ctx-chain', step: 0 },
+        operationClass: 'operation',
+        actionIds: ['playCard'],
+        sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+      },
+      {
+        seat: '0',
+        sequence: { chain: 'ctx-chain', step: 1 },
+        operationClass: 'operation',
+        actionIds: ['playCard'],
+        sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+      },
+    ]);
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code.startsWith('FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_')),
+      false,
+    );
+  });
+});
+
 describe('validated GameDef boundary', () => {
   it('brands only when validation has no errors and caches the branded identity', () => {
     const valid = createValidGameDef();

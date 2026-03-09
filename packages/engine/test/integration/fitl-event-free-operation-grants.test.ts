@@ -1641,6 +1641,55 @@ describe('event free-operation grants integration', () => {
     assert.equal(runtimeAfterSecond.freeOperationSequenceContexts, undefined);
   });
 
+  it('rejects nested effect-issued sequence context requires without an earlier capture', () => {
+    const base = createGrantViabilityPolicyDef();
+    const def = {
+      ...base,
+      eventDecks: base.eventDecks?.map((deck) => ({
+        ...deck,
+        cards: deck.cards.map((card) => {
+          if (card.id !== 'card-effect-require-usable-issue-sequence-nested' || card.unshaded === undefined) {
+            return card;
+          }
+          const effects = card.unshaded.effects ?? [];
+          const rewrittenEffects = effects.map((effect) => {
+            if (!('if' in effect)) {
+              return effect;
+            }
+            return {
+              if: {
+                ...effect.if,
+                then: effect.if.then.map((nestedEffect, nestedIndex) => {
+                  if (!('grantFreeOperation' in nestedEffect) || nestedIndex !== 1) {
+                    return nestedEffect;
+                  }
+                  return {
+                    grantFreeOperation: {
+                      ...nestedEffect.grantFreeOperation,
+                      sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+                    },
+                  };
+                }),
+              },
+            };
+          });
+          return {
+            ...card,
+            unshaded: {
+              ...card.unshaded,
+              effects: rewrittenEffects,
+            },
+          };
+        }),
+      })),
+    } as GameDef;
+
+    assert.throws(
+      () => initialState(def, 111, 3),
+      /FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_MISSING/,
+    );
+  });
+
   it('suppresses event moves when requireUsableForEventPlay grants are currently unusable', () => {
     const def = createGrantViabilityPolicyDef();
     const start = initialState(def, 111, 3).state;

@@ -1,6 +1,6 @@
 # ENG-205: Sequence-Context Linkage Validation for Free-Operation Grants
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — free-operation grant contract validation (event/effect paths)
@@ -12,9 +12,12 @@
 
 ## Assumption Reassessment (2026-03-09)
 
-1. Current runtime enforces required captured-key lookup but treats missing captures as regular mismatch denial.
-2. Current behavior validation checks shape-level `sequenceContext` integrity but does not verify chain-level capture/require linkage across grant steps.
-3. Mismatch: contracts that are structurally valid but semantically impossible are not rejected early. Correction: add static linkage validation.
+1. Current runtime enforces required captured-key lookup and denies unmatched grants as runtime mismatch (`FREE_OPERATION_NOT_GRANTED` path), so missing linkage is discovered late.
+2. Current static checks are split:
+   - `schemas-extensions.ts` / `schemas-ast.ts` enforce `sequenceContext` shape (non-empty capture/require fields).
+   - `validate-gamedef-behavior.ts` enforces effect-side grant shape constraints (`sequence.step`, `sequenceContext requires sequence`, etc.).
+3. Missing today: cross-step semantic linkage validation that guarantees `requireMoveZoneCandidatesFrom` is backed by an earlier capture in the same sequence chain.
+4. Correction: add one generic static linkage validator pass over both event-card grants and effect-issued grants.
 
 ## Architecture Check
 
@@ -32,19 +35,17 @@ Validate free-operation grant sequences so each `requireMoveZoneCandidatesFrom` 
 
 Enforce the same linkage contract for:
 - `eventDecks[].cards[].*.freeOperationGrants`
-- `effects[].grantFreeOperation` (including nested control-flow effects)
+- `grantFreeOperation` in all effect arrays (including nested control-flow effects)
 
 ### 3. Emit explicit diagnostics
 
 Add dedicated diagnostics for:
 - missing required capture key
 - require key captured only at same/later step
-- duplicate capture key policy violations (if policy is strict)
 
 ## Files to Touch
 
 - `packages/engine/src/kernel/validate-gamedef-behavior.ts` (modify)
-- `packages/engine/src/kernel/types-turn-flow.ts` (modify if needed for validator helpers)
 - `packages/engine/test/unit/validate-gamedef.test.ts` (modify)
 - `packages/engine/test/integration/fitl-event-free-operation-grants.test.ts` (modify)
 
@@ -59,7 +60,10 @@ Add dedicated diagnostics for:
 
 1. Grant definitions with `requireMoveZoneCandidatesFrom` and no earlier matching capture fail validation with typed diagnostics.
 2. Valid same-chain capture-before-require definitions pass validation.
-3. Existing suite: `node --test packages/engine/dist/test/unit/validate-gamedef.test.js`
+3. Parity holds for event-side grants and nested effect-issued grants.
+4. Existing suites:
+   - `node --test packages/engine/dist/test/unit/validate-gamedef.test.js`
+   - `node --test packages/engine/dist/test/integration/fitl-event-free-operation-grants.test.js`
 
 ### Invariants
 
@@ -79,3 +83,14 @@ Add dedicated diagnostics for:
 2. `node --test packages/engine/dist/test/unit/validate-gamedef.test.js`
 3. `node --test packages/engine/dist/test/integration/fitl-event-free-operation-grants.test.js`
 4. `pnpm -F @ludoforge/engine lint && pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Implemented:
+1. Added generic static sequence-context linkage diagnostics for both event-card grants and effect-issued grants (including nested effects).
+2. Added dedicated error diagnostics for missing required capture and non-earlier capture order.
+3. Added/updated unit + integration coverage to assert fail-fast validation and valid capture-before-require behavior.
+
+Adjusted vs original plan:
+1. No `types-turn-flow.ts` changes were required.
+2. Duplicate-capture policy checks were not introduced because there is no strict duplicate-capture contract in current runtime behavior.

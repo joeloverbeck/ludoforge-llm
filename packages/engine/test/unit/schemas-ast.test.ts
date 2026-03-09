@@ -384,7 +384,7 @@ describe('AST and selector schemas', () => {
 
       assert.equal(result.success, false);
       assert.equal(
-        result.error.issues.some((issue) => issue.message.includes('sequenceContext must include captureMoveZoneCandidatesAs or requireMoveZoneCandidatesFrom.')),
+        result.error.issues.some((issue) => issue.message.includes('sequenceContext must declare at least one capture/require key.')),
         true,
       );
     });

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { TURN_FLOW_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID_MESSAGE } from '../contracts/index.js';
+
 export const FreeOperationSequenceContextSchema = z
   .object({
     captureMoveZoneCandidatesAs: z.string().min(1).optional(),
@@ -11,6 +13,6 @@ export const FreeOperationSequenceContextSchema = z
       value.captureMoveZoneCandidatesAs !== undefined
       || value.requireMoveZoneCandidatesFrom !== undefined,
     {
-      message: 'sequenceContext must include captureMoveZoneCandidatesAs or requireMoveZoneCandidatesFrom.',
+      message: TURN_FLOW_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID_MESSAGE,
     },
   );

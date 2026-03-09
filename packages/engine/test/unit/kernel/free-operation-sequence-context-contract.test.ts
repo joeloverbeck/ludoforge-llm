@@ -7,6 +7,10 @@ import {
   parseTypeScriptSource,
 } from '../../helpers/kernel-source-ast-guard.js';
 import { readKernelSource } from '../../helpers/kernel-source-guard.js';
+import {
+  collectTurnFlowFreeOperationGrantContractViolations,
+  TURN_FLOW_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID_MESSAGE,
+} from '../../../src/contracts/turn-flow-free-operation-grant-contract.js';
 import { FreeOperationSequenceContextSchema } from '../../../src/kernel/free-operation-sequence-context-schema.js';
 import { EffectASTSchema } from '../../../src/kernel/schemas-ast.js';
 import { EventCardFreeOperationGrantSchema } from '../../../src/kernel/schemas-extensions.js';
@@ -143,5 +147,20 @@ describe('free-operation sequence-context canonical schema contract', () => {
         false,
       );
     }
+  });
+
+  it('keeps malformed sequenceContext wording aligned between the schema and shared grant contract', () => {
+    const schemaResult = FreeOperationSequenceContextSchema.safeParse({});
+    assert.equal(schemaResult.success, false);
+
+    const violation = collectTurnFlowFreeOperationGrantContractViolations({
+      operationClass: 'operation',
+      sequence: { step: 0 },
+      sequenceContext: {},
+    }).find((entry) => entry.code === 'sequenceContextInvalid');
+
+    assert.ok(violation);
+    assert.equal(schemaResult.error.issues[0]?.message, TURN_FLOW_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID_MESSAGE);
+    assert.equal(violation.message, TURN_FLOW_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID_MESSAGE);
   });
 });

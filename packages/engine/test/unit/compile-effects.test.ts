@@ -1563,7 +1563,7 @@ describe('compile-effects lowering', () => {
         code: 'CNL_COMPILER_MISSING_CAPABILITY',
         path: 'doc.actions.0.effects.0.grantFreeOperation.sequenceContext',
         severity: 'error',
-        message: 'Cannot lower grantFreeOperation sequenceContext to kernel AST: sequenceContext must include captureMoveZoneCandidatesAs or requireMoveZoneCandidatesFrom.',
+        message: 'Cannot lower grantFreeOperation sequenceContext to kernel AST: sequenceContext must declare at least one capture/require key.',
         suggestion: 'Rewrite this node to the canonical sequenceContext shape.',
         alternatives: [
           '{ captureMoveZoneCandidatesAs: string }',

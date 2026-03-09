@@ -101,6 +101,9 @@ export type TurnFlowFreeOperationGrantContractViolation = {
   readonly message: string;
 };
 
+export const TURN_FLOW_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID_MESSAGE =
+  'sequenceContext must declare at least one capture/require key.';
+
 export type TurnFlowFreeOperationGrantContractSurfaceViolation = {
   readonly path: string;
   readonly message: string;
@@ -241,7 +244,7 @@ export const collectTurnFlowFreeOperationGrantContractViolations = (
       violations.push({
         code: 'sequenceContextInvalid',
         path: ['sequenceContext'],
-        message: 'sequenceContext must declare at least one capture/require key.',
+        message: TURN_FLOW_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID_MESSAGE,
       });
     }
     if (grant.sequence === undefined || grant.sequence === null) {

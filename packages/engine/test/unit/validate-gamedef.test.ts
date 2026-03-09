@@ -5509,6 +5509,54 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
     );
   });
 
+  it('rejects event freeOperationGrants that require completion without postResolutionTurnFlow', () => {
+    const def = withEventCardSideConfig({
+      freeOperationGrants: [
+        {
+          seat: '0',
+          sequence: { chain: 'ctx-chain', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          completionPolicy: 'required',
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_GRANT_FREE_OPERATION_POST_RESOLUTION_TURN_FLOW_REQUIRED'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0].postResolutionTurnFlow',
+      ),
+      true,
+    );
+  });
+
+  it('rejects event freeOperationGrants that set postResolutionTurnFlow without required completionPolicy', () => {
+    const def = withEventCardSideConfig({
+      freeOperationGrants: [
+        {
+          seat: '0',
+          sequence: { chain: 'ctx-chain', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          postResolutionTurnFlow: 'resumeCardFlow',
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_GRANT_FREE_OPERATION_COMPLETION_POLICY_REQUIRED'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0].completionPolicy',
+      ),
+      true,
+    );
+  });
+
   it('rejects requireMoveZoneCandidatesFrom when no matching capture exists in the chain', () => {
     const def = withEventFreeOperationGrants([
       {

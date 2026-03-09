@@ -1547,6 +1547,27 @@ describe('compile-effects lowering', () => {
     assert.equal(diagnostic?.severity, 'error');
   });
 
+  it('rejects postResolutionTurnFlow without completionPolicy required on grantFreeOperation', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          grantFreeOperation: {
+            seat: '1',
+            operationClass: 'operation',
+            postResolutionTurnFlow: 'resumeCardFlow',
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    const diagnostic = result.diagnostics.find((entry) => entry.path === 'doc.actions.0.effects.0.grantFreeOperation.completionPolicy');
+    assert.ok(diagnostic);
+    assert.equal(diagnostic?.severity, 'error');
+  });
+
   it('lowers explicit postResolutionTurnFlow for required grantFreeOperation effects', () => {
     const result = lowerEffectArray(
       [

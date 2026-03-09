@@ -34,11 +34,14 @@ import {
   conditionSurfacePathForTerminalConditionWhen,
   conditionSurfacePathForTriggerMatch,
   conditionSurfacePathForTriggerWhen,
+  collectTurnFlowFreeOperationGrantContractViolations,
   isAllowedTokenFilterProp,
   isCanonicalBindingIdentifier,
-  isTurnFlowFreeOperationGrantViabilityPolicy,
   tokenFilterPropAlternatives,
   TURN_FLOW_ACTION_CLASS_VALUES,
+  TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES,
+  TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES,
+  TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
 } from '../contracts/index.js';
 import {
@@ -283,71 +286,113 @@ const validateFreeOperationGrantContract = (
   },
 ): void => {
   const label = options?.label ?? 'grantFreeOperation';
-  if (!(TURN_FLOW_ACTION_CLASS_VALUES as readonly string[]).includes(grant.operationClass)) {
-    diagnostics.push({
-      code: 'EFFECT_GRANT_FREE_OPERATION_CLASS_INVALID',
-      path: `${path}.operationClass`,
-      severity: 'error',
-      message: `${label}.operationClass is invalid: "${grant.operationClass}".`,
-      suggestion: `Use one of: ${TURN_FLOW_ACTION_CLASS_VALUES.join('|')}.`,
-    });
-  }
-  if (grant.uses !== undefined && (!Number.isSafeInteger(grant.uses) || grant.uses <= 0)) {
-    diagnostics.push({
-      code: 'EFFECT_GRANT_FREE_OPERATION_USES_INVALID',
-      path: `${path}.uses`,
-      severity: 'error',
-      message: `${label}.uses must be a positive integer.`,
-      suggestion: 'Set uses to an integer >= 1.',
-    });
-  }
-  if (
-    grant.viabilityPolicy !== undefined
-    && grant.viabilityPolicy !== null
-    && !isTurnFlowFreeOperationGrantViabilityPolicy(grant.viabilityPolicy)
-  ) {
-    diagnostics.push({
-      code: 'EFFECT_GRANT_FREE_OPERATION_VIABILITY_POLICY_INVALID',
-      path: `${path}.viabilityPolicy`,
-      severity: 'error',
-      message: `${label}.viabilityPolicy is invalid: "${grant.viabilityPolicy}".`,
-      suggestion: `Use one of: ${TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES.join('|')}.`,
-    });
-  }
-  const sequenceStep = grant.sequence?.step;
-  if (
-    grant.sequence !== undefined
-    && (typeof sequenceStep !== 'number' || !Number.isSafeInteger(sequenceStep) || sequenceStep < 0)
-  ) {
-    diagnostics.push({
-      code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_INVALID',
-      path: `${path}.sequence.step`,
-      severity: 'error',
-      message: `${label}.sequence.step must be a non-negative integer.`,
-      suggestion: 'Set sequence.step to an integer >= 0.',
-    });
-  }
-  if (grant.sequenceContext !== undefined) {
-    if (
-      grant.sequenceContext.captureMoveZoneCandidatesAs === undefined
-      && grant.sequenceContext.requireMoveZoneCandidatesFrom === undefined
-    ) {
-      diagnostics.push({
-        code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID',
-        path: `${path}.sequenceContext`,
-        severity: 'error',
-        message: `${label}.sequenceContext must declare at least one capture/require key.`,
-        suggestion: 'Set captureMoveZoneCandidatesAs and/or requireMoveZoneCandidatesFrom to non-empty strings.',
-      });
-    }
-    if (grant.sequence === undefined) {
-      diagnostics.push({
-        code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID',
-        path: `${path}.sequenceContext`,
-        severity: 'error',
-        message: `${label}.sequenceContext requires ${label}.sequence.`,
-        suggestion: 'Declare sequence.chain and sequence.step when using sequenceContext.',
-      });
+  for (const violation of collectTurnFlowFreeOperationGrantContractViolations(grant)) {
+    const suffix = violation.path.join('.');
+    switch (violation.code) {
+      case 'operationClassInvalid':
+        diagnostics.push({
+          code: 'EFFECT_GRANT_FREE_OPERATION_CLASS_INVALID',
+          path: `${path}.${suffix}`,
+          severity: 'error',
+          message: `${label}.${violation.message}`,
+          suggestion: `Use one of: ${TURN_FLOW_ACTION_CLASS_VALUES.join('|')}.`,
+        });
+        break;
+      case 'usesInvalid':
+        diagnostics.push({
+          code: 'EFFECT_GRANT_FREE_OPERATION_USES_INVALID',
+          path: `${path}.${suffix}`,
+          severity: 'error',
+          message: `${label}.${violation.message}`,
+          suggestion: 'Set uses to an integer >= 1.',
+        });
+        break;
+      case 'viabilityPolicyInvalid':
+        diagnostics.push({
+          code: 'EFFECT_GRANT_FREE_OPERATION_VIABILITY_POLICY_INVALID',
+          path: `${path}.${suffix}`,
+          severity: 'error',
+          message: `${label}.${violation.message}`,
+          suggestion: `Use one of: ${TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES.join('|')}.`,
+        });
+        break;
+      case 'completionPolicyInvalid':
+        diagnostics.push({
+          code: 'EFFECT_GRANT_FREE_OPERATION_COMPLETION_POLICY_INVALID',
+          path: `${path}.${suffix}`,
+          severity: 'error',
+          message: `${label}.${violation.message}`,
+          suggestion: `Use one of: ${TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES.join('|')}.`,
+        });
+        break;
+      case 'postResolutionTurnFlowInvalid':
+        diagnostics.push({
+          code: 'EFFECT_GRANT_FREE_OPERATION_POST_RESOLUTION_TURN_FLOW_INVALID',
+          path: `${path}.${suffix}`,
+          severity: 'error',
+          message: `${label}.${violation.message}`,
+          suggestion: `Use one of: ${TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES.join('|')}.`,
+        });
+        break;
+      case 'requiredPostResolutionTurnFlowMissing':
+        diagnostics.push({
+          code: 'EFFECT_GRANT_FREE_OPERATION_POST_RESOLUTION_TURN_FLOW_REQUIRED',
+          path: `${path}.${suffix}`,
+          severity: 'error',
+          message: `${label}.${violation.message}`,
+          suggestion: `Set ${label}.postResolutionTurnFlow to ${TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES.join('|')}.`,
+        });
+        break;
+      case 'postResolutionTurnFlowRequiresRequiredCompletionPolicy':
+        diagnostics.push({
+          code: 'EFFECT_GRANT_FREE_OPERATION_COMPLETION_POLICY_REQUIRED',
+          path: `${path}.${suffix}`,
+          severity: 'error',
+          message: `${label}.${violation.message}`,
+          suggestion: `Set ${label}.completionPolicy to ${TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES.join('|')}.`,
+        });
+        break;
+      case 'sequenceStepInvalid':
+        diagnostics.push({
+          code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_INVALID',
+          path: `${path}.${suffix}`,
+          severity: 'error',
+          message: `${label}.${violation.message}`,
+          suggestion: 'Set sequence.step to an integer >= 0.',
+        });
+        break;
+      case 'sequenceContextInvalid':
+        diagnostics.push({
+          code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID',
+          path: `${path}.${suffix}`,
+          severity: 'error',
+          message: `${label}.${violation.message}`,
+          suggestion: 'Set captureMoveZoneCandidatesAs and/or requireMoveZoneCandidatesFrom to non-empty strings.',
+        });
+        break;
+      case 'sequenceContextRequiresSequence':
+        diagnostics.push({
+          code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID',
+          path: `${path}.${suffix}`,
+          severity: 'error',
+          message: `${label}.${violation.message.replace('sequence', `${label}.sequence`)}`,
+          suggestion: 'Declare sequence.chain and sequence.step when using sequenceContext.',
+        });
+        break;
+      case 'outcomePolicyInvalid':
+        diagnostics.push({
+          code: 'EFFECT_GRANT_FREE_OPERATION_OUTCOME_POLICY_INVALID',
+          path: `${path}.${suffix}`,
+          severity: 'error',
+          message: `${label}.${violation.message}`,
+          suggestion: `Use one of: ${TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES.join('|')}.`,
+        });
+        break;
+      default:
+        {
+          const unhandled: never = violation.code;
+          void unhandled;
+        }
     }
   }
 };

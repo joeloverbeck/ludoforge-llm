@@ -191,6 +191,26 @@ describe('applyGrantFreeOperation', () => {
     });
   });
 
+  it('throws when postResolutionTurnFlow is set without completionPolicy required', () => {
+    const ctx = makeCtx();
+    const effect = {
+      grantFreeOperation: {
+        seat: 'self',
+        operationClass: 'operation',
+        postResolutionTurnFlow: 'resumeCardFlow',
+      },
+    } as unknown as Extract<EffectAST, { readonly grantFreeOperation: unknown }>;
+
+    assert.throws(() => applyGrantFreeOperation(effect, ctx), (err: unknown) => {
+      if (!isEffectErrorCode(err, 'EFFECT_RUNTIME')) {
+        return false;
+      }
+      assert.equal(err.context?.effectType, 'grantFreeOperation');
+      assert.match(String(err.message), /requires completionPolicy: required/i);
+      return true;
+    });
+  });
+
   it('keeps explicit postResolutionTurnFlow on emitted required pending grants', () => {
     const ctx = makeCtx();
     const effect = {

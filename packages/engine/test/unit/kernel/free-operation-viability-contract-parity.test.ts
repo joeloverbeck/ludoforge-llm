@@ -143,12 +143,12 @@ describe('free-operation viability policy contract parity', () => {
     }
   });
 
-  it('keeps validate-gamedef-behavior wired to canonical viability-policy runtime guard', () => {
+  it('keeps validate-gamedef-behavior wired to the canonical shared grant-contract helper', () => {
     const source = readKernelSource('src/kernel/validate-gamedef-behavior.ts');
     assert.match(
       source,
-      /isTurnFlowFreeOperationGrantViabilityPolicy\(grant\.viabilityPolicy\)/u,
-      'validate-gamedef-behavior.ts must validate grant.viabilityPolicy through canonical runtime guard',
+      /collectTurnFlowFreeOperationGrantContractViolations\(grant\)/u,
+      'validate-gamedef-behavior.ts must validate grants through the canonical shared grant-contract helper',
     );
   });
 });

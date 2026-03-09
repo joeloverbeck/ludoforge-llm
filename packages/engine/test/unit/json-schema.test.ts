@@ -647,6 +647,61 @@ describe('json schema artifacts', () => {
     assert.equal(validate(gameDefWithModernEventDeck), true, JSON.stringify(validate.errors, null, 2));
   });
 
+  it('eventDeck freeOperationGrants accept the explicit required completion contract shape', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(gameDefSchema);
+    const valid = {
+      ...gameDefWithModernEventDeck,
+      eventDecks: [
+        {
+          ...gameDefWithModernEventDeck.eventDecks![0],
+          cards: [
+            {
+              ...gameDefWithModernEventDeck.eventDecks![0]!.cards[0],
+              unshaded: {
+                ...gameDefWithModernEventDeck.eventDecks![0]!.cards[0]!.unshaded!,
+                freeOperationGrants: [
+                  {
+                    ...gameDefWithModernEventDeck.eventDecks![0]!.cards[0]!.unshaded!.freeOperationGrants![0],
+                    completionPolicy: 'required',
+                    postResolutionTurnFlow: 'resumeCardFlow',
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    assert.equal(validate(valid), true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  it('grantFreeOperation effects accept the explicit required completion contract shape', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(gameDefSchema);
+    const valid = {
+      ...fullGameDef,
+      actions: [
+        {
+          ...fullGameDef.actions[0],
+          effects: [
+            {
+              grantFreeOperation: {
+                seat: '0',
+                operationClass: 'operation',
+                completionPolicy: 'required',
+                postResolutionTurnFlow: 'resumeCardFlow',
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    assert.equal(validate(valid), true, JSON.stringify(validate.errors, null, 2));
+  });
+
   it('eventDeck target with application each and missing effects fails GameDef.schema.json validation', () => {
     const ajv = new Ajv({ allErrors: true, strict: false });
     const validate = ajv.compile(gameDefSchema);

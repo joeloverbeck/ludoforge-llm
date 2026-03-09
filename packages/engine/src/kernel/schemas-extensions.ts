@@ -20,6 +20,7 @@ import {
   hasTurnFlowInterruptSelectorMatchField,
 } from '../contracts/index.js';
 import { FreeOperationSequenceContextSchema } from './free-operation-sequence-context-schema.js';
+import { superRefineTurnFlowFreeOperationGrantContract } from './free-operation-grant-zod.js';
 
 export const TurnFlowDurationSchema = z.enum(TURN_FLOW_DURATION_VALUES);
 
@@ -104,7 +105,8 @@ export const EventCardFreeOperationGrantSchema = z
     outcomePolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES).optional(),
     postResolutionTurnFlow: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine(superRefineTurnFlowFreeOperationGrantContract);
 
 export const EventCardEligibilityOverrideTargetSchema = z.union([
   z

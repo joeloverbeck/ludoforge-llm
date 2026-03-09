@@ -10,6 +10,7 @@ import {
 } from '../contracts/index.js';
 import { PREDICATE_OPERATORS } from '../contracts/index.js';
 import { FreeOperationSequenceContextSchema } from './free-operation-sequence-context-schema.js';
+import { superRefineTurnFlowFreeOperationGrantContract } from './free-operation-grant-zod.js';
 import { AST_SCOPED_VAR_SCOPES, createScopedVarContractSchema } from './scoped-var-contract.js';
 
 export const OBJECT_STRICTNESS_POLICY = 'strict' as const;
@@ -807,7 +808,8 @@ effectAstSchemaInternal = z.union([
             .optional(),
           sequenceContext: FreeOperationSequenceContextSchema.optional(),
         })
-        .strict(),
+        .strict()
+        .superRefine(superRefineTurnFlowFreeOperationGrantContract),
     })
     .strict(),
   z

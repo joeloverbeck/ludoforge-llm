@@ -8,11 +8,8 @@ import { findPhaseDef } from './phase-lookup.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import {
+  collectTurnFlowFreeOperationGrantContractViolations,
   isTurnFlowActionClass,
-  isTurnFlowFreeOperationGrantCompletionPolicy,
-  isTurnFlowFreeOperationGrantOutcomePolicy,
-  isTurnFlowFreeOperationGrantPostResolutionTurnFlow,
-  isTurnFlowFreeOperationGrantViabilityPolicy,
 } from '../contracts/index.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { createEvalRuntimeResources } from './eval-context.js';
@@ -171,83 +168,37 @@ export const applyGrantFreeOperation = (
       uses,
     });
   }
-  if (
-    grant.viabilityPolicy !== undefined
-    && !isTurnFlowFreeOperationGrantViabilityPolicy(grant.viabilityPolicy)
-  ) {
-    throw effectRuntimeError(
-      EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
-      'grantFreeOperation.viabilityPolicy is invalid',
-      {
-        effectType: 'grantFreeOperation',
-        viabilityPolicy: grant.viabilityPolicy,
-      },
-    );
-  }
-  if (
-    grant.completionPolicy !== undefined
-    && !isTurnFlowFreeOperationGrantCompletionPolicy(grant.completionPolicy)
-  ) {
-    throw effectRuntimeError(
-      EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
-      'grantFreeOperation.completionPolicy is invalid',
-      {
-        effectType: 'grantFreeOperation',
-        completionPolicy: grant.completionPolicy,
-      },
-    );
-  }
-  if (
-    grant.outcomePolicy !== undefined
-    && !isTurnFlowFreeOperationGrantOutcomePolicy(grant.outcomePolicy)
-  ) {
-    throw effectRuntimeError(
-      EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
-      'grantFreeOperation.outcomePolicy is invalid',
-      {
-        effectType: 'grantFreeOperation',
-        outcomePolicy: grant.outcomePolicy,
-      },
-    );
-  }
-  if (
-    grant.postResolutionTurnFlow !== undefined
-    && !isTurnFlowFreeOperationGrantPostResolutionTurnFlow(grant.postResolutionTurnFlow)
-  ) {
-    throw effectRuntimeError(
-      EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
-      'grantFreeOperation.postResolutionTurnFlow is invalid',
-      {
-        effectType: 'grantFreeOperation',
-        postResolutionTurnFlow: grant.postResolutionTurnFlow,
-      },
-    );
-  }
-  if (
-    grant.completionPolicy === 'required'
-    && grant.postResolutionTurnFlow === undefined
-  ) {
-    throw effectRuntimeError(
-      EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
-      'grantFreeOperation.postResolutionTurnFlow is required when completionPolicy is required',
-      {
-        effectType: 'grantFreeOperation',
-        completionPolicy: grant.completionPolicy,
-      },
-    );
-  }
-  if (
-    grant.postResolutionTurnFlow !== undefined
-    && grant.completionPolicy !== 'required'
-  ) {
-    throw effectRuntimeError(
-      EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
-      'grantFreeOperation.postResolutionTurnFlow requires completionPolicy: required',
-      {
-        effectType: 'grantFreeOperation',
-        postResolutionTurnFlow: grant.postResolutionTurnFlow,
-      },
-    );
+  for (const violation of collectTurnFlowFreeOperationGrantContractViolations({
+    operationClass: grant.operationClass,
+    ...(grant.uses === undefined ? {} : { uses: grant.uses }),
+    ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
+    ...(grant.completionPolicy === undefined ? {} : { completionPolicy: grant.completionPolicy }),
+    ...(grant.outcomePolicy === undefined ? {} : { outcomePolicy: grant.outcomePolicy }),
+    ...(grant.postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow: grant.postResolutionTurnFlow }),
+    ...(grant.sequence === undefined ? {} : { sequence: grant.sequence }),
+    ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),
+  })) {
+    switch (violation.code) {
+      case 'viabilityPolicyInvalid':
+      case 'completionPolicyInvalid':
+      case 'outcomePolicyInvalid':
+      case 'postResolutionTurnFlowInvalid':
+      case 'requiredPostResolutionTurnFlowMissing':
+      case 'postResolutionTurnFlowRequiresRequiredCompletionPolicy':
+        throw effectRuntimeError(
+          EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
+          `grantFreeOperation.${violation.message}`,
+          {
+            effectType: 'grantFreeOperation',
+            ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
+            ...(grant.completionPolicy === undefined ? {} : { completionPolicy: grant.completionPolicy }),
+            ...(grant.outcomePolicy === undefined ? {} : { outcomePolicy: grant.outcomePolicy }),
+            ...(grant.postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow: grant.postResolutionTurnFlow }),
+          },
+        );
+      default:
+        break;
+    }
   }
   if (
     grant.sequenceContext !== undefined

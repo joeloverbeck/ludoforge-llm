@@ -6,7 +6,9 @@ import {
   CHOICE_OPTIONS_RUNTIME_SHAPE_DIAGNOSTIC_CODES,
 } from '../kernel/choice-options-runtime-shape-diagnostic.js';
 import {
+  collectTurnFlowFreeOperationGrantContractViolations,
   TURN_FLOW_ACTION_CLASS_VALUES,
+  TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
   collectDeclaredBinderCandidatesFromEffectNode,
@@ -1763,21 +1765,30 @@ function lowerGrantFreeOperationEffect(
     postResolutionTurnFlow = source.postResolutionTurnFlow as import('../contracts/index.js').TurnFlowFreeOperationGrantPostResolutionTurnFlow;
   }
 
-  if (completionPolicy === 'required' && postResolutionTurnFlow === undefined) {
-    diagnostics.push(...missingCapability(
-      `${path}.postResolutionTurnFlow`,
-      'grantFreeOperation postResolutionTurnFlow',
-      source.postResolutionTurnFlow,
-      [...TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES],
-    ).diagnostics);
-  }
-  if (postResolutionTurnFlow !== undefined && completionPolicy !== 'required') {
-    diagnostics.push(...missingCapability(
-      `${path}.completionPolicy`,
-      'grantFreeOperation completionPolicy',
-      source.completionPolicy,
-      ['required'],
-    ).diagnostics);
+  for (const violation of collectTurnFlowFreeOperationGrantContractViolations({
+    operationClass: source.operationClass,
+    ...(uses === undefined ? {} : { uses }),
+    ...(viabilityPolicy === undefined ? {} : { viabilityPolicy }),
+    ...(completionPolicy === undefined ? {} : { completionPolicy }),
+    ...(outcomePolicy === undefined ? {} : { outcomePolicy }),
+    ...(postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow }),
+  })) {
+    if (violation.code === 'requiredPostResolutionTurnFlowMissing') {
+      diagnostics.push(...missingCapability(
+        `${path}.postResolutionTurnFlow`,
+        'grantFreeOperation postResolutionTurnFlow',
+        source.postResolutionTurnFlow,
+        [...TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES],
+      ).diagnostics);
+    }
+    if (violation.code === 'postResolutionTurnFlowRequiresRequiredCompletionPolicy') {
+      diagnostics.push(...missingCapability(
+        `${path}.completionPolicy`,
+        'grantFreeOperation completionPolicy',
+        source.completionPolicy,
+        [...TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES],
+      ).diagnostics);
+    }
   }
 
   let loweredSequence: { readonly chain: string; readonly step: number } | undefined;

@@ -1,6 +1,6 @@
 # ENG-225: Unify Free-Operation Grant Contract Validation Across Event, Effect, and GameDef Paths
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — compiler, shared GameDef validation, schema contract parity, and grant contract tests
@@ -13,14 +13,27 @@
 ## Assumption Reassessment (2026-03-09)
 
 1. `grantFreeOperation` effect lowering/runtime now requires `postResolutionTurnFlow` when `completionPolicy: required` and rejects the inverse pairing.
-2. Event-card `freeOperationGrants` still flow through `compile-event-cards` and shared GameDef validation without equivalent `completionPolicy`/`postResolutionTurnFlow` coupling checks.
-3. Mismatch: the repository now has two different free-operation grant contract surfaces. Correction: define one canonical shared grant-contract validator and apply it uniformly to effect lowering, event lowering, GameDef validation, and schema/parity tests.
+2. Event-card `freeOperationGrants` currently have three relevant paths:
+   - `compile-event-cards.ts` lowers `zoneFilter` only and does not enforce semantic grant coupling.
+   - `cnl/cross-validate.ts` validates event-grant seat/action references only and does not enforce `completionPolicy`/`postResolutionTurnFlow` coupling.
+   - `validate-gamedef-behavior.ts` already uses a shared free-operation grant validator for some generic grant invariants, but that validator currently omits the `completionPolicy`/`postResolutionTurnFlow` contract.
+3. Mismatch: the repository does not have one canonical free-operation grant contract surface. Instead, generic grant validation is split across:
+   - effect lowering (`compile-effects.ts`)
+   - runtime effect application (`effects-turn-flow.ts`)
+   - partial shared `GameDef` validation (`validate-gamedef-behavior.ts`)
+   - structural schemas (`schemas-ast.ts`, `schemas-extensions.ts`)
+4. Correction: define one canonical reusable grant-contract helper for the shared semantic invariant and apply it where early diagnostics or runtime safety are required. Do not treat `compile-event-cards.ts` as the primary semantic enforcement point unless the compile pipeline cannot surface the shared validator early enough.
 
 ## Architecture Check
 
 1. One shared validator for free-operation grant contracts is cleaner than re-encoding the same invariant separately in effect lowering, event lowering, runtime validation, and ad hoc tests. It reduces drift and makes future contract extensions explicit.
 2. This keeps game-specific behavior in `GameSpecDoc` data while preserving a game-agnostic `GameDef`/kernel/simulator contract surface. The engine should validate generic grant semantics once, not per game or per ingestion path.
 3. No backwards-compatibility aliasing or fallback behavior should be introduced. Invalid grant shapes should fail validation rather than silently defaulting to detached semantics.
+4. Reassessment: duplicating the coupling check in `compile-event-cards.ts` and `cnl/cross-validate.ts` would not be cleaner architecture by itself. The ideal architecture is:
+   - one reusable semantic contract helper
+   - optional thin adapters where different layers need different error-reporting shapes
+   - structural schema checks kept close to schemas
+   - runtime assertions kept as a defensive backstop, not the primary source of truth
 
 ## What to Change
 
@@ -34,12 +47,13 @@ Extract the shared validation rules for free-operation grant contracts into one 
 
 Use that shared validator from:
 - effect lowering / effect runtime validation
-- event-card grant lowering
+- shared GameDef validation for event-card grants
 - behavioral GameDef validation for raw runtime inputs
+- event-card compile/cross-validation only if needed as a thin adapter for earlier compiler diagnostics
 
 ### 2. Close schema and GameDef parity gaps
 
-Update schema-level and GameDef-level validation so invalid required-grant shapes are rejected before runtime execution. If JSON Schema cannot express the full coupling ergonomically, keep the schema as structurally strict as practical and enforce the remaining semantic coupling in the shared validator and `assertValidatedGameDef`.
+Update schema-level and GameDef-level validation so invalid required-grant shapes are rejected before runtime execution. `schemas-extensions.ts` and `schemas-ast.ts` both currently expose this grant shape, so both schema surfaces must be reassessed. If JSON Schema cannot express the full coupling ergonomically, keep the schema as structurally strict as practical and enforce the remaining semantic coupling in the shared validator and `assertValidatedGameDef`.
 
 ### 3. Strengthen regression coverage around ingestion-path parity
 
@@ -52,7 +66,9 @@ Add tests proving the same required-grant contract is enforced consistently for:
 ## Files to Touch
 
 - `packages/engine/src/cnl/compile-event-cards.ts` (modify)
+- `packages/engine/src/cnl/cross-validate.ts` (reassess; modify only if an adapter is justified)
 - `packages/engine/src/cnl/compile-effects.ts` (modify)
+- `packages/engine/src/kernel/effects-turn-flow.ts` (modify)
 - `packages/engine/src/kernel/validate-gamedef-behavior.ts` (modify)
 - `packages/engine/src/kernel/schemas-extensions.ts` (modify)
 - `packages/engine/src/kernel/schemas-ast.ts` (modify if shared helper contract changes)
@@ -74,7 +90,8 @@ Add tests proving the same required-grant contract is enforced consistently for:
 
 1. Event-card `freeOperationGrants` with `completionPolicy: required` and no `postResolutionTurnFlow` are rejected by the canonical validation path.
 2. Direct `GameDef` validation rejects required grants missing `postResolutionTurnFlow` and rejects `postResolutionTurnFlow` on non-required grants.
-3. Existing suite: `pnpm -F @ludoforge/engine test`
+3. Defensive runtime validation remains aligned with the same canonical contract semantics.
+4. Existing suite: `pnpm -F @ludoforge/engine test`
 
 ### Invariants
 
@@ -86,9 +103,10 @@ Add tests proving the same required-grant contract is enforced consistently for:
 ### New/Modified Tests
 
 1. `packages/engine/test/unit/validate-gamedef.test.ts` — assert shared GameDef validation rejects missing/illegal `postResolutionTurnFlow` pairings on event-card grants.
-2. `packages/engine/test/unit/json-schema.test.ts` — tighten schema/parity fixtures so contract shape drift is caught at the artifact boundary where practical.
+2. `packages/engine/test/unit/json-schema.test.ts` — tighten schema/parity fixtures on both schema surfaces so contract shape drift is caught at the artifact boundary where practical.
 3. `packages/engine/test/unit/compile-effects.test.ts` — keep effect-lowering parity aligned with the shared validator after extraction.
 4. `packages/engine/test/unit/effects-turn-flow.test.ts` — keep runtime enforcement aligned with the same canonical contract assumptions.
+5. `packages/engine/test/unit/schemas-ast.test.ts` — add or update schema-ast coverage if the effect/event AST surface is tightened there rather than solely in `json-schema.test.ts`.
 
 ### Commands
 
@@ -97,3 +115,21 @@ Add tests proving the same required-grant contract is enforced consistently for:
 3. `pnpm -F @ludoforge/engine lint`
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm run check:ticket-deps`
+
+## Outcome
+
+- Completion date: 2026-03-09
+- What actually changed:
+  - Added a canonical shared free-operation grant contract helper in `packages/engine/src/contracts/turn-flow-free-operation-grant-contract.ts`.
+  - Rewired `compile-effects.ts`, `validate-gamedef-behavior.ts`, and `effects-turn-flow.ts` to consume the shared helper instead of carrying separate semantic coupling logic.
+  - Added a shared Zod adapter so `schemas-ast.ts` and `schemas-extensions.ts` enforce the same contract at the `validateGameDefBoundary` layer.
+  - Regenerated `packages/engine/schemas/*.schema.json` artifacts and updated grant-parity tests to assert the new shared-helper architecture.
+- Deviations from original plan:
+  - `compile-event-cards.ts` and `cnl/cross-validate.ts` did not need semantic contract changes. They remain focused on lowering and identifier cross-reference work, while the shared validator owns grant semantics.
+  - Generated draft-07 JSON schema artifacts remain structurally permissive for the `completionPolicy`/`postResolutionTurnFlow` coupling because Zod `superRefine` does not round-trip into JSON Schema. The canonical enforcement therefore lives in the shared helper plus Zod boundary/runtime validation rather than artifact-only JSON Schema.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build`
+  - `node --test dist/test/unit/validate-gamedef.test.js dist/test/unit/json-schema.test.js dist/test/unit/compile-effects.test.js dist/test/unit/effects-turn-flow.test.js` (run from `packages/engine/`)
+  - `pnpm -F @ludoforge/engine lint`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm run check:ticket-deps`

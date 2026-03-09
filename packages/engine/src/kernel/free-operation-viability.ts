@@ -5,12 +5,11 @@ import {
   resolveMoveDecisionSequence,
 } from './move-decision-sequence.js';
 import { resolvePlayerIndexForTurnFlowSeat, type SeatResolutionContext } from './seat-resolution.js';
-import {
-  doesGrantAuthorizeMove,
-  isPendingFreeOperationGrantSequenceReady,
-} from './free-operation-grant-authorization.js';
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
-import { isFreeOperationApplicableForMove } from './free-operation-discovery-analysis.js';
+import {
+  isFreeOperationApplicableForMove,
+  isFreeOperationGrantedForMove,
+} from './free-operation-discovery-analysis.js';
 import { resolveGrantFreeOperationActionDomain } from './free-operation-action-domain.js';
 import type {
   GameDef,
@@ -204,10 +203,6 @@ export const isFreeOperationGrantUsableInCurrentState = (
       },
     },
   };
-  if (!isPendingFreeOperationGrantSequenceReady(pendingProbeGrants, probeGrant)) {
-    return false;
-  }
-
   const actionIds = resolveGrantFreeOperationActionDomain(def, probeGrant);
   for (const actionId of actionIds) {
     const probeMove: Move = {
@@ -223,7 +218,7 @@ export const isFreeOperationGrantUsableInCurrentState = (
     });
     if (
       decisionProbe.complete &&
-      doesGrantAuthorizeMove(def, probeState, pendingProbeGrants, probeGrant, decisionProbe.move)
+      isFreeOperationGrantedForMove(def, probeState, decisionProbe.move, seatResolution)
     ) {
       return true;
     }

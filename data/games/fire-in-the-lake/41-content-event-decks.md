@@ -8537,85 +8537,307 @@ eventDecks:
             - US
           flavorText: Main-force concentration accelerates in contested provinces.
         unshaded:
-          text: Place 3 NVA Troops into any spaces with NVA pieces.
-          targets:
-            - id: $targetSpace
-              selector:
-                query: mapSpaces
-                filter:
+          text: Add ARVN Troops to double the ARVN pieces in a space with NVA. All ARVN free Assault NVA.
+          effects:
+            - if:
+                when:
                   op: ">"
                   left:
                     aggregate:
                       op: count
                       query:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - op: ">"
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      op: and
+                                      args:
+                                        - prop: faction
+                                          eq: ARVN
+                              right: 0
+                            - op: ">"
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      op: and
+                                      args:
+                                        - prop: faction
+                                          eq: NVA
+                              right: 0
+                  right: 0
+                then:
+                  - chooseOne:
+                      bind: $doublingSpace
+                      options:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - op: ">"
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      op: and
+                                      args:
+                                        - prop: faction
+                                          eq: ARVN
+                              right: 0
+                            - op: ">"
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      op: and
+                                      args:
+                                        - prop: faction
+                                          eq: NVA
+                              right: 0
+                  - let:
+                      bind: $arvnPieceCount
+                      value:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $doublingSpace
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  eq: ARVN
+                      in:
+                        - removeByPriority:
+                            budget:
+                              ref: binding
+                              name: $arvnPieceCount
+                            groups:
+                              - bind: $arvnTroop
+                                over:
+                                  query: tokensInZone
+                                  zone: available-ARVN:none
+                                  filter:
+                                    op: and
+                                    args:
+                                      - prop: faction
+                                        eq: ARVN
+                                      - prop: type
+                                        eq: troops
+                                to:
+                                  zoneExpr: $doublingSpace
+                else: []
+            - forEach:
+                bind: $assaultSpace
+                over:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - op: ">"
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: ARVN
+                        right: 0
+                      - op: or
+                        args:
+                          - op: ">"
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    op: and
+                                    args:
+                                      - prop: faction
+                                        eq: NVA
+                                      - prop: type
+                                        eq: troops
+                            right: 0
+                          - op: ">"
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    op: and
+                                    args:
+                                      - prop: faction
+                                        eq: NVA
+                                      - prop: type
+                                        eq: guerrilla
+                                      - prop: activity
+                                        eq: active
+                            right: 0
+                effects:
+                  - let:
+                      bind: $isProvince
+                      value:
+                        if:
+                          when:
+                            op: "=="
+                            left:
+                              ref: zoneProp
+                              zone: $assaultSpace
+                              prop: category
+                            right: province
+                          then: 1
+                          else: 0
+                      in:
+                        - let:
+                            bind: $arvnCubes
+                            value:
+                              if:
+                                when:
+                                  op: "=="
+                                  left:
+                                    ref: binding
+                                    name: $isProvince
+                                  right: 1
+                                then:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInZone
+                                      zone: $assaultSpace
+                                      filter:
+                                        op: and
+                                        args:
+                                          - prop: faction
+                                            eq: ARVN
+                                          - prop: type
+                                            eq: troops
+                                else:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInZone
+                                      zone: $assaultSpace
+                                      filter:
+                                        op: and
+                                        args:
+                                          - prop: faction
+                                            eq: ARVN
+                                          - prop: type
+                                            op: in
+                                            value:
+                                              - troops
+                                              - police
+                            in:
+                              - let:
+                                  bind: $damage
+                                  value:
+                                    if:
+                                      when:
+                                        op: zonePropIncludes
+                                        zone: $assaultSpace
+                                        prop: terrainTags
+                                        value: highland
+                                      then:
+                                        op: "/"
+                                        left:
+                                          ref: binding
+                                          name: $arvnCubes
+                                        right: 3
+                                      else:
+                                        op: "/"
+                                        left:
+                                          ref: binding
+                                          name: $arvnCubes
+                                        right: 2
+                                  in:
+                                    - macro: coin-assault-removal-order-single-faction
+                                      args:
+                                        space: $assaultSpace
+                                        damageExpr:
+                                          ref: binding
+                                          name: $damage
+                                        bodyCountEligible: true
+                                        treatTunneledBasesAsUntunneled: false
+                                        targetFaction: NVA
+        shaded:
+          text: Place up to 10 NVA Troops anywhere within 1 space of North Vietnam.
+          effects:
+            - chooseN:
+                bind: $nvaTroopsToPlace
+                options:
+                  query: tokensInZone
+                  zone: available-NVA:none
+                  filter:
+                    op: and
+                    args:
+                      - prop: faction
+                        eq: NVA
+                      - prop: type
+                        eq: troops
+                min: 0
+                max:
+                  op: min
+                  left: 10
+                  right:
+                    aggregate:
+                      op: count
+                      query:
                         query: tokensInZone
-                        zone: $zone
+                        zone: available-NVA:none
                         filter:
                           op: and
                           args:
                             - prop: faction
                               eq: NVA
-                  right: 0
-              cardinality:
-                max: 1
-              application: aggregate
-              effects:
-                - removeByPriority:
-                    budget: 3
-                    groups:
-                      - bind: $nvaTroop
-                        over:
-                          query: tokensInZone
-                          zone: available-NVA:none
-                          filter:
-                            op: and
-                            args:
-                              - prop: faction
-                                eq: NVA
-                              - prop: type
-                                eq: troops
-                        to:
-                          zoneExpr: $targetSpace
-        shaded:
-          text: Place 2 VC Guerrillas into any spaces with VC pieces.
-          targets:
-            - id: $targetSpace
-              selector:
-                query: mapSpaces
-                filter:
-                  op: ">"
-                  left:
-                    aggregate:
-                      op: count
-                      query:
-                        query: tokensInZone
-                        zone: $zone
-                        filter:
-                          op: and
-                          args:
-                            - prop: faction
-                              eq: VC
-                  right: 0
-              cardinality:
-                max: 1
-              application: aggregate
-              effects:
-                - removeByPriority:
-                    budget: 2
-                    groups:
-                      - bind: $vcGuerrilla
-                        over:
-                          query: tokensInZone
-                          zone: available-VC:none
-                          filter:
-                            op: and
-                            args:
-                              - prop: faction
-                                eq: VC
-                              - prop: type
-                                eq: guerrilla
-                        to:
-                          zoneExpr: $targetSpace
+                            - prop: type
+                              eq: troops
+            - forEach:
+                bind: $nvaTroop
+                over:
+                  query: binding
+                  name: $nvaTroopsToPlace
+                effects:
+                  - chooseOne:
+                      bind: "$chuLucDestination@{$nvaTroop}"
+                      options:
+                        query: enums
+                        values:
+                          - north-vietnam:none
+                          - central-laos:none
+                          - quang-tri-thua-thien:none
+                          - loc-hue-khe-sanh:none
+                  - moveToken:
+                      token: $nvaTroop
+                      from: available-NVA:none
+                      to:
+                        zoneExpr:
+                          ref: binding
+                          name: "$chuLucDestination@{$nvaTroop}"
       - id: card-53
         title: Sappers
         sideMode: dual

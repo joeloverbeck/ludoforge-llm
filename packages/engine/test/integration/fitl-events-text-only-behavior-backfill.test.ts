@@ -76,9 +76,9 @@ describe('FITL text-only card behavior backfill', () => {
     const cardById = new Map((compiled.gameDef?.eventDecks?.[0]?.cards ?? []).map((card) => [card.id, card] as const));
 
     const card47 = cardById.get('card-47');
-    assert.equal((card47?.unshaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 1);
-    assert.equal(card47?.unshaded?.effects, undefined);
-    assert.equal((card47?.unshaded?.targets?.[0]?.effects?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 3);
+    assert.equal(typeof (card47?.unshaded?.effects?.[0] as { if?: unknown } | undefined)?.if, 'object');
+    assert.equal(typeof (card47?.unshaded?.effects?.[1] as { forEach?: unknown } | undefined)?.forEach, 'object');
+    assert.equal((card47?.shaded?.effects?.[0] as { chooseN?: { bind?: string } } | undefined)?.chooseN?.bind, '$nvaTroopsToPlace');
 
     const card44 = cardById.get('card-44');
     assert.deepEqual(card44?.unshaded?.freeOperationGrants?.map((grant) => grant.actionIds?.[0]), ['airLift', 'sweep', 'assault']);

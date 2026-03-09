@@ -1472,6 +1472,69 @@ describe('FITL COIN operations integration', () => {
       );
       assert.equal(final.globalVars.aid, beforeAid + 6, 'Expected +6 Aid when one insurgent base is removed');
     });
+
+    it('keeps insurgent bases protected while any underground guerrilla of either insurgent faction remains', () => {
+      const { compiled } = compileProductionSpec();
+      assert.notEqual(compiled.gameDef, null);
+      const def = compiled.gameDef!;
+      const start = operationInitialState(def, 971, 4);
+      const citySpace = 'hue:none';
+
+      const modifiedStart: GameState = {
+        ...start,
+        activePlayer: asPlayerId(1),
+        zones: {
+          ...start.zones,
+          [citySpace]: [
+            { id: asTokenId('arvn-assault-protect-t-1'), type: 'troops', props: { faction: 'ARVN', type: 'troops' } },
+            { id: asTokenId('arvn-assault-protect-p-1'), type: 'police', props: { faction: 'ARVN', type: 'police' } },
+            { id: asTokenId('arvn-assault-protect-p-2'), type: 'police', props: { faction: 'ARVN', type: 'police' } },
+            { id: asTokenId('arvn-assault-protect-p-3'), type: 'police', props: { faction: 'ARVN', type: 'police' } },
+            {
+              id: asTokenId('arvn-assault-protect-nva-g'),
+              type: 'guerrilla',
+              props: { faction: 'NVA', type: 'guerrilla', activity: 'active' },
+            },
+            {
+              id: asTokenId('arvn-assault-protect-nva-b'),
+              type: 'base',
+              props: { faction: 'NVA', type: 'base', tunnel: 'untunneled' },
+            },
+            {
+              id: asTokenId('arvn-assault-protect-vc-ug'),
+              type: 'guerrilla',
+              props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+            },
+          ],
+        },
+      };
+
+      const template = legalMoves(def, modifiedStart).find((move) => move.actionId === asActionId('assault'));
+      assert.ok(template, 'Expected ARVN assault template move');
+      const selected = completeProfileMoveDeterministically(
+        { ...template!, actionClass: 'operation' },
+        (request) => {
+          if (request.name === '$targetSpaces') return [citySpace];
+          if (request.name === '$targetFactionFirst') return 'NVA';
+          return pickDeterministicDecisionValue(request);
+        },
+        def,
+        modifiedStart,
+      );
+
+      const final = applyMove(def, modifiedStart, selected).state;
+
+      assert.equal(
+        countFactionTokensInSpace(final, citySpace, ['NVA']),
+        1,
+        'The NVA base should remain because an underground VC guerrilla still blocks insurgent base removal',
+      );
+      assert.equal(
+        countFactionTokensInSpace(final, citySpace, ['VC']),
+        1,
+        'The underground VC guerrilla should remain in place and continue protecting insurgent bases',
+      );
+    });
   });
   /* eslint-enable @typescript-eslint/no-explicit-any */
 

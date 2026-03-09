@@ -24,25 +24,32 @@ describe('ai-move-policy', () => {
   });
 
   it('selectAiMove with ai-greedy always picks first legal move', () => {
-    expect(selectAiMove('ai-greedy', [MOVE_A, MOVE_B, MOVE_C])).toEqual(MOVE_A);
+    const result = selectAiMove('ai-greedy', [MOVE_A, MOVE_B, MOVE_C]);
+    expect(result).not.toBeNull();
+    expect(result!.move).toEqual(MOVE_A);
+    expect(result!.selectedIndex).toBe(0);
+    expect(result!.candidateCount).toBe(3);
   });
 
   it('selectAiMove with ai-random picks move by random index deterministically', () => {
     const random = vi.fn<() => number>().mockReturnValue(0.51);
-    const selected = selectAiMove('ai-random', [MOVE_A, MOVE_B, MOVE_C], random);
+    const result = selectAiMove('ai-random', [MOVE_A, MOVE_B, MOVE_C], random);
 
     expect(random).toHaveBeenCalledTimes(1);
-    expect(selected).toEqual(MOVE_B);
+    expect(result).not.toBeNull();
+    expect(result!.move).toEqual(MOVE_B);
+    expect(result!.selectedIndex).toBe(1);
+    expect(result!.candidateCount).toBe(3);
   });
 
   it('selectAiMove clamps invalid random values', () => {
-    const nanSelected = selectAiMove('ai-random', [MOVE_A, MOVE_B], () => Number.NaN);
-    const highSelected = selectAiMove('ai-random', [MOVE_A, MOVE_B], () => Number.POSITIVE_INFINITY);
-    const aboveOneSelected = selectAiMove('ai-random', [MOVE_A, MOVE_B], () => 2);
+    const nanResult = selectAiMove('ai-random', [MOVE_A, MOVE_B], () => Number.NaN);
+    const highResult = selectAiMove('ai-random', [MOVE_A, MOVE_B], () => Number.POSITIVE_INFINITY);
+    const aboveOneResult = selectAiMove('ai-random', [MOVE_A, MOVE_B], () => 2);
 
-    expect(nanSelected).toEqual(MOVE_A);
-    expect(highSelected).toEqual(MOVE_A);
-    expect(aboveOneSelected).toEqual(MOVE_B);
+    expect(nanResult!.move).toEqual(MOVE_A);
+    expect(highResult!.move).toEqual(MOVE_A);
+    expect(aboveOneResult!.move).toEqual(MOVE_B);
   });
 
   it('resolveAiPlaybackDelayMs maps speed tiers to deterministic step delays', () => {

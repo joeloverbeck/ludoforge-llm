@@ -1,4 +1,5 @@
 import type { Move } from '@ludoforge/engine/runtime';
+import { createTraceBus, type TraceBus } from '@ludoforge/engine/trace';
 import { useEffect, useRef, useState } from 'react';
 import type { StoreApi } from 'zustand';
 
@@ -8,12 +9,14 @@ import type { BootstrapDescriptor } from '../bootstrap/bootstrap-registry.js';
 import { listBootstrapDescriptors } from '../bootstrap/bootstrap-registry.js';
 import { resolveBootstrapConfig } from '../bootstrap/resolve-bootstrap-config.js';
 import { createGameStore, type GameStore } from '../store/game-store.js';
+import { createConsoleTraceSubscriber } from '../trace/console-trace-subscriber.js';
 import type { ActiveGameState, SessionState } from './session-types.js';
 
 export interface ActiveGameRuntime {
   readonly bridgeHandle: GameBridgeHandle;
   readonly store: StoreApi<GameStore>;
   readonly visualConfigProvider: ReturnType<typeof resolveBootstrapConfig>['visualConfigProvider'];
+  readonly traceBus: TraceBus;
 }
 
 interface ActiveGameRuntimeOptions {
@@ -56,15 +59,31 @@ export function useActiveGameRuntime(
     const search = buildActiveGameBootstrapSearch(sessionState, descriptor);
     const bootstrapConfig = resolveBootstrapConfig(search);
     const bridgeHandle = createGameBridge();
+    const traceBus = createTraceBus();
+
+    const traceEnabled = import.meta.env.DEV;
+    let unsubscribeTrace: (() => void) | undefined;
+    if (traceEnabled) {
+      unsubscribeTrace = traceBus.subscribe(createConsoleTraceSubscriber());
+    }
+
+    const storeOptions: { onMoveApplied?: (move: Move) => void; traceBus?: TraceBus } = {
+      traceBus,
+    };
+    if (options?.onMoveApplied !== undefined) {
+      storeOptions.onMoveApplied = options.onMoveApplied;
+    }
+
     const store = createGameStore(
       bridgeHandle.bridge,
       bootstrapConfig.visualConfigProvider,
-      options?.onMoveApplied === undefined ? undefined : { onMoveApplied: options.onMoveApplied },
+      storeOptions,
     );
     const nextRuntime: ActiveGameRuntime = {
       bridgeHandle,
       store,
       visualConfigProvider: bootstrapConfig.visualConfigProvider,
+      traceBus,
     };
     runtimeRef.current = nextRuntime;
     setRuntime(nextRuntime);
@@ -101,6 +120,8 @@ export function useActiveGameRuntime(
     return () => {
       cancelled = true;
       detachFatalErrorListener();
+      unsubscribeTrace?.();
+      traceBus.unsubscribeAll();
       if (runtimeRef.current === nextRuntime) {
         runtimeRef.current = null;
         setRuntime(null);

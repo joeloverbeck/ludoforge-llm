@@ -5415,6 +5415,88 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
       false,
     );
   });
+
+  it('rejects effect-issued require in if.else when matching capture exists only in sibling if.then', () => {
+    const def = withEventCardSideConfig({
+      effects: [
+        {
+          if: {
+            when: { op: '==', left: 1, right: 1 },
+            then: [
+              {
+                grantFreeOperation: {
+                  seat: '0',
+                  sequence: { chain: 'ctx-effect-if-branch-chain', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['playCard'],
+                  sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                },
+              },
+            ],
+            else: [
+              {
+                grantFreeOperation: {
+                  seat: '0',
+                  sequence: { chain: 'ctx-effect-if-branch-chain', step: 1 },
+                  operationClass: 'operation',
+                  actionIds: ['playCard'],
+                  sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_MISSING'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.effects[0].if.else[0].grantFreeOperation.sequenceContext.requireMoveZoneCandidatesFrom',
+      ),
+      true,
+    );
+  });
+
+  it('accepts effect-issued capture and require on the same if.then execution path', () => {
+    const def = withEventCardSideConfig({
+      effects: [
+        {
+          if: {
+            when: { op: '==', left: 1, right: 1 },
+            then: [
+              {
+                grantFreeOperation: {
+                  seat: '0',
+                  sequence: { chain: 'ctx-effect-if-then-chain', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['playCard'],
+                  sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                },
+              },
+              {
+                grantFreeOperation: {
+                  seat: '0',
+                  sequence: { chain: 'ctx-effect-if-then-chain', step: 1 },
+                  operationClass: 'operation',
+                  actionIds: ['playCard'],
+                  sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code.startsWith('FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_')),
+      false,
+    );
+  });
 });
 
 describe('validated GameDef boundary', () => {

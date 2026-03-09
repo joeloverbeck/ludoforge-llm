@@ -63,6 +63,10 @@ import {
   tokenFilterTraversalValidatorSuggestion,
 } from './token-filter-validator-boundary.js';
 import { isPredicateOp, PREDICATE_OPERATORS } from '../contracts/index.js';
+import {
+  collectEffectGrantSequenceContextExecutionPaths,
+  type SequenceContextLinkageGrantReference,
+} from './effect-grant-sequence-context-paths.js';
 
 function validateStaticMapSpaceSelector(
   diagnostics: Diagnostic[],
@@ -2155,14 +2159,6 @@ export const validatePostAdjacencyBehavior = (
   }
 };
 
-interface SequenceContextLinkageGrantReference {
-  readonly chain: string;
-  readonly step: number;
-  readonly path: string;
-  readonly captureKey?: string;
-  readonly requireKey?: string;
-}
-
 const collectSequenceContextLinkageGrantReference = (
   grant: FreeOperationSequenceContextGrantLike,
   path: string,
@@ -2201,37 +2197,6 @@ const collectSequenceContextLinkageGrantReference = (
     ...(captureKey === undefined ? {} : { captureKey }),
     ...(requireKey === undefined ? {} : { requireKey }),
   });
-};
-
-const collectEffectGrantSequenceContextReferences = (
-  value: unknown,
-  path: string,
-  references: SequenceContextLinkageGrantReference[],
-): void => {
-  if (Array.isArray(value)) {
-    value.forEach((entry, index) => {
-      collectEffectGrantSequenceContextReferences(entry, `${path}[${index}]`, references);
-    });
-    return;
-  }
-
-  if (typeof value !== 'object' || value === null) {
-    return;
-  }
-
-  const record = value as Readonly<Record<string, unknown>>;
-  const grantCandidate = record.grantFreeOperation;
-  if (typeof grantCandidate === 'object' && grantCandidate !== null) {
-    collectSequenceContextLinkageGrantReference(
-      grantCandidate as FreeOperationSequenceContextGrantLike,
-      `${path}.grantFreeOperation`,
-      references,
-    );
-  }
-
-  for (const [key, nested] of Object.entries(record)) {
-    collectEffectGrantSequenceContextReferences(nested, `${path}.${key}`, references);
-  }
 };
 
 const validateSequenceContextLinkageForReferences = (
@@ -2302,11 +2267,22 @@ const validateFreeOperationGrantSequenceContextLinkage = (
   const validateEffectGrantScope = (
     scopes: readonly SequenceContextLinkageScope[],
   ): void => {
-    const references: SequenceContextLinkageGrantReference[] = [];
+    let executionPaths: readonly (readonly SequenceContextLinkageGrantReference[])[] = [[]];
     scopes.forEach(({ value, path }) => {
-      collectEffectGrantSequenceContextReferences(value, path, references);
+      if (!Array.isArray(value)) {
+        return;
+      }
+      const scopeExecutionPaths = collectEffectGrantSequenceContextExecutionPaths(
+        value as readonly EffectAST[],
+        path,
+      );
+      executionPaths = executionPaths.flatMap((existingPath) =>
+        scopeExecutionPaths.map((scopePath) => [...existingPath, ...scopePath]),
+      );
     });
-    validateSequenceContextLinkageForReferences(diagnostics, references);
+    executionPaths.forEach((references) => {
+      validateSequenceContextLinkageForReferences(diagnostics, references);
+    });
   };
 
   (def.eventDecks ?? []).forEach((deck, deckIndex) => {
@@ -2392,14 +2368,14 @@ const validateFreeOperationGrantSequenceContextLinkage = (
           continue;
         }
         const sideEventEffectScopes: SequenceContextLinkageScope[] = [
-          {
-            value: side.effects,
-            path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.effects`,
-          },
           ...(side.targets?.map((target, targetIndex) => ({
             value: target.effects,
             path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.targets[${targetIndex}].effects`,
           })) ?? []),
+          {
+            value: side.effects,
+            path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.effects`,
+          },
         ];
         validateEffectGrantScope(sideEventEffectScopes);
         side.lastingEffects?.forEach((lastingEffect, lastingEffectIndex) => {
@@ -2418,15 +2394,22 @@ const validateFreeOperationGrantSequenceContextLinkage = (
         });
         side.branches?.forEach((branch, branchIndex) => {
           validateEffectGrantScope([
-            ...sideEventEffectScopes,
-            {
-              value: branch.effects,
-              path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.branches[${branchIndex}].effects`,
-            },
+            ...(side.targets?.map((target, targetIndex) => ({
+              value: target.effects,
+              path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.targets[${targetIndex}].effects`,
+            })) ?? []),
             ...(branch.targets?.map((target, targetIndex) => ({
               value: target.effects,
               path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.branches[${branchIndex}].targets[${targetIndex}].effects`,
             })) ?? []),
+            {
+              value: side.effects,
+              path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.effects`,
+            },
+            {
+              value: branch.effects,
+              path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.branches[${branchIndex}].effects`,
+            },
           ]);
           branch.lastingEffects?.forEach((lastingEffect, lastingEffectIndex) => {
             validateEffectGrantScope([

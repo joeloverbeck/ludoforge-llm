@@ -632,9 +632,9 @@ verbalization:
         effect: "NVA Rally: Trail improvement by +1 in spaces with NVA base"
     cap_pt76:
       - condition: "PT-76 is Unshaded"
-        effect: "NVA Attack: remove 1 extra enemy piece per space"
+        effect: "NVA Attack: each Attack space removes 1 NVA Troop first when possible; otherwise pay normal Resource cost"
       - condition: "PT-76 is Shaded"
-        effect: "NVA Attack: remove 1 enemy base on die roll of 1-3"
+        effect: "NVA Attack: 1 chosen Attack space removes 1 enemy per NVA Troop there"
     cap_armoredCavalry:
       - condition: "Armored Cavalry is Unshaded"
         effect: "Transport: move ARVN pieces from Cities (not just LoCs)"

@@ -43,133 +43,152 @@
       "type": "int",
       "init": 0,
       "min": 0,
-      "max": 20
+      "max": 20,
+      "material": false
     },
     {
       "name": "patrolCount",
       "type": "int",
       "init": 0,
       "min": 0,
-      "max": 20
+      "max": 20,
+      "material": false
     },
     {
       "name": "sweepCount",
       "type": "int",
       "init": 0,
       "min": 0,
-      "max": 20
+      "max": 20,
+      "material": false
     },
     {
       "name": "assaultCount",
       "type": "int",
       "init": 0,
       "min": 0,
-      "max": 20
+      "max": 20,
+      "material": false
     },
     {
       "name": "rallyCount",
       "type": "int",
       "init": 0,
       "min": 0,
-      "max": 20
+      "max": 20,
+      "material": false
     },
     {
       "name": "marchCount",
       "type": "int",
       "init": 0,
       "min": 0,
-      "max": 20
+      "max": 20,
+      "material": false
     },
     {
       "name": "attackCount",
       "type": "int",
       "init": 0,
       "min": 0,
-      "max": 20
+      "max": 20,
+      "material": false
     },
     {
       "name": "adviseCount",
       "type": "int",
       "init": 0,
       "min": 0,
-      "max": 20
+      "max": 20,
+      "material": false
     },
     {
       "name": "airLiftCount",
       "type": "int",
       "init": 0,
       "min": 0,
-      "max": 20
+      "max": 20,
+      "material": false
     },
     {
       "name": "airStrikeCount",
       "type": "int",
       "init": 0,
       "min": 0,
-      "max": 20
+      "max": 20,
+      "material": false
     },
     {
       "name": "governCount",
       "type": "int",
       "init": 0,
       "min": 0,
-      "max": 20
+      "max": 20,
+      "material": false
     },
     {
       "name": "transportCount",
       "type": "int",
       "init": 0,
       "min": 0,
-      "max": 20
+      "max": 20,
+      "material": false
     },
     {
       "name": "raidCount",
       "type": "int",
       "init": 0,
       "min": 0,
-      "max": 20
+      "max": 20,
+      "material": false
     },
     {
       "name": "infiltrateCount",
       "type": "int",
       "init": 0,
       "min": 0,
-      "max": 20
+      "max": 20,
+      "material": false
     },
     {
       "name": "bombardCount",
       "type": "int",
       "init": 0,
       "min": 0,
-      "max": 20
+      "max": 20,
+      "material": false
     },
     {
       "name": "nvaAmbushCount",
       "type": "int",
       "init": 0,
       "min": 0,
-      "max": 20
+      "max": 20,
+      "material": false
     },
     {
       "name": "taxCount",
       "type": "int",
       "init": 0,
       "min": 0,
-      "max": 20
+      "max": 20,
+      "material": false
     },
     {
       "name": "subvertCount",
       "type": "int",
       "init": 0,
       "min": 0,
-      "max": 20
+      "max": 20,
+      "material": false
     },
     {
       "name": "vcAmbushCount",
       "type": "int",
       "init": 0,
       "min": 0,
-      "max": 20
+      "max": 20,
+      "material": false
     },
     {
       "name": "mom_wildWeasels",
@@ -275,63 +294,72 @@
       "type": "int",
       "init": 10,
       "min": 0,
-      "max": 75
+      "max": 75,
+      "material": true
     },
     {
       "name": "vcResources",
       "type": "int",
       "init": 5,
       "min": 0,
-      "max": 75
+      "max": 75,
+      "material": true
     },
     {
       "name": "arvnResources",
       "type": "int",
       "init": 30,
       "min": 0,
-      "max": 75
+      "max": 75,
+      "material": true
     },
     {
       "name": "aid",
       "type": "int",
       "init": 15,
       "min": 0,
-      "max": 75
+      "max": 75,
+      "material": true
     },
     {
       "name": "patronage",
       "type": "int",
       "init": 15,
       "min": 0,
-      "max": 75
+      "max": 75,
+      "material": true
     },
     {
       "name": "trail",
       "type": "int",
       "init": 1,
       "min": 0,
-      "max": 4
+      "max": 4,
+      "material": true
     },
     {
       "name": "totalEcon",
       "type": "int",
       "init": 15,
       "min": 0,
-      "max": 75
+      "max": 75,
+      "material": true
     },
     {
       "name": "terrorSabotageMarkersPlaced",
       "type": "int",
       "init": 0,
       "min": 0,
-      "max": 15
+      "max": 15,
+      "material": true
     },
     {
       "name": "leaderBoxCardCount",
       "type": "int",
       "init": 0,
       "min": 0,
-      "max": 8
+      "max": 8,
+      "material": true
     }
   ],
   "perPlayerVars": [
@@ -61007,14 +61035,30 @@
             "freeOperationGrants": [
               {
                 "seat": "us",
+                "viabilityPolicy": "requireUsableForEventPlay",
                 "sequence": {
                   "chain": "ia-drang-us",
                   "step": 0
                 },
+                "completionPolicy": "required",
+                "outcomePolicy": "mustChangeGameplayState",
+                "postResolutionTurnFlow": "resumeCardFlow",
                 "operationClass": "operation",
                 "actionIds": [
                   "airLift"
                 ],
+                "moveZoneBindings": [
+                  "$usLiftDestination",
+                  "$coinLiftDestination"
+                ],
+                "moveZoneProbeBindings": [
+                  "$spaces",
+                  "$usLiftDestination",
+                  "$coinLiftDestination"
+                ],
+                "sequenceContext": {
+                  "captureMoveZoneCandidatesAs": "ia-drang-space"
+                },
                 "zoneFilter": {
                   "op": ">",
                   "left": {
@@ -61040,28 +61084,18 @@
                   "chain": "ia-drang-us",
                   "step": 1
                 },
+                "completionPolicy": "required",
+                "postResolutionTurnFlow": "resumeCardFlow",
                 "operationClass": "operation",
                 "actionIds": [
                   "sweep"
                 ],
+                "moveZoneBindings": [
+                  "$targetSpaces"
+                ],
                 "allowDuringMonsoon": true,
-                "zoneFilter": {
-                  "op": ">",
-                  "left": {
-                    "aggregate": {
-                      "op": "count",
-                      "query": {
-                        "query": "tokensInZone",
-                        "zone": "$zone",
-                        "filter": {
-                          "prop": "faction",
-                          "op": "eq",
-                          "value": "NVA"
-                        }
-                      }
-                    }
-                  },
-                  "right": 0
+                "sequenceContext": {
+                  "requireMoveZoneCandidatesFrom": "ia-drang-space"
                 }
               },
               {
@@ -61070,27 +61104,17 @@
                   "chain": "ia-drang-us",
                   "step": 2
                 },
+                "completionPolicy": "required",
+                "postResolutionTurnFlow": "resumeCardFlow",
                 "operationClass": "operation",
                 "actionIds": [
                   "assault"
                 ],
-                "zoneFilter": {
-                  "op": ">",
-                  "left": {
-                    "aggregate": {
-                      "op": "count",
-                      "query": {
-                        "query": "tokensInZone",
-                        "zone": "$zone",
-                        "filter": {
-                          "prop": "faction",
-                          "op": "eq",
-                          "value": "NVA"
-                        }
-                      }
-                    }
-                  },
-                  "right": 0
+                "moveZoneBindings": [
+                  "$targetSpaces"
+                ],
+                "sequenceContext": {
+                  "requireMoveZoneCandidatesFrom": "ia-drang-space"
                 }
               }
             ]

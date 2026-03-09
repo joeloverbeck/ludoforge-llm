@@ -7178,14 +7178,14 @@ eventDecks:
             - VC
           flavorText: Amphibious armor expands NVA assault options in difficult terrain.
         unshaded:
-          text: "NVA capability: selected Assaults gain armored removal pressure."
+          text: "Each NVA Attack space, first remove 1 NVA Troop cube. NVA CAPABILITY."
           effects:
             - macro: set-global-marker
               args:
                 markerId: cap_pt76
                 markerState: unshaded
         shaded:
-          text: "NVA capability (shaded): armored commitments increase NVA troop exposure."
+          text: "NVA Attack in 1 space removes 1 enemy per Troop. NVA CAPABILITY."
           effects:
             - macro: set-global-marker
               args:

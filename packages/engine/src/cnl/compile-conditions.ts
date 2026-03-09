@@ -396,7 +396,8 @@ function lowerTokenFilterEntry(
     return missingCapability(path, 'token filter value', source, ['{ prop, op, value: <string|string[]|ValueExpr> }']);
   }
 
-  // For 'in'/'notIn', value must be a string array
+  // For 'in'/'notIn', value may be a literal canonical string array, a named set,
+  // or a runtime-selected set reference consumed by predicate evaluation.
   if (op === 'in' || op === 'notIn') {
     const namedSetReference = lowerNamedSetReference(rawValue);
     if (namedSetReference !== null) {
@@ -420,16 +421,40 @@ function lowerTokenFilterEntry(
       };
     }
 
-    if (!Array.isArray(rawValue) || rawValue.some((item: unknown) => typeof item !== 'string')) {
-      return missingCapability(`${path}.value`, 'token filter set value', rawValue, ['string[]']);
+    if (Array.isArray(rawValue)) {
+      if (rawValue.some((item: unknown) => typeof item !== 'string')) {
+        return missingCapability(`${path}.value`, 'token filter set value', rawValue, ['string[]', '{ ref: "binding", name: string }', '{ ref: "grantContext", key: string }']);
+      }
+      const stringValues = rawValue as readonly string[];
+      const diagnostics = stringValues.flatMap((item, index) =>
+        validateCanonicalTokenTraitLiteral(context, prop, item, `${path}.value.${index}`),
+      );
+      return {
+        value: { prop, op, value: [...stringValues] },
+        diagnostics,
+      };
     }
-    const stringValues = rawValue as readonly string[];
-    const diagnostics = stringValues.flatMap((item, index) =>
-      validateCanonicalTokenTraitLiteral(context, prop, item, `${path}.value.${index}`),
-    );
+
+    const loweredValue = lowerValueNode(rawValue, context, `${path}.value`);
+    if (loweredValue.value === null) {
+      return { value: null, diagnostics: loweredValue.diagnostics };
+    }
+    if (
+      typeof loweredValue.value !== 'object'
+      || loweredValue.value === null
+      || !('ref' in loweredValue.value)
+      || (loweredValue.value.ref !== 'binding' && loweredValue.value.ref !== 'grantContext')
+    ) {
+      return missingCapability(`${path}.value`, 'token filter set value', rawValue, [
+        'string[]',
+        '{ ref: "binding", name: string }',
+        '{ ref: "grantContext", key: string }',
+      ]);
+    }
+
     return {
-      value: { prop, op, value: [...stringValues] },
-      diagnostics,
+      value: { prop, op, value: loweredValue.value },
+      diagnostics: loweredValue.diagnostics,
     };
   }
 
@@ -507,12 +532,36 @@ function lowerAssetRowFilterEntry(
   }
 
   if (op === 'in' || op === 'notIn') {
-    if (!Array.isArray(rawValue) || rawValue.some((item) => typeof item !== 'string')) {
-      return missingCapability(`${path}.value`, 'assetRows set value', rawValue, ['string[]']);
+    if (Array.isArray(rawValue)) {
+      if (rawValue.some((item) => typeof item !== 'string')) {
+        return missingCapability(`${path}.value`, 'assetRows set value', rawValue, ['string[]', '{ ref: "binding", name: string }', '{ ref: "grantContext", key: string }']);
+      }
+      return {
+        value: { field, op, value: [...rawValue] },
+        diagnostics: [],
+      };
     }
+
+    const loweredValue = lowerValueNode(rawValue, context, `${path}.value`);
+    if (loweredValue.value === null) {
+      return { value: null, diagnostics: loweredValue.diagnostics };
+    }
+    if (
+      typeof loweredValue.value !== 'object'
+      || loweredValue.value === null
+      || !('ref' in loweredValue.value)
+      || (loweredValue.value.ref !== 'binding' && loweredValue.value.ref !== 'grantContext')
+    ) {
+      return missingCapability(`${path}.value`, 'assetRows set value', rawValue, [
+        'string[]',
+        '{ ref: "binding", name: string }',
+        '{ ref: "grantContext", key: string }',
+      ]);
+    }
+
     return {
-      value: { field, op, value: [...rawValue] },
-      diagnostics: [],
+      value: { field, op, value: loweredValue.value },
+      diagnostics: loweredValue.diagnostics,
     };
   }
 

@@ -719,6 +719,60 @@ describe('evalQuery', () => {
     );
   });
 
+  it('evaluates assetRows membership predicates against runtime-selected grantContext sets', () => {
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        runtimeDataAssets: [
+          {
+            id: 'tournament-standard',
+            kind: 'scenario',
+            payload: {
+              blindSchedule: {
+                levels: [
+                  { level: 1, smallBlind: 10, phase: 'early' },
+                  { level: 2, smallBlind: 20, phase: 'mid' },
+                  { level: 3, smallBlind: 40, phase: 'late' },
+                ],
+              },
+            },
+          },
+        ],
+        tableContracts: [
+          {
+            id: 'tournament-standard::blindSchedule.levels',
+            assetId: 'tournament-standard',
+            tablePath: 'blindSchedule.levels',
+            fields: [
+              { field: 'level', type: 'int' },
+              { field: 'phase', type: 'string' },
+              { field: 'smallBlind', type: 'int' },
+            ],
+          },
+        ],
+      },
+      freeOperationOverlay: {
+        grantContext: {
+          allowedPhases: ['early', 'late'],
+        },
+      },
+    });
+
+    const filtered = evalQuery(
+      {
+        query: 'assetRows',
+        tableId: 'tournament-standard::blindSchedule.levels',
+        where: [{ field: 'phase', op: 'in', value: { ref: 'grantContext', key: 'allowedPhases' } }],
+      },
+      ctx,
+    );
+
+    assert.deepEqual(
+      filtered.map((row) => (row as Record<string, unknown>).level),
+      [1, 3],
+    );
+  });
+
   it('throws dedicated data-asset runtime errors for missing assetRows assets and invalid table paths', () => {
     const ctx = makeCtx({
       def: {
@@ -1679,6 +1733,31 @@ describe('evalQuery', () => {
         ctx,
       ).map((token) => (token as Token).id),
       [asTokenId('us-troop-1'), asTokenId('us-troop-2')],
+    );
+  });
+
+  it('evaluates token-filter membership predicates against runtime-selected binding sets', () => {
+    const ctx = makeCtx({
+      bindings: {
+        $targetFactions: ['US', 'ARVN'],
+      },
+    });
+
+    const tokens = evalQuery(
+      {
+        query: 'tokensInZone',
+        zone: 'battlefield:none',
+        filter: {
+          op: 'and',
+          args: [{ prop: 'faction', op: 'in', value: { ref: 'binding', name: '$targetFactions' } }],
+        },
+      },
+      ctx,
+    );
+
+    assert.deepEqual(
+      tokens.map((token) => (token as Token).id),
+      [asTokenId('us-troop-1'), asTokenId('us-troop-2'), asTokenId('arvn-troop-1')],
     );
   });
 

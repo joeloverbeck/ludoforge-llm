@@ -491,7 +491,14 @@ function validateMacroArgConstraints(
               : null
           : Array.isArray(value) && value.every((entry) => typeof entry === 'string')
             ? (value as readonly string[])
-            : null;
+            : isRecord(value)
+              && 'ref' in value
+              && (
+                (value.ref === 'binding' && typeof value.name === 'string')
+                || (value.ref === 'grantContext' && typeof value.key === 'string')
+              )
+              ? []
+              : null;
 
       if (valuesToValidate === null || valuesToValidate.some((entry) => !allowedValues.includes(entry))) {
         hasViolations = true;

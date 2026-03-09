@@ -11,7 +11,8 @@ interface FixtureTarget {
   readonly id: string;
   readonly label: string;
   readonly specPath: string;
-  readonly outputPath: string;
+  readonly gameDefOutputPath: string;
+  readonly metadataOutputPath: string;
 }
 
 function makeTarget(baseDir: string, id: string): FixtureTarget {
@@ -19,7 +20,8 @@ function makeTarget(baseDir: string, id: string): FixtureTarget {
     id,
     label: id.toUpperCase(),
     specPath: `/virtual/spec/${id}`,
-    outputPath: join(baseDir, `${id}-game-def.json`),
+    gameDefOutputPath: join(baseDir, `${id}-game-def.json`),
+    metadataOutputPath: join(baseDir, `${id}-game-metadata.json`),
   };
 }
 
@@ -37,13 +39,15 @@ describe('bootstrap-fixtures script', () => {
     tempDirs.push(dir);
 
     const target = makeTarget(dir, 'fitl');
-    const render = () => '{\n  "metadata": {\n    "id": "fitl"\n  }\n}\n';
+    const renderGameDef = () => '{\n  "metadata": {\n    "id": "fitl"\n  }\n}\n';
+    const renderMetadata = () => '{\n  "name": "FITL"\n}\n';
 
-    const generated = syncBootstrapFixtures({ mode: 'generate', targets: [target], render });
+    const generated = syncBootstrapFixtures({ mode: 'generate', targets: [target], renderGameDef, renderMetadata });
     expect(generated.mismatches).toEqual([]);
-    expect(readFileSync(target.outputPath, 'utf8')).toBe(render());
+    expect(readFileSync(target.gameDefOutputPath, 'utf8')).toBe(renderGameDef());
+    expect(readFileSync(target.metadataOutputPath, 'utf8')).toBe(renderMetadata());
 
-    const checked = syncBootstrapFixtures({ mode: 'check', targets: [target], render });
+    const checked = syncBootstrapFixtures({ mode: 'check', targets: [target], renderGameDef, renderMetadata });
     expect(checked.mismatches).toEqual([]);
   });
 
@@ -72,17 +76,18 @@ describe('bootstrap-fixtures script', () => {
     tempDirs.push(dir);
 
     const target = makeTarget(dir, 'texas');
-    const render = () => '{\n  "metadata": {\n    "id": "texas"\n  }\n}\n';
+    const renderGameDef = () => '{\n  "metadata": {\n    "id": "texas"\n  }\n}\n';
+    const renderMetadata = () => '{\n  "name": "Texas"\n}\n';
 
-    syncBootstrapFixtures({ mode: 'generate', targets: [target], render });
-    writeFileSync(target.outputPath, '{\n  "metadata": {\n    "id": "stale-texas"\n  }\n}\n', 'utf8');
+    syncBootstrapFixtures({ mode: 'generate', targets: [target], renderGameDef, renderMetadata });
+    writeFileSync(target.gameDefOutputPath, '{\n  "metadata": {\n    "id": "stale-texas"\n  }\n}\n', 'utf8');
 
-    const checked = syncBootstrapFixtures({ mode: 'check', targets: [target], render });
+    const checked = syncBootstrapFixtures({ mode: 'check', targets: [target], renderGameDef, renderMetadata });
     expect(checked.mismatches).toEqual([
       {
         id: 'texas',
-        outputPath: target.outputPath,
-        reason: 'fixture content differs from generated output',
+        outputPath: target.gameDefOutputPath,
+        reason: 'game-def fixture content differs from generated output',
       },
     ]);
   });
@@ -92,14 +97,20 @@ describe('bootstrap-fixtures script', () => {
     tempDirs.push(dir);
 
     const target = makeTarget(dir, 'fitl');
-    const render = () => '{\n  "metadata": {\n    "id": "fitl"\n  }\n}\n';
+    const renderGameDef = () => '{\n  "metadata": {\n    "id": "fitl"\n  }\n}\n';
+    const renderMetadata = () => '{\n  "name": "FITL"\n}\n';
 
-    const checked = syncBootstrapFixtures({ mode: 'check', targets: [target], render });
+    const checked = syncBootstrapFixtures({ mode: 'check', targets: [target], renderGameDef, renderMetadata });
     expect(checked.mismatches).toEqual([
       {
         id: 'fitl',
-        outputPath: target.outputPath,
-        reason: 'missing fixture file',
+        outputPath: target.gameDefOutputPath,
+        reason: 'missing game-def fixture file',
+      },
+      {
+        id: 'fitl',
+        outputPath: target.metadataOutputPath,
+        reason: 'missing metadata fixture file',
       },
     ]);
   });

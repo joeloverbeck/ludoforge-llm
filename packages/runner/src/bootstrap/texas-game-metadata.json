@@ -1,0 +1,9 @@
+{
+  "name": "Texas Hold'em",
+  "description": "No-limit Texas Hold'em poker tournament",
+  "playerMin": 2,
+  "playerMax": 10,
+  "factionIds": [
+    "neutral"
+  ]
+}

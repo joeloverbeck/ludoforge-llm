@@ -1,0 +1,12 @@
+{
+  "name": "Fire in the Lake",
+  "description": "A 4-faction COIN-series wargame set in the Vietnam War",
+  "playerMin": 4,
+  "playerMax": 4,
+  "factionIds": [
+    "us",
+    "arvn",
+    "nva",
+    "vc"
+  ]
+}

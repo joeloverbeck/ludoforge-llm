@@ -22,7 +22,8 @@ export function loadBootstrapFixtureTargets() {
       id: target.id,
       label: target.sourceLabel,
       specPath: resolve(REPO_ROOT, target.generatedFromSpecPath),
-      outputPath: resolve(RUNNER_ROOT, 'src', 'bootstrap', target.fixtureFile),
+      gameDefOutputPath: resolve(RUNNER_ROOT, 'src', 'bootstrap', target.fixtureFile),
+      metadataOutputPath: resolve(RUNNER_ROOT, 'src', 'bootstrap', deriveMetadataFileName(target.fixtureFile)),
     }));
 }
 
@@ -95,14 +96,20 @@ function compileFixtureGameDef(target) {
   return compiled.gameDef;
 }
 
-export function renderFixtureContent(target) {
+export function renderFixtureGameDefContent(target) {
   return `${JSON.stringify(compileFixtureGameDef(target), null, 2)}\n`;
+}
+
+export function renderFixtureMetadataContent(target) {
+  const gameDef = compileFixtureGameDef(target);
+  return `${JSON.stringify(extractBootstrapGameMetadata(gameDef), null, 2)}\n`;
 }
 
 export function syncBootstrapFixtures(options = {}) {
   const mode = options.mode ?? 'generate';
   const targets = options.targets ?? loadBootstrapFixtureTargets();
-  const render = options.render ?? renderFixtureContent;
+  const renderGameDef = options.renderGameDef ?? renderFixtureGameDefContent;
+  const renderMetadata = options.renderMetadata ?? renderFixtureMetadataContent;
 
   if (mode !== 'generate' && mode !== 'check') {
     throw new Error(`Unsupported mode: ${mode}`);
@@ -111,24 +118,43 @@ export function syncBootstrapFixtures(options = {}) {
   const mismatches = [];
 
   for (const target of targets) {
-    const rendered = render(target);
+    const outputs = [
+      {
+        outputPath: target.gameDefOutputPath,
+        rendered: renderGameDef(target),
+        kind: 'game-def',
+      },
+      {
+        outputPath: target.metadataOutputPath,
+        rendered: renderMetadata(target),
+        kind: 'metadata',
+      },
+    ];
 
     if (mode === 'generate') {
-      mkdirSync(dirname(target.outputPath), { recursive: true });
-      writeFileSync(target.outputPath, rendered, 'utf8');
+      for (const output of outputs) {
+        mkdirSync(dirname(output.outputPath), { recursive: true });
+        writeFileSync(output.outputPath, output.rendered, 'utf8');
+      }
       continue;
     }
 
-    let existing;
-    try {
-      existing = readFileSync(target.outputPath, 'utf8');
-    } catch {
-      mismatches.push({ id: target.id, outputPath: target.outputPath, reason: 'missing fixture file' });
-      continue;
-    }
+    for (const output of outputs) {
+      let existing;
+      try {
+        existing = readFileSync(output.outputPath, 'utf8');
+      } catch {
+        mismatches.push({ id: target.id, outputPath: output.outputPath, reason: `missing ${output.kind} fixture file` });
+        continue;
+      }
 
-    if (existing !== rendered) {
-      mismatches.push({ id: target.id, outputPath: target.outputPath, reason: 'fixture content differs from generated output' });
+      if (existing !== output.rendered) {
+        mismatches.push({
+          id: target.id,
+          outputPath: output.outputPath,
+          reason: `${output.kind} fixture content differs from generated output`,
+        });
+      }
     }
   }
 
@@ -169,4 +195,27 @@ export function runCli(argv = process.argv.slice(2)) {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   runCli();
+}
+
+function deriveMetadataFileName(fixtureFile) {
+  if (!fixtureFile.endsWith('-game-def.json')) {
+    throw new Error(`Bootstrap target fixtureFile must end with "-game-def.json" (fixtureFile=${fixtureFile})`);
+  }
+  return fixtureFile.replace(/-game-def\.json$/u, '-game-metadata.json');
+}
+
+function extractBootstrapGameMetadata(gameDef) {
+  const metadata = gameDef?.metadata ?? {};
+  const players = metadata?.players ?? {};
+  return {
+    name: typeof metadata.name === 'string' ? metadata.name : '',
+    description: typeof metadata.description === 'string' ? metadata.description : '',
+    playerMin: Number.isSafeInteger(players.min) && players.min >= 0 ? players.min : 0,
+    playerMax: Number.isSafeInteger(players.max) && players.max >= 0 ? players.max : 0,
+    factionIds: Array.isArray(gameDef?.seats)
+      ? gameDef.seats
+          .map((seat) => (seat !== null && typeof seat === 'object' && typeof seat.id === 'string' ? seat.id : null))
+          .filter((id) => typeof id === 'string' && id.length > 0)
+      : [],
+  };
 }

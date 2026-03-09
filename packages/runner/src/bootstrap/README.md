@@ -15,6 +15,7 @@ Bootstrap targets are defined once in `bootstrap-targets.json` and consumed by b
    - `generatedFromSpecPath` (required; canonical `GameSpecDoc` directory)
 2. Generate fixtures from canonical specs:
    - `pnpm -F @ludoforge/runner bootstrap:fixtures`
+   - This updates both `*-game-def.json` and `*-game-metadata.json` bootstrap artifacts.
 3. Ensure drift check is clean:
    - `pnpm -F @ludoforge/runner bootstrap:fixtures:check`
 4. Add/update tests in:

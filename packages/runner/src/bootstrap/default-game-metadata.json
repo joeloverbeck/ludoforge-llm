@@ -1,0 +1,7 @@
+{
+  "name": "Runner Bootstrap Default",
+  "description": "Minimal game for development testing",
+  "playerMin": 1,
+  "playerMax": 4,
+  "factionIds": []
+}

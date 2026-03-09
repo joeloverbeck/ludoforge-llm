@@ -31,7 +31,7 @@ export interface BootstrapGameMetadataSummary {
 
 const BOOTSTRAP_TARGET_DEFINITIONS = assertBootstrapTargetDefinitions(bootstrapTargets as unknown);
 const FIXTURE_LOADERS = import.meta.glob('./*-game-def.json', { import: 'default' }) as Record<string, () => Promise<unknown>>;
-const FIXTURE_METADATA = import.meta.glob('./*-game-def.json', { eager: true, import: 'default' }) as Record<string, unknown>;
+const FIXTURE_METADATA = import.meta.glob('./*-game-metadata.json', { eager: true, import: 'default' }) as Record<string, unknown>;
 const VISUAL_CONFIGS = import.meta.glob('../../../../data/games/*/visual-config.yaml', {
   eager: true,
   import: 'default',
@@ -39,13 +39,14 @@ const VISUAL_CONFIGS = import.meta.glob('../../../../data/games/*/visual-config.
 
 const BOOTSTRAP_REGISTRY: readonly BootstrapDescriptor[] = BOOTSTRAP_TARGET_DEFINITIONS.map((target) => {
   const fixturePath = `./${target.fixtureFile}`;
+  const metadataPath = `./${deriveMetadataFixtureFile(target.fixtureFile)}`;
   const fixtureLoader = FIXTURE_LOADERS[fixturePath];
   if (fixtureLoader === undefined) {
     throw new Error(`Bootstrap target fixture file does not exist (id=${target.id}, fixtureFile=${target.fixtureFile})`);
   }
-  const fixtureMetadata = FIXTURE_METADATA[fixturePath];
+  const fixtureMetadata = FIXTURE_METADATA[metadataPath];
   if (fixtureMetadata === undefined) {
-    throw new Error(`Bootstrap metadata fixture does not exist (id=${target.id}, fixtureFile=${target.fixtureFile})`);
+    throw new Error(`Bootstrap metadata fixture does not exist (id=${target.id}, fixtureFile=${metadataPath})`);
   }
 
   return {
@@ -213,22 +214,14 @@ function resolveGameMetadataSummary(targetId: string, fixtureInput: unknown): Bo
   if (fixture === null) {
     return fallbackSummary;
   }
-  const metadata = asRecord(fixture.metadata);
-  if (metadata === null) {
-    return fallbackSummary;
-  }
-  const players = asRecord(metadata.players);
-  if (players === null) {
-    return fallbackSummary;
-  }
-  const playerMin = asNonNegativeSafeInteger(players.min);
-  const playerMax = asNonNegativeSafeInteger(players.max);
+  const playerMin = asNonNegativeSafeInteger(fixture.playerMin);
+  const playerMax = asNonNegativeSafeInteger(fixture.playerMax);
   if (playerMin === null || playerMax === null || playerMin > playerMax) {
     return fallbackSummary;
   }
-  const name = readOptionalString(metadata.name);
-  const description = readOptionalString(metadata.description);
-  const factionIds = readFactionIds(fixture.seats);
+  const name = readOptionalString(fixture.name);
+  const description = readOptionalString(fixture.description);
+  const factionIds = readStringArray(fixture.factionIds);
 
   return {
     name: name ?? targetId,
@@ -237,6 +230,13 @@ function resolveGameMetadataSummary(targetId: string, fixtureInput: unknown): Bo
     playerMax,
     factionIds,
   } satisfies BootstrapGameMetadataSummary;
+}
+
+function deriveMetadataFixtureFile(fixtureFile: string): string {
+  if (!fixtureFile.endsWith('-game-def.json')) {
+    throw new Error(`Bootstrap target fixtureFile must end with "-game-def.json" (fixtureFile=${fixtureFile})`);
+  }
+  return fixtureFile.replace(/-game-def\.json$/u, '-game-metadata.json');
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -260,14 +260,10 @@ function readOptionalString(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
 }
 
-function readFactionIds(value: unknown): readonly string[] {
+function readStringArray(value: unknown): readonly string[] {
   if (!Array.isArray(value)) {
     return [];
   }
 
-  return value
-    .map((entry) => asRecord(entry))
-    .filter((entry): entry is Record<string, unknown> => entry !== null)
-    .map((entry) => readOptionalString(entry.id))
-    .filter((entry): entry is string => entry !== null && entry.length > 0);
+  return value.filter((entry): entry is string => typeof entry === 'string' && entry.length > 0);
 }

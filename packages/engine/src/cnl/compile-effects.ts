@@ -31,6 +31,7 @@ import type {
   ValueExpr,
   ZoneRef,
 } from '../kernel/types.js';
+import { FreeOperationSequenceContextSchema } from '../kernel/free-operation-sequence-context-schema.js';
 import { inferQueryDomainKinds, type QueryDomainKind } from '../kernel/query-domain-kinds.js';
 import { collectDeclaredBinderCandidates, collectSequentialBindings } from './binder-surface-registry.js';
 import {
@@ -1766,6 +1767,52 @@ function lowerGrantFreeOperationEffect(
     postResolutionTurnFlow = source.postResolutionTurnFlow as import('../contracts/index.js').TurnFlowFreeOperationGrantPostResolutionTurnFlow;
   }
 
+  let loweredSequence: { readonly chain: string; readonly step: number } | undefined;
+  if (source.sequence !== undefined) {
+    if (!isRecord(source.sequence) || typeof source.sequence.chain !== 'string' || !isInteger(source.sequence.step) || source.sequence.step < 0) {
+      diagnostics.push(
+        ...missingCapability(`${path}.sequence`, 'grantFreeOperation sequence', source.sequence, [
+          '{ chain: string, step: non-negative integer }',
+        ]).diagnostics,
+      );
+    } else {
+      loweredSequence = {
+        chain: source.sequence.chain,
+        step: source.sequence.step,
+      };
+    }
+  }
+
+  let loweredSequenceContext: import('../kernel/free-operation-sequence-context-contract.js').FreeOperationSequenceContextContract | undefined;
+  if (source.sequenceContext !== undefined) {
+    const parsedSequenceContext = FreeOperationSequenceContextSchema.safeParse(source.sequenceContext);
+    if (!parsedSequenceContext.success) {
+      const primaryIssue = parsedSequenceContext.error.issues[0];
+      const issueSuffix = primaryIssue?.path.length ? `.${primaryIssue.path.join('.')}` : '';
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
+        path: `${path}.sequenceContext${issueSuffix}`,
+        severity: 'error',
+        message: `Cannot lower grantFreeOperation sequenceContext to kernel AST: ${primaryIssue?.message ?? formatValue(source.sequenceContext)}`,
+        suggestion: 'Rewrite this node to the canonical sequenceContext shape.',
+        alternatives: [
+          '{ captureMoveZoneCandidatesAs: string }',
+          '{ requireMoveZoneCandidatesFrom: string }',
+          '{ captureMoveZoneCandidatesAs: string, requireMoveZoneCandidatesFrom: string }',
+        ],
+      });
+    } else {
+      loweredSequenceContext = {
+        ...(parsedSequenceContext.data.captureMoveZoneCandidatesAs === undefined
+          ? {}
+          : { captureMoveZoneCandidatesAs: parsedSequenceContext.data.captureMoveZoneCandidatesAs }),
+        ...(parsedSequenceContext.data.requireMoveZoneCandidatesFrom === undefined
+          ? {}
+          : { requireMoveZoneCandidatesFrom: parsedSequenceContext.data.requireMoveZoneCandidatesFrom }),
+      };
+    }
+  }
+
   for (const violation of collectTurnFlowFreeOperationGrantContractViolations({
     operationClass: source.operationClass,
     ...(uses === undefined ? {} : { uses }),
@@ -1773,6 +1820,8 @@ function lowerGrantFreeOperationEffect(
     ...(completionPolicy === undefined ? {} : { completionPolicy }),
     ...(outcomePolicy === undefined ? {} : { outcomePolicy }),
     ...(postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow }),
+    ...(loweredSequence === undefined ? {} : { sequence: loweredSequence }),
+    ...(loweredSequenceContext === undefined ? {} : { sequenceContext: loweredSequenceContext }),
   })) {
     const surface = renderTurnFlowFreeOperationGrantContractViolation(violation, {
       basePath: path,
@@ -1793,21 +1842,14 @@ function lowerGrantFreeOperationEffect(
         [...TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES],
       ).diagnostics);
     }
-  }
-
-  let loweredSequence: { readonly chain: string; readonly step: number } | undefined;
-  if (source.sequence !== undefined) {
-    if (!isRecord(source.sequence) || typeof source.sequence.chain !== 'string' || !isInteger(source.sequence.step) || source.sequence.step < 0) {
-      diagnostics.push(
-        ...missingCapability(`${path}.sequence`, 'grantFreeOperation sequence', source.sequence, [
-          '{ chain: string, step: non-negative integer }',
-        ]).diagnostics,
-      );
-    } else {
-      loweredSequence = {
-        chain: source.sequence.chain,
-        step: source.sequence.step,
-      };
+    if (violation.code === 'sequenceContextRequiresSequence') {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
+        path: surface.path,
+        severity: 'error',
+        message: surface.message,
+        suggestion: 'Declare sequence.chain and sequence.step when using sequenceContext.',
+      });
     }
   }
 
@@ -1831,6 +1873,7 @@ function lowerGrantFreeOperationEffect(
         ...(outcomePolicy === undefined ? {} : { outcomePolicy }),
         ...(postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow }),
         ...(loweredSequence === undefined ? {} : { sequence: loweredSequence }),
+        ...(loweredSequenceContext === undefined ? {} : { sequenceContext: loweredSequenceContext }),
       },
     },
     diagnostics,

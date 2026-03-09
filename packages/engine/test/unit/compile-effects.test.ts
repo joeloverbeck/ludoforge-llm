@@ -1505,6 +1505,103 @@ describe('compile-effects lowering', () => {
     ]);
   });
 
+  it('lowers grantFreeOperation sequenceContext through the CNL effect compiler', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          grantFreeOperation: {
+            seat: '3',
+            operationClass: 'operation',
+            sequence: { chain: 'ctx-chain', step: 0 },
+            sequenceContext: {
+              captureMoveZoneCandidatesAs: 'selected-space',
+              requireMoveZoneCandidatesFrom: 'selected-space',
+            },
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, [
+      {
+        grantFreeOperation: {
+          seat: '3',
+          operationClass: 'operation',
+          sequence: { chain: 'ctx-chain', step: 0 },
+          sequenceContext: {
+            captureMoveZoneCandidatesAs: 'selected-space',
+            requireMoveZoneCandidatesFrom: 'selected-space',
+          },
+        },
+      },
+    ]);
+  });
+
+  it('rejects malformed grantFreeOperation.sequenceContext values', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          grantFreeOperation: {
+            seat: '3',
+            operationClass: 'operation',
+            sequence: { chain: 'ctx-chain', step: 0 },
+            sequenceContext: {},
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    assert.deepEqual(
+      result.diagnostics.find((entry) => entry.path === 'doc.actions.0.effects.0.grantFreeOperation.sequenceContext'),
+      {
+        code: 'CNL_COMPILER_MISSING_CAPABILITY',
+        path: 'doc.actions.0.effects.0.grantFreeOperation.sequenceContext',
+        severity: 'error',
+        message: 'Cannot lower grantFreeOperation sequenceContext to kernel AST: sequenceContext must include captureMoveZoneCandidatesAs or requireMoveZoneCandidatesFrom.',
+        suggestion: 'Rewrite this node to the canonical sequenceContext shape.',
+        alternatives: [
+          '{ captureMoveZoneCandidatesAs: string }',
+          '{ requireMoveZoneCandidatesFrom: string }',
+          '{ captureMoveZoneCandidatesAs: string, requireMoveZoneCandidatesFrom: string }',
+        ],
+      },
+    );
+  });
+
+  it('rejects grantFreeOperation.sequenceContext when sequence is omitted', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          grantFreeOperation: {
+            seat: '3',
+            operationClass: 'operation',
+            sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    assert.deepEqual(
+      result.diagnostics.find((entry) => entry.path === 'doc.actions.0.effects.0.grantFreeOperation.sequenceContext'),
+      {
+        code: 'CNL_COMPILER_MISSING_CAPABILITY',
+        path: 'doc.actions.0.effects.0.grantFreeOperation.sequenceContext',
+        severity: 'error',
+        message: 'grantFreeOperation.sequenceContext requires grantFreeOperation.sequence.',
+        suggestion: 'Declare sequence.chain and sequence.step when using sequenceContext.',
+      },
+    );
+  });
+
   it('rejects invalid grantFreeOperation.viabilityPolicy values', () => {
     const result = lowerEffectArray(
       [

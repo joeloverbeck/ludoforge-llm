@@ -170,6 +170,50 @@ actor: 'active',
     );
   });
 
+  it('preserves grantFreeOperation sequenceContext through the compile pipeline', () => {
+    const compiled = compileGameSpecToGameDef({
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'pipeline-free-operation-sequence-context', players: { min: 2, max: 2 } },
+      zones: [{ id: 'board:none', owner: 'none', visibility: 'public', ordering: 'set' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [
+        {
+          id: 'pass',
+          actor: 'active',
+          executor: 'actor',
+          phase: ['main'],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [
+            {
+              grantFreeOperation: {
+                seat: '0',
+                operationClass: 'operation',
+                sequence: { chain: 'ctx-chain', step: 0 },
+                sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+              },
+            },
+          ],
+          limits: [],
+        },
+      ],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    });
+
+    assertNoDiagnostics(compiled);
+    assert.deepEqual(compiled.gameDef?.actions[0]?.effects, [
+      {
+        grantFreeOperation: {
+          seat: '0',
+          operationClass: 'operation',
+          sequence: { chain: 'ctx-chain', step: 0 },
+          sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+        },
+      },
+    ]);
+  });
+
   it('runs parse/validate/expand/compile/validate end-to-end for compile-valid fixture', () => {
     const markdown = readCompilerFixture('compile-valid.md');
     const parsed = parseGameSpec(markdown);

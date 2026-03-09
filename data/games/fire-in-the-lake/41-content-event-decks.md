@@ -8467,7 +8467,12 @@ eventDecks:
             - US
           flavorText: Route command tightens corridor discipline.
         unshaded:
-          text: NVA Infiltrate to only 1 destination space through Coup. MOMENTUM
+          text: Degrade the Trail by 2 boxes. Until Coup, Infiltrate is max 1 space. MOMENTUM
+          effects:
+            - addVar:
+                scope: global
+                var: trail
+                delta: -2
           lastingEffects:
             - id: mom-559th-transport-grp
               duration: round
@@ -8480,16 +8485,44 @@ eventDecks:
                   args:
                     varName: mom_559thTransportGrp
         shaded:
-          text: US Aid -6 and NVA Resources +6.
+          text: NVA free Infiltrate. Then NVA add 3 times and VC 2 times Trail value in Resources.
+          effectTiming: afterGrants
+          freeOperationGrants:
+            - seat: nva
+              sequence:
+                chain: 559th-transport-grp-nva
+                step: 0
+              viabilityPolicy: requireUsableAtIssue
+              completionPolicy: required
+              postResolutionTurnFlow: resumeCardFlow
+              operationClass: specialActivity
+              actionIds:
+                - infiltrate
           effects:
-            - addVar:
-                scope: global
-                var: aid
-                delta: -6
-            - addVar:
-                scope: global
-                var: nvaResources
-                delta: 6
+            - let:
+                bind: $trailValue
+                value:
+                  ref: gvar
+                  var: trail
+                in:
+                  - addVar:
+                      scope: global
+                      var: nvaResources
+                      delta:
+                        op: "*"
+                        left: 3
+                        right:
+                          ref: binding
+                          name: $trailValue
+                  - addVar:
+                      scope: global
+                      var: vcResources
+                      delta:
+                        op: "*"
+                        left: 2
+                        right:
+                          ref: binding
+                          name: $trailValue
       - id: card-47
         title: Chu Luc
         sideMode: dual

@@ -21,6 +21,8 @@ export interface TurnFlowFreeOperationGrantContract {
   readonly operationClass: TurnFlowActionClass;
   readonly actionIds?: readonly string[];
   readonly zoneFilter?: import('./types-ast.js').ConditionAST;
+  readonly moveZoneBindings?: readonly string[];
+  readonly moveZoneProbeBindings?: readonly string[];
   readonly allowDuringMonsoon?: boolean;
   readonly uses?: number;
   readonly completionPolicy?: TurnFlowFreeOperationGrantCompletionPolicy;
@@ -166,6 +168,8 @@ export interface TurnFlowPendingFreeOperationGrant {
   readonly operationClass: TurnFlowActionClass;
   readonly actionIds?: readonly string[];
   readonly zoneFilter?: import('./types-ast.js').ConditionAST;
+  readonly moveZoneBindings?: readonly string[];
+  readonly moveZoneProbeBindings?: readonly string[];
   readonly allowDuringMonsoon?: boolean;
   readonly viabilityPolicy?: TurnFlowFreeOperationGrantViabilityPolicy;
   readonly completionPolicy?: TurnFlowFreeOperationGrantCompletionPolicy;

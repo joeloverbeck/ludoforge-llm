@@ -11,6 +11,8 @@ const REQUIRED_COMPLETION_POLICY = TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POL
 const REQUIRED_POST_RESOLUTION_TURN_FLOW = TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES[0];
 const PREFLIGHT_CONTRACT_VIOLATION_CODES = new Set<TurnFlowFreeOperationGrantContractViolationCode>([
   'completionPolicyInvalid',
+  'moveZoneBindingsInvalid',
+  'moveZoneProbeBindingsInvalid',
   'postResolutionTurnFlowInvalid',
   'requiredPostResolutionTurnFlowMissing',
   'postResolutionTurnFlowRequiresRequiredCompletionPolicy',

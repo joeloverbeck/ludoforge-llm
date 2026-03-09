@@ -86,7 +86,12 @@ function expandVarField(
     // Expand each name into an individual var declaration
     for (const name of entry.batch.names) {
       if (entry.batch.type === 'boolean') {
-        expanded.push({ name, type: entry.batch.type, init: entry.batch.init });
+        expanded.push({
+          name,
+          type: entry.batch.type,
+          init: entry.batch.init,
+          ...(typeof entry.batch.material === 'boolean' ? { material: entry.batch.material } : {}),
+        });
       } else {
         expanded.push({
           name,
@@ -94,6 +99,7 @@ function expandVarField(
           init: entry.batch.init,
           min: entry.batch.min,
           max: entry.batch.max,
+          ...(typeof entry.batch.material === 'boolean' ? { material: entry.batch.material } : {}),
         });
       }
     }

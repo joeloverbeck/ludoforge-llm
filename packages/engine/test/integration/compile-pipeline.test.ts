@@ -759,7 +759,7 @@ actor: 'active',
     assert.notEqual(compiled.gameDef, null);
     assert.deepEqual(
       compiled.gameDef?.globalVars.find((variable) => variable.name === 'aid'),
-      { name: 'aid', type: 'int', init: 12, min: 0, max: 80 },
+      { name: 'aid', type: 'int', init: 12, min: 0, max: 80, material: true },
     );
   });
 

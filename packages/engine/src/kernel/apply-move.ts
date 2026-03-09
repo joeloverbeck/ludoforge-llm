@@ -50,6 +50,7 @@ import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { createExecutionEffectContext, type PhaseTransitionBudget } from './effect-context.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
+import { materialGameplayStateProjection } from './material-gameplay-state.js';
 import type {
   ActionDef,
   ActionPipelineDef,
@@ -107,19 +108,6 @@ const runtimeBindingsForMove = (
 ): Readonly<Record<string, MoveParamValue | boolean | string>> =>
   buildMoveRuntimeBindings(move, decisionBindingsForMove(executionProfile, move.params));
 
-const gameplayStateProjection = (state: GameState) => ({
-  globalVars: state.globalVars,
-  perPlayerVars: state.perPlayerVars,
-  zoneVars: state.zoneVars,
-  zones: state.zones,
-  nextTokenOrdinal: state.nextTokenOrdinal,
-  markers: state.markers,
-  ...(state.reveals === undefined ? {} : { reveals: state.reveals }),
-  ...(state.globalMarkers === undefined ? {} : { globalMarkers: state.globalMarkers }),
-  ...(state.activeLastingEffects === undefined ? {} : { activeLastingEffects: state.activeLastingEffects }),
-  ...(state.interruptPhaseStack === undefined ? {} : { interruptPhaseStack: state.interruptPhaseStack }),
-});
-
 const validateFreeOperationOutcomePolicy = (
   def: GameDef,
   beforeState: GameState,
@@ -141,7 +129,10 @@ const validateFreeOperationOutcomePolicy = (
   if (authorized.strongestOutcomeGrant === null) {
     return;
   }
-  if (deepEqual(gameplayStateProjection(beforeState), gameplayStateProjection(afterActionState))) {
+  if (deepEqual(
+    materialGameplayStateProjection(def, beforeState),
+    materialGameplayStateProjection(def, afterActionState),
+  )) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED, {
       grantId: authorized.strongestOutcomeGrant.grantId,
       outcomePolicy: 'mustChangeGameplayState',

@@ -24,6 +24,12 @@ type EventGrantViabilityPolicy = NonNullable<EventFreeOperationGrantDef['viabili
 type EffectGrantSequenceContext = NonNullable<EffectGrantFreeOperation['sequenceContext']>;
 type EventGrantSequenceContext = NonNullable<EventFreeOperationGrantDef['sequenceContext']>;
 type RuntimeGrantSequenceContext = NonNullable<TurnFlowFreeOperationGrantContract['sequenceContext']>;
+type EffectGrantMoveZoneBindings = NonNullable<EffectGrantFreeOperation['moveZoneBindings']>;
+type EventGrantMoveZoneBindings = NonNullable<EventFreeOperationGrantDef['moveZoneBindings']>;
+type RuntimeGrantMoveZoneBindings = NonNullable<TurnFlowFreeOperationGrantContract['moveZoneBindings']>;
+type EffectGrantMoveZoneProbeBindings = NonNullable<EffectGrantFreeOperation['moveZoneProbeBindings']>;
+type EventGrantMoveZoneProbeBindings = NonNullable<EventFreeOperationGrantDef['moveZoneProbeBindings']>;
+type RuntimeGrantMoveZoneProbeBindings = NonNullable<TurnFlowFreeOperationGrantContract['moveZoneProbeBindings']>;
 
 type CanonicalCoversTurnFlowType = TurnFlowFreeOperationGrantViabilityPolicy extends TurnFlowTypeViabilityPolicy ? true : false;
 type TurnFlowTypeCoversCanonical = TurnFlowTypeViabilityPolicy extends TurnFlowFreeOperationGrantViabilityPolicy ? true : false;
@@ -38,6 +44,14 @@ type CanonicalSequenceContextCoversEvent = FreeOperationSequenceContextContract 
 type EventSequenceContextCoversCanonical = EventGrantSequenceContext extends FreeOperationSequenceContextContract ? true : false;
 type CanonicalSequenceContextCoversRuntime = FreeOperationSequenceContextContract extends RuntimeGrantSequenceContext ? true : false;
 type RuntimeSequenceContextCoversCanonical = RuntimeGrantSequenceContext extends FreeOperationSequenceContextContract ? true : false;
+type EffectMoveZoneBindingsShareRuntimeType = EffectGrantMoveZoneBindings extends RuntimeGrantMoveZoneBindings ? true : false;
+type EventMoveZoneBindingsShareRuntimeType = EventGrantMoveZoneBindings extends RuntimeGrantMoveZoneBindings ? true : false;
+type RuntimeMoveZoneBindingsShareEffectType = RuntimeGrantMoveZoneBindings extends EffectGrantMoveZoneBindings ? true : false;
+type RuntimeMoveZoneBindingsShareEventType = RuntimeGrantMoveZoneBindings extends EventGrantMoveZoneBindings ? true : false;
+type EffectMoveZoneProbeBindingsShareRuntimeType = EffectGrantMoveZoneProbeBindings extends RuntimeGrantMoveZoneProbeBindings ? true : false;
+type EventMoveZoneProbeBindingsShareRuntimeType = EventGrantMoveZoneProbeBindings extends RuntimeGrantMoveZoneProbeBindings ? true : false;
+type RuntimeMoveZoneProbeBindingsShareEffectType = RuntimeGrantMoveZoneProbeBindings extends EffectGrantMoveZoneProbeBindings ? true : false;
+type RuntimeMoveZoneProbeBindingsShareEventType = RuntimeGrantMoveZoneProbeBindings extends EventGrantMoveZoneProbeBindings ? true : false;
 
 const CANONICAL_COVERS_TURN_FLOW_TYPE: CanonicalCoversTurnFlowType = true;
 const TURN_FLOW_TYPE_COVERS_CANONICAL: TurnFlowTypeCoversCanonical = true;
@@ -52,6 +66,14 @@ const CANONICAL_SEQUENCE_CONTEXT_COVERS_EVENT: CanonicalSequenceContextCoversEve
 const EVENT_SEQUENCE_CONTEXT_COVERS_CANONICAL: EventSequenceContextCoversCanonical = true;
 const CANONICAL_SEQUENCE_CONTEXT_COVERS_RUNTIME: CanonicalSequenceContextCoversRuntime = true;
 const RUNTIME_SEQUENCE_CONTEXT_COVERS_CANONICAL: RuntimeSequenceContextCoversCanonical = true;
+const EFFECT_MOVE_ZONE_BINDINGS_SHARE_RUNTIME_TYPE: EffectMoveZoneBindingsShareRuntimeType = true;
+const EVENT_MOVE_ZONE_BINDINGS_SHARE_RUNTIME_TYPE: EventMoveZoneBindingsShareRuntimeType = true;
+const RUNTIME_MOVE_ZONE_BINDINGS_SHARE_EFFECT_TYPE: RuntimeMoveZoneBindingsShareEffectType = true;
+const RUNTIME_MOVE_ZONE_BINDINGS_SHARE_EVENT_TYPE: RuntimeMoveZoneBindingsShareEventType = true;
+const EFFECT_MOVE_ZONE_PROBE_BINDINGS_SHARE_RUNTIME_TYPE: EffectMoveZoneProbeBindingsShareRuntimeType = true;
+const EVENT_MOVE_ZONE_PROBE_BINDINGS_SHARE_RUNTIME_TYPE: EventMoveZoneProbeBindingsShareRuntimeType = true;
+const RUNTIME_MOVE_ZONE_PROBE_BINDINGS_SHARE_EFFECT_TYPE: RuntimeMoveZoneProbeBindingsShareEffectType = true;
+const RUNTIME_MOVE_ZONE_PROBE_BINDINGS_SHARE_EVENT_TYPE: RuntimeMoveZoneProbeBindingsShareEventType = true;
 
 const loweringContext: EffectLoweringContext = {
   ownershipByBase: {},
@@ -75,6 +97,20 @@ describe('free-operation viability policy contract parity', () => {
     assert.equal(EVENT_SEQUENCE_CONTEXT_COVERS_CANONICAL, true);
     assert.equal(CANONICAL_SEQUENCE_CONTEXT_COVERS_RUNTIME, true);
     assert.equal(RUNTIME_SEQUENCE_CONTEXT_COVERS_CANONICAL, true);
+  });
+
+  it('keeps moveZoneBindings types aligned across runtime, AST, and event grant surfaces', () => {
+    assert.equal(EFFECT_MOVE_ZONE_BINDINGS_SHARE_RUNTIME_TYPE, true);
+    assert.equal(EVENT_MOVE_ZONE_BINDINGS_SHARE_RUNTIME_TYPE, true);
+    assert.equal(RUNTIME_MOVE_ZONE_BINDINGS_SHARE_EFFECT_TYPE, true);
+    assert.equal(RUNTIME_MOVE_ZONE_BINDINGS_SHARE_EVENT_TYPE, true);
+  });
+
+  it('keeps moveZoneProbeBindings types aligned across runtime, AST, and event grant surfaces', () => {
+    assert.equal(EFFECT_MOVE_ZONE_PROBE_BINDINGS_SHARE_RUNTIME_TYPE, true);
+    assert.equal(EVENT_MOVE_ZONE_PROBE_BINDINGS_SHARE_RUNTIME_TYPE, true);
+    assert.equal(RUNTIME_MOVE_ZONE_PROBE_BINDINGS_SHARE_EFFECT_TYPE, true);
+    assert.equal(RUNTIME_MOVE_ZONE_PROBE_BINDINGS_SHARE_EVENT_TYPE, true);
   });
 
   it('keeps runtime guard, AST schema, and event schema acceptance aligned with canonical viability policy values', () => {

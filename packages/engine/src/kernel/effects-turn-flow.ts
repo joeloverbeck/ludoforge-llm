@@ -173,6 +173,8 @@ export const applyGrantFreeOperation = (
     operationClass: grant.operationClass,
     ...(grant.uses === undefined ? {} : { uses: grant.uses }),
     ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
+    ...(grant.moveZoneBindings === undefined ? {} : { moveZoneBindings: grant.moveZoneBindings }),
+    ...(grant.moveZoneProbeBindings === undefined ? {} : { moveZoneProbeBindings: grant.moveZoneProbeBindings }),
     ...(grant.completionPolicy === undefined ? {} : { completionPolicy: grant.completionPolicy }),
     ...(grant.outcomePolicy === undefined ? {} : { outcomePolicy: grant.outcomePolicy }),
     ...(grant.postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow: grant.postResolutionTurnFlow }),
@@ -181,6 +183,8 @@ export const applyGrantFreeOperation = (
   })) {
     if (
       violation.code === 'viabilityPolicyInvalid'
+      || violation.code === 'moveZoneBindingsInvalid'
+      || violation.code === 'moveZoneProbeBindingsInvalid'
       || violation.code === 'completionPolicyInvalid'
       || violation.code === 'outcomePolicyInvalid'
       || violation.code === 'postResolutionTurnFlowInvalid'
@@ -197,6 +201,8 @@ export const applyGrantFreeOperation = (
         {
           effectType: 'grantFreeOperation',
           ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
+          ...(grant.moveZoneBindings === undefined ? {} : { moveZoneBindings: grant.moveZoneBindings }),
+          ...(grant.moveZoneProbeBindings === undefined ? {} : { moveZoneProbeBindings: grant.moveZoneProbeBindings }),
           ...(grant.completionPolicy === undefined ? {} : { completionPolicy: grant.completionPolicy }),
           ...(grant.outcomePolicy === undefined ? {} : { outcomePolicy: grant.outcomePolicy }),
           ...(grant.postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow: grant.postResolutionTurnFlow }),
@@ -247,6 +253,8 @@ export const applyGrantFreeOperation = (
     operationClass: grant.operationClass,
     ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
     ...(resolvedZoneFilter === undefined ? {} : { zoneFilter: resolvedZoneFilter }),
+    ...(grant.moveZoneBindings === undefined ? {} : { moveZoneBindings: [...grant.moveZoneBindings] }),
+    ...(grant.moveZoneProbeBindings === undefined ? {} : { moveZoneProbeBindings: [...grant.moveZoneProbeBindings] }),
     ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),
     ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
     ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),

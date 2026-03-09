@@ -125,9 +125,15 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
     assert.deepEqual(card?.unshaded?.freeOperationGrants, [
       {
         seat: 'us',
+        viabilityPolicy: 'requireUsableForEventPlay',
         sequence: { chain: 'ia-drang-us', step: 0 },
+        completionPolicy: 'required',
+        outcomePolicy: 'mustChangeGameplayState',
+        postResolutionTurnFlow: 'resumeCardFlow',
         operationClass: 'operation',
         actionIds: ['airLift'],
+        moveZoneBindings: ['$usLiftDestination', '$coinLiftDestination'],
+        moveZoneProbeBindings: ['$spaces', '$usLiftDestination', '$coinLiftDestination'],
         sequenceContext: {
           captureMoveZoneCandidatesAs: 'ia-drang-space',
         },
@@ -145,8 +151,11 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
       {
         seat: 'us',
         sequence: { chain: 'ia-drang-us', step: 1 },
+        completionPolicy: 'required',
+        postResolutionTurnFlow: 'resumeCardFlow',
         operationClass: 'operation',
         actionIds: ['sweep'],
+        moveZoneBindings: ['$targetSpaces'],
         allowDuringMonsoon: true,
         sequenceContext: {
           requireMoveZoneCandidatesFrom: 'ia-drang-space',
@@ -155,8 +164,11 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
       {
         seat: 'us',
         sequence: { chain: 'ia-drang-us', step: 2 },
+        completionPolicy: 'required',
+        postResolutionTurnFlow: 'resumeCardFlow',
         operationClass: 'operation',
         actionIds: ['assault'],
+        moveZoneBindings: ['$targetSpaces'],
         sequenceContext: {
           requireMoveZoneCandidatesFrom: 'ia-drang-space',
         },

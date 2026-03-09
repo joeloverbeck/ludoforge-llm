@@ -75,6 +75,7 @@ const analyzeFreeOperationGrantMatch = (
           def,
           state,
           move,
+          grant,
           grant.zoneFilter,
           options.zoneFilterErrorSurface ?? 'turnFlowEligibility',
         ),

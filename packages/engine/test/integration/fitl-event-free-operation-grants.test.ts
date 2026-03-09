@@ -1005,6 +1005,7 @@ phase: [asPhaseId('main')],
               query: 'enums',
               values: [
                 'card-require-usable-play',
+                'card-require-usable-play-outcome',
                 'card-require-usable-issue',
                 'card-effect-require-usable-issue',
                 'card-effect-require-usable-issue-sequence',
@@ -1083,6 +1084,31 @@ phase: [asPhaseId('main')],
                     op: '==',
                     left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
                     right: 'laos',
+                  },
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-require-usable-play-outcome',
+            title: 'Play-time Viability Requires Non-Noop Completion',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Only playable when grant can complete with a gameplay-state change.',
+              freeOperationGrants: [
+                {
+                  seat: 'self',
+                  sequence: { chain: 'outcome-unusable', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  viabilityPolicy: 'requireUsableForEventPlay',
+                  completionPolicy: 'required',
+                  outcomePolicy: 'mustChangeGameplayState',
+                  postResolutionTurnFlow: 'resumeCardFlow',
+                  zoneFilter: {
+                    op: '==',
+                    left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+                    right: 'cambodia',
                   },
                 },
               ],
@@ -2073,6 +2099,16 @@ describe('event free-operation grants integration', () => {
         return details.reason === ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE;
       },
     );
+  });
+
+  it('suppresses event moves when requireUsableForEventPlay cannot satisfy a required non-noop outcome', () => {
+    const def = createGrantViabilityPolicyDef();
+    const start = initialState(def, 211, 3).state;
+
+    const moves = legalMoves(def, start).filter(
+      (move) => String(move.actionId) === 'event' && move.params.eventCardId === 'card-require-usable-play-outcome',
+    );
+    assert.equal(moves.length, 0);
   });
 
   it('emits only currently-usable grants when requireUsableAtIssue is set', () => {

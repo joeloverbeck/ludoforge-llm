@@ -70,6 +70,8 @@ export type TurnFlowFreeOperationGrantContractCandidate = {
   readonly operationClass?: string;
   readonly uses?: number;
   readonly viabilityPolicy?: string | null;
+  readonly moveZoneBindings?: readonly unknown[] | null;
+  readonly moveZoneProbeBindings?: readonly unknown[] | null;
   readonly completionPolicy?: string | null;
   readonly outcomePolicy?: string | null;
   readonly postResolutionTurnFlow?: string | null;
@@ -118,6 +120,8 @@ export type TurnFlowFreeOperationGrantContractViolationCode =
   | 'operationClassInvalid'
   | 'usesInvalid'
   | 'viabilityPolicyInvalid'
+  | 'moveZoneBindingsInvalid'
+  | 'moveZoneProbeBindingsInvalid'
   | 'completionPolicyInvalid'
   | 'outcomePolicyInvalid'
   | 'postResolutionTurnFlowInvalid'
@@ -196,6 +200,36 @@ export const collectTurnFlowFreeOperationGrantContractViolations = (
       code: 'viabilityPolicyInvalid',
       path: ['viabilityPolicy'],
       message: `viabilityPolicy is invalid: "${grant.viabilityPolicy}".`,
+    });
+  }
+
+  if (
+    grant.moveZoneBindings !== undefined &&
+    (
+      !Array.isArray(grant.moveZoneBindings)
+      || grant.moveZoneBindings.length === 0
+      || grant.moveZoneBindings.some((entry) => typeof entry !== 'string' || entry.length === 0)
+    )
+  ) {
+    violations.push({
+      code: 'moveZoneBindingsInvalid',
+      path: ['moveZoneBindings'],
+      message: 'moveZoneBindings must be a non-empty string array.',
+    });
+  }
+
+  if (
+    grant.moveZoneProbeBindings !== undefined &&
+    (
+      !Array.isArray(grant.moveZoneProbeBindings)
+      || grant.moveZoneProbeBindings.length === 0
+      || grant.moveZoneProbeBindings.some((entry) => typeof entry !== 'string' || entry.length === 0)
+    )
+  ) {
+    violations.push({
+      code: 'moveZoneProbeBindingsInvalid',
+      path: ['moveZoneProbeBindings'],
+      message: 'moveZoneProbeBindings must be a non-empty string array.',
     });
   }
 

@@ -277,6 +277,8 @@ type FreeOperationGrantValidationTarget = {
   readonly operationClass: string;
   readonly uses?: number;
   readonly viabilityPolicy?: string | null;
+  readonly moveZoneBindings?: readonly unknown[] | null;
+  readonly moveZoneProbeBindings?: readonly unknown[] | null;
   readonly sequence?: {
     readonly step?: unknown;
   };
@@ -314,6 +316,14 @@ const FREE_OPERATION_GRANT_DIAGNOSTIC_BY_VIOLATION_CODE = {
   viabilityPolicyInvalid: {
     code: 'EFFECT_GRANT_FREE_OPERATION_VIABILITY_POLICY_INVALID',
     suggestion: () => `Use one of: ${TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES.join('|')}.`,
+  },
+  moveZoneBindingsInvalid: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_MOVE_ZONE_BINDINGS_INVALID',
+    suggestion: () => 'Set moveZoneBindings to a non-empty string array of bound move-zone names.',
+  },
+  moveZoneProbeBindingsInvalid: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_MOVE_ZONE_PROBE_BINDINGS_INVALID',
+    suggestion: () => 'Set moveZoneProbeBindings to a non-empty string array of bound move-zone names.',
   },
   completionPolicyInvalid: {
     code: 'EFFECT_GRANT_FREE_OPERATION_COMPLETION_POLICY_INVALID',
@@ -431,7 +441,7 @@ const validateAmbiguousFreeOperationGrantOverlap = <TGrant extends {
           `freeOperationGrant overlaps ambiguously with ${right.path}; top-ranked overlapping grants must be `
           + 'contract-equivalent duplicates or differ by deterministic grant semantics.',
         suggestion:
-          'Differentiate the grants by policy strength, actionIds, zoneFilter, or sequenceContext, or collapse them '
+          'Differentiate the grants by policy strength, actionIds, zoneFilter, moveZoneBindings, moveZoneProbeBindings, or sequenceContext, or collapse them '
           + 'into equivalent duplicates.',
       });
       diagnostics.push({
@@ -442,7 +452,7 @@ const validateAmbiguousFreeOperationGrantOverlap = <TGrant extends {
           `freeOperationGrant overlaps ambiguously with ${left.path}; top-ranked overlapping grants must be `
           + 'contract-equivalent duplicates or differ by deterministic grant semantics.',
         suggestion:
-          'Differentiate the grants by policy strength, actionIds, zoneFilter, or sequenceContext, or collapse them '
+          'Differentiate the grants by policy strength, actionIds, zoneFilter, moveZoneBindings, moveZoneProbeBindings, or sequenceContext, or collapse them '
           + 'into equivalent duplicates.',
       });
     }

@@ -12,6 +12,8 @@ type FreeOperationGrantOverlapComparable = {
   readonly executeAsSeat?: string;
   readonly operationClass: string;
   readonly zoneFilter?: unknown;
+  readonly moveZoneBindings?: readonly string[];
+  readonly moveZoneProbeBindings?: readonly string[];
   readonly allowDuringMonsoon?: boolean;
   readonly viabilityPolicy?: string;
   readonly completionPolicy?: string;
@@ -45,6 +47,8 @@ const createOverlapSurface = (
   };
   withOptional(surface, 'executeAsSeat', grant.executeAsSeat);
   withOptional(surface, 'zoneFilter', grant.zoneFilter);
+  withOptional(surface, 'moveZoneBindings', grant.moveZoneBindings === undefined ? undefined : [...grant.moveZoneBindings].sort());
+  withOptional(surface, 'moveZoneProbeBindings', grant.moveZoneProbeBindings === undefined ? undefined : [...grant.moveZoneProbeBindings].sort());
   withOptional(surface, 'allowDuringMonsoon', grant.allowDuringMonsoon);
   withOptional(surface, 'viabilityPolicy', grant.viabilityPolicy);
   withOptional(surface, 'sequenceContext', grant.sequenceContext);

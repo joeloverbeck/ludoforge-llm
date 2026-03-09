@@ -790,6 +790,8 @@ effectAstSchemaInternal = z.union([
         operationClass: z.enum(TURN_FLOW_ACTION_CLASS_VALUES),
         actionIds: z.array(StringSchema).optional(),
         zoneFilter: ConditionASTSchema.optional(),
+        moveZoneBindings: z.array(StringSchema).min(1).optional(),
+        moveZoneProbeBindings: z.array(StringSchema).min(1).optional(),
         allowDuringMonsoon: z.boolean().optional(),
         uses: NumberSchema.optional(),
         viabilityPolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES).optional(),

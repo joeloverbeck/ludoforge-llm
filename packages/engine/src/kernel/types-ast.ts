@@ -491,6 +491,8 @@ export type EffectAST =
         readonly operationClass: TurnFlowActionClass;
         readonly actionIds?: readonly string[];
         readonly zoneFilter?: ConditionAST;
+        readonly moveZoneBindings?: readonly string[];
+        readonly moveZoneProbeBindings?: readonly string[];
         readonly allowDuringMonsoon?: boolean;
         readonly uses?: number;
         readonly viabilityPolicy?: TurnFlowFreeOperationGrantViabilityPolicy;

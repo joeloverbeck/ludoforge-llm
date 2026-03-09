@@ -3928,12 +3928,23 @@ eventDecks:
           text: US free Air Lifts into 1 space with any NVA piece, then free Sweeps and Assaults there.
           freeOperationGrants:
             - seat: us
+              viabilityPolicy: requireUsableForEventPlay
               sequence:
                 chain: ia-drang-us
                 step: 0
+              completionPolicy: required
+              outcomePolicy: mustChangeGameplayState
+              postResolutionTurnFlow: resumeCardFlow
               operationClass: operation
               actionIds:
                 - airLift
+              moveZoneBindings:
+                - $usLiftDestination
+                - $coinLiftDestination
+              moveZoneProbeBindings:
+                - $spaces
+                - $usLiftDestination
+                - $coinLiftDestination
               sequenceContext:
                 captureMoveZoneCandidatesAs: ia-drang-space
               zoneFilter:
@@ -3954,9 +3965,13 @@ eventDecks:
               sequence:
                 chain: ia-drang-us
                 step: 1
+              completionPolicy: required
+              postResolutionTurnFlow: resumeCardFlow
               operationClass: operation
               actionIds:
                 - sweep
+              moveZoneBindings:
+                - $targetSpaces
               allowDuringMonsoon: true
               sequenceContext:
                 requireMoveZoneCandidatesFrom: ia-drang-space
@@ -3964,9 +3979,13 @@ eventDecks:
               sequence:
                 chain: ia-drang-us
                 step: 2
+              completionPolicy: required
+              postResolutionTurnFlow: resumeCardFlow
               operationClass: operation
               actionIds:
                 - assault
+              moveZoneBindings:
+                - $targetSpaces
               sequenceContext:
                 requireMoveZoneCandidatesFrom: ia-drang-space
         shaded:

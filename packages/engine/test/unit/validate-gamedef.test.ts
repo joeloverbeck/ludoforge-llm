@@ -5586,6 +5586,62 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
     );
   });
 
+  it('rejects invalid moveZoneBindings on event freeOperationGrants', () => {
+    const def = withEventCardSideConfig({
+      freeOperationGrants: [
+        {
+          seat: '0',
+          sequence: { chain: 'ctx-chain', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          moveZoneBindings: [''],
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_GRANT_FREE_OPERATION_MOVE_ZONE_BINDINGS_INVALID'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0].moveZoneBindings',
+      ),
+      true,
+    );
+  });
+
+  it('rejects invalid moveZoneProbeBindings on event freeOperationGrants', () => {
+    const diagnostics = validateGameDef({
+      ...createValidGameDef(),
+      eventDecks: [{
+        id: 'deck',
+        drawZone: 'deck:none',
+        discardZone: 'discard:none',
+        cards: [{
+          id: 'card',
+          title: 'Card',
+          sideMode: 'single',
+          unshaded: {
+            text: 'x',
+            freeOperationGrants: [{
+              seat: '1',
+              operationClass: 'operation',
+              sequence: { chain: 'x', step: 0 },
+              moveZoneProbeBindings: [''],
+            }],
+          },
+        }],
+      }],
+    });
+
+    assert.equal(
+      diagnostics.some((diag) =>
+        diag.code === 'EFFECT_GRANT_FREE_OPERATION_MOVE_ZONE_PROBE_BINDINGS_INVALID'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0].moveZoneProbeBindings'),
+      true,
+    );
+  });
+
   it('rejects requireMoveZoneCandidatesFrom when no matching capture exists in the chain', () => {
     const def = withEventFreeOperationGrants([
       {

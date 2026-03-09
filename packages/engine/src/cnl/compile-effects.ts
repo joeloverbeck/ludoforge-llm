@@ -1636,7 +1636,7 @@ function lowerGrantFreeOperationEffect(
 ): EffectLoweringResult<EffectAST> {
   if (typeof source.seat !== 'string') {
     return missingCapability(path, 'grantFreeOperation effect', source, [
-      '{ grantFreeOperation: { seat, operationClass, actionIds?, executeAsSeat?, zoneFilter?, allowDuringMonsoon?, uses?, viabilityPolicy?, id?, sequence? } }',
+      '{ grantFreeOperation: { seat, operationClass, actionIds?, executeAsSeat?, zoneFilter?, moveZoneBindings?, moveZoneProbeBindings?, allowDuringMonsoon?, uses?, viabilityPolicy?, id?, sequence? } }',
     ]);
   }
   if (typeof source.operationClass !== 'string' || !isTurnFlowActionClass(source.operationClass)) {
@@ -1688,6 +1688,36 @@ function lowerGrantFreeOperationEffect(
       return { value: null, diagnostics };
     }
     loweredZoneFilter = lowered.value;
+  }
+
+  let moveZoneBindings: string[] | undefined;
+  if (
+    source.moveZoneBindings !== undefined
+    && (!Array.isArray(source.moveZoneBindings) || source.moveZoneBindings.some((entry) => typeof entry !== 'string' || entry.length === 0))
+  ) {
+    diagnostics.push(...missingCapability(
+      `${path}.moveZoneBindings`,
+      'grantFreeOperation moveZoneBindings',
+      source.moveZoneBindings,
+      ['non-empty string[]'],
+    ).diagnostics);
+  } else if (Array.isArray(source.moveZoneBindings)) {
+    moveZoneBindings = [...source.moveZoneBindings] as string[];
+  }
+
+  let moveZoneProbeBindings: string[] | undefined;
+  if (
+    source.moveZoneProbeBindings !== undefined
+    && (!Array.isArray(source.moveZoneProbeBindings) || source.moveZoneProbeBindings.some((entry) => typeof entry !== 'string' || entry.length === 0))
+  ) {
+    diagnostics.push(...missingCapability(
+      `${path}.moveZoneProbeBindings`,
+      'grantFreeOperation moveZoneProbeBindings',
+      source.moveZoneProbeBindings,
+      ['non-empty string[]'],
+    ).diagnostics);
+  } else if (Array.isArray(source.moveZoneProbeBindings)) {
+    moveZoneProbeBindings = [...source.moveZoneProbeBindings] as string[];
   }
 
   let allowDuringMonsoon: boolean | undefined;
@@ -1817,6 +1847,8 @@ function lowerGrantFreeOperationEffect(
     operationClass: source.operationClass,
     ...(uses === undefined ? {} : { uses }),
     ...(viabilityPolicy === undefined ? {} : { viabilityPolicy }),
+    ...(moveZoneBindings === undefined ? {} : { moveZoneBindings }),
+    ...(moveZoneProbeBindings === undefined ? {} : { moveZoneProbeBindings }),
     ...(completionPolicy === undefined ? {} : { completionPolicy }),
     ...(outcomePolicy === undefined ? {} : { outcomePolicy }),
     ...(postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow }),
@@ -1866,6 +1898,8 @@ function lowerGrantFreeOperationEffect(
         ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
         ...(actionIds === undefined ? {} : { actionIds }),
         ...(loweredZoneFilter === undefined ? {} : { zoneFilter: loweredZoneFilter }),
+        ...(moveZoneBindings === undefined ? {} : { moveZoneBindings }),
+        ...(moveZoneProbeBindings === undefined ? {} : { moveZoneProbeBindings }),
         ...(allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon }),
         ...(uses === undefined ? {} : { uses }),
         ...(viabilityPolicy === undefined ? {} : { viabilityPolicy }),

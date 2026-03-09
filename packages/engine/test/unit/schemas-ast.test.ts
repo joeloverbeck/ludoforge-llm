@@ -389,6 +389,32 @@ describe('AST and selector schemas', () => {
       );
     });
 
+    it('parses grantFreeOperation moveZoneBindings when bound zone names are provided', () => {
+      const effect = {
+        grantFreeOperation: {
+          seat: '3',
+          operationClass: 'operation',
+          moveZoneBindings: ['$destination', '$targetSpaces'],
+          moveZoneProbeBindings: ['$spaces'],
+        },
+      } as const;
+
+      assert.deepEqual(EffectASTSchema.parse(effect), effect);
+    });
+
+    it('rejects grantFreeOperation moveZoneBindings when empty or non-string values are provided', () => {
+      const result = EffectASTSchema.safeParse({
+        grantFreeOperation: {
+          seat: '3',
+          operationClass: 'operation',
+          moveZoneBindings: [''],
+        },
+      });
+
+      assert.equal(result.success, false);
+      assert.equal(result.error.issues.some((issue) => issue.path.join('.') === 'grantFreeOperation.moveZoneBindings'), true);
+    });
+
     it('rejects grantFreeOperation required completion without postResolutionTurnFlow', () => {
       const result = EffectASTSchema.safeParse({
         grantFreeOperation: {
@@ -470,6 +496,18 @@ describe('AST and selector schemas', () => {
 
       assert.equal(result.success, false);
       assert.equal(result.error.issues.some((issue) => issue.path.join('.') === 'completionPolicy'), true);
+    });
+
+    it('parses event-card freeOperationGrants moveZoneBindings when bound zone names are provided', () => {
+      const grant = {
+        seat: '3',
+        operationClass: 'operation',
+        sequence: { chain: 'ctx-chain', step: 0 },
+        moveZoneBindings: ['$destination'],
+        moveZoneProbeBindings: ['$spaces'],
+      } as const;
+
+      assert.deepEqual(EventCardFreeOperationGrantSchema.parse(grant), grant);
     });
   });
 

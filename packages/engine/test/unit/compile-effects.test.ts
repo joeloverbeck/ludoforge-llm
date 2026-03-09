@@ -1479,6 +1479,8 @@ describe('compile-effects lowering', () => {
             actionIds: ['operation'],
             uses: 1,
             viabilityPolicy: 'requireUsableAtIssue',
+            moveZoneBindings: ['$destination'],
+            moveZoneProbeBindings: ['$spaces'],
             sequence: { chain: 'apc-uprising', step: 0 },
             zoneFilter: { op: '==', left: { ref: 'zoneProp', zone: 'saigon:none', prop: 'country' }, right: 'southVietnam' },
           },
@@ -1498,6 +1500,8 @@ describe('compile-effects lowering', () => {
           actionIds: ['operation'],
           uses: 1,
           viabilityPolicy: 'requireUsableAtIssue',
+          moveZoneBindings: ['$destination'],
+          moveZoneProbeBindings: ['$spaces'],
           sequence: { chain: 'apc-uprising', step: 0 },
           zoneFilter: { op: '==', left: { ref: 'zoneProp', zone: 'saigon:none', prop: 'country' }, right: 'southVietnam' },
         },
@@ -1619,6 +1623,48 @@ describe('compile-effects lowering', () => {
 
     assert.equal(result.value, null);
     const diagnostic = result.diagnostics.find((entry) => entry.path === 'doc.actions.0.effects.0.grantFreeOperation.viabilityPolicy');
+    assert.ok(diagnostic);
+    assert.equal(diagnostic?.severity, 'error');
+  });
+
+  it('rejects invalid grantFreeOperation.moveZoneBindings values', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          grantFreeOperation: {
+            seat: '1',
+            operationClass: 'operation',
+            moveZoneBindings: [7],
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    const diagnostic = result.diagnostics.find((entry) => entry.path === 'doc.actions.0.effects.0.grantFreeOperation.moveZoneBindings');
+    assert.ok(diagnostic);
+    assert.equal(diagnostic?.severity, 'error');
+  });
+
+  it('rejects invalid grantFreeOperation.moveZoneProbeBindings values', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          grantFreeOperation: {
+            seat: '1',
+            operationClass: 'operation',
+            moveZoneProbeBindings: [7],
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    const diagnostic = result.diagnostics.find((entry) => entry.path === 'doc.actions.0.effects.0.grantFreeOperation.moveZoneProbeBindings');
     assert.ok(diagnostic);
     assert.equal(diagnostic?.severity, 'error');
   });

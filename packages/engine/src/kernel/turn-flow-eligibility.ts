@@ -13,8 +13,8 @@ import {
 } from './seat-resolution.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import {
-  collectMoveZoneCandidates,
-  doesGrantAuthorizeMove,
+  collectGrantMoveZoneCandidates,
+  doesGrantPotentiallyAuthorizeMove,
   isPendingFreeOperationGrantSequenceReady,
   resolveAuthorizedPendingFreeOperationGrants,
 } from './free-operation-grant-authorization.js';
@@ -257,6 +257,8 @@ const toPendingFreeOperationGrant = (
   operationClass: grant.operationClass,
   ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
   ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
+  ...(grant.moveZoneBindings === undefined ? {} : { moveZoneBindings: [...grant.moveZoneBindings] }),
+  ...(grant.moveZoneProbeBindings === undefined ? {} : { moveZoneProbeBindings: [...grant.moveZoneProbeBindings] }),
   ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
   ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),
   ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
@@ -786,7 +788,7 @@ export const isMoveAllowedByRequiredPendingFreeOperationGrant = (
   return pending.some((grant) =>
     grant.seat === activeSeat
     && isRequiredPendingFreeOperationGrant(grant)
-    && doesGrantAuthorizeMove(def, state, pending, grant, move));
+    && doesGrantPotentiallyAuthorizeMove(def, state, pending, grant, move));
 };
 
 export const applyTurnFlowEligibilityAfterMove = (
@@ -1045,7 +1047,7 @@ export const consumeTurnFlowFreeOperationGrant = (
         ...pending.slice(consumedIndex + 1),
       ];
   const captureKey = consumed.sequenceContext?.captureMoveZoneCandidatesAs;
-  const capturedZones = captureKey === undefined ? [] : collectMoveZoneCandidates(def, move);
+  const capturedZones = captureKey === undefined ? [] : collectGrantMoveZoneCandidates(def, move, consumed);
   const capturedBatchId = consumed.sequenceBatchId;
   const baseSequenceContexts = runtime.freeOperationSequenceContexts;
   const nextSequenceContexts = captureKey === undefined || capturedBatchId === undefined

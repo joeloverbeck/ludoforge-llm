@@ -11,6 +11,7 @@ import { listKernelModulesByPrefix, readKernelSource } from '../../helpers/kerne
 const expectedApplyEffectsBoundaryModules = [
   'apply-move.ts',
   'event-execution.ts',
+  'free-operation-viability.ts',
   'initial-state.ts',
   'legal-choices.ts',
   'phase-lifecycle.ts',
@@ -28,6 +29,7 @@ const expectedConstructorsByBoundaryModule: Readonly<Record<
 >> = {
   'apply-move.ts': ['createExecutionEffectContext'],
   'event-execution.ts': ['createExecutionEffectContext'],
+  'free-operation-viability.ts': ['createExecutionEffectContext'],
   'initial-state.ts': ['createExecutionEffectContext'],
   'legal-choices.ts': ['createDiscoveryStrictEffectContext', 'createDiscoveryProbeEffectContext'],
   'phase-lifecycle.ts': ['createExecutionEffectContext'],

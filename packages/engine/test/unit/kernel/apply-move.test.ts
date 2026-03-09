@@ -1200,6 +1200,88 @@ describe('applyMove() required free-operation grant enforcement', () => {
     assert.equal(state.turnOrderState.runtime.pendingFreeOperationGrants?.length, 1);
   });
 
+  it('ignores non-material variable changes when enforcing mustChangeGameplayState outcome policy', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [{ addVar: { scope: 'global', var: 'airLiftCount', delta: 1 } }],
+      limits: [],
+    };
+
+    const def = {
+      ...makeBaseDef({
+        actions: [action],
+        globalVars: [{ name: 'airLiftCount', type: 'int', init: 0, min: 0, max: 10, material: false }],
+      }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            actionClassByActionId: { operation: 'operation' },
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      globalVars: { airLiftCount: 0 },
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-required-outcome',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              completionPolicy: 'required',
+              outcomePolicy: 'mustChangeGameplayState',
+              postResolutionTurnFlow: 'resumeCardFlow',
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+    });
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('operation'), params: {}, freeOperation: true }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & {
+          readonly reason?: string;
+          readonly context?: Record<string, unknown>;
+        };
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED);
+        assert.equal(details.context?.grantId, 'grant-required-outcome');
+        assert.equal(details.context?.outcomePolicy, 'mustChangeGameplayState');
+        return true;
+      },
+    );
+  });
+
   it('rejects overlapping free operations when any authorized grant requires gameplay-state change, regardless of grant order', () => {
     const action: ActionDef = {
       id: asActionId('operation'),
@@ -1284,12 +1366,12 @@ describe('applyMove() required free-operation grant enforcement', () => {
       params: [],
       pre: null,
       cost: [],
-      effects: [{ addVar: { scope: 'global', var: 'opCount', delta: 1 } }],
+      effects: [{ addVar: { scope: 'global', var: 'opMarker', delta: 1 } }],
       limits: [],
     };
 
     const def = {
-      ...makeBaseDef({ actions: [action], globalVars: [{ name: 'opCount', type: 'int', init: 0, min: 0, max: 10 }] }),
+      ...makeBaseDef({ actions: [action], globalVars: [{ name: 'opMarker', type: 'int', init: 0, min: 0, max: 10 }] }),
       turnOrder: {
         type: 'cardDriven',
         config: {
@@ -1323,7 +1405,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
 
     for (const pendingFreeOperationGrants of overlappingGrantOrders) {
       const state = makeBaseState({
-        globalVars: { opCount: 0 },
+        globalVars: { opMarker: 0 },
         turnOrderState: {
           type: 'cardDriven',
           runtime: {
@@ -1339,7 +1421,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
         freeOperation: true,
       }).state;
 
-      assert.equal(result.globalVars['opCount'], 1);
+      assert.equal(result.globalVars['opMarker'], 1);
       assert.equal(result.activePlayer, asPlayerId(1));
       assert.equal(result.turnOrderState.type, 'cardDriven');
       assert.deepEqual(

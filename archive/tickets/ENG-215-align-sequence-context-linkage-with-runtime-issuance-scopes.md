@@ -1,6 +1,6 @@
 # ENG-215: Align Sequence-Context Linkage Validation with Runtime Issuance Scopes
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — free-operation sequence-context validator scope semantics
@@ -78,3 +78,18 @@ Add tests that would currently fail incorrectly (capture in side, require in bra
 2. `node --test packages/engine/dist/test/unit/validate-gamedef.test.js`
 3. `node --test packages/engine/dist/test/integration/fitl-event-free-operation-grants.test.js`
 4. `pnpm -F @ludoforge/engine lint && pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+- Completion date: 2026-03-09
+- What changed:
+  - Updated `packages/engine/src/kernel/validate-gamedef-behavior.ts` so event free-operation grant linkage is validated in runtime-equivalent scopes: side-only, then side+branch for each branch candidate.
+  - Updated event effect-issued grant linkage validation to combine side and selected-branch `effects`/target-effect scopes the same way runtime executes them.
+  - Added unit coverage for valid side-capture plus branch-require linkage in both direct grant arrays and effect-issued grant arrays.
+  - Added integration coverage showing selected-branch event grant linkage executes correctly and selected-branch effect-issued linkage is accepted and issued.
+- Deviations from original plan:
+  - The new effect-issued integration regression verifies boundary acceptance plus selected-branch issuance, not full follow-up consumption, because the ticket scope is validation parity with runtime issuance/execution scopes rather than a separate runtime sequence-context consumption change.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build`
+  - `node --test packages/engine/dist/test/unit/validate-gamedef.test.js`
+  - `node packages/engine/dist/test/integration/fitl-event-free-operation-grants.test.js`

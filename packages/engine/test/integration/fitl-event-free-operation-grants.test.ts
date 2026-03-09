@@ -527,9 +527,15 @@ actor: 'active',
 executor: 'actor',
 phase: [asPhaseId('main')],
         params: [
-          { name: 'eventCardId', domain: { query: 'enums', values: ['card-sequence-context'] } },
+          {
+            name: 'eventCardId',
+            domain: {
+              query: 'enums',
+              values: ['card-sequence-context', 'card-sequence-context-branch', 'card-sequence-context-effect-branch'],
+            },
+          },
           { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
-          { name: 'branch', domain: { query: 'enums', values: ['none'] } },
+          { name: 'branch', domain: { query: 'enums', values: ['branch-follow-up', 'branch-effect-follow-up', 'none'] } },
         ],
         pre: null,
         cost: [],
@@ -604,6 +610,80 @@ phase: [asPhaseId('main')],
                   sequenceContext: {
                     requireMoveZoneCandidatesFrom: 'selected-space',
                   },
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-sequence-context-branch',
+            title: 'Sequence Context Capture With Branch Follow-Up',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Capture from side grant; require from selected branch grant.',
+              freeOperationGrants: [
+                {
+                  seat: 'NVA',
+                  sequence: { chain: 'nva-sequence-context-branch', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  sequenceContext: {
+                    captureMoveZoneCandidatesAs: 'selected-space',
+                  },
+                },
+              ],
+              branches: [
+                {
+                  id: 'branch-follow-up',
+                  freeOperationGrants: [
+                    {
+                      seat: 'NVA',
+                      sequence: { chain: 'nva-sequence-context-branch', step: 1 },
+                      operationClass: 'operation',
+                      actionIds: ['operation'],
+                      sequenceContext: {
+                        requireMoveZoneCandidatesFrom: 'selected-space',
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-sequence-context-effect-branch',
+            title: 'Sequence Context Effect Capture With Branch Follow-Up',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Capture from side effect grant; require from selected branch effect grant.',
+              effects: [
+                {
+                  grantFreeOperation: {
+                    seat: 'NVA',
+                    sequence: { chain: 'nva-sequence-context-effect-branch', step: 0 },
+                    operationClass: 'operation',
+                    actionIds: ['operation'],
+                    sequenceContext: {
+                      captureMoveZoneCandidatesAs: 'selected-space',
+                    },
+                  },
+                },
+              ],
+              branches: [
+                {
+                  id: 'branch-effect-follow-up',
+                  effects: [
+                    {
+                      grantFreeOperation: {
+                        seat: 'NVA',
+                        sequence: { chain: 'nva-sequence-context-effect-branch', step: 1 },
+                        operationClass: 'operation',
+                        actionIds: ['operation'],
+                        sequenceContext: {
+                          requireMoveZoneCandidatesFrom: 'selected-space',
+                        },
+                      },
+                    },
+                  ],
                 },
               ],
             },
@@ -1639,6 +1719,81 @@ describe('event free-operation grants integration', () => {
     const runtimeAfterSecond = requireCardDrivenRuntime(afterSecondFreeOp);
     assert.deepEqual(runtimeAfterSecond.pendingFreeOperationGrants ?? [], []);
     assert.equal(runtimeAfterSecond.freeOperationSequenceContexts, undefined);
+  });
+
+  it('accepts side capture plus branch require for event free-operation grants and enforces the captured zone at runtime', () => {
+    const def = createSequenceContextDef();
+    const start = initialState(def, 122, 2).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-sequence-context-branch', side: 'unshaded', branch: 'branch-follow-up' },
+    }).state;
+
+    const grantReadyState: GameState = {
+      ...afterEvent,
+      activePlayer: asPlayerId(1),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...requireCardDrivenRuntime(afterEvent),
+          currentCard: {
+            ...requireCardDrivenRuntime(afterEvent).currentCard,
+            firstEligible: 'NVA',
+            secondEligible: null,
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+        },
+      },
+    };
+
+    const afterFirstFreeOp = applyMove(def, grantReadyState, {
+      actionId: asActionId('operation'),
+      params: { 'decision:$zone': 'boardCambodia:none' },
+      freeOperation: true,
+    }).state;
+
+    assert.throws(
+      () =>
+        applyMove(def, afterFirstFreeOp, {
+          actionId: asActionId('operation'),
+          params: { 'decision:$zone': 'boardVietnam:none' },
+          freeOperation: true,
+        }),
+      (error: unknown) => assertFreeOperationDenial(error, 'sequenceContextMismatch'),
+    );
+
+    const afterSecondFreeOp = applyMove(def, afterFirstFreeOp, {
+      actionId: asActionId('operation'),
+      params: { 'decision:$zone': 'boardCambodia:none' },
+      freeOperation: true,
+    }).state;
+
+    const runtimeAfterSecond = requireCardDrivenRuntime(afterSecondFreeOp);
+    assert.deepEqual(runtimeAfterSecond.pendingFreeOperationGrants ?? [], []);
+    assert.equal(runtimeAfterSecond.freeOperationSequenceContexts, undefined);
+  });
+
+  it('accepts side effect-issued capture plus branch effect-issued require and issues both grants from the selected branch scope', () => {
+    const def = createSequenceContextDef();
+    const start = initialState(def, 123, 2).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: {
+        eventCardId: 'card-sequence-context-effect-branch',
+        side: 'unshaded',
+        branch: 'branch-effect-follow-up',
+      },
+    }).state;
+
+    const runtime = requireCardDrivenRuntime(afterEvent);
+    const grants = runtime.pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 2);
+    assert.deepEqual(grants.map((grant) => grant.sequenceIndex), [0, 1]);
   });
 
   it('rejects nested effect-issued sequence context requires without an earlier capture', () => {

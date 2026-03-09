@@ -7,6 +7,7 @@ import {
   isTurnFlowFreeOperationGrantViabilityPolicy,
   type TurnFlowFreeOperationGrantViabilityPolicy,
 } from '../../../src/contracts/index.js';
+import type { FreeOperationSequenceContextContract } from '../../../src/kernel/free-operation-sequence-context-contract.js';
 import { EffectASTSchema } from '../../../src/kernel/schemas-ast.js';
 import { EventCardFreeOperationGrantSchema } from '../../../src/kernel/schemas-extensions.js';
 import type { EffectAST } from '../../../src/kernel/types-ast.js';
@@ -20,6 +21,9 @@ import { readKernelSource } from '../../helpers/kernel-source-guard.js';
 type EffectGrantFreeOperation = Extract<EffectAST, { readonly grantFreeOperation: unknown }>['grantFreeOperation'];
 type EffectGrantViabilityPolicy = NonNullable<EffectGrantFreeOperation['viabilityPolicy']>;
 type EventGrantViabilityPolicy = NonNullable<EventFreeOperationGrantDef['viabilityPolicy']>;
+type EffectGrantSequenceContext = NonNullable<EffectGrantFreeOperation['sequenceContext']>;
+type EventGrantSequenceContext = NonNullable<EventFreeOperationGrantDef['sequenceContext']>;
+type RuntimeGrantSequenceContext = NonNullable<TurnFlowFreeOperationGrantContract['sequenceContext']>;
 
 type CanonicalCoversTurnFlowType = TurnFlowFreeOperationGrantViabilityPolicy extends TurnFlowTypeViabilityPolicy ? true : false;
 type TurnFlowTypeCoversCanonical = TurnFlowTypeViabilityPolicy extends TurnFlowFreeOperationGrantViabilityPolicy ? true : false;
@@ -28,6 +32,12 @@ type EffectCoversCanonical = EffectGrantViabilityPolicy extends TurnFlowFreeOper
 type CanonicalCoversEvent = TurnFlowFreeOperationGrantViabilityPolicy extends EventGrantViabilityPolicy ? true : false;
 type EventCoversCanonical = EventGrantViabilityPolicy extends TurnFlowFreeOperationGrantViabilityPolicy ? true : false;
 type EffectGrantSharesRuntimeContract = EffectGrantFreeOperation extends TurnFlowFreeOperationGrantContract ? true : false;
+type CanonicalSequenceContextCoversEffect = FreeOperationSequenceContextContract extends EffectGrantSequenceContext ? true : false;
+type EffectSequenceContextCoversCanonical = EffectGrantSequenceContext extends FreeOperationSequenceContextContract ? true : false;
+type CanonicalSequenceContextCoversEvent = FreeOperationSequenceContextContract extends EventGrantSequenceContext ? true : false;
+type EventSequenceContextCoversCanonical = EventGrantSequenceContext extends FreeOperationSequenceContextContract ? true : false;
+type CanonicalSequenceContextCoversRuntime = FreeOperationSequenceContextContract extends RuntimeGrantSequenceContext ? true : false;
+type RuntimeSequenceContextCoversCanonical = RuntimeGrantSequenceContext extends FreeOperationSequenceContextContract ? true : false;
 
 const CANONICAL_COVERS_TURN_FLOW_TYPE: CanonicalCoversTurnFlowType = true;
 const TURN_FLOW_TYPE_COVERS_CANONICAL: TurnFlowTypeCoversCanonical = true;
@@ -36,6 +46,12 @@ const EFFECT_COVERS_CANONICAL: EffectCoversCanonical = true;
 const CANONICAL_COVERS_EVENT: CanonicalCoversEvent = true;
 const EVENT_COVERS_CANONICAL: EventCoversCanonical = true;
 const EFFECT_GRANT_SHARES_RUNTIME_CONTRACT: EffectGrantSharesRuntimeContract = true;
+const CANONICAL_SEQUENCE_CONTEXT_COVERS_EFFECT: CanonicalSequenceContextCoversEffect = true;
+const EFFECT_SEQUENCE_CONTEXT_COVERS_CANONICAL: EffectSequenceContextCoversCanonical = true;
+const CANONICAL_SEQUENCE_CONTEXT_COVERS_EVENT: CanonicalSequenceContextCoversEvent = true;
+const EVENT_SEQUENCE_CONTEXT_COVERS_CANONICAL: EventSequenceContextCoversCanonical = true;
+const CANONICAL_SEQUENCE_CONTEXT_COVERS_RUNTIME: CanonicalSequenceContextCoversRuntime = true;
+const RUNTIME_SEQUENCE_CONTEXT_COVERS_CANONICAL: RuntimeSequenceContextCoversCanonical = true;
 
 const loweringContext: EffectLoweringContext = {
   ownershipByBase: {},
@@ -50,6 +66,15 @@ describe('free-operation viability policy contract parity', () => {
     assert.equal(CANONICAL_COVERS_EVENT, true);
     assert.equal(EVENT_COVERS_CANONICAL, true);
     assert.equal(EFFECT_GRANT_SHARES_RUNTIME_CONTRACT, true);
+  });
+
+  it('keeps sequenceContext types aligned across canonical, runtime, AST, and event grant surfaces', () => {
+    assert.equal(CANONICAL_SEQUENCE_CONTEXT_COVERS_EFFECT, true);
+    assert.equal(EFFECT_SEQUENCE_CONTEXT_COVERS_CANONICAL, true);
+    assert.equal(CANONICAL_SEQUENCE_CONTEXT_COVERS_EVENT, true);
+    assert.equal(EVENT_SEQUENCE_CONTEXT_COVERS_CANONICAL, true);
+    assert.equal(CANONICAL_SEQUENCE_CONTEXT_COVERS_RUNTIME, true);
+    assert.equal(RUNTIME_SEQUENCE_CONTEXT_COVERS_CANONICAL, true);
   });
 
   it('keeps runtime guard, AST schema, and event schema acceptance aligned with canonical viability policy values', () => {

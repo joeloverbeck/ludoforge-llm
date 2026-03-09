@@ -1,4 +1,5 @@
 import type { TurnFlowActionClass as CanonicalTurnFlowActionClass } from '../contracts/index.js';
+import type { FreeOperationSequenceContextContract } from './free-operation-sequence-context-contract.js';
 
 export type TurnFlowDuration = 'turn' | 'nextTurn' | 'round' | 'cycle';
 
@@ -6,11 +7,6 @@ export type TurnFlowActionClass = CanonicalTurnFlowActionClass;
 
 export type TurnFlowFreeOperationGrantViabilityPolicy =
   import('../contracts/index.js').TurnFlowFreeOperationGrantViabilityPolicy;
-
-export interface TurnFlowFreeOperationSequenceContextContract {
-  readonly captureMoveZoneCandidatesAs?: string;
-  readonly requireMoveZoneCandidatesFrom?: string;
-}
 
 export interface TurnFlowFreeOperationGrantContract {
   readonly id?: string;
@@ -25,7 +21,7 @@ export interface TurnFlowFreeOperationGrantContract {
     readonly chain: string;
     readonly step: number;
   };
-  readonly sequenceContext?: TurnFlowFreeOperationSequenceContextContract;
+  readonly sequenceContext?: FreeOperationSequenceContextContract;
   readonly viabilityPolicy?: TurnFlowFreeOperationGrantViabilityPolicy;
 }
 
@@ -166,7 +162,7 @@ export interface TurnFlowPendingFreeOperationGrant {
   readonly remainingUses: number;
   readonly sequenceBatchId?: string;
   readonly sequenceIndex?: number;
-  readonly sequenceContext?: TurnFlowFreeOperationSequenceContextContract;
+  readonly sequenceContext?: FreeOperationSequenceContextContract;
 }
 
 export interface TurnFlowFreeOperationSequenceBatchContext {

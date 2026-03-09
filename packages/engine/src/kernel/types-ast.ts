@@ -1,5 +1,6 @@
 import type { PlayerId, TokenId, ZoneId } from './branded.js';
 import type { PredicateOp } from '../contracts/index.js';
+import type { FreeOperationSequenceContextContract } from './free-operation-sequence-context-contract.js';
 import type { ScopedVarEndpointContract, ScopedVarPayloadContract } from './scoped-var-contract.js';
 import type {
   TurnFlowActionClass,
@@ -497,10 +498,7 @@ export type EffectAST =
           readonly chain: string;
           readonly step: number;
         };
-        readonly sequenceContext?: {
-          readonly captureMoveZoneCandidatesAs?: string;
-          readonly requireMoveZoneCandidatesFrom?: string;
-        };
+        readonly sequenceContext?: FreeOperationSequenceContextContract;
       };
     }
   | {

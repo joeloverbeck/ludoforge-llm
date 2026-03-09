@@ -5243,6 +5243,31 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
     } as unknown as GameDef;
   };
 
+  const withEventCardSideConfig = (unshaded: Record<string, unknown>): GameDef => {
+    const base = createValidGameDef();
+    return {
+      ...base,
+      eventDecks: [
+        {
+          id: 'deck',
+          drawZone: 'deck:none',
+          discardZone: 'market:none',
+          cards: [
+            {
+              id: 'card-1',
+              title: 'Sequence Context Linkage',
+              sideMode: 'single',
+              unshaded: {
+                text: 'sequence context test',
+                ...unshaded,
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+  };
+
   it('rejects requireMoveZoneCandidatesFrom when no matching capture exists in the chain', () => {
     const def = withEventFreeOperationGrants([
       {
@@ -5311,6 +5336,78 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
         sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
       },
     ]);
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code.startsWith('FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_')),
+      false,
+    );
+  });
+
+  it('accepts side capture plus branch require when the selected branch scope matches runtime issuance', () => {
+    const def = withEventCardSideConfig({
+      freeOperationGrants: [
+        {
+          seat: '0',
+          sequence: { chain: 'ctx-branch-chain', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+        },
+      ],
+      branches: [
+        {
+          id: 'branch-1',
+          freeOperationGrants: [
+            {
+              seat: '0',
+              sequence: { chain: 'ctx-branch-chain', step: 1 },
+              operationClass: 'operation',
+              actionIds: ['playCard'],
+              sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+            },
+          ],
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code.startsWith('FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_')),
+      false,
+    );
+  });
+
+  it('accepts side effect-issued capture plus branch effect-issued require when the selected branch scope matches runtime execution', () => {
+    const def = withEventCardSideConfig({
+      effects: [
+        {
+          grantFreeOperation: {
+            seat: '0',
+            sequence: { chain: 'ctx-effect-branch-chain', step: 0 },
+            operationClass: 'operation',
+            actionIds: ['playCard'],
+            sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+          },
+        },
+      ],
+      branches: [
+        {
+          id: 'branch-1',
+          effects: [
+            {
+              grantFreeOperation: {
+                seat: '0',
+                sequence: { chain: 'ctx-effect-branch-chain', step: 1 },
+                operationClass: 'operation',
+                actionIds: ['playCard'],
+                sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+              },
+            },
+          ],
+        },
+      ],
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(

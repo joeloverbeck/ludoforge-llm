@@ -17,6 +17,7 @@ import type {
   ZoneRef,
 } from './types.js';
 import type { AstScopedVarScope } from './scoped-var-contract.js';
+import type { FreeOperationSequenceContextGrantLike } from './free-operation-sequence-context-contract.js';
 import { isNumericValueExpr } from './numeric-value-expr.js';
 import { booleanArityMessage, booleanAritySuggestion, isNonEmptyArray } from './boolean-arity-policy.js';
 import {
@@ -2162,19 +2163,8 @@ interface SequenceContextLinkageGrantReference {
   readonly requireKey?: string;
 }
 
-interface SequenceContextGrantLike {
-  readonly sequence?: {
-    readonly chain?: unknown;
-    readonly step?: unknown;
-  };
-  readonly sequenceContext?: {
-    readonly captureMoveZoneCandidatesAs?: unknown;
-    readonly requireMoveZoneCandidatesFrom?: unknown;
-  };
-}
-
 const collectSequenceContextLinkageGrantReference = (
-  grant: SequenceContextGrantLike,
+  grant: FreeOperationSequenceContextGrantLike,
   path: string,
   references: SequenceContextLinkageGrantReference[],
 ): void => {
@@ -2233,7 +2223,7 @@ const collectEffectGrantSequenceContextReferences = (
   const grantCandidate = record.grantFreeOperation;
   if (typeof grantCandidate === 'object' && grantCandidate !== null) {
     collectSequenceContextLinkageGrantReference(
-      grantCandidate as SequenceContextGrantLike,
+      grantCandidate as FreeOperationSequenceContextGrantLike,
       `${path}.grantFreeOperation`,
       references,
     );
@@ -2286,26 +2276,36 @@ const validateFreeOperationGrantSequenceContextLinkage = (
   diagnostics: Diagnostic[],
   def: GameDef,
 ): void => {
+  type SequenceContextLinkageScope = {
+    readonly value: unknown;
+    readonly path: string;
+  };
+
   const validateEventGrantScope = (
-    grants: readonly unknown[] | undefined,
-    path: string,
+    scopes: readonly SequenceContextLinkageScope[],
   ): void => {
-    if (!Array.isArray(grants)) {
-      return;
-    }
     const references: SequenceContextLinkageGrantReference[] = [];
-    grants.forEach((grant, grantIndex) => {
-      collectSequenceContextLinkageGrantReference(
-        grant as SequenceContextGrantLike,
-        `${path}[${grantIndex}]`,
-        references,
-      );
+    scopes.forEach(({ value, path }) => {
+      if (!Array.isArray(value)) {
+        return;
+      }
+      value.forEach((grant, grantIndex) => {
+        collectSequenceContextLinkageGrantReference(
+          grant as FreeOperationSequenceContextGrantLike,
+          `${path}[${grantIndex}]`,
+          references,
+        );
+      });
     });
     validateSequenceContextLinkageForReferences(diagnostics, references);
   };
-  const validateEffectGrantScope = (value: unknown, path: string): void => {
+  const validateEffectGrantScope = (
+    scopes: readonly SequenceContextLinkageScope[],
+  ): void => {
     const references: SequenceContextLinkageGrantReference[] = [];
-    collectEffectGrantSequenceContextReferences(value, path, references);
+    scopes.forEach(({ value, path }) => {
+      collectEffectGrantSequenceContextReferences(value, path, references);
+    });
     validateSequenceContextLinkageForReferences(diagnostics, references);
   };
 
@@ -2319,32 +2319,40 @@ const validateFreeOperationGrantSequenceContextLinkage = (
         if (side === undefined) {
           continue;
         }
-        validateEventGrantScope(
-          side.freeOperationGrants,
-          `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.freeOperationGrants`,
-        );
+        const sideGrantScopes = [
+          {
+            value: side.freeOperationGrants,
+            path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.freeOperationGrants`,
+          },
+        ] as const;
+        validateEventGrantScope(sideGrantScopes);
         side.branches?.forEach((branch, branchIndex) => {
-          validateEventGrantScope(
-            branch.freeOperationGrants,
-            `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.branches[${branchIndex}].freeOperationGrants`,
-          );
+          validateEventGrantScope([
+            ...sideGrantScopes,
+            {
+              value: branch.freeOperationGrants,
+              path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.branches[${branchIndex}].freeOperationGrants`,
+            },
+          ]);
         });
       }
     });
   });
 
-  validateEffectGrantScope(def.setup, 'setup');
+  validateEffectGrantScope([{ value: def.setup, path: 'setup' }]);
   def.actions.forEach((action, actionIndex) => {
     const actionRecord = action as unknown as Readonly<Record<string, unknown>>;
-    validateEffectGrantScope(actionRecord.cost, `actions[${actionIndex}].cost`);
-    validateEffectGrantScope(actionRecord.effects, `actions[${actionIndex}].effects`);
+    validateEffectGrantScope([{ value: actionRecord.cost, path: `actions[${actionIndex}].cost` }]);
+    validateEffectGrantScope([{ value: actionRecord.effects, path: `actions[${actionIndex}].effects` }]);
   });
   (def.actionPipelines ?? []).forEach((pipeline, pipelineIndex) => {
     const pipelineRecord = pipeline as unknown as Readonly<Record<string, unknown>>;
-    validateEffectGrantScope(
-      pipelineRecord.costEffects,
-      `actionPipelines[${pipelineIndex}].costEffects`,
-    );
+    validateEffectGrantScope([
+      {
+        value: pipelineRecord.costEffects,
+        path: `actionPipelines[${pipelineIndex}].costEffects`,
+      },
+    ]);
     const stages = pipelineRecord.stages;
     if (!Array.isArray(stages)) {
       return;
@@ -2354,37 +2362,24 @@ const validateFreeOperationGrantSequenceContextLinkage = (
         typeof stage === 'object' && stage !== null
           ? stage as Readonly<Record<string, unknown>>
           : {};
-      validateEffectGrantScope(
-        stageRecord.effects,
-        `actionPipelines[${pipelineIndex}].stages[${stageIndex}].effects`,
-      );
+      validateEffectGrantScope([
+        {
+          value: stageRecord.effects,
+          path: `actionPipelines[${pipelineIndex}].stages[${stageIndex}].effects`,
+        },
+      ]);
     });
   });
   def.turnStructure.phases.forEach((phase, phaseIndex) => {
-    validateEffectGrantScope(
-      phase.onEnter,
-      `turnStructure.phases[${phaseIndex}].onEnter`,
-    );
-    validateEffectGrantScope(
-      phase.onExit,
-      `turnStructure.phases[${phaseIndex}].onExit`,
-    );
+    validateEffectGrantScope([{ value: phase.onEnter, path: `turnStructure.phases[${phaseIndex}].onEnter` }]);
+    validateEffectGrantScope([{ value: phase.onExit, path: `turnStructure.phases[${phaseIndex}].onExit` }]);
   });
   (def.turnStructure.interrupts ?? []).forEach((interrupt, interruptIndex) => {
-    validateEffectGrantScope(
-      interrupt.onEnter,
-      `turnStructure.interrupts[${interruptIndex}].onEnter`,
-    );
-    validateEffectGrantScope(
-      interrupt.onExit,
-      `turnStructure.interrupts[${interruptIndex}].onExit`,
-    );
+    validateEffectGrantScope([{ value: interrupt.onEnter, path: `turnStructure.interrupts[${interruptIndex}].onEnter` }]);
+    validateEffectGrantScope([{ value: interrupt.onExit, path: `turnStructure.interrupts[${interruptIndex}].onExit` }]);
   });
   def.triggers.forEach((trigger, triggerIndex) => {
-    validateEffectGrantScope(
-      trigger.effects,
-      `triggers[${triggerIndex}].effects`,
-    );
+    validateEffectGrantScope([{ value: trigger.effects, path: `triggers[${triggerIndex}].effects` }]);
   });
   (def.eventDecks ?? []).forEach((deck, deckIndex) => {
     deck.cards.forEach((card, cardIndex) => {
@@ -2396,46 +2391,56 @@ const validateFreeOperationGrantSequenceContextLinkage = (
         if (side === undefined) {
           continue;
         }
-        validateEffectGrantScope(
-          side.effects,
-          `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.effects`,
-        );
-        side.targets?.forEach((target, targetIndex) => {
-          validateEffectGrantScope(
-            target.effects,
-            `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.targets[${targetIndex}].effects`,
-          );
-        });
+        const sideEventEffectScopes: SequenceContextLinkageScope[] = [
+          {
+            value: side.effects,
+            path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.effects`,
+          },
+          ...(side.targets?.map((target, targetIndex) => ({
+            value: target.effects,
+            path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.targets[${targetIndex}].effects`,
+          })) ?? []),
+        ];
+        validateEffectGrantScope(sideEventEffectScopes);
         side.lastingEffects?.forEach((lastingEffect, lastingEffectIndex) => {
-          validateEffectGrantScope(
-            lastingEffect.setupEffects,
-            `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.lastingEffects[${lastingEffectIndex}].setupEffects`,
-          );
-          validateEffectGrantScope(
-            lastingEffect.teardownEffects,
-            `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.lastingEffects[${lastingEffectIndex}].teardownEffects`,
-          );
+          validateEffectGrantScope([
+            {
+              value: lastingEffect.setupEffects,
+              path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.lastingEffects[${lastingEffectIndex}].setupEffects`,
+            },
+          ]);
+          validateEffectGrantScope([
+            {
+              value: lastingEffect.teardownEffects,
+              path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.lastingEffects[${lastingEffectIndex}].teardownEffects`,
+            },
+          ]);
         });
         side.branches?.forEach((branch, branchIndex) => {
-          validateEffectGrantScope(
-            branch.effects,
-            `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.branches[${branchIndex}].effects`,
-          );
-          branch.targets?.forEach((target, targetIndex) => {
-            validateEffectGrantScope(
-              target.effects,
-              `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.branches[${branchIndex}].targets[${targetIndex}].effects`,
-            );
-          });
+          validateEffectGrantScope([
+            ...sideEventEffectScopes,
+            {
+              value: branch.effects,
+              path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.branches[${branchIndex}].effects`,
+            },
+            ...(branch.targets?.map((target, targetIndex) => ({
+              value: target.effects,
+              path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.branches[${branchIndex}].targets[${targetIndex}].effects`,
+            })) ?? []),
+          ]);
           branch.lastingEffects?.forEach((lastingEffect, lastingEffectIndex) => {
-            validateEffectGrantScope(
-              lastingEffect.setupEffects,
-              `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.branches[${branchIndex}].lastingEffects[${lastingEffectIndex}].setupEffects`,
-            );
-            validateEffectGrantScope(
-              lastingEffect.teardownEffects,
-              `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.branches[${branchIndex}].lastingEffects[${lastingEffectIndex}].teardownEffects`,
-            );
+            validateEffectGrantScope([
+              {
+                value: lastingEffect.setupEffects,
+                path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.branches[${branchIndex}].lastingEffects[${lastingEffectIndex}].setupEffects`,
+              },
+            ]);
+            validateEffectGrantScope([
+              {
+                value: lastingEffect.teardownEffects,
+                path: `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}.branches[${branchIndex}].lastingEffects[${lastingEffectIndex}].teardownEffects`,
+              },
+            ]);
           });
         });
       }

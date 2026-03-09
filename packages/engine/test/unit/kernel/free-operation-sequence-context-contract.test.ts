@@ -11,7 +11,8 @@ import { FreeOperationSequenceContextSchema } from '../../../src/kernel/free-ope
 import { EffectASTSchema } from '../../../src/kernel/schemas-ast.js';
 import { EventCardFreeOperationGrantSchema } from '../../../src/kernel/schemas-extensions.js';
 
-const canonicalModuleSpecifier = './free-operation-sequence-context-schema.js';
+const canonicalSchemaModuleSpecifier = './free-operation-sequence-context-schema.js';
+const canonicalContractModuleSpecifier = './free-operation-sequence-context-contract.js';
 
 const readSourceFile = (relativePath: string, fileName: string) =>
   parseTypeScriptSource(readKernelSource(relativePath), fileName);
@@ -22,14 +23,24 @@ describe('free-operation sequence-context canonical schema contract', () => {
     const extensionsSource = readSourceFile('src/kernel/schemas-extensions.ts', 'schemas-extensions.ts');
 
     assert.equal(
-      hasDirectNamedImport(astSource, canonicalModuleSpecifier, 'FreeOperationSequenceContextSchema'),
+      hasDirectNamedImport(astSource, canonicalSchemaModuleSpecifier, 'FreeOperationSequenceContextSchema'),
       true,
       'schemas-ast.ts must import FreeOperationSequenceContextSchema from the canonical module',
     );
     assert.equal(
-      hasDirectNamedImport(extensionsSource, canonicalModuleSpecifier, 'FreeOperationSequenceContextSchema'),
+      hasDirectNamedImport(extensionsSource, canonicalSchemaModuleSpecifier, 'FreeOperationSequenceContextSchema'),
       true,
       'schemas-extensions.ts must import FreeOperationSequenceContextSchema from the canonical module',
+    );
+  });
+
+  it('requires validate-gamedef-behavior to import the canonical structural grant helper', () => {
+    const behaviorSource = readSourceFile('src/kernel/validate-gamedef-behavior.ts', 'validate-gamedef-behavior.ts');
+
+    assert.equal(
+      hasDirectNamedImport(behaviorSource, canonicalContractModuleSpecifier, 'FreeOperationSequenceContextGrantLike'),
+      true,
+      'validate-gamedef-behavior.ts must import FreeOperationSequenceContextGrantLike from the canonical contract module',
     );
   });
 
@@ -52,6 +63,16 @@ describe('free-operation sequence-context canonical schema contract', () => {
         'consumer modules must not redeclare FreeOperationSequenceContextSchema locally',
       );
     }
+  });
+
+  it('forbids reintroducing local SequenceContextGrantLike definitions in validate-gamedef-behavior', () => {
+    const source = readKernelSource('src/kernel/validate-gamedef-behavior.ts');
+
+    assert.equal(
+      /interface\s+SequenceContextGrantLike\b/u.test(source),
+      false,
+      'validate-gamedef-behavior.ts must not redeclare SequenceContextGrantLike locally',
+    );
   });
 
   it('keeps canonical, AST, and event grant schema acceptance aligned', () => {

@@ -7203,11 +7203,448 @@ eventDecks:
             - ARVN
             - VC
             - US
-          flavorText: External materiel shipments increase insurgent placement flexibility.
+          flavorText: Soviet escalation matched.
         unshaded:
-          text: Place NVA/VC pieces into eligible spaces and improve insurgent posture.
+          text: Place any 6 ARVN pieces anywhere in South Vietnam.
+          effects:
+            - chooseN:
+                bind: $russianArmsArvnPieces
+                options:
+                  query: tokensInZone
+                  zone: available-ARVN:none
+                  filter:
+                    prop: faction
+                    eq: ARVN
+                min:
+                  op: min
+                  left: 6
+                  right:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: available-ARVN:none
+                        filter:
+                          prop: faction
+                          eq: ARVN
+                max:
+                  op: min
+                  left: 6
+                  right:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: available-ARVN:none
+                        filter:
+                          prop: faction
+                          eq: ARVN
+            - forEach:
+                bind: $arvnPiece
+                over:
+                  query: binding
+                  name: $russianArmsArvnPieces
+                effects:
+                  - if:
+                      when:
+                        op: ==
+                        left:
+                          ref: tokenProp
+                          token: $arvnPiece
+                          prop: type
+                        right: base
+                      then:
+                        - chooseOne:
+                            bind: $russianArmsDestination@{$arvnPiece}
+                            options:
+                              query: mapSpaces
+                              filter:
+                                op: and
+                                args:
+                                  - op: ==
+                                    left:
+                                      ref: zoneProp
+                                      zone: $zone
+                                      prop: country
+                                    right: southVietnam
+                                  - op: <
+                                    left:
+                                      aggregate:
+                                        op: count
+                                        query:
+                                          query: tokensInZone
+                                          zone: $zone
+                                          filter:
+                                            prop: type
+                                            eq: base
+                                    right: 2
+                        - moveToken:
+                            token: $arvnPiece
+                            from:
+                              zoneExpr:
+                                ref: tokenZone
+                                token: $arvnPiece
+                            to:
+                              zoneExpr:
+                                ref: binding
+                                name: $russianArmsDestination@{$arvnPiece}
+                      else:
+                        - chooseOne:
+                            bind: $russianArmsDestination@{$arvnPiece}
+                            options:
+                              query: mapSpaces
+                              filter:
+                                op: ==
+                                left:
+                                  ref: zoneProp
+                                  zone: $zone
+                                  prop: country
+                                right: southVietnam
+                        - moveToken:
+                            token: $arvnPiece
+                            from:
+                              zoneExpr:
+                                ref: tokenZone
+                                token: $arvnPiece
+                            to:
+                              zoneExpr:
+                                ref: binding
+                                name: $russianArmsDestination@{$arvnPiece}
         shaded:
-          text: Arms pipeline disruption limits placement and redirects strategic effort.
+          text: NVA in any 3 spaces places enough Troops to double their number. It then free Bombards.
+          freeOperationGrants:
+            - seat: nva
+              sequence:
+                chain: russian-arms-nva-bombard
+                step: 0
+              operationClass: operation
+              actionIds:
+                - bombard
+          effects:
+            - chooseN:
+                bind: $russianArmsShadedSpace1
+                chooser: nva
+                options:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: NVA
+                                  - prop: type
+                                    eq: troops
+                        right: 0
+                      - op: <=
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: NVA
+                                  - prop: type
+                                    eq: troops
+                        right:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: available-NVA:none
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: NVA
+                                  - prop: type
+                                    eq: troops
+                min: 0
+                max: 1
+            - forEach:
+                bind: $space
+                over:
+                  query: binding
+                  name: $russianArmsShadedSpace1
+                effects:
+                  - let:
+                      bind: $russianArmsTroopsToAdd
+                      value:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $space
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  eq: NVA
+                                - prop: type
+                                  eq: troops
+                      in:
+                        - forEach:
+                            bind: $nvaTroop
+                            over:
+                              query: tokensInZone
+                              zone: available-NVA:none
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: NVA
+                                  - prop: type
+                                    eq: troops
+                            limit:
+                              ref: binding
+                              name: $russianArmsTroopsToAdd
+                            effects:
+                              - moveToken:
+                                  token: $nvaTroop
+                                  from:
+                                    zoneExpr:
+                                      ref: tokenZone
+                                      token: $nvaTroop
+                                  to:
+                                    zoneExpr: $space
+            - chooseN:
+                bind: $russianArmsShadedSpace2
+                chooser: nva
+                options:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: NVA
+                                  - prop: type
+                                    eq: troops
+                        right: 0
+                      - op: <=
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: NVA
+                                  - prop: type
+                                    eq: troops
+                        right:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: available-NVA:none
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: NVA
+                                  - prop: type
+                                    eq: troops
+                      - op: not
+                        arg:
+                          op: in
+                          item:
+                            ref: zoneProp
+                            zone: $zone
+                            prop: id
+                          set:
+                            ref: binding
+                            name: $russianArmsShadedSpace1
+                min: 0
+                max: 1
+            - forEach:
+                bind: $space
+                over:
+                  query: binding
+                  name: $russianArmsShadedSpace2
+                effects:
+                  - let:
+                      bind: $russianArmsTroopsToAdd
+                      value:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $space
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  eq: NVA
+                                - prop: type
+                                  eq: troops
+                      in:
+                        - forEach:
+                            bind: $nvaTroop
+                            over:
+                              query: tokensInZone
+                              zone: available-NVA:none
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: NVA
+                                  - prop: type
+                                    eq: troops
+                            limit:
+                              ref: binding
+                              name: $russianArmsTroopsToAdd
+                            effects:
+                              - moveToken:
+                                  token: $nvaTroop
+                                  from:
+                                    zoneExpr:
+                                      ref: tokenZone
+                                      token: $nvaTroop
+                                  to:
+                                    zoneExpr: $space
+            - chooseN:
+                bind: $russianArmsShadedSpace3
+                chooser: nva
+                options:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: NVA
+                                  - prop: type
+                                    eq: troops
+                        right: 0
+                      - op: <=
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: NVA
+                                  - prop: type
+                                    eq: troops
+                        right:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: available-NVA:none
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: NVA
+                                  - prop: type
+                                    eq: troops
+                      - op: not
+                        arg:
+                          op: in
+                          item:
+                            ref: zoneProp
+                            zone: $zone
+                            prop: id
+                          set:
+                            ref: binding
+                            name: $russianArmsShadedSpace1
+                      - op: not
+                        arg:
+                          op: in
+                          item:
+                            ref: zoneProp
+                            zone: $zone
+                            prop: id
+                          set:
+                            ref: binding
+                            name: $russianArmsShadedSpace2
+                min: 0
+                max: 1
+            - forEach:
+                bind: $space
+                over:
+                  query: binding
+                  name: $russianArmsShadedSpace3
+                effects:
+                  - let:
+                      bind: $russianArmsTroopsToAdd
+                      value:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $space
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  eq: NVA
+                                - prop: type
+                                  eq: troops
+                      in:
+                        - forEach:
+                            bind: $nvaTroop
+                            over:
+                              query: tokensInZone
+                              zone: available-NVA:none
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    eq: NVA
+                                  - prop: type
+                                    eq: troops
+                            limit:
+                              ref: binding
+                              name: $russianArmsTroopsToAdd
+                            effects:
+                              - moveToken:
+                                  token: $nvaTroop
+                                  from:
+                                    zoneExpr:
+                                      ref: tokenZone
+                                      token: $nvaTroop
+                                  to:
+                                    zoneExpr: $space
       - id: card-52
         title: RAND
         sideMode: dual

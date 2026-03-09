@@ -19,6 +19,12 @@ import {
   type GameState,
   type Move,
 } from '../../../src/kernel/index.js';
+import {
+  SEQUENCE_CONTEXT_DENIED_ZONE_ID,
+  createSequenceContextMismatchTurnOrderState,
+  createSequenceContextMismatchZoneState,
+  createSequenceContextMismatchZones,
+} from '../../helpers/free-operation-sequence-context-fixtures.js';
 import { assertLegalitySurfaceParityForMove } from '../../helpers/legality-surface-parity-helpers.js';
 
 const makeState = (overrides?: Partial<GameState>): GameState => ({
@@ -288,7 +294,7 @@ describe('legality surface parity', () => {
 
   type FreeOperationDeniedCauseForParity = Exclude<
     FreeOperationBlockCause,
-    'granted' | 'nonCardDrivenTurnOrder' | 'notFreeOperationMove'
+    'granted' | 'nonCardDrivenTurnOrder' | 'notFreeOperationMove' | 'sequenceContextMismatch'
   >;
 
   const freeOperationDeniedMatrix: Readonly<Record<
@@ -299,7 +305,8 @@ describe('legality surface parity', () => {
       | 'freeOperationSequenceLocked'
       | 'freeOperationActionClassMismatch'
       | 'freeOperationActionIdMismatch'
-      | 'freeOperationZoneFilterMismatch'>;
+      | 'freeOperationZoneFilterMismatch'
+      | 'freeOperationAmbiguousOverlap'>;
       readonly buildState: () => GameState;
     }
   >> = {
@@ -475,6 +482,44 @@ describe('legality surface parity', () => {
           },
         }),
     },
+    ambiguousOverlap: {
+      choiceReason: 'freeOperationAmbiguousOverlap',
+      buildState: () =>
+        makeState({
+          turnOrderState: {
+            type: 'cardDriven',
+            runtime: {
+              seatOrder: ['0', '1'],
+              eligibility: { '0': true, '1': true },
+              currentCard: {
+                firstEligible: '0',
+                secondEligible: '1',
+                actedSeats: [],
+                passedSeats: [],
+                nonPassCount: 0,
+                firstActionClass: null,
+              },
+              pendingEligibilityOverrides: [],
+              pendingFreeOperationGrants: [
+                {
+                  grantId: 'grant-a',
+                  seat: '0',
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  remainingUses: 1,
+                },
+                {
+                  grantId: 'grant-b',
+                  seat: '0',
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  remainingUses: 2,
+                },
+              ],
+            },
+          },
+        }),
+    },
   };
 
   for (const [cause, scenario] of Object.entries(freeOperationDeniedMatrix) as ReadonlyArray<
@@ -509,6 +554,56 @@ describe('legality surface parity', () => {
       });
     });
   }
+
+  it('projects sequenceContextMismatch parity for denied free-operation probes', () => {
+    const operationActionId = asActionId('operation');
+    const def = {
+      ...makeCardDrivenFreeOpDef(operationActionId),
+      zones: createSequenceContextMismatchZones(),
+    } as unknown as GameDef;
+    const state = makeState({
+      zones: createSequenceContextMismatchZoneState(),
+      turnOrderState: createSequenceContextMismatchTurnOrderState(),
+    });
+    const deniedMove: Move = {
+      actionId: operationActionId,
+      params: { 'decision:$zone': SEQUENCE_CONTEXT_DENIED_ZONE_ID },
+      freeOperation: true,
+    };
+
+    assert.equal(
+      legalMoves(def, state).some(
+        (candidate) =>
+          candidate.freeOperation === true
+          && candidate.actionId === operationActionId
+          && JSON.stringify(candidate.params) === JSON.stringify(deniedMove.params),
+      ),
+      false,
+    );
+    assert.deepEqual(legalChoicesDiscover(def, state, deniedMove), {
+      kind: 'illegal',
+      complete: false,
+      reason: 'freeOperationSequenceContextMismatch',
+    });
+    assert.throws(() => applyMove(def, state, deniedMove), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & {
+        code?: unknown;
+        reason?: unknown;
+        context?: {
+          freeOperationDenial?: {
+            cause?: string;
+            sequenceContextMismatchGrantIds?: readonly string[];
+          };
+        };
+      };
+      assert.equal(details.code, 'ILLEGAL_MOVE');
+      assert.equal(details.reason, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED);
+      assert.equal(details.context?.freeOperationDenial?.cause, 'sequenceContextMismatch');
+      assert.equal((details.context?.freeOperationDenial?.sequenceContextMismatchGrantIds?.length ?? 0) > 0, true);
+      return true;
+    });
+  });
 
   it('prioritizes free-operation denial parity when pipeline is also not applicable', () => {
     const operationActionId = asActionId('operation');

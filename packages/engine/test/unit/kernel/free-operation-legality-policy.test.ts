@@ -16,7 +16,9 @@ describe('free-operation legality policy', () => {
     assert.equal(toFreeOperationDeniedCauseForLegality('sequenceLocked'), 'sequenceLocked');
     assert.equal(toFreeOperationDeniedCauseForLegality('actionClassMismatch'), 'actionClassMismatch');
     assert.equal(toFreeOperationDeniedCauseForLegality('actionIdMismatch'), 'actionIdMismatch');
+    assert.equal(toFreeOperationDeniedCauseForLegality('sequenceContextMismatch'), 'sequenceContextMismatch');
     assert.equal(toFreeOperationDeniedCauseForLegality('zoneFilterMismatch'), 'zoneFilterMismatch');
+    assert.equal(toFreeOperationDeniedCauseForLegality('ambiguousOverlap'), 'ambiguousOverlap');
   });
 
   it('maps denied causes to legalChoices illegal reasons deterministically', () => {
@@ -24,6 +26,11 @@ describe('free-operation legality policy', () => {
     assert.equal(toFreeOperationChoiceIllegalReason('sequenceLocked'), 'freeOperationSequenceLocked');
     assert.equal(toFreeOperationChoiceIllegalReason('actionClassMismatch'), 'freeOperationActionClassMismatch');
     assert.equal(toFreeOperationChoiceIllegalReason('actionIdMismatch'), 'freeOperationActionIdMismatch');
+    assert.equal(
+      toFreeOperationChoiceIllegalReason('sequenceContextMismatch'),
+      'freeOperationSequenceContextMismatch',
+    );
     assert.equal(toFreeOperationChoiceIllegalReason('zoneFilterMismatch'), 'freeOperationZoneFilterMismatch');
+    assert.equal(toFreeOperationChoiceIllegalReason('ambiguousOverlap'), 'freeOperationAmbiguousOverlap');
   });
 });

@@ -29,6 +29,7 @@ const CONDITION_SURFACE_HELPER_IDENTIFIERS = new Set<string>([
   'appendValueExprConditionSurfacePath',
   'appendQueryConditionSurfacePath',
   'appendEffectConditionSurfacePath',
+  'appendEventConditionSurfacePath',
   'appendActionPipelineConditionSurfacePath',
 ]);
 

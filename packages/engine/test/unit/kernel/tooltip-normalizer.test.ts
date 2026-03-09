@@ -1405,6 +1405,87 @@ describe('tooltip-normalizer', () => {
     });
   });
 
+  // --- Leaf macro override (Fix 4) ---
+
+  describe('leaf macro override', () => {
+    it('moveToken with __macro_ token + matching verbalization → SummaryMessage', () => {
+      const ctx: NormalizerContext = {
+        verbalization: {
+          labels: {},
+          stages: {},
+          macros: {
+            place_from_available_or_map_action: {
+              class: 'utility',
+              summary: 'Place piece from Available (or from map if non-primary)',
+            },
+          },
+          sentencePlans: {},
+          suppressPatterns: [],
+          stageDescriptions: {},
+          modifierEffects: {},
+        },
+        suppressPatterns: [],
+      };
+      const effect: EffectAST = {
+        moveToken: {
+          token: '__macro_place_from_available_or_map_action Pipelines_0__piece',
+          from: 'available-alpha',
+          to: 'saigon',
+        },
+      };
+      const messages = normalizeEffect(effect, ctx, 'leaf[0]');
+      assert.equal(messages.length, 1);
+      assert.equal(messages[0]!.kind, 'summary');
+      if (messages[0]!.kind === 'summary') {
+        assert.equal(messages[0]!.text, 'Place piece from Available (or from map if non-primary)');
+        assert.equal(messages[0]!.macroClass, 'utility');
+        assert.equal(messages[0]!.macroOrigin, 'place_from_available_or_map_action');
+      }
+    });
+
+    it('moveToken with __macro_ token but no verbalization entry → falls through to PlaceMessage', () => {
+      const ctx: NormalizerContext = {
+        verbalization: {
+          labels: {},
+          stages: {},
+          macros: {},
+          sentencePlans: {},
+          suppressPatterns: [],
+          stageDescriptions: {},
+          modifierEffects: {},
+        },
+        suppressPatterns: [],
+      };
+      const effect: EffectAST = {
+        moveToken: {
+          token: '__macro_place_from_available_or_map_action Pipelines_0__piece',
+          from: 'available-alpha',
+          to: 'saigon',
+        },
+      };
+      const messages = normalizeEffect(effect, ctx, 'leaf[1]');
+      assert.equal(messages.length, 1);
+      assert.equal(messages[0]!.kind, 'place');
+      if (messages[0]!.kind === 'place') {
+        assert.equal(messages[0]!.tokenFilter, 'piece');
+        assert.equal(messages[0]!.targetZone, 'saigon');
+      }
+    });
+
+    it('moveToken with __macro_ token but no verbalization at all → falls through', () => {
+      const effect: EffectAST = {
+        moveToken: {
+          token: '__macro_place_from_available_or_map_action Pipelines_0__piece',
+          from: 'available-alpha',
+          to: 'saigon',
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'leaf[2]');
+      assert.equal(messages.length, 1);
+      assert.equal(messages[0]!.kind, 'place');
+    });
+  });
+
   // --- Invariants ---
 
   describe('invariants', () => {

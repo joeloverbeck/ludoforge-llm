@@ -1,4 +1,5 @@
 import { incrementActionUsage } from './action-usage.js';
+import { deepEqual } from './deep-equal.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { applyBoundaryExpiry } from './boundary-expiry.js';
 import { isEffectRuntimeReason } from './effect-error.js';
@@ -28,7 +29,10 @@ import { buildAdjacencyGraph } from './spatial.js';
 import {
   applyTurnFlowEligibilityAfterMove,
   consumeTurnFlowFreeOperationGrant,
+  hasActiveSeatRequiredPendingFreeOperationGrant,
+  isMoveAllowedByRequiredPendingFreeOperationGrant,
 } from './turn-flow-eligibility.js';
+import { resolveAuthorizedPendingFreeOperationGrants } from './free-operation-grant-authorization.js';
 import { resolveFreeOperationDiscoveryAnalysis } from './free-operation-discovery-analysis.js';
 import { resolveTurnFlowActionClassMismatch } from './turn-flow-action-class.js';
 import { toFreeOperationDeniedCauseForLegality } from './free-operation-legality-policy.js';
@@ -41,9 +45,12 @@ import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { toMoveExecutionPolicy } from './execution-policy.js';
 import { createSeatResolutionContext } from './seat-resolution.js';
 import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
+import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
+import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { createExecutionEffectContext, type PhaseTransitionBudget } from './effect-context.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
+import { materialGameplayStateProjection } from './material-gameplay-state.js';
 import type {
   ActionDef,
   ActionPipelineDef,
@@ -100,6 +107,38 @@ const runtimeBindingsForMove = (
   executionProfile: ReturnType<typeof toExecutionPipeline> | undefined,
 ): Readonly<Record<string, MoveParamValue | boolean | string>> =>
   buildMoveRuntimeBindings(move, decisionBindingsForMove(executionProfile, move.params));
+
+const validateFreeOperationOutcomePolicy = (
+  def: GameDef,
+  beforeState: GameState,
+  afterActionState: GameState,
+  move: Move,
+  seatResolution: ReturnType<typeof createSeatResolutionContext>,
+): void => {
+  if (move.freeOperation !== true || beforeState.turnOrderState.type !== 'cardDriven') {
+    return;
+  }
+  const activeSeat = requireCardDrivenActiveSeat(
+    def,
+    beforeState,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_CONSUMPTION,
+    seatResolution,
+  );
+  const pending = beforeState.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
+  const authorized = resolveAuthorizedPendingFreeOperationGrants(def, beforeState, pending, activeSeat, move);
+  if (authorized.strongestOutcomeGrant === null) {
+    return;
+  }
+  if (deepEqual(
+    materialGameplayStateProjection(def, beforeState),
+    materialGameplayStateProjection(def, afterActionState),
+  )) {
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED, {
+      grantId: authorized.strongestOutcomeGrant.grantId,
+      outcomePolicy: 'mustChangeGameplayState',
+    });
+  }
+};
 
 const resolveMatchedPipelineForMove = (
   def: GameDef,
@@ -605,6 +644,14 @@ const validateMove = (
       freeOperationDenial: freeOperationAnalysis.denial,
     });
   }
+  if (
+    hasActiveSeatRequiredPendingFreeOperationGrant(def, state, seatResolution)
+    && !isMoveAllowedByRequiredPendingFreeOperationGrant(def, state, move, seatResolution)
+  ) {
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
+      detail: 'active seat has unresolved required free-operation grants',
+    });
+  }
   const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const preflight = resolveMovePreflightContext(
@@ -1076,14 +1123,27 @@ const applyMoveCore = (
   const seatResolution = createSeatResolutionContext(def, state.playerCount);
 
   const executed = executeMoveAction(def, state, move, seatResolution, options, coreOptions, shared, cachedRuntime);
+  validateFreeOperationOutcomePolicy(def, state, executed.stateWithRng, move, seatResolution);
   const turnFlowResult = move.freeOperation === true
     ? (() => {
       const consumed = consumeTurnFlowFreeOperationGrant(def, executed.stateWithRng, move, seatResolution);
+      if (consumed.consumedGrant?.postResolutionTurnFlow !== 'resumeCardFlow') {
+        return {
+          state: consumed.state,
+          traceEntries: consumed.traceEntries,
+          boundaryDurations: undefined,
+          releasedDeferredEventEffects: consumed.releasedDeferredEventEffects,
+        };
+      }
+      const progressed = applyTurnFlowEligibilityAfterMove(def, consumed.state, move);
       return {
-        state: consumed.state,
-        traceEntries: consumed.traceEntries,
-        boundaryDurations: undefined,
-        releasedDeferredEventEffects: consumed.releasedDeferredEventEffects,
+        state: progressed.state,
+        traceEntries: [...consumed.traceEntries, ...progressed.traceEntries],
+        boundaryDurations: progressed.boundaryDurations,
+        releasedDeferredEventEffects: [
+          ...consumed.releasedDeferredEventEffects,
+          ...(progressed.releasedDeferredEventEffects ?? []),
+        ],
       };
     })()
     : applyTurnFlowEligibilityAfterMove(def, executed.stateWithRng, move, executed.deferredEventEffect);

@@ -135,6 +135,7 @@ globalVars:
       init: 0
       min: 0
       max: 20
+      material: false
   - batch:
       names:
         - mom_wildWeasels

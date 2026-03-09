@@ -123,8 +123,10 @@ function extractModifiers(
   const content: TooltipMessage[] = [];
   for (const m of messages) {
     if (m.kind === 'modifier') {
-      // Suppress choice-flow conditionals from the Modifiers section entirely
-      if (m.modifierRole !== 'choiceFlow') {
+      // Include capability, leader, and unclassified (undefined) modifiers.
+      // Suppress choiceFlow (internal branching) and state-role modifiers
+      // (runtime conditions that aren't player-facing game modifiers).
+      if (m.modifierRole !== 'choiceFlow' && m.modifierRole !== 'state') {
         modifiers.push(m);
       }
     } else {

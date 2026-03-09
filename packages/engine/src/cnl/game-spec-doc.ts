@@ -24,6 +24,7 @@ export interface GameSpecVarDef {
   readonly init: unknown;
   readonly min?: unknown;
   readonly max?: unknown;
+  readonly material?: unknown;
 }
 
 export interface GameSpecGlobalMarkerLatticeDef {
@@ -47,6 +48,7 @@ export interface GameSpecBatchVarDef {
     readonly init: unknown;
     readonly min?: unknown;
     readonly max?: unknown;
+    readonly material?: unknown;
   };
 }
 

@@ -56,6 +56,7 @@ function makeModifier(overrides?: Partial<ModifierMessage>): ModifierMessage {
     kind: 'modifier',
     condition: 'monsoon === true',
     description: 'If monsoon: no air lift',
+    modifierRole: 'capability',
     astPath: 'effects[4]',
     ...overrides,
   };
@@ -440,6 +441,63 @@ function collectAllMessages(steps: readonly ContentPlanStep[]): readonly Tooltip
 function countAllMessages(steps: readonly ContentPlanStep[]): number {
   return collectAllMessages(steps).length;
 }
+
+// ---------------------------------------------------------------------------
+// Modifier role filtering (Fix 1 / Issue 5)
+// ---------------------------------------------------------------------------
+
+describe('planContent — modifier role filtering', () => {
+  it('excludes state-role modifiers from display', () => {
+    const messages: readonly TooltipMessage[] = [
+      makeSelect(),
+      makeModifier({ modifierRole: 'state', condition: 'active player is 0', astPath: 'effects[1]' }),
+    ];
+    const plan = planContent(messages, 'Train');
+    assert.equal(plan.modifiers.length, 0);
+  });
+
+  it('excludes choiceFlow-role modifiers from display', () => {
+    const messages: readonly TooltipMessage[] = [
+      makeSelect(),
+      makeModifier({ modifierRole: 'choiceFlow', condition: 'Choice is X', astPath: 'effects[1]' }),
+    ];
+    const plan = planContent(messages, 'Train');
+    assert.equal(plan.modifiers.length, 0);
+  });
+
+  it('preserves capability-role modifiers', () => {
+    const messages: readonly TooltipMessage[] = [
+      makeSelect(),
+      makeModifier({ modifierRole: 'capability', condition: 'has ability', astPath: 'effects[1]' }),
+    ];
+    const plan = planContent(messages, 'Train');
+    assert.equal(plan.modifiers.length, 1);
+    assert.equal(plan.modifiers[0]!.condition, 'has ability');
+  });
+
+  it('preserves leader-role modifiers', () => {
+    const messages: readonly TooltipMessage[] = [
+      makeSelect(),
+      makeModifier({ modifierRole: 'leader', condition: 'is leader', astPath: 'effects[1]' }),
+    ];
+    const plan = planContent(messages, 'Train');
+    assert.equal(plan.modifiers.length, 1);
+  });
+
+  it('preserves modifiers with undefined role (unclassified)', () => {
+    const messages: readonly TooltipMessage[] = [
+      makeSelect(),
+      {
+        kind: 'modifier' as const,
+        condition: 'gold >= 5',
+        description: '',
+        astPath: 'effects[1]',
+      },
+    ];
+    const plan = planContent(messages, 'Train');
+    assert.equal(plan.modifiers.length, 1);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // SummaryMessage sub-step header

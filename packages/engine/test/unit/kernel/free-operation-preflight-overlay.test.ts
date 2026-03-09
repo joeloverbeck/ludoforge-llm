@@ -23,7 +23,10 @@ describe('free-operation preflight overlay builder', () => {
       'turnFlowEligibility',
     );
 
-    assert.deepEqual(overlay, { executionPlayerOverride: asPlayerId(1) });
+    assert.deepEqual(overlay, {
+      executionPlayerOverride: asPlayerId(1),
+      skipPhaseCheck: true,
+    });
   });
 
   it('threads zone-filter diagnostics with provided surface and move payload for both surfaces', () => {
@@ -47,6 +50,7 @@ describe('free-operation preflight overlay builder', () => {
 
       assert.deepEqual(overlay, {
         executionPlayerOverride: asPlayerId(0),
+        skipPhaseCheck: true,
         freeOperationZoneFilter: zoneFilter,
         freeOperationZoneFilterDiagnostics: {
           source: surface,

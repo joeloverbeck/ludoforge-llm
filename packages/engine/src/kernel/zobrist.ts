@@ -23,8 +23,8 @@ const fnv1a64 = (input: string): bigint => {
 
 const encodeVariableDef = (def: GameDef['globalVars'][number]): string =>
   def.type === 'int'
-    ? `name=${def.name}|type=${def.type}|init=${def.init}|min=${def.min}|max=${def.max}`
-    : `name=${def.name}|type=${def.type}|init=${def.init}`;
+    ? `name=${def.name}|type=${def.type}|init=${def.init}|min=${def.min}|max=${def.max}|material=${def.material ?? true}`
+    : `name=${def.name}|type=${def.type}|init=${def.init}|material=${def.material ?? true}`;
 
 const canonicalizeGameDefFingerprint = (def: GameDef): string => {
   const zones = [...def.zones]

@@ -51,6 +51,7 @@ export const IntVariableDefSchema = z
     init: NumberSchema,
     min: NumberSchema,
     max: NumberSchema,
+    material: BooleanSchema.optional(),
   })
   .strict();
 
@@ -59,6 +60,7 @@ export const BooleanVariableDefSchema = z
     name: StringSchema,
     type: z.literal('boolean'),
     init: BooleanSchema,
+    material: BooleanSchema.optional(),
   })
   .strict();
 

@@ -193,12 +193,12 @@ describe('tooltip-value-stringifier', () => {
   });
 
   describe('stringifyValueExpr — aggregate expressions', () => {
-    it('count aggregate → "count of ..."', () => {
+    it('count aggregate → "count of <query>"', () => {
       assert.equal(
         stringifyValueExpr({
           aggregate: { op: 'count', query: { query: 'enums', values: ['a', 'b'] } },
         }),
-        'count of ...',
+        'count of enums',
       );
     });
 
@@ -424,7 +424,7 @@ describe('tooltip-value-stringifier', () => {
     });
 
     describe('aggregate', () => {
-      it('count aggregate → "number of matching items"', () => {
+      it('count aggregate over enums → "number of matching items"', () => {
         assert.equal(
           humanizeValueExpr(
             { aggregate: { op: 'count', query: { query: 'enums', values: ['a', 'b'] } } },
@@ -432,6 +432,112 @@ describe('tooltip-value-stringifier', () => {
           ),
           'number of matching items',
         );
+      });
+
+      it('count aggregate over tokensInZone with faction filter → descriptive count', () => {
+        assert.equal(
+          humanizeValueExpr(
+            {
+              aggregate: {
+                op: 'count',
+                query: {
+                  query: 'tokensInZone',
+                  zone: 'saigon',
+                  filter: { prop: 'faction', op: 'eq', value: 'Alpha' },
+                },
+              },
+            },
+            noLabels,
+          ),
+          'number of Alpha pieces',
+        );
+      });
+
+      it('count aggregate over tokensInZone with AND filter → combined description', () => {
+        assert.equal(
+          humanizeValueExpr(
+            {
+              aggregate: {
+                op: 'count',
+                query: {
+                  query: 'tokensInZone',
+                  zone: 'saigon',
+                  filter: {
+                    op: 'and',
+                    args: [
+                      { prop: 'faction', op: 'eq', value: 'Alpha' },
+                      { prop: 'type', op: 'eq', value: 'base' },
+                    ],
+                  },
+                },
+              },
+            },
+            noLabels,
+          ),
+          'number of Alpha Base pieces',
+        );
+      });
+
+      it('count aggregate over tokensInZone without filter → "number of pieces"', () => {
+        assert.equal(
+          humanizeValueExpr(
+            {
+              aggregate: {
+                op: 'count',
+                query: { query: 'tokensInZone', zone: 'saigon' },
+              },
+            },
+            noLabels,
+          ),
+          'number of pieces',
+        );
+      });
+
+      it('count aggregate over mapSpaces → "number of spaces"', () => {
+        assert.equal(
+          humanizeValueExpr(
+            {
+              aggregate: {
+                op: 'count',
+                query: { query: 'mapSpaces' },
+              },
+            },
+            noLabels,
+          ),
+          'number of spaces',
+        );
+      });
+
+      it('two count aggregates in comparison render differently', () => {
+        const alphaCount = humanizeValueExpr(
+          {
+            aggregate: {
+              op: 'count',
+              query: {
+                query: 'tokensInZone',
+                zone: 'z',
+                filter: { prop: 'faction', op: 'eq', value: 'Alpha' },
+              },
+            },
+          },
+          noLabels,
+        );
+        const bravoCount = humanizeValueExpr(
+          {
+            aggregate: {
+              op: 'count',
+              query: {
+                query: 'tokensInZone',
+                zone: 'z',
+                filter: { prop: 'faction', op: 'eq', value: 'Bravo' },
+              },
+            },
+          },
+          noLabels,
+        );
+        assert.notEqual(alphaCount, bravoCount, 'Two different filters should produce different descriptions');
+        assert.ok(alphaCount.includes('Alpha'));
+        assert.ok(bravoCount.includes('Bravo'));
       });
 
       it('sum aggregate with binding → "sum of <field>"', () => {

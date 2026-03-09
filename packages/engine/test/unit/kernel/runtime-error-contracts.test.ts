@@ -283,6 +283,7 @@ describe('runtime error context contracts', () => {
       ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED,
       ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH,
       ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED,
+      ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED,
     ] as const satisfies readonly IllegalMoveReasonsRequiringContext[];
 
     const optionalContextReasons = [
@@ -332,6 +333,10 @@ describe('runtime error context contracts', () => {
           actionId: action.id,
           matchingGrantIds: [],
         },
+      },
+      [ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED]: {
+        grantId: 'grant-1',
+        outcomePolicy: 'mustChangeGameplayState',
       },
     };
 
@@ -409,6 +414,11 @@ describe('runtime error context contracts', () => {
         ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED,
         requiredContextFixtures[ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED],
       );
+      illegalMoveError(
+        move,
+        ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED,
+        requiredContextFixtures[ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED],
+      );
       // @ts-expect-error required-context reasons must reject missing context
       illegalMoveError(move, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED);
       // @ts-expect-error required-context reasons must reject missing context
@@ -417,6 +427,8 @@ describe('runtime error context contracts', () => {
       illegalMoveError(move, ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH);
       // @ts-expect-error required-context reasons must reject missing context
       illegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED);
+      // @ts-expect-error required-context reasons must reject missing context
+      illegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED);
 
       illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE);
       illegalMoveError(

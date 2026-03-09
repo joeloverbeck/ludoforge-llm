@@ -1479,6 +1479,8 @@ describe('compile-effects lowering', () => {
             actionIds: ['operation'],
             uses: 1,
             viabilityPolicy: 'requireUsableAtIssue',
+            moveZoneBindings: ['$destination'],
+            moveZoneProbeBindings: ['$spaces'],
             sequence: { chain: 'apc-uprising', step: 0 },
             zoneFilter: { op: '==', left: { ref: 'zoneProp', zone: 'saigon:none', prop: 'country' }, right: 'southVietnam' },
           },
@@ -1498,11 +1500,110 @@ describe('compile-effects lowering', () => {
           actionIds: ['operation'],
           uses: 1,
           viabilityPolicy: 'requireUsableAtIssue',
+          moveZoneBindings: ['$destination'],
+          moveZoneProbeBindings: ['$spaces'],
           sequence: { chain: 'apc-uprising', step: 0 },
           zoneFilter: { op: '==', left: { ref: 'zoneProp', zone: 'saigon:none', prop: 'country' }, right: 'southVietnam' },
         },
       },
     ]);
+  });
+
+  it('lowers grantFreeOperation sequenceContext through the CNL effect compiler', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          grantFreeOperation: {
+            seat: '3',
+            operationClass: 'operation',
+            sequence: { chain: 'ctx-chain', step: 0 },
+            sequenceContext: {
+              captureMoveZoneCandidatesAs: 'selected-space',
+              requireMoveZoneCandidatesFrom: 'selected-space',
+            },
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, [
+      {
+        grantFreeOperation: {
+          seat: '3',
+          operationClass: 'operation',
+          sequence: { chain: 'ctx-chain', step: 0 },
+          sequenceContext: {
+            captureMoveZoneCandidatesAs: 'selected-space',
+            requireMoveZoneCandidatesFrom: 'selected-space',
+          },
+        },
+      },
+    ]);
+  });
+
+  it('rejects malformed grantFreeOperation.sequenceContext values', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          grantFreeOperation: {
+            seat: '3',
+            operationClass: 'operation',
+            sequence: { chain: 'ctx-chain', step: 0 },
+            sequenceContext: {},
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    assert.deepEqual(
+      result.diagnostics.find((entry) => entry.path === 'doc.actions.0.effects.0.grantFreeOperation.sequenceContext'),
+      {
+        code: 'CNL_COMPILER_MISSING_CAPABILITY',
+        path: 'doc.actions.0.effects.0.grantFreeOperation.sequenceContext',
+        severity: 'error',
+        message: 'Cannot lower grantFreeOperation sequenceContext to kernel AST: sequenceContext must declare at least one capture/require key.',
+        suggestion: 'Rewrite this node to the canonical sequenceContext shape.',
+        alternatives: [
+          '{ captureMoveZoneCandidatesAs: string }',
+          '{ requireMoveZoneCandidatesFrom: string }',
+          '{ captureMoveZoneCandidatesAs: string, requireMoveZoneCandidatesFrom: string }',
+        ],
+      },
+    );
+  });
+
+  it('rejects grantFreeOperation.sequenceContext when sequence is omitted', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          grantFreeOperation: {
+            seat: '3',
+            operationClass: 'operation',
+            sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    assert.deepEqual(
+      result.diagnostics.find((entry) => entry.path === 'doc.actions.0.effects.0.grantFreeOperation.sequenceContext'),
+      {
+        code: 'CNL_COMPILER_MISSING_CAPABILITY',
+        path: 'doc.actions.0.effects.0.grantFreeOperation.sequenceContext',
+        severity: 'error',
+        message: 'grantFreeOperation.sequenceContext requires grantFreeOperation.sequence.',
+        suggestion: 'Declare sequence.chain and sequence.step when using sequenceContext.',
+      },
+    );
   });
 
   it('rejects invalid grantFreeOperation.viabilityPolicy values', () => {
@@ -1524,6 +1625,119 @@ describe('compile-effects lowering', () => {
     const diagnostic = result.diagnostics.find((entry) => entry.path === 'doc.actions.0.effects.0.grantFreeOperation.viabilityPolicy');
     assert.ok(diagnostic);
     assert.equal(diagnostic?.severity, 'error');
+  });
+
+  it('rejects invalid grantFreeOperation.moveZoneBindings values', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          grantFreeOperation: {
+            seat: '1',
+            operationClass: 'operation',
+            moveZoneBindings: [7],
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    const diagnostic = result.diagnostics.find((entry) => entry.path === 'doc.actions.0.effects.0.grantFreeOperation.moveZoneBindings');
+    assert.ok(diagnostic);
+    assert.equal(diagnostic?.severity, 'error');
+  });
+
+  it('rejects invalid grantFreeOperation.moveZoneProbeBindings values', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          grantFreeOperation: {
+            seat: '1',
+            operationClass: 'operation',
+            moveZoneProbeBindings: [7],
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    const diagnostic = result.diagnostics.find((entry) => entry.path === 'doc.actions.0.effects.0.grantFreeOperation.moveZoneProbeBindings');
+    assert.ok(diagnostic);
+    assert.equal(diagnostic?.severity, 'error');
+  });
+
+  it('requires explicit postResolutionTurnFlow when grantFreeOperation completionPolicy is required', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          grantFreeOperation: {
+            seat: '1',
+            operationClass: 'operation',
+            completionPolicy: 'required',
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    const diagnostic = result.diagnostics.find((entry) => entry.path === 'doc.actions.0.effects.0.grantFreeOperation.postResolutionTurnFlow');
+    assert.ok(diagnostic);
+    assert.equal(diagnostic?.severity, 'error');
+  });
+
+  it('rejects postResolutionTurnFlow without completionPolicy required on grantFreeOperation', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          grantFreeOperation: {
+            seat: '1',
+            operationClass: 'operation',
+            postResolutionTurnFlow: 'resumeCardFlow',
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    const diagnostic = result.diagnostics.find((entry) => entry.path === 'doc.actions.0.effects.0.grantFreeOperation.completionPolicy');
+    assert.ok(diagnostic);
+    assert.equal(diagnostic?.severity, 'error');
+  });
+
+  it('lowers explicit postResolutionTurnFlow for required grantFreeOperation effects', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          grantFreeOperation: {
+            seat: '1',
+            operationClass: 'operation',
+            completionPolicy: 'required',
+            postResolutionTurnFlow: 'resumeCardFlow',
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, [
+      {
+        grantFreeOperation: {
+          seat: '1',
+          operationClass: 'operation',
+          completionPolicy: 'required',
+          postResolutionTurnFlow: 'resumeCardFlow',
+        },
+      },
+    ]);
   });
 
   it('emits warning diagnostics for risky free-operation sequence transitions', () => {

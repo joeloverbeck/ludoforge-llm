@@ -15,6 +15,7 @@ interface FreeOperationPreflightOverlayDiagnostics {
 
 export interface FreeOperationPreflightOverlay {
   readonly executionPlayerOverride?: PlayerId;
+  readonly skipPhaseCheck?: boolean;
   readonly freeOperationZoneFilter?: ConditionAST;
   readonly freeOperationZoneFilterDiagnostics?: FreeOperationPreflightOverlayDiagnostics;
 }
@@ -30,6 +31,7 @@ export const buildFreeOperationPreflightOverlay = (
 
   return {
     executionPlayerOverride: analysis.executionPlayer,
+    skipPhaseCheck: true,
     ...(analysis.zoneFilter === undefined
       ? {}
       : {

@@ -5217,6 +5217,1190 @@ describe('validateGameDef arithmetic diagnostics', () => {
   });
 });
 
+describe('validateGameDef free-operation sequence-context linkage diagnostics', () => {
+  const withEventFreeOperationGrants = (freeOperationGrants: readonly unknown[]): GameDef => {
+    const base = createValidGameDef();
+    return {
+      ...base,
+      eventDecks: [
+        {
+          id: 'deck',
+          drawZone: 'deck:none',
+          discardZone: 'market:none',
+          cards: [
+            {
+              id: 'card-1',
+              title: 'Sequence Context Linkage',
+              sideMode: 'single',
+              unshaded: {
+                text: 'sequence context test',
+                freeOperationGrants,
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+  };
+
+  const withEventCardSideConfig = (unshaded: Record<string, unknown>): GameDef => {
+    const base = createValidGameDef();
+    return {
+      ...base,
+      eventDecks: [
+        {
+          id: 'deck',
+          drawZone: 'deck:none',
+          discardZone: 'market:none',
+          cards: [
+            {
+              id: 'card-1',
+              title: 'Sequence Context Linkage',
+              sideMode: 'single',
+              unshaded: {
+                text: 'sequence context test',
+                ...unshaded,
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+  };
+
+  const withEventTargetSelector = (
+    selector: Record<string, unknown>,
+    cardinality: Record<string, unknown>,
+    options?: {
+      readonly baseOverrides?: Record<string, unknown>;
+    },
+  ): GameDef => {
+    const base = withEventCardSideConfig({
+      targets: [
+        {
+          id: '$target',
+          selector,
+          cardinality,
+          application: 'each',
+          effects: [],
+        },
+      ],
+    });
+    return {
+      ...base,
+      ...(options?.baseOverrides ?? {}),
+    } as unknown as GameDef;
+  };
+
+  it('validates event side effects through the generic effect validator', () => {
+    const def = withEventCardSideConfig({
+      effects: [
+        {
+          draw: { from: 'deck:none', to: 'missing:none', count: 1 },
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_ZONE_MISSING'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.effects[0].draw.to',
+      ),
+      true,
+    );
+  });
+
+  it('validates event card playCondition through the generic condition validator', () => {
+    const def = {
+      ...withEventCardSideConfig({}),
+      eventDecks: [
+        {
+          id: 'deck',
+          drawZone: 'deck:none',
+          discardZone: 'market:none',
+          cards: [
+            {
+              id: 'card-1',
+              title: 'Sequence Context Linkage',
+              sideMode: 'single',
+              playCondition: {
+                op: '==',
+                left: { ref: 'zoneCount', zone: 'missing:none' },
+                right: 0,
+              },
+              unshaded: { text: 'sequence context test' },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_ZONE_MISSING'
+          && diag.path === 'eventDecks[0].cards[0].playCondition.left.zone',
+      ),
+      true,
+    );
+  });
+
+  it('validates nested branch target effects on event cards through the generic effect validator', () => {
+    const def = withEventCardSideConfig({
+      branches: [
+        {
+          id: 'branch-1',
+          targets: [
+            {
+              id: 'target-1',
+              selector: { query: 'players' },
+              cardinality: { n: 1 },
+              application: 'each',
+              effects: [
+                {
+                  draw: { from: 'deck:none', to: 'missing:none', count: 1 },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_ZONE_MISSING'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.branches[0].targets[0].effects[0].draw.to',
+      ),
+      true,
+    );
+  });
+
+  it('rejects single-select event target selectors with non-encodable runtime shapes', () => {
+    const def = withEventTargetSelector(
+      { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' },
+      { n: 1 },
+      {
+        baseOverrides: {
+          runtimeDataAssets: [{ id: 'tournament-standard', kind: 'scenario', payload: { blindSchedule: { levels: [] } } }],
+          tableContracts: [
+            {
+              id: 'tournament-standard::blindSchedule.levels',
+              assetId: 'tournament-standard',
+              tablePath: 'blindSchedule.levels',
+              fields: [{ field: 'bigBlind', type: 'int' }],
+            },
+          ],
+        },
+      },
+    );
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.targets[0].selector'
+          && diag.severity === 'error',
+      ),
+      true,
+    );
+  });
+
+  it('rejects multi-select event target selectors with non-encodable runtime shapes', () => {
+    const def = withEventTargetSelector(
+      { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' },
+      { max: 2 },
+      {
+        baseOverrides: {
+          runtimeDataAssets: [{ id: 'tournament-standard', kind: 'scenario', payload: { blindSchedule: { levels: [] } } }],
+          tableContracts: [
+            {
+              id: 'tournament-standard::blindSchedule.levels',
+              assetId: 'tournament-standard',
+              tablePath: 'blindSchedule.levels',
+              fields: [{ field: 'bigBlind', type: 'int' }],
+            },
+          ],
+        },
+      },
+    );
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.targets[0].selector'
+          && diag.severity === 'error',
+      ),
+      true,
+    );
+  });
+
+  it('suppresses event target runtime-shape diagnostics when selector validation already fails', () => {
+    const def = withEventTargetSelector(
+      { query: 'assetRows', tableId: 'missing-table' },
+      { n: 1 },
+    );
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_RUNTIME_TABLE_MISSING'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.targets[0].selector.tableId'
+          && diag.severity === 'error',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.targets[0].selector',
+      ),
+      false,
+    );
+  });
+
+  it('accepts event target selectors with move-param-encodable runtime shapes', () => {
+    const def = withEventTargetSelector(
+      { query: 'tokensInZone', zone: 'deck:none' },
+      { max: 1 },
+    );
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.targets[0].selector',
+      ),
+      false,
+    );
+  });
+
+  it('validates event freeOperationGrants through the shared grant validator', () => {
+    const def = withEventCardSideConfig({
+      freeOperationGrants: [
+        {
+          seat: '0',
+          sequence: { chain: 'ctx-chain', step: -1 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_INVALID'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0].sequence.step',
+      ),
+      true,
+    );
+  });
+
+  it('rejects event freeOperationGrants that require completion without postResolutionTurnFlow', () => {
+    const def = withEventCardSideConfig({
+      freeOperationGrants: [
+        {
+          seat: '0',
+          sequence: { chain: 'ctx-chain', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          completionPolicy: 'required',
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_GRANT_FREE_OPERATION_POST_RESOLUTION_TURN_FLOW_REQUIRED'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0].postResolutionTurnFlow',
+      ),
+      true,
+    );
+  });
+
+  it('rejects event freeOperationGrants that set postResolutionTurnFlow without required completionPolicy', () => {
+    const def = withEventCardSideConfig({
+      freeOperationGrants: [
+        {
+          seat: '0',
+          sequence: { chain: 'ctx-chain', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          postResolutionTurnFlow: 'resumeCardFlow',
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_GRANT_FREE_OPERATION_COMPLETION_POLICY_REQUIRED'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0].completionPolicy',
+      ),
+      true,
+    );
+  });
+
+  it('renders sequenceContext requires sequence against the correct freeOperationGrant surface', () => {
+    const def = withEventCardSideConfig({
+      freeOperationGrants: [
+        {
+          seat: '0',
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.deepEqual(
+      diagnostics.find(
+        (diag) =>
+          diag.code === 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0].sequenceContext',
+      ),
+      {
+        code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID',
+        path: 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0].sequenceContext',
+        severity: 'error',
+        message: 'freeOperationGrant.sequenceContext requires freeOperationGrant.sequence.',
+        suggestion: 'Declare sequence.chain and sequence.step when using sequenceContext.',
+      },
+    );
+  });
+
+  it('rejects invalid moveZoneBindings on event freeOperationGrants', () => {
+    const def = withEventCardSideConfig({
+      freeOperationGrants: [
+        {
+          seat: '0',
+          sequence: { chain: 'ctx-chain', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          moveZoneBindings: [''],
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_GRANT_FREE_OPERATION_MOVE_ZONE_BINDINGS_INVALID'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0].moveZoneBindings',
+      ),
+      true,
+    );
+  });
+
+  it('rejects invalid moveZoneProbeBindings on event freeOperationGrants', () => {
+    const diagnostics = validateGameDef({
+      ...createValidGameDef(),
+      eventDecks: [{
+        id: 'deck',
+        drawZone: 'deck:none',
+        discardZone: 'discard:none',
+        cards: [{
+          id: 'card',
+          title: 'Card',
+          sideMode: 'single',
+          unshaded: {
+            text: 'x',
+            freeOperationGrants: [{
+              seat: '1',
+              operationClass: 'operation',
+              sequence: { chain: 'x', step: 0 },
+              moveZoneProbeBindings: [''],
+            }],
+          },
+        }],
+      }],
+    });
+
+    assert.equal(
+      diagnostics.some((diag) =>
+        diag.code === 'EFFECT_GRANT_FREE_OPERATION_MOVE_ZONE_PROBE_BINDINGS_INVALID'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0].moveZoneProbeBindings'),
+      true,
+    );
+  });
+
+  it('rejects requireMoveZoneCandidatesFrom when no matching capture exists in the chain', () => {
+    const def = withEventFreeOperationGrants([
+      {
+        seat: '0',
+        sequence: { chain: 'ctx-chain', step: 1 },
+        operationClass: 'operation',
+        actionIds: ['playCard'],
+        sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+      },
+    ]);
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_MISSING'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0].sequenceContext.requireMoveZoneCandidatesFrom',
+      ),
+      true,
+    );
+  });
+
+  it('rejects requireMoveZoneCandidatesFrom when matching capture is at same or later sequence step', () => {
+    const def = withEventFreeOperationGrants([
+      {
+        seat: '0',
+        sequence: { chain: 'ctx-chain', step: 1 },
+        operationClass: 'operation',
+        actionIds: ['playCard'],
+        sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+      },
+      {
+        seat: '0',
+        sequence: { chain: 'ctx-chain', step: 1 },
+        operationClass: 'operation',
+        actionIds: ['playCard'],
+        sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+      },
+    ]);
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_ORDER_INVALID'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0].sequenceContext.requireMoveZoneCandidatesFrom',
+      ),
+      true,
+    );
+  });
+
+  it('accepts requireMoveZoneCandidatesFrom when matching capture exists at an earlier sequence step', () => {
+    const def = withEventFreeOperationGrants([
+      {
+        seat: '0',
+        sequence: { chain: 'ctx-chain', step: 0 },
+        operationClass: 'operation',
+        actionIds: ['playCard'],
+        sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+      },
+      {
+        seat: '0',
+        sequence: { chain: 'ctx-chain', step: 1 },
+        operationClass: 'operation',
+        actionIds: ['playCard'],
+        sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+      },
+    ]);
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code.startsWith('FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_')),
+      false,
+    );
+  });
+
+  it('accepts side capture plus branch require when the selected branch scope matches runtime issuance', () => {
+    const def = withEventCardSideConfig({
+      freeOperationGrants: [
+        {
+          seat: '0',
+          sequence: { chain: 'ctx-branch-chain', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+        },
+      ],
+      branches: [
+        {
+          id: 'branch-1',
+          freeOperationGrants: [
+            {
+              seat: '0',
+              sequence: { chain: 'ctx-branch-chain', step: 1 },
+              operationClass: 'operation',
+              actionIds: ['playCard'],
+              sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+            },
+          ],
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code.startsWith('FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_')),
+      false,
+    );
+  });
+
+  it('rejects ambiguous overlapping event freeOperationGrants on the same side', () => {
+    const def = withEventCardSideConfig({
+      freeOperationGrants: [
+        {
+          seat: '0',
+          sequence: { chain: 'ambiguous-a', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          uses: 1,
+        },
+        {
+          seat: '0',
+          sequence: { chain: 'ambiguous-b', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          uses: 2,
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0]',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[1]',
+      ),
+      true,
+    );
+  });
+
+  it('accepts contract-equivalent duplicate event freeOperationGrants', () => {
+    const def = withEventCardSideConfig({
+      freeOperationGrants: [
+        {
+          seat: '0',
+          sequence: { chain: 'duplicate-a', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          completionPolicy: 'required',
+          outcomePolicy: 'mustChangeGameplayState',
+          postResolutionTurnFlow: 'resumeCardFlow',
+        },
+        {
+          seat: '0',
+          sequence: { chain: 'duplicate-b', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          completionPolicy: 'required',
+          outcomePolicy: 'mustChangeGameplayState',
+          postResolutionTurnFlow: 'resumeCardFlow',
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'),
+      false,
+    );
+  });
+
+  it('treats omitted uses and explicit uses: 1 as contract-equivalent duplicate event freeOperationGrants', () => {
+    const def = withEventCardSideConfig({
+      freeOperationGrants: [
+        {
+          seat: '0',
+          sequence: { chain: 'duplicate-uses-a', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+        },
+        {
+          seat: '0',
+          sequence: { chain: 'duplicate-uses-b', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          uses: 1,
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'),
+      false,
+    );
+  });
+
+  it('accepts same-chain sequential event freeOperationGrants because they cannot co-issue', () => {
+    const def = withEventCardSideConfig({
+      freeOperationGrants: [
+        {
+          seat: '0',
+          sequence: { chain: 'ordered', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          completionPolicy: 'required',
+          postResolutionTurnFlow: 'resumeCardFlow',
+        },
+        {
+          seat: '0',
+          sequence: { chain: 'ordered', step: 1 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          completionPolicy: 'required',
+          outcomePolicy: 'mustChangeGameplayState',
+          postResolutionTurnFlow: 'resumeCardFlow',
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'),
+      false,
+    );
+  });
+
+  it('rejects ambiguous overlapping event freeOperationGrants across side and branch issuance scope', () => {
+    const def = withEventCardSideConfig({
+      freeOperationGrants: [
+        {
+          seat: '0',
+          sequence: { chain: 'cross-scope-side', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          uses: 1,
+        },
+      ],
+      branches: [
+        {
+          id: 'branch-1',
+          freeOperationGrants: [
+            {
+              seat: '0',
+              sequence: { chain: 'cross-scope-branch', step: 0 },
+              operationClass: 'operation',
+              actionIds: ['playCard'],
+              uses: 2,
+            },
+          ],
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0]',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.branches[0].freeOperationGrants[0]',
+      ),
+      true,
+    );
+  });
+
+  it('accepts side effect-issued capture plus branch effect-issued require when the selected branch scope matches runtime execution', () => {
+    const def = withEventCardSideConfig({
+      effects: [
+        {
+          grantFreeOperation: {
+            seat: '0',
+            sequence: { chain: 'ctx-effect-branch-chain', step: 0 },
+            operationClass: 'operation',
+            actionIds: ['playCard'],
+            sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+          },
+        },
+      ],
+      branches: [
+        {
+          id: 'branch-1',
+          effects: [
+            {
+              grantFreeOperation: {
+                seat: '0',
+                sequence: { chain: 'ctx-effect-branch-chain', step: 1 },
+                operationClass: 'operation',
+                actionIds: ['playCard'],
+                sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code.startsWith('FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_')),
+      false,
+    );
+  });
+
+  it('rejects effect-issued require in if.else when matching capture exists only in sibling if.then', () => {
+    const def = withEventCardSideConfig({
+      effects: [
+        {
+          if: {
+            when: { op: '==', left: 1, right: 1 },
+            then: [
+              {
+                grantFreeOperation: {
+                  seat: '0',
+                  sequence: { chain: 'ctx-effect-if-branch-chain', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['playCard'],
+                  sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                },
+              },
+            ],
+            else: [
+              {
+                grantFreeOperation: {
+                  seat: '0',
+                  sequence: { chain: 'ctx-effect-if-branch-chain', step: 1 },
+                  operationClass: 'operation',
+                  actionIds: ['playCard'],
+                  sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_MISSING'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.effects[0].if.else[0].grantFreeOperation.sequenceContext.requireMoveZoneCandidatesFrom',
+      ),
+      true,
+    );
+  });
+
+  it('accepts effect-issued capture and require on the same if.then execution path', () => {
+    const def = withEventCardSideConfig({
+      effects: [
+        {
+          if: {
+            when: { op: '==', left: 1, right: 1 },
+            then: [
+              {
+                grantFreeOperation: {
+                  seat: '0',
+                  sequence: { chain: 'ctx-effect-if-then-chain', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['playCard'],
+                  sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                },
+              },
+              {
+                grantFreeOperation: {
+                  seat: '0',
+                  sequence: { chain: 'ctx-effect-if-then-chain', step: 1 },
+                  operationClass: 'operation',
+                  actionIds: ['playCard'],
+                  sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code.startsWith('FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_')),
+      false,
+    );
+  });
+
+  it('accepts effect-issued capture and require on the same forEach.effects execution path', () => {
+    const def = withEventCardSideConfig({
+      effects: [
+        {
+          forEach: {
+            bind: '$player',
+            over: { query: 'players' },
+            effects: [
+              {
+                grantFreeOperation: {
+                  seat: '0',
+                  sequence: { chain: 'ctx-effect-for-each-body-chain', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['playCard'],
+                  sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                },
+              },
+              {
+                grantFreeOperation: {
+                  seat: '0',
+                  sequence: { chain: 'ctx-effect-for-each-body-chain', step: 1 },
+                  operationClass: 'operation',
+                  actionIds: ['playCard'],
+                  sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code.startsWith('FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_')),
+      false,
+    );
+  });
+
+  it('rejects effect-issued require in forEach.in when matching capture exists only inside forEach.effects', () => {
+    const def = withEventCardSideConfig({
+      effects: [
+        {
+          forEach: {
+            bind: '$player',
+            countBind: '$count',
+            over: { query: 'players' },
+            effects: [
+              {
+                grantFreeOperation: {
+                  seat: '0',
+                  sequence: { chain: 'ctx-effect-for-each-continuation-chain', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['playCard'],
+                  sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                },
+              },
+            ],
+            in: [
+              {
+                grantFreeOperation: {
+                  seat: '0',
+                  sequence: { chain: 'ctx-effect-for-each-continuation-chain', step: 1 },
+                  operationClass: 'operation',
+                  actionIds: ['playCard'],
+                  sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_MISSING'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.effects[0].forEach.in[0].grantFreeOperation.sequenceContext.requireMoveZoneCandidatesFrom',
+      ),
+      true,
+    );
+  });
+
+  it('rejects ambiguous overlapping effect-issued free-operation grants on the same execution path', () => {
+    const def = withEventCardSideConfig({
+      effects: [
+        {
+          grantFreeOperation: {
+            seat: '0',
+            sequence: { chain: 'effect-overlap-a', step: 0 },
+            operationClass: 'operation',
+            actionIds: ['playCard'],
+            sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+          },
+        },
+        {
+          grantFreeOperation: {
+            seat: '0',
+            sequence: { chain: 'effect-overlap-b', step: 0 },
+            operationClass: 'operation',
+            actionIds: ['playCard'],
+            sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+          },
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.effects[0].grantFreeOperation',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.effects[1].grantFreeOperation',
+      ),
+      true,
+    );
+  });
+
+  it('rejects ambiguous overlapping effect-issued free-operation grants across side and branch execution scope', () => {
+    const def = withEventCardSideConfig({
+      effects: [
+        {
+          grantFreeOperation: {
+            seat: '0',
+            sequence: { chain: 'effect-side-branch-overlap-a', step: 0 },
+            operationClass: 'operation',
+            actionIds: ['playCard'],
+            sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+          },
+        },
+      ],
+      branches: [
+        {
+          id: 'branch-1',
+          effects: [
+            {
+              grantFreeOperation: {
+                seat: '0',
+                sequence: { chain: 'effect-side-branch-overlap-b', step: 0 },
+                operationClass: 'operation',
+                actionIds: ['playCard'],
+                sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.effects[0].grantFreeOperation',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.branches[0].effects[0].grantFreeOperation',
+      ),
+      true,
+    );
+  });
+
+  it('accepts overlapping-looking effect-issued free-operation grants when they are on mutually exclusive if branches', () => {
+    const def = withEventCardSideConfig({
+      effects: [
+        {
+          if: {
+            when: { op: '==', left: 1, right: 1 },
+            then: [
+              {
+                grantFreeOperation: {
+                  seat: '0',
+                  sequence: { chain: 'effect-exclusive-then', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['playCard'],
+                  sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                },
+              },
+            ],
+            else: [
+              {
+                grantFreeOperation: {
+                  seat: '0',
+                  sequence: { chain: 'effect-exclusive-else', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['playCard'],
+                  sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'),
+      false,
+    );
+  });
+
+  it('rejects sequence-context grants inside evaluateSubset.compute because the scope is non-persistent', () => {
+    const def = withEventCardSideConfig({
+      effects: [
+        {
+          evaluateSubset: {
+            source: { query: 'players' },
+            subsetSize: 1,
+            subsetBind: '$subset',
+            compute: [
+              {
+                grantFreeOperation: {
+                  seat: '0',
+                  sequence: { chain: 'ctx-effect-evaluate-subset-compute-chain', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['playCard'],
+                  sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                },
+              },
+            ],
+            scoreExpr: 1,
+            resultBind: '$score',
+            in: [],
+          },
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_SCOPE_UNSUPPORTED'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.effects[0].evaluateSubset.compute[0].grantFreeOperation.sequenceContext',
+      ),
+      true,
+    );
+  });
+
+  it('rejects nested sequence-context grants inside evaluateSubset.compute descendants', () => {
+    const def = withEventCardSideConfig({
+      effects: [
+        {
+          evaluateSubset: {
+            source: { query: 'players' },
+            subsetSize: 1,
+            subsetBind: '$subset',
+            compute: [
+              {
+                if: {
+                  when: { op: '==', left: 1, right: 1 },
+                  then: [
+                    {
+                      grantFreeOperation: {
+                        seat: '0',
+                        sequence: { chain: 'ctx-effect-evaluate-subset-compute-nested-chain', step: 0 },
+                        operationClass: 'operation',
+                        actionIds: ['playCard'],
+                        sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+            scoreExpr: 1,
+            resultBind: '$score',
+            in: [],
+          },
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_SCOPE_UNSUPPORTED'
+          && diag.path
+            === 'eventDecks[0].cards[0].unshaded.effects[0].evaluateSubset.compute[0].if.then[0].grantFreeOperation.sequenceContext',
+      ),
+      true,
+    );
+  });
+
+  it('accepts nested sequence-context grants inside evaluateSubset.in descendants', () => {
+    const def = withEventCardSideConfig({
+      effects: [
+        {
+          evaluateSubset: {
+            source: { query: 'players' },
+            subsetSize: 1,
+            subsetBind: '$subset',
+            compute: [],
+            scoreExpr: 1,
+            resultBind: '$score',
+            in: [
+              {
+                if: {
+                  when: { op: '==', left: 1, right: 1 },
+                  then: [
+                    {
+                      grantFreeOperation: {
+                        seat: '0',
+                        sequence: { chain: 'ctx-effect-evaluate-subset-in-nested-chain', step: 0 },
+                        operationClass: 'operation',
+                        actionIds: ['playCard'],
+                        sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                      },
+                    },
+                    {
+                      grantFreeOperation: {
+                        seat: '0',
+                        sequence: { chain: 'ctx-effect-evaluate-subset-in-nested-chain', step: 1 },
+                        operationClass: 'operation',
+                        actionIds: ['playCard'],
+                        sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code === 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_SCOPE_UNSUPPORTED'),
+      false,
+    );
+    assert.equal(
+      diagnostics.some((diag) => diag.code.startsWith('FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_')),
+      false,
+    );
+  });
+});
+
 describe('validated GameDef boundary', () => {
   it('brands only when validation has no errors and caches the branded identity', () => {
     const valid = createValidGameDef();

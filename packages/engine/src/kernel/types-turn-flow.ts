@@ -1,4 +1,5 @@
 import type { TurnFlowActionClass as CanonicalTurnFlowActionClass } from '../contracts/index.js';
+import type { FreeOperationSequenceContextContract } from './free-operation-sequence-context-contract.js';
 
 export type TurnFlowDuration = 'turn' | 'nextTurn' | 'round' | 'cycle';
 
@@ -6,6 +7,12 @@ export type TurnFlowActionClass = CanonicalTurnFlowActionClass;
 
 export type TurnFlowFreeOperationGrantViabilityPolicy =
   import('../contracts/index.js').TurnFlowFreeOperationGrantViabilityPolicy;
+export type TurnFlowFreeOperationGrantCompletionPolicy =
+  import('../contracts/index.js').TurnFlowFreeOperationGrantCompletionPolicy;
+export type TurnFlowFreeOperationGrantOutcomePolicy =
+  import('../contracts/index.js').TurnFlowFreeOperationGrantOutcomePolicy;
+export type TurnFlowFreeOperationGrantPostResolutionTurnFlow =
+  import('../contracts/index.js').TurnFlowFreeOperationGrantPostResolutionTurnFlow;
 
 export interface TurnFlowFreeOperationGrantContract {
   readonly id?: string;
@@ -14,12 +21,18 @@ export interface TurnFlowFreeOperationGrantContract {
   readonly operationClass: TurnFlowActionClass;
   readonly actionIds?: readonly string[];
   readonly zoneFilter?: import('./types-ast.js').ConditionAST;
+  readonly moveZoneBindings?: readonly string[];
+  readonly moveZoneProbeBindings?: readonly string[];
   readonly allowDuringMonsoon?: boolean;
   readonly uses?: number;
+  readonly completionPolicy?: TurnFlowFreeOperationGrantCompletionPolicy;
+  readonly outcomePolicy?: TurnFlowFreeOperationGrantOutcomePolicy;
+  readonly postResolutionTurnFlow?: TurnFlowFreeOperationGrantPostResolutionTurnFlow;
   readonly sequence?: {
     readonly chain: string;
     readonly step: number;
   };
+  readonly sequenceContext?: FreeOperationSequenceContextContract;
   readonly viabilityPolicy?: TurnFlowFreeOperationGrantViabilityPolicy;
 }
 
@@ -155,11 +168,25 @@ export interface TurnFlowPendingFreeOperationGrant {
   readonly operationClass: TurnFlowActionClass;
   readonly actionIds?: readonly string[];
   readonly zoneFilter?: import('./types-ast.js').ConditionAST;
+  readonly moveZoneBindings?: readonly string[];
+  readonly moveZoneProbeBindings?: readonly string[];
   readonly allowDuringMonsoon?: boolean;
   readonly viabilityPolicy?: TurnFlowFreeOperationGrantViabilityPolicy;
+  readonly completionPolicy?: TurnFlowFreeOperationGrantCompletionPolicy;
+  readonly outcomePolicy?: TurnFlowFreeOperationGrantOutcomePolicy;
+  readonly postResolutionTurnFlow?: TurnFlowFreeOperationGrantPostResolutionTurnFlow;
   readonly remainingUses: number;
   readonly sequenceBatchId?: string;
   readonly sequenceIndex?: number;
+  readonly sequenceContext?: FreeOperationSequenceContextContract;
+}
+
+export interface TurnFlowSuspendedCardEnd {
+  readonly reason: 'rightmostPass' | 'twoNonPass';
+}
+
+export interface TurnFlowFreeOperationSequenceBatchContext {
+  readonly capturedMoveZonesByKey: Readonly<Record<string, readonly string[]>>;
 }
 
 export interface TurnFlowDeferredEventEffectPayload {
@@ -211,7 +238,9 @@ export interface TurnFlowRuntimeState {
   readonly currentCard: TurnFlowRuntimeCardState;
   readonly pendingEligibilityOverrides?: readonly TurnFlowPendingEligibilityOverride[];
   readonly pendingFreeOperationGrants?: readonly TurnFlowPendingFreeOperationGrant[];
+  readonly freeOperationSequenceContexts?: Readonly<Record<string, TurnFlowFreeOperationSequenceBatchContext>>;
   readonly pendingDeferredEventEffects?: readonly TurnFlowPendingDeferredEventEffect[];
+  readonly suspendedCardEnd?: TurnFlowSuspendedCardEnd;
   readonly consecutiveCoupRounds?: number;
   readonly compoundAction?: CompoundActionState;
 }

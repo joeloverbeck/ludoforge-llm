@@ -20,12 +20,17 @@ import type {
   MoveParamValue,
   Rng,
   TriggerEvent,
+  TurnFlowFreeOperationGrantContract,
 } from './types.js';
 
 export const DEFAULT_MAX_EFFECT_OPS = 10_000;
 
 export interface PhaseTransitionBudget {
   remaining: number;
+}
+
+export interface FreeOperationProbeScope {
+  readonly priorGrantDefinitions: TurnFlowFreeOperationGrantContract[];
 }
 
 export interface EffectTraceContext {
@@ -56,6 +61,8 @@ interface EffectContextBase {
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
   /** Accumulated forEach iteration path for scoping inner decision IDs. */
   readonly iterationPath?: string;
+  /** Runtime scope carrying previously executed grant definitions for sequence viability probes. */
+  readonly freeOperationProbeScope?: FreeOperationProbeScope;
 }
 
 export interface ExecutionEffectContext extends EffectContextBase {

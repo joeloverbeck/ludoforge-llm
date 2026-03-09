@@ -104,6 +104,11 @@ export interface IllegalMoveContextByReason {
     IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED> & Readonly<{
       readonly freeOperationDenial: FreeOperationBlockExplanation;
     }>;
+  readonly [ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED]:
+    IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED> & Readonly<{
+      readonly grantId: string;
+      readonly outcomePolicy: import('../contracts/index.js').TurnFlowFreeOperationGrantOutcomePolicy;
+    }>;
   readonly [ILLEGAL_MOVE_REASONS.ACTION_ACTOR_NOT_APPLICABLE]:
     IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.ACTION_ACTOR_NOT_APPLICABLE>;
   readonly [ILLEGAL_MOVE_REASONS.ACTION_EXECUTOR_NOT_APPLICABLE]:
@@ -294,6 +299,7 @@ const ILLEGAL_MOVE_REQUIRED_CONTEXT_FIELDS: Readonly<{
     ['operationActionId', 'specialActivityActionId', 'profileId', 'relation', 'operationParam', 'specialActivityParam'],
   [ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH]: ['mappedActionClass', 'submittedActionClass'],
   [ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED]: ['freeOperationDenial'],
+  [ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED]: ['grantId', 'outcomePolicy'],
 };
 
 const validateRequiredIllegalMoveContextFields = (

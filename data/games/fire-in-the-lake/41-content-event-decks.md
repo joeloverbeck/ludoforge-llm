@@ -3928,12 +3928,25 @@ eventDecks:
           text: US free Air Lifts into 1 space with any NVA piece, then free Sweeps and Assaults there.
           freeOperationGrants:
             - seat: us
+              viabilityPolicy: requireUsableForEventPlay
               sequence:
                 chain: ia-drang-us
                 step: 0
+              completionPolicy: required
+              outcomePolicy: mustChangeGameplayState
+              postResolutionTurnFlow: resumeCardFlow
               operationClass: operation
               actionIds:
                 - airLift
+              moveZoneBindings:
+                - $usLiftDestination
+                - $coinLiftDestination
+              moveZoneProbeBindings:
+                - $spaces
+                - $usLiftDestination
+                - $coinLiftDestination
+              sequenceContext:
+                captureMoveZoneCandidatesAs: ia-drang-space
               zoneFilter:
                 op: ">"
                 left:
@@ -3952,45 +3965,29 @@ eventDecks:
               sequence:
                 chain: ia-drang-us
                 step: 1
+              completionPolicy: required
+              postResolutionTurnFlow: resumeCardFlow
               operationClass: operation
               actionIds:
                 - sweep
+              moveZoneBindings:
+                - $targetSpaces
               allowDuringMonsoon: true
-              zoneFilter:
-                op: ">"
-                left:
-                  aggregate:
-                    op: count
-                    query:
-                      query: tokensInZone
-                      zone: $zone
-                      filter:
-                        op: and
-                        args:
-                          - prop: faction
-                            eq: NVA
-                right: 0
+              sequenceContext:
+                requireMoveZoneCandidatesFrom: ia-drang-space
             - seat: us
               sequence:
                 chain: ia-drang-us
                 step: 2
+              completionPolicy: required
+              postResolutionTurnFlow: resumeCardFlow
               operationClass: operation
               actionIds:
                 - assault
-              zoneFilter:
-                op: ">"
-                left:
-                  aggregate:
-                    op: count
-                    query:
-                      query: tokensInZone
-                      zone: $zone
-                      filter:
-                        op: and
-                        args:
-                          - prop: faction
-                            eq: NVA
-                right: 0
+              moveZoneBindings:
+                - $targetSpaces
+              sequenceContext:
+                requireMoveZoneCandidatesFrom: ia-drang-space
         shaded:
           text: "Dong Xuan campaign-hot LZs: Select a Province with NVA Troops then remove a die roll of US Troops within 1 space of it to Casualties."
           targets:

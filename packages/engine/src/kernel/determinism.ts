@@ -1,4 +1,4 @@
-import { isDeepStrictEqual } from 'node:util';
+import { deepEqual } from './deep-equal.js';
 import { createRng, deserialize, serialize, stepRng } from './prng.js';
 import { deserializeGameState, serializeGameState } from './serde.js';
 import type { GameState, Rng } from './types.js';
@@ -14,7 +14,7 @@ const formatValue = (value: unknown): string => {
 export const assertDeterministic = <T>(
   fn: (rng: Rng) => T,
   seed: bigint,
-  compare: (a: T, b: T) => boolean = (a, b) => isDeepStrictEqual(a, b),
+  compare: (a: T, b: T) => boolean = (a, b) => deepEqual(a, b),
 ): void => {
   const first = fn(createRng(seed));
   const second = fn(createRng(seed));
@@ -51,12 +51,12 @@ export const assertStateRoundTrip = (state: GameState): void => {
   const serialized = serializeGameState(state);
   const roundTripped = deserializeGameState(serialized);
 
-  if (!isDeepStrictEqual(roundTripped, state)) {
+  if (!deepEqual(roundTripped, state)) {
     throw new Error('State round-trip mismatch after serialize/deserialize');
   }
 
   const reserialized = serializeGameState(roundTripped);
-  if (!isDeepStrictEqual(reserialized, serialized)) {
+  if (!deepEqual(reserialized, serialized)) {
     throw new Error('State serialization is not stable across round-trip');
   }
 };

@@ -12,6 +12,7 @@ import { readKernelSource } from '../../helpers/kernel-source-guard.js';
 
 import {
   CARD_SEAT_ORDER_MIN_DISTINCT_SEATS,
+  applyMove,
   asActionId,
   asPhaseId,
   asPlayerId,
@@ -2399,6 +2400,212 @@ phase: [asPhaseId('main')],
 
     const moves = legalMoves(def, state).filter((move) => String(move.actionId) === 'operation');
     assert.equal(moves.some((move) => move.freeOperation === true), true);
+  });
+
+  it('suppresses ambiguous top-ranked free-operation overlaps from legal move generation', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = {
+      ...makeBaseDef({ actions: [action] }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [{ first: 'operation', second: ['operation'] }],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            actionClassByActionId: { operation: 'operation' },
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-a',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              remainingUses: 1,
+            },
+            {
+              grantId: 'grant-b',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              remainingUses: 2,
+            },
+          ],
+        },
+      },
+    });
+
+    const moves = legalMoves(def, state).filter((move) => String(move.actionId) === 'operation');
+    assert.equal(moves.some((move) => move.freeOperation === true), false);
+    assert.equal(moves.some((move) => move.freeOperation !== true), true);
+  });
+
+  it('suppresses pass and non-free actions while the active seat has a required pending grant', () => {
+    const passAction: ActionDef = {
+      id: asActionId('pass'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = {
+      ...makeBaseDef({ actions: [passAction, action] }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [{ first: 'operation', second: ['operation', 'limitedOperation'] }],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            actionClassByActionId: { pass: 'pass', operation: 'operation' },
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeCardDrivenState({
+      currentCard: {
+        firstEligible: '0',
+        secondEligible: '1',
+        actedSeats: [],
+        passedSeats: [],
+        nonPassCount: 0,
+        firstActionClass: null,
+      },
+      pendingFreeOperationGrants: [
+        {
+          grantId: 'grant-required',
+          seat: '0',
+          operationClass: 'operation',
+          actionIds: ['operation'],
+          completionPolicy: 'required',
+          postResolutionTurnFlow: 'resumeCardFlow',
+          remainingUses: 1,
+        },
+      ],
+    });
+
+    const moves = legalMoves(def, state);
+    assert.equal(moves.some((move) => String(move.actionId) === 'pass'), false);
+    assert.equal(moves.some((move) => String(move.actionId) === 'operation' && move.freeOperation === true), true);
+    assert.equal(moves.some((move) => String(move.actionId) === 'operation' && move.freeOperation !== true), false);
+  });
+
+  it('restores regular non-free moves to the next normal seat after a required free operation resolves', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = {
+      ...makeBaseDef({ actions: [action] }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            actionClassByActionId: { operation: 'operation' },
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const start = makeCardDrivenState({
+      currentCard: {
+        firstEligible: '0',
+        secondEligible: null,
+        actedSeats: [],
+        passedSeats: [],
+        nonPassCount: 0,
+        firstActionClass: null,
+      },
+      pendingFreeOperationGrants: [
+        {
+          grantId: 'grant-required',
+          seat: '0',
+          operationClass: 'operation',
+          actionIds: ['operation'],
+          completionPolicy: 'required',
+          postResolutionTurnFlow: 'resumeCardFlow',
+          remainingUses: 1,
+        },
+      ],
+    });
+
+    const afterFreeOperation = applyMove(def, start, {
+      actionId: asActionId('operation'),
+      params: {},
+      freeOperation: true,
+    }).state;
+
+    const moves = legalMoves(def, afterFreeOperation).filter((move) => String(move.actionId) === 'operation');
+    assert.equal(afterFreeOperation.activePlayer, asPlayerId(1));
+    assert.equal(moves.some((move) => move.freeOperation === true), false);
+    assert.equal(moves.some((move) => move.freeOperation !== true), true);
   });
 
   it('26. preserves event moves when event decision probing hits deferrable missing bindings', () => {

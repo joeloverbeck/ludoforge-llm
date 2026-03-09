@@ -87,7 +87,7 @@ const findCard44Move = (def: GameDef, state: GameState, side: 'unshaded' | 'shad
   );
 
 describe('FITL card-44 Ia Drang', () => {
-  it('unshaded grants ordered free US Air Lift -> Sweep -> Assault, allows Monsoon Sweep, and keeps ARVN follow-up free', () => {
+  it('unshaded requires a real Air Lift, preserves there-sequencing, and clears the full required chain', () => {
     const def = compileDef();
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined, 'Expected event deck');
@@ -126,7 +126,10 @@ describe('FITL card-44 Ia Drang', () => {
         ...(lookaheadZone === null
           ? {}
           : { [lookaheadZone]: [makeToken('ia-drang-monsoon-lookahead', 'card', 'none', { isCoup: true })] }),
-        [ADJACENT_CITY]: [makeToken('ia-drang-us-lift', 'troops', 'US', { type: 'troops' })],
+        [ADJACENT_CITY]: [
+          makeToken('ia-drang-us-lift', 'troops', 'US', { type: 'troops' }),
+          makeToken('ia-drang-nva-alt-space', 'troops', 'NVA', { type: 'troops' }),
+        ],
         [TARGET_PROVINCE]: [
           makeToken('ia-drang-us-in-target', 'troops', 'US', { type: 'troops' }),
           makeToken('ia-drang-arvn-troop', 'troops', 'ARVN', { type: 'troops' }),
@@ -178,16 +181,22 @@ describe('FITL card-44 Ia Drang', () => {
       actionId: asActionId('airLift'),
       freeOperation: true,
       params: {
-        $spaces: [TARGET_PROVINCE],
-        $usLiftTroops: [],
+        $spaces: [ADJACENT_CITY, TARGET_PROVINCE],
+        $usLiftTroops: ['ia-drang-us-lift'],
+        '$usLiftDestination@ia-drang-us-lift': TARGET_PROVINCE,
         $coinLiftPieces: [],
       },
     }).state;
 
     assert.equal(
       countTokens(afterAirLift, ADJACENT_CITY, (token) => token.id === asTokenId('ia-drang-us-lift')),
+      0,
+      'Ia Drang Air Lift should move a US troop into the selected NVA space',
+    );
+    assert.equal(
+      countTokens(afterAirLift, TARGET_PROVINCE, (token) => token.id === asTokenId('ia-drang-us-lift')),
       1,
-      'With single-space selection, free Air Lift may resolve without moving a troop between spaces',
+      'Ia Drang Air Lift should place the lifted troop in the target space',
     );
     assert.equal(requireCardDrivenRuntime(afterAirLift).pendingFreeOperationGrants?.length, 2);
 
@@ -198,6 +207,35 @@ describe('FITL card-44 Ia Drang', () => {
       sweepMoves.some((move) => move.freeOperation !== true),
       false,
       'During Monsoon, only the grant-marked Sweep should be legal',
+    );
+    assert.throws(
+      () =>
+        applyMove(def, afterAirLift, {
+          actionId: asActionId('sweep'),
+          freeOperation: true,
+          params: {
+            $targetSpaces: [ADJACENT_CITY],
+            $movingAdjacentTroops: [],
+          },
+        }),
+      (error: unknown) => {
+        if (!(error instanceof Error)) {
+          return false;
+        }
+        const details = error as Error & {
+          readonly context?: {
+            readonly freeOperationDenial?: {
+              readonly cause?: string;
+              readonly sequenceContextMismatchGrantIds?: readonly string[];
+            };
+          };
+        };
+        return (
+          details.context?.freeOperationDenial?.cause === 'sequenceContextMismatch'
+          && (details.context?.freeOperationDenial?.sequenceContextMismatchGrantIds?.length ?? 0) > 0
+        );
+      },
+      'Ia Drang follow-up free Sweep should be denied outside the Air Lift-selected space context',
     );
 
     const afterSweep = applyMoveWithResolvedDecisionIds(def, afterAirLift, {
@@ -221,10 +259,10 @@ describe('FITL card-44 Ia Drang', () => {
     }).state;
 
     assert.equal(final.globalVars.arvnResources, arvnBefore, 'ARVN follow-up on free US Assault should cost 0 resources');
-    assert.equal(
-      (requireCardDrivenRuntime(final).pendingFreeOperationGrants ?? []).length <= 1,
-      true,
-      'Ia Drang sequence should progress through free operations without charging ARVN resources',
+    assert.deepEqual(
+      requireCardDrivenRuntime(final).pendingFreeOperationGrants ?? [],
+      [],
+      'Ia Drang should consume the full required Air Lift -> Sweep -> Assault chain',
     );
   });
 
@@ -341,33 +379,8 @@ describe('FITL card-44 Ia Drang', () => {
     assert.equal(shadedMove, undefined, 'Shaded should require a province with NVA Troops (not guerrillas/bases only)');
   });
 
-  it('unshaded is suppressed when strict grant viability is required and no usable grant exists', () => {
-    const baseDef = compileDef();
-    const def = (() => {
-      const mutable = structuredClone(baseDef) as unknown as Record<string, unknown>;
-      const primaryDeck = (mutable.eventDecks as Array<Record<string, unknown>> | undefined)?.[0];
-      if (primaryDeck === undefined) {
-        return baseDef;
-      }
-      primaryDeck.cards = ((primaryDeck.cards as Array<Record<string, unknown>> | undefined) ?? []).map((card) => {
-        const unshaded = card.unshaded as Record<string, unknown> | undefined;
-        const grants = unshaded?.freeOperationGrants as Array<Record<string, unknown>> | undefined;
-        if (card.id !== CARD_ID || grants === undefined) {
-          return card;
-        }
-        return {
-          ...card,
-          unshaded: {
-            ...unshaded,
-            freeOperationGrants: grants.map((grant) => ({
-              ...grant,
-              viabilityPolicy: 'requireUsableForEventPlay' as const,
-            })),
-          },
-        };
-      });
-      return mutable as unknown as GameDef;
-    })();
+  it('unshaded is suppressed when the only possible opening Air Lift would be a no-op', () => {
+    const def = compileDef();
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined, 'Expected event deck');
 
@@ -378,7 +391,10 @@ describe('FITL card-44 Ia Drang', () => {
       zones: {
         ...base.zones,
         [eventDeck!.discardZone]: [makeToken(CARD_ID, 'card', 'none')],
-        [TARGET_PROVINCE]: [makeToken('ia-drang-no-unshaded-us', 'troops', 'US', { type: 'troops' })],
+        [TARGET_PROVINCE]: [
+          makeToken('ia-drang-noop-airlift-us', 'troops', 'US', { type: 'troops' }),
+          makeToken('ia-drang-noop-airlift-nva', 'troops', 'NVA', { type: 'troops' }),
+        ],
       },
     };
 
@@ -386,7 +402,7 @@ describe('FITL card-44 Ia Drang', () => {
     assert.equal(
       unshadedMove,
       undefined,
-      'Ia Drang unshaded should be absent when every strict viability grant is unusable in current state',
+      'Ia Drang unshaded should be absent when no state-changing Air Lift into the NVA space is possible',
     );
   });
 
@@ -394,6 +410,11 @@ describe('FITL card-44 Ia Drang', () => {
     const def = compileDef();
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined, 'Expected event deck');
+    const lookaheadZone =
+      def.turnOrder?.type === 'cardDriven'
+        ? def.turnOrder.config.turnFlow.cardLifecycle.lookahead
+        : null;
+    assert.notEqual(lookaheadZone, null, 'Expected card-driven lookahead zone');
 
     const base = clearAllZones(initialState(def, 44006, 4).state);
     const setup: GameState = {
@@ -417,6 +438,10 @@ describe('FITL card-44 Ia Drang', () => {
       zones: {
         ...base.zones,
         [eventDeck!.discardZone]: [makeToken(CARD_ID, 'card', 'none')],
+        ...(lookaheadZone === null
+          ? {}
+          : { [lookaheadZone]: [makeToken('ia-drang-seq-lookahead', 'card', 'none', { isCoup: true })] }),
+        [ADJACENT_CITY]: [makeToken('ia-drang-seq-us', 'troops', 'US', { type: 'troops' })],
         [TARGET_PROVINCE]: [makeToken('ia-drang-seq-nva', 'troops', 'NVA', { type: 'troops' })],
       },
     };

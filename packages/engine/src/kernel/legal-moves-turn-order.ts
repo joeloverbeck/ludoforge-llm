@@ -8,6 +8,7 @@ import {
 } from './free-operation-discovery-analysis.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import {
+  isMoveAllowedByRequiredPendingFreeOperationGrant,
   isEventMovePlayableUnderGrantViabilityPolicy,
 } from './turn-flow-eligibility.js';
 import { resolveEffectiveFreeOperationActionDomain, resolveTurnFlowDefaultFreeOperationActionDomain } from './free-operation-action-domain.js';
@@ -321,7 +322,7 @@ export function applyTurnFlowWindowFilters(
 
   const cancellationRules = turnFlow.pivotal?.interrupt?.cancellation;
   if (cancellationRules === undefined || cancellationRules.length === 0) {
-    return filtered;
+    return filtered.filter((move) => isMoveAllowedByRequiredPendingFreeOperationGrant(def, state, move, seatResolution));
   }
 
   const canceledMoves = new Set<Move>();
@@ -339,9 +340,11 @@ export function applyTurnFlowWindowFilters(
   }
 
   if (canceledMoves.size === 0) {
-    return filtered;
+    return filtered.filter((move) => isMoveAllowedByRequiredPendingFreeOperationGrant(def, state, move, seatResolution));
   }
-  return filtered.filter((move) => !canceledMoves.has(move));
+  return filtered
+    .filter((move) => !canceledMoves.has(move))
+    .filter((move) => isMoveAllowedByRequiredPendingFreeOperationGrant(def, state, move, seatResolution));
 }
 
 export function applyPendingFreeOperationVariants(

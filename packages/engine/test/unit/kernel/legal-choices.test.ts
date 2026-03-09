@@ -25,6 +25,12 @@ import {
   ownershipSelection,
   type ChoiceOwnershipPrimitive,
 } from '../../helpers/choice-ownership-parity-helpers.js';
+import {
+  SEQUENCE_CONTEXT_DENIED_ZONE_ID,
+  createSequenceContextMismatchTurnOrderState,
+  createSequenceContextMismatchZoneState,
+  createSequenceContextMismatchZones,
+} from '../../helpers/free-operation-sequence-context-fixtures.js';
 import { readKernelSource } from '../../helpers/kernel-source-guard.js';
 
 const makeBaseDef = (overrides?: {
@@ -2837,6 +2843,54 @@ phase: [asPhaseId('main')],
       assert.deepEqual(
         legalChoicesDiscover(def, state, { actionId: asActionId('operation'), params: {}, freeOperation: true }),
         { kind: 'illegal', complete: false, reason: 'freeOperationZoneFilterMismatch' },
+      );
+    });
+
+    it('returns illegal with freeOperationSequenceContextMismatch when matching grants fail sequence-context evaluation', () => {
+      const action: ActionDef = {
+        id: asActionId('operation'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      };
+
+      const def: GameDef = {
+        ...makeBaseDef({
+          actions: [action],
+          zones: createSequenceContextMismatchZones(),
+        }),
+        turnOrder: {
+          type: 'cardDriven',
+          config: {
+            turnFlow: {
+              cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+              eligibility: { seats: ['0', '1'], overrideWindows: [] },
+              optionMatrix: [],
+              passRewards: [],
+              freeOperationActionIds: ['operation'],
+              durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            },
+          },
+        },
+      } as unknown as GameDef;
+
+      const state = makeBaseState({
+        zones: createSequenceContextMismatchZoneState(),
+        turnOrderState: createSequenceContextMismatchTurnOrderState(),
+      });
+
+      assert.deepEqual(
+        legalChoicesDiscover(def, state, {
+          actionId: asActionId('operation'),
+          params: { 'decision:$zone': SEQUENCE_CONTEXT_DENIED_ZONE_ID },
+          freeOperation: true,
+        }),
+        { kind: 'illegal', complete: false, reason: 'freeOperationSequenceContextMismatch' },
       );
     });
 

@@ -88,6 +88,10 @@ function lowerVarDefsWithSourceIndices(
       diagnostics.push(missingCapabilityDiagnostic(path, 'variable definition', variable));
       continue;
     }
+    if (variable.material !== undefined && typeof variable.material !== 'boolean') {
+      diagnostics.push(missingCapabilityDiagnostic(`${path}.material`, 'variable material flag', variable.material, ['boolean']));
+      continue;
+    }
 
     if (variable.type === 'int') {
       if (!isFiniteNumber(variable.init) || !isFiniteNumber(variable.min) || !isFiniteNumber(variable.max)) {
@@ -102,6 +106,7 @@ function lowerVarDefsWithSourceIndices(
           init: variable.init,
           min: variable.min,
           max: variable.max,
+          ...(variable.material === undefined ? {} : { material: variable.material }),
         },
       });
       continue;
@@ -118,6 +123,7 @@ function lowerVarDefsWithSourceIndices(
           name: variable.name,
           type: 'boolean',
           init: variable.init,
+          ...(variable.material === undefined ? {} : { material: variable.material }),
         },
       });
       continue;

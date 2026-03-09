@@ -311,6 +311,46 @@ describe('applyGrantFreeOperation', () => {
     const grants = tos.runtime.pendingFreeOperationGrants ?? [];
     assert.equal(grants.length, 0);
   });
+
+  it('emits sequence-later effect-issued grants when earlier sequence steps are usable', () => {
+    const ctx = makeCtx();
+    const effect = {
+      grantFreeOperation: {
+        seat: 'self',
+        operationClass: 'operation',
+        actionIds: ['attack'],
+        viabilityPolicy: 'requireUsableAtIssue',
+        sequence: { chain: 'usable-sequence', step: 1 },
+      },
+    } as unknown as Extract<EffectAST, { readonly grantFreeOperation: unknown }>;
+
+    const result = applyGrantFreeOperation(effect, ctx);
+    const tos = result.state.turnOrderState;
+    if (tos.type !== 'cardDriven') throw new Error('Expected cardDriven');
+    const grants = tos.runtime.pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 1);
+    assert.equal(grants[0]?.sequenceIndex, 1);
+  });
+
+  it('suppresses sequence-later effect-issued grants when earlier sequence steps are unusable', () => {
+    const ctx = makeCtx();
+    const effect = {
+      grantFreeOperation: {
+        seat: 'self',
+        operationClass: 'operation',
+        actionIds: ['attack'],
+        viabilityPolicy: 'requireUsableAtIssue',
+        sequence: { chain: 'unusable-sequence', step: 1 },
+        zoneFilter: { op: '==', left: 1, right: 2 },
+      },
+    } as unknown as Extract<EffectAST, { readonly grantFreeOperation: unknown }>;
+
+    const result = applyGrantFreeOperation(effect, ctx);
+    const tos = result.state.turnOrderState;
+    if (tos.type !== 'cardDriven') throw new Error('Expected cardDriven');
+    const grants = tos.runtime.pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 0);
+  });
 });
 
 describe('applyGotoPhaseExact', () => {

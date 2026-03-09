@@ -42,6 +42,96 @@ const toPendingFreeOperationGrant = (
   ...(grant.sequence?.step === undefined ? {} : { sequenceIndex: grant.sequence.step }),
 });
 
+const resolveProbeGrantSeats = (
+  grant: TurnFlowFreeOperationGrantContract,
+  activeSeat: string,
+  seatOrder: readonly string[],
+): { readonly seat: string; readonly executeAsSeat?: string } | null => {
+  const seat = resolveFreeOperationGrantSeatToken(grant.seat, activeSeat, seatOrder);
+  if (seat === null) {
+    return null;
+  }
+
+  if (grant.executeAsSeat === undefined) {
+    return { seat };
+  }
+
+  const executeAsSeat = resolveFreeOperationGrantSeatToken(grant.executeAsSeat, activeSeat, seatOrder);
+  if (executeAsSeat === null) {
+    return null;
+  }
+  return { seat, executeAsSeat };
+};
+
+const toResolvedProbePendingGrant = (
+  grant: TurnFlowFreeOperationGrantContract,
+  activeSeat: string,
+  seatOrder: readonly string[],
+  grantId: string,
+): TurnFlowPendingFreeOperationGrant | null => {
+  const resolvedSeats = resolveProbeGrantSeats(grant, activeSeat, seatOrder);
+  if (resolvedSeats === null) {
+    return null;
+  }
+  return {
+    ...toPendingFreeOperationGrant(grant, grantId, grant.sequence === undefined ? undefined : '__probeBatch__'),
+    seat: resolvedSeats.seat,
+    ...(resolvedSeats.executeAsSeat === undefined ? {} : { executeAsSeat: resolvedSeats.executeAsSeat }),
+  };
+};
+
+const resolveUnusableSequenceProbeBlockers = (
+  def: GameDef,
+  state: GameState,
+  grant: TurnFlowFreeOperationGrantContract,
+  activeSeat: string,
+  seatOrder: readonly string[],
+  seatResolution: SeatResolutionContext,
+  baseBlockers: readonly TurnFlowPendingFreeOperationGrant[],
+  candidates: readonly TurnFlowFreeOperationGrantContract[],
+): readonly TurnFlowPendingFreeOperationGrant[] => {
+  const sequence = grant.sequence;
+  if (sequence === undefined) {
+    return baseBlockers;
+  }
+
+  const derivedBlockers = [...baseBlockers];
+  const priorCandidates = candidates
+    .filter(
+      (candidate) =>
+        candidate.sequence !== undefined &&
+        candidate.sequence.chain === sequence.chain &&
+        candidate.sequence.step < sequence.step,
+    )
+    .sort((left, right) => left.sequence!.step - right.sequence!.step);
+
+  for (const [index, candidate] of priorCandidates.entries()) {
+    const candidateUsable = isFreeOperationGrantUsableInCurrentState(
+      def,
+      state,
+      candidate,
+      activeSeat,
+      seatOrder,
+      seatResolution,
+      { sequenceProbeBlockers: derivedBlockers },
+    );
+    if (candidateUsable) {
+      continue;
+    }
+    const blocker = toResolvedProbePendingGrant(
+      candidate,
+      activeSeat,
+      seatOrder,
+      `__probe_blocker__:${sequence.chain}:${candidate.sequence!.step}:${index}`,
+    );
+    if (blocker !== null) {
+      derivedBlockers.push(blocker);
+    }
+  }
+
+  return derivedBlockers;
+};
+
 export const DEFAULT_FREE_OPERATION_GRANT_VIABILITY_POLICY: TurnFlowFreeOperationGrantViabilityPolicy = 'emitAlways';
 
 export const resolveFreeOperationGrantViabilityPolicy = (
@@ -63,6 +153,7 @@ export const isFreeOperationGrantUsableInCurrentState = (
   seatResolution: SeatResolutionContext,
   options?: {
     readonly sequenceProbeBlockers?: readonly TurnFlowPendingFreeOperationGrant[];
+    readonly sequenceProbeCandidates?: readonly TurnFlowFreeOperationGrantContract[];
   },
 ): boolean => {
   const runtime = cardDrivenRuntime(state);
@@ -70,26 +161,28 @@ export const isFreeOperationGrantUsableInCurrentState = (
     return false;
   }
 
-  const seat = resolveFreeOperationGrantSeatToken(grant.seat, activeSeat, seatOrder);
-  if (seat === null) {
+  const resolvedSeats = resolveProbeGrantSeats(grant, activeSeat, seatOrder);
+  if (resolvedSeats === null) {
     return false;
   }
-
-  let executeAsSeat: string | undefined;
-  if (grant.executeAsSeat !== undefined) {
-    const resolvedExecuteAsSeat = resolveFreeOperationGrantSeatToken(grant.executeAsSeat, activeSeat, seatOrder);
-    if (resolvedExecuteAsSeat === null) {
-      return false;
-    }
-    executeAsSeat = resolvedExecuteAsSeat;
-  }
+  const { seat, executeAsSeat } = resolvedSeats;
 
   const probeGrant: TurnFlowPendingFreeOperationGrant = {
     ...toPendingFreeOperationGrant(grant, '__probe__', grant.sequence === undefined ? undefined : '__probeBatch__'),
     seat,
     ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
   };
-  const pendingProbeGrants = [...(options?.sequenceProbeBlockers ?? []), probeGrant];
+  const probeBlockers = resolveUnusableSequenceProbeBlockers(
+    def,
+    state,
+    grant,
+    activeSeat,
+    seatOrder,
+    seatResolution,
+    options?.sequenceProbeBlockers ?? [],
+    options?.sequenceProbeCandidates ?? [],
+  );
+  const pendingProbeGrants = [...probeBlockers, probeGrant];
   const probeActivePlayerIndex = resolvePlayerIndexForTurnFlowSeat(seat, seatResolution.index);
   const probeState: GameState = {
     ...state,

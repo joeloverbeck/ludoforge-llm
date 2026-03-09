@@ -257,7 +257,7 @@ const extractPendingFreeOperationGrants = (
   const emittedBatchBaseId = pendingFreeOperationGrantBatchBaseId(state, move);
   const declaredGrants = resolveEventFreeOperationGrants(def, state, move);
   for (const [grantIndex, grant] of declaredGrants.entries()) {
-    const sequenceProbeBlockers = grant.sequence === undefined
+    const sequenceProbeCandidates = grant.sequence === undefined
       ? []
       : declaredGrants
         .filter(
@@ -265,14 +265,10 @@ const extractPendingFreeOperationGrants = (
             candidate.sequence !== undefined
             && candidate.sequence.chain === grant.sequence.chain
             && candidate.sequence.step < grant.sequence.step,
-        )
-        .map((candidate, blockerIndex) => ({
-          ...toPendingFreeOperationGrant(candidate, `__probe_blocker__:${grantIndex}:${blockerIndex}`, '__probeBatch__'),
-          seat: activeSeat,
-        }));
+        );
     if (
       grantRequiresUsableProbe(grant) &&
-      !isFreeOperationGrantUsableInCurrentState(def, state, grant, activeSeat, seatOrder, seatResolution, { sequenceProbeBlockers })
+      !isFreeOperationGrantUsableInCurrentState(def, state, grant, activeSeat, seatOrder, seatResolution, { sequenceProbeCandidates })
     ) {
       continue;
     }

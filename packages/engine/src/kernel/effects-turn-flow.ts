@@ -2,11 +2,13 @@ import {
   effectRuntimeError,
   makeTurnFlowActiveSeatUnresolvableEffectRuntimeContext,
 } from './effect-error.js';
+import { asActionId } from './branded.js';
 import { resetPhaseUsage } from './action-usage.js';
 import { advancePhase, buildAdvancePhaseRequest } from './phase-advance.js';
 import { findPhaseDef } from './phase-lookup.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { resolveBindingTemplate } from './binding-template.js';
+import { resolveEventEffectList } from './event-execution.js';
 import {
   isTurnFlowActionClass,
   isTurnFlowFreeOperationGrantViabilityPolicy,
@@ -20,7 +22,12 @@ import {
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
-import type { EffectAST, GameState, TurnFlowPendingFreeOperationGrant } from './types.js';
+import type {
+  EffectAST,
+  GameState,
+  TurnFlowFreeOperationGrantContract,
+  TurnFlowPendingFreeOperationGrant,
+} from './types.js';
 import { createSeatResolutionContext, resolveTurnFlowSeatForPlayerIndex } from './seat-resolution.js';
 import {
   activeSeatUnresolvableInvariantMessage,
@@ -45,25 +52,49 @@ const makeUniqueGrantId = (
   return candidate;
 };
 
-const buildSequenceProbeBlockers = (
+const buildSequenceProbeCandidates = (
+  ctx: EffectContext,
   grant: Extract<EffectAST, { readonly grantFreeOperation: unknown }>['grantFreeOperation'],
-  activeSeat: string,
-): readonly TurnFlowPendingFreeOperationGrant[] => {
+): readonly TurnFlowFreeOperationGrantContract[] => {
   const step = grant.sequence?.step;
   if (step === undefined || step <= 0) {
     return [];
   }
+
+  const topLevelEffectIndex = Number.parseInt((ctx.effectPath ?? '').match(/^\[(\d+)\]/)?.[1] ?? '', 10);
+  if (Number.isSafeInteger(topLevelEffectIndex) && topLevelEffectIndex > 0 && ctx.traceContext?.actionId !== undefined) {
+    const eventEffects = resolveEventEffectList(
+      ctx.def,
+      ctx.state,
+      {
+        actionId: asActionId(ctx.traceContext.actionId),
+        params: ctx.moveParams,
+      },
+    );
+    const priorEffectCandidates = eventEffects
+      .slice(0, topLevelEffectIndex)
+      .flatMap((effect) => ('grantFreeOperation' in effect ? [effect.grantFreeOperation] : []))
+      .filter(
+        (candidate) =>
+          candidate.sequence !== undefined &&
+          candidate.sequence.chain === grant.sequence!.chain &&
+          candidate.sequence.step < step,
+      );
+    if (priorEffectCandidates.length > 0) {
+      return priorEffectCandidates;
+    }
+  }
+
   return Array.from({ length: step }, (_, index) => ({
-    grantId: `__probe_blocker__:${grant.sequence!.chain}:${index}`,
-    seat: activeSeat,
+    seat: grant.seat,
+    ...(grant.executeAsSeat === undefined ? {} : { executeAsSeat: grant.executeAsSeat }),
     operationClass: grant.operationClass,
     ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
     ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
     ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
     ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
-    remainingUses: 1,
-    sequenceBatchId: '__probeBatch__',
-    sequenceIndex: index,
+    ...(grant.uses === undefined ? {} : { uses: grant.uses }),
+    sequence: { chain: grant.sequence!.chain, step: index },
   }));
 };
 
@@ -214,7 +245,7 @@ export const applyGrantFreeOperation = (
       activeSeat,
       runtime.seatOrder,
       seatResolution,
-      { sequenceProbeBlockers: buildSequenceProbeBlockers(resolvedGrant, activeSeat) },
+      { sequenceProbeCandidates: buildSequenceProbeCandidates(ctx, resolvedGrant) },
     )
   ) {
     return {

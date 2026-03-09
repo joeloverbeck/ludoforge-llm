@@ -13,6 +13,69 @@ import { resolveLabel } from './tooltip-label-resolver.js';
 import { humanizeIdentifier } from './tooltip-humanizer.js';
 
 // ---------------------------------------------------------------------------
+// Macro ID humanization
+// ---------------------------------------------------------------------------
+
+/**
+ * Known abbreviations in macro IDs that should be rendered in a specific form.
+ * Keys are lowercase, values are the display form.
+ *
+ * Game-specific abbreviations (e.g. faction names) belong in verbalization
+ * data, not here.  Only truly generic abbreviations go in this map.
+ */
+const MACRO_ABBREVIATIONS: Readonly<Record<string, string>> = {
+  id: 'ID',
+  hp: 'HP',
+  ai: 'AI',
+  ui: 'UI',
+};
+
+/**
+ * Convert a macro ID (underscore-separated) into a human-readable title.
+ *
+ * - Splits on underscores
+ * - Strips trailing "action" segment (internal compiler artifact)
+ * - Expands known generic abbreviations (e.g., `id` → `ID`, `ai` → `AI`)
+ * - Title-cases remaining words
+ *
+ * @example humanizeMacroId('place_from_available_or_map_action') → 'Place From Available Or Map'
+ * @example humanizeMacroId('player_ai_turn') → 'Player AI Turn'
+ */
+/**
+ * Split a segment on camelCase boundaries.
+ * E.g. `trainUs` → `['train', 'Us']`, `MyTroops` → `['My', 'Troops']`
+ */
+const splitCamelCase = (segment: string): readonly string[] =>
+  segment
+    .replace(/([a-z])([A-Z])/g, '$1\0$2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1\0$2')
+    .split('\0')
+    .filter((w) => w.length > 0);
+
+export const humanizeMacroId = (macroId: string): string => {
+  // Split on underscores first, then split each segment on camelCase boundaries
+  const rawWords = macroId.split('_').filter((w) => w.length > 0);
+  if (rawWords.length === 0) return macroId;
+
+  const words = rawWords.flatMap(splitCamelCase);
+  if (words.length === 0) return macroId;
+
+  // Strip trailing "action" — it's a compiler artifact, not meaningful to users
+  if (words.length > 1 && words[words.length - 1]!.toLowerCase() === 'action') {
+    words.pop();
+  }
+
+  return words
+    .map((word) => {
+      const lower = word.toLowerCase();
+      const abbr = MACRO_ABBREVIATIONS[lower];
+      if (abbr !== undefined) return abbr;
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(' ');
+};
+
+// ---------------------------------------------------------------------------
 // Binding name sanitization
 // ---------------------------------------------------------------------------
 

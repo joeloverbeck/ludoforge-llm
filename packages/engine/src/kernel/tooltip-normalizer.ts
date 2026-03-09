@@ -9,7 +9,7 @@ import type { EffectAST, ZoneRef, NumericValueExpr, PlayerSel } from './types-as
 import type { VerbalizationDef } from './verbalization-types.js';
 import type { TooltipMessage, VarScope } from './tooltip-ir.js';
 import { isSuppressed, isScaffoldingEffect } from './tooltip-suppression.js';
-import { stringifyValueExpr, stringifyNumericExpr, stringifyZoneRef, stripMacroBindingPrefix } from './tooltip-value-stringifier.js';
+import { stringifyValueExpr, stringifyNumericExpr, stringifyZoneRef, stripMacroBindingPrefix, humanizeMacroId } from './tooltip-value-stringifier.js';
 import {
   normalizeChooseN,
   normalizeChooseOne,
@@ -27,6 +27,10 @@ export interface NormalizerContext {
   readonly suppressPatterns: readonly string[];
   /** Label from a parent chooseOne branch, propagated to child chooseN for contextual "Select up to N X" */
   readonly choiceBranchLabel?: string;
+  /** Runtime value of `__actionClass` binding (e.g., 'limitedOperation' or 'fullOperation').
+   *  When set, `normalizeIf` evaluates `__actionClass == '...'` conditions statically
+   *  and emits only the matching branch, eliminating duplicate LimOp/FullOp display. */
+  readonly actionClassBinding?: string;
 }
 
 /** Extract a single-key union member from EffectAST by its discriminant key. */
@@ -356,18 +360,30 @@ const tryLeafMacroOverride = (
     if (typeof val !== 'string' || !val.startsWith('__macro_')) continue;
     const macroId = extractMacroIdFromBinding(val);
     if (macroId === undefined) continue;
+
+    // Try verbalization summary first
     const macroEntry = ctx.verbalization.macros[macroId];
-    if (macroEntry?.summary === undefined) continue;
-    const text = macroEntry.slots !== undefined
-      ? Object.entries(macroEntry.slots).reduce(
-          (acc, [k, v]) => acc.replaceAll(`{${k}}`, v),
-          macroEntry.summary,
-        )
-      : macroEntry.summary;
+    if (macroEntry?.summary !== undefined) {
+      const text = macroEntry.slots !== undefined
+        ? Object.entries(macroEntry.slots).reduce(
+            (acc, [k, v]) => acc.replaceAll(`{${k}}`, v),
+            macroEntry.summary,
+          )
+        : macroEntry.summary;
+      return [{
+        kind: 'summary',
+        text,
+        macroClass: macroEntry.class,
+        macroOrigin: macroId,
+        astPath,
+      }];
+    }
+
+    // Fallback: derive human-readable text from the macro ID
+    // when verbalization exists but this specific macro has no summary
     return [{
       kind: 'summary',
-      text,
-      macroClass: macroEntry.class,
+      text: humanizeMacroId(macroId),
       macroOrigin: macroId,
       astPath,
     }];

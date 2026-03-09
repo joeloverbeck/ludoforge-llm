@@ -340,13 +340,18 @@ describe('tryMacroOverride', () => {
     assert.equal(result, undefined);
   });
 
-  it('returns undefined when macro has no summary', () => {
+  it('returns humanized fallback when macro has no summary', () => {
     const ctx: NormalizerContext = {
       verbalization: makeVerb({ trainUs: { class: 'Train', summary: undefined as unknown as string } }),
       suppressPatterns: [],
     };
     const result = tryMacroOverride(forEachWithMacro('trainUs'), ctx, 'r');
-    assert.equal(result, undefined);
+    assert.ok(result !== undefined, 'expected fallback summary, not undefined');
+    assert.equal(result!.length, 1);
+    const msg = result![0] as SummaryMessage;
+    assert.equal(msg.kind, 'summary');
+    assert.equal(msg.text, 'Train Us');
+    assert.equal(msg.macroOrigin, 'trainUs');
   });
 
   it('produces SummaryMessage instead of SetMessage', () => {

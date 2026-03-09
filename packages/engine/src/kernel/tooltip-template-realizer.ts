@@ -66,8 +66,16 @@ const resolveSelectFilter = (msg: SelectMessage, ctx: LabelContext, count?: numb
 };
 
 const realizeSelect = (msg: SelectMessage, ctx: LabelContext): string => {
+  // When optionHints exist and there are few options, show them as choices
   if (msg.optionHints !== undefined && msg.optionHints.length > 0 && msg.optionHints.length <= 5) {
     const options = msg.optionHints.map((h) => resolveLabel(h, ctx)).join(', ');
+    // When bounds are present with 'items' target, include hints as context
+    if (msg.bounds !== undefined && msg.target === 'items') {
+      const { min, max } = msg.bounds;
+      if (min === max) return `Select ${min} from: ${options}`;
+      if (min === 0) return `Select up to ${max} from: ${options}`;
+      return `Select ${min}-${max} from: ${options}`;
+    }
     return `Choose from: ${options}`;
   }
 
@@ -76,10 +84,18 @@ const realizeSelect = (msg: SelectMessage, ctx: LabelContext): string => {
     ? resolveLabel(msg.choiceBranchLabel, ctx)
     : undefined;
 
+  // When target is 'items' and optionHints exist (>5 options), append hint summary
+  const hintSuffix = msg.target === 'items'
+    && branchResolved === undefined
+    && msg.optionHints !== undefined
+    && msg.optionHints.length > 5
+    ? ` from: ${msg.optionHints.slice(0, 5).map((h) => resolveLabel(h, ctx)).join(', ')}...`
+    : undefined;
+
   const targetLabel = branchResolved ?? resolveSelectFilter(msg, ctx) ?? msg.target;
 
   if (msg.bounds === undefined) {
-    return `Select ${targetLabel}`;
+    return `Select ${targetLabel}${hintSuffix ?? ''}`;
   }
 
   const { min, max } = msg.bounds;
@@ -91,17 +107,17 @@ const realizeSelect = (msg: SelectMessage, ctx: LabelContext): string => {
     const label = hasContext
       ? (branchResolved ?? resolveSelectFilter(msg, ctx, min) ?? msg.target)
       : min === 1 ? singularTarget(msg.target) : msg.target;
-    return `Select ${min} ${label}`;
+    return `Select ${min} ${label}${hintSuffix ?? ''}`;
   }
 
   if (min === 0) {
     const label = max === 1
       ? (hasContext ? (branchResolved ?? resolveSelectFilter(msg, ctx, 1) ?? singularTarget(msg.target)) : singularTarget(msg.target))
       : targetLabel;
-    return `Select up to ${max} ${label}`;
+    return `Select up to ${max} ${label}${hintSuffix ?? ''}`;
   }
 
-  return `Select ${min}-${max} ${targetLabel}`;
+  return `Select ${min}-${max} ${targetLabel}${hintSuffix ?? ''}`;
 };
 
 const realizePlace = (msg: PlaceMessage, ctx: LabelContext): string => {

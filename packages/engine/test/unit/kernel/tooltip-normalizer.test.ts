@@ -1095,7 +1095,7 @@ describe('tooltip-normalizer', () => {
       assert.equal(messages[0]!.kind, 'gain');
     });
 
-    it('effect with macroOrigin but macro has no summary → normal processing', () => {
+    it('effect with macroOrigin but macro has no summary → humanized fallback', () => {
       const ctx: NormalizerContext = {
         verbalization: {
           labels: {},
@@ -1119,8 +1119,12 @@ describe('tooltip-normalizer', () => {
         },
       };
       const messages = normalizeEffect(effect, ctx, 'macro[2]');
-      assert.ok(messages.length >= 1);
-      assert.equal(messages[0]!.kind, 'gain');
+      assert.equal(messages.length, 1, 'Fallback should produce exactly 1 summary');
+      assert.equal(messages[0]!.kind, 'summary');
+      if (messages[0]!.kind === 'summary') {
+        assert.equal(messages[0]!.text, 'Train Us');
+        assert.equal(messages[0]!.macroOrigin, 'trainUs');
+      }
     });
   });
 
@@ -1443,7 +1447,7 @@ describe('tooltip-normalizer', () => {
       }
     });
 
-    it('moveToken with __macro_ token but no verbalization entry → falls through to PlaceMessage', () => {
+    it('moveToken with __macro_ token but no verbalization entry → humanized fallback summary', () => {
       const ctx: NormalizerContext = {
         verbalization: {
           labels: {},
@@ -1465,10 +1469,10 @@ describe('tooltip-normalizer', () => {
       };
       const messages = normalizeEffect(effect, ctx, 'leaf[1]');
       assert.equal(messages.length, 1);
-      assert.equal(messages[0]!.kind, 'place');
-      if (messages[0]!.kind === 'place') {
-        assert.equal(messages[0]!.tokenFilter, 'piece');
-        assert.equal(messages[0]!.targetZone, 'saigon');
+      assert.equal(messages[0]!.kind, 'summary');
+      if (messages[0]!.kind === 'summary') {
+        assert.equal(messages[0]!.text, 'Place From Available Or Map');
+        assert.equal(messages[0]!.macroOrigin, 'place_from_available_or_map_action');
       }
     });
 

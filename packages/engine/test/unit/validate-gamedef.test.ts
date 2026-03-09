@@ -5696,6 +5696,152 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
     );
   });
 
+  it('rejects ambiguous overlapping event freeOperationGrants on the same side', () => {
+    const def = withEventCardSideConfig({
+      freeOperationGrants: [
+        {
+          seat: '0',
+          sequence: { chain: 'ambiguous-a', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          uses: 1,
+        },
+        {
+          seat: '0',
+          sequence: { chain: 'ambiguous-b', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          uses: 2,
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0]',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[1]',
+      ),
+      true,
+    );
+  });
+
+  it('accepts contract-equivalent duplicate event freeOperationGrants', () => {
+    const def = withEventCardSideConfig({
+      freeOperationGrants: [
+        {
+          seat: '0',
+          sequence: { chain: 'duplicate-a', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          completionPolicy: 'required',
+          outcomePolicy: 'mustChangeGameplayState',
+          postResolutionTurnFlow: 'resumeCardFlow',
+        },
+        {
+          seat: '0',
+          sequence: { chain: 'duplicate-b', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          completionPolicy: 'required',
+          outcomePolicy: 'mustChangeGameplayState',
+          postResolutionTurnFlow: 'resumeCardFlow',
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'),
+      false,
+    );
+  });
+
+  it('accepts same-chain sequential event freeOperationGrants because they cannot co-issue', () => {
+    const def = withEventCardSideConfig({
+      freeOperationGrants: [
+        {
+          seat: '0',
+          sequence: { chain: 'ordered', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          completionPolicy: 'required',
+          postResolutionTurnFlow: 'resumeCardFlow',
+        },
+        {
+          seat: '0',
+          sequence: { chain: 'ordered', step: 1 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          completionPolicy: 'required',
+          outcomePolicy: 'mustChangeGameplayState',
+          postResolutionTurnFlow: 'resumeCardFlow',
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'),
+      false,
+    );
+  });
+
+  it('rejects ambiguous overlapping event freeOperationGrants across side and branch issuance scope', () => {
+    const def = withEventCardSideConfig({
+      freeOperationGrants: [
+        {
+          seat: '0',
+          sequence: { chain: 'cross-scope-side', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          uses: 1,
+        },
+      ],
+      branches: [
+        {
+          id: 'branch-1',
+          freeOperationGrants: [
+            {
+              seat: '0',
+              sequence: { chain: 'cross-scope-branch', step: 0 },
+              operationClass: 'operation',
+              actionIds: ['playCard'],
+              uses: 2,
+            },
+          ],
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0]',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.branches[0].freeOperationGrants[0]',
+      ),
+      true,
+    );
+  });
+
   it('accepts side effect-issued capture plus branch effect-issued require when the selected branch scope matches runtime execution', () => {
     const def = withEventCardSideConfig({
       effects: [

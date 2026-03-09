@@ -82,6 +82,38 @@ export type TurnFlowFreeOperationGrantContractCandidate = {
   } | null;
 };
 
+export const turnFlowFreeOperationGrantPolicyRank = (
+  grant: Pick<
+    TurnFlowFreeOperationGrantContractCandidate,
+    'completionPolicy' | 'outcomePolicy' | 'postResolutionTurnFlow'
+  >,
+): readonly [number, number, number] => [
+  grant.completionPolicy === 'required' ? 1 : 0,
+  grant.outcomePolicy === 'mustChangeGameplayState' ? 1 : 0,
+  grant.postResolutionTurnFlow === 'resumeCardFlow' ? 1 : 0,
+];
+
+export const compareTurnFlowFreeOperationGrantPriority = (
+  left: Pick<
+    TurnFlowFreeOperationGrantContractCandidate,
+    'completionPolicy' | 'outcomePolicy' | 'postResolutionTurnFlow'
+  >,
+  right: Pick<
+    TurnFlowFreeOperationGrantContractCandidate,
+    'completionPolicy' | 'outcomePolicy' | 'postResolutionTurnFlow'
+  >,
+): number => {
+  const leftRank = turnFlowFreeOperationGrantPolicyRank(left);
+  const rightRank = turnFlowFreeOperationGrantPolicyRank(right);
+  for (let index = 0; index < leftRank.length; index += 1) {
+    const delta = rightRank[index]! - leftRank[index]!;
+    if (delta !== 0) {
+      return delta;
+    }
+  }
+  return 0;
+};
+
 export type TurnFlowFreeOperationGrantContractViolationCode =
   | 'operationClassInvalid'
   | 'usesInvalid'

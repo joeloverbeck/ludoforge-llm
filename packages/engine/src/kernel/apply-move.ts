@@ -32,7 +32,7 @@ import {
   hasActiveSeatRequiredPendingFreeOperationGrant,
   isMoveAllowedByRequiredPendingFreeOperationGrant,
 } from './turn-flow-eligibility.js';
-import { findAuthorizedPendingFreeOperationGrant } from './free-operation-grant-authorization.js';
+import { resolveAuthorizedPendingFreeOperationGrants } from './free-operation-grant-authorization.js';
 import { resolveFreeOperationDiscoveryAnalysis } from './free-operation-discovery-analysis.js';
 import { resolveTurnFlowActionClassMismatch } from './turn-flow-action-class.js';
 import { toFreeOperationDeniedCauseForLegality } from './free-operation-legality-policy.js';
@@ -137,14 +137,14 @@ const validateFreeOperationOutcomePolicy = (
     seatResolution,
   );
   const pending = beforeState.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
-  const grant = findAuthorizedPendingFreeOperationGrant(def, beforeState, pending, activeSeat, move);
-  if (grant?.outcomePolicy !== 'mustChangeGameplayState') {
+  const authorized = resolveAuthorizedPendingFreeOperationGrants(def, beforeState, pending, activeSeat, move);
+  if (authorized.strongestOutcomeGrant === null) {
     return;
   }
   if (isDeepStrictEqual(gameplayStateProjection(beforeState), gameplayStateProjection(afterActionState))) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED, {
-      grantId: grant.grantId,
-      outcomePolicy: grant.outcomePolicy,
+      grantId: authorized.strongestOutcomeGrant.grantId,
+      outcomePolicy: 'mustChangeGameplayState',
     });
   }
 };

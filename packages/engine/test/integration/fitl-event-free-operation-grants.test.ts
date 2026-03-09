@@ -52,7 +52,7 @@ actor: 'active',
 executor: 'actor',
 phase: [asPhaseId('main')],
         params: [
-          { name: 'eventCardId', domain: { query: 'enums', values: ['card-1', 'card-2', 'card-3', 'card-4', 'card-5', 'card-6', 'card-7', 'card-9', 'card-required-outcome'] } },
+          { name: 'eventCardId', domain: { query: 'enums', values: ['card-1', 'card-2', 'card-3', 'card-4', 'card-5', 'card-6', 'card-7', 'card-9', 'card-required-outcome', 'card-overlap-required-outcome'] } },
           { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
           { name: 'branch', domain: { query: 'enums', values: ['branch-grant-nva', 'none'] } },
         ],
@@ -219,6 +219,31 @@ phase: [asPhaseId('main')],
                 {
                   seat: 'US',
                   sequence: { chain: 'required-self', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  completionPolicy: 'required',
+                  outcomePolicy: 'mustChangeGameplayState',
+                  postResolutionTurnFlow: 'resumeCardFlow',
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-overlap-required-outcome',
+            title: 'Overlapping Required Self Grant',
+            sideMode: 'single',
+            unshaded: {
+              text: 'US receives overlapping free operations, one of which must change gameplay state.',
+              freeOperationGrants: [
+                {
+                  seat: 'US',
+                  sequence: { chain: 'overlap-self-weaker', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                },
+                {
+                  seat: 'US',
+                  sequence: { chain: 'overlap-self-required', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                   completionPolicy: 'required',
@@ -2292,6 +2317,96 @@ describe('event free-operation grants integration', () => {
     );
   });
 
+  it('rejects overlapping free operations that fail required outcome policy even when pending grants are reordered', () => {
+    const def = createDef();
+    const start = initialState(def, 90, 4).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-overlap-required-outcome', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    assert.equal(afterEvent.turnOrderState.type, 'cardDriven');
+    const emittedGrants = afterEvent.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
+    assert.equal(emittedGrants.length, 2);
+
+    for (const state of [
+      afterEvent,
+      {
+        ...afterEvent,
+        turnOrderState: {
+          type: 'cardDriven' as const,
+          runtime: {
+            ...afterEvent.turnOrderState.runtime,
+            pendingFreeOperationGrants: [...emittedGrants].reverse(),
+          },
+        },
+      },
+    ]) {
+      assert.throws(
+        () => applyMove(def, state, { actionId: asActionId('operation'), params: {}, freeOperation: true }),
+        (error: unknown) => {
+          if (!(error instanceof Error)) {
+            return false;
+          }
+          const details = error as Error & {
+            readonly reason?: string;
+            readonly context?: {
+              readonly grantId?: string;
+              readonly outcomePolicy?: string;
+            };
+          };
+          return (
+            details.reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED
+            && typeof details.context?.grantId === 'string'
+            && details.context?.grantId.includes('freeOp:')
+            && details.context?.outcomePolicy === 'mustChangeGameplayState'
+          );
+        },
+      );
+    }
+  });
+
+  it('rejects ambiguous declarative event free-operation grants before play starts', () => {
+    const def = createDef();
+    const invalidDecks = (def.eventDecks ?? []).map((deck) => ({
+      ...deck,
+      cards: deck.cards.map((card) =>
+        card.id !== 'card-1'
+          ? card
+          : {
+              ...card,
+              unshaded: {
+                ...card.unshaded!,
+                freeOperationGrants: [
+                  {
+                    seat: 'VC',
+                    sequence: { chain: 'invalid-overlap-a', step: 0 },
+                    operationClass: 'operation',
+                    actionIds: ['operation'],
+                    uses: 1,
+                  },
+                  {
+                    seat: 'VC',
+                    sequence: { chain: 'invalid-overlap-b', step: 0 },
+                    operationClass: 'operation',
+                    actionIds: ['operation'],
+                    uses: 2,
+                  },
+                ],
+              },
+            }),
+    })) as readonly EventDeckDef[];
+
+    assert.throws(
+      () => initialState({
+        ...def,
+        eventDecks: invalidDecks,
+      }, 124, 4),
+      /FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS/,
+    );
+  });
+
   it('resumes turn flow after a successful required free operation and advances to the next card candidates', () => {
     const def = createRequiredGrantResumeDef();
     const start = initialState(def, 89, 4).state;
@@ -2340,4 +2455,5 @@ describe('event free-operation grants integration', () => {
       'after resolution the next card should expose only ordinary moves',
     );
   });
+
 });

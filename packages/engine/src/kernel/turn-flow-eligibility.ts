@@ -15,8 +15,8 @@ import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycl
 import {
   collectMoveZoneCandidates,
   doesGrantAuthorizeMove,
-  findAuthorizedPendingFreeOperationGrant,
   isPendingFreeOperationGrantSequenceReady,
+  resolveAuthorizedPendingFreeOperationGrants,
 } from './free-operation-grant-authorization.js';
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
@@ -1021,7 +1021,13 @@ export const consumeTurnFlowFreeOperationGrant = (
     seatResolution,
   );
   const pending = runtime.pendingFreeOperationGrants ?? [];
-  const authorizedGrant = findAuthorizedPendingFreeOperationGrant(def, state, pending, activeSeat, move);
+  const authorizedGrant = resolveAuthorizedPendingFreeOperationGrants(
+    def,
+    state,
+    pending,
+    activeSeat,
+    move,
+  ).canonicalGrant;
   if (authorizedGrant === null) {
     return { state, traceEntries: [], releasedDeferredEventEffects: [] };
   }

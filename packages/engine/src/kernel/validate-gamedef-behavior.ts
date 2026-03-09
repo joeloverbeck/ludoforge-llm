@@ -8,6 +8,7 @@ import type {
   ConditionAST,
   EffectAST,
   EventBranchDef,
+  EventFreeOperationGrantDef,
   EventLastingEffectDef,
   EventSideDef,
   EventTargetDef,
@@ -34,6 +35,7 @@ import {
   conditionSurfacePathForTerminalConditionWhen,
   conditionSurfacePathForTriggerMatch,
   conditionSurfacePathForTriggerWhen,
+  compareTurnFlowFreeOperationGrantPriority,
   collectTurnFlowFreeOperationGrantContractViolations,
   isAllowedTokenFilterProp,
   isCanonicalBindingIdentifier,
@@ -46,6 +48,7 @@ import {
   TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
   type TurnFlowFreeOperationGrantContractViolationCode,
 } from '../contracts/index.js';
+import { resolveGrantFreeOperationActionDomain } from './free-operation-action-domain.js';
 import {
   type ValidationContext,
   pushMissingReferenceDiagnostic,
@@ -278,6 +281,11 @@ type FreeOperationGrantValidationTarget = {
   readonly zoneFilter?: ConditionAST;
 };
 
+type EventFreeOperationGrantValidationScopeEntry = Readonly<{
+  readonly grant: EventFreeOperationGrantDef;
+  readonly path: string;
+}>;
+
 const FREE_OPERATION_GRANT_DIAGNOSTIC_BY_VIOLATION_CODE = {
   operationClassInvalid: {
     code: 'EFFECT_GRANT_FREE_OPERATION_CLASS_INVALID',
@@ -351,6 +359,109 @@ const validateFreeOperationGrantContract = (
       message: surface.message,
       suggestion: diagnostic.suggestion(label),
     });
+  }
+};
+
+const normalizedEventFreeOperationGrantActionIds = (
+  def: GameDef,
+  grant: EventFreeOperationGrantDef,
+): readonly string[] => [...resolveGrantFreeOperationActionDomain(def, grant)].sort();
+
+const eventFreeOperationGrantOverlapSurfaceKey = (
+  def: GameDef,
+  grant: EventFreeOperationGrantDef,
+): string => JSON.stringify({
+  seat: grant.seat,
+  executeAsSeat: grant.executeAsSeat,
+  operationClass: grant.operationClass,
+  actionIds: normalizedEventFreeOperationGrantActionIds(def, grant),
+  zoneFilter: grant.zoneFilter,
+  allowDuringMonsoon: grant.allowDuringMonsoon,
+  viabilityPolicy: grant.viabilityPolicy,
+  sequenceContext: grant.sequenceContext,
+});
+
+const eventFreeOperationGrantEquivalenceKey = (
+  def: GameDef,
+  grant: EventFreeOperationGrantDef,
+): string => JSON.stringify({
+  seat: grant.seat,
+  executeAsSeat: grant.executeAsSeat,
+  operationClass: grant.operationClass,
+  actionIds: normalizedEventFreeOperationGrantActionIds(def, grant),
+  zoneFilter: grant.zoneFilter,
+  allowDuringMonsoon: grant.allowDuringMonsoon,
+  viabilityPolicy: grant.viabilityPolicy,
+  completionPolicy: grant.completionPolicy,
+  outcomePolicy: grant.outcomePolicy,
+  postResolutionTurnFlow: grant.postResolutionTurnFlow,
+  uses: grant.uses ?? 1,
+  sequenceContext: grant.sequenceContext,
+  ...(grant.sequenceContext === undefined
+    ? {}
+    : {
+        sequence: grant.sequence,
+      }),
+});
+
+const eventFreeOperationGrantsCanCoissue = (
+  left: EventFreeOperationGrantDef,
+  right: EventFreeOperationGrantDef,
+): boolean => left.sequence.chain !== right.sequence.chain || left.sequence.step === right.sequence.step;
+
+const validateAmbiguousEventFreeOperationGrantOverlap = (
+  diagnostics: Diagnostic[],
+  def: GameDef,
+  grants: readonly EventFreeOperationGrantValidationScopeEntry[],
+): void => {
+  for (let leftIndex = 0; leftIndex < grants.length; leftIndex += 1) {
+    const left = grants[leftIndex];
+    if (left === undefined) {
+      continue;
+    }
+    for (let rightIndex = leftIndex + 1; rightIndex < grants.length; rightIndex += 1) {
+      const right = grants[rightIndex];
+      if (right === undefined) {
+        continue;
+      }
+      if (!eventFreeOperationGrantsCanCoissue(left.grant, right.grant)) {
+        continue;
+      }
+      if (
+        eventFreeOperationGrantOverlapSurfaceKey(def, left.grant)
+        !== eventFreeOperationGrantOverlapSurfaceKey(def, right.grant)
+      ) {
+        continue;
+      }
+      if (compareTurnFlowFreeOperationGrantPriority(left.grant, right.grant) !== 0) {
+        continue;
+      }
+      if (eventFreeOperationGrantEquivalenceKey(def, left.grant) === eventFreeOperationGrantEquivalenceKey(def, right.grant)) {
+        continue;
+      }
+      diagnostics.push({
+        code: 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS',
+        path: left.path,
+        severity: 'error',
+        message:
+          `freeOperationGrant overlaps ambiguously with ${right.path}; top-ranked overlapping grants must be `
+          + 'contract-equivalent duplicates or differ by deterministic grant semantics.',
+        suggestion:
+          'Differentiate the grants by policy strength, actionIds, zoneFilter, or sequenceContext, or collapse them '
+          + 'into equivalent duplicates.',
+      });
+      diagnostics.push({
+        code: 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS',
+        path: right.path,
+        severity: 'error',
+        message:
+          `freeOperationGrant overlaps ambiguously with ${left.path}; top-ranked overlapping grants must be `
+          + 'contract-equivalent duplicates or differ by deterministic grant semantics.',
+        suggestion:
+          'Differentiate the grants by policy strength, actionIds, zoneFilter, or sequenceContext, or collapse them '
+          + 'into equivalent duplicates.',
+      });
+    }
   }
 };
 
@@ -2180,6 +2291,16 @@ export const validatePostAdjacencyBehavior = (
         );
       }
     });
+    if (branch.freeOperationGrants !== undefined) {
+      validateAmbiguousEventFreeOperationGrantOverlap(
+        diagnostics,
+        def,
+        branch.freeOperationGrants.map((grant, grantIndex) => ({
+          grant,
+          path: `${path}.freeOperationGrants[${grantIndex}]`,
+        })),
+      );
+    }
     branch.effects?.forEach((effect, effectIndex) => {
       validateEffectAst(diagnostics, effect, `${path}.effects[${effectIndex}]`, context);
     });
@@ -2211,13 +2332,40 @@ export const validatePostAdjacencyBehavior = (
         );
       }
     });
+    if (side.freeOperationGrants !== undefined) {
+      validateAmbiguousEventFreeOperationGrantOverlap(
+        diagnostics,
+        def,
+        side.freeOperationGrants.map((grant, grantIndex) => ({
+          grant,
+          path: `${path}.freeOperationGrants[${grantIndex}]`,
+        })),
+      );
+    }
     side.effects?.forEach((effect, effectIndex) => {
       validateEffectAst(diagnostics, effect, `${path}.effects[${effectIndex}]`, context);
     });
     validateEventTargets(side.targets, path);
     validateEventLastingEffects(side.lastingEffects, path);
     side.branches?.forEach((branch, branchIndex) => {
-      validateEventBranchBehavior(branch, `${path}.branches[${branchIndex}]`);
+      const branchPath = `${path}.branches[${branchIndex}]`;
+      validateEventBranchBehavior(branch, branchPath);
+      if (side.freeOperationGrants !== undefined && branch.freeOperationGrants !== undefined) {
+        validateAmbiguousEventFreeOperationGrantOverlap(
+          diagnostics,
+          def,
+          [
+            ...side.freeOperationGrants.map((grant, grantIndex) => ({
+              grant,
+              path: `${path}.freeOperationGrants[${grantIndex}]`,
+            })),
+            ...branch.freeOperationGrants.map((grant, grantIndex) => ({
+              grant,
+              path: `${branchPath}.freeOperationGrants[${grantIndex}]`,
+            })),
+          ],
+        );
+      }
     });
   };
 

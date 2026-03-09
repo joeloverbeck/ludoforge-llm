@@ -193,7 +193,11 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
     assert.equal(card?.shaded?.text, 'Place up to 10 NVA Troops anywhere within 1 space of North Vietnam.');
     assert.equal(typeof (card?.unshaded?.effects?.[0] as { if?: unknown } | undefined)?.if, 'object');
     assert.equal(typeof (card?.unshaded?.effects?.[1] as { forEach?: unknown } | undefined)?.forEach, 'object');
+    assert.equal(card?.unshaded?.freeOperationGrants, undefined, 'Card 47 should resolve via event effects, not grant issuance');
+    const serializedCompiledUnshaded = JSON.stringify(card?.unshaded?.effects ?? []);
     const serializedParsedUnshaded = JSON.stringify(parsedCard?.unshaded?.effects ?? []);
+    assert.match(serializedCompiledUnshaded, /coin-assault-removal-order/, 'Card 47 should call the shared assault helper');
+    assert.doesNotMatch(serializedCompiledUnshaded, /coin-assault-removal-order-single-faction/, 'Card 47 should not reference the removed bespoke helper');
     assert.match(serializedParsedUnshaded, /targetFactions/, 'Card 47 should encode its targeted assault via targetFactions');
     assert.doesNotMatch(serializedParsedUnshaded, /targetFactionMode/, 'Card 47 should not retain the legacy targetFactionMode alias');
     assert.equal((card?.shaded?.effects?.[0] as { chooseN?: { bind?: string } } | undefined)?.chooseN?.bind, '$nvaTroopsToPlace');

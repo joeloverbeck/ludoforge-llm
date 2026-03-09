@@ -15,6 +15,10 @@ export const CONDITION_SURFACE_SUFFIX = {
     moveAllFilter: 'moveAll.filter',
     grantFreeOperationZoneFilter: 'grantFreeOperation.zoneFilter',
   },
+  event: {
+    playCondition: 'playCondition',
+    freeOperationGrantZoneFilter: 'zoneFilter',
+  },
   actionPipeline: {
     applicability: 'applicability',
     legality: 'legality',
@@ -28,6 +32,8 @@ export type ValueExprConditionSurfaceSuffix =
 export type QueryConditionSurfaceSuffix = (typeof CONDITION_SURFACE_SUFFIX.query)[keyof typeof CONDITION_SURFACE_SUFFIX.query];
 export type EffectConditionSurfaceSuffix =
   (typeof CONDITION_SURFACE_SUFFIX.effect)[keyof typeof CONDITION_SURFACE_SUFFIX.effect];
+export type EventConditionSurfaceSuffix =
+  (typeof CONDITION_SURFACE_SUFFIX.event)[keyof typeof CONDITION_SURFACE_SUFFIX.event];
 export type ActionPipelineConditionSurfaceSuffix =
   (typeof CONDITION_SURFACE_SUFFIX.actionPipeline)[keyof typeof CONDITION_SURFACE_SUFFIX.actionPipeline];
 
@@ -43,6 +49,9 @@ export const appendQueryConditionSurfacePath = (basePath: string, suffix: QueryC
   appendConditionSurfacePath(basePath, suffix);
 
 export const appendEffectConditionSurfacePath = (basePath: string, suffix: EffectConditionSurfaceSuffix): string =>
+  appendConditionSurfacePath(basePath, suffix);
+
+export const appendEventConditionSurfacePath = (basePath: string, suffix: EventConditionSurfaceSuffix): string =>
   appendConditionSurfacePath(basePath, suffix);
 
 export const appendActionPipelineConditionSurfacePath = (

@@ -11,6 +11,16 @@ export interface SequenceContextLinkageGrantReference {
 
 type SequenceContextLinkagePathState = readonly SequenceContextLinkageGrantReference[];
 
+const dedupeExecutionPaths = (
+  paths: readonly SequenceContextLinkagePathState[],
+): readonly SequenceContextLinkagePathState[] => {
+  const unique = new Map<string, SequenceContextLinkagePathState>();
+  paths.forEach((path) => {
+    unique.set(JSON.stringify(path), path);
+  });
+  return [...unique.values()];
+};
+
 const effectArrayContainsSequenceContextGrant = (effects: readonly EffectAST[]): boolean =>
   effects.some((effect) => effectContainsSequenceContextGrant(effect));
 
@@ -43,8 +53,7 @@ const effectContainsSequenceContextGrant = (effect: EffectAST): boolean => {
   }
 
   if ('evaluateSubset' in effect) {
-    return effectArrayContainsSequenceContextGrant(effect.evaluateSubset.compute)
-      || effectArrayContainsSequenceContextGrant(effect.evaluateSubset.in);
+    return effectArrayContainsSequenceContextGrant(effect.evaluateSubset.in);
   }
 
   if ('rollRandom' in effect) {
@@ -151,14 +160,15 @@ const walkEffectExecutionPaths = (
   }
 
   if ('forEach' in effect) {
-    walkEffectArrayExecutionPaths(effect.forEach.effects, `${path}.forEach.effects`, incoming);
-    return effect.forEach.in === undefined
-      ? incoming
-      : walkEffectArrayExecutionPaths(effect.forEach.in, `${path}.forEach.in`, incoming);
+    const loopBodyPaths = walkEffectArrayExecutionPaths(effect.forEach.effects, `${path}.forEach.effects`, incoming);
+    const continuationIncoming = dedupeExecutionPaths([...incoming, ...loopBodyPaths]);
+    if (effect.forEach.countBind === undefined || effect.forEach.in === undefined) {
+      return continuationIncoming;
+    }
+    return walkEffectArrayExecutionPaths(effect.forEach.in, `${path}.forEach.in`, continuationIncoming);
   }
 
   if ('evaluateSubset' in effect) {
-    walkEffectArrayExecutionPaths(effect.evaluateSubset.compute, `${path}.evaluateSubset.compute`, incoming);
     return walkEffectArrayExecutionPaths(effect.evaluateSubset.in, `${path}.evaluateSubset.in`, incoming);
   }
 

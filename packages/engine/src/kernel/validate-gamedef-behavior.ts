@@ -7,6 +7,10 @@ import { hasErrorDiagnosticAtPathSince } from './diagnostic-path-policy.js';
 import type {
   ConditionAST,
   EffectAST,
+  EventBranchDef,
+  EventLastingEffectDef,
+  EventSideDef,
+  EventTargetDef,
   GameDef,
   NumericValueExpr,
   OptionsQuery,
@@ -21,6 +25,7 @@ import type { FreeOperationSequenceContextGrantLike } from './free-operation-seq
 import { isNumericValueExpr } from './numeric-value-expr.js';
 import { booleanArityMessage, booleanAritySuggestion, isNonEmptyArray } from './boolean-arity-policy.js';
 import {
+  appendEventConditionSurfacePath,
   appendEffectConditionSurfacePath,
   appendQueryConditionSurfacePath,
   appendValueExprConditionSurfacePath,
@@ -243,6 +248,102 @@ export function collectEffectDeclaredBinderPolicyPatternsForTest(): readonly str
 function normalizeDeclaredBinderDiagnosticPath(path: string): string {
   return path.replace(/\.([0-9]+)(?=\.|$)/g, '[$1]');
 }
+
+const isUnsupportedSequenceContextGrantPath = (path: string): boolean =>
+  /\.evaluateSubset\.compute\[\d+\]$/.test(path);
+
+type FreeOperationGrantValidationTarget = {
+  readonly operationClass: string;
+  readonly uses?: number;
+  readonly viabilityPolicy?: string | null;
+  readonly sequence?: {
+    readonly step?: unknown;
+  };
+  readonly sequenceContext?: {
+    readonly captureMoveZoneCandidatesAs?: unknown;
+    readonly requireMoveZoneCandidatesFrom?: unknown;
+  };
+  readonly zoneFilter?: ConditionAST;
+};
+
+const validateFreeOperationGrantContract = (
+  diagnostics: Diagnostic[],
+  grant: FreeOperationGrantValidationTarget,
+  path: string,
+  context: ValidationContext,
+  options?: {
+    readonly label?: string;
+  },
+): void => {
+  const label = options?.label ?? 'grantFreeOperation';
+  if (!(TURN_FLOW_ACTION_CLASS_VALUES as readonly string[]).includes(grant.operationClass)) {
+    diagnostics.push({
+      code: 'EFFECT_GRANT_FREE_OPERATION_CLASS_INVALID',
+      path: `${path}.operationClass`,
+      severity: 'error',
+      message: `${label}.operationClass is invalid: "${grant.operationClass}".`,
+      suggestion: `Use one of: ${TURN_FLOW_ACTION_CLASS_VALUES.join('|')}.`,
+    });
+  }
+  if (grant.uses !== undefined && (!Number.isSafeInteger(grant.uses) || grant.uses <= 0)) {
+    diagnostics.push({
+      code: 'EFFECT_GRANT_FREE_OPERATION_USES_INVALID',
+      path: `${path}.uses`,
+      severity: 'error',
+      message: `${label}.uses must be a positive integer.`,
+      suggestion: 'Set uses to an integer >= 1.',
+    });
+  }
+  if (
+    grant.viabilityPolicy !== undefined
+    && grant.viabilityPolicy !== null
+    && !isTurnFlowFreeOperationGrantViabilityPolicy(grant.viabilityPolicy)
+  ) {
+    diagnostics.push({
+      code: 'EFFECT_GRANT_FREE_OPERATION_VIABILITY_POLICY_INVALID',
+      path: `${path}.viabilityPolicy`,
+      severity: 'error',
+      message: `${label}.viabilityPolicy is invalid: "${grant.viabilityPolicy}".`,
+      suggestion: `Use one of: ${TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES.join('|')}.`,
+    });
+  }
+  const sequenceStep = grant.sequence?.step;
+  if (
+    grant.sequence !== undefined
+    && (typeof sequenceStep !== 'number' || !Number.isSafeInteger(sequenceStep) || sequenceStep < 0)
+  ) {
+    diagnostics.push({
+      code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_INVALID',
+      path: `${path}.sequence.step`,
+      severity: 'error',
+      message: `${label}.sequence.step must be a non-negative integer.`,
+      suggestion: 'Set sequence.step to an integer >= 0.',
+    });
+  }
+  if (grant.sequenceContext !== undefined) {
+    if (
+      grant.sequenceContext.captureMoveZoneCandidatesAs === undefined
+      && grant.sequenceContext.requireMoveZoneCandidatesFrom === undefined
+    ) {
+      diagnostics.push({
+        code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID',
+        path: `${path}.sequenceContext`,
+        severity: 'error',
+        message: `${label}.sequenceContext must declare at least one capture/require key.`,
+        suggestion: 'Set captureMoveZoneCandidatesAs and/or requireMoveZoneCandidatesFrom to non-empty strings.',
+      });
+    }
+    if (grant.sequence === undefined) {
+      diagnostics.push({
+        code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID',
+        path: `${path}.sequenceContext`,
+        severity: 'error',
+        message: `${label}.sequenceContext requires ${label}.sequence.`,
+        suggestion: 'Declare sequence.chain and sequence.step when using sequenceContext.',
+      });
+    }
+  }
+};
 
 const validateDeclaredCanonicalBindingsOnEffect = (
   diagnostics: Diagnostic[],
@@ -1833,71 +1934,15 @@ export const validateEffectAst = (
 
   if ('grantFreeOperation' in effect) {
     const grant = effect.grantFreeOperation;
-    if (!(TURN_FLOW_ACTION_CLASS_VALUES as readonly string[]).includes(grant.operationClass)) {
-      diagnostics.push({
-        code: 'EFFECT_GRANT_FREE_OPERATION_CLASS_INVALID',
-        path: `${path}.grantFreeOperation.operationClass`,
-        severity: 'error',
-        message: `grantFreeOperation.operationClass is invalid: \"${grant.operationClass}\".`,
-        suggestion: `Use one of: ${TURN_FLOW_ACTION_CLASS_VALUES.join('|')}.`,
-      });
-    }
-    if (grant.uses !== undefined && (!Number.isSafeInteger(grant.uses) || grant.uses <= 0)) {
-      diagnostics.push({
-        code: 'EFFECT_GRANT_FREE_OPERATION_USES_INVALID',
-        path: `${path}.grantFreeOperation.uses`,
-        severity: 'error',
-        message: 'grantFreeOperation.uses must be a positive integer.',
-        suggestion: 'Set uses to an integer >= 1.',
-      });
-    }
-    if (
-      grant.viabilityPolicy !== undefined
-      && !isTurnFlowFreeOperationGrantViabilityPolicy(grant.viabilityPolicy)
-    ) {
-      diagnostics.push({
-        code: 'EFFECT_GRANT_FREE_OPERATION_VIABILITY_POLICY_INVALID',
-        path: `${path}.grantFreeOperation.viabilityPolicy`,
-        severity: 'error',
-        message: `grantFreeOperation.viabilityPolicy is invalid: "${grant.viabilityPolicy}".`,
-        suggestion: `Use one of: ${TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES.join('|')}.`,
-      });
-    }
-    if (
-      grant.sequence !== undefined &&
-      (!Number.isSafeInteger(grant.sequence.step) || grant.sequence.step < 0)
-    ) {
-      diagnostics.push({
-        code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_INVALID',
-        path: `${path}.grantFreeOperation.sequence.step`,
-        severity: 'error',
-        message: 'grantFreeOperation.sequence.step must be a non-negative integer.',
-        suggestion: 'Set sequence.step to an integer >= 0.',
-      });
-    }
-    if (grant.sequenceContext !== undefined) {
-      if (
-        grant.sequenceContext.captureMoveZoneCandidatesAs === undefined
-        && grant.sequenceContext.requireMoveZoneCandidatesFrom === undefined
-      ) {
-        diagnostics.push({
-          code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID',
-          path: `${path}.grantFreeOperation.sequenceContext`,
-          severity: 'error',
-          message: 'grantFreeOperation.sequenceContext must declare at least one capture/require key.',
-          suggestion: 'Set captureMoveZoneCandidatesAs and/or requireMoveZoneCandidatesFrom to non-empty strings.',
-        });
-      }
-      if (grant.sequence === undefined) {
-        diagnostics.push({
-          code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID',
-          path: `${path}.grantFreeOperation.sequenceContext`,
-          severity: 'error',
-          message: 'grantFreeOperation.sequenceContext requires grantFreeOperation.sequence.',
-          suggestion: 'Declare sequence.chain and sequence.step when using sequenceContext.',
-        });
-      }
-    }
+    validateFreeOperationGrantContract(
+      diagnostics,
+      grant,
+      `${path}.grantFreeOperation`,
+      context,
+      {
+        label: 'grantFreeOperation',
+      },
+    );
     if (grant.zoneFilter !== undefined) {
       validateConditionAst(
         diagnostics,
@@ -1905,6 +1950,15 @@ export const validateEffectAst = (
         appendEffectConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.effect.grantFreeOperationZoneFilter),
         context,
       );
+    }
+    if (grant.sequenceContext !== undefined && isUnsupportedSequenceContextGrantPath(path)) {
+      diagnostics.push({
+        code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_SCOPE_UNSUPPORTED',
+        path: `${path}.grantFreeOperation.sequenceContext`,
+        severity: 'error',
+        message: 'grantFreeOperation.sequenceContext is not supported inside evaluateSubset.compute because compute-state grants are not persistent.',
+        suggestion: 'Move the sequence-context grant to a persistent effect scope such as evaluateSubset.in or another enclosing effect list.',
+      });
     }
     return;
   }
@@ -2031,6 +2085,107 @@ export const validatePostAdjacencyBehavior = (
   phaseCandidates: readonly string[],
   actionCandidates: readonly string[],
 ): void => {
+  const validateEventTargets = (
+    targets: readonly EventTargetDef[] | undefined,
+    path: string,
+  ): void => {
+    targets?.forEach((target, targetIndex) => {
+      validateOptionsQuery(diagnostics, target.selector, `${path}.targets[${targetIndex}].selector`, context);
+      target.effects.forEach((effect, effectIndex) => {
+        validateEffectAst(diagnostics, effect, `${path}.targets[${targetIndex}].effects[${effectIndex}]`, context);
+      });
+    });
+  };
+
+  const validateEventLastingEffects = (
+    lastingEffects: readonly EventLastingEffectDef[] | undefined,
+    path: string,
+  ): void => {
+    lastingEffects?.forEach((lastingEffect, lastingEffectIndex) => {
+      lastingEffect.setupEffects.forEach((effect, effectIndex) => {
+        validateEffectAst(
+          diagnostics,
+          effect,
+          `${path}.lastingEffects[${lastingEffectIndex}].setupEffects[${effectIndex}]`,
+          context,
+        );
+      });
+      lastingEffect.teardownEffects?.forEach((effect, effectIndex) => {
+        validateEffectAst(
+          diagnostics,
+          effect,
+          `${path}.lastingEffects[${lastingEffectIndex}].teardownEffects[${effectIndex}]`,
+          context,
+        );
+      });
+    });
+  };
+
+  const validateEventBranchBehavior = (
+    branch: EventBranchDef,
+    path: string,
+  ): void => {
+    branch.freeOperationGrants?.forEach((grant, grantIndex) => {
+      validateFreeOperationGrantContract(
+        diagnostics,
+        grant,
+        `${path}.freeOperationGrants[${grantIndex}]`,
+        context,
+        { label: 'freeOperationGrant' },
+      );
+      if (grant.zoneFilter !== undefined) {
+        validateConditionAst(
+          diagnostics,
+          grant.zoneFilter,
+          appendEventConditionSurfacePath(
+            `${path}.freeOperationGrants[${grantIndex}]`,
+            CONDITION_SURFACE_SUFFIX.event.freeOperationGrantZoneFilter,
+          ),
+          context,
+        );
+      }
+    });
+    branch.effects?.forEach((effect, effectIndex) => {
+      validateEffectAst(diagnostics, effect, `${path}.effects[${effectIndex}]`, context);
+    });
+    validateEventTargets(branch.targets, path);
+    validateEventLastingEffects(branch.lastingEffects, path);
+  };
+
+  const validateEventSideBehavior = (
+    side: EventSideDef,
+    path: string,
+  ): void => {
+    side.freeOperationGrants?.forEach((grant, grantIndex) => {
+      validateFreeOperationGrantContract(
+        diagnostics,
+        grant,
+        `${path}.freeOperationGrants[${grantIndex}]`,
+        context,
+        { label: 'freeOperationGrant' },
+      );
+      if (grant.zoneFilter !== undefined) {
+        validateConditionAst(
+          diagnostics,
+          grant.zoneFilter,
+          appendEventConditionSurfacePath(
+            `${path}.freeOperationGrants[${grantIndex}]`,
+            CONDITION_SURFACE_SUFFIX.event.freeOperationGrantZoneFilter,
+          ),
+          context,
+        );
+      }
+    });
+    side.effects?.forEach((effect, effectIndex) => {
+      validateEffectAst(diagnostics, effect, `${path}.effects[${effectIndex}]`, context);
+    });
+    validateEventTargets(side.targets, path);
+    validateEventLastingEffects(side.lastingEffects, path);
+    side.branches?.forEach((branch, branchIndex) => {
+      validateEventBranchBehavior(branch, `${path}.branches[${branchIndex}]`);
+    });
+  };
+
   def.turnStructure.phases.forEach((phase, phaseIndex) => {
     phase.onEnter?.forEach((effect, effectIndex) => {
       validateEffectAst(diagnostics, effect, `turnStructure.phases[${phaseIndex}].onEnter[${effectIndex}]`, context);
@@ -2112,6 +2267,32 @@ export const validatePostAdjacencyBehavior = (
 
     trigger.effects.forEach((effect, effectIndex) => {
       validateEffectAst(diagnostics, effect, `triggers[${triggerIndex}].effects[${effectIndex}]`, context);
+    });
+  });
+
+  (def.eventDecks ?? []).forEach((deck, deckIndex) => {
+    deck.cards.forEach((card, cardIndex) => {
+      if (card.playCondition !== undefined) {
+        validateConditionAst(
+          diagnostics,
+          card.playCondition,
+          appendEventConditionSurfacePath(
+            `eventDecks[${deckIndex}].cards[${cardIndex}]`,
+            CONDITION_SURFACE_SUFFIX.event.playCondition,
+          ),
+          context,
+        );
+      }
+      const sides = [
+        ['unshaded', card.unshaded],
+        ['shaded', card.shaded],
+      ] as const;
+      for (const [sideId, side] of sides) {
+        if (side === undefined) {
+          continue;
+        }
+        validateEventSideBehavior(side, `eventDecks[${deckIndex}].cards[${cardIndex}].${sideId}`);
+      }
     });
   });
 

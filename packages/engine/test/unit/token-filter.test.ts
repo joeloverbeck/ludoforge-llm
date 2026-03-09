@@ -57,6 +57,20 @@ describe('token-filter', () => {
     assert.equal(resolved, true);
   });
 
+  it('supports caller-provided set resolution for membership predicates', () => {
+    const token = makeToken('card-4', { faction: 'ARVN' });
+    const predicate: TokenFilterPredicate = {
+      prop: 'faction',
+      op: 'in',
+      value: { ref: 'binding', name: '$targetFactions' },
+    };
+
+    const resolved = matchesTokenFilterPredicate(token, predicate, (value) =>
+      typeof value === 'object' && value !== null && 'ref' in value ? ['ARVN', 'US'] : null,
+    );
+    assert.equal(resolved, true);
+  });
+
   it('filters token lists by expression filters', () => {
     const tokens: readonly Token[] = [
       makeToken('a', { suit: 'hearts' }),

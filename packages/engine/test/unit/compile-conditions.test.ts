@@ -966,6 +966,25 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('lowers assetRows membership predicates with runtime-selected grantContext sets', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'assetRows',
+        tableId: 'tournament-standard::blindSchedule.levels',
+        where: [{ field: 'phase', op: 'in', value: { ref: 'grantContext', key: 'allowedPhases' } }],
+      },
+      context,
+      'doc.actions.0.params.0.domain',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'assetRows',
+      tableId: 'tournament-standard::blindSchedule.levels',
+      where: [{ field: 'phase', op: 'in', value: { ref: 'grantContext', key: 'allowedPhases' } }],
+    });
+  });
+
   it('lowers assetRows query cardinality when provided', () => {
     const result = lowerQueryNode(
       {
@@ -1048,6 +1067,51 @@ describe('compile-conditions lowering', () => {
         ],
       },
     });
+  });
+
+  it('lowers token-filter membership predicates with runtime-selected binding sets', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'board',
+        filter: {
+          op: 'and',
+          args: [
+            { prop: 'faction', op: 'in', value: { ref: 'binding', name: '$targetFactions' } },
+          ],
+        },
+      },
+      tokenFilterContext,
+      'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'tokensInZone',
+      zone: 'board:none',
+      filter: { prop: 'faction', op: 'in', value: { ref: 'binding', name: '$targetFactions' } },
+    });
+  });
+
+  it('rejects scalar runtime expressions as token-filter membership operands', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'board',
+        filter: {
+          op: 'and',
+          args: [
+            { prop: 'faction', op: 'in', value: { ref: 'gvar', var: 'targetFaction' } },
+          ],
+        },
+      },
+      tokenFilterContext,
+      'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+    assert.equal(result.diagnostics[0]?.path, 'doc.actionPipelines.0.stages.0.effects.0.forEach.over.filter.args.0.value');
   });
 
   it('canonicalizes single-argument boolean token-filter wrappers to predicates', () => {

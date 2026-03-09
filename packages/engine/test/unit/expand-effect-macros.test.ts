@@ -630,6 +630,94 @@ phase: ['main'],
     ]);
   });
 
+  it('allows runtime-selected set refs for tokenTraitValues macro params', () => {
+    const macro: EffectMacroDef = {
+      id: 'typed-traits',
+      params: [{ name: 'pieceTypes', type: { kind: 'tokenTraitValues', prop: 'type' } }],
+      exports: [],
+      effects: [{ setVar: { scope: 'global', var: 'pickedTypes', value: { param: 'pieceTypes' } } }],
+    };
+    const doc = makeDoc({
+      effectMacros: [macro],
+      dataAssets: [
+        {
+          id: 'pieces',
+          kind: 'pieceCatalog',
+          payload: {
+            seats: [{ id: 'US' }],
+            pieceTypes: [
+              { id: 'us-troops', seat: 'US', statusDimensions: [], transitions: [], runtimeProps: { type: 'troops' } },
+              { id: 'us-ranger', seat: 'US', statusDimensions: [], transitions: [], runtimeProps: { type: 'ranger' } },
+            ],
+            inventory: [
+              { pieceTypeId: 'us-troops', seat: 'US', total: 1 },
+              { pieceTypeId: 'us-ranger', seat: 'US', total: 1 },
+            ],
+          },
+        },
+        {
+          id: 'map',
+          kind: 'map',
+          payload: { spaces: [] },
+        },
+        {
+          id: 'scenario',
+          kind: 'scenario',
+          payload: { mapAssetId: 'map', pieceCatalogAssetId: 'pieces', scenarioName: 'S', yearRange: 'Y' },
+        },
+      ],
+      setup: [{ macro: 'typed-traits', args: { pieceTypes: { ref: 'grantContext', key: 'pieceTypes' } } }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.equal(result.diagnostics.length, 0);
+    assert.deepEqual(result.doc.setup, [
+      { setVar: { scope: 'global', var: 'pickedTypes', value: { ref: 'grantContext', key: 'pieceTypes' } } },
+    ]);
+  });
+
+  it('rejects non-set runtime expressions for tokenTraitValues macro params', () => {
+    const macro: EffectMacroDef = {
+      id: 'typed-traits',
+      params: [{ name: 'pieceTypes', type: { kind: 'tokenTraitValues', prop: 'type' } }],
+      exports: [],
+      effects: [{ setVar: { scope: 'global', var: 'pickedTypes', value: { param: 'pieceTypes' } } }],
+    };
+    const doc = makeDoc({
+      effectMacros: [macro],
+      dataAssets: [
+        {
+          id: 'pieces',
+          kind: 'pieceCatalog',
+          payload: {
+            seats: [{ id: 'US' }],
+            pieceTypes: [
+              { id: 'us-troops', seat: 'US', statusDimensions: [], transitions: [], runtimeProps: { type: 'troops' } },
+            ],
+            inventory: [{ pieceTypeId: 'us-troops', seat: 'US', total: 1 }],
+          },
+        },
+        {
+          id: 'map',
+          kind: 'map',
+          payload: { spaces: [] },
+        },
+        {
+          id: 'scenario',
+          kind: 'scenario',
+          payload: { mapAssetId: 'map', pieceCatalogAssetId: 'pieces', scenarioName: 'S', yearRange: 'Y' },
+        },
+      ],
+      setup: [{ macro: 'typed-traits', args: { pieceTypes: { ref: 'gvar', var: 'pickedType' } } }],
+    });
+
+    const result = expandEffectMacros(doc);
+    const violation = result.diagnostics.find((d) => d.code === 'EFFECT_MACRO_ARG_CONSTRAINT_VIOLATION');
+    assert.ok(violation !== undefined);
+    assert.equal(violation?.path, 'setup[0].args.pieceTypes');
+    assert.deepEqual(result.doc.setup, []);
+  });
+
   it('rewrites nested macro args only for binding-aware param kinds', () => {
     const inner: EffectMacroDef = {
       id: 'inner',

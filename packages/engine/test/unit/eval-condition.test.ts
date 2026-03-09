@@ -195,10 +195,49 @@ describe('evalCondition', () => {
     );
   });
 
+  it('throws MISSING_BINDING when in binding set is missing', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () => evalCondition({ op: 'in', item: 3, set: { ref: 'binding', name: '$missingSet' } }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'),
+    );
+  });
+
   it('treats missing grantContext membership refs as an empty set', () => {
     const ctx = makeCtx();
 
     assert.equal(evalCondition({ op: 'in', item: 3, set: { ref: 'grantContext', key: 'allowedTargets' } }, ctx), false);
+  });
+
+  it('throws TYPE_MISMATCH when in grantContext set resolves to a scalar', () => {
+    const ctx = makeCtx({
+      freeOperationOverlay: {
+        grantContext: {
+          allowedTargets: 3,
+        },
+      },
+    });
+
+    assert.throws(
+      () => evalCondition({ op: 'in', item: 3, set: { ref: 'grantContext', key: 'allowedTargets' } }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
+  it('throws TYPE_MISMATCH when in grantContext set mixes scalar types', () => {
+    const ctx = makeCtx({
+      freeOperationOverlay: {
+        grantContext: {
+          allowedTargets: [1, '2', 3],
+        },
+      },
+    });
+
+    assert.throws(
+      () => evalCondition({ op: 'in', item: 3, set: { ref: 'grantContext', key: 'allowedTargets' } }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
   });
 
   it('evaluates zonePropIncludes for array properties', () => {

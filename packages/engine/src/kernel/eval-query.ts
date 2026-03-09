@@ -24,13 +24,14 @@ import {
   runtimeTableIssueEvalError,
   runtimeTableRowsUnavailableEvalError,
 } from './runtime-table-eval-errors.js';
-import { filterRowsByPredicates, type PredicateValue, type ResolvedRowPredicate } from './query-predicate.js';
+import { filterRowsByPredicates, type ResolvedRowPredicate } from './query-predicate.js';
+import { resolvePredicateValue } from './predicate-value-resolution.js';
 import { filterTokensByExpr } from './token-filter.js';
 import { foldTokenFilterExpr } from './token-filter-expr-utils.js';
 import { planAssetRowsLookup } from './runtime-table-lookup-plan.js';
 import { hasTokenRuntimeShapeKeys } from './token-shape.js';
 import { getTokenStateIndex } from './token-state-index.js';
-import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterExpr, TokenFilterPredicate, ValueExpr } from './types.js';
+import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterExpr } from './types.js';
 
 type AssetRow = Readonly<Record<string, unknown>>;
 type QueryResult = Token | AssetRow | number | string | boolean | PlayerId | ZoneId;
@@ -234,92 +235,6 @@ function assertWithinBounds(length: number, query: OptionsQuery, maxQueryResults
       resultLength: length,
     });
   }
-}
-
-function isScalarValue(value: unknown): value is string | number | boolean {
-  return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
-}
-
-function isPredicateScalarArray(value: unknown): value is readonly (string | number | boolean)[] {
-  return Array.isArray(value) && value.every((entry) => isScalarValue(entry));
-}
-
-function resolveRuntimePredicateReference(
-  value: TokenFilterPredicate['value'] | AssetRowPredicate['value'],
-  ctx: EvalContext,
-): PredicateValue | null {
-  if (typeof value !== 'object' || value === null || !('ref' in value)) {
-    return null;
-  }
-
-  if (value.ref === 'binding') {
-    const resolvedName = resolveBindingTemplate(value.name, ctx.bindings);
-    const bindingValue = ctx.bindings[resolvedName];
-    if (bindingValue === undefined) {
-      throw missingVarError(`Binding not found: ${resolvedName}`, {
-        reference: value,
-        binding: resolvedName,
-        bindingTemplate: value.name,
-        availableBindings: Object.keys(ctx.bindings).sort(),
-      });
-    }
-    if (isScalarValue(bindingValue) || isPredicateScalarArray(bindingValue)) {
-      return bindingValue;
-    }
-    throw typeMismatchError(`Binding ${resolvedName} must resolve to a scalar or scalar array in predicate position`, {
-      reference: value,
-      binding: resolvedName,
-      bindingTemplate: value.name,
-      actualType: Array.isArray(bindingValue) ? 'array' : typeof bindingValue,
-      value: bindingValue,
-    });
-  }
-
-  if (value.ref === 'grantContext') {
-    const grantValue = ctx.freeOperationOverlay?.grantContext?.[value.key];
-    if (grantValue === undefined) {
-      throw missingVarError(`Free-operation grant context key not found: ${value.key}`, {
-        reference: value,
-        availableGrantContextKeys: Object.keys(ctx.freeOperationOverlay?.grantContext ?? {}).sort(),
-      });
-    }
-    if (isScalarValue(grantValue) || isPredicateScalarArray(grantValue)) {
-      return grantValue;
-    }
-    throw typeMismatchError(`Free-operation grant context ${value.key} must resolve to a scalar or scalar array in predicate position`, {
-      reference: value,
-      key: value.key,
-      actualType: Array.isArray(grantValue) ? 'array' : typeof grantValue,
-      value: grantValue,
-    });
-  }
-
-  return null;
-}
-
-function resolvePredicateValue(
-  value: TokenFilterPredicate['value'] | AssetRowPredicate['value'],
-  ctx: EvalContext,
-): PredicateValue {
-  if (Array.isArray(value)) {
-    return value;
-  }
-  if (isScalarValue(value)) {
-    return value;
-  }
-  const resolvedReference = resolveRuntimePredicateReference(value, ctx);
-  if (resolvedReference !== null) {
-    return resolvedReference;
-  }
-  const resolved = evalValue(value as ValueExpr, ctx);
-  if (!isScalarValue(resolved) && !isPredicateScalarArray(resolved)) {
-    throw typeMismatchError('Predicate value must resolve to a scalar or scalar array', {
-      value,
-      resolved,
-      actualType: Array.isArray(resolved) ? 'array' : typeof resolved,
-    });
-  }
-  return resolved;
 }
 
 function resolveGrantContextQuery(

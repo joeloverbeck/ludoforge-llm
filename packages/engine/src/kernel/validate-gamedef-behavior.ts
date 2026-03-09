@@ -37,12 +37,14 @@ import {
   collectTurnFlowFreeOperationGrantContractViolations,
   isAllowedTokenFilterProp,
   isCanonicalBindingIdentifier,
+  renderTurnFlowFreeOperationGrantContractViolation,
   tokenFilterPropAlternatives,
   TURN_FLOW_ACTION_CLASS_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
+  type TurnFlowFreeOperationGrantContractViolationCode,
 } from '../contracts/index.js';
 import {
   type ValidationContext,
@@ -276,6 +278,56 @@ type FreeOperationGrantValidationTarget = {
   readonly zoneFilter?: ConditionAST;
 };
 
+const FREE_OPERATION_GRANT_DIAGNOSTIC_BY_VIOLATION_CODE = {
+  operationClassInvalid: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_CLASS_INVALID',
+    suggestion: () => `Use one of: ${TURN_FLOW_ACTION_CLASS_VALUES.join('|')}.`,
+  },
+  usesInvalid: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_USES_INVALID',
+    suggestion: () => 'Set uses to an integer >= 1.',
+  },
+  viabilityPolicyInvalid: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_VIABILITY_POLICY_INVALID',
+    suggestion: () => `Use one of: ${TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES.join('|')}.`,
+  },
+  completionPolicyInvalid: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_COMPLETION_POLICY_INVALID',
+    suggestion: () => `Use one of: ${TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES.join('|')}.`,
+  },
+  outcomePolicyInvalid: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_OUTCOME_POLICY_INVALID',
+    suggestion: () => `Use one of: ${TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES.join('|')}.`,
+  },
+  postResolutionTurnFlowInvalid: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_POST_RESOLUTION_TURN_FLOW_INVALID',
+    suggestion: () => `Use one of: ${TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES.join('|')}.`,
+  },
+  requiredPostResolutionTurnFlowMissing: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_POST_RESOLUTION_TURN_FLOW_REQUIRED',
+    suggestion: (label: string) => `Set ${label}.postResolutionTurnFlow to ${TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES.join('|')}.`,
+  },
+  postResolutionTurnFlowRequiresRequiredCompletionPolicy: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_COMPLETION_POLICY_REQUIRED',
+    suggestion: (label: string) => `Set ${label}.completionPolicy to ${TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES.join('|')}.`,
+  },
+  sequenceStepInvalid: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_INVALID',
+    suggestion: () => 'Set sequence.step to an integer >= 0.',
+  },
+  sequenceContextInvalid: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID',
+    suggestion: () => 'Set captureMoveZoneCandidatesAs and/or requireMoveZoneCandidatesFrom to non-empty strings.',
+  },
+  sequenceContextRequiresSequence: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID',
+    suggestion: () => 'Declare sequence.chain and sequence.step when using sequenceContext.',
+  },
+} satisfies Record<TurnFlowFreeOperationGrantContractViolationCode, {
+  readonly code: string;
+  readonly suggestion: (label: string) => string;
+}>;
+
 const validateFreeOperationGrantContract = (
   diagnostics: Diagnostic[],
   grant: FreeOperationGrantValidationTarget,
@@ -287,113 +339,18 @@ const validateFreeOperationGrantContract = (
 ): void => {
   const label = options?.label ?? 'grantFreeOperation';
   for (const violation of collectTurnFlowFreeOperationGrantContractViolations(grant)) {
-    const suffix = violation.path.join('.');
-    switch (violation.code) {
-      case 'operationClassInvalid':
-        diagnostics.push({
-          code: 'EFFECT_GRANT_FREE_OPERATION_CLASS_INVALID',
-          path: `${path}.${suffix}`,
-          severity: 'error',
-          message: `${label}.${violation.message}`,
-          suggestion: `Use one of: ${TURN_FLOW_ACTION_CLASS_VALUES.join('|')}.`,
-        });
-        break;
-      case 'usesInvalid':
-        diagnostics.push({
-          code: 'EFFECT_GRANT_FREE_OPERATION_USES_INVALID',
-          path: `${path}.${suffix}`,
-          severity: 'error',
-          message: `${label}.${violation.message}`,
-          suggestion: 'Set uses to an integer >= 1.',
-        });
-        break;
-      case 'viabilityPolicyInvalid':
-        diagnostics.push({
-          code: 'EFFECT_GRANT_FREE_OPERATION_VIABILITY_POLICY_INVALID',
-          path: `${path}.${suffix}`,
-          severity: 'error',
-          message: `${label}.${violation.message}`,
-          suggestion: `Use one of: ${TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES.join('|')}.`,
-        });
-        break;
-      case 'completionPolicyInvalid':
-        diagnostics.push({
-          code: 'EFFECT_GRANT_FREE_OPERATION_COMPLETION_POLICY_INVALID',
-          path: `${path}.${suffix}`,
-          severity: 'error',
-          message: `${label}.${violation.message}`,
-          suggestion: `Use one of: ${TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES.join('|')}.`,
-        });
-        break;
-      case 'postResolutionTurnFlowInvalid':
-        diagnostics.push({
-          code: 'EFFECT_GRANT_FREE_OPERATION_POST_RESOLUTION_TURN_FLOW_INVALID',
-          path: `${path}.${suffix}`,
-          severity: 'error',
-          message: `${label}.${violation.message}`,
-          suggestion: `Use one of: ${TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES.join('|')}.`,
-        });
-        break;
-      case 'requiredPostResolutionTurnFlowMissing':
-        diagnostics.push({
-          code: 'EFFECT_GRANT_FREE_OPERATION_POST_RESOLUTION_TURN_FLOW_REQUIRED',
-          path: `${path}.${suffix}`,
-          severity: 'error',
-          message: `${label}.${violation.message}`,
-          suggestion: `Set ${label}.postResolutionTurnFlow to ${TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES.join('|')}.`,
-        });
-        break;
-      case 'postResolutionTurnFlowRequiresRequiredCompletionPolicy':
-        diagnostics.push({
-          code: 'EFFECT_GRANT_FREE_OPERATION_COMPLETION_POLICY_REQUIRED',
-          path: `${path}.${suffix}`,
-          severity: 'error',
-          message: `${label}.${violation.message}`,
-          suggestion: `Set ${label}.completionPolicy to ${TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES.join('|')}.`,
-        });
-        break;
-      case 'sequenceStepInvalid':
-        diagnostics.push({
-          code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_INVALID',
-          path: `${path}.${suffix}`,
-          severity: 'error',
-          message: `${label}.${violation.message}`,
-          suggestion: 'Set sequence.step to an integer >= 0.',
-        });
-        break;
-      case 'sequenceContextInvalid':
-        diagnostics.push({
-          code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID',
-          path: `${path}.${suffix}`,
-          severity: 'error',
-          message: `${label}.${violation.message}`,
-          suggestion: 'Set captureMoveZoneCandidatesAs and/or requireMoveZoneCandidatesFrom to non-empty strings.',
-        });
-        break;
-      case 'sequenceContextRequiresSequence':
-        diagnostics.push({
-          code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID',
-          path: `${path}.${suffix}`,
-          severity: 'error',
-          message: `${label}.${violation.message.replace('sequence', `${label}.sequence`)}`,
-          suggestion: 'Declare sequence.chain and sequence.step when using sequenceContext.',
-        });
-        break;
-      case 'outcomePolicyInvalid':
-        diagnostics.push({
-          code: 'EFFECT_GRANT_FREE_OPERATION_OUTCOME_POLICY_INVALID',
-          path: `${path}.${suffix}`,
-          severity: 'error',
-          message: `${label}.${violation.message}`,
-          suggestion: `Use one of: ${TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES.join('|')}.`,
-        });
-        break;
-      default:
-        {
-          const unhandled: never = violation.code;
-          void unhandled;
-        }
-    }
+    const surface = renderTurnFlowFreeOperationGrantContractViolation(violation, {
+      basePath: path,
+      label,
+    });
+    const diagnostic = FREE_OPERATION_GRANT_DIAGNOSTIC_BY_VIOLATION_CODE[violation.code];
+    diagnostics.push({
+      code: diagnostic.code,
+      path: surface.path,
+      severity: 'error',
+      message: surface.message,
+      suggestion: diagnostic.suggestion(label),
+    });
   }
 };
 

@@ -5557,6 +5557,35 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
     );
   });
 
+  it('renders sequenceContext requires sequence against the correct freeOperationGrant surface', () => {
+    const def = withEventCardSideConfig({
+      freeOperationGrants: [
+        {
+          seat: '0',
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.deepEqual(
+      diagnostics.find(
+        (diag) =>
+          diag.code === 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0].sequenceContext',
+      ),
+      {
+        code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID',
+        path: 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0].sequenceContext',
+        severity: 'error',
+        message: 'freeOperationGrant.sequenceContext requires freeOperationGrant.sequence.',
+        suggestion: 'Declare sequence.chain and sequence.step when using sequenceContext.',
+      },
+    );
+  });
+
   it('rejects requireMoveZoneCandidatesFrom when no matching capture exists in the chain', () => {
     const def = withEventFreeOperationGrants([
       {

@@ -10,6 +10,7 @@ import { resolveBindingTemplate } from './binding-template.js';
 import {
   collectTurnFlowFreeOperationGrantContractViolations,
   isTurnFlowActionClass,
+  renderTurnFlowFreeOperationGrantContractViolation,
 } from '../contracts/index.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { createEvalRuntimeResources } from './eval-context.js';
@@ -178,52 +179,30 @@ export const applyGrantFreeOperation = (
     ...(grant.sequence === undefined ? {} : { sequence: grant.sequence }),
     ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),
   })) {
-    switch (violation.code) {
-      case 'viabilityPolicyInvalid':
-      case 'completionPolicyInvalid':
-      case 'outcomePolicyInvalid':
-      case 'postResolutionTurnFlowInvalid':
-      case 'requiredPostResolutionTurnFlowMissing':
-      case 'postResolutionTurnFlowRequiresRequiredCompletionPolicy':
-        throw effectRuntimeError(
-          EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
-          `grantFreeOperation.${violation.message}`,
-          {
-            effectType: 'grantFreeOperation',
-            ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
-            ...(grant.completionPolicy === undefined ? {} : { completionPolicy: grant.completionPolicy }),
-            ...(grant.outcomePolicy === undefined ? {} : { outcomePolicy: grant.outcomePolicy }),
-            ...(grant.postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow: grant.postResolutionTurnFlow }),
-          },
-        );
-      default:
-        break;
+    if (
+      violation.code === 'viabilityPolicyInvalid'
+      || violation.code === 'completionPolicyInvalid'
+      || violation.code === 'outcomePolicyInvalid'
+      || violation.code === 'postResolutionTurnFlowInvalid'
+      || violation.code === 'requiredPostResolutionTurnFlowMissing'
+      || violation.code === 'postResolutionTurnFlowRequiresRequiredCompletionPolicy'
+      || violation.code === 'sequenceStepInvalid'
+      || violation.code === 'sequenceContextInvalid'
+      || violation.code === 'sequenceContextRequiresSequence'
+    ) {
+      const surface = renderTurnFlowFreeOperationGrantContractViolation(violation);
+      throw effectRuntimeError(
+        EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
+        surface.message,
+        {
+          effectType: 'grantFreeOperation',
+          ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
+          ...(grant.completionPolicy === undefined ? {} : { completionPolicy: grant.completionPolicy }),
+          ...(grant.outcomePolicy === undefined ? {} : { outcomePolicy: grant.outcomePolicy }),
+          ...(grant.postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow: grant.postResolutionTurnFlow }),
+        },
+      );
     }
-  }
-  if (
-    grant.sequenceContext !== undefined
-    && grant.sequence === undefined
-  ) {
-    throw effectRuntimeError(
-      EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
-      'grantFreeOperation.sequenceContext requires grantFreeOperation.sequence',
-      {
-        effectType: 'grantFreeOperation',
-      },
-    );
-  }
-  if (
-    grant.sequenceContext !== undefined
-    && grant.sequenceContext.captureMoveZoneCandidatesAs === undefined
-    && grant.sequenceContext.requireMoveZoneCandidatesFrom === undefined
-  ) {
-    throw effectRuntimeError(
-      EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
-      'grantFreeOperation.sequenceContext must include captureMoveZoneCandidatesAs or requireMoveZoneCandidatesFrom',
-      {
-        effectType: 'grantFreeOperation',
-      },
-    );
   }
 
   const existing = runtime.pendingFreeOperationGrants ?? [];
@@ -231,12 +210,6 @@ export const applyGrantFreeOperation = (
   const grantId = makeUniqueGrantId(existing, grant.id ?? fallbackBaseId);
   const sequenceBatchId = grant.sequence === undefined ? undefined : `${grantId}:${grant.sequence.chain}`;
   const sequenceIndex = grant.sequence?.step;
-  if (sequenceIndex !== undefined && (!Number.isSafeInteger(sequenceIndex) || sequenceIndex < 0)) {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, 'grantFreeOperation.sequence.step must be a non-negative integer', {
-      effectType: 'grantFreeOperation',
-      sequenceStep: sequenceIndex,
-    });
-  }
 
   const resolvedZoneFilter = grant.zoneFilter === undefined
     ? undefined

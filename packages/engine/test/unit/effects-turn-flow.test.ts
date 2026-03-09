@@ -211,6 +211,67 @@ describe('applyGrantFreeOperation', () => {
     });
   });
 
+  it('throws when sequenceContext is set without sequence using the shared contract surface text', () => {
+    const ctx = makeCtx();
+    const effect = {
+      grantFreeOperation: {
+        seat: 'self',
+        operationClass: 'operation',
+        sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+      },
+    } as unknown as Extract<EffectAST, { readonly grantFreeOperation: unknown }>;
+
+    assert.throws(() => applyGrantFreeOperation(effect, ctx), (err: unknown) => {
+      if (!isEffectErrorCode(err, 'EFFECT_RUNTIME')) {
+        return false;
+      }
+      assert.equal(err.context?.effectType, 'grantFreeOperation');
+      assert.match(String(err.message), /grantFreeOperation\.sequenceContext requires grantFreeOperation\.sequence/i);
+      return true;
+    });
+  });
+
+  it('throws when sequenceContext omits both capture and require keys', () => {
+    const ctx = makeCtx();
+    const effect = {
+      grantFreeOperation: {
+        seat: 'self',
+        operationClass: 'operation',
+        sequence: { chain: 'ctx-chain', step: 0 },
+        sequenceContext: {},
+      },
+    } as unknown as Extract<EffectAST, { readonly grantFreeOperation: unknown }>;
+
+    assert.throws(() => applyGrantFreeOperation(effect, ctx), (err: unknown) => {
+      if (!isEffectErrorCode(err, 'EFFECT_RUNTIME')) {
+        return false;
+      }
+      assert.equal(err.context?.effectType, 'grantFreeOperation');
+      assert.match(String(err.message), /grantFreeOperation\.sequenceContext must declare at least one capture\/require key/i);
+      return true;
+    });
+  });
+
+  it('throws when sequence.step is negative using the shared contract surface text', () => {
+    const ctx = makeCtx();
+    const effect = {
+      grantFreeOperation: {
+        seat: 'self',
+        operationClass: 'operation',
+        sequence: { chain: 'ctx-chain', step: -1 },
+      },
+    } as unknown as Extract<EffectAST, { readonly grantFreeOperation: unknown }>;
+
+    assert.throws(() => applyGrantFreeOperation(effect, ctx), (err: unknown) => {
+      if (!isEffectErrorCode(err, 'EFFECT_RUNTIME')) {
+        return false;
+      }
+      assert.equal(err.context?.effectType, 'grantFreeOperation');
+      assert.match(String(err.message), /grantFreeOperation\.sequence\.step must be a non-negative integer/i);
+      return true;
+    });
+  });
+
   it('keeps explicit postResolutionTurnFlow on emitted required pending grants', () => {
     const ctx = makeCtx();
     const effect = {

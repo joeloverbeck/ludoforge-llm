@@ -101,6 +101,33 @@ export type TurnFlowFreeOperationGrantContractViolation = {
   readonly message: string;
 };
 
+export type TurnFlowFreeOperationGrantContractSurfaceViolation = {
+  readonly path: string;
+  readonly message: string;
+};
+
+export const renderTurnFlowFreeOperationGrantContractViolation = (
+  violation: TurnFlowFreeOperationGrantContractViolation,
+  options?: {
+    readonly basePath?: string;
+    readonly label?: string;
+  },
+): TurnFlowFreeOperationGrantContractSurfaceViolation => {
+  const label = options?.label ?? 'grantFreeOperation';
+  const suffix = violation.path.join('.');
+  const path = options?.basePath === undefined ? suffix : `${options.basePath}.${suffix}`;
+  if (violation.code === 'sequenceContextRequiresSequence') {
+    return {
+      path,
+      message: `${label}.sequenceContext requires ${label}.sequence.`,
+    };
+  }
+  return {
+    path,
+    message: `${label}.${violation.message}`,
+  };
+};
+
 export const collectTurnFlowFreeOperationGrantContractViolations = (
   grant: TurnFlowFreeOperationGrantContractCandidate,
 ): readonly TurnFlowFreeOperationGrantContractViolation[] => {

@@ -7,6 +7,7 @@ import {
 } from '../kernel/choice-options-runtime-shape-diagnostic.js';
 import {
   collectTurnFlowFreeOperationGrantContractViolations,
+  renderTurnFlowFreeOperationGrantContractViolation,
   TURN_FLOW_ACTION_CLASS_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES,
@@ -1773,9 +1774,12 @@ function lowerGrantFreeOperationEffect(
     ...(outcomePolicy === undefined ? {} : { outcomePolicy }),
     ...(postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow }),
   })) {
+    const surface = renderTurnFlowFreeOperationGrantContractViolation(violation, {
+      basePath: path,
+    });
     if (violation.code === 'requiredPostResolutionTurnFlowMissing') {
       diagnostics.push(...missingCapability(
-        `${path}.postResolutionTurnFlow`,
+        surface.path,
         'grantFreeOperation postResolutionTurnFlow',
         source.postResolutionTurnFlow,
         [...TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES],
@@ -1783,7 +1787,7 @@ function lowerGrantFreeOperationEffect(
     }
     if (violation.code === 'postResolutionTurnFlowRequiresRequiredCompletionPolicy') {
       diagnostics.push(...missingCapability(
-        `${path}.completionPolicy`,
+        surface.path,
         'grantFreeOperation completionPolicy',
         source.completionPolicy,
         [...TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES],

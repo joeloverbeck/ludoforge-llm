@@ -45,7 +45,7 @@ Add tests where capture and require live in mutually exclusive branches and ensu
 
 ## Out of Scope
 
-- Denial-cause renaming/parity work (`tickets/ENG-206-sequence-context-denial-cause-parity.md`).
+- Denial-cause renaming/parity work (`archive/tickets/ENG/ENG-206-sequence-context-denial-cause-parity.md`).
 - Schema deduplication work (`tickets/ENG-207-consolidate-sequence-context-schema-ownership.md`).
 - Mandatory completion/outcome contracts (`tickets/ENG-203-mandatory-grant-and-action-outcome-contracts.md`).
 

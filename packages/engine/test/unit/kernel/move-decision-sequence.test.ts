@@ -24,6 +24,12 @@ import {
   ownershipSelection,
   type ChoiceOwnershipPrimitive,
 } from '../../helpers/choice-ownership-parity-helpers.js';
+import {
+  SEQUENCE_CONTEXT_DENIED_ZONE_ID,
+  createSequenceContextMismatchTurnOrderState,
+  createSequenceContextMismatchZoneState,
+  createSequenceContextMismatchZones,
+} from '../../helpers/free-operation-sequence-context-fixtures.js';
 
 const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
@@ -777,10 +783,7 @@ phase: [asPhaseId('main')],
 
     const def: GameDef = {
       ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
-      zones: [
-        { id: asZoneId('board:cambodia'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'cambodia', coastal: false }, adjacentTo: [] },
-        { id: asZoneId('board:vietnam'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false }, adjacentTo: [] },
-      ],
+      zones: createSequenceContextMismatchZones({ includeAdjacency: true }),
       turnOrder: {
         type: 'cardDriven',
         config: {
@@ -1262,6 +1265,81 @@ phase: [asPhaseId('main')],
       kind: 'illegal',
       complete: false,
       reason: 'freeOperationZoneFilterMismatch',
+    });
+  });
+
+  it('rejects decision selections outside the captured free-operation sequence context', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'operation-profile',
+      actionId: asActionId('operation'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              chooseOne: {
+                internalDecisionId: 'decision:$zone',
+                bind: '$zone',
+                options: { query: 'zones' },
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def: GameDef = {
+      ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
+      zones: [
+        { id: asZoneId('board:cambodia'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'cambodia', coastal: false }, adjacentTo: [] },
+        { id: asZoneId('board:vietnam'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false }, adjacentTo: [] },
+      ],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      zones: createSequenceContextMismatchZoneState(),
+      turnOrderState: createSequenceContextMismatchTurnOrderState(),
+    });
+
+    const result = resolveMoveDecisionSequence(def, state, {
+      actionId: asActionId('operation'),
+      params: { 'decision:$zone': SEQUENCE_CONTEXT_DENIED_ZONE_ID },
+      freeOperation: true,
+    });
+    assert.equal(result.complete, false);
+    assert.deepEqual(result.illegal, {
+      kind: 'illegal',
+      complete: false,
+      reason: 'freeOperationSequenceContextMismatch',
     });
   });
 

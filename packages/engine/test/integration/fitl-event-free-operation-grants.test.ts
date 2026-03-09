@@ -1625,7 +1625,7 @@ describe('event free-operation grants integration', () => {
         };
         return (
           details.reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED
-          && details.context?.freeOperationDenial?.cause === 'zoneFilterMismatch'
+          && details.context?.freeOperationDenial?.cause === 'sequenceContextMismatch'
           && (details.context?.freeOperationDenial?.sequenceContextMismatchGrantIds?.length ?? 0) > 0
         );
       },

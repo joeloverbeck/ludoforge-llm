@@ -21,6 +21,7 @@ export const FREE_OPERATION_CHOICE_ILLEGAL_REASONS = [
   'freeOperationSequenceLocked',
   'freeOperationActionClassMismatch',
   'freeOperationActionIdMismatch',
+  'freeOperationSequenceContextMismatch',
   'freeOperationZoneFilterMismatch',
 ] as const;
 

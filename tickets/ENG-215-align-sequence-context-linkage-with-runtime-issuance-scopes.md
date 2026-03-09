@@ -48,7 +48,7 @@ Add tests that would currently fail incorrectly (capture in side, require in bra
 
 ## Out of Scope
 
-- Denial-cause taxonomy changes (`tickets/ENG-206-sequence-context-denial-cause-parity.md`).
+- Denial-cause taxonomy changes (`archive/tickets/ENG/ENG-206-sequence-context-denial-cause-parity.md`).
 - Schema ownership deduplication (`tickets/ENG-207-consolidate-sequence-context-schema-ownership.md`).
 - Mandatory grant/outcome contracts (`tickets/ENG-203-mandatory-grant-and-action-outcome-contracts.md`).
 

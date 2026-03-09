@@ -168,7 +168,7 @@ const explainFreeOperationBlockFromAnalysis = (
 
   if (contextMatchedGrants.length === 0) {
     return {
-      cause: 'zoneFilterMismatch',
+      cause: 'sequenceContextMismatch',
       activeSeat,
       actionClass,
       actionId,

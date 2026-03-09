@@ -7,6 +7,7 @@ export type FreeOperationBlockCause =
   | 'sequenceLocked'
   | 'actionClassMismatch'
   | 'actionIdMismatch'
+  | 'sequenceContextMismatch'
   | 'zoneFilterMismatch'
   | 'granted';
 

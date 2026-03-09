@@ -13,6 +13,7 @@ export const toFreeOperationDeniedCauseForLegality = (
     case 'sequenceLocked':
     case 'actionClassMismatch':
     case 'actionIdMismatch':
+    case 'sequenceContextMismatch':
     case 'zoneFilterMismatch':
       return cause;
     case 'granted':
@@ -32,6 +33,7 @@ export const toFreeOperationChoiceIllegalReason = (
   | 'freeOperationSequenceLocked'
   | 'freeOperationActionClassMismatch'
   | 'freeOperationActionIdMismatch'
+  | 'freeOperationSequenceContextMismatch'
   | 'freeOperationZoneFilterMismatch' => {
   switch (cause) {
     case 'noActiveSeatGrant':
@@ -42,6 +44,8 @@ export const toFreeOperationChoiceIllegalReason = (
       return 'freeOperationActionClassMismatch';
     case 'actionIdMismatch':
       return 'freeOperationActionIdMismatch';
+    case 'sequenceContextMismatch':
+      return 'freeOperationSequenceContextMismatch';
     case 'zoneFilterMismatch':
       return 'freeOperationZoneFilterMismatch';
     default: {

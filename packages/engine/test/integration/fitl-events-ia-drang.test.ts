@@ -225,7 +225,7 @@ describe('FITL card-44 Ia Drang', () => {
           };
         };
         return (
-          details.context?.freeOperationDenial?.cause === 'zoneFilterMismatch'
+          details.context?.freeOperationDenial?.cause === 'sequenceContextMismatch'
           && (details.context?.freeOperationDenial?.sequenceContextMismatchGrantIds?.length ?? 0) > 0
         );
       },

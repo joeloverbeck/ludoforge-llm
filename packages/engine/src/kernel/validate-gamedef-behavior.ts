@@ -804,6 +804,28 @@ const validateChoiceOptionsRuntimeShape = (
   diagnostics.push(diagnostic);
 };
 
+const validateChoiceOptionsQueryContract = (
+  diagnostics: Diagnostic[],
+  query: OptionsQuery,
+  path: string,
+  context: ValidationContext,
+  effectName: 'chooseOne' | 'chooseN',
+): void => {
+  const diagnosticsBeforeQueryValidation = diagnostics.length;
+  validateOptionsQuery(diagnostics, query, path, context);
+  if (!hasErrorDiagnosticAtPathSince(diagnostics, diagnosticsBeforeQueryValidation, path)) {
+    validateChoiceOptionsRuntimeShape(diagnostics, query, path, effectName);
+  }
+};
+
+const eventTargetChoiceEffectName = (target: EventTargetDef): 'chooseOne' | 'chooseN' => {
+  const cardinality = target.cardinality;
+  return ('n' in cardinality && cardinality.n === 1)
+    || (!('n' in cardinality) && cardinality.max === 1)
+    ? 'chooseOne'
+    : 'chooseN';
+};
+
 const uniqueKeyTupleToLabel = (tuple: readonly string[]): string => `[${tuple.join(', ')}]`;
 
 const validatesUniqueKeyConstraint = (
@@ -1793,11 +1815,7 @@ export const validateEffectAst = (
 
   if ('chooseOne' in effect) {
     const optionsPath = `${path}.chooseOne.options`;
-    const diagnosticsBeforeQueryValidation = diagnostics.length;
-    validateOptionsQuery(diagnostics, effect.chooseOne.options, optionsPath, context);
-    if (!hasErrorDiagnosticAtPathSince(diagnostics, diagnosticsBeforeQueryValidation, optionsPath)) {
-      validateChoiceOptionsRuntimeShape(diagnostics, effect.chooseOne.options, optionsPath, 'chooseOne');
-    }
+    validateChoiceOptionsQueryContract(diagnostics, effect.chooseOne.options, optionsPath, context, 'chooseOne');
     return;
   }
 
@@ -2080,11 +2098,7 @@ export const validateEffectAst = (
   }
 
   const optionsPath = `${path}.chooseN.options`;
-  const diagnosticsBeforeQueryValidation = diagnostics.length;
-  validateOptionsQuery(diagnostics, effect.chooseN.options, optionsPath, context);
-  if (!hasErrorDiagnosticAtPathSince(diagnostics, diagnosticsBeforeQueryValidation, optionsPath)) {
-    validateChoiceOptionsRuntimeShape(diagnostics, effect.chooseN.options, optionsPath, 'chooseN');
-  }
+  validateChoiceOptionsQueryContract(diagnostics, effect.chooseN.options, optionsPath, context, 'chooseN');
 };
 
 export const validatePostAdjacencyBehavior = (
@@ -2099,7 +2113,14 @@ export const validatePostAdjacencyBehavior = (
     path: string,
   ): void => {
     targets?.forEach((target, targetIndex) => {
-      validateOptionsQuery(diagnostics, target.selector, `${path}.targets[${targetIndex}].selector`, context);
+      const selectorPath = `${path}.targets[${targetIndex}].selector`;
+      validateChoiceOptionsQueryContract(
+        diagnostics,
+        target.selector,
+        selectorPath,
+        context,
+        eventTargetChoiceEffectName(target),
+      );
       target.effects.forEach((effect, effectIndex) => {
         validateEffectAst(diagnostics, effect, `${path}.targets[${targetIndex}].effects[${effectIndex}]`, context);
       });

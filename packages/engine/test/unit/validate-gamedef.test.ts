@@ -5268,6 +5268,30 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
     } as unknown as GameDef;
   };
 
+  const withEventTargetSelector = (
+    selector: Record<string, unknown>,
+    cardinality: Record<string, unknown>,
+    options?: {
+      readonly baseOverrides?: Record<string, unknown>;
+    },
+  ): GameDef => {
+    const base = withEventCardSideConfig({
+      targets: [
+        {
+          id: '$target',
+          selector,
+          cardinality,
+          application: 'each',
+          effects: [],
+        },
+      ],
+    });
+    return {
+      ...base,
+      ...(options?.baseOverrides ?? {}),
+    } as unknown as GameDef;
+  };
+
   it('validates event side effects through the generic effect validator', () => {
     const def = withEventCardSideConfig({
       effects: [
@@ -5354,6 +5378,111 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
           && diag.path === 'eventDecks[0].cards[0].unshaded.branches[0].targets[0].effects[0].draw.to',
       ),
       true,
+    );
+  });
+
+  it('rejects single-select event target selectors with non-encodable runtime shapes', () => {
+    const def = withEventTargetSelector(
+      { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' },
+      { n: 1 },
+      {
+        baseOverrides: {
+          runtimeDataAssets: [{ id: 'tournament-standard', kind: 'scenario', payload: { blindSchedule: { levels: [] } } }],
+          tableContracts: [
+            {
+              id: 'tournament-standard::blindSchedule.levels',
+              assetId: 'tournament-standard',
+              tablePath: 'blindSchedule.levels',
+              fields: [{ field: 'bigBlind', type: 'int' }],
+            },
+          ],
+        },
+      },
+    );
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.targets[0].selector'
+          && diag.severity === 'error',
+      ),
+      true,
+    );
+  });
+
+  it('rejects multi-select event target selectors with non-encodable runtime shapes', () => {
+    const def = withEventTargetSelector(
+      { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' },
+      { max: 2 },
+      {
+        baseOverrides: {
+          runtimeDataAssets: [{ id: 'tournament-standard', kind: 'scenario', payload: { blindSchedule: { levels: [] } } }],
+          tableContracts: [
+            {
+              id: 'tournament-standard::blindSchedule.levels',
+              assetId: 'tournament-standard',
+              tablePath: 'blindSchedule.levels',
+              fields: [{ field: 'bigBlind', type: 'int' }],
+            },
+          ],
+        },
+      },
+    );
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.targets[0].selector'
+          && diag.severity === 'error',
+      ),
+      true,
+    );
+  });
+
+  it('suppresses event target runtime-shape diagnostics when selector validation already fails', () => {
+    const def = withEventTargetSelector(
+      { query: 'assetRows', tableId: 'missing-table' },
+      { n: 1 },
+    );
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_RUNTIME_TABLE_MISSING'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.targets[0].selector.tableId'
+          && diag.severity === 'error',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.targets[0].selector',
+      ),
+      false,
+    );
+  });
+
+  it('accepts event target selectors with move-param-encodable runtime shapes', () => {
+    const def = withEventTargetSelector(
+      { query: 'tokensInZone', zone: 'deck:none' },
+      { max: 1 },
+    );
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.targets[0].selector',
+      ),
+      false,
     );
   });
 

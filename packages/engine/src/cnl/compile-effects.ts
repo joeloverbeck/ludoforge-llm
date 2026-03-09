@@ -1712,6 +1712,36 @@ function lowerGrantFreeOperationEffect(
     viabilityPolicy = source.viabilityPolicy;
   }
 
+  let completionPolicy: import('../contracts/index.js').TurnFlowFreeOperationGrantCompletionPolicy | undefined;
+  if (
+    source.completionPolicy !== undefined
+    && (typeof source.completionPolicy !== 'string' || source.completionPolicy !== 'required')
+  ) {
+    diagnostics.push(...missingCapability(
+      `${path}.completionPolicy`,
+      'grantFreeOperation completionPolicy',
+      source.completionPolicy,
+      ['required'],
+    ).diagnostics);
+  } else if (typeof source.completionPolicy === 'string') {
+    completionPolicy = source.completionPolicy;
+  }
+
+  let outcomePolicy: import('../contracts/index.js').TurnFlowFreeOperationGrantOutcomePolicy | undefined;
+  if (
+    source.outcomePolicy !== undefined
+    && (typeof source.outcomePolicy !== 'string' || source.outcomePolicy !== 'mustChangeGameplayState')
+  ) {
+    diagnostics.push(...missingCapability(
+      `${path}.outcomePolicy`,
+      'grantFreeOperation outcomePolicy',
+      source.outcomePolicy,
+      ['mustChangeGameplayState'],
+    ).diagnostics);
+  } else if (typeof source.outcomePolicy === 'string') {
+    outcomePolicy = source.outcomePolicy;
+  }
+
   let loweredSequence: { readonly chain: string; readonly step: number } | undefined;
   if (source.sequence !== undefined) {
     if (!isRecord(source.sequence) || typeof source.sequence.chain !== 'string' || !isInteger(source.sequence.step) || source.sequence.step < 0) {
@@ -1744,6 +1774,8 @@ function lowerGrantFreeOperationEffect(
         ...(allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon }),
         ...(uses === undefined ? {} : { uses }),
         ...(viabilityPolicy === undefined ? {} : { viabilityPolicy }),
+        ...(completionPolicy === undefined ? {} : { completionPolicy }),
+        ...(outcomePolicy === undefined ? {} : { outcomePolicy }),
         ...(loweredSequence === undefined ? {} : { sequence: loweredSequence }),
       },
     },

@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util';
 import { incrementActionUsage } from './action-usage.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { applyBoundaryExpiry } from './boundary-expiry.js';
@@ -28,7 +29,10 @@ import { buildAdjacencyGraph } from './spatial.js';
 import {
   applyTurnFlowEligibilityAfterMove,
   consumeTurnFlowFreeOperationGrant,
+  hasActiveSeatRequiredPendingFreeOperationGrant,
+  isMoveAllowedByRequiredPendingFreeOperationGrant,
 } from './turn-flow-eligibility.js';
+import { findAuthorizedPendingFreeOperationGrant } from './free-operation-grant-authorization.js';
 import { resolveFreeOperationDiscoveryAnalysis } from './free-operation-discovery-analysis.js';
 import { resolveTurnFlowActionClassMismatch } from './turn-flow-action-class.js';
 import { toFreeOperationDeniedCauseForLegality } from './free-operation-legality-policy.js';
@@ -41,6 +45,8 @@ import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { toMoveExecutionPolicy } from './execution-policy.js';
 import { createSeatResolutionContext } from './seat-resolution.js';
 import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
+import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
+import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { createExecutionEffectContext, type PhaseTransitionBudget } from './effect-context.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
@@ -100,6 +106,48 @@ const runtimeBindingsForMove = (
   executionProfile: ReturnType<typeof toExecutionPipeline> | undefined,
 ): Readonly<Record<string, MoveParamValue | boolean | string>> =>
   buildMoveRuntimeBindings(move, decisionBindingsForMove(executionProfile, move.params));
+
+const gameplayStateProjection = (state: GameState) => ({
+  globalVars: state.globalVars,
+  perPlayerVars: state.perPlayerVars,
+  zoneVars: state.zoneVars,
+  zones: state.zones,
+  nextTokenOrdinal: state.nextTokenOrdinal,
+  markers: state.markers,
+  ...(state.reveals === undefined ? {} : { reveals: state.reveals }),
+  ...(state.globalMarkers === undefined ? {} : { globalMarkers: state.globalMarkers }),
+  ...(state.activeLastingEffects === undefined ? {} : { activeLastingEffects: state.activeLastingEffects }),
+  ...(state.interruptPhaseStack === undefined ? {} : { interruptPhaseStack: state.interruptPhaseStack }),
+});
+
+const validateFreeOperationOutcomePolicy = (
+  def: GameDef,
+  beforeState: GameState,
+  afterActionState: GameState,
+  move: Move,
+  seatResolution: ReturnType<typeof createSeatResolutionContext>,
+): void => {
+  if (move.freeOperation !== true || beforeState.turnOrderState.type !== 'cardDriven') {
+    return;
+  }
+  const activeSeat = requireCardDrivenActiveSeat(
+    def,
+    beforeState,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_CONSUMPTION,
+    seatResolution,
+  );
+  const pending = beforeState.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
+  const grant = findAuthorizedPendingFreeOperationGrant(def, beforeState, pending, activeSeat, move);
+  if (grant?.outcomePolicy !== 'mustChangeGameplayState') {
+    return;
+  }
+  if (isDeepStrictEqual(gameplayStateProjection(beforeState), gameplayStateProjection(afterActionState))) {
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED, {
+      grantId: grant.grantId,
+      outcomePolicy: grant.outcomePolicy,
+    });
+  }
+};
 
 const resolveMatchedPipelineForMove = (
   def: GameDef,
@@ -605,6 +653,14 @@ const validateMove = (
       freeOperationDenial: freeOperationAnalysis.denial,
     });
   }
+  if (
+    hasActiveSeatRequiredPendingFreeOperationGrant(def, state, seatResolution)
+    && !isMoveAllowedByRequiredPendingFreeOperationGrant(def, state, move, seatResolution)
+  ) {
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
+      detail: 'active seat has unresolved required free-operation grants',
+    });
+  }
   const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const preflight = resolveMovePreflightContext(
@@ -1076,6 +1132,7 @@ const applyMoveCore = (
   const seatResolution = createSeatResolutionContext(def, state.playerCount);
 
   const executed = executeMoveAction(def, state, move, seatResolution, options, coreOptions, shared, cachedRuntime);
+  validateFreeOperationOutcomePolicy(def, state, executed.stateWithRng, move, seatResolution);
   const turnFlowResult = move.freeOperation === true
     ? (() => {
       const consumed = consumeTurnFlowFreeOperationGrant(def, executed.stateWithRng, move, seatResolution);

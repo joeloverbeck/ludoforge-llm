@@ -15,6 +15,8 @@ import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycl
 import {
   collectMoveZoneCandidates,
   doesGrantAuthorizeMove,
+  findAuthorizedPendingFreeOperationGrant,
+  isPendingFreeOperationGrantSequenceReady,
 } from './free-operation-grant-authorization.js';
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
@@ -109,6 +111,51 @@ const computeCandidates = (
     second: candidates[1] ?? null,
   };
 };
+
+const isRequiredPendingFreeOperationGrant = (
+  grant: TurnFlowPendingFreeOperationGrant,
+): boolean => grant.completionPolicy === 'required';
+
+const resolveReadyRequiredFreeOperationGrantSeats = (
+  pending: readonly TurnFlowPendingFreeOperationGrant[],
+  seatOrder: readonly string[],
+): { readonly first: string | null; readonly second: string | null } => {
+  const readySeats = new Set(
+    pending
+      .filter((grant) => isRequiredPendingFreeOperationGrant(grant) && isPendingFreeOperationGrantSequenceReady(pending, grant))
+      .map((grant) => grant.seat),
+  );
+  const ordered = seatOrder.filter((seat) => readySeats.has(seat));
+  return {
+    first: ordered[0] ?? null,
+    second: ordered[1] ?? null,
+  };
+};
+
+const withRequiredGrantCandidates = (
+  pending: readonly TurnFlowPendingFreeOperationGrant[],
+  seatOrder: readonly string[],
+  currentCard: TurnFlowRuntimeCardState,
+): TurnFlowRuntimeCardState => {
+  const required = resolveReadyRequiredFreeOperationGrantSeats(pending, seatOrder);
+  if (required.first === null && required.second === null) {
+    return currentCard;
+  }
+  return {
+    ...currentCard,
+    firstEligible: required.first,
+    secondEligible: required.second,
+  };
+};
+
+const hasReadyRequiredPendingFreeOperationGrantForSeat = (
+  pending: readonly TurnFlowPendingFreeOperationGrant[],
+  seat: string,
+): boolean =>
+  pending.some((grant) =>
+    grant.seat === seat
+    && isRequiredPendingFreeOperationGrant(grant)
+    && isPendingFreeOperationGrantSequenceReady(pending, grant));
 
 const cardSnapshot = (card: TurnFlowRuntimeCardState) => ({
   firstEligible: card.firstEligible,
@@ -212,6 +259,8 @@ const toPendingFreeOperationGrant = (
   ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
   ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),
   ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
+  ...(grant.completionPolicy === undefined ? {} : { completionPolicy: grant.completionPolicy }),
+  ...(grant.outcomePolicy === undefined ? {} : { outcomePolicy: grant.outcomePolicy }),
   remainingUses: grant.uses ?? 1,
   ...(sequenceBatchId === undefined ? {} : { sequenceBatchId }),
   ...(grant.sequence === undefined ? {} : { sequenceIndex: grant.sequence.step }),
@@ -341,6 +390,20 @@ const withPendingDeferredEventEffects = (
   return nextRuntime;
 };
 
+const withSuspendedCardEnd = (
+  runtime: TurnFlowRuntimeState,
+  suspendedCardEnd: TurnFlowRuntimeState['suspendedCardEnd'] | undefined,
+) => {
+  const nextRuntime = {
+    ...runtime,
+    ...(suspendedCardEnd === undefined ? {} : { suspendedCardEnd }),
+  };
+  if (suspendedCardEnd === undefined) {
+    delete (nextRuntime as { suspendedCardEnd?: TurnFlowRuntimeState['suspendedCardEnd'] }).suspendedCardEnd;
+  }
+  return nextRuntime;
+};
+
 const withFreeOperationSequenceContexts = (
   runtime: TurnFlowRuntimeState,
   contexts: TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined,
@@ -444,6 +507,94 @@ const computePostCardEligibility = (
     eligibility[override.seat] = override.eligible;
   }
   return eligibility;
+};
+
+const finalizeSuspendedOrEndedCard = (
+  def: GameDef,
+  rewardState: GameState,
+  runtime: TurnFlowRuntimeState,
+  seatResolution: SeatResolutionContext,
+  currentCard: TurnFlowRuntimeCardState,
+  pendingOverrides: readonly TurnFlowPendingEligibilityOverride[],
+  pendingFreeOperationGrants: readonly TurnFlowPendingFreeOperationGrant[],
+  pendingDeferredEventEffects: readonly TurnFlowPendingDeferredEventEffect[],
+  activeSeat: string,
+  endedReason: 'rightmostPass' | 'twoNonPass',
+): TurnFlowTransitionResult => {
+  let nextEligibility: Readonly<Record<string, boolean>>;
+  let nextSeatOrder = runtime.seatOrder;
+  let baseState = rewardState;
+  let boundaryDurations: readonly TurnFlowDuration[] | undefined;
+  const traceEntries: TriggerLogEntry[] = [];
+
+  const coupPhaseIds = def.turnOrder?.type === 'cardDriven'
+    ? new Set((def.turnOrder.config.coupPlan?.phases ?? []).map((p) => String(p.id)))
+    : new Set<string>();
+  const roundEndsInCoupPhase = coupPhaseIds.has(String(rewardState.currentPhase));
+
+  if (roundEndsInCoupPhase) {
+    nextEligibility = Object.fromEntries(
+      runtime.seatOrder.map((seat) => [seat, false]),
+    ) as Readonly<Record<string, boolean>>;
+  } else {
+    nextEligibility = computePostCardEligibility(runtime.seatOrder, currentCard, pendingOverrides);
+    const lifecycle = applyTurnFlowCardBoundary(def, rewardState);
+    baseState = lifecycle.state;
+    traceEntries.push(...lifecycle.traceEntries);
+    boundaryDurations = resolveBoundaryDurationsAtTurnEnd(lifecycle.traceEntries);
+    const cardSeatOrder = resolveCardSeatOrder(def, baseState, seatResolution);
+    if (cardSeatOrder !== null) {
+      nextSeatOrder = cardSeatOrder;
+    }
+  }
+
+  const resetCandidates = computeCandidates(nextSeatOrder, nextEligibility, new Set());
+  const nextTurn: TurnFlowRuntimeCardState = {
+    firstEligible: resetCandidates.first,
+    secondEligible: resetCandidates.second,
+    actedSeats: [],
+    passedSeats: [],
+    nonPassCount: 0,
+    firstActionClass: null,
+  };
+  traceEntries.push({
+    kind: 'turnFlowEligibility',
+    step: 'cardEnd',
+    seat: activeSeat,
+    before: cardSnapshot(currentCard),
+    after: cardSnapshot(nextTurn),
+    eligibilityBefore: runtime.eligibility,
+    eligibilityAfter: nextEligibility,
+    ...(pendingOverrides.length === 0 ? {} : { overrides: pendingOverrides }),
+    reason: endedReason,
+  });
+
+  const normalizedPendingFreeOperationGrants = toPendingFreeOperationGrants(pendingFreeOperationGrants);
+  const normalizedPendingDeferredEventEffects = toPendingDeferredEventEffects(pendingDeferredEventEffects);
+  const nextRuntimeBase: TurnFlowRuntimeState = {
+    ...runtime,
+    seatOrder: nextSeatOrder,
+    eligibility: nextEligibility,
+    currentCard: nextTurn,
+    pendingEligibilityOverrides: [],
+  };
+  return {
+    state: withActiveFromFirstEligible({
+      ...baseState,
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: withPendingDeferredEventEffects(
+          withPendingFreeOperationGrants(
+            withSuspendedCardEnd(nextRuntimeBase, undefined),
+            normalizedPendingFreeOperationGrants,
+          ),
+          normalizedPendingDeferredEventEffects,
+        ),
+      },
+    }, nextTurn.firstEligible, seatResolution),
+    traceEntries,
+    ...(boundaryDurations === undefined ? {} : { boundaryDurations }),
+  };
 };
 
 const withActiveFromFirstEligible = (
@@ -589,6 +740,53 @@ export const isActiveSeatEligibleForTurnFlow = (
   );
 };
 
+export const hasActiveSeatRequiredPendingFreeOperationGrant = (
+  def: GameDef,
+  state: GameState,
+  seatResolution: SeatResolutionContext,
+): boolean => {
+  const runtime = cardDrivenRuntime(state);
+  if (runtime === null) {
+    return false;
+  }
+  const activeSeat = requireCardDrivenActiveSeat(
+    def,
+    state,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ELIGIBILITY_CHECK,
+    seatResolution,
+  );
+  return hasReadyRequiredPendingFreeOperationGrantForSeat(runtime.pendingFreeOperationGrants ?? [], activeSeat);
+};
+
+export const isMoveAllowedByRequiredPendingFreeOperationGrant = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  seatResolution: SeatResolutionContext,
+): boolean => {
+  const runtime = cardDrivenRuntime(state);
+  if (runtime === null) {
+    return true;
+  }
+  const activeSeat = requireCardDrivenActiveSeat(
+    def,
+    state,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.WINDOW_FILTER_APPLICATION,
+    seatResolution,
+  );
+  const pending = runtime.pendingFreeOperationGrants ?? [];
+  if (!hasReadyRequiredPendingFreeOperationGrantForSeat(pending, activeSeat)) {
+    return true;
+  }
+  if (move.freeOperation !== true) {
+    return false;
+  }
+  return pending.some((grant) =>
+    grant.seat === activeSeat
+    && isRequiredPendingFreeOperationGrant(grant)
+    && doesGrantAuthorizeMove(def, state, pending, grant, move));
+};
+
 export const applyTurnFlowEligibilityAfterMove = (
   def: GameDef,
   state: GameState,
@@ -684,14 +882,14 @@ export const applyTurnFlowEligibilityAfterMove = (
     (before.nonPassCount === 0 && moveClass !== 'pass' ? normalizeFirstActionClass(moveClass) : null);
 
   const activeCardCandidates = computeCandidates(runtime.seatOrder, runtime.eligibility, acted);
-  const currentCard: TurnFlowRuntimeCardState = {
+  const currentCard = withRequiredGrantCandidates(pendingFreeOperationGrants, runtime.seatOrder, {
     firstEligible: activeCardCandidates.first,
     secondEligible: activeCardCandidates.second,
     actedSeats: [...acted],
     passedSeats: [...passed],
     nonPassCount,
     firstActionClass,
-  };
+  });
 
   const rewardState =
     rewards.length === 0
@@ -737,99 +935,69 @@ export const applyTurnFlowEligibilityAfterMove = (
   }
 
   let endedReason: 'rightmostPass' | 'twoNonPass' | undefined;
+  const requiredGrantCandidates = resolveReadyRequiredFreeOperationGrantSeats(pendingFreeOperationGrants, runtime.seatOrder);
+  const hasRequiredGrantWindow = requiredGrantCandidates.first !== null || requiredGrantCandidates.second !== null;
   if (inCoupPhase) {
     // In coup phases, the round ends only when ALL seats have passed.
     // (The standard firstEligible/secondEligible tracking is not used in
     // coup phases, so the normal rightmostPass condition would fire prematurely.)
-    if (runtime.seatOrder.every((seat) => acted.has(seat))) {
+    if (!hasRequiredGrantWindow && runtime.seatOrder.every((seat) => acted.has(seat))) {
       endedReason = 'rightmostPass';
     }
-  } else if (step === 'passChain' && currentCard.firstEligible === null && currentCard.secondEligible === null) {
+  } else if (!hasRequiredGrantWindow && step === 'passChain' && currentCard.firstEligible === null && currentCard.secondEligible === null) {
     endedReason = 'rightmostPass';
-  } else if (currentCard.nonPassCount >= 2) {
+  } else if (!hasRequiredGrantWindow && currentCard.nonPassCount >= 2) {
     endedReason = 'twoNonPass';
   }
-
-  let nextTurn = currentCard;
-  let nextEligibility = runtime.eligibility;
-  let nextPendingOverrides = pendingOverrides;
-  let nextPendingFreeOperationGrants = pendingFreeOperationGrants;
-  let nextPendingDeferredEventEffects = deferredEventEffects;
-  let nextSeatOrder = runtime.seatOrder;
-  let baseState = rewardState;
-  let boundaryDurations: readonly TurnFlowDuration[] | undefined;
   if (endedReason !== undefined) {
-    nextPendingOverrides = [];
-
-    const coupPhaseIds = def.turnOrder?.type === 'cardDriven'
-      ? new Set((def.turnOrder.config.coupPlan?.phases ?? []).map((p) => String(p.id)))
-      : new Set<string>();
-    const roundEndsInCoupPhase = coupPhaseIds.has(String(rewardState.currentPhase));
-
-    if (roundEndsInCoupPhase) {
-      // In coup phases, a round ending means the phase is complete.
-      // Make all factions ineligible so advanceToDecisionPoint advances
-      // to the next phase instead of starting a new round.
-      nextEligibility = Object.fromEntries(
-        runtime.seatOrder.map((seat) => [seat, false]),
-      ) as Readonly<Record<string, boolean>>;
-    } else {
-      nextEligibility = computePostCardEligibility(runtime.seatOrder, currentCard, pendingOverrides);
-      const lifecycle = applyTurnFlowCardBoundary(def, rewardState);
-      baseState = lifecycle.state;
-      traceEntries.push(...lifecycle.traceEntries);
-      boundaryDurations = resolveBoundaryDurationsAtTurnEnd(lifecycle.traceEntries);
-      const cardSeatOrder = resolveCardSeatOrder(def, baseState, seatResolution);
-      if (cardSeatOrder !== null) {
-        nextSeatOrder = cardSeatOrder;
-      }
-    }
-
-    const resetCandidates = computeCandidates(nextSeatOrder, nextEligibility, new Set());
-    nextTurn = {
-      firstEligible: resetCandidates.first,
-      secondEligible: resetCandidates.second,
-      actedSeats: [],
-      passedSeats: [],
-      nonPassCount: 0,
-      firstActionClass: null,
+    const finalized = finalizeSuspendedOrEndedCard(
+      def,
+      rewardState,
+      runtime,
+      seatResolution,
+      currentCard,
+      pendingOverrides,
+      pendingFreeOperationGrants,
+      deferredEventEffects,
+      activeSeat,
+      endedReason,
+    );
+    return {
+      state: finalized.state,
+      traceEntries: [...traceEntries, ...finalized.traceEntries],
+      ...(finalized.boundaryDurations === undefined ? {} : { boundaryDurations: finalized.boundaryDurations }),
+      ...(releasedDeferredEventEffects.length === 0 ? {} : { releasedDeferredEventEffects }),
     };
-    traceEntries.push({
-      kind: 'turnFlowEligibility',
-      step: 'cardEnd',
-      seat: activeSeat,
-      before: cardSnapshot(currentCard),
-      after: cardSnapshot(nextTurn),
-      eligibilityBefore: runtime.eligibility,
-      eligibilityAfter: nextEligibility,
-      ...(pendingOverrides.length === 0 ? {} : { overrides: pendingOverrides }),
-      reason: endedReason,
-    });
   }
 
-  const normalizedPendingFreeOperationGrants = toPendingFreeOperationGrants(nextPendingFreeOperationGrants);
-  const normalizedPendingDeferredEventEffects = toPendingDeferredEventEffects(nextPendingDeferredEventEffects);
+  const normalizedPendingFreeOperationGrants = toPendingFreeOperationGrants(pendingFreeOperationGrants);
+  const normalizedPendingDeferredEventEffects = toPendingDeferredEventEffects(deferredEventEffects);
+  const nextRuntime = withPendingDeferredEventEffects(
+    withPendingFreeOperationGrants(
+      withSuspendedCardEnd({
+        ...runtime,
+        pendingEligibilityOverrides: pendingOverrides,
+        currentCard,
+      }, hasRequiredGrantWindow
+        && (before.nonPassCount >= 1 || step === 'passChain')
+        && ((step === 'passChain' && activeCardCandidates.first === null && activeCardCandidates.second === null) || currentCard.nonPassCount >= 2)
+        ? { reason: step === 'passChain' && activeCardCandidates.first === null && activeCardCandidates.second === null ? 'rightmostPass' : 'twoNonPass' }
+        : runtime.suspendedCardEnd),
+      normalizedPendingFreeOperationGrants,
+    ),
+    normalizedPendingDeferredEventEffects,
+  );
   const stateWithTurnFlow: GameState = {
-    ...baseState,
+    ...rewardState,
     turnOrderState: {
       type: 'cardDriven',
-      runtime: withPendingDeferredEventEffects(
-        withPendingFreeOperationGrants({
-          ...runtime,
-          seatOrder: nextSeatOrder,
-          eligibility: nextEligibility,
-          pendingEligibilityOverrides: nextPendingOverrides,
-          currentCard: nextTurn,
-        }, normalizedPendingFreeOperationGrants),
-        normalizedPendingDeferredEventEffects,
-      ),
+      runtime: nextRuntime,
     },
   };
 
   return {
-    state: withActiveFromFirstEligible(stateWithTurnFlow, nextTurn.firstEligible, seatResolution),
+    state: withActiveFromFirstEligible(stateWithTurnFlow, currentCard.firstEligible, seatResolution),
     traceEntries,
-    ...(boundaryDurations === undefined ? {} : { boundaryDurations }),
     ...(releasedDeferredEventEffects.length === 0 ? {} : { releasedDeferredEventEffects }),
   };
 };
@@ -851,12 +1019,11 @@ export const consumeTurnFlowFreeOperationGrant = (
     seatResolution,
   );
   const pending = runtime.pendingFreeOperationGrants ?? [];
-  const consumedIndex = pending.findIndex(
-    (grant) => grant.seat === activeSeat && doesGrantAuthorizeMove(def, state, pending, grant, move),
-  );
-  if (consumedIndex < 0) {
+  const authorizedGrant = findAuthorizedPendingFreeOperationGrant(def, state, pending, activeSeat, move);
+  if (authorizedGrant === null) {
     return { state, traceEntries: [], releasedDeferredEventEffects: [] };
   }
+  const consumedIndex = pending.findIndex((grant) => grant.grantId === authorizedGrant.grantId);
   const consumed = pending[consumedIndex]!;
   const decremented = consumed.remainingUses - 1;
   const nextPending = decremented <= 0
@@ -887,8 +1054,32 @@ export const consumeTurnFlowFreeOperationGrant = (
   const splitDeferred = splitReadyDeferredEventEffects(runtime.pendingDeferredEventEffects ?? [], nextPending);
   const normalizedPendingFreeOperationGrants = toPendingFreeOperationGrants(nextPending);
   const normalizedPendingDeferredEventEffects = toPendingDeferredEventEffects(splitDeferred.remaining);
+  const nextCurrentCard = withRequiredGrantCandidates(nextPending, runtime.seatOrder, runtime.currentCard);
   const traceEntries = splitDeferred.ready.map<TriggerLogEntry>((released) =>
     createDeferredLifecycleTraceEntry('released', released));
+  if (
+    runtime.suspendedCardEnd !== undefined
+    && resolveReadyRequiredFreeOperationGrantSeats(nextPending, runtime.seatOrder).first === null
+    && resolveReadyRequiredFreeOperationGrantSeats(nextPending, runtime.seatOrder).second === null
+  ) {
+    const finalized = finalizeSuspendedOrEndedCard(
+      def,
+      state,
+      runtime,
+      seatResolution,
+      runtime.currentCard,
+      runtime.pendingEligibilityOverrides ?? [],
+      nextPending,
+      splitDeferred.remaining,
+      activeSeat,
+      runtime.suspendedCardEnd.reason,
+    );
+    return {
+      state: finalized.state,
+      traceEntries: [...traceEntries, ...finalized.traceEntries],
+      releasedDeferredEventEffects: splitDeferred.ready,
+    };
+  }
   return {
     state: {
       ...state,
@@ -896,7 +1087,13 @@ export const consumeTurnFlowFreeOperationGrant = (
         type: 'cardDriven',
         runtime: withPendingDeferredEventEffects(
           withFreeOperationSequenceContexts(
-            withPendingFreeOperationGrants(runtime, normalizedPendingFreeOperationGrants),
+            withPendingFreeOperationGrants(
+              withSuspendedCardEnd({
+                ...runtime,
+                currentCard: nextCurrentCard,
+              }, runtime.suspendedCardEnd),
+              normalizedPendingFreeOperationGrants,
+            ),
             nextSequenceContexts,
           ),
           normalizedPendingDeferredEventEffects,

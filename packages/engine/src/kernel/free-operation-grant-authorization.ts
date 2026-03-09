@@ -232,3 +232,14 @@ export const doesGrantAuthorizeMove = (
   );
 
 export const doesGrantRequireSequenceContextMatch = doesGrantSatisfySequenceContext;
+
+export const findAuthorizedPendingFreeOperationGrant = (
+  def: GameDef,
+  state: GameState,
+  pending: readonly TurnFlowPendingFreeOperationGrant[],
+  activeSeat: string,
+  move: Move,
+): TurnFlowPendingFreeOperationGrant | null =>
+  pending.find(
+    (grant) => grant.seat === activeSeat && doesGrantAuthorizeMove(def, state, pending, grant, move),
+  ) ?? null;

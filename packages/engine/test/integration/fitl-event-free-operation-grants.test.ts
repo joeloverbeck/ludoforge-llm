@@ -52,7 +52,7 @@ actor: 'active',
 executor: 'actor',
 phase: [asPhaseId('main')],
         params: [
-          { name: 'eventCardId', domain: { query: 'enums', values: ['card-1', 'card-2', 'card-3', 'card-4', 'card-5', 'card-6', 'card-7', 'card-9'] } },
+          { name: 'eventCardId', domain: { query: 'enums', values: ['card-1', 'card-2', 'card-3', 'card-4', 'card-5', 'card-6', 'card-7', 'card-9', 'card-required-outcome'] } },
           { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
           { name: 'branch', domain: { query: 'enums', values: ['branch-grant-nva', 'none'] } },
         ],
@@ -207,6 +207,24 @@ phase: [asPhaseId('main')],
             unshaded: {
               text: 'Grant VC free operation via effect execution.',
               effects: [{ grantFreeOperation: { seat: 'VC', operationClass: 'operation', actionIds: ['operation'] } }],
+            },
+          },
+          {
+            id: 'card-required-outcome',
+            title: 'Required Self Grant',
+            sideMode: 'single',
+            unshaded: {
+              text: 'US must take a free operation that changes gameplay state.',
+              freeOperationGrants: [
+                {
+                  seat: 'US',
+                  sequence: { chain: 'required-self', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  completionPolicy: 'required',
+                  outcomePolicy: 'mustChangeGameplayState',
+                },
+              ],
             },
           },
         ],
@@ -2122,5 +2140,54 @@ describe('event free-operation grants integration', () => {
     assert.equal(blockedNormal.length, 0, 'Monsoon restriction should block regular operation moves');
     assert.equal(allowedFree.length > 0, true, 'Grant-marked free operation should bypass monsoon restriction');
     assert.equal(blockedFree.length, 0, 'Free operation should be blocked when grant lacks monsoon allowance');
+  });
+
+  it('blocks pass during required grant windows and rejects free operations that fail outcome policy', () => {
+    const def = createDef();
+    const start = initialState(def, 88, 4).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-required-outcome', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    assert.equal(afterEvent.activePlayer, asPlayerId(0));
+    const moves = legalMoves(def, afterEvent);
+    assert.equal(
+      moves.some((move) => String(move.actionId) === 'pass'),
+      false,
+      'required pending grants should suppress pass during the obligation window',
+    );
+    assert.equal(
+      moves.some((move) => String(move.actionId) === 'operation' && move.freeOperation === true),
+      true,
+      'required pending grants should still expose the matching free operation',
+    );
+    assert.equal(
+      moves.some((move) => String(move.actionId) === 'operation' && move.freeOperation !== true),
+      false,
+      'required pending grants should suppress unrelated non-free actions',
+    );
+
+    assert.throws(
+      () => applyMove(def, afterEvent, { actionId: asActionId('operation'), params: {}, freeOperation: true }),
+      (error: unknown) => {
+        if (!(error instanceof Error)) {
+          return false;
+        }
+        const details = error as Error & {
+          readonly reason?: string;
+          readonly context?: {
+            readonly grantId?: string;
+            readonly outcomePolicy?: string;
+          };
+        };
+        return (
+          details.reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED
+          && typeof details.context?.grantId === 'string'
+          && details.context?.outcomePolicy === 'mustChangeGameplayState'
+        );
+      },
+    );
   });
 });

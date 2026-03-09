@@ -12,6 +12,8 @@ import {
 import {
   TURN_FLOW_INTERRUPT_SELECTOR_EMPTY_MESSAGE,
   TURN_FLOW_ACTION_CLASS_VALUES,
+  TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES,
+  TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
   TURN_FLOW_DURATION_VALUES,
   hasTurnFlowInterruptSelectorMatchField,
@@ -97,6 +99,8 @@ export const EventCardFreeOperationGrantSchema = z
     uses: IntegerSchema.min(1).optional(),
     sequenceContext: FreeOperationSequenceContextSchema.optional(),
     viabilityPolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES).optional(),
+    completionPolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES).optional(),
+    outcomePolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES).optional(),
   })
   .strict();
 
@@ -512,6 +516,8 @@ export const TurnFlowRuntimeStateSchema = z
             zoneFilter: ConditionASTSchema.optional(),
             allowDuringMonsoon: BooleanSchema.optional(),
             viabilityPolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES).optional(),
+            completionPolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES).optional(),
+            outcomePolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES).optional(),
             remainingUses: IntegerSchema.min(1),
             sequenceBatchId: StringSchema.min(1).optional(),
             sequenceIndex: IntegerSchema.min(0).optional(),
@@ -543,6 +549,12 @@ export const TurnFlowRuntimeStateSchema = z
           })
           .strict(),
       )
+      .optional(),
+    suspendedCardEnd: z
+      .object({
+        reason: z.union([z.literal('rightmostPass'), z.literal('twoNonPass')]),
+      })
+      .strict()
       .optional(),
     consecutiveCoupRounds: IntegerSchema.min(0).optional(),
     compoundAction: z

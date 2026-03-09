@@ -9,6 +9,8 @@ import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import {
   isTurnFlowActionClass,
+  isTurnFlowFreeOperationGrantCompletionPolicy,
+  isTurnFlowFreeOperationGrantOutcomePolicy,
   isTurnFlowFreeOperationGrantViabilityPolicy,
 } from '../contracts/index.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
@@ -182,6 +184,32 @@ export const applyGrantFreeOperation = (
     );
   }
   if (
+    grant.completionPolicy !== undefined
+    && !isTurnFlowFreeOperationGrantCompletionPolicy(grant.completionPolicy)
+  ) {
+    throw effectRuntimeError(
+      EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
+      'grantFreeOperation.completionPolicy is invalid',
+      {
+        effectType: 'grantFreeOperation',
+        completionPolicy: grant.completionPolicy,
+      },
+    );
+  }
+  if (
+    grant.outcomePolicy !== undefined
+    && !isTurnFlowFreeOperationGrantOutcomePolicy(grant.outcomePolicy)
+  ) {
+    throw effectRuntimeError(
+      EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
+      'grantFreeOperation.outcomePolicy is invalid',
+      {
+        effectType: 'grantFreeOperation',
+        outcomePolicy: grant.outcomePolicy,
+      },
+    );
+  }
+  if (
     grant.sequenceContext !== undefined
     && grant.sequence === undefined
   ) {
@@ -258,6 +286,8 @@ export const applyGrantFreeOperation = (
     ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),
     ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
     ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
+    ...(grant.completionPolicy === undefined ? {} : { completionPolicy: grant.completionPolicy }),
+    ...(grant.outcomePolicy === undefined ? {} : { outcomePolicy: grant.outcomePolicy }),
     remainingUses: uses,
     ...(sequenceBatchId === undefined ? {} : { sequenceBatchId }),
     ...(sequenceIndex === undefined ? {} : { sequenceIndex }),

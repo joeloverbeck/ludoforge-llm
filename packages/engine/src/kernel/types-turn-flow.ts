@@ -7,6 +7,10 @@ export type TurnFlowActionClass = CanonicalTurnFlowActionClass;
 
 export type TurnFlowFreeOperationGrantViabilityPolicy =
   import('../contracts/index.js').TurnFlowFreeOperationGrantViabilityPolicy;
+export type TurnFlowFreeOperationGrantCompletionPolicy =
+  import('../contracts/index.js').TurnFlowFreeOperationGrantCompletionPolicy;
+export type TurnFlowFreeOperationGrantOutcomePolicy =
+  import('../contracts/index.js').TurnFlowFreeOperationGrantOutcomePolicy;
 
 export interface TurnFlowFreeOperationGrantContract {
   readonly id?: string;
@@ -17,6 +21,8 @@ export interface TurnFlowFreeOperationGrantContract {
   readonly zoneFilter?: import('./types-ast.js').ConditionAST;
   readonly allowDuringMonsoon?: boolean;
   readonly uses?: number;
+  readonly completionPolicy?: TurnFlowFreeOperationGrantCompletionPolicy;
+  readonly outcomePolicy?: TurnFlowFreeOperationGrantOutcomePolicy;
   readonly sequence?: {
     readonly chain: string;
     readonly step: number;
@@ -159,10 +165,16 @@ export interface TurnFlowPendingFreeOperationGrant {
   readonly zoneFilter?: import('./types-ast.js').ConditionAST;
   readonly allowDuringMonsoon?: boolean;
   readonly viabilityPolicy?: TurnFlowFreeOperationGrantViabilityPolicy;
+  readonly completionPolicy?: TurnFlowFreeOperationGrantCompletionPolicy;
+  readonly outcomePolicy?: TurnFlowFreeOperationGrantOutcomePolicy;
   readonly remainingUses: number;
   readonly sequenceBatchId?: string;
   readonly sequenceIndex?: number;
   readonly sequenceContext?: FreeOperationSequenceContextContract;
+}
+
+export interface TurnFlowSuspendedCardEnd {
+  readonly reason: 'rightmostPass' | 'twoNonPass';
 }
 
 export interface TurnFlowFreeOperationSequenceBatchContext {
@@ -220,6 +232,7 @@ export interface TurnFlowRuntimeState {
   readonly pendingFreeOperationGrants?: readonly TurnFlowPendingFreeOperationGrant[];
   readonly freeOperationSequenceContexts?: Readonly<Record<string, TurnFlowFreeOperationSequenceBatchContext>>;
   readonly pendingDeferredEventEffects?: readonly TurnFlowPendingDeferredEventEffect[];
+  readonly suspendedCardEnd?: TurnFlowSuspendedCardEnd;
   readonly consecutiveCoupRounds?: number;
   readonly compoundAction?: CompoundActionState;
 }

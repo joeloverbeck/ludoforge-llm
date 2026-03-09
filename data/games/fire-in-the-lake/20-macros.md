@@ -829,6 +829,8 @@ effectMacros:
     params:
       - { name: faction, type: { kind: enum, values: [NVA, VC] } }
       - { name: resourceVar, type: string }
+      - { name: paidMinExpr, type: value }
+      - { name: paidMaxExpr, type: value }
     exports: [$targetSpaces]
     effects:
       - if:
@@ -867,16 +869,23 @@ effectMacros:
                   if:
                     when: { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
                     then: 1
-                    else:
-                      if:
-                        when: { op: '>', left: { ref: gvar, var: { param: resourceVar } }, right: 0 }
-                        then: 1
-                        else: 0
+                    else: { param: paidMinExpr }
                 max:
                   if:
                     when: { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
                     then: 99
-                    else: { ref: gvar, var: { param: resourceVar } }
+                    else: { param: paidMaxExpr }
+
+  # ── pt76-select-enhanced-space ────────────────────────────────────────────
+  # PT-76 shaded chooses exactly one already-selected Attack space to receive
+  # the per-NVA-Troop damage replacement.
+  - id: pt76-select-enhanced-space
+    params: []
+    exports: [$pt76EnhancedSpace]
+    effects:
+      - chooseOne:
+          bind: $pt76EnhancedSpace
+          options: { query: binding, name: $targetSpaces }
 
   # ── insurgent-terror-select-spaces ────────────────────────────────────────
   # Shared insurgent Terror map-space selector:

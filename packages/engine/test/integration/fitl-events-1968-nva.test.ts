@@ -101,6 +101,11 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
           'NVA Bombard max 3 spaces. NVA CAPABILITY. Other restrictions on Bombard apply normally (4.4.2).',
         );
       }
+
+      if (expected.id === 'card-45') {
+        assert.equal(card?.unshaded?.text, 'Each NVA Attack space, first remove 1 NVA Troop cube. NVA CAPABILITY.');
+        assert.equal(card?.shaded?.text, 'NVA Attack in 1 space removes 1 enemy per Troop. NVA CAPABILITY.');
+      }
     }
   });
 

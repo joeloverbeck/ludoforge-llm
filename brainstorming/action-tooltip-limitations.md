@@ -47,4 +47,7 @@ Place __macro_place_from_available_or_map_action Pipelines_1__stages_2__effects_
 
 ▸
 Modifiers (0 active)
+CAPS is Unshaded: Train: place free Police in training spaces with US base
+CORDS is Unshaded: Train: pacify in up to 2 selected spaces instead of 1
+CORDS is Shaded: Train: pacification shifts only to Passive Support
 Available

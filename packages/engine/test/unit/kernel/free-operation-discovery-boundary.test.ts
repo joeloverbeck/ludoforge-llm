@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   collectNamedImportsByLocalName,
+  hasImportWithModuleSubstring,
   parseTypeScriptSource,
 } from '../../helpers/kernel-source-ast-guard.js';
 import { readKernelSource } from '../../helpers/kernel-source-guard.js';
@@ -23,6 +24,11 @@ describe('free-operation discovery boundary architecture guard', () => {
       legacyImports.has('resolveFreeOperationDiscoveryAnalysis'),
       false,
       'legal-choices.ts must not import resolveFreeOperationDiscoveryAnalysis from turn-flow-eligibility.ts',
+    );
+    assert.equal(
+      hasImportWithModuleSubstring(sourceFile, './turn-flow-eligibility.js'),
+      false,
+      'legal-choices.ts must not import turn-flow-eligibility.ts directly',
     );
   });
 });

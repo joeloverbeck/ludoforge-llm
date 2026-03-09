@@ -90,8 +90,12 @@ const countMatching = (state: GameState, zone: string, predicate: (token: Token)
 
 describe('FITL card-47 Chu Luc', () => {
   it('encodes exact card text plus executable unshaded doubling/targeted-assault and shaded border placement payloads', () => {
-    const def = compileDef();
-    const card = def.eventDecks?.[0]?.cards.find((entry) => entry.id === CARD_ID);
+    const { parsed, compiled } = compileProductionSpec();
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef!.eventDecks?.[0]?.cards.find((entry) => entry.id === CARD_ID);
+    const parsedCard = parsed.doc.eventDecks?.[0]?.cards?.find((entry) => entry.id === CARD_ID);
 
     assert.notEqual(card, undefined, 'Expected card-47 in production deck');
     assert.equal(card?.unshaded?.text, 'Add ARVN Troops to double the ARVN pieces in a space with NVA. All ARVN free Assault NVA.');
@@ -101,6 +105,11 @@ describe('FITL card-47 Chu Luc', () => {
     assert.equal((card?.shaded?.effects?.[0] as { chooseN?: { bind?: string } } | undefined)?.chooseN?.bind, '$nvaTroopsToPlace');
     assert.equal(typeof (card?.shaded?.effects?.[1] as { forEach?: unknown } | undefined)?.forEach, 'object');
     assert.equal(card?.unshaded?.freeOperationGrants, undefined, 'Chu Luc unshaded should resolve via event effects, not generic assault grants');
+    const serializedUnshaded = JSON.stringify(card?.unshaded?.effects ?? []);
+    const serializedParsedUnshaded = JSON.stringify(parsedCard?.unshaded?.effects ?? []);
+    assert.match(serializedUnshaded, /coin-assault-removal-order/, 'Chu Luc unshaded should use the shared assault removal helper');
+    assert.doesNotMatch(serializedUnshaded, /coin-assault-removal-order-single-faction/, 'Chu Luc unshaded should not depend on the removed single-faction helper');
+    assert.match(serializedParsedUnshaded, /targetFactionMode/, 'Chu Luc unshaded should specify targeted shared-assault mode explicitly in authored data');
   });
 
   it('unshaded doubles ARVN pieces in the chosen space, then assaults NVA only in every eligible space', () => {

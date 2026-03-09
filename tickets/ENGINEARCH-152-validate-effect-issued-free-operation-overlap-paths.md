@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — path-sensitive `GameDef` validation for effect-issued free-operation overlaps
-**Deps**: tickets/ENGINEARCH-150-extract-shared-free-operation-overlap-classifier.md, archive/tickets/ENG/ENG-216-path-sensitive-sequence-context-linkage-validation.md, archive/tickets/ENG/ENG-217-complete-sequence-context-control-flow-path-traversal.md, packages/engine/src/kernel/effect-grant-sequence-context-paths.ts, packages/engine/src/kernel/validate-gamedef-behavior.ts
+**Deps**: archive/tickets/ENGINEARCH-150-extract-shared-free-operation-overlap-classifier.md, archive/tickets/ENG/ENG-216-path-sensitive-sequence-context-linkage-validation.md, archive/tickets/ENG/ENG-217-complete-sequence-context-control-flow-path-traversal.md, packages/engine/src/kernel/effect-grant-sequence-context-paths.ts, packages/engine/src/kernel/validate-gamedef-behavior.ts
 
 ## Problem
 

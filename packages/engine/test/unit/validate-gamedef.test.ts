@@ -5766,6 +5766,32 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
     );
   });
 
+  it('treats omitted uses and explicit uses: 1 as contract-equivalent duplicate event freeOperationGrants', () => {
+    const def = withEventCardSideConfig({
+      freeOperationGrants: [
+        {
+          seat: '0',
+          sequence: { chain: 'duplicate-uses-a', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+        },
+        {
+          seat: '0',
+          sequence: { chain: 'duplicate-uses-b', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          uses: 1,
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code === 'FREE_OPERATION_GRANT_OVERLAP_AMBIGUOUS'),
+      false,
+    );
+  });
+
   it('accepts same-chain sequential event freeOperationGrants because they cannot co-issue', () => {
     const def = withEventCardSideConfig({
       freeOperationGrants: [

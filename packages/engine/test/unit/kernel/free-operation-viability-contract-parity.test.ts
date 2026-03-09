@@ -210,4 +210,35 @@ describe('free-operation viability policy contract parity', () => {
       'validate-gamedef-behavior.ts must validate grants through the canonical shared grant-contract helper',
     );
   });
+
+  it('keeps runtime and validation overlap classification wired to the shared overlap helper', () => {
+    const validationSource = readKernelSource('src/kernel/validate-gamedef-behavior.ts');
+    const runtimeSource = readKernelSource('src/kernel/free-operation-grant-authorization.ts');
+
+    assert.match(
+      validationSource,
+      /from '\.\/free-operation-grant-overlap\.js'/u,
+      'validate-gamedef-behavior.ts must import the shared free-operation overlap helper',
+    );
+    assert.match(
+      validationSource,
+      /eventFreeOperationGrantOverlapSurfaceKey\(/u,
+      'validate-gamedef-behavior.ts must classify overlap surfaces through the shared event-grant overlap helper',
+    );
+    assert.match(
+      validationSource,
+      /eventFreeOperationGrantEquivalenceKey\(/u,
+      'validate-gamedef-behavior.ts must classify grant equivalence through the shared event-grant overlap helper',
+    );
+    assert.match(
+      runtimeSource,
+      /from '\.\/free-operation-grant-overlap\.js'/u,
+      'free-operation-grant-authorization.ts must import the shared free-operation overlap helper',
+    );
+    assert.match(
+      runtimeSource,
+      /pendingFreeOperationGrantEquivalenceKey\(/u,
+      'free-operation-grant-authorization.ts must classify authorized grant equivalence through the shared pending-grant overlap helper',
+    );
+  });
 });

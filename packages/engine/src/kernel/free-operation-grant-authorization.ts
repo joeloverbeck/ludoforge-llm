@@ -4,6 +4,7 @@ import { createCollector } from './execution-collector.js';
 import { evalCondition } from './eval-condition.js';
 import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
 import { resolveGrantFreeOperationActionDomain } from './free-operation-action-domain.js';
+import { pendingFreeOperationGrantEquivalenceKey } from './free-operation-grant-overlap.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
 import {
@@ -239,63 +240,11 @@ const compareAuthorizedPendingFreeOperationGrantPriority = (
   right: TurnFlowPendingFreeOperationGrant,
 ): number => compareTurnFlowFreeOperationGrantPriority(left, right);
 
-const normalizedGrantActionIds = (
-  def: GameDef,
-  grant: TurnFlowPendingFreeOperationGrant,
-): readonly string[] => [...grantActionIds(def, grant)].sort();
-
-const grantHasSequenceBatchScopedSemantics = (
-  state: GameState,
-  grant: TurnFlowPendingFreeOperationGrant,
-): boolean => {
-  if (state.turnOrderState.type !== 'cardDriven') {
-    return false;
-  }
-  const batchId = grant.sequenceBatchId;
-  if (batchId === undefined) {
-    return false;
-  }
-  return grant.sequenceContext !== undefined || state.turnOrderState.runtime.freeOperationSequenceContexts?.[batchId] !== undefined;
-};
-
-const grantDeferredDependencyProfile = (
-  state: GameState,
-  grant: TurnFlowPendingFreeOperationGrant,
-): readonly string[] => {
-  if (state.turnOrderState.type !== 'cardDriven' || grant.sequenceBatchId === undefined) {
-    return [];
-  }
-  return (state.turnOrderState.runtime.pendingDeferredEventEffects ?? [])
-    .filter((deferred) => deferred.requiredGrantBatchIds.includes(grant.sequenceBatchId!))
-    .map((deferred) => deferred.deferredId)
-    .sort();
-};
-
 const authorizedPendingFreeOperationGrantEquivalenceKey = (
   def: GameDef,
   state: GameState,
   grant: TurnFlowPendingFreeOperationGrant,
-): string => JSON.stringify({
-  seat: grant.seat,
-  executeAsSeat: grant.executeAsSeat,
-  operationClass: grant.operationClass,
-  actionIds: normalizedGrantActionIds(def, grant),
-  zoneFilter: grant.zoneFilter,
-  allowDuringMonsoon: grant.allowDuringMonsoon,
-  viabilityPolicy: grant.viabilityPolicy,
-  completionPolicy: grant.completionPolicy,
-  outcomePolicy: grant.outcomePolicy,
-  postResolutionTurnFlow: grant.postResolutionTurnFlow,
-  remainingUses: grant.remainingUses,
-  sequenceContext: grant.sequenceContext,
-  deferredDependencyProfile: grantDeferredDependencyProfile(state, grant),
-  ...(grantHasSequenceBatchScopedSemantics(state, grant)
-    ? {
-        sequenceBatchId: grant.sequenceBatchId,
-        sequenceIndex: grant.sequenceIndex,
-      }
-    : {}),
-});
+): string => pendingFreeOperationGrantEquivalenceKey(def, state, grant);
 
 const assertNoAmbiguousAuthorizedPendingFreeOperationGrantOverlap = (
   def: GameDef,

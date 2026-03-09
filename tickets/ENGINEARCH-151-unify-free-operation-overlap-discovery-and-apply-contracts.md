@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — legal-move discovery, free-operation denial analysis, and apply-time overlap parity
-**Deps**: tickets/ENGINEARCH-150-extract-shared-free-operation-overlap-classifier.md, archive/tickets/ENG-224-strengthen-required-outcome-enforcement-for-overlapping-grants.md, packages/engine/src/kernel/legal-moves-turn-order.ts, packages/engine/src/kernel/free-operation-discovery-analysis.ts, packages/engine/src/kernel/free-operation-grant-authorization.ts
+**Deps**: archive/tickets/ENGINEARCH-150-extract-shared-free-operation-overlap-classifier.md, archive/tickets/ENG-224-strengthen-required-outcome-enforcement-for-overlapping-grants.md, packages/engine/src/kernel/legal-moves-turn-order.ts, packages/engine/src/kernel/free-operation-discovery-analysis.ts, packages/engine/src/kernel/free-operation-grant-authorization.ts
 
 ## Problem
 

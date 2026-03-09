@@ -1,5 +1,5 @@
-import { isDeepStrictEqual } from 'node:util';
 import { incrementActionUsage } from './action-usage.js';
+import { deepEqual } from './deep-equal.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { applyBoundaryExpiry } from './boundary-expiry.js';
 import { isEffectRuntimeReason } from './effect-error.js';
@@ -141,7 +141,7 @@ const validateFreeOperationOutcomePolicy = (
   if (authorized.strongestOutcomeGrant === null) {
     return;
   }
-  if (isDeepStrictEqual(gameplayStateProjection(beforeState), gameplayStateProjection(afterActionState))) {
+  if (deepEqual(gameplayStateProjection(beforeState), gameplayStateProjection(afterActionState))) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED, {
       grantId: authorized.strongestOutcomeGrant.grantId,
       outcomePolicy: 'mustChangeGameplayState',

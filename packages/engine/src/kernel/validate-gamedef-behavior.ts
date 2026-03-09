@@ -48,7 +48,6 @@ import {
   TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
   type TurnFlowFreeOperationGrantContractViolationCode,
 } from '../contracts/index.js';
-import { resolveGrantFreeOperationActionDomain } from './free-operation-action-domain.js';
 import {
   type ValidationContext,
   pushMissingReferenceDiagnostic,
@@ -83,6 +82,10 @@ import {
 import {
   collectEffectGrantSequenceContextExecutionPaths,
 } from './effect-grant-sequence-context-paths.js';
+import {
+  eventFreeOperationGrantEquivalenceKey,
+  eventFreeOperationGrantOverlapSurfaceKey,
+} from './free-operation-grant-overlap.js';
 import {
   getNestedEffectSequenceContextScopes,
   ROOT_EFFECT_SEQUENCE_CONTEXT_SCOPE,
@@ -361,48 +364,6 @@ const validateFreeOperationGrantContract = (
     });
   }
 };
-
-const normalizedEventFreeOperationGrantActionIds = (
-  def: GameDef,
-  grant: EventFreeOperationGrantDef,
-): readonly string[] => [...resolveGrantFreeOperationActionDomain(def, grant)].sort();
-
-const eventFreeOperationGrantOverlapSurfaceKey = (
-  def: GameDef,
-  grant: EventFreeOperationGrantDef,
-): string => JSON.stringify({
-  seat: grant.seat,
-  executeAsSeat: grant.executeAsSeat,
-  operationClass: grant.operationClass,
-  actionIds: normalizedEventFreeOperationGrantActionIds(def, grant),
-  zoneFilter: grant.zoneFilter,
-  allowDuringMonsoon: grant.allowDuringMonsoon,
-  viabilityPolicy: grant.viabilityPolicy,
-  sequenceContext: grant.sequenceContext,
-});
-
-const eventFreeOperationGrantEquivalenceKey = (
-  def: GameDef,
-  grant: EventFreeOperationGrantDef,
-): string => JSON.stringify({
-  seat: grant.seat,
-  executeAsSeat: grant.executeAsSeat,
-  operationClass: grant.operationClass,
-  actionIds: normalizedEventFreeOperationGrantActionIds(def, grant),
-  zoneFilter: grant.zoneFilter,
-  allowDuringMonsoon: grant.allowDuringMonsoon,
-  viabilityPolicy: grant.viabilityPolicy,
-  completionPolicy: grant.completionPolicy,
-  outcomePolicy: grant.outcomePolicy,
-  postResolutionTurnFlow: grant.postResolutionTurnFlow,
-  uses: grant.uses ?? 1,
-  sequenceContext: grant.sequenceContext,
-  ...(grant.sequenceContext === undefined
-    ? {}
-    : {
-        sequence: grant.sequence,
-      }),
-});
 
 const eventFreeOperationGrantsCanCoissue = (
   left: EventFreeOperationGrantDef,

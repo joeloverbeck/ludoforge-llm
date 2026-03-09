@@ -59,6 +59,7 @@ interface FreeOperationGrantConsumptionResult {
   readonly state: GameState;
   readonly traceEntries: readonly TriggerLogEntry[];
   readonly releasedDeferredEventEffects: readonly TurnFlowReleasedDeferredEventEffect[];
+  readonly consumedGrant?: TurnFlowPendingFreeOperationGrant;
 }
 
 const isPassAction = (def: GameDef, move: Move): boolean =>
@@ -261,6 +262,7 @@ const toPendingFreeOperationGrant = (
   ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
   ...(grant.completionPolicy === undefined ? {} : { completionPolicy: grant.completionPolicy }),
   ...(grant.outcomePolicy === undefined ? {} : { outcomePolicy: grant.outcomePolicy }),
+  ...(grant.postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow: grant.postResolutionTurnFlow }),
   remainingUses: grant.uses ?? 1,
   ...(sequenceBatchId === undefined ? {} : { sequenceBatchId }),
   ...(grant.sequence === undefined ? {} : { sequenceIndex: grant.sequence.step }),
@@ -1054,32 +1056,8 @@ export const consumeTurnFlowFreeOperationGrant = (
   const splitDeferred = splitReadyDeferredEventEffects(runtime.pendingDeferredEventEffects ?? [], nextPending);
   const normalizedPendingFreeOperationGrants = toPendingFreeOperationGrants(nextPending);
   const normalizedPendingDeferredEventEffects = toPendingDeferredEventEffects(splitDeferred.remaining);
-  const nextCurrentCard = withRequiredGrantCandidates(nextPending, runtime.seatOrder, runtime.currentCard);
   const traceEntries = splitDeferred.ready.map<TriggerLogEntry>((released) =>
     createDeferredLifecycleTraceEntry('released', released));
-  if (
-    runtime.suspendedCardEnd !== undefined
-    && resolveReadyRequiredFreeOperationGrantSeats(nextPending, runtime.seatOrder).first === null
-    && resolveReadyRequiredFreeOperationGrantSeats(nextPending, runtime.seatOrder).second === null
-  ) {
-    const finalized = finalizeSuspendedOrEndedCard(
-      def,
-      state,
-      runtime,
-      seatResolution,
-      runtime.currentCard,
-      runtime.pendingEligibilityOverrides ?? [],
-      nextPending,
-      splitDeferred.remaining,
-      activeSeat,
-      runtime.suspendedCardEnd.reason,
-    );
-    return {
-      state: finalized.state,
-      traceEntries: [...traceEntries, ...finalized.traceEntries],
-      releasedDeferredEventEffects: splitDeferred.ready,
-    };
-  }
   return {
     state: {
       ...state,
@@ -1090,7 +1068,6 @@ export const consumeTurnFlowFreeOperationGrant = (
             withPendingFreeOperationGrants(
               withSuspendedCardEnd({
                 ...runtime,
-                currentCard: nextCurrentCard,
               }, runtime.suspendedCardEnd),
               normalizedPendingFreeOperationGrants,
             ),
@@ -1102,5 +1079,6 @@ export const consumeTurnFlowFreeOperationGrant = (
     },
     traceEntries,
     releasedDeferredEventEffects: splitDeferred.ready,
+    consumedGrant: consumed,
   };
 };

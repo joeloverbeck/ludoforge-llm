@@ -171,6 +171,45 @@ describe('applyGrantFreeOperation', () => {
     });
   });
 
+  it('throws when required grantFreeOperation omits postResolutionTurnFlow', () => {
+    const ctx = makeCtx();
+    const effect = {
+      grantFreeOperation: {
+        seat: 'self',
+        operationClass: 'operation',
+        completionPolicy: 'required',
+      },
+    } as unknown as Extract<EffectAST, { readonly grantFreeOperation: unknown }>;
+
+    assert.throws(() => applyGrantFreeOperation(effect, ctx), (err: unknown) => {
+      if (!isEffectErrorCode(err, 'EFFECT_RUNTIME')) {
+        return false;
+      }
+      assert.equal(err.context?.effectType, 'grantFreeOperation');
+      assert.match(String(err.message), /postResolutionTurnFlow is required/i);
+      return true;
+    });
+  });
+
+  it('keeps explicit postResolutionTurnFlow on emitted required pending grants', () => {
+    const ctx = makeCtx();
+    const effect = {
+      grantFreeOperation: {
+        seat: 'self',
+        operationClass: 'operation',
+        completionPolicy: 'required',
+        postResolutionTurnFlow: 'resumeCardFlow',
+      },
+    } as unknown as Extract<EffectAST, { readonly grantFreeOperation: unknown }>;
+
+    const result = applyGrantFreeOperation(effect, ctx);
+    const tos = result.state.turnOrderState;
+    assert.equal(tos.type, 'cardDriven');
+    if (tos.type !== 'cardDriven') return;
+    const grants = tos.runtime.pendingFreeOperationGrants ?? [];
+    assert.equal(grants[0]?.postResolutionTurnFlow, 'resumeCardFlow');
+  });
+
   it('resolves "self" seat to active player', () => {
     const ctx = makeCtx();
     const effect = {

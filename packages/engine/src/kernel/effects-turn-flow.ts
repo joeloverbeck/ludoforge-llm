@@ -11,6 +11,7 @@ import {
   isTurnFlowActionClass,
   isTurnFlowFreeOperationGrantCompletionPolicy,
   isTurnFlowFreeOperationGrantOutcomePolicy,
+  isTurnFlowFreeOperationGrantPostResolutionTurnFlow,
   isTurnFlowFreeOperationGrantViabilityPolicy,
 } from '../contracts/index.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
@@ -210,6 +211,45 @@ export const applyGrantFreeOperation = (
     );
   }
   if (
+    grant.postResolutionTurnFlow !== undefined
+    && !isTurnFlowFreeOperationGrantPostResolutionTurnFlow(grant.postResolutionTurnFlow)
+  ) {
+    throw effectRuntimeError(
+      EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
+      'grantFreeOperation.postResolutionTurnFlow is invalid',
+      {
+        effectType: 'grantFreeOperation',
+        postResolutionTurnFlow: grant.postResolutionTurnFlow,
+      },
+    );
+  }
+  if (
+    grant.completionPolicy === 'required'
+    && grant.postResolutionTurnFlow === undefined
+  ) {
+    throw effectRuntimeError(
+      EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
+      'grantFreeOperation.postResolutionTurnFlow is required when completionPolicy is required',
+      {
+        effectType: 'grantFreeOperation',
+        completionPolicy: grant.completionPolicy,
+      },
+    );
+  }
+  if (
+    grant.postResolutionTurnFlow !== undefined
+    && grant.completionPolicy !== 'required'
+  ) {
+    throw effectRuntimeError(
+      EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
+      'grantFreeOperation.postResolutionTurnFlow requires completionPolicy: required',
+      {
+        effectType: 'grantFreeOperation',
+        postResolutionTurnFlow: grant.postResolutionTurnFlow,
+      },
+    );
+  }
+  if (
     grant.sequenceContext !== undefined
     && grant.sequence === undefined
   ) {
@@ -288,6 +328,7 @@ export const applyGrantFreeOperation = (
     ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
     ...(grant.completionPolicy === undefined ? {} : { completionPolicy: grant.completionPolicy }),
     ...(grant.outcomePolicy === undefined ? {} : { outcomePolicy: grant.outcomePolicy }),
+    ...(grant.postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow: grant.postResolutionTurnFlow }),
     remainingUses: uses,
     ...(sequenceBatchId === undefined ? {} : { sequenceBatchId }),
     ...(sequenceIndex === undefined ? {} : { sequenceIndex }),

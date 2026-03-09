@@ -37,6 +37,7 @@ const toPendingFreeOperationGrant = (
   ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),
   ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
   ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
+  ...(grant.postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow: grant.postResolutionTurnFlow }),
   remainingUses: grant.uses ?? 1,
   ...(sequenceBatchId === undefined ? {} : { sequenceBatchId }),
   ...(grant.sequence?.step === undefined ? {} : { sequenceIndex: grant.sequence.step }),

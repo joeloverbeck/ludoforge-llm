@@ -7,6 +7,7 @@ import {
 } from '../kernel/choice-options-runtime-shape-diagnostic.js';
 import {
   TURN_FLOW_ACTION_CLASS_VALUES,
+  TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
   collectDeclaredBinderCandidatesFromEffectNode,
   hasBindingIdentifier,
@@ -1742,6 +1743,43 @@ function lowerGrantFreeOperationEffect(
     outcomePolicy = source.outcomePolicy;
   }
 
+  let postResolutionTurnFlow: import('../contracts/index.js').TurnFlowFreeOperationGrantPostResolutionTurnFlow | undefined;
+  if (
+    source.postResolutionTurnFlow !== undefined
+    && (
+      typeof source.postResolutionTurnFlow !== 'string'
+      || !TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES.includes(
+        source.postResolutionTurnFlow as import('../contracts/index.js').TurnFlowFreeOperationGrantPostResolutionTurnFlow,
+      )
+    )
+  ) {
+    diagnostics.push(...missingCapability(
+      `${path}.postResolutionTurnFlow`,
+      'grantFreeOperation postResolutionTurnFlow',
+      source.postResolutionTurnFlow,
+      [...TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES],
+    ).diagnostics);
+  } else if (typeof source.postResolutionTurnFlow === 'string') {
+    postResolutionTurnFlow = source.postResolutionTurnFlow as import('../contracts/index.js').TurnFlowFreeOperationGrantPostResolutionTurnFlow;
+  }
+
+  if (completionPolicy === 'required' && postResolutionTurnFlow === undefined) {
+    diagnostics.push(...missingCapability(
+      `${path}.postResolutionTurnFlow`,
+      'grantFreeOperation postResolutionTurnFlow',
+      source.postResolutionTurnFlow,
+      [...TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES],
+    ).diagnostics);
+  }
+  if (postResolutionTurnFlow !== undefined && completionPolicy !== 'required') {
+    diagnostics.push(...missingCapability(
+      `${path}.completionPolicy`,
+      'grantFreeOperation completionPolicy',
+      source.completionPolicy,
+      ['required'],
+    ).diagnostics);
+  }
+
   let loweredSequence: { readonly chain: string; readonly step: number } | undefined;
   if (source.sequence !== undefined) {
     if (!isRecord(source.sequence) || typeof source.sequence.chain !== 'string' || !isInteger(source.sequence.step) || source.sequence.step < 0) {
@@ -1776,6 +1814,7 @@ function lowerGrantFreeOperationEffect(
         ...(viabilityPolicy === undefined ? {} : { viabilityPolicy }),
         ...(completionPolicy === undefined ? {} : { completionPolicy }),
         ...(outcomePolicy === undefined ? {} : { outcomePolicy }),
+        ...(postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow }),
         ...(loweredSequence === undefined ? {} : { sequence: loweredSequence }),
       },
     },

@@ -47,3 +47,19 @@ export const isTurnFlowFreeOperationGrantOutcomePolicy = (
   value: string,
 ): value is TurnFlowFreeOperationGrantOutcomePolicy =>
   TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_SET.has(value);
+
+export const TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES = [
+  'resumeCardFlow',
+] as const;
+
+export type TurnFlowFreeOperationGrantPostResolutionTurnFlow =
+  (typeof TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES)[number];
+
+const TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_SET = new Set<string>(
+  TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES,
+);
+
+export const isTurnFlowFreeOperationGrantPostResolutionTurnFlow = (
+  value: string,
+): value is TurnFlowFreeOperationGrantPostResolutionTurnFlow =>
+  TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_SET.has(value);

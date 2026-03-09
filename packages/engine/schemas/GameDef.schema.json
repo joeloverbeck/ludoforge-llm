@@ -521,7 +521,7 @@
     "setup": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/anon_ab1bf7de"
+        "$ref": "#/definitions/anon_e546ce24"
       }
     },
     "turnStructure": {
@@ -538,13 +538,13 @@
               "onEnter": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/anon_ab1bf7de"
+                  "$ref": "#/definitions/anon_e546ce24"
                 }
               },
               "onExit": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/anon_ab1bf7de"
+                  "$ref": "#/definitions/anon_e546ce24"
                 }
               },
               "actionDefaults": {
@@ -560,7 +560,7 @@
                   "afterEffects": {
                     "type": "array",
                     "items": {
-                      "$ref": "#/definitions/anon_ab1bf7de"
+                      "$ref": "#/definitions/anon_e546ce24"
                     }
                   }
                 },
@@ -584,13 +584,13 @@
               "onEnter": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/anon_ab1bf7de"
+                  "$ref": "#/definitions/anon_e546ce24"
                 }
               },
               "onExit": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/anon_ab1bf7de"
+                  "$ref": "#/definitions/anon_e546ce24"
                 }
               },
               "actionDefaults": {
@@ -606,7 +606,7 @@
                   "afterEffects": {
                     "type": "array",
                     "items": {
-                      "$ref": "#/definitions/anon_ab1bf7de"
+                      "$ref": "#/definitions/anon_e546ce24"
                     }
                   }
                 },
@@ -1288,7 +1288,7 @@
           "costEffects": {
             "type": "array",
             "items": {
-              "$ref": "#/definitions/anon_ab1bf7de"
+              "$ref": "#/definitions/anon_e546ce24"
             }
           },
           "targeting": {
@@ -1343,7 +1343,7 @@
                 "effects": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_ab1bf7de"
+                    "$ref": "#/definitions/anon_e546ce24"
                   }
                 }
               },
@@ -1678,13 +1678,13 @@
           "cost": {
             "type": "array",
             "items": {
-              "$ref": "#/definitions/anon_ab1bf7de"
+              "$ref": "#/definitions/anon_e546ce24"
             }
           },
           "effects": {
             "type": "array",
             "items": {
-              "$ref": "#/definitions/anon_ab1bf7de"
+              "$ref": "#/definitions/anon_e546ce24"
             }
           },
           "limits": {
@@ -1919,7 +1919,7 @@
           "effects": {
             "type": "array",
             "items": {
-              "$ref": "#/definitions/anon_ab1bf7de"
+              "$ref": "#/definitions/anon_e546ce24"
             }
           }
         },
@@ -2402,6 +2402,12 @@
                             "enum": [
                               "mustChangeGameplayState"
                             ]
+                          },
+                          "postResolutionTurnFlow": {
+                            "type": "string",
+                            "enum": [
+                              "resumeCardFlow"
+                            ]
                           }
                         },
                         "required": [
@@ -2473,7 +2479,7 @@
                       "minItems": 1,
                       "type": "array",
                       "items": {
-                        "$ref": "#/definitions/anon_ab1bf7de"
+                        "$ref": "#/definitions/anon_e546ce24"
                       }
                     },
                     "branches": {
@@ -2607,6 +2613,12 @@
                                   "enum": [
                                     "mustChangeGameplayState"
                                   ]
+                                },
+                                "postResolutionTurnFlow": {
+                                  "type": "string",
+                                  "enum": [
+                                    "resumeCardFlow"
+                                  ]
                                 }
                               },
                               "required": [
@@ -2678,7 +2690,7 @@
                             "minItems": 1,
                             "type": "array",
                             "items": {
-                              "$ref": "#/definitions/anon_ab1bf7de"
+                              "$ref": "#/definitions/anon_e546ce24"
                             }
                           },
                           "targets": {
@@ -2740,7 +2752,7 @@
                                       "minItems": 1,
                                       "type": "array",
                                       "items": {
-                                        "$ref": "#/definitions/anon_ab1bf7de"
+                                        "$ref": "#/definitions/anon_e546ce24"
                                       }
                                     }
                                   },
@@ -2808,7 +2820,7 @@
                                       "minItems": 1,
                                       "type": "array",
                                       "items": {
-                                        "$ref": "#/definitions/anon_ab1bf7de"
+                                        "$ref": "#/definitions/anon_e546ce24"
                                       }
                                     }
                                   },
@@ -2846,14 +2858,14 @@
                                   "minItems": 1,
                                   "type": "array",
                                   "items": {
-                                    "$ref": "#/definitions/anon_ab1bf7de"
+                                    "$ref": "#/definitions/anon_e546ce24"
                                   }
                                 },
                                 "teardownEffects": {
                                   "minItems": 1,
                                   "type": "array",
                                   "items": {
-                                    "$ref": "#/definitions/anon_ab1bf7de"
+                                    "$ref": "#/definitions/anon_e546ce24"
                                   }
                                 }
                               },
@@ -2931,7 +2943,7 @@
                                 "minItems": 1,
                                 "type": "array",
                                 "items": {
-                                  "$ref": "#/definitions/anon_ab1bf7de"
+                                  "$ref": "#/definitions/anon_e546ce24"
                                 }
                               }
                             },
@@ -2999,7 +3011,7 @@
                                 "minItems": 1,
                                 "type": "array",
                                 "items": {
-                                  "$ref": "#/definitions/anon_ab1bf7de"
+                                  "$ref": "#/definitions/anon_e546ce24"
                                 }
                               }
                             },
@@ -3037,14 +3049,14 @@
                             "minItems": 1,
                             "type": "array",
                             "items": {
-                              "$ref": "#/definitions/anon_ab1bf7de"
+                              "$ref": "#/definitions/anon_e546ce24"
                             }
                           },
                           "teardownEffects": {
                             "minItems": 1,
                             "type": "array",
                             "items": {
-                              "$ref": "#/definitions/anon_ab1bf7de"
+                              "$ref": "#/definitions/anon_e546ce24"
                             }
                           }
                         },
@@ -3181,6 +3193,12 @@
                             "enum": [
                               "mustChangeGameplayState"
                             ]
+                          },
+                          "postResolutionTurnFlow": {
+                            "type": "string",
+                            "enum": [
+                              "resumeCardFlow"
+                            ]
                           }
                         },
                         "required": [
@@ -3252,7 +3270,7 @@
                       "minItems": 1,
                       "type": "array",
                       "items": {
-                        "$ref": "#/definitions/anon_ab1bf7de"
+                        "$ref": "#/definitions/anon_e546ce24"
                       }
                     },
                     "branches": {
@@ -3386,6 +3404,12 @@
                                   "enum": [
                                     "mustChangeGameplayState"
                                   ]
+                                },
+                                "postResolutionTurnFlow": {
+                                  "type": "string",
+                                  "enum": [
+                                    "resumeCardFlow"
+                                  ]
                                 }
                               },
                               "required": [
@@ -3457,7 +3481,7 @@
                             "minItems": 1,
                             "type": "array",
                             "items": {
-                              "$ref": "#/definitions/anon_ab1bf7de"
+                              "$ref": "#/definitions/anon_e546ce24"
                             }
                           },
                           "targets": {
@@ -3519,7 +3543,7 @@
                                       "minItems": 1,
                                       "type": "array",
                                       "items": {
-                                        "$ref": "#/definitions/anon_ab1bf7de"
+                                        "$ref": "#/definitions/anon_e546ce24"
                                       }
                                     }
                                   },
@@ -3587,7 +3611,7 @@
                                       "minItems": 1,
                                       "type": "array",
                                       "items": {
-                                        "$ref": "#/definitions/anon_ab1bf7de"
+                                        "$ref": "#/definitions/anon_e546ce24"
                                       }
                                     }
                                   },
@@ -3625,14 +3649,14 @@
                                   "minItems": 1,
                                   "type": "array",
                                   "items": {
-                                    "$ref": "#/definitions/anon_ab1bf7de"
+                                    "$ref": "#/definitions/anon_e546ce24"
                                   }
                                 },
                                 "teardownEffects": {
                                   "minItems": 1,
                                   "type": "array",
                                   "items": {
-                                    "$ref": "#/definitions/anon_ab1bf7de"
+                                    "$ref": "#/definitions/anon_e546ce24"
                                   }
                                 }
                               },
@@ -3710,7 +3734,7 @@
                                 "minItems": 1,
                                 "type": "array",
                                 "items": {
-                                  "$ref": "#/definitions/anon_ab1bf7de"
+                                  "$ref": "#/definitions/anon_e546ce24"
                                 }
                               }
                             },
@@ -3778,7 +3802,7 @@
                                 "minItems": 1,
                                 "type": "array",
                                 "items": {
-                                  "$ref": "#/definitions/anon_ab1bf7de"
+                                  "$ref": "#/definitions/anon_e546ce24"
                                 }
                               }
                             },
@@ -3816,14 +3840,14 @@
                             "minItems": 1,
                             "type": "array",
                             "items": {
-                              "$ref": "#/definitions/anon_ab1bf7de"
+                              "$ref": "#/definitions/anon_e546ce24"
                             }
                           },
                           "teardownEffects": {
                             "minItems": 1,
                             "type": "array",
                             "items": {
-                              "$ref": "#/definitions/anon_ab1bf7de"
+                              "$ref": "#/definitions/anon_e546ce24"
                             }
                           }
                         },
@@ -6821,7 +6845,7 @@
         }
       ]
     },
-    "anon_ab1bf7de": {
+    "anon_e546ce24": {
       "anyOf": [
         {
           "type": "object",
@@ -8213,13 +8237,13 @@
                 "then": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_ab1bf7de"
+                    "$ref": "#/definitions/anon_e546ce24"
                   }
                 },
                 "else": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_ab1bf7de"
+                    "$ref": "#/definitions/anon_e546ce24"
                   }
                 }
               },
@@ -8267,7 +8291,7 @@
                 "effects": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_ab1bf7de"
+                    "$ref": "#/definitions/anon_e546ce24"
                   }
                 },
                 "limit": {
@@ -8284,7 +8308,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_ab1bf7de"
+                    "$ref": "#/definitions/anon_e546ce24"
                   }
                 }
               },
@@ -8386,7 +8410,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_ab1bf7de"
+                    "$ref": "#/definitions/anon_e546ce24"
                   }
                 }
               },
@@ -8502,7 +8526,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_ab1bf7de"
+                    "$ref": "#/definitions/anon_e546ce24"
                   }
                 },
                 "macroOrigin": {
@@ -8550,7 +8574,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_ab1bf7de"
+                    "$ref": "#/definitions/anon_e546ce24"
                   }
                 },
                 "macroOrigin": {
@@ -8644,7 +8668,7 @@
                 "compute": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_ab1bf7de"
+                    "$ref": "#/definitions/anon_e546ce24"
                   }
                 },
                 "scoreExpr": {
@@ -8661,7 +8685,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_ab1bf7de"
+                    "$ref": "#/definitions/anon_e546ce24"
                   }
                 },
                 "macroOrigin": {
@@ -9066,7 +9090,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_ab1bf7de"
+                    "$ref": "#/definitions/anon_e546ce24"
                   }
                 },
                 "macroOrigin": {
@@ -9332,6 +9356,12 @@
                   "type": "string",
                   "enum": [
                     "mustChangeGameplayState"
+                  ]
+                },
+                "postResolutionTurnFlow": {
+                  "type": "string",
+                  "enum": [
+                    "resumeCardFlow"
                   ]
                 },
                 "sequence": {

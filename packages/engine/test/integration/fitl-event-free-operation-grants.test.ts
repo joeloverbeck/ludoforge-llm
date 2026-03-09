@@ -223,6 +223,7 @@ phase: [asPhaseId('main')],
                   actionIds: ['operation'],
                   completionPolicy: 'required',
                   outcomePolicy: 'mustChangeGameplayState',
+                  postResolutionTurnFlow: 'resumeCardFlow',
                 },
               ],
             },
@@ -273,6 +274,106 @@ const createClassAwareDedupDef = (): GameDef => {
 
   return def as unknown as GameDef;
 };
+
+const createRequiredGrantResumeDef = (): GameDef =>
+  ({
+    metadata: { id: 'event-required-grant-resume-int', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
+    seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }, { id: 'VC' }],
+    constants: {},
+    globalVars: [{ name: 'opCount', type: 'int', init: 0, min: 0, max: 10 }],
+    perPlayerVars: [],
+    zones: [],
+    tokenTypes: [],
+    setup: [],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    turnOrder: {
+      type: 'cardDriven',
+      config: {
+        turnFlow: {
+          cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          eligibility: {
+            seats: ['US', 'ARVN', 'NVA', 'VC'],
+            overrideWindows: [],
+          },
+          optionMatrix: [{ first: 'event', second: ['operation'] }],
+          passRewards: [],
+          freeOperationActionIds: ['operation'],
+          durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          actionClassByActionId: { event: 'event', operation: 'operation' },
+        },
+      },
+    },
+    actions: [
+      {
+        id: asActionId('event'),
+        capabilities: ['cardEvent'],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [
+          { name: 'eventCardId', domain: { query: 'enums', values: ['card-required-resume'] } },
+          { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
+          { name: 'branch', domain: { query: 'enums', values: ['none'] } },
+        ],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+      {
+        id: asActionId('operation'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+    ],
+    actionPipelines: [
+      {
+        id: 'operation-profile',
+        actionId: asActionId('operation'),
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [{ effects: [{ addVar: { scope: 'global', var: 'opCount', delta: 1 } }] }],
+        atomicity: 'atomic',
+      },
+    ],
+    triggers: [],
+    terminal: { conditions: [] },
+    eventDecks: [
+      {
+        id: 'event-deck',
+        drawZone: 'deck:none',
+        discardZone: 'played:none',
+        cards: [
+          {
+            id: 'card-required-resume',
+            title: 'Required Follow-Up',
+            sideMode: 'single',
+            unshaded: {
+              text: 'US event requires ARVN to take a free operation.',
+              freeOperationGrants: [
+                {
+                  seat: 'ARVN',
+                  sequence: { chain: 'resume-chain', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  completionPolicy: 'required',
+                  postResolutionTurnFlow: 'resumeCardFlow',
+                },
+              ],
+            },
+          },
+        ],
+      } as EventDeckDef,
+    ],
+  }) as unknown as GameDef;
 
 const createActionIdMismatchDef = (): GameDef => {
   const def = createDef() as unknown as {
@@ -2188,6 +2289,55 @@ describe('event free-operation grants integration', () => {
           && details.context?.outcomePolicy === 'mustChangeGameplayState'
         );
       },
+    );
+  });
+
+  it('resumes turn flow after a successful required free operation and advances to the next card candidates', () => {
+    const def = createRequiredGrantResumeDef();
+    const start = initialState(def, 89, 4).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-required-resume', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    assert.equal(afterEvent.activePlayer, asPlayerId(1));
+    const forcedMoves = legalMoves(def, afterEvent);
+    assert.equal(
+      forcedMoves.some((move) => String(move.actionId) === 'operation' && move.freeOperation === true),
+      true,
+      'required grant window should force the granted free operation',
+    );
+    assert.equal(
+      forcedMoves.some((move) => String(move.actionId) === 'operation' && move.freeOperation !== true),
+      false,
+      'required grant window should suppress regular operations until resolution',
+    );
+
+    const afterRequiredOperation = applyMove(def, afterEvent, {
+      actionId: asActionId('operation'),
+      params: {},
+      freeOperation: true,
+    }).state;
+
+    const runtime = requireCardDrivenRuntime(afterRequiredOperation);
+    assert.equal(afterRequiredOperation.globalVars['opCount'], 1);
+    assert.deepEqual(runtime.pendingFreeOperationGrants ?? [], []);
+    assert.equal(afterRequiredOperation.activePlayer, asPlayerId(2));
+    assert.deepEqual(runtime.currentCard, {
+      firstEligible: 'NVA',
+      secondEligible: 'VC',
+      actedSeats: [],
+      passedSeats: [],
+      nonPassCount: 0,
+      firstActionClass: null,
+    });
+
+    const followupMoves = legalMoves(def, afterRequiredOperation);
+    assert.equal(
+      followupMoves.some((move) => String(move.actionId) === 'operation' && move.freeOperation === true),
+      false,
+      'after resolution the next card should expose only ordinary moves',
     );
   });
 });

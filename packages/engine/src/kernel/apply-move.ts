@@ -1136,11 +1136,23 @@ const applyMoveCore = (
   const turnFlowResult = move.freeOperation === true
     ? (() => {
       const consumed = consumeTurnFlowFreeOperationGrant(def, executed.stateWithRng, move, seatResolution);
+      if (consumed.consumedGrant?.postResolutionTurnFlow !== 'resumeCardFlow') {
+        return {
+          state: consumed.state,
+          traceEntries: consumed.traceEntries,
+          boundaryDurations: undefined,
+          releasedDeferredEventEffects: consumed.releasedDeferredEventEffects,
+        };
+      }
+      const progressed = applyTurnFlowEligibilityAfterMove(def, consumed.state, move);
       return {
-        state: consumed.state,
-        traceEntries: consumed.traceEntries,
-        boundaryDurations: undefined,
-        releasedDeferredEventEffects: consumed.releasedDeferredEventEffects,
+        state: progressed.state,
+        traceEntries: [...consumed.traceEntries, ...progressed.traceEntries],
+        boundaryDurations: progressed.boundaryDurations,
+        releasedDeferredEventEffects: [
+          ...consumed.releasedDeferredEventEffects,
+          ...(progressed.releasedDeferredEventEffects ?? []),
+        ],
       };
     })()
     : applyTurnFlowEligibilityAfterMove(def, executed.stateWithRng, move, executed.deferredEventEffect);

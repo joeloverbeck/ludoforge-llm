@@ -11,6 +11,8 @@ export type TurnFlowFreeOperationGrantCompletionPolicy =
   import('../contracts/index.js').TurnFlowFreeOperationGrantCompletionPolicy;
 export type TurnFlowFreeOperationGrantOutcomePolicy =
   import('../contracts/index.js').TurnFlowFreeOperationGrantOutcomePolicy;
+export type TurnFlowFreeOperationGrantPostResolutionTurnFlow =
+  import('../contracts/index.js').TurnFlowFreeOperationGrantPostResolutionTurnFlow;
 
 export interface TurnFlowFreeOperationGrantContract {
   readonly id?: string;
@@ -23,6 +25,7 @@ export interface TurnFlowFreeOperationGrantContract {
   readonly uses?: number;
   readonly completionPolicy?: TurnFlowFreeOperationGrantCompletionPolicy;
   readonly outcomePolicy?: TurnFlowFreeOperationGrantOutcomePolicy;
+  readonly postResolutionTurnFlow?: TurnFlowFreeOperationGrantPostResolutionTurnFlow;
   readonly sequence?: {
     readonly chain: string;
     readonly step: number;
@@ -167,6 +170,7 @@ export interface TurnFlowPendingFreeOperationGrant {
   readonly viabilityPolicy?: TurnFlowFreeOperationGrantViabilityPolicy;
   readonly completionPolicy?: TurnFlowFreeOperationGrantCompletionPolicy;
   readonly outcomePolicy?: TurnFlowFreeOperationGrantOutcomePolicy;
+  readonly postResolutionTurnFlow?: TurnFlowFreeOperationGrantPostResolutionTurnFlow;
   readonly remainingUses: number;
   readonly sequenceBatchId?: string;
   readonly sequenceIndex?: number;

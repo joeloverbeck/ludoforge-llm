@@ -1131,6 +1131,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
               actionIds: ['operation'],
               completionPolicy: 'required',
               outcomePolicy: 'mustChangeGameplayState',
+              postResolutionTurnFlow: 'resumeCardFlow',
               remainingUses: 1,
             },
           ],
@@ -1221,6 +1222,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
               operationClass: 'operation',
               actionIds: ['operation'],
               completionPolicy: 'required',
+              postResolutionTurnFlow: 'resumeCardFlow',
               remainingUses: 1,
             },
           ],
@@ -1239,6 +1241,87 @@ describe('applyMove() required free-operation grant enforcement', () => {
         return true;
       },
     );
+  });
+
+  it('resumes ordinary card progression after a successful required free operation on an open card', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = {
+      ...makeBaseDef({ actions: [action], globalVars: [] }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            actionClassByActionId: { operation: 'operation' },
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: null,
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-required-open-card',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              completionPolicy: 'required',
+              postResolutionTurnFlow: 'resumeCardFlow',
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+      globalVars: {},
+    });
+
+    const result = applyMove(def, state, {
+      actionId: asActionId('operation'),
+      params: {},
+      freeOperation: true,
+    }).state;
+
+    assert.equal(result.activePlayer, asPlayerId(1));
+    assert.equal(result.turnOrderState.type, 'cardDriven');
+    assert.deepEqual(result.turnOrderState.runtime.pendingFreeOperationGrants ?? [], []);
+    assert.deepEqual(result.turnOrderState.runtime.currentCard, {
+      firstEligible: '1',
+      secondEligible: null,
+      actedSeats: ['0'],
+      passedSeats: [],
+      nonPassCount: 1,
+      firstActionClass: 'operation',
+    });
   });
 });
 

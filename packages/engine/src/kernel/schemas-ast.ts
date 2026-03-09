@@ -5,6 +5,7 @@ import {
   TURN_FLOW_ACTION_CLASS_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES,
+  TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
 } from '../contracts/index.js';
 import { PREDICATE_OPERATORS } from '../contracts/index.js';
@@ -796,6 +797,7 @@ effectAstSchemaInternal = z.union([
           viabilityPolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES).optional(),
           completionPolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES).optional(),
           outcomePolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES).optional(),
+          postResolutionTurnFlow: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES).optional(),
           sequence: z
             .object({
               chain: StringSchema,

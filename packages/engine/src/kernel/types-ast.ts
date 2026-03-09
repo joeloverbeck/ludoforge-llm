@@ -496,6 +496,7 @@ export type EffectAST =
         readonly viabilityPolicy?: TurnFlowFreeOperationGrantViabilityPolicy;
         readonly completionPolicy?: import('../contracts/index.js').TurnFlowFreeOperationGrantCompletionPolicy;
         readonly outcomePolicy?: import('../contracts/index.js').TurnFlowFreeOperationGrantOutcomePolicy;
+        readonly postResolutionTurnFlow?: import('../contracts/index.js').TurnFlowFreeOperationGrantPostResolutionTurnFlow;
         readonly sequence?: {
           readonly chain: string;
           readonly step: number;

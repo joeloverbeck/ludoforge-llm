@@ -6,6 +6,7 @@
 **Engine Changes**: Yes — depends on stage-level pipeline predicates from ENGINEARCH-006, plus FITL data/test updates
 **Deps**: `tickets/README.md`, `tickets/_TEMPLATE.md`, `archive/tickets/ENGINEARCH-006-stage-level-pipeline-predicates.md`, `archive/tickets/FITLCAPMOMRVNLEA-004-capability-branches-march-attack-bombard.md`, `data/games/fire-in-the-lake/20-macros.md`, `data/games/fire-in-the-lake/30-rules-actions.md`, `packages/engine/test/integration/fitl-capabilities-march-attack-bombard.test.ts`
 
+
 ## Problem
 
 PT-76 is implemented correctly for card text, removal timing, and shaded behavior, but the unshaded multi-space Attack selector still uses a global `paidMaxExpr` cap as a workaround for a missing engine capability. That workaround cannot validate the exact chosen subset, so some illegal NVA Attack selections remain legal when troop-paying spaces exist outside the subset. PT-76 should be reworked to use an exact declarative rule once the engine can validate bound stage selections.

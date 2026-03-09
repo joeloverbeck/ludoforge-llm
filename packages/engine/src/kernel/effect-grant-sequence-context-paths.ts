@@ -1,18 +1,13 @@
-import type { FreeOperationSequenceContextGrantLike } from './free-operation-sequence-context-contract.js';
 import {
   getNestedEffectSequenceContextScopes,
   ROOT_EFFECT_SEQUENCE_CONTEXT_SCOPE,
   type EffectSequenceContextScope,
 } from './effect-sequence-context-scope.js';
+import {
+  collectSequenceContextLinkageGrantReference,
+  type SequenceContextLinkageGrantReference,
+} from './sequence-context-linkage-grant-reference.js';
 import type { EffectAST } from './types.js';
-
-export interface SequenceContextLinkageGrantReference {
-  readonly chain: string;
-  readonly step: number;
-  readonly path: string;
-  readonly captureKey?: string;
-  readonly requireKey?: string;
-}
 
 type SequenceContextLinkagePathState = readonly SequenceContextLinkageGrantReference[];
 
@@ -37,46 +32,6 @@ const effectContainsSequenceContextGrant = (effect: EffectAST, scope: EffectSequ
 
   return getNestedEffectSequenceContextScopes(effect, scope).some((nestedScope) =>
     nestedScope.effects.some((entry) => effectContainsSequenceContextGrant(entry, nestedScope.scope)));
-};
-
-const collectSequenceContextLinkageGrantReference = (
-  grant: FreeOperationSequenceContextGrantLike,
-  path: string,
-): SequenceContextLinkageGrantReference | null => {
-  const sequence = grant.sequence;
-  const sequenceContext = grant.sequenceContext;
-  if (
-    sequence === undefined
-    || sequenceContext === undefined
-    || typeof sequence.chain !== 'string'
-  ) {
-    return null;
-  }
-
-  const step = sequence.step;
-  if (typeof step !== 'number' || !Number.isSafeInteger(step) || step < 0) {
-    return null;
-  }
-
-  const captureKey =
-    typeof sequenceContext.captureMoveZoneCandidatesAs === 'string'
-      ? sequenceContext.captureMoveZoneCandidatesAs
-      : undefined;
-  const requireKey =
-    typeof sequenceContext.requireMoveZoneCandidatesFrom === 'string'
-      ? sequenceContext.requireMoveZoneCandidatesFrom
-      : undefined;
-  if (captureKey === undefined && requireKey === undefined) {
-    return null;
-  }
-
-  return {
-    chain: sequence.chain,
-    step,
-    path,
-    ...(captureKey === undefined ? {} : { captureKey }),
-    ...(requireKey === undefined ? {} : { requireKey }),
-  };
 };
 
 const appendGrantReference = (

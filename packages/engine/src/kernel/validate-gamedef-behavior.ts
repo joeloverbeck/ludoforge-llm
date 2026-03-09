@@ -69,8 +69,11 @@ import {
 } from './token-filter-validator-boundary.js';
 import { isPredicateOp, PREDICATE_OPERATORS } from '../contracts/index.js';
 import {
-  collectEffectGrantSequenceContextExecutionPaths,
+  collectSequenceContextLinkageGrantReference,
   type SequenceContextLinkageGrantReference,
+} from './sequence-context-linkage-grant-reference.js';
+import {
+  collectEffectGrantSequenceContextExecutionPaths,
 } from './effect-grant-sequence-context-paths.js';
 import {
   getNestedEffectSequenceContextScopes,
@@ -2370,46 +2373,6 @@ export const validatePostAdjacencyBehavior = (
   }
 };
 
-const collectSequenceContextLinkageGrantReference = (
-  grant: FreeOperationSequenceContextGrantLike,
-  path: string,
-  references: SequenceContextLinkageGrantReference[],
-): void => {
-  const sequence = grant.sequence;
-  const sequenceContext = grant.sequenceContext;
-  if (
-    sequence === undefined
-    || sequenceContext === undefined
-    || typeof sequence.chain !== 'string'
-  ) {
-    return;
-  }
-  const step = sequence.step;
-  if (typeof step !== 'number' || !Number.isSafeInteger(step) || step < 0) {
-    return;
-  }
-
-  const captureKey =
-    typeof sequenceContext.captureMoveZoneCandidatesAs === 'string'
-      ? sequenceContext.captureMoveZoneCandidatesAs
-      : undefined;
-  const requireKey =
-    typeof sequenceContext.requireMoveZoneCandidatesFrom === 'string'
-      ? sequenceContext.requireMoveZoneCandidatesFrom
-      : undefined;
-  if (captureKey === undefined && requireKey === undefined) {
-    return;
-  }
-
-  references.push({
-    chain: sequence.chain,
-    step,
-    path,
-    ...(captureKey === undefined ? {} : { captureKey }),
-    ...(requireKey === undefined ? {} : { requireKey }),
-  });
-};
-
 const validateSequenceContextLinkageForReferences = (
   diagnostics: Diagnostic[],
   references: readonly SequenceContextLinkageGrantReference[],
@@ -2466,11 +2429,13 @@ const validateFreeOperationGrantSequenceContextLinkage = (
         return;
       }
       value.forEach((grant, grantIndex) => {
-        collectSequenceContextLinkageGrantReference(
+        const reference = collectSequenceContextLinkageGrantReference(
           grant as FreeOperationSequenceContextGrantLike,
           `${path}[${grantIndex}]`,
-          references,
         );
+        if (reference !== null) {
+          references.push(reference);
+        }
       });
     });
     validateSequenceContextLinkageForReferences(diagnostics, references);

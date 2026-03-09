@@ -985,6 +985,41 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('lowers assetRows membership predicates with numeric literal sets', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'assetRows',
+        tableId: 'tournament-standard::blindSchedule.levels',
+        where: [{ field: 'level', op: 'in', value: [1, 3, 5] }],
+      },
+      context,
+      'doc.actions.0.params.0.domain',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'assetRows',
+      tableId: 'tournament-standard::blindSchedule.levels',
+      where: [{ field: 'level', op: 'in', value: [1, 3, 5] }],
+    });
+  });
+
+  it('rejects assetRows membership predicates with mixed literal scalar sets', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'assetRows',
+        tableId: 'tournament-standard::blindSchedule.levels',
+        where: [{ field: 'level', op: 'in', value: [1, '3'] }],
+      },
+      context,
+      'doc.actions.0.params.0.domain',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+    assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.params.0.domain.where[0].value');
+  });
+
   it('lowers assetRows query cardinality when provided', () => {
     const result = lowerQueryNode(
       {
@@ -1091,6 +1126,51 @@ describe('compile-conditions lowering', () => {
       zone: 'board:none',
       filter: { prop: 'faction', op: 'in', value: { ref: 'binding', name: '$targetFactions' } },
     });
+  });
+
+  it('lowers token-filter membership predicates with boolean literal sets', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'board',
+        filter: {
+          op: 'and',
+          args: [
+            { prop: 'ready', op: 'in', value: [true, false] },
+          ],
+        },
+      },
+      { ...context, tokenFilterProps: ['ready'] },
+      'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'tokensInZone',
+      zone: 'board:none',
+      filter: { prop: 'ready', op: 'in', value: [true, false] },
+    });
+  });
+
+  it('rejects token-filter membership predicates with non-scalar literal sets', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'board',
+        filter: {
+          op: 'and',
+          args: [
+            { prop: 'ready', op: 'in', value: [[true]] },
+          ],
+        },
+      },
+      { ...context, tokenFilterProps: ['ready'] },
+      'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+    assert.equal(result.diagnostics[0]?.path, 'doc.actionPipelines.0.stages.0.effects.0.forEach.over.filter.args.0.value');
   });
 
   it('rejects scalar runtime expressions as token-filter membership operands', () => {

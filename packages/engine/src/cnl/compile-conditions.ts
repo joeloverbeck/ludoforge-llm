@@ -1,5 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { isNumericValueExpr } from '../kernel/numeric-value-expr.js';
+import { isMembershipScalar } from '../kernel/value-membership.js';
 import {
   hasBindingIdentifier,
   isPredicateOp,
@@ -393,7 +394,7 @@ function lowerTokenFilterEntry(
   const rawValue = source.value;
 
   if (rawValue === undefined) {
-    return missingCapability(path, 'token filter value', source, ['{ prop, op, value: <string|string[]|ValueExpr> }']);
+    return missingCapability(path, 'token filter value', source, ['{ prop, op, value: <string|number|boolean|(string|number|boolean)[]|ValueExpr> }']);
   }
 
   // For 'in'/'notIn', value may be a literal canonical string array, a named set,
@@ -422,15 +423,20 @@ function lowerTokenFilterEntry(
     }
 
     if (Array.isArray(rawValue)) {
-      if (rawValue.some((item: unknown) => typeof item !== 'string')) {
-        return missingCapability(`${path}.value`, 'token filter set value', rawValue, ['string[]', '{ ref: "binding", name: string }', '{ ref: "grantContext", key: string }']);
+      const literalSet = lowerScalarMembershipLiteral(
+        rawValue,
+        `${path}.value`,
+        'token filter set value',
+        ['homogeneous (string|number|boolean)[]', '{ ref: "binding", name: string }', '{ ref: "grantContext", key: string }'],
+      );
+      if (literalSet.value === null) {
+        return { value: null, diagnostics: literalSet.diagnostics };
       }
-      const stringValues = rawValue as readonly string[];
-      const diagnostics = stringValues.flatMap((item, index) =>
-        validateCanonicalTokenTraitLiteral(context, prop, item, `${path}.value.${index}`),
+      const diagnostics = literalSet.value.flatMap((item, index) =>
+        typeof item === 'string' ? validateCanonicalTokenTraitLiteral(context, prop, item, `${path}.value.${index}`) : [],
       );
       return {
-        value: { prop, op, value: [...stringValues] },
+        value: { prop, op, value: [...literalSet.value] },
         diagnostics,
       };
     }
@@ -446,7 +452,7 @@ function lowerTokenFilterEntry(
       || (loweredValue.value.ref !== 'binding' && loweredValue.value.ref !== 'grantContext')
     ) {
       return missingCapability(`${path}.value`, 'token filter set value', rawValue, [
-        'string[]',
+        'homogeneous (string|number|boolean)[]',
         '{ ref: "binding", name: string }',
         '{ ref: "grantContext", key: string }',
       ]);
@@ -528,17 +534,23 @@ function lowerAssetRowFilterEntry(
   const rawValue = source.value;
 
   if (rawValue === undefined) {
-    return missingCapability(path, 'assetRows where value', source, ['{ field, op, value: <string|string[]|ValueExpr> }']);
+    return missingCapability(path, 'assetRows where value', source, ['{ field, op, value: <string|number|boolean|(string|number|boolean)[]|ValueExpr> }']);
   }
 
   if (op === 'in' || op === 'notIn') {
     if (Array.isArray(rawValue)) {
-      if (rawValue.some((item) => typeof item !== 'string')) {
-        return missingCapability(`${path}.value`, 'assetRows set value', rawValue, ['string[]', '{ ref: "binding", name: string }', '{ ref: "grantContext", key: string }']);
+      const literalSet = lowerScalarMembershipLiteral(
+        rawValue,
+        `${path}.value`,
+        'assetRows set value',
+        ['homogeneous (string|number|boolean)[]', '{ ref: "binding", name: string }', '{ ref: "grantContext", key: string }'],
+      );
+      if (literalSet.value === null) {
+        return { value: null, diagnostics: literalSet.diagnostics };
       }
       return {
-        value: { field, op, value: [...rawValue] },
-        diagnostics: [],
+        value: { field, op, value: [...literalSet.value] },
+        diagnostics: literalSet.diagnostics,
       };
     }
 
@@ -553,7 +565,7 @@ function lowerAssetRowFilterEntry(
       || (loweredValue.value.ref !== 'binding' && loweredValue.value.ref !== 'grantContext')
     ) {
       return missingCapability(`${path}.value`, 'assetRows set value', rawValue, [
-        'string[]',
+        'homogeneous (string|number|boolean)[]',
         '{ ref: "binding", name: string }',
         '{ ref: "grantContext", key: string }',
       ]);
@@ -594,6 +606,30 @@ function lowerAssetRowFilterArray(
   }
 
   return { value: predicates, diagnostics };
+}
+
+function lowerScalarMembershipLiteral(
+  source: readonly unknown[],
+  path: string,
+  kind: string,
+  alternatives: readonly string[],
+): ConditionLoweringResult<readonly (string | number | boolean)[]> {
+  const values: Array<string | number | boolean> = [];
+  let scalarType: 'string' | 'number' | 'boolean' | null = null;
+
+  for (const entry of source) {
+    if (!isMembershipScalar(entry)) {
+      return missingCapability(path, kind, source, alternatives);
+    }
+    const entryType = typeof entry as 'string' | 'number' | 'boolean';
+    if (scalarType !== null && entryType !== scalarType) {
+      return missingCapability(path, kind, source, alternatives);
+    }
+    scalarType ??= entryType;
+    values.push(entry);
+  }
+
+  return { value: values, diagnostics: [] };
 }
 
 function validateCanonicalTokenTraitLiteral(

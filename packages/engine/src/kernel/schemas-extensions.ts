@@ -12,15 +12,13 @@ import {
 import {
   TURN_FLOW_INTERRUPT_SELECTOR_EMPTY_MESSAGE,
   TURN_FLOW_ACTION_CLASS_VALUES,
-  TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES,
-  TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
   TURN_FLOW_DURATION_VALUES,
   hasTurnFlowInterruptSelectorMatchField,
 } from '../contracts/index.js';
 import { FreeOperationSequenceContextSchema } from './free-operation-sequence-context-schema.js';
-import { superRefineTurnFlowFreeOperationGrantContract } from './free-operation-grant-zod.js';
+import { createTurnFlowFreeOperationGrantSchema } from './free-operation-grant-zod.js';
 
 export const TurnFlowDurationSchema = z.enum(TURN_FLOW_DURATION_VALUES);
 
@@ -83,30 +81,25 @@ export const EventCardLastingEffectSchema = z
   })
   .strict();
 
-export const EventCardFreeOperationGrantSchema = z
-  .object({
-    sequence: z
-      .object({
-        chain: StringSchema.min(1),
-        step: IntegerSchema.min(0),
-      })
-      .strict(),
-    id: StringSchema.min(1).optional(),
-    seat: StringSchema.min(1),
-    executeAsSeat: StringSchema.min(1).optional(),
-    operationClass: z.enum(TURN_FLOW_ACTION_CLASS_VALUES),
-    actionIds: z.array(StringSchema.min(1)).min(1).optional(),
-    zoneFilter: ConditionASTSchema.optional(),
-    allowDuringMonsoon: z.boolean().optional(),
-    uses: IntegerSchema.min(1).optional(),
-    sequenceContext: FreeOperationSequenceContextSchema.optional(),
-    viabilityPolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES).optional(),
-    completionPolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES).optional(),
-    outcomePolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES).optional(),
-    postResolutionTurnFlow: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES).optional(),
-  })
-  .strict()
-  .superRefine(superRefineTurnFlowFreeOperationGrantContract);
+export const EventCardFreeOperationGrantSchema = createTurnFlowFreeOperationGrantSchema({
+  sequence: z
+    .object({
+      chain: StringSchema.min(1),
+      step: IntegerSchema.min(0),
+    })
+    .strict(),
+  id: StringSchema.min(1).optional(),
+  seat: StringSchema.min(1),
+  executeAsSeat: StringSchema.min(1).optional(),
+  operationClass: z.enum(TURN_FLOW_ACTION_CLASS_VALUES),
+  actionIds: z.array(StringSchema.min(1)).min(1).optional(),
+  zoneFilter: ConditionASTSchema.optional(),
+  allowDuringMonsoon: z.boolean().optional(),
+  uses: IntegerSchema.min(1).optional(),
+  sequenceContext: FreeOperationSequenceContextSchema.optional(),
+  viabilityPolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES).optional(),
+  outcomePolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES).optional(),
+});
 
 export const EventCardEligibilityOverrideTargetSchema = z.union([
   z
@@ -510,25 +503,21 @@ export const TurnFlowRuntimeStateSchema = z
       .optional(),
     pendingFreeOperationGrants: z
       .array(
-        z
-          .object({
-            grantId: StringSchema.min(1),
-            seat: StringSchema.min(1),
-            executeAsSeat: StringSchema.min(1).optional(),
-            operationClass: TurnFlowActionClassSchema,
-            actionIds: z.array(StringSchema.min(1)).min(1).optional(),
-            zoneFilter: ConditionASTSchema.optional(),
-            allowDuringMonsoon: BooleanSchema.optional(),
-            viabilityPolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES).optional(),
-            completionPolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES).optional(),
-            outcomePolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES).optional(),
-            postResolutionTurnFlow: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES).optional(),
-            remainingUses: IntegerSchema.min(1),
-            sequenceBatchId: StringSchema.min(1).optional(),
-            sequenceIndex: IntegerSchema.min(0).optional(),
-            sequenceContext: FreeOperationSequenceContextSchema.optional(),
-          })
-          .strict(),
+        createTurnFlowFreeOperationGrantSchema({
+          grantId: StringSchema.min(1),
+          seat: StringSchema.min(1),
+          executeAsSeat: StringSchema.min(1).optional(),
+          operationClass: TurnFlowActionClassSchema,
+          actionIds: z.array(StringSchema.min(1)).min(1).optional(),
+          zoneFilter: ConditionASTSchema.optional(),
+          allowDuringMonsoon: BooleanSchema.optional(),
+          viabilityPolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES).optional(),
+          outcomePolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES).optional(),
+          remainingUses: IntegerSchema.min(1),
+          sequenceBatchId: StringSchema.min(1).optional(),
+          sequenceIndex: IntegerSchema.min(0).optional(),
+          sequenceContext: FreeOperationSequenceContextSchema.optional(),
+        }),
       )
       .optional(),
     freeOperationSequenceContexts: z

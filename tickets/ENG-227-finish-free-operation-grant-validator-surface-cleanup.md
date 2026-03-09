@@ -56,7 +56,7 @@ for both invalid required-grant pairings, so the shared validator wiring is cove
 
 ## Out of Scope
 
-- Structural JSON Schema artifact parity tracked in `tickets/ENG-226-express-free-operation-grant-coupling-in-structural-schemas.md`
+- Structural JSON Schema artifact parity tracked in `archive/tickets/ENG-226-express-free-operation-grant-coupling-in-structural-schemas.md`
 - Overlapping grant outcome enforcement tracked in `tickets/ENG-224-strengthen-required-outcome-enforcement-for-overlapping-grants.md`
 - FITL-specific data migrations tracked in `tickets/ENG-204-ia-drang-reencode-on-grant-contracts.md`
 

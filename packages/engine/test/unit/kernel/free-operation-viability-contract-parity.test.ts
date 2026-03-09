@@ -143,6 +143,65 @@ describe('free-operation viability policy contract parity', () => {
     }
   });
 
+  it('keeps AST and event schema completion-contract coupling aligned', () => {
+    const validAst = EffectASTSchema.safeParse({
+      grantFreeOperation: {
+        seat: 'self',
+        operationClass: 'operation',
+        completionPolicy: 'required',
+        postResolutionTurnFlow: 'resumeCardFlow',
+      },
+    });
+    assert.equal(validAst.success, true);
+
+    const validEvent = EventCardFreeOperationGrantSchema.safeParse({
+      seat: '0',
+      operationClass: 'operation',
+      sequence: { chain: 'parity-chain', step: 0 },
+      completionPolicy: 'required',
+      postResolutionTurnFlow: 'resumeCardFlow',
+    });
+    assert.equal(validEvent.success, true);
+
+    const invalidCases = [
+      {
+        ast: {
+          grantFreeOperation: {
+            seat: 'self',
+            operationClass: 'operation',
+            completionPolicy: 'required',
+          },
+        },
+        event: {
+          seat: '0',
+          operationClass: 'operation',
+          sequence: { chain: 'parity-chain', step: 0 },
+          completionPolicy: 'required',
+        },
+      },
+      {
+        ast: {
+          grantFreeOperation: {
+            seat: 'self',
+            operationClass: 'operation',
+            postResolutionTurnFlow: 'resumeCardFlow',
+          },
+        },
+        event: {
+          seat: '0',
+          operationClass: 'operation',
+          sequence: { chain: 'parity-chain', step: 0 },
+          postResolutionTurnFlow: 'resumeCardFlow',
+        },
+      },
+    ] as const;
+
+    for (const invalid of invalidCases) {
+      assert.equal(EffectASTSchema.safeParse(invalid.ast).success, false);
+      assert.equal(EventCardFreeOperationGrantSchema.safeParse(invalid.event).success, false);
+    }
+  });
+
   it('keeps validate-gamedef-behavior wired to the canonical shared grant-contract helper', () => {
     const source = readKernelSource('src/kernel/validate-gamedef-behavior.ts');
     assert.match(

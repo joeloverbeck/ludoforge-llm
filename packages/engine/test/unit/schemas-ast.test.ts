@@ -11,6 +11,7 @@ import {
   ValueExprSchema,
   asPlayerId,
 } from '../../src/kernel/index.js';
+import { EventCardFreeOperationGrantSchema } from '../../src/kernel/schemas-extensions.js';
 import { PREDICATE_OPERATORS } from '../../src/contracts/index.js';
 import { AST_SCOPED_VAR_SCOPES } from '../../src/kernel/scoped-var-contract.js';
 import { buildDiscriminatedEndpointMatrix } from '../helpers/transfer-endpoint-matrix.js';
@@ -386,6 +387,89 @@ describe('AST and selector schemas', () => {
         result.error.issues.some((issue) => issue.message.includes('sequenceContext must include captureMoveZoneCandidatesAs or requireMoveZoneCandidatesFrom.')),
         true,
       );
+    });
+
+    it('rejects grantFreeOperation required completion without postResolutionTurnFlow', () => {
+      const result = EffectASTSchema.safeParse({
+        grantFreeOperation: {
+          seat: '3',
+          operationClass: 'operation',
+          completionPolicy: 'required',
+        },
+      });
+
+      assert.equal(result.success, false);
+    });
+
+    it('rejects grantFreeOperation postResolutionTurnFlow without required completionPolicy', () => {
+      const result = EffectASTSchema.safeParse({
+        grantFreeOperation: {
+          seat: '3',
+          operationClass: 'operation',
+          postResolutionTurnFlow: 'resumeCardFlow',
+        },
+      });
+
+      assert.equal(result.success, false);
+    });
+
+    it('reports grantFreeOperation invalid completionPolicy on the field path instead of a top-level union error', () => {
+      const result = EffectASTSchema.safeParse({
+        grantFreeOperation: {
+          seat: '3',
+          operationClass: 'operation',
+          completionPolicy: 'bogus',
+        },
+      });
+
+      assert.equal(result.success, false);
+      assert.equal(result.error.issues.some((issue) => issue.path.join('.') === 'grantFreeOperation.completionPolicy'), true);
+    });
+
+    it('parses event-card freeOperationGrants with the explicit required completion contract shape', () => {
+      const grant = {
+        seat: '3',
+        operationClass: 'operation',
+        sequence: { chain: 'ctx-chain', step: 0 },
+        completionPolicy: 'required',
+        postResolutionTurnFlow: 'resumeCardFlow',
+      } as const;
+
+      assert.deepEqual(EventCardFreeOperationGrantSchema.parse(grant), grant);
+    });
+
+    it('rejects event-card freeOperationGrants that require completion without postResolutionTurnFlow', () => {
+      const result = EventCardFreeOperationGrantSchema.safeParse({
+        seat: '3',
+        operationClass: 'operation',
+        sequence: { chain: 'ctx-chain', step: 0 },
+        completionPolicy: 'required',
+      });
+
+      assert.equal(result.success, false);
+    });
+
+    it('rejects event-card freeOperationGrants that set postResolutionTurnFlow without required completionPolicy', () => {
+      const result = EventCardFreeOperationGrantSchema.safeParse({
+        seat: '3',
+        operationClass: 'operation',
+        sequence: { chain: 'ctx-chain', step: 0 },
+        postResolutionTurnFlow: 'resumeCardFlow',
+      });
+
+      assert.equal(result.success, false);
+    });
+
+    it('reports event-card freeOperationGrants invalid completionPolicy on the field path instead of a top-level union error', () => {
+      const result = EventCardFreeOperationGrantSchema.safeParse({
+        seat: '3',
+        operationClass: 'operation',
+        sequence: { chain: 'ctx-chain', step: 0 },
+        completionPolicy: 'bogus',
+      });
+
+      assert.equal(result.success, false);
+      assert.equal(result.error.issues.some((issue) => issue.path.join('.') === 'completionPolicy'), true);
     });
   });
 

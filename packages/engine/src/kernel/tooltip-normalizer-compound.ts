@@ -10,8 +10,8 @@
 import type { EffectAST, ValueExpr, ConditionAST, OptionsQuery, TokenFilterExpr } from './types-ast.js';
 import type { TooltipMessage, SelectMessage } from './tooltip-ir.js';
 import type { NormalizerContext } from './tooltip-normalizer.js';
-import { humanizeCondition, resolveModifierEffect, classifyModifierRole } from './tooltip-modifier-humanizer.js';
-import { stringifyValueExpr, stringifyNumericExpr, stringifyZoneRef, stripMacroBindingPrefix } from './tooltip-value-stringifier.js';
+import { humanizeCondition, resolveModifierEffect, classifyModifierRole, matchesGlobPattern } from './tooltip-modifier-humanizer.js';
+import { stringifyNumericExpr, stringifyZoneRef, stripMacroBindingPrefix, stringifyTokenFilter } from './tooltip-value-stringifier.js';
 
 /** Extract a single-key union member from EffectAST by its discriminant key. */
 type EffectOf<K extends string> = Extract<EffectAST, Record<K, unknown>>;
@@ -58,17 +58,6 @@ export const isEnumQuery = (q: OptionsQuery): boolean =>
   'query' in q && q.query === 'enums';
 
 // --- Filter stringifiers ---
-
-const stringifyPredicateValue = (value: ValueExpr | readonly (string | number | boolean)[]): string => {
-  if (Array.isArray(value)) return (value as readonly (string | number | boolean)[]).join(', ');
-  return stringifyValueExpr(value as ValueExpr);
-};
-
-const stringifyTokenFilter = (filter: TokenFilterExpr): string => {
-  if ('prop' in filter) return `${filter.prop} ${filter.op} ${stringifyPredicateValue(filter.value)}`;
-  if (filter.op === 'not') return `NOT ${stringifyTokenFilter(filter.arg)}`;
-  return (filter.args as readonly TokenFilterExpr[]).map(stringifyTokenFilter).join(` ${filter.op.toUpperCase()} `);
-};
 
 interface ExtractedFilter {
   readonly filter?: string;
@@ -208,16 +197,44 @@ export const normalizeForEach = (
 };
 
 /**
- * Extract a branch label from a simple equality condition (e.g., "Train Choice == Place Irregulars").
- * Returns the right-hand string value, which contextualizes child chooseN selections.
+ * Extract the variable name from the LHS of a comparison condition.
  */
-const extractBranchLabel = (cond: ConditionAST): string | undefined => {
-  if (typeof cond === 'boolean') return undefined;
-  const c = cond as Record<string, unknown>;
-  if (c.op === '==' && c.right !== undefined && typeof c.right === 'string') {
-    return c.right;
+const extractLHSName = (left: ValueExpr): string | undefined => {
+  if (typeof left === 'string') return left;
+  if (typeof left === 'object' && left !== null && 'ref' in left) {
+    if (left.ref === 'gvar') return left.var;
+    if (left.ref === 'pvar') return left.var;
+    if (left.ref === 'binding') return left.name;
   }
   return undefined;
+};
+
+/**
+ * Extract a branch label from a simple equality condition (e.g., "Train Choice == Place Irregulars").
+ * Returns the right-hand string value, which contextualizes child chooseN selections.
+ *
+ * Guards against capability marker state values leaking as branch labels — only
+ * produces labels from choice-flow variables, not capability keys.
+ */
+const extractBranchLabel = (cond: ConditionAST, ctx: NormalizerContext): string | undefined => {
+  if (typeof cond === 'boolean') return undefined;
+  const c = cond as Record<string, unknown>;
+  if (c.op !== '==' || c.right === undefined || typeof c.right !== 'string') return undefined;
+
+  const lhsName = extractLHSName(c.left as ValueExpr);
+  if (lhsName === undefined) return undefined;
+
+  // Reject if LHS is a capability key (e.g., cap_cords)
+  if (ctx.verbalization?.modifierEffects[lhsName] !== undefined) return undefined;
+
+  // Only accept if LHS matches a choiceFlowPattern
+  const classification = ctx.verbalization?.modifierClassification;
+  if (classification !== undefined) {
+    const isChoiceFlow = classification.choiceFlowPatterns.some((p) => matchesGlobPattern(lhsName, p));
+    if (!isChoiceFlow) return undefined;
+  }
+
+  return c.right;
 };
 
 export const normalizeIf = (
@@ -232,7 +249,7 @@ export const normalizeIf = (
   const resolved = resolveModifierEffect(when, ctx);
 
   // Propagate branch label from equality conditions (e.g., "Choice is Place Irregulars")
-  const branchLabel = extractBranchLabel(when);
+  const branchLabel = extractBranchLabel(when, ctx);
   const childCtx = branchLabel !== undefined ? { ...ctx, choiceBranchLabel: branchLabel } : ctx;
 
   const thenMessages = recurse(thenEffects, childCtx, `${astPath}.then`);
@@ -253,7 +270,7 @@ export const normalizeIf = (
     condition: resolved.condition,
     description: resolved.effect,
     conditionAST: when,
-    modifierRole: role,
+    ...(role !== undefined ? { modifierRole: role } : {}),
     astPath,
   };
 
@@ -305,6 +322,20 @@ export const normalizeGrantFreeOperation = (
 ): readonly TooltipMessage[] => {
   const { seat, operationClass } = payload.grantFreeOperation;
   return [{ kind: 'grant', operation: operationClass, targetPlayer: seat, astPath }];
+};
+
+// --- Leaf macro binding extraction ---
+
+/**
+ * Extract a macro ID from a `__macro_` prefixed binding name.
+ * E.g. `"__macro_place_from_available_or_map_action Pipelines_0__..."` → `"place_from_available_or_map_action"`.
+ * Returns undefined if the name doesn't start with `__macro_`.
+ */
+export const extractMacroIdFromBinding = (name: string): string | undefined => {
+  if (!name.startsWith('__macro_')) return undefined;
+  const stripped = name.slice('__macro_'.length);
+  const spaceIdx = stripped.indexOf(' ');
+  return spaceIdx >= 0 ? stripped.slice(0, spaceIdx) : stripped;
 };
 
 // --- Macro override ---

@@ -7,7 +7,7 @@
  * to eliminate duplication and provide complete ref-type coverage.
  */
 
-import type { ValueExpr, NumericValueExpr, ZoneRef } from './types-ast.js';
+import type { ValueExpr, NumericValueExpr, ZoneRef, OptionsQuery, TokenFilterExpr } from './types-ast.js';
 import type { LabelContext } from './tooltip-label-resolver.js';
 import { resolveLabel } from './tooltip-label-resolver.js';
 import { humanizeIdentifier } from './tooltip-humanizer.js';
@@ -75,6 +75,99 @@ export const stringifyZoneRef = (ref: ZoneRef): string => {
   return keys.length > 0 ? `zone(${keys.join(', ')})` : 'zone';
 };
 
+// ---------------------------------------------------------------------------
+// Token filter stringification (moved from tooltip-normalizer-compound.ts)
+// ---------------------------------------------------------------------------
+
+const stringifyPredicateValue = (value: ValueExpr | readonly (string | number | boolean)[]): string => {
+  if (Array.isArray(value)) return (value as readonly (string | number | boolean)[]).join(', ');
+  return stringifyValueExpr(value as ValueExpr);
+};
+
+export const stringifyTokenFilter = (filter: TokenFilterExpr): string => {
+  if ('prop' in filter) return `${filter.prop} ${filter.op} ${stringifyPredicateValue(filter.value)}`;
+  if (filter.op === 'not') return `NOT ${stringifyTokenFilter(filter.arg)}`;
+  return (filter.args as readonly TokenFilterExpr[]).map(stringifyTokenFilter).join(` ${filter.op.toUpperCase()} `);
+};
+
+// ---------------------------------------------------------------------------
+// Aggregate count humanization
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a human-readable description from a token filter for use in count
+ * expressions. E.g. `{ prop: 'faction', op: 'eq', value: 'US' }` → "US".
+ */
+const humanizeTokenFilterForCount = (filter: TokenFilterExpr, ctx: LabelContext): string => {
+  if ('prop' in filter) {
+    const { prop, op, value } = filter;
+    // Array values (e.g., in operator): "Alpha/Bravo"
+    if (Array.isArray(value)) {
+      return (value as readonly (string | number | boolean)[])
+        .map((v) => resolveLabel(String(v), ctx))
+        .join('/');
+    }
+    const resolved = resolveLabel(String(value), ctx);
+    // For 'type' properties, capitalize as a noun (e.g., "base" → "Bases")
+    if (prop === 'type') return resolved;
+    // For 'in' operator with array-like values
+    if (op === 'in' && Array.isArray(value)) {
+      return (value as readonly (string | number | boolean)[])
+        .map((v) => resolveLabel(String(v), ctx))
+        .join('/');
+    }
+    return resolved;
+  }
+  if (filter.op === 'not') return humanizeTokenFilterForCount(filter.arg, ctx);
+  if (filter.op === 'and') {
+    // AND combinator: concatenate parts (e.g., "US Bases")
+    return (filter.args as readonly TokenFilterExpr[])
+      .map((f) => humanizeTokenFilterForCount(f, ctx))
+      .join(' ');
+  }
+  // OR combinator: slash-separate (e.g., "Alpha/Bravo")
+  return (filter.args as readonly TokenFilterExpr[])
+    .map((f) => humanizeTokenFilterForCount(f, ctx))
+    .join('/');
+};
+
+/**
+ * Humanize an aggregate count query into a descriptive string.
+ * Introspects the query's type and filter to produce text like
+ * "US Bases" instead of "matching items".
+ */
+const humanizeAggregateQuery = (query: OptionsQuery, ctx: LabelContext): string => {
+  if (!('query' in query)) return 'matching items';
+
+  // Token queries — introspect the token filter
+  if (query.query === 'tokensInZone' || query.query === 'tokensInMapSpaces' || query.query === 'tokensInAdjacentZones') {
+    const q = query as { readonly filter?: TokenFilterExpr };
+    if (q.filter !== undefined) {
+      const desc = humanizeTokenFilterForCount(q.filter, ctx);
+      if (desc.length > 0) return `${desc} pieces`;
+    }
+    return 'pieces';
+  }
+
+  // Space queries
+  if (query.query === 'mapSpaces' || query.query === 'zones') return 'spaces';
+
+  // Binding — resolve label
+  if (query.query === 'binding') {
+    const q = query as { readonly query: 'binding'; readonly name: string };
+    return resolveLabel(q.name, ctx);
+  }
+
+  // Concat — combine source descriptions
+  if (query.query === 'concat') {
+    const descriptions = query.sources.map((s) => humanizeAggregateQuery(s, ctx));
+    const unique = [...new Set(descriptions)];
+    return unique.length === 1 ? unique[0]! : unique.join(' or ');
+  }
+
+  return 'matching items';
+};
+
 export const stringifyValueExpr = (expr: ValueExpr): string => {
   if (typeof expr === 'number' || typeof expr === 'boolean') return String(expr);
   if (typeof expr === 'string') return expr;
@@ -110,7 +203,9 @@ export const stringifyValueExpr = (expr: ValueExpr): string => {
 
   // Aggregate expression
   if ('aggregate' in expr) {
-    return `${expr.aggregate.op} of ...`;
+    const agg = expr.aggregate;
+    if (agg.op === 'count') return `count of ${agg.query.query ?? '...'}`;
+    return `${agg.op} of ...`;
   }
 
   // Concat expression
@@ -200,7 +295,8 @@ export const humanizeValueExpr = (
   if ('aggregate' in expr) {
     const agg = expr.aggregate;
     if (agg.op === 'count') {
-      return 'number of matching items';
+      const description = humanizeAggregateQuery(agg.query, ctx);
+      return `number of ${description}`;
     }
     // sum/min/max with bind + valueExpr
     const rawBind = agg.bind;

@@ -2,13 +2,11 @@ import {
   effectRuntimeError,
   makeTurnFlowActiveSeatUnresolvableEffectRuntimeContext,
 } from './effect-error.js';
-import { asActionId } from './branded.js';
 import { resetPhaseUsage } from './action-usage.js';
 import { advancePhase, buildAdvancePhaseRequest } from './phase-advance.js';
 import { findPhaseDef } from './phase-lookup.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { resolveBindingTemplate } from './binding-template.js';
-import { resolveEventEffectList } from './event-execution.js';
 import {
   isTurnFlowActionClass,
   isTurnFlowFreeOperationGrantViabilityPolicy,
@@ -60,42 +58,12 @@ const buildSequenceProbeCandidates = (
   if (step === undefined || step <= 0) {
     return [];
   }
-
-  const topLevelEffectIndex = Number.parseInt((ctx.effectPath ?? '').match(/^\[(\d+)\]/)?.[1] ?? '', 10);
-  if (Number.isSafeInteger(topLevelEffectIndex) && topLevelEffectIndex > 0 && ctx.traceContext?.actionId !== undefined) {
-    const eventEffects = resolveEventEffectList(
-      ctx.def,
-      ctx.state,
-      {
-        actionId: asActionId(ctx.traceContext.actionId),
-        params: ctx.moveParams,
-      },
-    );
-    const priorEffectCandidates = eventEffects
-      .slice(0, topLevelEffectIndex)
-      .flatMap((effect) => ('grantFreeOperation' in effect ? [effect.grantFreeOperation] : []))
-      .filter(
-        (candidate) =>
-          candidate.sequence !== undefined &&
-          candidate.sequence.chain === grant.sequence!.chain &&
-          candidate.sequence.step < step,
-      );
-    if (priorEffectCandidates.length > 0) {
-      return priorEffectCandidates;
-    }
-  }
-
-  return Array.from({ length: step }, (_, index) => ({
-    seat: grant.seat,
-    ...(grant.executeAsSeat === undefined ? {} : { executeAsSeat: grant.executeAsSeat }),
-    operationClass: grant.operationClass,
-    ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
-    ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
-    ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
-    ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
-    ...(grant.uses === undefined ? {} : { uses: grant.uses }),
-    sequence: { chain: grant.sequence!.chain, step: index },
-  }));
+  return (ctx.freeOperationProbeScope?.priorGrantDefinitions ?? []).filter(
+    (candidate) =>
+      candidate.sequence !== undefined
+      && candidate.sequence.chain === grant.sequence!.chain
+      && candidate.sequence.step < step,
+  );
 };
 
 const consumePhaseTransitionBudget = (ctx: EffectContext, effectType: string): boolean => {
@@ -235,6 +203,7 @@ export const applyGrantFreeOperation = (
       ...grant,
       zoneFilter: resolvedZoneFilter,
     };
+  ctx.freeOperationProbeScope?.priorGrantDefinitions.push(resolvedGrant);
 
   if (
     grantRequiresUsableProbe(resolvedGrant)

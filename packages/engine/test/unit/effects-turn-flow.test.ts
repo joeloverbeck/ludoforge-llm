@@ -10,6 +10,7 @@ import {
   createCollector,
   createRng,
   isEffectErrorCode,
+  applyEffects,
   TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS,
   type EffectAST,
   type EffectContext,
@@ -312,40 +313,142 @@ describe('applyGrantFreeOperation', () => {
     assert.equal(grants.length, 0);
   });
 
-  it('emits sequence-later effect-issued grants when earlier sequence steps are usable', () => {
+  it('emits sequence-later effect-issued grants in non-event effect contexts when earlier sequence steps are usable', () => {
     const ctx = makeCtx();
-    const effect = {
-      grantFreeOperation: {
-        seat: 'self',
-        operationClass: 'operation',
-        actionIds: ['attack'],
-        viabilityPolicy: 'requireUsableAtIssue',
-        sequence: { chain: 'usable-sequence', step: 1 },
-      },
-    } as unknown as Extract<EffectAST, { readonly grantFreeOperation: unknown }>;
-
-    const result = applyGrantFreeOperation(effect, ctx);
+    const result = applyEffects(
+      [
+        {
+          grantFreeOperation: {
+            seat: 'self',
+            operationClass: 'operation',
+            actionIds: ['attack'],
+            viabilityPolicy: 'requireUsableAtIssue',
+            sequence: { chain: 'usable-sequence', step: 0 },
+          },
+        },
+        {
+          grantFreeOperation: {
+            seat: 'self',
+            operationClass: 'operation',
+            actionIds: ['attack'],
+            viabilityPolicy: 'requireUsableAtIssue',
+            sequence: { chain: 'usable-sequence', step: 1 },
+          },
+        },
+      ],
+      ctx,
+    );
     const tos = result.state.turnOrderState;
     if (tos.type !== 'cardDriven') throw new Error('Expected cardDriven');
     const grants = tos.runtime.pendingFreeOperationGrants ?? [];
-    assert.equal(grants.length, 1);
-    assert.equal(grants[0]?.sequenceIndex, 1);
+    assert.equal(grants.length, 2);
+    assert.deepEqual(grants.map((grant) => grant.sequenceIndex), [0, 1]);
   });
 
-  it('suppresses sequence-later effect-issued grants when earlier sequence steps are unusable', () => {
+  it('suppresses sequence-later effect-issued grants in non-event effect contexts when earlier sequence steps are unusable', () => {
     const ctx = makeCtx();
-    const effect = {
-      grantFreeOperation: {
-        seat: 'self',
-        operationClass: 'operation',
-        actionIds: ['attack'],
-        viabilityPolicy: 'requireUsableAtIssue',
-        sequence: { chain: 'unusable-sequence', step: 1 },
-        zoneFilter: { op: '==', left: 1, right: 2 },
-      },
-    } as unknown as Extract<EffectAST, { readonly grantFreeOperation: unknown }>;
+    const result = applyEffects(
+      [
+        {
+          grantFreeOperation: {
+            seat: 'self',
+            operationClass: 'operation',
+            actionIds: ['attack'],
+            viabilityPolicy: 'requireUsableAtIssue',
+            sequence: { chain: 'unusable-sequence', step: 0 },
+            zoneFilter: { op: '==', left: 1, right: 2 },
+          },
+        },
+        {
+          grantFreeOperation: {
+            seat: 'self',
+            operationClass: 'operation',
+            actionIds: ['attack'],
+            viabilityPolicy: 'requireUsableAtIssue',
+            sequence: { chain: 'unusable-sequence', step: 1 },
+          },
+        },
+      ],
+      ctx,
+    );
+    const tos = result.state.turnOrderState;
+    if (tos.type !== 'cardDriven') throw new Error('Expected cardDriven');
+    const grants = tos.runtime.pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 0);
+  });
 
-    const result = applyGrantFreeOperation(effect, ctx);
+  it('emits nested sequence-later effect-issued grants when earlier nested sequence steps are usable', () => {
+    const ctx = makeCtx();
+    const result = applyEffects(
+      [
+        {
+          if: {
+            when: { op: '==', left: 1, right: 1 },
+            then: [
+              {
+                grantFreeOperation: {
+                  seat: 'self',
+                  operationClass: 'operation',
+                  actionIds: ['attack'],
+                  viabilityPolicy: 'requireUsableAtIssue',
+                  sequence: { chain: 'nested-usable-sequence', step: 0 },
+                },
+              },
+              {
+                grantFreeOperation: {
+                  seat: 'self',
+                  operationClass: 'operation',
+                  actionIds: ['attack'],
+                  viabilityPolicy: 'requireUsableAtIssue',
+                  sequence: { chain: 'nested-usable-sequence', step: 1 },
+                },
+              },
+            ],
+          },
+        },
+      ],
+      ctx,
+    );
+    const tos = result.state.turnOrderState;
+    if (tos.type !== 'cardDriven') throw new Error('Expected cardDriven');
+    const grants = tos.runtime.pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 2);
+    assert.deepEqual(grants.map((grant) => grant.sequenceIndex), [0, 1]);
+  });
+
+  it('suppresses nested sequence-later effect-issued grants when earlier nested sequence steps are unusable', () => {
+    const ctx = makeCtx();
+    const result = applyEffects(
+      [
+        {
+          if: {
+            when: { op: '==', left: 1, right: 1 },
+            then: [
+              {
+                grantFreeOperation: {
+                  seat: 'self',
+                  operationClass: 'operation',
+                  actionIds: ['attack'],
+                  viabilityPolicy: 'requireUsableAtIssue',
+                  sequence: { chain: 'nested-unusable-sequence', step: 0 },
+                  zoneFilter: { op: '==', left: 1, right: 2 },
+                },
+              },
+              {
+                grantFreeOperation: {
+                  seat: 'self',
+                  operationClass: 'operation',
+                  actionIds: ['attack'],
+                  viabilityPolicy: 'requireUsableAtIssue',
+                  sequence: { chain: 'nested-unusable-sequence', step: 1 },
+                },
+              },
+            ],
+          },
+        },
+      ],
+      ctx,
+    );
     const tos = result.state.turnOrderState;
     if (tos.type !== 'cardDriven') throw new Error('Expected cardDriven');
     const grants = tos.runtime.pendingFreeOperationGrants ?? [];

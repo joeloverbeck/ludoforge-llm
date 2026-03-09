@@ -393,3 +393,142 @@ describe('tryMacroOverride', () => {
     assert.equal(msg.text, 'Do {thing}');
   });
 });
+
+// ---------------------------------------------------------------------------
+// extractMacroIdFromBinding (Fix 4)
+// ---------------------------------------------------------------------------
+
+import { extractMacroIdFromBinding } from '../../../src/kernel/tooltip-normalizer-compound.js';
+
+describe('extractMacroIdFromBinding', () => {
+  it('extracts macro ID from __macro_ prefixed name with space separator', () => {
+    assert.equal(
+      extractMacroIdFromBinding('__macro_place_from_available_or_map_action Pipelines_0__stages_1__effects_0__piece'),
+      'place_from_available_or_map_action',
+    );
+  });
+
+  it('extracts macro ID from simple __macro_ name without space', () => {
+    assert.equal(
+      extractMacroIdFromBinding('__macro_simple_macro'),
+      'simple_macro',
+    );
+  });
+
+  it('returns undefined for non-macro names', () => {
+    assert.equal(extractMacroIdFromBinding('normalBinding'), undefined);
+  });
+
+  it('returns undefined for empty string', () => {
+    assert.equal(extractMacroIdFromBinding(''), undefined);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// extractBranchLabel guarding (Fix 2)
+// ---------------------------------------------------------------------------
+
+import { normalizeIf } from '../../../src/kernel/tooltip-normalizer-compound.js';
+import type { EffectAST as IfEffectAST } from '../../../src/kernel/types-ast.js';
+
+describe('extractBranchLabel guarding', () => {
+  const noopRecurse = (effects: readonly IfEffectAST[], _ctx: NormalizerContext, basePath: string) =>
+    effects.map((_, i) => ({ kind: 'suppressed' as const, reason: 'test', astPath: `${basePath}[${i}]` }));
+
+  it('does not produce branch label for capability condition', () => {
+    const ctx: NormalizerContext = {
+      verbalization: {
+        labels: {},
+        stages: {},
+        macros: {},
+        sentencePlans: {},
+        suppressPatterns: [],
+        stageDescriptions: {},
+        modifierEffects: {
+          cap_cords: [{ condition: 'cap_cords is unshaded', effect: 'Coordinated ops' }],
+        },
+        modifierClassification: {
+          choiceFlowPatterns: ['*Choice'],
+          leaderPatterns: ['Active Leader*'],
+        },
+      },
+      suppressPatterns: [],
+    };
+
+    const ifEffect: IfEffectAST = {
+      if: {
+        when: { op: '==', left: { ref: 'gvar', var: 'cap_cords' }, right: 'unshaded' },
+        then: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
+      },
+    };
+
+    const result = normalizeIf(
+      ifEffect as Extract<IfEffectAST, { if: unknown }>,
+      ctx,
+      'root',
+      noopRecurse,
+    );
+
+    const selects = result.filter((m) => m.kind === 'select');
+    for (const sel of selects) {
+      assert.equal((sel as SelectMessage).choiceBranchLabel, undefined, 'Should not have branch label from capability');
+    }
+  });
+
+  it('produces branch label for choice-flow condition', () => {
+    const ctx: NormalizerContext = {
+      verbalization: {
+        labels: {},
+        stages: {},
+        macros: {},
+        sentencePlans: {},
+        suppressPatterns: [],
+        stageDescriptions: {},
+        modifierEffects: {},
+        modifierClassification: {
+          choiceFlowPatterns: ['*Choice'],
+          leaderPatterns: [],
+        },
+      },
+      suppressPatterns: [],
+    };
+
+    const ifEffect: IfEffectAST = {
+      if: {
+        when: { op: '==', left: { ref: 'gvar', var: 'Train Choice' }, right: 'Place Irregulars' },
+        then: [{
+          chooseN: {
+            internalDecisionId: 'd1',
+            options: { query: 'binding', name: 'items' } as OptionsQuery,
+            bind: 'sel',
+            n: 2,
+          },
+        }],
+      },
+    };
+
+    const innerRecurse = (effects: readonly IfEffectAST[], innerCtx: NormalizerContext, basePath: string) => {
+      return effects.flatMap((e, i) => {
+        if ('chooseN' in e) {
+          return normalizeChooseN(
+            e as Extract<IfEffectAST, { chooseN: unknown }>,
+            innerCtx,
+            `${basePath}[${i}]`,
+          );
+        }
+        return [{ kind: 'suppressed' as const, reason: 'test', astPath: `${basePath}[${i}]` }];
+      });
+    };
+
+    const result = normalizeIf(
+      ifEffect as Extract<IfEffectAST, { if: unknown }>,
+      ctx,
+      'root',
+      innerRecurse,
+    );
+
+    const selects = result.filter((m) => m.kind === 'select') as SelectMessage[];
+    assert.ok(selects.length > 0, 'Should have a SelectMessage');
+    assert.equal(selects[0]!.choiceBranchLabel, 'Place Irregulars');
+  });
+});

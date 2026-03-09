@@ -408,6 +408,9 @@ verbalization:
     shift-support-opposition:
       class: utility
       summary: "Shift support/opposition marker"
+    place_from_available_or_map_action:
+      class: utility
+      summary: "Place piece from Available (or from map if non-US)"
 
   # ── Sentence plans ────────────────────────────────────────────────────
   sentencePlans:

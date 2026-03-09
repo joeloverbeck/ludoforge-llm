@@ -647,6 +647,8 @@ phase: [asPhaseId('main')],
                 'card-effect-require-usable-issue',
                 'card-effect-require-usable-issue-sequence',
                 'card-effect-require-usable-issue-sequence-usable',
+                'card-effect-require-usable-issue-sequence-nested',
+                'card-effect-require-usable-issue-sequence-nested-usable',
               ],
             },
           },
@@ -847,6 +849,82 @@ phase: [asPhaseId('main')],
                     actionIds: ['operation'],
                     sequence: { chain: 'effect-issue-seq-usable', step: 1 },
                     viabilityPolicy: 'requireUsableAtIssue',
+                  },
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-effect-require-usable-issue-sequence-nested',
+            title: 'Effect Issue-time Viability Sequence Nested Required',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Nested later sequence steps are not emitted when earlier nested steps are currently unusable.',
+              effects: [
+                {
+                  if: {
+                    when: { op: '==', left: 1, right: 1 },
+                    then: [
+                      {
+                        grantFreeOperation: {
+                          seat: 'self',
+                          operationClass: 'operation',
+                          actionIds: ['operation'],
+                          sequence: { chain: 'effect-issue-seq-nested', step: 0 },
+                          viabilityPolicy: 'requireUsableAtIssue',
+                          zoneFilter: { op: '==', left: 1, right: 2 },
+                        },
+                      },
+                      {
+                        grantFreeOperation: {
+                          seat: 'self',
+                          operationClass: 'operation',
+                          actionIds: ['operation'],
+                          sequence: { chain: 'effect-issue-seq-nested', step: 1 },
+                          viabilityPolicy: 'requireUsableAtIssue',
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-effect-require-usable-issue-sequence-nested-usable',
+            title: 'Effect Issue-time Viability Sequence Nested Usable',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Nested later sequence steps are emitted when earlier nested steps are currently usable.',
+              effects: [
+                {
+                  if: {
+                    when: { op: '==', left: 1, right: 1 },
+                    then: [
+                      {
+                        grantFreeOperation: {
+                          seat: 'self',
+                          operationClass: 'operation',
+                          actionIds: ['operation'],
+                          sequence: { chain: 'effect-issue-seq-nested-usable', step: 0 },
+                          viabilityPolicy: 'requireUsableAtIssue',
+                          zoneFilter: {
+                            op: '==',
+                            left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+                            right: 'cambodia',
+                          },
+                        },
+                      },
+                      {
+                        grantFreeOperation: {
+                          seat: 'self',
+                          operationClass: 'operation',
+                          actionIds: ['operation'],
+                          sequence: { chain: 'effect-issue-seq-nested-usable', step: 1 },
+                          viabilityPolicy: 'requireUsableAtIssue',
+                        },
+                      },
+                    ],
                   },
                 },
               ],
@@ -1416,6 +1494,33 @@ describe('event free-operation grants integration', () => {
     const afterEvent = applyMove(def, start, {
       actionId: asActionId('event'),
       params: { eventCardId: 'card-effect-require-usable-issue-sequence-usable', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const grants = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 2);
+    assert.deepEqual(grants.map((grant) => grant.sequenceIndex), [0, 1]);
+  });
+
+  it('does not emit nested sequence-later effect grants when earlier nested requireUsableAtIssue steps are currently unusable', () => {
+    const def = createGrantViabilityPolicyDef();
+    const start = initialState(def, 116, 3).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-effect-require-usable-issue-sequence-nested', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const grants = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 0);
+  });
+
+  it('emits nested sequence-later effect grants when earlier nested requireUsableAtIssue steps are currently usable', () => {
+    const def = createGrantViabilityPolicyDef();
+    const start = initialState(def, 117, 3).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-effect-require-usable-issue-sequence-nested-usable', side: 'unshaded', branch: 'none' },
     }).state;
 
     const grants = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];

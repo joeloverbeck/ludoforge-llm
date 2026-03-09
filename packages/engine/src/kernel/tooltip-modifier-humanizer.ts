@@ -191,7 +191,7 @@ export function resolveModifierEffect(
  * Match a name against a glob-like pattern with leading/trailing wildcards.
  * Supports patterns like `*Choice`, `Active Leader*`, `*Mode*`.
  */
-function matchesGlobPattern(name: string, pattern: string): boolean {
+export function matchesGlobPattern(name: string, pattern: string): boolean {
   const startsWild = pattern.startsWith('*');
   const endsWild = pattern.endsWith('*');
   const core = pattern.replace(/^\*|\*$/g, '');
@@ -209,8 +209,8 @@ function matchesGlobPattern(name: string, pattern: string): boolean {
 export function classifyModifierRole(
   cond: ConditionAST,
   ctx: NormalizerContext,
-): ModifierRole {
-  if (ctx.verbalization === undefined) return 'state';
+): ModifierRole | undefined {
+  if (ctx.verbalization === undefined) return undefined;
 
   const names = extractConditionNames(cond);
   const modEffects = ctx.verbalization.modifierEffects;

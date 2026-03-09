@@ -19,6 +19,7 @@ import {
   normalizeRemoveByPriority,
   normalizeGrantFreeOperation,
   tryMacroOverride,
+  extractMacroIdFromBinding,
 } from './tooltip-normalizer-compound.js';
 
 export interface NormalizerContext {
@@ -332,6 +333,48 @@ const normalizeShiftGlobalMarker = (
   }];
 };
 
+// --- Leaf macro override ---
+
+/**
+ * Scan leaf effect fields for `__macro_` binding names. If found, extract the
+ * macro ID and look up a summary in verbalization macros. Returns a SummaryMessage
+ * if a match is found, undefined otherwise (falls through to normal normalization).
+ */
+const tryLeafMacroOverride = (
+  effect: EffectAST,
+  ctx: NormalizerContext,
+  astPath: string,
+): readonly TooltipMessage[] | undefined => {
+  if (ctx.verbalization === undefined) return undefined;
+
+  // Scan string-valued fields in the effect payload for __macro_ bindings
+  const key = Object.keys(effect)[0];
+  if (key === undefined) return undefined;
+  const payload = (effect as Record<string, Record<string, unknown>>)[key]!;
+
+  for (const val of Object.values(payload)) {
+    if (typeof val !== 'string' || !val.startsWith('__macro_')) continue;
+    const macroId = extractMacroIdFromBinding(val);
+    if (macroId === undefined) continue;
+    const macroEntry = ctx.verbalization.macros[macroId];
+    if (macroEntry?.summary === undefined) continue;
+    const text = macroEntry.slots !== undefined
+      ? Object.entries(macroEntry.slots).reduce(
+          (acc, [k, v]) => acc.replaceAll(`{${k}}`, v),
+          macroEntry.summary,
+        )
+      : macroEntry.summary;
+    return [{
+      kind: 'summary',
+      text,
+      macroClass: macroEntry.class,
+      macroOrigin: macroId,
+      astPath,
+    }];
+  }
+  return undefined;
+};
+
 // --- Recursive helper (injected into compound normalizers) ---
 
 const normalizeEffectList = (
@@ -358,6 +401,10 @@ export const normalizeEffect = (
   // Macro override: highest priority for compound effects
   const macroResult = tryMacroOverride(effect, ctx, astPath);
   if (macroResult !== undefined) return macroResult;
+
+  // Leaf macro override: binding names with __macro_ prefix
+  const leafMacroResult = tryLeafMacroOverride(effect, ctx, astPath);
+  if (leafMacroResult !== undefined) return leafMacroResult;
 
   // Variable effects (rules 1-8)
   if ('addVar' in effect) return normalizeAddVar(effect, ctx, astPath);

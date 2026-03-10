@@ -6816,9 +6816,34 @@ eventDecks:
             - VC
           flavorText: Air-defense concentration blunts repeated bridge attacks.
         unshaded:
-          text: NVA fortifies logistics corridor resilience around Trail adjustments.
+          text: Degrade the Trail by 3 boxes.
+          effects:
+            - addVar:
+                scope: global
+                var: trail
+                delta: -3
         shaded:
-          text: Strike disruption causes COIN losses and protects northern throughput.
+          text: Improve Trail by 1 box. Then add three times Trail value to NVA Resources.
+          effects:
+            - addVar:
+                scope: global
+                var: trail
+                delta: 1
+            - let:
+                bind: $trailValue
+                value:
+                  ref: gvar
+                  var: trail
+                in:
+                  - addVar:
+                      scope: global
+                      var: nvaResources
+                      delta:
+                        op: "*"
+                        left: 3
+                        right:
+                          ref: binding
+                          name: $trailValue
       - id: card-36
         title: Hamburger Hill
         sideMode: dual
@@ -6833,9 +6858,380 @@ eventDecks:
             - ARVN
           flavorText: A brutal highland battle drives force repositioning and tunnel pressure.
         unshaded:
-          text: Reposition selected NVA/VC forces and intensify pressure against exposed COIN units.
+          text: Move 4 US Troops from any spaces to a Highland. Remove 1 NVA or VC Base there, even if Tunneled.
+          effects:
+            - let:
+                bind: $movableUsTroops
+                value:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInMapSpaces
+                      filter:
+                        op: and
+                        args:
+                          - prop: faction
+                            op: eq
+                            value: US
+                          - prop: type
+                            op: eq
+                            value: troops
+                in:
+                  - let:
+                      bind: $highlandBaseTargets
+                      value:
+                        aggregate:
+                          op: count
+                          query:
+                            query: mapSpaces
+                            filter:
+                              op: and
+                              args:
+                                - op: zonePropIncludes
+                                  zone: $zone
+                                  prop: terrainTags
+                                  value: highland
+                                - op: ">"
+                                  left:
+                                    aggregate:
+                                      op: count
+                                      query:
+                                        query: tokensInZone
+                                        zone: $zone
+                                        filter:
+                                          op: and
+                                          args:
+                                            - prop: faction
+                                              op: in
+                                              value:
+                                                - NVA
+                                                - VC
+                                            - prop: type
+                                              op: eq
+                                              value: base
+                                  right: 0
+                      in:
+                        - if:
+                            when:
+                              op: or
+                              args:
+                                - op: ">"
+                                  left:
+                                    ref: binding
+                                    name: $movableUsTroops
+                                  right: 0
+                                - op: ">"
+                                  left:
+                                    ref: binding
+                                    name: $highlandBaseTargets
+                                  right: 0
+                            then:
+                              - chooseOne:
+                                  bind: $targetHighland
+                                  options:
+                                    query: mapSpaces
+                                    filter:
+                                      op: and
+                                      args:
+                                        - op: zonePropIncludes
+                                          zone: $zone
+                                          prop: terrainTags
+                                          value: highland
+                                        - op: or
+                                          args:
+                                            - op: ">"
+                                              left:
+                                                ref: binding
+                                                name: $movableUsTroops
+                                              right: 0
+                                            - op: ">"
+                                              left:
+                                                aggregate:
+                                                  op: count
+                                                  query:
+                                                    query: tokensInZone
+                                                    zone: $zone
+                                                    filter:
+                                                      op: and
+                                                      args:
+                                                        - prop: faction
+                                                          op: in
+                                                          value:
+                                                            - NVA
+                                                            - VC
+                                                        - prop: type
+                                                          op: eq
+                                                          value: base
+                                              right: 0
+                              - let:
+                                  bind: $movableTroopsToTarget
+                                  value:
+                                    aggregate:
+                                      op: count
+                                      query:
+                                        query: tokensInMapSpaces
+                                        spaceFilter:
+                                          op: "!="
+                                          left:
+                                            ref: zoneProp
+                                            zone: $zone
+                                            prop: id
+                                          right:
+                                            ref: zoneProp
+                                            zone: $targetHighland
+                                            prop: id
+                                        filter:
+                                          op: and
+                                          args:
+                                            - prop: faction
+                                              op: eq
+                                              value: US
+                                            - prop: type
+                                              op: eq
+                                              value: troops
+                                  in:
+                                    - chooseN:
+                                        bind: $usTroopsToMove
+                                        options:
+                                          query: tokensInMapSpaces
+                                          spaceFilter:
+                                            op: "!="
+                                            left:
+                                              ref: zoneProp
+                                              zone: $zone
+                                              prop: id
+                                            right:
+                                              ref: zoneProp
+                                              zone: $targetHighland
+                                              prop: id
+                                          filter:
+                                            op: and
+                                            args:
+                                              - prop: faction
+                                                op: eq
+                                                value: US
+                                              - prop: type
+                                                op: eq
+                                                value: troops
+                                        min:
+                                          op: min
+                                          left: 4
+                                          right:
+                                            ref: binding
+                                            name: $movableTroopsToTarget
+                                        max:
+                                          op: min
+                                          left: 4
+                                          right:
+                                            ref: binding
+                                            name: $movableTroopsToTarget
+                                    - forEach:
+                                        bind: $usTroop
+                                        over:
+                                          query: binding
+                                          name: $usTroopsToMove
+                                        effects:
+                                          - moveToken:
+                                              token: $usTroop
+                                              from:
+                                                zoneExpr:
+                                                  ref: tokenZone
+                                                  token: $usTroop
+                                              to:
+                                                zoneExpr: $targetHighland
+                                    - let:
+                                        bind: $basesAtTarget
+                                        value:
+                                          aggregate:
+                                            op: count
+                                            query:
+                                              query: tokensInZone
+                                              zone: $targetHighland
+                                              filter:
+                                                op: and
+                                                args:
+                                                  - prop: faction
+                                                    op: in
+                                                    value:
+                                                      - NVA
+                                                      - VC
+                                                  - prop: type
+                                                    op: eq
+                                                    value: base
+                                        in:
+                                          - if:
+                                              when:
+                                                op: ">"
+                                                left:
+                                                  ref: binding
+                                                  name: $basesAtTarget
+                                                right: 0
+                                              then:
+                                                - chooseOne:
+                                                    bind: $baseToRemove
+                                                    options:
+                                                      query: tokensInZone
+                                                      zone: $targetHighland
+                                                      filter:
+                                                        op: and
+                                                        args:
+                                                          - prop: faction
+                                                            op: in
+                                                            value:
+                                                              - NVA
+                                                              - VC
+                                                          - prop: type
+                                                            op: eq
+                                                            value: base
+                                                - moveToken:
+                                                    token: $baseToRemove
+                                                    from:
+                                                      zoneExpr:
+                                                        ref: tokenZone
+                                                        token: $baseToRemove
+                                                    to:
+                                                      zoneExpr:
+                                                        concat:
+                                                          - available-
+                                                          - ref: tokenProp
+                                                            token: $baseToRemove
+                                                            prop: faction
+                                                          - :none
+                                              else: []
+                            else: []
         shaded:
-          text: COIN assault gains ground but incurs attrition and tunnel-side effects.
+          text: Place a Tunnel on an NVA or VC Highland Base. 3 US Troops there to Casualties.
+          effects:
+            - let:
+                bind: $highlandInsurgentBaseCount
+                value:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInMapSpaces
+                      spaceFilter:
+                        op: zonePropIncludes
+                        zone: $zone
+                        prop: terrainTags
+                        value: highland
+                      filter:
+                        op: and
+                        args:
+                          - prop: faction
+                            op: in
+                            value:
+                              - NVA
+                              - VC
+                          - prop: type
+                            op: eq
+                            value: base
+                in:
+                  - if:
+                      when:
+                        op: ">"
+                        left:
+                          ref: binding
+                          name: $highlandInsurgentBaseCount
+                        right: 0
+                      then:
+                        - chooseOne:
+                            bind: $highlandBaseTarget
+                            options:
+                              query: tokensInMapSpaces
+                              spaceFilter:
+                                op: zonePropIncludes
+                                zone: $zone
+                                prop: terrainTags
+                                value: highland
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    op: in
+                                    value:
+                                      - NVA
+                                      - VC
+                                  - prop: type
+                                    op: eq
+                                    value: base
+                        - setTokenProp:
+                            token: $highlandBaseTarget
+                            prop: tunnel
+                            value: tunneled
+                        - chooseN:
+                            bind: $usTroopsToCasualties
+                            options:
+                              query: tokensInZone
+                              zone:
+                                zoneExpr:
+                                  ref: tokenZone
+                                  token: $highlandBaseTarget
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    op: eq
+                                    value: US
+                                  - prop: type
+                                    op: eq
+                                    value: troops
+                            min:
+                              op: min
+                              left: 3
+                              right:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone:
+                                      zoneExpr:
+                                        ref: tokenZone
+                                        token: $highlandBaseTarget
+                                    filter:
+                                      op: and
+                                      args:
+                                        - prop: faction
+                                          op: eq
+                                          value: US
+                                        - prop: type
+                                          op: eq
+                                          value: troops
+                            max:
+                              op: min
+                              left: 3
+                              right:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone:
+                                      zoneExpr:
+                                        ref: tokenZone
+                                        token: $highlandBaseTarget
+                                    filter:
+                                      op: and
+                                      args:
+                                        - prop: faction
+                                          op: eq
+                                          value: US
+                                        - prop: type
+                                          op: eq
+                                          value: troops
+                        - forEach:
+                            bind: $usTroop
+                            over:
+                              query: binding
+                              name: $usTroopsToCasualties
+                            effects:
+                              - moveToken:
+                                  token: $usTroop
+                                  from:
+                                    zoneExpr:
+                                      ref: tokenZone
+                                      token: $usTroop
+                                  to:
+                                    zoneExpr: casualties-US:none
+                      else: []
       - id: card-37
         title: Khe Sanh
         sideMode: dual

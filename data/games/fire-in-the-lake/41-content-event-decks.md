@@ -4433,72 +4433,170 @@ eventDecks:
                 scope: global
                 var: trail
                 delta: -2
-            - chooseN:
-                bind: $nvaLaosPieces
-                options:
-                  query: tokensInMapSpaces
-                  spaceFilter:
-                    op: ==
-                    left:
-                      ref: zoneProp
-                      zone: $zone
-                      prop: country
-                    right: laos
-                  filter:
-                    op: and
-                    args:
-                      - prop: faction
-                        op: eq
-                        value: NVA
-                min: 0
-                max: 4
-            - forEach:
-                bind: $nvaLaosPiece
-                over:
-                  query: binding
-                  name: $nvaLaosPieces
-                effects:
-                  - moveToken:
-                      token: $nvaLaosPiece
-                      from:
-                        zoneExpr:
-                          ref: tokenZone
-                          token: $nvaLaosPiece
-                      to:
-                        zoneExpr: available-NVA:none
-            - chooseN:
-                bind: $nvaCambodiaPieces
-                options:
-                  query: tokensInMapSpaces
-                  spaceFilter:
-                    op: ==
-                    left:
-                      ref: zoneProp
-                      zone: $zone
-                      prop: country
-                    right: cambodia
-                  filter:
-                    op: and
-                    args:
-                      - prop: faction
-                        op: eq
-                        value: NVA
-                min: 0
-                max: 4
-            - forEach:
-                bind: $nvaCambodiaPiece
-                over:
-                  query: binding
-                  name: $nvaCambodiaPieces
-                effects:
-                  - moveToken:
-                      token: $nvaCambodiaPiece
-                      from:
-                        zoneExpr:
-                          ref: tokenZone
-                          token: $nvaCambodiaPiece
-                      to:
-                        zoneExpr: available-NVA:none
+            - let:
+                bind: $nvaLaosRemovalCount
+                value:
+                  if:
+                    when:
+                      op: ">"
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInMapSpaces
+                            spaceFilter:
+                              op: ==
+                              left:
+                                ref: zoneProp
+                                zone: $zone
+                                prop: country
+                              right: laos
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  op: eq
+                                  value: NVA
+                      right: 4
+                    then: 4
+                    else:
+                      aggregate:
+                        op: count
+                        query:
+                          query: tokensInMapSpaces
+                          spaceFilter:
+                            op: ==
+                            left:
+                              ref: zoneProp
+                              zone: $zone
+                              prop: country
+                            right: laos
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                op: eq
+                                value: NVA
+                in:
+                  - chooseN:
+                      bind: $nvaLaosPieces
+                      options:
+                        query: tokensInMapSpaces
+                        spaceFilter:
+                          op: ==
+                          left:
+                            ref: zoneProp
+                            zone: $zone
+                            prop: country
+                          right: laos
+                        filter:
+                          op: and
+                          args:
+                            - prop: faction
+                              op: eq
+                              value: NVA
+                      min:
+                        ref: binding
+                        name: $nvaLaosRemovalCount
+                      max:
+                        ref: binding
+                        name: $nvaLaosRemovalCount
+                  - forEach:
+                      bind: $nvaLaosPiece
+                      over:
+                        query: binding
+                        name: $nvaLaosPieces
+                      effects:
+                        - moveToken:
+                            token: $nvaLaosPiece
+                            from:
+                              zoneExpr:
+                                ref: tokenZone
+                                token: $nvaLaosPiece
+                            to:
+                              zoneExpr: available-NVA:none
+            - let:
+                bind: $nvaCambodiaRemovalCount
+                value:
+                  if:
+                    when:
+                      op: ">"
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInMapSpaces
+                            spaceFilter:
+                              op: ==
+                              left:
+                                ref: zoneProp
+                                zone: $zone
+                                prop: country
+                              right: cambodia
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  op: eq
+                                  value: NVA
+                      right: 4
+                    then: 4
+                    else:
+                      aggregate:
+                        op: count
+                        query:
+                          query: tokensInMapSpaces
+                          spaceFilter:
+                            op: ==
+                            left:
+                              ref: zoneProp
+                              zone: $zone
+                              prop: country
+                            right: cambodia
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                op: eq
+                                value: NVA
+                in:
+                  - chooseN:
+                      bind: $nvaCambodiaPieces
+                      options:
+                        query: tokensInMapSpaces
+                        spaceFilter:
+                          op: ==
+                          left:
+                            ref: zoneProp
+                            zone: $zone
+                            prop: country
+                          right: cambodia
+                        filter:
+                          op: and
+                          args:
+                            - prop: faction
+                              op: eq
+                              value: NVA
+                      min:
+                        ref: binding
+                        name: $nvaCambodiaRemovalCount
+                      max:
+                        ref: binding
+                        name: $nvaCambodiaRemovalCount
+                  - forEach:
+                      bind: $nvaCambodiaPiece
+                      over:
+                        query: binding
+                        name: $nvaCambodiaPieces
+                      effects:
+                        - moveToken:
+                            token: $nvaCambodiaPiece
+                            from:
+                              zoneExpr:
+                                ref: tokenZone
+                                token: $nvaCambodiaPiece
+                            to:
+                              zoneExpr: available-NVA:none
         shaded:
           text: Add twice Trail value to each NVA and VC Resources. NVA moves its unTunneled Bases anywhere within Laos/Cambodia.
           effects:
@@ -4544,14 +4642,6 @@ eventDecks:
                         op: eq
                         value: untunneled
                 effects:
-                  - chooseOne:
-                      bind: $baseDestination@{$nvaBase}
-                      options:
-                        query: mapSpaces
-                        filter:
-                          conditionMacro: fitl-space-in-laos-cambodia
-                          args:
-                            spaceExpr: $zone
                   - moveToken:
                       token: $nvaBase
                       from:
@@ -4559,9 +4649,53 @@ eventDecks:
                           ref: tokenZone
                           token: $nvaBase
                       to:
+                        zoneExpr: trucks-base-staging:none
+            - forEach:
+                bind: $stagedNvaBase
+                over:
+                  query: tokensInZone
+                  zone: trucks-base-staging:none
+                  filter:
+                    op: and
+                    args:
+                      - prop: faction
+                        op: eq
+                        value: NVA
+                      - prop: type
+                        op: eq
+                        value: base
+                effects:
+                  - chooseOne:
+                      bind: $trucksBaseDestination
+                      options:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - conditionMacro: fitl-space-in-laos-cambodia
+                              args:
+                                spaceExpr: $zone
+                            - op: "<"
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      op: and
+                                      args:
+                                        - prop: type
+                                          op: eq
+                                          value: base
+                              right: 2
+                  - moveToken:
+                      token: $stagedNvaBase
+                      from: trucks-base-staging:none
+                      to:
                         zoneExpr:
                           ref: binding
-                          name: $baseDestination@{$nvaBase}
+                          name: $trucksBaseDestination
       - id: card-97
         title: Brinks Hotel
         sideMode: dual

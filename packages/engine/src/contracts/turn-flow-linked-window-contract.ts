@@ -15,7 +15,7 @@ export interface TurnFlowLinkedWindowValidationIssue {
 }
 
 export interface TurnFlowWithWindows {
-  readonly windows: readonly TurnFlowWindowLike[];
+  readonly windows?: readonly TurnFlowWindowLike[];
 }
 
 const collectTurnFlowWindowIdsByUsage = (
@@ -23,6 +23,9 @@ const collectTurnFlowWindowIdsByUsage = (
   usage: TurnFlowWindowUsage,
 ): readonly string[] => {
   if (turnFlow === null || turnFlow === undefined) {
+    return [];
+  }
+  if (!Array.isArray(turnFlow.windows)) {
     return [];
   }
   return turnFlow.windows

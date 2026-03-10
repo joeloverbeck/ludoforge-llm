@@ -11682,34 +11682,59 @@
             "arvn",
             "nva",
             "vc"
-          ],
-          "overrideWindows": [
-            {
-              "id": "remain-eligible",
-              "duration": "nextTurn"
-            },
-            {
-              "id": "make-ineligible",
-              "duration": "nextTurn"
-            },
-            {
-              "id": "us-special-window",
-              "duration": "turn"
-            },
-            {
-              "id": "arvn-special-window",
-              "duration": "turn"
-            },
-            {
-              "id": "nva-special-window",
-              "duration": "turn"
-            },
-            {
-              "id": "vc-special-window",
-              "duration": "turn"
-            }
           ]
         },
+        "windows": [
+          {
+            "id": "make-eligible-now",
+            "duration": "turn",
+            "usages": [
+              "eligibilityOverride"
+            ]
+          },
+          {
+            "id": "remain-eligible",
+            "duration": "nextTurn",
+            "usages": [
+              "eligibilityOverride"
+            ]
+          },
+          {
+            "id": "make-ineligible",
+            "duration": "nextTurn",
+            "usages": [
+              "eligibilityOverride"
+            ]
+          },
+          {
+            "id": "us-special-window",
+            "duration": "turn",
+            "usages": [
+              "actionPipeline"
+            ]
+          },
+          {
+            "id": "arvn-special-window",
+            "duration": "turn",
+            "usages": [
+              "actionPipeline"
+            ]
+          },
+          {
+            "id": "nva-special-window",
+            "duration": "turn",
+            "usages": [
+              "actionPipeline"
+            ]
+          },
+          {
+            "id": "vc-special-window",
+            "duration": "turn",
+            "usages": [
+              "actionPipeline"
+            ]
+          }
+        ],
         "actionClassByActionId": {
           "pass": "pass",
           "event": "event",
@@ -66860,7 +66885,7 @@
             "flavorText": "Analyst leaks expose hidden assumptions and reverse perceived advantages."
           },
           "unshaded": {
-            "text": "Flip one currently active capability to its opposite side.",
+            "text": "Flip 1 shaded US Capability to unshaded.",
             "effects": [
               {
                 "chooseOne": {
@@ -66868,8 +66893,17 @@
                   "bind": "$randCapabilityMarker",
                   "options": {
                     "query": "globalMarkers",
+                    "markers": [
+                      "cap_topGun",
+                      "cap_arcLight",
+                      "cap_abrams",
+                      "cap_cobras",
+                      "cap_m48Patton",
+                      "cap_caps",
+                      "cap_cords",
+                      "cap_lgbs"
+                    ],
                     "states": [
-                      "unshaded",
                       "shaded"
                     ]
                   }
@@ -66888,7 +66922,7 @@
             ]
           },
           "shaded": {
-            "text": "Flip one currently active capability to its opposite side.",
+            "text": "Systems analysis ignorant of local conditions: Flip 1 unshaded US Capability to shaded.",
             "effects": [
               {
                 "chooseOne": {
@@ -66896,9 +66930,18 @@
                   "bind": "$randCapabilityMarker",
                   "options": {
                     "query": "globalMarkers",
+                    "markers": [
+                      "cap_topGun",
+                      "cap_arcLight",
+                      "cap_abrams",
+                      "cap_cobras",
+                      "cap_m48Patton",
+                      "cap_caps",
+                      "cap_cords",
+                      "cap_lgbs"
+                    ],
                     "states": [
-                      "unshaded",
-                      "shaded"
+                      "unshaded"
                     ]
                   }
                 }
@@ -66933,75 +66976,87 @@
             "flavorText": "Shock teams probe base perimeters."
           },
           "unshaded": {
-            "text": "Remove a COIN Base and up to 2 Troops from one selected space.",
+            "text": "Remove 2 NVA Troops each from up to 3 spaces in South Vietnam. Remain Eligible.",
+            "eligibilityOverrides": [
+              {
+                "target": {
+                  "kind": "active"
+                },
+                "eligible": true,
+                "windowId": "remain-eligible"
+              }
+            ],
             "targets": [
               {
-                "id": "$targetSpace",
+                "id": "$targetSouthVietnamSpace",
                 "selector": {
-                  "query": "mapSpaces"
+                  "query": "mapSpaces",
+                  "filter": {
+                    "condition": {
+                      "op": "and",
+                      "args": [
+                        {
+                          "op": "==",
+                          "left": {
+                            "ref": "zoneProp",
+                            "zone": "$zone",
+                            "prop": "country"
+                          },
+                          "right": "southVietnam"
+                        },
+                        {
+                          "op": ">",
+                          "left": {
+                            "aggregate": {
+                              "op": "count",
+                              "query": {
+                                "query": "tokensInZone",
+                                "zone": "$zone",
+                                "filter": {
+                                  "op": "and",
+                                  "args": [
+                                    {
+                                      "prop": "faction",
+                                      "op": "eq",
+                                      "value": "NVA"
+                                    },
+                                    {
+                                      "prop": "type",
+                                      "op": "eq",
+                                      "value": "troops"
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          },
+                          "right": 0
+                        }
+                      ]
+                    }
+                  }
                 },
                 "cardinality": {
-                  "max": 1
+                  "max": 3
                 },
-                "application": "aggregate",
+                "application": "each",
                 "effects": [
                   {
                     "removeByPriority": {
-                      "budget": 3,
+                      "budget": 2,
                       "groups": [
                         {
-                          "bind": "$coinBase",
+                          "bind": "$nvaTroop",
                           "over": {
                             "query": "tokensInZone",
-                            "zone": "$targetSpace",
+                            "zone": "$targetSouthVietnamSpace",
                             "filter": {
                               "op": "and",
                               "args": [
                                 {
                                   "prop": "faction",
-                                  "op": "in",
-                                  "value": [
-                                    "US",
-                                    "ARVN"
-                                  ]
-                                },
-                                {
-                                  "prop": "type",
                                   "op": "eq",
-                                  "value": "base"
-                                }
-                              ]
-                            }
-                          },
-                          "to": {
-                            "zoneExpr": {
-                              "concat": [
-                                "available-",
-                                {
-                                  "ref": "tokenProp",
-                                  "token": "$coinBase",
-                                  "prop": "faction"
-                                },
-                                ":none"
-                              ]
-                            }
-                          }
-                        },
-                        {
-                          "bind": "$coinTroop",
-                          "over": {
-                            "query": "tokensInZone",
-                            "zone": "$targetSpace",
-                            "filter": {
-                              "op": "and",
-                              "args": [
-                                {
-                                  "prop": "faction",
-                                  "op": "in",
-                                  "value": [
-                                    "US",
-                                    "ARVN"
-                                  ]
+                                  "value": "NVA"
                                 },
                                 {
                                   "prop": "type",
@@ -67012,17 +67067,7 @@
                             }
                           },
                           "to": {
-                            "zoneExpr": {
-                              "concat": [
-                                "available-",
-                                {
-                                  "ref": "tokenProp",
-                                  "token": "$coinTroop",
-                                  "prop": "faction"
-                                },
-                                ":none"
-                              ]
-                            }
+                            "zoneExpr": "available-NVA:none"
                           }
                         }
                       ]
@@ -67033,64 +67078,131 @@
             ]
           },
           "shaded": {
-            "text": "Remove 3 NVA/VC Guerrillas from one selected space.",
-            "targets": [
+            "text": "Remove up to 1 US and 2 ARVN Bases from any Provinces (US to Casualties).",
+            "effects": [
               {
-                "id": "$targetSpace",
-                "selector": {
-                  "query": "mapSpaces"
-                },
-                "cardinality": {
-                  "max": 1
-                },
-                "application": "aggregate",
-                "effects": [
-                  {
-                    "removeByPriority": {
-                      "budget": 3,
-                      "groups": [
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.110.shaded.effects.0.chooseN",
+                  "bind": "$usBasesToRemove",
+                  "options": {
+                    "query": "tokensInMapSpaces",
+                    "spaceFilter": {
+                      "condition": {
+                        "op": "==",
+                        "left": {
+                          "ref": "zoneProp",
+                          "zone": "$zone",
+                          "prop": "category"
+                        },
+                        "right": "province"
+                      }
+                    },
+                    "filter": {
+                      "op": "and",
+                      "args": [
                         {
-                          "bind": "$insurgentGuerrilla",
-                          "over": {
-                            "query": "tokensInZone",
-                            "zone": "$targetSpace",
-                            "filter": {
-                              "op": "and",
-                              "args": [
-                                {
-                                  "prop": "faction",
-                                  "op": "in",
-                                  "value": [
-                                    "NVA",
-                                    "VC"
-                                  ]
-                                },
-                                {
-                                  "prop": "type",
-                                  "op": "eq",
-                                  "value": "guerrilla"
-                                }
-                              ]
-                            }
-                          },
-                          "to": {
-                            "zoneExpr": {
-                              "concat": [
-                                "available-",
-                                {
-                                  "ref": "tokenProp",
-                                  "token": "$insurgentGuerrilla",
-                                  "prop": "faction"
-                                },
-                                ":none"
-                              ]
-                            }
-                          }
+                          "prop": "faction",
+                          "op": "eq",
+                          "value": "US"
+                        },
+                        {
+                          "prop": "type",
+                          "op": "eq",
+                          "value": "base"
                         }
                       ]
                     }
-                  }
-                ]
+                  },
+                  "max": 1,
+                  "min": 0
+                }
+              },
+              {
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.110.shaded.effects.1.chooseN",
+                  "bind": "$arvnBasesToRemove",
+                  "options": {
+                    "query": "tokensInMapSpaces",
+                    "spaceFilter": {
+                      "condition": {
+                        "op": "==",
+                        "left": {
+                          "ref": "zoneProp",
+                          "zone": "$zone",
+                          "prop": "category"
+                        },
+                        "right": "province"
+                      }
+                    },
+                    "filter": {
+                      "op": "and",
+                      "args": [
+                        {
+                          "prop": "faction",
+                          "op": "eq",
+                          "value": "ARVN"
+                        },
+                        {
+                          "prop": "type",
+                          "op": "eq",
+                          "value": "base"
+                        }
+                      ]
+                    }
+                  },
+                  "max": 2,
+                  "min": 0
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$usBase",
+                  "over": {
+                    "query": "binding",
+                    "name": "$usBasesToRemove"
+                  },
+                  "effects": [
+                    {
+                      "moveToken": {
+                        "token": "$usBase",
+                        "from": {
+                          "zoneExpr": {
+                            "ref": "tokenZone",
+                            "token": "$usBase"
+                          }
+                        },
+                        "to": {
+                          "zoneExpr": "casualties-US:none"
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$arvnBase",
+                  "over": {
+                    "query": "binding",
+                    "name": "$arvnBasesToRemove"
+                  },
+                  "effects": [
+                    {
+                      "moveToken": {
+                        "token": "$arvnBase",
+                        "from": {
+                          "zoneExpr": {
+                            "ref": "tokenZone",
+                            "token": "$arvnBase"
+                          }
+                        },
+                        "to": {
+                          "zoneExpr": "available-ARVN:none"
+                        }
+                      }
+                    }
+                  ]
+                }
               }
             ]
           }
@@ -67112,10 +67224,116 @@
             "flavorText": "Raid planning reshapes near-term eligibility and initiative windows."
           },
           "unshaded": {
-            "text": "Adjust next-card eligibility to favor COIN follow-on operations."
+            "text": "2 Troop Casualties to Available. NVA Ineligible through next card. US Eligible.",
+            "eligibilityOverrides": [
+              {
+                "target": {
+                  "kind": "seat",
+                  "seat": "us"
+                },
+                "eligible": true,
+                "windowId": "make-eligible-now"
+              },
+              {
+                "target": {
+                  "kind": "seat",
+                  "seat": "nva"
+                },
+                "eligible": false,
+                "windowId": "make-ineligible"
+              }
+            ],
+            "effects": [
+              {
+                "removeByPriority": {
+                  "budget": 2,
+                  "groups": [
+                    {
+                      "bind": "$usTroopCasualty",
+                      "over": {
+                        "query": "tokensInZone",
+                        "zone": "casualties-US:none",
+                        "filter": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "prop": "faction",
+                              "op": "eq",
+                              "value": "US"
+                            },
+                            {
+                              "prop": "type",
+                              "op": "eq",
+                              "value": "troops"
+                            }
+                          ]
+                        }
+                      },
+                      "to": {
+                        "zoneExpr": "available-US:none"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
           },
           "shaded": {
-            "text": "Raid aftermath shifts eligibility toward insurgent initiative."
+            "text": "Any 2 Casualties out of play. US Ineligible through next card.",
+            "eligibilityOverrides": [
+              {
+                "target": {
+                  "kind": "seat",
+                  "seat": "us"
+                },
+                "eligible": false,
+                "windowId": "make-ineligible"
+              }
+            ],
+            "effects": [
+              {
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.81.shaded.effects.0.chooseN",
+                  "bind": "$casualtiesToOutOfPlay",
+                  "options": {
+                    "query": "tokensInZone",
+                    "zone": "casualties-US:none",
+                    "filter": {
+                      "prop": "faction",
+                      "op": "eq",
+                      "value": "US"
+                    }
+                  },
+                  "max": 2,
+                  "min": 0
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$casualtyToOutOfPlay",
+                  "over": {
+                    "query": "binding",
+                    "name": "$casualtiesToOutOfPlay"
+                  },
+                  "effects": [
+                    {
+                      "moveToken": {
+                        "token": "$casualtyToOutOfPlay",
+                        "from": {
+                          "zoneExpr": {
+                            "ref": "tokenZone",
+                            "token": "$casualtyToOutOfPlay"
+                          }
+                        },
+                        "to": {
+                          "zoneExpr": "out-of-play-US:none"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
           }
         },
         {

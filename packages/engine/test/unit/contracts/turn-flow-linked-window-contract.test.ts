@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   collectTurnFlowEligibilityOverrideWindowIds,
+  collectTurnFlowActionPipelineWindowIds,
   findMissingTurnFlowLinkedWindows,
 } from '../../../src/contracts/index.js';
 
@@ -37,6 +38,11 @@ describe('turn-flow linked window contract', () => {
     });
 
     assert.deepEqual(ids, ['window-b']);
+  });
+
+  it('fails closed when turnFlow.windows is absent instead of throwing', () => {
+    assert.deepEqual(collectTurnFlowEligibilityOverrideWindowIds({}), []);
+    assert.deepEqual(collectTurnFlowActionPipelineWindowIds({}), []);
   });
 
   it('returns missing linked window references with stable indices', () => {

@@ -10424,72 +10424,98 @@ eventDecks:
             - US
           flavorText: Strategic guidance reshapes tempo of operations.
         unshaded:
-          text: Either ARVN executes 2 free Limited Operations, or VC then NVA execute 3 total.
+          text: 4 out-of-play US Troops to South Vietnam, or ARVN Resources +9. ARVN executes any 2 free Limited Operations.
           branches:
-            - id: arvn-two-free-limited-ops
+            - id: place-us-troops-and-arvn-two-free-limited-ops
+              order: 1
+              effects:
+                - distributeTokens:
+                    tokens:
+                      query: tokensInZone
+                      zone: out-of-play-US:none
+                      filter:
+                        op: and
+                        args:
+                          - prop: faction
+                            op: eq
+                            value: US
+                          - prop: type
+                            op: eq
+                            value: troops
+                    destinations:
+                      query: mapSpaces
+                      filter:
+                        op: ==
+                        left:
+                          ref: zoneProp
+                          zone: $zone
+                          prop: country
+                        right: southVietnam
+                    max: 4
+              freeOperationGrants:
+                - seat: arvn
+                  sequence:
+                    chain: uncle-ho-unshaded-arvn-two
+                    step: 0
+                  operationClass: limitedOperation
+                - seat: arvn
+                  sequence:
+                    chain: uncle-ho-unshaded-arvn-two
+                    step: 1
+                  operationClass: limitedOperation
+            - id: add-arvn-resources-and-arvn-two-free-limited-ops
+              order: 2
+              effects:
+                - addVar:
+                    scope: global
+                    var: arvnResources
+                    delta: 9
+              freeOperationGrants:
+                - seat: arvn
+                  sequence:
+                    chain: uncle-ho-unshaded-arvn-two
+                    step: 0
+                  operationClass: limitedOperation
+                - seat: arvn
+                  sequence:
+                    chain: uncle-ho-unshaded-arvn-two
+                    step: 1
+                  operationClass: limitedOperation
+        shaded:
+          text: "Revolutionary unifier: VC then NVA each execute 3 free Limited Operations."
+          branches:
+            - id: vc-then-nva-six-free-limited-ops
               order: 1
               freeOperationGrants:
-                - seat: arvn
-                  sequence:
-                    chain: uncle-ho-unshaded-arvn-two
-                    step: 0
-                  operationClass: limitedOperation
-                - seat: arvn
-                  sequence:
-                    chain: uncle-ho-unshaded-arvn-two
-                    step: 1
-                  operationClass: limitedOperation
-            - id: vc-then-nva-three-free-limited-ops
-              order: 2
-              freeOperationGrants:
                 - seat: vc
                   sequence:
-                    chain: uncle-ho-unshaded-vc-nva-three
+                    chain: uncle-ho-shaded-vc-nva-six
                     step: 0
                   operationClass: limitedOperation
                 - seat: vc
                   sequence:
-                    chain: uncle-ho-unshaded-vc-nva-three
+                    chain: uncle-ho-shaded-vc-nva-six
                     step: 1
+                  operationClass: limitedOperation
+                - seat: vc
+                  sequence:
+                    chain: uncle-ho-shaded-vc-nva-six
+                    step: 2
                   operationClass: limitedOperation
                 - seat: nva
                   sequence:
-                    chain: uncle-ho-unshaded-vc-nva-three
-                    step: 2
+                    chain: uncle-ho-shaded-vc-nva-six
+                    step: 3
                   operationClass: limitedOperation
-        shaded:
-          text: "COIN initiative: US/ARVN execute 3 total free Limited Operations."
-          branches:
-            - id: us-then-arvn-three-free-limited-ops
-              order: 1
-              freeOperationGrants:
-                - seat: us
+                - seat: nva
                   sequence:
-                    chain: uncle-ho-shaded-us-arvn-three
-                    step: 0
+                    chain: uncle-ho-shaded-vc-nva-six
+                    step: 4
                   operationClass: limitedOperation
-                - seat: arvn
+                - seat: nva
                   sequence:
-                    chain: uncle-ho-shaded-us-arvn-three
-                    step: 1
-                  operationClass: limitedOperation
-                - seat: arvn
-                  sequence:
-                    chain: uncle-ho-shaded-us-arvn-three
-                    step: 2
-                  operationClass: limitedOperation
-            - id: us-two-free-limited-ops
-              order: 2
-              freeOperationGrants:
-                - seat: us
-                  sequence:
-                    chain: uncle-ho-shaded-us-two
-                    step: 0
-                  operationClass: limitedOperation
-                - seat: us
-                  sequence:
-                    chain: uncle-ho-shaded-us-two
-                    step: 1
+                    chain: uncle-ho-shaded-vc-nva-six
+                    step: 5
                   operationClass: limitedOperation
       - id: card-63
         title: Fact Finding

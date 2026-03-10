@@ -83,7 +83,7 @@ describe('FITL 1964 remaining event-card production spec', () => {
     assert.deepEqual(card?.shaded?.effects, [{ setGlobalMarker: { marker: 'cap_aaa', state: 'shaded' } }]);
   });
 
-  it('encodes card 50 (Uncle Ho) free-operation grants as limitedOperation class constraints', () => {
+  it('encodes card 50 (Uncle Ho) exact text, corrected branches, and limited-operation sequencing', () => {
     const { parsed, compiled } = compileProductionSpec();
 
     assertNoErrors(parsed);
@@ -91,12 +91,47 @@ describe('FITL 1964 remaining event-card production spec', () => {
 
     const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-50');
     assert.notEqual(card, undefined);
+    assert.equal(
+      card?.unshaded?.text,
+      '4 out-of-play US Troops to South Vietnam, or ARVN Resources +9. ARVN executes any 2 free Limited Operations.',
+    );
+    assert.equal(
+      card?.shaded?.text,
+      'Revolutionary unifier: VC then NVA each execute 3 free Limited Operations.',
+    );
 
-    const unshadedGrants = (card?.unshaded?.branches ?? []).flatMap((branch) => branch.freeOperationGrants ?? []);
-    const shadedGrants = (card?.shaded?.branches ?? []).flatMap((branch) => branch.freeOperationGrants ?? []);
-    assert.equal(unshadedGrants.length > 0, true);
-    assert.equal(shadedGrants.length > 0, true);
-    assert.equal(unshadedGrants.every((grant) => grant.operationClass === 'limitedOperation'), true);
+    const unshadedBranches = card?.unshaded?.branches ?? [];
+    assert.deepEqual(
+      unshadedBranches.map((branch) => branch.id),
+      ['place-us-troops-and-arvn-two-free-limited-ops', 'add-arvn-resources-and-arvn-two-free-limited-ops'],
+    );
+    assert.deepEqual(
+      unshadedBranches.map((branch) => branch.freeOperationGrants?.map((grant) => grant.seat)),
+      [['arvn', 'arvn'], ['arvn', 'arvn']],
+    );
+    assert.equal(
+      unshadedBranches.flatMap((branch) => branch.freeOperationGrants ?? []).every((grant) => grant.operationClass === 'limitedOperation'),
+      true,
+    );
+
+    const shadedBranches = card?.shaded?.branches ?? [];
+    assert.deepEqual(shadedBranches.map((branch) => branch.id), ['vc-then-nva-six-free-limited-ops']);
+    const shadedGrants = shadedBranches[0]?.freeOperationGrants ?? [];
+    assert.deepEqual(
+      shadedGrants.map((grant) => grant.seat),
+      ['vc', 'vc', 'vc', 'nva', 'nva', 'nva'],
+    );
+    assert.deepEqual(
+      shadedGrants.map((grant) => grant.sequence),
+      [
+        { chain: 'uncle-ho-shaded-vc-nva-six', step: 0 },
+        { chain: 'uncle-ho-shaded-vc-nva-six', step: 1 },
+        { chain: 'uncle-ho-shaded-vc-nva-six', step: 2 },
+        { chain: 'uncle-ho-shaded-vc-nva-six', step: 3 },
+        { chain: 'uncle-ho-shaded-vc-nva-six', step: 4 },
+        { chain: 'uncle-ho-shaded-vc-nva-six', step: 5 },
+      ],
+    );
     assert.equal(shadedGrants.every((grant) => grant.operationClass === 'limitedOperation'), true);
   });
 });

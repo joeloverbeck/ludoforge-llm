@@ -734,7 +734,7 @@ Lasting Effects Indicator (5.3): None
 Shaded Text (see Dual Use 5.2): "Revolutionary unifier: VC then NVA each execute 3 free Limited Operations."
 
 Period Event (Set Up Option): 1964
-Faction Order: NVA, VC, US, ARVN
+Faction Order: NVA, ARVN, VC, US
 Card Number: 51
 Title: 301st Supply Bn
 Italized Flavor Text: "Combat units diverted to logistics."

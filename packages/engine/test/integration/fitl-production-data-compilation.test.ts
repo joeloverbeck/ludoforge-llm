@@ -81,7 +81,7 @@ describe('FITL production data integration compilation', () => {
       ]);
       assert.deepEqual(compiled.gameDef.turnOrder.config.turnFlow.durationWindows, ['turn', 'nextTurn', 'round', 'cycle']);
       assert.equal(
-        compiled.gameDef.turnOrder.config.turnFlow.eligibility.overrideWindows.some(
+        compiled.gameDef.turnOrder.config.turnFlow.windows.some(
           (windowDef) => windowDef.id === 'remain-eligible' && windowDef.duration === 'nextTurn',
         ),
         true,

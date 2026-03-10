@@ -34,7 +34,9 @@ const createCardDrivenDef = (): GameDef =>
       config: {
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-          eligibility: { seats: ['0', '1'], overrideWindows: [] },
+          eligibility: { seats: ['0', '1'] },
+
+          windows: [],
           optionMatrix: [],
           passRewards: [],
           durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],

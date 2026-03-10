@@ -48,8 +48,8 @@ const withCardDrivenTurnFlow = (
           },
           eligibility: {
             seats: eligibilitySeats,
-            overrideWindows: [],
           },
+          windows: [],
           actionClassByActionId: {
             playCard: 'event',
           },
@@ -112,12 +112,14 @@ const withPipelineLinkedWindows = (
   linkedWindows: readonly string[] | undefined,
   options?: {
     readonly overrideWindowIds?: readonly string[];
+    readonly overrideWindowUsages?: readonly ('eligibilityOverride' | 'actionPipeline')[] | undefined;
     readonly turnOrderType?: 'cardDriven' | 'roundRobin';
   },
 ): GameDef => {
   const base = createValidGameDef();
   const turnOrderType = options?.turnOrderType ?? 'cardDriven';
   const overrideWindowIds = options?.overrideWindowIds ?? ['special-window'];
+  const overrideWindowUsages = options?.overrideWindowUsages ?? ['actionPipeline'];
   return {
     ...base,
     turnOrder: turnOrderType === 'cardDriven'
@@ -128,8 +130,8 @@ const withPipelineLinkedWindows = (
               cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
               eligibility: {
                 seats: ['0', '1'],
-                overrideWindows: overrideWindowIds.map((id) => ({ id, duration: 'nextTurn' })),
               },
+              windows: overrideWindowIds.map((id) => ({ id, duration: 'nextTurn', usages: overrideWindowUsages })),
               actionClassByActionId: { playCard: 'event' },
               optionMatrix: [],
               passRewards: [],
@@ -4119,6 +4121,19 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('reports linkedWindows entries that reference windows without action-pipeline usage', () => {
+    const def = withPipelineLinkedWindows(['special-window'], { overrideWindowUsages: ['eligibilityOverride'] });
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_TURN_FLOW_OVERRIDE_WINDOW_MISSING' &&
+          diag.path === 'actionPipelines[0].linkedWindows[0]',
+      ),
+    );
+  });
+
   it('does not report linkedWindows diagnostics when linkedWindows is absent', () => {
     const def = withPipelineLinkedWindows(undefined);
 
@@ -4322,7 +4337,9 @@ describe('validateGameDef reference checks', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             actionClassByActionId: { pass: 'pass' },
             optionMatrix: [],
             passRewards: [],
@@ -4356,7 +4373,9 @@ describe('validateGameDef reference checks', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             actionClassByActionId: { pass: 'pass' },
             optionMatrix: [],
             passRewards: [],
@@ -4388,7 +4407,9 @@ describe('validateGameDef reference checks', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             actionClassByActionId: { pass: 'pass' },
             optionMatrix: [],
             passRewards: [],

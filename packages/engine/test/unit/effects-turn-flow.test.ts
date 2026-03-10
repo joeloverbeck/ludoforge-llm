@@ -52,7 +52,8 @@ const makeDef = (overrides?: Partial<GameDef>): GameDef =>
       config: {
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-          eligibility: { seats: ['0', '1', '2', '3'], overrideWindows: [] },
+          eligibility: { seats: ['0', '1', '2', '3'] },
+          windows: [],
           actionClassByActionId: { attack: 'operation', defend: 'limitedOperation' },
           optionMatrix: [],
           passRewards: [],

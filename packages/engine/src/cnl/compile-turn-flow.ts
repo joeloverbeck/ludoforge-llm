@@ -165,7 +165,12 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
     eligibility: {
       valid: isRecord,
       message: 'turnFlow.eligibility is required and must be an object.',
-      suggestion: 'Define eligibility.seats and eligibility.overrideWindows.',
+      suggestion: 'Define eligibility.seats.',
+    },
+    windows: {
+      valid: Array.isArray,
+      message: 'turnFlow.windows is required and must be an array.',
+      suggestion: 'Define windows as turn-flow window descriptors.',
     },
     actionClassByActionId: {
       valid: isRecord,
@@ -214,7 +219,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
     typeof cardLifecycle.leader !== 'string' ||
     !isRecord(eligibility) ||
     !Array.isArray(eligibility.seats) ||
-    !Array.isArray(eligibility.overrideWindows) ||
+    !Array.isArray(rawTurnFlow.windows) ||
     !isRecord(rawTurnFlow.actionClassByActionId) ||
     !Array.isArray(rawTurnFlow.optionMatrix) ||
     !Array.isArray(rawTurnFlow.passRewards) ||

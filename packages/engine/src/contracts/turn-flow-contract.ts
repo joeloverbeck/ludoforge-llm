@@ -4,6 +4,7 @@ import type { TurnFlowActionClass } from './turn-flow-action-class-contract.js';
 export const TURN_FLOW_REQUIRED_KEYS = [
   'cardLifecycle',
   'eligibility',
+  'windows',
   'actionClassByActionId',
   'optionMatrix',
   'passRewards',

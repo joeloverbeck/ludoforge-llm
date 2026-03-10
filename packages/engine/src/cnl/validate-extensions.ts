@@ -17,8 +17,9 @@ import {
   TURN_FLOW_FIRST_ACTION_VALUES,
   TURN_FLOW_KEYS,
   TURN_FLOW_OPTION_MATRIX_ROW_KEYS,
-  TURN_FLOW_OVERRIDE_WINDOW_KEYS,
+  TURN_FLOW_WINDOW_KEYS,
   TURN_FLOW_PASS_REWARD_KEYS,
+  TURN_FLOW_WINDOW_USAGE_VALUES,
   isFiniteNumber,
   isRecord,
   pushDuplicateNormalizedIdDiagnostics,
@@ -795,7 +796,7 @@ export function validateTurnOrder(doc: GameSpecDoc, diagnostics: Diagnostic[]): 
       path: 'doc.turnOrder.config.turnFlow.eligibility',
       severity: 'error',
       message: 'turnFlow.eligibility must be an object.',
-      suggestion: 'Provide eligibility.seats and eligibility.overrideWindows.',
+      suggestion: 'Provide eligibility.seats.',
     });
   } else {
     validateUnknownKeys(eligibility, TURN_FLOW_ELIGIBILITY_KEYS, 'doc.turnOrder.config.turnFlow.eligibility', diagnostics, 'eligibility');
@@ -822,37 +823,61 @@ export function validateTurnOrder(doc: GameSpecDoc, diagnostics: Diagnostic[]): 
       }
     }
 
-    if (!Array.isArray(eligibility.overrideWindows)) {
+    if (!Array.isArray(turnFlow.windows)) {
       diagnostics.push({
-        code: 'CNL_VALIDATOR_TURN_FLOW_OVERRIDE_WINDOWS_INVALID',
-        path: 'doc.turnOrder.config.turnFlow.eligibility.overrideWindows',
+        code: 'CNL_VALIDATOR_TURN_FLOW_WINDOWS_INVALID',
+        path: 'doc.turnOrder.config.turnFlow.windows',
         severity: 'error',
-        message: 'turnFlow.eligibility.overrideWindows must be an array.',
-        suggestion: 'Set overrideWindows to an array of { id, duration } objects.',
+        message: 'turnFlow.windows must be an array.',
+        suggestion: 'Set windows to an array of { id, duration, usages } objects.',
       });
     } else {
-      for (const [index, windowDef] of eligibility.overrideWindows.entries()) {
-        const basePath = `doc.turnOrder.config.turnFlow.eligibility.overrideWindows.${index}`;
+      for (const [index, windowDef] of turnFlow.windows.entries()) {
+        const basePath = `doc.turnOrder.config.turnFlow.windows.${index}`;
         if (!isRecord(windowDef)) {
           diagnostics.push({
-            code: 'CNL_VALIDATOR_TURN_FLOW_OVERRIDE_WINDOW_SHAPE_INVALID',
+            code: 'CNL_VALIDATOR_TURN_FLOW_WINDOW_SHAPE_INVALID',
             path: basePath,
             severity: 'error',
-            message: 'Each override window must be an object.',
-            suggestion: 'Set override window entries to { id, duration } objects.',
+            message: 'Each turn-flow window must be an object.',
+            suggestion: 'Set window entries to { id, duration, usages } objects.',
           });
           continue;
         }
-        validateUnknownKeys(windowDef, TURN_FLOW_OVERRIDE_WINDOW_KEYS, basePath, diagnostics, 'override window');
-        validateIdentifierField(windowDef, 'id', `${basePath}.id`, diagnostics, 'override window id');
+        validateUnknownKeys(windowDef, TURN_FLOW_WINDOW_KEYS, basePath, diagnostics, 'turn-flow window');
+        validateIdentifierField(windowDef, 'id', `${basePath}.id`, diagnostics, 'turn-flow window id');
         validateEnumField(
           windowDef,
           'duration',
           TURN_FLOW_DURATION_VALUES,
           basePath,
           diagnostics,
-          'override window',
+          'turn-flow window',
         );
+        if (!Array.isArray(windowDef.usages) || windowDef.usages.length === 0) {
+          diagnostics.push({
+            code: 'CNL_VALIDATOR_TURN_FLOW_WINDOW_USAGES_INVALID',
+            path: `${basePath}.usages`,
+            severity: 'error',
+            message: 'turn-flow window usages must be a non-empty array.',
+            suggestion: `Use one or more of: ${TURN_FLOW_WINDOW_USAGE_VALUES.join(', ')}.`,
+          });
+          continue;
+        }
+        for (const [usageIndex, usage] of windowDef.usages.entries()) {
+          const isKnownUsage =
+            typeof usage === 'string'
+            && (TURN_FLOW_WINDOW_USAGE_VALUES as readonly string[]).includes(usage);
+          if (!isKnownUsage) {
+            diagnostics.push({
+              code: 'CNL_VALIDATOR_TURN_FLOW_WINDOW_USAGES_INVALID',
+              path: `${basePath}.usages.${usageIndex}`,
+              severity: 'error',
+              message: `turn-flow window usage must be one of: ${TURN_FLOW_WINDOW_USAGE_VALUES.join(', ')}.`,
+              suggestion: `Set usages entries to one of: ${TURN_FLOW_WINDOW_USAGE_VALUES.join(', ')}.`,
+            });
+          }
+        }
       }
     }
   }

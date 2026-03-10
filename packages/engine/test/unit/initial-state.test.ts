@@ -287,7 +287,8 @@ describe('initialState', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: [], overrideWindows: [] },
+            eligibility: { seats: [] },
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -335,7 +336,8 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['1', '0'], overrideWindows: [] },
+            eligibility: { seats: ['1', '0'] },
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],

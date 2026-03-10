@@ -92,7 +92,7 @@ turnOrder:
         leader: hue:none
       eligibility:
         seats: [us, nva]
-        overrideWindows: []
+      windows: []
       actionClassByActionId:
         pass: pass
         boostSupport: operation

@@ -361,7 +361,7 @@ describe('parseGameSpec API shape', () => {
       '        leader: leader:none',
       '      eligibility:',
       '        seats: [us, nva]',
-      '        overrideWindows: []',
+      '      windows: []',
       '      optionMatrix: []',
       '      passRewards: []',
       '      durationWindows: [turn]',

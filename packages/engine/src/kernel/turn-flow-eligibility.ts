@@ -174,7 +174,7 @@ const cardSnapshot = (card: TurnFlowRuntimeCardState) => ({
 const indexOverrideWindows = (
   def: GameDef,
 ): Readonly<Record<string, TurnFlowDuration>> =>
-  Object.fromEntries((cardDrivenConfig(def)?.turnFlow.eligibility.overrideWindows ?? []).map((windowDef) => [windowDef.id, windowDef.duration]));
+  Object.fromEntries((cardDrivenConfig(def)?.turnFlow.windows ?? []).map((windowDef) => [windowDef.id, windowDef.duration]));
 
 const resolveSeatId = (
   seat: string,

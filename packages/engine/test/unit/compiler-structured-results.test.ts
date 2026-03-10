@@ -480,7 +480,8 @@ describe('compiler structured section results', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
-            eligibility: { seats: ['US', 'ARVN'], overrideWindows: [] },
+            eligibility: { seats: ['US', 'ARVN'] },
+            windows: [],
             actionClassByActionId: { pass: 'pass' } as const,
             optionMatrix: [],
             passRewards: [],
@@ -948,7 +949,8 @@ describe('compiler structured section results', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
-            eligibility: { seats: ['us', 'nva'], overrideWindows: [] },
+            eligibility: { seats: ['us', 'nva'] },
+            windows: [],
             actionClassByActionId: { pass: 'pass' } as const,
             optionMatrix: [],
             passRewards: [],
@@ -1003,7 +1005,8 @@ describe('compiler structured section results', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
-            eligibility: { seats: ['0', '1', '2', '3'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1', '2', '3'] },
+            windows: [],
             actionClassByActionId: { pass: 'pass' } as const,
             optionMatrix: [],
             passRewards: [],
@@ -1146,7 +1149,8 @@ describe('compiler structured section results', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+            windows: [],
             actionClassByActionId: { pass: 'pass' } as const,
             optionMatrix: [],
             passRewards: [],
@@ -1209,7 +1213,8 @@ describe('compiler structured section results', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+            windows: [],
             actionClassByActionId: { pass: 'pass' } as const,
             optionMatrix: [],
             passRewards: [{ seat: 'US', resource: 'resorces', amount: 1 }],
@@ -1266,7 +1271,8 @@ describe('compiler structured section results', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
-            eligibility: { seats: ['US', 'ARVN'], overrideWindows: [] },
+            eligibility: { seats: ['US', 'ARVN'] },
+            windows: [],
             actionClassByActionId: { pass: 'pass' } as const,
             optionMatrix: [],
             passRewards: [],
@@ -1356,7 +1362,8 @@ describe('compiler structured section results', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
-            eligibility: { seats: ['US', 'ARVN'], overrideWindows: [] },
+            eligibility: { seats: ['US', 'ARVN'] },
+            windows: [],
             actionClassByActionId: { pass: 'pass' } as const,
             optionMatrix: [],
             passRewards: [],
@@ -1399,7 +1406,8 @@ describe('compiler structured section results', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
-            eligibility: { seats: ['US', 'ARVN'], overrideWindows: [] },
+            eligibility: { seats: ['US', 'ARVN'] },
+            windows: [],
             actionClassByActionId: { pass: 'pass' } as const,
             optionMatrix: [],
             passRewards: [],

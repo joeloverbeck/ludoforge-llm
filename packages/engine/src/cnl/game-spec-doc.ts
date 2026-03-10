@@ -6,7 +6,7 @@ import type {
 } from '../kernel/types.js';
 import type { VictoryStandingsDef } from '../kernel/types-core.js';
 import type { VerbalizationLabelEntry, VerbalizationMacroEntry, VerbalizationStageDescription, VerbalizationModifierEffect, VerbalizationModifierClassification } from '../kernel/verbalization-types.js';
-import type { TurnFlowActionClass } from '../contracts/index.js';
+import type { TurnFlowActionClass, TurnFlowWindowUsage } from '../contracts/index.js';
 
 export interface GameSpecMetadata {
   readonly id: string;
@@ -236,19 +236,34 @@ export interface GameSpecTurnFlowCardLifecycle {
   readonly leader: string;
 }
 
-export interface GameSpecTurnFlowEligibilityOverrideWindow {
+export interface GameSpecTurnFlowWindow {
   readonly id: string;
   readonly duration: GameSpecTurnFlowDuration;
+  readonly usages: readonly TurnFlowWindowUsage[];
 }
 
 export interface GameSpecTurnFlowEligibility {
   readonly seats: readonly string[];
-  readonly overrideWindows: readonly GameSpecTurnFlowEligibilityOverrideWindow[];
 }
 
 export interface GameSpecTurnFlowOptionMatrixRow {
   readonly first: 'event' | 'operation' | 'operationPlusSpecialActivity';
   readonly second: readonly GameSpecTurnFlowActionClass[];
+}
+
+export interface GameSpecTurnFlow {
+  readonly cardLifecycle: GameSpecTurnFlowCardLifecycle;
+  readonly eligibility: GameSpecTurnFlowEligibility;
+  readonly windows: readonly GameSpecTurnFlowWindow[];
+  readonly actionClassByActionId: Readonly<Record<string, GameSpecTurnFlowActionClass>>;
+  readonly optionMatrix: readonly GameSpecTurnFlowOptionMatrixRow[];
+  readonly passRewards: readonly GameSpecTurnFlowPassReward[];
+  readonly freeOperationActionIds?: readonly string[];
+  readonly durationWindows: readonly GameSpecTurnFlowDuration[];
+  readonly monsoon?: GameSpecTurnFlowMonsoon;
+  readonly pivotal?: GameSpecTurnFlowPivotal;
+  readonly cardSeatOrderMetadataKey?: string;
+  readonly cardSeatOrderMapping?: Readonly<Record<string, string>>;
 }
 
 export interface GameSpecTurnFlowPassReward {
@@ -300,18 +315,6 @@ export interface GameSpecTurnFlowPivotal {
   readonly requirePreActionWindow?: boolean;
   readonly disallowWhenLookaheadIsCoup?: boolean;
   readonly interrupt?: GameSpecTurnFlowInterruptResolution;
-}
-
-export interface GameSpecTurnFlow {
-  readonly cardLifecycle: GameSpecTurnFlowCardLifecycle;
-  readonly eligibility: GameSpecTurnFlowEligibility;
-  readonly actionClassByActionId: Readonly<Record<string, GameSpecTurnFlowActionClass>>;
-  readonly optionMatrix: readonly GameSpecTurnFlowOptionMatrixRow[];
-  readonly passRewards: readonly GameSpecTurnFlowPassReward[];
-  readonly freeOperationActionIds?: readonly string[];
-  readonly durationWindows: readonly GameSpecTurnFlowDuration[];
-  readonly monsoon?: GameSpecTurnFlowMonsoon;
-  readonly pivotal?: GameSpecTurnFlowPivotal;
 }
 
 export interface GameSpecActionPipelineStageDef {

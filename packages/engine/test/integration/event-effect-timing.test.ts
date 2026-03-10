@@ -42,8 +42,8 @@ const createDef = (): GameDef =>
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
             seats: ['0', '1', '2', '3'],
-            overrideWindows: [],
           },
+          windows: [],
           optionMatrix: [{ first: 'event', second: ['operation'] }],
           passRewards: [],
           freeOperationActionIds: ['operation'],

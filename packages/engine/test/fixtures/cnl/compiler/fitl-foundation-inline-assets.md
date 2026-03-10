@@ -78,11 +78,13 @@ turnFlow:
     leader: hue:none
   eligibility:
     seats: ["US", "ARVN", "NVA", "VC"]
-    overrideWindows:
-      - id: remain-eligible
-        duration: nextTurn
-      - id: force-ineligible
-        duration: nextTurn
+  windows:
+    - id: remain-eligible
+      duration: nextTurn
+      usages: [eligibilityOverride]
+    - id: force-ineligible
+      duration: nextTurn
+      usages: [eligibilityOverride]
   optionMatrix:
     - first: event
       second: [operation, operationPlusSpecialActivity]

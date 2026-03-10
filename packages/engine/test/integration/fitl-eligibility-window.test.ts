@@ -34,12 +34,12 @@ const createDef = (): GameDef =>
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
             seats: ['US', 'ARVN', 'NVA', 'VC'],
-            overrideWindows: [
-              { id: 'force-eligible-now', duration: 'turn' },
-              { id: 'remain-eligible', duration: 'nextTurn' },
-              { id: 'force-ineligible', duration: 'nextTurn' },
-            ],
           },
+          windows: [
+            { id: 'force-eligible-now', duration: 'turn', usages: ['eligibilityOverride'] },
+            { id: 'remain-eligible', duration: 'nextTurn', usages: ['eligibilityOverride'] },
+            { id: 'force-ineligible', duration: 'nextTurn', usages: ['eligibilityOverride'] },
+          ],
           optionMatrix: [{ first: 'event', second: ['operation'] }],
           passRewards: [],
           freeOperationActionIds: ['operation'],

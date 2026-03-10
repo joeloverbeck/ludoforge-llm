@@ -938,8 +938,8 @@ describe('validateGameSpec structural rules', () => {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
             eligibility: {
               seats: ['us', 'arvn', 'nva', 'vc'],
-              overrideWindows: [{ id: 'remain-eligible', duration: 'nextTurn' }],
             },
+            windows: [{ id: 'remain-eligible', duration: 'nextTurn', usages: ['eligibilityOverride'] }],
             actionClassByActionId: { pass: 'pass' },
             optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
             passRewards: [{ seat: 'coin', resource: 'arvnResources', amount: 3 }],
@@ -962,8 +962,8 @@ describe('validateGameSpec structural rules', () => {
             cardLifecycle: { played: 'played:none', lookahead: '', leader: 'leader:none' },
             eligibility: {
               seats: ['us', ''],
-              overrideWindows: [{ id: 'window-a', duration: 'season' }],
             },
+            windows: [{ id: 'window-a', duration: 'season', usages: ['eligibilityOverride'] }],
             actionClassByActionId: { pass: 'pass' },
             optionMatrix: [{ first: 'event', second: ['operation', 'invalid'] }],
             passRewards: [{ seat: 'coin', resource: 'arvnResources', amount: '3' }],
@@ -974,7 +974,7 @@ describe('validateGameSpec structural rules', () => {
     } as unknown as Parameters<typeof validateGameSpec>[0]);
 
     assert.equal(
-      diagnostics.some((diagnostic) => diagnostic.path === 'doc.turnOrder.config.turnFlow.eligibility.overrideWindows.0.duration'),
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.turnOrder.config.turnFlow.windows.0.duration'),
       true,
     );
     assert.equal(
@@ -1001,8 +1001,8 @@ describe('validateGameSpec structural rules', () => {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
             eligibility: {
               seats: ['us', 'arvn'],
-              overrideWindows: [],
             },
+            windows: [],
             actionClassByActionId: { pass: 'pass', train: 'invalidClass' },
             optionMatrix: [{ first: 'event', second: ['operation'] }],
             passRewards: [],

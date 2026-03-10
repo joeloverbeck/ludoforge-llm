@@ -923,7 +923,9 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -1011,7 +1013,9 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -1139,7 +1143,9 @@ describe('applyMove() required free-operation grant enforcement', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -1223,7 +1229,9 @@ describe('applyMove() required free-operation grant enforcement', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -1302,7 +1310,9 @@ describe('applyMove() required free-operation grant enforcement', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -1377,7 +1387,9 @@ describe('applyMove() required free-operation grant enforcement', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -1451,7 +1463,9 @@ describe('applyMove() required free-operation grant enforcement', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -1533,7 +1547,9 @@ describe('applyMove() required free-operation grant enforcement', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -1620,7 +1636,9 @@ describe('applyMove() required free-operation grant enforcement', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -1694,7 +1712,9 @@ describe('applyMove() required free-operation grant enforcement', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -1870,7 +1890,9 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -1952,7 +1974,9 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -2048,7 +2072,9 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -2124,7 +2150,9 @@ describe('applyMove() compound special-activity free-operation pipeline overlay 
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['special'],

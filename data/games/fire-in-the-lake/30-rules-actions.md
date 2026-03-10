@@ -24,21 +24,28 @@ turnOrder:
         leader: leader:none
       eligibility:
         seats: ['us', 'arvn', 'nva', 'vc']
-        overrideWindows:
-          - id: make-eligible-now
-            duration: turn
-          - id: remain-eligible
-            duration: nextTurn
-          - id: make-ineligible
-            duration: nextTurn
-          - id: us-special-window
-            duration: turn
-          - id: arvn-special-window
-            duration: turn
-          - id: nva-special-window
-            duration: turn
-          - id: vc-special-window
-            duration: turn
+      windows:
+        - id: make-eligible-now
+          duration: turn
+          usages: [eligibilityOverride]
+        - id: remain-eligible
+          duration: nextTurn
+          usages: [eligibilityOverride]
+        - id: make-ineligible
+          duration: nextTurn
+          usages: [eligibilityOverride]
+        - id: us-special-window
+          duration: turn
+          usages: [actionPipeline]
+        - id: arvn-special-window
+          duration: turn
+          usages: [actionPipeline]
+        - id: nva-special-window
+          duration: turn
+          usages: [actionPipeline]
+        - id: vc-special-window
+          duration: turn
+          usages: [actionPipeline]
       actionClassByActionId:
         pass: pass
         event: event

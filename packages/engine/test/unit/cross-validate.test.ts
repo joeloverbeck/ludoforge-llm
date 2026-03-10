@@ -55,8 +55,8 @@ function createRichCompilableDoc(): GameSpecDoc {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
             seats: [...RICH_SEAT_CATALOG_IDS],
-            overrideWindows: [{ id: 'window-a', duration: 'nextTurn' as const }],
           },
+          windows: [{ id: 'window-a', duration: 'nextTurn' as const, usages: ['eligibilityOverride', 'actionPipeline'] as const }],
           actionClassByActionId: { act: 'operation', pass: 'pass', event: 'event' },
           optionMatrix: [{ first: 'event' as const, second: ['pass' as const] }],
           passRewards: [{ seat: PRIMARY_SEAT_ID, resource: 'resources', amount: 2 }],
@@ -231,10 +231,7 @@ describe('crossValidateSpec', () => {
           ...turnOrder.config,
           turnFlow: {
             ...turnOrder.config.turnFlow,
-            eligibility: {
-              ...turnOrder.config.turnFlow.eligibility,
-              overrideWindows: [{ id: 'cafe\u0301', duration: 'nextTurn' }],
-            },
+            windows: [{ id: 'cafe\u0301', duration: 'nextTurn', usages: ['eligibilityOverride', 'actionPipeline'] }],
           },
         },
       },
@@ -1087,6 +1084,46 @@ describe('crossValidateSpec', () => {
     assert.notEqual(diagnostic, undefined);
     assert.equal(diagnostic?.path, 'doc.eventDecks.0.cards.0.unshaded.branches.0.eligibilityOverrides.0.windowId');
     assert.equal(diagnostic?.suggestion, 'Did you mean "window-a"?');
+  });
+
+  it('eventDeck eligibilityOverrides reject windows that are not declared for eligibility usage', () => {
+    const sections = compileRichSections();
+    const turnOrder = requireValue(sections.turnOrder);
+    assert.equal(turnOrder.type, 'cardDriven');
+    const turnFlow = turnOrder.config.turnFlow;
+    const deck = requireValue(sections.eventDecks?.[0]);
+    const card = requireValue(deck.cards[0]);
+    const diagnostics = crossValidate({
+      ...sections,
+      turnOrder: {
+        ...turnOrder,
+        config: {
+          ...turnOrder.config,
+          turnFlow: {
+            ...turnFlow,
+            windows: [{ id: 'window-a', duration: 'nextTurn', usages: ['actionPipeline'] }],
+          },
+        },
+      },
+      eventDecks: [
+        {
+          ...deck,
+          cards: [
+            {
+              ...card,
+              unshaded: {
+                ...(card.unshaded ?? {}),
+                eligibilityOverrides: [{ target: { kind: 'active' }, eligible: true, windowId: 'window-a' }],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_EVENT_DECK_OVERRIDE_WINDOW_MISSING');
+    assert.notEqual(diagnostic, undefined);
+    assert.equal(diagnostic?.path, 'doc.eventDecks.0.cards.0.unshaded.eligibilityOverrides.0.windowId');
   });
 
   it('eventDeck eligibilityOverrides with valid references produce no override cross-ref diagnostics', () => {

@@ -16,6 +16,7 @@ import {
   TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
   TURN_FLOW_DURATION_VALUES,
+  TURN_FLOW_WINDOW_USAGE_VALUES,
   hasTurnFlowInterruptSelectorMatchField,
 } from '../contracts/index.js';
 import { FreeOperationSequenceContextSchema } from './free-operation-sequence-context-schema.js';
@@ -251,17 +252,17 @@ export const TurnFlowCardLifecycleSchema = z
   })
   .strict();
 
-export const TurnFlowEligibilityOverrideWindowSchema = z
+export const TurnFlowWindowSchema = z
   .object({
     id: StringSchema.min(1),
     duration: TurnFlowDurationSchema,
+    usages: z.array(z.enum(TURN_FLOW_WINDOW_USAGE_VALUES)).min(1),
   })
   .strict();
 
 export const TurnFlowEligibilitySchema = z
   .object({
     seats: z.array(StringSchema.min(1)),
-    overrideWindows: z.array(TurnFlowEligibilityOverrideWindowSchema),
   })
   .strict();
 
@@ -355,6 +356,7 @@ export const TurnFlowSchema = z
   .object({
     cardLifecycle: TurnFlowCardLifecycleSchema,
     eligibility: TurnFlowEligibilitySchema,
+    windows: z.array(TurnFlowWindowSchema),
     actionClassByActionId: z.record(StringSchema.min(1), TurnFlowActionClassSchema),
     optionMatrix: z.array(TurnFlowOptionMatrixRowSchema),
     passRewards: z.array(TurnFlowPassRewardSchema),

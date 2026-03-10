@@ -1160,6 +1160,7 @@ function deriveActionGroups(moves: readonly Move[]): RenderModel['actionGroups']
   }
 
   return Array.from(groupsByClass.entries()).map(([groupKey, actionsById]) => ({
+    groupKey,
     groupName: groupKey === 'Actions' ? 'Actions' : formatIdAsDisplayName(groupKey),
     actions: Array.from(actionsById.values()),
   }));

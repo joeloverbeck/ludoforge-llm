@@ -32,7 +32,7 @@ export function ActionToolbar({ store, onActionHoverStart, onActionHoverEnd }: A
   return (
     <section className={styles.toolbar} aria-label="Available actions" data-testid="action-toolbar">
       {toolbarModel.actionGroups.map((group) => (
-        <div key={group.groupName} className={styles.group} data-testid={`action-group-${group.groupName}`}>
+        <div key={group.groupKey} className={styles.group} data-testid={`action-group-${group.groupKey}`}>
           <p className={styles.groupLabel}>{group.groupName}</p>
           <div className={styles.groupActions}>
             {group.actions.map((action) => {
@@ -40,12 +40,12 @@ export function ActionToolbar({ store, onActionHoverStart, onActionHoverEnd }: A
 
               return (
                 <button
-                  key={`${group.groupName}:${action.actionId}`}
+                  key={`${group.groupKey}:${action.actionId}`}
                   type="button"
                   className={styles.actionButton}
                   disabled={!action.isAvailable}
                   aria-disabled={action.isAvailable ? undefined : 'true'}
-                  data-testid={`action-${group.groupName}-${action.actionId}`}
+                  data-testid={`action-${group.groupKey}-${action.actionId}`}
                   onClick={() => {
                     if (!action.isAvailable) {
                       return;

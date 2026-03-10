@@ -1,6 +1,6 @@
 # OPSAGRP-001: Add groupKey to RenderActionGroup and fix data-testid fragility
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -77,3 +77,10 @@ Update `ActionToolbar.test.ts` test ID lookups to use the raw key (e.g. `action-
 
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-10
+- **What changed**: Added `readonly groupKey: string` to `RenderActionGroup` interface. Populated it from the raw Map key in `deriveActionGroups`. Switched `ActionToolbar` `data-testid` and React `key` attributes from `groupName` to `groupKey`. Updated 5 test files (ActionToolbar, derive-render-model-state, render-model-types, GameContainer, bottom-bar-mode) to include `groupKey` in fixtures and use it for test ID lookups.
+- **Deviations**: 3 additional test files (render-model-types, GameContainer, bottom-bar-mode) needed `groupKey` added to their fixtures beyond what the ticket listed. No architectural deviations.
+- **Verification**: 150 test files (1495 tests) pass. Typecheck clean across all packages.

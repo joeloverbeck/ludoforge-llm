@@ -27,6 +27,7 @@ type TraversableElement = ReactElement<{
 
 const DEFAULT_ACTION_GROUPS: NonNullable<GameStore['renderModel']>['actionGroups'] = [
   {
+    groupKey: 'core',
     groupName: 'Core',
     actions: [
       { actionId: 'move', displayName: 'Move', isAvailable: true },
@@ -34,6 +35,7 @@ const DEFAULT_ACTION_GROUPS: NonNullable<GameStore['renderModel']>['actionGroups
     ],
   },
   {
+    groupKey: 'special',
     groupName: 'Special',
     actions: [{ actionId: 'trade', displayName: 'Trade', isAvailable: true }],
   },
@@ -122,7 +124,7 @@ describe('ActionToolbar', () => {
       }),
     });
 
-    const disabledButton = findElementByTestId(tree, 'action-Core-pass');
+    const disabledButton = findElementByTestId(tree, 'action-core-pass');
     expect(disabledButton).not.toBeNull();
     if (disabledButton === null) {
       throw new Error('Expected disabled action button.');
@@ -137,6 +139,7 @@ describe('ActionToolbar', () => {
 
     const actionsWithClass: NonNullable<GameStore['renderModel']>['actionGroups'] = [
       {
+        groupKey: 'operation',
         groupName: 'Operation',
         actions: [
           { actionId: 'train', displayName: 'Train', isAvailable: true, actionClass: 'operation' },
@@ -151,7 +154,7 @@ describe('ActionToolbar', () => {
       }),
     });
 
-    const trainButton = findElementByTestId(tree, 'action-Operation-train');
+    const trainButton = findElementByTestId(tree, 'action-operation-train');
     expect(trainButton).not.toBeNull();
     if (trainButton === null || trainButton.props.onClick === undefined) {
       throw new Error('Expected train action click handler.');
@@ -172,7 +175,7 @@ describe('ActionToolbar', () => {
       }),
     });
 
-    const moveButton = findElementByTestId(tree, 'action-Core-move');
+    const moveButton = findElementByTestId(tree, 'action-core-move');
     expect(moveButton).not.toBeNull();
     if (moveButton === null || moveButton.props.onClick === undefined) {
       throw new Error('Expected move action click handler.');
@@ -197,7 +200,7 @@ describe('ActionToolbar', () => {
     const tree = ActionToolbar({
       store: createToolbarStore({
         renderModel: makeToolbarRenderModel({
-          actionGroups: [{ groupName: 'Empty', actions: [] }],
+          actionGroups: [{ groupKey: 'empty', groupName: 'Empty', actions: [] }],
         }),
       }),
     });
@@ -214,8 +217,8 @@ describe('ActionToolbar', () => {
       }),
     );
 
-    expect(html).toContain('data-testid="action-group-Core"');
-    expect(html).toContain('data-testid="action-group-Special"');
+    expect(html).toContain('data-testid="action-group-core"');
+    expect(html).toContain('data-testid="action-group-special"');
   });
 
   it('does not render hint spans inside action buttons', () => {
@@ -271,7 +274,7 @@ describe('ActionToolbar', () => {
       onActionHoverEnd,
     });
 
-    const moveButton = findElementByTestId(tree, 'action-Core-move');
+    const moveButton = findElementByTestId(tree, 'action-core-move');
     expect(moveButton).not.toBeNull();
     if (moveButton === null) {
       throw new Error('Expected move button.');
@@ -293,7 +296,7 @@ describe('ActionToolbar', () => {
       onActionHoverEnd,
     });
 
-    const moveButton = findElementByTestId(tree, 'action-Core-move');
+    const moveButton = findElementByTestId(tree, 'action-core-move');
     expect(moveButton).not.toBeNull();
     if (moveButton === null || moveButton.props.onPointerEnter === undefined) {
       throw new Error('Expected move button with onPointerEnter.');
@@ -317,7 +320,7 @@ describe('ActionToolbar', () => {
       onActionHoverEnd,
     });
 
-    const moveButton = findElementByTestId(tree, 'action-Core-move');
+    const moveButton = findElementByTestId(tree, 'action-core-move');
     expect(moveButton).not.toBeNull();
     if (moveButton === null || moveButton.props.onPointerLeave === undefined) {
       throw new Error('Expected move button with onPointerLeave.');
@@ -335,7 +338,7 @@ describe('ActionToolbar', () => {
     });
 
     expect(tree).not.toBeNull();
-    const moveButton = findElementByTestId(tree, 'action-Core-move');
+    const moveButton = findElementByTestId(tree, 'action-core-move');
     expect(moveButton).not.toBeNull();
     if (moveButton === null) {
       throw new Error('Expected move button.');

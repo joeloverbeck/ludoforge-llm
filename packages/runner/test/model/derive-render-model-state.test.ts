@@ -776,10 +776,12 @@ describe('deriveRenderModel state metadata', () => {
 
     expect(model.actionGroups).toEqual([
       {
+        groupKey: 'ops',
         groupName: 'Ops',
         actions: [{ actionId: 'train-us', displayName: 'Train Us', isAvailable: true, actionClass: 'ops' }],
       },
       {
+        groupKey: 'Actions',
         groupName: 'Actions',
         actions: [{ actionId: 'pass', displayName: 'Pass', isAvailable: true }],
       },
@@ -1237,22 +1239,22 @@ describe('deriveRenderModel state metadata', () => {
       makeRenderContext(state.playerCount, asPlayerId(0), { legalMoveResult }),
     );
 
-    const groupNames = model.actionGroups.map((group) => group.groupName);
+    const groupKeys = model.actionGroups.map((group) => group.groupKey);
     // specialActivity moves should be filtered out entirely, not shown in any group
-    expect(groupNames).not.toContain('Special Activity');
+    expect(groupKeys).not.toContain('specialActivity');
     // Op+SA group should be synthesized from operation moves
-    expect(groupNames).toContain('Operation Plus Special Activity');
-    expect(groupNames).toContain('Operation');
+    expect(groupKeys).toContain('operationPlusSpecialActivity');
+    expect(groupKeys).toContain('operation');
 
     // Op+SA group should contain operations (train, patrol) but NOT advise
-    const opSaGroup = model.actionGroups.find((group) => group.groupName === 'Operation Plus Special Activity');
+    const opSaGroup = model.actionGroups.find((group) => group.groupKey === 'operationPlusSpecialActivity');
     const opSaActionIds = opSaGroup?.actions.map((action) => action.actionId) ?? [];
     expect(opSaActionIds).toContain('train');
     expect(opSaActionIds).toContain('patrol');
     expect(opSaActionIds).not.toContain('advise');
 
     // Operation group should contain train and patrol
-    const opGroup = model.actionGroups.find((group) => group.groupName === 'Operation');
+    const opGroup = model.actionGroups.find((group) => group.groupKey === 'operation');
     const opActionIds = opGroup?.actions.map((action) => action.actionId) ?? [];
     expect(opActionIds).toContain('train');
     expect(opActionIds).toContain('patrol');

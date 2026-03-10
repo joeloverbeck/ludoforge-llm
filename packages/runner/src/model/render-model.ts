@@ -174,6 +174,7 @@ export interface RenderPlayer {
 }
 
 export interface RenderActionGroup {
+  readonly groupKey: string;
   readonly groupName: string;
   readonly actions: readonly RenderAction[];
 }

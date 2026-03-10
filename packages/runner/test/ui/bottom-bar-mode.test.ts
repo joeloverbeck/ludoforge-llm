@@ -41,7 +41,7 @@ function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']
     phaseName: 'main',
     phaseDisplayName: 'Main',
     eventDecks: [],
-    actionGroups: [{ groupName: 'Core', actions: [{ actionId: 'pass', displayName: 'Pass', isAvailable: true }] }],
+    actionGroups: [{ groupKey: 'core', groupName: 'Core', actions: [{ actionId: 'pass', displayName: 'Pass', isAvailable: true }] }],
     choiceBreadcrumb: [],
     choiceContext: null,
     choiceUi: { kind: 'none' },

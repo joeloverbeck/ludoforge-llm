@@ -1,6 +1,6 @@
 # FITL-001: Narrow Pathet Lao ARVN Police redeploy to US/ARVN control
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None
@@ -13,8 +13,9 @@
 ## Assumption Reassessment (2026-03-10)
 
 1. Current production data for `card-58` routes ARVN Police through `fitl-space-coin-controlled` in `data/games/fire-in-the-lake/41-content-event-decks.md`.
-2. `reports/fire-in-the-lake-rules-section-6.md` section 6.4.2 confirms ARVN Police redeploy to LoCs or COIN Controlled spaces within South Vietnam, and the card-specific playbook clarification narrows `COIN` on this event to `US` or `ARVN`.
-3. The mismatch is in game data semantics, not in the agnostic engine. The correction belongs in FITL GameSpecDoc data, optionally with a new FITL macro if that is the cleanest reuse point.
+2. `reports/fire-in-the-lake-rules-section-6.md` section 6.4.2 confirms the baseline redeploy destinations for ARVN Police: South Vietnam LoCs or COIN Controlled spaces. No repo-local playbook artifact currently documents the narrower `US`/`ARVN`-only interpretation for `card-58`, so this ticket should record that interpretation explicitly rather than implying an existing repository citation.
+3. Existing integration coverage in `packages/engine/test/integration/fitl-events-pathet-lao.test.ts` already proves most shaded redeploy behavior, including legal LoC and ARVN-Troop destination handling. The missing regression is the negative case where ARVN Police are incorrectly allowed into a South Vietnam space controlled only by `VC`.
+4. The mismatch is in FITL game data semantics, not in the agnostic engine. The correction belongs in FITL GameSpecDoc data, optionally with a new FITL macro if that is the cleanest reuse point.
 
 ## Architecture Check
 
@@ -34,7 +35,7 @@ Replace the current `fitl-space-coin-controlled` usage for ARVN Police destinati
 
 ### 3. Add rule-accurate regression coverage
 
-Add a test proving ARVN Police cannot redeploy into a South Vietnam space controlled only by `VC`, while still being able to redeploy to:
+Strengthen the existing `fitl-events-pathet-lao` integration coverage with a regression proving ARVN Police cannot redeploy into a South Vietnam space controlled only by `VC`, while still being able to redeploy to:
 - a South Vietnam LoC
 - a South Vietnam space controlled by `US`/`ARVN`
 
@@ -67,10 +68,17 @@ Add a test proving ARVN Police cannot redeploy into a South Vietnam space contro
 
 ### New/Modified Tests
 
-1. `packages/engine/test/integration/fitl-events-pathet-lao.test.ts` — add a negative case for VC-only-controlled police destinations and positive cases for LoC / US-ARVN-controlled destinations.
+1. `packages/engine/test/integration/fitl-events-pathet-lao.test.ts` — extend the existing shaded redeploy test to assert that VC-only-controlled South Vietnam spaces are not offered as ARVN Police destinations while LoCs and US/ARVN-controlled spaces remain legal.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build`
 2. `node dist/test/integration/fitl-events-pathet-lao.test.js`
 3. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+- Completion date: 2026-03-10
+- What actually changed: Added FITL macro `fitl-space-us-arvn-controlled`, switched `card-58` shaded ARVN Police redeploy destinations to that narrower predicate, and strengthened the existing Pathet Lao integration test to assert that VC-only-controlled South Vietnam spaces are not offered as police destinations while LoCs and US/ARVN-controlled spaces remain legal.
+- Deviations from original plan: Reused and extended the existing shaded redeploy test instead of adding a separate case for each positive destination class, because the file already covered the legal LoC and US/ARVN-controlled paths. Also corrected the ticket to reflect that the repo lacked a local playbook artifact for the card-specific clarification.
+- Verification results: `pnpm -F @ludoforge/engine build`, `node --test packages/engine/dist/test/integration/fitl-events-pathet-lao.test.js`, `pnpm -F @ludoforge/engine test`, `pnpm turbo lint`, and `pnpm run check:ticket-deps` all passed.

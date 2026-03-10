@@ -27,6 +27,7 @@ const SOUTHERN_LAOS = 'southern-laos:none';
 const NORTHEAST_CAMBODIA = 'northeast-cambodia:none';
 const SAIGON = 'saigon:none';
 const QUANG_NAM = 'quang-nam:none';
+const QUANG_TRI_THUA_THIEN = 'quang-tri-thua-thien:none';
 const HUE_DA_NANG_LOC = 'loc-hue-da-nang:none';
 
 const makeToken = (
@@ -286,6 +287,10 @@ describe('FITL card-58 Pathet Lao', () => {
           makeToken('us-b-quang-nam', 'base', 'US'),
           makeToken('nva-t-quang-nam', 'troops', 'NVA'),
         ],
+        [QUANG_TRI_THUA_THIEN]: [
+          makeToken('vc-g-quang-tri-1', 'guerrilla', 'VC', { activity: 'active' }),
+          makeToken('vc-g-quang-tri-2', 'guerrilla', 'VC', { activity: 'underground' }),
+        ],
         [SAIGON]: [
           makeToken('nva-t-saigon', 'troops', 'NVA'),
         ],
@@ -296,6 +301,7 @@ describe('FITL card-58 Pathet Lao', () => {
     assert.notEqual(move, undefined, 'Expected Pathet Lao shaded move');
 
     let usDestinationDecisions = 0;
+    let policeDestinationOptions: string[] = [];
     const overrides: DecisionOverrideRule[] = [
       {
         when: (request) =>
@@ -316,7 +322,10 @@ describe('FITL card-58 Pathet Lao', () => {
         when: (request) =>
           (request.name.includes('pathetLaoArvnPoliceDestination') || request.decisionId.includes('pathetLaoArvnPoliceDestination'))
           && request.options.some((option) => option.value === HUE_DA_NANG_LOC),
-        value: HUE_DA_NANG_LOC,
+        value: (request) => {
+          policeDestinationOptions = request.options.map((option) => String(option.value));
+          return HUE_DA_NANG_LOC;
+        },
       },
     ];
 
@@ -324,6 +333,13 @@ describe('FITL card-58 Pathet Lao', () => {
 
     assert.equal(final.globalVars.trail, 1, 'Trail should not improve when Laos contains COIN cubes');
 
+    assert.equal(policeDestinationOptions.includes(HUE_DA_NANG_LOC), true, 'ARVN Police should still be able to redeploy to a South Vietnam LoC');
+    assert.equal(policeDestinationOptions.includes(QUANG_NAM), true, 'ARVN Police should still be able to redeploy to a US/ARVN-controlled South Vietnam space');
+    assert.equal(
+      policeDestinationOptions.includes(QUANG_TRI_THUA_THIEN),
+      false,
+      'ARVN Police must not be offered South Vietnam spaces controlled only by VC',
+    );
     assert.equal(countFactionType(final, HUE_DA_NANG_LOC, 'US', 'troops'), 1, 'US troops may redeploy to a South Vietnam LoC');
     assert.equal(zoneHas(final, QUANG_NAM, 'arvn-t-laos'), true, 'ARVN troops may redeploy to a South Vietnam space with a COIN base');
     assert.equal(zoneHas(final, HUE_DA_NANG_LOC, 'arvn-p-laos'), true, 'ARVN police may redeploy to a South Vietnam LoC');

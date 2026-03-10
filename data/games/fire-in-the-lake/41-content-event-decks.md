@@ -9019,7 +9019,7 @@ eventDecks:
                                                       zone: $zone
                                                       prop: category
                                                     right: loc
-                                                  - conditionMacro: fitl-space-coin-controlled
+                                                  - conditionMacro: fitl-space-us-arvn-controlled
                                                     args:
                                                       spaceExpr: $zone
                                     - moveToken:

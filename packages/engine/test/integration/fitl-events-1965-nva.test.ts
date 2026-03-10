@@ -205,4 +205,28 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
     assert.equal((card?.shaded?.effects?.[0] as { chooseN?: { bind?: string } } | undefined)?.chooseN?.bind, '$nvaTroopsToPlace');
     assert.equal(typeof (card?.shaded?.effects?.[1] as { forEach?: unknown } | undefined)?.forEach, 'object');
   });
+
+  it('encodes card 53 (Sappers) with South Vietnam troop-removal targeting, remain-eligible, and province-only base removal routing', () => {
+    const { parsed, compiled } = compileProductionSpec();
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-53');
+    assert.notEqual(card, undefined);
+
+    assert.equal(card?.unshaded?.text, 'Remove 2 NVA Troops each from up to 3 spaces in South Vietnam. Remain Eligible.');
+    assert.equal(card?.shaded?.text, 'Remove up to 1 US and 2 ARVN Bases from any Provinces (US to Casualties).');
+    assert.deepEqual(card?.unshaded?.eligibilityOverrides, [
+      { target: { kind: 'active' }, eligible: true, windowId: 'remain-eligible' },
+    ]);
+    assert.equal((card?.unshaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 3);
+    assert.equal(card?.unshaded?.targets?.[0]?.application, 'each');
+    assert.equal(
+      (card?.unshaded?.targets?.[0]?.effects?.[0] as { removeByPriority?: { budget?: unknown } } | undefined)?.removeByPriority?.budget,
+      2,
+    );
+    assert.equal((card?.shaded?.effects?.[0] as { chooseN?: { max?: unknown } } | undefined)?.chooseN?.max, 1);
+    assert.equal((card?.shaded?.effects?.[1] as { chooseN?: { max?: unknown } } | undefined)?.chooseN?.max, 2);
+  });
 });

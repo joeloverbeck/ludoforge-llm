@@ -10100,100 +10100,139 @@ eventDecks:
             - ARVN
           flavorText: Shock teams probe base perimeters.
         unshaded:
-          text: Remove a COIN Base and up to 2 Troops from one selected space.
+          text: Remove 2 NVA Troops each from up to 3 spaces in South Vietnam. Remain Eligible.
+          eligibilityOverrides:
+            - target:
+                kind: active
+              eligible: true
+              windowId: remain-eligible
           targets:
-            - id: $targetSpace
+            - id: $targetSouthVietnamSpace
               selector:
                 query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - op: ==
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: country
+                      right: southVietnam
+                    - op: ">"
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  op: eq
+                                  value: NVA
+                                - prop: type
+                                  op: eq
+                                  value: troops
+                      right: 0
               cardinality:
-                max: 1
-              application: aggregate
+                max: 3
+              application: each
               effects:
                 - removeByPriority:
-                    budget: 3
+                    budget: 2
                     groups:
-                      - bind: $coinBase
+                      - bind: $nvaTroop
                         over:
                           query: tokensInZone
-                          zone: $targetSpace
+                          zone: $targetSouthVietnamSpace
                           filter:
                             op: and
                             args:
                               - prop: faction
-                                op: in
-                                value:
-                                  - US
-                                  - ARVN
-                              - prop: type
                                 op: eq
-                                value: base
-                        to:
-                          zoneExpr:
-                            concat:
-                              - available-
-                              - ref: tokenProp
-                                token: $coinBase
-                                prop: faction
-                              - :none
-                      - bind: $coinTroop
-                        over:
-                          query: tokensInZone
-                          zone: $targetSpace
-                          filter:
-                            op: and
-                            args:
-                              - prop: faction
-                                op: in
-                                value:
-                                  - US
-                                  - ARVN
+                                value: NVA
                               - prop: type
                                 op: eq
                                 value: troops
                         to:
-                          zoneExpr:
-                            concat:
-                              - available-
-                              - ref: tokenProp
-                                token: $coinTroop
-                                prop: faction
-                              - :none
+                          zoneExpr: available-NVA:none
         shaded:
-          text: Remove 3 NVA/VC Guerrillas from one selected space.
-          targets:
-            - id: $targetSpace
-              selector:
-                query: mapSpaces
-              cardinality:
+          text: Remove up to 1 US and 2 ARVN Bases from any Provinces (US to Casualties).
+          effects:
+            - chooseN:
+                bind: $usBasesToRemove
+                options:
+                  query: tokensInMapSpaces
+                  spaceFilter:
+                    op: ==
+                    left:
+                      ref: zoneProp
+                      zone: $zone
+                      prop: category
+                    right: province
+                  filter:
+                    op: and
+                    args:
+                      - prop: faction
+                        op: eq
+                        value: US
+                      - prop: type
+                        op: eq
+                        value: base
+                min: 0
                 max: 1
-              application: aggregate
-              effects:
-                - removeByPriority:
-                    budget: 3
-                    groups:
-                      - bind: $insurgentGuerrilla
-                        over:
-                          query: tokensInZone
-                          zone: $targetSpace
-                          filter:
-                            op: and
-                            args:
-                              - prop: faction
-                                op: in
-                                value:
-                                  - NVA
-                                  - VC
-                              - prop: type
-                                op: eq
-                                value: guerrilla
-                        to:
-                          zoneExpr:
-                            concat:
-                              - available-
-                              - ref: tokenProp
-                                token: $insurgentGuerrilla
-                                prop: faction
-                              - :none
+            - chooseN:
+                bind: $arvnBasesToRemove
+                options:
+                  query: tokensInMapSpaces
+                  spaceFilter:
+                    op: ==
+                    left:
+                      ref: zoneProp
+                      zone: $zone
+                      prop: category
+                    right: province
+                  filter:
+                    op: and
+                    args:
+                      - prop: faction
+                        op: eq
+                        value: ARVN
+                      - prop: type
+                        op: eq
+                        value: base
+                min: 0
+                max: 2
+            - forEach:
+                bind: $usBase
+                over:
+                  query: binding
+                  name: $usBasesToRemove
+                effects:
+                  - moveToken:
+                      token: $usBase
+                      from:
+                        zoneExpr:
+                          ref: tokenZone
+                          token: $usBase
+                      to:
+                        zoneExpr: casualties-US:none
+            - forEach:
+                bind: $arvnBase
+                over:
+                  query: binding
+                  name: $arvnBasesToRemove
+                effects:
+                  - moveToken:
+                      token: $arvnBase
+                      from:
+                        zoneExpr:
+                          ref: tokenZone
+                          token: $arvnBase
+                      to:
+                        zoneExpr: available-ARVN:none
       - id: card-56
         title: Vo Nguyen Giap
         sideMode: dual

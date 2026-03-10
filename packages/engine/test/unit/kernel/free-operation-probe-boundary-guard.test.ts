@@ -54,10 +54,52 @@ describe('free-operation probe boundary architecture guard', () => {
     const source = readKernelSource('src/kernel/free-operation-viability.ts');
     const sourceFile = parseTypeScriptSource(source, 'free-operation-viability.ts');
 
+    const sharedImports = collectNamedImportsByLocalName(sourceFile, './free-operation-grant-bindings.js');
+    assert.equal(
+      sharedImports.get('collectGrantAwareMoveZoneCandidates'),
+      'collectGrantAwareMoveZoneCandidates',
+      'free-operation-viability.ts must consume canonical grant-aware zone-candidate helper through the neutral bindings module',
+    );
+
     assert.equal(
       hasImportWithModuleSubstring(sourceFile, './free-operation-grant-authorization.js'),
       false,
       'free-operation-viability.ts must not import free-operation-grant-authorization.ts directly',
+    );
+  });
+
+  it('keeps authorization on the same neutral grant-binding helper', () => {
+    const source = readKernelSource('src/kernel/free-operation-grant-authorization.ts');
+    const sourceFile = parseTypeScriptSource(source, 'free-operation-grant-authorization.ts');
+    const sharedImports = collectNamedImportsByLocalName(sourceFile, './free-operation-grant-bindings.js');
+
+    assert.equal(
+      sharedImports.get('collectGrantAwareMoveZoneCandidates'),
+      'collectGrantAwareMoveZoneCandidates',
+      'free-operation-grant-authorization.ts must use the neutral grant-binding helper for zone candidates',
+    );
+    assert.equal(
+      sharedImports.get('resolveGrantAwareMoveRuntimeBindings'),
+      'resolveGrantAwareMoveRuntimeBindings',
+      'free-operation-grant-authorization.ts must use the neutral grant-binding helper for canonical bindings',
+    );
+  });
+
+  it('keeps legal-moves free-operation seeding on shared grant helpers instead of local grant semantics', () => {
+    const source = readKernelSource('src/kernel/legal-moves.ts');
+    const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');
+    const bindingImports = collectNamedImportsByLocalName(sourceFile, './free-operation-grant-bindings.js');
+    const overlayImports = collectNamedImportsByLocalName(sourceFile, './free-operation-preflight-overlay.js');
+
+    assert.equal(
+      bindingImports.get('resolvePendingFreeOperationGrantExecutionPlayer'),
+      'resolvePendingFreeOperationGrantExecutionPlayer',
+      'legal-moves.ts must resolve grant execution players through the shared free-operation grant bindings helper',
+    );
+    assert.equal(
+      overlayImports.get('buildFreeOperationPreflightOverlay'),
+      'buildFreeOperationPreflightOverlay',
+      'legal-moves.ts must build grant preflight overlays through the shared free-operation overlay helper',
     );
   });
 });

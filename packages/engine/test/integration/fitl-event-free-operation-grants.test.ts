@@ -1088,6 +1088,140 @@ phase: [asPhaseId('main')],
     ],
   }) as unknown as GameDef;
 
+const createExecuteAsSeatZoneBindingDef = (): GameDef =>
+  ({
+    metadata: { id: 'event-free-op-execute-as-zone-binding-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+    seats: [{ id: 'US' }, { id: 'ARVN' }],
+    constants: {},
+    globalVars: [],
+    perPlayerVars: [],
+    zones: [
+      {
+        id: 'boardCambodia:none',
+        owner: 'none',
+        visibility: 'public',
+        ordering: 'set',
+        category: 'province',
+        attributes: { population: 1, econ: 0, country: 'cambodia', coastal: false },
+      },
+      {
+        id: 'boardVietnam:none',
+        owner: 'none',
+        visibility: 'public',
+        ordering: 'set',
+        category: 'province',
+        attributes: { population: 1, econ: 0, country: 'southVietnam', coastal: false },
+      },
+    ],
+    tokenTypes: [],
+    setup: [],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    turnOrder: {
+      type: 'cardDriven',
+      config: {
+        turnFlow: {
+          cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          eligibility: { seats: ['US', 'ARVN'] },
+          windows: [],
+          optionMatrix: [{ first: 'event', second: ['operation'] }],
+          passRewards: [],
+          freeOperationActionIds: ['operation'],
+          durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+        },
+      },
+    },
+    actions: [
+      {
+        id: asActionId('event'),
+        capabilities: ['cardEvent'],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [
+          { name: 'eventCardId', domain: { query: 'enums', values: ['card-execute-as-zone-binding'] } },
+          { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
+          { name: 'branch', domain: { query: 'enums', values: ['none'] } },
+        ],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+      {
+        id: asActionId('operation'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+    ],
+    actionPipelines: [
+      {
+        id: 'operation-execute-as-zone-binding',
+        actionId: asActionId('operation'),
+        applicability: { op: '==', left: { ref: 'activePlayer' }, right: 0 },
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [
+          {
+            effects: [
+              {
+                chooseOne: {
+                  internalDecisionId: 'decision:$candidateZone',
+                  bind: '$grantZone',
+                  options: { query: 'zones' },
+                },
+              },
+            ],
+          },
+        ],
+        atomicity: 'partial',
+      },
+    ],
+    triggers: [],
+    terminal: { conditions: [] },
+    eventDecks: [
+      {
+        id: 'event-deck',
+        drawZone: 'deck:none',
+        discardZone: 'played:none',
+        cards: [
+          {
+            id: 'card-execute-as-zone-binding',
+            title: 'Execute As Zone Binding',
+            sideMode: 'single',
+            unshaded: {
+              text: 'ARVN gets a US-profile free operation that must target Cambodia.',
+              freeOperationGrants: [
+                {
+                  seat: 'ARVN',
+                  executeAsSeat: 'US',
+                  sequence: { batch: 'execute-as-zone-binding', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  viabilityPolicy: 'requireUsableAtIssue',
+                  moveZoneBindings: ['$grantZone'],
+                  zoneFilter: {
+                    op: '==',
+                    left: { ref: 'zoneProp', zone: '$grantZone', prop: 'country' },
+                    right: 'cambodia',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      } as EventDeckDef,
+    ],
+  }) as unknown as GameDef;
+
+
 const createGrantViabilityPolicyDef = (): GameDef =>
   ({
     metadata: { id: 'event-free-op-viability-policy-int', players: { min: 3, max: 3 }, maxTriggerDepth: 8 },
@@ -2375,6 +2509,40 @@ describe('event free-operation grants integration', () => {
     const second = applyMove(def, first, { actionId: asActionId('airStrike'), params: {}, freeOperation: true }).state;
     assert.equal(second.globalVars.executeAsMarker, 300);
     assert.deepEqual(requireCardDrivenRuntime(second).pendingFreeOperationGrants ?? [], []);
+  });
+
+  it('keeps requireUsableAtIssue executeAsSeat grants usable when moveZoneBindings depend on the overridden profile', () => {
+    const def = createExecuteAsSeatZoneBindingDef();
+    const start = initialState(def, 335, 2).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-execute-as-zone-binding', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const runtime = requireCardDrivenRuntime(afterEvent);
+    assert.equal(runtime.pendingFreeOperationGrants?.length, 1);
+
+    const freeMoves = legalMoves(def, afterEvent).filter(
+      (move) => String(move.actionId) === 'operation' && move.freeOperation === true,
+    );
+    assert.equal(freeMoves.length, 1);
+
+    assert.throws(
+      () => applyMove(def, afterEvent, {
+        actionId: asActionId('operation'),
+        params: { 'decision:$candidateZone': 'boardVietnam:none' },
+        freeOperation: true,
+      }),
+      (error: unknown) => assertFreeOperationDenial(error, 'zoneFilterMismatch'),
+    );
+
+    const afterFreeOperation = applyMove(def, afterEvent, {
+      actionId: asActionId('operation'),
+      params: { 'decision:$candidateZone': 'boardCambodia:none' },
+      freeOperation: true,
+    }).state;
+    assert.deepEqual(requireCardDrivenRuntime(afterFreeOperation).pendingFreeOperationGrants ?? [], []);
   });
 
   it('allows monsoon-restricted free operations only when the applicable grant explicitly allows monsoon execution', () => {

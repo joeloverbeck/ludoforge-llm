@@ -4,6 +4,7 @@ import { resolveActionApplicabilityPreflight } from './action-applicability-pref
 import { resolveDeclaredActionParamDomainOptions } from './declared-action-param-domain.js';
 import type { EvalContext, EvalRuntimeResources } from './eval-context.js';
 import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
+import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import { isMoveDecisionSequenceAdmittedForLegalMove } from './move-decision-sequence.js';
 import {
   applyPendingFreeOperationVariants,
@@ -16,6 +17,7 @@ import {
   isPendingFreeOperationGrantSequenceReady,
 } from './free-operation-grant-authorization.js';
 import { resolveTurnFlowDefaultFreeOperationActionDomain } from './free-operation-action-domain.js';
+import { resolvePendingFreeOperationGrantExecutionPlayer } from './free-operation-grant-bindings.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import type { TurnFlowActionClass } from './types-turn-flow.js';
 import { shouldEnumerateLegalMoveForOutcome } from './legality-outcome.js';
@@ -37,8 +39,7 @@ import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import type { FreeOperationExecutionOverlay } from './free-operation-overlay.js';
 import { kernelRuntimeError } from './runtime-error.js';
-import { asPlayerId } from './branded.js';
-import { createSeatResolutionContext, resolvePlayerIndexForTurnFlowSeat } from './seat-resolution.js';
+import { createSeatResolutionContext } from './seat-resolution.js';
 import { requireCardDrivenActiveSeat, validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { findPhaseDef } from './phase-lookup.js';
@@ -51,7 +52,6 @@ import type {
   MoveParamValue,
   PhaseDef,
   RuntimeWarning,
-  TurnFlowPendingFreeOperationGrant,
 } from './types.js';
 
 export interface LegalMoveEnumerationOptions {
@@ -379,15 +379,6 @@ function enumerateParams(
   }
 }
 
-function resolveGrantExecutionPlayer(
-  grant: TurnFlowPendingFreeOperationGrant,
-  seatResolution: ReturnType<typeof createSeatResolutionContext>,
-): GameState['activePlayer'] | null {
-  const executionSeat = grant.executeAsSeat ?? grant.seat;
-  const playerIndex = resolvePlayerIndexForTurnFlowSeat(executionSeat, seatResolution.index);
-  return playerIndex === null ? null : asPlayerId(playerIndex);
-}
-
 function enumeratePendingFreeOperationMoves(
   def: GameDef,
   state: GameState,
@@ -427,8 +418,8 @@ function enumeratePendingFreeOperationMoves(
   const defaultActionDomain = resolveTurnFlowDefaultFreeOperationActionDomain(def);
 
   for (const grant of readyGrants) {
-    const executionPlayer = resolveGrantExecutionPlayer(grant, seatResolution);
-    if (executionPlayer === null) {
+    const executionPlayer = resolvePendingFreeOperationGrantExecutionPlayer(def, state, grant);
+    if (executionPlayer === undefined) {
       continue;
     }
 
@@ -445,6 +436,16 @@ function enumeratePendingFreeOperationMoves(
       }
 
       const hasActionPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
+      const freeOperationPreflightOverlay = buildFreeOperationPreflightOverlay(
+        {
+          executionPlayer,
+          ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
+          ...(grant.executionContext === undefined ? {} : { executionContext: grant.executionContext }),
+        },
+        { actionId: action.id, params: {} },
+        'turnFlowEligibility',
+        { skipPhaseCheck: false },
+      );
       const preflight = resolveActionApplicabilityPreflight({
         def,
         state,
@@ -456,15 +457,7 @@ function enumeratePendingFreeOperationMoves(
         evalRuntimeResources,
         skipExecutorCheck: !hasActionPipeline,
         skipPipelineDispatch: !hasActionPipeline,
-        executionPlayerOverride: executionPlayer,
-        ...((grant.zoneFilter === undefined && grant.executionContext === undefined)
-          ? {}
-          : {
-              freeOperationOverlay: {
-                ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
-                ...(grant.executionContext === undefined ? {} : { grantContext: grant.executionContext }),
-              },
-            }),
+        ...freeOperationPreflightOverlay,
       });
       if (preflight.kind === 'notApplicable') {
         continue;
@@ -492,15 +485,7 @@ function enumeratePendingFreeOperationMoves(
         currentPhaseDef,
         {
           ...(preflight.pipelineDispatch.kind === 'matched' ? { pipeline: preflight.pipelineDispatch.profile } : {}),
-          executionPlayerOverride: executionPlayer,
-          ...((grant.zoneFilter === undefined && grant.executionContext === undefined)
-            ? {}
-            : {
-                freeOperationOverlay: {
-                  ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
-                  ...(grant.executionContext === undefined ? {} : { grantContext: grant.executionContext }),
-                },
-              }),
+          ...freeOperationPreflightOverlay,
           moveOverrides: { freeOperation: true },
         },
       );

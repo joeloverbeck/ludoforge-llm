@@ -1,11 +1,13 @@
 import { asZoneId } from './branded.js';
 import { compareTurnFlowFreeOperationGrantPriority, isTurnFlowActionClass } from '../contracts/index.js';
-import { findActionById } from './action-capabilities.js';
-import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { createCollector } from './execution-collector.js';
 import { evalCondition } from './eval-condition.js';
 import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
 import { resolveGrantFreeOperationActionDomain } from './free-operation-action-domain.js';
+import {
+  collectGrantAwareMoveZoneCandidates,
+  resolveGrantAwareMoveRuntimeBindings,
+} from './free-operation-grant-bindings.js';
 import { pendingFreeOperationGrantEquivalenceKey } from './free-operation-grant-overlap.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
@@ -13,10 +15,8 @@ import {
   collectFreeOperationZoneFilterProbeRebindableAliases,
   evaluateFreeOperationZoneFilterProbe,
 } from './free-operation-zone-filter-probe.js';
-import { buildMoveRuntimeBindings, resolvePipelineDecisionBindingsForMove } from './move-runtime-bindings.js';
 import { shouldDeferFreeOperationZoneFilterFailure } from './missing-binding-policy.js';
 import { kernelRuntimeError } from './runtime-error.js';
-import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
 import type {
@@ -96,109 +96,24 @@ const doesGrantApplyToMove = (
   isGrantOperationClassCompatible(grant.operationClass, moveOperationClass(def, move)) &&
   grantActionIds(def, grant).includes(String(move.actionId));
 
-const buildActionAwareMoveRuntimeBindings = (
-  def: GameDef,
-  state: GameState,
-  move: Move,
-): Readonly<Record<string, unknown>> => {
-  const baseBindings = buildMoveRuntimeBindings(move);
-  const action = findActionById(def, move.actionId);
-  if (action === undefined) {
-    return baseBindings;
-  }
-
-  const preflight = resolveActionApplicabilityPreflight({
-    def,
-    state,
-    action,
-    adjacencyGraph: buildAdjacencyGraph(def.zones),
-    runtimeTableIndex: buildRuntimeTableIndex(def),
-    decisionPlayer: state.activePlayer,
-    bindings: baseBindings,
-    evalRuntimeResources: createEvalRuntimeResources(),
-    skipPhaseCheck: true,
-  });
-  if (preflight.kind !== 'applicable' || preflight.pipelineDispatch.kind !== 'matched') {
-    return baseBindings;
-  }
-
-  return buildMoveRuntimeBindings(
-    move,
-    resolvePipelineDecisionBindingsForMove(preflight.pipelineDispatch.profile, move.params),
-  );
-};
-
-export const collectMoveZoneCandidates = (def: GameDef, move: Move): readonly string[] => {
-  const zoneIdSet = new Set(def.zones.map((zone) => String(zone.id)));
-  const candidates = new Set<string>();
-  const collectFromValue = (paramValue: unknown): void => {
-    if (typeof paramValue === 'string' && zoneIdSet.has(paramValue)) {
-      candidates.add(paramValue);
-      return;
-    }
-    if (Array.isArray(paramValue)) {
-      for (const item of paramValue) {
-        if (typeof item === 'string' && zoneIdSet.has(item)) {
-          candidates.add(item);
-        }
-      }
-    }
-  };
-  for (const paramValue of Object.values(move.params)) {
-    collectFromValue(paramValue);
-  }
-  return [...candidates];
-};
-
 export const collectGrantMoveZoneCandidates = (
   def: GameDef,
   state: GameState,
   move: Move,
-  grant: Pick<TurnFlowPendingFreeOperationGrant, 'moveZoneBindings'>,
-): readonly string[] => {
-  if (grant.moveZoneBindings === undefined || grant.moveZoneBindings.length === 0) {
-    return collectMoveZoneCandidates(def, move);
-  }
-  const zoneIdSet = new Set(def.zones.map((zone) => String(zone.id)));
-  const bindings = buildActionAwareMoveRuntimeBindings(def, state, move);
-  const candidates = new Set<string>();
-  const collectFromValue = (value: unknown): void => {
-    if (typeof value === 'string' && zoneIdSet.has(value)) {
-      candidates.add(value);
-      return;
-    }
-    if (Array.isArray(value)) {
-      for (const item of value) {
-        if (typeof item === 'string' && zoneIdSet.has(item)) {
-          candidates.add(item);
-        }
-      }
-    }
-  };
-  for (const bindingName of grant.moveZoneBindings) {
-    for (const [candidateBindingName, value] of Object.entries(bindings)) {
-      if (
-        candidateBindingName === bindingName
-        || candidateBindingName.startsWith(`${bindingName}@`)
-      ) {
-        collectFromValue(value);
-      }
-    }
-  }
-  return [...candidates];
-};
+  grant: Pick<TurnFlowPendingFreeOperationGrant, 'seat' | 'executeAsSeat' | 'executionContext' | 'moveZoneBindings'>,
+): readonly string[] =>
+  collectGrantAwareMoveZoneCandidates(def, state, move, grant);
 
 export const collectGrantMoveZoneProbeCandidates = (
   def: GameDef,
   state: GameState,
   move: Move,
-  grant: Pick<TurnFlowPendingFreeOperationGrant, 'moveZoneBindings' | 'moveZoneProbeBindings'>,
+  grant: Pick<
+    TurnFlowPendingFreeOperationGrant,
+    'seat' | 'executeAsSeat' | 'executionContext' | 'moveZoneBindings' | 'moveZoneProbeBindings'
+  >,
 ): readonly string[] =>
-  grant.moveZoneProbeBindings === undefined
-    ? collectGrantMoveZoneCandidates(def, state, move, grant)
-    : collectGrantMoveZoneCandidates(def, state, move, {
-      moveZoneBindings: grant.moveZoneProbeBindings,
-    });
+  collectGrantAwareMoveZoneCandidates(def, state, move, grant, { useProbeBindings: true });
 
 const doesGrantSatisfySequenceContext = (
   def: GameDef,
@@ -236,14 +151,14 @@ export const evaluateZoneFilterForMove = (
   def: GameDef,
   state: GameState,
   move: Move,
-  grant: Pick<TurnFlowPendingFreeOperationGrant, 'moveZoneBindings' | 'executionContext'>,
+  grant: Pick<TurnFlowPendingFreeOperationGrant, 'seat' | 'executeAsSeat' | 'executionContext' | 'moveZoneBindings'>,
   zoneFilter: ConditionAST,
   surface: FreeOperationZoneFilterSurface,
 ): boolean => {
   const shouldDeferZoneFilterFailure = (cause: unknown): boolean =>
     shouldDeferFreeOperationZoneFilterFailure(surface, cause);
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
-  const baseBindings = buildActionAwareMoveRuntimeBindings(def, state, move);
+  const baseBindings = resolveGrantAwareMoveRuntimeBindings(def, state, move, grant);
   const rebindableAliases = collectFreeOperationZoneFilterProbeRebindableAliases(zoneFilter);
   const zones = collectGrantMoveZoneCandidates(def, state, move, grant);
   if (zones.length === 0) {

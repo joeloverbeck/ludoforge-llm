@@ -25,6 +25,9 @@ export const buildFreeOperationPreflightOverlay = (
   analysis: FreeOperationPreflightOverlayInput | null | undefined,
   move: Pick<Move, 'actionId' | 'params'>,
   surface: FreeOperationZoneFilterSurface,
+  options?: {
+    readonly skipPhaseCheck?: boolean;
+  },
 ): FreeOperationPreflightOverlay => {
   if (analysis === null || analysis === undefined) {
     return {};
@@ -32,7 +35,7 @@ export const buildFreeOperationPreflightOverlay = (
 
   return {
     executionPlayerOverride: analysis.executionPlayer,
-    skipPhaseCheck: true,
+    ...(options?.skipPhaseCheck === false ? {} : { skipPhaseCheck: true }),
     ...((analysis.zoneFilter === undefined && analysis.executionContext === undefined)
       ? {}
       : {

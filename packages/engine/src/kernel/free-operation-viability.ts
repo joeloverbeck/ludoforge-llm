@@ -10,6 +10,7 @@ import { createEvalRuntimeResources, type EvalContext } from './eval-context.js'
 import { createExecutionEffectContext } from './effect-context.js';
 import { applyEffects } from './effects.js';
 import { isEffectRuntimeReason } from './effect-error.js';
+import { collectGrantAwareMoveZoneCandidates } from './free-operation-grant-bindings.js';
 import {
   resolveMoveDecisionSequence,
   type ResolveMoveDecisionSequenceResult,
@@ -208,46 +209,6 @@ const STRICT_FREE_OPERATION_PROBE_BUDGETS = {
   maxDecisionProbeSteps: 4_096,
 } as const;
 
-const collectProbeMoveZoneCandidates = (
-  def: GameDef,
-  move: Move,
-  probeGrant: Pick<TurnFlowPendingFreeOperationGrant, 'moveZoneBindings' | 'moveZoneProbeBindings'>,
-): readonly string[] => {
-  const configuredBindings = probeGrant.moveZoneProbeBindings ?? probeGrant.moveZoneBindings;
-  const zoneIdSet = new Set(def.zones.map((zone) => String(zone.id)));
-  const bindings = buildMoveRuntimeBindings(move);
-  const candidates = new Set<string>();
-  const collectFromValue = (value: unknown): void => {
-    if (typeof value === 'string' && zoneIdSet.has(value)) {
-      candidates.add(value);
-      return;
-    }
-    if (Array.isArray(value)) {
-      for (const item of value) {
-        if (typeof item === 'string' && zoneIdSet.has(item)) {
-          candidates.add(item);
-        }
-      }
-    }
-  };
-
-  if (configuredBindings === undefined || configuredBindings.length === 0) {
-    for (const value of Object.values(move.params)) {
-      collectFromValue(value);
-    }
-    return [...candidates];
-  }
-
-  for (const bindingName of configuredBindings) {
-    for (const [candidateBindingName, value] of Object.entries(bindings)) {
-      if (candidateBindingName === bindingName || candidateBindingName.startsWith(`${bindingName}@`)) {
-        collectFromValue(value);
-      }
-    }
-  }
-  return [...candidates];
-};
-
 const rankProbeOptionValue = (
   state: GameState,
   value: MoveParamValue,
@@ -284,7 +245,9 @@ const selectableDecisionValues = (
       },
       freeOperation: true,
     };
-    const probeZones = collectProbeMoveZoneCandidates(def, fauxMove, probeGrant);
+    const probeZones = collectGrantAwareMoveZoneCandidates(def, state, fauxMove, probeGrant, {
+      useProbeBindings: true,
+    });
     if (probeZones.length > 0) {
       return probeZones.reduce((score, zoneId) => score + (state.zones[zoneId]?.length ?? 0), 0);
     }

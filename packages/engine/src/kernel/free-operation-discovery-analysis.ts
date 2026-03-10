@@ -2,6 +2,7 @@ import { asPlayerId } from './branded.js';
 import type { FreeOperationBlockExplanation } from './free-operation-denial-contract.js';
 import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
 import {
+  doesGrantPotentiallyAuthorizeMove,
   doesGrantRequireSequenceContextMatch,
   evaluateZoneFilterForMove,
   grantActionIds,
@@ -305,14 +306,20 @@ export const isFreeOperationAllowedDuringMonsoonForMove = (
   if (move.freeOperation !== true) {
     return false;
   }
-  const analysis = analyzeFreeOperationGrantMatch(def, state, move, seatResolution, {
-    evaluateZoneFilters: true,
-    zoneFilterErrorSurface: options?.zoneFilterErrorSurface ?? 'turnFlowEligibility',
-  });
-  if (analysis === null) {
+  if (state.turnOrderState.type !== 'cardDriven') {
     return false;
   }
-  return analysis.zoneMatchedGrants.some((grant) => grant.allowDuringMonsoon === true);
+  const activeSeat = requireCardDrivenActiveSeat(
+    def,
+    state,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_MATCH_EVALUATION,
+    seatResolution,
+  );
+  const pending = state.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
+  return pending.some((grant) =>
+    grant.seat === activeSeat
+    && grant.allowDuringMonsoon === true
+    && doesGrantPotentiallyAuthorizeMove(def, state, pending, grant, move));
 };
 
 export const isFreeOperationGrantedForMove = (

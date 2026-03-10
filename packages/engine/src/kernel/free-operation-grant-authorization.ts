@@ -199,7 +199,7 @@ export const evaluateZoneFilterForMove = (
   def: GameDef,
   state: GameState,
   move: Move,
-  grant: Pick<TurnFlowPendingFreeOperationGrant, 'moveZoneBindings'>,
+  grant: Pick<TurnFlowPendingFreeOperationGrant, 'moveZoneBindings' | 'executionContext'>,
   zoneFilter: ConditionAST,
   surface: FreeOperationZoneFilterSurface,
 ): boolean => {
@@ -222,6 +222,11 @@ export const evaluateZoneFilterForMove = (
         actorPlayer: state.activePlayer,
         bindings: baseBindings,
         resources: createEvalRuntimeResources({ collector: createCollector() }),
+        ...(
+          grant.executionContext === undefined
+            ? {}
+            : { freeOperationOverlay: { grantContext: grant.executionContext } }
+        ),
       }));
     } catch (cause) {
       if (shouldDeferZoneFilterFailure(cause)) {
@@ -251,6 +256,11 @@ export const evaluateZoneFilterForMove = (
           actorPlayer: state.activePlayer,
           bindings,
           resources: createEvalRuntimeResources({ collector: createCollector() }),
+          ...(
+            grant.executionContext === undefined
+              ? {}
+              : { freeOperationOverlay: { grantContext: grant.executionContext } }
+          ),
         })),
       })) {
         return true;

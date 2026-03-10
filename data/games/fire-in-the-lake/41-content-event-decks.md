@@ -10446,24 +10446,163 @@ eventDecks:
             - US
           flavorText: Operational tempo follows strategic concentration.
         unshaded:
-          text: NVA execute free March then free Attack.
-          freeOperationGrants:
-            - seat: nva
-              sequence:
-                chain: vo-nguyen-giap-nva
-                step: 0
-              operationClass: operation
-              actionIds:
-                - march
-            - seat: nva
-              sequence:
-                chain: vo-nguyen-giap-nva
-                step: 1
-              operationClass: operation
-              actionIds:
-                - attack
+          text: In each of any 3 spaces, replace any 2 Guerrillas with 1 NVA Troop.
+          targets:
+            - id: $voNguyenGiapUnshadedSpace
+              selector:
+                query: mapSpaces
+                filter:
+                  op: ">"
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: $zone
+                        filter:
+                          op: and
+                          args:
+                            - prop: faction
+                              op: in
+                              value:
+                                - NVA
+                                - VC
+                            - prop: type
+                              op: eq
+                              value: guerrilla
+                  right: 1
+              cardinality:
+                max: 3
+              application: each
+              effects:
+                - chooseN:
+                    bind: "$voNguyenGiapGuerrillas@{$voNguyenGiapUnshadedSpace}"
+                    n: 2
+                    options:
+                      query: tokensInZone
+                      zone: $voNguyenGiapUnshadedSpace
+                      filter:
+                        op: and
+                        args:
+                          - prop: faction
+                            op: in
+                            value:
+                              - NVA
+                              - VC
+                          - prop: type
+                            op: eq
+                            value: guerrilla
+                - forEach:
+                    bind: $voNguyenGiapGuerrilla
+                    over:
+                      query: binding
+                      name: "$voNguyenGiapGuerrillas@{$voNguyenGiapUnshadedSpace}"
+                    effects:
+                      - if:
+                          when:
+                            op: ==
+                            left:
+                              ref: tokenProp
+                              token: $voNguyenGiapGuerrilla
+                              prop: faction
+                            right: NVA
+                          then:
+                            - moveToken:
+                                token: $voNguyenGiapGuerrilla
+                                from:
+                                  zoneExpr:
+                                    ref: tokenZone
+                                    token: $voNguyenGiapGuerrilla
+                                to:
+                                  zoneExpr: available-NVA:none
+                          else:
+                            - moveToken:
+                                token: $voNguyenGiapGuerrilla
+                                from:
+                                  zoneExpr:
+                                    ref: tokenZone
+                                    token: $voNguyenGiapGuerrilla
+                                to:
+                                  zoneExpr: available-VC:none
+                - removeByPriority:
+                    budget: 1
+                    groups:
+                      - bind: $voNguyenGiapTroop
+                        over:
+                          query: tokensInZone
+                          zone: available-NVA:none
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                op: eq
+                                value: NVA
+                              - prop: type
+                                op: eq
+                                value: troops
+                        to:
+                          zoneExpr: $voNguyenGiapUnshadedSpace
         shaded:
-          text: NVA execute free March in up to 3 spaces, then 1 free Op or Special Activity in each.
+          text: NVA free Marches into up to 3 spaces then executes any 1 free Op or Special Activity within each, if desired.
+          targets:
+            - id: $voNguyenGiapShadedSpace
+              selector:
+                query: mapSpaces
+              cardinality:
+                max: 3
+              application: aggregate
+              effects:
+                - forEach:
+                    bind: $voNguyenGiapFollowUpSpace
+                    over:
+                      query: binding
+                      name: $voNguyenGiapShadedSpace
+                    effects:
+                      - grantFreeOperation:
+                          seat: nva
+                          sequence:
+                            chain: vo-nguyen-giap-shaded
+                            step: 1
+                          operationClass: operation
+                          actionIds:
+                            - rally
+                            - march
+                            - attack
+                            - infiltrate
+                            - bombard
+                          zoneFilter:
+                            op: ==
+                            left:
+                              ref: binding
+                              name: $zone
+                            right: "{$voNguyenGiapFollowUpSpace}"
+                          sequenceContext:
+                            requireMoveZoneCandidatesFrom: vo-nguyen-giap-shaded-space
+                - grantFreeOperation:
+                    seat: nva
+                    sequence:
+                      chain: vo-nguyen-giap-shaded
+                      step: 0
+                    operationClass: operation
+                    actionIds:
+                      - march
+                    moveZoneBindings:
+                      - $targetSpaces
+                    allowDuringMonsoon: true
+                    sequenceContext:
+                      captureMoveZoneCandidatesAs: vo-nguyen-giap-shaded-space
+                    executionContext:
+                      selectedSpaces:
+                        ref: binding
+                        name: $voNguyenGiapShadedSpace
+                    zoneFilter:
+                      op: in
+                      item:
+                        ref: binding
+                        name: $zone
+                      set:
+                        ref: grantContext
+                        key: selectedSpaces
       - id: card-59
         title: Plei Mei
         sideMode: dual

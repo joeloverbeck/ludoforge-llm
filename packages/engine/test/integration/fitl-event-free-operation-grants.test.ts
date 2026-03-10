@@ -2787,6 +2787,71 @@ describe('event free-operation grants integration', () => {
     assert.equal(afterOperation.globalVars.selectedTarget, 1);
   });
 
+  it('surfaces executionContext-backed free moves even when the base action is blocked by monsoon-style restrictions', () => {
+    const base = createExecutionContextGrantDef() as GameDef & {
+      turnOrder: {
+        type: 'cardDriven';
+        config: {
+          turnFlow: {
+            monsoon?: { restrictedActions: Array<{ actionId: string }> };
+          };
+        };
+      };
+    };
+    base.turnOrder.config.turnFlow.monsoon = {
+      restrictedActions: [{ actionId: 'operation' }],
+    };
+
+    const initial = initialState(base, 503, 2).state;
+    const runtime = requireCardDrivenRuntime(initial);
+    const afterEvent: GameState = {
+      ...initial,
+      activePlayer: asPlayerId(0),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...runtime,
+          currentCard: {
+            ...runtime.currentCard,
+            firstEligible: 'US',
+            secondEligible: null,
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'execution-context-monsoon',
+              seat: 'US',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              executionContext: {
+                allowedTargets: [2],
+                effectCode: 7,
+              },
+              allowDuringMonsoon: true,
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+      zones: {
+        ...initial.zones,
+        'lookahead:none': [{ id: asTokenId('monsoon-execution-context'), type: 'card', props: { isCoup: true } }],
+      },
+    };
+
+    const freeMoves = legalMoves(base, afterEvent).filter(
+      (move) => String(move.actionId) === 'operation' && move.freeOperation === true,
+    );
+    assert.deepEqual(
+      freeMoves.map((move) => move.params.target),
+      [2],
+      'executionContext grant should still seed a free move when the non-free base action is monsoon-blocked',
+    );
+  });
+
   it('rejects overlapping declarative grants that differ only by executionContext', () => {
     const def = createExecutionContextGrantDef();
     const invalidDecks = (def.eventDecks ?? []).map((deck) => ({

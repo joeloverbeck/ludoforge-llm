@@ -341,7 +341,9 @@ function enumerateParams(
   if (executionPlayer === null) {
     return;
   }
-  const ctx = makeEvalContext(def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, executionPlayer, bindings);
+  const ctx = makeEvalContext(def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, executionPlayer, bindings, {
+    ...(options?.freeOperationOverlay === undefined ? {} : { freeOperationOverlay: options.freeOperationOverlay }),
+  });
   const resolution = resolveDeclaredActionParamDomainOptions(param, ctx);
   if (resolution.invalidOption !== undefined) {
     throw kernelRuntimeError(
@@ -475,21 +477,6 @@ function enumeratePendingFreeOperationMoves(
           preflight.error,
           preflight.selectorContractViolations,
         );
-      }
-
-      if (
-        !isMoveDecisionSequenceAdmittedForLegalMove(
-          def,
-          state,
-          { actionId: action.id, params: {}, freeOperation: true },
-          MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
-          {
-            budgets: enumeration.budgets,
-            onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
-          },
-        )
-      ) {
-        continue;
       }
 
       enumerateParams(

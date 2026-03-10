@@ -1,5 +1,4 @@
-import { isMoveDecisionSequenceAdmittedForLegalMove, resolveMoveDecisionSequence } from './move-decision-sequence.js';
-import { MISSING_BINDING_POLICY_CONTEXTS } from './missing-binding-policy.js';
+import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import type { MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import {
   isFreeOperationApplicableForMove,
@@ -398,20 +397,6 @@ export function applyPendingFreeOperationVariants(
       ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
     }).complete;
     const unresolvedDecisionCheckpoint = !checkpoint;
-    if (unresolvedDecisionCheckpoint) {
-      if (!isMoveDecisionSequenceAdmittedForLegalMove(
-        def,
-        state,
-        candidate,
-        MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
-        {
-          ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
-          ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
-        },
-      )) {
-        continue;
-      }
-    }
     if (!unresolvedDecisionCheckpoint && !isFreeOperationGrantedForMove(def, state, candidate, seatResolution)) {
       continue;
     }

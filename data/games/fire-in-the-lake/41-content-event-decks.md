@@ -8403,14 +8403,22 @@ eventDecks:
             - ARVN
           flavorText: Analyst leaks expose hidden assumptions and reverse perceived advantages.
         unshaded:
-          text: Flip one currently active capability to its opposite side.
+          text: Flip 1 shaded US Capability to unshaded.
           effects:
             - chooseOne:
                 bind: $randCapabilityMarker
                 options:
                   query: globalMarkers
+                  markers:
+                    - cap_topGun
+                    - cap_arcLight
+                    - cap_abrams
+                    - cap_cobras
+                    - cap_m48Patton
+                    - cap_caps
+                    - cap_cords
+                    - cap_lgbs
                   states:
-                    - unshaded
                     - shaded
             - flipGlobalMarker:
                 marker:
@@ -8419,15 +8427,23 @@ eventDecks:
                 stateA: unshaded
                 stateB: shaded
         shaded:
-          text: Flip one currently active capability to its opposite side.
+          text: "Systems analysis ignorant of local conditions: Flip 1 unshaded US Capability to shaded."
           effects:
             - chooseOne:
                 bind: $randCapabilityMarker
                 options:
                   query: globalMarkers
+                  markers:
+                    - cap_topGun
+                    - cap_arcLight
+                    - cap_abrams
+                    - cap_cobras
+                    - cap_m48Patton
+                    - cap_caps
+                    - cap_cords
+                    - cap_lgbs
                   states:
                     - unshaded
-                    - shaded
             - flipGlobalMarker:
                 marker:
                   ref: binding

@@ -7,11 +7,13 @@ import {
   asTokenId,
   initialState,
   legalMoves,
+  resolveMoveDecisionSequence,
   type GameDef,
   type GameState,
   type Token,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
@@ -31,6 +33,17 @@ const expectedCards = [
   { id: 'card-57', order: 57, title: 'International Unrest', seatOrder: ['NVA', 'VC', 'ARVN', 'US'] },
   { id: 'card-58', order: 58, title: 'Pathet Lao', seatOrder: ['NVA', 'VC', 'ARVN', 'US'] },
   { id: 'card-60', order: 60, title: 'War Photographer', seatOrder: ['NVA', 'VC', 'ARVN', 'US'] },
+] as const;
+
+const RAND_US_CAPABILITY_MARKERS = [
+  'cap_topGun',
+  'cap_arcLight',
+  'cap_abrams',
+  'cap_cobras',
+  'cap_m48Patton',
+  'cap_caps',
+  'cap_cords',
+  'cap_lgbs',
 ] as const;
 
 const compileDef = (): GameDef => {
@@ -315,17 +328,25 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
     assert.equal(card?.title, 'RAND');
     assert.equal(card?.metadata?.period, '1968');
     assert.deepEqual(card?.metadata?.seatOrder, ['NVA', 'VC', 'US', 'ARVN']);
-    assert.equal(typeof card?.unshaded?.text, 'string');
-    assert.equal(typeof card?.shaded?.text, 'string');
+    assert.equal(card?.unshaded?.text, 'Flip 1 shaded US Capability to unshaded.');
+    assert.equal(
+      card?.shaded?.text,
+      'Systems analysis ignorant of local conditions: Flip 1 unshaded US Capability to shaded.',
+    );
     const unshadedChoose = (
       card?.unshaded?.effects?.[0] as {
-        chooseOne?: { internalDecisionId?: string; bind?: string; options?: { query?: string; states?: string[] } };
+        chooseOne?: {
+          internalDecisionId?: string;
+          bind?: string;
+          options?: { query?: string; markers?: string[]; states?: string[] };
+        };
       }
     )?.chooseOne;
     assert.equal(typeof unshadedChoose?.internalDecisionId, 'string');
     assert.equal(unshadedChoose?.bind, '$randCapabilityMarker');
     assert.equal(unshadedChoose?.options?.query, 'globalMarkers');
-    assert.deepEqual(unshadedChoose?.options?.states, ['unshaded', 'shaded']);
+    assert.deepEqual(unshadedChoose?.options?.markers, [...RAND_US_CAPABILITY_MARKERS]);
+    assert.deepEqual(unshadedChoose?.options?.states, ['shaded']);
     assert.deepEqual((card?.unshaded?.effects?.[1] as { flipGlobalMarker?: unknown })?.flipGlobalMarker, {
       marker: { ref: 'binding', name: '$randCapabilityMarker' },
       stateA: 'unshaded',
@@ -334,17 +355,157 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
 
     const shadedChoose = (
       card?.shaded?.effects?.[0] as {
-        chooseOne?: { internalDecisionId?: string; bind?: string; options?: { query?: string; states?: string[] } };
+        chooseOne?: {
+          internalDecisionId?: string;
+          bind?: string;
+          options?: { query?: string; markers?: string[]; states?: string[] };
+        };
       }
     )?.chooseOne;
     assert.equal(typeof shadedChoose?.internalDecisionId, 'string');
     assert.equal(shadedChoose?.bind, '$randCapabilityMarker');
     assert.equal(shadedChoose?.options?.query, 'globalMarkers');
-    assert.deepEqual(shadedChoose?.options?.states, ['unshaded', 'shaded']);
+    assert.deepEqual(shadedChoose?.options?.markers, [...RAND_US_CAPABILITY_MARKERS]);
+    assert.deepEqual(shadedChoose?.options?.states, ['unshaded']);
     assert.deepEqual((card?.shaded?.effects?.[1] as { flipGlobalMarker?: unknown })?.flipGlobalMarker, {
       marker: { ref: 'binding', name: '$randCapabilityMarker' },
       stateA: 'unshaded',
       stateB: 'shaded',
     });
+  });
+
+  it('RAND unshaded offers only shaded US capabilities and flips the selected marker to unshaded', () => {
+    const def = compileDef();
+    const eventDeck = def.eventDecks?.[0];
+    assert.notEqual(eventDeck, undefined, 'Expected at least one event deck');
+
+    const start = clearAllZones(initialState(def, 196852, 4).state);
+    const configured: GameState = {
+      ...start,
+      activePlayer: asPlayerId(0),
+      turnOrderState: { type: 'roundRobin' },
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_topGun: 'shaded',
+        cap_cobras: 'shaded',
+        cap_cords: 'unshaded',
+        cap_migs: 'shaded',
+      },
+      zones: {
+        ...start.zones,
+        [eventDeck!.discardZone]: [makeToken('card-52', 'card', 'none')],
+      },
+    };
+
+    const move = legalMoves(def, configured).find(
+      (candidate) =>
+        String(candidate.actionId) === 'event' &&
+        candidate.params.eventCardId === 'card-52' &&
+        candidate.params.side === 'unshaded',
+    );
+    assert.notEqual(move, undefined, 'Expected legal RAND unshaded event move');
+
+    const pending = resolveMoveDecisionSequence(def, configured, move!, { choose: () => undefined });
+    assert.equal(pending.complete, false);
+    assert.equal(pending.nextDecision?.name, '$randCapabilityMarker');
+    assert.deepEqual(
+      pending.nextDecision?.options.map((option) => option.value),
+      ['cap_topGun', 'cap_cobras'],
+      'RAND unshaded should offer only shaded US capabilities',
+    );
+
+    const after = applyMoveWithResolvedDecisionIds(def, configured, move!, {
+      overrides: [
+        {
+          when: (request) => request.name === '$randCapabilityMarker',
+          value: 'cap_topGun',
+        },
+      ],
+    }).state;
+    assert.equal(after.globalMarkers?.cap_topGun, 'unshaded');
+    assert.equal(after.globalMarkers?.cap_cobras, 'shaded');
+    assert.equal(after.globalMarkers?.cap_cords, 'unshaded');
+    assert.equal(after.globalMarkers?.cap_migs, 'shaded');
+  });
+
+  it('RAND shaded offers only unshaded US capabilities and ARVN may execute it under dual-use rules', () => {
+    const def = compileDef();
+    const eventDeck = def.eventDecks?.[0];
+    assert.notEqual(eventDeck, undefined, 'Expected at least one event deck');
+
+    const start = clearAllZones(initialState(def, 196853, 4).state);
+    const configured: GameState = {
+      ...start,
+      activePlayer: asPlayerId(3),
+      turnOrderState: { type: 'roundRobin' },
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_lgbs: 'unshaded',
+        cap_cords: 'unshaded',
+        cap_topGun: 'shaded',
+        cap_pt76: 'unshaded',
+      },
+      zones: {
+        ...start.zones,
+        [eventDeck!.discardZone]: [makeToken('card-52', 'card', 'none')],
+      },
+    };
+
+    const move = legalMoves(def, configured).find(
+      (candidate) =>
+        String(candidate.actionId) === 'event' &&
+        candidate.params.eventCardId === 'card-52' &&
+        candidate.params.side === 'shaded',
+    );
+    assert.notEqual(move, undefined, 'Expected legal RAND shaded event move for ARVN');
+
+    const pending = resolveMoveDecisionSequence(def, configured, move!, { choose: () => undefined });
+    assert.equal(pending.complete, false);
+    assert.equal(pending.nextDecision?.name, '$randCapabilityMarker');
+    assert.deepEqual(
+      pending.nextDecision?.options.map((option) => option.value),
+      ['cap_cords', 'cap_lgbs'],
+      'RAND shaded should offer only unshaded US capabilities',
+    );
+
+    const after = applyMoveWithResolvedDecisionIds(def, configured, move!, {
+      overrides: [
+        {
+          when: (request) => request.name === '$randCapabilityMarker',
+          value: 'cap_lgbs',
+        },
+      ],
+    }).state;
+    assert.equal(after.globalMarkers?.cap_lgbs, 'shaded');
+    assert.equal(after.globalMarkers?.cap_cords, 'unshaded');
+    assert.equal(after.globalMarkers?.cap_topGun, 'shaded');
+    assert.equal(after.globalMarkers?.cap_pt76, 'unshaded');
+  });
+
+  it('RAND is not legal when no US capability is on the required side', () => {
+    const def = compileDef();
+    const eventDeck = def.eventDecks?.[0];
+    assert.notEqual(eventDeck, undefined, 'Expected at least one event deck');
+
+    const start = clearAllZones(initialState(def, 196854, 4).state);
+    const configured: GameState = {
+      ...start,
+      activePlayer: asPlayerId(0),
+      turnOrderState: { type: 'roundRobin' },
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_pt76: 'shaded',
+        cap_boobyTraps: 'unshaded',
+      },
+      zones: {
+        ...start.zones,
+        [eventDeck!.discardZone]: [makeToken('card-52', 'card', 'none')],
+      },
+    };
+
+    const randMoves = legalMoves(def, configured).filter(
+      (candidate) => String(candidate.actionId) === 'event' && candidate.params.eventCardId === 'card-52',
+    );
+    assert.deepEqual(randMoves, [], 'RAND should be illegal when no matching US capability can be flipped');
   });
 });

@@ -5,7 +5,7 @@ import {
   isFreeOperationAllowedDuringMonsoonForMove,
   isFreeOperationGrantedForMove,
 } from './free-operation-discovery-analysis.js';
-import { legalChoicesDiscover } from './legal-choices.js';
+import { canResolveAmbiguousFreeOperationOverlapInCurrentState } from './free-operation-viability.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import {
   isMoveAllowedByRequiredPendingFreeOperationGrant,
@@ -408,8 +408,9 @@ export function applyPendingFreeOperationVariants(
       continue;
     }
     if (!isFreeOperationGrantedForMove(def, state, candidate, seatResolution)) {
-      const discovery = legalChoicesDiscover(def, state, candidate);
-      if (discovery.kind === 'illegal') {
+      if (!canResolveAmbiguousFreeOperationOverlapInCurrentState(def, state, candidate, seatResolution, {
+        ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
+      })) {
         continue;
       }
     }

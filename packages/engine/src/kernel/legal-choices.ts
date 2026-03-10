@@ -30,6 +30,7 @@ import {
   toFreeOperationChoiceIllegalReason,
   toFreeOperationDeniedCauseForLegality,
 } from './free-operation-legality-policy.js';
+import { canResolveAmbiguousFreeOperationOverlapInCurrentState } from './free-operation-viability.js';
 import {
   resolveFreeOperationDiscoveryAnalysis,
 } from './free-operation-discovery-analysis.js';
@@ -529,26 +530,6 @@ const mapPendingChoiceOptions = (
     request,
   );
 
-const mergeDeferredPredicateOptions = (
-  left: LegalChoicesRuntimeOptions | undefined,
-  right: { readonly onDeferredPredicatesEvaluated?: (count: number) => void } | undefined,
-): LegalChoicesRuntimeOptions | undefined => {
-  if (left === undefined && right?.onDeferredPredicatesEvaluated === undefined) {
-    return undefined;
-  }
-  return {
-    ...(left ?? {}),
-    ...(right?.onDeferredPredicatesEvaluated === undefined
-      ? {}
-      : {
-        onDeferredPredicatesEvaluated: (count: number) => {
-          left?.onDeferredPredicatesEvaluated?.(count);
-          right.onDeferredPredicatesEvaluated?.(count);
-        },
-      }),
-  };
-};
-
 const legalChoicesWithPreparedContextInternal = (
   context: LegalChoicesPreparedContext,
   partialMove: Move,
@@ -768,17 +749,54 @@ const canResolveAmbiguousFreeOperationOverlapViaLaterDecisions = (
   partialMove: Move,
   options?: LegalChoicesRuntimeOptions,
 ): boolean =>
-  classifyDecisionSequenceSatisfiability(
+  canResolveAmbiguousFreeOperationOverlapInCurrentState(
+    context.def,
+    context.state,
     partialMove,
-    (probeMove, probeOptions) =>
-      legalChoicesWithPreparedContextProbeInternal(
-        context,
-        probeMove,
-        false,
-        mergeDeferredPredicateOptions(options, probeOptions),
-        true,
-      ),
-  ).classification !== 'unsatisfiable';
+    context.seatResolution,
+    {
+      onWarning: () => undefined,
+      resolveDecisionSequence: (move) => {
+        const request = legalChoicesWithPreparedContextProbeInternal(
+          context,
+          move,
+          false,
+          options,
+          true,
+        );
+        if (request.kind === 'complete') {
+          return {
+            complete: true,
+            move,
+            warnings: [],
+          };
+        }
+        if (request.kind === 'illegal') {
+          return {
+            complete: false,
+            move,
+            illegal: request,
+            warnings: [],
+          };
+        }
+        if (request.kind === 'pendingStochastic') {
+          return {
+            complete: false,
+            move,
+            nextDecisionSet: request.alternatives,
+            stochasticDecision: request,
+            warnings: [],
+          };
+        }
+        return {
+          complete: false,
+          move,
+          nextDecision: request,
+          warnings: [],
+        };
+      },
+    },
+  );
 
 const legalChoicesWithPreparedContextStrict = (
   context: LegalChoicesPreparedContext,

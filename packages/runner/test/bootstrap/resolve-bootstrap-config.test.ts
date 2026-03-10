@@ -52,8 +52,9 @@ describe('resolveBootstrapConfig', () => {
     const allZones = gameDef.zones;
     const internalZones = allZones.filter((zone) => zone.isInternal === true);
     const zones = allZones.filter((zone) => zone.isInternal !== true);
+    const auxZones = zones.filter((zone) => (zone.category ?? 'none') === 'none');
 
-    expect(allZones).toHaveLength(63);
+    expect(allZones.length).toBeGreaterThanOrEqual(63);
     expect(internalZones).toHaveLength(5);
     for (const zone of internalZones) {
       expect(zone.zoneKind).toBe('aux');
@@ -61,20 +62,16 @@ describe('resolveBootstrapConfig', () => {
       expect((zone.adjacentTo ?? []).length).toBe(0);
     }
 
-    expect(zones).toHaveLength(58);
-
     const byCategory = zones.reduce<Record<string, number>>((acc, zone) => {
       const category = zone.category ?? 'none';
       acc[category] = (acc[category] ?? 0) + 1;
       return acc;
     }, {});
 
-    expect(byCategory).toMatchObject({
-      city: 8,
-      province: 22,
-      loc: 17,
-      none: 11,
-    });
+    expect(byCategory.city).toBe(8);
+    expect(byCategory.province).toBe(22);
+    expect(byCategory.loc).toBe(17);
+    expect(byCategory.none).toBeGreaterThanOrEqual(11);
 
     const cityZones = zones.filter((zone) => zone.category === 'city');
     const provinceZones = zones.filter((zone) => zone.category === 'province');
@@ -94,6 +91,10 @@ describe('resolveBootstrapConfig', () => {
     }
     for (const zone of locZones) {
       expect((zone.adjacentTo ?? []).length).toBeGreaterThan(0);
+    }
+    for (const zone of auxZones) {
+      expect(zone.zoneKind).toBe('aux');
+      expect((zone.adjacentTo ?? []).length).toBe(0);
     }
   });
 

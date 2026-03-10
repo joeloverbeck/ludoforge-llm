@@ -10,7 +10,10 @@ import { createEvalRuntimeResources, type EvalContext } from './eval-context.js'
 import { createExecutionEffectContext } from './effect-context.js';
 import { applyEffects } from './effects.js';
 import { isEffectRuntimeReason } from './effect-error.js';
-import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
+import {
+  resolveMoveDecisionSequence,
+  type ResolveMoveDecisionSequenceResult,
+} from './move-decision-sequence.js';
 import { resolveMoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import {
   decideApplyMovePipelineViability,
@@ -44,6 +47,7 @@ import type {
   Move,
   MoveParamScalar,
   MoveParamValue,
+  RuntimeWarning,
   TurnFlowFreeOperationGrantContract,
   TurnFlowFreeOperationGrantViabilityPolicy,
   TurnFlowPendingFreeOperationGrant,
@@ -191,6 +195,14 @@ export const grantRequiresUsableProbe = (grant: Pick<TurnFlowFreeOperationGrantC
   return policy === 'requireUsableAtIssue' || policy === 'requireUsableForEventPlay';
 };
 
+type FreeOperationDecisionSequenceResolver = (
+  move: Move,
+  options?: {
+    readonly budgets?: Partial<ReturnType<typeof resolveMoveEnumerationBudgets>>;
+    readonly onWarning?: (warning: RuntimeWarning) => void;
+  },
+) => ResolveMoveDecisionSequenceResult;
+
 const STRICT_FREE_OPERATION_PROBE_BUDGETS = {
   maxParamExpansions: 500_000,
   maxDecisionProbeSteps: 4_096,
@@ -256,11 +268,14 @@ const rankProbeOptionValue = (
 const selectableDecisionValues = (
   def: GameDef,
   state: GameState,
-  probeGrant: TurnFlowPendingFreeOperationGrant,
+  probeGrant: TurnFlowPendingFreeOperationGrant | null,
   currentMove: Move,
   request: ChoicePendingRequest,
 ): readonly MoveParamValue[] => {
   const probeValue = (value: MoveParamValue): number => {
+    if (probeGrant === null) {
+      return rankProbeOptionValue(state, value);
+    }
     const fauxMove: Move = {
       actionId: currentMove.actionId,
       params: {
@@ -584,10 +599,27 @@ const hasLegalCompletedProbeMove = (
   authorizationState: GameState,
   baseMove: Move,
   seatResolution: SeatResolutionContext,
+  options?: {
+    readonly budgets?: Partial<ReturnType<typeof resolveMoveEnumerationBudgets>>;
+    readonly onWarning?: (warning: RuntimeWarning) => void;
+    readonly selectionGrant?: TurnFlowPendingFreeOperationGrant | null;
+    readonly resolveDecisionSequence?: FreeOperationDecisionSequenceResolver;
+  },
 ): boolean => {
   const budgets = resolveMoveEnumerationBudgets(STRICT_FREE_OPERATION_PROBE_BUDGETS);
   let decisionProbeSteps = 0;
   let paramExpansions = 0;
+  const resolveDecisionSequence = options?.resolveDecisionSequence ?? ((move, resolveOptions) =>
+    resolveMoveDecisionSequence(
+      def,
+      explorationState,
+      move,
+      {
+        choose: () => undefined,
+        ...(resolveOptions?.budgets === undefined ? {} : { budgets: resolveOptions.budgets }),
+        ...(resolveOptions?.onWarning === undefined ? {} : { onWarning: resolveOptions.onWarning }),
+      },
+    ));
 
   const visit = (move: Move): boolean => {
     if (decisionProbeSteps >= budgets.maxDecisionProbeSteps || paramExpansions > budgets.maxParamExpansions) {
@@ -595,10 +627,9 @@ const hasLegalCompletedProbeMove = (
     }
     decisionProbeSteps += 1;
 
-    const request = resolveMoveDecisionSequence(def, explorationState, move, {
-      choose: () => undefined,
+    const request = resolveDecisionSequence(move, {
       budgets,
-      onWarning: () => undefined,
+      ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
     });
 
     if (request.complete) {
@@ -641,10 +672,26 @@ const hasLegalCompletedProbeMove = (
       return false;
     }
 
-    const probeGrant = authorizationState.turnOrderState.type === 'cardDriven'
-      ? authorizationState.turnOrderState.runtime.pendingFreeOperationGrants?.find((grant) => grant.grantId === '__probe__') ?? null
-      : null;
+    const probeGrant = options?.selectionGrant
+      ?? (authorizationState.turnOrderState.type === 'cardDriven'
+        ? authorizationState.turnOrderState.runtime.pendingFreeOperationGrants?.find((grant) => grant.grantId === '__probe__') ?? null
+        : null);
     if (probeGrant === null) {
+      for (const selection of selectableDecisionValues(def, authorizationState, null, request.move, nextDecision)) {
+        paramExpansions += 1;
+        if (paramExpansions > budgets.maxParamExpansions) {
+          return false;
+        }
+        if (visit({
+          ...request.move,
+          params: {
+            ...request.move.params,
+            [nextDecision.decisionId]: selection,
+          },
+        })) {
+          return true;
+        }
+      }
       return false;
     }
     for (const selection of selectableDecisionValues(def, authorizationState, probeGrant, request.move, nextDecision)) {
@@ -666,6 +713,47 @@ const hasLegalCompletedProbeMove = (
   };
 
   return visit(baseMove);
+};
+
+export const canResolveAmbiguousFreeOperationOverlapInCurrentState = (
+  def: GameDef,
+  state: GameState,
+  baseMove: Move,
+  seatResolution: SeatResolutionContext,
+  options?: {
+    readonly onWarning?: (warning: RuntimeWarning) => void;
+    readonly resolveDecisionSequence?: FreeOperationDecisionSequenceResolver;
+  },
+): boolean => {
+  const analysis = resolveFreeOperationDiscoveryAnalysis(
+    def,
+    state,
+    baseMove,
+    seatResolution,
+    { zoneFilterErrorSurface: 'turnFlowEligibility' },
+  );
+  if (analysis.denial.cause !== 'ambiguousOverlap') {
+    return false;
+  }
+
+  const selectionGrant = state.turnOrderState.type === 'cardDriven'
+    ? state.turnOrderState.runtime.pendingFreeOperationGrants?.find((grant) =>
+      analysis.denial.ambiguousGrantIds?.includes(grant.grantId) === true)
+      ?? null
+    : null;
+
+  return hasLegalCompletedProbeMove(
+    def,
+    state,
+    state,
+    baseMove,
+    seatResolution,
+    {
+      ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
+      selectionGrant,
+      ...(options?.resolveDecisionSequence === undefined ? {} : { resolveDecisionSequence: options.resolveDecisionSequence }),
+    },
+  );
 };
 
 export const isFreeOperationGrantUsableInCurrentState = (

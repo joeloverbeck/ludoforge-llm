@@ -577,9 +577,15 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
     );
     assert.ok(sa2sShadedBranch.length >= 1, 'Expected cap_sa2s shaded branch in rally-nva trail improvement');
     const sa2sBoost = findDeep(sa2sShadedBranch[0], (node: any) =>
-      node?.addVar?.var === 'trail' &&
-      node?.addVar?.delta?.if?.then === 1 &&
-      node?.addVar?.delta?.if?.else === 2,
+      node?.if?.when?.left?.ref === 'globalMarkerState' &&
+      node?.if?.when?.left?.marker === 'cap_sa2s' &&
+      node?.if?.when?.right === 'shaded' &&
+      node?.if?.then?.if?.when?.left?.ref === 'gvar' &&
+      node?.if?.then?.if?.when?.left?.var === 'trail' &&
+      node?.if?.then?.if?.when?.right === 3 &&
+      node?.if?.then?.if?.then === 1 &&
+      node?.if?.then?.if?.else === 2 &&
+      node?.if?.else === 1,
     );
     assert.ok(sa2sBoost.length >= 1, 'Expected cap_sa2s shaded to encode a +2 Trail improvement with max-4 clamp');
 

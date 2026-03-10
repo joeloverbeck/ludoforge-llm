@@ -138,6 +138,56 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
     });
   });
 
+  it('encodes card 35 (Thanh Hoa) as direct Trail degradation and post-improvement Trail-scaled NVA resource gain', () => {
+    const { parsed, compiled } = compileProductionSpec();
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-35');
+    assert.notEqual(card, undefined);
+    assert.equal(card?.unshaded?.text, 'Degrade the Trail by 3 boxes.');
+    assert.equal(card?.shaded?.text, 'Improve Trail by 1 box. Then add three times Trail value to NVA Resources.');
+    assert.deepEqual(card?.unshaded?.effects, [
+      {
+        addVar: {
+          scope: 'global',
+          var: 'trail',
+          delta: -3,
+        },
+      },
+    ]);
+    assert.equal(card?.shaded?.effects?.length, 2, 'Expected shaded Thanh Hoa to improve Trail then add Trail-scaled resources');
+    assert.deepEqual((card?.shaded?.effects?.[0] as { addVar?: unknown })?.addVar, {
+      scope: 'global',
+      var: 'trail',
+      delta: 1,
+    });
+    assert.deepEqual((card?.shaded?.effects?.[1] as { let?: unknown })?.let, {
+      bind: '$trailValue',
+      value: {
+        ref: 'gvar',
+        var: 'trail',
+      },
+      in: [
+        {
+          addVar: {
+            scope: 'global',
+            var: 'nvaResources',
+            delta: {
+              op: '*',
+              left: 3,
+              right: {
+                ref: 'binding',
+                name: '$trailValue',
+              },
+            },
+          },
+        },
+      ],
+    });
+  });
+
   it('blocks MiGs shaded execution when Top Gun unshaded is already active', () => {
     const def = compileDef();
     const eventDeck = def.eventDecks?.[0];

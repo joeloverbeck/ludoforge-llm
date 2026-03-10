@@ -89,8 +89,8 @@ interface MultiSelectModeProps {
 
 function isLegalScalarChoiceOption(
   option: Extract<NonNullable<GameStore['renderModel']>['choiceUi'], { readonly kind: 'discreteMany' }>['options'][number],
-): option is (typeof option & { readonly value: ChoiceScalar; readonly legality: 'legal' }) {
-  return option.legality === 'legal' && isChoiceScalar(option.value);
+): option is (typeof option & { readonly value: ChoiceScalar; readonly legality: 'legal' | 'unknown' }) {
+  return option.legality !== 'illegal' && isChoiceScalar(option.value);
 }
 
 function MultiSelectMode({ choiceUi, chooseN }: MultiSelectModeProps): ReactElement {
@@ -131,7 +131,7 @@ function MultiSelectMode({ choiceUi, chooseN }: MultiSelectModeProps): ReactElem
       <div className={styles.options}>
         {choiceUi.options.map((option) => {
           const isSelected = selectedChoiceValueIds.includes(option.choiceValueId);
-          const isLegalScalar = option.legality === 'legal' && isChoiceScalar(option.value);
+          const isLegalScalar = option.legality !== 'illegal' && isChoiceScalar(option.value);
           const atSelectionLimit = !isSelected && selectedCount >= bounds.max;
           const isDisabled = !isLegalScalar || atSelectionLimit;
 
@@ -410,7 +410,7 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
         {choiceUi.kind === 'discreteOne' ? (
           <div className={styles.options} data-testid="choice-mode-discrete">
             {choiceUi.options.map((option) => {
-              const isLegal = option.legality === 'legal';
+              const isLegal = option.legality !== 'illegal';
               return (
                 <div key={option.choiceValueId} className={styles.optionRow}>
                   <button

@@ -267,7 +267,7 @@ describe('ChoicePanel', () => {
     expect(chooseOne).toHaveBeenCalledWith('zone-a');
   });
 
-  it('keeps unknown-legality options non-actionable with deterministic feedback', () => {
+  it('treats unknown-legality options as selectable in discreteOne mode', () => {
     const chooseOne = vi.fn(async () => {});
 
     renderChoicePanel({
@@ -285,9 +285,10 @@ describe('ChoicePanel', () => {
     });
 
     const unknownOption = getByTestId(choiceOptionTestId('zone-u')) as HTMLButtonElement;
-    expect(unknownOption.disabled).toBe(true);
+    expect(unknownOption.disabled).toBe(false);
     fireEvent.click(unknownOption);
-    expect(chooseOne).toHaveBeenCalledTimes(0);
+    expect(chooseOne).toHaveBeenCalledTimes(1);
+    expect(chooseOne).toHaveBeenCalledWith('zone-u');
 
     const html = renderToStaticMarkup(
       createElement(ChoicePanel, {
@@ -303,7 +304,47 @@ describe('ChoicePanel', () => {
         }),
       }),
     );
-    expect(html).toContain('This option is currently unavailable.');
+    expect(html).not.toContain('data-testid="illegality-feedback"');
+  });
+
+  it('treats unknown-legality options as selectable in discreteMany mode', () => {
+    const chooseN = vi.fn(async () => {});
+    renderChoicePanel({
+      mode: 'choicePending',
+      store: createChoiceStore({
+        renderModel: makeRenderModel({
+          choiceUi: {
+            kind: 'discreteMany',
+            decisionId: 'test-decision',
+            options: [
+              makeChoiceOption('zone-a', 'Zone A', 'unknown', null),
+              makeChoiceOption('zone-b', 'Zone B', 'unknown', null),
+              makeChoiceOption('zone-c', 'Zone C', 'illegal', 'blocked'),
+            ],
+            min: 1,
+            max: 2,
+          },
+        }),
+        chooseN,
+      }),
+    });
+
+    // Unknown options should be selectable
+    const optionA = getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-a')}`) as HTMLButtonElement;
+    expect(optionA.disabled).toBe(false);
+
+    // Illegal option should remain disabled
+    const optionC = getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-c')}`) as HTMLButtonElement;
+    expect(optionC.disabled).toBe(true);
+
+    // Selection bounds should reflect unknown options (2 legal/unknown), not 0
+    expect(getByTestId('choice-multi-count').textContent).toContain('Selected: 0 of 1-2');
+
+    // Select and confirm
+    fireEvent.click(optionA);
+    fireEvent.click(getByTestId('choice-multi-confirm'));
+    expect(chooseN).toHaveBeenCalledTimes(1);
+    expect(chooseN).toHaveBeenCalledWith(['zone-a']);
   });
 
   it('uses stable distinct option identities for scalar/array value collisions', () => {

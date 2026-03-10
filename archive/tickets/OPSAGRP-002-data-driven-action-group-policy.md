@@ -1,6 +1,6 @@
 # OPSAGRP-002: Data-driven action group policy via visual-config.yaml
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
@@ -99,3 +99,18 @@ Add the `actionGroupPolicy` to the FITL visual-config.yaml declaring the COIN-sp
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
+
+## Outcome
+
+**Completed**: 2026-03-10
+
+**What changed**:
+- Added `ActionGroupPolicy` Zod schema (`synthesize` + `hide` arrays) to `visual-config-types.ts`
+- Added `getActionGroupPolicy()` accessor to `VisualConfigProvider`
+- Refactored `deriveActionGroups` from hardcoded COIN logic to generic policy-driven loop — zero hardcoded action class literals remain
+- Added `actionGroupPolicy` section to FITL `visual-config.yaml` declaring COIN-specific synthesis/hide rules
+- Replaced 1 hardcoded test with 3 policy-driven tests (no policy, COIN policy, multi-synthesis)
+
+**Deviations**: None — implemented exactly as specified.
+
+**Verification**: 150 test files, 1497 tests pass. Typecheck clean. Lint clean.

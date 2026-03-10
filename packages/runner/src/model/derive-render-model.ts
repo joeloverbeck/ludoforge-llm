@@ -38,6 +38,7 @@ import type {
   RenderVariable,
   RenderZone,
 } from './render-model.js';
+import type { ActionGroupPolicy } from '../config/visual-config-types.js';
 import type { RenderContext } from '../store/store-types.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
 import { formatChoiceValueFallback, formatChoiceValueResolved, serializeChoiceValueIdentity } from './choice-value-utils.js';
@@ -134,7 +135,10 @@ export function deriveRenderModel(
     phaseName: String(state.currentPhase),
     phaseDisplayName: formatIdAsDisplayName(String(state.currentPhase)),
     eventDecks,
-    actionGroups: deriveActionGroups(context.legalMoveResult?.moves ?? []),
+    actionGroups: deriveActionGroups(
+      context.legalMoveResult?.moves ?? [],
+      context.visualConfigProvider.getActionGroupPolicy(),
+    ),
     choiceBreadcrumb: deriveChoiceBreadcrumb(context, zonesById),
     choiceContext,
     choiceUi,
@@ -1112,7 +1116,22 @@ function normalizeIndex(index: number, playerCount: number): number {
   return normalized < 0 ? normalized + playerCount : normalized;
 }
 
-function deriveActionGroups(moves: readonly Move[]): RenderModel['actionGroups'] {
+function deriveActionGroups(
+  moves: readonly Move[],
+  policy: ActionGroupPolicy | null,
+): RenderModel['actionGroups'] {
+  const hiddenClasses = new Set(policy?.hide ?? []);
+  const synthesizeRules = policy?.synthesize ?? [];
+
+  const synthesizeByClass = new Map<string, readonly string[]>();
+  for (const rule of synthesizeRules) {
+    const existing = synthesizeByClass.get(rule.fromClass);
+    synthesizeByClass.set(
+      rule.fromClass,
+      existing !== undefined ? [...existing, rule.intoGroup] : [rule.intoGroup],
+    );
+  }
+
   const groupsByClass = new Map<string, Map<string, RenderAction>>();
 
   const ensureGroup = (key: string): Map<string, RenderAction> => {
@@ -1130,31 +1149,25 @@ function deriveActionGroups(moves: readonly Move[]): RenderModel['actionGroups']
     const actionId = String(move.actionId);
     const displayName = formatIdAsDisplayName(actionId);
 
-    if (ac === 'operation') {
-      // Add to Operation group
-      const opGroup = ensureGroup('operation');
-      if (!opGroup.has(actionId)) {
-        opGroup.set(actionId, { actionId, displayName, isAvailable: true, actionClass: 'operation' });
-      }
-      // Also add synthetic entry to Op+SA group
-      const opsaGroup = ensureGroup('operationPlusSpecialActivity');
-      if (!opsaGroup.has(actionId)) {
-        opsaGroup.set(actionId, { actionId, displayName, isAvailable: true, actionClass: 'operationPlusSpecialActivity' });
-      }
-    } else if (ac === 'specialActivity') {
-      // Skip SA moves — they are chosen later in the compound move decision flow
+    if (ac !== null && hiddenClasses.has(ac)) {
       continue;
-    } else if (ac === 'operationPlusSpecialActivity') {
-      // If the engine emits these directly (2nd eligible), group them as-is
-      const group = ensureGroup('operationPlusSpecialActivity');
-      if (!group.has(actionId)) {
-        group.set(actionId, { actionId, displayName, isAvailable: true, actionClass: 'operationPlusSpecialActivity' });
-      }
-    } else {
-      const groupKey = ac ?? 'Actions';
-      const group = ensureGroup(groupKey);
-      if (!group.has(actionId)) {
-        group.set(actionId, { actionId, displayName, isAvailable: true, ...(ac !== null ? { actionClass: ac } : {}) });
+    }
+
+    const groupKey = ac ?? 'Actions';
+    const group = ensureGroup(groupKey);
+    if (!group.has(actionId)) {
+      group.set(actionId, { actionId, displayName, isAvailable: true, ...(ac !== null ? { actionClass: ac } : {}) });
+    }
+
+    if (ac !== null) {
+      const targets = synthesizeByClass.get(ac);
+      if (targets !== undefined) {
+        for (const target of targets) {
+          const synthGroup = ensureGroup(target);
+          if (!synthGroup.has(actionId)) {
+            synthGroup.set(actionId, { actionId, displayName, isAvailable: true, actionClass: target });
+          }
+        }
       }
     }
   }

@@ -1220,11 +1220,10 @@ describe('deriveRenderModel state metadata', () => {
     });
   });
 
-  it('synthesizes Op+SA group from operation moves and filters out specialActivity', () => {
+  it('without actionGroupPolicy, groups all action classes directly with no synthesis or hiding', () => {
     const def = compileFixture();
     const state = initialState(def, 400, 2).state;
 
-    // 1st eligible: engine emits operation + specialActivity moves (never operationPlusSpecialActivity)
     const moves: Move[] = [
       { actionId: asActionId('train'), params: {}, actionClass: 'operation' },
       { actionId: asActionId('patrol'), params: {}, actionClass: 'operation' },
@@ -1240,31 +1239,103 @@ describe('deriveRenderModel state metadata', () => {
     );
 
     const groupKeys = model.actionGroups.map((group) => group.groupKey);
-    // specialActivity moves should be filtered out entirely, not shown in any group
+    // No policy → no synthesis, no hiding
+    expect(groupKeys).toContain('operation');
+    expect(groupKeys).toContain('specialActivity');
+    expect(groupKeys).toContain('Actions');
+    expect(groupKeys).not.toContain('operationPlusSpecialActivity');
+
+    const saGroup = model.actionGroups.find((g) => g.groupKey === 'specialActivity');
+    expect(saGroup?.actions.map((a) => a.actionId)).toEqual(['advise']);
+  });
+
+  it('with actionGroupPolicy, synthesizes groups and hides classes per policy', () => {
+    const def = compileFixture();
+    const state = initialState(def, 400, 2).state;
+
+    const moves: Move[] = [
+      { actionId: asActionId('train'), params: {}, actionClass: 'operation' },
+      { actionId: asActionId('patrol'), params: {}, actionClass: 'operation' },
+      { actionId: asActionId('advise'), params: {}, actionClass: 'specialActivity' },
+      { actionId: asActionId('pass'), params: {} },
+    ];
+
+    const coinPolicy = new VisualConfigProvider({
+      version: 1,
+      actionGroupPolicy: {
+        synthesize: [{ fromClass: 'operation', intoGroup: 'operationPlusSpecialActivity' }],
+        hide: ['specialActivity'],
+      },
+    });
+
+    const legalMoveResult: LegalMoveEnumerationResult = { moves, warnings: [] };
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        legalMoveResult,
+        visualConfigProvider: coinPolicy,
+      }),
+    );
+
+    const groupKeys = model.actionGroups.map((group) => group.groupKey);
     expect(groupKeys).not.toContain('specialActivity');
-    // Op+SA group should be synthesized from operation moves
     expect(groupKeys).toContain('operationPlusSpecialActivity');
     expect(groupKeys).toContain('operation');
 
-    // Op+SA group should contain operations (train, patrol) but NOT advise
-    const opSaGroup = model.actionGroups.find((group) => group.groupKey === 'operationPlusSpecialActivity');
-    const opSaActionIds = opSaGroup?.actions.map((action) => action.actionId) ?? [];
+    const opSaGroup = model.actionGroups.find((g) => g.groupKey === 'operationPlusSpecialActivity');
+    const opSaActionIds = opSaGroup?.actions.map((a) => a.actionId) ?? [];
     expect(opSaActionIds).toContain('train');
     expect(opSaActionIds).toContain('patrol');
     expect(opSaActionIds).not.toContain('advise');
 
-    // Operation group should contain train and patrol
-    const opGroup = model.actionGroups.find((group) => group.groupKey === 'operation');
-    const opActionIds = opGroup?.actions.map((action) => action.actionId) ?? [];
+    const opGroup = model.actionGroups.find((g) => g.groupKey === 'operation');
+    const opActionIds = opGroup?.actions.map((a) => a.actionId) ?? [];
     expect(opActionIds).toContain('train');
     expect(opActionIds).toContain('patrol');
-    expect(opActionIds).not.toContain('advise');
 
-    // actionClass should be propagated correctly
     const opTrainAction = opGroup?.actions.find((a) => a.actionId === 'train');
     expect(opTrainAction?.actionClass).toBe('operation');
     const opsaTrainAction = opSaGroup?.actions.find((a) => a.actionId === 'train');
     expect(opsaTrainAction?.actionClass).toBe('operationPlusSpecialActivity');
+  });
+
+  it('actionGroupPolicy with multiple synthesis targets creates all declared groups', () => {
+    const def = compileFixture();
+    const state = initialState(def, 400, 2).state;
+
+    const moves: Move[] = [
+      { actionId: asActionId('attack'), params: {}, actionClass: 'combat' },
+      { actionId: asActionId('defend'), params: {}, actionClass: 'combat' },
+    ];
+
+    const multiSynthPolicy = new VisualConfigProvider({
+      version: 1,
+      actionGroupPolicy: {
+        synthesize: [
+          { fromClass: 'combat', intoGroup: 'allActions' },
+          { fromClass: 'combat', intoGroup: 'combatSpecial' },
+        ],
+      },
+    });
+
+    const legalMoveResult: LegalMoveEnumerationResult = { moves, warnings: [] };
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        legalMoveResult,
+        visualConfigProvider: multiSynthPolicy,
+      }),
+    );
+
+    const groupKeys = model.actionGroups.map((g) => g.groupKey);
+    expect(groupKeys).toContain('combat');
+    expect(groupKeys).toContain('allActions');
+    expect(groupKeys).toContain('combatSpecial');
+
+    const allActionsGroup = model.actionGroups.find((g) => g.groupKey === 'allActions');
+    expect(allActionsGroup?.actions.map((a) => a.actionId)).toEqual(['attack', 'defend']);
   });
 
   it('derives eligibility from card metadata via cardSeatOrderMetadataKey', () => {

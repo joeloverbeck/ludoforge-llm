@@ -8464,9 +8464,74 @@ eventDecks:
             - ARVN
           flavorText: Raid planning reshapes near-term eligibility and initiative windows.
         unshaded:
-          text: Adjust next-card eligibility to favor COIN follow-on operations.
+          text: 2 Troop Casualties to Available. NVA Ineligible through next card. US Eligible.
+          eligibilityOverrides:
+            - target:
+                kind: seat
+                seat: us
+              eligible: true
+              windowId: make-eligible-now
+            - target:
+                kind: seat
+                seat: nva
+              eligible: false
+              windowId: make-ineligible
+          effects:
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: $usTroopCasualty
+                    over:
+                      query: tokensInZone
+                      zone: casualties-US:none
+                      filter:
+                        op: and
+                        args:
+                          - prop: faction
+                            op: eq
+                            value: US
+                          - prop: type
+                            op: eq
+                            value: troops
+                    to:
+                      zoneExpr: available-US:none
         shaded:
-          text: Raid aftermath shifts eligibility toward insurgent initiative.
+          text: Any 2 Casualties out of play. US Ineligible through next card.
+          eligibilityOverrides:
+            - target:
+                kind: seat
+                seat: us
+              eligible: false
+              windowId: make-ineligible
+          effects:
+            - chooseN:
+                internalDecisionId: son-tay-casualties-to-out-of-play
+                bind: $casualtiesToOutOfPlay
+                options:
+                  query: tokensInZone
+                  zone: casualties-US:none
+                  filter:
+                    op: and
+                    args:
+                      - prop: faction
+                        op: eq
+                        value: US
+                min: 0
+                max: 2
+            - forEach:
+                bind: $casualtyToOutOfPlay
+                over:
+                  query: binding
+                  name: $casualtiesToOutOfPlay
+                effects:
+                  - moveToken:
+                      token: $casualtyToOutOfPlay
+                      from:
+                        zoneExpr:
+                          ref: tokenZone
+                          token: $casualtyToOutOfPlay
+                      to:
+                        zoneExpr: out-of-play-US:none
       - id: card-57
         title: International Unrest
         sideMode: dual

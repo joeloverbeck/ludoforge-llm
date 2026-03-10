@@ -6,10 +6,13 @@ import {
   asActionId,
   asPhaseId,
   asPlayerId,
+  asTokenId,
   initialState,
   legalMoves,
   type GameDef,
+  type GameState,
   type Move,
+  type Token,
 } from '../../src/kernel/index.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
@@ -32,6 +35,7 @@ const createDef = (): GameDef =>
           eligibility: {
             seats: ['US', 'ARVN', 'NVA', 'VC'],
             overrideWindows: [
+              { id: 'force-eligible-now', duration: 'turn' },
               { id: 'remain-eligible', duration: 'nextTurn' },
               { id: 'force-ineligible', duration: 'nextTurn' },
             ],
@@ -51,7 +55,7 @@ actor: 'active',
 executor: 'actor',
 phase: [asPhaseId('main')],
         params: [
-          { name: 'eventCardId', domain: { query: 'enums', values: ['card-overrides', 'card-free-op'] } },
+          { name: 'eventCardId', domain: { query: 'enums', values: ['card-overrides', 'card-immediate', 'card-free-op'] } },
           { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
         ],
         pre: null,
@@ -92,6 +96,17 @@ phase: [asPhaseId('main')],
             },
           },
           {
+            id: 'card-immediate',
+            title: 'Immediate Eligibility',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Make US eligible right now.',
+              eligibilityOverrides: [
+                { target: { kind: 'seat', seat: 'US' }, eligible: true, windowId: 'force-eligible-now' },
+              ],
+            },
+          },
+          {
             id: 'card-free-op',
             title: 'Free Operation Grant',
             sideMode: 'single',
@@ -126,6 +141,51 @@ describe('FITL eligibility window integration', () => {
     assert.deepEqual(requireCardDrivenRuntime(second.state).eligibility, { US: true, ARVN: false, NVA: false, VC: true });
     assert.equal(requireCardDrivenRuntime(second.state).currentCard.firstEligible, 'US');
     assert.equal(requireCardDrivenRuntime(second.state).currentCard.secondEligible, 'VC');
+  });
+
+  it('applies declared turn-duration overrides immediately without queuing them for the next card', () => {
+    const def = createDef();
+    const start = initialState(def, 42, 4).state;
+    const runtime = requireCardDrivenRuntime(start);
+
+    const configured: GameState = {
+      ...start,
+      activePlayer: asPlayerId(2),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...runtime,
+          eligibility: { US: false, ARVN: false, NVA: true, VC: true },
+          currentCard: {
+            ...runtime.currentCard,
+            firstEligible: 'NVA',
+            secondEligible: 'VC',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+        },
+      },
+      zones: {
+        ...start.zones,
+        'played:none': [{
+          id: asTokenId('card-immediate'),
+          type: 'card',
+          props: { faction: 'none', type: 'card' },
+        } as Token],
+      },
+    };
+
+    const first = applyMove(def, configured, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-immediate', side: 'unshaded' },
+    }).state;
+
+    assert.deepEqual(requireCardDrivenRuntime(first).eligibility, { US: true, ARVN: false, NVA: true, VC: true });
+    assert.equal(requireCardDrivenRuntime(first).currentCard.firstEligible, 'US');
+    assert.equal(requireCardDrivenRuntime(first).currentCard.secondEligible, 'VC');
+    assert.deepEqual(requireCardDrivenRuntime(first).pendingEligibilityOverrides ?? [], []);
   });
 
   it('emits and consumes one-shot free-operation move variants from freeOpGranted directives', () => {

@@ -25,6 +25,8 @@ turnOrder:
       eligibility:
         seats: ['us', 'arvn', 'nva', 'vc']
         overrideWindows:
+          - id: make-eligible-now
+            duration: turn
           - id: remain-eligible
             duration: nextTurn
           - id: make-ineligible

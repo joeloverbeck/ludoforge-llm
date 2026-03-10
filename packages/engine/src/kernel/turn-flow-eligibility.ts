@@ -245,7 +245,7 @@ const extractPendingEligibilityOverrides = (
         ? activeSeat
         : resolveSeatId(declaration.target.seat, seatOrder);
     const duration = windowById[declaration.windowId];
-    if (seat === null || duration !== 'nextTurn') {
+    if (seat === null || (duration !== 'nextTurn' && duration !== 'turn')) {
       continue;
     }
     overrides.push({
@@ -257,6 +257,20 @@ const extractPendingEligibilityOverrides = (
   }
 
   return overrides;
+};
+
+const applyEligibilityOverrides = (
+  eligibility: Readonly<Record<string, boolean>>,
+  overrides: readonly TurnFlowPendingEligibilityOverride[],
+): Readonly<Record<string, boolean>> => {
+  if (overrides.length === 0) {
+    return eligibility;
+  }
+  const nextEligibility = { ...eligibility };
+  for (const override of overrides) {
+    nextEligibility[override.seat] = override.eligible;
+  }
+  return nextEligibility;
 };
 
 const toPendingFreeOperationGrant = (
@@ -880,6 +894,8 @@ export const applyTurnFlowEligibilityAfterMove = (
   const existingPendingFreeOperationGrants = runtime.pendingFreeOperationGrants ?? [];
   const existingPendingDeferredEventEffects = runtime.pendingDeferredEventEffects ?? [];
   const newOverrides = extractPendingEligibilityOverrides(def, state, move, activeSeat, runtime.seatOrder);
+  const immediateOverrides = newOverrides.filter((override) => override.duration === 'turn');
+  const deferredOverrides = newOverrides.filter((override) => override.duration === 'nextTurn');
   const newFreeOpGrants = extractPendingFreeOperationGrants(
     def,
     state,
@@ -889,7 +905,8 @@ export const applyTurnFlowEligibilityAfterMove = (
     seatResolution,
     existingPendingFreeOperationGrants,
   );
-  const pendingOverrides = [...(runtime.pendingEligibilityOverrides ?? []), ...newOverrides];
+  const effectiveEligibility = applyEligibilityOverrides(runtime.eligibility, immediateOverrides);
+  const pendingOverrides = [...(runtime.pendingEligibilityOverrides ?? []), ...deferredOverrides];
   const pendingFreeOperationGrants = [
     ...existingPendingFreeOperationGrants,
     ...newFreeOpGrants,
@@ -918,7 +935,7 @@ export const applyTurnFlowEligibilityAfterMove = (
     before.firstActionClass ??
     (before.nonPassCount === 0 && moveClass !== 'pass' ? normalizeFirstActionClass(moveClass) : null);
 
-  const activeCardCandidates = computeCandidates(runtime.seatOrder, runtime.eligibility, acted);
+  const activeCardCandidates = computeCandidates(runtime.seatOrder, effectiveEligibility, acted);
   const currentCard = withRequiredGrantCandidates(pendingFreeOperationGrants, runtime.seatOrder, {
     firstEligible: activeCardCandidates.first,
     secondEligible: activeCardCandidates.second,
@@ -959,6 +976,10 @@ export const applyTurnFlowEligibilityAfterMove = (
       seat: activeSeat,
       before: cardSnapshot(currentCard),
       after: cardSnapshot(currentCard),
+      ...(immediateOverrides.length === 0 ? {} : {
+        eligibilityBefore: runtime.eligibility,
+        eligibilityAfter: effectiveEligibility,
+      }),
       overrides: newOverrides,
     });
   }
@@ -990,7 +1011,10 @@ export const applyTurnFlowEligibilityAfterMove = (
     const finalized = finalizeSuspendedOrEndedCard(
       def,
       rewardState,
-      runtime,
+      {
+        ...runtime,
+        eligibility: effectiveEligibility,
+      },
       seatResolution,
       currentCard,
       pendingOverrides,
@@ -1013,6 +1037,7 @@ export const applyTurnFlowEligibilityAfterMove = (
     withPendingFreeOperationGrants(
       withSuspendedCardEnd({
         ...runtime,
+        eligibility: effectiveEligibility,
         pendingEligibilityOverrides: pendingOverrides,
         currentCard,
       }, hasRequiredGrantWindow

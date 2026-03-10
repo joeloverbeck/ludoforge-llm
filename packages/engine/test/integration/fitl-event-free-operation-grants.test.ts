@@ -35,8 +35,8 @@ const createDef = (): GameDef =>
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
             seats: ['US', 'ARVN', 'NVA', 'VC'],
-            overrideWindows: [],
           },
+          windows: [],
           optionMatrix: [{ first: 'event', second: ['operation'] }],
           passRewards: [],
           freeOperationActionIds: ['operation'],
@@ -318,8 +318,8 @@ const createRequiredGrantResumeDef = (): GameDef =>
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
             seats: ['US', 'ARVN', 'NVA', 'VC'],
-            overrideWindows: [],
           },
+          windows: [],
           optionMatrix: [{ first: 'event', second: ['operation'] }],
           passRewards: [],
           freeOperationActionIds: ['operation'],
@@ -495,8 +495,8 @@ const createExecutionContextGrantDef = (): GameDef => ({
         cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
         eligibility: {
           seats: ['US', 'NVA'],
-          overrideWindows: [],
         },
+        windows: [],
         actionClassByActionId: { event: 'event', operation: 'operation' },
         optionMatrix: [{ first: 'event', second: ['operation'] }],
         passRewards: [],
@@ -664,8 +664,8 @@ const createZoneFilteredDef = (): GameDef =>
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
             seats: ['US', 'ARVN', 'NVA'],
-            overrideWindows: [],
           },
+          windows: [],
           optionMatrix: [{ first: 'event', second: ['operation'] }],
           passRewards: [],
           freeOperationActionIds: ['operation'],
@@ -795,8 +795,8 @@ const createSequenceContextDef = (): GameDef =>
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
             seats: ['US', 'NVA'],
-            overrideWindows: [],
           },
+          windows: [],
           optionMatrix: [{ first: 'event', second: ['operation'] }],
           passRewards: [],
           freeOperationActionIds: ['operation'],
@@ -996,8 +996,8 @@ const createExecuteAsSeatDef = (): GameDef =>
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
             seats: ['US', 'ARVN'],
-            overrideWindows: [],
           },
+          windows: [],
           optionMatrix: [{ first: 'event', second: ['operation'] }],
           passRewards: [],
           freeOperationActionIds: ['operation'],
@@ -1123,8 +1123,8 @@ const createGrantViabilityPolicyDef = (): GameDef =>
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
             seats: ['US', 'ARVN', 'NVA'],
-            overrideWindows: [],
           },
+          windows: [],
           optionMatrix: [{ first: 'event', second: ['operation'] }],
           passRewards: [],
           freeOperationActionIds: ['operation'],
@@ -1482,8 +1482,8 @@ const createExecuteAsSeatSpecialActivityDef = (): GameDef =>
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
             seats: ['US', 'ARVN'],
-            overrideWindows: [],
           },
+          windows: [],
           actionClassByActionId: { airStrike: 'specialActivity' },
           optionMatrix: [{ first: 'event', second: ['operationPlusSpecialActivity'] }],
           passRewards: [],

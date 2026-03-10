@@ -356,7 +356,9 @@ describe('legalMoves', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1', '2'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1', '2'] },
+
+            windows: [],
             actionClassByActionId: {
               pass: 'pass',
               event: 'event',
@@ -469,7 +471,9 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1', '2'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1', '2'] },
+
+            windows: [],
             actionClassByActionId: {
               pass: 'pass',
               event: 'event',
@@ -567,7 +571,9 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1', '2'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1', '2'] },
+
+            windows: [],
             actionClassByActionId: {
               operation: 'operation',
               limitedOperation: 'limitedOperation',
@@ -604,7 +610,9 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -724,7 +732,9 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -819,7 +829,9 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -911,7 +923,9 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -997,7 +1011,9 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -1090,7 +1106,9 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -1196,7 +1214,9 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -1296,7 +1316,9 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],

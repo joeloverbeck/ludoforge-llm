@@ -61,8 +61,8 @@ const fullGameDef = {
         cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
         eligibility: {
           seats: ['us', 'arvn', 'nva', 'vc'],
-          overrideWindows: [{ id: 'remain-eligible', duration: 'nextTurn' }],
         },
+        windows: [{ id: 'remain-eligible', duration: 'nextTurn', usages: ['eligibilityOverride'] }],
         actionClassByActionId: { pass: 'pass' },
         optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
         passRewards: [{ seat: 'coin', resource: 'arvnResources', amount: 3 }],

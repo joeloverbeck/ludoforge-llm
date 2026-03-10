@@ -8403,14 +8403,22 @@ eventDecks:
             - ARVN
           flavorText: Analyst leaks expose hidden assumptions and reverse perceived advantages.
         unshaded:
-          text: Flip one currently active capability to its opposite side.
+          text: Flip 1 shaded US Capability to unshaded.
           effects:
             - chooseOne:
                 bind: $randCapabilityMarker
                 options:
                   query: globalMarkers
+                  markers:
+                    - cap_topGun
+                    - cap_arcLight
+                    - cap_abrams
+                    - cap_cobras
+                    - cap_m48Patton
+                    - cap_caps
+                    - cap_cords
+                    - cap_lgbs
                   states:
-                    - unshaded
                     - shaded
             - flipGlobalMarker:
                 marker:
@@ -8419,15 +8427,23 @@ eventDecks:
                 stateA: unshaded
                 stateB: shaded
         shaded:
-          text: Flip one currently active capability to its opposite side.
+          text: "Systems analysis ignorant of local conditions: Flip 1 unshaded US Capability to shaded."
           effects:
             - chooseOne:
                 bind: $randCapabilityMarker
                 options:
                   query: globalMarkers
+                  markers:
+                    - cap_topGun
+                    - cap_arcLight
+                    - cap_abrams
+                    - cap_cobras
+                    - cap_m48Patton
+                    - cap_caps
+                    - cap_cords
+                    - cap_lgbs
                   states:
                     - unshaded
-                    - shaded
             - flipGlobalMarker:
                 marker:
                   ref: binding
@@ -8448,9 +8464,74 @@ eventDecks:
             - ARVN
           flavorText: Raid planning reshapes near-term eligibility and initiative windows.
         unshaded:
-          text: Adjust next-card eligibility to favor COIN follow-on operations.
+          text: 2 Troop Casualties to Available. NVA Ineligible through next card. US Eligible.
+          eligibilityOverrides:
+            - target:
+                kind: seat
+                seat: us
+              eligible: true
+              windowId: make-eligible-now
+            - target:
+                kind: seat
+                seat: nva
+              eligible: false
+              windowId: make-ineligible
+          effects:
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: $usTroopCasualty
+                    over:
+                      query: tokensInZone
+                      zone: casualties-US:none
+                      filter:
+                        op: and
+                        args:
+                          - prop: faction
+                            op: eq
+                            value: US
+                          - prop: type
+                            op: eq
+                            value: troops
+                    to:
+                      zoneExpr: available-US:none
         shaded:
-          text: Raid aftermath shifts eligibility toward insurgent initiative.
+          text: Any 2 Casualties out of play. US Ineligible through next card.
+          eligibilityOverrides:
+            - target:
+                kind: seat
+                seat: us
+              eligible: false
+              windowId: make-ineligible
+          effects:
+            - chooseN:
+                internalDecisionId: son-tay-casualties-to-out-of-play
+                bind: $casualtiesToOutOfPlay
+                options:
+                  query: tokensInZone
+                  zone: casualties-US:none
+                  filter:
+                    op: and
+                    args:
+                      - prop: faction
+                        op: eq
+                        value: US
+                min: 0
+                max: 2
+            - forEach:
+                bind: $casualtyToOutOfPlay
+                over:
+                  query: binding
+                  name: $casualtiesToOutOfPlay
+                effects:
+                  - moveToken:
+                      token: $casualtyToOutOfPlay
+                      from:
+                        zoneExpr:
+                          ref: tokenZone
+                          token: $casualtyToOutOfPlay
+                      to:
+                        zoneExpr: out-of-play-US:none
       - id: card-57
         title: International Unrest
         sideMode: dual
@@ -10084,100 +10165,139 @@ eventDecks:
             - ARVN
           flavorText: Shock teams probe base perimeters.
         unshaded:
-          text: Remove a COIN Base and up to 2 Troops from one selected space.
+          text: Remove 2 NVA Troops each from up to 3 spaces in South Vietnam. Remain Eligible.
+          eligibilityOverrides:
+            - target:
+                kind: active
+              eligible: true
+              windowId: remain-eligible
           targets:
-            - id: $targetSpace
+            - id: $targetSouthVietnamSpace
               selector:
                 query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - op: ==
+                      left:
+                        ref: zoneProp
+                        zone: $zone
+                        prop: country
+                      right: southVietnam
+                    - op: ">"
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  op: eq
+                                  value: NVA
+                                - prop: type
+                                  op: eq
+                                  value: troops
+                      right: 0
               cardinality:
-                max: 1
-              application: aggregate
+                max: 3
+              application: each
               effects:
                 - removeByPriority:
-                    budget: 3
+                    budget: 2
                     groups:
-                      - bind: $coinBase
+                      - bind: $nvaTroop
                         over:
                           query: tokensInZone
-                          zone: $targetSpace
+                          zone: $targetSouthVietnamSpace
                           filter:
                             op: and
                             args:
                               - prop: faction
-                                op: in
-                                value:
-                                  - US
-                                  - ARVN
-                              - prop: type
                                 op: eq
-                                value: base
-                        to:
-                          zoneExpr:
-                            concat:
-                              - available-
-                              - ref: tokenProp
-                                token: $coinBase
-                                prop: faction
-                              - :none
-                      - bind: $coinTroop
-                        over:
-                          query: tokensInZone
-                          zone: $targetSpace
-                          filter:
-                            op: and
-                            args:
-                              - prop: faction
-                                op: in
-                                value:
-                                  - US
-                                  - ARVN
+                                value: NVA
                               - prop: type
                                 op: eq
                                 value: troops
                         to:
-                          zoneExpr:
-                            concat:
-                              - available-
-                              - ref: tokenProp
-                                token: $coinTroop
-                                prop: faction
-                              - :none
+                          zoneExpr: available-NVA:none
         shaded:
-          text: Remove 3 NVA/VC Guerrillas from one selected space.
-          targets:
-            - id: $targetSpace
-              selector:
-                query: mapSpaces
-              cardinality:
+          text: Remove up to 1 US and 2 ARVN Bases from any Provinces (US to Casualties).
+          effects:
+            - chooseN:
+                bind: $usBasesToRemove
+                options:
+                  query: tokensInMapSpaces
+                  spaceFilter:
+                    op: ==
+                    left:
+                      ref: zoneProp
+                      zone: $zone
+                      prop: category
+                    right: province
+                  filter:
+                    op: and
+                    args:
+                      - prop: faction
+                        op: eq
+                        value: US
+                      - prop: type
+                        op: eq
+                        value: base
+                min: 0
                 max: 1
-              application: aggregate
-              effects:
-                - removeByPriority:
-                    budget: 3
-                    groups:
-                      - bind: $insurgentGuerrilla
-                        over:
-                          query: tokensInZone
-                          zone: $targetSpace
-                          filter:
-                            op: and
-                            args:
-                              - prop: faction
-                                op: in
-                                value:
-                                  - NVA
-                                  - VC
-                              - prop: type
-                                op: eq
-                                value: guerrilla
-                        to:
-                          zoneExpr:
-                            concat:
-                              - available-
-                              - ref: tokenProp
-                                token: $insurgentGuerrilla
-                                prop: faction
-                              - :none
+            - chooseN:
+                bind: $arvnBasesToRemove
+                options:
+                  query: tokensInMapSpaces
+                  spaceFilter:
+                    op: ==
+                    left:
+                      ref: zoneProp
+                      zone: $zone
+                      prop: category
+                    right: province
+                  filter:
+                    op: and
+                    args:
+                      - prop: faction
+                        op: eq
+                        value: ARVN
+                      - prop: type
+                        op: eq
+                        value: base
+                min: 0
+                max: 2
+            - forEach:
+                bind: $usBase
+                over:
+                  query: binding
+                  name: $usBasesToRemove
+                effects:
+                  - moveToken:
+                      token: $usBase
+                      from:
+                        zoneExpr:
+                          ref: tokenZone
+                          token: $usBase
+                      to:
+                        zoneExpr: casualties-US:none
+            - forEach:
+                bind: $arvnBase
+                over:
+                  query: binding
+                  name: $arvnBasesToRemove
+                effects:
+                  - moveToken:
+                      token: $arvnBase
+                      from:
+                        zoneExpr:
+                          ref: tokenZone
+                          token: $arvnBase
+                      to:
+                        zoneExpr: available-ARVN:none
       - id: card-56
         title: Vo Nguyen Giap
         sideMode: dual

@@ -3,6 +3,7 @@ import {
   TURN_FLOW_ACTION_CLASS_VALUES,
   buildMissingReferenceSuggestion,
   TURN_FLOW_DURATION_VALUES,
+  TURN_FLOW_WINDOW_USAGE_VALUES,
   TURN_FLOW_FIRST_ACTION_VALUES,
   TURN_FLOW_OPTIONAL_KEYS,
   TURN_FLOW_REQUIRED_KEYS,
@@ -15,6 +16,7 @@ import type { GameSpecSourceMap } from './source-map.js';
 export {
   TURN_FLOW_ACTION_CLASS_VALUES,
   TURN_FLOW_DURATION_VALUES,
+  TURN_FLOW_WINDOW_USAGE_VALUES,
   TURN_FLOW_FIRST_ACTION_VALUES,
   TURN_FLOW_REQUIRED_KEYS,
 };
@@ -29,8 +31,8 @@ export const TURN_STRUCTURE_KEYS = ['phases', 'interrupts'] as const;
 export const TURN_ORDER_KEYS = ['type', 'order', 'config'] as const;
 export const TURN_FLOW_KEYS = [...TURN_FLOW_REQUIRED_KEYS, ...TURN_FLOW_OPTIONAL_KEYS] as const;
 export const TURN_FLOW_CARD_LIFECYCLE_KEYS = ['played', 'lookahead', 'leader'] as const;
-export const TURN_FLOW_ELIGIBILITY_KEYS = ['seats', 'overrideWindows'] as const;
-export const TURN_FLOW_OVERRIDE_WINDOW_KEYS = ['id', 'duration'] as const;
+export const TURN_FLOW_ELIGIBILITY_KEYS = ['seats'] as const;
+export const TURN_FLOW_WINDOW_KEYS = ['id', 'duration', 'usages'] as const;
 export const TURN_FLOW_OPTION_MATRIX_ROW_KEYS = ['first', 'second'] as const;
 export const TURN_FLOW_PASS_REWARD_KEYS = ['seat', 'resource', 'amount'] as const;
 export const ACTION_PIPELINE_KEYS = [

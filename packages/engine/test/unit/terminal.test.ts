@@ -182,7 +182,8 @@ describe('terminalResult', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['us', 'nva', 'arvn'], overrideWindows: [] },
+            eligibility: { seats: ['us', 'nva', 'arvn'] },
+            windows: [],
             actionClassByActionId: { pass: 'pass' },
             optionMatrix: [],
             passRewards: [],
@@ -248,7 +249,8 @@ describe('terminalResult', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['us', 'nva', 'arvn'], overrideWindows: [] },
+            eligibility: { seats: ['us', 'nva', 'arvn'] },
+            windows: [],
             actionClassByActionId: { pass: 'pass' },
             optionMatrix: [],
             passRewards: [],
@@ -325,7 +327,8 @@ describe('terminalResult', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['us', 'nva', 'arvn'], overrideWindows: [] },
+            eligibility: { seats: ['us', 'nva', 'arvn'] },
+            windows: [],
             actionClassByActionId: { pass: 'pass' },
             optionMatrix: [],
             passRewards: [],
@@ -402,7 +405,8 @@ describe('terminalResult', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['us', 'nva', 'arvn'], overrideWindows: [] },
+            eligibility: { seats: ['us', 'nva', 'arvn'] },
+            windows: [],
             actionClassByActionId: { pass: 'pass' },
             optionMatrix: [],
             passRewards: [],

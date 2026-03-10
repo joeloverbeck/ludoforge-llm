@@ -9,7 +9,9 @@ import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
 const minimalCardDrivenTurnFlow = {
   cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
-  eligibility: { seats: ['us', 'arvn', 'nva', 'vc'], overrideWindows: [] },
+  eligibility: { seats: ['us', 'arvn', 'nva', 'vc'] },
+
+  windows: [],
   actionClassByActionId: { pass: 'pass' } as const,
   optionMatrix: [],
   passRewards: [],
@@ -612,8 +614,8 @@ describe('compile top-level actions/triggers/end conditions', () => {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
             eligibility: {
               seats: ['us', 'arvn', 'nva', 'vc'],
-              overrideWindows: [{ id: 'remain-eligible', duration: 'nextTurn' as const }],
             },
+            windows: [{ id: 'remain-eligible', duration: 'nextTurn' as const, usages: ['eligibilityOverride'] as const }],
             actionClassByActionId: { pass: 'pass' as const },
             optionMatrix: [{ first: 'event' as const, second: ['operation', 'operationPlusSpecialActivity'] as const }],
             passRewards: [
@@ -742,7 +744,9 @@ describe('compile top-level actions/triggers/end conditions', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none' },
-            eligibility: { seats: ['us'], overrideWindows: [] },
+            eligibility: { seats: ['us'] },
+
+            windows: [],
           },
         },
       },
@@ -1221,7 +1225,9 @@ describe('compile top-level actions/triggers/end conditions', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['us'], overrideWindows: [] },
+            eligibility: { seats: ['us'] },
+
+            windows: [],
             actionClassByActionId: { unknownAction: 'operation' as const, pass: 'pass' as const },
             optionMatrix: [{ first: 'event' as const, second: ['operation'] as const }],
             passRewards: [],
@@ -1390,8 +1396,8 @@ describe('compile top-level actions/triggers/end conditions', () => {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
             eligibility: {
               seats: ['us', 'arvn', 'us'],
-              overrideWindows: [],
             },
+            windows: [],
             actionClassByActionId: { pass: 'pass' as const, pivotalA: 'event' as const, pivotalB: 'event' as const },
             optionMatrix: [
               { first: 'event' as const, second: ['operation'] as const },
@@ -1467,8 +1473,8 @@ describe('compile top-level actions/triggers/end conditions', () => {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
             eligibility: {
               seats: ['us', 7, 'us'],
-              overrideWindows: [],
             },
+            windows: [],
             actionClassByActionId: { pass: 'pass' as const, pivotalA: 'event' as const, pivotalB: 'event' as const },
             optionMatrix: [{ first: 'event' as const, second: ['operation'] as const }],
             passRewards: [],
@@ -1940,8 +1946,8 @@ describe('compile top-level actions/triggers/end conditions', () => {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
             eligibility: {
               seats: ['us', 'arvn', 'nva', 'vc'],
-              overrideWindows: [],
             },
+            windows: [],
             actionClassByActionId: { pass: 'pass' as const, pivotalA: 'event' as const, pivotalB: 'event' as const },
             optionMatrix: [{ first: 'event' as const, second: ['operation'] as const }],
             passRewards: [],

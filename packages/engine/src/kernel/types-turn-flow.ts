@@ -1,4 +1,4 @@
-import type { TurnFlowActionClass as CanonicalTurnFlowActionClass } from '../contracts/index.js';
+import type { TurnFlowActionClass as CanonicalTurnFlowActionClass, TurnFlowWindowUsage } from '../contracts/index.js';
 import type { FreeOperationSequenceContextContract } from './free-operation-sequence-context-contract.js';
 
 export type TurnFlowDuration = 'turn' | 'nextTurn' | 'round' | 'cycle';
@@ -43,14 +43,14 @@ export interface TurnFlowCardLifecycleDef {
   readonly leader: string;
 }
 
-export interface TurnFlowEligibilityOverrideWindowDef {
+export interface TurnFlowWindowDef {
   readonly id: string;
   readonly duration: TurnFlowDuration;
+  readonly usages: readonly TurnFlowWindowUsage[];
 }
 
 export interface TurnFlowEligibilityDef {
   readonly seats: readonly string[];
-  readonly overrideWindows: readonly TurnFlowEligibilityOverrideWindowDef[];
 }
 
 export interface TurnFlowOptionMatrixRowDef {
@@ -112,6 +112,7 @@ export interface TurnFlowPivotalDef {
 export interface TurnFlowDef {
   readonly cardLifecycle: TurnFlowCardLifecycleDef;
   readonly eligibility: TurnFlowEligibilityDef;
+  readonly windows: readonly TurnFlowWindowDef[];
   readonly actionClassByActionId: Readonly<Record<string, TurnFlowActionClass>>;
   readonly optionMatrix: readonly TurnFlowOptionMatrixRowDef[];
   readonly passRewards: readonly TurnFlowPassRewardDef[];

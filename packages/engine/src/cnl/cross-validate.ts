@@ -2,6 +2,7 @@ import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { EffectAST, EventSideDef, ZoneRef } from '../kernel/types.js';
 import {
   buildCardDrivenTurnFlowSemanticRequirements,
+  collectTurnFlowActionPipelineWindowIds,
   collectTurnFlowEligibilityOverrideWindowIds,
   evaluateActionSelectorContracts,
   findMissingTurnFlowLinkedWindows,
@@ -35,9 +36,10 @@ export function crossValidateSpec(
   const zoneTargets = collectIdentifierTargets(sections.zones?.map((zone) => zone.id));
   const tokenTypeTargets = collectIdentifierTargets(sections.tokenTypes?.map((tokenType) => tokenType.id));
   const cardDrivenTurnFlow = sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder.config.turnFlow : null;
-  const overrideWindowIds = collectTurnFlowEligibilityOverrideWindowIds(cardDrivenTurnFlow);
+  const eventEligibilityWindowIds = collectTurnFlowEligibilityOverrideWindowIds(cardDrivenTurnFlow);
+  const actionPipelineWindowIds = collectTurnFlowActionPipelineWindowIds(cardDrivenTurnFlow);
   const seatTargets = collectIdentifierTargets(seatIdentityContract.referenceSeatIds);
-  const windowTargets = collectIdentifierTargets(overrideWindowIds);
+  const eventWindowTargets = collectIdentifierTargets(eventEligibilityWindowIds);
   const globalVarTargets = collectIdentifierTargets(sections.globalVars?.map((globalVar) => globalVar.name));
   const perPlayerVarTargets = collectIdentifierTargets(sections.perPlayerVars?.map((playerVar) => playerVar.name));
 
@@ -99,15 +101,15 @@ export function crossValidateSpec(
 
   if (sections.actionPipelines !== null && cardDrivenTurnFlow !== null) {
     for (const [profileIndex, profile] of sections.actionPipelines.entries()) {
-      for (const { index: windowIndex, windowId } of findMissingTurnFlowLinkedWindows(profile.linkedWindows, overrideWindowIds)) {
+      for (const { index: windowIndex, windowId } of findMissingTurnFlowLinkedWindows(profile.linkedWindows, actionPipelineWindowIds)) {
         pushMissingReferenceDiagnostic(
           diagnostics,
           CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_PROFILE_WINDOW_MISSING,
           `doc.actionPipelines.${profileIndex}.linkedWindows.${windowIndex}`,
-          `Operation profile "${profile.id}" references unknown eligibility override window "${windowId}".`,
+          `Operation profile "${profile.id}" references unknown action-pipeline turn-flow window "${windowId}".`,
           windowId,
-          overrideWindowIds,
-          'Use one of the declared turnFlow.eligibility.overrideWindows ids.',
+          actionPipelineWindowIds,
+          'Use one of the declared turnFlow.windows ids with actionPipeline usage.',
         );
       }
 
@@ -469,7 +471,7 @@ export function crossValidateSpec(
           zoneTargets,
           card.id,
           seatTargets,
-          windowTargets,
+          eventWindowTargets,
           actionTargets,
           cardDrivenTurnFlow !== null && validateSeatReferences,
         );
@@ -480,7 +482,7 @@ export function crossValidateSpec(
           zoneTargets,
           card.id,
           seatTargets,
-          windowTargets,
+          eventWindowTargets,
           actionTargets,
           cardDrivenTurnFlow !== null && validateSeatReferences,
         );
@@ -971,8 +973,8 @@ function validateEventEligibilityOverrides(
       `${pathPrefix}.${overrideIndex}.windowId`,
       override.windowId,
       windowTargets,
-      `Event card "${cardId}" eligibilityOverride references unknown window "${override.windowId}".`,
-      'Use one of the declared turnFlow.eligibility.overrideWindows ids.',
+      `Event card "${cardId}" eligibilityOverride references a turn-flow window "${override.windowId}" that is not declared for eligibility overrides.`,
+      'Use one of the declared turnFlow.windows ids with eligibilityOverride usage.',
     );
   }
 }

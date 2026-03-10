@@ -92,17 +92,7 @@ export function parseGameSpec(markdown: string, options: ParseGameSpecOptions = 
 
     if (yamlDoc.errors.length > 0) {
       for (const error of yamlDoc.errors) {
-        const line = error.linePos?.[0]?.line;
-        const col = error.linePos?.[0]?.col;
-        diagnostics.push({
-          code: 'CNL_PARSER_YAML_PARSE_ERROR',
-          path: `yaml.block.${index}.parse`,
-          severity: 'error',
-          message:
-            line !== undefined
-              ? `YAML parse error at line ${line}${col !== undefined ? `, col ${col}` : ''}: ${error.message}`
-              : error.message,
-        });
+        diagnostics.push(buildYamlParseDiagnostic(block.text, index, error));
       }
       continue;
     }
@@ -577,6 +567,80 @@ function applyDiagnosticCap(
   };
 
   return [...kept, truncationWarning];
+}
+
+function buildYamlParseDiagnostic(
+  blockText: string,
+  blockIndex: number,
+  error: {
+    readonly message: string;
+    readonly linePos?: ReadonlyArray<{ readonly line: number; readonly col: number }>;
+  },
+): Diagnostic {
+  const line = error.linePos?.[0]?.line;
+  const col = error.linePos?.[0]?.col;
+  const contextSnippet = line === undefined ? undefined : getLineAt(blockText, line);
+  const summary = summarizeYamlErrorMessage(error.message);
+
+  return {
+    code: 'CNL_PARSER_YAML_PARSE_ERROR',
+    path: `yaml.block.${blockIndex}.parse`,
+    severity: 'error',
+    message:
+      line !== undefined
+        ? `YAML parse error at line ${line}${col !== undefined ? `, col ${col}` : ''}: ${summary}`
+        : summary,
+    suggestion: looksLikePlainScalarColonHazard(contextSnippet)
+      ? 'Quote plain-text values containing ": " or use a block scalar so YAML keeps the value as one string.'
+      : 'Fix YAML syntax near the reported line.',
+    ...(contextSnippet === undefined ? {} : { contextSnippet }),
+  };
+}
+
+function getLineAt(text: string, lineNumber: number): string | undefined {
+  if (lineNumber < 1) {
+    return undefined;
+  }
+
+  return text.split(/\r?\n/)[lineNumber - 1];
+}
+
+function summarizeYamlErrorMessage(message: string): string {
+  const firstLine = message.split(/\r?\n/, 1)[0]?.trim() ?? 'Invalid YAML syntax.';
+  return firstLine.replace(/\s+at line \d+, column \d+:$/, '.');
+}
+
+function looksLikePlainScalarColonHazard(line: string | undefined): boolean {
+  if (line === undefined) {
+    return false;
+  }
+
+  const kvMatch = line.match(/^\s*[^#\s][^:]*:\s*(.+)$/);
+  if (kvMatch === null) {
+    return false;
+  }
+
+  const rawValue = (kvMatch[1] ?? '').trim();
+  if (rawValue.length === 0) {
+    return false;
+  }
+
+  if (rawValue === '|' || rawValue === '>') {
+    return false;
+  }
+
+  if (rawValue.length >= 2) {
+    const first = rawValue[0];
+    const last = rawValue[rawValue.length - 1];
+    if ((first === '"' && last === '"') || (first === '\'' && last === '\'')) {
+      return false;
+    }
+    if ((first === '{' && last === '}') || (first === '[' && last === ']')) {
+      return false;
+    }
+  }
+
+  return /:\s/.test(rawValue);
 }
 
 function normalizeLimit(

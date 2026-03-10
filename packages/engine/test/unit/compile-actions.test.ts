@@ -7,7 +7,8 @@ import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
 const minimalCardDrivenTurnFlow = {
   cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
-  eligibility: { seats: ['us', 'arvn', 'nva', 'vc'], overrideWindows: [] },
+  eligibility: { seats: ['us', 'arvn', 'nva', 'vc'] },
+  windows: [],
   actionClassByActionId: { pass: 'pass' } as const,
   optionMatrix: [],
   passRewards: [],
@@ -271,7 +272,7 @@ describe('compile actions', () => {
             ...minimalCardDrivenTurnFlow,
             eligibility: {
               seats: ['US', 'ARVN', 'NVA', 'VC'],
-              overrideWindows: [],
+            windows: [],
             },
           },
         },

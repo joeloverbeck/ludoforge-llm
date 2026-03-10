@@ -48,7 +48,9 @@ describe('seat-resolution helpers', () => {
         type: 'cardDriven',
         config: {
           turnFlow: {
-            eligibility: { seats: ['US', 'NVA'], overrideWindows: [] },
+            eligibility: { seats: ['US', 'NVA'] },
+
+            windows: [],
           },
         },
       },

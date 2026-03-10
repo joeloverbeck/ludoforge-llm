@@ -719,39 +719,50 @@
                             "type": "string",
                             "minLength": 1
                           }
-                        },
-                        "overrideWindows": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "id": {
-                                "type": "string",
-                                "minLength": 1
-                              },
-                              "duration": {
-                                "type": "string",
-                                "enum": [
-                                  "turn",
-                                  "nextTurn",
-                                  "round",
-                                  "cycle"
-                                ]
-                              }
-                            },
-                            "required": [
-                              "id",
-                              "duration"
-                            ],
-                            "additionalProperties": false
-                          }
                         }
                       },
                       "required": [
-                        "seats",
-                        "overrideWindows"
+                        "seats"
                       ],
                       "additionalProperties": false
+                    },
+                    "windows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "duration": {
+                            "type": "string",
+                            "enum": [
+                              "turn",
+                              "nextTurn",
+                              "round",
+                              "cycle"
+                            ]
+                          },
+                          "usages": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "eligibilityOverride",
+                                "actionPipeline"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "duration",
+                          "usages"
+                        ],
+                        "additionalProperties": false
+                      }
                     },
                     "actionClassByActionId": {
                       "type": "object",
@@ -1118,6 +1129,7 @@
                   "required": [
                     "cardLifecycle",
                     "eligibility",
+                    "windows",
                     "actionClassByActionId",
                     "optionMatrix",
                     "passRewards",

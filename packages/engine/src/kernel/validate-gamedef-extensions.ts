@@ -15,7 +15,7 @@ import { type ValidationContext, checkDuplicateIds, pushMissingReferenceDiagnost
 import { forEachDefined } from './validate-gamedef-utils.js';
 import {
   appendActionPipelineConditionSurfacePath,
-  collectTurnFlowEligibilityOverrideWindowIds,
+  collectTurnFlowActionPipelineWindowIds,
   CONDITION_SURFACE_SUFFIX,
   conditionSurfacePathForTerminalCheckpointWhen,
   findMissingTurnFlowLinkedWindows,
@@ -326,8 +326,8 @@ export const validateActionPipelines = (
   context: ValidationContext,
 ): void => {
   const hasCardDrivenTurnOrder = def.turnOrder?.type === 'cardDriven';
-  const overrideWindowCandidates = hasCardDrivenTurnOrder
-    ? collectTurnFlowEligibilityOverrideWindowIds(def.turnOrder.config.turnFlow)
+  const linkedWindowCandidates = hasCardDrivenTurnOrder
+    ? collectTurnFlowActionPipelineWindowIds(def.turnOrder.config.turnFlow)
     : [];
 
   const operationActionIdCounts = new Map<string, number>();
@@ -399,15 +399,15 @@ export const validateActionPipelines = (
     }
 
     if (hasCardDrivenTurnOrder) {
-      const missingWindows = findMissingTurnFlowLinkedWindows(actionPipeline.linkedWindows, overrideWindowCandidates);
+      const missingWindows = findMissingTurnFlowLinkedWindows(actionPipeline.linkedWindows, linkedWindowCandidates);
       for (const { index: windowIndex, windowId } of missingWindows) {
         pushMissingReferenceDiagnostic(
           diagnostics,
           'REF_TURN_FLOW_OVERRIDE_WINDOW_MISSING',
           `${basePath}.linkedWindows[${windowIndex}]`,
-          `Unknown turn-flow eligibility override window "${windowId}".`,
+          `Unknown action-pipeline turn-flow window "${windowId}".`,
           windowId,
-          overrideWindowCandidates,
+          linkedWindowCandidates,
         );
       }
     }

@@ -6,10 +6,13 @@ import {
   asActionId,
   asPhaseId,
   asPlayerId,
+  asTokenId,
   initialState,
   legalMoves,
   type GameDef,
+  type GameState,
   type Move,
+  type Token,
 } from '../../src/kernel/index.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
@@ -31,11 +34,13 @@ const createDef = (): GameDef =>
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
             seats: ['US', 'ARVN', 'NVA', 'VC'],
-            overrideWindows: [
-              { id: 'remain-eligible', duration: 'nextTurn' },
-              { id: 'force-ineligible', duration: 'nextTurn' },
-            ],
           },
+          windows: [
+            { id: 'force-eligible-now', duration: 'turn', usages: ['eligibilityOverride'] },
+            { id: 'force-ineligible-now', duration: 'turn', usages: ['eligibilityOverride'] },
+            { id: 'remain-eligible', duration: 'nextTurn', usages: ['eligibilityOverride'] },
+            { id: 'force-ineligible', duration: 'nextTurn', usages: ['eligibilityOverride'] },
+          ],
           optionMatrix: [{ first: 'event', second: ['operation'] }],
           passRewards: [],
           freeOperationActionIds: ['operation'],
@@ -51,7 +56,13 @@ actor: 'active',
 executor: 'actor',
 phase: [asPhaseId('main')],
         params: [
-          { name: 'eventCardId', domain: { query: 'enums', values: ['card-overrides', 'card-free-op'] } },
+          {
+            name: 'eventCardId',
+            domain: {
+              query: 'enums',
+              values: ['card-overrides', 'card-immediate', 'card-immediate-negative', 'card-mixed-overrides', 'card-free-op'],
+            },
+          },
           { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
         ],
         pre: null,
@@ -92,6 +103,40 @@ phase: [asPhaseId('main')],
             },
           },
           {
+            id: 'card-immediate',
+            title: 'Immediate Eligibility',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Make US eligible right now.',
+              eligibilityOverrides: [
+                { target: { kind: 'seat', seat: 'US' }, eligible: true, windowId: 'force-eligible-now' },
+              ],
+            },
+          },
+          {
+            id: 'card-immediate-negative',
+            title: 'Immediate Ineligibility',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Make ARVN ineligible right now.',
+              eligibilityOverrides: [
+                { target: { kind: 'seat', seat: 'ARVN' }, eligible: false, windowId: 'force-ineligible-now' },
+              ],
+            },
+          },
+          {
+            id: 'card-mixed-overrides',
+            title: 'Mixed Overrides',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Make ARVN ineligible now and keep US eligible next turn.',
+              eligibilityOverrides: [
+                { target: { kind: 'seat', seat: 'ARVN' }, eligible: false, windowId: 'force-ineligible-now' },
+                { target: { kind: 'active' }, eligible: true, windowId: 'remain-eligible' },
+              ],
+            },
+          },
+          {
             id: 'card-free-op',
             title: 'Free Operation Grant',
             sideMode: 'single',
@@ -126,6 +171,168 @@ describe('FITL eligibility window integration', () => {
     assert.deepEqual(requireCardDrivenRuntime(second.state).eligibility, { US: true, ARVN: false, NVA: false, VC: true });
     assert.equal(requireCardDrivenRuntime(second.state).currentCard.firstEligible, 'US');
     assert.equal(requireCardDrivenRuntime(second.state).currentCard.secondEligible, 'VC');
+  });
+
+  it('applies declared turn-duration overrides immediately without queuing them for the next card', () => {
+    const def = createDef();
+    const start = initialState(def, 42, 4).state;
+    const runtime = requireCardDrivenRuntime(start);
+
+    const configured: GameState = {
+      ...start,
+      activePlayer: asPlayerId(2),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...runtime,
+          eligibility: { US: false, ARVN: false, NVA: true, VC: true },
+          currentCard: {
+            ...runtime.currentCard,
+            firstEligible: 'NVA',
+            secondEligible: 'VC',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+        },
+      },
+      zones: {
+        ...start.zones,
+        'played:none': [{
+          id: asTokenId('card-immediate'),
+          type: 'card',
+          props: { faction: 'none', type: 'card' },
+        } as Token],
+      },
+    };
+
+    const first = applyMove(def, configured, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-immediate', side: 'unshaded' },
+    }).state;
+
+    assert.deepEqual(requireCardDrivenRuntime(first).eligibility, { US: true, ARVN: false, NVA: true, VC: true });
+    assert.equal(requireCardDrivenRuntime(first).currentCard.firstEligible, 'US');
+    assert.equal(requireCardDrivenRuntime(first).currentCard.secondEligible, 'VC');
+    assert.deepEqual(requireCardDrivenRuntime(first).pendingEligibilityOverrides ?? [], []);
+  });
+
+  it('applies declared turn-duration ineligibility overrides immediately without queuing them for the next card', () => {
+    const def = createDef();
+    const start = initialState(def, 44, 4).state;
+    const runtime = requireCardDrivenRuntime(start);
+
+    const configured: GameState = {
+      ...start,
+      activePlayer: asPlayerId(0),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...runtime,
+          eligibility: { US: true, ARVN: true, NVA: true, VC: false },
+          currentCard: {
+            ...runtime.currentCard,
+            firstEligible: 'US',
+            secondEligible: 'ARVN',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+        },
+      },
+      zones: {
+        ...start.zones,
+        'played:none': [{
+          id: asTokenId('card-immediate-negative'),
+          type: 'card',
+          props: { faction: 'none', type: 'card' },
+        } as Token],
+      },
+    };
+
+    const first = applyMove(def, configured, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-immediate-negative', side: 'unshaded' },
+    }).state;
+
+    assert.deepEqual(requireCardDrivenRuntime(first).eligibility, { US: true, ARVN: false, NVA: true, VC: false });
+    assert.equal(requireCardDrivenRuntime(first).currentCard.firstEligible, 'NVA');
+    assert.equal(requireCardDrivenRuntime(first).currentCard.secondEligible, null);
+    assert.deepEqual(requireCardDrivenRuntime(first).pendingEligibilityOverrides ?? [], []);
+  });
+
+  it('keeps turn overrides current-card-only while nextTurn overrides queue and apply at card end', () => {
+    const def = createDef();
+    const start = initialState(def, 45, 4).state;
+    const runtime = requireCardDrivenRuntime(start);
+
+    const configured: GameState = {
+      ...start,
+      activePlayer: asPlayerId(0),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...runtime,
+          eligibility: { US: true, ARVN: true, NVA: true, VC: false },
+          currentCard: {
+            ...runtime.currentCard,
+            firstEligible: 'US',
+            secondEligible: 'ARVN',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+        },
+      },
+      zones: {
+        ...start.zones,
+        'played:none': [{
+          id: asTokenId('card-mixed-overrides'),
+          type: 'card',
+          props: { faction: 'none', type: 'card' },
+        } as Token],
+      },
+    };
+
+    const firstResult = applyMove(def, configured, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-mixed-overrides', side: 'unshaded' },
+    });
+    const afterEvent = firstResult.state;
+
+    assert.deepEqual(requireCardDrivenRuntime(afterEvent).eligibility, { US: true, ARVN: false, NVA: true, VC: false });
+    assert.equal(requireCardDrivenRuntime(afterEvent).currentCard.firstEligible, 'NVA');
+    assert.equal(requireCardDrivenRuntime(afterEvent).currentCard.secondEligible, null);
+    assert.deepEqual(requireCardDrivenRuntime(afterEvent).pendingEligibilityOverrides ?? [], [
+      { seat: 'US', eligible: true, windowId: 'remain-eligible', duration: 'nextTurn' },
+    ]);
+
+    const overrideCreate = firstResult.triggerFirings.find(
+      (entry) => entry.kind === 'turnFlowEligibility' && entry.step === 'overrideCreate',
+    ) as
+      | {
+        overrides?: readonly unknown[];
+        eligibilityBefore?: unknown;
+        eligibilityAfter?: unknown;
+      }
+      | undefined;
+    assert.deepEqual(overrideCreate?.overrides, [
+      { seat: 'ARVN', eligible: false, windowId: 'force-ineligible-now', duration: 'turn' },
+      { seat: 'US', eligible: true, windowId: 'remain-eligible', duration: 'nextTurn' },
+    ]);
+    assert.deepEqual(overrideCreate?.eligibilityBefore, { US: true, ARVN: true, NVA: true, VC: false });
+    assert.deepEqual(overrideCreate?.eligibilityAfter, { US: true, ARVN: false, NVA: true, VC: false });
+
+    const secondResult = applyMove(def, afterEvent, { actionId: asActionId('operation'), params: {} });
+    const nextCard = secondResult.state;
+
+    assert.deepEqual(requireCardDrivenRuntime(nextCard).eligibility, { US: true, ARVN: true, NVA: false, VC: true });
+    assert.equal(requireCardDrivenRuntime(nextCard).currentCard.firstEligible, 'US');
+    assert.equal(requireCardDrivenRuntime(nextCard).currentCard.secondEligible, 'ARVN');
+    assert.deepEqual(requireCardDrivenRuntime(nextCard).pendingEligibilityOverrides ?? [], []);
   });
 
   it('emits and consumes one-shot free-operation move variants from freeOpGranted directives', () => {

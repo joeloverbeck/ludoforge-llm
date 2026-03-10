@@ -480,20 +480,20 @@ function detectLineBasedMistakes(lines: readonly string[], findings: LintFinding
       continue;
     }
 
-    if (!isQuotedOrBlockScalar(rawValue) && rawValue.includes(':')) {
+    if (isSuspiciousPlainScalarColonValue(rawValue)) {
       findings.push({
         line: lineNumber,
         col: line.indexOf(':') + 2,
         code: 'CNL_YAML_001',
         severity: 'warning',
-        message: 'Unquoted colon found in scalar value.',
-        suggestion: 'Wrap the value in quotes.',
+        message: 'Plain scalar contains an additional ": " token that YAML may interpret as a nested mapping.',
+        suggestion: 'Wrap the value in quotes or use a block scalar when the text should stay a single string.',
         contextSnippet: line,
         pathSuffix: `line.${lineNumber}`,
       });
     }
 
-    if (!isQuotedOrBlockScalar(rawValue) && BOOLEAN_LIKE.has(rawValue.toLowerCase())) {
+    if (!isProtectedValue(rawValue) && BOOLEAN_LIKE.has(rawValue.toLowerCase())) {
       findings.push({
         line: lineNumber,
         col: line.indexOf(':') + 2,
@@ -506,7 +506,7 @@ function detectLineBasedMistakes(lines: readonly string[], findings: LintFinding
       });
     }
 
-    if (!isQuotedOrBlockScalar(rawValue) && SPECIAL_CHARS_PATTERN.test(rawValue)) {
+    if (!isProtectedValue(rawValue) && SPECIAL_CHARS_PATTERN.test(rawValue)) {
       findings.push({
         line: lineNumber,
         col: line.indexOf(':') + 2,
@@ -555,7 +555,7 @@ function detectBareMultilineStrings(lines: readonly string[], findings: LintFind
     }
 
     const nextIndent = (next.match(/^(\s*)/)?.[1] ?? '').length;
-    if (nextIndent > currentIndent && !nextTrimmed.startsWith('-') && !isQuotedOrBlockScalar(value)) {
+    if (nextIndent > currentIndent && !nextTrimmed.startsWith('-') && !isProtectedValue(value)) {
       findings.push({
         line: index + 1,
         col: current.indexOf(':') + 2,
@@ -665,6 +665,10 @@ function hasMixedTwoAndFourSpaceIndent(indentCounts: ReadonlySet<number>): boole
   return sawTwo && sawFour;
 }
 
+function isProtectedValue(value: string): boolean {
+  return isQuotedOrBlockScalar(value) || isInlineFlowCollection(value);
+}
+
 function isQuotedOrBlockScalar(value: string): boolean {
   if (value === '|' || value === '>') {
     return true;
@@ -677,6 +681,20 @@ function isQuotedOrBlockScalar(value: string): boolean {
   const first = value[0];
   const last = value[value.length - 1];
   return (first === '"' && last === '"') || (first === '\'' && last === '\'');
+}
+
+function isInlineFlowCollection(value: string): boolean {
+  if (value.length < 2) {
+    return false;
+  }
+
+  const first = value[0];
+  const last = value[value.length - 1];
+  return (first === '{' && last === '}') || (first === '[' && last === ']');
+}
+
+function isSuspiciousPlainScalarColonValue(value: string): boolean {
+  return !isProtectedValue(value) && /:\s/.test(value);
 }
 
 function isPlainObject(value: unknown): value is Readonly<Record<string, unknown>> {

@@ -1,7 +1,12 @@
 import { canonicalizeIdentifier } from './canonical-identifier-contract.js';
 
-export interface TurnFlowEligibilityOverrideWindowLike {
+export const TURN_FLOW_WINDOW_USAGE_VALUES = ['eligibilityOverride', 'actionPipeline'] as const;
+
+export type TurnFlowWindowUsage = (typeof TURN_FLOW_WINDOW_USAGE_VALUES)[number];
+
+export interface TurnFlowWindowLike {
   readonly id: string;
+  readonly usages: readonly TurnFlowWindowUsage[];
 }
 
 export interface TurnFlowLinkedWindowValidationIssue {
@@ -9,20 +14,32 @@ export interface TurnFlowLinkedWindowValidationIssue {
   readonly windowId: string;
 }
 
-export interface TurnFlowWithEligibilityOverrideWindows {
-  readonly eligibility: {
-    readonly overrideWindows: readonly TurnFlowEligibilityOverrideWindowLike[];
-  };
+export interface TurnFlowWithWindows {
+  readonly windows?: readonly TurnFlowWindowLike[];
 }
 
-export const collectTurnFlowEligibilityOverrideWindowIds = (
-  turnFlow: TurnFlowWithEligibilityOverrideWindows | null | undefined,
+const collectTurnFlowWindowIdsByUsage = (
+  turnFlow: TurnFlowWithWindows | null | undefined,
+  usage: TurnFlowWindowUsage,
 ): readonly string[] => {
   if (turnFlow === null || turnFlow === undefined) {
     return [];
   }
-  return turnFlow.eligibility.overrideWindows.map((window) => canonicalizeIdentifier(window.id));
+  if (!Array.isArray(turnFlow.windows)) {
+    return [];
+  }
+  return turnFlow.windows
+    .filter((window) => window.usages.includes(usage))
+    .map((window) => canonicalizeIdentifier(window.id));
 };
+
+export const collectTurnFlowEligibilityOverrideWindowIds = (
+  turnFlow: TurnFlowWithWindows | null | undefined,
+): readonly string[] => collectTurnFlowWindowIdsByUsage(turnFlow, 'eligibilityOverride');
+
+export const collectTurnFlowActionPipelineWindowIds = (
+  turnFlow: TurnFlowWithWindows | null | undefined,
+): readonly string[] => collectTurnFlowWindowIdsByUsage(turnFlow, 'actionPipeline');
 
 export const findMissingTurnFlowLinkedWindows = (
   linkedWindows: readonly string[] | undefined,

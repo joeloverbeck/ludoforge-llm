@@ -117,6 +117,31 @@ describe('parseGameSpec API shape', () => {
     assert.match(parseDiagnostic?.message ?? '', /line/i);
   });
 
+  it('reports malformed eventDeck text lines with context and quoting guidance', () => {
+    const result = parseGameSpec([
+      '```yaml',
+      'eventDecks:',
+      '  - id: test-deck',
+      '    cards:',
+      '      - id: card-001',
+      '        text: Systems analysis ignorant of local conditions: Flip 1 unshaded US Capability to shaded.',
+      '```',
+    ].join('\n'));
+    const parseDiagnostic = result.diagnostics.find((diagnostic) => diagnostic.code === 'CNL_PARSER_YAML_PARSE_ERROR');
+    const lintDiagnostic = result.diagnostics.find((diagnostic) => diagnostic.code === 'CNL_YAML_001');
+
+    assert.ok(parseDiagnostic !== undefined);
+    assert.equal(parseDiagnostic?.path, 'yaml.block.0.parse');
+    assert.match(parseDiagnostic?.message ?? '', /line 5, col 15/i);
+    assert.equal(
+      parseDiagnostic?.contextSnippet,
+      '        text: Systems analysis ignorant of local conditions: Flip 1 unshaded US Capability to shaded.',
+    );
+    assert.match(parseDiagnostic?.suggestion ?? '', /quote plain-text values containing ": "/i);
+    assert.ok(lintDiagnostic !== undefined);
+    assert.equal(result.doc.eventDecks, null);
+  });
+
   it('keeps YAML 1.2 boolean-like scalars as strings', () => {
     const result = parseGameSpec([
       '```yaml',
@@ -336,7 +361,7 @@ describe('parseGameSpec API shape', () => {
       '        leader: leader:none',
       '      eligibility:',
       '        seats: [us, nva]',
-      '        overrideWindows: []',
+      '      windows: []',
       '      optionMatrix: []',
       '      passRewards: []',
       '      durationWindows: [turn]',

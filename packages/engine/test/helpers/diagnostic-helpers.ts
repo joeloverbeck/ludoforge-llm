@@ -31,6 +31,14 @@ export function assertNoWarnings(
   assert.fail(`Expected 0 runtime warnings, got ${result.warnings.length}:\n${formatted}`);
 }
 
+export function assertStageBlocked(stageName: string, blocked: boolean): void {
+  assert.equal(blocked, true, `Expected ${stageName} stage to be blocked.`);
+}
+
+export function assertStageNotBlocked(stageName: string, blocked: boolean): void {
+  assert.equal(blocked, false, `Expected ${stageName} stage to run.`);
+}
+
 export function assertDataAssetCascadeSuppression(options: {
   readonly diagnostics: readonly Diagnostic[];
   readonly cascadeCode: 'CNL_DATA_ASSET_CASCADE_ZONES_MISSING' | 'CNL_DATA_ASSET_CASCADE_TOKEN_TYPES_MISSING';

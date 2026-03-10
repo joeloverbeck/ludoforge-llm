@@ -50,8 +50,8 @@ const createDef = (): GameDef =>
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
             seats: ['US', 'ARVN', 'NVA', 'VC'],
-            overrideWindows: [{ id: 'remain-eligible', duration: 'nextTurn' }],
           },
+          windows: [{ id: 'remain-eligible', duration: 'nextTurn', usages: ['eligibilityOverride'] }],
           actionClassByActionId: {
             pass: 'pass',
             event: 'event',
@@ -247,8 +247,8 @@ const createEventTraceDef = (): GameDef =>
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
             seats: ['US', 'ARVN', 'NVA', 'VC'],
-            overrideWindows: [{ id: 'remain-eligible', duration: 'nextTurn' }],
           },
+          windows: [{ id: 'remain-eligible', duration: 'nextTurn', usages: ['eligibilityOverride'] }],
           actionClassByActionId: {
             pass: 'pass',
             event: 'event',

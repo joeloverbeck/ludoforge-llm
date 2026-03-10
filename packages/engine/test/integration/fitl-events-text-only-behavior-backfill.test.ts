@@ -95,10 +95,16 @@ describe('FITL text-only card behavior backfill', () => {
     assert.equal(typeof (card44?.shaded?.targets?.[0]?.effects?.[0] as { rollRandom?: unknown })?.rollRandom, 'object');
 
     const card53 = cardById.get('card-53');
-    assert.equal(card53?.unshaded?.effects, undefined);
-    assert.equal(card53?.shaded?.effects, undefined);
-    assert.equal((card53?.unshaded?.targets?.[0]?.effects?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 3);
-    assert.equal((card53?.shaded?.targets?.[0]?.effects?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 3);
+    assert.deepEqual(card53?.unshaded?.eligibilityOverrides, [
+      { target: { kind: 'active' }, eligible: true, windowId: 'remain-eligible' },
+    ]);
+    assert.equal((card53?.unshaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 3);
+    assert.equal(card53?.unshaded?.targets?.[0]?.application, 'each');
+    assert.equal((card53?.unshaded?.targets?.[0]?.effects?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 2);
+    assert.equal((card53?.shaded?.effects?.[0] as { chooseN?: { max?: unknown } } | undefined)?.chooseN?.max, 1);
+    assert.equal((card53?.shaded?.effects?.[1] as { chooseN?: { max?: unknown } } | undefined)?.chooseN?.max, 2);
+    assert.equal(typeof (card53?.shaded?.effects?.[2] as { forEach?: unknown } | undefined)?.forEach, 'object');
+    assert.equal(typeof (card53?.shaded?.effects?.[3] as { forEach?: unknown } | undefined)?.forEach, 'object');
 
     const card64 = cardById.get('card-64');
     assert.deepEqual(card64?.unshaded?.effects, [

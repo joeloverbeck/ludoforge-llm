@@ -1,15 +1,18 @@
 import { createHash } from 'node:crypto';
+import * as assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { compileGameSpecToGameDef, loadGameSpecSource, parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
+import type { Diagnostic } from '../../src/kernel/diagnostics.js';
+import type { CompileResult, RunGameSpecStagesResult } from '../../src/cnl/index.js';
+import { loadGameSpecSource, runGameSpecStages } from '../../src/cnl/index.js';
 
 export interface CompiledProductionSpec {
   readonly markdown: string;
-  readonly parsed: ReturnType<typeof parseGameSpec>;
-  readonly validatorDiagnostics: ReturnType<typeof validateGameSpec>;
-  readonly compiled: ReturnType<typeof compileGameSpecToGameDef>;
+  readonly parsed: ReturnType<typeof runGameSpecStages>['parsed'];
+  readonly validatorDiagnostics: ReturnType<typeof runGameSpecStages>['validation']['diagnostics'];
+  readonly compiled: CompileResult & { readonly gameDef: NonNullable<CompileResult['gameDef']> };
 }
 
 function resolveRepoRoot(): string {
@@ -64,11 +67,15 @@ export function compileProductionSpec(): CompiledProductionSpec {
     return cachedFitlResult;
   }
 
-  const parsed = parseGameSpec(markdown);
-  const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
-  const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+  const staged = runGameSpecStages(markdown);
+  const compiled = requireSuccessfulProductionCompilation('FITL production spec', staged);
 
-  cachedFitlResult = { markdown, parsed, validatorDiagnostics, compiled };
+  cachedFitlResult = {
+    markdown,
+    parsed: staged.parsed,
+    validatorDiagnostics: staged.validation.diagnostics,
+    compiled,
+  };
   cachedFitlHash = hash;
 
   return cachedFitlResult;
@@ -86,11 +93,15 @@ export function compileTexasProductionSpec(): CompiledProductionSpec {
     return cachedTexasResult;
   }
 
-  const parsed = parseGameSpec(markdown);
-  const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
-  const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+  const staged = runGameSpecStages(markdown);
+  const compiled = requireSuccessfulProductionCompilation('Texas production spec', staged);
 
-  cachedTexasResult = { markdown, parsed, validatorDiagnostics, compiled };
+  cachedTexasResult = {
+    markdown,
+    parsed: staged.parsed,
+    validatorDiagnostics: staged.validation.diagnostics,
+    compiled,
+  };
   cachedTexasHash = hash;
 
   return cachedTexasResult;
@@ -102,4 +113,46 @@ export function compileTexasProductionSpec(): CompiledProductionSpec {
  */
 export function readCompilerFixture(name: string): string {
   return loadGameSpecSource(join(FIXTURE_BASE_PATH, name)).markdown;
+}
+
+function requireSuccessfulProductionCompilation(
+  label: string,
+  staged: RunGameSpecStagesResult,
+): CompileResult & { readonly gameDef: NonNullable<CompileResult['gameDef']> } {
+  assert.equal(staged.validation.blocked, false, `${label} should not block validation after parse.`);
+  assert.equal(staged.compilation.blocked, false, `${label} should not block compilation after parse.`);
+  assert.equal(
+    hasErrorDiagnostics(staged.parsed.diagnostics),
+    false,
+    `${label} should not contain parser errors:\n${formatDiagnosticSummary(staged.parsed.diagnostics)}`,
+  );
+  assert.equal(
+    hasErrorDiagnostics(staged.validation.diagnostics),
+    false,
+    `${label} should not contain validator errors:\n${formatDiagnosticSummary(staged.validation.diagnostics)}`,
+  );
+
+  const compiled = staged.compilation.result;
+  if (compiled === null) {
+    assert.fail(`${label} should produce a compile result.`);
+  }
+  if (compiled.gameDef === null) {
+    assert.fail(`${label} should produce a compiled gameDef.`);
+  }
+
+  return compiled as CompileResult & { readonly gameDef: NonNullable<CompileResult['gameDef']> };
+}
+
+function hasErrorDiagnostics(diagnostics: readonly Diagnostic[]): boolean {
+  return diagnostics.some((diagnostic) => diagnostic.severity === 'error');
+}
+
+function formatDiagnosticSummary(diagnostics: readonly Diagnostic[]): string {
+  if (diagnostics.length === 0) {
+    return '(none)';
+  }
+
+  return diagnostics
+    .map((diagnostic) => `[${diagnostic.severity}] ${diagnostic.code} at ${diagnostic.path}: ${diagnostic.message}`)
+    .join('\n');
 }

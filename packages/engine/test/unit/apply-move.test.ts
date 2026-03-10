@@ -267,7 +267,9 @@ const createDeferredDecisionEventDef = (
       config: {
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-          eligibility: { seats: ['0', '1'], overrideWindows: [] },
+          eligibility: { seats: ['0', '1'] },
+
+          windows: [],
           optionMatrix: [{ first: 'event', second: ['operation'] }],
           passRewards: [],
           freeOperationActionIds: ['operation'],
@@ -1212,7 +1214,9 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1', '2', '3'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1', '2', '3'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [
               { seat: '0', resource: 'res0', amount: 1 },
@@ -1279,7 +1283,9 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1', '2', '3'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1', '2', '3'] },
+
+            windows: [],
             optionMatrix: [{ first: 'operation', second: ['limitedOperation', 'operation'] }],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -1350,11 +1356,11 @@ phase: [asPhaseId('main')],
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
             eligibility: {
               seats: ['0', '1', '2', '3'],
-              overrideWindows: [
-                { id: 'remain-eligible', duration: 'nextTurn' },
-                { id: 'force-ineligible', duration: 'nextTurn' },
-              ],
             },
+            windows: [
+              { id: 'remain-eligible', duration: 'nextTurn', usages: ['eligibilityOverride'] },
+              { id: 'force-ineligible', duration: 'nextTurn', usages: ['eligibilityOverride'] },
+            ],
             optionMatrix: [{ first: 'event', second: ['operation'] }],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -2026,7 +2032,9 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1', '2', '3'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1', '2', '3'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -2094,7 +2102,9 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1', '2', '3'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1', '2', '3'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -2171,7 +2181,9 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1', '2', '3'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1', '2', '3'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -2894,7 +2906,9 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],

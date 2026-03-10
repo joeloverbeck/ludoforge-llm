@@ -427,6 +427,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         type: 'cardDriven',
         config: {
           turnFlow: {
+            windows: [],
             cardLifecycle: {
               played: 'played:none',
               lookahead: 'draw:none',
@@ -434,7 +435,6 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
             },
             eligibility: {
               seats: ['us', 'nva'],
-              overrideWindows: [],
             },
             actionClassByActionId: {},
             optionMatrix: [],

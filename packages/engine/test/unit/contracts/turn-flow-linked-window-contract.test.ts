@@ -3,33 +3,46 @@ import { describe, it } from 'node:test';
 
 import {
   collectTurnFlowEligibilityOverrideWindowIds,
+  collectTurnFlowActionPipelineWindowIds,
   findMissingTurnFlowLinkedWindows,
 } from '../../../src/contracts/index.js';
 
 describe('turn-flow linked window contract', () => {
   it('collects override window ids in declaration order', () => {
     const ids = collectTurnFlowEligibilityOverrideWindowIds({
-      eligibility: {
-        overrideWindows: [
-          { id: 'window-a' },
-          { id: 'window-b' },
-        ],
-      },
+      windows: [
+        { id: 'window-a', usages: ['eligibilityOverride'] },
+        { id: 'window-b', usages: ['eligibilityOverride', 'actionPipeline'] },
+      ],
     });
     assert.deepEqual(ids, ['window-a', 'window-b']);
   });
 
   it('canonicalizes override window ids during collection', () => {
     const ids = collectTurnFlowEligibilityOverrideWindowIds({
-      eligibility: {
-        overrideWindows: [
-          { id: ' window-a ' },
-          { id: 'cafe\u0301' },
-        ],
-      },
+      windows: [
+        { id: ' window-a ', usages: ['eligibilityOverride'] },
+        { id: 'cafe\u0301', usages: ['eligibilityOverride'] },
+      ],
     });
 
     assert.deepEqual(ids, ['window-a', 'caf\u00e9']);
+  });
+
+  it('ignores windows that are not declared for eligibility override usage', () => {
+    const ids = collectTurnFlowEligibilityOverrideWindowIds({
+      windows: [
+        { id: 'window-a', usages: ['actionPipeline'] },
+        { id: 'window-b', usages: ['eligibilityOverride', 'actionPipeline'] },
+      ],
+    });
+
+    assert.deepEqual(ids, ['window-b']);
+  });
+
+  it('fails closed when turnFlow.windows is absent instead of throwing', () => {
+    assert.deepEqual(collectTurnFlowEligibilityOverrideWindowIds({}), []);
+    assert.deepEqual(collectTurnFlowActionPipelineWindowIds({}), []);
   });
 
   it('returns missing linked window references with stable indices', () => {

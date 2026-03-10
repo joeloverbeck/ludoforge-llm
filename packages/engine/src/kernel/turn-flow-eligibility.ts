@@ -31,6 +31,10 @@ import {
   requireCardDrivenActiveSeat,
 } from './turn-flow-runtime-invariants.js';
 import {
+  authorizedFreeOperationGrantMissingInvariantMessage,
+  makeAuthorizedFreeOperationGrantMissingInvariantContext,
+} from './turn-flow-invariant-contracts.js';
+import {
   grantRequiresUsableProbe,
   isFreeOperationGrantUsableInCurrentState,
   resolveFreeOperationGrantViabilityPolicy,
@@ -1102,7 +1106,18 @@ export const consumeTurnFlowFreeOperationGrant = (
   const runtimePending = runtime.pendingFreeOperationGrants ?? [];
   const consumedIndex = runtimePending.findIndex((grant) => grant.grantId === authorizedGrant.grantId);
   if (consumedIndex < 0) {
-    return { state, traceEntries: [], releasedDeferredEventEffects: [] };
+    const context = makeAuthorizedFreeOperationGrantMissingInvariantContext({
+      actionId: String(move.actionId),
+      activeSeat,
+      authorizedGrantId: authorizedGrant.grantId,
+      authorizationPendingGrantIds: pending.map((grant) => grant.grantId),
+      runtimePendingGrantIds: runtimePending.map((grant) => grant.grantId),
+    });
+    throw kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      authorizedFreeOperationGrantMissingInvariantMessage(context),
+      context,
+    );
   }
   const consumed = runtimePending[consumedIndex]!;
   const decremented = consumed.remainingUses - 1;

@@ -9,11 +9,15 @@ import {
   asTokenId,
   ILLEGAL_MOVE_REASONS,
   initialState,
+  isKernelErrorCode,
   legalMoves,
+  consumeTurnFlowFreeOperationGrant,
+  createSeatResolutionContext,
   type EventCardDef,
   type EventDeckDef,
   type GameDef,
   type GameState,
+  type KernelRuntimeErrorContext,
 } from '../../src/kernel/index.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
@@ -1910,6 +1914,60 @@ describe('event free-operation grants integration', () => {
 
     const fifth = applyMove(def, fourth, { actionId: asActionId('operation'), params: {}, freeOperation: true }).state;
     assert.deepEqual(requireCardDrivenRuntime(fifth).pendingFreeOperationGrants ?? [], []);
+  });
+
+  it('fails fast when an authorized free-operation grant disappears before post-move consumption', () => {
+    const def = createDef();
+    const start = initialState(def, 181, 4).state;
+
+    const first = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-4', side: 'unshaded', branch: 'none' },
+    }).state;
+    const second = applyMove(def, first, { actionId: asActionId('operation'), params: {} }).state;
+    const authorizationState = applyMove(def, second, { actionId: asActionId('operation'), params: {} }).state;
+    const runtimeBefore = requireCardDrivenRuntime(authorizationState);
+    const authorizedGrantId = runtimeBefore.pendingFreeOperationGrants?.[0]?.grantId;
+    assert.equal(authorizedGrantId, 'vc-reusable-op');
+
+    const corruptedPostActionState: GameState = {
+      ...authorizationState,
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...runtimeBefore,
+          pendingFreeOperationGrants: [],
+        },
+      },
+    };
+
+    assert.throws(
+      () =>
+        consumeTurnFlowFreeOperationGrant(
+          def,
+          authorizationState,
+          corruptedPostActionState,
+          { actionId: asActionId('operation'), params: {}, freeOperation: true },
+          createSeatResolutionContext(def, authorizationState.playerCount),
+        ),
+      (error: unknown) => {
+        if (!isKernelErrorCode(error, 'RUNTIME_CONTRACT_INVALID')) {
+          return false;
+        }
+        const context: KernelRuntimeErrorContext<'RUNTIME_CONTRACT_INVALID'> | undefined = error.context;
+        if (
+          context === undefined
+          || !('invariant' in context)
+          || context.invariant !== 'turnFlow.freeOperationGrant.authorizedGrantMissingAfterExecution'
+        ) {
+          return false;
+        }
+        return context.authorizedGrantId === 'vc-reusable-op'
+          && context.activeSeat === 'VC'
+          && context.authorizationPendingGrantIds.includes('vc-reusable-op')
+          && context.runtimePendingGrantIds.length === 0;
+      },
+    );
   });
 
   it('enforces operationClass on free-operation grants', () => {

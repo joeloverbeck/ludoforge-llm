@@ -3,6 +3,8 @@ import type { TurnFlowActiveSeatInvariantSurface } from './turn-flow-active-seat
 export const TURN_FLOW_ACTIVE_SEAT_UNRESOLVABLE_INVARIANT = 'turnFlow.activeSeat.unresolvable';
 export const TURN_FLOW_CARD_METADATA_SEAT_ORDER_SHAPE_INVALID_INVARIANT =
   'turnFlow.cardMetadataSeatOrder.shapeInvalid';
+export const TURN_FLOW_AUTHORIZED_FREE_OPERATION_GRANT_MISSING_INVARIANT =
+  'turnFlow.freeOperationGrant.authorizedGrantMissingAfterExecution';
 
 export interface TurnFlowActiveSeatInvariantContext {
   readonly invariant: typeof TURN_FLOW_ACTIVE_SEAT_UNRESOLVABLE_INVARIANT;
@@ -18,4 +20,13 @@ export interface CardMetadataSeatOrderShapeInvariantContext {
   readonly minDistinctSeatCount: number;
   readonly distinctSeatCount: number;
   readonly duplicates: readonly string[];
+}
+
+export interface AuthorizedFreeOperationGrantMissingInvariantContext {
+  readonly invariant: typeof TURN_FLOW_AUTHORIZED_FREE_OPERATION_GRANT_MISSING_INVARIANT;
+  readonly actionId: string;
+  readonly activeSeat: string;
+  readonly authorizedGrantId: string;
+  readonly authorizationPendingGrantIds: readonly string[];
+  readonly runtimePendingGrantIds: readonly string[];
 }

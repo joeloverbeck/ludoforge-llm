@@ -7,13 +7,17 @@ import {
   ILLEGAL_MOVE_REASONS,
   PIPELINE_RUNTIME_REASONS,
   RUNTIME_CONTRACT_REASONS,
+  TURN_FLOW_AUTHORIZED_FREE_OPERATION_GRANT_MISSING_INVARIANT,
   illegalMoveError,
   kernelRuntimeError,
+  makeAuthorizedFreeOperationGrantMissingInvariantContext,
+  authorizedFreeOperationGrantMissingInvariantMessage,
   pipelineApplicabilityEvaluationError,
   pipelinePredicateEvaluationError,
   runtimeContractInvalidError,
   type ActionDef,
   type ActionPipelineDef,
+  type AuthorizedFreeOperationGrantMissingInvariantContext,
   type FreeOperationBlockExplanation,
   type IllegalMoveContextInput,
   type IllegalMoveReason,
@@ -210,6 +214,32 @@ describe('runtime error context contracts', () => {
     assert.equal(context.minDistinctSeatCount, 2);
     assert.equal(context.distinctSeatCount, 1);
     assert.deepEqual(context.duplicates, ['us']);
+  });
+
+  it('kernel runtime helper emits authorized missing free-operation grant invariant context contract', () => {
+    const invariantContext = makeAuthorizedFreeOperationGrantMissingInvariantContext({
+      actionId: 'operate',
+      activeSeat: 'VC',
+      authorizedGrantId: 'grant-7',
+      authorizationPendingGrantIds: ['grant-7', 'grant-8'],
+      runtimePendingGrantIds: ['grant-8'],
+    });
+    const error = kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      authorizedFreeOperationGrantMissingInvariantMessage(invariantContext),
+      invariantContext,
+    );
+
+    assert.equal(error.code, 'RUNTIME_CONTRACT_INVALID');
+    const context: KernelRuntimeErrorContext<'RUNTIME_CONTRACT_INVALID'> = error.context!;
+    assert.ok('invariant' in context);
+    assert.equal(context.invariant, TURN_FLOW_AUTHORIZED_FREE_OPERATION_GRANT_MISSING_INVARIANT);
+    const typedContext = context as AuthorizedFreeOperationGrantMissingInvariantContext;
+    assert.equal(typedContext.actionId, 'operate');
+    assert.equal(typedContext.activeSeat, 'VC');
+    assert.equal(typedContext.authorizedGrantId, 'grant-7');
+    assert.deepEqual(typedContext.authorizationPendingGrantIds, ['grant-7', 'grant-8']);
+    assert.deepEqual(typedContext.runtimePendingGrantIds, ['grant-8']);
   });
 
   it('keeps active-seat invariant metadata/message parity between kernel and effect runtime contracts', () => {

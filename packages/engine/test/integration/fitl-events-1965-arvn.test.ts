@@ -74,14 +74,14 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
       {
         seat: 'arvn',
         executeAsSeat: 'us',
-        sequence: { chain: 'roks-arvn-as-us', step: 0 },
+        sequence: { batch: 'roks-arvn-as-us', step: 0 },
         operationClass: 'operation',
         actionIds: ['sweep'],
       },
       {
         seat: 'arvn',
         executeAsSeat: 'us',
-        sequence: { chain: 'roks-arvn-as-us', step: 1 },
+        sequence: { batch: 'roks-arvn-as-us', step: 1 },
         operationClass: 'operation',
         actionIds: ['assault'],
       },

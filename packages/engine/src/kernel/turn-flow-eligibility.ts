@@ -359,7 +359,7 @@ const extractPendingFreeOperationGrants = (
         .filter(
           (candidate) =>
             candidate.sequence !== undefined
-            && candidate.sequence.chain === grant.sequence.chain
+            && candidate.sequence.batch === grant.sequence.batch
             && candidate.sequence.step < grant.sequence.step,
         );
     if (
@@ -388,7 +388,7 @@ const extractPendingFreeOperationGrants = (
       [...existingPendingFreeOperationGrants, ...extracted],
       baseId,
     );
-    const sequenceBatchId = `${emittedBatchBaseId}:${grant.sequence.chain}`;
+    const sequenceBatchId = `${emittedBatchBaseId}:${grant.sequence.batch}`;
     extracted.push({
       ...toPendingFreeOperationGrant(
         grant,

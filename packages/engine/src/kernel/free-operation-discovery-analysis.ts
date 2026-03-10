@@ -299,7 +299,7 @@ export const isFreeOperationAllowedDuringMonsoonForMove = (
   state: GameState,
   move: Move,
   seatResolution: SeatResolutionContext,
-  options?: {
+  _options?: {
     readonly zoneFilterErrorSurface?: FreeOperationZoneFilterSurface;
   },
 ): boolean => {

@@ -86,7 +86,7 @@ export const EventCardLastingEffectSchema = z
 export const EventCardFreeOperationGrantSchema = createTurnFlowFreeOperationGrantSchema({
   sequence: z
     .object({
-      chain: StringSchema.min(1),
+      batch: StringSchema.min(1),
       step: IntegerSchema.min(0),
     })
     .strict(),

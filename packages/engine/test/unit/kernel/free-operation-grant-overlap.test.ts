@@ -68,7 +68,7 @@ describe('free-operation grant overlap classifier', () => {
     const declarativeWithSequence = freeOperationGrantEquivalenceKey(baseGrant, ['operation'], {
       additionalFields: {
         uses: 1,
-        sequence: { chain: 'alpha', step: 0 },
+        sequence: { batch: 'alpha', step: 0 },
       },
     });
 

@@ -110,7 +110,7 @@ describe('FITL card-40 PoWs', () => {
       {
         seat: 'self',
         executeAsSeat: 'us',
-        sequence: { chain: 'pows-free-airstrike', step: 0 },
+        sequence: { batch: 'pows-free-airstrike', step: 0 },
         operationClass: 'operation',
         actionIds: ['airStrike'],
       },

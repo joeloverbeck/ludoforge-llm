@@ -342,4 +342,74 @@ describe('FITL card-56 Vo Nguyen Giap', () => {
       'All exact-space follow-up grants should clear after each marched space uses or skips its one free action',
     );
   });
+
+  it('shaded allows a non-Rally exact-space free Attack follow-up after the free March', () => {
+    const def = compileDef();
+    const setup = setupCardDrivenState(
+      def,
+      56004,
+      2,
+      'nva',
+      'vc',
+      {
+        [ORIGIN_A]: [
+          makeToken('giap-attack-a-t1', 'troops', 'NVA'),
+          makeToken('giap-attack-a-t2', 'troops', 'NVA'),
+        ],
+        [SPACE_A]: [
+          makeToken('giap-attack-us-t1', 'troops', 'US'),
+        ],
+      },
+    );
+
+    const eventMove = findCardMove(def, setup, 'shaded');
+    assert.notEqual(eventMove, undefined, 'Expected Vo Nguyen Giap shaded event move');
+
+    const afterEvent = applyMoveWithResolvedDecisionIds(def, setup, eventMove!, {
+      overrides: [{ when: (req) => req.name === '$voNguyenGiapShadedSpace', value: [SPACE_A] }],
+    }).state;
+
+    const grantReadyState = withGrantReadyNva(afterEvent);
+    const afterMarch = applyMoveWithResolvedDecisionIds(def, grantReadyState, {
+      actionId: asActionId('march'),
+      freeOperation: true,
+      params: {
+        $targetSpaces: [SPACE_A],
+        $chainSpaces: [],
+        [`$movingGuerrillas@${SPACE_A}`]: [],
+        [`$movingTroops@${SPACE_A}`]: [asTokenId('giap-attack-a-t1'), asTokenId('giap-attack-a-t2')],
+      },
+    }).state;
+
+    const readyAfterMarch = withGrantReadyNva(afterMarch);
+    const freeAttackMoves = legalMoves(def, readyAfterMarch).filter(
+      (move) => move.freeOperation === true && String(move.actionId) === 'attack',
+    );
+    assert.ok(freeAttackMoves.length > 0, 'Expected a free Attack follow-up after the March resolves');
+
+    const afterAttack = applyMoveWithResolvedDecisionIds(def, readyAfterMarch, {
+      actionId: asActionId('attack'),
+      freeOperation: true,
+      params: {
+        $targetSpaces: [SPACE_A],
+        $attackMode: 'troops-attack',
+      },
+    }).state;
+
+    assert.equal(
+      countTokens(afterAttack, SPACE_A, (token) => token.props.faction === 'US' && token.type === 'troops'),
+      0,
+      'The free follow-up Attack should resolve in the marched space and remove the US troop',
+    );
+    assert.equal(
+      countTokens(afterAttack, SPACE_A, (token) => token.props.faction === 'NVA' && token.type === 'troops'),
+      1,
+      'Troops-mode Attack should apply normal attrition after the free follow-up resolves',
+    );
+    assert.deepEqual(
+      requireCardDrivenRuntime(afterAttack).pendingFreeOperationGrants ?? [],
+      [],
+      'The single marched-space follow-up grant should clear after the Attack resolves',
+    );
+  });
 });

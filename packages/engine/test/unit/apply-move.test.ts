@@ -340,7 +340,7 @@ const createDeferredDecisionEventDef = (
                 ? {
                   freeOperationGrants: [{
                     seat: '0',
-                    sequence: { chain: 'seq', step: 0 },
+                    sequence: { batch: 'seq', step: 0 },
                     operationClass: 'operation',
                     actionIds: ['operation'],
                   }],

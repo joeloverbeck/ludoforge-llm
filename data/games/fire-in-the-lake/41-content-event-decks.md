@@ -127,14 +127,14 @@ eventDecks:
           freeOperationGrants:
             - seat: arvn
               sequence:
-                chain: amphib-landing-arvn
+                batch: amphib-landing-arvn
                 step: 0
               operationClass: operation
               actionIds:
                 - sweep
             - seat: arvn
               sequence:
-                chain: amphib-landing-arvn
+                batch: amphib-landing-arvn
                 step: 1
               operationClass: operation
               actionIds:
@@ -159,7 +159,7 @@ eventDecks:
           freeOperationGrants:
             - seat: arvn
               sequence:
-                chain: macv-arvn-special-activity
+                batch: macv-arvn-special-activity
                 step: 0
               operationClass: limitedOperation
       - id: card-70
@@ -181,7 +181,7 @@ eventDecks:
             - seat: arvn
               executeAsSeat: us
               sequence:
-                chain: roks-arvn-as-us
+                batch: roks-arvn-as-us
                 step: 0
               operationClass: operation
               actionIds:
@@ -189,7 +189,7 @@ eventDecks:
             - seat: arvn
               executeAsSeat: us
               sequence:
-                chain: roks-arvn-as-us
+                batch: roks-arvn-as-us
                 step: 1
               operationClass: operation
               actionIds:
@@ -1213,7 +1213,7 @@ eventDecks:
             - seat: nva
               executeAsSeat: us
               sequence:
-                chain: gulf-of-tonkin-us-airstrike
+                batch: gulf-of-tonkin-us-airstrike
                 step: 0
               operationClass: operation
               actionIds:
@@ -1678,7 +1678,7 @@ eventDecks:
           freeOperationGrants:
             - seat: us
               sequence:
-                chain: aces-us-airstrike
+                batch: aces-us-airstrike
                 step: 0
               operationClass: operation
               actionIds:
@@ -2978,7 +2978,7 @@ eventDecks:
           freeOperationGrants:
             - seat: us
               sequence:
-                chain: operation-attleboro-us
+                batch: operation-attleboro-us
                 step: 0
               operationClass: operation
               actionIds:
@@ -3008,7 +3008,7 @@ eventDecks:
                 right: 0
             - seat: us
               sequence:
-                chain: operation-attleboro-us
+                batch: operation-attleboro-us
                 step: 1
               operationClass: operation
               actionIds:
@@ -3038,7 +3038,7 @@ eventDecks:
                 right: 0
             - seat: us
               sequence:
-                chain: operation-attleboro-us
+                batch: operation-attleboro-us
                 step: 2
               operationClass: operation
               actionIds:
@@ -3371,7 +3371,7 @@ eventDecks:
                 - seat: self
                   executeAsSeat: us
                   sequence:
-                    chain: tf116-us
+                    batch: tf116-us
                     step: 0
                   operationClass: operation
                   actionIds:
@@ -3416,7 +3416,7 @@ eventDecks:
                 - seat: self
                   executeAsSeat: us
                   sequence:
-                    chain: tf116-us
+                    batch: tf116-us
                     step: 1
                   operationClass: operation
                   actionIds:
@@ -3463,7 +3463,7 @@ eventDecks:
                 - seat: self
                   executeAsSeat: arvn
                   sequence:
-                    chain: tf116-arvn
+                    batch: tf116-arvn
                     step: 0
                   operationClass: operation
                   actionIds:
@@ -3508,7 +3508,7 @@ eventDecks:
                 - seat: self
                   executeAsSeat: arvn
                   sequence:
-                    chain: tf116-arvn
+                    batch: tf116-arvn
                     step: 1
                   operationClass: operation
                   actionIds:
@@ -4071,7 +4071,7 @@ eventDecks:
             - seat: us
               viabilityPolicy: requireUsableForEventPlay
               sequence:
-                chain: ia-drang-us
+                batch: ia-drang-us
                 step: 0
               completionPolicy: required
               outcomePolicy: mustChangeGameplayState
@@ -4105,7 +4105,7 @@ eventDecks:
                 right: 0
             - seat: us
               sequence:
-                chain: ia-drang-us
+                batch: ia-drang-us
                 step: 1
               completionPolicy: required
               postResolutionTurnFlow: resumeCardFlow
@@ -4119,7 +4119,7 @@ eventDecks:
                 requireMoveZoneCandidatesFrom: ia-drang-space
             - seat: us
               sequence:
-                chain: ia-drang-us
+                batch: ia-drang-us
                 step: 2
               completionPolicy: required
               postResolutionTurnFlow: resumeCardFlow
@@ -4838,14 +4838,14 @@ eventDecks:
           freeOperationGrants:
             - seat: us
               sequence:
-                chain: westmoreland-us
+                batch: westmoreland-us
                 step: 0
               operationClass: operation
               actionIds:
                 - airLift
             - seat: us
               sequence:
-                chain: westmoreland-us
+                batch: westmoreland-us
                 step: 1
               operationClass: operation
               actionIds:
@@ -4853,7 +4853,7 @@ eventDecks:
                 - assault
             - seat: us
               sequence:
-                chain: westmoreland-us
+                batch: westmoreland-us
                 step: 2
               operationClass: operation
               actionIds:
@@ -5056,14 +5056,14 @@ eventDecks:
           freeOperationGrants:
             - seat: us
               sequence:
-                chain: masher-white-wing-us
+                batch: masher-white-wing-us
                 step: 0
               operationClass: operation
               actionIds:
                 - sweep
             - seat: us
               sequence:
-                chain: masher-white-wing-us
+                batch: masher-white-wing-us
                 step: 1
               operationClass: operation
               actionIds:
@@ -5071,7 +5071,7 @@ eventDecks:
             - seat: arvn
               executeAsSeat: us
               sequence:
-                chain: masher-white-wing-arvn-as-us
+                batch: masher-white-wing-arvn-as-us
                 step: 0
               operationClass: operation
               actionIds:
@@ -5079,7 +5079,7 @@ eventDecks:
             - seat: arvn
               executeAsSeat: us
               sequence:
-                chain: masher-white-wing-arvn-as-us
+                batch: masher-white-wing-arvn-as-us
                 step: 1
               operationClass: operation
               actionIds:
@@ -5845,7 +5845,7 @@ eventDecks:
           freeOperationGrants:
             - seat: arvn
               sequence:
-                chain: sihanouk-unshaded-arvn
+                batch: sihanouk-unshaded-arvn
                 step: 0
               operationClass: operation
               actionIds:
@@ -5863,12 +5863,12 @@ eventDecks:
           freeOperationGrants:
             - seat: vc
               sequence:
-                chain: sihanouk-shaded-vc-nva
+                batch: sihanouk-shaded-vc-nva
                 step: 0
               operationClass: operation
             - seat: nva
               sequence:
-                chain: sihanouk-shaded-vc-nva
+                batch: sihanouk-shaded-vc-nva
                 step: 1
               operationClass: operation
       - id: card-51
@@ -6325,7 +6325,7 @@ eventDecks:
           freeOperationGrants:
             - seat: us
               sequence:
-                chain: lrrp-us-airstrike
+                batch: lrrp-us-airstrike
                 step: 0
               operationClass: operation
               actionIds:
@@ -6795,7 +6795,7 @@ eventDecks:
                 - seat: self
                   executeAsSeat: us
                   sequence:
-                    chain: uss-new-jersey-us
+                    batch: uss-new-jersey-us
                     step: 0
                   operationClass: operation
                   actionIds:
@@ -6806,7 +6806,7 @@ eventDecks:
                 - seat: self
                   executeAsSeat: arvn
                   sequence:
-                    chain: uss-new-jersey-arvn
+                    batch: uss-new-jersey-arvn
                     step: 0
                   operationClass: operation
                   actionIds:
@@ -7773,7 +7773,7 @@ eventDecks:
             - seat: self
               executeAsSeat: us
               sequence:
-                chain: pows-free-airstrike
+                batch: pows-free-airstrike
                 step: 0
               operationClass: operation
               actionIds:
@@ -8163,7 +8163,7 @@ eventDecks:
           freeOperationGrants:
             - seat: nva
               sequence:
-                chain: russian-arms-nva-bombard
+                batch: russian-arms-nva-bombard
                 step: 0
               operationClass: operation
               actionIds:
@@ -9916,7 +9916,7 @@ eventDecks:
           freeOperationGrants:
             - seat: nva
               sequence:
-                chain: 559th-transport-grp-nva
+                batch: 559th-transport-grp-nva
                 step: 0
               viabilityPolicy: requireUsableAtIssue
               completionPolicy: required
@@ -10561,7 +10561,7 @@ eventDecks:
                       - grantFreeOperation:
                           seat: nva
                           sequence:
-                            chain: vo-nguyen-giap-shaded
+                            batch: vo-nguyen-giap-shaded
                             step: 1
                           operationClass: operation
                           actionIds:
@@ -10581,7 +10581,7 @@ eventDecks:
                 - grantFreeOperation:
                     seat: nva
                     sequence:
-                      chain: vo-nguyen-giap-shaded
+                      batch: vo-nguyen-giap-shaded
                       step: 0
                     operationClass: operation
                     actionIds:
@@ -10621,7 +10621,7 @@ eventDecks:
           freeOperationGrants:
             - seat: nva
               sequence:
-                chain: plei-mei-nva
+                batch: plei-mei-nva
                 step: 0
               operationClass: operation
               actionIds:
@@ -10631,7 +10631,7 @@ eventDecks:
           freeOperationGrants:
             - seat: nva
               sequence:
-                chain: plei-mei-nva
+                batch: plei-mei-nva
                 step: 0
               operationClass: operation
               actionIds:
@@ -10888,12 +10888,12 @@ eventDecks:
               freeOperationGrants:
                 - seat: arvn
                   sequence:
-                    chain: uncle-ho-unshaded-arvn-two
+                    batch: uncle-ho-unshaded-arvn-two
                     step: 0
                   operationClass: limitedOperation
                 - seat: arvn
                   sequence:
-                    chain: uncle-ho-unshaded-arvn-two
+                    batch: uncle-ho-unshaded-arvn-two
                     step: 1
                   operationClass: limitedOperation
             - id: add-arvn-resources-and-arvn-two-free-limited-ops
@@ -10906,12 +10906,12 @@ eventDecks:
               freeOperationGrants:
                 - seat: arvn
                   sequence:
-                    chain: uncle-ho-unshaded-arvn-two
+                    batch: uncle-ho-unshaded-arvn-two
                     step: 0
                   operationClass: limitedOperation
                 - seat: arvn
                   sequence:
-                    chain: uncle-ho-unshaded-arvn-two
+                    batch: uncle-ho-unshaded-arvn-two
                     step: 1
                   operationClass: limitedOperation
         shaded:
@@ -10922,32 +10922,32 @@ eventDecks:
               freeOperationGrants:
                 - seat: vc
                   sequence:
-                    chain: uncle-ho-shaded-vc-nva-six
+                    batch: uncle-ho-shaded-vc-nva-six
                     step: 0
                   operationClass: limitedOperation
                 - seat: vc
                   sequence:
-                    chain: uncle-ho-shaded-vc-nva-six
+                    batch: uncle-ho-shaded-vc-nva-six
                     step: 1
                   operationClass: limitedOperation
                 - seat: vc
                   sequence:
-                    chain: uncle-ho-shaded-vc-nva-six
+                    batch: uncle-ho-shaded-vc-nva-six
                     step: 2
                   operationClass: limitedOperation
                 - seat: nva
                   sequence:
-                    chain: uncle-ho-shaded-vc-nva-six
+                    batch: uncle-ho-shaded-vc-nva-six
                     step: 3
                   operationClass: limitedOperation
                 - seat: nva
                   sequence:
-                    chain: uncle-ho-shaded-vc-nva-six
+                    batch: uncle-ho-shaded-vc-nva-six
                     step: 4
                   operationClass: limitedOperation
                 - seat: nva
                   sequence:
-                    chain: uncle-ho-shaded-vc-nva-six
+                    batch: uncle-ho-shaded-vc-nva-six
                     step: 5
                   operationClass: limitedOperation
       - id: card-63

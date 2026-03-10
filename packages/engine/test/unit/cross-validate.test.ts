@@ -800,7 +800,7 @@ describe('crossValidateSpec', () => {
               ...card,
               unshaded: {
                 ...(card.unshaded ?? {}),
-                freeOperationGrants: [{ seat: 'uss', sequence: { chain: 'unknown-faction', step: 0 }, operationClass: 'operation' }],
+                freeOperationGrants: [{ seat: 'uss', sequence: { batch: 'unknown-faction', step: 0 }, operationClass: 'operation' }],
               },
             },
           ],
@@ -834,7 +834,7 @@ describe('crossValidateSpec', () => {
                     freeOperationGrants: [
                       {
                         seat: 'us',
-                        sequence: { chain: 'unknown-action', step: 0 },
+                        sequence: { batch: 'unknown-action', step: 0 },
                         operationClass: 'operation',
                         actionIds: ['acx'],
                       },
@@ -875,7 +875,7 @@ describe('crossValidateSpec', () => {
                   {
                     seat: 'us',
                     executeAsSeat: 'uuss',
-                    sequence: { chain: 'unknown-execute-as', step: 0 },
+                    sequence: { batch: 'unknown-execute-as', step: 0 },
                     operationClass: 'operation',
                   },
                 ],
@@ -910,7 +910,7 @@ describe('crossValidateSpec', () => {
                   {
                     seat: 'us',
                     executeAsSeat: 'coalition-seat',
-                    sequence: { chain: 'unknown-execute-as-fallback', step: 0 },
+                    sequence: { batch: 'unknown-execute-as-fallback', step: 0 },
                     operationClass: 'operation',
                   },
                 ],
@@ -945,7 +945,7 @@ describe('crossValidateSpec', () => {
                 freeOperationGrants: [
                   {
                     seat: 'us',
-                    sequence: { chain: 'valid-grant', step: 0 },
+                    sequence: { batch: 'valid-grant', step: 0 },
                     operationClass: 'operation',
                     actionIds: ['act'],
                   },
@@ -981,7 +981,7 @@ describe('crossValidateSpec', () => {
                   {
                     seat: 'self',
                     executeAsSeat: 'us',
-                    sequence: { chain: 'self-grant', step: 0 },
+                    sequence: { batch: 'self-grant', step: 0 },
                     operationClass: 'operation',
                     actionIds: ['act'],
                   },

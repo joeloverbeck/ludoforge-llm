@@ -327,7 +327,7 @@ describe('event playability context parity', () => {
     unshaded: {
       effectTiming: 'afterGrants',
       effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 1 } }],
-      freeOperationGrants: [{ seat: '0', sequence: { chain: 'seq', step: 0 }, operationClass: 'operation', actionIds: ['operation'] }],
+      freeOperationGrants: [{ seat: '0', sequence: { batch: 'seq', step: 0 }, operationClass: 'operation', actionIds: ['operation'] }],
       eligibilityOverrides: [{ target: { kind: 'active' }, eligible: true, windowId: 'window-a' }],
     },
   };

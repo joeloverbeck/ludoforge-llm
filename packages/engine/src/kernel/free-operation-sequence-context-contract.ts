@@ -5,7 +5,7 @@ export interface FreeOperationSequenceContextContract {
 
 export interface FreeOperationSequenceContextGrantLike {
   readonly sequence?: {
-    readonly chain?: unknown;
+    readonly batch?: unknown;
     readonly step?: unknown;
   };
   readonly sequenceContext?: {

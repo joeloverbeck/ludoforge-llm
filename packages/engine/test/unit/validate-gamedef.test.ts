@@ -5550,7 +5550,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
       freeOperationGrants: [
         {
           seat: '0',
-          sequence: { chain: 'ctx-chain', step: -1 },
+          sequence: { batch: 'ctx-chain', step: -1 },
           operationClass: 'operation',
           actionIds: ['playCard'],
         },
@@ -5573,7 +5573,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
       freeOperationGrants: [
         {
           seat: '0',
-          sequence: { chain: 'ctx-chain', step: 0 },
+          sequence: { batch: 'ctx-chain', step: 0 },
           operationClass: 'operation',
           actionIds: ['playCard'],
           completionPolicy: 'required',
@@ -5597,7 +5597,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
       freeOperationGrants: [
         {
           seat: '0',
-          sequence: { chain: 'ctx-chain', step: 0 },
+          sequence: { batch: 'ctx-chain', step: 0 },
           operationClass: 'operation',
           actionIds: ['playCard'],
           postResolutionTurnFlow: 'resumeCardFlow',
@@ -5640,7 +5640,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
         path: 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0].sequenceContext',
         severity: 'error',
         message: 'freeOperationGrant.sequenceContext requires freeOperationGrant.sequence.',
-        suggestion: 'Declare sequence.chain and sequence.step when using sequenceContext.',
+        suggestion: 'Declare sequence.batch and sequence.step when using sequenceContext.',
       },
     );
   });
@@ -5650,7 +5650,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
       freeOperationGrants: [
         {
           seat: '0',
-          sequence: { chain: 'ctx-chain', step: 0 },
+          sequence: { batch: 'ctx-chain', step: 0 },
           operationClass: 'operation',
           actionIds: ['playCard'],
           moveZoneBindings: [''],
@@ -5685,7 +5685,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
             freeOperationGrants: [{
               seat: '1',
               operationClass: 'operation',
-              sequence: { chain: 'x', step: 0 },
+              sequence: { batch: 'x', step: 0 },
               moveZoneProbeBindings: [''],
             }],
           },
@@ -5701,11 +5701,11 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
     );
   });
 
-  it('rejects requireMoveZoneCandidatesFrom when no matching capture exists in the chain', () => {
+  it('rejects requireMoveZoneCandidatesFrom when no matching capture exists in the batch', () => {
     const def = withEventFreeOperationGrants([
       {
         seat: '0',
-        sequence: { chain: 'ctx-chain', step: 1 },
+        sequence: { batch: 'ctx-chain', step: 1 },
         operationClass: 'operation',
         actionIds: ['playCard'],
         sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
@@ -5727,14 +5727,14 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
     const def = withEventFreeOperationGrants([
       {
         seat: '0',
-        sequence: { chain: 'ctx-chain', step: 1 },
+        sequence: { batch: 'ctx-chain', step: 1 },
         operationClass: 'operation',
         actionIds: ['playCard'],
         sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
       },
       {
         seat: '0',
-        sequence: { chain: 'ctx-chain', step: 1 },
+        sequence: { batch: 'ctx-chain', step: 1 },
         operationClass: 'operation',
         actionIds: ['playCard'],
         sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
@@ -5756,14 +5756,14 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
     const def = withEventFreeOperationGrants([
       {
         seat: '0',
-        sequence: { chain: 'ctx-chain', step: 0 },
+        sequence: { batch: 'ctx-chain', step: 0 },
         operationClass: 'operation',
         actionIds: ['playCard'],
         sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
       },
       {
         seat: '0',
-        sequence: { chain: 'ctx-chain', step: 1 },
+        sequence: { batch: 'ctx-chain', step: 1 },
         operationClass: 'operation',
         actionIds: ['playCard'],
         sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
@@ -5782,7 +5782,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
       freeOperationGrants: [
         {
           seat: '0',
-          sequence: { chain: 'ctx-branch-chain', step: 0 },
+          sequence: { batch: 'ctx-branch-chain', step: 0 },
           operationClass: 'operation',
           actionIds: ['playCard'],
           sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
@@ -5794,7 +5794,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
           freeOperationGrants: [
             {
               seat: '0',
-              sequence: { chain: 'ctx-branch-chain', step: 1 },
+              sequence: { batch: 'ctx-branch-chain', step: 1 },
               operationClass: 'operation',
               actionIds: ['playCard'],
               sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
@@ -5816,14 +5816,14 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
       freeOperationGrants: [
         {
           seat: '0',
-          sequence: { chain: 'ambiguous-a', step: 0 },
+          sequence: { batch: 'ambiguous-a', step: 0 },
           operationClass: 'operation',
           actionIds: ['playCard'],
           uses: 1,
         },
         {
           seat: '0',
-          sequence: { chain: 'ambiguous-b', step: 0 },
+          sequence: { batch: 'ambiguous-b', step: 0 },
           operationClass: 'operation',
           actionIds: ['playCard'],
           uses: 2,
@@ -5855,7 +5855,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
       freeOperationGrants: [
         {
           seat: '0',
-          sequence: { chain: 'duplicate-a', step: 0 },
+          sequence: { batch: 'duplicate-a', step: 0 },
           operationClass: 'operation',
           actionIds: ['playCard'],
           completionPolicy: 'required',
@@ -5864,7 +5864,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
         },
         {
           seat: '0',
-          sequence: { chain: 'duplicate-b', step: 0 },
+          sequence: { batch: 'duplicate-b', step: 0 },
           operationClass: 'operation',
           actionIds: ['playCard'],
           completionPolicy: 'required',
@@ -5886,13 +5886,13 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
       freeOperationGrants: [
         {
           seat: '0',
-          sequence: { chain: 'duplicate-uses-a', step: 0 },
+          sequence: { batch: 'duplicate-uses-a', step: 0 },
           operationClass: 'operation',
           actionIds: ['playCard'],
         },
         {
           seat: '0',
-          sequence: { chain: 'duplicate-uses-b', step: 0 },
+          sequence: { batch: 'duplicate-uses-b', step: 0 },
           operationClass: 'operation',
           actionIds: ['playCard'],
           uses: 1,
@@ -5907,12 +5907,12 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
     );
   });
 
-  it('accepts same-chain sequential event freeOperationGrants because they cannot co-issue', () => {
+  it('accepts same-batch sequential event freeOperationGrants because they cannot co-issue', () => {
     const def = withEventCardSideConfig({
       freeOperationGrants: [
         {
           seat: '0',
-          sequence: { chain: 'ordered', step: 0 },
+          sequence: { batch: 'ordered', step: 0 },
           operationClass: 'operation',
           actionIds: ['playCard'],
           completionPolicy: 'required',
@@ -5920,7 +5920,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
         },
         {
           seat: '0',
-          sequence: { chain: 'ordered', step: 1 },
+          sequence: { batch: 'ordered', step: 1 },
           operationClass: 'operation',
           actionIds: ['playCard'],
           completionPolicy: 'required',
@@ -5942,7 +5942,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
       freeOperationGrants: [
         {
           seat: '0',
-          sequence: { chain: 'cross-scope-side', step: 0 },
+          sequence: { batch: 'cross-scope-side', step: 0 },
           operationClass: 'operation',
           actionIds: ['playCard'],
           uses: 1,
@@ -5954,7 +5954,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
           freeOperationGrants: [
             {
               seat: '0',
-              sequence: { chain: 'cross-scope-branch', step: 0 },
+              sequence: { batch: 'cross-scope-branch', step: 0 },
               operationClass: 'operation',
               actionIds: ['playCard'],
               uses: 2,
@@ -5989,7 +5989,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
         {
           grantFreeOperation: {
             seat: '0',
-            sequence: { chain: 'ctx-effect-branch-chain', step: 0 },
+            sequence: { batch: 'ctx-effect-branch-chain', step: 0 },
             operationClass: 'operation',
             actionIds: ['playCard'],
             sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
@@ -6003,7 +6003,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
             {
               grantFreeOperation: {
                 seat: '0',
-                sequence: { chain: 'ctx-effect-branch-chain', step: 1 },
+                sequence: { batch: 'ctx-effect-branch-chain', step: 1 },
                 operationClass: 'operation',
                 actionIds: ['playCard'],
                 sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
@@ -6031,7 +6031,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
               {
                 grantFreeOperation: {
                   seat: '0',
-                  sequence: { chain: 'ctx-effect-if-branch-chain', step: 0 },
+                  sequence: { batch: 'ctx-effect-if-branch-chain', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['playCard'],
                   sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
@@ -6042,7 +6042,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
               {
                 grantFreeOperation: {
                   seat: '0',
-                  sequence: { chain: 'ctx-effect-if-branch-chain', step: 1 },
+                  sequence: { batch: 'ctx-effect-if-branch-chain', step: 1 },
                   operationClass: 'operation',
                   actionIds: ['playCard'],
                   sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
@@ -6075,7 +6075,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
               {
                 grantFreeOperation: {
                   seat: '0',
-                  sequence: { chain: 'ctx-effect-if-then-chain', step: 0 },
+                  sequence: { batch: 'ctx-effect-if-then-chain', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['playCard'],
                   sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
@@ -6084,7 +6084,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
               {
                 grantFreeOperation: {
                   seat: '0',
-                  sequence: { chain: 'ctx-effect-if-then-chain', step: 1 },
+                  sequence: { batch: 'ctx-effect-if-then-chain', step: 1 },
                   operationClass: 'operation',
                   actionIds: ['playCard'],
                   sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
@@ -6114,7 +6114,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
               {
                 grantFreeOperation: {
                   seat: '0',
-                  sequence: { chain: 'ctx-effect-for-each-body-chain', step: 0 },
+                  sequence: { batch: 'ctx-effect-for-each-body-chain', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['playCard'],
                   sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
@@ -6123,7 +6123,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
               {
                 grantFreeOperation: {
                   seat: '0',
-                  sequence: { chain: 'ctx-effect-for-each-body-chain', step: 1 },
+                  sequence: { batch: 'ctx-effect-for-each-body-chain', step: 1 },
                   operationClass: 'operation',
                   actionIds: ['playCard'],
                   sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
@@ -6154,7 +6154,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
               {
                 grantFreeOperation: {
                   seat: '0',
-                  sequence: { chain: 'ctx-effect-for-each-continuation-chain', step: 0 },
+                  sequence: { batch: 'ctx-effect-for-each-continuation-chain', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['playCard'],
                   sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
@@ -6165,7 +6165,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
               {
                 grantFreeOperation: {
                   seat: '0',
-                  sequence: { chain: 'ctx-effect-for-each-continuation-chain', step: 1 },
+                  sequence: { batch: 'ctx-effect-for-each-continuation-chain', step: 1 },
                   operationClass: 'operation',
                   actionIds: ['playCard'],
                   sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
@@ -6194,7 +6194,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
         {
           grantFreeOperation: {
             seat: '0',
-            sequence: { chain: 'effect-overlap-a', step: 0 },
+            sequence: { batch: 'effect-overlap-a', step: 0 },
             operationClass: 'operation',
             actionIds: ['playCard'],
             sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
@@ -6203,7 +6203,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
         {
           grantFreeOperation: {
             seat: '0',
-            sequence: { chain: 'effect-overlap-b', step: 0 },
+            sequence: { batch: 'effect-overlap-b', step: 0 },
             operationClass: 'operation',
             actionIds: ['playCard'],
             sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
@@ -6237,7 +6237,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
         {
           grantFreeOperation: {
             seat: '0',
-            sequence: { chain: 'effect-side-branch-overlap-a', step: 0 },
+            sequence: { batch: 'effect-side-branch-overlap-a', step: 0 },
             operationClass: 'operation',
             actionIds: ['playCard'],
             sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
@@ -6251,7 +6251,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
             {
               grantFreeOperation: {
                 seat: '0',
-                sequence: { chain: 'effect-side-branch-overlap-b', step: 0 },
+                sequence: { batch: 'effect-side-branch-overlap-b', step: 0 },
                 operationClass: 'operation',
                 actionIds: ['playCard'],
                 sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
@@ -6291,7 +6291,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
               {
                 grantFreeOperation: {
                   seat: '0',
-                  sequence: { chain: 'effect-exclusive-then', step: 0 },
+                  sequence: { batch: 'effect-exclusive-then', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['playCard'],
                   sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
@@ -6302,7 +6302,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
               {
                 grantFreeOperation: {
                   seat: '0',
-                  sequence: { chain: 'effect-exclusive-else', step: 0 },
+                  sequence: { batch: 'effect-exclusive-else', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['playCard'],
                   sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
@@ -6333,7 +6333,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
               {
                 grantFreeOperation: {
                   seat: '0',
-                  sequence: { chain: 'ctx-effect-evaluate-subset-compute-chain', step: 0 },
+                  sequence: { batch: 'ctx-effect-evaluate-subset-compute-chain', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['playCard'],
                   sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
@@ -6375,7 +6375,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
                     {
                       grantFreeOperation: {
                         seat: '0',
-                        sequence: { chain: 'ctx-effect-evaluate-subset-compute-nested-chain', step: 0 },
+                        sequence: { batch: 'ctx-effect-evaluate-subset-compute-nested-chain', step: 0 },
                         operationClass: 'operation',
                         actionIds: ['playCard'],
                         sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
@@ -6424,7 +6424,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
                     {
                       grantFreeOperation: {
                         seat: '0',
-                        sequence: { chain: 'ctx-effect-evaluate-subset-in-nested-chain', step: 0 },
+                        sequence: { batch: 'ctx-effect-evaluate-subset-in-nested-chain', step: 0 },
                         operationClass: 'operation',
                         actionIds: ['playCard'],
                         sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
@@ -6433,7 +6433,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
                     {
                       grantFreeOperation: {
                         seat: '0',
-                        sequence: { chain: 'ctx-effect-evaluate-subset-in-nested-chain', step: 1 },
+                        sequence: { batch: 'ctx-effect-evaluate-subset-in-nested-chain', step: 1 },
                         operationClass: 'operation',
                         actionIds: ['playCard'],
                         sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },

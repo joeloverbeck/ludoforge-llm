@@ -137,7 +137,7 @@ const gameDefWithModernEventDeck: GameDef = {
             freeOperationGrants: [
               {
                 seat: '0',
-                sequence: { chain: 'play-card-grant', step: 0 },
+                sequence: { batch: 'play-card-grant', step: 0 },
                 operationClass: 'operation',
                 actionIds: ['playCard'],
                 uses: 1,

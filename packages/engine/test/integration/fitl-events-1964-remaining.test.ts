@@ -124,12 +124,12 @@ describe('FITL 1964 remaining event-card production spec', () => {
     assert.deepEqual(
       shadedGrants.map((grant) => grant.sequence),
       [
-        { chain: 'uncle-ho-shaded-vc-nva-six', step: 0 },
-        { chain: 'uncle-ho-shaded-vc-nva-six', step: 1 },
-        { chain: 'uncle-ho-shaded-vc-nva-six', step: 2 },
-        { chain: 'uncle-ho-shaded-vc-nva-six', step: 3 },
-        { chain: 'uncle-ho-shaded-vc-nva-six', step: 4 },
-        { chain: 'uncle-ho-shaded-vc-nva-six', step: 5 },
+        { batch: 'uncle-ho-shaded-vc-nva-six', step: 0 },
+        { batch: 'uncle-ho-shaded-vc-nva-six', step: 1 },
+        { batch: 'uncle-ho-shaded-vc-nva-six', step: 2 },
+        { batch: 'uncle-ho-shaded-vc-nva-six', step: 3 },
+        { batch: 'uncle-ho-shaded-vc-nva-six', step: 4 },
+        { batch: 'uncle-ho-shaded-vc-nva-six', step: 5 },
       ],
     );
     assert.equal(shadedGrants.every((grant) => grant.operationClass === 'limitedOperation'), true);

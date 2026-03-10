@@ -94,7 +94,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       {
         seat: 'nva',
         executeAsSeat: 'us',
-        sequence: { chain: 'gulf-of-tonkin-us-airstrike', step: 0 },
+        sequence: { batch: 'gulf-of-tonkin-us-airstrike', step: 0 },
         operationClass: 'operation',
         actionIds: ['airStrike'],
       },

@@ -128,7 +128,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
       {
         seat: 'us',
         viabilityPolicy: 'requireUsableForEventPlay',
-        sequence: { chain: 'ia-drang-us', step: 0 },
+        sequence: { batch: 'ia-drang-us', step: 0 },
         completionPolicy: 'required',
         outcomePolicy: 'mustChangeGameplayState',
         postResolutionTurnFlow: 'resumeCardFlow',
@@ -152,7 +152,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
       },
       {
         seat: 'us',
-        sequence: { chain: 'ia-drang-us', step: 1 },
+        sequence: { batch: 'ia-drang-us', step: 1 },
         completionPolicy: 'required',
         postResolutionTurnFlow: 'resumeCardFlow',
         operationClass: 'operation',
@@ -165,7 +165,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
       },
       {
         seat: 'us',
-        sequence: { chain: 'ia-drang-us', step: 2 },
+        sequence: { batch: 'ia-drang-us', step: 2 },
         completionPolicy: 'required',
         postResolutionTurnFlow: 'resumeCardFlow',
         operationClass: 'operation',
@@ -235,7 +235,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
       ?.effects?.[0] as { grantFreeOperation?: Record<string, unknown> } | undefined)?.grantFreeOperation);
     assert.deepEqual(followUp, {
       seat: 'nva',
-      sequence: { chain: 'vo-nguyen-giap-shaded', step: 1 },
+      sequence: { batch: 'vo-nguyen-giap-shaded', step: 1 },
       operationClass: 'operation',
       actionIds: ['rally', 'march', 'attack', 'infiltrate', 'bombard'],
       zoneFilter: {
@@ -252,7 +252,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
     });
     assert.deepEqual((shadedEffects[1] as { grantFreeOperation?: Record<string, unknown> }).grantFreeOperation, {
       seat: 'nva',
-      sequence: { chain: 'vo-nguyen-giap-shaded', step: 0 },
+      sequence: { batch: 'vo-nguyen-giap-shaded', step: 0 },
       operationClass: 'operation',
       actionIds: ['march'],
       moveZoneBindings: ['$targetSpaces'],

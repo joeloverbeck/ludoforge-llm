@@ -113,7 +113,7 @@ describe('FITL card-49 Russian Arms', () => {
     assert.deepEqual(card?.shaded?.freeOperationGrants, [
       {
         seat: 'nva',
-        sequence: { chain: 'russian-arms-nva-bombard', step: 0 },
+        sequence: { batch: 'russian-arms-nva-bombard', step: 0 },
         operationClass: 'operation',
         actionIds: ['bombard'],
       },

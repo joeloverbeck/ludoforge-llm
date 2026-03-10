@@ -143,7 +143,7 @@ const resolveUnusableSequenceProbeBlockers = (
     .filter(
       (candidate) =>
         candidate.sequence !== undefined &&
-        candidate.sequence.chain === sequence.chain &&
+        candidate.sequence.batch === sequence.batch &&
         candidate.sequence.step < sequence.step,
     )
     .sort((left, right) => left.sequence!.step - right.sequence!.step);
@@ -168,7 +168,7 @@ const resolveUnusableSequenceProbeBlockers = (
       candidate,
       activeSeat,
       seatOrder,
-      `__probe_blocker__:${sequence.chain}:${candidate.sequence!.step}:${index}`,
+      `__probe_blocker__:${sequence.batch}:${candidate.sequence!.step}:${index}`,
       evalContext,
     );
     if (blocker !== null) {

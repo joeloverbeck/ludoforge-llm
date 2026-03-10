@@ -16,7 +16,7 @@ describe('sequence-context linkage grant reference extraction', () => {
     assert.equal(
       collectSequenceContextLinkageGrantReference(
         {
-          sequence: { chain: 'ctx-chain', step: -1 },
+          sequence: { batch: 'ctx-chain', step: -1 },
           sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
         },
         'grants[1]',
@@ -29,7 +29,7 @@ describe('sequence-context linkage grant reference extraction', () => {
     assert.equal(
       collectSequenceContextLinkageGrantReference(
         {
-          sequence: { chain: 'ctx-chain', step: 0 },
+          sequence: { batch: 'ctx-chain', step: 0 },
         },
         'grants[0]',
       ),
@@ -38,7 +38,7 @@ describe('sequence-context linkage grant reference extraction', () => {
     assert.equal(
       collectSequenceContextLinkageGrantReference(
         {
-          sequence: { chain: 'ctx-chain', step: 0 },
+          sequence: { batch: 'ctx-chain', step: 0 },
           sequenceContext: {},
         },
         'grants[1]',
@@ -51,13 +51,13 @@ describe('sequence-context linkage grant reference extraction', () => {
     assert.deepEqual(
       collectSequenceContextLinkageGrantReference(
         {
-          sequence: { chain: 'ctx-chain', step: 0 },
+          sequence: { batch: 'ctx-chain', step: 0 },
           sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
         },
         'grants[0]',
       ),
       {
-        chain: 'ctx-chain',
+        batch: 'ctx-chain',
         step: 0,
         path: 'grants[0]',
         captureKey: 'selected-space',
@@ -66,13 +66,13 @@ describe('sequence-context linkage grant reference extraction', () => {
     assert.deepEqual(
       collectSequenceContextLinkageGrantReference(
         {
-          sequence: { chain: 'ctx-chain', step: 1 },
+          sequence: { batch: 'ctx-chain', step: 1 },
           sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
         },
         'grants[1]',
       ),
       {
-        chain: 'ctx-chain',
+        batch: 'ctx-chain',
         step: 1,
         path: 'grants[1]',
         requireKey: 'selected-space',

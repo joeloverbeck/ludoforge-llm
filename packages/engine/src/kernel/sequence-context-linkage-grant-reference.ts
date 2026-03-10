@@ -1,7 +1,7 @@
 import type { FreeOperationSequenceContextGrantLike } from './free-operation-sequence-context-contract.js';
 
 export interface SequenceContextLinkageGrantReference {
-  readonly chain: string;
+  readonly batch: string;
   readonly step: number;
   readonly path: string;
   readonly captureKey?: string;
@@ -17,7 +17,7 @@ export const collectSequenceContextLinkageGrantReference = (
   if (
     sequence === undefined
     || sequenceContext === undefined
-    || typeof sequence.chain !== 'string'
+    || typeof sequence.batch !== 'string'
   ) {
     return null;
   }
@@ -40,7 +40,7 @@ export const collectSequenceContextLinkageGrantReference = (
   }
 
   return {
-    chain: sequence.chain,
+    batch: sequence.batch,
     step,
     path,
     ...(captureKey === undefined ? {} : { captureKey }),

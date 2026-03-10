@@ -10,20 +10,20 @@ import {
 } from '../../../src/kernel/effect-grant-execution-paths.js';
 import type { EffectAST } from '../../../src/kernel/types.js';
 
-const captureGrant = (chain: string, step: number): EffectAST => ({
+const captureGrant = (batch: string, step: number): EffectAST => ({
   grantFreeOperation: {
     seat: '0',
-    sequence: { chain, step },
+    sequence: { batch, step },
     operationClass: 'operation',
     actionIds: ['playCard'],
     sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
   },
 });
 
-const requireGrant = (chain: string, step: number): EffectAST => ({
+const requireGrant = (batch: string, step: number): EffectAST => ({
   grantFreeOperation: {
     seat: '0',
-    sequence: { chain, step },
+    sequence: { batch, step },
     operationClass: 'operation',
     actionIds: ['playCard'],
     sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
@@ -37,15 +37,15 @@ const summarizeNestedScopes = (effect: EffectAST) =>
     traversal: nestedScope.traversal,
   }));
 
-const captureReference = (chain: string, step: number, path: string) => ({
-  chain,
+const captureReference = (batch: string, step: number, path: string) => ({
+  batch,
   step,
   path,
   captureKey: 'selected-space',
 });
 
-const requireReference = (chain: string, step: number, path: string) => ({
-  chain,
+const requireReference = (batch: string, step: number, path: string) => ({
+  batch,
   step,
   path,
   requireKey: 'selected-space',
@@ -455,15 +455,15 @@ describe('effect sequence-context scope policy', () => {
       effects,
       'effects',
       (grant, path) => ({
-        chain: grant.sequence?.chain,
+        batch: grant.sequence?.batch,
         step: grant.sequence?.step,
         path,
       }),
     );
 
     assert.deepEqual(executionPaths, [
-      [{ chain: 'generic-then-chain', step: 0, path: 'effects[0].if.then[0].grantFreeOperation' }],
-      [{ chain: 'generic-else-chain', step: 1, path: 'effects[0].if.else[0].grantFreeOperation' }],
+      [{ batch: 'generic-then-chain', step: 0, path: 'effects[0].if.then[0].grantFreeOperation' }],
+      [{ batch: 'generic-else-chain', step: 1, path: 'effects[0].if.else[0].grantFreeOperation' }],
     ]);
   });
 });

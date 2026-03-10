@@ -130,7 +130,7 @@ describe('free-operation viability policy contract parity', () => {
         seat: '0',
         operationClass: 'operation',
         viabilityPolicy: policy,
-        sequence: { chain: 'parity-chain', step: 0 },
+        sequence: { batch: 'parity-chain', step: 0 },
       });
       assert.equal(eventParsed.success, true, `EventCard free-operation grant schema should accept ${policy}`);
     }
@@ -161,7 +161,7 @@ describe('free-operation viability policy contract parity', () => {
         seat: '0',
         operationClass: 'operation',
         viabilityPolicy: value,
-        sequence: { chain: 'parity-chain', step: 0 },
+        sequence: { batch: 'parity-chain', step: 0 },
       });
       assert.equal(eventParsed.success, false, `EventCard free-operation grant schema should reject ${value}`);
 
@@ -193,7 +193,7 @@ describe('free-operation viability policy contract parity', () => {
     const validEvent = EventCardFreeOperationGrantSchema.safeParse({
       seat: '0',
       operationClass: 'operation',
-      sequence: { chain: 'parity-chain', step: 0 },
+      sequence: { batch: 'parity-chain', step: 0 },
       completionPolicy: 'required',
       postResolutionTurnFlow: 'resumeCardFlow',
     });
@@ -211,7 +211,7 @@ describe('free-operation viability policy contract parity', () => {
         event: {
           seat: '0',
           operationClass: 'operation',
-          sequence: { chain: 'parity-chain', step: 0 },
+          sequence: { batch: 'parity-chain', step: 0 },
           completionPolicy: 'required',
         },
       },
@@ -226,7 +226,7 @@ describe('free-operation viability policy contract parity', () => {
         event: {
           seat: '0',
           operationClass: 'operation',
-          sequence: { chain: 'parity-chain', step: 0 },
+          sequence: { batch: 'parity-chain', step: 0 },
           postResolutionTurnFlow: 'resumeCardFlow',
         },
       },

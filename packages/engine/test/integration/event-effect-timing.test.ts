@@ -125,7 +125,7 @@ const createDef = (): GameDef =>
               freeOperationGrants: [
                 {
                   seat: '3',
-                  sequence: { chain: 'vc-after', step: 0 },
+                  sequence: { batch: 'vc-after', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                 },
@@ -142,7 +142,7 @@ const createDef = (): GameDef =>
               freeOperationGrants: [
                 {
                   seat: '2',
-                  sequence: { chain: 'nva-after-2', step: 0 },
+                  sequence: { batch: 'nva-after-2', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                 },
@@ -159,7 +159,7 @@ const createDef = (): GameDef =>
               freeOperationGrants: [
                 {
                   seat: '3',
-                  sequence: { chain: 'vc-before', step: 0 },
+                  sequence: { batch: 'vc-before', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                 },
@@ -184,7 +184,7 @@ const createDef = (): GameDef =>
               freeOperationGrants: [
                 {
                   seat: '3',
-                  sequence: { chain: 'vc-default', step: 0 },
+                  sequence: { batch: 'vc-default', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                 },
@@ -201,13 +201,13 @@ const createDef = (): GameDef =>
               freeOperationGrants: [
                 {
                   seat: '3',
-                  sequence: { chain: 'vc-batch-a', step: 0 },
+                  sequence: { batch: 'vc-batch-a', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                 },
                 {
                   seat: '3',
-                  sequence: { chain: 'vc-batch-b', step: 0 },
+                  sequence: { batch: 'vc-batch-b', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                 },
@@ -229,7 +229,7 @@ const createDef = (): GameDef =>
                   freeOperationGrants: [
                     {
                       seat: '3',
-                      sequence: { chain: 'vc-branch', step: 0 },
+                      sequence: { batch: 'vc-branch', step: 0 },
                       operationClass: 'operation',
                       actionIds: ['operation'],
                     },
@@ -264,7 +264,7 @@ const createDef = (): GameDef =>
               freeOperationGrants: [
                 {
                   seat: '0',
-                  sequence: { chain: 'self-grant', step: 0 },
+                  sequence: { batch: 'self-grant', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                 },

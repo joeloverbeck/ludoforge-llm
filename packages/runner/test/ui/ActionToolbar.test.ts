@@ -122,7 +122,7 @@ describe('ActionToolbar', () => {
       }),
     });
 
-    const disabledButton = findElementByTestId(tree, 'action-pass');
+    const disabledButton = findElementByTestId(tree, 'action-Core-pass');
     expect(disabledButton).not.toBeNull();
     if (disabledButton === null) {
       throw new Error('Expected disabled action button.');
@@ -132,7 +132,37 @@ describe('ActionToolbar', () => {
     expect(disabledButton.props['aria-disabled']).toBe('true');
   });
 
-  it('clicking an available action dispatches selectAction', () => {
+  it('clicking an available action dispatches selectAction with actionClass', () => {
+    const selectAction = vi.fn(async () => {});
+
+    const actionsWithClass: NonNullable<GameStore['renderModel']>['actionGroups'] = [
+      {
+        groupName: 'Operation',
+        actions: [
+          { actionId: 'train', displayName: 'Train', isAvailable: true, actionClass: 'operation' },
+        ],
+      },
+    ];
+
+    const tree = ActionToolbar({
+      store: createToolbarStore({
+        renderModel: makeToolbarRenderModel({ actionGroups: actionsWithClass }),
+        selectAction,
+      }),
+    });
+
+    const trainButton = findElementByTestId(tree, 'action-Operation-train');
+    expect(trainButton).not.toBeNull();
+    if (trainButton === null || trainButton.props.onClick === undefined) {
+      throw new Error('Expected train action click handler.');
+    }
+
+    trainButton.props.onClick();
+    expect(selectAction).toHaveBeenCalledTimes(1);
+    expect(selectAction).toHaveBeenCalledWith('train', 'operation');
+  });
+
+  it('clicking an action without actionClass passes undefined', () => {
     const selectAction = vi.fn(async () => {});
 
     const tree = ActionToolbar({
@@ -142,7 +172,7 @@ describe('ActionToolbar', () => {
       }),
     });
 
-    const moveButton = findElementByTestId(tree, 'action-move');
+    const moveButton = findElementByTestId(tree, 'action-Core-move');
     expect(moveButton).not.toBeNull();
     if (moveButton === null || moveButton.props.onClick === undefined) {
       throw new Error('Expected move action click handler.');
@@ -150,7 +180,7 @@ describe('ActionToolbar', () => {
 
     moveButton.props.onClick();
     expect(selectAction).toHaveBeenCalledTimes(1);
-    expect(selectAction).toHaveBeenCalledWith('move');
+    expect(selectAction).toHaveBeenCalledWith('move', undefined);
   });
 
   it('does not render when renderModel is null', () => {
@@ -241,7 +271,7 @@ describe('ActionToolbar', () => {
       onActionHoverEnd,
     });
 
-    const moveButton = findElementByTestId(tree, 'action-move');
+    const moveButton = findElementByTestId(tree, 'action-Core-move');
     expect(moveButton).not.toBeNull();
     if (moveButton === null) {
       throw new Error('Expected move button.');
@@ -263,7 +293,7 @@ describe('ActionToolbar', () => {
       onActionHoverEnd,
     });
 
-    const moveButton = findElementByTestId(tree, 'action-move');
+    const moveButton = findElementByTestId(tree, 'action-Core-move');
     expect(moveButton).not.toBeNull();
     if (moveButton === null || moveButton.props.onPointerEnter === undefined) {
       throw new Error('Expected move button with onPointerEnter.');
@@ -287,7 +317,7 @@ describe('ActionToolbar', () => {
       onActionHoverEnd,
     });
 
-    const moveButton = findElementByTestId(tree, 'action-move');
+    const moveButton = findElementByTestId(tree, 'action-Core-move');
     expect(moveButton).not.toBeNull();
     if (moveButton === null || moveButton.props.onPointerLeave === undefined) {
       throw new Error('Expected move button with onPointerLeave.');
@@ -305,7 +335,7 @@ describe('ActionToolbar', () => {
     });
 
     expect(tree).not.toBeNull();
-    const moveButton = findElementByTestId(tree, 'action-move');
+    const moveButton = findElementByTestId(tree, 'action-Core-move');
     expect(moveButton).not.toBeNull();
     if (moveButton === null) {
       throw new Error('Expected move button.');

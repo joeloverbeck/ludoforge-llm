@@ -182,6 +182,7 @@ export interface RenderAction {
   readonly actionId: string;
   readonly displayName: string;
   readonly isAvailable: boolean;
+  readonly actionClass?: string;
 }
 
 export interface RenderChoiceStep {

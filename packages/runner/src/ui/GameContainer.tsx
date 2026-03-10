@@ -43,7 +43,6 @@ import { deriveBottomBarState } from './bottom-bar-mode.js';
 import { buildFactionCssVariableStyle } from './faction-color-style.js';
 import { EventLogPanel } from './EventLogPanel.js';
 import { useEventLogEntries } from './useEventLogEntries.js';
-import { useKeyboardShortcuts } from './useKeyboardShortcuts.js';
 import type { OverlayPanelComponent, OverlayPanelDiagnostics, OverlayPanelProps } from './overlay-panel-contract.js';
 import styles from './GameContainer.module.css';
 
@@ -139,13 +138,10 @@ export function GameContainer({
     onTooltipPointerEnter,
     onTooltipPointerLeave,
   } = useActionTooltip(bridge);
-  const keyboardShortcutsEnabled = !readOnlyMode && error === null && (gameLifecycle === 'playing' || gameLifecycle === 'terminal');
   const keyboardCoordinator = useMemo(
     () => (typeof document === 'undefined' ? null : createKeyboardCoordinator(document)),
     [],
   );
-
-  useKeyboardShortcuts(store, keyboardShortcutsEnabled, keyboardCoordinator ?? undefined);
 
   useEffect(() => {
     return () => {

@@ -45,12 +45,12 @@ export function ActionToolbar({ store, onActionHoverStart, onActionHoverEnd }: A
                   className={styles.actionButton}
                   disabled={!action.isAvailable}
                   aria-disabled={action.isAvailable ? undefined : 'true'}
-                  data-testid={`action-${action.actionId}`}
+                  data-testid={`action-${group.groupName}-${action.actionId}`}
                   onClick={() => {
                     if (!action.isAvailable) {
                       return;
                     }
-                    void store.getState().selectAction(actionId);
+                    void store.getState().selectAction(actionId, action.actionClass);
                   }}
                   onPointerEnter={(e) => onActionHoverStart?.(action.actionId, e.currentTarget)}
                   onPointerLeave={() => onActionHoverEnd?.()}

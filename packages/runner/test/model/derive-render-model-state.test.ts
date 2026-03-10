@@ -777,7 +777,7 @@ describe('deriveRenderModel state metadata', () => {
     expect(model.actionGroups).toEqual([
       {
         groupName: 'Ops',
-        actions: [{ actionId: 'train-us', displayName: 'Train Us', isAvailable: true }],
+        actions: [{ actionId: 'train-us', displayName: 'Train Us', isAvailable: true, actionClass: 'ops' }],
       },
       {
         groupName: 'Actions',
@@ -1218,13 +1218,14 @@ describe('deriveRenderModel state metadata', () => {
     });
   });
 
-  it('groups specialActivity moves into the operationPlusSpecialActivity group', () => {
+  it('synthesizes Op+SA group from operation moves and filters out specialActivity', () => {
     const def = compileFixture();
     const state = initialState(def, 400, 2).state;
 
+    // 1st eligible: engine emits operation + specialActivity moves (never operationPlusSpecialActivity)
     const moves: Move[] = [
       { actionId: asActionId('train'), params: {}, actionClass: 'operation' },
-      { actionId: asActionId('train'), params: {}, actionClass: 'operationPlusSpecialActivity' },
+      { actionId: asActionId('patrol'), params: {}, actionClass: 'operation' },
       { actionId: asActionId('advise'), params: {}, actionClass: 'specialActivity' },
       { actionId: asActionId('pass'), params: {} },
     ];
@@ -1237,21 +1238,31 @@ describe('deriveRenderModel state metadata', () => {
     );
 
     const groupNames = model.actionGroups.map((group) => group.groupName);
-    // specialActivity should be merged into operationPlusSpecialActivity, not its own group
+    // specialActivity moves should be filtered out entirely, not shown in any group
     expect(groupNames).not.toContain('Special Activity');
+    // Op+SA group should be synthesized from operation moves
     expect(groupNames).toContain('Operation Plus Special Activity');
+    expect(groupNames).toContain('Operation');
 
-    // The Op+SA group should contain both train and advise
+    // Op+SA group should contain operations (train, patrol) but NOT advise
     const opSaGroup = model.actionGroups.find((group) => group.groupName === 'Operation Plus Special Activity');
     const opSaActionIds = opSaGroup?.actions.map((action) => action.actionId) ?? [];
     expect(opSaActionIds).toContain('train');
-    expect(opSaActionIds).toContain('advise');
+    expect(opSaActionIds).toContain('patrol');
+    expect(opSaActionIds).not.toContain('advise');
 
-    // The operation group should contain train
+    // Operation group should contain train and patrol
     const opGroup = model.actionGroups.find((group) => group.groupName === 'Operation');
     const opActionIds = opGroup?.actions.map((action) => action.actionId) ?? [];
     expect(opActionIds).toContain('train');
+    expect(opActionIds).toContain('patrol');
     expect(opActionIds).not.toContain('advise');
+
+    // actionClass should be propagated correctly
+    const opTrainAction = opGroup?.actions.find((a) => a.actionId === 'train');
+    expect(opTrainAction?.actionClass).toBe('operation');
+    const opsaTrainAction = opSaGroup?.actions.find((a) => a.actionId === 'train');
+    expect(opsaTrainAction?.actionClass).toBe('operationPlusSpecialActivity');
   });
 
   it('derives eligibility from card metadata via cardSeatOrderMetadataKey', () => {

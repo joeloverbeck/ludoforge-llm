@@ -17,6 +17,7 @@ import {
 } from '@ludoforge/engine/runtime';
 
 import type {
+  RenderAction,
   RenderAdjacency,
   RenderChoiceContext,
 
@@ -1112,30 +1113,55 @@ function normalizeIndex(index: number, playerCount: number): number {
 }
 
 function deriveActionGroups(moves: readonly Move[]): RenderModel['actionGroups'] {
-  const groupsByClass = new Map<string, Map<string, string>>();
-  for (const move of moves) {
-    const actionClass = typeof move.actionClass === 'string' && move.actionClass.length > 0 ? move.actionClass : null;
-    // Merge specialActivity into the operationPlusSpecialActivity group so SAs
-    // appear alongside operations in the UI rather than as a separate group.
-    const groupKey = actionClass === 'specialActivity' ? 'operationPlusSpecialActivity' : (actionClass ?? 'Actions');
-    const group = groupsByClass.get(groupKey) ?? new Map<string, string>();
-    if (!groupsByClass.has(groupKey)) {
-      groupsByClass.set(groupKey, group);
-    }
+  const groupsByClass = new Map<string, Map<string, RenderAction>>();
 
+  const ensureGroup = (key: string): Map<string, RenderAction> => {
+    if (!groupsByClass.has(key)) {
+      groupsByClass.set(key, new Map());
+    }
+    return groupsByClass.get(key)!;
+  };
+
+  for (const move of moves) {
+    const ac =
+      typeof move.actionClass === 'string' && move.actionClass.length > 0
+        ? move.actionClass
+        : null;
     const actionId = String(move.actionId);
-    if (!group.has(actionId)) {
-      group.set(actionId, formatIdAsDisplayName(actionId));
+    const displayName = formatIdAsDisplayName(actionId);
+
+    if (ac === 'operation') {
+      // Add to Operation group
+      const opGroup = ensureGroup('operation');
+      if (!opGroup.has(actionId)) {
+        opGroup.set(actionId, { actionId, displayName, isAvailable: true, actionClass: 'operation' });
+      }
+      // Also add synthetic entry to Op+SA group
+      const opsaGroup = ensureGroup('operationPlusSpecialActivity');
+      if (!opsaGroup.has(actionId)) {
+        opsaGroup.set(actionId, { actionId, displayName, isAvailable: true, actionClass: 'operationPlusSpecialActivity' });
+      }
+    } else if (ac === 'specialActivity') {
+      // Skip SA moves — they are chosen later in the compound move decision flow
+      continue;
+    } else if (ac === 'operationPlusSpecialActivity') {
+      // If the engine emits these directly (2nd eligible), group them as-is
+      const group = ensureGroup('operationPlusSpecialActivity');
+      if (!group.has(actionId)) {
+        group.set(actionId, { actionId, displayName, isAvailable: true, actionClass: 'operationPlusSpecialActivity' });
+      }
+    } else {
+      const groupKey = ac ?? 'Actions';
+      const group = ensureGroup(groupKey);
+      if (!group.has(actionId)) {
+        group.set(actionId, { actionId, displayName, isAvailable: true, ...(ac !== null ? { actionClass: ac } : {}) });
+      }
     }
   }
 
   return Array.from(groupsByClass.entries()).map(([groupKey, actionsById]) => ({
     groupName: groupKey === 'Actions' ? 'Actions' : formatIdAsDisplayName(groupKey),
-    actions: Array.from(actionsById.entries()).map(([actionId, displayName]) => ({
-      actionId,
-      displayName,
-      isAvailable: true,
-    })),
+    actions: Array.from(actionsById.values()),
   }));
 }
 

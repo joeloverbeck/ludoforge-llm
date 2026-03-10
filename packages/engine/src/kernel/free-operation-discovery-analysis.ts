@@ -36,8 +36,13 @@ interface FreeOperationGrantAnalysis {
   readonly actionClassMatchedGrants: readonly TurnFlowPendingFreeOperationGrant[];
   readonly actionMatchedGrants: readonly TurnFlowPendingFreeOperationGrant[];
   readonly contextMatchedGrants: readonly TurnFlowPendingFreeOperationGrant[];
+  readonly applicableGrants: readonly TurnFlowPendingFreeOperationGrant[];
   readonly zoneMatchedGrants: readonly TurnFlowPendingFreeOperationGrant[];
-  readonly ambiguousGrantIds: readonly string[];
+  readonly overlap: {
+    readonly candidateGrants: readonly TurnFlowPendingFreeOperationGrant[];
+    readonly matchingGrantIds: readonly string[];
+    readonly ambiguousGrantIds: readonly string[];
+  };
 }
 
 const analyzeFreeOperationGrantMatch = (
@@ -112,7 +117,7 @@ const analyzeFreeOperationGrantMatch = (
   const ambiguity = options?.evaluateZoneFilters === true
     ? resolveAuthorizedPendingFreeOperationGrantOverlapAmbiguity(def, state, ambiguityCandidates)
     : null;
-  const ambiguousGrantIds = ambiguity?.strongestGrantIds ?? [];
+  const applicableGrants = zoneMatchedGrants.length > 0 ? zoneMatchedGrants : contextMatchedGrants;
   return {
     activeSeat,
     actionClass,
@@ -123,8 +128,13 @@ const analyzeFreeOperationGrantMatch = (
     actionClassMatchedGrants,
     actionMatchedGrants,
     contextMatchedGrants,
+    applicableGrants,
     zoneMatchedGrants,
-    ambiguousGrantIds,
+    overlap: {
+      candidateGrants: ambiguityCandidates,
+      matchingGrantIds: ambiguityCandidates.map((grant) => grant.grantId),
+      ambiguousGrantIds: ambiguity?.strongestGrantIds ?? [],
+    },
   };
 };
 
@@ -161,7 +171,7 @@ const explainFreeOperationBlockFromAnalysis = (
     actionMatchedGrants,
     contextMatchedGrants,
     zoneMatchedGrants,
-    ambiguousGrantIds,
+    overlap,
   } = analysis;
 
   if (activeGrants.length === 0) {
@@ -214,14 +224,14 @@ const explainFreeOperationBlockFromAnalysis = (
     };
   }
 
-  if (ambiguousGrantIds.length > 0) {
+  if (overlap.ambiguousGrantIds.length > 0) {
     return {
       cause: 'ambiguousOverlap',
       activeSeat,
       actionClass,
       actionId,
-      matchingGrantIds: zoneMatchedGrants.map((grant) => grant.grantId),
-      ambiguousGrantIds,
+      matchingGrantIds: overlap.matchingGrantIds,
+      ambiguousGrantIds: overlap.ambiguousGrantIds,
     };
   }
 
@@ -286,14 +296,13 @@ export const resolveFreeOperationDiscoveryAnalysis = (
     };
   }
 
-  const applicable = analysis.zoneMatchedGrants.length > 0 ? analysis.zoneMatchedGrants : analysis.contextMatchedGrants;
-  const prioritized = applicable.find((grant) => grant.executeAsSeat !== undefined) ?? applicable[0];
+  const prioritized = analysis.applicableGrants.find((grant) => grant.executeAsSeat !== undefined) ?? analysis.applicableGrants[0];
   const executionSeat = prioritized?.executeAsSeat ?? prioritized?.seat;
   const executionPlayer = executionSeat === undefined
     ? state.activePlayer
     : parsePlayerId(executionSeat, seatResolution) ?? state.activePlayer;
 
-  const zoneFilters: ConditionAST[] = applicable
+  const zoneFilters: ConditionAST[] = analysis.applicableGrants
     .flatMap((grant) => (grant.zoneFilter === undefined ? [] : [grant.zoneFilter]));
   const [firstZoneFilter, ...remainingZoneFilters] = zoneFilters;
   const zoneFilter: ConditionAST | undefined = zoneFilters.length === 0

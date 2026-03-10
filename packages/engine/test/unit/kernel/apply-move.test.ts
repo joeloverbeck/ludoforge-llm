@@ -1527,6 +1527,98 @@ describe('applyMove() required free-operation grant enforcement', () => {
     });
   });
 
+  it('preserves matching grant ids when unresolved exact-zone overlap becomes terminal', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [{ addVar: { scope: 'global', var: 'opCount', delta: 1 } }],
+      limits: [],
+    };
+
+    const def = {
+      ...makeBaseDef({ actions: [action], globalVars: [{ name: 'opCount', type: 'int', init: 0, min: 0, max: 10 }] }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'] },
+            windows: [],
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            actionClassByActionId: { operation: 'operation' },
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      globalVars: { opCount: 0 },
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-board',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              zoneFilter: { op: '==', left: { ref: 'binding', name: '$zone' }, right: 'board:none' },
+              remainingUses: 1,
+            },
+            {
+              grantId: 'grant-city',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              zoneFilter: { op: '==', left: { ref: 'binding', name: '$zone' }, right: 'city:none' },
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+    });
+
+    assert.throws(() => applyMove(def, state, { actionId: asActionId('operation'), params: {}, freeOperation: true }), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & {
+        readonly code?: string;
+        readonly reason?: string;
+        readonly context?: {
+          readonly freeOperationDenial?: {
+            readonly cause?: string;
+            readonly matchingGrantIds?: readonly string[];
+            readonly ambiguousGrantIds?: readonly string[];
+          };
+        };
+      };
+      assert.equal(details.code, 'ILLEGAL_MOVE');
+      assert.equal(details.reason, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED);
+      assert.equal(details.context?.freeOperationDenial?.cause, 'ambiguousOverlap');
+      assert.deepEqual(details.context?.freeOperationDenial?.matchingGrantIds, ['grant-board', 'grant-city']);
+      assert.deepEqual(details.context?.freeOperationDenial?.ambiguousGrantIds, ['grant-board', 'grant-city']);
+      return true;
+    });
+  });
+
   it('allows top-ranked overlapping grants when they are contract-equivalent duplicates', () => {
     const action: ActionDef = {
       id: asActionId('operation'),

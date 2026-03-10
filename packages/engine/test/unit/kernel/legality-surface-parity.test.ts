@@ -751,11 +751,19 @@ describe('legality surface parity', () => {
       const details = error as Error & {
         code?: unknown;
         reason?: unknown;
-        context?: { freeOperationDenial?: { cause?: string } };
+        context?: {
+          freeOperationDenial?: {
+            cause?: string;
+            matchingGrantIds?: readonly string[];
+            ambiguousGrantIds?: readonly string[];
+          };
+        };
       };
       assert.equal(details.code, 'ILLEGAL_MOVE');
       assert.equal(details.reason, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED);
       assert.equal(details.context?.freeOperationDenial?.cause, 'ambiguousOverlap');
+      assert.deepEqual(details.context?.freeOperationDenial?.matchingGrantIds, ['grant-board', 'grant-city']);
+      assert.deepEqual(details.context?.freeOperationDenial?.ambiguousGrantIds, ['grant-board', 'grant-city']);
       return true;
     });
   });

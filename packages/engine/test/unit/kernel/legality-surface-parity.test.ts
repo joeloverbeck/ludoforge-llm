@@ -689,6 +689,172 @@ describe('legality surface parity', () => {
     );
   });
 
+  it('rejects exact-zone free-operation overlap when no future zone binding can resolve it', () => {
+    const operationActionId = asActionId('operation');
+    const def = {
+      ...makeCardDrivenFreeOpDef(operationActionId),
+      zones: [
+        { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+        { id: asZoneId('city:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+      ],
+    } as unknown as GameDef;
+    const state = makeState({
+      zones: { 'board:none': [], 'city:none': [] },
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-board',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              zoneFilter: { op: '==', left: { ref: 'binding', name: '$zone' }, right: 'board:none' },
+              remainingUses: 1,
+            },
+            {
+              grantId: 'grant-city',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              zoneFilter: { op: '==', left: { ref: 'binding', name: '$zone' }, right: 'city:none' },
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+    });
+    const move: Move = { actionId: operationActionId, params: {}, freeOperation: true };
+
+    assert.deepEqual(legalChoicesDiscover(def, state, move), {
+      kind: 'illegal',
+      complete: false,
+      reason: 'freeOperationAmbiguousOverlap',
+    });
+    assert.equal(
+      legalMoves(def, state).some((candidate) => candidate.freeOperation === true && candidate.actionId === operationActionId),
+      false,
+    );
+    assert.throws(() => applyMove(def, state, move), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & {
+        code?: unknown;
+        reason?: unknown;
+        context?: { freeOperationDenial?: { cause?: string } };
+      };
+      assert.equal(details.code, 'ILLEGAL_MOVE');
+      assert.equal(details.reason, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED);
+      assert.equal(details.context?.freeOperationDenial?.cause, 'ambiguousOverlap');
+      return true;
+    });
+  });
+
+  it('rejects exact-zone free-operation overlap when remaining decisions are non-zone choices only', () => {
+    const operationActionId = asActionId('operation');
+    const def = {
+      ...makeCardDrivenFreeOpDef(operationActionId),
+      zones: [
+        { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+        { id: asZoneId('city:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+      ],
+      actionPipelines: [
+        {
+          id: 'operation-profile',
+          actionId: operationActionId,
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [
+            {
+              effects: [
+                {
+                  chooseOne: {
+                    internalDecisionId: 'decision:$mode',
+                    bind: '$mode',
+                    options: { query: 'enums', values: ['quiet', 'loud'] },
+                  },
+                },
+              ],
+            },
+          ],
+          atomicity: 'partial',
+        },
+      ],
+    } as unknown as GameDef;
+    const state = makeState({
+      zones: { 'board:none': [], 'city:none': [] },
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-board',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              zoneFilter: { op: '==', left: { ref: 'binding', name: '$zone' }, right: 'board:none' },
+              remainingUses: 1,
+            },
+            {
+              grantId: 'grant-city',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              zoneFilter: { op: '==', left: { ref: 'binding', name: '$zone' }, right: 'city:none' },
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+    });
+    const move: Move = { actionId: operationActionId, params: {}, freeOperation: true };
+
+    assert.deepEqual(legalChoicesDiscover(def, state, move), {
+      kind: 'illegal',
+      complete: false,
+      reason: 'freeOperationAmbiguousOverlap',
+    });
+    assert.equal(
+      legalMoves(def, state).some((candidate) => candidate.freeOperation === true && candidate.actionId === operationActionId),
+      false,
+    );
+    assert.throws(() => applyMove(def, state, move), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & {
+        code?: unknown;
+        reason?: unknown;
+        context?: { freeOperationDenial?: { cause?: string } };
+      };
+      assert.equal(details.code, 'ILLEGAL_MOVE');
+      assert.equal(details.reason, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED);
+      assert.equal(details.context?.freeOperationDenial?.cause, 'ambiguousOverlap');
+      return true;
+    });
+  });
+
   it('prioritizes free-operation denial parity when pipeline is also not applicable', () => {
     const operationActionId = asActionId('operation');
     const baseDef = makeCardDrivenFreeOpDef(operationActionId);

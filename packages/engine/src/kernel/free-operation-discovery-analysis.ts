@@ -1,4 +1,5 @@
 import { asPlayerId } from './branded.js';
+import { isEvalErrorCode } from './eval-error.js';
 import type { FreeOperationBlockExplanation } from './free-operation-denial-contract.js';
 import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
 import {
@@ -13,6 +14,7 @@ import {
   resolveAuthorizedPendingFreeOperationGrantOverlapAmbiguity,
 } from './free-operation-grant-authorization.js';
 import { resolvePlayerIndexForTurnFlowSeat, type SeatResolutionContext } from './seat-resolution.js';
+import { isTurnFlowErrorCode } from './turn-flow-error.js';
 import type { ResolvedTurnFlowActionClass } from './turn-flow-action-class.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
@@ -37,22 +39,6 @@ interface FreeOperationGrantAnalysis {
   readonly zoneMatchedGrants: readonly TurnFlowPendingFreeOperationGrant[];
   readonly ambiguousGrantIds: readonly string[];
 }
-
-const shouldDeferAmbiguousOverlapUntilMoveZonesResolve = (
-  def: GameDef,
-  move: Move,
-  matchingGrants: readonly TurnFlowPendingFreeOperationGrant[],
-  surface: FreeOperationZoneFilterSurface,
-): boolean => {
-  if (surface !== 'legalChoices' || matchingGrants.length <= 1) {
-    return false;
-  }
-  return matchingGrants.every(
-    (grant) =>
-      grant.zoneFilter !== undefined
-      && collectGrantMoveZoneCandidates(def, move, grant).length === 0,
-  );
-};
 
 const analyzeFreeOperationGrantMatch = (
   def: GameDef,
@@ -87,31 +73,46 @@ const analyzeFreeOperationGrantMatch = (
     move,
     { allowUnresolvedMoveZones: true },
   ));
+  const unresolvedZoneFilterGrants: TurnFlowPendingFreeOperationGrant[] = [];
   const zoneMatchedGrants = options?.evaluateZoneFilters === true
     ? contextMatchedGrants.filter(
-        (grant) => grant.zoneFilter === undefined || evaluateZoneFilterForMove(
-          def,
-          state,
-          move,
-          grant,
-          grant.zoneFilter,
-          options.zoneFilterErrorSurface ?? 'turnFlowEligibility',
-        ),
+        (grant) => {
+          if (grant.zoneFilter === undefined) {
+            return true;
+          }
+          try {
+            return evaluateZoneFilterForMove(
+              def,
+              state,
+              move,
+              grant,
+              grant.zoneFilter,
+              options.zoneFilterErrorSurface ?? 'turnFlowEligibility',
+            );
+          } catch (cause) {
+            const underlyingCause = isTurnFlowErrorCode(cause, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED')
+              ? (cause as Error & { cause?: unknown }).cause
+              : cause;
+            if (
+              isEvalErrorCode(underlyingCause, 'MISSING_BINDING')
+              && collectGrantMoveZoneCandidates(def, move, grant).length === 0
+            ) {
+              unresolvedZoneFilterGrants.push(grant);
+              return false;
+            }
+            throw cause;
+          }
+        },
       )
     : actionMatchedGrants;
+  const ambiguityCandidates =
+    zoneMatchedGrants.length > 0 || unresolvedZoneFilterGrants.length <= 1
+      ? zoneMatchedGrants
+      : unresolvedZoneFilterGrants;
   const ambiguity = options?.evaluateZoneFilters === true
-    ? resolveAuthorizedPendingFreeOperationGrantOverlapAmbiguity(def, state, zoneMatchedGrants)
+    ? resolveAuthorizedPendingFreeOperationGrantOverlapAmbiguity(def, state, ambiguityCandidates)
     : null;
-  const ambiguousGrantIds =
-    ambiguity === null
-    || shouldDeferAmbiguousOverlapUntilMoveZonesResolve(
-      def,
-      move,
-      zoneMatchedGrants.filter((grant) => ambiguity.strongestGrantIds.includes(grant.grantId)),
-      options?.zoneFilterErrorSurface ?? 'turnFlowEligibility',
-    )
-      ? []
-      : ambiguity.strongestGrantIds;
+  const ambiguousGrantIds = ambiguity?.strongestGrantIds ?? [];
   return {
     activeSeat,
     actionClass,
@@ -213,16 +214,6 @@ const explainFreeOperationBlockFromAnalysis = (
     };
   }
 
-  if (zoneMatchedGrants.length === 0) {
-    return {
-      cause: 'zoneFilterMismatch',
-      activeSeat,
-      actionClass,
-      actionId,
-      matchingGrantIds: contextMatchedGrants.map((grant) => grant.grantId),
-    };
-  }
-
   if (ambiguousGrantIds.length > 0) {
     return {
       cause: 'ambiguousOverlap',
@@ -231,6 +222,16 @@ const explainFreeOperationBlockFromAnalysis = (
       actionId,
       matchingGrantIds: zoneMatchedGrants.map((grant) => grant.grantId),
       ambiguousGrantIds,
+    };
+  }
+
+  if (zoneMatchedGrants.length === 0) {
+    return {
+      cause: 'zoneFilterMismatch',
+      activeSeat,
+      actionClass,
+      actionId,
+      matchingGrantIds: contextMatchedGrants.map((grant) => grant.grantId),
     };
   }
 

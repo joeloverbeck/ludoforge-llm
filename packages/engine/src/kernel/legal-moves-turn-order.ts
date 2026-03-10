@@ -5,6 +5,7 @@ import {
   isFreeOperationAllowedDuringMonsoonForMove,
   isFreeOperationGrantedForMove,
 } from './free-operation-discovery-analysis.js';
+import { legalChoicesDiscover } from './legal-choices.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import {
   isMoveAllowedByRequiredPendingFreeOperationGrant,
@@ -407,7 +408,10 @@ export function applyPendingFreeOperationVariants(
       continue;
     }
     if (!isFreeOperationGrantedForMove(def, state, candidate, seatResolution)) {
-      continue;
+      const discovery = legalChoicesDiscover(def, state, candidate);
+      if (discovery.kind === 'illegal') {
+        continue;
+      }
     }
 
     const key = toMoveIdentityKey(def, candidate);

@@ -39,6 +39,7 @@ import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-o
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type {
   ActionDef,
+  ChoiceIllegalRequest,
   ChoiceOption,
   ChoicePendingRequest,
   ChoiceRequest,
@@ -528,6 +529,26 @@ const mapPendingChoiceOptions = (
     request,
   );
 
+const mergeDeferredPredicateOptions = (
+  left: LegalChoicesRuntimeOptions | undefined,
+  right: { readonly onDeferredPredicatesEvaluated?: (count: number) => void } | undefined,
+): LegalChoicesRuntimeOptions | undefined => {
+  if (left === undefined && right?.onDeferredPredicatesEvaluated === undefined) {
+    return undefined;
+  }
+  return {
+    ...(left ?? {}),
+    ...(right?.onDeferredPredicatesEvaluated === undefined
+      ? {}
+      : {
+        onDeferredPredicatesEvaluated: (count: number) => {
+          left?.onDeferredPredicatesEvaluated?.(count);
+          right.onDeferredPredicatesEvaluated?.(count);
+        },
+      }),
+  };
+};
+
 const legalChoicesWithPreparedContextInternal = (
   context: LegalChoicesPreparedContext,
   partialMove: Move,
@@ -535,23 +556,42 @@ const legalChoicesWithPreparedContextInternal = (
   executeDiscoveryEffects: ExecuteDiscoveryEffects,
   evaluateProbeLegality: ProbeLegalityEvaluator,
   options?: LegalChoicesRuntimeOptions,
+  allowAmbiguousFreeOperationOverlapDiscovery = false,
 ): ChoiceRequest => {
   const { def, state, action, adjacencyGraph, runtimeTableIndex, seatResolution } = context;
   let freeOperationAnalysis: ReturnType<typeof resolveFreeOperationDiscoveryAnalysis> | undefined;
+  let freeOperationAmbiguousOverlapReason: Extract<ChoiceIllegalRequest['reason'], 'freeOperationAmbiguousOverlap'> | null = null;
   if (partialMove.freeOperation === true) {
     const analysis = resolveFreeOperationDiscoveryAnalysis(def, state, partialMove, seatResolution, {
       zoneFilterErrorSurface: 'legalChoices',
     });
     const deniedCause = toFreeOperationDeniedCauseForLegality(analysis.denial.cause);
     if (deniedCause !== null) {
-      return {
-        kind: 'illegal',
-        complete: false,
-        reason: toFreeOperationChoiceIllegalReason(deniedCause),
-      };
+      const deniedReason = toFreeOperationChoiceIllegalReason(deniedCause);
+      if (!(allowAmbiguousFreeOperationOverlapDiscovery && deniedReason === 'freeOperationAmbiguousOverlap')) {
+        return {
+          kind: 'illegal',
+          complete: false,
+          reason: deniedReason,
+        };
+      }
+      freeOperationAmbiguousOverlapReason = deniedReason;
     }
     freeOperationAnalysis = analysis;
   }
+
+  const finalizeRequest = (request: ChoiceRequest): ChoiceRequest => {
+    if (freeOperationAmbiguousOverlapReason === null) {
+      return request;
+    }
+    return request.kind === 'pending' || request.kind === 'pendingStochastic'
+      ? request
+      : {
+        kind: 'illegal',
+        complete: false,
+        reason: freeOperationAmbiguousOverlapReason,
+      };
+  };
 
   const baseBindings: Record<string, unknown> = {
     ...buildMoveRuntimeBindings(partialMove),
@@ -582,14 +622,13 @@ const legalChoicesWithPreparedContextInternal = (
   const pipelineDispatch = preflight.pipelineDispatch;
   const actionParamRequest = resolveActionParamPendingChoice(action, evalCtx, partialMove);
   if (actionParamRequest !== null) {
-    if (!shouldEvaluateOptionLegality) {
-      return actionParamRequest;
-    }
-
-    return {
+    const request = !shouldEvaluateOptionLegality
+      ? actionParamRequest
+      : {
       ...actionParamRequest,
       options: mapPendingChoiceOptions(partialMove, actionParamRequest, options, evaluateProbeLegality),
     };
+    return finalizeRequest(request);
   }
 
   const eventEffects = isCardEventActionId(def, action.id)
@@ -614,7 +653,7 @@ const legalChoicesWithPreparedContextInternal = (
     }
     const viabilityDecision = decideDiscoveryLegalChoicesPipelineViability(status);
     if (viabilityDecision.kind === 'illegalChoice') {
-      return { kind: 'illegal', complete: false, reason: toChoiceIllegalReason(viabilityDecision.outcome) };
+      return finalizeRequest({ kind: 'illegal', complete: false, reason: toChoiceIllegalReason(viabilityDecision.outcome) });
     }
     let stageState = state;
     let stageBindings = pipelineEvalCtx.bindings;
@@ -638,7 +677,7 @@ const legalChoicesWithPreparedContextInternal = (
       }
       const stageDecision = decideDiscoveryLegalChoicesPipelineViability(stageStatus);
       if (stageDecision.kind === 'illegalChoice') {
-        return { kind: 'illegal', complete: false, reason: toChoiceIllegalReason(stageDecision.outcome) };
+        return finalizeRequest({ kind: 'illegal', complete: false, reason: toChoiceIllegalReason(stageDecision.outcome) });
       }
       if (stageStatus.atomicity === 'partial' && stageStatus.costValidation === 'failed') {
         continue;
@@ -648,13 +687,13 @@ const legalChoicesWithPreparedContextInternal = (
       stageBindings = stageResult.bindings;
       if (!shouldEvaluateOptionLegality || stageResult.request.kind !== 'pending') {
         if (stageResult.request.kind !== 'complete') {
-          return stageResult.request;
+          return finalizeRequest(stageResult.request);
         }
       } else {
-        return {
+        return finalizeRequest({
           ...stageResult.request,
           options: mapPendingChoiceOptions(partialMove, stageResult.request, options, evaluateProbeLegality),
-        };
+        });
       }
     }
     const eventEvalCtx: EvalContext = {
@@ -664,13 +703,13 @@ const legalChoicesWithPreparedContextInternal = (
     };
     const request = executeDiscoveryEffects(eventEffects, eventEvalCtx, partialMove).request;
     if (!shouldEvaluateOptionLegality || request.kind !== 'pending') {
-      return request;
+      return finalizeRequest(request);
     }
 
-    return {
+    return finalizeRequest({
       ...request,
       options: mapPendingChoiceOptions(partialMove, request, options, evaluateProbeLegality),
-    };
+    });
   }
 
   const request = executeDiscoveryEffects(
@@ -679,14 +718,37 @@ const legalChoicesWithPreparedContextInternal = (
     partialMove,
   ).request;
   if (!shouldEvaluateOptionLegality || request.kind !== 'pending') {
-    return request;
+    return finalizeRequest(request);
   }
 
-  return {
+  return finalizeRequest({
     ...request,
     options: mapPendingChoiceOptions(partialMove, request, options, evaluateProbeLegality),
-  };
+  });
 };
+
+const legalChoicesWithPreparedContextProbeInternal = (
+  context: LegalChoicesPreparedContext,
+  partialMove: Move,
+  shouldEvaluateOptionLegality: boolean,
+  options?: LegalChoicesRuntimeOptions,
+  allowAmbiguousFreeOperationOverlapDiscovery = false,
+): ChoiceRequest =>
+  legalChoicesWithPreparedContextInternal(
+    context,
+    partialMove,
+    shouldEvaluateOptionLegality,
+    executeDiscoveryEffectsProbe,
+    (probeMove, probeOptions) => legalChoicesWithPreparedContextProbeInternal(
+      context,
+      probeMove,
+      false,
+      probeOptions,
+      allowAmbiguousFreeOperationOverlapDiscovery,
+    ),
+    options,
+    allowAmbiguousFreeOperationOverlapDiscovery,
+  );
 
 const legalChoicesWithPreparedContextProbe = (
   context: LegalChoicesPreparedContext,
@@ -694,22 +756,37 @@ const legalChoicesWithPreparedContextProbe = (
   shouldEvaluateOptionLegality: boolean,
   options?: LegalChoicesRuntimeOptions,
 ): ChoiceRequest =>
-  legalChoicesWithPreparedContextInternal(
+  legalChoicesWithPreparedContextProbeInternal(
     context,
     partialMove,
     shouldEvaluateOptionLegality,
-    executeDiscoveryEffectsProbe,
-    (probeMove, probeOptions) => legalChoicesWithPreparedContextProbe(context, probeMove, false, probeOptions),
     options,
   );
+
+const canResolveAmbiguousFreeOperationOverlapViaLaterDecisions = (
+  context: LegalChoicesPreparedContext,
+  partialMove: Move,
+  options?: LegalChoicesRuntimeOptions,
+): boolean =>
+  classifyDecisionSequenceSatisfiability(
+    partialMove,
+    (probeMove, probeOptions) =>
+      legalChoicesWithPreparedContextProbeInternal(
+        context,
+        probeMove,
+        false,
+        mergeDeferredPredicateOptions(options, probeOptions),
+        true,
+      ),
+  ).classification !== 'unsatisfiable';
 
 const legalChoicesWithPreparedContextStrict = (
   context: LegalChoicesPreparedContext,
   partialMove: Move,
   shouldEvaluateOptionLegality: boolean,
   options?: LegalChoicesRuntimeOptions,
-): ChoiceRequest =>
-  legalChoicesWithPreparedContextInternal(
+): ChoiceRequest => {
+  const strictRequest = legalChoicesWithPreparedContextInternal(
     context,
     partialMove,
     shouldEvaluateOptionLegality,
@@ -717,6 +794,27 @@ const legalChoicesWithPreparedContextStrict = (
     (probeMove, probeOptions) => legalChoicesWithPreparedContextProbe(context, probeMove, false, probeOptions),
     options,
   );
+  if (strictRequest.kind !== 'illegal' || strictRequest.reason !== 'freeOperationAmbiguousOverlap') {
+    return strictRequest;
+  }
+
+  const provisionalRequest = legalChoicesWithPreparedContextInternal(
+    context,
+    partialMove,
+    shouldEvaluateOptionLegality,
+    executeDiscoveryEffectsStrict,
+    (probeMove, probeOptions) => legalChoicesWithPreparedContextProbe(context, probeMove, false, probeOptions),
+    options,
+    true,
+  );
+  if (
+    (provisionalRequest.kind !== 'pending' && provisionalRequest.kind !== 'pendingStochastic')
+    || !canResolveAmbiguousFreeOperationOverlapViaLaterDecisions(context, partialMove, options)
+  ) {
+    return strictRequest;
+  }
+  return provisionalRequest;
+};
 
 export function legalChoicesDiscover(
   def: GameDef,

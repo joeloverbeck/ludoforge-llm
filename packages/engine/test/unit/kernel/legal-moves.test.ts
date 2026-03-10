@@ -2503,6 +2503,218 @@ phase: [asPhaseId('main')],
     assert.equal(moves.some((move) => move.freeOperation !== true), true);
   });
 
+  it('keeps provisional free-operation variants when a later zone decision can resolve exact-zone overlap', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = {
+      ...makeBaseDef({
+        actions: [action],
+        zones: [
+          { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+          { id: asZoneId('city:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+        ],
+      }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
+            optionMatrix: [{ first: 'operation', second: ['operation'] }],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            actionClassByActionId: { operation: 'operation' },
+          },
+        },
+      },
+      actionPipelines: [
+        {
+          id: 'operation-profile',
+          actionId: action.id,
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [
+            {
+              effects: [
+                {
+                  chooseN: {
+                    internalDecisionId: 'decision:$targetSpaces',
+                    bind: '$targetSpaces',
+                    options: { query: 'enums', values: ['board:none', 'city:none'] },
+                    min: 1,
+                    max: 1,
+                  },
+                },
+              ],
+            },
+          ],
+          atomicity: 'partial',
+        },
+      ],
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      zones: { 'board:none': [], 'city:none': [] },
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-board',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              zoneFilter: { op: '==', left: { ref: 'binding', name: '$zone' }, right: 'board:none' },
+              remainingUses: 1,
+            },
+            {
+              grantId: 'grant-city',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              zoneFilter: { op: '==', left: { ref: 'binding', name: '$zone' }, right: 'city:none' },
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+    });
+
+    const moves = legalMoves(def, state).filter((move) => String(move.actionId) === 'operation');
+    assert.equal(moves.some((move) => move.freeOperation === true), true);
+  });
+
+  it('suppresses provisional free-operation variants when remaining decisions cannot bind the competing grant zones', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = {
+      ...makeBaseDef({
+        actions: [action],
+        zones: [
+          { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+          { id: asZoneId('city:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+        ],
+      }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
+            optionMatrix: [{ first: 'operation', second: ['operation'] }],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            actionClassByActionId: { operation: 'operation' },
+          },
+        },
+      },
+      actionPipelines: [
+        {
+          id: 'operation-profile',
+          actionId: action.id,
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [
+            {
+              effects: [
+                {
+                  chooseOne: {
+                    internalDecisionId: 'decision:$mode',
+                    bind: '$mode',
+                    options: { query: 'enums', values: ['quiet', 'loud'] },
+                  },
+                },
+              ],
+            },
+          ],
+          atomicity: 'partial',
+        },
+      ],
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      zones: { 'board:none': [], 'city:none': [] },
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-board',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              zoneFilter: { op: '==', left: { ref: 'binding', name: '$zone' }, right: 'board:none' },
+              remainingUses: 1,
+            },
+            {
+              grantId: 'grant-city',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              zoneFilter: { op: '==', left: { ref: 'binding', name: '$zone' }, right: 'city:none' },
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+    });
+
+    const moves = legalMoves(def, state).filter((move) => String(move.actionId) === 'operation');
+    assert.equal(moves.some((move) => move.freeOperation === true), false);
+  });
+
   it('suppresses pass and non-free actions while the active seat has a required pending grant', () => {
     const passAction: ActionDef = {
       id: asActionId('pass'),

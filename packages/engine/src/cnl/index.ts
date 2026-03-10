@@ -17,6 +17,7 @@ export * from './game-spec-doc.js';
 export * from './source-map.js';
 export * from './parser.js';
 export * from './compose-gamespec.js';
+export * from './staged-pipeline.js';
 export * from './load-gamespec-source.js';
 export * from './validate-spec.js';
 export * from './cross-validate.js';

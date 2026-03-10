@@ -1,8 +1,8 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
-import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { parseGameSpec, runGameSpecStages, validateGameSpec } from '../../src/cnl/index.js';
+import { assertNoErrors, assertStageBlocked, assertStageNotBlocked } from '../helpers/diagnostic-helpers.js';
 import { readFixtureText } from '../helpers/fixture-reader.js';
 import { readCompilerFixture } from '../helpers/production-spec-helpers.js';
 
@@ -23,6 +23,50 @@ describe('parse + validate full-spec integration', () => {
     assert.equal(parsed.doc.actions?.[0]?.id, 'draw');
     const firstPhase = parsed.doc.turnStructure?.phases[0];
     assert.equal(firstPhase !== undefined && 'id' in firstPhase ? firstPhase.id : undefined, 'main');
+  });
+
+  it('blocks validation and compilation in the staged helper after parser-fatal YAML errors', () => {
+    const markdown = [
+      '# Malformed Event Deck',
+      '',
+      '```yaml',
+      'metadata:',
+      '  id: malformed-eventdeck',
+      '  players:',
+      '    min: 2',
+      '    max: 4',
+      'eventDecks:',
+      '  - id: propaganda',
+      '    cards:',
+      '      - id: card-001',
+      '        text: Systems analysis ignorant of local conditions: Flip 1 unshaded US Capability to shaded.',
+      '```',
+    ].join('\n');
+
+    const staged = runGameSpecStages(markdown);
+
+    assert.equal(
+      staged.parsed.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_PARSER_YAML_PARSE_ERROR'),
+      true,
+    );
+    assertStageBlocked('validation', staged.validation.blocked);
+    assertStageBlocked('compilation', staged.compilation.blocked);
+    assert.deepEqual(staged.validation.diagnostics, []);
+    assert.equal(staged.compilation.result, null);
+  });
+
+  it('runs validation and compilation in the staged helper for valid compilable specs', () => {
+    const markdown = readCompilerFixture('compile-valid.md');
+    const staged = runGameSpecStages(markdown);
+
+    assertNoErrors(staged.parsed);
+    assertStageNotBlocked('validation', staged.validation.blocked);
+    assertStageNotBlocked('compilation', staged.compilation.blocked);
+    assert.deepEqual(staged.validation.diagnostics, []);
+    assert.notEqual(staged.compilation.result, null);
+    assert.deepEqual(staged.compilation.result?.diagnostics, []);
+    assert.notEqual(staged.compilation.result?.gameDef, null);
+    assert.equal((staged.compilation.result?.gameDef?.actions.length ?? 0) > 0, true);
   });
 
   it('reports stable deterministic diagnostics for a multi-issue spec end-to-end', () => {

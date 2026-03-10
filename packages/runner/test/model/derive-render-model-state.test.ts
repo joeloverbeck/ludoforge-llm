@@ -219,6 +219,7 @@ function withStateMetadata(baseDef: GameDef, baseState: GameState): { readonly d
       type: 'cardDriven',
       config: {
         turnFlow: {
+          windows: [],
           cardLifecycle: {
             played: 'played:none',
             lookahead: 'draw:none',
@@ -226,7 +227,6 @@ function withStateMetadata(baseDef: GameDef, baseState: GameState): { readonly d
           },
           eligibility: {
             seats: ['us', 'nva'],
-            overrideWindows: [],
           },
           actionClassByActionId: {},
           optionMatrix: [],

@@ -94,7 +94,7 @@ interface GameStoreActions {
     triggerFirings: readonly TriggerLogEntry[],
   ): void;
   reportBootstrapFailure(error: unknown): void;
-  selectAction(actionId: ActionId): Promise<void>;
+  selectAction(actionId: ActionId, actionClass?: string): Promise<void>;
   chooseOne(choice: Exclude<MoveParamValue, readonly unknown[]>): Promise<void>;
   chooseN(choice: readonly Exclude<MoveParamValue, readonly unknown[]>[]): Promise<void>;
   confirmMove(): Promise<void>;
@@ -902,9 +902,13 @@ export function createGameStore(
           setAndDerive(buildInitFailureState(error, lifecycle));
         },
 
-        async selectAction(actionId) {
+        async selectAction(actionId, actionClass) {
           await runActionOperation(async (ctx) => {
-            const baseMove: Move = { actionId, params: {} };
+            const baseMove: Move = {
+              actionId,
+              params: {},
+              ...(actionClass !== undefined ? { actionClass } : {}),
+            };
             const choiceRequest = await bridge.legalChoices(baseMove);
             if (choiceRequest.kind === 'illegal') {
               guardSetAndDerive(ctx, {

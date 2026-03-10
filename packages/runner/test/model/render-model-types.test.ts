@@ -116,6 +116,7 @@ describe('render-model types', () => {
       ],
       actionGroups: [
         {
+          groupKey: 'Actions',
           groupName: 'Actions',
           actions: [{ actionId: 'pass', displayName: 'Pass', isAvailable: true }],
         },

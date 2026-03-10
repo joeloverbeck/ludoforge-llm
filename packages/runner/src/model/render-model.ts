@@ -174,6 +174,7 @@ export interface RenderPlayer {
 }
 
 export interface RenderActionGroup {
+  readonly groupKey: string;
   readonly groupName: string;
   readonly actions: readonly RenderAction[];
 }
@@ -182,6 +183,7 @@ export interface RenderAction {
   readonly actionId: string;
   readonly displayName: string;
   readonly isAvailable: boolean;
+  readonly actionClass?: string;
 }
 
 export interface RenderChoiceStep {

@@ -404,6 +404,13 @@ actions:
   coupNvaRedeployTroops:
     displayName: "Coup: NVA Troop Redeploy"
 
+actionGroupPolicy:
+  synthesize:
+    - fromClass: operation
+      intoGroup: operationPlusSpecialActivity
+  hide:
+    - specialActivity
+
 victoryStandings:
   tooltipBreakdowns:
     - seat: us

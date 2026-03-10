@@ -15,6 +15,7 @@ import type {
   VisualAnimationDescriptorKind,
 } from '../animation/animation-types.js';
 import type {
+  ActionGroupPolicy,
   ZoneHighlightMoveEndpoints,
   ZoneHighlightSourceKind,
   AttributeRule,
@@ -330,6 +331,10 @@ export class VisualConfigProvider {
 
   getMarkerBadgeConfig(): MarkerBadgeConfig | null {
     return this.config?.zones?.markerBadge ?? null;
+  }
+
+  getActionGroupPolicy(): ActionGroupPolicy | null {
+    return this.config?.actionGroupPolicy ?? null;
   }
 
   getHiddenZones(): ReadonlySet<string> {

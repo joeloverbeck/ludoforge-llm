@@ -324,6 +324,16 @@ const ActionVisualSchema = z.object({
   choices: z.record(z.string(), ActionChoiceVisualSchema).optional(),
 });
 
+const ActionGroupSynthesizeEntrySchema = z.object({
+  fromClass: z.string(),
+  intoGroup: z.string(),
+});
+
+const ActionGroupPolicySchema = z.object({
+  synthesize: z.array(ActionGroupSynthesizeEntrySchema).optional(),
+  hide: z.array(z.string()).optional(),
+});
+
 export const VisualConfigSchema = z.object({
   version: z.literal(1),
   layout: LayoutConfigSchema.optional(),
@@ -340,6 +350,7 @@ export const VisualConfigSchema = z.object({
   tableOverlays: TableOverlaysSchema.optional(),
   phaseBanners: PhaseBannersSchema.optional(),
   victoryStandings: VictoryStandingsVisualSchema.optional(),
+  actionGroupPolicy: ActionGroupPolicySchema.optional(),
 });
 
 export type LayoutMode = z.infer<typeof LayoutModeSchema>;
@@ -390,4 +401,6 @@ export type VictoryStandingsVisualConfig = z.infer<typeof VictoryStandingsVisual
 export type ActionChoiceOptionVisual = z.infer<typeof ActionChoiceOptionVisualSchema>;
 export type ActionChoiceVisual = z.infer<typeof ActionChoiceVisualSchema>;
 export type ActionVisual = z.infer<typeof ActionVisualSchema>;
+export type ActionGroupSynthesizeEntry = z.infer<typeof ActionGroupSynthesizeEntrySchema>;
+export type ActionGroupPolicy = z.infer<typeof ActionGroupPolicySchema>;
 export type VisualConfig = z.infer<typeof VisualConfigSchema>;

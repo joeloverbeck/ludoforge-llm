@@ -1,6 +1,6 @@
 # OPSAGRP-003: Add test coverage for direct operationPlusSpecialActivity emission
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -62,3 +62,10 @@ Add a test with mixed moves: some `operation` (synthesized into Op+SA) and some 
 ### Commands
 
 1. `pnpm -F @ludoforge/runner test`
+
+## Outcome
+
+- Completion date: 2026-03-10
+- What changed: `packages/runner/test/model/derive-render-model-state.test.ts` includes coverage for direct `operationPlusSpecialActivity` moves without synthesis and for mixed direct plus synthesized entries deduplicating by `actionId`.
+- Deviations from original plan: The ticket's original rationale was corrected before archival. `deriveActionGroups` does not have a dedicated `operationPlusSpecialActivity` branch; the added tests still cover the direct-emission behavior the ticket intended to protect.
+- Verification results: `pnpm -F @ludoforge/runner test` passed on 2026-03-10. The implementing change is present in commit `2aea7e21` (`test: add coverage for direct operationPlusSpecialActivity emission`).

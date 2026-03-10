@@ -346,6 +346,10 @@ const FREE_OPERATION_GRANT_DIAGNOSTIC_BY_VIOLATION_CODE = {
     code: 'EFFECT_GRANT_FREE_OPERATION_COMPLETION_POLICY_REQUIRED',
     suggestion: (label: string) => `Set ${label}.completionPolicy to ${TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES.join('|')}.`,
   },
+  sequenceBatchInvalid: {
+    code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_INVALID',
+    suggestion: () => 'Set sequence.batch to a non-empty string.',
+  },
   sequenceStepInvalid: {
     code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_INVALID',
     suggestion: () => 'Set sequence.step to an integer >= 0.',
@@ -356,7 +360,7 @@ const FREE_OPERATION_GRANT_DIAGNOSTIC_BY_VIOLATION_CODE = {
   },
   sequenceContextRequiresSequence: {
     code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID',
-    suggestion: () => 'Declare sequence.chain and sequence.step when using sequenceContext.',
+    suggestion: () => 'Declare sequence.batch and sequence.step when using sequenceContext.',
   },
   executionContextInvalid: {
     code: 'EFFECT_GRANT_FREE_OPERATION_EXECUTION_CONTEXT_INVALID',
@@ -405,17 +409,17 @@ const validateFreeOperationGrantContract = (
 };
 
 const freeOperationGrantsCanCoissue = (
-  left: { readonly sequence?: { readonly chain?: unknown; readonly step?: unknown } },
-  right: { readonly sequence?: { readonly chain?: unknown; readonly step?: unknown } },
+  left: { readonly sequence?: { readonly batch?: unknown; readonly step?: unknown } },
+  right: { readonly sequence?: { readonly batch?: unknown; readonly step?: unknown } },
 ): boolean => {
   if (left.sequence === undefined || right.sequence === undefined) {
     return true;
   }
-  return left.sequence.chain !== right.sequence.chain || left.sequence.step === right.sequence.step;
+  return left.sequence.batch !== right.sequence.batch || left.sequence.step === right.sequence.step;
 };
 
 const validateAmbiguousFreeOperationGrantOverlap = <TGrant extends {
-  readonly sequence?: { readonly chain?: unknown; readonly step?: unknown };
+  readonly sequence?: { readonly batch?: unknown; readonly step?: unknown };
   readonly completionPolicy?: string | null;
   readonly outcomePolicy?: string | null;
   readonly postResolutionTurnFlow?: string | null;
@@ -2571,7 +2575,7 @@ const validateSequenceContextLinkageForReferences = (
 
     const matchingCaptures = references.filter(
       (candidate) =>
-        candidate.chain === reference.chain
+        candidate.batch === reference.batch
         && candidate.captureKey === requireKey,
     );
     if (matchingCaptures.some((candidate) => candidate.step < reference.step)) {
@@ -2582,8 +2586,8 @@ const validateSequenceContextLinkageForReferences = (
       ? 'FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_ORDER_INVALID'
       : 'FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_MISSING';
     const message = code === 'FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_ORDER_INVALID'
-      ? `requireMoveZoneCandidatesFrom "${requireKey}" in sequence chain "${reference.chain}" must reference a capture from an earlier sequence.step.`
-      : `requireMoveZoneCandidatesFrom "${requireKey}" in sequence chain "${reference.chain}" has no matching captureMoveZoneCandidatesAs.`;
+      ? `requireMoveZoneCandidatesFrom "${requireKey}" in sequence batch "${reference.batch}" must reference a capture from an earlier sequence.step.`
+      : `requireMoveZoneCandidatesFrom "${requireKey}" in sequence batch "${reference.batch}" has no matching captureMoveZoneCandidatesAs.`;
     diagnostics.push({
       code,
       path: `${reference.path}.sequenceContext.requireMoveZoneCandidatesFrom`,
@@ -2591,8 +2595,8 @@ const validateSequenceContextLinkageForReferences = (
       message,
       suggestion:
         code === 'FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_ORDER_INVALID'
-          ? `Move captureMoveZoneCandidatesAs "${requireKey}" to a lower step in chain "${reference.chain}", or change the required key.`
-          : `Add an earlier captureMoveZoneCandidatesAs "${requireKey}" step in chain "${reference.chain}", or change the required key.`,
+          ? `Move captureMoveZoneCandidatesAs "${requireKey}" to a lower step in batch "${reference.batch}", or change the required key.`
+          : `Add an earlier captureMoveZoneCandidatesAs "${requireKey}" step in batch "${reference.batch}", or change the required key.`,
     });
   }
 };

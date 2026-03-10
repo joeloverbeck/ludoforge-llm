@@ -63,7 +63,7 @@ const buildSequenceProbeCandidates = (
   return (ctx.freeOperationProbeScope?.priorGrantDefinitions ?? []).filter(
     (candidate) =>
       candidate.sequence !== undefined
-      && candidate.sequence.chain === grant.sequence!.chain
+      && candidate.sequence.batch === grant.sequence!.batch
       && candidate.sequence.step < step,
   );
 };
@@ -218,7 +218,10 @@ export const applyGrantFreeOperation = (
   const existing = runtime.pendingFreeOperationGrants ?? [];
   const fallbackBaseId = `freeOpEffect:${ctx.state.turnCount}:${activeSeat}:${existing.length}`;
   const grantId = makeUniqueGrantId(existing, grant.id ?? fallbackBaseId);
-  const sequenceBatchId = grant.sequence === undefined ? undefined : `${grantId}:${grant.sequence.chain}`;
+  const sequenceBatchBaseId = grant.sequence === undefined
+    ? undefined
+    : grant.id ?? `${ctx.traceContext?.effectPathRoot ?? 'freeOpEffect'}:${activeSeat}`;
+  const sequenceBatchId = grant.sequence === undefined ? undefined : `${sequenceBatchBaseId}:${grant.sequence.batch}`;
   const sequenceIndex = grant.sequence?.step;
 
   const resolvedZoneFilter = grant.zoneFilter === undefined

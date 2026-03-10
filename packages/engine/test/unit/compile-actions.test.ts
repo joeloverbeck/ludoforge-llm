@@ -150,14 +150,14 @@ describe('compile actions', () => {
                 seat: 'arvn',
                 operationClass: 'operation',
                 actionIds: ['limitedOp'],
-                sequence: { chain: 'action-sequence', step: 0 },
+                sequence: { batch: 'action-sequence', step: 0 },
               },
             },
             {
               grantFreeOperation: {
                 seat: 'arvn',
                 operationClass: 'operation',
-                sequence: { chain: 'action-sequence', step: 1 },
+                sequence: { batch: 'action-sequence', step: 1 },
               },
             },
           ],

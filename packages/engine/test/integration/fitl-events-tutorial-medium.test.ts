@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { findDeep } from '../helpers/ast-search-helpers.js';
 
 describe('FITL tutorial medium event-card production spec', () => {
   it('compiles card 55 (Trucks) with trail degradation and Laos/Cambodia scoped removal model', () => {
@@ -21,14 +22,14 @@ describe('FITL tutorial medium event-card production spec', () => {
     // Unshaded: Trail degrades 2 boxes (not 1), NVA selects pieces via chooseN (not removeByPriority)
     const unshadedTrail = card?.unshaded?.effects?.find((effect) => 'addVar' in effect && effect.addVar.var === 'trail');
     assert.deepEqual(unshadedTrail, { addVar: { scope: 'global', var: 'trail', delta: -2 } });
-    const unshadedChooseN = card?.unshaded?.effects?.find((effect) => 'chooseN' in effect);
-    assert.notEqual(unshadedChooseN, undefined);
+    const unshadedChooseN = findDeep(card?.unshaded?.effects ?? [], (node) => typeof node?.chooseN?.bind === 'string');
+    assert.equal(unshadedChooseN.length, 2, 'Expected nested Laos and Cambodia chooseN removals');
 
-    // Shaded: 2 * Trail to both NVA and VC Resources via let binding, base repositioning via forEach
+    // Shaded: 2 * Trail to both NVA and VC Resources via let binding, base repositioning via staging + forEach
     const shadedLet = card?.shaded?.effects?.find((effect) => 'let' in effect);
     assert.notEqual(shadedLet, undefined);
-    const shadedMove = card?.shaded?.effects?.find((effect) => 'forEach' in effect);
-    assert.notEqual(shadedMove, undefined);
+    const shadedMove = findDeep(card?.shaded?.effects ?? [], (node) => node?.forEach?.over?.query === 'tokensInZone');
+    assert.equal(shadedMove.length >= 1, true);
   });
 
   it('compiles card 97 (Brinks Hotel) with aid/patronage branches and leader flip using setGlobalMarker', () => {
@@ -96,7 +97,7 @@ describe('FITL tutorial medium event-card production spec', () => {
     assert.deepEqual(card?.unshaded?.freeOperationGrants, [
       {
         seat: 'arvn',
-        sequence: { chain: 'sihanouk-unshaded-arvn', step: 0 },
+        sequence: { batch: 'sihanouk-unshaded-arvn', step: 0 },
         operationClass: 'operation',
         actionIds: ['sweep', 'assault'],
         zoneFilter: {
@@ -107,8 +108,8 @@ describe('FITL tutorial medium event-card production spec', () => {
       },
     ]);
     assert.deepEqual(card?.shaded?.freeOperationGrants, [
-      { seat: 'vc', sequence: { chain: 'sihanouk-shaded-vc-nva', step: 0 }, operationClass: 'operation' },
-      { seat: 'nva', sequence: { chain: 'sihanouk-shaded-vc-nva', step: 1 }, operationClass: 'operation' },
+      { seat: 'vc', sequence: { batch: 'sihanouk-shaded-vc-nva', step: 0 }, operationClass: 'operation' },
+      { seat: 'nva', sequence: { batch: 'sihanouk-shaded-vc-nva', step: 1 }, operationClass: 'operation' },
     ]);
   });
 

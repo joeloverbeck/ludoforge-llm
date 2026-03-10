@@ -29,7 +29,7 @@ export interface TurnFlowFreeOperationGrantContract {
   readonly outcomePolicy?: TurnFlowFreeOperationGrantOutcomePolicy;
   readonly postResolutionTurnFlow?: TurnFlowFreeOperationGrantPostResolutionTurnFlow;
   readonly sequence?: {
-    readonly chain: string;
+    readonly batch: string;
     readonly step: number;
   };
   readonly sequenceContext?: FreeOperationSequenceContextContract;

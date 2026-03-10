@@ -68,11 +68,12 @@ describe('runtime error context contracts', () => {
     };
 
     const freeOperationDenial: FreeOperationBlockExplanation = {
-      cause: 'actionIdMismatch',
+      cause: 'ambiguousOverlap',
       activeSeat: '2',
       actionClass: 'operation',
       actionId: 'operate',
-      matchingGrantIds: ['grant-1'],
+      matchingGrantIds: ['grant-1', 'grant-2'],
+      ambiguousGrantIds: ['grant-1', 'grant-2'],
     };
 
     const error = illegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED, {

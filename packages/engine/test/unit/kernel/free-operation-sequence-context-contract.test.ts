@@ -96,7 +96,7 @@ describe('free-operation sequence-context canonical schema contract', () => {
           grantFreeOperation: {
             seat: 'self',
             operationClass: 'operation',
-            sequence: { chain: 'ctx-chain', step: 0 },
+            sequence: { batch: 'ctx-chain', step: 0 },
             sequenceContext,
           },
         }).success,
@@ -106,7 +106,7 @@ describe('free-operation sequence-context canonical schema contract', () => {
         EventCardFreeOperationGrantSchema.safeParse({
           seat: '0',
           operationClass: 'operation',
-          sequence: { chain: 'ctx-chain', step: 0 },
+          sequence: { batch: 'ctx-chain', step: 0 },
           sequenceContext,
         }).success,
         true,
@@ -131,7 +131,7 @@ describe('free-operation sequence-context canonical schema contract', () => {
           grantFreeOperation: {
             seat: 'self',
             operationClass: 'operation',
-            sequence: { chain: 'ctx-chain', step: 0 },
+            sequence: { batch: 'ctx-chain', step: 0 },
             sequenceContext,
           },
         }).success,
@@ -141,7 +141,7 @@ describe('free-operation sequence-context canonical schema contract', () => {
         EventCardFreeOperationGrantSchema.safeParse({
           seat: '0',
           operationClass: 'operation',
-          sequence: { chain: 'ctx-chain', step: 0 },
+          sequence: { batch: 'ctx-chain', step: 0 },
           sequenceContext,
         }).success,
         false,

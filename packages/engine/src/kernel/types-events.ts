@@ -34,7 +34,7 @@ export interface EventLastingEffectDef {
 
 export interface EventFreeOperationGrantDef extends TurnFlowFreeOperationGrantContract {
   readonly sequence: {
-    readonly chain: string;
+    readonly batch: string;
     readonly step: number;
   };
 }

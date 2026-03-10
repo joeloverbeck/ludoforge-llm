@@ -128,7 +128,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
       {
         seat: 'us',
         viabilityPolicy: 'requireUsableForEventPlay',
-        sequence: { chain: 'ia-drang-us', step: 0 },
+        sequence: { batch: 'ia-drang-us', step: 0 },
         completionPolicy: 'required',
         outcomePolicy: 'mustChangeGameplayState',
         postResolutionTurnFlow: 'resumeCardFlow',
@@ -152,7 +152,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
       },
       {
         seat: 'us',
-        sequence: { chain: 'ia-drang-us', step: 1 },
+        sequence: { batch: 'ia-drang-us', step: 1 },
         completionPolicy: 'required',
         postResolutionTurnFlow: 'resumeCardFlow',
         operationClass: 'operation',
@@ -165,7 +165,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
       },
       {
         seat: 'us',
-        sequence: { chain: 'ia-drang-us', step: 2 },
+        sequence: { batch: 'ia-drang-us', step: 2 },
         completionPolicy: 'required',
         postResolutionTurnFlow: 'resumeCardFlow',
         operationClass: 'operation',
@@ -204,6 +204,80 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
     assert.doesNotMatch(serializedParsedUnshaded, /targetFactionMode/, 'Card 47 should not retain the legacy targetFactionMode alias');
     assert.equal((card?.shaded?.effects?.[0] as { chooseN?: { bind?: string } } | undefined)?.chooseN?.bind, '$nvaTroopsToPlace');
     assert.equal(typeof (card?.shaded?.effects?.[1] as { forEach?: unknown } | undefined)?.forEach, 'object');
+  });
+
+  it('encodes card 56 (Vo Nguyen Giap) as guerrilla replacement plus selected-space March sequencing and per-space follow-up grants', () => {
+    const { parsed, compiled } = compileProductionSpec();
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-56');
+    assert.notEqual(card, undefined);
+
+    assert.equal(card?.unshaded?.text, 'In each of any 3 spaces, replace any 2 Guerrillas with 1 NVA Troop.');
+    assert.equal(
+      card?.shaded?.text,
+      'NVA free Marches into up to 3 spaces then executes any 1 free Op or Special Activity within each, if desired.',
+    );
+    assert.equal((card?.unshaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 3);
+    assert.equal(card?.unshaded?.targets?.[0]?.application, 'each');
+    assert.equal(typeof (card?.unshaded?.targets?.[0]?.effects?.[0] as { chooseN?: unknown } | undefined)?.chooseN, 'object');
+    assert.equal(typeof (card?.unshaded?.targets?.[0]?.effects?.[1] as { forEach?: unknown } | undefined)?.forEach, 'object');
+    assert.equal(typeof (card?.unshaded?.targets?.[0]?.effects?.[2] as { removeByPriority?: unknown } | undefined)?.removeByPriority, 'object');
+
+    assert.equal(card?.shaded?.targets?.[0]?.application, 'aggregate');
+    assert.equal((card?.shaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 3);
+    const shadedEffects = card?.shaded?.targets?.[0]?.effects ?? [];
+    assert.equal(typeof (shadedEffects[0] as { forEach?: unknown } | undefined)?.forEach, 'object');
+    assert.equal(typeof (shadedEffects[1] as { grantFreeOperation?: unknown } | undefined)?.grantFreeOperation, 'object');
+    const followUp = (((shadedEffects[0] as { forEach?: { effects?: unknown[] } } | undefined)?.forEach
+      ?.effects?.[0] as { grantFreeOperation?: Record<string, unknown> } | undefined)?.grantFreeOperation);
+    assert.deepEqual(followUp, {
+      seat: 'nva',
+      sequence: { batch: 'vo-nguyen-giap-shaded', step: 1 },
+      operationClass: 'operation',
+      actionIds: ['rally', 'march', 'attack', 'infiltrate', 'bombard'],
+      zoneFilter: {
+        op: '==',
+        left: {
+          ref: 'binding',
+          name: '$zone',
+        },
+        right: '{$voNguyenGiapFollowUpSpace}',
+      },
+      sequenceContext: {
+        requireMoveZoneCandidatesFrom: 'vo-nguyen-giap-shaded-space',
+      },
+    });
+    assert.deepEqual((shadedEffects[1] as { grantFreeOperation?: Record<string, unknown> }).grantFreeOperation, {
+      seat: 'nva',
+      sequence: { batch: 'vo-nguyen-giap-shaded', step: 0 },
+      operationClass: 'operation',
+      actionIds: ['march'],
+      moveZoneBindings: ['$targetSpaces'],
+      allowDuringMonsoon: true,
+      sequenceContext: {
+        captureMoveZoneCandidatesAs: 'vo-nguyen-giap-shaded-space',
+      },
+      executionContext: {
+        selectedSpaces: {
+          ref: 'binding',
+          name: '$voNguyenGiapShadedSpace',
+        },
+      },
+      zoneFilter: {
+        op: 'in',
+        item: {
+          ref: 'binding',
+          name: '$zone',
+        },
+        set: {
+          ref: 'grantContext',
+          key: 'selectedSpaces',
+        },
+      },
+    });
   });
 
   it('encodes card 53 (Sappers) with South Vietnam troop-removal targeting, remain-eligible, and province-only base removal routing', () => {

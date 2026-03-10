@@ -509,7 +509,7 @@ export type EffectAST =
         readonly outcomePolicy?: import('../contracts/index.js').TurnFlowFreeOperationGrantOutcomePolicy;
         readonly postResolutionTurnFlow?: import('../contracts/index.js').TurnFlowFreeOperationGrantPostResolutionTurnFlow;
         readonly sequence?: {
-          readonly chain: string;
+          readonly batch: string;
           readonly step: number;
         };
         readonly sequenceContext?: FreeOperationSequenceContextContract;

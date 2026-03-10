@@ -91,7 +91,7 @@ describe('FITL card-46 559th Transport Grp', () => {
     assert.deepEqual(card?.shaded?.freeOperationGrants, [
       {
         seat: 'nva',
-        sequence: { chain: '559th-transport-grp-nva', step: 0 },
+        sequence: { batch: '559th-transport-grp-nva', step: 0 },
         viabilityPolicy: 'requireUsableAtIssue',
         completionPolicy: 'required',
         postResolutionTurnFlow: 'resumeCardFlow',

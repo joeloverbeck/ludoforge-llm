@@ -145,7 +145,7 @@ phase: [asPhaseId('main')],
               freeOperationGrants: [
                 {
                   seat: 'NVA',
-                  sequence: { chain: 'grant-nva-op', step: 0 },
+                  sequence: { batch: 'grant-nva-op', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                 },

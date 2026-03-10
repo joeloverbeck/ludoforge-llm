@@ -321,7 +321,7 @@ describe('AST and selector schemas', () => {
               actionIds: ['operation'],
               zoneFilter: { op: '==', left: { ref: 'zoneProp', zone: '$zone', prop: 'country' }, right: 'southVietnam' },
               uses: 2,
-              sequence: { chain: 'vc-ops', step: 1 },
+              sequence: { batch: 'vc-ops', step: 1 },
             },
           },
           {
@@ -370,7 +370,7 @@ describe('AST and selector schemas', () => {
         grantFreeOperation: {
           seat: '3',
           operationClass: 'operation',
-          sequence: { chain: 'ctx-chain', step: 0 },
+          sequence: { batch: 'ctx-chain', step: 0 },
           sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
         },
       } as const;
@@ -383,7 +383,7 @@ describe('AST and selector schemas', () => {
         grantFreeOperation: {
           seat: '3',
           operationClass: 'operation',
-          sequence: { chain: 'ctx-chain', step: 0 },
+          sequence: { batch: 'ctx-chain', step: 0 },
           sequenceContext: {},
         },
       });
@@ -492,7 +492,7 @@ describe('AST and selector schemas', () => {
       const grant = {
         seat: '3',
         operationClass: 'operation',
-        sequence: { chain: 'ctx-chain', step: 0 },
+        sequence: { batch: 'ctx-chain', step: 0 },
         completionPolicy: 'required',
         postResolutionTurnFlow: 'resumeCardFlow',
       } as const;
@@ -504,7 +504,7 @@ describe('AST and selector schemas', () => {
       const result = EventCardFreeOperationGrantSchema.safeParse({
         seat: '3',
         operationClass: 'operation',
-        sequence: { chain: 'ctx-chain', step: 0 },
+        sequence: { batch: 'ctx-chain', step: 0 },
         completionPolicy: 'required',
       });
 
@@ -515,7 +515,7 @@ describe('AST and selector schemas', () => {
       const result = EventCardFreeOperationGrantSchema.safeParse({
         seat: '3',
         operationClass: 'operation',
-        sequence: { chain: 'ctx-chain', step: 0 },
+        sequence: { batch: 'ctx-chain', step: 0 },
         postResolutionTurnFlow: 'resumeCardFlow',
       });
 
@@ -526,7 +526,7 @@ describe('AST and selector schemas', () => {
       const result = EventCardFreeOperationGrantSchema.safeParse({
         seat: '3',
         operationClass: 'operation',
-        sequence: { chain: 'ctx-chain', step: 0 },
+        sequence: { batch: 'ctx-chain', step: 0 },
         completionPolicy: 'bogus',
       });
 
@@ -538,7 +538,7 @@ describe('AST and selector schemas', () => {
       const grant = {
         seat: '3',
         operationClass: 'operation',
-        sequence: { chain: 'ctx-chain', step: 0 },
+        sequence: { batch: 'ctx-chain', step: 0 },
         moveZoneBindings: ['$destination'],
         moveZoneProbeBindings: ['$spaces'],
       } as const;

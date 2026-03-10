@@ -11,6 +11,7 @@ const expectedViabilityExports = [
   'DEFAULT_FREE_OPERATION_GRANT_VIABILITY_POLICY',
   'resolveFreeOperationGrantViabilityPolicy',
   'grantRequiresUsableProbe',
+  'canResolveAmbiguousFreeOperationOverlapInCurrentState',
   'isFreeOperationGrantUsableInCurrentState',
 ] as const;
 

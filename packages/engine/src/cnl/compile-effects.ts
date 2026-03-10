@@ -1849,17 +1849,17 @@ function lowerGrantFreeOperationEffect(
     postResolutionTurnFlow = source.postResolutionTurnFlow as import('../contracts/index.js').TurnFlowFreeOperationGrantPostResolutionTurnFlow;
   }
 
-  let loweredSequence: { readonly chain: string; readonly step: number } | undefined;
+  let loweredSequence: { readonly batch: string; readonly step: number } | undefined;
   if (source.sequence !== undefined) {
-    if (!isRecord(source.sequence) || typeof source.sequence.chain !== 'string' || !isInteger(source.sequence.step) || source.sequence.step < 0) {
+    if (!isRecord(source.sequence) || typeof source.sequence.batch !== 'string' || !isInteger(source.sequence.step) || source.sequence.step < 0) {
       diagnostics.push(
         ...missingCapability(`${path}.sequence`, 'grantFreeOperation sequence', source.sequence, [
-          '{ chain: string, step: non-negative integer }',
+          '{ batch: string, step: non-negative integer }',
         ]).diagnostics,
       );
     } else {
       loweredSequence = {
-        chain: source.sequence.chain,
+        batch: source.sequence.batch,
         step: source.sequence.step,
       };
     }
@@ -1946,7 +1946,7 @@ function lowerGrantFreeOperationEffect(
         path: surface.path,
         severity: 'error',
         message: surface.message,
-        suggestion: 'Declare sequence.chain and sequence.step when using sequenceContext.',
+        suggestion: 'Declare sequence.batch and sequence.step when using sequenceContext.',
       });
     }
   }
@@ -2781,7 +2781,7 @@ type LoweredGrantSequenceEntry = {
   readonly actionIds?: readonly string[];
   readonly zoneFilter?: ConditionAST;
   readonly sequence: {
-    readonly chain: string;
+    readonly batch: string;
     readonly step: number;
   };
 };
@@ -2807,20 +2807,20 @@ const collectFreeOperationSequenceViabilityWarnings = (
     return [];
   }
 
-  const byChain = new Map<string, LoweredGrantSequenceEntry[]>();
+  const byBatch = new Map<string, LoweredGrantSequenceEntry[]>();
   for (const grant of grants) {
-    const existing = byChain.get(grant.sequence.chain) ?? [];
+    const existing = byBatch.get(grant.sequence.batch) ?? [];
     existing.push(grant);
-    byChain.set(grant.sequence.chain, existing);
+    byBatch.set(grant.sequence.batch, existing);
   }
 
   const diagnostics: Diagnostic[] = [];
-  for (const [chain, chainEntries] of byChain.entries()) {
-    if (chainEntries.length < 2) {
+  for (const [batch, batchEntries] of byBatch.entries()) {
+    if (batchEntries.length < 2) {
       continue;
     }
     const byStep = new Map<number, LoweredGrantSequenceEntry[]>();
-    for (const entry of chainEntries) {
+    for (const entry of batchEntries) {
       const existing = byStep.get(entry.sequence.step) ?? [];
       existing.push(entry);
       byStep.set(entry.sequence.step, existing);
@@ -2834,12 +2834,12 @@ const collectFreeOperationSequenceViabilityWarnings = (
         path: stepEntries[0]!.sequencePath,
         severity: 'warning',
         message:
-          `Free-operation sequence chain "${chain}" has duplicate step ${String(step)}, which can lock later steps until one duplicate is consumed.`,
-        suggestion: 'Assign unique `sequence.step` values per chain in event resolution order.',
+          `Free-operation sequence batch "${batch}" has duplicate step ${String(step)}, which can lock later steps until one duplicate is consumed.`,
+        suggestion: 'Assign unique `sequence.step` values per batch in event resolution order.',
       });
     }
 
-    const ordered = [...chainEntries].sort((left, right) => left.sequence.step - right.sequence.step);
+    const ordered = [...batchEntries].sort((left, right) => left.sequence.step - right.sequence.step);
     for (let index = 1; index < ordered.length; index += 1) {
       const previous = ordered[index - 1]!;
       const current = ordered[index]!;
@@ -2851,7 +2851,7 @@ const collectFreeOperationSequenceViabilityWarnings = (
           path: currentStepPath,
           severity: 'warning',
           message:
-            `Free-operation sequence chain "${chain}" changes operationClass between step ${String(previous.sequence.step)} and ${String(current.sequence.step)}.`,
+            `Free-operation sequence batch "${batch}" changes operationClass between step ${String(previous.sequence.step)} and ${String(current.sequence.step)}.`,
           suggestion: 'Confirm earlier sequence steps are reliably playable; otherwise later steps may remain blocked.',
         });
       }
@@ -2866,7 +2866,7 @@ const collectFreeOperationSequenceViabilityWarnings = (
           path: currentStepPath,
           severity: 'warning',
           message:
-            `Free-operation sequence chain "${chain}" has non-overlapping actionIds between step ${String(previous.sequence.step)} and ${String(current.sequence.step)}.`,
+            `Free-operation sequence batch "${batch}" has non-overlapping actionIds between step ${String(previous.sequence.step)} and ${String(current.sequence.step)}.`,
           suggestion: 'Ensure the earlier step can be consumed in realistic states, or relax sequence constraints.',
         });
       }
@@ -2879,8 +2879,8 @@ const collectFreeOperationSequenceViabilityWarnings = (
           path: currentStepPath,
           severity: 'warning',
           message:
-            `Free-operation sequence chain "${chain}" uses different zoneFilter conditions between step ${String(previous.sequence.step)} and ${String(current.sequence.step)}.`,
-          suggestion: 'Verify earlier step filters are not stricter than later steps in the same chain.',
+            `Free-operation sequence batch "${batch}" uses different zoneFilter conditions between step ${String(previous.sequence.step)} and ${String(current.sequence.step)}.`,
+          suggestion: 'Verify earlier step filters are not stricter than later steps in the same batch.',
         });
       }
     }

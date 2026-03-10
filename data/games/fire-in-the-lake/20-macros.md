@@ -3389,6 +3389,33 @@ conditionMacros:
               args:
                 - { prop: faction, op: eq, value: NVA }
 
+  # Card-specific control subset: only US and ARVN count for control.
+  - id: fitl-space-us-arvn-controlled
+    params:
+      - { name: spaceExpr, type: value }
+    condition:
+      op: '>'
+      left:
+        aggregate:
+          op: count
+          query:
+            query: tokensInZone
+            zone: { param: spaceExpr }
+            filter:
+              op: and
+              args:
+                - { prop: faction, op: in, value: ['US', 'ARVN'] }
+      right:
+        aggregate:
+          op: count
+          query:
+            query: tokensInZone
+            zone: { param: spaceExpr }
+            filter:
+              op: and
+              args:
+                - { prop: faction, op: eq, value: NVA }
+
   # Shared control predicate: city without NVA Control.
   - id: fitl-space-city-without-nva-control
     params:

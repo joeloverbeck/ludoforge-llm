@@ -1481,7 +1481,7 @@ describe('compile-effects lowering', () => {
             viabilityPolicy: 'requireUsableAtIssue',
             moveZoneBindings: ['$destination'],
             moveZoneProbeBindings: ['$spaces'],
-            sequence: { chain: 'apc-uprising', step: 0 },
+            sequence: { batch: 'apc-uprising', step: 0 },
             zoneFilter: { op: '==', left: { ref: 'zoneProp', zone: 'saigon:none', prop: 'country' }, right: 'southVietnam' },
           },
         },
@@ -1502,7 +1502,7 @@ describe('compile-effects lowering', () => {
           viabilityPolicy: 'requireUsableAtIssue',
           moveZoneBindings: ['$destination'],
           moveZoneProbeBindings: ['$spaces'],
-          sequence: { chain: 'apc-uprising', step: 0 },
+          sequence: { batch: 'apc-uprising', step: 0 },
           zoneFilter: { op: '==', left: { ref: 'zoneProp', zone: 'saigon:none', prop: 'country' }, right: 'southVietnam' },
         },
       },
@@ -1516,7 +1516,7 @@ describe('compile-effects lowering', () => {
           grantFreeOperation: {
             seat: '3',
             operationClass: 'operation',
-            sequence: { chain: 'ctx-chain', step: 0 },
+            sequence: { batch: 'ctx-chain', step: 0 },
             sequenceContext: {
               captureMoveZoneCandidatesAs: 'selected-space',
               requireMoveZoneCandidatesFrom: 'selected-space',
@@ -1534,7 +1534,7 @@ describe('compile-effects lowering', () => {
         grantFreeOperation: {
           seat: '3',
           operationClass: 'operation',
-          sequence: { chain: 'ctx-chain', step: 0 },
+          sequence: { batch: 'ctx-chain', step: 0 },
           sequenceContext: {
             captureMoveZoneCandidatesAs: 'selected-space',
             requireMoveZoneCandidatesFrom: 'selected-space',
@@ -1551,7 +1551,7 @@ describe('compile-effects lowering', () => {
           grantFreeOperation: {
             seat: '3',
             operationClass: 'operation',
-            sequence: { chain: 'ctx-chain', step: 0 },
+            sequence: { batch: 'ctx-chain', step: 0 },
             sequenceContext: {},
           },
         },
@@ -1601,7 +1601,7 @@ describe('compile-effects lowering', () => {
         path: 'doc.actions.0.effects.0.grantFreeOperation.sequenceContext',
         severity: 'error',
         message: 'grantFreeOperation.sequenceContext requires grantFreeOperation.sequence.',
-        suggestion: 'Declare sequence.chain and sequence.step when using sequenceContext.',
+        suggestion: 'Declare sequence.batch and sequence.step when using sequenceContext.',
       },
     );
   });
@@ -1748,7 +1748,7 @@ describe('compile-effects lowering', () => {
             seat: '1',
             operationClass: 'limitedOperation',
             actionIds: ['limitedOp'],
-            sequence: { chain: 'risk-chain', step: 0 },
+            sequence: { batch: 'risk-chain', step: 0 },
             zoneFilter: { op: '==', left: { ref: 'zoneProp', zone: 'saigon:none', prop: 'country' }, right: 'southVietnam' },
           },
         },
@@ -1757,7 +1757,7 @@ describe('compile-effects lowering', () => {
             seat: '1',
             operationClass: 'operation',
             actionIds: ['operation'],
-            sequence: { chain: 'risk-chain', step: 1 },
+            sequence: { batch: 'risk-chain', step: 1 },
           },
         },
       ],
@@ -1786,14 +1786,14 @@ describe('compile-effects lowering', () => {
             seat: '1',
             operationClass: 'operation',
             actionIds: ['limitedOp'],
-            sequence: { chain: 'mixed-domain-chain', step: 0 },
+            sequence: { batch: 'mixed-domain-chain', step: 0 },
           },
         },
         {
           grantFreeOperation: {
             seat: '1',
             operationClass: 'operation',
-            sequence: { chain: 'mixed-domain-chain', step: 1 },
+            sequence: { batch: 'mixed-domain-chain', step: 1 },
           },
         },
       ],
@@ -1822,14 +1822,14 @@ describe('compile-effects lowering', () => {
           grantFreeOperation: {
             seat: '1',
             operationClass: 'operation',
-            sequence: { chain: 'absent-domain-chain', step: 0 },
+            sequence: { batch: 'absent-domain-chain', step: 0 },
           },
         },
         {
           grantFreeOperation: {
             seat: '1',
             operationClass: 'operation',
-            sequence: { chain: 'absent-domain-chain', step: 1 },
+            sequence: { batch: 'absent-domain-chain', step: 1 },
           },
         },
       ],
@@ -1856,14 +1856,14 @@ describe('compile-effects lowering', () => {
             seat: '1',
             operationClass: 'operation',
             actionIds: ['operation'],
-            sequence: { chain: 'mixed-domain-overlap-chain', step: 0 },
+            sequence: { batch: 'mixed-domain-overlap-chain', step: 0 },
           },
         },
         {
           grantFreeOperation: {
             seat: '1',
             operationClass: 'operation',
-            sequence: { chain: 'mixed-domain-overlap-chain', step: 1 },
+            sequence: { batch: 'mixed-domain-overlap-chain', step: 1 },
           },
         },
       ],

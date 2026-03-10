@@ -824,7 +824,7 @@ effectAstSchemaInternal = z.union([
         outcomePolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES).optional(),
         sequence: z
           .object({
-            chain: StringSchema,
+            batch: StringSchema,
             step: NumberSchema,
           })
           .strict()

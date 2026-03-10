@@ -127,14 +127,14 @@ eventDecks:
           freeOperationGrants:
             - seat: arvn
               sequence:
-                chain: amphib-landing-arvn
+                batch: amphib-landing-arvn
                 step: 0
               operationClass: operation
               actionIds:
                 - sweep
             - seat: arvn
               sequence:
-                chain: amphib-landing-arvn
+                batch: amphib-landing-arvn
                 step: 1
               operationClass: operation
               actionIds:
@@ -159,7 +159,7 @@ eventDecks:
           freeOperationGrants:
             - seat: arvn
               sequence:
-                chain: macv-arvn-special-activity
+                batch: macv-arvn-special-activity
                 step: 0
               operationClass: limitedOperation
       - id: card-70
@@ -181,7 +181,7 @@ eventDecks:
             - seat: arvn
               executeAsSeat: us
               sequence:
-                chain: roks-arvn-as-us
+                batch: roks-arvn-as-us
                 step: 0
               operationClass: operation
               actionIds:
@@ -189,7 +189,7 @@ eventDecks:
             - seat: arvn
               executeAsSeat: us
               sequence:
-                chain: roks-arvn-as-us
+                batch: roks-arvn-as-us
                 step: 1
               operationClass: operation
               actionIds:
@@ -1213,7 +1213,7 @@ eventDecks:
             - seat: nva
               executeAsSeat: us
               sequence:
-                chain: gulf-of-tonkin-us-airstrike
+                batch: gulf-of-tonkin-us-airstrike
                 step: 0
               operationClass: operation
               actionIds:
@@ -1678,7 +1678,7 @@ eventDecks:
           freeOperationGrants:
             - seat: us
               sequence:
-                chain: aces-us-airstrike
+                batch: aces-us-airstrike
                 step: 0
               operationClass: operation
               actionIds:
@@ -2978,7 +2978,7 @@ eventDecks:
           freeOperationGrants:
             - seat: us
               sequence:
-                chain: operation-attleboro-us
+                batch: operation-attleboro-us
                 step: 0
               operationClass: operation
               actionIds:
@@ -3008,7 +3008,7 @@ eventDecks:
                 right: 0
             - seat: us
               sequence:
-                chain: operation-attleboro-us
+                batch: operation-attleboro-us
                 step: 1
               operationClass: operation
               actionIds:
@@ -3038,7 +3038,7 @@ eventDecks:
                 right: 0
             - seat: us
               sequence:
-                chain: operation-attleboro-us
+                batch: operation-attleboro-us
                 step: 2
               operationClass: operation
               actionIds:
@@ -3371,7 +3371,7 @@ eventDecks:
                 - seat: self
                   executeAsSeat: us
                   sequence:
-                    chain: tf116-us
+                    batch: tf116-us
                     step: 0
                   operationClass: operation
                   actionIds:
@@ -3416,7 +3416,7 @@ eventDecks:
                 - seat: self
                   executeAsSeat: us
                   sequence:
-                    chain: tf116-us
+                    batch: tf116-us
                     step: 1
                   operationClass: operation
                   actionIds:
@@ -3463,7 +3463,7 @@ eventDecks:
                 - seat: self
                   executeAsSeat: arvn
                   sequence:
-                    chain: tf116-arvn
+                    batch: tf116-arvn
                     step: 0
                   operationClass: operation
                   actionIds:
@@ -3508,7 +3508,7 @@ eventDecks:
                 - seat: self
                   executeAsSeat: arvn
                   sequence:
-                    chain: tf116-arvn
+                    batch: tf116-arvn
                     step: 1
                   operationClass: operation
                   actionIds:
@@ -4071,7 +4071,7 @@ eventDecks:
             - seat: us
               viabilityPolicy: requireUsableForEventPlay
               sequence:
-                chain: ia-drang-us
+                batch: ia-drang-us
                 step: 0
               completionPolicy: required
               outcomePolicy: mustChangeGameplayState
@@ -4105,7 +4105,7 @@ eventDecks:
                 right: 0
             - seat: us
               sequence:
-                chain: ia-drang-us
+                batch: ia-drang-us
                 step: 1
               completionPolicy: required
               postResolutionTurnFlow: resumeCardFlow
@@ -4119,7 +4119,7 @@ eventDecks:
                 requireMoveZoneCandidatesFrom: ia-drang-space
             - seat: us
               sequence:
-                chain: ia-drang-us
+                batch: ia-drang-us
                 step: 2
               completionPolicy: required
               postResolutionTurnFlow: resumeCardFlow
@@ -4433,72 +4433,170 @@ eventDecks:
                 scope: global
                 var: trail
                 delta: -2
-            - chooseN:
-                bind: $nvaLaosPieces
-                options:
-                  query: tokensInMapSpaces
-                  spaceFilter:
-                    op: ==
-                    left:
-                      ref: zoneProp
-                      zone: $zone
-                      prop: country
-                    right: laos
-                  filter:
-                    op: and
-                    args:
-                      - prop: faction
-                        op: eq
-                        value: NVA
-                min: 0
-                max: 4
-            - forEach:
-                bind: $nvaLaosPiece
-                over:
-                  query: binding
-                  name: $nvaLaosPieces
-                effects:
-                  - moveToken:
-                      token: $nvaLaosPiece
-                      from:
-                        zoneExpr:
-                          ref: tokenZone
-                          token: $nvaLaosPiece
-                      to:
-                        zoneExpr: available-NVA:none
-            - chooseN:
-                bind: $nvaCambodiaPieces
-                options:
-                  query: tokensInMapSpaces
-                  spaceFilter:
-                    op: ==
-                    left:
-                      ref: zoneProp
-                      zone: $zone
-                      prop: country
-                    right: cambodia
-                  filter:
-                    op: and
-                    args:
-                      - prop: faction
-                        op: eq
-                        value: NVA
-                min: 0
-                max: 4
-            - forEach:
-                bind: $nvaCambodiaPiece
-                over:
-                  query: binding
-                  name: $nvaCambodiaPieces
-                effects:
-                  - moveToken:
-                      token: $nvaCambodiaPiece
-                      from:
-                        zoneExpr:
-                          ref: tokenZone
-                          token: $nvaCambodiaPiece
-                      to:
-                        zoneExpr: available-NVA:none
+            - let:
+                bind: $nvaLaosRemovalCount
+                value:
+                  if:
+                    when:
+                      op: ">"
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInMapSpaces
+                            spaceFilter:
+                              op: ==
+                              left:
+                                ref: zoneProp
+                                zone: $zone
+                                prop: country
+                              right: laos
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  op: eq
+                                  value: NVA
+                      right: 4
+                    then: 4
+                    else:
+                      aggregate:
+                        op: count
+                        query:
+                          query: tokensInMapSpaces
+                          spaceFilter:
+                            op: ==
+                            left:
+                              ref: zoneProp
+                              zone: $zone
+                              prop: country
+                            right: laos
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                op: eq
+                                value: NVA
+                in:
+                  - chooseN:
+                      bind: $nvaLaosPieces
+                      options:
+                        query: tokensInMapSpaces
+                        spaceFilter:
+                          op: ==
+                          left:
+                            ref: zoneProp
+                            zone: $zone
+                            prop: country
+                          right: laos
+                        filter:
+                          op: and
+                          args:
+                            - prop: faction
+                              op: eq
+                              value: NVA
+                      min:
+                        ref: binding
+                        name: $nvaLaosRemovalCount
+                      max:
+                        ref: binding
+                        name: $nvaLaosRemovalCount
+                  - forEach:
+                      bind: $nvaLaosPiece
+                      over:
+                        query: binding
+                        name: $nvaLaosPieces
+                      effects:
+                        - moveToken:
+                            token: $nvaLaosPiece
+                            from:
+                              zoneExpr:
+                                ref: tokenZone
+                                token: $nvaLaosPiece
+                            to:
+                              zoneExpr: available-NVA:none
+            - let:
+                bind: $nvaCambodiaRemovalCount
+                value:
+                  if:
+                    when:
+                      op: ">"
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInMapSpaces
+                            spaceFilter:
+                              op: ==
+                              left:
+                                ref: zoneProp
+                                zone: $zone
+                                prop: country
+                              right: cambodia
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  op: eq
+                                  value: NVA
+                      right: 4
+                    then: 4
+                    else:
+                      aggregate:
+                        op: count
+                        query:
+                          query: tokensInMapSpaces
+                          spaceFilter:
+                            op: ==
+                            left:
+                              ref: zoneProp
+                              zone: $zone
+                              prop: country
+                            right: cambodia
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                op: eq
+                                value: NVA
+                in:
+                  - chooseN:
+                      bind: $nvaCambodiaPieces
+                      options:
+                        query: tokensInMapSpaces
+                        spaceFilter:
+                          op: ==
+                          left:
+                            ref: zoneProp
+                            zone: $zone
+                            prop: country
+                          right: cambodia
+                        filter:
+                          op: and
+                          args:
+                            - prop: faction
+                              op: eq
+                              value: NVA
+                      min:
+                        ref: binding
+                        name: $nvaCambodiaRemovalCount
+                      max:
+                        ref: binding
+                        name: $nvaCambodiaRemovalCount
+                  - forEach:
+                      bind: $nvaCambodiaPiece
+                      over:
+                        query: binding
+                        name: $nvaCambodiaPieces
+                      effects:
+                        - moveToken:
+                            token: $nvaCambodiaPiece
+                            from:
+                              zoneExpr:
+                                ref: tokenZone
+                                token: $nvaCambodiaPiece
+                            to:
+                              zoneExpr: available-NVA:none
         shaded:
           text: Add twice Trail value to each NVA and VC Resources. NVA moves its unTunneled Bases anywhere within Laos/Cambodia.
           effects:
@@ -4544,14 +4642,6 @@ eventDecks:
                         op: eq
                         value: untunneled
                 effects:
-                  - chooseOne:
-                      bind: $baseDestination@{$nvaBase}
-                      options:
-                        query: mapSpaces
-                        filter:
-                          conditionMacro: fitl-space-in-laos-cambodia
-                          args:
-                            spaceExpr: $zone
                   - moveToken:
                       token: $nvaBase
                       from:
@@ -4559,9 +4649,53 @@ eventDecks:
                           ref: tokenZone
                           token: $nvaBase
                       to:
+                        zoneExpr: trucks-base-staging:none
+            - forEach:
+                bind: $stagedNvaBase
+                over:
+                  query: tokensInZone
+                  zone: trucks-base-staging:none
+                  filter:
+                    op: and
+                    args:
+                      - prop: faction
+                        op: eq
+                        value: NVA
+                      - prop: type
+                        op: eq
+                        value: base
+                effects:
+                  - chooseOne:
+                      bind: $trucksBaseDestination
+                      options:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - conditionMacro: fitl-space-in-laos-cambodia
+                              args:
+                                spaceExpr: $zone
+                            - op: "<"
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      op: and
+                                      args:
+                                        - prop: type
+                                          op: eq
+                                          value: base
+                              right: 2
+                  - moveToken:
+                      token: $stagedNvaBase
+                      from: trucks-base-staging:none
+                      to:
                         zoneExpr:
                           ref: binding
-                          name: $baseDestination@{$nvaBase}
+                          name: $trucksBaseDestination
       - id: card-97
         title: Brinks Hotel
         sideMode: dual
@@ -4704,14 +4838,14 @@ eventDecks:
           freeOperationGrants:
             - seat: us
               sequence:
-                chain: westmoreland-us
+                batch: westmoreland-us
                 step: 0
               operationClass: operation
               actionIds:
                 - airLift
             - seat: us
               sequence:
-                chain: westmoreland-us
+                batch: westmoreland-us
                 step: 1
               operationClass: operation
               actionIds:
@@ -4719,7 +4853,7 @@ eventDecks:
                 - assault
             - seat: us
               sequence:
-                chain: westmoreland-us
+                batch: westmoreland-us
                 step: 2
               operationClass: operation
               actionIds:
@@ -4922,14 +5056,14 @@ eventDecks:
           freeOperationGrants:
             - seat: us
               sequence:
-                chain: masher-white-wing-us
+                batch: masher-white-wing-us
                 step: 0
               operationClass: operation
               actionIds:
                 - sweep
             - seat: us
               sequence:
-                chain: masher-white-wing-us
+                batch: masher-white-wing-us
                 step: 1
               operationClass: operation
               actionIds:
@@ -4937,7 +5071,7 @@ eventDecks:
             - seat: arvn
               executeAsSeat: us
               sequence:
-                chain: masher-white-wing-arvn-as-us
+                batch: masher-white-wing-arvn-as-us
                 step: 0
               operationClass: operation
               actionIds:
@@ -4945,7 +5079,7 @@ eventDecks:
             - seat: arvn
               executeAsSeat: us
               sequence:
-                chain: masher-white-wing-arvn-as-us
+                batch: masher-white-wing-arvn-as-us
                 step: 1
               operationClass: operation
               actionIds:
@@ -5711,7 +5845,7 @@ eventDecks:
           freeOperationGrants:
             - seat: arvn
               sequence:
-                chain: sihanouk-unshaded-arvn
+                batch: sihanouk-unshaded-arvn
                 step: 0
               operationClass: operation
               actionIds:
@@ -5729,12 +5863,12 @@ eventDecks:
           freeOperationGrants:
             - seat: vc
               sequence:
-                chain: sihanouk-shaded-vc-nva
+                batch: sihanouk-shaded-vc-nva
                 step: 0
               operationClass: operation
             - seat: nva
               sequence:
-                chain: sihanouk-shaded-vc-nva
+                batch: sihanouk-shaded-vc-nva
                 step: 1
               operationClass: operation
       - id: card-51
@@ -6191,7 +6325,7 @@ eventDecks:
           freeOperationGrants:
             - seat: us
               sequence:
-                chain: lrrp-us-airstrike
+                batch: lrrp-us-airstrike
                 step: 0
               operationClass: operation
               actionIds:
@@ -6661,7 +6795,7 @@ eventDecks:
                 - seat: self
                   executeAsSeat: us
                   sequence:
-                    chain: uss-new-jersey-us
+                    batch: uss-new-jersey-us
                     step: 0
                   operationClass: operation
                   actionIds:
@@ -6672,7 +6806,7 @@ eventDecks:
                 - seat: self
                   executeAsSeat: arvn
                   sequence:
-                    chain: uss-new-jersey-arvn
+                    batch: uss-new-jersey-arvn
                     step: 0
                   operationClass: operation
                   actionIds:
@@ -7639,7 +7773,7 @@ eventDecks:
             - seat: self
               executeAsSeat: us
               sequence:
-                chain: pows-free-airstrike
+                batch: pows-free-airstrike
                 step: 0
               operationClass: operation
               actionIds:
@@ -8029,7 +8163,7 @@ eventDecks:
           freeOperationGrants:
             - seat: nva
               sequence:
-                chain: russian-arms-nva-bombard
+                batch: russian-arms-nva-bombard
                 step: 0
               operationClass: operation
               actionIds:
@@ -8546,9 +8680,68 @@ eventDecks:
             - US
           flavorText: Global pressure amplifies domestic war costs and casualty politics.
         unshaded:
-          text: Casualty-driven die roll reduces COIN political leverage.
+          text: Any 2 US Casualties to Available.
+          effects:
+            - chooseN:
+                internalDecisionId: international-unrest-casualties-to-available
+                bind: $casualtiesToAvailable
+                options:
+                  query: tokensInZone
+                  zone: casualties-US:none
+                  filter:
+                    op: and
+                    args:
+                      - prop: faction
+                        op: eq
+                        value: US
+                min: 0
+                max: 2
+            - forEach:
+                bind: $casualtyToAvailable
+                over:
+                  query: binding
+                  name: $casualtiesToAvailable
+                effects:
+                  - moveToken:
+                      token: $casualtyToAvailable
+                      from:
+                        zoneExpr:
+                          ref: tokenZone
+                          token: $casualtyToAvailable
+                      to:
+                        zoneExpr: available-US:none
         shaded:
-          text: External backlash constrains insurgent options and forces resource tradeoffs.
+          text: 2 Available US Troops out of play. NVA add a die roll of Resources.
+          effects:
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: $availableUSTroop
+                    over:
+                      query: tokensInZone
+                      zone: available-US:none
+                      filter:
+                        op: and
+                        args:
+                          - prop: faction
+                            op: eq
+                            value: US
+                          - prop: type
+                            op: eq
+                            value: troops
+                    to:
+                      zoneExpr: out-of-play-US:none
+            - rollRandom:
+                bind: $dieRoll
+                min: 1
+                max: 6
+                in:
+                  - addVar:
+                      scope: global
+                      var: nvaResources
+                      delta:
+                        ref: binding
+                        name: $dieRoll
       - id: card-58
         title: Pathet Lao
         sideMode: dual
@@ -8563,9 +8756,287 @@ eventDecks:
             - US
           flavorText: Laotian coordination alters trail security and redeployment pressure.
         unshaded:
-          text: Conditionally improve Trail or trigger selective redeploy effects.
+          text: NVA removes 6 of its pieces total from North Vietnam and Laos.
+          effects:
+            - let:
+                bind: $eligibleNvaCount
+                value:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInMapSpaces
+                      spaceFilter:
+                        op: or
+                        args:
+                          - op: ==
+                            left:
+                              ref: zoneProp
+                              zone: $zone
+                              prop: country
+                            right: northVietnam
+                          - op: ==
+                            left:
+                              ref: zoneProp
+                              zone: $zone
+                              prop: country
+                            right: laos
+                      filter:
+                        prop: faction
+                        op: eq
+                        value: NVA
+                in:
+                  - let:
+                      bind: $nvaRemoveCount
+                      value:
+                        op: min
+                        left: 6
+                        right:
+                          ref: binding
+                          name: $eligibleNvaCount
+                      in:
+                        - if:
+                            when:
+                              op: ">"
+                              left:
+                                ref: binding
+                                name: $nvaRemoveCount
+                              right: 0
+                            then:
+                              - chooseN:
+                                  bind: $nvaPiecesToRemove
+                                  options:
+                                    query: tokensInMapSpaces
+                                    spaceFilter:
+                                      op: or
+                                      args:
+                                        - op: ==
+                                          left:
+                                            ref: zoneProp
+                                            zone: $zone
+                                            prop: country
+                                          right: northVietnam
+                                        - op: ==
+                                          left:
+                                            ref: zoneProp
+                                            zone: $zone
+                                            prop: country
+                                          right: laos
+                                    filter:
+                                      prop: faction
+                                      op: eq
+                                      value: NVA
+                                  min:
+                                    ref: binding
+                                    name: $nvaRemoveCount
+                                  max:
+                                    ref: binding
+                                    name: $nvaRemoveCount
+                              - forEach:
+                                  bind: $nvaPieceToRemove
+                                  over:
+                                    query: binding
+                                    name: $nvaPiecesToRemove
+                                  effects:
+                                    - moveToken:
+                                        token: $nvaPieceToRemove
+                                        from:
+                                          zoneExpr:
+                                            ref: tokenZone
+                                            token: $nvaPieceToRemove
+                                        to:
+                                          zoneExpr: available-NVA:none
+                            else: []
         shaded:
-          text: Cross-border disruption degrades Trail tempo and complicates redeploy planning.
+          text: If no COIN cubes in Laos, Improve Trail 2 boxes. If there are, US and ARVN Redeploy them to Vietnam.
+          effects:
+            - if:
+                when:
+                  op: ">"
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInMapSpaces
+                        spaceFilter:
+                          op: ==
+                          left:
+                            ref: zoneProp
+                            zone: $zone
+                            prop: country
+                          right: laos
+                        filter:
+                          op: and
+                          args:
+                            - prop: faction
+                              op: in
+                              value:
+                                - US
+                                - ARVN
+                            - prop: type
+                              op: in
+                              value:
+                                - troops
+                                - police
+                  right: 0
+                then:
+                  - forEach:
+                      bind: $laosCoinCube
+                      over:
+                        query: tokensInMapSpaces
+                        spaceFilter:
+                          op: ==
+                          left:
+                            ref: zoneProp
+                            zone: $zone
+                            prop: country
+                          right: laos
+                        filter:
+                          op: and
+                          args:
+                            - prop: faction
+                              op: in
+                              value:
+                                - US
+                                - ARVN
+                            - prop: type
+                              op: in
+                              value:
+                                - troops
+                                - police
+                      effects:
+                        - if:
+                            when:
+                              op: ==
+                              left:
+                                ref: tokenProp
+                                token: $laosCoinCube
+                                prop: faction
+                              right: US
+                            then:
+                              - chooseOne:
+                                  bind: $pathetLaoUsDestination@{$laosCoinCube}
+                                  options:
+                                    query: mapSpaces
+                                    filter:
+                                      op: ==
+                                      left:
+                                        ref: zoneProp
+                                        zone: $zone
+                                        prop: country
+                                      right: southVietnam
+                              - moveToken:
+                                  token: $laosCoinCube
+                                  from:
+                                    zoneExpr:
+                                      ref: tokenZone
+                                      token: $laosCoinCube
+                                  to:
+                                    zoneExpr:
+                                      ref: binding
+                                      name: $pathetLaoUsDestination@{$laosCoinCube}
+                            else:
+                              - if:
+                                  when:
+                                    op: ==
+                                    left:
+                                      ref: tokenProp
+                                      token: $laosCoinCube
+                                      prop: type
+                                    right: troops
+                                  then:
+                                    - chooseOne:
+                                        bind: $pathetLaoArvnTroopDestination@{$laosCoinCube}
+                                        options:
+                                          query: mapSpaces
+                                          filter:
+                                            op: and
+                                            args:
+                                              - op: ==
+                                                left:
+                                                  ref: zoneProp
+                                                  zone: $zone
+                                                  prop: country
+                                                right: southVietnam
+                                              - op: or
+                                                args:
+                                                  - conditionMacro: fitl-space-city-without-nva-control
+                                                    args:
+                                                      spaceExpr: $zone
+                                                  - op: ==
+                                                    left:
+                                                      ref: zoneProp
+                                                      zone: $zone
+                                                      prop: id
+                                                    right: saigon:none
+                                                  - op: ">"
+                                                    left:
+                                                      aggregate:
+                                                        op: count
+                                                        query:
+                                                          query: tokensInZone
+                                                          zone: $zone
+                                                          filter:
+                                                            op: and
+                                                            args:
+                                                              - prop: faction
+                                                                op: in
+                                                                value:
+                                                                  - US
+                                                                  - ARVN
+                                                              - prop: type
+                                                                op: eq
+                                                                value: base
+                                                    right: 0
+                                    - moveToken:
+                                        token: $laosCoinCube
+                                        from:
+                                          zoneExpr:
+                                            ref: tokenZone
+                                            token: $laosCoinCube
+                                        to:
+                                          zoneExpr:
+                                            ref: binding
+                                            name: $pathetLaoArvnTroopDestination@{$laosCoinCube}
+                                  else:
+                                    - chooseOne:
+                                        bind: $pathetLaoArvnPoliceDestination@{$laosCoinCube}
+                                        options:
+                                          query: mapSpaces
+                                          filter:
+                                            op: and
+                                            args:
+                                              - op: ==
+                                                left:
+                                                  ref: zoneProp
+                                                  zone: $zone
+                                                  prop: country
+                                                right: southVietnam
+                                              - op: or
+                                                args:
+                                                  - op: ==
+                                                    left:
+                                                      ref: zoneProp
+                                                      zone: $zone
+                                                      prop: category
+                                                    right: loc
+                                                  - conditionMacro: fitl-space-us-arvn-controlled
+                                                    args:
+                                                      spaceExpr: $zone
+                                    - moveToken:
+                                        token: $laosCoinCube
+                                        from:
+                                          zoneExpr:
+                                            ref: tokenZone
+                                            token: $laosCoinCube
+                                        to:
+                                          zoneExpr:
+                                            ref: binding
+                                            name: $pathetLaoArvnPoliceDestination@{$laosCoinCube}
+                else:
+                  - addVar:
+                      scope: global
+                      var: trail
+                      delta: 2
       - id: card-60
         title: War Photographer
         sideMode: dual
@@ -9782,7 +10253,7 @@ eventDecks:
           freeOperationGrants:
             - seat: nva
               sequence:
-                chain: 559th-transport-grp-nva
+                batch: 559th-transport-grp-nva
                 step: 0
               viabilityPolicy: requireUsableAtIssue
               completionPolicy: required
@@ -10312,24 +10783,163 @@ eventDecks:
             - US
           flavorText: Operational tempo follows strategic concentration.
         unshaded:
-          text: NVA execute free March then free Attack.
-          freeOperationGrants:
-            - seat: nva
-              sequence:
-                chain: vo-nguyen-giap-nva
-                step: 0
-              operationClass: operation
-              actionIds:
-                - march
-            - seat: nva
-              sequence:
-                chain: vo-nguyen-giap-nva
-                step: 1
-              operationClass: operation
-              actionIds:
-                - attack
+          text: In each of any 3 spaces, replace any 2 Guerrillas with 1 NVA Troop.
+          targets:
+            - id: $voNguyenGiapUnshadedSpace
+              selector:
+                query: mapSpaces
+                filter:
+                  op: ">"
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: $zone
+                        filter:
+                          op: and
+                          args:
+                            - prop: faction
+                              op: in
+                              value:
+                                - NVA
+                                - VC
+                            - prop: type
+                              op: eq
+                              value: guerrilla
+                  right: 1
+              cardinality:
+                max: 3
+              application: each
+              effects:
+                - chooseN:
+                    bind: "$voNguyenGiapGuerrillas@{$voNguyenGiapUnshadedSpace}"
+                    n: 2
+                    options:
+                      query: tokensInZone
+                      zone: $voNguyenGiapUnshadedSpace
+                      filter:
+                        op: and
+                        args:
+                          - prop: faction
+                            op: in
+                            value:
+                              - NVA
+                              - VC
+                          - prop: type
+                            op: eq
+                            value: guerrilla
+                - forEach:
+                    bind: $voNguyenGiapGuerrilla
+                    over:
+                      query: binding
+                      name: "$voNguyenGiapGuerrillas@{$voNguyenGiapUnshadedSpace}"
+                    effects:
+                      - if:
+                          when:
+                            op: ==
+                            left:
+                              ref: tokenProp
+                              token: $voNguyenGiapGuerrilla
+                              prop: faction
+                            right: NVA
+                          then:
+                            - moveToken:
+                                token: $voNguyenGiapGuerrilla
+                                from:
+                                  zoneExpr:
+                                    ref: tokenZone
+                                    token: $voNguyenGiapGuerrilla
+                                to:
+                                  zoneExpr: available-NVA:none
+                          else:
+                            - moveToken:
+                                token: $voNguyenGiapGuerrilla
+                                from:
+                                  zoneExpr:
+                                    ref: tokenZone
+                                    token: $voNguyenGiapGuerrilla
+                                to:
+                                  zoneExpr: available-VC:none
+                - removeByPriority:
+                    budget: 1
+                    groups:
+                      - bind: $voNguyenGiapTroop
+                        over:
+                          query: tokensInZone
+                          zone: available-NVA:none
+                          filter:
+                            op: and
+                            args:
+                              - prop: faction
+                                op: eq
+                                value: NVA
+                              - prop: type
+                                op: eq
+                                value: troops
+                        to:
+                          zoneExpr: $voNguyenGiapUnshadedSpace
         shaded:
-          text: NVA execute free March in up to 3 spaces, then 1 free Op or Special Activity in each.
+          text: NVA free Marches into up to 3 spaces then executes any 1 free Op or Special Activity within each, if desired.
+          targets:
+            - id: $voNguyenGiapShadedSpace
+              selector:
+                query: mapSpaces
+              cardinality:
+                max: 3
+              application: aggregate
+              effects:
+                - forEach:
+                    bind: $voNguyenGiapFollowUpSpace
+                    over:
+                      query: binding
+                      name: $voNguyenGiapShadedSpace
+                    effects:
+                      - grantFreeOperation:
+                          seat: nva
+                          sequence:
+                            batch: vo-nguyen-giap-shaded
+                            step: 1
+                          operationClass: operation
+                          actionIds:
+                            - rally
+                            - march
+                            - attack
+                            - infiltrate
+                            - bombard
+                          zoneFilter:
+                            op: ==
+                            left:
+                              ref: binding
+                              name: $zone
+                            right: "{$voNguyenGiapFollowUpSpace}"
+                          sequenceContext:
+                            requireMoveZoneCandidatesFrom: vo-nguyen-giap-shaded-space
+                - grantFreeOperation:
+                    seat: nva
+                    sequence:
+                      batch: vo-nguyen-giap-shaded
+                      step: 0
+                    operationClass: operation
+                    actionIds:
+                      - march
+                    moveZoneBindings:
+                      - $targetSpaces
+                    allowDuringMonsoon: true
+                    sequenceContext:
+                      captureMoveZoneCandidatesAs: vo-nguyen-giap-shaded-space
+                    executionContext:
+                      selectedSpaces:
+                        ref: binding
+                        name: $voNguyenGiapShadedSpace
+                    zoneFilter:
+                      op: in
+                      item:
+                        ref: binding
+                        name: $zone
+                      set:
+                        ref: grantContext
+                        key: selectedSpaces
       - id: card-59
         title: Plei Mei
         sideMode: dual
@@ -10348,7 +10958,7 @@ eventDecks:
           freeOperationGrants:
             - seat: nva
               sequence:
-                chain: plei-mei-nva
+                batch: plei-mei-nva
                 step: 0
               operationClass: operation
               actionIds:
@@ -10358,7 +10968,7 @@ eventDecks:
           freeOperationGrants:
             - seat: nva
               sequence:
-                chain: plei-mei-nva
+                batch: plei-mei-nva
                 step: 0
               operationClass: operation
               actionIds:
@@ -10615,12 +11225,12 @@ eventDecks:
               freeOperationGrants:
                 - seat: arvn
                   sequence:
-                    chain: uncle-ho-unshaded-arvn-two
+                    batch: uncle-ho-unshaded-arvn-two
                     step: 0
                   operationClass: limitedOperation
                 - seat: arvn
                   sequence:
-                    chain: uncle-ho-unshaded-arvn-two
+                    batch: uncle-ho-unshaded-arvn-two
                     step: 1
                   operationClass: limitedOperation
             - id: add-arvn-resources-and-arvn-two-free-limited-ops
@@ -10633,12 +11243,12 @@ eventDecks:
               freeOperationGrants:
                 - seat: arvn
                   sequence:
-                    chain: uncle-ho-unshaded-arvn-two
+                    batch: uncle-ho-unshaded-arvn-two
                     step: 0
                   operationClass: limitedOperation
                 - seat: arvn
                   sequence:
-                    chain: uncle-ho-unshaded-arvn-two
+                    batch: uncle-ho-unshaded-arvn-two
                     step: 1
                   operationClass: limitedOperation
         shaded:
@@ -10649,32 +11259,32 @@ eventDecks:
               freeOperationGrants:
                 - seat: vc
                   sequence:
-                    chain: uncle-ho-shaded-vc-nva-six
+                    batch: uncle-ho-shaded-vc-nva-six
                     step: 0
                   operationClass: limitedOperation
                 - seat: vc
                   sequence:
-                    chain: uncle-ho-shaded-vc-nva-six
+                    batch: uncle-ho-shaded-vc-nva-six
                     step: 1
                   operationClass: limitedOperation
                 - seat: vc
                   sequence:
-                    chain: uncle-ho-shaded-vc-nva-six
+                    batch: uncle-ho-shaded-vc-nva-six
                     step: 2
                   operationClass: limitedOperation
                 - seat: nva
                   sequence:
-                    chain: uncle-ho-shaded-vc-nva-six
+                    batch: uncle-ho-shaded-vc-nva-six
                     step: 3
                   operationClass: limitedOperation
                 - seat: nva
                   sequence:
-                    chain: uncle-ho-shaded-vc-nva-six
+                    batch: uncle-ho-shaded-vc-nva-six
                     step: 4
                   operationClass: limitedOperation
                 - seat: nva
                   sequence:
-                    chain: uncle-ho-shaded-vc-nva-six
+                    batch: uncle-ho-shaded-vc-nva-six
                     step: 5
                   operationClass: limitedOperation
       - id: card-63

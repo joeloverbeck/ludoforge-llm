@@ -102,7 +102,7 @@ phase: [asPhaseId('main')],
               freeOperationGrants: [
                 {
                   seat: 'VC',
-                  sequence: { chain: 'vc-op', step: 0 },
+                  sequence: { batch: 'vc-op', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                 },
@@ -121,7 +121,7 @@ phase: [asPhaseId('main')],
                   freeOperationGrants: [
                     {
                       seat: 'NVA',
-                      sequence: { chain: 'nva-op', step: 0 },
+                      sequence: { batch: 'nva-op', step: 0 },
                       operationClass: 'operation',
                       actionIds: ['operation'],
                     },
@@ -137,8 +137,8 @@ phase: [asPhaseId('main')],
             unshaded: {
               text: 'Grant VC two free operations.',
               freeOperationGrants: [
-                { seat: 'VC', sequence: { chain: 'vc-op-1', step: 0 }, operationClass: 'operation', actionIds: ['operation'] },
-                { seat: 'VC', sequence: { chain: 'vc-op-2', step: 0 }, operationClass: 'operation', actionIds: ['operation'] },
+                { seat: 'VC', sequence: { batch: 'vc-op-1', step: 0 }, operationClass: 'operation', actionIds: ['operation'] },
+                { seat: 'VC', sequence: { batch: 'vc-op-2', step: 0 }, operationClass: 'operation', actionIds: ['operation'] },
               ],
             },
           },
@@ -152,7 +152,7 @@ phase: [asPhaseId('main')],
                 {
                   id: 'vc-reusable-op',
                   seat: 'VC',
-                  sequence: { chain: 'vc-reusable-op', step: 0 },
+                  sequence: { batch: 'vc-reusable-op', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                   uses: 2,
@@ -169,7 +169,7 @@ phase: [asPhaseId('main')],
               freeOperationGrants: [
                 {
                   seat: 'VC',
-                  sequence: { chain: 'vc-limited', step: 0 },
+                  sequence: { batch: 'vc-limited', step: 0 },
                   operationClass: 'limitedOperation',
                   actionIds: ['operation'],
                 },
@@ -183,8 +183,8 @@ phase: [asPhaseId('main')],
             unshaded: {
               text: 'VC gets limited operation first, then regular operation.',
               freeOperationGrants: [
-                { seat: 'VC', sequence: { chain: 'vc-ordered', step: 0 }, operationClass: 'limitedOperation', actionIds: ['operation'] },
-                { seat: 'VC', sequence: { chain: 'vc-ordered', step: 1 }, operationClass: 'operation', actionIds: ['operation'] },
+                { seat: 'VC', sequence: { batch: 'vc-ordered', step: 0 }, operationClass: 'limitedOperation', actionIds: ['operation'] },
+                { seat: 'VC', sequence: { batch: 'vc-ordered', step: 1 }, operationClass: 'operation', actionIds: ['operation'] },
               ],
             },
           },
@@ -195,8 +195,8 @@ phase: [asPhaseId('main')],
             unshaded: {
               text: 'VC gets a free operation before NVA gets one.',
               freeOperationGrants: [
-                { seat: 'VC', sequence: { chain: 'vc-nva-ordered', step: 0 }, operationClass: 'operation', actionIds: ['operation'] },
-                { seat: 'NVA', sequence: { chain: 'vc-nva-ordered', step: 1 }, operationClass: 'operation', actionIds: ['operation'] },
+                { seat: 'VC', sequence: { batch: 'vc-nva-ordered', step: 0 }, operationClass: 'operation', actionIds: ['operation'] },
+                { seat: 'NVA', sequence: { batch: 'vc-nva-ordered', step: 1 }, operationClass: 'operation', actionIds: ['operation'] },
               ],
             },
           },
@@ -218,7 +218,7 @@ phase: [asPhaseId('main')],
               freeOperationGrants: [
                 {
                   seat: 'US',
-                  sequence: { chain: 'required-self', step: 0 },
+                  sequence: { batch: 'required-self', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                   completionPolicy: 'required',
@@ -237,13 +237,13 @@ phase: [asPhaseId('main')],
               freeOperationGrants: [
                 {
                   seat: 'US',
-                  sequence: { chain: 'overlap-self-weaker', step: 0 },
+                  sequence: { batch: 'overlap-self-weaker', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                 },
                 {
                   seat: 'US',
-                  sequence: { chain: 'overlap-self-required', step: 0 },
+                  sequence: { batch: 'overlap-self-required', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                   completionPolicy: 'required',
@@ -287,8 +287,8 @@ const createClassAwareDedupDef = (): GameDef => {
     unshaded: {
       text: 'Grant VC both operation and limited operation free variants.',
       freeOperationGrants: [
-        { seat: 'VC', sequence: { chain: 'vc-dual-class', step: 0 }, operationClass: 'operation', actionIds: ['operation'] },
-        { seat: 'VC', sequence: { chain: 'vc-dual-class', step: 0 }, operationClass: 'limitedOperation', actionIds: ['operation'] },
+        { seat: 'VC', sequence: { batch: 'vc-dual-class', step: 0 }, operationClass: 'operation', actionIds: ['operation'] },
+        { seat: 'VC', sequence: { batch: 'vc-dual-class', step: 0 }, operationClass: 'limitedOperation', actionIds: ['operation'] },
       ],
     },
   };
@@ -386,7 +386,7 @@ const createRequiredGrantResumeDef = (): GameDef =>
               freeOperationGrants: [
                 {
                   seat: 'ARVN',
-                  sequence: { chain: 'resume-chain', step: 0 },
+                  sequence: { batch: 'resume-chain', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                   completionPolicy: 'required',
@@ -574,7 +574,7 @@ const createExecutionContextGrantDef = (): GameDef => ({
             freeOperationGrants: [
               {
                 seat: 'US',
-                sequence: { chain: 'context', step: 0 },
+                sequence: { batch: 'context', step: 0 },
                 operationClass: 'operation',
                 actionIds: ['operation'],
                 completionPolicy: 'required',
@@ -743,7 +743,7 @@ phase: [asPhaseId('main')],
               freeOperationGrants: [
                 {
                   seat: 'NVA',
-                  sequence: { chain: 'nva-cambodia', step: 0 },
+                  sequence: { batch: 'nva-cambodia', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                   zoneFilter: {
@@ -880,7 +880,7 @@ phase: [asPhaseId('main')],
               freeOperationGrants: [
                 {
                   seat: 'NVA',
-                  sequence: { chain: 'nva-sequence-context', step: 0 },
+                  sequence: { batch: 'nva-sequence-context', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                   sequenceContext: {
@@ -889,7 +889,7 @@ phase: [asPhaseId('main')],
                 },
                 {
                   seat: 'NVA',
-                  sequence: { chain: 'nva-sequence-context', step: 1 },
+                  sequence: { batch: 'nva-sequence-context', step: 1 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                   sequenceContext: {
@@ -908,7 +908,7 @@ phase: [asPhaseId('main')],
               freeOperationGrants: [
                 {
                   seat: 'NVA',
-                  sequence: { chain: 'nva-sequence-context-branch', step: 0 },
+                  sequence: { batch: 'nva-sequence-context-branch', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                   sequenceContext: {
@@ -922,7 +922,7 @@ phase: [asPhaseId('main')],
                   freeOperationGrants: [
                     {
                       seat: 'NVA',
-                      sequence: { chain: 'nva-sequence-context-branch', step: 1 },
+                      sequence: { batch: 'nva-sequence-context-branch', step: 1 },
                       operationClass: 'operation',
                       actionIds: ['operation'],
                       sequenceContext: {
@@ -944,7 +944,7 @@ phase: [asPhaseId('main')],
                 {
                   grantFreeOperation: {
                     seat: 'NVA',
-                    sequence: { chain: 'nva-sequence-context-effect-branch', step: 0 },
+                    sequence: { batch: 'nva-sequence-context-effect-branch', step: 0 },
                     operationClass: 'operation',
                     actionIds: ['operation'],
                     sequenceContext: {
@@ -960,7 +960,7 @@ phase: [asPhaseId('main')],
                     {
                       grantFreeOperation: {
                         seat: 'NVA',
-                        sequence: { chain: 'nva-sequence-context-effect-branch', step: 1 },
+                        sequence: { batch: 'nva-sequence-context-effect-branch', step: 1 },
                         operationClass: 'operation',
                         actionIds: ['operation'],
                         sequenceContext: {
@@ -1076,7 +1076,7 @@ phase: [asPhaseId('main')],
                 {
                   seat: 'ARVN',
                   executeAsSeat: 'US',
-                  sequence: { chain: 'execute-as-faction', step: 0 },
+                  sequence: { batch: 'execute-as-faction', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                 },
@@ -1217,7 +1217,7 @@ phase: [asPhaseId('main')],
               freeOperationGrants: [
                 {
                   seat: 'self',
-                  sequence: { chain: 'nva-unusable', step: 0 },
+                  sequence: { batch: 'nva-unusable', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                   viabilityPolicy: 'requireUsableForEventPlay',
@@ -1239,7 +1239,7 @@ phase: [asPhaseId('main')],
               freeOperationGrants: [
                 {
                   seat: 'self',
-                  sequence: { chain: 'outcome-unusable', step: 0 },
+                  sequence: { batch: 'outcome-unusable', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                   viabilityPolicy: 'requireUsableForEventPlay',
@@ -1264,7 +1264,7 @@ phase: [asPhaseId('main')],
               freeOperationGrants: [
                 {
                   seat: 'self',
-                  sequence: { chain: 'issue-usable', step: 0 },
+                  sequence: { batch: 'issue-usable', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                   viabilityPolicy: 'requireUsableAtIssue',
@@ -1276,7 +1276,7 @@ phase: [asPhaseId('main')],
                 },
                 {
                   seat: 'self',
-                  sequence: { chain: 'issue-unusable', step: 0 },
+                  sequence: { batch: 'issue-unusable', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                   viabilityPolicy: 'requireUsableAtIssue',
@@ -1333,7 +1333,7 @@ phase: [asPhaseId('main')],
                     seat: 'self',
                     operationClass: 'operation',
                     actionIds: ['operation'],
-                    sequence: { chain: 'effect-issue-seq', step: 0 },
+                    sequence: { batch: 'effect-issue-seq', step: 0 },
                     viabilityPolicy: 'requireUsableAtIssue',
                     zoneFilter: { op: '==', left: 1, right: 2 },
                   },
@@ -1343,7 +1343,7 @@ phase: [asPhaseId('main')],
                     seat: 'self',
                     operationClass: 'operation',
                     actionIds: ['operation'],
-                    sequence: { chain: 'effect-issue-seq', step: 1 },
+                    sequence: { batch: 'effect-issue-seq', step: 1 },
                     viabilityPolicy: 'requireUsableAtIssue',
                   },
                 },
@@ -1362,7 +1362,7 @@ phase: [asPhaseId('main')],
                     seat: 'self',
                     operationClass: 'operation',
                     actionIds: ['operation'],
-                    sequence: { chain: 'effect-issue-seq-usable', step: 0 },
+                    sequence: { batch: 'effect-issue-seq-usable', step: 0 },
                     viabilityPolicy: 'requireUsableAtIssue',
                     zoneFilter: {
                       op: '==',
@@ -1376,7 +1376,7 @@ phase: [asPhaseId('main')],
                     seat: 'self',
                     operationClass: 'operation',
                     actionIds: ['operation'],
-                    sequence: { chain: 'effect-issue-seq-usable', step: 1 },
+                    sequence: { batch: 'effect-issue-seq-usable', step: 1 },
                     viabilityPolicy: 'requireUsableAtIssue',
                   },
                 },
@@ -1399,7 +1399,7 @@ phase: [asPhaseId('main')],
                           seat: 'self',
                           operationClass: 'operation',
                           actionIds: ['operation'],
-                          sequence: { chain: 'effect-issue-seq-nested', step: 0 },
+                          sequence: { batch: 'effect-issue-seq-nested', step: 0 },
                           viabilityPolicy: 'requireUsableAtIssue',
                           zoneFilter: { op: '==', left: 1, right: 2 },
                         },
@@ -1409,7 +1409,7 @@ phase: [asPhaseId('main')],
                           seat: 'self',
                           operationClass: 'operation',
                           actionIds: ['operation'],
-                          sequence: { chain: 'effect-issue-seq-nested', step: 1 },
+                          sequence: { batch: 'effect-issue-seq-nested', step: 1 },
                           viabilityPolicy: 'requireUsableAtIssue',
                         },
                       },
@@ -1435,7 +1435,7 @@ phase: [asPhaseId('main')],
                           seat: 'self',
                           operationClass: 'operation',
                           actionIds: ['operation'],
-                          sequence: { chain: 'effect-issue-seq-nested-usable', step: 0 },
+                          sequence: { batch: 'effect-issue-seq-nested-usable', step: 0 },
                           viabilityPolicy: 'requireUsableAtIssue',
                           zoneFilter: {
                             op: '==',
@@ -1449,7 +1449,7 @@ phase: [asPhaseId('main')],
                           seat: 'self',
                           operationClass: 'operation',
                           actionIds: ['operation'],
-                          sequence: { chain: 'effect-issue-seq-nested-usable', step: 1 },
+                          sequence: { batch: 'effect-issue-seq-nested-usable', step: 1 },
                           viabilityPolicy: 'requireUsableAtIssue',
                         },
                       },
@@ -1552,7 +1552,7 @@ phase: [asPhaseId('main')],
                 {
                   seat: 'ARVN',
                   executeAsSeat: 'US',
-                  sequence: { chain: 'execute-as-faction-sa', step: 0 },
+                  sequence: { batch: 'execute-as-faction-sa', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['airStrike'],
                 },
@@ -1607,7 +1607,7 @@ const createMonsoonGrantBypassDef = (): GameDef => {
         freeOperationGrants: [
           {
             seat: 'VC',
-            sequence: { chain: 'vc-monsoon-op', step: 0 },
+            sequence: { batch: 'vc-monsoon-op', step: 0 },
             operationClass: 'operation',
             actionIds: ['operation'],
             allowDuringMonsoon: true,
@@ -1624,7 +1624,7 @@ const createMonsoonGrantBypassDef = (): GameDef => {
         freeOperationGrants: [
           {
             seat: 'VC',
-            sequence: { chain: 'vc-monsoon-blocked-op', step: 0 },
+            sequence: { batch: 'vc-monsoon-blocked-op', step: 0 },
             operationClass: 'operation',
             actionIds: ['operation'],
           },
@@ -2191,7 +2191,7 @@ describe('event free-operation grants integration', () => {
                       seat: 'self',
                       operationClass: 'operation',
                       actionIds: ['operation'],
-                      sequence: { chain: 'effect-issue-seq-nested', step: 1 },
+                      sequence: { batch: 'effect-issue-seq-nested', step: 1 },
                       viabilityPolicy: 'requireUsableAtIssue',
                       sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
                     },
@@ -2558,14 +2558,14 @@ describe('event free-operation grants integration', () => {
                 freeOperationGrants: [
                   {
                     seat: 'VC',
-                    sequence: { chain: 'invalid-overlap-a', step: 0 },
+                    sequence: { batch: 'invalid-overlap-a', step: 0 },
                     operationClass: 'operation',
                     actionIds: ['operation'],
                     uses: 1,
                   },
                   {
                     seat: 'VC',
-                    sequence: { chain: 'invalid-overlap-b', step: 0 },
+                    sequence: { batch: 'invalid-overlap-b', step: 0 },
                     operationClass: 'operation',
                     actionIds: ['operation'],
                     uses: 2,
@@ -2599,7 +2599,7 @@ describe('event free-operation grants integration', () => {
                   {
                     grantFreeOperation: {
                       seat: 'VC',
-                      sequence: { chain: 'invalid-effect-overlap-a', step: 0 },
+                      sequence: { batch: 'invalid-effect-overlap-a', step: 0 },
                       operationClass: 'operation',
                       actionIds: ['operation'],
                       sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
@@ -2608,7 +2608,7 @@ describe('event free-operation grants integration', () => {
                   {
                     grantFreeOperation: {
                       seat: 'VC',
-                      sequence: { chain: 'invalid-effect-overlap-b', step: 0 },
+                      sequence: { batch: 'invalid-effect-overlap-b', step: 0 },
                       operationClass: 'operation',
                       actionIds: ['operation'],
                       sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
@@ -2647,7 +2647,7 @@ describe('event free-operation grants integration', () => {
                         {
                           grantFreeOperation: {
                             seat: 'VC',
-                            sequence: { chain: 'exclusive-effect-overlap-then', step: 0 },
+                            sequence: { batch: 'exclusive-effect-overlap-then', step: 0 },
                             operationClass: 'operation',
                             actionIds: ['operation'],
                             sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
@@ -2658,7 +2658,7 @@ describe('event free-operation grants integration', () => {
                         {
                           grantFreeOperation: {
                             seat: 'VC',
-                            sequence: { chain: 'exclusive-effect-overlap-else', step: 0 },
+                            sequence: { batch: 'exclusive-effect-overlap-else', step: 0 },
                             operationClass: 'operation',
                             actionIds: ['operation'],
                             sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
@@ -2787,6 +2787,71 @@ describe('event free-operation grants integration', () => {
     assert.equal(afterOperation.globalVars.selectedTarget, 1);
   });
 
+  it('surfaces executionContext-backed free moves even when the base action is blocked by monsoon-style restrictions', () => {
+    const base = createExecutionContextGrantDef() as GameDef & {
+      turnOrder: {
+        type: 'cardDriven';
+        config: {
+          turnFlow: {
+            monsoon?: { restrictedActions: Array<{ actionId: string }> };
+          };
+        };
+      };
+    };
+    base.turnOrder.config.turnFlow.monsoon = {
+      restrictedActions: [{ actionId: 'operation' }],
+    };
+
+    const initial = initialState(base, 503, 2).state;
+    const runtime = requireCardDrivenRuntime(initial);
+    const afterEvent: GameState = {
+      ...initial,
+      activePlayer: asPlayerId(0),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...runtime,
+          currentCard: {
+            ...runtime.currentCard,
+            firstEligible: 'US',
+            secondEligible: null,
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'execution-context-monsoon',
+              seat: 'US',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              executionContext: {
+                allowedTargets: [2],
+                effectCode: 7,
+              },
+              allowDuringMonsoon: true,
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+      zones: {
+        ...initial.zones,
+        'lookahead:none': [{ id: asTokenId('monsoon-execution-context'), type: 'card', props: { isCoup: true } }],
+      },
+    };
+
+    const freeMoves = legalMoves(base, afterEvent).filter(
+      (move) => String(move.actionId) === 'operation' && move.freeOperation === true,
+    );
+    assert.deepEqual(
+      freeMoves.map((move) => move.params.target),
+      [2],
+      'executionContext grant should still seed a free move when the non-free base action is monsoon-blocked',
+    );
+  });
+
   it('rejects overlapping declarative grants that differ only by executionContext', () => {
     const def = createExecutionContextGrantDef();
     const invalidDecks = (def.eventDecks ?? []).map((deck) => ({
@@ -2801,14 +2866,14 @@ describe('event free-operation grants integration', () => {
                 freeOperationGrants: [
                   {
                     seat: 'US',
-                    sequence: { chain: 'context-a', step: 0 },
+                    sequence: { batch: 'context-a', step: 0 },
                     operationClass: 'operation',
                     actionIds: ['operation'],
                     executionContext: { allowedTargets: [1], effectCode: 3 },
                   },
                   {
                     seat: 'US',
-                    sequence: { chain: 'context-b', step: 0 },
+                    sequence: { batch: 'context-b', step: 0 },
                     operationClass: 'operation',
                     actionIds: ['operation'],
                     executionContext: { allowedTargets: [2], effectCode: 4 },

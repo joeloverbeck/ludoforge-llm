@@ -76,6 +76,7 @@ export type TurnFlowFreeOperationGrantContractCandidate = {
   readonly outcomePolicy?: string | null;
   readonly postResolutionTurnFlow?: string | null;
   readonly sequence?: {
+    readonly batch?: unknown;
     readonly step?: unknown;
   } | null;
   readonly sequenceContext?: {
@@ -142,6 +143,7 @@ export type TurnFlowFreeOperationGrantContractViolationCode =
   | 'postResolutionTurnFlowInvalid'
   | 'requiredPostResolutionTurnFlowMissing'
   | 'postResolutionTurnFlowRequiresRequiredCompletionPolicy'
+  | 'sequenceBatchInvalid'
   | 'sequenceStepInvalid'
   | 'sequenceContextInvalid'
   | 'sequenceContextRequiresSequence'
@@ -308,6 +310,18 @@ export const collectTurnFlowFreeOperationGrantContractViolations = (
   }
 
   const sequenceStep = grant.sequence?.step;
+  if (
+    grant.sequence !== undefined
+    && grant.sequence !== null
+    && (typeof grant.sequence.batch !== 'string' || grant.sequence.batch.length === 0)
+  ) {
+    violations.push({
+      code: 'sequenceBatchInvalid',
+      path: ['sequence', 'batch'],
+      message: 'sequence.batch must be a non-empty string.',
+    });
+  }
+
   if (
     grant.sequence !== undefined
     && grant.sequence !== null

@@ -12,8 +12,8 @@
 
 ## Assumption Reassessment (2026-03-10)
 
-1. The `ac === 'operationPlusSpecialActivity'` branch exists at line 1147-1152 of `derive-render-model.ts` — confirmed.
-2. The test `synthesizes Op+SA group from operation moves and filters out specialActivity` in `derive-render-model-state.test.ts` does not include any move with `actionClass: 'operationPlusSpecialActivity'` in its input array — confirmed. It only tests the synthesis path.
+1. ~~The `ac === 'operationPlusSpecialActivity'` branch exists at line 1147-1152 of `derive-render-model.ts` — confirmed.~~ **CORRECTED**: No special-case branch exists. `deriveActionGroups` (lines 1119-1180) is fully generic — it groups moves by whatever `actionClass` value they carry. Direct `operationPlusSpecialActivity` emission is handled by the same generic path as any other `actionClass`.
+2. The test `with actionGroupPolicy, synthesizes groups and hides classes per policy` in `derive-render-model-state.test.ts` does not include any move with `actionClass: 'operationPlusSpecialActivity'` in its input array — confirmed. It only tests the synthesis path.
 3. The COIN 2nd-eligible path in the engine does emit `operationPlusSpecialActivity` directly — this is the expected kernel behavior for the limited-operation case.
 
 ## Architecture Check

@@ -254,8 +254,8 @@ actions:
                 filter:
                   op: and
                   args:
-                    - { prop: faction, eq: ARVN }
-                    - { prop: type, eq: police }
+                    - { prop: faction, op: eq, value: ARVN }
+                    - { prop: type, op: eq, value: police }
           right: 0
         - op: '>'
           left:
@@ -267,8 +267,8 @@ actions:
                 filter:
                   op: and
                   args:
-                    - { prop: faction, eq: US }
-                    - { prop: type, eq: troops }
+                    - { prop: faction, op: eq, value: US }
+                    - { prop: type, op: eq, value: troops }
           right: 0
         - conditionMacro: us-joint-op-arvn-spend-eligible
           args:
@@ -376,8 +376,8 @@ actions:
                 filter:
                   op: and
                   args:
-                    - { prop: faction, eq: ARVN }
-                    - { prop: type, eq: police }
+                    - { prop: faction, op: eq, value: ARVN }
+                    - { prop: type, op: eq, value: police }
           right: 0
         - op: '>'
           left:
@@ -389,8 +389,8 @@ actions:
                 filter:
                   op: and
                   args:
-                    - { prop: faction, eq: ARVN }
-                    - { prop: type, eq: troops }
+                    - { prop: faction, op: eq, value: ARVN }
+                    - { prop: type, op: eq, value: troops }
           right: 0
         - op: '>='
           left: { ref: gvar, var: arvnResources }
@@ -476,7 +476,7 @@ actions:
                 filter:
                   op: and
                   args:
-                    - { prop: faction, eq: VC }
+                    - { prop: faction, op: eq, value: VC }
           right: 0
         - op: <=
           left:
@@ -549,8 +549,8 @@ actions:
                 filter:
                   op: and
                   args:
-                    - { prop: faction, eq: ARVN }
-                    - { prop: type, eq: troops }
+                    - { prop: faction, op: eq, value: ARVN }
+                    - { prop: type, op: eq, value: troops }
           right: 0
         - op: or
           args:
@@ -589,7 +589,7 @@ actions:
                   op: and
                   args:
                     - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                    - { prop: type, eq: base }
+                    - { prop: type, op: eq, value: base }
           right: 0
         - op: or
           args:
@@ -621,7 +621,7 @@ actions:
                       op: and
                       args:
                         - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                        - { prop: type, eq: base }
+                        - { prop: type, op: eq, value: base }
               right: 0
             - op: '>'
               left:
@@ -645,8 +645,8 @@ actions:
             filter:
               op: and
               args:
-                - { prop: faction, eq: ARVN }
-                - { prop: type, eq: troops }
+                - { prop: faction, op: eq, value: ARVN }
+                - { prop: type, op: eq, value: troops }
           limit: 1
           effects:
             - moveToken:
@@ -691,7 +691,7 @@ actions:
                               op: and
                               args:
                                 - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                                - { prop: type, eq: base }
+                                - { prop: type, op: eq, value: base }
                       right: 0
                     - op: '>'
                       left:
@@ -703,8 +703,8 @@ actions:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: ARVN }
-                                - { prop: type, eq: troops }
+                                - { prop: faction, op: eq, value: ARVN }
+                                - { prop: type, op: eq, value: troops }
                       right: 0
           right: 0
         - op: '>'
@@ -717,8 +717,8 @@ actions:
                 filter:
                   op: and
                   args:
-                    - { prop: faction, eq: ARVN }
-                    - { prop: type, eq: troops }
+                    - { prop: faction, op: eq, value: ARVN }
+                    - { prop: type, op: eq, value: troops }
           right: 0
         - op: or
           args:
@@ -750,7 +750,7 @@ actions:
                       op: and
                       args:
                         - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                        - { prop: type, eq: base }
+                        - { prop: type, op: eq, value: base }
               right: 0
             - op: '>'
               left:
@@ -774,8 +774,8 @@ actions:
             filter:
               op: and
               args:
-                - { prop: faction, eq: ARVN }
-                - { prop: type, eq: troops }
+                - { prop: faction, op: eq, value: ARVN }
+                - { prop: type, op: eq, value: troops }
           limit: 1
           effects:
             - moveToken:
@@ -806,8 +806,8 @@ actions:
                 filter:
                   op: and
                   args:
-                    - { prop: faction, eq: ARVN }
-                    - { prop: type, eq: police }
+                    - { prop: faction, op: eq, value: ARVN }
+                    - { prop: type, op: eq, value: police }
           right: 0
         - op: '>'
           left:
@@ -866,8 +866,8 @@ actions:
             filter:
               op: and
               args:
-                - { prop: faction, eq: ARVN }
-                - { prop: type, eq: police }
+                - { prop: faction, op: eq, value: ARVN }
+                - { prop: type, op: eq, value: police }
           limit: 1
           effects:
             - moveToken:
@@ -898,8 +898,8 @@ actions:
                 filter:
                   op: and
                   args:
-                    - { prop: faction, eq: NVA }
-                    - { prop: type, eq: troops }
+                    - { prop: faction, op: eq, value: NVA }
+                    - { prop: type, op: eq, value: troops }
           right: 0
         - op: '>'
           left:
@@ -911,8 +911,8 @@ actions:
                 filter:
                   op: and
                   args:
-                    - { prop: faction, eq: NVA }
-                    - { prop: type, eq: base }
+                    - { prop: faction, op: eq, value: NVA }
+                    - { prop: type, op: eq, value: base }
           right: 0
     cost: []
     effects:
@@ -924,8 +924,8 @@ actions:
             filter:
               op: and
               args:
-                - { prop: faction, eq: NVA }
-                - { prop: type, eq: troops }
+                - { prop: faction, op: eq, value: NVA }
+                - { prop: type, op: eq, value: troops }
           limit: 1
           effects:
             - moveToken:
@@ -985,7 +985,7 @@ actions:
                     filter:
                       op: and
                       args:
-                        - { prop: cardId, eq: card-121 }
+                        - { prop: cardId, op: eq, value: card-121 }
               right: 0
         - op: and
           args:
@@ -1001,7 +1001,7 @@ actions:
                     filter:
                       op: and
                       args:
-                        - { prop: cardId, eq: card-122 }
+                        - { prop: cardId, op: eq, value: card-122 }
               right: 0
         - op: and
           args:
@@ -1017,7 +1017,7 @@ actions:
                     filter:
                       op: and
                       args:
-                        - { prop: cardId, eq: card-123 }
+                        - { prop: cardId, op: eq, value: card-123 }
               right: 0
         - op: and
           args:
@@ -1033,7 +1033,7 @@ actions:
                     filter:
                       op: and
                       args:
-                        - { prop: cardId, eq: card-124 }
+                        - { prop: cardId, op: eq, value: card-124 }
               right: 0
     cost: []
     effects:
@@ -1048,7 +1048,7 @@ actions:
                   filter:
                     op: and
                     args:
-                      - { prop: cardId, eq: card-121 }
+                      - { prop: cardId, op: eq, value: card-121 }
                 limit: 1
                 effects:
                   - moveToken:
@@ -1066,7 +1066,7 @@ actions:
                   filter:
                     op: and
                     args:
-                      - { prop: cardId, eq: card-122 }
+                      - { prop: cardId, op: eq, value: card-122 }
                 limit: 1
                 effects:
                   - moveToken:
@@ -1084,7 +1084,7 @@ actions:
                   filter:
                     op: and
                     args:
-                      - { prop: cardId, eq: card-123 }
+                      - { prop: cardId, op: eq, value: card-123 }
                 limit: 1
                 effects:
                   - moveToken:
@@ -1102,7 +1102,7 @@ actions:
                   filter:
                     op: and
                     args:
-                      - { prop: cardId, eq: card-124 }
+                      - { prop: cardId, op: eq, value: card-124 }
                 limit: 1
                 effects:
                   - moveToken:
@@ -1218,7 +1218,7 @@ actionPipelines:
                               - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                               - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
                           - op: '>'
-                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, eq: 'US' }] } } } }
+                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, op: eq, value: 'US' }] } } } }
                             right: 0
                     min: 1
                     max: 1
@@ -1235,7 +1235,7 @@ actionPipelines:
                               - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                               - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
                           - op: '>'
-                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, eq: 'US' }] } } } }
+                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, op: eq, value: 'US' }] } } } }
                             right: 0
                     min: 1
                     max: 99
@@ -1266,7 +1266,7 @@ actionPipelines:
                       args:
                         - { op: '==', left: { ref: binding, name: $trainChoice }, right: 'place-at-base' }
                         - op: '>'
-                          left: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'US' }, { prop: type, eq: base }] } } } }
+                          left: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: eq, value: 'US' }, { prop: type, op: eq, value: base }] } } } }
                           right: 0
                     then:
                       - chooseOne:
@@ -1355,7 +1355,7 @@ actionPipelines:
                       args:
                         - { op: '==', left: { ref: binding, name: $subAction }, right: 'pacify' }
                         - op: '>'
-                          left: { aggregate: { op: count, query: { query: tokensInZone, zone: $subSpace, filter: { op: and, args: [{ prop: faction, eq: 'US' }] } } } }
+                          left: { aggregate: { op: count, query: { query: tokensInZone, zone: $subSpace, filter: { op: and, args: [{ prop: faction, op: eq, value: 'US' }] } } } }
                           right: 0
                     then:
                       - let:
@@ -1549,7 +1549,7 @@ actionPipelines:
                           args:
                             - { op: '==', left: { ref: zoneProp, zone: $space, prop: category }, right: 'city' }
                             - op: '>'
-                              left: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: in, value: ['US', 'ARVN'] }, { prop: type, eq: base }] } } } }
+                              left: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: in, value: ['US', 'ARVN'] }, { prop: type, op: eq, value: base }] } } } }
                               right: 0
                     then:
                       # Cost: 3 ARVN Resources
@@ -1599,10 +1599,10 @@ actionPipelines:
                       args:
                         - { op: '==', left: { ref: binding, name: $subAction }, right: 'pacify' }
                         - op: '>'
-                          left: { aggregate: { op: count, query: { query: tokensInZone, zone: $subSpace, filter: { op: and, args: [{ prop: faction, eq: 'ARVN' }, { prop: type, eq: troops }] } } } }
+                          left: { aggregate: { op: count, query: { query: tokensInZone, zone: $subSpace, filter: { op: and, args: [{ prop: faction, op: eq, value: 'ARVN' }, { prop: type, op: eq, value: troops }] } } } }
                           right: 0
                         - op: '>'
-                          left: { aggregate: { op: count, query: { query: tokensInZone, zone: $subSpace, filter: { op: and, args: [{ prop: faction, eq: 'ARVN' }, { prop: type, eq: police }] } } } }
+                          left: { aggregate: { op: count, query: { query: tokensInZone, zone: $subSpace, filter: { op: and, args: [{ prop: faction, op: eq, value: 'ARVN' }, { prop: type, op: eq, value: police }] } } } }
                           right: 0
                     then:
                       - if:
@@ -1654,11 +1654,11 @@ actionPipelines:
                         - { op: '==', left: { ref: binding, name: $subAction }, right: 'replace-cubes-with-base' }
                         # Must have 3+ ARVN cubes
                         - op: '>='
-                          left: { aggregate: { op: count, query: { query: tokensInZone, zone: $subSpace, filter: { op: and, args: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
+                          left: { aggregate: { op: count, query: { query: tokensInZone, zone: $subSpace, filter: { op: and, args: [{ prop: faction, op: eq, value: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
                           right: 3
                         # Stacking: fewer than 2 bases
                         - op: '<'
-                          left: { aggregate: { op: count, query: { query: tokensInZone, zone: $subSpace, filter: { op: and, args: [{ prop: type, eq: base }] } } } }
+                          left: { aggregate: { op: count, query: { query: tokensInZone, zone: $subSpace, filter: { op: and, args: [{ prop: type, op: eq, value: base }] } } } }
                           right: 2
                     then:
                       # Cost: 3 ARVN Resources (even if free op)
@@ -1669,7 +1669,7 @@ actionPipelines:
                           over:
                             query: tokensInZone
                             zone: $subSpace
-                            filter: { op: and, args: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] }
+                            filter: { op: and, args: [{ prop: faction, op: eq, value: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] }
                           limit: 3
                           effects:
                             - moveToken: { token: $cube, from: $subSpace, to: available-ARVN:none }
@@ -1766,7 +1766,7 @@ actionPipelines:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: 'US' }
+                          - { prop: faction, op: eq, value: 'US' }
                           - { prop: type, op: in, value: ['troops', 'police'] }
                     min: 0
                     max:
@@ -1795,14 +1795,14 @@ actionPipelines:
               effects:
                 - let:
                     bind: $usCubeCount
-                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $actLoc, filter: { op: and, args: [{ prop: faction, eq: 'US' }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
+                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $actLoc, filter: { op: and, args: [{ prop: faction, op: eq, value: 'US' }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
                     in:
                       - forEach:
                           bind: $guerrilla
                           over:
                             query: tokensInZone
                             zone: $actLoc
-                            filter: { op: and, args: [{ prop: type, eq: guerrilla }, { prop: activity, eq: underground }] }
+                            filter: { op: and, args: [{ prop: type, op: eq, value: guerrilla }, { prop: activity, op: eq, value: underground }] }
                           limit: { ref: binding, name: $usCubeCount }
                           effects:
                             - setTokenProp: { token: $guerrilla, prop: activity, value: active }
@@ -1820,11 +1820,11 @@ actionPipelines:
               effects:
                 - let:
                     bind: $usTroops
-                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $assaultLoC, filter: { op: and, args: [{ prop: faction, eq: 'US' }, { prop: type, eq: troops }] } } } }
+                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $assaultLoC, filter: { op: and, args: [{ prop: faction, op: eq, value: 'US' }, { prop: type, op: eq, value: troops }] } } } }
                     in:
                       - let:
                           bind: $hasUSBase
-                          value: { aggregate: { op: count, query: { query: tokensInZone, zone: $assaultLoC, filter: { op: and, args: [{ prop: faction, eq: 'US' }, { prop: type, eq: base }] } } } }
+                          value: { aggregate: { op: count, query: { query: tokensInZone, zone: $assaultLoC, filter: { op: and, args: [{ prop: faction, op: eq, value: 'US' }, { prop: type, op: eq, value: base }] } } } }
                           in:
                             - let:
                                 bind: $patrolDmg
@@ -1940,7 +1940,7 @@ actionPipelines:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: 'ARVN' }
+                          - { prop: faction, op: eq, value: 'ARVN' }
                           - { prop: type, op: in, value: ['troops', 'police'] }
                     min: 0
                     max: 99
@@ -1965,14 +1965,14 @@ actionPipelines:
               effects:
                 - let:
                     bind: $arvnCubeCount
-                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $actLoc, filter: { op: and, args: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
+                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $actLoc, filter: { op: and, args: [{ prop: faction, op: eq, value: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
                     in:
                       - forEach:
                           bind: $guerrilla
                           over:
                             query: tokensInZone
                             zone: $actLoc
-                            filter: { op: and, args: [{ prop: type, eq: guerrilla }, { prop: activity, eq: underground }] }
+                            filter: { op: and, args: [{ prop: type, op: eq, value: guerrilla }, { prop: activity, op: eq, value: underground }] }
                           limit: { ref: binding, name: $arvnCubeCount }
                           effects:
                             - setTokenProp: { token: $guerrilla, prop: activity, value: active }
@@ -1990,7 +1990,7 @@ actionPipelines:
               effects:
                 - let:
                     bind: $arvnCubes
-                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $assaultLoC, filter: { op: and, args: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
+                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $assaultLoC, filter: { op: and, args: [{ prop: faction, op: eq, value: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
                     in:
                       - let:
                           bind: $patrolDmg
@@ -2092,8 +2092,8 @@ actionPipelines:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: 'US' }
-                          - { prop: type, eq: troops }
+                          - { prop: faction, op: eq, value: 'US' }
+                          - { prop: type, op: eq, value: troops }
                     min: 0
                     max: 99
                 - forEach:
@@ -2220,8 +2220,8 @@ actionPipelines:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: 'ARVN' }
-                          - { prop: type, eq: troops }
+                          - { prop: faction, op: eq, value: 'ARVN' }
+                          - { prop: type, op: eq, value: troops }
                     min: 0
                     max: 99
                 - forEach:
@@ -2278,7 +2278,7 @@ actionPipelines:
                         op: and
                         args:
                           - op: '>'
-                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, eq: 'US' }, { prop: type, eq: troops }] } } } }
+                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, op: eq, value: 'US' }, { prop: type, op: eq, value: troops }] } } } }
                             right: 0
                           - op: '>'
                             left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
@@ -2297,7 +2297,7 @@ actionPipelines:
                               op: and
                               args:
                                 - op: '>'
-                                  left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, eq: 'US' }, { prop: type, eq: troops }] } } } }
+                                  left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, op: eq, value: 'US' }, { prop: type, op: eq, value: troops }] } } } }
                                   right: 0
                                 - op: '>'
                                   left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
@@ -2313,7 +2313,7 @@ actionPipelines:
                               op: and
                               args:
                                 - op: '>'
-                                  left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, eq: 'US' }, { prop: type, eq: troops }] } } } }
+                                  left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, op: eq, value: 'US' }, { prop: type, op: eq, value: troops }] } } } }
                                   right: 0
                                 - op: '>'
                                   left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
@@ -2346,11 +2346,11 @@ actionPipelines:
                     in:
                       - let:
                           bind: $usTroops
-                          value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'US' }, { prop: type, eq: troops }] } } } }
+                          value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: eq, value: 'US' }, { prop: type, op: eq, value: troops }] } } } }
                           in:
                             - let:
                                 bind: $hasUSBase
-                                value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'US' }, { prop: type, eq: base }] } } } }
+                                value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: eq, value: 'US' }, { prop: type, op: eq, value: base }] } } } }
                                 in:
                                   - let:
                                       bind: $damage
@@ -2439,7 +2439,7 @@ actionPipelines:
                           in:
                             - let:
                                 bind: $arvnCubes
-                                value: { aggregate: { op: count, query: { query: tokensInZone, zone: $arvnSpace, filter: { op: and, args: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
+                                value: { aggregate: { op: count, query: { query: tokensInZone, zone: $arvnSpace, filter: { op: and, args: [{ prop: faction, op: eq, value: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
                                 in:
                                   - let:
                                       bind: $arvnDamage
@@ -2499,7 +2499,7 @@ actionPipelines:
                         op: and
                         args:
                           - op: '>'
-                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
+                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, op: eq, value: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
                             right: 0
                           - op: '>'
                             left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
@@ -2515,7 +2515,7 @@ actionPipelines:
                         op: and
                         args:
                           - op: '>'
-                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
+                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, op: eq, value: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
                             right: 0
                           - op: '>'
                             left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
@@ -2560,8 +2560,8 @@ actionPipelines:
                                 value:
                                   if:
                                     when: { op: '==', left: { ref: binding, name: $isProvince }, right: 1 }
-                                    then: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'ARVN' }, { prop: type, eq: troops }] } } } }
-                                    else: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
+                                    then: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: eq, value: 'ARVN' }, { prop: type, op: eq, value: troops }] } } } }
+                                    else: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: eq, value: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
                                 in:
                                   - let:
                                       bind: $damage
@@ -2618,7 +2618,7 @@ actionPipelines:
                       - addVar: { scope: global, var: nvaResources, delta: -1 }
                 - let:
                     bind: $nvaBaseCount
-                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: base }] } } } }
+                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: eq, value: 'NVA' }, { prop: type, op: eq, value: base }] } } } }
                     in:
                       - if:
                           when: { op: '==', left: { ref: binding, name: $nvaBaseCount }, right: 0 }
@@ -2628,10 +2628,10 @@ actionPipelines:
                                   op: and
                                   args:
                                     - op: '>='
-                                      left: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: guerrilla }] } } } }
+                                      left: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: eq, value: 'NVA' }, { prop: type, op: eq, value: guerrilla }] } } } }
                                       right: 2
                                     - op: '<'
-                                      left: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: type, eq: base }] } } } }
+                                      left: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: type, op: eq, value: base }] } } } }
                                       right: 2
                                 then:
                                   - chooseOne:
@@ -2658,7 +2658,7 @@ actionPipelines:
                                       over:
                                         query: tokensInZone
                                         zone: $space
-                                        filter: { op: and, args: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: guerrilla }] }
+                                        filter: { op: and, args: [{ prop: faction, op: eq, value: 'NVA' }, { prop: type, op: eq, value: guerrilla }] }
                                       limit: 2
                                       effects:
                                         - moveToken: { token: $g, from: $space, to: { zoneExpr: 'available-NVA:none' } }
@@ -2785,7 +2785,7 @@ actionPipelines:
                       - addVar: { scope: global, var: vcResources, delta: -1 }
                 - let:
                     bind: $vcBaseCount
-                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'VC' }, { prop: type, eq: base }] } } } }
+                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: eq, value: 'VC' }, { prop: type, op: eq, value: base }] } } } }
                     in:
                       - if:
                           when: { op: '==', left: { ref: binding, name: $vcBaseCount }, right: 0 }
@@ -2795,10 +2795,10 @@ actionPipelines:
                                   op: and
                                   args:
                                     - op: '>='
-                                      left: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'VC' }, { prop: type, eq: guerrilla }] } } } }
+                                      left: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: eq, value: 'VC' }, { prop: type, op: eq, value: guerrilla }] } } } }
                                       right: 2
                                     - op: '<'
-                                      left: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: type, eq: base }] } } } }
+                                      left: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: type, op: eq, value: base }] } } } }
                                       right: 2
                                 then:
                                   - chooseOne:
@@ -2825,7 +2825,7 @@ actionPipelines:
                                       over:
                                         query: tokensInZone
                                         zone: $space
-                                        filter: { op: and, args: [{ prop: faction, eq: 'VC' }, { prop: type, eq: guerrilla }] }
+                                        filter: { op: and, args: [{ prop: faction, op: eq, value: 'VC' }, { prop: type, op: eq, value: guerrilla }] }
                                       limit: 2
                                       effects:
                                         - moveToken: { token: $g, from: $space, to: { zoneExpr: 'available-VC:none' } }
@@ -2862,7 +2862,7 @@ actionPipelines:
                                       over:
                                         query: tokensInZone
                                         zone: $space
-                                        filter: { op: and, args: [{ prop: faction, eq: 'VC' }, { prop: type, eq: guerrilla }, { prop: activity, eq: active }] }
+                                        filter: { op: and, args: [{ prop: faction, op: eq, value: 'VC' }, { prop: type, op: eq, value: guerrilla }, { prop: activity, op: eq, value: active }] }
                                       effects:
                                         - setTokenProp: { token: $g, prop: activity, value: underground }
       - stage: cap-cadres-rally-agitate
@@ -2890,7 +2890,7 @@ actionPipelines:
                                     query:
                                       query: tokensInZone
                                       zone: $cadresSpace
-                                      filter: { op: and, args: [{ prop: faction, eq: 'VC' }, { prop: type, eq: base }] }
+                                      filter: { op: and, args: [{ prop: faction, op: eq, value: 'VC' }, { prop: type, op: eq, value: base }] }
                                 right: 0
                               - op: or
                                 args:
@@ -3040,7 +3040,7 @@ actionPipelines:
                                           filter:
                                             op: and
                                             args:
-                                              - { prop: faction, eq: 'NVA' }
+                                              - { prop: faction, op: eq, value: 'NVA' }
                                     right: 0
                                   - op: '>'
                                     left:
@@ -3064,8 +3064,8 @@ actionPipelines:
                                           filter:
                                             op: and
                                             args:
-                                              - { prop: faction, eq: 'NVA' }
-                                              - { prop: type, eq: troops }
+                                              - { prop: faction, op: eq, value: 'NVA' }
+                                              - { prop: type, op: eq, value: troops }
                                     right: 0
                         right: 0
                   then: 1
@@ -3103,8 +3103,8 @@ actionPipelines:
                               filter:
                                 op: and
                                 args:
-                                  - { prop: faction, eq: NVA }
-                                  - { prop: type, eq: troops }
+                                  - { prop: faction, op: eq, value: NVA }
+                                  - { prop: type, op: eq, value: troops }
                         right: 0
                       then: 1
                       else: 0
@@ -3131,8 +3131,8 @@ actionPipelines:
                                       filter:
                                         op: and
                                         args:
-                                          - { prop: faction, eq: NVA }
-                                          - { prop: type, eq: troops }
+                                          - { prop: faction, op: eq, value: NVA }
+                                          - { prop: type, op: eq, value: troops }
                                 in:
                                   - if:
                                       when: { op: '>', left: { ref: binding, name: $pt76CostTroopCount }, right: 0 }
@@ -3147,8 +3147,8 @@ actionPipelines:
                                                   filter:
                                                     op: and
                                                     args:
-                                                      - { prop: faction, eq: NVA }
-                                                      - { prop: type, eq: troops }
+                                                      - { prop: faction, op: eq, value: NVA }
+                                                      - { prop: type, op: eq, value: troops }
                                                 to:
                                                   zoneExpr: 'available-NVA:none'
                                       else:
@@ -3167,7 +3167,7 @@ actionPipelines:
                     effects:
                       - let:
                           bind: $nvaTroops
-                          value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: troops }] } } } }
+                          value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: eq, value: 'NVA' }, { prop: type, op: eq, value: troops }] } } } }
                           in:
                             - chooseOne:
                                 bind: $attackMode
@@ -3180,7 +3180,7 @@ actionPipelines:
                                       over:
                                         query: tokensInZone
                                         zone: $space
-                                        filter: { op: and, args: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: guerrilla }] }
+                                        filter: { op: and, args: [{ prop: faction, op: eq, value: 'NVA' }, { prop: type, op: eq, value: guerrilla }] }
                                       effects:
                                         - setTokenProp: { token: $g, prop: activity, value: active }
                                   - if:
@@ -3198,7 +3198,7 @@ actionPipelines:
                                       else:
                                         - let:
                                             bind: $guerrillaCount
-                                            value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: guerrilla }] } } } }
+                                            value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: eq, value: 'NVA' }, { prop: type, op: eq, value: guerrilla }] } } } }
                                             in:
                                               - rollRandom:
                                                   bind: $dieRoll
@@ -3240,7 +3240,7 @@ actionPipelines:
                     effects:
                       - let:
                           bind: $nvaTroops
-                          value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: troops }] } } } }
+                          value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: eq, value: 'NVA' }, { prop: type, op: eq, value: troops }] } } } }
                           in:
                             - chooseOne:
                                 bind: $attackMode
@@ -3253,12 +3253,12 @@ actionPipelines:
                                       over:
                                         query: tokensInZone
                                         zone: $space
-                                        filter: { op: and, args: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: guerrilla }] }
+                                        filter: { op: and, args: [{ prop: faction, op: eq, value: 'NVA' }, { prop: type, op: eq, value: guerrilla }] }
                                       effects:
                                         - setTokenProp: { token: $g, prop: activity, value: active }
                                   - let:
                                       bind: $guerrillaCount
-                                      value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: guerrilla }] } } } }
+                                      value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: eq, value: 'NVA' }, { prop: type, op: eq, value: guerrilla }] } } } }
                                       in:
                                         - rollRandom:
                                             bind: $dieRoll
@@ -3326,12 +3326,12 @@ actionPipelines:
                     over:
                       query: tokensInZone
                       zone: $space
-                      filter: { op: and, args: [{ prop: faction, eq: 'VC' }, { prop: type, eq: guerrilla }] }
+                      filter: { op: and, args: [{ prop: faction, op: eq, value: 'VC' }, { prop: type, op: eq, value: guerrilla }] }
                     effects:
                       - setTokenProp: { token: $g, prop: activity, value: active }
                 - let:
                     bind: $guerrillaCount
-                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: 'VC' }, { prop: type, eq: guerrilla }] } } } }
+                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: eq, value: 'VC' }, { prop: type, op: eq, value: guerrilla }] } } } }
                     in:
                       - rollRandom:
                           bind: $dieRoll
@@ -3447,7 +3447,7 @@ actionPipelines:
                             filter:
                               op: and
                               args:
-                                - { prop: isCoup, eq: true }
+                                - { prop: isCoup, op: eq, value: true }
                       right: 0
                     then:
                       - chooseOne:
@@ -3481,8 +3481,8 @@ actionPipelines:
                                 value:
                                   if:
                                     when: { op: '==', left: { ref: binding, name: $isProvince }, right: 1 }
-                                    then: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: ARVN }, { prop: type, eq: troops }] } } } }
-                                    else: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, eq: ARVN }, { prop: type, op: in, value: [troops, police] }] } } } }
+                                    then: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: eq, value: ARVN }, { prop: type, op: eq, value: troops }] } } } }
+                                    else: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: { op: and, args: [{ prop: faction, op: eq, value: ARVN }, { prop: type, op: in, value: [troops, police] }] } } } }
                                 in:
                                   - let:
                                       bind: $damage
@@ -3513,7 +3513,7 @@ actionPipelines:
                               args:
                                 - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                                 - { prop: type, op: in, value: [irregular, ranger] }
-                                - { prop: activity, eq: underground }
+                                - { prop: activity, op: eq, value: underground }
                           limit: 1
                           effects:
                             - setTokenProp: { token: $friendlySF, prop: activity, value: active }
@@ -3583,8 +3583,8 @@ actionPipelines:
                 filter:
                   op: and
                   args:
-                    - { prop: faction, eq: US }
-                    - { prop: type, eq: troops }
+                    - { prop: faction, op: eq, value: US }
+                    - { prop: type, op: eq, value: troops }
               min: 0
               max: 99
           - forEach:
@@ -3619,7 +3619,7 @@ actionPipelines:
                     filter:
                       op: and
                       args:
-                        - { prop: faction, eq: ARVN }
+                        - { prop: faction, op: eq, value: ARVN }
                         - { prop: type, op: in, value: [troops, ranger] }
                   - query: tokensInMapSpaces
                     spaceFilter:
@@ -3629,8 +3629,8 @@ actionPipelines:
                     filter:
                       op: and
                       args:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: irregular }
+                        - { prop: faction, op: eq, value: US }
+                        - { prop: type, op: eq, value: irregular }
               min: 0
               max: 4
           - forEach:
@@ -3936,115 +3936,199 @@ actionPipelines:
                                   - if:
                                       when: { op: '>=', left: { ref: binding, name: $topGunDie }, right: 4 }
                                       then:
-                                        - addVar:
-                                            scope: global
-                                            var: trail
-                                            delta:
-                                              op: '-'
-                                              left: 0
-                                              right: { ref: binding, name: $airStrikeTrailDegrade }
                                         - if:
-                                            when:
-                                              op: and
-                                              args:
-                                                - { op: '==', left: { ref: globalMarkerState, marker: cap_migs }, right: shaded }
-                                                - { op: '!=', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
+                                            when: { op: '>', left: { ref: binding, name: $airStrikeTrailDegrade }, right: 0 }
                                             then:
-                                              - forEach:
-                                                  bind: $migsCostTroop
-                                                  over:
-                                                    query: tokensInZone
-                                                    zone: available-US:none
-                                                    filter: { op: and, args: [{ prop: faction, eq: US }, { prop: type, eq: troops }] }
-                                                  limit: 1
-                                                  effects:
-                                                    - moveToken:
-                                                        token: $migsCostTroop
-                                                        from: available-US:none
-                                                        to: { zoneExpr: 'casualties-US:none' }
-                                        - if:
-                                            when: { op: '==', left: { ref: globalMarkerState, marker: cap_sa2s }, right: unshaded }
-                                            then:
-                                              - chooseN:
-                                                  bind: $sa2sCostSpaces
-                                                  options:
-                                                    query: concat
-                                                    sources:
-                                                      - { query: binding, name: $spaces }
-                                                      - { query: binding, name: $arcLightNoCoinProvinces }
-                                                  min: 0
-                                                  max: 1
-                                              - forEach:
-                                                  bind: $sa2sCostSpace
-                                                  over: { query: binding, name: $sa2sCostSpaces }
-                                                  effects:
+                                              - addVar:
+                                                  scope: global
+                                                  var: trail
+                                                  delta:
+                                                    op: '-'
+                                                    left: 0
+                                                    right: { ref: binding, name: $airStrikeTrailDegrade }
+                                              - if:
+                                                  when:
+                                                    op: and
+                                                    args:
+                                                      - { op: '==', left: { ref: globalMarkerState, marker: cap_migs }, right: shaded }
+                                                      - { op: '!=', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
+                                                  then:
                                                     - forEach:
-                                                        bind: $sa2sCostPiece
+                                                        bind: $migsCostTroop
                                                         over:
                                                           query: tokensInZone
-                                                          zone: $sa2sCostSpace
-                                                          filter: { op: and, args: [{ prop: faction, eq: NVA }] }
+                                                          zone: available-US:none
+                                                          filter: { op: and, args: [{ prop: faction, op: eq, value: US }, { prop: type, op: eq, value: troops }] }
                                                         limit: 1
                                                         effects:
                                                           - moveToken:
-                                                              token: $sa2sCostPiece
-                                                              from: $sa2sCostSpace
-                                                              to: { zoneExpr: 'available-NVA:none' }
+                                                              token: $migsCostTroop
+                                                              from: available-US:none
+                                                              to: { zoneExpr: 'casualties-US:none' }
+                                              - let:
+                                                  bind: $sa2sEligibleCount
+                                                  value:
+                                                    aggregate:
+                                                      op: count
+                                                      query:
+                                                        query: tokensInMapSpaces
+                                                        spaceFilter:
+                                                          conditionMacro: fitl-space-outside-south-province
+                                                          args: { spaceExpr: $zone }
+                                                        filter:
+                                                          op: and
+                                                          args:
+                                                            - { prop: faction, op: eq, value: NVA }
+                                                            - op: or
+                                                              args:
+                                                                - { prop: type, op: in, value: [troops, guerrilla] }
+                                                                - op: and
+                                                                  args:
+                                                                    - { prop: type, op: eq, value: base }
+                                                                    - { prop: tunnel, op: eq, value: untunneled }
+                                                  in:
+                                                    - let:
+                                                        bind: $sa2sRemoveCount
+                                                        value:
+                                                          if:
+                                                            when: { op: '==', left: { ref: globalMarkerState, marker: cap_sa2s }, right: unshaded }
+                                                            then:
+                                                              op: min
+                                                              left: 1
+                                                              right: { ref: binding, name: $sa2sEligibleCount }
+                                                            else: 0
+                                                        in:
+                                                          - if:
+                                                              when: { op: '>', left: { ref: binding, name: $sa2sRemoveCount }, right: 0 }
+                                                              then:
+                                                                - chooseN:
+                                                                    bind: $sa2sPiecesToRemove
+                                                                    options:
+                                                                      query: tokensInMapSpaces
+                                                                      spaceFilter:
+                                                                        conditionMacro: fitl-space-outside-south-province
+                                                                        args: { spaceExpr: $zone }
+                                                                      filter:
+                                                                        op: and
+                                                                        args:
+                                                                          - { prop: faction, op: eq, value: NVA }
+                                                                          - op: or
+                                                                            args:
+                                                                              - { prop: type, op: in, value: [troops, guerrilla] }
+                                                                              - op: and
+                                                                                args:
+                                                                                  - { prop: type, op: eq, value: base }
+                                                                                  - { prop: tunnel, op: eq, value: untunneled }
+                                                                    min: { ref: binding, name: $sa2sRemoveCount }
+                                                                    max: { ref: binding, name: $sa2sRemoveCount }
+                                                                - forEach:
+                                                                    bind: $sa2sPiece
+                                                                    over: { query: binding, name: $sa2sPiecesToRemove }
+                                                                    effects:
+                                                                      - moveToken:
+                                                                          token: $sa2sPiece
+                                                                          from:
+                                                                            zoneExpr:
+                                                                              ref: tokenZone
+                                                                              token: $sa2sPiece
+                                                                          to: { zoneExpr: 'available-NVA:none' }
                           else:
-                            - addVar:
-                                scope: global
-                                var: trail
-                                delta:
-                                  op: '-'
-                                  left: 0
-                                  right: { ref: binding, name: $airStrikeTrailDegrade }
                             - if:
-                                when:
-                                  op: and
-                                  args:
-                                    - { op: '==', left: { ref: globalMarkerState, marker: cap_migs }, right: shaded }
-                                    - { op: '!=', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
+                                when: { op: '>', left: { ref: binding, name: $airStrikeTrailDegrade }, right: 0 }
                                 then:
-                                  - forEach:
-                                      bind: $migsCostTroop
-                                      over:
-                                        query: tokensInZone
-                                        zone: available-US:none
-                                        filter: { op: and, args: [{ prop: faction, eq: US }, { prop: type, eq: troops }] }
-                                      limit: 1
-                                      effects:
-                                        - moveToken:
-                                            token: $migsCostTroop
-                                            from: available-US:none
-                                            to: { zoneExpr: 'casualties-US:none' }
-                            - if:
-                                when: { op: '==', left: { ref: globalMarkerState, marker: cap_sa2s }, right: unshaded }
-                                then:
-                                  - chooseN:
-                                      bind: $sa2sCostSpaces
-                                      options:
-                                        query: concat
-                                        sources:
-                                          - { query: binding, name: $spaces }
-                                          - { query: binding, name: $arcLightNoCoinProvinces }
-                                      min: 0
-                                      max: 1
-                                  - forEach:
-                                      bind: $sa2sCostSpace
-                                      over: { query: binding, name: $sa2sCostSpaces }
-                                      effects:
+                                  - addVar:
+                                      scope: global
+                                      var: trail
+                                      delta:
+                                        op: '-'
+                                        left: 0
+                                        right: { ref: binding, name: $airStrikeTrailDegrade }
+                                  - if:
+                                      when:
+                                        op: and
+                                        args:
+                                          - { op: '==', left: { ref: globalMarkerState, marker: cap_migs }, right: shaded }
+                                          - { op: '!=', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
+                                      then:
                                         - forEach:
-                                            bind: $sa2sCostPiece
+                                            bind: $migsCostTroop
                                             over:
                                               query: tokensInZone
-                                              zone: $sa2sCostSpace
-                                              filter: { op: and, args: [{ prop: faction, eq: NVA }] }
+                                              zone: available-US:none
+                                              filter: { op: and, args: [{ prop: faction, op: eq, value: US }, { prop: type, op: eq, value: troops }] }
                                             limit: 1
                                             effects:
                                               - moveToken:
-                                                  token: $sa2sCostPiece
-                                                  from: $sa2sCostSpace
-                                                  to: { zoneExpr: 'available-NVA:none' }
+                                                  token: $migsCostTroop
+                                                  from: available-US:none
+                                                  to: { zoneExpr: 'casualties-US:none' }
+                                  - let:
+                                      bind: $sa2sEligibleCount
+                                      value:
+                                        aggregate:
+                                          op: count
+                                          query:
+                                            query: tokensInMapSpaces
+                                            spaceFilter:
+                                              conditionMacro: fitl-space-outside-south-province
+                                              args: { spaceExpr: $zone }
+                                            filter:
+                                              op: and
+                                              args:
+                                                - { prop: faction, op: eq, value: NVA }
+                                                - op: or
+                                                  args:
+                                                    - { prop: type, op: in, value: [troops, guerrilla] }
+                                                    - op: and
+                                                      args:
+                                                        - { prop: type, op: eq, value: base }
+                                                        - { prop: tunnel, op: eq, value: untunneled }
+                                      in:
+                                        - let:
+                                            bind: $sa2sRemoveCount
+                                            value:
+                                              if:
+                                                when: { op: '==', left: { ref: globalMarkerState, marker: cap_sa2s }, right: unshaded }
+                                                then:
+                                                  op: min
+                                                  left: 1
+                                                  right: { ref: binding, name: $sa2sEligibleCount }
+                                                else: 0
+                                            in:
+                                              - if:
+                                                  when: { op: '>', left: { ref: binding, name: $sa2sRemoveCount }, right: 0 }
+                                                  then:
+                                                    - chooseN:
+                                                        bind: $sa2sPiecesToRemove
+                                                        options:
+                                                          query: tokensInMapSpaces
+                                                          spaceFilter:
+                                                            conditionMacro: fitl-space-outside-south-province
+                                                            args: { spaceExpr: $zone }
+                                                          filter:
+                                                            op: and
+                                                            args:
+                                                              - { prop: faction, op: eq, value: NVA }
+                                                              - op: or
+                                                                args:
+                                                                  - { prop: type, op: in, value: [troops, guerrilla] }
+                                                                  - op: and
+                                                                    args:
+                                                                      - { prop: type, op: eq, value: base }
+                                                                      - { prop: tunnel, op: eq, value: untunneled }
+                                                        min: { ref: binding, name: $sa2sRemoveCount }
+                                                        max: { ref: binding, name: $sa2sRemoveCount }
+                                                    - forEach:
+                                                        bind: $sa2sPiece
+                                                        over: { query: binding, name: $sa2sPiecesToRemove }
+                                                        effects:
+                                                          - moveToken:
+                                                              token: $sa2sPiece
+                                                              from:
+                                                                zoneExpr:
+                                                                  ref: tokenZone
+                                                                  token: $sa2sPiece
+                                                              to: { zoneExpr: 'available-NVA:none' }
       - stage: air-strike-telemetry
         effects:
           - addVar:
@@ -4162,7 +4246,7 @@ actionPipelines:
                                 filter:
                                   op: and
                                   args:
-                                    - { prop: faction, eq: ARVN }
+                                    - { prop: faction, op: eq, value: ARVN }
                                     - { prop: type, op: in, value: [troops, police] }
                           right:
                             aggregate:
@@ -4173,8 +4257,8 @@ actionPipelines:
                                 filter:
                                   op: and
                                   args:
-                                    - { prop: faction, eq: US }
-                                    - { prop: type, eq: troops }
+                                    - { prop: faction, op: eq, value: US }
+                                    - { prop: type, op: eq, value: troops }
                     then:
                       - addVar:
                           scope: global
@@ -4241,7 +4325,7 @@ actionPipelines:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: ARVN }
+                                - { prop: faction, op: eq, value: ARVN }
                                 - { prop: type, op: in, value: { ref: namedSet, name: ARVNTransportEligibleTypes } }
                       right: 0
       - stage: select-destination
@@ -4319,7 +4403,7 @@ actionPipelines:
                 filter:
                   op: and
                   args:
-                    - { prop: faction, eq: ARVN }
+                    - { prop: faction, op: eq, value: ARVN }
                     - { prop: type, op: in, value: { ref: namedSet, name: ARVNTransportEligibleTypes } }
               limit: 6
               effects:
@@ -4344,8 +4428,8 @@ actionPipelines:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: ARVN }
-                          - { prop: type, eq: ranger }
+                          - { prop: faction, op: eq, value: ARVN }
+                          - { prop: type, op: eq, value: ranger }
                     effects:
                       - setTokenProp: { token: $ranger, prop: activity, value: underground }
       - stage: cap-armored-cavalry-unshaded-assault
@@ -4412,8 +4496,8 @@ actionPipelines:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: ARVN }
-                                - { prop: type, eq: ranger }
+                                - { prop: faction, op: eq, value: ARVN }
+                                - { prop: type, op: eq, value: ranger }
                           effects:
                             - moveToken:
                                 token: $ranger
@@ -4437,9 +4521,9 @@ actionPipelines:
                                 filter:
                                   op: and
                                   args:
-                                    - { prop: faction, eq: ARVN }
-                                    - { prop: type, eq: ranger }
-                                    - { prop: activity, eq: underground }
+                                    - { prop: faction, op: eq, value: ARVN }
+                                    - { prop: type, op: eq, value: ranger }
+                                    - { prop: activity, op: eq, value: underground }
                           right: 0
                     then:
                       - forEach:
@@ -4450,9 +4534,9 @@ actionPipelines:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: ARVN }
-                                - { prop: type, eq: ranger }
-                                - { prop: activity, eq: underground }
+                                - { prop: faction, op: eq, value: ARVN }
+                                - { prop: type, op: eq, value: ranger }
+                                - { prop: activity, op: eq, value: underground }
                           limit: 1
                           effects:
                             - setTokenProp: { token: $activatingRanger, prop: activity, value: active }
@@ -4516,8 +4600,8 @@ actionPipelines:
                           filter:
                             op: and
                             args:
-                              - { prop: faction, eq: NVA }
-                              - { prop: type, eq: base }
+                              - { prop: faction, op: eq, value: NVA }
+                              - { prop: type, op: eq, value: base }
                     in:
                       - let:
                           bind: $nvaPieceCount
@@ -4530,7 +4614,7 @@ actionPipelines:
                                 filter:
                                   op: and
                                   args:
-                                    - { prop: faction, eq: NVA }
+                                    - { prop: faction, op: eq, value: NVA }
                           in:
                             - let:
                                 bind: $vcPieceCount
@@ -4543,7 +4627,7 @@ actionPipelines:
                                       filter:
                                         op: and
                                         args:
-                                          - { prop: faction, eq: VC }
+                                          - { prop: faction, op: eq, value: VC }
                                 in:
                                   - if:
                                       when:
@@ -4587,8 +4671,8 @@ actionPipelines:
                                               filter:
                                                 op: and
                                                 args:
-                                                  - { prop: faction, eq: NVA }
-                                                  - { prop: type, eq: guerrilla }
+                                                  - { prop: faction, op: eq, value: NVA }
+                                                  - { prop: type, op: eq, value: guerrilla }
                                             min: 0
                                             max: 99
                                         - forEach:
@@ -4636,8 +4720,8 @@ actionPipelines:
                                                               filter:
                                                                 op: and
                                                                 args:
-                                                                  - { prop: faction, eq: VC }
-                                                                  - { prop: type, eq: guerrilla }
+                                                                  - { prop: faction, op: eq, value: VC }
+                                                                  - { prop: type, op: eq, value: guerrilla }
                                                         right: 0
                                                       - op: '>'
                                                         left:
@@ -4649,8 +4733,8 @@ actionPipelines:
                                                               filter:
                                                                 op: and
                                                                 args:
-                                                                  - { prop: faction, eq: VC }
-                                                                  - { prop: type, eq: base }
+                                                                  - { prop: faction, op: eq, value: VC }
+                                                                  - { prop: type, op: eq, value: base }
                                                         right: 0
                                                   then:
                                                     - chooseOne:
@@ -4669,8 +4753,8 @@ actionPipelines:
                                                                 filter:
                                                                   op: and
                                                                   args:
-                                                                    - { prop: faction, eq: VC }
-                                                                    - { prop: type, eq: guerrilla }
+                                                                    - { prop: faction, op: eq, value: VC }
+                                                                    - { prop: type, op: eq, value: guerrilla }
                                                           right: 0
                                                         then:
                                                           - chooseOne:
@@ -4691,8 +4775,8 @@ actionPipelines:
                                                           filter:
                                                             op: and
                                                             args:
-                                                              - { prop: faction, eq: VC }
-                                                              - { prop: type, eq: guerrilla }
+                                                              - { prop: faction, op: eq, value: VC }
+                                                              - { prop: type, op: eq, value: guerrilla }
                                                         limit: 1
                                                         effects:
                                                           - moveToken:
@@ -4720,9 +4804,9 @@ actionPipelines:
                                                                 filter:
                                                                   op: and
                                                                   args:
-                                                                    - { prop: faction, eq: VC }
-                                                                    - { prop: type, eq: base }
-                                                                    - { prop: tunnel, eq: tunneled }
+                                                                    - { prop: faction, op: eq, value: VC }
+                                                                    - { prop: type, op: eq, value: base }
+                                                                    - { prop: tunnel, op: eq, value: tunneled }
                                                           right: 0
                                                         then:
                                                           - forEach:
@@ -4733,9 +4817,9 @@ actionPipelines:
                                                                 filter:
                                                                   op: and
                                                                   args:
-                                                                    - { prop: faction, eq: VC }
-                                                                    - { prop: type, eq: base }
-                                                                    - { prop: tunnel, eq: tunneled }
+                                                                    - { prop: faction, op: eq, value: VC }
+                                                                    - { prop: type, op: eq, value: base }
+                                                                    - { prop: tunnel, op: eq, value: tunneled }
                                                               limit: 1
                                                               effects:
                                                                 - moveToken:
@@ -4756,8 +4840,8 @@ actionPipelines:
                                                                 filter:
                                                                   op: and
                                                                   args:
-                                                                    - { prop: faction, eq: NVA }
-                                                                    - { prop: type, eq: base }
+                                                                    - { prop: faction, op: eq, value: NVA }
+                                                                    - { prop: type, op: eq, value: base }
                                                               limit: 1
                                                               effects:
                                                                 - setTokenProp: { token: $nvaTunneledBase, prop: tunnel, value: tunneled }
@@ -4770,8 +4854,8 @@ actionPipelines:
                                                                 filter:
                                                                   op: and
                                                                   args:
-                                                                    - { prop: faction, eq: VC }
-                                                                    - { prop: type, eq: base }
+                                                                    - { prop: faction, op: eq, value: VC }
+                                                                    - { prop: type, op: eq, value: base }
                                                               limit: 1
                                                               effects:
                                                                 - moveToken:
@@ -4841,8 +4925,8 @@ actionPipelines:
                           filter:
                             op: and
                             args:
-                              - { prop: faction, eq: US }
-                              - { prop: type, eq: troops }
+                              - { prop: faction, op: eq, value: US }
+                              - { prop: type, op: eq, value: troops }
                     in:
                       - let:
                           bind: $arvnTroopCount
@@ -4855,8 +4939,8 @@ actionPipelines:
                                 filter:
                                   op: and
                                   args:
-                                    - { prop: faction, eq: ARVN }
-                                    - { prop: type, eq: troops }
+                                    - { prop: faction, op: eq, value: ARVN }
+                                    - { prop: type, op: eq, value: troops }
                           in:
                             - if:
                                 when:
@@ -4899,8 +4983,8 @@ actionPipelines:
                                               filter:
                                                 op: and
                                                 args:
-                                                  - { prop: faction, eq: US }
-                                                  - { prop: type, eq: troops }
+                                                  - { prop: faction, op: eq, value: US }
+                                                  - { prop: type, op: eq, value: troops }
                                             min: 1
                                             max: 1
                                         - forEach:
@@ -4920,8 +5004,8 @@ actionPipelines:
                                               filter:
                                                 op: and
                                                 args:
-                                                  - { prop: faction, eq: ARVN }
-                                                  - { prop: type, eq: troops }
+                                                  - { prop: faction, op: eq, value: ARVN }
+                                                  - { prop: type, op: eq, value: troops }
                                             min: 1
                                             max: 1
                                         - forEach:
@@ -5028,9 +5112,9 @@ actionPipelines:
                       filter:
                         op: and
                         args:
-                          - { prop: faction, eq: VC }
-                          - { prop: type, eq: guerrilla }
-                          - { prop: activity, eq: underground }
+                          - { prop: faction, op: eq, value: VC }
+                          - { prop: type, op: eq, value: guerrilla }
+                          - { prop: activity, op: eq, value: underground }
                     limit: 1
                     effects:
                       - setTokenProp: { token: $taxingGuerrilla, prop: activity, value: active }
@@ -5086,9 +5170,9 @@ actionPipelines:
                         filter:
                           op: and
                           args:
-                            - { prop: faction, eq: VC }
-                            - { prop: type, eq: guerrilla }
-                            - { prop: activity, eq: underground }
+                            - { prop: faction, op: eq, value: VC }
+                            - { prop: type, op: eq, value: guerrilla }
+                            - { prop: activity, op: eq, value: underground }
                   right: 0
                 - op: or
                   args:
@@ -5102,7 +5186,7 @@ actionPipelines:
                             filter:
                               op: and
                               args:
-                                - { prop: faction, eq: ARVN }
+                                - { prop: faction, op: eq, value: ARVN }
                                 - { prop: type, op: in, value: [troops, police] }
                       right: 1
                     - op: and
@@ -5117,7 +5201,7 @@ actionPipelines:
                                 filter:
                                   op: and
                                   args:
-                                    - { prop: faction, eq: ARVN }
+                                    - { prop: faction, op: eq, value: ARVN }
                                     - { prop: type, op: in, value: [troops, police] }
                           right: 0
                         - op: '>'
@@ -5130,8 +5214,8 @@ actionPipelines:
                                 filter:
                                   op: and
                                   args:
-                                    - { prop: faction, eq: VC }
-                                    - { prop: type, eq: guerrilla }
+                                    - { prop: faction, op: eq, value: VC }
+                                    - { prop: type, op: eq, value: guerrilla }
                           right: 0
       right: 0
     costValidation: null
@@ -5163,7 +5247,7 @@ actionPipelines:
                     filter:
                       op: and
                       args:
-                        - { prop: faction, eq: ARVN }
+                        - { prop: faction, op: eq, value: ARVN }
                         - { prop: type, op: in, value: [troops, police] }
               in:
                 - forEach:
@@ -5181,7 +5265,7 @@ actionPipelines:
                                 filter:
                                   op: and
                                   args:
-                                    - { prop: faction, eq: ARVN }
+                                    - { prop: faction, op: eq, value: ARVN }
                                     - { prop: type, op: in, value: [troops, police] }
                           in:
                             - let:
@@ -5195,8 +5279,8 @@ actionPipelines:
                                       filter:
                                         op: and
                                         args:
-                                          - { prop: faction, eq: VC }
-                                          - { prop: type, eq: guerrilla }
+                                          - { prop: faction, op: eq, value: VC }
+                                          - { prop: type, op: eq, value: guerrilla }
                                 in:
                                   - if:
                                       when:
@@ -5230,7 +5314,7 @@ actionPipelines:
                                               filter:
                                                 op: and
                                                 args:
-                                                  - { prop: faction, eq: ARVN }
+                                                  - { prop: faction, op: eq, value: ARVN }
                                                   - { prop: type, op: in, value: [troops, police] }
                                             min: 2
                                             max: 2
@@ -5253,7 +5337,7 @@ actionPipelines:
                                               filter:
                                                 op: and
                                                 args:
-                                                  - { prop: faction, eq: ARVN }
+                                                  - { prop: faction, op: eq, value: ARVN }
                                                   - { prop: type, op: in, value: [troops, police] }
                                             min: 1
                                             max: 1
@@ -5273,8 +5357,8 @@ actionPipelines:
                                               filter:
                                                 op: and
                                                 args:
-                                                  - { prop: faction, eq: VC }
-                                                  - { prop: type, eq: guerrilla }
+                                                  - { prop: faction, op: eq, value: VC }
+                                                  - { prop: type, op: eq, value: guerrilla }
                                             limit: 1
                                             effects:
                                               - moveToken:
@@ -5292,7 +5376,7 @@ actionPipelines:
                           filter:
                             op: and
                             args:
-                              - { prop: faction, eq: ARVN }
+                              - { prop: faction, op: eq, value: ARVN }
                               - { prop: type, op: in, value: [troops, police] }
                     in:
                       - let:

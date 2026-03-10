@@ -317,6 +317,29 @@ describe('effects control-flow handlers', () => {
     assert.equal(result.state.globalVars.sum, 3);
   });
 
+  it('forEach resolves limit from a let binding in the same authored scope', () => {
+    const ctx = makeCtx();
+    const effect: EffectAST = {
+      let: {
+        bind: '$loopLimit',
+        value: 2,
+        in: [
+          {
+            forEach: {
+              bind: '$n',
+              over: { query: 'intsInRange', min: 1, max: 5 },
+              limit: { ref: 'binding', name: '$loopLimit' },
+              effects: [{ addVar: { scope: 'global', var: 'sum', delta: { ref: 'binding', name: '$n' } } }],
+            },
+          },
+        ],
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.globalVars.sum, 3);
+  });
+
   it('forEach with countBind and in binds iteration count after loop', () => {
     const ctx = makeCtx();
     const effect: EffectAST = {

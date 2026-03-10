@@ -56,6 +56,13 @@ import type {
 
 export interface LegalMoveEnumerationOptions {
   readonly budgets?: Partial<MoveEnumerationBudgets>;
+  /**
+   * When true, plain (non-pipeline) actions are probed for decision-sequence
+   * feasibility before inclusion. Actions whose first choice has an empty
+   * domain are excluded. Defaults to false for backward compatibility with
+   * internal callers like phase-advance that rely on template presence.
+   */
+  readonly probePlainActionFeasibility?: boolean;
 }
 
 export interface LegalMoveEnumerationResult {
@@ -65,6 +72,7 @@ export interface LegalMoveEnumerationResult {
 
 interface MoveEnumerationState {
   readonly budgets: MoveEnumerationBudgets;
+  readonly probePlainActionFeasibility: boolean;
   readonly warnings: RuntimeWarning[];
   readonly moves: Move[];
   paramExpansions: number;
@@ -221,6 +229,7 @@ function enumerateParams(
     readonly executionPlayerOverride?: GameState['activePlayer'];
     readonly freeOperationOverlay?: FreeOperationExecutionOverlay;
     readonly moveOverrides?: Partial<Move>;
+    readonly runtime?: GameDefRuntime;
   },
 ): void {
   if (enumeration.paramExpansionBudgetExceeded || enumeration.templateBudgetExceeded) {
@@ -294,6 +303,31 @@ function enumerateParams(
       params,
       ...(options?.moveOverrides ?? {}),
     };
+
+    if (enumeration.probePlainActionFeasibility && options?.pipeline === undefined) {
+      try {
+        if (
+          !isMoveDecisionSequenceAdmittedForLegalMove(
+            def,
+            state,
+            move,
+            MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_PLAIN_ACTION_DECISION_SEQUENCE,
+            {
+              budgets: enumeration.budgets,
+              onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
+            },
+            options?.runtime,
+          )
+        ) {
+          return;
+        }
+      } catch {
+        // Plain actions may have effects that reference runtime state not
+        // available during discovery (missing vars, unresolvable selectors).
+        // Any probe error is treated as "unknown" — keep the move.
+      }
+    }
+
     tryPushOptionMatrixFilteredMove(enumeration, def, state, move, action);
     return;
   }
@@ -589,6 +623,7 @@ export const enumerateLegalMoves = (
 
   const enumeration: MoveEnumerationState = {
     budgets,
+    probePlainActionFeasibility: options?.probePlainActionFeasibility === true,
     warnings,
     moves: [],
     paramExpansions: 0,
@@ -655,7 +690,9 @@ export const enumerateLegalMoves = (
     }
 
     if (!hasActionPipeline) {
-      enumerateParams(action, def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, 0, {}, enumeration, currentPhaseDef);
+      enumerateParams(action, def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, 0, {}, enumeration, currentPhaseDef,
+        runtime === undefined ? undefined : { runtime },
+      );
       continue;
     }
 

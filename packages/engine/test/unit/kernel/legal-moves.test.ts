@@ -2826,6 +2826,164 @@ phase: [asPhaseId('main')],
   });
 });
 
+describe('legalMoves plain-action feasibility probe', () => {
+  it('32. plain action with unsatisfiable first choice is excluded', () => {
+    const action: ActionDef = {
+      id: asActionId('patrol'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          chooseOne: {
+            internalDecisionId: 'decision:$target',
+            bind: '$target',
+            options: { query: 'enums', values: [] },
+          },
+        } as GameDef['actions'][number]['effects'][number],
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState();
+
+    const moves = legalMoves(def, state, { probePlainActionFeasibility: true });
+    assert.equal(moves.length, 0, 'action with empty choice domain should be filtered out');
+  });
+
+  it('33. plain action with satisfiable choices is included', () => {
+    const action: ActionDef = {
+      id: asActionId('patrol'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          chooseOne: {
+            internalDecisionId: 'decision:$target',
+            bind: '$target',
+            options: { query: 'enums', values: ['loc1', 'loc2'] },
+          },
+        } as GameDef['actions'][number]['effects'][number],
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState();
+
+    const moves = legalMoves(def, state, { probePlainActionFeasibility: true });
+    assert.equal(moves.length, 1, 'action with satisfiable choice domain should be included');
+    assert.equal(moves[0]?.actionId, asActionId('patrol'));
+  });
+
+  it('34. probe budget exceeded classifies as unknown and keeps move', () => {
+    const action: ActionDef = {
+      id: asActionId('patrol'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          chooseOne: {
+            internalDecisionId: 'decision:$target',
+            bind: '$target',
+            options: { query: 'enums', values: ['loc1'] },
+          },
+        } as GameDef['actions'][number]['effects'][number],
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState();
+
+    const result = enumerateLegalMoves(def, state, { probePlainActionFeasibility: true, budgets: { maxDecisionProbeSteps: 0 } });
+    assert.equal(result.moves.length, 1, 'when probe budget is zero, move should be kept (conservative)');
+    assert.equal(result.moves[0]?.actionId, asActionId('patrol'));
+  });
+
+  it('35. pipeline actions are not double-probed', () => {
+    const action: ActionDef = {
+      id: asActionId('trainOp'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'trainProfile',
+      actionId: asActionId('trainOp'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          stage: 'selectSpaces',
+          effects: [
+            {
+              chooseN: {
+                internalDecisionId: 'decision:$spaces',
+                bind: '$spaces',
+                options: { query: 'enums', values: ['saigon', 'hue'] },
+                min: 1,
+                max: 10,
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    const state = makeBaseState();
+
+    const moves = legalMoves(def, state);
+    assert.equal(moves.length, 1, 'pipeline action should still be emitted (probed by pipeline path only)');
+    assert.equal(moves[0]?.actionId, asActionId('trainOp'));
+  });
+
+  it('36. routes plain-action decision admission through canonical helper with plainActionDecisionSequence context', () => {
+    const source = readKernelSource('src/kernel/legal-moves.ts');
+    const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');
+
+    const helperCalls = collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceAdmittedForLegalMove');
+    assert.equal(
+      helperCalls.some((call) => {
+        if (call.arguments.length < 4) {
+          return false;
+        }
+        const contextArg = unwrapTypeScriptExpression(call.arguments[3]!);
+        return (
+          ts.isPropertyAccessExpression(contextArg) &&
+          ts.isIdentifier(contextArg.expression) &&
+          contextArg.expression.text === 'MISSING_BINDING_POLICY_CONTEXTS' &&
+          contextArg.name.text === 'LEGAL_MOVES_PLAIN_ACTION_DECISION_SEQUENCE'
+        );
+      }),
+      true,
+      'plain-action path admission must use canonical helper with legalMoves.plainActionDecisionSequence context',
+    );
+  });
+});
+
 describe('legalMoves seat-resolution lifecycle architecture guard', () => {
   const isIdentifierArgument = (argument: ts.Expression, identifier: string): boolean => {
     const unwrapped = unwrapTypeScriptExpression(argument);

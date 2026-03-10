@@ -210,6 +210,53 @@ describe('compile top-level actions/triggers/end conditions', () => {
     }
   });
 
+  it('rejects shorthand alias token filters at the top-level compiler boundary', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'top-level-token-filter-alias', players: { min: 2, max: 2 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [
+        {
+          id: 'pick',
+          actor: 'active',
+          executor: 'actor',
+          phase: ['main'],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [
+            {
+              chooseOne: {
+                bind: '$token',
+                options: {
+                  query: 'tokensInZone',
+                  zone: 'deck:none',
+                  filter: { prop: 'id', eq: 'token-1' },
+                },
+              },
+            },
+          ],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [{ when: true, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_MISSING_CAPABILITY'
+          && diagnostic.path === 'doc.actions.0.effects.0.chooseOne.options.filter',
+      ),
+      true,
+    );
+  });
+
   it('fails compile when terminal winner selector uses non-canonical alias token', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),

@@ -7,6 +7,7 @@ export const MISSING_BINDING_POLICY_CONTEXTS = {
   LEGAL_MOVES_EXECUTOR_DURING_PARAM_ENUMERATION: 'legalMoves.executorDuringParamEnumeration',
   LEGAL_MOVES_EVENT_DECISION_SEQUENCE: 'legalMoves.eventDecisionSequence',
   LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE: 'legalMoves.pipelineDecisionSequence',
+  LEGAL_MOVES_PLAIN_ACTION_DECISION_SEQUENCE: 'legalMoves.plainActionDecisionSequence',
   LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE: 'legalMoves.freeOperationDecisionSequence',
   LEGAL_CHOICES_FREE_OPERATION_ZONE_FILTER_PROBE: 'legalChoices.freeOperationZoneFilterProbe',
   PIPELINE_DISCOVERY_PREDICATE: 'pipeline.discoveryPredicate',
@@ -27,6 +28,9 @@ const MISSING_BINDING_CONTEXT_POLICIES: Readonly<Record<MissingBindingPolicyCont
     deferSelectorCardinality: true,
   },
   [MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE]: {
+    deferSelectorCardinality: false,
+  },
+  [MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_PLAIN_ACTION_DECISION_SEQUENCE]: {
     deferSelectorCardinality: false,
   },
   [MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE]: {

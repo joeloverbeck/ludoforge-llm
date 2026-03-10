@@ -743,6 +743,31 @@ describe('effects choice assertions', () => {
     assert.equal(result.rng, ctx.rng);
   });
 
+  it('chooseN resolves min/max from a let binding in the same authored scope', () => {
+    const ctx = makeCtx({ moveParams: { 'decision:$picks': ['alpha', 'beta'] } });
+    const effect: EffectAST = {
+      let: {
+        bind: '$pickCount',
+        value: 2,
+        in: [
+          {
+            chooseN: {
+              internalDecisionId: 'decision:$picks',
+              bind: '$picks',
+              options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
+              min: { ref: 'binding', name: '$pickCount' },
+              max: { ref: 'binding', name: '$pickCount' },
+            },
+          },
+        ],
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state, ctx.state);
+    assert.equal(result.rng, ctx.rng);
+  });
+
   it('chooseN throws when expression-valued bounds evaluate to non-integers', () => {
     const ctx = makeCtx({ moveParams: { 'decision:$picks': ['alpha'] } });
     const effect: EffectAST = {

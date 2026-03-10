@@ -1138,6 +1138,156 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     assert.equal(countTokens(noAvailableFinal, 'casualties-US:none', (token) => token.props.faction === 'US' && token.type === 'troops'), 0);
   });
 
+  it('Air Strike cap_sa2s unshaded removes 1 eligible NVA piece outside the South when Trail degrades', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const strikeSpace = 'saigon:none';
+    const northVietnam = 'north-vietnam:none';
+    const base = clearAllZones(initialState(def, 21036, 4).state);
+    const start: GameState = {
+      ...base,
+      activePlayer: asPlayerId(0),
+      globalVars: {
+        ...base.globalVars,
+        trail: 3,
+      },
+      globalMarkers: {
+        ...base.globalMarkers,
+        cap_sa2s: 'unshaded',
+      },
+      zones: {
+        ...base.zones,
+        [strikeSpace]: [
+          makeToken('sa2s-us-map', 'troops', 'US', { type: 'troops' }),
+          makeToken('sa2s-vc-map', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+        ],
+        [northVietnam]: [
+          makeToken('sa2s-nv-base', 'base', 'NVA', { type: 'base', tunnel: 'untunneled' }),
+        ],
+      },
+    };
+
+    const final = applyMoveWithResolvedDecisionIds(def, start, {
+      actionId: asActionId('airStrike'),
+      params: {
+        $spaces: [strikeSpace],
+        $degradeTrail: 'yes',
+      },
+    }).state;
+
+    assert.equal(final.globalVars.trail, 2, 'Air Strike should still degrade Trail by 1 normally');
+    assert.equal(
+      countTokens(final, northVietnam, (token) => token.id === asTokenId('sa2s-nv-base')),
+      0,
+      'cap_sa2s unshaded should remove an eligible untunneled NVA base in North Vietnam even if the strike was elsewhere',
+    );
+    assert.equal(
+      countTokens(final, 'available-NVA:none', (token) => token.id === asTokenId('sa2s-nv-base')),
+      1,
+      'Removed SA-2s target should go to Available',
+    );
+  });
+
+  it('Air Strike cap_sa2s unshaded does not remove NVA pieces when Trail does not actually degrade', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const strikeSpace = 'saigon:none';
+    const northVietnam = 'north-vietnam:none';
+    const base = clearAllZones(initialState(def, 21037, 4).state);
+    const start: GameState = {
+      ...base,
+      activePlayer: asPlayerId(0),
+      globalVars: {
+        ...base.globalVars,
+        trail: 2,
+      },
+      globalMarkers: {
+        ...base.globalMarkers,
+        cap_sa2s: 'unshaded',
+        cap_aaa: 'shaded',
+      },
+      zones: {
+        ...base.zones,
+        [strikeSpace]: [
+          makeToken('sa2s-nodegrade-us', 'troops', 'US', { type: 'troops' }),
+          makeToken('sa2s-nodegrade-vc', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+        ],
+        [northVietnam]: [
+          makeToken('sa2s-nodegrade-nva', 'troops', 'NVA', { type: 'troops' }),
+        ],
+      },
+    };
+
+    const final = applyMoveWithResolvedDecisionIds(def, start, {
+      actionId: asActionId('airStrike'),
+      params: {
+        $spaces: [strikeSpace],
+        $degradeTrail: 'yes',
+      },
+    }).state;
+
+    assert.equal(final.globalVars.trail, 2, 'AAA shaded should keep Trail at 2');
+    assert.equal(
+      countTokens(final, northVietnam, (token) => token.id === asTokenId('sa2s-nodegrade-nva')),
+      1,
+      'cap_sa2s unshaded should not trigger when Air Strike declares degrade but Trail does not change',
+    );
+    assert.equal(
+      countTokens(final, 'available-NVA:none', (token) => token.id === asTokenId('sa2s-nodegrade-nva')),
+      0,
+    );
+  });
+
+  it('Air Strike cap_migs shaded does not remove available US troops when AAA shaded prevents Trail degradation', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const strikeSpace = 'saigon:none';
+    const base = clearAllZones(initialState(def, 21038, 4).state);
+    const start: GameState = {
+      ...base,
+      activePlayer: asPlayerId(0),
+      globalVars: {
+        ...base.globalVars,
+        trail: 2,
+      },
+      globalMarkers: {
+        ...base.globalMarkers,
+        cap_migs: 'shaded',
+        cap_aaa: 'shaded',
+      },
+      zones: {
+        ...base.zones,
+        [strikeSpace]: [
+          makeToken('migs-aaa-us-map', 'troops', 'US', { type: 'troops' }),
+          makeToken('migs-aaa-vc-map', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+        ],
+        'available-US:none': [makeToken('migs-aaa-us-av', 'troops', 'US', { type: 'troops' })],
+      },
+    };
+
+    const final = applyMoveWithResolvedDecisionIds(def, start, {
+      actionId: asActionId('airStrike'),
+      params: {
+        $spaces: [strikeSpace],
+        $degradeTrail: 'yes',
+      },
+    }).state;
+
+    assert.equal(final.globalVars.trail, 2, 'AAA shaded should prevent the Trail drop');
+    assert.equal(
+      countTokens(final, 'available-US:none', (token) => token.id === asTokenId('migs-aaa-us-av')),
+      1,
+      'cap_migs shaded should not trigger unless Trail actually degrades',
+    );
+    assert.equal(countTokens(final, 'casualties-US:none', (token) => token.id === asTokenId('migs-aaa-us-av')), 0);
+  });
+
   it('Air Strike cap_aaa shaded enforces Trail floor of 2 without Top Gun modifiers', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);

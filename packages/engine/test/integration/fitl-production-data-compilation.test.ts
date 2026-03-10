@@ -366,9 +366,34 @@ describe('FITL production data integration compilation', () => {
       'Deck zone must have deck behavior with drawFrom: top',
     );
 
-    // No batch or template artifacts should remain in the compiled GameDef
+    // No batch or template expansion artifacts should remain in the compiled GameDef.
+    // Free-operation sequencing intentionally preserves sequence.batch as part of the runtime contract.
+    const batchPaths: string[] = [];
+    const collectKeyPaths = (value: unknown, path: string): void => {
+      if (Array.isArray(value)) {
+        value.forEach((entry, index) => collectKeyPaths(entry, `${path}[${index}]`));
+        return;
+      }
+      if (value === null || typeof value !== 'object') {
+        return;
+      }
+      for (const [key, entry] of Object.entries(value)) {
+        const nextPath = path.length === 0 ? key : `${path}.${key}`;
+        if (key === 'batch') {
+          batchPaths.push(nextPath);
+        }
+        collectKeyPaths(entry, nextPath);
+      }
+    };
+    collectKeyPaths(compiled.gameDef, '');
+    assert.equal(
+      batchPaths.every((path) => path.endsWith('.freeOperationGrants[0].sequence.batch')
+        || path.includes('.freeOperationGrants[') && path.endsWith('.sequence.batch')
+        || path.endsWith('.grantFreeOperation.sequence.batch')),
+      true,
+      `Unexpected batch artifacts remained in compiled GameDef: ${batchPaths.join(', ')}`,
+    );
     const gameDefJson = JSON.stringify(compiled.gameDef);
-    assert.equal(gameDefJson.includes('"batch"'), false, 'No batch artifacts should remain in compiled GameDef');
     assert.equal(gameDefJson.includes('"template"'), false, 'No template artifacts should remain in compiled GameDef');
 
     const pieceCatalogAsset = (parsed.doc.dataAssets ?? []).find(

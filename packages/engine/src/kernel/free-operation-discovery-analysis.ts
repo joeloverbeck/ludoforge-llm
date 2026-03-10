@@ -2,6 +2,7 @@ import { asPlayerId } from './branded.js';
 import type { FreeOperationBlockExplanation } from './free-operation-denial-contract.js';
 import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
 import {
+  collectGrantMoveZoneCandidates,
   doesGrantPotentiallyAuthorizeMove,
   doesGrantRequireSequenceContextMatch,
   evaluateZoneFilterForMove,
@@ -36,6 +37,22 @@ interface FreeOperationGrantAnalysis {
   readonly zoneMatchedGrants: readonly TurnFlowPendingFreeOperationGrant[];
   readonly ambiguousGrantIds: readonly string[];
 }
+
+const shouldDeferAmbiguousOverlapUntilMoveZonesResolve = (
+  def: GameDef,
+  move: Move,
+  matchingGrants: readonly TurnFlowPendingFreeOperationGrant[],
+  surface: FreeOperationZoneFilterSurface,
+): boolean => {
+  if (surface !== 'legalChoices' || matchingGrants.length <= 1) {
+    return false;
+  }
+  return matchingGrants.every(
+    (grant) =>
+      grant.zoneFilter !== undefined
+      && collectGrantMoveZoneCandidates(def, move, grant).length === 0,
+  );
+};
 
 const analyzeFreeOperationGrantMatch = (
   def: GameDef,
@@ -82,9 +99,19 @@ const analyzeFreeOperationGrantMatch = (
         ),
       )
     : actionMatchedGrants;
-  const ambiguousGrantIds = options?.evaluateZoneFilters === true
-    ? (resolveAuthorizedPendingFreeOperationGrantOverlapAmbiguity(def, state, zoneMatchedGrants)?.strongestGrantIds ?? [])
-    : [];
+  const ambiguity = options?.evaluateZoneFilters === true
+    ? resolveAuthorizedPendingFreeOperationGrantOverlapAmbiguity(def, state, zoneMatchedGrants)
+    : null;
+  const ambiguousGrantIds =
+    ambiguity === null
+    || shouldDeferAmbiguousOverlapUntilMoveZonesResolve(
+      def,
+      move,
+      zoneMatchedGrants.filter((grant) => ambiguity.strongestGrantIds.includes(grant.grantId)),
+      options?.zoneFilterErrorSurface ?? 'turnFlowEligibility',
+    )
+      ? []
+      : ambiguity.strongestGrantIds;
   return {
     activeSeat,
     actionClass,
@@ -327,11 +354,17 @@ export const isFreeOperationGrantedForMove = (
   state: GameState,
   move: Move,
   seatResolution: SeatResolutionContext,
+  options?: {
+    readonly zoneFilterErrorSurface?: FreeOperationZoneFilterSurface;
+  },
 ): boolean => {
   if (move.freeOperation !== true) {
     return true;
   }
-  const analysis = analyzeFreeOperationGrantMatch(def, state, move, seatResolution, { evaluateZoneFilters: true });
+  const analysis = analyzeFreeOperationGrantMatch(def, state, move, seatResolution, {
+    evaluateZoneFilters: true,
+    zoneFilterErrorSurface: options?.zoneFilterErrorSurface ?? 'legalChoices',
+  });
   if (analysis === null) {
     return false;
   }

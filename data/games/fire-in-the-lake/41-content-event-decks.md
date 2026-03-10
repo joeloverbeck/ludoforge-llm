@@ -8680,9 +8680,68 @@ eventDecks:
             - US
           flavorText: Global pressure amplifies domestic war costs and casualty politics.
         unshaded:
-          text: Casualty-driven die roll reduces COIN political leverage.
+          text: Any 2 US Casualties to Available.
+          effects:
+            - chooseN:
+                internalDecisionId: international-unrest-casualties-to-available
+                bind: $casualtiesToAvailable
+                options:
+                  query: tokensInZone
+                  zone: casualties-US:none
+                  filter:
+                    op: and
+                    args:
+                      - prop: faction
+                        op: eq
+                        value: US
+                min: 0
+                max: 2
+            - forEach:
+                bind: $casualtyToAvailable
+                over:
+                  query: binding
+                  name: $casualtiesToAvailable
+                effects:
+                  - moveToken:
+                      token: $casualtyToAvailable
+                      from:
+                        zoneExpr:
+                          ref: tokenZone
+                          token: $casualtyToAvailable
+                      to:
+                        zoneExpr: available-US:none
         shaded:
-          text: External backlash constrains insurgent options and forces resource tradeoffs.
+          text: 2 Available US Troops out of play. NVA add a die roll of Resources.
+          effects:
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: $availableUSTroop
+                    over:
+                      query: tokensInZone
+                      zone: available-US:none
+                      filter:
+                        op: and
+                        args:
+                          - prop: faction
+                            op: eq
+                            value: US
+                          - prop: type
+                            op: eq
+                            value: troops
+                    to:
+                      zoneExpr: out-of-play-US:none
+            - rollRandom:
+                bind: $dieRoll
+                min: 1
+                max: 6
+                in:
+                  - addVar:
+                      scope: global
+                      var: nvaResources
+                      delta:
+                        ref: binding
+                        name: $dieRoll
       - id: card-58
         title: Pathet Lao
         sideMode: dual
@@ -8697,9 +8756,287 @@ eventDecks:
             - US
           flavorText: Laotian coordination alters trail security and redeployment pressure.
         unshaded:
-          text: Conditionally improve Trail or trigger selective redeploy effects.
+          text: NVA removes 6 of its pieces total from North Vietnam and Laos.
+          effects:
+            - let:
+                bind: $eligibleNvaCount
+                value:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInMapSpaces
+                      spaceFilter:
+                        op: or
+                        args:
+                          - op: ==
+                            left:
+                              ref: zoneProp
+                              zone: $zone
+                              prop: country
+                            right: northVietnam
+                          - op: ==
+                            left:
+                              ref: zoneProp
+                              zone: $zone
+                              prop: country
+                            right: laos
+                      filter:
+                        prop: faction
+                        op: eq
+                        value: NVA
+                in:
+                  - let:
+                      bind: $nvaRemoveCount
+                      value:
+                        op: min
+                        left: 6
+                        right:
+                          ref: binding
+                          name: $eligibleNvaCount
+                      in:
+                        - if:
+                            when:
+                              op: ">"
+                              left:
+                                ref: binding
+                                name: $nvaRemoveCount
+                              right: 0
+                            then:
+                              - chooseN:
+                                  bind: $nvaPiecesToRemove
+                                  options:
+                                    query: tokensInMapSpaces
+                                    spaceFilter:
+                                      op: or
+                                      args:
+                                        - op: ==
+                                          left:
+                                            ref: zoneProp
+                                            zone: $zone
+                                            prop: country
+                                          right: northVietnam
+                                        - op: ==
+                                          left:
+                                            ref: zoneProp
+                                            zone: $zone
+                                            prop: country
+                                          right: laos
+                                    filter:
+                                      prop: faction
+                                      op: eq
+                                      value: NVA
+                                  min:
+                                    ref: binding
+                                    name: $nvaRemoveCount
+                                  max:
+                                    ref: binding
+                                    name: $nvaRemoveCount
+                              - forEach:
+                                  bind: $nvaPieceToRemove
+                                  over:
+                                    query: binding
+                                    name: $nvaPiecesToRemove
+                                  effects:
+                                    - moveToken:
+                                        token: $nvaPieceToRemove
+                                        from:
+                                          zoneExpr:
+                                            ref: tokenZone
+                                            token: $nvaPieceToRemove
+                                        to:
+                                          zoneExpr: available-NVA:none
+                            else: []
         shaded:
-          text: Cross-border disruption degrades Trail tempo and complicates redeploy planning.
+          text: If no COIN cubes in Laos, Improve Trail 2 boxes. If there are, US and ARVN Redeploy them to Vietnam.
+          effects:
+            - if:
+                when:
+                  op: ">"
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInMapSpaces
+                        spaceFilter:
+                          op: ==
+                          left:
+                            ref: zoneProp
+                            zone: $zone
+                            prop: country
+                          right: laos
+                        filter:
+                          op: and
+                          args:
+                            - prop: faction
+                              op: in
+                              value:
+                                - US
+                                - ARVN
+                            - prop: type
+                              op: in
+                              value:
+                                - troops
+                                - police
+                  right: 0
+                then:
+                  - forEach:
+                      bind: $laosCoinCube
+                      over:
+                        query: tokensInMapSpaces
+                        spaceFilter:
+                          op: ==
+                          left:
+                            ref: zoneProp
+                            zone: $zone
+                            prop: country
+                          right: laos
+                        filter:
+                          op: and
+                          args:
+                            - prop: faction
+                              op: in
+                              value:
+                                - US
+                                - ARVN
+                            - prop: type
+                              op: in
+                              value:
+                                - troops
+                                - police
+                      effects:
+                        - if:
+                            when:
+                              op: ==
+                              left:
+                                ref: tokenProp
+                                token: $laosCoinCube
+                                prop: faction
+                              right: US
+                            then:
+                              - chooseOne:
+                                  bind: $pathetLaoUsDestination@{$laosCoinCube}
+                                  options:
+                                    query: mapSpaces
+                                    filter:
+                                      op: ==
+                                      left:
+                                        ref: zoneProp
+                                        zone: $zone
+                                        prop: country
+                                      right: southVietnam
+                              - moveToken:
+                                  token: $laosCoinCube
+                                  from:
+                                    zoneExpr:
+                                      ref: tokenZone
+                                      token: $laosCoinCube
+                                  to:
+                                    zoneExpr:
+                                      ref: binding
+                                      name: $pathetLaoUsDestination@{$laosCoinCube}
+                            else:
+                              - if:
+                                  when:
+                                    op: ==
+                                    left:
+                                      ref: tokenProp
+                                      token: $laosCoinCube
+                                      prop: type
+                                    right: troops
+                                  then:
+                                    - chooseOne:
+                                        bind: $pathetLaoArvnTroopDestination@{$laosCoinCube}
+                                        options:
+                                          query: mapSpaces
+                                          filter:
+                                            op: and
+                                            args:
+                                              - op: ==
+                                                left:
+                                                  ref: zoneProp
+                                                  zone: $zone
+                                                  prop: country
+                                                right: southVietnam
+                                              - op: or
+                                                args:
+                                                  - conditionMacro: fitl-space-city-without-nva-control
+                                                    args:
+                                                      spaceExpr: $zone
+                                                  - op: ==
+                                                    left:
+                                                      ref: zoneProp
+                                                      zone: $zone
+                                                      prop: id
+                                                    right: saigon:none
+                                                  - op: ">"
+                                                    left:
+                                                      aggregate:
+                                                        op: count
+                                                        query:
+                                                          query: tokensInZone
+                                                          zone: $zone
+                                                          filter:
+                                                            op: and
+                                                            args:
+                                                              - prop: faction
+                                                                op: in
+                                                                value:
+                                                                  - US
+                                                                  - ARVN
+                                                              - prop: type
+                                                                op: eq
+                                                                value: base
+                                                    right: 0
+                                    - moveToken:
+                                        token: $laosCoinCube
+                                        from:
+                                          zoneExpr:
+                                            ref: tokenZone
+                                            token: $laosCoinCube
+                                        to:
+                                          zoneExpr:
+                                            ref: binding
+                                            name: $pathetLaoArvnTroopDestination@{$laosCoinCube}
+                                  else:
+                                    - chooseOne:
+                                        bind: $pathetLaoArvnPoliceDestination@{$laosCoinCube}
+                                        options:
+                                          query: mapSpaces
+                                          filter:
+                                            op: and
+                                            args:
+                                              - op: ==
+                                                left:
+                                                  ref: zoneProp
+                                                  zone: $zone
+                                                  prop: country
+                                                right: southVietnam
+                                              - op: or
+                                                args:
+                                                  - op: ==
+                                                    left:
+                                                      ref: zoneProp
+                                                      zone: $zone
+                                                      prop: category
+                                                    right: loc
+                                                  - conditionMacro: fitl-space-coin-controlled
+                                                    args:
+                                                      spaceExpr: $zone
+                                    - moveToken:
+                                        token: $laosCoinCube
+                                        from:
+                                          zoneExpr:
+                                            ref: tokenZone
+                                            token: $laosCoinCube
+                                        to:
+                                          zoneExpr:
+                                            ref: binding
+                                            name: $pathetLaoArvnPoliceDestination@{$laosCoinCube}
+                else:
+                  - addVar:
+                      scope: global
+                      var: trail
+                      delta: 2
       - id: card-60
         title: War Photographer
         sideMode: dual

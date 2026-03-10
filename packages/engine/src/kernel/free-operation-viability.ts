@@ -603,7 +603,13 @@ const hasLegalCompletedProbeMove = (
 
     if (request.complete) {
       if (
-        !isFreeOperationGrantedForMove(def, authorizationState, request.move, seatResolution)
+        !isFreeOperationGrantedForMove(
+          def,
+          authorizationState,
+          request.move,
+          seatResolution,
+          { zoneFilterErrorSurface: 'turnFlowEligibility' },
+        )
         || !isCompletedProbeMoveCurrentlyLegal(def, authorizationState, request.move, seatResolution)
       ) {
         return false;

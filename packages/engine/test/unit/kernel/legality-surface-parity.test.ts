@@ -607,6 +607,88 @@ describe('legality surface parity', () => {
     });
   });
 
+  it('defers provisional exact-zone free-operation overlap during discovery until move zones are chosen', () => {
+    const operationActionId = asActionId('operation');
+    const def = {
+      ...makeCardDrivenFreeOpDef(operationActionId),
+      zones: [
+        { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+        { id: asZoneId('city:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+      ],
+      actionPipelines: [
+        {
+          id: 'operation-profile',
+          actionId: operationActionId,
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [
+            {
+              effects: [
+                {
+                  chooseN: {
+                    internalDecisionId: 'decision:$targetSpaces',
+                    bind: '$targetSpaces',
+                    options: { query: 'enums', values: ['board:none', 'city:none'] },
+                    min: 1,
+                    max: 1,
+                  },
+                },
+              ],
+            },
+          ],
+          atomicity: 'partial',
+        },
+      ],
+    } as unknown as GameDef;
+    const state = makeState({
+      zones: { 'board:none': [], 'city:none': [] },
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-board',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              zoneFilter: { op: '==', left: { ref: 'binding', name: '$zone' }, right: 'board:none' },
+              remainingUses: 1,
+            },
+            {
+              grantId: 'grant-city',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              zoneFilter: { op: '==', left: { ref: 'binding', name: '$zone' }, right: 'city:none' },
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+    });
+    const move: Move = { actionId: operationActionId, params: {}, freeOperation: true };
+
+    const request = legalChoicesDiscover(def, state, move);
+    assert.equal(request.kind, 'pending');
+    assert.equal(
+      legalMoves(def, state).some((candidate) => candidate.freeOperation === true && candidate.actionId === operationActionId),
+      true,
+    );
+  });
+
   it('prioritizes free-operation denial parity when pipeline is also not applicable', () => {
     const operationActionId = asActionId('operation');
     const baseDef = makeCardDrivenFreeOpDef(operationActionId);

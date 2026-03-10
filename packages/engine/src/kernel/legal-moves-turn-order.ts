@@ -1,4 +1,4 @@
-import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
+import { isMoveDecisionSequenceAdmittedForLegalMove } from './move-decision-sequence.js';
 import type { MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import {
   isFreeOperationApplicableForMove,
@@ -16,6 +16,7 @@ import type { GameDef, GameState, Move, MoveParamValue, RuntimeWarning } from '.
 import type { TurnFlowActionClass, TurnFlowInterruptMoveSelectorDef } from './types-turn-flow.js';
 import { asActionId } from './branded.js';
 import type { SeatResolutionContext } from './seat-resolution.js';
+import { MISSING_BINDING_POLICY_CONTEXTS } from './missing-binding-policy.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
 
@@ -391,13 +392,21 @@ export function applyPendingFreeOperationVariants(
     if (!isFreeOperationApplicableForMove(def, state, candidate, seatResolution)) {
       continue;
     }
-    const checkpoint = resolveMoveDecisionSequence(def, state, candidate, {
-      choose: () => undefined,
-      ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
-      ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
-    }).complete;
-    const unresolvedDecisionCheckpoint = !checkpoint;
-    if (!unresolvedDecisionCheckpoint && !isFreeOperationGrantedForMove(def, state, candidate, seatResolution)) {
+    if (
+      !isMoveDecisionSequenceAdmittedForLegalMove(
+        def,
+        state,
+        candidate,
+        MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
+        {
+          ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
+          ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
+        },
+      )
+    ) {
+      continue;
+    }
+    if (!isFreeOperationGrantedForMove(def, state, candidate, seatResolution)) {
       continue;
     }
 

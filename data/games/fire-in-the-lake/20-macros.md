@@ -3324,6 +3324,40 @@ conditionMacros:
         - { op: '==', left: { ref: zoneProp, zone: { param: spaceExpr }, prop: category }, right: province }
         - { conditionMacro: fitl-space-outside-south, args: { spaceExpr: { param: spaceExpr } } }
 
+  # Shared geography predicate: map space with a COIN Base in or adjacent.
+  - id: fitl-space-with-or-adjacent-coin-base
+    params:
+      - { name: spaceExpr, type: value }
+    condition:
+      op: or
+      args:
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { param: spaceExpr }
+                filter:
+                  op: and
+                  args:
+                    - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
+                    - { prop: type, op: eq, value: base }
+          right: 0
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInAdjacentZones
+                zone: { param: spaceExpr }
+                filter:
+                  op: and
+                  args:
+                    - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
+                    - { prop: type, op: eq, value: base }
+          right: 0
+
   # Shared geography predicate: Laos/Cambodia province only (FITL "outside Vietnam" for card-38).
   - id: fitl-space-outside-vietnam-province
     params:

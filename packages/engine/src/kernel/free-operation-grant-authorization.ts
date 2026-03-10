@@ -1,5 +1,7 @@
 import { asZoneId } from './branded.js';
 import { compareTurnFlowFreeOperationGrantPriority, isTurnFlowActionClass } from '../contracts/index.js';
+import { findActionById } from './action-capabilities.js';
+import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { createCollector } from './execution-collector.js';
 import { evalCondition } from './eval-condition.js';
 import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
@@ -11,9 +13,10 @@ import {
   collectFreeOperationZoneFilterProbeRebindableAliases,
   evaluateFreeOperationZoneFilterProbe,
 } from './free-operation-zone-filter-probe.js';
-import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
+import { buildMoveRuntimeBindings, resolvePipelineDecisionBindingsForMove } from './move-runtime-bindings.js';
 import { shouldDeferFreeOperationZoneFilterFailure } from './missing-binding-policy.js';
 import { kernelRuntimeError } from './runtime-error.js';
+import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
 import type {
@@ -93,6 +96,38 @@ const doesGrantApplyToMove = (
   isGrantOperationClassCompatible(grant.operationClass, moveOperationClass(def, move)) &&
   grantActionIds(def, grant).includes(String(move.actionId));
 
+const buildActionAwareMoveRuntimeBindings = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+): Readonly<Record<string, unknown>> => {
+  const baseBindings = buildMoveRuntimeBindings(move);
+  const action = findActionById(def, move.actionId);
+  if (action === undefined) {
+    return baseBindings;
+  }
+
+  const preflight = resolveActionApplicabilityPreflight({
+    def,
+    state,
+    action,
+    adjacencyGraph: buildAdjacencyGraph(def.zones),
+    runtimeTableIndex: buildRuntimeTableIndex(def),
+    decisionPlayer: state.activePlayer,
+    bindings: baseBindings,
+    evalRuntimeResources: createEvalRuntimeResources(),
+    skipPhaseCheck: true,
+  });
+  if (preflight.kind !== 'applicable' || preflight.pipelineDispatch.kind !== 'matched') {
+    return baseBindings;
+  }
+
+  return buildMoveRuntimeBindings(
+    move,
+    resolvePipelineDecisionBindingsForMove(preflight.pipelineDispatch.profile, move.params),
+  );
+};
+
 export const collectMoveZoneCandidates = (def: GameDef, move: Move): readonly string[] => {
   const zoneIdSet = new Set(def.zones.map((zone) => String(zone.id)));
   const candidates = new Set<string>();
@@ -117,6 +152,7 @@ export const collectMoveZoneCandidates = (def: GameDef, move: Move): readonly st
 
 export const collectGrantMoveZoneCandidates = (
   def: GameDef,
+  state: GameState,
   move: Move,
   grant: Pick<TurnFlowPendingFreeOperationGrant, 'moveZoneBindings'>,
 ): readonly string[] => {
@@ -124,7 +160,7 @@ export const collectGrantMoveZoneCandidates = (
     return collectMoveZoneCandidates(def, move);
   }
   const zoneIdSet = new Set(def.zones.map((zone) => String(zone.id)));
-  const bindings = buildMoveRuntimeBindings(move);
+  const bindings = buildActionAwareMoveRuntimeBindings(def, state, move);
   const candidates = new Set<string>();
   const collectFromValue = (value: unknown): void => {
     if (typeof value === 'string' && zoneIdSet.has(value)) {
@@ -154,12 +190,13 @@ export const collectGrantMoveZoneCandidates = (
 
 export const collectGrantMoveZoneProbeCandidates = (
   def: GameDef,
+  state: GameState,
   move: Move,
   grant: Pick<TurnFlowPendingFreeOperationGrant, 'moveZoneBindings' | 'moveZoneProbeBindings'>,
 ): readonly string[] =>
   grant.moveZoneProbeBindings === undefined
-    ? collectGrantMoveZoneCandidates(def, move, grant)
-    : collectGrantMoveZoneCandidates(def, move, {
+    ? collectGrantMoveZoneCandidates(def, state, move, grant)
+    : collectGrantMoveZoneCandidates(def, state, move, {
       moveZoneBindings: grant.moveZoneProbeBindings,
     });
 
@@ -187,7 +224,7 @@ const doesGrantSatisfySequenceContext = (
   if (captured === undefined || captured.length === 0) {
     return false;
   }
-  const moveZones = collectGrantMoveZoneCandidates(def, move, grant);
+  const moveZones = collectGrantMoveZoneCandidates(def, state, move, grant);
   if (moveZones.length === 0) {
     return options?.allowUnresolvedMoveZones === true;
   }
@@ -206,12 +243,12 @@ export const evaluateZoneFilterForMove = (
   const shouldDeferZoneFilterFailure = (cause: unknown): boolean =>
     shouldDeferFreeOperationZoneFilterFailure(surface, cause);
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
-  const baseBindings: Readonly<Record<string, unknown>> = buildMoveRuntimeBindings(move);
+  const baseBindings = buildActionAwareMoveRuntimeBindings(def, state, move);
   const rebindableAliases = collectFreeOperationZoneFilterProbeRebindableAliases(zoneFilter);
-  const zones = collectGrantMoveZoneCandidates(def, move, grant);
+  const zones = collectGrantMoveZoneCandidates(def, state, move, grant);
   if (zones.length === 0) {
     if (grant.moveZoneBindings !== undefined && grant.moveZoneBindings.length > 0) {
-      return false;
+      return surface === 'legalChoices';
     }
     try {
       return evalCondition(zoneFilter, createEvalContext({
@@ -310,7 +347,7 @@ export const doesGrantPotentiallyAuthorizeMove = (
   doesGrantSatisfySequenceContext(def, state, grant, move, { allowUnresolvedMoveZones: true }) &&
   (
     grant.zoneFilter === undefined
-    || collectGrantMoveZoneCandidates(def, move, grant).length === 0
+    || collectGrantMoveZoneCandidates(def, state, move, grant).length === 0
     || evaluateZoneFilterForMove(def, state, move, grant, grant.zoneFilter, 'turnFlowEligibility')
   );
 

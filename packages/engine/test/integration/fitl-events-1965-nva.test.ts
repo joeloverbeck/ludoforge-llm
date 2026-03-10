@@ -280,6 +280,54 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
     });
   });
 
+  it('encodes card 59 (Plei Mei) as one-space NVA removal plus a constrained March followed by Attack or Ambush', () => {
+    const { parsed, compiled } = compileProductionSpec();
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-59');
+    assert.notEqual(card, undefined);
+
+    assert.equal(card?.unshaded?.text, 'Remove any 3 NVA pieces from a space with or adjacent to a COIN Base.');
+    assert.equal(
+      card?.shaded?.text,
+      'NVA free March from any spaces outside South Vietnam, then free Attack or Ambush any 1 space.',
+    );
+    assert.equal(card?.unshaded?.targets?.[0]?.id, '$pleiMeiUnshadedSpace');
+    assert.equal(typeof (card?.unshaded?.targets?.[0]?.effects?.[0] as { chooseN?: unknown } | undefined)?.chooseN, 'object');
+    assert.equal(typeof (card?.unshaded?.targets?.[0]?.effects?.[1] as { forEach?: unknown } | undefined)?.forEach, 'object');
+
+    const grants = card?.shaded?.freeOperationGrants ?? [];
+    assert.equal(grants.length, 2);
+    assert.deepEqual(grants[0]?.sequence, { batch: 'plei-mei-nva', step: 0 });
+    assert.deepEqual(grants[0]?.actionIds, ['march']);
+    assert.equal(grants[0]?.allowDuringMonsoon, true);
+    assert.equal(grants[0]?.viabilityPolicy, 'requireUsableForEventPlay');
+    assert.equal(grants[0]?.completionPolicy, 'required');
+    assert.equal(grants[0]?.outcomePolicy, 'mustChangeGameplayState');
+    assert.equal(grants[0]?.postResolutionTurnFlow, 'resumeCardFlow');
+    assert.deepEqual(grants[0]?.moveZoneBindings, ['$targetSpaces', '$chainSpaces']);
+    assert.deepEqual(grants[0]?.moveZoneProbeBindings, ['$targetSpaces', '$chainSpaces']);
+    assert.equal((grants[0]?.zoneFilter as { op?: string } | undefined)?.op, 'and');
+
+    assert.deepEqual(grants[1]?.sequence, { batch: 'plei-mei-nva', step: 1 });
+    assert.deepEqual(grants[1]?.actionIds, ['attack', 'ambushNva']);
+    assert.deepEqual(grants[1]?.zoneFilter, {
+      op: '==',
+      left: {
+        aggregate: {
+          op: 'count',
+          query: {
+            query: 'binding',
+            name: '$targetSpaces',
+          },
+        },
+      },
+      right: 1,
+    });
+  });
+
   it('encodes card 53 (Sappers) with South Vietnam troop-removal targeting, remain-eligible, and province-only base removal routing', () => {
     const { parsed, compiled } = compileProductionSpec();
 

@@ -77,4 +77,18 @@ export const shouldDeferFreeOperationZoneFilterFailure = (
   error: unknown,
 ): boolean =>
   surface === 'legalChoices' &&
-  shouldDeferMissingBinding(error, MISSING_BINDING_POLICY_CONTEXTS.LEGAL_CHOICES_FREE_OPERATION_ZONE_FILTER_PROBE);
+  (
+    shouldDeferMissingBinding(error, MISSING_BINDING_POLICY_CONTEXTS.LEGAL_CHOICES_FREE_OPERATION_ZONE_FILTER_PROBE) ||
+    (
+      isEvalErrorCode(error, 'MISSING_VAR') &&
+      (
+        typeof error.context?.binding === 'string' ||
+        (
+          typeof error.context?.query === 'object' &&
+          error.context?.query !== null &&
+          'query' in error.context.query &&
+          (error.context.query as { readonly query?: unknown }).query === 'binding'
+        )
+      )
+    )
+  );

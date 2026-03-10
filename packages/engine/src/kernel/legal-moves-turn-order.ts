@@ -8,6 +8,7 @@ import {
 import { canResolveAmbiguousFreeOperationOverlapInCurrentState } from './free-operation-viability.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import {
+  hasActiveSeatRequiredPendingFreeOperationGrant,
   isMoveAllowedByRequiredPendingFreeOperationGrant,
   isEventMovePlayableUnderGrantViabilityPolicy,
 } from './turn-flow-eligibility.js';
@@ -16,7 +17,7 @@ import { toMoveIdentityKey } from './move-identity.js';
 import type { GameDef, GameState, Move, MoveParamValue, RuntimeWarning } from './types.js';
 import type { TurnFlowActionClass, TurnFlowInterruptMoveSelectorDef } from './types-turn-flow.js';
 import { asActionId } from './branded.js';
-import type { SeatResolutionContext } from './seat-resolution.js';
+import { createSeatResolutionContext, type SeatResolutionContext } from './seat-resolution.js';
 import { MISSING_BINDING_POLICY_CONTEXTS } from './missing-binding-policy.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
@@ -55,6 +56,16 @@ export function resolveConstrainedSecondEligibleActionClasses(
 }
 
 export function isMoveAllowedByTurnFlowOptionMatrix(def: GameDef, state: GameState, move: Move): boolean {
+  if (move.freeOperation === true && state.turnOrderState.type === 'cardDriven') {
+    const seatResolution = createSeatResolutionContext(def, state.playerCount);
+    if (
+      hasActiveSeatRequiredPendingFreeOperationGrant(def, state, seatResolution)
+      && isMoveAllowedByRequiredPendingFreeOperationGrant(def, state, move, seatResolution)
+    ) {
+      return true;
+    }
+  }
+
   const constrained = resolveConstrainedSecondEligibleActionClasses(def, state);
   if (constrained === null) {
     return true;

@@ -1161,7 +1161,7 @@ const applyMoveCore = (
   validateFreeOperationOutcomePolicy(def, state, executed.stateWithRng, move, seatResolution);
   const turnFlowResult = move.freeOperation === true
     ? (() => {
-      const consumed = consumeTurnFlowFreeOperationGrant(def, executed.stateWithRng, move, seatResolution);
+      const consumed = consumeTurnFlowFreeOperationGrant(def, state, executed.stateWithRng, move, seatResolution);
       if (consumed.consumedGrant?.postResolutionTurnFlow !== 'resumeCardFlow') {
         return {
           state: consumed.state,

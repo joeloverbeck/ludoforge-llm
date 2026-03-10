@@ -680,6 +680,84 @@ phase: [asPhaseId('main')],
     assert.equal(isMoveAllowedByTurnFlowOptionMatrix(def, state, incompatibleMove), false);
   });
 
+  it('lets a ready required free-operation grant override option-matrix gating for the active seat', () => {
+    const def = {
+      ...makeBaseDef({
+        actions: [
+          {
+            id: asActionId('operation'),
+            actor: 'active',
+            executor: 'actor',
+            phase: [asPhaseId('main')],
+            params: [],
+            pre: null,
+            cost: [],
+            effects: [],
+            limits: [],
+          },
+        ],
+      }),
+      metadata: { id: 'legal-moves-required-free-op-option-matrix', players: { min: 2, max: 2 } },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'] },
+            windows: [],
+            actionClassByActionId: {
+              pass: 'pass',
+              operation: 'operation',
+            },
+            optionMatrix: [{ first: 'event', second: ['limitedOperation'] }],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      playerCount: 2,
+      activePlayer: asPlayerId(0),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: null,
+            actedSeats: ['0'],
+            passedSeats: [],
+            nonPassCount: 1,
+            firstActionClass: 'event',
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'required-op',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              completionPolicy: 'required',
+              postResolutionTurnFlow: 'resumeCardFlow',
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+    });
+
+    const move = {
+      actionId: asActionId('operation'),
+      params: {},
+      freeOperation: true,
+    };
+
+    assert.equal(isMoveAllowedByTurnFlowOptionMatrix(def, state, move), true);
+  });
+
   it('2. simple action (no profile) still emits fully-enumerated moves', () => {
     const action: ActionDef = {
       id: asActionId('simpleAction'),

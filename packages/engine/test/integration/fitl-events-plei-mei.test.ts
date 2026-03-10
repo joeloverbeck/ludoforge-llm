@@ -251,9 +251,19 @@ describe('FITL card-59 Plei Mei', () => {
     const afterEvent = applyMoveWithResolvedDecisionIds(def, setup, eventMove!).state;
     const afterEventRuntime = requireCardDrivenRuntime(afterEvent);
     assert.equal(afterEventRuntime.pendingFreeOperationGrants?.length, 2);
+    const movesAfterEvent = legalMoves(def, afterEvent);
     assert.ok(
-      legalMoves(def, afterEvent).some((move) => String(move.actionId) === 'march' && move.freeOperation === true),
+      movesAfterEvent.some((move) => String(move.actionId) === 'march' && move.freeOperation === true),
       'The shaded event should surface a free March immediately after resolving',
+    );
+    assert.equal(
+      movesAfterEvent.some(
+        (move) =>
+          (String(move.actionId) === 'attack' || String(move.actionId) === 'ambushNva')
+          && move.freeOperation === true,
+      ),
+      false,
+      'Only the first sequence step should surface before the March resolves',
     );
 
     const afterMarch = applyMoveWithResolvedDecisionIds(def, afterEvent, {
@@ -270,8 +280,14 @@ describe('FITL card-59 Plei Mei', () => {
     assert.equal(afterMarch.globalVars.nvaResources, setup.globalVars.nvaResources, 'The free March should cost 0 Resources');
     assert.equal(countTokens(afterMarch, QUANG_TRI, (token) => token.props.faction === 'NVA' && token.type === 'troops'), 2);
     assert.equal(requireCardDrivenRuntime(afterMarch).pendingFreeOperationGrants?.length, 1);
+    const movesAfterMarch = legalMoves(def, afterMarch);
+    assert.equal(
+      movesAfterMarch.some((move) => String(move.actionId) === 'march' && move.freeOperation === true),
+      false,
+      'The March grant should stop surfacing after its required step resolves',
+    );
     assert.ok(
-      legalMoves(def, afterMarch).some((move) => String(move.actionId) === 'attack' && move.freeOperation === true),
+      movesAfterMarch.some((move) => String(move.actionId) === 'attack' && move.freeOperation === true),
       'The follow-up free Attack should appear only after the March resolves',
     );
 
@@ -323,6 +339,26 @@ describe('FITL card-59 Plei Mei', () => {
     );
   });
 
+  it('suppresses shaded play when no legal free March origin exists outside South Vietnam', () => {
+    const def = compileDef();
+    const setup = setupCardDrivenState(
+      def,
+      59007,
+      {
+        [QUANG_NAM]: [makeToken('plei-only-inside-t1', 'troops', 'NVA')],
+        [PLEIKU]: [makeToken('plei-target-us', 'troops', 'US')],
+      },
+      { trail: 1 },
+    );
+
+    const move = findCardMove(def, setup, 'shaded');
+    assert.equal(
+      move,
+      undefined,
+      'The shaded event must not be playable when its first required March is legal only from South Vietnam',
+    );
+  });
+
   it('shaded allows a free Ambush in any one legal space, not only a March destination', () => {
     const def = compileDef();
     const setup = setupCardDrivenState(
@@ -357,6 +393,17 @@ describe('FITL card-59 Plei Mei', () => {
         [`$movingTroops@${QUANG_TRI}`]: [asTokenId('plei-ambush-marcher')],
       },
     }).state;
+
+    const movesAfterMarch = legalMoves(def, afterMarch);
+    assert.equal(
+      movesAfterMarch.some((move) => String(move.actionId) === 'march' && move.freeOperation === true),
+      false,
+      'The March grant should stop surfacing once the sequence advances to the Ambush step',
+    );
+    assert.ok(
+      movesAfterMarch.some((move) => String(move.actionId) === 'ambushNva' && move.freeOperation === true),
+      'The follow-up free Ambush should surface once the March resolves in a legal Ambush state',
+    );
 
     assert.throws(
       () =>

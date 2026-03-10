@@ -73,4 +73,45 @@ describe('parse + validate full-spec integration', () => {
       true,
     );
   });
+
+  it('keeps malformed nested eventDeck YAML diagnostics parser-primary and deterministic', () => {
+    const markdown = [
+      '# Malformed Event Deck',
+      '',
+      '```yaml',
+      'metadata:',
+      '  id: malformed-eventdeck',
+      '  players:',
+      '    min: 2',
+      '    max: 4',
+      'eventDecks:',
+      '  - id: propaganda',
+      '    cards:',
+      '      - id: card-001',
+      '        text: Systems analysis ignorant of local conditions: Flip 1 unshaded US Capability to shaded.',
+      '```',
+    ].join('\n');
+
+    const runOnce = () => {
+      const parsed = parseGameSpec(markdown);
+      return {
+        parsed,
+        diagnostics: [...parsed.diagnostics, ...validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap })],
+      };
+    };
+
+    const first = runOnce();
+    const second = runOnce();
+    const parseDiagnostic = first.diagnostics.find((diagnostic) => diagnostic.code === 'CNL_PARSER_YAML_PARSE_ERROR');
+
+    assert.deepEqual(second.diagnostics, first.diagnostics);
+    assert.ok(parseDiagnostic);
+    assert.equal(parseDiagnostic?.path, 'yaml.block.0.parse');
+    assert.equal(
+      parseDiagnostic?.contextSnippet,
+      '        text: Systems analysis ignorant of local conditions: Flip 1 unshaded US Capability to shaded.',
+    );
+    assert.match(parseDiagnostic?.suggestion ?? '', /quote plain-text values containing ": "/i);
+    assert.equal(first.parsed.doc.eventDecks, null);
+  });
 });

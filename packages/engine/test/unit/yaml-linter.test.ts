@@ -4,9 +4,15 @@ import { describe, it } from 'node:test';
 import { lintYamlHardening } from '../../src/cnl/yaml-linter.js';
 
 describe('lintYamlHardening', () => {
-  it('detects mistake 1: unquoted colons in scalar values', () => {
-    const diagnostics = lintYamlHardening('metadata:\n  id: game:name\n');
-    assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'CNL_YAML_001'));
+  it('detects mistake 1: plain scalars with a second colon-space token', () => {
+    const diagnostics = lintYamlHardening(
+      'eventDecks:\n  - id: card-001\n    text: Systems analysis ignorant of local conditions: Flip 1 capability.\n',
+    );
+    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_YAML_001');
+
+    assert.ok(diagnostic);
+    assert.match(diagnostic?.message ?? '', /nested mapping/i);
+    assert.match(diagnostic?.suggestion ?? '', /quote/i);
   });
 
   it('detects mistake 2: inconsistent indentation', () => {
@@ -109,5 +115,12 @@ describe('lintYamlHardening', () => {
     const first = lintYamlHardening(input);
     const second = lintYamlHardening(input);
     assert.deepEqual(first, second);
+  });
+
+  it('does not flag inline flow collections as plain-scalar colon mistakes', () => {
+    const diagnostics = lintYamlHardening('actions:\n  - id: draw\n    actor: { currentPlayer: true }\n    phase: [main]\n');
+
+    assert.equal(diagnostics.some((diagnostic) => diagnostic.code === 'CNL_YAML_001'), false);
+    assert.equal(diagnostics.some((diagnostic) => diagnostic.code === 'CNL_YAML_009'), false);
   });
 });

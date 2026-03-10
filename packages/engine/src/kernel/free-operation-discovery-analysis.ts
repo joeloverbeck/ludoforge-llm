@@ -100,7 +100,7 @@ const analyzeFreeOperationGrantMatch = (
               : cause;
             if (
               isEvalErrorCode(underlyingCause, 'MISSING_BINDING')
-              && collectGrantMoveZoneCandidates(def, move, grant).length === 0
+              && collectGrantMoveZoneCandidates(def, state, move, grant).length === 0
             ) {
               unresolvedZoneFilterGrants.push(grant);
               return false;

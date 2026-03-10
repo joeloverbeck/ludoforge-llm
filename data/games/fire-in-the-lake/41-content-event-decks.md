@@ -10952,27 +10952,323 @@ eventDecks:
             - VC
             - ARVN
             - US
-          flavorText: Highland clashes force rapid tactical repositioning.
+          flavorText: CIDG interdict NVA.
         unshaded:
-          text: Remove enemy pieces in one selected Highland and execute free March.
+          text: Remove any 3 NVA pieces from a space with or adjacent to a COIN Base.
+          targets:
+            - id: $pleiMeiUnshadedSpace
+              selector:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  op: eq
+                                  value: NVA
+                      right: 0
+                    - conditionMacro: fitl-space-with-or-adjacent-coin-base
+                      args:
+                        spaceExpr: $zone
+              cardinality:
+                max: 1
+              application: aggregate
+              effects:
+                - chooseN:
+                    bind: $pleiMeiNvaPieces
+                    options:
+                      query: tokensInZone
+                      zone: $pleiMeiUnshadedSpace
+                      filter:
+                        op: and
+                        args:
+                          - prop: faction
+                            op: eq
+                            value: NVA
+                    min:
+                      op: min
+                      left: 3
+                      right:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $pleiMeiUnshadedSpace
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  op: eq
+                                  value: NVA
+                    max:
+                      op: min
+                      left: 3
+                      right:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $pleiMeiUnshadedSpace
+                            filter:
+                              op: and
+                              args:
+                                - prop: faction
+                                  op: eq
+                                  value: NVA
+                - forEach:
+                    bind: $pleiMeiPiece
+                    over:
+                      query: binding
+                      name: $pleiMeiNvaPieces
+                    effects:
+                      - moveToken:
+                          token: $pleiMeiPiece
+                          from:
+                            zoneExpr:
+                              ref: tokenZone
+                              token: $pleiMeiPiece
+                          to:
+                            zoneExpr: available-NVA:none
+        shaded:
+          text: NVA free March from any spaces outside South Vietnam, then free Attack or Ambush any 1 space.
           freeOperationGrants:
             - seat: nva
               sequence:
                 batch: plei-mei-nva
                 step: 0
               operationClass: operation
+              viabilityPolicy: requireUsableForEventPlay
+              completionPolicy: required
+              outcomePolicy: mustChangeGameplayState
+              postResolutionTurnFlow: resumeCardFlow
               actionIds:
                 - march
-        shaded:
-          text: Remove COIN pieces in one selected Highland and execute free Attack.
-          freeOperationGrants:
+              moveZoneBindings:
+                - $targetSpaces
+                - $chainSpaces
+              moveZoneProbeBindings:
+                - $targetSpaces
+                - $chainSpaces
+              allowDuringMonsoon: true
+              zoneFilter:
+                op: and
+                args:
+                  - op: '>'
+                    left:
+                      op: '+'
+                      left:
+                        aggregate:
+                          op: sum
+                          query:
+                            query: binding
+                            name: $targetSpaces
+                          bind: $pleiMeiDest
+                          valueExpr:
+                            op: '+'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: binding
+                                  name: '$movingGuerrillas@{$pleiMeiDest}'
+                            right:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: binding
+                                  name: '$movingTroops@{$pleiMeiDest}'
+                      right:
+                        aggregate:
+                          op: sum
+                          query:
+                            query: binding
+                            name: $chainSpaces
+                          bind: $pleiMeiChainDest
+                          valueExpr:
+                            op: '+'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: binding
+                                  name: '$movingGuerrillas@{$pleiMeiChainDest}'
+                            right:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: binding
+                                  name: '$movingTroops@{$pleiMeiChainDest}'
+                    right: 0
+                  - op: ==
+                    left:
+                      op: '+'
+                      left:
+                        aggregate:
+                          op: sum
+                          query:
+                            query: binding
+                            name: $targetSpaces
+                          bind: $pleiMeiDest
+                          valueExpr:
+                            op: '+'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: binding
+                                  name: '$movingGuerrillas@{$pleiMeiDest}'
+                            right:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: binding
+                                  name: '$movingTroops@{$pleiMeiDest}'
+                      right:
+                        aggregate:
+                          op: sum
+                          query:
+                            query: binding
+                            name: $chainSpaces
+                          bind: $pleiMeiChainDest
+                          valueExpr:
+                            op: '+'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: binding
+                                  name: '$movingGuerrillas@{$pleiMeiChainDest}'
+                            right:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: binding
+                                  name: '$movingTroops@{$pleiMeiChainDest}'
+                    right:
+                      op: '+'
+                      left:
+                        aggregate:
+                          op: sum
+                          query:
+                            query: binding
+                            name: $targetSpaces
+                          bind: $pleiMeiDest
+                          valueExpr:
+                            op: '+'
+                            left:
+                              aggregate:
+                                op: sum
+                                query:
+                                  query: tokenZones
+                                  source:
+                                    query: binding
+                                    name: '$movingGuerrillas@{$pleiMeiDest}'
+                                  dedupe: false
+                                bind: $pleiMeiOrigin
+                                valueExpr:
+                                  if:
+                                    when:
+                                      conditionMacro: fitl-space-outside-south
+                                      args:
+                                        spaceExpr: $pleiMeiOrigin
+                                    then: 1
+                                    else: 0
+                            right:
+                              aggregate:
+                                op: sum
+                                query:
+                                  query: tokenZones
+                                  source:
+                                    query: binding
+                                    name: '$movingTroops@{$pleiMeiDest}'
+                                  dedupe: false
+                                bind: $pleiMeiOrigin
+                                valueExpr:
+                                  if:
+                                    when:
+                                      conditionMacro: fitl-space-outside-south
+                                      args:
+                                        spaceExpr: $pleiMeiOrigin
+                                    then: 1
+                                    else: 0
+                      right:
+                        aggregate:
+                          op: sum
+                          query:
+                            query: binding
+                            name: $chainSpaces
+                          bind: $pleiMeiChainDest
+                          valueExpr:
+                            op: '+'
+                            left:
+                              aggregate:
+                                op: sum
+                                query:
+                                  query: tokenZones
+                                  source:
+                                    query: binding
+                                    name: '$movingGuerrillas@{$pleiMeiChainDest}'
+                                  dedupe: false
+                                bind: $pleiMeiOrigin
+                                valueExpr:
+                                  if:
+                                    when:
+                                      conditionMacro: fitl-space-outside-south
+                                      args:
+                                        spaceExpr: $pleiMeiOrigin
+                                    then: 1
+                                    else: 0
+                            right:
+                              aggregate:
+                                op: sum
+                                query:
+                                  query: tokenZones
+                                  source:
+                                    query: binding
+                                    name: '$movingTroops@{$pleiMeiChainDest}'
+                                  dedupe: false
+                                bind: $pleiMeiOrigin
+                                valueExpr:
+                                  if:
+                                    when:
+                                      conditionMacro: fitl-space-outside-south
+                                      args:
+                                        spaceExpr: $pleiMeiOrigin
+                                    then: 1
+                                    else: 0
             - seat: nva
               sequence:
                 batch: plei-mei-nva
-                step: 0
+                step: 1
               operationClass: operation
+              completionPolicy: required
+              outcomePolicy: mustChangeGameplayState
+              postResolutionTurnFlow: resumeCardFlow
               actionIds:
                 - attack
+                - ambushNva
+              moveZoneBindings:
+                - $targetSpaces
+              moveZoneProbeBindings:
+                - $targetSpaces
+              zoneFilter:
+                op: ==
+                left:
+                  aggregate:
+                    op: count
+                    query:
+                      query: binding
+                      name: $targetSpaces
+                right: 1
       - id: card-48
         title: Nam Dong
         sideMode: dual

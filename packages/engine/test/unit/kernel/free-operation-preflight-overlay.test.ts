@@ -81,4 +81,22 @@ describe('free-operation preflight overlay builder', () => {
       },
     });
   });
+
+  it('can omit skipPhaseCheck when the caller needs ordinary phase gating', () => {
+    const overlay = buildFreeOperationPreflightOverlay(
+      { executionPlayer: asPlayerId(0), executionContext: { allowedTargets: [2] } },
+      { actionId: asActionId('operation:free'), params: { target: 2 } },
+      'turnFlowEligibility',
+      { skipPhaseCheck: false },
+    );
+
+    assert.deepEqual(overlay, {
+      executionPlayerOverride: asPlayerId(0),
+      freeOperationOverlay: {
+        grantContext: {
+          allowedTargets: [2],
+        },
+      },
+    });
+  });
 });

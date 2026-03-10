@@ -4,11 +4,13 @@ import { ILLEGAL_MOVE_REASONS } from './runtime-reasons.js';
 import type { IllegalMoveReason, PipelineRuntimeReason, RuntimeContractReason } from './runtime-reasons.js';
 import type { FreeOperationBlockExplanation } from './free-operation-denial-contract.js';
 import type {
+  AuthorizedFreeOperationGrantMissingInvariantContext,
   CardMetadataSeatOrderShapeInvariantContext,
   TurnFlowActiveSeatInvariantContext,
 } from './turn-flow-invariant-contract-types.js';
 import type { ActionDef, ActionPipelineDef, GameState, Move, TurnFlowActionClass } from './types.js';
 export type {
+  AuthorizedFreeOperationGrantMissingInvariantContext,
   CardMetadataSeatOrderShapeInvariantContext,
   TurnFlowActiveSeatInvariantContext,
 } from './turn-flow-invariant-contract-types.js';
@@ -51,6 +53,7 @@ export interface SelectorRuntimeContractInvalidContext {
 
 export type RuntimeContractInvalidContext =
   | SelectorRuntimeContractInvalidContext
+  | AuthorizedFreeOperationGrantMissingInvariantContext
   | TurnFlowActiveSeatInvariantContext
   | CardMetadataSeatOrderShapeInvariantContext;
 

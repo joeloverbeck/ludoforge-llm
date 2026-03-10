@@ -31,6 +31,10 @@ import {
   requireCardDrivenActiveSeat,
 } from './turn-flow-runtime-invariants.js';
 import {
+  authorizedFreeOperationGrantMissingInvariantMessage,
+  makeAuthorizedFreeOperationGrantMissingInvariantContext,
+} from './turn-flow-invariant-contracts.js';
+import {
   grantRequiresUsableProbe,
   isFreeOperationGrantUsableInCurrentState,
   resolveFreeOperationGrantViabilityPolicy,
@@ -1066,6 +1070,7 @@ export const applyTurnFlowEligibilityAfterMove = (
 
 export const consumeTurnFlowFreeOperationGrant = (
   def: GameDef,
+  authorizationState: GameState,
   state: GameState,
   move: Move,
   seatResolution: SeatResolutionContext,
@@ -1074,16 +1079,23 @@ export const consumeTurnFlowFreeOperationGrant = (
     return { state, traceEntries: [], releasedDeferredEventEffects: [] };
   }
   const runtime = state.turnOrderState.runtime;
+  const authorizationRuntime =
+    authorizationState.turnOrderState.type === 'cardDriven'
+      ? authorizationState.turnOrderState.runtime
+      : null;
+  if (authorizationRuntime === null) {
+    return { state, traceEntries: [], releasedDeferredEventEffects: [] };
+  }
   const activeSeat = requireCardDrivenActiveSeat(
     def,
-    state,
+    authorizationState,
     TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_CONSUMPTION,
     seatResolution,
   );
-  const pending = runtime.pendingFreeOperationGrants ?? [];
+  const pending = authorizationRuntime.pendingFreeOperationGrants ?? [];
   const authorizedGrant = resolveAuthorizedPendingFreeOperationGrants(
     def,
-    state,
+    authorizationState,
     pending,
     activeSeat,
     move,
@@ -1091,21 +1103,36 @@ export const consumeTurnFlowFreeOperationGrant = (
   if (authorizedGrant === null) {
     return { state, traceEntries: [], releasedDeferredEventEffects: [] };
   }
-  const consumedIndex = pending.findIndex((grant) => grant.grantId === authorizedGrant.grantId);
-  const consumed = pending[consumedIndex]!;
+  const runtimePending = runtime.pendingFreeOperationGrants ?? [];
+  const consumedIndex = runtimePending.findIndex((grant) => grant.grantId === authorizedGrant.grantId);
+  if (consumedIndex < 0) {
+    const context = makeAuthorizedFreeOperationGrantMissingInvariantContext({
+      actionId: String(move.actionId),
+      activeSeat,
+      authorizedGrantId: authorizedGrant.grantId,
+      authorizationPendingGrantIds: pending.map((grant) => grant.grantId),
+      runtimePendingGrantIds: runtimePending.map((grant) => grant.grantId),
+    });
+    throw kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      authorizedFreeOperationGrantMissingInvariantMessage(context),
+      context,
+    );
+  }
+  const consumed = runtimePending[consumedIndex]!;
   const decremented = consumed.remainingUses - 1;
   const nextPending = decremented <= 0
-    ? [...pending.slice(0, consumedIndex), ...pending.slice(consumedIndex + 1)]
+    ? [...runtimePending.slice(0, consumedIndex), ...runtimePending.slice(consumedIndex + 1)]
     : [
-        ...pending.slice(0, consumedIndex),
+        ...runtimePending.slice(0, consumedIndex),
         {
           ...consumed,
           remainingUses: decremented,
         },
-        ...pending.slice(consumedIndex + 1),
+        ...runtimePending.slice(consumedIndex + 1),
       ];
   const captureKey = consumed.sequenceContext?.captureMoveZoneCandidatesAs;
-  const capturedZones = captureKey === undefined ? [] : collectGrantMoveZoneCandidates(def, move, consumed);
+  const capturedZones = captureKey === undefined ? [] : collectGrantMoveZoneCandidates(def, authorizationState, move, consumed);
   const capturedBatchId = consumed.sequenceBatchId;
   const baseSequenceContexts = runtime.freeOperationSequenceContexts;
   const nextSequenceContexts = captureKey === undefined || capturedBatchId === undefined

@@ -8838,14 +8838,14 @@ eventDecks:
             - VC
           flavorText: Surface-to-air missiles tighten the northern shield.
         unshaded:
-          text: "NVA capability: Air Strike can remove only 2 pieces in one selected space."
+          text: When Air Strike Degrades Trail, US removes 1 NVA piece outside the South.
           effects:
             - macro: set-global-marker
               args:
                 markerId: cap_sa2s
                 markerState: unshaded
         shaded:
-          text: "NVA capability (shaded): Air Strike losses can include US Troops when available."
+          text: Rally Improves Trail 2 boxes not 1 (unshaded Wild Weasels remove).
           effects:
             - macro: set-global-marker
               args:

@@ -52,6 +52,8 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
     assert.notEqual(card, undefined);
     assert.equal(card?.tags?.includes('capability'), true);
     assert.equal(card?.tags?.includes('NVA'), true);
+    assert.equal(card?.unshaded?.text, 'When Air Strike Degrades Trail, US removes 1 NVA piece outside the South.');
+    assert.equal(card?.shaded?.text, 'Rally Improves Trail 2 boxes not 1 (unshaded Wild Weasels remove).');
     assert.deepEqual(card?.unshaded?.effects, [{ setGlobalMarker: { marker: 'cap_sa2s', state: 'unshaded' } }]);
     assert.deepEqual(card?.shaded?.effects, [{ setGlobalMarker: { marker: 'cap_sa2s', state: 'shaded' } }]);
   });

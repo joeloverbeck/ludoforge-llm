@@ -1,3 +1,5 @@
+**Status**: COMPLETED
+
 # Technical Report: Automatic Natural-Language Generation for Action Tooltips
 
 ## 1. Problem Statement
@@ -256,7 +258,7 @@ The US Sweep pipeline profile has these stages:
 Stages:
 1. **select-spaces**: Via macro, choose spaces with NVA control or presence.
 2. **resolve-per-space**: Cost 1 NVA Resource per space. If no NVA base: place 1 guerrilla or (if 2+ guerrillas and <2 bases) replace 2 guerrillas with a base. If NVA base present: place guerrillas up to (Trail + base count).
-3. **trail-improvement**: Optionally spend 2 NVA Resources to increase Trail by 1 (if Trail < 4 and McNamara Line not active). AAA capability affects space selection; SA-2s capability may give +2 Trail boost.
+3. **trail-improvement**: Optionally spend 2 NVA Resources to increase Trail by 1 (if Trail < 4 and McNamara Line not active). AAA capability affects space selection; shaded SA-2s increases the Trail gain by 2 boxes instead of 1.
 
 **Desired natural-language tooltip**:
 
@@ -269,7 +271,7 @@ Stages:
 > 2. In each space:
 >    - **Without base**: Place 1 NVA guerrilla; or replace 2 guerrillas with an NVA base (if 2+ guerrillas and fewer than 2 bases in space).
 >    - **With base**: Place guerrillas up to Trail + NVA base count in the space.
-> 3. **Trail Improvement** (optional): Spend 2 NVA Resources to increase Trail by 1 (max 4). AAA (unshaded) limits to 1 Laos/Cambodia space; SA-2s (shaded) may give +2 Trail.
+> 3. **Trail Improvement** (optional): Spend 2 NVA Resources to increase Trail by 1 (max 4). AAA (unshaded) limits to 1 Laos/Cambodia space; SA-2s (shaded) makes that improvement 2 boxes instead of 1.
 
 ### 4.3 US Train Action (from `30-rules-actions.md:1232-1497`)
 
@@ -662,3 +664,10 @@ The natural-language output should still support live state annotations. This ca
 9. **Existing research**: Are there academic papers or open-source projects on natural language generation from game rule DSLs, board game rule explanation systems, or AST-to-English translation for domain-specific languages?
 
 10. **Hybrid rendering**: Should the tooltip support both modes (structured AST view for power users, natural-language view for casual players) with a toggle? How does this affect the architecture?
+
+## Outcome
+
+- Completion date: 2026-03-10
+- What changed: Finalized and archived this report after it had served its purpose as a design/reference artifact for action-tooltip natural-language generation exploration.
+- Deviations from original plan: None recorded in this document.
+- Verification results: Prepared for archival using the repository archival workflow; post-move dependency verification will be run with `pnpm run check:ticket-deps`.

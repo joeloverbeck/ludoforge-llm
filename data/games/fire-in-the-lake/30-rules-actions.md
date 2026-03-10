@@ -3936,115 +3936,199 @@ actionPipelines:
                                   - if:
                                       when: { op: '>=', left: { ref: binding, name: $topGunDie }, right: 4 }
                                       then:
-                                        - addVar:
-                                            scope: global
-                                            var: trail
-                                            delta:
-                                              op: '-'
-                                              left: 0
-                                              right: { ref: binding, name: $airStrikeTrailDegrade }
                                         - if:
-                                            when:
-                                              op: and
-                                              args:
-                                                - { op: '==', left: { ref: globalMarkerState, marker: cap_migs }, right: shaded }
-                                                - { op: '!=', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
+                                            when: { op: '>', left: { ref: binding, name: $airStrikeTrailDegrade }, right: 0 }
                                             then:
-                                              - forEach:
-                                                  bind: $migsCostTroop
-                                                  over:
-                                                    query: tokensInZone
-                                                    zone: available-US:none
-                                                    filter: { op: and, args: [{ prop: faction, op: eq, value: US }, { prop: type, op: eq, value: troops }] }
-                                                  limit: 1
-                                                  effects:
-                                                    - moveToken:
-                                                        token: $migsCostTroop
-                                                        from: available-US:none
-                                                        to: { zoneExpr: 'casualties-US:none' }
-                                        - if:
-                                            when: { op: '==', left: { ref: globalMarkerState, marker: cap_sa2s }, right: unshaded }
-                                            then:
-                                              - chooseN:
-                                                  bind: $sa2sCostSpaces
-                                                  options:
-                                                    query: concat
-                                                    sources:
-                                                      - { query: binding, name: $spaces }
-                                                      - { query: binding, name: $arcLightNoCoinProvinces }
-                                                  min: 0
-                                                  max: 1
-                                              - forEach:
-                                                  bind: $sa2sCostSpace
-                                                  over: { query: binding, name: $sa2sCostSpaces }
-                                                  effects:
+                                              - addVar:
+                                                  scope: global
+                                                  var: trail
+                                                  delta:
+                                                    op: '-'
+                                                    left: 0
+                                                    right: { ref: binding, name: $airStrikeTrailDegrade }
+                                              - if:
+                                                  when:
+                                                    op: and
+                                                    args:
+                                                      - { op: '==', left: { ref: globalMarkerState, marker: cap_migs }, right: shaded }
+                                                      - { op: '!=', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
+                                                  then:
                                                     - forEach:
-                                                        bind: $sa2sCostPiece
+                                                        bind: $migsCostTroop
                                                         over:
                                                           query: tokensInZone
-                                                          zone: $sa2sCostSpace
-                                                          filter: { op: and, args: [{ prop: faction, op: eq, value: NVA }] }
+                                                          zone: available-US:none
+                                                          filter: { op: and, args: [{ prop: faction, op: eq, value: US }, { prop: type, op: eq, value: troops }] }
                                                         limit: 1
                                                         effects:
                                                           - moveToken:
-                                                              token: $sa2sCostPiece
-                                                              from: $sa2sCostSpace
-                                                              to: { zoneExpr: 'available-NVA:none' }
+                                                              token: $migsCostTroop
+                                                              from: available-US:none
+                                                              to: { zoneExpr: 'casualties-US:none' }
+                                              - let:
+                                                  bind: $sa2sEligibleCount
+                                                  value:
+                                                    aggregate:
+                                                      op: count
+                                                      query:
+                                                        query: tokensInMapSpaces
+                                                        spaceFilter:
+                                                          conditionMacro: fitl-space-outside-south-province
+                                                          args: { spaceExpr: $zone }
+                                                        filter:
+                                                          op: and
+                                                          args:
+                                                            - { prop: faction, op: eq, value: NVA }
+                                                            - op: or
+                                                              args:
+                                                                - { prop: type, op: in, value: [troops, guerrilla] }
+                                                                - op: and
+                                                                  args:
+                                                                    - { prop: type, op: eq, value: base }
+                                                                    - { prop: tunnel, op: eq, value: untunneled }
+                                                  in:
+                                                    - let:
+                                                        bind: $sa2sRemoveCount
+                                                        value:
+                                                          if:
+                                                            when: { op: '==', left: { ref: globalMarkerState, marker: cap_sa2s }, right: unshaded }
+                                                            then:
+                                                              op: min
+                                                              left: 1
+                                                              right: { ref: binding, name: $sa2sEligibleCount }
+                                                            else: 0
+                                                        in:
+                                                          - if:
+                                                              when: { op: '>', left: { ref: binding, name: $sa2sRemoveCount }, right: 0 }
+                                                              then:
+                                                                - chooseN:
+                                                                    bind: $sa2sPiecesToRemove
+                                                                    options:
+                                                                      query: tokensInMapSpaces
+                                                                      spaceFilter:
+                                                                        conditionMacro: fitl-space-outside-south-province
+                                                                        args: { spaceExpr: $zone }
+                                                                      filter:
+                                                                        op: and
+                                                                        args:
+                                                                          - { prop: faction, op: eq, value: NVA }
+                                                                          - op: or
+                                                                            args:
+                                                                              - { prop: type, op: in, value: [troops, guerrilla] }
+                                                                              - op: and
+                                                                                args:
+                                                                                  - { prop: type, op: eq, value: base }
+                                                                                  - { prop: tunnel, op: eq, value: untunneled }
+                                                                    min: { ref: binding, name: $sa2sRemoveCount }
+                                                                    max: { ref: binding, name: $sa2sRemoveCount }
+                                                                - forEach:
+                                                                    bind: $sa2sPiece
+                                                                    over: { query: binding, name: $sa2sPiecesToRemove }
+                                                                    effects:
+                                                                      - moveToken:
+                                                                          token: $sa2sPiece
+                                                                          from:
+                                                                            zoneExpr:
+                                                                              ref: tokenZone
+                                                                              token: $sa2sPiece
+                                                                          to: { zoneExpr: 'available-NVA:none' }
                           else:
-                            - addVar:
-                                scope: global
-                                var: trail
-                                delta:
-                                  op: '-'
-                                  left: 0
-                                  right: { ref: binding, name: $airStrikeTrailDegrade }
                             - if:
-                                when:
-                                  op: and
-                                  args:
-                                    - { op: '==', left: { ref: globalMarkerState, marker: cap_migs }, right: shaded }
-                                    - { op: '!=', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
+                                when: { op: '>', left: { ref: binding, name: $airStrikeTrailDegrade }, right: 0 }
                                 then:
-                                  - forEach:
-                                      bind: $migsCostTroop
-                                      over:
-                                        query: tokensInZone
-                                        zone: available-US:none
-                                        filter: { op: and, args: [{ prop: faction, op: eq, value: US }, { prop: type, op: eq, value: troops }] }
-                                      limit: 1
-                                      effects:
-                                        - moveToken:
-                                            token: $migsCostTroop
-                                            from: available-US:none
-                                            to: { zoneExpr: 'casualties-US:none' }
-                            - if:
-                                when: { op: '==', left: { ref: globalMarkerState, marker: cap_sa2s }, right: unshaded }
-                                then:
-                                  - chooseN:
-                                      bind: $sa2sCostSpaces
-                                      options:
-                                        query: concat
-                                        sources:
-                                          - { query: binding, name: $spaces }
-                                          - { query: binding, name: $arcLightNoCoinProvinces }
-                                      min: 0
-                                      max: 1
-                                  - forEach:
-                                      bind: $sa2sCostSpace
-                                      over: { query: binding, name: $sa2sCostSpaces }
-                                      effects:
+                                  - addVar:
+                                      scope: global
+                                      var: trail
+                                      delta:
+                                        op: '-'
+                                        left: 0
+                                        right: { ref: binding, name: $airStrikeTrailDegrade }
+                                  - if:
+                                      when:
+                                        op: and
+                                        args:
+                                          - { op: '==', left: { ref: globalMarkerState, marker: cap_migs }, right: shaded }
+                                          - { op: '!=', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
+                                      then:
                                         - forEach:
-                                            bind: $sa2sCostPiece
+                                            bind: $migsCostTroop
                                             over:
                                               query: tokensInZone
-                                              zone: $sa2sCostSpace
-                                              filter: { op: and, args: [{ prop: faction, op: eq, value: NVA }] }
+                                              zone: available-US:none
+                                              filter: { op: and, args: [{ prop: faction, op: eq, value: US }, { prop: type, op: eq, value: troops }] }
                                             limit: 1
                                             effects:
                                               - moveToken:
-                                                  token: $sa2sCostPiece
-                                                  from: $sa2sCostSpace
-                                                  to: { zoneExpr: 'available-NVA:none' }
+                                                  token: $migsCostTroop
+                                                  from: available-US:none
+                                                  to: { zoneExpr: 'casualties-US:none' }
+                                  - let:
+                                      bind: $sa2sEligibleCount
+                                      value:
+                                        aggregate:
+                                          op: count
+                                          query:
+                                            query: tokensInMapSpaces
+                                            spaceFilter:
+                                              conditionMacro: fitl-space-outside-south-province
+                                              args: { spaceExpr: $zone }
+                                            filter:
+                                              op: and
+                                              args:
+                                                - { prop: faction, op: eq, value: NVA }
+                                                - op: or
+                                                  args:
+                                                    - { prop: type, op: in, value: [troops, guerrilla] }
+                                                    - op: and
+                                                      args:
+                                                        - { prop: type, op: eq, value: base }
+                                                        - { prop: tunnel, op: eq, value: untunneled }
+                                      in:
+                                        - let:
+                                            bind: $sa2sRemoveCount
+                                            value:
+                                              if:
+                                                when: { op: '==', left: { ref: globalMarkerState, marker: cap_sa2s }, right: unshaded }
+                                                then:
+                                                  op: min
+                                                  left: 1
+                                                  right: { ref: binding, name: $sa2sEligibleCount }
+                                                else: 0
+                                            in:
+                                              - if:
+                                                  when: { op: '>', left: { ref: binding, name: $sa2sRemoveCount }, right: 0 }
+                                                  then:
+                                                    - chooseN:
+                                                        bind: $sa2sPiecesToRemove
+                                                        options:
+                                                          query: tokensInMapSpaces
+                                                          spaceFilter:
+                                                            conditionMacro: fitl-space-outside-south-province
+                                                            args: { spaceExpr: $zone }
+                                                          filter:
+                                                            op: and
+                                                            args:
+                                                              - { prop: faction, op: eq, value: NVA }
+                                                              - op: or
+                                                                args:
+                                                                  - { prop: type, op: in, value: [troops, guerrilla] }
+                                                                  - op: and
+                                                                    args:
+                                                                      - { prop: type, op: eq, value: base }
+                                                                      - { prop: tunnel, op: eq, value: untunneled }
+                                                        min: { ref: binding, name: $sa2sRemoveCount }
+                                                        max: { ref: binding, name: $sa2sRemoveCount }
+                                                    - forEach:
+                                                        bind: $sa2sPiece
+                                                        over: { query: binding, name: $sa2sPiecesToRemove }
+                                                        effects:
+                                                          - moveToken:
+                                                              token: $sa2sPiece
+                                                              from:
+                                                                zoneExpr:
+                                                                  ref: tokenZone
+                                                                  token: $sa2sPiece
+                                                              to: { zoneExpr: 'available-NVA:none' }
       - stage: air-strike-telemetry
         effects:
           - addVar:

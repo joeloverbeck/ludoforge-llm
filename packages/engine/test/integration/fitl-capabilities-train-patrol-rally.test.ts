@@ -481,6 +481,72 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
     assert.equal(after.globalVars.nvaResources, 7, 'Single-space Rally + Trail improvement should cost 3 total Resources');
   });
 
+  it('SA-2s shaded improves Trail by 2 boxes instead of 1 during Rally', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const start = clearAllZones(initialState(def, 36041, 4).state);
+    const setup: GameState = {
+      ...start,
+      activePlayer: asPlayerId(2),
+      globalVars: {
+        ...start.globalVars,
+        nvaResources: 5,
+        trail: 1,
+      },
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_sa2s: 'shaded',
+      },
+    };
+
+    const after = applyMoveWithResolvedDecisionIds(def, setup, {
+      actionId: asActionId('rally'),
+      params: {
+        $targetSpaces: [],
+        $improveTrail: 'yes',
+        $trailImproveSpaces: ['central-laos:none'],
+      },
+    }).state;
+
+    assert.equal(after.globalVars.nvaResources, 3, 'Trail improvement should still cost 2 Resources');
+    assert.equal(after.globalVars.trail, 3, 'SA-2s shaded should improve Trail by 2 from 1 to 3');
+  });
+
+  it('SA-2s shaded Rally Trail boost still clamps at the maximum Trail value of 4', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const start = clearAllZones(initialState(def, 36042, 4).state);
+    const setup: GameState = {
+      ...start,
+      activePlayer: asPlayerId(2),
+      globalVars: {
+        ...start.globalVars,
+        nvaResources: 5,
+        trail: 3,
+      },
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_sa2s: 'shaded',
+      },
+    };
+
+    const after = applyMoveWithResolvedDecisionIds(def, setup, {
+      actionId: asActionId('rally'),
+      params: {
+        $targetSpaces: [],
+        $improveTrail: 'yes',
+        $trailImproveSpaces: ['central-laos:none'],
+      },
+    }).state;
+
+    assert.equal(after.globalVars.nvaResources, 3, 'Trail improvement should still pay the normal 2-Resource cost');
+    assert.equal(after.globalVars.trail, 4, 'SA-2s shaded should clamp a +2 Trail improvement at 4');
+  });
+
   it('encodes Rally trail and cadres branches with side-specific constraints', () => {
     const rallyNva = getParsedProfile('rally-nva-profile');
     const rallyVc = getParsedProfile('rally-vc-profile');
@@ -510,6 +576,12 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
       node?.if?.when?.right === 'shaded',
     );
     assert.ok(sa2sShadedBranch.length >= 1, 'Expected cap_sa2s shaded branch in rally-nva trail improvement');
+    const sa2sBoost = findDeep(sa2sShadedBranch[0], (node: any) =>
+      node?.addVar?.var === 'trail' &&
+      node?.addVar?.delta?.if?.then === 1 &&
+      node?.addVar?.delta?.if?.else === 2,
+    );
+    assert.ok(sa2sBoost.length >= 1, 'Expected cap_sa2s shaded to encode a +2 Trail improvement with max-4 clamp');
 
     const cadresShadedBranch = findDeep(rallyVc.stages, (node: any) =>
       node?.if?.when?.left?.ref === 'globalMarkerState' &&

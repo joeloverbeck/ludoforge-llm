@@ -627,9 +627,9 @@ verbalization:
         effect: "Air Strike Trail degradation: US loses 2 pieces to Available"
     cap_sa2s:
       - condition: "SA-2s is Unshaded"
-        effect: "Air Strike Trail degradation: US loses 1 piece to Casualties"
+        effect: "Whenever Air Strike degrades Trail, remove 1 NVA troop, guerrilla, or untunneled base outside the South"
       - condition: "SA-2s is Shaded"
-        effect: "NVA Rally: Trail improvement by +1 in spaces with NVA base"
+        effect: "NVA Rally Trail improvement increases by 2 boxes instead of 1"
     cap_pt76:
       - condition: "PT-76 is Unshaded"
         effect: "NVA Attack: each Attack space removes 1 NVA Troop first when possible; otherwise pay normal Resource cost"

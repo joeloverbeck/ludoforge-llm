@@ -60872,10 +60872,53 @@
             "flavorText": "Air-defense concentration blunts repeated bridge attacks."
           },
           "unshaded": {
-            "text": "NVA fortifies logistics corridor resilience around Trail adjustments."
+            "text": "Degrade the Trail by 3 boxes.",
+            "effects": [
+              {
+                "addVar": {
+                  "scope": "global",
+                  "var": "trail",
+                  "delta": -3
+                }
+              }
+            ]
           },
           "shaded": {
-            "text": "Strike disruption causes COIN losses and protects northern throughput."
+            "text": "Improve Trail by 1 box. Then add three times Trail value to NVA Resources.",
+            "effects": [
+              {
+                "addVar": {
+                  "scope": "global",
+                  "var": "trail",
+                  "delta": 1
+                }
+              },
+              {
+                "let": {
+                  "bind": "$trailValue",
+                  "value": {
+                    "ref": "gvar",
+                    "var": "trail"
+                  },
+                  "in": [
+                    {
+                      "addVar": {
+                        "scope": "global",
+                        "var": "nvaResources",
+                        "delta": {
+                          "op": "*",
+                          "left": 3,
+                          "right": {
+                            "ref": "binding",
+                            "name": "$trailValue"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
           }
         },
         {
@@ -60895,10 +60938,642 @@
             "flavorText": "A brutal highland battle drives force repositioning and tunnel pressure."
           },
           "unshaded": {
-            "text": "Reposition selected NVA/VC forces and intensify pressure against exposed COIN units."
+            "text": "Move 4 US Troops from any spaces to a Highland. Remove 1 NVA or VC Base there, even if Tunneled.",
+            "effects": [
+              {
+                "let": {
+                  "bind": "$movableUsTroops",
+                  "value": {
+                    "aggregate": {
+                      "op": "count",
+                      "query": {
+                        "query": "tokensInMapSpaces",
+                        "filter": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "prop": "faction",
+                              "op": "eq",
+                              "value": "US"
+                            },
+                            {
+                              "prop": "type",
+                              "op": "eq",
+                              "value": "troops"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "in": [
+                    {
+                      "let": {
+                        "bind": "$highlandBaseTargets",
+                        "value": {
+                          "aggregate": {
+                            "op": "count",
+                            "query": {
+                              "query": "mapSpaces",
+                              "filter": {
+                                "condition": {
+                                  "op": "and",
+                                  "args": [
+                                    {
+                                      "op": "zonePropIncludes",
+                                      "zone": "$zone",
+                                      "prop": "terrainTags",
+                                      "value": "highland"
+                                    },
+                                    {
+                                      "op": ">",
+                                      "left": {
+                                        "aggregate": {
+                                          "op": "count",
+                                          "query": {
+                                            "query": "tokensInZone",
+                                            "zone": "$zone",
+                                            "filter": {
+                                              "op": "and",
+                                              "args": [
+                                                {
+                                                  "prop": "faction",
+                                                  "op": "in",
+                                                  "value": [
+                                                    "NVA",
+                                                    "VC"
+                                                  ]
+                                                },
+                                                {
+                                                  "prop": "type",
+                                                  "op": "eq",
+                                                  "value": "base"
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "right": 0
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "in": [
+                          {
+                            "if": {
+                              "when": {
+                                "op": "or",
+                                "args": [
+                                  {
+                                    "op": ">",
+                                    "left": {
+                                      "ref": "binding",
+                                      "name": "$movableUsTroops"
+                                    },
+                                    "right": 0
+                                  },
+                                  {
+                                    "op": ">",
+                                    "left": {
+                                      "ref": "binding",
+                                      "name": "$highlandBaseTargets"
+                                    },
+                                    "right": 0
+                                  }
+                                ]
+                              },
+                              "then": [
+                                {
+                                  "chooseOne": {
+                                    "internalDecisionId": "decision:doc.eventDecks.0.cards.73.unshaded.effects.0.let.in.0.let.in.0.if.then.0.chooseOne",
+                                    "bind": "$targetHighland",
+                                    "options": {
+                                      "query": "mapSpaces",
+                                      "filter": {
+                                        "condition": {
+                                          "op": "and",
+                                          "args": [
+                                            {
+                                              "op": "zonePropIncludes",
+                                              "zone": "$zone",
+                                              "prop": "terrainTags",
+                                              "value": "highland"
+                                            },
+                                            {
+                                              "op": "or",
+                                              "args": [
+                                                {
+                                                  "op": ">",
+                                                  "left": {
+                                                    "ref": "binding",
+                                                    "name": "$movableUsTroops"
+                                                  },
+                                                  "right": 0
+                                                },
+                                                {
+                                                  "op": ">",
+                                                  "left": {
+                                                    "aggregate": {
+                                                      "op": "count",
+                                                      "query": {
+                                                        "query": "tokensInZone",
+                                                        "zone": "$zone",
+                                                        "filter": {
+                                                          "op": "and",
+                                                          "args": [
+                                                            {
+                                                              "prop": "faction",
+                                                              "op": "in",
+                                                              "value": [
+                                                                "NVA",
+                                                                "VC"
+                                                              ]
+                                                            },
+                                                            {
+                                                              "prop": "type",
+                                                              "op": "eq",
+                                                              "value": "base"
+                                                            }
+                                                          ]
+                                                        }
+                                                      }
+                                                    }
+                                                  },
+                                                  "right": 0
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "let": {
+                                    "bind": "$movableTroopsToTarget",
+                                    "value": {
+                                      "aggregate": {
+                                        "op": "count",
+                                        "query": {
+                                          "query": "tokensInMapSpaces",
+                                          "spaceFilter": {
+                                            "condition": {
+                                              "op": "!=",
+                                              "left": {
+                                                "ref": "zoneProp",
+                                                "zone": "$zone",
+                                                "prop": "id"
+                                              },
+                                              "right": {
+                                                "ref": "zoneProp",
+                                                "zone": "$targetHighland",
+                                                "prop": "id"
+                                              }
+                                            }
+                                          },
+                                          "filter": {
+                                            "op": "and",
+                                            "args": [
+                                              {
+                                                "prop": "faction",
+                                                "op": "eq",
+                                                "value": "US"
+                                              },
+                                              {
+                                                "prop": "type",
+                                                "op": "eq",
+                                                "value": "troops"
+                                              }
+                                            ]
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "in": [
+                                      {
+                                        "chooseN": {
+                                          "internalDecisionId": "decision:doc.eventDecks.0.cards.73.unshaded.effects.0.let.in.0.let.in.0.if.then.1.let.in.0.chooseN",
+                                          "bind": "$usTroopsToMove",
+                                          "options": {
+                                            "query": "tokensInMapSpaces",
+                                            "spaceFilter": {
+                                              "condition": {
+                                                "op": "!=",
+                                                "left": {
+                                                  "ref": "zoneProp",
+                                                  "zone": "$zone",
+                                                  "prop": "id"
+                                                },
+                                                "right": {
+                                                  "ref": "zoneProp",
+                                                  "zone": "$targetHighland",
+                                                  "prop": "id"
+                                                }
+                                              }
+                                            },
+                                            "filter": {
+                                              "op": "and",
+                                              "args": [
+                                                {
+                                                  "prop": "faction",
+                                                  "op": "eq",
+                                                  "value": "US"
+                                                },
+                                                {
+                                                  "prop": "type",
+                                                  "op": "eq",
+                                                  "value": "troops"
+                                                }
+                                              ]
+                                            }
+                                          },
+                                          "max": {
+                                            "op": "min",
+                                            "left": 4,
+                                            "right": {
+                                              "ref": "binding",
+                                              "name": "$movableTroopsToTarget"
+                                            }
+                                          },
+                                          "min": {
+                                            "op": "min",
+                                            "left": 4,
+                                            "right": {
+                                              "ref": "binding",
+                                              "name": "$movableTroopsToTarget"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "forEach": {
+                                          "bind": "$usTroop",
+                                          "over": {
+                                            "query": "binding",
+                                            "name": "$usTroopsToMove"
+                                          },
+                                          "effects": [
+                                            {
+                                              "moveToken": {
+                                                "token": "$usTroop",
+                                                "from": {
+                                                  "zoneExpr": {
+                                                    "ref": "tokenZone",
+                                                    "token": "$usTroop"
+                                                  }
+                                                },
+                                                "to": {
+                                                  "zoneExpr": "$targetHighland"
+                                                }
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      },
+                                      {
+                                        "let": {
+                                          "bind": "$basesAtTarget",
+                                          "value": {
+                                            "aggregate": {
+                                              "op": "count",
+                                              "query": {
+                                                "query": "tokensInZone",
+                                                "zone": "$targetHighland",
+                                                "filter": {
+                                                  "op": "and",
+                                                  "args": [
+                                                    {
+                                                      "prop": "faction",
+                                                      "op": "in",
+                                                      "value": [
+                                                        "NVA",
+                                                        "VC"
+                                                      ]
+                                                    },
+                                                    {
+                                                      "prop": "type",
+                                                      "op": "eq",
+                                                      "value": "base"
+                                                    }
+                                                  ]
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "in": [
+                                            {
+                                              "if": {
+                                                "when": {
+                                                  "op": ">",
+                                                  "left": {
+                                                    "ref": "binding",
+                                                    "name": "$basesAtTarget"
+                                                  },
+                                                  "right": 0
+                                                },
+                                                "then": [
+                                                  {
+                                                    "chooseOne": {
+                                                      "internalDecisionId": "decision:doc.eventDecks.0.cards.73.unshaded.effects.0.let.in.0.let.in.0.if.then.1.let.in.2.let.in.0.if.then.0.chooseOne",
+                                                      "bind": "$baseToRemove",
+                                                      "options": {
+                                                        "query": "tokensInZone",
+                                                        "zone": "$targetHighland",
+                                                        "filter": {
+                                                          "op": "and",
+                                                          "args": [
+                                                            {
+                                                              "prop": "faction",
+                                                              "op": "in",
+                                                              "value": [
+                                                                "NVA",
+                                                                "VC"
+                                                              ]
+                                                            },
+                                                            {
+                                                              "prop": "type",
+                                                              "op": "eq",
+                                                              "value": "base"
+                                                            }
+                                                          ]
+                                                        }
+                                                      }
+                                                    }
+                                                  },
+                                                  {
+                                                    "moveToken": {
+                                                      "token": "$baseToRemove",
+                                                      "from": {
+                                                        "zoneExpr": {
+                                                          "ref": "tokenZone",
+                                                          "token": "$baseToRemove"
+                                                        }
+                                                      },
+                                                      "to": {
+                                                        "zoneExpr": {
+                                                          "concat": [
+                                                            "available-",
+                                                            {
+                                                              "ref": "tokenProp",
+                                                              "token": "$baseToRemove",
+                                                              "prop": "faction"
+                                                            },
+                                                            ":none"
+                                                          ]
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                ],
+                                                "else": []
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              ],
+                              "else": []
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
           },
           "shaded": {
-            "text": "COIN assault gains ground but incurs attrition and tunnel-side effects."
+            "text": "Place a Tunnel on an NVA or VC Highland Base. 3 US Troops there to Casualties.",
+            "effects": [
+              {
+                "let": {
+                  "bind": "$highlandInsurgentBaseCount",
+                  "value": {
+                    "aggregate": {
+                      "op": "count",
+                      "query": {
+                        "query": "tokensInMapSpaces",
+                        "spaceFilter": {
+                          "condition": {
+                            "op": "zonePropIncludes",
+                            "zone": "$zone",
+                            "prop": "terrainTags",
+                            "value": "highland"
+                          }
+                        },
+                        "filter": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "prop": "faction",
+                              "op": "in",
+                              "value": [
+                                "NVA",
+                                "VC"
+                              ]
+                            },
+                            {
+                              "prop": "type",
+                              "op": "eq",
+                              "value": "base"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "in": [
+                    {
+                      "if": {
+                        "when": {
+                          "op": ">",
+                          "left": {
+                            "ref": "binding",
+                            "name": "$highlandInsurgentBaseCount"
+                          },
+                          "right": 0
+                        },
+                        "then": [
+                          {
+                            "chooseOne": {
+                              "internalDecisionId": "decision:doc.eventDecks.0.cards.73.shaded.effects.0.let.in.0.if.then.0.chooseOne",
+                              "bind": "$highlandBaseTarget",
+                              "options": {
+                                "query": "tokensInMapSpaces",
+                                "spaceFilter": {
+                                  "condition": {
+                                    "op": "zonePropIncludes",
+                                    "zone": "$zone",
+                                    "prop": "terrainTags",
+                                    "value": "highland"
+                                  }
+                                },
+                                "filter": {
+                                  "op": "and",
+                                  "args": [
+                                    {
+                                      "prop": "faction",
+                                      "op": "in",
+                                      "value": [
+                                        "NVA",
+                                        "VC"
+                                      ]
+                                    },
+                                    {
+                                      "prop": "type",
+                                      "op": "eq",
+                                      "value": "base"
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "setTokenProp": {
+                              "token": "$highlandBaseTarget",
+                              "prop": "tunnel",
+                              "value": "tunneled"
+                            }
+                          },
+                          {
+                            "chooseN": {
+                              "internalDecisionId": "decision:doc.eventDecks.0.cards.73.shaded.effects.0.let.in.0.if.then.2.chooseN",
+                              "bind": "$usTroopsToCasualties",
+                              "options": {
+                                "query": "tokensInZone",
+                                "zone": {
+                                  "zoneExpr": {
+                                    "ref": "tokenZone",
+                                    "token": "$highlandBaseTarget"
+                                  }
+                                },
+                                "filter": {
+                                  "op": "and",
+                                  "args": [
+                                    {
+                                      "prop": "faction",
+                                      "op": "eq",
+                                      "value": "US"
+                                    },
+                                    {
+                                      "prop": "type",
+                                      "op": "eq",
+                                      "value": "troops"
+                                    }
+                                  ]
+                                }
+                              },
+                              "max": {
+                                "op": "min",
+                                "left": 3,
+                                "right": {
+                                  "aggregate": {
+                                    "op": "count",
+                                    "query": {
+                                      "query": "tokensInZone",
+                                      "zone": {
+                                        "zoneExpr": {
+                                          "ref": "tokenZone",
+                                          "token": "$highlandBaseTarget"
+                                        }
+                                      },
+                                      "filter": {
+                                        "op": "and",
+                                        "args": [
+                                          {
+                                            "prop": "faction",
+                                            "op": "eq",
+                                            "value": "US"
+                                          },
+                                          {
+                                            "prop": "type",
+                                            "op": "eq",
+                                            "value": "troops"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "min": {
+                                "op": "min",
+                                "left": 3,
+                                "right": {
+                                  "aggregate": {
+                                    "op": "count",
+                                    "query": {
+                                      "query": "tokensInZone",
+                                      "zone": {
+                                        "zoneExpr": {
+                                          "ref": "tokenZone",
+                                          "token": "$highlandBaseTarget"
+                                        }
+                                      },
+                                      "filter": {
+                                        "op": "and",
+                                        "args": [
+                                          {
+                                            "prop": "faction",
+                                            "op": "eq",
+                                            "value": "US"
+                                          },
+                                          {
+                                            "prop": "type",
+                                            "op": "eq",
+                                            "value": "troops"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "forEach": {
+                              "bind": "$usTroop",
+                              "over": {
+                                "query": "binding",
+                                "name": "$usTroopsToCasualties"
+                              },
+                              "effects": [
+                                {
+                                  "moveToken": {
+                                    "token": "$usTroop",
+                                    "from": {
+                                      "zoneExpr": {
+                                        "ref": "tokenZone",
+                                        "token": "$usTroop"
+                                      }
+                                    },
+                                    "to": {
+                                      "zoneExpr": "casualties-US:none"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ],
+                        "else": []
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
           }
         },
         {
@@ -65684,11 +66359,87 @@
             "flavorText": "Strategic guidance reshapes tempo of operations."
           },
           "unshaded": {
-            "text": "Either ARVN executes 2 free Limited Operations, or VC then NVA execute 3 total.",
+            "text": "4 out-of-play US Troops to South Vietnam, or ARVN Resources +9. ARVN executes any 2 free Limited Operations.",
             "branches": [
               {
-                "id": "arvn-two-free-limited-ops",
+                "id": "place-us-troops-and-arvn-two-free-limited-ops",
                 "order": 1,
+                "effects": [
+                  {
+                    "chooseN": {
+                      "internalDecisionId": "decision:doc.eventDecks.0.cards.114.unshaded.branches.0.effects.0.distributeTokens.selectTokens",
+                      "bind": "$__selected_doc_eventDecks_0_cards_114_unshaded_branches_0_effects_0_distributeTokens",
+                      "options": {
+                        "query": "tokensInZone",
+                        "zone": "out-of-play-US:none",
+                        "filter": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "prop": "faction",
+                              "op": "eq",
+                              "value": "US"
+                            },
+                            {
+                              "prop": "type",
+                              "op": "eq",
+                              "value": "troops"
+                            }
+                          ]
+                        }
+                      },
+                      "max": 4
+                    }
+                  },
+                  {
+                    "forEach": {
+                      "bind": "$__token_doc_eventDecks_0_cards_114_unshaded_branches_0_effects_0_distributeTokens",
+                      "over": {
+                        "query": "binding",
+                        "name": "$__selected_doc_eventDecks_0_cards_114_unshaded_branches_0_effects_0_distributeTokens"
+                      },
+                      "effects": [
+                        {
+                          "chooseOne": {
+                            "internalDecisionId": "decision:doc.eventDecks.0.cards.114.unshaded.branches.0.effects.0.distributeTokens.chooseDestination",
+                            "bind": "$__destination_doc_eventDecks_0_cards_114_unshaded_branches_0_effects_0_distributeTokens",
+                            "options": {
+                              "query": "mapSpaces",
+                              "filter": {
+                                "condition": {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "country"
+                                  },
+                                  "right": "southVietnam"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "moveToken": {
+                            "token": "$__token_doc_eventDecks_0_cards_114_unshaded_branches_0_effects_0_distributeTokens",
+                            "from": {
+                              "zoneExpr": {
+                                "ref": "tokenZone",
+                                "token": "$__token_doc_eventDecks_0_cards_114_unshaded_branches_0_effects_0_distributeTokens"
+                              }
+                            },
+                            "to": {
+                              "zoneExpr": {
+                                "ref": "binding",
+                                "name": "$__destination_doc_eventDecks_0_cards_114_unshaded_branches_0_effects_0_distributeTokens"
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
                 "freeOperationGrants": [
                   {
                     "seat": "arvn",
@@ -65709,30 +66460,31 @@
                 ]
               },
               {
-                "id": "vc-then-nva-three-free-limited-ops",
+                "id": "add-arvn-resources-and-arvn-two-free-limited-ops",
                 "order": 2,
+                "effects": [
+                  {
+                    "addVar": {
+                      "scope": "global",
+                      "var": "arvnResources",
+                      "delta": 9
+                    }
+                  }
+                ],
                 "freeOperationGrants": [
                   {
-                    "seat": "vc",
+                    "seat": "arvn",
                     "sequence": {
-                      "chain": "uncle-ho-unshaded-vc-nva-three",
+                      "chain": "uncle-ho-unshaded-arvn-two",
                       "step": 0
                     },
                     "operationClass": "limitedOperation"
                   },
                   {
-                    "seat": "vc",
+                    "seat": "arvn",
                     "sequence": {
-                      "chain": "uncle-ho-unshaded-vc-nva-three",
+                      "chain": "uncle-ho-unshaded-arvn-two",
                       "step": 1
-                    },
-                    "operationClass": "limitedOperation"
-                  },
-                  {
-                    "seat": "nva",
-                    "sequence": {
-                      "chain": "uncle-ho-unshaded-vc-nva-three",
-                      "step": 2
                     },
                     "operationClass": "limitedOperation"
                   }
@@ -65741,55 +66493,57 @@
             ]
           },
           "shaded": {
-            "text": "COIN initiative: US/ARVN execute 3 total free Limited Operations.",
+            "text": "Revolutionary unifier: VC then NVA each execute 3 free Limited Operations.",
             "branches": [
               {
-                "id": "us-then-arvn-three-free-limited-ops",
+                "id": "vc-then-nva-six-free-limited-ops",
                 "order": 1,
                 "freeOperationGrants": [
                   {
-                    "seat": "us",
+                    "seat": "vc",
                     "sequence": {
-                      "chain": "uncle-ho-shaded-us-arvn-three",
+                      "chain": "uncle-ho-shaded-vc-nva-six",
                       "step": 0
                     },
                     "operationClass": "limitedOperation"
                   },
                   {
-                    "seat": "arvn",
+                    "seat": "vc",
                     "sequence": {
-                      "chain": "uncle-ho-shaded-us-arvn-three",
+                      "chain": "uncle-ho-shaded-vc-nva-six",
                       "step": 1
                     },
                     "operationClass": "limitedOperation"
                   },
                   {
-                    "seat": "arvn",
+                    "seat": "vc",
                     "sequence": {
-                      "chain": "uncle-ho-shaded-us-arvn-three",
+                      "chain": "uncle-ho-shaded-vc-nva-six",
                       "step": 2
                     },
                     "operationClass": "limitedOperation"
-                  }
-                ]
-              },
-              {
-                "id": "us-two-free-limited-ops",
-                "order": 2,
-                "freeOperationGrants": [
+                  },
                   {
-                    "seat": "us",
+                    "seat": "nva",
                     "sequence": {
-                      "chain": "uncle-ho-shaded-us-two",
-                      "step": 0
+                      "chain": "uncle-ho-shaded-vc-nva-six",
+                      "step": 3
                     },
                     "operationClass": "limitedOperation"
                   },
                   {
-                    "seat": "us",
+                    "seat": "nva",
                     "sequence": {
-                      "chain": "uncle-ho-shaded-us-two",
-                      "step": 1
+                      "chain": "uncle-ho-shaded-vc-nva-six",
+                      "step": 4
+                    },
+                    "operationClass": "limitedOperation"
+                  },
+                  {
+                    "seat": "nva",
+                    "sequence": {
+                      "chain": "uncle-ho-shaded-vc-nva-six",
+                      "step": 5
                     },
                     "operationClass": "limitedOperation"
                   }

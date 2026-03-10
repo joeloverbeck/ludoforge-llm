@@ -112,7 +112,7 @@ describe('FITL tutorial medium event-card production spec', () => {
     ]);
   });
 
-  it('compiles card 51 (301st Supply Bn) with removal model and shaded rollRandom resource gain', () => {
+  it('compiles card 51 (301st Supply Bn) with cross-space insurgent removal and shaded rollRandom resource gain', () => {
     const { parsed, compiled } = compileProductionSpec();
 
     assertNoErrors(parsed);
@@ -125,12 +125,13 @@ describe('FITL tutorial medium event-card production spec', () => {
     assert.equal(card?.metadata?.period, '1964');
     assert.deepEqual(card?.metadata?.seatOrder, ['NVA', 'VC', 'US', 'ARVN']);
 
-    const unshadedRemoval = card?.unshaded?.targets?.[0]?.effects?.find((effect) => 'removeByPriority' in effect);
-    assert.notEqual(unshadedRemoval, undefined);
-    assert.equal(card?.unshaded?.effects, undefined);
+    const unshadedEffects = card?.unshaded?.effects ?? [];
+    const unshadedLet = unshadedEffects.find((effect) => 'let' in effect);
+    assert.notEqual(unshadedLet, undefined);
+    assert.equal(card?.unshaded?.targets, undefined);
 
     const shadedTrail = card?.shaded?.effects?.find((effect) => 'addVar' in effect && effect.addVar.var === 'trail');
-    assert.deepEqual(shadedTrail, { addVar: { scope: 'global', var: 'trail', delta: 1 } });
+    assert.deepEqual(shadedTrail, { addVar: { scope: 'global', var: 'trail', delta: 2 } });
 
     const shadedRoll = card?.shaded?.effects?.find((effect) => 'rollRandom' in effect);
     assert.notEqual(shadedRoll, undefined);

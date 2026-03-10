@@ -5751,77 +5751,117 @@ eventDecks:
             - ARVN
           flavorText: Throughput under strain.
         unshaded:
-          text: Remove non-base Insurgents outside South Vietnam.
-          targets:
-            - id: $outsideSouthSpace
-              selector:
-                query: mapSpaces
-                filter:
-                  op: "!="
-                  left:
-                    ref: zoneProp
-                    zone: $zone
-                    prop: country
-                  right: southVietnam
-              cardinality:
-                max: 1
-              application: aggregate
-              effects:
-                - removeByPriority:
-                    budget: 3
-                    groups:
-                      - bind: $nvaTroops
-                        over:
-                          query: tokensInZone
-                          zone: $outsideSouthSpace
-                          filter:
-                            op: and
-                            args:
-                              - prop: faction
-                                op: eq
-                                value: NVA
-                              - prop: type
-                                op: eq
-                                value: troops
-                        to:
-                          zoneExpr: available-NVA:none
-                      - bind: $nvaGuerrilla
-                        over:
-                          query: tokensInZone
-                          zone: $outsideSouthSpace
-                          filter:
-                            op: and
-                            args:
-                              - prop: faction
-                                op: eq
-                                value: NVA
-                              - prop: type
-                                op: eq
-                                value: guerrilla
-                        to:
-                          zoneExpr: available-NVA:none
-                      - bind: $vcGuerrilla
-                        over:
-                          query: tokensInZone
-                          zone: $outsideSouthSpace
-                          filter:
-                            op: and
-                            args:
-                              - prop: faction
-                                op: eq
-                                value: VC
-                              - prop: type
-                                op: eq
-                                value: guerrilla
-                        to:
-                          zoneExpr: available-VC:none
+          text: Remove 6 non-base Insurgent pieces from outside South Vietnam.
+          effects:
+            - let:
+                bind: $eligibleInsurgentCount
+                value:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInMapSpaces
+                      spaceFilter:
+                        conditionMacro: fitl-space-outside-south
+                        args:
+                          spaceExpr: $zone
+                      filter:
+                        op: and
+                        args:
+                          - prop: faction
+                            op: in
+                            value:
+                              - NVA
+                              - VC
+                          - prop: type
+                            op: in
+                            value:
+                              - troops
+                              - guerrilla
+                in:
+                  - let:
+                      bind: $insurgentRemoveCount
+                      value:
+                        op: min
+                        left: 6
+                        right:
+                          ref: binding
+                          name: $eligibleInsurgentCount
+                      in:
+                        - if:
+                            when:
+                              op: ">"
+                              left:
+                                ref: binding
+                                name: $insurgentRemoveCount
+                              right: 0
+                            then:
+                              - chooseN:
+                                  bind: $insurgentPiecesToRemove
+                                  options:
+                                    query: tokensInMapSpaces
+                                    spaceFilter:
+                                      conditionMacro: fitl-space-outside-south
+                                      args:
+                                        spaceExpr: $zone
+                                    filter:
+                                      op: and
+                                      args:
+                                        - prop: faction
+                                          op: in
+                                          value:
+                                            - NVA
+                                            - VC
+                                        - prop: type
+                                          op: in
+                                          value:
+                                            - troops
+                                            - guerrilla
+                                  min:
+                                    ref: binding
+                                    name: $insurgentRemoveCount
+                                  max:
+                                    ref: binding
+                                    name: $insurgentRemoveCount
+                              - forEach:
+                                  bind: $insurgentPiece
+                                  over:
+                                    query: binding
+                                    name: $insurgentPiecesToRemove
+                                  effects:
+                                    - if:
+                                        when:
+                                          op: ==
+                                          left:
+                                            ref: tokenProp
+                                            token: $insurgentPiece
+                                            prop: faction
+                                          right: NVA
+                                        then:
+                                          - moveToken:
+                                              token: $insurgentPiece
+                                              from:
+                                                zoneExpr:
+                                                  ref: tokenZone
+                                                  token: $insurgentPiece
+                                              to:
+                                                zoneExpr: available-NVA:none
+                                        else:
+                                          - moveToken:
+                                              token: $insurgentPiece
+                                              from:
+                                                zoneExpr:
+                                                  ref: tokenZone
+                                                  token: $insurgentPiece
+                                              to:
+                                                zoneExpr: available-VC:none
+                            else: []
         shaded:
-          text: Improve Trail 1 box and add NVA Resources equal to a die roll.
+          text: Improve Trail by 2 boxes and add a die roll of NVA Resources.
           effects:
             - addVar:
                 scope: global
                 var: trail
-                delta: 1
+                delta: 2
             - rollRandom:
                 bind: $dieRoll
                 min: 1

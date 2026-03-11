@@ -387,11 +387,28 @@ export function applyPendingFreeOperationVariants(
 
   const variants: Move[] = [...moves];
   const seen = new Set(moves.map((move) => toMoveIdentityKey(def, move)));
+  const existingBaseMoveKeys = new Set(
+    moves.map((move) => `${String(move.actionId)}:${resolveTurnFlowActionClass(def, move) ?? ''}`),
+  );
   const turnFlowDefaults = resolveTurnFlowDefaultFreeOperationActionDomain(def);
-  const pendingActionIds = pendingGrants
-    .filter((grant) => grant.seat === activeSeat && grant.executionContext === undefined)
-    .flatMap((grant) => resolveEffectiveFreeOperationActionDomain(grant.actionIds, turnFlowDefaults));
-  const extraBaseMoves: Move[] = pendingActionIds.map((actionId) => ({ actionId: asActionId(actionId), params: {} }));
+  const pendingGrantMoves = pendingGrants
+    .filter((grant) => grant.seat === activeSeat)
+    .flatMap((grant) =>
+      resolveEffectiveFreeOperationActionDomain(grant.actionIds, turnFlowDefaults).map((actionId) => ({
+        actionId,
+        operationClass: grant.operationClass,
+      }))
+    );
+  const extraBaseMoves: Move[] = pendingGrantMoves
+    .filter(({ actionId, operationClass }) => !existingBaseMoveKeys.has(`${actionId}:${operationClass}`))
+    .map(({ actionId, operationClass }) => {
+      const mappedActionClass = resolveTurnFlowActionClass(def, { actionId: asActionId(actionId), params: {} });
+      return {
+        actionId: asActionId(actionId),
+        ...(mappedActionClass === null ? { actionClass: operationClass } : {}),
+        params: {},
+      };
+    });
 
   for (const move of [...moves, ...extraBaseMoves]) {
     if (move.freeOperation === true) {

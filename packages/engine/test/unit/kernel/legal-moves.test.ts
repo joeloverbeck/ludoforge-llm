@@ -758,6 +758,70 @@ phase: [asPhaseId('main')],
     assert.equal(isMoveAllowedByTurnFlowOptionMatrix(def, state, move), true);
   });
 
+  it('surfaces required special-activity grants as direct free moves even without executionContext', () => {
+    const def = {
+      ...makeBaseDef({
+        actions: [
+          {
+            id: asActionId('infiltrate'),
+            actor: 'active',
+            executor: 'actor',
+            phase: [asPhaseId('main')],
+            params: [],
+            pre: null,
+            cost: [],
+            effects: [],
+            limits: [],
+          },
+        ],
+      }),
+      metadata: { id: 'legal-moves-required-special-activity-grant', players: { min: 2, max: 2 } },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'] },
+            windows: [],
+            actionClassByActionId: {
+              infiltrate: 'specialActivity',
+            },
+            optionMatrix: [{ first: 'event', second: ['operation'] }],
+            passRewards: [],
+            freeOperationActionIds: ['infiltrate'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeCardDrivenState({
+      currentCard: {
+        firstEligible: '0',
+        secondEligible: null,
+        actedSeats: ['0'],
+        passedSeats: [],
+        nonPassCount: 1,
+        firstActionClass: 'event',
+      },
+      pendingFreeOperationGrants: [
+        {
+          grantId: 'required-infiltrate',
+          seat: '0',
+          operationClass: 'specialActivity',
+          actionIds: ['infiltrate'],
+          completionPolicy: 'required',
+          postResolutionTurnFlow: 'resumeCardFlow',
+          remainingUses: 1,
+        },
+      ],
+    });
+
+    const moves = legalMoves(def, state).filter((move) => String(move.actionId) === 'infiltrate');
+    assert.equal(moves.some((move) => move.freeOperation === true), true);
+    assert.equal(moves.some((move) => move.freeOperation !== true), false);
+  });
+
   it('2. simple action (no profile) still emits fully-enumerated moves', () => {
     const action: ActionDef = {
       id: asActionId('simpleAction'),

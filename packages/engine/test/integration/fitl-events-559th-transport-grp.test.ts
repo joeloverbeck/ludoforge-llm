@@ -264,6 +264,12 @@ describe('FITL card-46 559th Transport Grp', () => {
     const move = findCard46Move(def, setup, 'shaded');
     assert.notEqual(move, undefined, 'Expected card-46 shaded event move');
 
+    const immediateAfterEvent = applyMove(def, setup, move!, { advanceToDecisionPoint: false }).state;
+    const immediateFreeMoves = legalMoves(def, immediateAfterEvent).filter(
+      (candidate) => String(candidate.actionId) === 'infiltrate' && candidate.freeOperation === true,
+    );
+    assert.equal(immediateFreeMoves.length > 0, true, 'Expected a required free Infiltrate decision immediately after the event issues its grant');
+
     const afterEvent = applyMove(def, setup, move!).state;
     assert.equal(afterEvent.globalVars.nvaResources, 5, 'Shaded payout should wait until free Infiltrate resolves');
     assert.equal(afterEvent.globalVars.vcResources, 1, 'Shaded payout should wait until free Infiltrate resolves');

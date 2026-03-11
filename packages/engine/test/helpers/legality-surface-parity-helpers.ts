@@ -37,7 +37,12 @@ const defaultChoose = (request: ChoicePendingRequest): MoveParamValue | undefine
   pickDeterministicChoiceValue(request);
 
 const defaultActionPresenceProbe = ({ def, state, move }: { readonly def: GameDef; readonly state: GameState; readonly move: Move }): boolean =>
-  legalMoves(def, state).some((candidate) => String(candidate.actionId) === String(move.actionId));
+  legalMoves(def, state).some(
+    (candidate) =>
+      String(candidate.actionId) === String(move.actionId)
+      && candidate.freeOperation === move.freeOperation
+      && candidate.actionClass === move.actionClass,
+  );
 
 const parityContext = (surface: 'legalMoves' | 'legalChoices' | 'applyMove', step: number, move: Move, detail: string): string =>
   `Legality surface parity divergence surface=${surface} step=${step} actionId=${String(move.actionId)}: ${detail}`;

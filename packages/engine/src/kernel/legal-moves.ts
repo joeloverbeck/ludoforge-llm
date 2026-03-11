@@ -18,6 +18,11 @@ import {
 } from './free-operation-grant-authorization.js';
 import { resolveTurnFlowDefaultFreeOperationActionDomain } from './free-operation-action-domain.js';
 import { resolvePendingFreeOperationGrantExecutionPlayer } from './free-operation-grant-bindings.js';
+import {
+  isFreeOperationApplicableForMove,
+  isFreeOperationGrantedForMove,
+} from './free-operation-discovery-analysis.js';
+import { canResolveAmbiguousFreeOperationOverlapInCurrentState } from './free-operation-viability.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import type { TurnFlowActionClass } from './types-turn-flow.js';
 import { shouldEnumerateLegalMoveForOutcome } from './legality-outcome.js';
@@ -407,7 +412,6 @@ function enumeratePendingFreeOperationMoves(
   const readyGrants = pending.filter(
     (grant) =>
       grant.seat === activeSeat &&
-      grant.executionContext !== undefined &&
       isPendingFreeOperationGrantSequenceReady(pending, grant),
   );
   if (readyGrants.length === 0) {
@@ -424,18 +428,20 @@ function enumeratePendingFreeOperationMoves(
     }
 
     for (const actionId of grantActionIds(def, grant).length > 0 ? grantActionIds(def, grant) : defaultActionDomain) {
-      const grantMoveKey = `${grant.grantId}:${actionId}`;
-      if (seenGrantMoveKeys.has(grantMoveKey)) {
-        continue;
-      }
-      seenGrantMoveKeys.add(grantMoveKey);
-
       const action = def.actions.find((candidate) => String(candidate.id) === actionId);
       if (action === undefined) {
         continue;
       }
 
       const hasActionPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
+      const grantMoveKey = grant.executionContext === undefined && hasActionPipeline
+        ? actionId
+        : `${grant.grantId}:${actionId}`;
+      if (seenGrantMoveKeys.has(grantMoveKey)) {
+        continue;
+      }
+      seenGrantMoveKeys.add(grantMoveKey);
+
       const freeOperationPreflightOverlay = buildFreeOperationPreflightOverlay(
         {
           executionPlayer,
@@ -472,24 +478,82 @@ function enumeratePendingFreeOperationMoves(
         );
       }
 
-      enumerateParams(
-        action,
-        def,
-        adjacencyGraph,
-        runtimeTableIndex,
-        evalRuntimeResources,
-        state,
-        0,
-        {},
-        enumeration,
-        currentPhaseDef,
-        {
-          ...(preflight.pipelineDispatch.kind === 'matched' ? { pipeline: preflight.pipelineDispatch.profile } : {}),
-          ...freeOperationPreflightOverlay,
-          moveOverrides: { freeOperation: true },
-        },
-      );
-      if (enumeration.paramExpansionBudgetExceeded || enumeration.templateBudgetExceeded) {
+      if (grant.executionContext !== undefined) {
+        enumerateParams(
+          action,
+          def,
+          adjacencyGraph,
+          runtimeTableIndex,
+          evalRuntimeResources,
+          state,
+          0,
+          {},
+          enumeration,
+          currentPhaseDef,
+          {
+            ...(preflight.pipelineDispatch.kind === 'matched' ? { pipeline: preflight.pipelineDispatch.profile } : {}),
+            ...freeOperationPreflightOverlay,
+            moveOverrides: { freeOperation: true },
+          },
+        );
+        if (enumeration.paramExpansionBudgetExceeded || enumeration.templateBudgetExceeded) {
+          return;
+        }
+        continue;
+      }
+
+      if (!hasActionPipeline) {
+        continue;
+      }
+
+      if (preflight.pipelineDispatch.kind !== 'matched') {
+        continue;
+      }
+
+      const pipeline = preflight.pipelineDispatch.profile;
+      const status = evaluateDiscoveryPipelinePredicateStatus(action, pipeline, preflight.evalCtx, {
+        includeCostValidation: pipeline.atomicity === 'atomic',
+      });
+      const viabilityDecision = decideDiscoveryLegalMovesPipelineViability(status);
+      if (viabilityDecision.kind === 'excludeTemplate') {
+        if (
+          viabilityDecision.outcome !== 'pipelineLegalityFailed'
+          || !shouldEnumerateLegalMoveForOutcome(viabilityDecision.outcome)
+        ) {
+          continue;
+        }
+      }
+      const mappedActionClass = resolveTurnFlowActionClass(def, { actionId: action.id, params: {} });
+      const baseMove: Move = {
+        actionId: action.id,
+        params: {},
+        freeOperation: true,
+        ...(mappedActionClass === null ? { actionClass: grant.operationClass } : {}),
+      };
+      if (!isFreeOperationApplicableForMove(def, state, baseMove, seatResolution)) {
+        continue;
+      }
+      if (!isFreeOperationGrantedForMove(def, state, baseMove, seatResolution)) {
+        if (!canResolveAmbiguousFreeOperationOverlapInCurrentState(def, state, baseMove, seatResolution)) {
+          continue;
+        }
+      }
+      if (
+        !isMoveDecisionSequenceAdmittedForLegalMove(
+          def,
+          state,
+          baseMove,
+          MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
+          {
+            budgets: enumeration.budgets,
+            onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
+          },
+        )
+      ) {
+        continue;
+      }
+
+      if (!tryPushTemplateMove(enumeration, baseMove, action.id)) {
         return;
       }
     }

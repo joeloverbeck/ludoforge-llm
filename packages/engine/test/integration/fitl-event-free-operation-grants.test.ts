@@ -1825,6 +1825,28 @@ describe('event free-operation grants integration', () => {
     assert.deepEqual(secondRun, firstRun);
   });
 
+  it('surfaces required non-executionContext grants immediately after event issuance', () => {
+    const def = createDef();
+    const start = initialState(def, 271, 4).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-required-outcome', side: 'unshaded', branch: 'none' },
+    }, {
+      advanceToDecisionPoint: false,
+    }).state;
+
+    const pending = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
+    assert.equal(pending.length, 1);
+    assert.equal(pending[0]?.completionPolicy, 'required');
+    assert.equal(pending[0]?.executionContext, undefined);
+
+    const freeMoves = legalMoves(def, afterEvent).filter(
+      (move) => String(move.actionId) === 'operation' && move.freeOperation === true,
+    );
+    assert.equal(freeMoves.length > 0, true);
+  });
+
   it('creates pending free-operation grants from event branch declarations', () => {
     const def = createDef();
     const start = initialState(def, 10, 4).state;

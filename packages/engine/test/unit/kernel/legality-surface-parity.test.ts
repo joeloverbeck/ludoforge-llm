@@ -132,6 +132,15 @@ const makeCardDrivenFreeOpDef = (operationActionId: ReturnType<typeof asActionId
     terminal: { conditions: [] },
   }) as unknown as GameDef;
 
+const hasExactLegalMove = (def: GameDef, state: GameState, move: Move): boolean =>
+  legalMoves(def, state).some(
+    (candidate) =>
+      String(candidate.actionId) === String(move.actionId)
+      && candidate.freeOperation === move.freeOperation
+      && candidate.actionClass === move.actionClass
+      && JSON.stringify(candidate.params) === JSON.stringify(move.params),
+  );
+
 describe('legality surface parity', () => {
   const legalScenarioCases: ReadonlyArray<{
     readonly name: string;
@@ -538,10 +547,7 @@ describe('legality surface parity', () => {
         complete: false,
         reason: scenario.choiceReason,
       });
-      assert.equal(
-        legalMoves(def, state).some((candidate) => candidate.freeOperation === true && candidate.actionId === operationActionId),
-        false,
-      );
+      assert.equal(hasExactLegalMove(def, state, move), false);
       assert.throws(() => applyMove(def, state, move), (error: unknown) => {
         assert.ok(error instanceof Error);
         const details = error as Error & {
@@ -574,12 +580,7 @@ describe('legality surface parity', () => {
     };
 
     assert.equal(
-      legalMoves(def, state).some(
-        (candidate) =>
-          candidate.freeOperation === true
-          && candidate.actionId === operationActionId
-          && JSON.stringify(candidate.params) === JSON.stringify(deniedMove.params),
-      ),
+      hasExactLegalMove(def, state, deniedMove),
       false,
     );
     assert.deepEqual(legalChoicesDiscover(def, state, deniedMove), {

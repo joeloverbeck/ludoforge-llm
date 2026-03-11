@@ -10,7 +10,7 @@ import {
   queryAdjacentZones,
   queryConnectedZones,
   queryTokensInAdjacentZones,
-  type EvalContext,
+  type ReadContext,
   type GameDef,
   type GameState,
   type Token,
@@ -66,7 +66,7 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
+const makeCtx = (overrides?: Partial<ReadContext>): ReadContext => {
   const def = makeDef();
   return makeEvalContext({
     def,

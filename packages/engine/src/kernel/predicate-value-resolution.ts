@@ -1,5 +1,5 @@
 import { resolveBindingTemplate } from './binding-template.js';
-import type { EvalContext } from './eval-context.js';
+import type { ReadContext } from './eval-context.js';
 import { missingBindingError, missingVarError, typeMismatchError } from './eval-error.js';
 import { evalValue } from './eval-value.js';
 import type { AssetRowPredicate, TokenFilterPredicate, ValueExpr } from './types.js';
@@ -21,7 +21,7 @@ function isPredicateScalarArray(value: unknown): value is readonly (string | num
 
 function resolveRuntimePredicateReference(
   value: PredicateRuntimeValue,
-  ctx: EvalContext,
+  ctx: ReadContext,
   options: PredicateValueResolutionOptions,
 ): PredicateValue | null {
   if (typeof value !== 'object' || value === null || !('ref' in value)) {
@@ -80,7 +80,7 @@ function resolveRuntimePredicateReference(
 
 export function resolvePredicateValue(
   value: PredicateRuntimeValue,
-  ctx: EvalContext,
+  ctx: ReadContext,
   options: PredicateValueResolutionOptions = { missingBinding: 'varError' },
 ): PredicateValue {
   if (Array.isArray(value)) {

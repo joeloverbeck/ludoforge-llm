@@ -8,7 +8,7 @@ import {
   evalCondition,
   serializeGameState,
   type ConditionAST,
-  type EvalContext,
+  type ReadContext,
   type GameDef,
   type SerializedGameState,
 } from '../../src/kernel/index.js';
@@ -21,7 +21,7 @@ describe('evaluation integration - complex scenario', () => {
     const serializedState = readFixtureJson<SerializedGameState>('trace/eval-state-snapshot.json');
     const state = deserializeGameState(serializedState);
 
-    const ctx: EvalContext = makeEvalContext({
+    const ctx: ReadContext = makeEvalContext({
       def,
       adjacencyGraph: buildAdjacencyGraph(def.zones),
       state,

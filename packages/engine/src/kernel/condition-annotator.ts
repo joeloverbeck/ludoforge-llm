@@ -16,7 +16,7 @@ import {
 } from './ast-to-display.js';
 import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
-import { createEvalContext, createEvalRuntimeResources, type EvalContext } from './eval-context.js';
+import { createEvalContext, createEvalRuntimeResources, type ReadContext } from './eval-context.js';
 import type { ActionDef, ActionUsageRecord, ConditionAST, GameDef, GameState, ValueExpr } from './types.js';
 import type { ActionPipelineDef } from './types-operations.js';
 import type { EffectAST } from './types-ast.js';
@@ -57,7 +57,7 @@ const isComparisonOp = (op: string): op is ComparisonOp => COMPARISON_OPS.has(op
 
 const tryEvalCondition = (
   cond: ConditionAST,
-  evalCtx: EvalContext,
+  evalCtx: ReadContext,
 ): { readonly result: 'pass' | 'fail'; readonly text: string } => {
   try {
     const passed = evalCondition(cond, evalCtx);
@@ -80,7 +80,7 @@ const isComparisonCondition = (cond: ConditionAST): cond is ComparisonCondition 
 
 const tryEvalComparisonValues = (
   cond: ConditionAST,
-  evalCtx: EvalContext,
+  evalCtx: ReadContext,
 ): readonly DisplayAnnotationNode[] => {
   if (!isComparisonCondition(cond)) return [];
   try {
@@ -115,7 +115,7 @@ interface WalkResult {
 const annotateConditionNodes = (
   nodes: readonly DisplayNode[],
   cond: ConditionAST,
-  evalCtx: EvalContext,
+  evalCtx: ReadContext,
   offset: number,
 ): WalkResult => {
   if (typeof cond === 'boolean') {
@@ -177,7 +177,7 @@ const annotateConditionNodes = (
 const annotateConditionGroup = (
   group: DisplayGroupNode,
   cond: ConditionAST,
-  evalCtx: EvalContext,
+  evalCtx: ReadContext,
 ): DisplayGroupNode => {
   const { annotated } = annotateConditionNodes(group.children, cond, evalCtx, 0);
   return { ...group, children: annotated };
@@ -249,7 +249,7 @@ export const annotateLimitsGroup = (
 
 const buildAnnotatedPipelineSection = (
   pipeline: ActionPipelineDef,
-  evalCtx: EvalContext,
+  evalCtx: ReadContext,
 ): DisplayGroupNode => {
   const children: DisplayGroupNode[] = [];
 
@@ -300,7 +300,7 @@ const buildAnnotatedPipelineSection = (
 
 const pipelineApplicabilityPasses = (
   pipeline: ActionPipelineDef,
-  evalCtx: EvalContext,
+  evalCtx: ReadContext,
 ): boolean => {
   if (pipeline.applicability === undefined) return true;
   try {
@@ -344,7 +344,7 @@ const buildRuleCard = (
   action: ActionDef,
   def: GameDef,
   runtime: GameDefRuntime,
-  evalCtx: EvalContext,
+  evalCtx: ReadContext,
 ): RuleCard => {
   // Extract __actionClass from runtime bindings to enable context-aware branch selection
   const actionClassBinding = evalCtx.bindings.__actionClass as string | undefined;
@@ -372,7 +372,7 @@ const buildRuleCard = (
 const buildRuleState = (
   action: ActionDef,
   ruleCard: RuleCard,
-  evalCtx: EvalContext,
+  evalCtx: ReadContext,
   limitUsage: readonly LimitUsageInfo[],
   def: GameDef,
 ): RuleState => {
@@ -425,7 +425,7 @@ const buildRuleState = (
 const buildTooltipPayload = (
   action: ActionDef,
   context: AnnotationContext,
-  evalCtx: EvalContext,
+  evalCtx: ReadContext,
   limitUsage: readonly LimitUsageInfo[],
 ): ActionTooltipPayload | undefined => {
   try {

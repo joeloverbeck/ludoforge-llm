@@ -7,7 +7,7 @@ import {
   asPlayerId,
   buildAdjacencyGraph,
   queryConnectedZones,
-  type EvalContext,
+  type ReadContext,
   type GameDef,
   type GameState,
 } from '../../../src/kernel/index.js';
@@ -30,7 +30,7 @@ const makeState = (zoneIds: readonly string[]): GameState => ({
   markers: {},
 });
 
-const makeCtx = (def: GameDef): EvalContext => {
+const makeCtx = (def: GameDef): ReadContext => {
   return makeEvalContext({
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),

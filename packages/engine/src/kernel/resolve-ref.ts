@@ -1,5 +1,5 @@
 import { resolveMapSpaceId, resolveSinglePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
-import type { EvalContext } from './eval-context.js';
+import type { ReadContext } from './eval-context.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { missingBindingError, missingVarError, typeMismatchError, zonePropNotFoundError } from './eval-error.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
@@ -43,11 +43,11 @@ function resolveTokenIdFromBinding(bindingName: string, value: unknown, referenc
   return resolveTokenBinding(bindingName, value, reference).tokenId;
 }
 
-function findTokenByIdInZones(ctx: EvalContext, tokenId: string): Token | null {
+function findTokenByIdInZones(ctx: ReadContext, tokenId: string): Token | null {
   return getTokenStateIndexEntry(ctx.state, tokenId)?.token ?? null;
 }
 
-function resolveActiveSeatId(ctx: EvalContext): string | null {
+function resolveActiveSeatId(ctx: ReadContext): string | null {
   const runtimeSeatOrder = ctx.state.turnOrderState.type === 'cardDriven'
     && 'runtime' in ctx.state.turnOrderState
     && Array.isArray(ctx.state.turnOrderState.runtime?.seatOrder)
@@ -65,7 +65,7 @@ function resolveActiveSeatId(ctx: EvalContext): string | null {
   return String(ctx.activePlayer);
 }
 
-export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean | string | ScalarArrayValue {
+export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean | string | ScalarArrayValue {
   if (ref.ref === 'gvar') {
     const value = ctx.state.globalVars[ref.var];
     if (value === undefined) {

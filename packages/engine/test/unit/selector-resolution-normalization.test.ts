@@ -9,11 +9,11 @@ import {
   resolveZoneWithNormalization,
   selectorResolutionFailurePolicyForMode,
 } from '../../src/kernel/selector-resolution-normalization.js';
-import type { EvalContext } from '../../src/kernel/eval-context.js';
+import type { ReadContext } from '../../src/kernel/eval-context.js';
 import type { GameDef, GameState } from '../../src/kernel/types.js';
 import { makeEvalContext } from '../helpers/eval-context-test-helpers.js';
 
-const makeEvalCtx = (): EvalContext => {
+const makeEvalCtx = (): ReadContext => {
   const def: GameDef = {
     metadata: { id: 'selector-resolution-normalization-test', players: { min: 2, max: 2 } },
     constants: {},

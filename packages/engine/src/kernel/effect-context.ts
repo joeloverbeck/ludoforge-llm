@@ -3,18 +3,14 @@ import type {
   DecisionAuthorityProbeContext,
   DecisionAuthorityStrictContext,
 } from './types-core.js';
-import type { FreeOperationExecutionOverlay } from './free-operation-overlay.js';
 import {
   type EvalRuntimeResources,
+  type ReadContext,
 } from './eval-context.js';
-import type { RuntimeTableIndex } from './runtime-table-index.js';
-import type { AdjacencyGraph } from './spatial.js';
 import type {
   ChoicePendingRequest,
   ChoiceStochasticPendingRequest,
   EffectTraceEventContext,
-  ExecutionCollector,
-  GameDef,
   GameState,
   MoveParamValue,
   Rng,
@@ -38,24 +34,16 @@ export interface EffectTraceContext {
   readonly effectPathRoot: string;
 }
 
-interface EffectContextBase {
-  readonly def: GameDef;
-  readonly adjacencyGraph: AdjacencyGraph;
-  readonly state: GameState;
+export interface WriteContext extends ReadContext {
   readonly rng: Rng;
-  readonly activePlayer: PlayerId;
-  readonly actorPlayer: PlayerId;
-  readonly bindings: Readonly<Record<string, unknown>>;
-  readonly resources: EvalRuntimeResources;
-  readonly runtimeTableIndex?: RuntimeTableIndex;
   readonly moveParams: Readonly<Record<string, MoveParamValue>>;
+}
+
+interface EffectContextBase extends WriteContext {
   readonly traceContext?: EffectTraceContext;
   readonly effectPath?: string;
   readonly maxEffectOps?: number;
   readonly freeOperation?: boolean;
-  readonly freeOperationOverlay?: FreeOperationExecutionOverlay;
-  readonly maxQueryResults?: number;
-  readonly collector: ExecutionCollector;
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
   /** Accumulated forEach iteration path for scoping inner decision IDs. */
   readonly iterationPath?: string;

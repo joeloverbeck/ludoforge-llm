@@ -1,4 +1,4 @@
-import { getMaxQueryResults, type EvalContext } from './eval-context.js';
+import { getMaxQueryResults, type ReadContext } from './eval-context.js';
 import { isRecoverableEvalResolutionError } from './eval-error-classification.js';
 import { missingVarError, queryBoundsExceededError, typeMismatchError } from './eval-error.js';
 import { evalCondition } from './eval-condition.js';
@@ -37,7 +37,7 @@ type AssetRow = Readonly<Record<string, unknown>>;
 type QueryResult = Token | AssetRow | number | string | boolean | PlayerId | ZoneId;
 type RuntimeQueryShape = 'token' | 'object' | 'number' | 'string' | 'boolean' | 'empty' | 'mixed';
 
-function resolveIntDomainBound(bound: NumericValueExpr, ctx: EvalContext): number | null {
+function resolveIntDomainBound(bound: NumericValueExpr, ctx: ReadContext): number | null {
   let value: unknown;
   try {
     value = typeof bound === 'number' ? bound : evalValue(bound, ctx);
@@ -88,7 +88,7 @@ function resolveIntRangeContract(
     readonly step?: NumericValueExpr;
     readonly alwaysInclude?: readonly NumericValueExpr[];
   },
-  ctx: EvalContext,
+  ctx: ReadContext,
 ): ResolvedIntRangeContract | null {
   if (min > max) {
     return null;
@@ -168,7 +168,7 @@ function evaluateIntRangeDomain(
     readonly alwaysInclude?: readonly NumericValueExpr[];
     readonly maxResults?: NumericValueExpr;
   },
-  ctx: EvalContext,
+  ctx: ReadContext,
 ): readonly number[] {
   const contract = resolveIntRangeContract(min, max, controls, ctx);
   if (contract === null) {
@@ -210,7 +210,7 @@ function isWithinResolvedIntRangeDomain(
 
 function resolveDeclaredIntVarBounds(
   query: Extract<OptionsQuery, { readonly query: 'intsInVarRange' }>,
-  ctx: EvalContext,
+  ctx: ReadContext,
 ): { readonly min: number; readonly max: number } | null {
   const scope = query.scope ?? 'global';
   const declared =
@@ -239,7 +239,7 @@ function assertWithinBounds(length: number, query: OptionsQuery, maxQueryResults
 
 function resolveGrantContextQuery(
   key: string,
-  ctx: EvalContext,
+  ctx: ReadContext,
 ): readonly (string | number | boolean)[] {
   const value = ctx.freeOperationOverlay?.grantContext?.[key];
   if (value === undefined) {
@@ -248,7 +248,7 @@ function resolveGrantContextQuery(
   return Array.isArray(value) ? value : [value as string | number | boolean];
 }
 
-function applyTokenFilter(tokens: readonly Token[], filter: TokenFilterExpr, ctx: EvalContext): readonly Token[] {
+function applyTokenFilter(tokens: readonly Token[], filter: TokenFilterExpr, ctx: ReadContext): readonly Token[] {
   return filterTokensByExpr(tokens, filter, (value) => resolvePredicateValue(value, ctx));
 }
 
@@ -261,7 +261,7 @@ function tokenFilterPredicateCount(filter: TokenFilterExpr): number {
   });
 }
 
-function resolveAssetRowPredicates(where: readonly AssetRowPredicate[], ctx: EvalContext): readonly ResolvedRowPredicate[] {
+function resolveAssetRowPredicates(where: readonly AssetRowPredicate[], ctx: ReadContext): readonly ResolvedRowPredicate[] {
   return where.map((predicate) => ({
     field: predicate.field,
     op: predicate.op,
@@ -281,10 +281,10 @@ function extractOwnerQualifier(zoneId: ZoneId): string | null {
 type ZoneQueryFilter = Extract<OptionsQuery, { readonly query: 'zones' }>['filter'];
 
 const evaluateFreeOperationZoneFilterForZone = (
-  freeOperationZoneFilter: NonNullable<NonNullable<EvalContext['freeOperationOverlay']>['zoneFilter']>,
+  freeOperationZoneFilter: NonNullable<NonNullable<ReadContext['freeOperationOverlay']>['zoneFilter']>,
   rebindableAliases: ReadonlySet<string>,
   zoneId: ZoneId,
-  ctx: EvalContext,
+  ctx: ReadContext,
 ): boolean => {
   return evaluateFreeOperationZoneFilterProbe({
     zoneId,
@@ -300,7 +300,7 @@ const evaluateFreeOperationZoneFilterForZone = (
 function applyZonesFilter(
   zones: readonly { readonly id: ZoneId; readonly owner: 'none' | 'player' }[],
   queryFilter: ZoneQueryFilter,
-  ctx: EvalContext,
+  ctx: ReadContext,
 ): readonly ZoneId[] {
   let filteredZones = [...zones];
   const queryCondition = queryFilter?.condition;
@@ -363,14 +363,14 @@ function applyZonesFilter(
   return filteredZones.map((zone) => zone.id);
 }
 
-function evalZonesQuery(query: Extract<OptionsQuery, { readonly query: 'zones' }>, ctx: EvalContext): readonly ZoneId[] {
+function evalZonesQuery(query: Extract<OptionsQuery, { readonly query: 'zones' }>, ctx: ReadContext): readonly ZoneId[] {
   const allZones = [...ctx.def.zones].sort((left, right) => left.id.localeCompare(right.id));
   return applyZonesFilter(allZones, query.filter, ctx);
 }
 
 function evalMapSpacesQuery(
   query: Extract<OptionsQuery, { readonly query: 'mapSpaces' }>,
-  ctx: EvalContext,
+  ctx: ReadContext,
 ): readonly ZoneId[] {
   const mapSpaceZones = [...ctx.def.zones]
     .filter((zone) => zone.zoneKind === 'board')
@@ -380,7 +380,7 @@ function evalMapSpacesQuery(
 
 function evalTokensInMapSpacesQuery(
   query: Extract<OptionsQuery, { readonly query: 'tokensInMapSpaces' }>,
-  ctx: EvalContext,
+  ctx: ReadContext,
 ): readonly Token[] {
   const mapSpaceZones = [...ctx.def.zones]
     .filter((zone) => zone.zoneKind === 'board')
@@ -439,7 +439,7 @@ function normalizeOrderIndex(index: number, length: number): number {
 
 function evalNextInOrderByConditionQuery(
   query: Extract<OptionsQuery, { readonly query: 'nextInOrderByCondition' }>,
-  ctx: EvalContext,
+  ctx: ReadContext,
 ): readonly QueryResult[] {
   const sourceOrder = evalQuery(query.source, ctx);
   if (sourceOrder.length === 0) {
@@ -528,7 +528,7 @@ function classifyQueryResults(items: readonly QueryResult[]): RuntimeQueryShape 
   return expected ?? 'empty';
 }
 
-function resolveRuntimeTableRows(query: Extract<OptionsQuery, { readonly query: 'assetRows' }>, ctx: EvalContext): {
+function resolveRuntimeTableRows(query: Extract<OptionsQuery, { readonly query: 'assetRows' }>, ctx: ReadContext): {
   readonly rows: readonly AssetRow[];
   readonly fieldNames: ReadonlySet<string>;
   readonly keyIndexesByTuple: ReadonlyMap<string, RuntimeTableKeyIndex>;
@@ -561,7 +561,7 @@ function resolveRuntimeTableRows(query: Extract<OptionsQuery, { readonly query: 
 
 function evalAssetRowsQuery(
   query: Extract<OptionsQuery, { readonly query: 'assetRows' }>,
-  ctx: EvalContext,
+  ctx: ReadContext,
 ): readonly AssetRow[] {
   const resolved = resolveRuntimeTableRows(query, ctx);
   const rows = resolved.rows;
@@ -604,7 +604,7 @@ function evalAssetRowsQuery(
   return matchedRows;
 }
 
-export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly QueryResult[] {
+export function evalQuery(query: OptionsQuery, ctx: ReadContext): readonly QueryResult[] {
   const maxQueryResults = getMaxQueryResults(ctx);
 
   switch (query.query) {
@@ -870,7 +870,7 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
 export function isInIntRangeDomain(
   query: Extract<OptionsQuery, { readonly query: 'intsInRange' | 'intsInVarRange' }>,
   selected: unknown,
-  ctx: EvalContext,
+  ctx: ReadContext,
 ): boolean {
   if (typeof selected !== 'number' || !Number.isSafeInteger(selected)) {
     return false;

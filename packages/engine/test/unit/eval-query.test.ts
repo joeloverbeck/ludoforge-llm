@@ -11,7 +11,7 @@ import {
   asZoneId,
   evalQuery,
   isEvalErrorCode,
-  type EvalContext,
+  type ReadContext,
   type GameDef,
   type GameState,
   type Token,
@@ -122,7 +122,7 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
+const makeCtx = (overrides?: Partial<ReadContext>): ReadContext => {
   const def = makeDef();
   return makeEvalContext({
     def,
@@ -2268,7 +2268,7 @@ describe('evalQuery', () => {
     const cases: readonly {
       readonly name: string;
       readonly query: Parameters<typeof evalQuery>[0];
-      readonly ctx: EvalContext;
+      readonly ctx: ReadContext;
     }[] = [
       {
         name: 'tokensInZone',
@@ -2323,7 +2323,7 @@ describe('evalQuery', () => {
     const cases: readonly {
       readonly name: string;
       readonly query: Parameters<typeof evalQuery>[0];
-      readonly ctx: EvalContext;
+      readonly ctx: ReadContext;
     }[] = [
       {
         name: 'zones.filter.condition',

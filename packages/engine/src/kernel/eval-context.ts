@@ -24,7 +24,7 @@ export function createEvalRuntimeResources(input?: EvalRuntimeResourceInput): Ev
   };
 }
 
-export interface EvalContext {
+export interface ReadContext {
   readonly def: GameDef;
   readonly adjacencyGraph: AdjacencyGraph;
   readonly state: GameState;
@@ -38,11 +38,12 @@ export interface EvalContext {
   readonly collector: ExecutionCollector;
 }
 
-export type EvalContextInput = Omit<EvalContext, 'collector'> & {
+
+export type EvalContextInput = Omit<ReadContext, 'collector'> & {
   readonly resources: EvalRuntimeResources;
 };
 
-export function createEvalContext(input: EvalContextInput): EvalContext {
+export function createEvalContext(input: EvalContextInput): ReadContext {
   const {
     resources,
     ...ctx
@@ -54,6 +55,6 @@ export function createEvalContext(input: EvalContextInput): EvalContext {
   };
 }
 
-export function getMaxQueryResults(ctx: Pick<EvalContext, 'maxQueryResults'>): number {
+export function getMaxQueryResults(ctx: Pick<ReadContext, 'maxQueryResults'>): number {
   return ctx.maxQueryResults ?? DEFAULT_MAX_QUERY_RESULTS;
 }

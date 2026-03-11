@@ -17,7 +17,7 @@ import {
   type ActionDef,
   type ActionPipelineDef,
   type ActionResolutionStageDef,
-  type EvalContext,
+  type ReadContext,
   type GameDef,
   type GameState,
 } from '../../../src/kernel/index.js';
@@ -76,7 +76,7 @@ const makeEvalCtx = (
   def: GameDef,
   state: GameState,
   bindings: Readonly<Record<string, unknown>> = {},
-): EvalContext => {
+): ReadContext => {
   return makeEvalContext({
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),

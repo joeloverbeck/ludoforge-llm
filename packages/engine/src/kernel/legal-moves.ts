@@ -2,7 +2,7 @@ import { evalCondition } from './eval-condition.js';
 import { resolveActionExecutor } from './action-executor.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { resolveDeclaredActionParamDomainOptions } from './declared-action-param-domain.js';
-import type { EvalContext, EvalRuntimeResources } from './eval-context.js';
+import type { ReadContext, EvalRuntimeResources } from './eval-context.js';
 import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import { isMoveDecisionSequenceAdmittedForLegalMove } from './move-decision-sequence.js';
@@ -217,7 +217,7 @@ function makeEvalContext(
   options?: {
     readonly freeOperationOverlay?: FreeOperationExecutionOverlay;
   },
-): EvalContext {
+): ReadContext {
   return createEvalContext({
     def,
     adjacencyGraph,

@@ -1,5 +1,5 @@
 import { evalCondition } from './eval-condition.js';
-import type { EvalContext } from './eval-context.js';
+import type { ReadContext } from './eval-context.js';
 import { pipelineApplicabilityEvaluationError } from './runtime-error.js';
 import type { ActionDef, ActionPipelineDef, ActionResolutionStageDef, ConditionAST, EffectAST, GameDef } from './types.js';
 
@@ -20,7 +20,7 @@ export type ActionPipelineDispatch =
 export const resolveActionPipelineDispatch = (
   def: GameDef,
   action: ActionDef,
-  ctx: EvalContext,
+  ctx: ReadContext,
 ): ActionPipelineDispatch => {
   const applicabilityMatches = (profile: ActionPipelineDef): boolean => {
     if (profile.applicability === undefined) {

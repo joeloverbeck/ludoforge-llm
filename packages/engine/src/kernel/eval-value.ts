@@ -1,4 +1,4 @@
-import type { EvalContext } from './eval-context.js';
+import type { ReadContext } from './eval-context.js';
 import { evalCondition } from './eval-condition.js';
 import { divisionByZeroError, typeMismatchError } from './eval-error.js';
 import { evalQuery } from './eval-query.js';
@@ -17,7 +17,7 @@ function expectSafeInteger(value: unknown, message: string, context: Readonly<Re
   return value;
 }
 
-export function evalValue(expr: ValueExpr, ctx: EvalContext): ScalarValue | ScalarArrayValue {
+export function evalValue(expr: ValueExpr, ctx: ReadContext): ScalarValue | ScalarArrayValue {
   if (typeof expr === 'number' || typeof expr === 'boolean' || typeof expr === 'string') {
     return expr;
   }

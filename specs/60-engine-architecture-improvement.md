@@ -375,11 +375,18 @@ Builder functions provide autocomplete, validate shape at the call site, and ser
 
 ### Tickets
 
-| ID | Title | Size |
-|----|-------|------|
-| ASTSAFE-001 | Add typed eval variants (evalNumericValue, evalStringValue, evalBooleanValue) | M |
-| ASTSAFE-002 | Create ast-builders.ts with builder functions for all EffectAST variants | M |
-| ASTSAFE-003 | Migrate compiler and kernel consumers to typed eval and builders | L |
+| ID | Title | Size | Status |
+|----|-------|------|--------|
+| ASTSAFE-001 | Add typed eval variants (evalNumericValue, evalStringValue, evalBooleanValue) | M | ✅ Done |
+| ASTSAFE-002 | Create ast-builders.ts with builder functions for all EffectAST variants | M | ✅ Done |
+| ASTSAFE-003 | Migrate compiler and kernel consumers to typed eval and builders | L | ✅ Done |
+
+#### Implementation Notes
+
+- `evalNumericValue` and `evalStringValue` already existed; `evalBooleanValue` was added to `eval-value.ts` following the same pattern.
+- `ast-builders.ts` was created in prior commits with builders for all EffectAST variants.
+- Compiler and kernel consumers were migrated in prior commits.
+- Unused `effectType` parameter in `control-flow-limit.ts` was fixed (prefixed with `_`).
 
 ---
 
@@ -442,11 +449,17 @@ The orchestrator topologically sorts passes by `dependsOn`, validates no cycles 
 
 ### Tickets
 
-| ID | Title | Size |
-|----|-------|------|
-| MACROEXP-001 | Define ExpansionPass interface; implement topological sort orchestrator | M |
-| MACROEXP-002 | Refactor 5 existing passes to ExpansionPass; declare dependencies | M |
-| MACROEXP-003 | Add provenance metadata and unified placeholder syntax | M |
+| ID | Title | Size | Status |
+|----|-------|------|--------|
+| MACROEXP-001 | Define ExpansionPass interface; implement topological sort orchestrator | M | ✅ Done |
+| MACROEXP-002 | Refactor 5 existing passes to ExpansionPass; declare dependencies | M | ✅ Done |
+| MACROEXP-003 | Add provenance metadata and unified placeholder syntax | M | ✅ Done |
+
+#### Implementation Notes
+
+- **MACROEXP-001**: Created `expansion-pass.ts` (~130 LOC) with `ExpansionPass` interface, `ExpansionOrigin` type, `substitutePlaceholders` utility, Kahn's algorithm topological sort, and `runExpansionPipeline` orchestrator. Added 2 diagnostic codes for cycle detection and unknown dependencies. 13 unit tests.
+- **MACROEXP-002**: Each of the 5 passes exports an `ExpansionPass` object (`pieceGenerationPass`, `batchMarkersPass`, `batchVarsPass`, `zoneTemplatesPass`, `phaseTemplatesPass`). `expand-templates.ts` rewritten to use `runExpansionPipeline` with `DEFAULT_EXPANSION_PASSES`. Public API unchanged.
+- **MACROEXP-003**: Added `_origin?: ExpansionOrigin` to `GameSpecVarDef`, `GameSpecGlobalMarkerLatticeDef`, `GameSpecZoneDef`, `GameSpecPhaseDef`. Each pass injects `_origin` on generated entities. Exception: piece types inside `PieceCatalogPayload` cannot carry `_origin` due to strict Zod schema validation on data asset payloads. 7 provenance unit tests including negative test for this constraint.
 
 ---
 
@@ -456,8 +469,8 @@ The orchestrator topologically sorts passes by `dependsOn`, validates no cycles 
 Phase 1 (parallel — no cross-dependencies):
   LAYCTX    ─── context hierarchy refactoring ✅ COMPLETE
   VALDECOMP ─── validator decomposition ✅ COMPLETE
-  ASTSAFE   ─── AST type safety
-  MACROEXP  ─── macro expansion pipeline
+  ASTSAFE   ─── AST type safety ✅ COMPLETE
+  MACROEXP  ─── macro expansion pipeline ✅ COMPLETE
 
 Phase 2 (UNBLOCKED — LAYCTX complete):
   EFFREG ─── effect registry (needs ReadContext/WriteContext from LAYCTX)
@@ -504,8 +517,8 @@ pnpm turbo build && pnpm turbo typecheck && pnpm turbo lint && pnpm turbo test
 | EFFREG | `effect-dispatch.ts` contains no if-chains; registry object compiles with exhaustiveness |
 | IDENT | `seat-resolution.ts` deleted; no raw seat string comparisons outside `identity.ts` |
 | VALDECOMP | `validate-gamedef-behavior.ts` ≤200 LOC (orchestrator only); each sub-module ≤600 LOC |
-| ASTSAFE | No raw `EffectAST` object literals in `compile-effects-*.ts`; no unnarrrowed `evalValue` calls at new call sites |
-| MACROEXP | `expand-templates.ts` uses topological sort; all passes declare `dependsOn` |
+| ASTSAFE | ✅ No raw `EffectAST` object literals in `compile-effects-*.ts`; no unnarrowed `evalValue` calls at new call sites |
+| MACROEXP | ✅ `expand-templates.ts` uses topological sort; all passes declare `dependsOn`; provenance on generated entities |
 
 ### Ultimate Verification
 

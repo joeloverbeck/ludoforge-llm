@@ -41,6 +41,17 @@ export function evalStringValue(expr: ValueExpr, ctx: ReadContext, label?: strin
   return result;
 }
 
+export function evalBooleanValue(expr: ValueExpr, ctx: ReadContext, label?: string): boolean {
+  const result = evalValue(expr, ctx);
+  if (typeof result !== 'boolean') {
+    throw typeMismatchError(
+      `Expected boolean value${label ? ` for ${label}` : ''}, got ${typeof result}`,
+      { expr, result, expectedType: 'boolean' },
+    );
+  }
+  return result;
+}
+
 export function evalIntegerValue(expr: ValueExpr, ctx: ReadContext, label?: string): number {
   const result = evalValue(expr, ctx);
   if (typeof result !== 'number' || !Number.isSafeInteger(result)) {

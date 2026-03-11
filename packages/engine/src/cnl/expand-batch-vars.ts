@@ -1,5 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
+import type { ExpansionPass } from './expansion-pass.js';
 import type {
   GameSpecBatchVarDef,
   GameSpecDoc,
@@ -84,6 +85,7 @@ function expandVarField(
     }
 
     // Expand each name into an individual var declaration
+    const origin = { pass: 'batchVars' } as const;
     for (const name of entry.batch.names) {
       if (entry.batch.type === 'boolean') {
         expanded.push({
@@ -91,6 +93,7 @@ function expandVarField(
           type: entry.batch.type,
           init: entry.batch.init,
           ...(typeof entry.batch.material === 'boolean' ? { material: entry.batch.material } : {}),
+          _origin: origin,
         });
       } else {
         expanded.push({
@@ -100,6 +103,7 @@ function expandVarField(
           min: entry.batch.min,
           max: entry.batch.max,
           ...(typeof entry.batch.material === 'boolean' ? { material: entry.batch.material } : {}),
+          _origin: origin,
         });
       }
     }
@@ -156,3 +160,9 @@ export function expandBatchVars(doc: GameSpecDoc): {
 
   return { doc: nextDoc, diagnostics };
 }
+
+export const batchVarsPass: ExpansionPass = {
+  id: 'batchVars',
+  dependsOn: [],
+  expand: expandBatchVars,
+};

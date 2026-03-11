@@ -7,7 +7,7 @@ export const DEFAULT_CONTROL_FLOW_ITERATION_LIMIT = 100;
 export type ControlFlowEffectType = 'forEach' | 'reduce';
 
 export const resolveControlFlowIterationLimit = (
-  effectType: ControlFlowEffectType,
+  _effectType: ControlFlowEffectType,
   limitExpr: NumericValueExpr | undefined,
   evalCtx: ReadContext,
   onInvalidLimit: (evaluatedLimit: unknown) => number,

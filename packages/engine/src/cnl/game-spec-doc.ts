@@ -18,6 +18,11 @@ export interface GameSpecMetadata {
   readonly namedSets?: Readonly<Record<string, readonly string[]>>;
 }
 
+export interface GameSpecExpansionOrigin {
+  readonly pass: string;
+  readonly template?: string;
+}
+
 export interface GameSpecVarDef {
   readonly name: string;
   readonly type: string;
@@ -25,12 +30,14 @@ export interface GameSpecVarDef {
   readonly min?: unknown;
   readonly max?: unknown;
   readonly material?: unknown;
+  readonly _origin?: GameSpecExpansionOrigin;
 }
 
 export interface GameSpecGlobalMarkerLatticeDef {
   readonly id: string;
   readonly states: readonly string[];
   readonly defaultState: string;
+  readonly _origin?: GameSpecExpansionOrigin;
 }
 
 export interface GameSpecBatchGlobalMarkerLattice {
@@ -74,6 +81,7 @@ export interface GameSpecZoneDef {
   readonly category?: string;
   readonly attributes?: Readonly<Record<string, AttributeValue>>;
   readonly behavior?: GameSpecZoneBehavior;
+  readonly _origin?: GameSpecExpansionOrigin;
 }
 
 export interface GameSpecZoneTemplateDef {
@@ -137,6 +145,7 @@ export interface GameSpecPhaseDef {
     readonly pre?: unknown;
     readonly afterEffects?: readonly unknown[];
   };
+  readonly _origin?: GameSpecExpansionOrigin;
 }
 
 export interface GameSpecPhaseTemplateParam {

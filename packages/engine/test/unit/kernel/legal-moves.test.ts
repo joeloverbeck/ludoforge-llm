@@ -3067,6 +3067,210 @@ phase: [asPhaseId('main')],
     assert.equal(moves.some((move) => move.freeOperation !== true), true);
   });
 
+  it('surfaces only executionContext-scoped free moves during a required grant window', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [{ name: 'target', domain: { query: 'intsInRange', min: 1, max: 2 } }],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'operation-with-grant-context',
+      actionId: asActionId('operation'),
+      legality: {
+        op: 'in',
+        item: { ref: 'binding', name: 'target' },
+        set: { ref: 'grantContext', key: 'allowedTargets' },
+      },
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [{ effects: [] }],
+      atomicity: 'atomic',
+    };
+
+    const def = {
+      ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
+            optionMatrix: [{ first: 'event', second: ['operation'] }],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            actionClassByActionId: { operation: 'operation' },
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeCardDrivenState({
+      currentCard: {
+        firstEligible: '0',
+        secondEligible: null,
+        actedSeats: ['0'],
+        passedSeats: [],
+        nonPassCount: 1,
+        firstActionClass: 'event',
+      },
+      pendingFreeOperationGrants: [
+        {
+          grantId: 'grant-context',
+          seat: '0',
+          operationClass: 'operation',
+          actionIds: ['operation'],
+          completionPolicy: 'required',
+          postResolutionTurnFlow: 'resumeCardFlow',
+          executionContext: { allowedTargets: [2] },
+          remainingUses: 1,
+        },
+      ],
+    });
+
+    const moves = legalMoves(def, state).filter((move) => String(move.actionId) === 'operation');
+    assert.deepEqual(moves, [
+      {
+        actionId: asActionId('operation'),
+        params: { target: 2 },
+        freeOperation: true,
+        actionClass: 'operation',
+      },
+    ]);
+  });
+
+  it('keeps staged pending grants locked to the current ready pipeline step', () => {
+    const airLift: ActionDef = {
+      id: asActionId('airLift'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const sweep: ActionDef = {
+      id: asActionId('sweep'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const emptyPipeline = (id: string, actionId: ReturnType<typeof asActionId>): ActionPipelineDef => ({
+      id,
+      actionId,
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [{ effects: [] }],
+      atomicity: 'partial',
+    });
+
+    const def = {
+      ...makeBaseDef({
+        actions: [airLift, sweep],
+        actionPipelines: [
+          emptyPipeline('airlift-profile', asActionId('airLift')),
+          emptyPipeline('sweep-profile', asActionId('sweep')),
+        ],
+      }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
+            optionMatrix: [{ first: 'event', second: ['operation'] }],
+            passRewards: [],
+            freeOperationActionIds: ['airLift', 'sweep'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            actionClassByActionId: { airLift: 'operation', sweep: 'operation' },
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const start = makeCardDrivenState({
+      currentCard: {
+        firstEligible: '0',
+        secondEligible: null,
+        actedSeats: ['0'],
+        passedSeats: [],
+        nonPassCount: 1,
+        firstActionClass: 'event',
+      },
+      pendingFreeOperationGrants: [
+        {
+          grantId: 'grant-airlift',
+          seat: '0',
+          operationClass: 'operation',
+          actionIds: ['airLift'],
+          completionPolicy: 'required',
+          sequenceBatchId: 'chain',
+          sequenceIndex: 0,
+          remainingUses: 1,
+        },
+        {
+          grantId: 'grant-sweep',
+          seat: '0',
+          operationClass: 'operation',
+          actionIds: ['sweep'],
+          completionPolicy: 'required',
+          postResolutionTurnFlow: 'resumeCardFlow',
+          sequenceBatchId: 'chain',
+          sequenceIndex: 1,
+          remainingUses: 1,
+        },
+      ],
+    });
+
+    const firstMoves = legalMoves(def, start);
+    assert.equal(
+      firstMoves.some((move) => String(move.actionId) === 'airLift' && move.freeOperation === true),
+      true,
+    );
+    assert.equal(
+      firstMoves.some((move) => String(move.actionId) === 'sweep' && move.freeOperation === true),
+      false,
+    );
+
+    const afterAirLift = applyMove(def, start, {
+      actionId: asActionId('airLift'),
+      params: {},
+      freeOperation: true,
+    }).state;
+
+    const secondMoves = legalMoves(def, afterAirLift);
+    assert.equal(
+      secondMoves.some((move) => String(move.actionId) === 'airLift' && move.freeOperation === true),
+      false,
+    );
+    assert.equal(
+      secondMoves.some((move) => String(move.actionId) === 'sweep' && move.freeOperation === true),
+      true,
+    );
+  });
+
   it('26. preserves event moves when event decision probing hits deferrable missing bindings', () => {
     const { def, state, actionId } = makeEventLegalMovesFixture({
       id: 'event-deferrable-binding',

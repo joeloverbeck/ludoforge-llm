@@ -27,6 +27,7 @@ Thumbs.db
 
 # Campaign artifacts (improve-loop)
 campaigns/*/results.tsv
+campaigns/*/run.log.build
 
 # Worktrees
 .worktrees/

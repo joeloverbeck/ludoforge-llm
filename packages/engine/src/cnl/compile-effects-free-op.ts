@@ -25,6 +25,7 @@ import {
   missingCapability,
 } from './compile-effects-utils.js';
 import { lowerFreeOperationExecutionContextNode } from './compile-effects-core.js';
+import { grantFreeOperation as grantFreeOperationBuilder } from '../kernel/ast-builders.js';
 
 export function lowerGrantFreeOperationEffect(
   source: Record<string, unknown>,
@@ -302,27 +303,25 @@ export function lowerGrantFreeOperationEffect(
   }
 
   return {
-    value: {
-      grantFreeOperation: {
-        seat: source.seat,
-        operationClass: source.operationClass,
-        ...(effectId === undefined ? {} : { id: effectId }),
-        ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
-        ...(actionIds === undefined ? {} : { actionIds }),
-        ...(loweredZoneFilter === undefined ? {} : { zoneFilter: loweredZoneFilter }),
-        ...(moveZoneBindings === undefined ? {} : { moveZoneBindings }),
-        ...(moveZoneProbeBindings === undefined ? {} : { moveZoneProbeBindings }),
-        ...(allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon }),
-        ...(uses === undefined ? {} : { uses }),
-        ...(viabilityPolicy === undefined ? {} : { viabilityPolicy }),
-        ...(completionPolicy === undefined ? {} : { completionPolicy }),
-        ...(outcomePolicy === undefined ? {} : { outcomePolicy }),
-        ...(postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow }),
-        ...(loweredSequence === undefined ? {} : { sequence: loweredSequence }),
-        ...(loweredSequenceContext === undefined ? {} : { sequenceContext: loweredSequenceContext }),
-        ...(loweredExecutionContext === undefined ? {} : { executionContext: loweredExecutionContext }),
-      },
-    },
+    value: grantFreeOperationBuilder({
+      seat: source.seat,
+      operationClass: source.operationClass,
+      ...(effectId === undefined ? {} : { id: effectId }),
+      ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
+      ...(actionIds === undefined ? {} : { actionIds }),
+      ...(loweredZoneFilter === undefined ? {} : { zoneFilter: loweredZoneFilter }),
+      ...(moveZoneBindings === undefined ? {} : { moveZoneBindings }),
+      ...(moveZoneProbeBindings === undefined ? {} : { moveZoneProbeBindings }),
+      ...(allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon }),
+      ...(uses === undefined ? {} : { uses }),
+      ...(viabilityPolicy === undefined ? {} : { viabilityPolicy }),
+      ...(completionPolicy === undefined ? {} : { completionPolicy }),
+      ...(outcomePolicy === undefined ? {} : { outcomePolicy }),
+      ...(postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow }),
+      ...(loweredSequence === undefined ? {} : { sequence: loweredSequence }),
+      ...(loweredSequenceContext === undefined ? {} : { sequenceContext: loweredSequenceContext }),
+      ...(loweredExecutionContext === undefined ? {} : { executionContext: loweredExecutionContext }),
+    }),
     diagnostics,
   };
 }

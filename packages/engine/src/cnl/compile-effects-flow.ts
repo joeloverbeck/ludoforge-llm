@@ -21,6 +21,25 @@ import {
   readMacroOrigin,
   validateQueryDomainContract,
 } from './compile-effects-utils.js';
+import {
+  ifEffect,
+  forEach as forEachEffect,
+  reduce as reduceEffect,
+  removeByPriority as removeByPriorityEffect,
+  letEffect,
+  bindValue as bindValueEffect,
+  evaluateSubset as evaluateSubsetEffect,
+  rollRandom as rollRandomEffect,
+  setMarker as setMarkerEffect,
+  shiftMarker as shiftMarkerEffect,
+  setGlobalMarker as setGlobalMarkerEffect,
+  flipGlobalMarker as flipGlobalMarkerEffect,
+  shiftGlobalMarker as shiftGlobalMarkerEffect,
+  gotoPhaseExact as gotoPhaseExactEffect,
+  advancePhase as advancePhaseEffect,
+  pushInterruptPhase as pushInterruptPhaseEffect,
+  popInterruptPhase as popInterruptPhaseEffect,
+} from '../kernel/ast-builders.js';
 
 export function lowerIfEffect(
   source: Record<string, unknown>,
@@ -77,13 +96,11 @@ export function lowerIfEffect(
   }
 
   return {
-    value: {
-      if: {
-        when: when.value,
-        then: thenEffects.value,
-        ...(elseEffects.value === undefined ? {} : { else: elseEffects.value }),
-      },
-    },
+    value: ifEffect({
+      when: when.value,
+      then: thenEffects.value,
+      ...(elseEffects.value === undefined ? {} : { else: elseEffects.value }),
+    }),
     diagnostics,
   };
 }
@@ -152,17 +169,15 @@ export function lowerForEachEffect(
   }
 
   return {
-    value: {
-      forEach: {
-        bind: source.bind,
-        ...(macroOrigin.value === undefined ? {} : { macroOrigin: macroOrigin.value }),
-        over: over.value,
-        effects: loweredEffects.value,
-        ...(loweredLimit !== undefined ? { limit: loweredLimit } : {}),
-        ...(countBind !== undefined ? { countBind } : {}),
-        ...(loweredIn !== undefined ? { in: loweredIn } : {}),
-      },
-    },
+    value: forEachEffect({
+      bind: source.bind,
+      ...(macroOrigin.value === undefined ? {} : { macroOrigin: macroOrigin.value }),
+      over: over.value,
+      effects: loweredEffects.value,
+      ...(loweredLimit !== undefined ? { limit: loweredLimit } : {}),
+      ...(countBind !== undefined ? { countBind } : {}),
+      ...(loweredIn !== undefined ? { in: loweredIn } : {}),
+    }),
     diagnostics,
   };
 }
@@ -285,21 +300,19 @@ export function lowerReduceEffect(
   }
 
   return {
-    value: {
-      reduce: {
-        itemBind,
-        accBind,
-        ...(itemMacroOrigin.value === undefined ? {} : { itemMacroOrigin: itemMacroOrigin.value }),
-        ...(accMacroOrigin.value === undefined ? {} : { accMacroOrigin: accMacroOrigin.value }),
-        over: over.value,
-        initial: initial.value,
-        next: next.value,
-        ...(loweredLimit === undefined ? {} : { limit: loweredLimit }),
-        resultBind,
-        ...(resultMacroOrigin.value === undefined ? {} : { resultMacroOrigin: resultMacroOrigin.value }),
-        in: loweredIn.value,
-      },
-    },
+    value: reduceEffect({
+      itemBind,
+      accBind,
+      ...(itemMacroOrigin.value === undefined ? {} : { itemMacroOrigin: itemMacroOrigin.value }),
+      ...(accMacroOrigin.value === undefined ? {} : { accMacroOrigin: accMacroOrigin.value }),
+      over: over.value,
+      initial: initial.value,
+      next: next.value,
+      ...(loweredLimit === undefined ? {} : { limit: loweredLimit }),
+      resultBind,
+      ...(resultMacroOrigin.value === undefined ? {} : { resultMacroOrigin: resultMacroOrigin.value }),
+      in: loweredIn.value,
+    }),
     diagnostics,
   };
 }
@@ -411,15 +424,13 @@ export function lowerRemoveByPriorityEffect(
   }
 
   return {
-    value: {
-      removeByPriority: {
-        budget: budgetResult.value,
-        groups: loweredGroups,
-        ...(remainingBind === undefined ? {} : { remainingBind }),
-        ...(loweredIn === undefined ? {} : { in: loweredIn }),
-        ...(macroOrigin.value === undefined ? {} : { macroOrigin: macroOrigin.value }),
-      },
-    },
+    value: removeByPriorityEffect({
+      budget: budgetResult.value,
+      groups: loweredGroups,
+      ...(remainingBind === undefined ? {} : { remainingBind }),
+      ...(loweredIn === undefined ? {} : { in: loweredIn }),
+      ...(macroOrigin.value === undefined ? {} : { macroOrigin: macroOrigin.value }),
+    }),
     diagnostics,
   };
 }
@@ -444,13 +455,11 @@ export function lowerLetEffect(
   }
 
   return {
-    value: {
-      let: {
-        bind: source.bind,
-        value: value.value,
-        in: inEffects.value,
-      },
-    },
+    value: letEffect({
+      bind: source.bind,
+      value: value.value,
+      in: inEffects.value,
+    }),
     diagnostics,
   };
 }
@@ -472,12 +481,10 @@ export function lowerBindValueEffect(
   }
 
   return {
-    value: {
-      bindValue: {
-        bind: source.bind,
-        value: value.value,
-      },
-    },
+    value: bindValueEffect({
+      bind: source.bind,
+      value: value.value,
+    }),
     diagnostics,
   };
 }
@@ -563,18 +570,16 @@ export function lowerEvaluateSubsetEffect(
   }
 
   return {
-    value: {
-      evaluateSubset: {
-        source: loweredSource.value,
-        subsetSize: loweredSubsetSize.value,
-        subsetBind: source.subsetBind,
-        compute: computeAndScore.loweredCompute.value,
-        scoreExpr: computeAndScore.loweredScoreExpr.value,
-        resultBind: source.resultBind,
-        ...(bestSubsetBind === undefined ? {} : { bestSubsetBind }),
-        in: loweredIn.value,
-      },
-    },
+    value: evaluateSubsetEffect({
+      source: loweredSource.value,
+      subsetSize: loweredSubsetSize.value,
+      subsetBind: source.subsetBind,
+      compute: computeAndScore.loweredCompute.value,
+      scoreExpr: computeAndScore.loweredScoreExpr.value,
+      resultBind: source.resultBind,
+      ...(bestSubsetBind === undefined ? {} : { bestSubsetBind }),
+      in: loweredIn.value,
+    }),
     diagnostics,
   };
 }
@@ -601,14 +606,12 @@ export function lowerRollRandomEffect(
   }
 
   return {
-    value: {
-      rollRandom: {
-        bind: source.bind,
-        min: minResult.value,
-        max: maxResult.value,
-        in: inEffects.value,
-      },
-    },
+    value: rollRandomEffect({
+      bind: source.bind,
+      min: minResult.value,
+      max: maxResult.value,
+      in: inEffects.value,
+    }),
     diagnostics,
   };
 }
@@ -632,13 +635,11 @@ export function lowerSetMarkerEffect(
   }
 
   return {
-    value: {
-      setMarker: {
-        space: space.value,
-        marker: source.marker,
-        state: stateResult.value,
-      },
-    },
+    value: setMarkerEffect({
+      space: space.value,
+      marker: source.marker,
+      state: stateResult.value,
+    }),
     diagnostics,
   };
 }
@@ -662,13 +663,11 @@ export function lowerShiftMarkerEffect(
   }
 
   return {
-    value: {
-      shiftMarker: {
-        space: space.value,
-        marker: source.marker,
-        delta: delta.value,
-      },
-    },
+    value: shiftMarkerEffect({
+      space: space.value,
+      marker: source.marker,
+      delta: delta.value,
+    }),
     diagnostics,
   };
 }
@@ -690,12 +689,10 @@ export function lowerSetGlobalMarkerEffect(
   }
 
   return {
-    value: {
-      setGlobalMarker: {
-        marker: source.marker,
-        state: state.value,
-      },
-    },
+    value: setGlobalMarkerEffect({
+      marker: source.marker,
+      state: state.value,
+    }),
     diagnostics,
   };
 }
@@ -716,13 +713,11 @@ export function lowerFlipGlobalMarkerEffect(
   }
 
   return {
-    value: {
-      flipGlobalMarker: {
-        marker: marker.value,
-        stateA: stateA.value,
-        stateB: stateB.value,
-      },
-    },
+    value: flipGlobalMarkerEffect({
+      marker: marker.value,
+      stateA: stateA.value,
+      stateB: stateB.value,
+    }),
     diagnostics,
   };
 }
@@ -744,12 +739,10 @@ export function lowerShiftGlobalMarkerEffect(
   }
 
   return {
-    value: {
-      shiftGlobalMarker: {
-        marker: source.marker,
-        delta: delta.value,
-      },
-    },
+    value: shiftGlobalMarkerEffect({
+      marker: source.marker,
+      delta: delta.value,
+    }),
     diagnostics,
   };
 }
@@ -763,11 +756,9 @@ export function lowerGotoPhaseExactEffect(
   }
 
   return {
-    value: {
-      gotoPhaseExact: {
-        phase: source.phase,
-      },
-    },
+    value: gotoPhaseExactEffect({
+      phase: source.phase,
+    }),
     diagnostics: [],
   };
 }
@@ -781,9 +772,7 @@ export function lowerAdvancePhaseEffect(
   }
 
   return {
-    value: {
-      advancePhase: {},
-    },
+    value: advancePhaseEffect({}),
     diagnostics: [],
   };
 }
@@ -799,12 +788,10 @@ export function lowerPushInterruptPhaseEffect(
   }
 
   return {
-    value: {
-      pushInterruptPhase: {
-        phase: source.phase,
-        resumePhase: source.resumePhase,
-      },
-    },
+    value: pushInterruptPhaseEffect({
+      phase: source.phase,
+      resumePhase: source.resumePhase,
+    }),
     diagnostics: [],
   };
 }
@@ -818,9 +805,7 @@ export function lowerPopInterruptPhaseEffect(
   }
 
   return {
-    value: {
-      popInterruptPhase: {},
-    },
+    value: popInterruptPhaseEffect({}),
     diagnostics: [],
   };
 }

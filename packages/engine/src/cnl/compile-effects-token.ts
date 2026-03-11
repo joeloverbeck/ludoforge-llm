@@ -18,6 +18,18 @@ import {
   validateBindingReference,
   validatePrefixedBindingReference,
 } from './compile-effects-utils.js';
+import {
+  moveToken as moveTokenBuilder,
+  moveAll as moveAllBuilder,
+  moveTokenAdjacent as moveTokenAdjacentBuilder,
+  draw as drawBuilder,
+  reveal as revealBuilder,
+  conceal as concealBuilder,
+  shuffle as shuffleBuilder,
+  createToken as createTokenBuilder,
+  destroyToken as destroyTokenBuilder,
+  setTokenProp as setTokenPropBuilder,
+} from '../kernel/ast-builders.js';
 
 export function lowerMoveTokenEffect(
   source: Record<string, unknown>,
@@ -56,14 +68,12 @@ export function lowerMoveTokenEffect(
   }
 
   return {
-    value: {
-      moveToken: {
-        token: source.token,
-        from: from.value,
-        to: to.value,
-        ...(position === undefined ? {} : { position }),
-      },
-    },
+    value: moveTokenBuilder({
+      token: source.token,
+      from: from.value,
+      to: to.value,
+      ...(position === undefined ? {} : { position }),
+    }),
     diagnostics,
   };
 }
@@ -85,13 +95,11 @@ export function lowerMoveAllEffect(
     return { value: null, diagnostics };
   }
   return {
-    value: {
-      moveAll: {
-        from: from.value,
-        to: to.value,
-        ...(filter.value === undefined ? {} : { filter: filter.value }),
-      },
-    },
+    value: moveAllBuilder({
+      from: from.value,
+      to: to.value,
+      ...(filter.value === undefined ? {} : { filter: filter.value }),
+    }),
     diagnostics,
   };
 }
@@ -121,13 +129,11 @@ export function lowerMoveTokenAdjacentEffect(
   }
 
   return {
-    value: {
-      moveTokenAdjacent: {
-        token: source.token,
-        from: from.value,
-        ...(directionValue === undefined ? {} : { direction: directionValue }),
-      },
-    },
+    value: moveTokenAdjacentBuilder({
+      token: source.token,
+      from: from.value,
+      ...(directionValue === undefined ? {} : { direction: directionValue }),
+    }),
     diagnostics,
   };
 }
@@ -148,13 +154,11 @@ export function lowerDrawEffect(
     return { value: null, diagnostics };
   }
   return {
-    value: {
-      draw: {
-        from: from.value,
-        to: to.value,
-        count: source.count,
-      },
-    },
+    value: drawBuilder({
+      from: from.value,
+      to: to.value,
+      count: source.count,
+    }),
     diagnostics,
   };
 }
@@ -194,13 +198,11 @@ export function lowerRevealEffect(
   }
 
   return {
-    value: {
-      reveal: {
-        zone: zone.value,
-        to,
-        ...(filter === undefined ? {} : { filter }),
-      },
-    },
+    value: revealBuilder({
+      zone: zone.value,
+      to,
+      ...(filter === undefined ? {} : { filter }),
+    }),
     diagnostics,
   };
 }
@@ -240,13 +242,11 @@ export function lowerConcealEffect(
   }
 
   return {
-    value: {
-      conceal: {
-        zone: zone.value,
-        ...(from === undefined ? {} : { from }),
-        ...(filter === undefined ? {} : { filter }),
-      },
-    },
+    value: concealBuilder({
+      zone: zone.value,
+      ...(from === undefined ? {} : { from }),
+      ...(filter === undefined ? {} : { filter }),
+    }),
     diagnostics,
   };
 }
@@ -262,7 +262,7 @@ export function lowerShuffleEffect(
     return { value: null, diagnostics: zone.diagnostics };
   }
   return {
-    value: { shuffle: { zone: zone.value } },
+    value: shuffleBuilder({ zone: zone.value }),
     diagnostics: zone.diagnostics,
   };
 }
@@ -309,13 +309,11 @@ export function lowerCreateTokenEffect(
   }
 
   return {
-    value: {
-      createToken: {
-        type: source.type,
-        zone: zone.value,
-        ...(Object.keys(props).length === 0 ? {} : { props }),
-      },
-    },
+    value: createTokenBuilder({
+      type: source.type,
+      zone: zone.value,
+      ...(Object.keys(props).length === 0 ? {} : { props }),
+    }),
     diagnostics,
   };
 }
@@ -333,7 +331,7 @@ export function lowerDestroyTokenEffect(
     return { value: null, diagnostics };
   }
   return {
-    value: { destroyToken: { token: source.token } },
+    value: destroyTokenBuilder({ token: source.token }),
     diagnostics,
   };
 }
@@ -357,7 +355,7 @@ export function lowerSetTokenPropEffect(
   }
 
   return {
-    value: { setTokenProp: { token: source.token, prop: source.prop, value: value.value } },
+    value: setTokenPropBuilder({ token: source.token, prop: source.prop, value: value.value }),
     diagnostics,
   };
 }

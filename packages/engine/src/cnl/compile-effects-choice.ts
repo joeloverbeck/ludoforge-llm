@@ -1,4 +1,5 @@
 import type { EffectAST, NumericValueExpr } from '../kernel/types.js';
+import { chooseOne as chooseOneBuilder, chooseN as chooseNBuilder, forEach as forEachBuilder, moveToken as moveTokenBuilder } from '../kernel/ast-builders.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import {
   lowerNumericValueNode,
@@ -55,14 +56,12 @@ export function lowerChooseOneEffect(
     return { value: null, diagnostics };
   }
   return {
-    value: {
-      chooseOne: {
-        internalDecisionId: toInternalDecisionId(path),
-        bind: source.bind,
-        options: options.value,
-        ...(chooser.value === undefined ? {} : { chooser: chooser.value }),
-      },
-    },
+    value: chooseOneBuilder({
+      internalDecisionId: toInternalDecisionId(path),
+      bind: source.bind,
+      options: options.value,
+      ...(chooser.value === undefined ? {} : { chooser: chooser.value }),
+    }),
     diagnostics,
   };
 }
@@ -177,15 +176,13 @@ export function lowerChooseNEffect(
           ...(loweredMin === undefined ? {} : { min: loweredMin }),
         };
   return {
-    value: {
-      chooseN: {
-        internalDecisionId: toInternalDecisionId(path),
-        bind: source.bind,
-        options: options.value,
-        ...(normalizedChooser === undefined ? {} : { chooser: normalizedChooser }),
-        ...cardinality,
-      },
-    },
+    value: chooseNBuilder({
+      internalDecisionId: toInternalDecisionId(path),
+      bind: source.bind,
+      options: options.value,
+      ...(normalizedChooser === undefined ? {} : { chooser: normalizedChooser }),
+      ...cardinality,
+    }),
     diagnostics,
   };
 }
@@ -306,39 +303,31 @@ export function lowerDistributeTokensEffects(
 
   return {
     value: [
-      {
-        chooseN: {
-          internalDecisionId: toInternalDecisionId(`${path}.selectTokens`),
-          bind: selectedBind,
-          options: tokenOptions.value,
-          ...cardinality,
+      chooseNBuilder({
+        internalDecisionId: toInternalDecisionId(`${path}.selectTokens`),
+        bind: selectedBind,
+        options: tokenOptions.value,
+        ...cardinality,
+      }),
+      forEachBuilder({
+        bind: tokenBind,
+        over: {
+          query: 'binding',
+          name: selectedBind,
         },
-      },
-      {
-        forEach: {
-          bind: tokenBind,
-          over: {
-            query: 'binding',
-            name: selectedBind,
-          },
-          effects: [
-            {
-              chooseOne: {
-                internalDecisionId: toInternalDecisionId(`${path}.chooseDestination`),
-                bind: destinationBind,
-                options: destinationOptions.value,
-              },
-            },
-            {
-              moveToken: {
-                token: tokenBind,
-                from: { zoneExpr: { ref: 'tokenZone', token: tokenBind } },
-                to: { zoneExpr: { ref: 'binding', name: destinationBind } },
-              },
-            },
-          ],
-        },
-      },
+        effects: [
+          chooseOneBuilder({
+            internalDecisionId: toInternalDecisionId(`${path}.chooseDestination`),
+            bind: destinationBind,
+            options: destinationOptions.value,
+          }),
+          moveTokenBuilder({
+            token: tokenBind,
+            from: { zoneExpr: { ref: 'tokenZone', token: tokenBind } },
+            to: { zoneExpr: { ref: 'binding', name: destinationBind } },
+          }),
+        ],
+      }),
     ],
     diagnostics,
   };

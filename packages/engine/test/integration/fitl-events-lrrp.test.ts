@@ -11,6 +11,7 @@ import {
   type Move,
   type Token,
 } from '../../src/kernel/index.js';
+import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
@@ -90,6 +91,60 @@ describe('FITL card-26 LRRP', () => {
     assert.equal(grant?.operationClass, 'operation');
     assert.deepEqual(grant?.actionIds, ['airStrike']);
     assert.equal(grant?.zoneFilter, undefined, 'LRRP Air Strike should follow normal Air Strike target rules');
+  });
+
+  it('encodes LRRP unshaded/shaded minute structure details in the production AST', () => {
+    const { parsed } = compileProductionSpec();
+    assertNoErrors(parsed);
+    const card = parsed.doc.eventDecks?.[0]?.cards.find((entry) => entry.id === CARD_ID);
+    assert.notEqual(card, undefined, 'Expected card-26 parsed definition');
+
+    const unshadedCap = findDeep(card?.unshaded?.effects ?? [], (node: unknown) => {
+      const candidate = node as { let?: { bind?: string; value?: { if?: { when?: { right?: unknown }; then?: unknown } } } };
+      return candidate.let?.bind === '$irregularsToPlaceCount'
+        && candidate.let.value?.if?.when?.right === 3
+        && candidate.let.value?.if?.then === 3;
+    });
+    const unshadedPlacementSelector = findDeep(card?.unshaded?.effects ?? [], (node: unknown) => {
+      const candidate = node as { macro?: string };
+      return candidate.macro === 'select-laos-cambodia-province';
+    });
+    const unshadedExactPlacementCount = findDeep(card?.unshaded?.effects ?? [], (node: unknown) => {
+      const candidate = node as { chooseN?: { bind?: string; min?: unknown; max?: unknown } };
+      return candidate.chooseN?.bind === '$irregularsToPlace'
+        && JSON.stringify(candidate.chooseN.min) === JSON.stringify({ ref: 'binding', name: '$irregularsToPlaceCount' })
+        && JSON.stringify(candidate.chooseN.max) === JSON.stringify({ ref: 'binding', name: '$irregularsToPlaceCount' });
+    });
+
+    const shadedCap = findDeep(card?.shaded?.effects ?? [], (node: unknown) => {
+      const candidate = node as { let?: { bind?: string; value?: { if?: { when?: { right?: unknown }; then?: unknown } } } };
+      return candidate.let?.bind === '$irregularsToCasualtiesCount'
+        && candidate.let.value?.if?.when?.right === 3
+        && candidate.let.value?.if?.then === 3;
+    });
+    const shadedMapOnlySelector = findDeep(card?.shaded?.effects ?? [], (node: unknown) => {
+      const candidate = node as { chooseN?: { bind?: string; options?: { query?: string } } };
+      return candidate.chooseN?.bind === '$irregularsToCasualties'
+        && candidate.chooseN?.options?.query === 'tokensInMapSpaces';
+    });
+    const shadedUniqueSourceShift = findDeep(card?.shaded?.effects ?? [], (node: unknown) => {
+      const candidate = node as { forEach?: { bind?: string; over?: { query?: string }; effects?: unknown[] } };
+      return candidate.forEach?.bind === '$sourceSpace'
+        && candidate.forEach?.over?.query === 'tokenZones'
+        && findDeep(candidate.forEach.effects ?? [], (inner: unknown) => {
+          const innerCandidate = inner as { macro?: string; args?: { space?: unknown; deltaExpr?: unknown } };
+          return innerCandidate.macro === 'shift-support-opposition'
+            && innerCandidate.args?.space === '$sourceSpace'
+            && innerCandidate.args?.deltaExpr === -1;
+        }).length > 0;
+    });
+
+    assert.equal(unshadedCap.length > 0, true, 'LRRP unshaded should cap placement at 3 or fewer available Irregulars');
+    assert.equal(unshadedPlacementSelector.length > 0, true, 'LRRP unshaded should select a Laos/Cambodia province for each placed Irregular');
+    assert.equal(unshadedExactPlacementCount.length > 0, true, 'LRRP unshaded should place exactly the chosen Irregular count');
+    assert.equal(shadedCap.length > 0, true, 'LRRP shaded should cap casualties at 3 or fewer map Irregulars');
+    assert.equal(shadedMapOnlySelector.length > 0, true, 'LRRP shaded should select Irregulars only from map spaces');
+    assert.equal(shadedUniqueSourceShift.length > 0, true, 'LRRP shaded should shift each source space once via tokenZones before moving casualties');
   });
 
   it('unshaded defines Laos/Cambodia province placement and queues a normal free Air Strike grant', () => {

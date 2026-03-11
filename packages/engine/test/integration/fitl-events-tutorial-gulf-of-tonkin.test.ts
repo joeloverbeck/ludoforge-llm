@@ -708,11 +708,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       },
     };
 
-    const eventMoves = legalMoves(def, setup).filter((move) => String(move.actionId) === 'event');
-    const unshaded = eventMoves.find((move) => move.params.side === 'unshaded');
-    assert.notEqual(unshaded, undefined, 'Expected unshaded side to remain legal because chooseN can select zero');
+    const unshaded = buildEventMove(def, 'unshaded');
 
-    const pending = legalChoicesEvaluate(def, setup, unshaded!);
+    const pending = legalChoicesEvaluate(def, setup, unshaded);
     assert.equal(pending.kind, 'pending');
     if (pending.kind !== 'pending') {
       throw new Error('Expected chooseN request.');
@@ -720,9 +718,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     assert.equal(pending.type, 'chooseN');
 
     const zeroSelectionMove: Move = {
-      ...unshaded!,
+      ...unshaded,
       params: {
-        ...unshaded!.params,
+        ...unshaded.params,
         [pending.decisionId]: [],
       },
     };

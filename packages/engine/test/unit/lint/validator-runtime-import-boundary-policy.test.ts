@@ -11,11 +11,11 @@ import {
 } from '../../helpers/kernel-source-ast-guard.js';
 import { findEnginePackageRoot } from '../../helpers/lint-policy-helpers.js';
 
-const VALIDATOR_BEHAVIOR_FILE = ['src', 'kernel', 'validate-gamedef-behavior.ts'] as const;
+const VALIDATOR_BEHAVIOR_FILE = ['src', 'kernel', 'validate-queries.ts'] as const;
 const QUERY_PREDICATE_FILE = ['src', 'kernel', 'query-predicate.ts'] as const;
 
 describe('validator/runtime predicate-op boundary policy', () => {
-  it('validator behavior imports predicate-op contracts from neutral contract module, not runtime evaluator', () => {
+  it('validator queries imports predicate-op contracts from neutral contract module, not runtime evaluator', () => {
     const thisDir = dirname(fileURLToPath(import.meta.url));
     const engineRoot = findEnginePackageRoot(thisDir);
     const validatorPath = resolve(engineRoot, ...VALIDATOR_BEHAVIOR_FILE);
@@ -26,12 +26,12 @@ describe('validator/runtime predicate-op boundary policy', () => {
     assert.equal(
       contractImports.get('isPredicateOp'),
       'isPredicateOp',
-      'validate-gamedef-behavior.ts must import isPredicateOp from ../contracts/index.js without aliasing',
+      'validate-queries.ts must import isPredicateOp from ../contracts/index.js without aliasing',
     );
     assert.equal(
       contractImports.get('PREDICATE_OPERATORS'),
       'PREDICATE_OPERATORS',
-      'validate-gamedef-behavior.ts must import PREDICATE_OPERATORS from ../contracts/index.js without aliasing',
+      'validate-queries.ts must import PREDICATE_OPERATORS from ../contracts/index.js without aliasing',
     );
 
     for (const statement of validatorSourceFile.statements) {
@@ -42,7 +42,7 @@ describe('validator/runtime predicate-op boundary policy', () => {
       if (!ts.isStringLiteral(moduleSpecifier) || moduleSpecifier.text !== './query-predicate.js') {
         continue;
       }
-      assert.fail('validate-gamedef-behavior.ts must not import runtime query-predicate module');
+      assert.fail('validate-queries.ts must not import runtime query-predicate module');
     }
   });
 

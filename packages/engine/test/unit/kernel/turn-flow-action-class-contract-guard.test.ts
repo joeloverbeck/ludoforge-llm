@@ -66,9 +66,9 @@ describe('turn-flow action-class canonical contract guard', () => {
       readKernelSource('src/kernel/effects-turn-flow.ts'),
       'effects-turn-flow.ts',
     );
-    const behaviorValidationSource = parseTypeScriptSource(
-      readKernelSource('src/kernel/validate-gamedef-behavior.ts'),
-      'validate-gamedef-behavior.ts',
+    const queriesValidationSource = parseTypeScriptSource(
+      readKernelSource('src/kernel/validate-queries.ts'),
+      'validate-queries.ts',
     );
 
     assert.equal(
@@ -87,9 +87,9 @@ describe('turn-flow action-class canonical contract guard', () => {
       'effects-turn-flow.ts must consume canonical runtime action-class guard',
     );
     assert.equal(
-      collectImportSpecifiers(behaviorValidationSource).includes('../contracts/index.js'),
+      collectImportSpecifiers(queriesValidationSource).includes('../contracts/index.js'),
       true,
-      'validate-gamedef-behavior.ts must consume canonical action-class values',
+      'validate-queries.ts must consume canonical action-class values',
     );
   });
 
@@ -101,7 +101,7 @@ describe('turn-flow action-class canonical contract guard', () => {
       readKernelSource('src/kernel/effects-turn-flow.ts'),
       readKernelSource('src/kernel/types-ast.ts'),
       readKernelSource('src/kernel/legal-moves-turn-order.ts'),
-      readKernelSource('src/kernel/validate-gamedef-behavior.ts'),
+      readKernelSource('src/kernel/validate-queries.ts'),
     ];
 
     for (const source of sources) {

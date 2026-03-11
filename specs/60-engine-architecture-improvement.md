@@ -290,12 +290,26 @@ A `VALIDATION_BOUNDARY.md` document clarifies the compiler-vs-kernel validation 
 
 ### Tickets
 
-| ID | Title | Size |
-|----|-------|------|
-| VALDECOMP-001 | Extract effect validation into validate-effects.ts | L |
-| VALDECOMP-002 | Extract condition and value validation into separate modules | M |
-| VALDECOMP-003 | Extract query/event validation; wire up orchestrator | L |
-| VALDECOMP-004 | Document validation boundary (compiler vs kernel) | S |
+| ID | Title | Size | Status |
+|----|-------|------|--------|
+| VALDECOMP-001 | Extract shared helpers + effect validation | L | ✅ Done |
+| VALDECOMP-002 | Extract condition and value validation into separate modules | M | ✅ Done |
+| VALDECOMP-003 | Extract query/event validation; wire up orchestrator | L | ✅ Done |
+| VALDECOMP-004 | Document validation boundary (compiler vs kernel) | S | ✅ Done |
+
+### Implementation Notes
+
+VALDECOMP completed. Key decisions and deviations from original plan:
+
+- **6 sub-modules instead of 5**: Added `validate-behavior-shared.ts` (~330 LOC) for shared helpers (`validateReference`, `validateMapSpacePropertyReference`, `validateCanonicalBinding`, `tryStaticStringValue`, `validateMarkerStateLiteral`, `validateScopedVarReference`, etc.) used across multiple validator domains.
+- **Thin orchestrator**: `validate-gamedef-behavior.ts` reduced from 2,813 LOC to ~35 LOC of pure re-exports. All consumers continue to import from it unchanged.
+- **Circular dependency handling**: `validateValueExpr` ↔ `validateConditionAst` and `validateValueExpr` → `validateOptionsQuery` cross-module calls use ESM live bindings (lazy imports inside function bodies). No runtime issues since all cross-references are resolved after module initialization.
+- **Dependency DAG**: `shared → values → conditions → queries → effects → events`. Each module imports only from predecessors in this chain (plus shared).
+- **Policy test updates**: 6 architectural lint/policy tests referenced `validate-gamedef-behavior.ts` by path. Updated to point to the specific sub-module now containing the checked patterns (`validate-effects.ts`, `validate-events.ts`, `validate-queries.ts`, `validate-conditions.ts`).
+- **No consumer modifications**: `validate-gamedef-core.ts`, `validate-gamedef-extensions.ts`, and all functional tests continue to import from `validate-gamedef-behavior.ts` via re-exports.
+- **No functional test modifications**: All 4,012 existing tests pass unchanged, confirming behavioral preservation.
+- **`VALIDATION_BOUNDARY.md`** created in `docs/` documenting compiler-vs-kernel validation boundary and the new module structure.
+- Phase 5 (ASTSAFE) is now unblocked.
 
 ---
 
@@ -441,7 +455,7 @@ The orchestrator topologically sorts passes by `dependsOn`, validates no cycles 
 ```
 Phase 1 (parallel — no cross-dependencies):
   LAYCTX    ─── context hierarchy refactoring ✅ COMPLETE
-  VALDECOMP ─── validator decomposition
+  VALDECOMP ─── validator decomposition ✅ COMPLETE
   ASTSAFE   ─── AST type safety
   MACROEXP  ─── macro expansion pipeline
 

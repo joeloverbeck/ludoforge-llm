@@ -100,6 +100,19 @@ const createTurn4EventDecisionOverrides = (): readonly DecisionOverrideRule[] =>
   ];
 };
 
+const choiceStringOptions = (request: ChoicePendingRequest): readonly string[] =>
+  request.options
+    .map((option) => option.value)
+    .filter((value): value is string => typeof value === 'string');
+
+const requestOffersAll = (
+  request: ChoicePendingRequest,
+  required: readonly string[],
+): boolean => {
+  const options = new Set(choiceStringOptions(request));
+  return required.every((value) => options.has(value));
+};
+
 const createTurn4NvaReportBranchDecisionOverrides = (): readonly DecisionOverrideRule[] => [
   {
     when: (request: ChoicePendingRequest) =>
@@ -166,7 +179,10 @@ const createTurn4NvaReportBranchDecisionOverrides = (): readonly DecisionOverrid
   {
     when: (request: ChoicePendingRequest) =>
       request.name === '$targetSpaces'
-      && request.decisionId.includes('doc.actionPipelines.22.stages[0].effects.0'),
+      && requestOffersAll(request, [
+        'southern-laos:none',
+        'kien-giang-an-xuyen:none',
+      ]),
     value: ['southern-laos:none', 'kien-giang-an-xuyen:none'],
   },
   {

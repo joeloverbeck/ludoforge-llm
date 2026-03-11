@@ -152,12 +152,24 @@ The registry object enforces that every `EffectKind` has a corresponding handler
 
 ### Tickets
 
-| ID | Title | Size |
-|----|-------|------|
-| EFFREG-001 | Define EffectKindMap mapped type in types-ast.ts | M |
-| EFFREG-002 | Create effect-registry.ts with typed handler registration | M |
-| EFFREG-003 | Refactor effects-*.ts handlers to match EffectHandler signature | L |
-| EFFREG-004 | Replace dispatch if-chains with registry lookup; remove effectTypeOf | M |
+| ID | Title | Size | Status |
+|----|-------|------|--------|
+| EFFREG-001 | Define EffectKindMap mapped type in types-ast.ts | M | ✅ Done |
+| EFFREG-002 | Create effect-registry.ts with typed handler registration | M | ✅ Done |
+| EFFREG-003 | Replace dispatch if-chains with registry lookup; remove effectTypeOf | M | ✅ Done |
+
+### Implementation Notes
+
+EFFREG completed. Key decisions and deviations from original plan:
+
+- **3 tickets instead of 4**: The original plan had a separate ticket for refactoring `effects-*.ts` handler signatures. Instead, the registry uses a `simple()` wrapper function that adapts 2-arg handlers `(effect, ctx) => EffectResult` to the 4-arg registry signature `(effect, ctx, budget, applyEffects) => EffectResult`, eliminating the need to modify any handler files.
+- **`EffectKindMap` interface** (not mapped type): Defined as an `interface` in `types-ast.ts` mapping each of the 34 effect kind names to their tagged object types. `EffectAST` is derived as `EffectKindMap[EffectKind]`, structurally identical to the old union.
+- **Helper types exported**: `EffectKind = keyof EffectKindMap` and `EffectOfKind<K>` enable typed effect handling throughout the codebase.
+- **`effectKindOf` replaces `effectTypeOf`**: Returns `EffectKind` (typed) instead of `string`. Uses `Object.keys(effect)[0]` — simpler than the old 34-branch if-chain.
+- **Registry exhaustiveness**: The `EffectRegistry` mapped type `{ [K in EffectKind]: EffectHandler<K> }` produces a compile error if any effect kind is missing a handler entry.
+- **No handler file modifications**: All 9 `effects-*.ts` files remain unchanged. The `simple()` wrapper adapts simple handlers; control-flow handlers (`applyIf`, `applyForEach`, `applyReduce`, `applyRemoveByPriority`, `applyLet`, `applyEvaluateSubset`, `applyRollRandom`) are assigned directly since they already accept budget and callback args.
+- **No test modifications**: All existing tests pass unchanged, confirming behavioral preservation.
+- Phase 3 (IDENT, VALDECOMP) is now unblocked.
 
 ---
 

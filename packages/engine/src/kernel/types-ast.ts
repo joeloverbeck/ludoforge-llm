@@ -265,277 +265,282 @@ export type AddVarPayload = ScopedVarPayloadContract<
   { readonly delta: NumericValueExpr }
 >;
 
-export type EffectAST =
-  | {
-      readonly setVar: SetVarPayload;
-    }
-  | {
-      readonly setActivePlayer: {
-        readonly player: PlayerSel;
-      };
-    }
-  | {
-      readonly addVar: AddVarPayload;
-    }
-  | {
-      readonly transferVar: {
-        readonly from: TransferVarEndpoint;
-        readonly to: TransferVarEndpoint;
-        readonly amount: NumericValueExpr;
-        readonly min?: NumericValueExpr;
-        readonly max?: NumericValueExpr;
-        readonly actualBind?: string;
-        readonly macroOrigin?: EffectMacroOrigin;
-      };
-    }
-  | {
-      readonly moveToken: {
-        readonly token: TokenSel;
-        readonly from: ZoneRef;
-        readonly to: ZoneRef;
-        readonly position?: 'top' | 'bottom' | 'random';
-      };
-    }
-  | {
-      readonly moveAll: {
-        readonly from: ZoneRef;
-        readonly to: ZoneRef;
-        readonly filter?: ConditionAST;
-      };
-    }
-  | {
-      readonly moveTokenAdjacent: {
-        readonly token: TokenSel;
-        readonly from: ZoneRef;
-        readonly direction?: string;
-      };
-    }
-  | {
-      readonly draw: {
-        readonly from: ZoneRef;
-        readonly to: ZoneRef;
-        readonly count: number;
-      };
-    }
-  | {
-      readonly reveal: {
-        readonly zone: ZoneRef;
-        readonly to: 'all' | PlayerSel;
-        readonly filter?: TokenFilterExpr;
-      };
-    }
-  | {
-      readonly conceal: {
-        readonly zone: ZoneRef;
-        readonly from?: 'all' | PlayerSel;
-        readonly filter?: TokenFilterExpr;
-      };
-    }
-  | { readonly shuffle: { readonly zone: ZoneRef } }
-  | {
-      readonly createToken: {
-        readonly type: string;
-        readonly zone: ZoneRef;
-        readonly props?: Readonly<Record<string, ValueExpr>>;
-      };
-    }
-  | { readonly destroyToken: { readonly token: TokenSel } }
-  | {
-      readonly setTokenProp: {
-        readonly token: TokenSel;
-        readonly prop: string;
-        readonly value: ValueExpr;
-      };
-    }
-  | {
-      readonly if: {
-        readonly when: ConditionAST;
-        readonly then: readonly EffectAST[];
-        readonly else?: readonly EffectAST[];
-      };
-    }
-  | {
-      readonly forEach: {
-        readonly bind: string;
-        readonly macroOrigin?: EffectMacroOrigin;
-        readonly over: OptionsQuery;
-        readonly effects: readonly EffectAST[];
-        readonly limit?: NumericValueExpr;
-        readonly countBind?: string;
-        readonly in?: readonly EffectAST[];
-      };
-    }
-  | {
-      readonly reduce: {
-        readonly itemBind: string;
-        readonly accBind: string;
-        readonly itemMacroOrigin?: EffectMacroOrigin;
-        readonly accMacroOrigin?: EffectMacroOrigin;
-        readonly over: OptionsQuery;
-        readonly initial: ValueExpr;
-        readonly next: ValueExpr;
-        readonly limit?: NumericValueExpr;
-        readonly resultBind: string;
-        readonly resultMacroOrigin?: EffectMacroOrigin;
-        readonly in: readonly EffectAST[];
-      };
-    }
-  | {
-      readonly removeByPriority: {
-        readonly budget: NumericValueExpr;
-        readonly groups: readonly {
-          readonly bind: string;
-          readonly over: OptionsQuery;
-          readonly to: ZoneRef;
-          readonly from?: ZoneRef;
-          readonly countBind?: string;
-          readonly macroOrigin?: EffectMacroOrigin;
-        }[];
-        readonly remainingBind?: string;
-        readonly in?: readonly EffectAST[];
-        readonly macroOrigin?: EffectMacroOrigin;
-      };
-    }
-  | {
-      readonly let: {
-        readonly bind: string;
-        readonly value: ValueExpr;
-        readonly in: readonly EffectAST[];
-        readonly macroOrigin?: EffectMacroOrigin;
-      };
-    }
-  | {
-      readonly bindValue: {
-        readonly bind: string;
-        readonly value: ValueExpr;
-        readonly macroOrigin?: EffectMacroOrigin;
-      };
-    }
-  | {
-      readonly evaluateSubset: {
-        readonly source: OptionsQuery;
-        readonly subsetSize: NumericValueExpr;
-        readonly subsetBind: string;
-        readonly compute: readonly EffectAST[];
-        readonly scoreExpr: NumericValueExpr;
-        readonly resultBind: string;
-        readonly bestSubsetBind?: string;
-        readonly in: readonly EffectAST[];
-        readonly macroOrigin?: EffectMacroOrigin;
-      };
-    }
-  | {
-      readonly chooseOne: {
-        readonly internalDecisionId: string;
-        readonly bind: string;
-        readonly options: OptionsQuery;
-        readonly chooser?: PlayerSel;
-        readonly macroOrigin?: EffectMacroOrigin;
-      };
-    }
-  | {
-      readonly chooseN: {
-        readonly internalDecisionId: string;
-        readonly bind: string;
-        readonly options: OptionsQuery;
-        readonly chooser?: PlayerSel;
-        readonly macroOrigin?: EffectMacroOrigin;
-      } & (
-        | {
-            readonly n: number;
-            readonly min?: never;
-            readonly max?: never;
-          }
-        | {
-            readonly min?: NumericValueExpr;
-            readonly max: NumericValueExpr;
-            readonly n?: never;
-          }
-      );
-    }
-  | {
-      readonly rollRandom: {
-        readonly bind: string;
-        readonly min: NumericValueExpr;
-        readonly max: NumericValueExpr;
-        readonly in: readonly EffectAST[];
-        readonly macroOrigin?: EffectMacroOrigin;
-      };
-    }
-  | {
-      readonly setMarker: {
-        readonly space: ZoneRef;
-        readonly marker: string;
-        readonly state: ValueExpr;
-      };
-    }
-  | {
-      readonly shiftMarker: {
-        readonly space: ZoneRef;
-        readonly marker: string;
-        readonly delta: NumericValueExpr;
-      };
-    }
-  | {
-      readonly setGlobalMarker: {
-        readonly marker: string;
-        readonly state: ValueExpr;
-      };
-    }
-  | {
-      readonly flipGlobalMarker: {
-        readonly marker: ValueExpr;
-        readonly stateA: ValueExpr;
-        readonly stateB: ValueExpr;
-      };
-    }
-  | {
-      readonly shiftGlobalMarker: {
-        readonly marker: string;
-        readonly delta: NumericValueExpr;
-      };
-    }
-  | {
-      readonly grantFreeOperation: {
-        readonly id?: string;
-        readonly seat: string;
-        readonly executeAsSeat?: string;
-        readonly operationClass: TurnFlowActionClass;
-        readonly actionIds?: readonly string[];
-        readonly zoneFilter?: ConditionAST;
-        readonly moveZoneBindings?: readonly string[];
-        readonly moveZoneProbeBindings?: readonly string[];
-        readonly allowDuringMonsoon?: boolean;
-        readonly uses?: number;
-        readonly viabilityPolicy?: TurnFlowFreeOperationGrantViabilityPolicy;
-        readonly completionPolicy?: import('../contracts/index.js').TurnFlowFreeOperationGrantCompletionPolicy;
-        readonly outcomePolicy?: import('../contracts/index.js').TurnFlowFreeOperationGrantOutcomePolicy;
-        readonly postResolutionTurnFlow?: import('../contracts/index.js').TurnFlowFreeOperationGrantPostResolutionTurnFlow;
-        readonly sequence?: {
-          readonly batch: string;
-          readonly step: number;
-        };
-        readonly sequenceContext?: FreeOperationSequenceContextContract;
-        readonly executionContext?: FreeOperationExecutionContext;
-      };
-    }
-  | {
-      readonly gotoPhaseExact: {
-        readonly phase: string;
-      };
-    }
-  | {
-      readonly advancePhase: Record<string, never>;
-    }
-  | {
-      readonly pushInterruptPhase: {
-        readonly phase: string;
-        readonly resumePhase: string;
-      };
-    }
-  | {
-      readonly popInterruptPhase: Record<string, never>;
+export interface EffectKindMap {
+  readonly setVar: {
+    readonly setVar: SetVarPayload;
+  };
+  readonly setActivePlayer: {
+    readonly setActivePlayer: {
+      readonly player: PlayerSel;
     };
+  };
+  readonly addVar: {
+    readonly addVar: AddVarPayload;
+  };
+  readonly transferVar: {
+    readonly transferVar: {
+      readonly from: TransferVarEndpoint;
+      readonly to: TransferVarEndpoint;
+      readonly amount: NumericValueExpr;
+      readonly min?: NumericValueExpr;
+      readonly max?: NumericValueExpr;
+      readonly actualBind?: string;
+      readonly macroOrigin?: EffectMacroOrigin;
+    };
+  };
+  readonly moveToken: {
+    readonly moveToken: {
+      readonly token: TokenSel;
+      readonly from: ZoneRef;
+      readonly to: ZoneRef;
+      readonly position?: 'top' | 'bottom' | 'random';
+    };
+  };
+  readonly moveAll: {
+    readonly moveAll: {
+      readonly from: ZoneRef;
+      readonly to: ZoneRef;
+      readonly filter?: ConditionAST;
+    };
+  };
+  readonly moveTokenAdjacent: {
+    readonly moveTokenAdjacent: {
+      readonly token: TokenSel;
+      readonly from: ZoneRef;
+      readonly direction?: string;
+    };
+  };
+  readonly draw: {
+    readonly draw: {
+      readonly from: ZoneRef;
+      readonly to: ZoneRef;
+      readonly count: number;
+    };
+  };
+  readonly reveal: {
+    readonly reveal: {
+      readonly zone: ZoneRef;
+      readonly to: 'all' | PlayerSel;
+      readonly filter?: TokenFilterExpr;
+    };
+  };
+  readonly conceal: {
+    readonly conceal: {
+      readonly zone: ZoneRef;
+      readonly from?: 'all' | PlayerSel;
+      readonly filter?: TokenFilterExpr;
+    };
+  };
+  readonly shuffle: { readonly shuffle: { readonly zone: ZoneRef } };
+  readonly createToken: {
+    readonly createToken: {
+      readonly type: string;
+      readonly zone: ZoneRef;
+      readonly props?: Readonly<Record<string, ValueExpr>>;
+    };
+  };
+  readonly destroyToken: { readonly destroyToken: { readonly token: TokenSel } };
+  readonly setTokenProp: {
+    readonly setTokenProp: {
+      readonly token: TokenSel;
+      readonly prop: string;
+      readonly value: ValueExpr;
+    };
+  };
+  readonly if: {
+    readonly if: {
+      readonly when: ConditionAST;
+      readonly then: readonly EffectAST[];
+      readonly else?: readonly EffectAST[];
+    };
+  };
+  readonly forEach: {
+    readonly forEach: {
+      readonly bind: string;
+      readonly macroOrigin?: EffectMacroOrigin;
+      readonly over: OptionsQuery;
+      readonly effects: readonly EffectAST[];
+      readonly limit?: NumericValueExpr;
+      readonly countBind?: string;
+      readonly in?: readonly EffectAST[];
+    };
+  };
+  readonly reduce: {
+    readonly reduce: {
+      readonly itemBind: string;
+      readonly accBind: string;
+      readonly itemMacroOrigin?: EffectMacroOrigin;
+      readonly accMacroOrigin?: EffectMacroOrigin;
+      readonly over: OptionsQuery;
+      readonly initial: ValueExpr;
+      readonly next: ValueExpr;
+      readonly limit?: NumericValueExpr;
+      readonly resultBind: string;
+      readonly resultMacroOrigin?: EffectMacroOrigin;
+      readonly in: readonly EffectAST[];
+    };
+  };
+  readonly removeByPriority: {
+    readonly removeByPriority: {
+      readonly budget: NumericValueExpr;
+      readonly groups: readonly {
+        readonly bind: string;
+        readonly over: OptionsQuery;
+        readonly to: ZoneRef;
+        readonly from?: ZoneRef;
+        readonly countBind?: string;
+        readonly macroOrigin?: EffectMacroOrigin;
+      }[];
+      readonly remainingBind?: string;
+      readonly in?: readonly EffectAST[];
+      readonly macroOrigin?: EffectMacroOrigin;
+    };
+  };
+  readonly let: {
+    readonly let: {
+      readonly bind: string;
+      readonly value: ValueExpr;
+      readonly in: readonly EffectAST[];
+      readonly macroOrigin?: EffectMacroOrigin;
+    };
+  };
+  readonly bindValue: {
+    readonly bindValue: {
+      readonly bind: string;
+      readonly value: ValueExpr;
+      readonly macroOrigin?: EffectMacroOrigin;
+    };
+  };
+  readonly evaluateSubset: {
+    readonly evaluateSubset: {
+      readonly source: OptionsQuery;
+      readonly subsetSize: NumericValueExpr;
+      readonly subsetBind: string;
+      readonly compute: readonly EffectAST[];
+      readonly scoreExpr: NumericValueExpr;
+      readonly resultBind: string;
+      readonly bestSubsetBind?: string;
+      readonly in: readonly EffectAST[];
+      readonly macroOrigin?: EffectMacroOrigin;
+    };
+  };
+  readonly chooseOne: {
+    readonly chooseOne: {
+      readonly internalDecisionId: string;
+      readonly bind: string;
+      readonly options: OptionsQuery;
+      readonly chooser?: PlayerSel;
+      readonly macroOrigin?: EffectMacroOrigin;
+    };
+  };
+  readonly chooseN: {
+    readonly chooseN: {
+      readonly internalDecisionId: string;
+      readonly bind: string;
+      readonly options: OptionsQuery;
+      readonly chooser?: PlayerSel;
+      readonly macroOrigin?: EffectMacroOrigin;
+    } & (
+      | {
+          readonly n: number;
+          readonly min?: never;
+          readonly max?: never;
+        }
+      | {
+          readonly min?: NumericValueExpr;
+          readonly max: NumericValueExpr;
+          readonly n?: never;
+        }
+    );
+  };
+  readonly rollRandom: {
+    readonly rollRandom: {
+      readonly bind: string;
+      readonly min: NumericValueExpr;
+      readonly max: NumericValueExpr;
+      readonly in: readonly EffectAST[];
+      readonly macroOrigin?: EffectMacroOrigin;
+    };
+  };
+  readonly setMarker: {
+    readonly setMarker: {
+      readonly space: ZoneRef;
+      readonly marker: string;
+      readonly state: ValueExpr;
+    };
+  };
+  readonly shiftMarker: {
+    readonly shiftMarker: {
+      readonly space: ZoneRef;
+      readonly marker: string;
+      readonly delta: NumericValueExpr;
+    };
+  };
+  readonly setGlobalMarker: {
+    readonly setGlobalMarker: {
+      readonly marker: string;
+      readonly state: ValueExpr;
+    };
+  };
+  readonly flipGlobalMarker: {
+    readonly flipGlobalMarker: {
+      readonly marker: ValueExpr;
+      readonly stateA: ValueExpr;
+      readonly stateB: ValueExpr;
+    };
+  };
+  readonly shiftGlobalMarker: {
+    readonly shiftGlobalMarker: {
+      readonly marker: string;
+      readonly delta: NumericValueExpr;
+    };
+  };
+  readonly grantFreeOperation: {
+    readonly grantFreeOperation: {
+      readonly id?: string;
+      readonly seat: string;
+      readonly executeAsSeat?: string;
+      readonly operationClass: TurnFlowActionClass;
+      readonly actionIds?: readonly string[];
+      readonly zoneFilter?: ConditionAST;
+      readonly moveZoneBindings?: readonly string[];
+      readonly moveZoneProbeBindings?: readonly string[];
+      readonly allowDuringMonsoon?: boolean;
+      readonly uses?: number;
+      readonly viabilityPolicy?: TurnFlowFreeOperationGrantViabilityPolicy;
+      readonly completionPolicy?: import('../contracts/index.js').TurnFlowFreeOperationGrantCompletionPolicy;
+      readonly outcomePolicy?: import('../contracts/index.js').TurnFlowFreeOperationGrantOutcomePolicy;
+      readonly postResolutionTurnFlow?: import('../contracts/index.js').TurnFlowFreeOperationGrantPostResolutionTurnFlow;
+      readonly sequence?: {
+        readonly batch: string;
+        readonly step: number;
+      };
+      readonly sequenceContext?: FreeOperationSequenceContextContract;
+      readonly executionContext?: FreeOperationExecutionContext;
+    };
+  };
+  readonly gotoPhaseExact: {
+    readonly gotoPhaseExact: {
+      readonly phase: string;
+    };
+  };
+  readonly advancePhase: {
+    readonly advancePhase: Record<string, never>;
+  };
+  readonly pushInterruptPhase: {
+    readonly pushInterruptPhase: {
+      readonly phase: string;
+      readonly resumePhase: string;
+    };
+  };
+  readonly popInterruptPhase: {
+    readonly popInterruptPhase: Record<string, never>;
+  };
+}
+
+export type EffectKind = keyof EffectKindMap;
+export type EffectOfKind<K extends EffectKind> = EffectKindMap[K];
+export type EffectAST = EffectKindMap[EffectKind];
 
 export type MoveParamScalar = number | string | boolean | TokenId | ZoneId | PlayerId;
 export type MoveParamValue = MoveParamScalar | readonly MoveParamScalar[];

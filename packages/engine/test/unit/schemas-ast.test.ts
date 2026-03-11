@@ -615,12 +615,14 @@ describe('AST and selector schemas', () => {
       { query: 'connectedZones', zone: 'board:a' },
       { query: 'connectedZones', zone: { zoneExpr: { ref: 'binding', name: '$zone' } } },
       { query: 'connectedZones', zone: 'board:a', includeStart: true },
+      { query: 'connectedZones', zone: 'board:a', allowTargetOutsideVia: true },
       { query: 'connectedZones', zone: 'board:a', maxDepth: 2 },
       {
         query: 'connectedZones',
         zone: 'board:a',
         via: { op: 'adjacent', left: 'board:a', right: 'board:b' },
         includeStart: false,
+        allowTargetOutsideVia: true,
         maxDepth: 4,
       },
     ];
@@ -1159,6 +1161,13 @@ describe('AST and selector schemas', () => {
       includeStartAtDepth: 1,
     });
     assert.equal(wrongField.success, false);
+
+    const wrongAllowTargetOutsideVia = OptionsQuerySchema.safeParse({
+      query: 'connectedZones',
+      zone: 'board:a',
+      allowTargetOutsideVia: 'yes',
+    });
+    assert.equal(wrongAllowTargetOutsideVia.success, false);
   });
 
   it('enforces full transferVar endpoint required/forbidden field matrix by scope', () => {

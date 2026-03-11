@@ -303,6 +303,7 @@ optionsQuerySchemaInternal = z.union([
       zone: ZoneRefSchema,
       via: ConditionASTSchema.optional(),
       includeStart: BooleanSchema.optional(),
+      allowTargetOutsideVia: BooleanSchema.optional(),
       maxDepth: NumberSchema.optional(),
     })
     .strict(),
@@ -447,6 +448,7 @@ conditionAstSchemaInternal = z.union([
       from: ZoneSelSchema,
       to: ZoneSelSchema,
       via: ConditionASTSchema.optional(),
+      allowTargetOutsideVia: BooleanSchema.optional(),
       maxDepth: NumberSchema.optional(),
     })
     .strict(),

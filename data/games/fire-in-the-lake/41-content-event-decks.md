@@ -9120,14 +9120,14 @@ eventDecks:
             - VC
           flavorText: Mechanized formations increase ARVN operational reach.
         unshaded:
-          text: "ARVN capability: Armored columns improve ARVN mobile operation efficiency."
+          text: "ARVN in 1 Transport destination after Ops may free Assault."
           effects:
             - macro: set-global-marker
               args:
                 markerId: cap_armoredCavalry
                 markerState: unshaded
         shaded:
-          text: "ARVN capability (shaded): armored commitments create vulnerabilities around ARVN moves."
+          text: "Transport Rangers only."
           effects:
             - macro: set-global-marker
               args:

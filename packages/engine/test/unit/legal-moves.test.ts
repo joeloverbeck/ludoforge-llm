@@ -9,8 +9,11 @@ import {
   asTokenId,
   asZoneId,
   createSeatResolutionContext,
+  ILLEGAL_MOVE_REASONS,
   legalChoicesDiscover,
   legalMoves,
+  probeMoveLegality,
+  probeMoveViability,
   type GameDef,
   type GameState,
   type Move,
@@ -175,6 +178,43 @@ describe('legalMoves', () => {
     const second = legalMoves(def, state);
 
     assert.deepEqual(first, second);
+  });
+
+  it('probes exact move legality without enumerating the full move set', () => {
+    const def = createDef();
+    const state = createState();
+
+    assert.deepEqual(
+      probeMoveLegality(def, state, { actionId: asActionId('comboPre'), params: { n: 1, c: 'x' } }),
+      { legal: true },
+    );
+
+    const illegal = probeMoveLegality(def, state, { actionId: asActionId('comboPre'), params: { n: 2, c: 'x' } });
+    assert.equal(illegal.legal, false);
+    assert.equal(illegal.code, 'ILLEGAL_MOVE');
+    if (illegal.code === 'ILLEGAL_MOVE') {
+      assert.equal(illegal.context.reason, ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE);
+    }
+  });
+
+  it('probes partial move viability for incremental decision building', () => {
+    const def = createDef();
+    const state = createState();
+
+    const admissible = probeMoveViability(def, state, { actionId: asActionId('comboPre'), params: { n: 1 } });
+    assert.equal(admissible.viable, true);
+    if (admissible.viable) {
+      assert.equal(admissible.complete, false);
+      assert.equal(admissible.nextDecision?.name, 'c');
+      assert.equal(admissible.nextDecision?.options.length, 2);
+    }
+
+    const unsatisfied = probeMoveViability(def, state, { actionId: asActionId('comboPre'), params: { n: 2 } });
+    assert.equal(unsatisfied.viable, false);
+    assert.equal(unsatisfied.code, 'ILLEGAL_MOVE');
+    if (unsatisfied.code === 'ILLEGAL_MOVE') {
+      assert.equal(unsatisfied.context.reason, ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE);
+    }
   });
 
   it('enumerates params from dynamic intsInRange bounds', () => {

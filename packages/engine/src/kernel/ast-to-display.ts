@@ -302,6 +302,9 @@ const conditionLeafToInlineNodes = (cond: ConditionLeaf): DisplayInlineNode[] =>
       if (cond.via !== undefined) {
         nodes.push(SPACE, kw('via'), SPACE, ...conditionToInlinePreview(cond.via));
       }
+      if (cond.allowTargetOutsideVia === true) {
+        nodes.push(SPACE, kw('allowTargetOutsideVia'));
+      }
       if (cond.maxDepth !== undefined) {
         nodes.push(SPACE, kw('maxDepth'), SPACE, val(String(cond.maxDepth), 'number'));
       }

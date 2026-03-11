@@ -9,7 +9,6 @@ import {
   shouldDeferIncompleteDecisionValidationForMove,
 } from './event-execution.js';
 import { createCollector } from './execution-collector.js';
-import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import { resolveActionPipelineDispatch, toExecutionPipeline } from './apply-move-pipeline.js';
 import { toApplyMoveIllegalReason } from './legality-outcome.js';
 import {
@@ -28,7 +27,16 @@ import {
 } from './move-runtime-bindings.js';
 import { EFFECT_RUNTIME_REASONS, ILLEGAL_MOVE_REASONS } from './runtime-reasons.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
-import { illegalMoveError, isKernelErrorCode, isKernelRuntimeError, kernelRuntimeError } from './runtime-error.js';
+import {
+  illegalMoveError,
+  isKernelErrorCode,
+  isKernelRuntimeError,
+  kernelRuntimeError,
+  type IllegalMoveContext,
+  type KernelRuntimeError,
+  type KernelRuntimeErrorCode,
+  type KernelRuntimeErrorContext,
+} from './runtime-error.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import {
   applyTurnFlowEligibilityAfterMove,
@@ -59,6 +67,8 @@ import type {
   ActionDef,
   ActionPipelineDef,
   ApplyMoveResult,
+  ChoicePendingRequest,
+  ChoiceStochasticPendingRequest,
   ExecutionOptions,
   GameDef,
   GameState,
@@ -66,6 +76,7 @@ import type {
   MoveParamScalar,
   MoveParamValue,
   Rng,
+  RuntimeWarning,
   TurnFlowDeferredEventEffectPayload,
   TurnFlowReleasedDeferredEventEffect,
   TriggerLogEntry,
@@ -74,6 +85,7 @@ import type {
 import { asPlayerId } from './branded.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
+import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
 
 const DEFAULT_MAX_TRIGGER_DEPTH = 8;
 
@@ -381,6 +393,50 @@ const validateDeclaredActionParams = (action: ActionDef, evalCtx: EvalContext, m
 interface ValidatedMoveContext {
   readonly preflight: MovePreflightContext;
 }
+
+export type MoveLegalityProbeResult =
+  | Readonly<{ readonly legal: true }>
+  | Readonly<{
+      readonly legal: false;
+      readonly code: 'ILLEGAL_MOVE';
+      readonly context: IllegalMoveContext;
+      readonly error: KernelRuntimeError<'ILLEGAL_MOVE'>;
+    }>
+  | Readonly<{
+      readonly legal: false;
+      readonly code: Exclude<KernelRuntimeErrorCode, 'ILLEGAL_MOVE'>;
+      readonly context?: KernelRuntimeErrorContext<Exclude<KernelRuntimeErrorCode, 'ILLEGAL_MOVE'>>;
+      readonly error: KernelRuntimeError<Exclude<KernelRuntimeErrorCode, 'ILLEGAL_MOVE'>>;
+    }>;
+
+export type MoveViabilityProbeResult =
+  | Readonly<{
+      readonly viable: true;
+      readonly complete: true;
+      readonly move: Move;
+      readonly warnings: readonly RuntimeWarning[];
+    }>
+  | Readonly<{
+      readonly viable: true;
+      readonly complete: false;
+      readonly move: Move;
+      readonly warnings: readonly RuntimeWarning[];
+      readonly nextDecision?: ChoicePendingRequest;
+      readonly nextDecisionSet?: readonly ChoicePendingRequest[];
+      readonly stochasticDecision?: ChoiceStochasticPendingRequest;
+    }>
+  | Readonly<{
+      readonly viable: false;
+      readonly code: 'ILLEGAL_MOVE';
+      readonly context: IllegalMoveContext;
+      readonly error: KernelRuntimeError<'ILLEGAL_MOVE'>;
+    }>
+  | Readonly<{
+      readonly viable: false;
+      readonly code: Exclude<KernelRuntimeErrorCode, 'ILLEGAL_MOVE'>;
+      readonly context?: KernelRuntimeErrorContext<Exclude<KernelRuntimeErrorCode, 'ILLEGAL_MOVE'>>;
+      readonly error: KernelRuntimeError<Exclude<KernelRuntimeErrorCode, 'ILLEGAL_MOVE'>>;
+    }>;
 
 interface MovePreflightContext {
   readonly action: ActionDef;
@@ -1417,4 +1473,167 @@ export const applyMove = (def: GameDef, state: GameState, move: Move, options?: 
     return applySimultaneousSubmission(def, state, move, options, runtime);
   }
   return applyMoveCore(def, state, move, options, undefined, runtime);
+};
+
+export const probeMoveLegality = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  runtime?: GameDefRuntime,
+): MoveLegalityProbeResult => {
+  try {
+    validateMove(
+      def,
+      state,
+      move,
+      createSeatResolutionContext(def, state.playerCount),
+      createEvalRuntimeResources(),
+      runtime,
+    );
+    return { legal: true };
+  } catch (error) {
+    if (isKernelRuntimeError(error)) {
+      if (error.code === 'ILLEGAL_MOVE') {
+        const illegalError = error as KernelRuntimeError<'ILLEGAL_MOVE'>;
+        return {
+          legal: false,
+          code: illegalError.code,
+          context: illegalError.context as IllegalMoveContext,
+          error: illegalError,
+        };
+      }
+      const nonIllegalError = error as KernelRuntimeError<Exclude<KernelRuntimeErrorCode, 'ILLEGAL_MOVE'>>;
+      return {
+        legal: false,
+        code: nonIllegalError.code,
+        error: nonIllegalError,
+        ...(nonIllegalError.context === undefined ? {} : { context: nonIllegalError.context }),
+      };
+    }
+    throw error;
+  }
+};
+
+export const probeMoveViability = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  runtime?: GameDefRuntime,
+): MoveViabilityProbeResult => {
+  try {
+    const seatResolution = createSeatResolutionContext(def, state.playerCount);
+    const evalRuntimeResources = createEvalRuntimeResources();
+    const classMismatch = resolveTurnFlowActionClassMismatch(def, move);
+    if (classMismatch !== null) {
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH, {
+        mappedActionClass: classMismatch.mapped,
+        submittedActionClass: classMismatch.submitted,
+      });
+    }
+    const freeOperationAnalysis = resolveMoveFreeOperationAnalysis(def, state, move, seatResolution);
+    const deniedFreeOperationCause = freeOperationAnalysis === null
+      ? null
+      : toFreeOperationDeniedCauseForLegality(freeOperationAnalysis.denial.cause);
+    if (move.freeOperation === true && freeOperationAnalysis !== null && deniedFreeOperationCause !== null) {
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED, {
+        freeOperationDenial: freeOperationAnalysis.denial,
+      });
+    }
+    if (
+      hasActiveSeatRequiredPendingFreeOperationGrant(def, state, seatResolution)
+      && !isMoveAllowedByRequiredPendingFreeOperationGrant(def, state, move, seatResolution)
+    ) {
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
+        detail: 'active seat has unresolved required free-operation grants',
+      });
+    }
+
+    const adjacencyGraph = runtime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
+    const runtimeTableIndex = runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
+    const preflight = resolveMovePreflightContext(
+      def,
+      state,
+      move,
+      seatResolution,
+      adjacencyGraph,
+      runtimeTableIndex,
+      evalRuntimeResources,
+      'validation',
+      runtime,
+      freeOperationAnalysis,
+    );
+
+    if (preflight.action.pre !== null && !evalCondition(preflight.action.pre, preflight.evalCtx)) {
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE);
+    }
+    if (preflight.actionPipeline === undefined) {
+      for (const param of preflight.action.params) {
+        if (!(param.name in move.params)) {
+          continue;
+        }
+        if (!isDeclaredActionParamValueInDomain(param, move.params[param.name], preflight.evalCtx)) {
+          throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_NOT_LEGAL_FOR_ACTION);
+        }
+      }
+    }
+    validateTurnFlowWindowAccess(def, state, move, seatResolution);
+
+    const sequence = resolveMoveDecisionSequence(def, state, move, { choose: () => undefined }, runtime);
+    if (sequence.illegal !== undefined) {
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
+        detail: sequence.illegal.reason,
+      });
+    }
+    if (sequence.nextDecision !== undefined && sequence.nextDecision.options.length === 0) {
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
+        detail: `decision ${sequence.nextDecision.name} has no legal options`,
+      });
+    }
+    if (
+      sequence.nextDecisionSet !== undefined
+      && sequence.nextDecisionSet.length > 0
+      && sequence.nextDecisionSet.every((request) => request.options.length === 0)
+    ) {
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
+        detail: 'all pending decision alternatives have no legal options',
+      });
+    }
+    if (sequence.complete) {
+      return {
+        viable: true,
+        complete: true,
+        move: sequence.move,
+        warnings: sequence.warnings,
+      };
+    }
+    return {
+      viable: true,
+      complete: false,
+      move: sequence.move,
+      warnings: sequence.warnings,
+      ...(sequence.nextDecision === undefined ? {} : { nextDecision: sequence.nextDecision }),
+      ...(sequence.nextDecisionSet === undefined ? {} : { nextDecisionSet: sequence.nextDecisionSet }),
+      ...(sequence.stochasticDecision === undefined ? {} : { stochasticDecision: sequence.stochasticDecision }),
+    };
+  } catch (error) {
+    if (isKernelRuntimeError(error)) {
+      if (error.code === 'ILLEGAL_MOVE') {
+        const illegalError = error as KernelRuntimeError<'ILLEGAL_MOVE'>;
+        return {
+          viable: false,
+          code: illegalError.code,
+          context: illegalError.context as IllegalMoveContext,
+          error: illegalError,
+        };
+      }
+      const nonIllegalError = error as KernelRuntimeError<Exclude<KernelRuntimeErrorCode, 'ILLEGAL_MOVE'>>;
+      return {
+        viable: false,
+        code: nonIllegalError.code,
+        error: nonIllegalError,
+        ...(nonIllegalError.context === undefined ? {} : { context: nonIllegalError.context }),
+      };
+    }
+    throw error;
+  }
 };

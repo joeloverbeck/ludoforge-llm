@@ -1718,7 +1718,12 @@ describe('compile-conditions lowering', () => {
       'doc.effects.1.forEach.over',
     );
     const connected = lowerQueryNode(
-      { query: 'connectedZones', zone: { zoneExpr: { ref: 'binding', name: '$zone' } }, includeStart: true },
+      {
+        query: 'connectedZones',
+        zone: { zoneExpr: { ref: 'binding', name: '$zone' } },
+        includeStart: true,
+        allowTargetOutsideVia: true,
+      },
       context,
       'doc.effects.2.forEach.over',
     );
@@ -1738,6 +1743,7 @@ describe('compile-conditions lowering', () => {
       query: 'connectedZones',
       zone: { zoneExpr: { ref: 'binding', name: '$zone' } },
       includeStart: true,
+      allowTargetOutsideVia: true,
     });
   });
 

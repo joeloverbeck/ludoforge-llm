@@ -137,6 +137,7 @@ export type ConditionAST =
       readonly from: ZoneSel;
       readonly to: ZoneSel;
       readonly via?: ConditionAST;
+      readonly allowTargetOutsideVia?: boolean;
       readonly maxDepth?: number;
     }
   | {
@@ -223,6 +224,7 @@ export type OptionsQuery =
       readonly zone: ZoneRef;
       readonly via?: ConditionAST;
       readonly includeStart?: boolean;
+      readonly allowTargetOutsideVia?: boolean;
       readonly maxDepth?: number;
     }
   | { readonly query: 'binding'; readonly name: string; readonly displayName?: string }

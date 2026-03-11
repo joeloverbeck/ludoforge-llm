@@ -109,6 +109,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
 
     const checks: Array<{ profileId: string; marker: string; expectedSide: 'unshaded' | 'shaded'; forbiddenSide?: 'unshaded' | 'shaded' }> = [
       { profileId: 'transport-profile', marker: 'cap_armoredCavalry', expectedSide: 'unshaded' },
+      { profileId: 'transport-profile', marker: 'cap_armoredCavalry', expectedSide: 'shaded' },
       { profileId: 'govern-profile', marker: 'cap_mandateOfHeaven', expectedSide: 'unshaded' },
       { profileId: 'govern-profile', marker: 'cap_mandateOfHeaven', expectedSide: 'shaded' },
       { profileId: 'nva-ambush-profile', marker: 'cap_boobyTraps', expectedSide: 'unshaded', forbiddenSide: 'shaded' },
@@ -149,7 +150,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
     assert.ok(mapSpaceLoops.length > 0, 'Ranger flip should iterate across mapSpaces');
   });
 
-  it('moves and flips Rangers in all cap_armoredCavalry states, including Rangers outside destination', () => {
+  it('moves ARVN Troops normally, restricts shaded Transport to Rangers only, and flips Rangers map-wide', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
@@ -196,11 +197,17 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
 
     assert.equal(
       countTokens(shaded, destination, (token) => token.props.faction === 'ARVN' && token.type === 'troops'),
-      1,
+      0,
+      'Shaded cap_armoredCavalry should prevent ARVN Troops from moving by Transport',
     );
     assert.equal(
       countTokens(shaded, destination, (token) => token.props.faction === 'ARVN' && token.type === 'ranger'),
       1,
+    );
+    assert.equal(
+      countTokens(shaded, origin, (token) => token.id === asTokenId('transport-shaded-troop')),
+      1,
+      'Shaded cap_armoredCavalry should leave ARVN Troops at the origin',
     );
     const inactiveRanger = (inactive.zones[destination] ?? []).find((token) => token.id === asTokenId('transport-inactive-ranger'));
     const unshadedRanger = (unshaded.zones[destination] ?? []).find((token) => token.id === asTokenId('transport-unshaded-ranger'));
@@ -214,6 +221,156 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
     assert.equal(inactiveRemoteRanger?.props.activity, 'underground', 'Inactive cap_armoredCavalry should flip remote Rangers');
     assert.equal(unshadedRemoteRanger?.props.activity, 'underground', 'Unshaded cap_armoredCavalry should flip remote Rangers');
     assert.equal(shadedRemoteRanger?.props.activity, 'underground', 'Shaded cap_armoredCavalry should flip remote Rangers');
+  });
+
+  it('grants unshaded Armored Cavalry a free ARVN Assault in the Transport destination after movement', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const origin = 'da-nang:none';
+    const destination = 'loc-hue-da-nang:none';
+    const start = withMarker(initialState(def, 7101, 4).state, 'cap_armoredCavalry', 'unshaded');
+    const configured: GameState = {
+      ...start,
+      activePlayer: asPlayerId(1),
+      globalVars: {
+        ...start.globalVars,
+        arvnResources: 0,
+        aid: 0,
+      },
+      zones: {
+        ...start.zones,
+        [origin]: [
+          makeToken('armored-unshaded-t1', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('armored-unshaded-t2', 'troops', 'ARVN', { type: 'troops' }),
+        ],
+        [destination]: [
+          makeToken('armored-unshaded-vc-g', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('armored-unshaded-vc-base', 'base', 'VC', { type: 'base', tunnel: 'untunneled' }),
+        ],
+      },
+    };
+
+    const final = applyMoveWithResolvedDecisionIds(def, configured, {
+      actionId: asActionId('transport'),
+      params: {
+        $transportOrigin: origin,
+        $transportDestination: destination,
+        $armoredCavalryFreeAssault: 1,
+      },
+    }).state;
+
+    assert.equal(
+      countTokens(final, destination, (token) => token.props.faction === 'ARVN' && token.type === 'troops'),
+      2,
+      'Unshaded Armored Cavalry should complete the Transport movement before the free Assault resolves',
+    );
+    assert.equal(
+      countTokens(final, destination, (token) => token.props.faction === 'VC' && token.type === 'guerrilla'),
+      0,
+      'Two transported ARVN Troops should generate one free Assault removal in the destination',
+    );
+    assert.equal(
+      countTokens(final, destination, (token) => token.props.faction === 'VC' && token.type === 'base'),
+      1,
+      'The free Assault should still respect base-last removal order',
+    );
+    assert.equal(final.globalVars.arvnResources, 0, 'Armored Cavalry free Assault should not spend ARVN Resources');
+  });
+
+  it('allows declining the unshaded Armored Cavalry free Assault and preserves shaded destinations from free removals', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const origin = 'da-nang:none';
+    const destination = 'loc-hue-da-nang:none';
+
+    const unshadedStart = withMarker(initialState(def, 7102, 4).state, 'cap_armoredCavalry', 'unshaded');
+    const shadedStart = withMarker(initialState(def, 7103, 4).state, 'cap_armoredCavalry', 'shaded');
+
+    const configure = (state: GameState, marker: MarkerState): GameState => ({
+      ...state,
+      activePlayer: asPlayerId(1),
+      zones: {
+        ...state.zones,
+        [origin]: [
+          makeToken(`armored-${marker}-t1`, 'troops', 'ARVN', { type: 'troops' }),
+          makeToken(`armored-${marker}-r1`, 'ranger', 'ARVN', { type: 'ranger', activity: 'active' }),
+        ],
+        [destination]: [
+          makeToken(`armored-${marker}-enemy`, 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+        ],
+      },
+    });
+
+    const declined = applyMoveWithResolvedDecisionIds(def, configure(unshadedStart, 'unshaded'), {
+      actionId: asActionId('transport'),
+      params: {
+        $transportOrigin: origin,
+        $transportDestination: destination,
+        $armoredCavalryFreeAssault: 0,
+      },
+    }).state;
+
+    const shaded = applyMoveWithResolvedDecisionIds(def, configure(shadedStart, 'shaded'), {
+      actionId: asActionId('transport'),
+      params: {
+        $transportOrigin: origin,
+        $transportDestination: destination,
+      },
+    }).state;
+
+    assert.equal(
+      countTokens(declined, destination, (token) => token.props.faction === 'VC' && token.type === 'guerrilla'),
+      1,
+      'Declining the optional Armored Cavalry free Assault should leave insurgents in place',
+    );
+    assert.equal(
+      countTokens(shaded, destination, (token) => token.props.faction === 'VC' && token.type === 'guerrilla'),
+      1,
+      'Shaded Armored Cavalry should not grant any free Assault removal',
+    );
+  });
+
+  it('uses the ARVN Highland Assault formula for unshaded Armored Cavalry follow-up assaults', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const origin = 'qui-nhon:none';
+    const destination = 'pleiku-darlac:none';
+    const start = withMarker(initialState(def, 7104, 4).state, 'cap_armoredCavalry', 'unshaded');
+    const configured: GameState = {
+      ...start,
+      activePlayer: asPlayerId(1),
+      zones: {
+        ...start.zones,
+        [origin]: [
+          makeToken('armored-highland-t1', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('armored-highland-t2', 'troops', 'ARVN', { type: 'troops' }),
+        ],
+        [destination]: [
+          makeToken('armored-highland-enemy', 'guerrilla', 'NVA', { type: 'guerrilla', activity: 'active' }),
+        ],
+      },
+    };
+
+    const final = applyMoveWithResolvedDecisionIds(def, configured, {
+      actionId: asActionId('transport'),
+      params: {
+        $transportOrigin: origin,
+        $transportDestination: destination,
+        $armoredCavalryFreeAssault: 1,
+      },
+    }).state;
+
+    assert.equal(
+      countTokens(final, destination, (token) => token.props.faction === 'NVA' && token.type === 'guerrilla'),
+      1,
+      'Highland Armored Cavalry follow-up Assault should use the ARVN 3-cubes-per-removal formula',
+    );
   });
 
   it('applies cap_mandateOfHeaven shaded max-1 Govern selection and unshaded one-space no-shift override', () => {

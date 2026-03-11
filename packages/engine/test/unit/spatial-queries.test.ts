@@ -148,4 +148,27 @@ describe('spatial query helpers', () => {
 
     assert.deepEqual(connected, [asZoneId('b:none'), asZoneId('d:none')]);
   });
+
+  it('connectedZones can include endpoints outside via without traversing past them', () => {
+    const ctx = makeCtx({
+      bindings: {
+        $blocked: asZoneId('d:none'),
+      },
+    });
+
+    const connected = queryConnectedZones(
+      ctx.adjacencyGraph,
+      ctx.state,
+      asZoneId('a:none'),
+      ctx,
+      {
+        op: '!=',
+        left: { ref: 'binding', name: '$zone' },
+        right: { ref: 'binding', name: '$blocked' },
+      },
+      { allowTargetOutsideVia: true },
+    );
+
+    assert.deepEqual(connected, [asZoneId('b:none'), asZoneId('c:none'), asZoneId('d:none')]);
+  });
 });

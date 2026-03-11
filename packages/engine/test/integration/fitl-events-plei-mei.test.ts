@@ -11,10 +11,12 @@ import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 import {
   asActionId,
+  ILLEGAL_MOVE_REASONS,
   asPlayerId,
   asTokenId,
   initialState,
   legalMoves,
+  probeMoveViability,
   type GameDef,
   type GameState,
   type Move,
@@ -107,13 +109,20 @@ const setupCardDrivenState = (
   };
 };
 
-const findCardMove = (def: GameDef, state: GameState, side: 'unshaded' | 'shaded'): Move | undefined =>
-  legalMoves(def, state).find(
-    (move) =>
-      String(move.actionId) === 'event'
-      && move.params.side === side
-      && (move.params.eventCardId === undefined || move.params.eventCardId === CARD_ID),
-  );
+const buildCardMove = (def: GameDef, side: 'unshaded' | 'shaded'): Move => {
+  const eventDeckId = def.eventDecks?.[0]?.id;
+  if (eventDeckId === undefined) {
+    assert.fail('Expected FITL event deck');
+  }
+  return {
+    actionId: asActionId('event'),
+    params: {
+      eventCardId: CARD_ID,
+      eventDeckId,
+      side,
+    },
+  };
+};
 
 describe('FITL card-59 Plei Mei', () => {
   it('compiles card 59 with the exact rules text and a March then Attack-or-Ambush grant sequence', () => {
@@ -176,9 +185,6 @@ describe('FITL card-59 Plei Mei', () => {
       ],
     });
 
-    const move = findCardMove(def, setup, 'unshaded');
-    assert.notEqual(move, undefined, 'Expected Plei Mei unshaded event move');
-
     const overrides: readonly DecisionOverrideRule[] = [
       { when: (request) => request.name === '$pleiMeiUnshadedSpace', value: PLEIKU },
       {
@@ -186,7 +192,7 @@ describe('FITL card-59 Plei Mei', () => {
         value: ['plei-nva-t1', 'plei-nva-g1', 'plei-nva-base'],
       },
     ];
-    const final = applyMoveWithResolvedDecisionIds(def, setup, move!, { overrides }).state;
+    const final = applyMoveWithResolvedDecisionIds(def, setup, buildCardMove(def, 'unshaded'), { overrides }).state;
 
     assert.equal(hasToken(final, PLEIKU, 'plei-nva-t1'), false);
     assert.equal(hasToken(final, PLEIKU, 'plei-nva-g1'), false);
@@ -206,10 +212,7 @@ describe('FITL card-59 Plei Mei', () => {
       ],
     });
 
-    const move = findCardMove(def, setup, 'unshaded');
-    assert.notEqual(move, undefined, 'Expected Plei Mei unshaded event move');
-
-    const final = applyMoveWithResolvedDecisionIds(def, setup, move!, {
+    const final = applyMoveWithResolvedDecisionIds(def, setup, buildCardMove(def, 'unshaded'), {
       overrides: [{ when: (request) => request.name === '$pleiMeiUnshadedSpace', value: QUANG_TRI }],
     }).state;
 
@@ -224,8 +227,12 @@ describe('FITL card-59 Plei Mei', () => {
       [SAIGON]: [makeToken('plei-us-no-adjacent', 'troops', 'US')],
     });
 
-    const move = findCardMove(def, setup, 'unshaded');
-    assert.equal(move, undefined);
+    const result = probeMoveViability(def, setup, buildCardMove(def, 'unshaded'));
+    assert.equal(result.viable, false);
+    assert.equal(result.code, 'ILLEGAL_MOVE');
+    if (result.code === 'ILLEGAL_MOVE') {
+      assert.equal(result.context.reason, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE);
+    }
   });
 
   it('shaded grants a free Monsoon March from outside South Vietnam only, at zero cost, then a free exact-one-space Attack', () => {
@@ -245,10 +252,7 @@ describe('FITL card-59 Plei Mei', () => {
       { monsoon: true, trail: 1 },
     );
 
-    const eventMove = findCardMove(def, setup, 'shaded');
-    assert.notEqual(eventMove, undefined, 'Expected Plei Mei shaded event move');
-
-    const afterEvent = applyMoveWithResolvedDecisionIds(def, setup, eventMove!).state;
+    const afterEvent = applyMoveWithResolvedDecisionIds(def, setup, buildCardMove(def, 'shaded')).state;
     const afterEventRuntime = requireCardDrivenRuntime(afterEvent);
     assert.equal(afterEventRuntime.pendingFreeOperationGrants?.length, 2);
     const movesAfterEvent = legalMoves(def, afterEvent);
@@ -317,10 +321,7 @@ describe('FITL card-59 Plei Mei', () => {
       { monsoon: true, trail: 1 },
     );
 
-    const eventMove = findCardMove(def, setup, 'shaded');
-    assert.notEqual(eventMove, undefined, 'Expected Plei Mei shaded event move');
-
-    const afterEvent = applyMoveWithResolvedDecisionIds(def, setup, eventMove!).state;
+    const afterEvent = applyMoveWithResolvedDecisionIds(def, setup, buildCardMove(def, 'shaded')).state;
 
     assert.throws(
       () =>
@@ -351,12 +352,12 @@ describe('FITL card-59 Plei Mei', () => {
       { trail: 1 },
     );
 
-    const move = findCardMove(def, setup, 'shaded');
-    assert.equal(
-      move,
-      undefined,
-      'The shaded event must not be playable when its first required March is legal only from South Vietnam',
-    );
+    const result = probeMoveViability(def, setup, buildCardMove(def, 'shaded'));
+    assert.equal(result.viable, false);
+    assert.equal(result.code, 'ILLEGAL_MOVE');
+    if (result.code === 'ILLEGAL_MOVE') {
+      assert.equal(result.context.reason, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE);
+    }
   });
 
   it('shaded allows a free Ambush in any one legal space, not only a March destination', () => {
@@ -379,10 +380,7 @@ describe('FITL card-59 Plei Mei', () => {
       { trail: 1 },
     );
 
-    const eventMove = findCardMove(def, setup, 'shaded');
-    assert.notEqual(eventMove, undefined, 'Expected Plei Mei shaded event move');
-
-    const afterEvent = applyMoveWithResolvedDecisionIds(def, setup, eventMove!).state;
+    const afterEvent = applyMoveWithResolvedDecisionIds(def, setup, buildCardMove(def, 'shaded')).state;
     const afterMarch = applyMoveWithResolvedDecisionIds(def, afterEvent, {
       actionId: asActionId('march'),
       freeOperation: true,

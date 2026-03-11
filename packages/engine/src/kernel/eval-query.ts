@@ -814,10 +814,11 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
     case 'connectedZones': {
       const zoneId = resolveZoneRef(query.zone, ctx);
       const options =
-        query.includeStart === undefined && query.maxDepth === undefined
+        query.includeStart === undefined && query.allowTargetOutsideVia === undefined && query.maxDepth === undefined
           ? undefined
           : {
               ...(query.includeStart === undefined ? {} : { includeStart: query.includeStart }),
+              ...(query.allowTargetOutsideVia === undefined ? {} : { allowTargetOutsideVia: query.allowTargetOutsideVia }),
               ...(query.maxDepth === undefined ? {} : { maxDepth: query.maxDepth }),
             };
       const zones = queryConnectedZones(ctx.adjacencyGraph, ctx.state, zoneId, ctx, query.via, {

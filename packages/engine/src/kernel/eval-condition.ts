@@ -106,6 +106,7 @@ export function evalCondition(cond: ConditionAST, ctx: EvalContext): boolean {
       const fromZoneId = resolveSingleZoneSel(cond.from, ctx);
       const toZoneId = resolveSingleZoneSel(cond.to, ctx);
       const reachableZones = queryConnectedZones(ctx.adjacencyGraph, ctx.state, fromZoneId, ctx, cond.via, {
+        ...(cond.allowTargetOutsideVia === undefined ? {} : { allowTargetOutsideVia: cond.allowTargetOutsideVia }),
         ...(cond.maxDepth === undefined ? {} : { maxDepth: cond.maxDepth }),
       });
       return reachableZones.includes(toZoneId);

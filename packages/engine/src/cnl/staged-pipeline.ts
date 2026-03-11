@@ -1,6 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { compileGameSpecToGameDef, type CompileOptions, type CompileResult } from './compiler.js';
-import { loadGameSpecEntrypoint } from './load-gamespec-source.js';
+import type { LoadedGameSpecBundle } from './gamespec-bundle.js';
 import { parseGameSpec, type ParseGameSpecOptions, type ParseGameSpecResult } from './parser.js';
 import { validateGameSpec, type ValidateGameSpecOptions } from './validate-spec.js';
 
@@ -9,6 +9,8 @@ export interface RunGameSpecStagesOptions {
   readonly validateOptions?: ValidateGameSpecOptions;
   readonly compileOptions?: CompileOptions;
 }
+
+export type RunGameSpecBundleStagesOptions = Omit<RunGameSpecStagesOptions, 'parseOptions'>;
 
 export interface ValidationStageResult {
   readonly blocked: boolean;
@@ -24,8 +26,9 @@ export interface RunGameSpecStagesResult {
   readonly parsed: ParseGameSpecResult;
   readonly validation: ValidationStageResult;
   readonly compilation: CompilationStageResult;
+  readonly entryPath?: string;
+  readonly sourceFingerprint?: string;
   readonly sourcePaths?: readonly string[];
-  readonly sourceOrder?: readonly string[];
 }
 
 export function runGameSpecStages(
@@ -36,26 +39,23 @@ export function runGameSpecStages(
   return runParsedGameSpecStages(parsed, options);
 }
 
-export function runGameSpecStagesFromEntrypoint(
-  entryPath: string,
-  options: RunGameSpecStagesOptions = {},
+export function runGameSpecStagesFromBundle(
+  bundle: LoadedGameSpecBundle,
+  options: RunGameSpecBundleStagesOptions = {},
 ): RunGameSpecStagesResult {
-  const entryParseOptions = options.parseOptions === undefined ? undefined : omitParseSourceId(options.parseOptions);
-  const loaded = loadGameSpecEntrypoint(entryPath, {
-    ...(entryParseOptions === undefined ? {} : { parseOptions: entryParseOptions }),
-  });
-  const staged = runParsedGameSpecStages(loaded.parsed, options);
+  const staged = runParsedGameSpecStages(bundle.parsed, options);
 
   return {
     ...staged,
-    sourcePaths: loaded.sourcePaths,
-    sourceOrder: loaded.sourceOrder,
+    entryPath: bundle.entryPath,
+    sourceFingerprint: bundle.sourceFingerprint,
+    sourcePaths: bundle.sources.map((source) => source.path),
   };
 }
 
 function runParsedGameSpecStages(
   parsed: ParseGameSpecResult,
-  options: RunGameSpecStagesOptions,
+  options: RunGameSpecBundleStagesOptions,
 ): RunGameSpecStagesResult {
   if (hasErrorDiagnostics(parsed.diagnostics)) {
     return {
@@ -95,10 +95,4 @@ function runParsedGameSpecStages(
 
 function hasErrorDiagnostics(diagnostics: readonly Diagnostic[]): boolean {
   return diagnostics.some((diagnostic) => diagnostic.severity === 'error');
-}
-
-function omitParseSourceId(parseOptions: ParseGameSpecOptions): Omit<ParseGameSpecOptions, 'sourceId'> {
-  const { sourceId, ...entryParseOptions } = parseOptions;
-  void sourceId;
-  return entryParseOptions;
 }

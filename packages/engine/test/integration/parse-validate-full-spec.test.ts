@@ -1,14 +1,38 @@
 import * as assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { describe, it } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
-import { parseGameSpec, runGameSpecStages, validateGameSpec } from '../../src/cnl/index.js';
+import {
+  loadGameSpecBundleFromEntrypoint,
+  parseGameSpec,
+  runGameSpecStages,
+  runGameSpecStagesFromBundle,
+  validateGameSpec,
+} from '../../src/cnl/index.js';
 import { assertNoErrors, assertStageBlocked, assertStageNotBlocked } from '../helpers/diagnostic-helpers.js';
 import { readFixtureText } from '../helpers/fixture-reader.js';
 import { compileProductionSpec, compileTexasProductionSpec, readCompilerFixture } from '../helpers/production-spec-helpers.js';
 
 const readFixture = (name: string): string => readFixtureText(`cnl/${name}`);
 
-describe('parse + validate full-spec integration', () => {
+function resolveRepoRoot(): string {
+  let cursor = dirname(fileURLToPath(import.meta.url));
+
+  for (let depth = 0; depth < 8; depth += 1) {
+    if (existsSync(resolve(cursor, 'pnpm-workspace.yaml'))) {
+      return cursor;
+    }
+    cursor = resolve(cursor, '..');
+  }
+
+  return process.cwd();
+}
+
+const repoRootPath = resolveRepoRoot();
+
+describe('parse + validate full-spec integration', { concurrency: 1 }, () => {
   it('accepts a realistic valid full markdown spec end-to-end', () => {
     const markdown = readFixture('full-valid-spec.md');
     const parsed = parseGameSpec(markdown);
@@ -69,14 +93,21 @@ describe('parse + validate full-spec integration', () => {
     assert.equal((staged.compilation.result?.gameDef?.actions.length ?? 0) > 0, true);
   });
 
-  it('compiles FITL and Texas production specs through explicit file entrypoints', () => {
+  it('compiles FITL and Texas production specs through explicit entrypoint bundles', () => {
     const fitl = compileProductionSpec();
     const texas = compileTexasProductionSpec();
+    const fitlBundle = loadGameSpecBundleFromEntrypoint(resolve(repoRootPath, 'data/games/fire-in-the-lake.game-spec.md'));
+    const texasBundle = loadGameSpecBundleFromEntrypoint(resolve(repoRootPath, 'data/games/texas-holdem.game-spec.md'));
+    const fitlStaged = runGameSpecStagesFromBundle(fitlBundle);
+    const texasStaged = runGameSpecStagesFromBundle(texasBundle);
 
     assertNoErrors(fitl.parsed);
     assertNoErrors(texas.parsed);
     assert.equal(fitl.compiled.gameDef.victoryStandings !== undefined, true);
     assert.equal(texas.compiled.gameDef.metadata.id, 'texas-holdem-nlhe-tournament');
+    assert.equal(fitlStaged.sourceFingerprint, fitlBundle.sourceFingerprint);
+    assert.equal(texasStaged.sourceFingerprint, texasBundle.sourceFingerprint);
+    assert.notEqual(fitlBundle.sourceFingerprint, texasBundle.sourceFingerprint);
   });
 
   it('reports stable deterministic diagnostics for a multi-issue spec end-to-end', () => {

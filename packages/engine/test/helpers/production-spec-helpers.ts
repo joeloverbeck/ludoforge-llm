@@ -1,12 +1,12 @@
-import { createHash } from 'node:crypto';
 import * as assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import type { Diagnostic } from '../../src/kernel/diagnostics.js';
+import type { LoadedGameSpecBundle } from '../../src/cnl/index.js';
 import type { CompileResult, RunGameSpecStagesResult } from '../../src/cnl/index.js';
-import { loadGameSpecEntrypoint, loadGameSpecSource, runGameSpecStagesFromEntrypoint } from '../../src/cnl/index.js';
+import { loadGameSpecBundleFromEntrypoint, loadGameSpecSource, runGameSpecStagesFromBundle } from '../../src/cnl/index.js';
 
 export interface CompiledProductionSpec {
   readonly markdown: string;
@@ -36,27 +36,16 @@ const FITL_PRODUCTION_ENTRYPOINT_PATH = join(REPO_ROOT, 'data', 'games', 'fire-i
 const TEXAS_PRODUCTION_ENTRYPOINT_PATH = join(REPO_ROOT, 'data', 'games', 'texas-holdem.game-spec.md');
 const FIXTURE_BASE_PATH = join(REPO_ROOT, 'packages', 'engine', 'test', 'fixtures', 'cnl', 'compiler');
 
-let cachedFitlParsed: RunGameSpecStagesResult['parsed'] | null = null;
-let cachedFitlParsedHash: string | null = null;
+let cachedFitlBundle: LoadedGameSpecBundle | null = null;
 let cachedFitlResult: CompiledProductionSpec | null = null;
-let cachedFitlHash: string | null = null;
+let cachedTexasBundle: LoadedGameSpecBundle | null = null;
 let cachedTexasResult: CompiledProductionSpec | null = null;
-let cachedTexasHash: string | null = null;
 
 /**
  * Loads the FITL production spec through the canonical entrypoint and caches the parsed result.
  */
 export function parseProductionSpec(): RunGameSpecStagesResult['parsed'] {
-  const loaded = loadGameSpecEntrypoint(FITL_PRODUCTION_ENTRYPOINT_PATH);
-  const hash = hashSourceFiles([FITL_PRODUCTION_ENTRYPOINT_PATH, ...loaded.sourcePaths]);
-
-  if (cachedFitlParsed !== null && cachedFitlParsedHash === hash) {
-    return cachedFitlParsed;
-  }
-
-  cachedFitlParsed = loaded.parsed;
-  cachedFitlParsedHash = hash;
-  return cachedFitlParsed;
+  return loadFitlBundle().parsed;
 }
 
 /**
@@ -72,23 +61,20 @@ export function readTexasProductionSpec(): string {
  * All FITL game-rule tests should use this instead of per-fixture compilation.
  */
 export function compileProductionSpec(): CompiledProductionSpec {
-  const parsed = parseProductionSpec();
-  const hash = hashSourceFiles([FITL_PRODUCTION_ENTRYPOINT_PATH, ...collectFitlSourcePaths()]);
-
-  if (cachedFitlResult !== null && cachedFitlHash === hash) {
+  const bundle = loadFitlBundle();
+  if (cachedFitlResult !== null && cachedFitlBundle?.sourceFingerprint === bundle.sourceFingerprint) {
     return cachedFitlResult;
   }
 
-  const staged = runGameSpecStagesFromEntrypoint(FITL_PRODUCTION_ENTRYPOINT_PATH);
+  const staged = runGameSpecStagesFromBundle(bundle);
   const compiled = requireSuccessfulProductionCompilation('FITL production spec', staged);
 
   cachedFitlResult = {
-    markdown: '',
-    parsed,
+    markdown: bundle.sources.map((source) => source.markdown).join('\n\n'),
+    parsed: bundle.parsed,
     validatorDiagnostics: staged.validation.diagnostics,
     compiled,
   };
-  cachedFitlHash = hash;
 
   return cachedFitlResult;
 }
@@ -98,26 +84,20 @@ export function compileProductionSpec(): CompiledProductionSpec {
  * Cache invalidates when the file content hash changes.
  */
 export function compileTexasProductionSpec(): CompiledProductionSpec {
-  const markdown = readTexasProductionSpec();
-  const hash = createHash('sha256')
-    .update(readFileSync(TEXAS_PRODUCTION_ENTRYPOINT_PATH, 'utf8'))
-    .update(markdown)
-    .digest('hex');
-
-  if (cachedTexasResult !== null && cachedTexasHash === hash) {
+  const bundle = loadTexasBundle();
+  if (cachedTexasResult !== null && cachedTexasBundle?.sourceFingerprint === bundle.sourceFingerprint) {
     return cachedTexasResult;
   }
 
-  const staged = runGameSpecStagesFromEntrypoint(TEXAS_PRODUCTION_ENTRYPOINT_PATH);
+  const staged = runGameSpecStagesFromBundle(bundle);
   const compiled = requireSuccessfulProductionCompilation('Texas production spec', staged);
 
   cachedTexasResult = {
-    markdown,
+    markdown: bundle.sources.map((source) => source.markdown).join('\n\n'),
     parsed: staged.parsed,
     validatorDiagnostics: staged.validation.diagnostics,
     compiled,
   };
-  cachedTexasHash = hash;
 
   return cachedTexasResult;
 }
@@ -172,13 +152,20 @@ function formatDiagnosticSummary(diagnostics: readonly Diagnostic[]): string {
     .join('\n');
 }
 
-function collectFitlSourcePaths(): readonly string[] {
-  return loadGameSpecEntrypoint(FITL_PRODUCTION_ENTRYPOINT_PATH).sourcePaths;
+function loadFitlBundle(): LoadedGameSpecBundle {
+  const loaded = loadGameSpecBundleFromEntrypoint(FITL_PRODUCTION_ENTRYPOINT_PATH);
+  if (cachedFitlBundle !== null && cachedFitlBundle.sourceFingerprint === loaded.sourceFingerprint) {
+    return cachedFitlBundle;
+  }
+  cachedFitlBundle = loaded;
+  return loaded;
 }
 
-function hashSourceFiles(paths: readonly string[]): string {
-  return paths.reduce(
-    (hash, filePath) => hash.update(filePath).update('\0').update(readFileSync(filePath, 'utf8')).update('\0'),
-    createHash('sha256'),
-  ).digest('hex');
+function loadTexasBundle(): LoadedGameSpecBundle {
+  const loaded = loadGameSpecBundleFromEntrypoint(TEXAS_PRODUCTION_ENTRYPOINT_PATH);
+  if (cachedTexasBundle !== null && cachedTexasBundle.sourceFingerprint === loaded.sourceFingerprint) {
+    return cachedTexasBundle;
+  }
+  cachedTexasBundle = loaded;
+  return loaded;
 }

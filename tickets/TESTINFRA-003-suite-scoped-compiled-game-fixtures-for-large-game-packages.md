@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — engine test helpers and large-game integration test structure
-**Deps**: `tickets/README.md`, `tickets/ENGINEARCH-207-first-class-gamespec-bundles-and-single-pass-fingerprints.md`, `archive/tickets/FITLSPEC-102-split-fitl-production-spec-into-imported-fragments.md`, `packages/engine/test/helpers/production-spec-helpers.ts`, `packages/engine/test/integration/fitl-capabilities-march-attack-bombard.test.ts`, `packages/engine/test/integration/fitl-active-doubling-victory.test.ts`, `packages/engine/test/integration/compile-verbalization-integration.test.ts`
+**Deps**: `tickets/README.md`, `archive/tickets/ENGINEARCH-207-first-class-gamespec-bundles-and-single-pass-fingerprints.md`, `archive/tickets/FITLSPEC-102-split-fitl-production-spec-into-imported-fragments.md`, `packages/engine/test/helpers/production-spec-helpers.ts`, `packages/engine/test/integration/fitl-capabilities-march-attack-bombard.test.ts`, `packages/engine/test/integration/fitl-active-doubling-victory.test.ts`, `packages/engine/test/integration/compile-verbalization-integration.test.ts`
 
 ## Problem
 

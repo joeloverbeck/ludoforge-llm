@@ -3411,7 +3411,7 @@ conditionMacros:
             filter:
               op: and
               args:
-                - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
+                - { prop: faction, op: in, value: ['US', 'ARVN'] }
       right:
         aggregate:
           op: count
@@ -3421,7 +3421,7 @@ conditionMacros:
             filter:
               op: and
               args:
-                - { prop: faction, op: eq, value: NVA }
+                - { prop: faction, op: in, value: ['NVA', 'VC'] }
 
   # Card-specific control subset: only US and ARVN count for control.
   - id: fitl-space-us-arvn-controlled
@@ -3462,7 +3462,7 @@ conditionMacros:
           args:
             spaceExpr: { param: spaceExpr }
 
-  # Shared control predicate: COIN-controlled city (US+ARVN+VC strictly greater than NVA).
+  # Shared control predicate: COIN-controlled city (US+ARVN strictly greater than NVA+VC).
   - id: fitl-space-coin-controlled-city
     params:
       - { name: spaceExpr, type: value }
@@ -3473,6 +3473,21 @@ conditionMacros:
         - conditionMacro: fitl-space-coin-controlled
           args:
             spaceExpr: { param: spaceExpr }
+
+  - id: fitl-space-sup-coin-city-no-saigon
+    params:
+      - { name: spaceExpr, type: value }
+    condition:
+      op: and
+      args:
+        - conditionMacro: fitl-space-coin-controlled-city
+          args:
+            spaceExpr: { param: spaceExpr }
+        - { op: '!=', left: { ref: zoneProp, zone: { param: spaceExpr }, prop: id }, right: saigon:none }
+        - op: or
+          args:
+            - { op: '==', left: { ref: markerState, space: { param: spaceExpr }, marker: supportOpposition }, right: passiveSupport }
+            - { op: '==', left: { ref: markerState, space: { param: spaceExpr }, marker: supportOpposition }, right: activeSupport }
 
   # Rule 6.4.2 destination check with card-90 override ("as if no Bases"):
   # destination must be Saigon or a city without NVA Control.

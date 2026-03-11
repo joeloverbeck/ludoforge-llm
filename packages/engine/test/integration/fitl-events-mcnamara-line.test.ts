@@ -108,18 +108,7 @@ describe('FITL card-38 McNamara Line', () => {
     const move = findMcNamaraMove(def, setup);
     assert.notEqual(move, undefined, 'Expected card-38 unshaded event move');
 
-    const destinations = [DA_NANG, HUE, HUE, DA_NANG];
-    let destinationIndex = 0;
-    const result = applyMoveWithResolvedDecisionIds(def, setup, move!, {
-      overrides: [{
-        when: (request) => request.name === '$mcnamaraCityDestination',
-        value: () => {
-          const value = destinations[destinationIndex];
-          destinationIndex += 1;
-          return value;
-        },
-      }],
-    }).state;
+    const result = applyMoveWithResolvedDecisionIds(def, setup, move!).state;
 
     assert.equal(zoneHas(result, CENTRAL_LAOS, 'mcn-us-t-laos'), false);
     assert.equal(zoneHas(result, CENTRAL_LAOS, 'mcn-arvn-p-laos'), false);
@@ -136,9 +125,11 @@ describe('FITL card-38 McNamara Line', () => {
     );
 
     assert.equal(zoneHas(result, DA_NANG, 'mcn-us-t-laos'), true);
+    assert.equal(zoneHas(result, DA_NANG, 'mcn-arvn-p-laos'), true);
+    assert.equal(zoneHas(result, DA_NANG, 'mcn-us-b-cam'), true);
     assert.equal(zoneHas(result, DA_NANG, 'mcn-arvn-r-cam'), true);
-    assert.equal(zoneHas(result, HUE, 'mcn-arvn-p-laos'), true);
-    assert.equal(zoneHas(result, HUE, 'mcn-us-b-cam'), true);
+    assert.equal(zoneHas(result, HUE, 'mcn-arvn-p-laos'), false);
+    assert.equal(zoneHas(result, HUE, 'mcn-us-b-cam'), false);
     const movedPieceIds = ['mcn-us-t-laos', 'mcn-arvn-p-laos', 'mcn-us-b-cam', 'mcn-arvn-r-cam'] as const;
     const anyMovedPieceInCanTho = movedPieceIds.some((tokenId) => zoneHas(result, CAN_THO, tokenId));
     assert.equal(anyMovedPieceInCanTho, false, 'Redeployed pieces must end only in COIN-controlled cities');

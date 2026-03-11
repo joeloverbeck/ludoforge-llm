@@ -1,9 +1,19 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { extname, join } from 'node:path';
+import { dirname, extname, join, resolve } from 'node:path';
+
+import type { ParseGameSpecOptions, ParseGameSpecResult } from './parser.js';
+import { composeGameSpec } from './compose-gamespec.js';
 
 export interface LoadedGameSpecSource {
   readonly markdown: string;
   readonly sourcePaths: readonly string[];
+}
+
+export interface LoadedGameSpecEntrypointSource {
+  readonly entryPath: string;
+  readonly parsed: ParseGameSpecResult;
+  readonly sourcePaths: readonly string[];
+  readonly sourceOrder: readonly string[];
 }
 
 const MARKDOWN_EXTENSION = '.md';
@@ -35,4 +45,51 @@ export function loadGameSpecSource(entryPath: string): LoadedGameSpecSource {
 
   const markdown = markdownFiles.map((filePath) => readFileSync(filePath, 'utf8')).join('\n\n');
   return { markdown, sourcePaths: markdownFiles };
+}
+
+export function loadGameSpecEntrypoint(
+  entryPath: string,
+  options: {
+    readonly parseOptions?: Omit<ParseGameSpecOptions, 'sourceId'>;
+  } = {},
+): LoadedGameSpecEntrypointSource {
+  const resolvedEntryPath = resolve(entryPath);
+  const entryStats = statSync(resolvedEntryPath);
+  if (!entryStats.isFile()) {
+    throw new Error(`GameSpec entrypoint must be a markdown file: ${entryPath}`);
+  }
+
+  const composeOptions = {
+    loadSource: (sourceId: string) => loadEntrypointSource(sourceId),
+    resolveImport: (importPath: string, importerSourceId: string) => resolve(dirname(importerSourceId), importPath),
+    ...(options.parseOptions === undefined ? {} : { parseOptions: options.parseOptions }),
+  };
+
+  const result = composeGameSpec(resolvedEntryPath, {
+    ...composeOptions,
+  });
+
+  return {
+    entryPath: resolvedEntryPath,
+    parsed: {
+      doc: result.doc,
+      sourceMap: result.sourceMap,
+      diagnostics: result.diagnostics,
+    },
+    sourcePaths: result.sourceOrder,
+    sourceOrder: result.sourceOrder,
+  };
+}
+
+function loadEntrypointSource(sourceId: string): string | null {
+  const resolvedSourceId = resolve(sourceId);
+  try {
+    const stats = statSync(resolvedSourceId);
+    if (!stats.isFile()) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+  return readFileSync(resolvedSourceId, 'utf8');
 }

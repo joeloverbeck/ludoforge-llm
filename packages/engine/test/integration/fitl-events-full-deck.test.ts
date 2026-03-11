@@ -37,6 +37,8 @@ describe('FITL full deck compilation and golden invariants', () => {
     assertNoErrors(parsed);
     assertNoErrors(compiled);
     assert.notEqual(compiled.gameDef, null);
+    assert.equal(parsed.doc.eventDecks?.length, 1, 'Expected imported fragments to compose into one logical event deck');
+    assert.equal(parsed.doc.eventDecks?.[0]?.cards.length, 130, 'Expected parsed FITL event deck to retain all 130 cards');
 
     const deck = compiled.gameDef?.eventDecks?.[0];
     assert.notEqual(deck, undefined);

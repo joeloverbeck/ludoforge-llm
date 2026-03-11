@@ -1,15 +1,13 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseGameSpec } from '../../src/cnl/index.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { readProductionSpec } from '../helpers/production-spec-helpers.js';
+import { parseProductionSpec } from '../helpers/production-spec-helpers.js';
 
 describe('fitl production data scaffold', () => {
   it('parses production FITL GameSpec source and exposes required scaffold envelopes', () => {
-    const markdown = readProductionSpec();
-    const parsed = parseGameSpec(markdown);
+    const parsed = parseProductionSpec();
 
     assertNoErrors(parsed);
     assert.equal(parsed.doc.metadata?.id, 'fire-in-the-lake');
@@ -29,7 +27,7 @@ describe('fitl production data scaffold', () => {
   });
 
   it('authors event moveToken.to with explicit zoneExpr wrappers', () => {
-    const parsed = parseGameSpec(readProductionSpec());
+    const parsed = parseProductionSpec();
     assertNoErrors(parsed);
 
     const moveTokenNodes = findDeep(parsed.doc.eventDecks ?? [], (node) => typeof node?.moveToken === 'object' && node.moveToken !== null).map(

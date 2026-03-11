@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import { parseGameSpec, runGameSpecStages, validateGameSpec } from '../../src/cnl/index.js';
 import { assertNoErrors, assertStageBlocked, assertStageNotBlocked } from '../helpers/diagnostic-helpers.js';
 import { readFixtureText } from '../helpers/fixture-reader.js';
-import { readCompilerFixture } from '../helpers/production-spec-helpers.js';
+import { compileProductionSpec, compileTexasProductionSpec, readCompilerFixture } from '../helpers/production-spec-helpers.js';
 
 const readFixture = (name: string): string => readFixtureText(`cnl/${name}`);
 
@@ -67,6 +67,16 @@ describe('parse + validate full-spec integration', () => {
     assert.deepEqual(staged.compilation.result?.diagnostics, []);
     assert.notEqual(staged.compilation.result?.gameDef, null);
     assert.equal((staged.compilation.result?.gameDef?.actions.length ?? 0) > 0, true);
+  });
+
+  it('compiles FITL and Texas production specs through explicit file entrypoints', () => {
+    const fitl = compileProductionSpec();
+    const texas = compileTexasProductionSpec();
+
+    assertNoErrors(fitl.parsed);
+    assertNoErrors(texas.parsed);
+    assert.equal(fitl.compiled.gameDef.victoryStandings !== undefined, true);
+    assert.equal(texas.compiled.gameDef.metadata.id, 'texas-holdem-nlhe-tournament');
   });
 
   it('reports stable deterministic diagnostics for a multi-issue spec end-to-end', () => {

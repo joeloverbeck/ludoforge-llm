@@ -52,6 +52,26 @@ export default tseslint.config(
       "no-useless-escape": "off",
       "prefer-const": "off",
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/explicit-function-return-type": [
+        "warn",
+        { allowExpressions: true, allowTypedFunctionExpressions: true },
+      ],
+      "no-param-reassign": "warn",
+      "no-console": ["warn", { allow: ["warn", "error"] }],
+    },
+  },
+  {
+    files: ["**/test/**/*.ts", "**/*.test.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/explicit-function-return-type": "off",
+    },
+  },
+  {
+    files: ["packages/runner/src/trace/**/*.ts"],
+    rules: {
+      "no-console": "off",
     },
   },
   {

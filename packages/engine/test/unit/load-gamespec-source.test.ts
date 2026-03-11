@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { describe, it } from 'node:test';
 
-import { loadGameSpecSource } from '../../src/cnl/load-gamespec-source.js';
+import { loadGameSpecEntrypoint, loadGameSpecSource } from '../../src/cnl/load-gamespec-source.js';
 
 describe('loadGameSpecSource', () => {
   it('loads a single markdown file', () => {
@@ -46,6 +46,60 @@ describe('loadGameSpecSource', () => {
     try {
       writeFileSync(join(dir, 'notes.txt'), 'not markdown', 'utf8');
       assert.throws(() => loadGameSpecSource(dir), /No markdown source files found/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('loads and composes a filesystem entrypoint file', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gamespec-entry-'));
+    try {
+      const entryPath = join(dir, 'game-spec.md');
+      const metaPath = join(dir, 'meta.md');
+      const rulesPath = join(dir, 'rules.md');
+
+      writeFileSync(entryPath, '```yaml\nimports:\n  - ./meta.md\n  - ./rules.md\n```', 'utf8');
+      writeFileSync(metaPath, '```yaml\nmetadata:\n  id: test-game\n  players: { min: 2, max: 2 }\n```', 'utf8');
+      writeFileSync(
+        rulesPath,
+        [
+          '```yaml',
+          'turnStructure:',
+          '  phases:',
+          '    - id: main',
+          'actions:',
+          '  - id: pass',
+          '    actor: active',
+          '    executor: actor',
+          '    phase: [main]',
+          '    params: []',
+          '    pre: null',
+          '    cost: []',
+          '    effects: []',
+          '    limits: []',
+          'terminal:',
+          '  conditions:',
+          '    - when: { op: "==", left: 1, right: 1 }',
+          '      result: { type: draw }',
+          '```',
+        ].join('\n'),
+        'utf8',
+      );
+
+      const loaded = loadGameSpecEntrypoint(entryPath);
+      assert.deepEqual(loaded.sourcePaths, [metaPath, rulesPath, entryPath]);
+      assert.equal(loaded.parsed.doc.metadata?.id, 'test-game');
+      assert.equal(loaded.parsed.doc.actions?.[0]?.id, 'pass');
+      assert.equal(loaded.parsed.sourceMap.byPath['metadata.id']?.sourceId, metaPath);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects directory entrypoints for composed loading', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gamespec-entry-dir-'));
+    try {
+      assert.throws(() => loadGameSpecEntrypoint(dir), /must be a markdown file/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

@@ -2566,6 +2566,46 @@ describe('event free-operation grants integration', () => {
     assert.deepEqual(requireCardDrivenRuntime(second).pendingFreeOperationGrants ?? [], []);
   });
 
+  it('keeps event-issued executeAsSeat free operations discoverable when an earlier same-action grant is pipeline-inapplicable', () => {
+    const def = createExecuteAsSeatDef() as GameDef & {
+      actionPipelines: NonNullable<GameDef['actionPipelines']>;
+    };
+    def.actionPipelines = def.actionPipelines.filter((profile) => profile.id !== 'operation-as-self');
+
+    const start = initialState(def, 33, 2).state;
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-8', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const runtime = requireCardDrivenRuntime(afterEvent);
+    const emittedGrant = runtime.pendingFreeOperationGrants?.[0];
+    assert.ok(emittedGrant);
+
+    const reordered = {
+      ...afterEvent,
+      turnOrderState: {
+        type: 'cardDriven' as const,
+        runtime: {
+          ...runtime,
+          pendingFreeOperationGrants: [
+            {
+              ...emittedGrant,
+              grantId: 'grant-invalid-first',
+              executeAsSeat: 'ARVN',
+            },
+            emittedGrant,
+          ],
+        },
+      },
+    } satisfies GameState;
+
+    const freeMoves = legalMoves(def, reordered).filter(
+      (move) => String(move.actionId) === 'operation' && move.freeOperation === true,
+    );
+    assert.equal(freeMoves.length, 1);
+  });
+
   it('applies executeAsSeat free-operation grants to special-activity actionIds', () => {
     const def = createExecuteAsSeatSpecialActivityDef();
     const start = initialState(def, 34, 2).state;

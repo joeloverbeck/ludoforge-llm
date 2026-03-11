@@ -34,6 +34,7 @@ import {
 } from './pipeline-viability-policy.js';
 import { MISSING_BINDING_POLICY_CONTEXTS, shouldDeferMissingBinding } from './missing-binding-policy.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
+import { toMoveIdentityKey } from './move-identity.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
@@ -398,7 +399,8 @@ function enumeratePendingFreeOperationMoves(
     return;
   }
 
-  const pending = state.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
+  const runtime = state.turnOrderState.runtime;
+  const pending = runtime.pendingFreeOperationGrants ?? [];
   if (pending.length === 0) {
     return;
   }
@@ -420,6 +422,7 @@ function enumeratePendingFreeOperationMoves(
 
   const seenGrantMoveKeys = new Set<string>();
   const defaultActionDomain = resolveTurnFlowDefaultFreeOperationActionDomain(def);
+  const isCurrentReadyGrant = (grantId: string): boolean => readyGrants.some((grant) => grant.grantId === grantId);
 
   for (const grant of readyGrants) {
     const executionPlayer = resolvePendingFreeOperationGrantExecutionPlayer(def, state, grant);
@@ -434,13 +437,6 @@ function enumeratePendingFreeOperationMoves(
       }
 
       const hasActionPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
-      const grantMoveKey = grant.executionContext === undefined && hasActionPipeline
-        ? actionId
-        : `${grant.grantId}:${actionId}`;
-      if (seenGrantMoveKeys.has(grantMoveKey)) {
-        continue;
-      }
-      seenGrantMoveKeys.add(grantMoveKey);
 
       const freeOperationPreflightOverlay = buildFreeOperationPreflightOverlay(
         {
@@ -530,18 +526,132 @@ function enumeratePendingFreeOperationMoves(
         freeOperation: true,
         ...(mappedActionClass === null ? { actionClass: grant.operationClass } : {}),
       };
-      if (!isFreeOperationApplicableForMove(def, state, baseMove, seatResolution)) {
+
+      const viableReadyGrantIds = readyGrants
+        .filter((candidateGrant) => {
+          const candidateExecutionPlayer = resolvePendingFreeOperationGrantExecutionPlayer(def, state, candidateGrant);
+          if (candidateExecutionPlayer === undefined || candidateGrant.executionContext !== undefined) {
+            return false;
+          }
+
+          const candidatePreflightOverlay = buildFreeOperationPreflightOverlay(
+            {
+              executionPlayer: candidateExecutionPlayer,
+              ...(candidateGrant.zoneFilter === undefined ? {} : { zoneFilter: candidateGrant.zoneFilter }),
+            },
+            { actionId: action.id, params: {} },
+            'turnFlowEligibility',
+            { skipPhaseCheck: false },
+          );
+          const candidatePreflight = resolveActionApplicabilityPreflight({
+            def,
+            state,
+            action,
+            adjacencyGraph,
+            decisionPlayer: state.activePlayer,
+            bindings: buildMoveRuntimeBindings({ actionId: action.id, params: {} }),
+            runtimeTableIndex,
+            evalRuntimeResources,
+            skipExecutorCheck: !hasActionPipeline,
+            skipPipelineDispatch: !hasActionPipeline,
+            ...candidatePreflightOverlay,
+          });
+          if (candidatePreflight.kind === 'notApplicable') {
+            return false;
+          }
+          if (candidatePreflight.kind === 'invalidSpec') {
+            throw selectorInvalidSpecError(
+              'legalMoves',
+              candidatePreflight.selector,
+              action,
+              candidatePreflight.error,
+              candidatePreflight.selectorContractViolations,
+            );
+          }
+          if (!hasActionPipeline || candidatePreflight.pipelineDispatch.kind !== 'matched') {
+            return false;
+          }
+
+          const candidatePipeline = candidatePreflight.pipelineDispatch.profile;
+          const candidateStatus = evaluateDiscoveryPipelinePredicateStatus(action, candidatePipeline, candidatePreflight.evalCtx, {
+            includeCostValidation: candidatePipeline.atomicity === 'atomic',
+          });
+          const candidateViabilityDecision = decideDiscoveryLegalMovesPipelineViability(candidateStatus);
+          if (
+            candidateViabilityDecision.kind === 'excludeTemplate'
+            && (
+              candidateViabilityDecision.outcome !== 'pipelineLegalityFailed'
+              || !shouldEnumerateLegalMoveForOutcome(candidateViabilityDecision.outcome)
+            )
+          ) {
+            return false;
+          }
+
+          const candidateMove: Move = {
+            actionId: action.id,
+            params: {},
+            freeOperation: true,
+            ...(mappedActionClass === null ? { actionClass: candidateGrant.operationClass } : {}),
+          };
+          if (toMoveIdentityKey(def, candidateMove) !== toMoveIdentityKey(def, baseMove)) {
+            return false;
+          }
+          const candidateScopedState: GameState = {
+            ...state,
+            turnOrderState: {
+              type: 'cardDriven',
+              runtime: {
+                ...runtime,
+                pendingFreeOperationGrants: pending.filter(
+                  (pendingGrant) => pendingGrant.grantId === candidateGrant.grantId || !isCurrentReadyGrant(pendingGrant.grantId),
+                ),
+              },
+            },
+          };
+          if (!isFreeOperationApplicableForMove(def, candidateScopedState, candidateMove, seatResolution)) {
+            return false;
+          }
+          if (!isFreeOperationGrantedForMove(def, candidateScopedState, candidateMove, seatResolution)) {
+            return false;
+          }
+          return isMoveDecisionSequenceAdmittedForLegalMove(
+            def,
+            candidateScopedState,
+            candidateMove,
+            MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
+            {
+              budgets: enumeration.budgets,
+              onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
+            },
+          );
+        })
+        .map((candidateGrant) => candidateGrant.grantId);
+
+      const viableReadyGrantState: GameState = {
+        ...state,
+        turnOrderState: {
+          type: 'cardDriven',
+          runtime: {
+            ...runtime,
+            pendingFreeOperationGrants: pending.filter(
+              (pendingGrant) => viableReadyGrantIds.includes(pendingGrant.grantId) || !isCurrentReadyGrant(pendingGrant.grantId),
+            ),
+          },
+        },
+      };
+
+      if (!isFreeOperationApplicableForMove(def, viableReadyGrantState, baseMove, seatResolution)) {
         continue;
       }
-      if (!isFreeOperationGrantedForMove(def, state, baseMove, seatResolution)) {
-        if (!canResolveAmbiguousFreeOperationOverlapInCurrentState(def, state, baseMove, seatResolution)) {
+      if (!isFreeOperationGrantedForMove(def, viableReadyGrantState, baseMove, seatResolution)) {
+        if (!canResolveAmbiguousFreeOperationOverlapInCurrentState(def, viableReadyGrantState, baseMove, seatResolution)) {
           continue;
         }
       }
       if (
         !isMoveDecisionSequenceAdmittedForLegalMove(
           def,
-          state,
+          viableReadyGrantState,
           baseMove,
           MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
           {
@@ -552,6 +662,12 @@ function enumeratePendingFreeOperationMoves(
       ) {
         continue;
       }
+
+      const grantMoveKey = toMoveIdentityKey(def, baseMove);
+      if (seenGrantMoveKeys.has(grantMoveKey)) {
+        continue;
+      }
+      seenGrantMoveKeys.add(grantMoveKey);
 
       if (!tryPushTemplateMove(enumeration, baseMove, action.id)) {
         return;

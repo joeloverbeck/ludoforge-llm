@@ -2447,6 +2447,77 @@ phase: [asPhaseId('main')],
     assert.deepEqual(secondRun, firstRun);
   });
 
+  it('surfaces a later executeAsSeat direct-seeded free-operation grant when an earlier same-action grant is pipeline-inapplicable', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'operation-as-seat-1',
+      actionId: asActionId('operation'),
+      applicability: { op: '==', left: { ref: 'activePlayer' }, right: 1 },
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [{ effects: [] }],
+      atomicity: 'atomic',
+    };
+
+    const def = {
+      ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'] },
+            windows: [],
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeCardDrivenState({
+      pendingFreeOperationGrants: [
+        {
+          grantId: 'grant-invalid-first',
+          seat: '0',
+          executeAsSeat: '0',
+          operationClass: 'operation',
+          actionIds: ['operation'],
+          remainingUses: 1,
+        },
+        {
+          grantId: 'grant-valid-second',
+          seat: '0',
+          executeAsSeat: '1',
+          operationClass: 'operation',
+          actionIds: ['operation'],
+          remainingUses: 1,
+        },
+      ],
+    });
+
+    const freeMoves = legalMoves(def, state).filter(
+      (move) => String(move.actionId) === 'operation' && move.freeOperation === true,
+    );
+
+    assert.equal(freeMoves.length, 1);
+  });
+
   it('does not expose free-operation variants when grant and turn-flow action domains are both absent', () => {
     const action: ActionDef = {
       id: asActionId('operation'),

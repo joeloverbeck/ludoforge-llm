@@ -3,6 +3,7 @@ import type { GameSpecDoc } from './game-spec-doc.js';
 import { createEmptyGameSpecDoc } from './game-spec-doc.js';
 import { parseGameSpec, type ParseGameSpecOptions, type ParseGameSpecResult } from './parser.js';
 import { sortDiagnosticsDeterministic } from './compiler-diagnostics.js';
+import { normalizeIdentifier } from './identifier-utils.js';
 import type { GameSpecSourceMap, SourceSpan } from './source-map.js';
 
 const SINGLETON_SECTIONS = [
@@ -58,7 +59,7 @@ export function composeGameSpec(entrySourceId: string, options: ComposeGameSpecO
   const visitingStack: string[] = [];
   const visitingSet = new Set<string>();
 
-  const visit = (sourceId: string, from?: { readonly sourceId: string; readonly importIndex: number }) => {
+  const visit = (sourceId: string, from?: { readonly sourceId: string; readonly importIndex: number }): void => {
     if (parsedBySourceId.has(sourceId)) {
       return;
     }
@@ -182,6 +183,10 @@ function mergeSingleSource(
     if (incoming === null) {
       continue;
     }
+    if (section === 'eventDecks') {
+      mergeEventDeckSections(target, source, diagnostics, targetSourceMapByPath, blockOffset);
+      continue;
+    }
     const existingList = existing === null ? [] : [...existing];
     const incomingList = [...incoming];
     const baseIndex = existingList.length;
@@ -189,6 +194,78 @@ function mergeSingleSource(
     assignListSection(target, section, [...existingList, ...incomingList]);
     copySectionSourceMapEntries(section, source.parsed.sourceMap, targetSourceMapByPath, blockOffset, baseIndex);
   }
+}
+
+function mergeEventDeckSections(
+  target: GameSpecDoc,
+  source: ParsedSource,
+  diagnostics: Diagnostic[],
+  targetSourceMapByPath: Record<string, SourceSpan>,
+  blockOffset: number,
+): void {
+  const incomingDecks = source.parsed.doc.eventDecks;
+  if (incomingDecks === null) {
+    return;
+  }
+
+  const existingDecks = target.eventDecks === null ? [] : [...target.eventDecks];
+  const deckIndexByNormalizedId = new Map<string, number>();
+  for (const [index, deck] of existingDecks.entries()) {
+    deckIndexByNormalizedId.set(normalizeIdentifier(deck.id), index);
+  }
+
+  for (const [incomingDeckIndex, incomingDeck] of incomingDecks.entries()) {
+    const normalizedDeckId = normalizeIdentifier(incomingDeck.id);
+    const existingDeckIndex = deckIndexByNormalizedId.get(normalizedDeckId);
+    if (existingDeckIndex === undefined) {
+      const targetDeckIndex = existingDecks.length;
+      existingDecks.push(incomingDeck);
+      deckIndexByNormalizedId.set(normalizedDeckId, targetDeckIndex);
+      copyEventDeckSourceMapEntries(
+        source.parsed.sourceMap,
+        targetSourceMapByPath,
+        blockOffset,
+        incomingDeckIndex,
+        targetDeckIndex,
+        0,
+        true,
+      );
+      continue;
+    }
+
+    const existingDeck = existingDecks[existingDeckIndex];
+    if (existingDeck === undefined) {
+      continue;
+    }
+    if (!areEventDeckDefinitionsCompatible(existingDeck, incomingDeck)) {
+      diagnostics.push({
+        code: 'CNL_COMPOSE_EVENT_DECK_CONFLICT',
+        path: `doc.eventDecks.${incomingDeckIndex}`,
+        severity: 'error',
+        message: `Imported event deck "${incomingDeck.id}" redefines deck metadata inconsistently across fragments.`,
+        suggestion: 'Keep draw/discard/shuffle deck metadata identical across fragments that append cards to one event deck.',
+        entityId: source.sourceId,
+      });
+      continue;
+    }
+
+    const existingCardCount = existingDeck.cards.length;
+    existingDecks[existingDeckIndex] = {
+      ...existingDeck,
+      cards: [...existingDeck.cards, ...incomingDeck.cards],
+    };
+    copyEventDeckSourceMapEntries(
+      source.parsed.sourceMap,
+      targetSourceMapByPath,
+      blockOffset,
+      incomingDeckIndex,
+      existingDeckIndex,
+      existingCardCount,
+      false,
+    );
+  }
+
+  assignListSection(target, 'eventDecks', existingDecks);
 }
 
 function copySectionSourceMapEntries(
@@ -220,6 +297,72 @@ function remapListPath(section: string, path: string, indexOffset: number): stri
     const parsed = Number.parseInt(rawIndex, 10);
     return `${section}[${parsed + indexOffset}]`;
   });
+}
+
+function copyEventDeckSourceMapEntries(
+  sourceMap: GameSpecSourceMap,
+  targetByPath: Record<string, SourceSpan>,
+  blockOffset: number,
+  sourceDeckIndex: number,
+  targetDeckIndex: number,
+  cardIndexOffset: number,
+  includeDeckLevelEntries: boolean,
+): void {
+  const deckPrefix = `eventDecks[${sourceDeckIndex}]`;
+  const cardPrefix = `${deckPrefix}.cards[`;
+
+  for (const [path, span] of Object.entries(sourceMap.byPath)) {
+    if (path !== deckPrefix && !path.startsWith(`${deckPrefix}.`) && !path.startsWith(cardPrefix)) {
+      continue;
+    }
+    if (!includeDeckLevelEntries && !path.startsWith(cardPrefix)) {
+      continue;
+    }
+
+    const mappedPath = remapEventDeckPath(path, sourceDeckIndex, targetDeckIndex, cardIndexOffset);
+    const mappedSpan: SourceSpan = {
+      ...span,
+      blockIndex: span.blockIndex + blockOffset,
+    };
+    if (targetByPath[mappedPath] === undefined) {
+      targetByPath[mappedPath] = mappedSpan;
+    }
+  }
+}
+
+function remapEventDeckPath(
+  path: string,
+  sourceDeckIndex: number,
+  targetDeckIndex: number,
+  cardIndexOffset: number,
+): string {
+  const expectedPrefix = `eventDecks[${sourceDeckIndex}]`;
+  if (!path.startsWith(expectedPrefix)) {
+    return path;
+  }
+
+  let mapped = `eventDecks[${targetDeckIndex}]${path.slice(expectedPrefix.length)}`;
+  if (cardIndexOffset === 0) {
+    return mapped;
+  }
+
+  mapped = mapped.replace(/^eventDecks\[\d+\]\.cards\[(\d+)\]/, (_match, rawIndex: string) => {
+    const parsed = Number.parseInt(rawIndex, 10);
+    return `eventDecks[${targetDeckIndex}].cards[${parsed + cardIndexOffset}]`;
+  });
+  return mapped;
+}
+
+function areEventDeckDefinitionsCompatible(
+  left: NonNullable<GameSpecDoc['eventDecks']>[number],
+  right: NonNullable<GameSpecDoc['eventDecks']>[number],
+): boolean {
+  return (
+    normalizeIdentifier(left.id) === normalizeIdentifier(right.id)
+    && left.drawZone === right.drawZone
+    && left.discardZone === right.discardZone
+    && (left.shuffleOnSetup ?? false) === (right.shuffleOnSetup ?? false)
+  );
 }
 
 function maxBlockIndex(sourceMap: GameSpecSourceMap): number {

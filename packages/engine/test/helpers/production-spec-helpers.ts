@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import type { Diagnostic } from '../../src/kernel/diagnostics.js';
 import type { CompileResult, RunGameSpecStagesResult } from '../../src/cnl/index.js';
-import { loadGameSpecSource, runGameSpecStagesFromEntrypoint } from '../../src/cnl/index.js';
+import { loadGameSpecEntrypoint, loadGameSpecSource, runGameSpecStagesFromEntrypoint } from '../../src/cnl/index.js';
 
 export interface CompiledProductionSpec {
   readonly markdown: string;
@@ -31,22 +31,32 @@ function resolveRepoRoot(): string {
 }
 
 const REPO_ROOT = resolveRepoRoot();
-const FITL_PRODUCTION_SPEC_PATH = join(REPO_ROOT, 'data', 'games', 'fire-in-the-lake');
 const TEXAS_PRODUCTION_SPEC_PATH = join(REPO_ROOT, 'data', 'games', 'texas-holdem');
 const FITL_PRODUCTION_ENTRYPOINT_PATH = join(REPO_ROOT, 'data', 'games', 'fire-in-the-lake.game-spec.md');
 const TEXAS_PRODUCTION_ENTRYPOINT_PATH = join(REPO_ROOT, 'data', 'games', 'texas-holdem.game-spec.md');
 const FIXTURE_BASE_PATH = join(REPO_ROOT, 'packages', 'engine', 'test', 'fixtures', 'cnl', 'compiler');
 
+let cachedFitlParsed: RunGameSpecStagesResult['parsed'] | null = null;
+let cachedFitlParsedHash: string | null = null;
 let cachedFitlResult: CompiledProductionSpec | null = null;
 let cachedFitlHash: string | null = null;
 let cachedTexasResult: CompiledProductionSpec | null = null;
 let cachedTexasHash: string | null = null;
 
 /**
- * Reads the raw FITL production spec markdown.
+ * Loads the FITL production spec through the canonical entrypoint and caches the parsed result.
  */
-export function readProductionSpec(): string {
-  return loadGameSpecSource(FITL_PRODUCTION_SPEC_PATH).markdown;
+export function parseProductionSpec(): RunGameSpecStagesResult['parsed'] {
+  const loaded = loadGameSpecEntrypoint(FITL_PRODUCTION_ENTRYPOINT_PATH);
+  const hash = hashSourceFiles([FITL_PRODUCTION_ENTRYPOINT_PATH, ...loaded.sourcePaths]);
+
+  if (cachedFitlParsed !== null && cachedFitlParsedHash === hash) {
+    return cachedFitlParsed;
+  }
+
+  cachedFitlParsed = loaded.parsed;
+  cachedFitlParsedHash = hash;
+  return cachedFitlParsed;
 }
 
 /**
@@ -62,11 +72,8 @@ export function readTexasProductionSpec(): string {
  * All FITL game-rule tests should use this instead of per-fixture compilation.
  */
 export function compileProductionSpec(): CompiledProductionSpec {
-  const markdown = readProductionSpec();
-  const hash = createHash('sha256')
-    .update(readFileSync(FITL_PRODUCTION_ENTRYPOINT_PATH, 'utf8'))
-    .update(markdown)
-    .digest('hex');
+  const parsed = parseProductionSpec();
+  const hash = hashSourceFiles([FITL_PRODUCTION_ENTRYPOINT_PATH, ...collectFitlSourcePaths()]);
 
   if (cachedFitlResult !== null && cachedFitlHash === hash) {
     return cachedFitlResult;
@@ -76,8 +83,8 @@ export function compileProductionSpec(): CompiledProductionSpec {
   const compiled = requireSuccessfulProductionCompilation('FITL production spec', staged);
 
   cachedFitlResult = {
-    markdown,
-    parsed: staged.parsed,
+    markdown: '',
+    parsed,
     validatorDiagnostics: staged.validation.diagnostics,
     compiled,
   };
@@ -163,4 +170,15 @@ function formatDiagnosticSummary(diagnostics: readonly Diagnostic[]): string {
   return diagnostics
     .map((diagnostic) => `[${diagnostic.severity}] ${diagnostic.code} at ${diagnostic.path}: ${diagnostic.message}`)
     .join('\n');
+}
+
+function collectFitlSourcePaths(): readonly string[] {
+  return loadGameSpecEntrypoint(FITL_PRODUCTION_ENTRYPOINT_PATH).sourcePaths;
+}
+
+function hashSourceFiles(paths: readonly string[]): string {
+  return paths.reduce(
+    (hash, filePath) => hash.update(filePath).update('\0').update(readFileSync(filePath, 'utf8')).update('\0'),
+    createHash('sha256'),
+  ).digest('hex');
 }

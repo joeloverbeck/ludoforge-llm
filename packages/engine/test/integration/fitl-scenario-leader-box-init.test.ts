@@ -1,14 +1,13 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { compileGameSpecToGameDef, parseGameSpec } from '../../src/cnl/index.js';
+import { compileGameSpecToGameDef } from '../../src/cnl/index.js';
 import { initialState } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { readProductionSpec } from '../helpers/production-spec-helpers.js';
+import { parseProductionSpec } from '../helpers/production-spec-helpers.js';
 
 function compileScenarioGameDef(scenarioId: 'fitl-scenario-full' | 'fitl-scenario-short' | 'fitl-scenario-medium') {
-  const markdown = readProductionSpec();
-  const parsed = parseGameSpec(markdown);
+  const parsed = parseProductionSpec();
   assertNoErrors(parsed);
   assert.notEqual(parsed.doc.metadata, null, 'Expected production spec metadata');
 

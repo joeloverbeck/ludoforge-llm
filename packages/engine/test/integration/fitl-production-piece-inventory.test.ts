@@ -1,9 +1,8 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseGameSpec } from '../../src/cnl/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { readProductionSpec } from '../helpers/production-spec-helpers.js';
+import { parseProductionSpec } from '../helpers/production-spec-helpers.js';
 
 interface PieceTypeLike {
   readonly id: string;
@@ -18,8 +17,7 @@ interface InventoryEntryLike {
 
 describe('fitl production piece inventory', () => {
   it('encodes the full 229-piece inventory', () => {
-    const markdown = readProductionSpec();
-    const parsed = parseGameSpec(markdown);
+    const parsed = parseProductionSpec();
     assertNoErrors(parsed);
 
     const pieceCatalogAsset = (parsed.doc.dataAssets ?? []).find(

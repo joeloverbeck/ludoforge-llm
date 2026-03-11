@@ -98,7 +98,7 @@ function hasErrorDiagnostics(diagnostics: readonly Diagnostic[]): boolean {
 }
 
 function omitParseSourceId(parseOptions: ParseGameSpecOptions): Omit<ParseGameSpecOptions, 'sourceId'> {
-  const entryParseOptions: Omit<ParseGameSpecOptions, 'sourceId'> = { ...parseOptions };
-  delete (entryParseOptions as Partial<ParseGameSpecOptions>).sourceId;
+  const { sourceId, ...entryParseOptions } = parseOptions;
+  void sourceId;
   return entryParseOptions;
 }

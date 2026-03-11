@@ -1,9 +1,8 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseGameSpec } from '../../src/cnl/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { readProductionSpec } from '../helpers/production-spec-helpers.js';
+import { parseProductionSpec } from '../helpers/production-spec-helpers.js';
 
 type MapSpace = {
   readonly id: string;
@@ -11,8 +10,7 @@ type MapSpace = {
 };
 
 const readMapSpaces = (): MapSpace[] => {
-  const markdown = readProductionSpec();
-  const parsed = parseGameSpec(markdown);
+  const parsed = parseProductionSpec();
   assertNoErrors(parsed);
 
   const mapAsset = parsed.doc.dataAssets?.find((asset) => asset.id === 'fitl-map-production' && asset.kind === 'map');

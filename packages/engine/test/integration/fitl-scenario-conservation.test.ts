@@ -1,8 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseGameSpec } from '../../src/cnl/index.js';
-import { readProductionSpec } from '../helpers/production-spec-helpers.js';
+import { parseProductionSpec } from '../helpers/production-spec-helpers.js';
 import type {
   MapPayload,
   MapSpaceInput,
@@ -21,8 +20,7 @@ interface ParsedFitlData {
 }
 
 function loadFitlData(): ParsedFitlData {
-  const markdown = readProductionSpec();
-  const parsed = parseGameSpec(markdown);
+  const parsed = parseProductionSpec();
   const parseErrors = parsed.diagnostics.filter((d) => d.severity === 'error');
   assert.equal(parseErrors.length, 0, `Parse errors: ${parseErrors.map((d) => d.message).join('; ')}`);
 

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None in this ticket — relies on prior engine/compiler fixes
-**Deps**: archive/tickets/ENGINEARCH/ENGINEARCH-165-canonical-rollrandom-chooseN-cardinality-contract.md, tickets/ENGINEARCH-166-generic-stochastic-decision-completion-and-normalization.md, tickets/ENGINEARCH-167-legality-backed-choice-domain-expressiveness.md
+**Deps**: archive/tickets/ENGINEARCH/ENGINEARCH-165-canonical-rollrandom-chooseN-cardinality-contract.md, archive/tickets/ENGINEARCH/ENGINEARCH-166-generic-stochastic-decision-completion-and-normalization.md, tickets/ENGINEARCH-167-legality-backed-choice-domain-expressiveness.md
 
 ## Problem
 

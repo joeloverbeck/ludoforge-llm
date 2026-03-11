@@ -1,11 +1,13 @@
-import { legalChoicesEvaluate } from './legal-choices.js';
 import {
   selectChoiceOptionValuesByLegalityPrecedence,
   selectUniqueChoiceOptionValuesByLegalityPrecedence,
 } from './choice-option-policy.js';
+import { completeMoveDecisionSequence } from './move-decision-completion.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import { nextInt } from './prng.js';
 import type {
+  ChoicePendingRequest,
+  ChoiceStochasticPendingRequest,
   GameState,
   Move,
   MoveParamScalar,
@@ -67,54 +69,67 @@ export const completeTemplateMove = (
   rng: Rng,
   runtime?: GameDefRuntime,
 ): TemplateCompletionResult => {
-  let current = templateMove;
-  let choices = legalChoicesEvaluate(def, state, current, undefined, runtime);
   let cursor = rng;
   let iterations = 0;
 
-  while (choices.kind === 'pending') {
+  const choose = (request: ChoicePendingRequest): MoveParamValue | undefined => {
     if (++iterations > MAX_CHOICES) {
       throw new Error(
-        `Choice loop exceeded ${MAX_CHOICES} iterations for action ${String(current.actionId)}`,
+        `Choice loop exceeded ${MAX_CHOICES} iterations for action ${String(templateMove.actionId)}`,
       );
     }
 
-    const options = choices.type === 'chooseN'
-      ? selectUniqueChoiceOptionValuesByLegalityPrecedence(choices)
-      : selectChoiceOptionValuesByLegalityPrecedence(choices);
+    const options = request.type === 'chooseN'
+      ? selectUniqueChoiceOptionValuesByLegalityPrecedence(request)
+      : selectChoiceOptionValuesByLegalityPrecedence(request);
     const optionCount = options.length;
-    const min = choices.min ?? 0;
+    const min = request.min ?? 0;
     if (optionCount === 0) {
-      if (choices.type === 'chooseN' && min === 0) {
-        current = { ...current, params: { ...current.params, [choices.decisionId]: [] } };
-        choices = legalChoicesEvaluate(def, state, current, undefined, runtime);
-        continue;
-      }
-      return { kind: 'unsatisfiable' };
+      return request.type === 'chooseN' && min === 0 ? [] : undefined;
     }
 
-    const declaredMax = choices.type === 'chooseN' ? (choices.max ?? optionCount) : optionCount;
+    const declaredMax = request.type === 'chooseN' ? (request.max ?? optionCount) : optionCount;
     const max = Math.min(declaredMax, optionCount);
-    if (choices.type === 'chooseN' && (optionCount < min || max < min)) {
-      return { kind: 'unsatisfiable' };
+    if (request.type === 'chooseN' && (optionCount < min || max < min)) {
+      return undefined;
     }
 
-    const { selected, rng: nextRng } =
-      choices.type === 'chooseN'
-        ? selectFromChooseN(options, min, max, cursor)
-        : selectFromChooseOne(options, cursor);
+    const selection = request.type === 'chooseN'
+      ? selectFromChooseN(options, min, max, cursor)
+      : selectFromChooseOne(options, cursor);
+    cursor = selection.rng;
+    return selection.selected;
+  };
 
+  const chooseStochastic = (
+    request: ChoiceStochasticPendingRequest,
+  ): Readonly<Record<string, MoveParamScalar>> | undefined => {
+    if (++iterations > MAX_CHOICES) {
+      throw new Error(
+        `Choice loop exceeded ${MAX_CHOICES} iterations for action ${String(templateMove.actionId)}`,
+      );
+    }
+    if (request.outcomes.length === 0) {
+      return undefined;
+    }
+    const [index, nextRng] = nextInt(cursor, 0, request.outcomes.length - 1);
     cursor = nextRng;
-    current = { ...current, params: { ...current.params, [choices.decisionId]: selected } };
-    choices = legalChoicesEvaluate(def, state, current, undefined, runtime);
-  }
-  if (choices.kind === 'pendingStochastic') {
-    return { kind: 'stochasticUnresolved', move: current, rng: cursor };
-  }
+    return request.outcomes[index]?.bindings;
+  };
 
-  if (choices.kind === 'illegal') {
+  const result = completeMoveDecisionSequence(def, state, templateMove, {
+    choose,
+    chooseStochastic,
+  }, runtime);
+
+  if (result.complete) {
+    return { kind: 'completed', move: result.move, rng: cursor };
+  }
+  if (result.illegal !== undefined || result.nextDecision !== undefined) {
     return { kind: 'unsatisfiable' };
   }
-
-  return { kind: 'completed', move: current, rng: cursor };
+  if (result.stochasticDecision !== undefined) {
+    return { kind: 'stochasticUnresolved', move: result.move, rng: cursor };
+  }
+  return { kind: 'unsatisfiable' };
 };

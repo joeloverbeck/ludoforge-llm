@@ -166,6 +166,26 @@ describe('decision sequence satisfiability', () => {
             options: [{ value: 'b', legality: 'unknown', illegalReason: null }],
           },
         ],
+        outcomes: [
+          { bindings: { $roll: 1 }, nextDecision: {
+            kind: 'pending',
+            complete: false,
+            decisionId: 'decision:$alpha',
+            name: '$alpha',
+            type: 'chooseOne',
+            targetKinds: [],
+            options: [{ value: 'a', legality: 'unknown', illegalReason: null }],
+          } },
+          { bindings: { $roll: 2 }, nextDecision: {
+            kind: 'pending',
+            complete: false,
+            decisionId: 'decision:$beta',
+            name: '$beta',
+            type: 'chooseOne',
+            targetKinds: [],
+            options: [{ value: 'b', legality: 'unknown', illegalReason: null }],
+          } },
+        ],
       }),
     );
 

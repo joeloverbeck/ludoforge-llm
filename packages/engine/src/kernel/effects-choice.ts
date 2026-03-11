@@ -12,7 +12,14 @@ import { withTracePath } from './trace-provenance.js';
 import { normalizeChoiceDomain, toChoiceComparableValue, type MembershipScalar } from './value-membership.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
-import type { ChoicePendingRequest, ChoiceStochasticPendingRequest, EffectAST, PlayerSel } from './types.js';
+import type {
+  ChoicePendingRequest,
+  ChoiceStochasticOutcome,
+  ChoiceStochasticPendingRequest,
+  EffectAST,
+  MoveParamScalar,
+  PlayerSel,
+} from './types.js';
 import type { EffectBudgetState } from './effects-control.js';
 
 type ApplyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContext, budget: EffectBudgetState) => EffectResult;
@@ -110,8 +117,20 @@ const mergePendingChoiceRequests = (
 };
 
 const toStochasticPendingChoice = (
-  pendingByDecisionId: ReadonlyMap<string, readonly ChoicePendingRequest[]>,
+  outcomes: readonly ChoiceStochasticOutcome[],
 ): ChoiceStochasticPendingRequest => {
+  const pendingByDecisionId = new Map<string, ChoicePendingRequest[]>();
+  for (const outcome of outcomes) {
+    if (outcome.nextDecision === undefined) {
+      continue;
+    }
+    const existing = pendingByDecisionId.get(outcome.nextDecision.decisionId);
+    if (existing === undefined) {
+      pendingByDecisionId.set(outcome.nextDecision.decisionId, [outcome.nextDecision]);
+    } else {
+      existing.push(outcome.nextDecision);
+    }
+  }
   const alternatives = [...pendingByDecisionId.entries()]
     .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
     .flatMap(([, requests]) => mergePendingChoiceRequests(requests));
@@ -120,7 +139,65 @@ const toStochasticPendingChoice = (
     complete: false,
     source: 'rollRandom',
     alternatives,
+    outcomes,
   };
+};
+
+const resolveFixedRandomBinding = (
+  bind: string,
+  value: unknown,
+  minValue: number,
+  maxValue: number,
+): number => {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value)) {
+    throw effectRuntimeError(
+      EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+      `rollRandom binding ${bind} must resolve to a safe integer`,
+      {
+        effectType: 'rollRandom',
+        bind,
+        actualType: typeof value,
+        value,
+      },
+    );
+  }
+  if (value < minValue || value > maxValue) {
+    throw effectRuntimeError(
+      EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+      `rollRandom binding ${bind} must stay within [${minValue}, ${maxValue}]`,
+      {
+        effectType: 'rollRandom',
+        bind,
+        value,
+        min: minValue,
+        max: maxValue,
+      },
+    );
+  }
+  return value;
+};
+
+const collectNestedOutcomes = (
+  bind: string,
+  rolledValue: MoveParamScalar,
+  pendingChoice: ChoicePendingRequest | ChoiceStochasticPendingRequest | undefined,
+): readonly ChoiceStochasticOutcome[] => {
+  if (pendingChoice === undefined) {
+    return [{ bindings: { [bind]: rolledValue } }];
+  }
+  if (pendingChoice.kind === 'pendingStochastic') {
+    return pendingChoice.outcomes.map((outcome) => ({
+      bindings: {
+        [bind]: rolledValue,
+        ...outcome.bindings,
+      },
+      ...(outcome.nextDecision === undefined ? {} : { nextDecision: outcome.nextDecision }),
+    }));
+  }
+  return [{
+    bindings: { [bind]: rolledValue },
+    nextDecision: pendingChoice,
+  }];
 };
 
 const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => {
@@ -562,16 +639,28 @@ export const applyRollRandom = (
     });
   }
 
-  if (ctx.mode === 'discovery') {
-    const pendingByDecisionId = new Map<string, ChoicePendingRequest[]>();
-    const collectPending = (pendingChoice: ChoicePendingRequest): void => {
-      const existing = pendingByDecisionId.get(pendingChoice.decisionId);
-      if (existing === undefined) {
-        pendingByDecisionId.set(pendingChoice.decisionId, [pendingChoice]);
-      } else {
-        existing.push(pendingChoice);
-      }
+  const fixedBinding = evalCtx.bindings[effect.rollRandom.bind];
+  if (fixedBinding !== undefined) {
+    const rolledValue = resolveFixedRandomBinding(effect.rollRandom.bind, fixedBinding, minValue, maxValue);
+    const nestedCtx: EffectContext = {
+      ...ctx,
+      bindings: {
+        ...ctx.bindings,
+        [effect.rollRandom.bind]: rolledValue,
+      },
     };
+    const nestedResult = applyEffectsWithBudget(effect.rollRandom.in, withTracePath(nestedCtx, '.rollRandom.in'), budget);
+    return {
+      state: nestedResult.state,
+      rng: nestedResult.rng,
+      ...(nestedResult.emittedEvents === undefined ? {} : { emittedEvents: nestedResult.emittedEvents }),
+      ...(nestedResult.pendingChoice === undefined ? {} : { pendingChoice: nestedResult.pendingChoice }),
+      bindings: ctx.bindings,
+    };
+  }
+
+  if (ctx.mode === 'discovery') {
+    const outcomes: ChoiceStochasticOutcome[] = [];
     for (let rolledValue = minValue; rolledValue <= maxValue; rolledValue += 1) {
       const nestedCtx: EffectContext = {
         ...ctx,
@@ -581,40 +670,50 @@ export const applyRollRandom = (
         },
       };
       const nestedResult = applyEffectsWithBudget(effect.rollRandom.in, withTracePath(nestedCtx, '.rollRandom.in'), budget);
-      const pendingChoice = nestedResult.pendingChoice;
-      if (pendingChoice === undefined) {
-        continue;
-      }
-      if (pendingChoice.kind === 'pendingStochastic') {
-        pendingChoice.alternatives.forEach(collectPending);
-        continue;
-      }
-      collectPending(pendingChoice);
+      outcomes.push(...collectNestedOutcomes(effect.rollRandom.bind, rolledValue, nestedResult.pendingChoice));
     }
 
-    if (pendingByDecisionId.size === 0) {
+    if (outcomes.length === 0) {
       return { state: ctx.state, rng: ctx.rng, bindings: ctx.bindings };
     }
-
-    if (pendingByDecisionId.size > 1) {
+    if (outcomes.every((outcome) => outcome.nextDecision === undefined)) {
       return {
         state: ctx.state,
         rng: ctx.rng,
         bindings: ctx.bindings,
-        pendingChoice: toStochasticPendingChoice(pendingByDecisionId),
+        pendingChoice: toStochasticPendingChoice(outcomes),
       };
     }
 
-    const selectedDecisionId = pendingByDecisionId.keys().next().value as string;
-    const mergedPendingChoices = mergePendingChoiceRequests(pendingByDecisionId.get(selectedDecisionId)!);
-    const pendingChoice: ChoicePendingRequest | ChoiceStochasticPendingRequest = mergedPendingChoices.length === 1
-      ? mergedPendingChoices[0]!
-      : {
-        kind: 'pendingStochastic',
-        complete: false,
-        source: 'rollRandom',
-        alternatives: mergedPendingChoices,
-      };
+    const pendingByDecisionId = new Map<string, ChoicePendingRequest[]>();
+    for (const outcome of outcomes) {
+      if (outcome.nextDecision === undefined) {
+        continue;
+      }
+      const existing = pendingByDecisionId.get(outcome.nextDecision.decisionId);
+      if (existing === undefined) {
+        pendingByDecisionId.set(outcome.nextDecision.decisionId, [outcome.nextDecision]);
+      } else {
+        existing.push(outcome.nextDecision);
+      }
+    }
+
+    const pendingChoice: ChoicePendingRequest | ChoiceStochasticPendingRequest =
+      pendingByDecisionId.size === 1 && outcomes.every((outcome) => outcome.nextDecision !== undefined)
+        ? (() => {
+          const selectedDecisionId = pendingByDecisionId.keys().next().value as string;
+          const mergedPendingChoices = mergePendingChoiceRequests(pendingByDecisionId.get(selectedDecisionId)!);
+          return mergedPendingChoices.length === 1
+            ? mergedPendingChoices[0]!
+            : {
+              kind: 'pendingStochastic',
+              complete: false,
+              source: 'rollRandom',
+              alternatives: mergedPendingChoices,
+              outcomes,
+            };
+        })()
+        : toStochasticPendingChoice(outcomes);
     return {
       state: ctx.state,
       rng: ctx.rng,

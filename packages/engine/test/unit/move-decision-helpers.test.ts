@@ -95,4 +95,66 @@ describe('move decision helpers', () => {
       /Scripted move could not be completed for actionId=op: choice="\$target" options=0 min=0/,
     );
   });
+
+  it('completes stochastic branch-local decisions through the shared completion path', () => {
+    const def = makeDef({
+      id: asActionId('op'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          rollRandom: {
+            bind: '$roll',
+            min: 1,
+            max: 2,
+            in: [
+              {
+                if: {
+                  when: { op: '==', left: { ref: 'binding', name: '$roll' }, right: 1 },
+                  then: [
+                    {
+                      chooseOne: {
+                        internalDecisionId: 'decision:$alpha',
+                        bind: '$alpha',
+                        options: { query: 'enums', values: ['alpha'] },
+                      },
+                    } as ActionDef['effects'][number],
+                  ],
+                  else: [
+                    {
+                      chooseOne: {
+                        internalDecisionId: 'decision:$beta',
+                        bind: '$beta',
+                        options: { query: 'enums', values: ['beta'] },
+                      },
+                    } as ActionDef['effects'][number],
+                  ],
+                },
+              } as ActionDef['effects'][number],
+            ],
+          },
+        } as ActionDef['effects'][number],
+      ],
+      limits: [],
+    });
+
+    const resolved = completeMoveDecisionSequenceOrThrow(
+      makeMove(),
+      def,
+      makeState(),
+      (request) => pickDeterministicDecisionValue(request),
+    );
+
+    assert.equal(typeof resolved.params.$roll, 'number');
+    if (resolved.params.$roll === 1) {
+      assert.equal(resolved.params['decision:$alpha'], 'alpha');
+      return;
+    }
+    assert.equal(resolved.params.$roll, 2);
+    assert.equal(resolved.params['decision:$beta'], 'beta');
+  });
 });

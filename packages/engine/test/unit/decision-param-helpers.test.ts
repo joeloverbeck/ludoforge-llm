@@ -7,6 +7,7 @@ import {
   asPhaseId,
   asPlayerId,
   asZoneId,
+  createRng,
   type ActionDef,
   type ActionPipelineDef,
   type GameDef,
@@ -224,6 +225,70 @@ const makeDefWithCompoundAccompanyingConstraintAndUnresolvedSa = (): GameDef => 
   });
 };
 
+const makeDefWithStochasticChoice = (): GameDef => {
+  const action: ActionDef = {
+    id: asActionId('nested-choice-op'),
+    actor: 'active',
+    executor: 'actor',
+    phase: [asPhaseId('main')],
+    params: [],
+    pre: null,
+    cost: [],
+    effects: [],
+    limits: [],
+  };
+
+  const profile: ActionPipelineDef = {
+    id: 'stochastic-choice-profile',
+    actionId: asActionId('nested-choice-op'),
+    legality: null,
+    costValidation: null,
+    costEffects: [],
+    targeting: {},
+    stages: [
+      {
+        effects: [
+          {
+            rollRandom: {
+              bind: '$roll',
+              min: 1,
+              max: 2,
+              in: [
+                {
+                  if: {
+                    when: { op: '==', left: { ref: 'binding', name: '$roll' }, right: 1 },
+                    then: [
+                      {
+                        chooseOne: {
+                          internalDecisionId: 'decision:$alpha',
+                          bind: '$alpha',
+                          options: { query: 'enums', values: ['a1', 'a2'] },
+                        },
+                      } as GameDef['actions'][number]['effects'][number],
+                    ],
+                    else: [
+                      {
+                        chooseOne: {
+                          internalDecisionId: 'decision:$beta',
+                          bind: '$beta',
+                          options: { query: 'enums', values: ['b1', 'b2'] },
+                        },
+                      } as GameDef['actions'][number]['effects'][number],
+                    ],
+                  },
+                } as GameDef['actions'][number]['effects'][number],
+              ],
+            },
+          } as GameDef['actions'][number]['effects'][number],
+        ],
+      },
+    ],
+    atomicity: 'partial',
+  };
+
+  return makeBaseDef({ actions: [action], actionPipelines: [profile] });
+};
+
 describe('decision param helper', () => {
   it('fills nested templated decision ids with deterministic defaults', () => {
     const resolved = normalizeDecisionParamsForMove(makeDefWithNestedTemplatedChoices(), makeBaseState(), makeMove());
@@ -345,6 +410,26 @@ describe('decision param helper', () => {
       .filter(([decisionId]) => decisionId.includes('$__macro_caps__bonusSpace'))
       .map((entry) => String(entry[1]));
     assert.deepEqual(repeatedChoices, ['hold', 'advance']);
+  });
+
+  it('completes stochastic branch-local decisions and persists the sampled binding', () => {
+    const resolved = normalizeDecisionParamsForMove(
+      makeDefWithStochasticChoice(),
+      makeBaseState(),
+      makeMove(),
+      { rng: createRng(14n) },
+    );
+
+    assert.equal(typeof resolved.params.$roll, 'number');
+    if (resolved.params.$roll === 1) {
+      assert.equal(resolved.params['decision:$alpha'], 'a1');
+      assert.equal(Object.prototype.hasOwnProperty.call(resolved.params, 'decision:$beta'), false);
+      return;
+    }
+
+    assert.equal(resolved.params.$roll, 2);
+    assert.equal(resolved.params['decision:$beta'], 'b1');
+    assert.equal(Object.prototype.hasOwnProperty.call(resolved.params, 'decision:$alpha'), false);
   });
 
   it('fails with diagnostics when canonical selection cannot resolve a pending decision', () => {

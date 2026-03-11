@@ -2,12 +2,12 @@ import * as assert from 'node:assert/strict';
 
 import {
   applyMove,
+  completeMoveDecisionSequence,
   createRng,
   initialState,
   legalMoves,
   nextInt,
   pickDeterministicChoiceValue,
-  resolveMoveDecisionSequence,
   terminalResult,
   type ChoicePendingRequest,
   type GameDef,
@@ -125,11 +125,18 @@ const resolveMoveDecisionsForPolicy = (
   context: RuntimeSmokeSelectMoveContext,
   policy: RuntimeSmokePolicy,
 ): Move => {
-  const decisionResult = resolveMoveDecisionSequence(def, state, move, {
+  const decisionResult = completeMoveDecisionSequence(def, state, move, {
     budgets: {
       maxDecisionProbeSteps: MAX_DECISION_STEPS,
     },
     choose: (request) => policy.chooseDecision?.(request, context) ?? deterministicDefaultDecision(request),
+    chooseStochastic: (request) => {
+      if (request.outcomes.length === 0) {
+        return undefined;
+      }
+      const outcomeIndex = context.drawInt(0, request.outcomes.length - 1);
+      return request.outcomes[outcomeIndex]?.bindings;
+    },
   });
 
   if (!decisionResult.complete) {

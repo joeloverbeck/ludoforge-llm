@@ -1,13 +1,15 @@
 import {
   applyMove,
+  completeMoveDecisionSequence,
+  nextInt,
   pickDeterministicChoiceValue,
-  resolveMoveDecisionSequence,
   type ApplyMoveResult,
   type ChoicePendingRequest,
   type GameDef,
   type GameState,
   type Move,
   type MoveParamValue,
+  type Rng,
 } from '../../src/kernel/index.js';
 
 const MAX_DECISION_STEPS = 256;
@@ -20,6 +22,7 @@ export interface DecisionOverrideRule {
 export interface ResolveDecisionParamsOptions {
   readonly overrides?: readonly DecisionOverrideRule[];
   readonly maxDecisionProbeSteps?: number;
+  readonly rng?: Rng;
 }
 
 interface DecisionResolutionContext {
@@ -100,7 +103,7 @@ const resolveDecisionValue = (
   return deterministicDefault(request);
 };
 
-const formatResolutionFailure = (move: Move, result: ReturnType<typeof resolveMoveDecisionSequence>): string => {
+const formatResolutionFailure = (move: Move, result: ReturnType<typeof completeMoveDecisionSequence>): string => {
   if (result.nextDecision !== undefined) {
     const decision = result.nextDecision;
     return `unresolved decisionId=${decision.decisionId} name=${decision.name} type=${decision.type} options=${decision.options.length} min=${decision.min ?? 0}`;
@@ -122,11 +125,20 @@ const normalizeDecisionParamsForMoveInternal = (
     byDecisionId: new Map<string, number>(),
     byName: new Map<string, number>(),
   };
-  const result = resolveMoveDecisionSequence(def, state, move, {
+  let stochasticRng: Rng = options?.rng ?? { state: state.rng };
+  const result = completeMoveDecisionSequence(def, state, move, {
     budgets: {
       maxDecisionProbeSteps: options?.maxDecisionProbeSteps ?? MAX_DECISION_STEPS,
     },
     choose: (request) => resolveDecisionValue(request, move, resolutionContext, options),
+    chooseStochastic: (request) => {
+      if (request.outcomes.length === 0) {
+        return undefined;
+      }
+      const [index, nextRng] = nextInt(stochasticRng, 0, request.outcomes.length - 1);
+      stochasticRng = nextRng;
+      return request.outcomes[index]?.bindings;
+    },
   });
   if (result.complete) {
     return result.move;

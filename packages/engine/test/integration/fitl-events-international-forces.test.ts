@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   asPlayerId,
   asTokenId,
+  createRng,
   initialState,
   legalChoicesEvaluate,
   legalMoves,
@@ -13,7 +14,11 @@ import {
   type Move,
   type Token,
 } from '../../src/kernel/index.js';
-import { applyMoveWithResolvedDecisionIds, type DecisionOverrideRule } from '../helpers/decision-param-helpers.js';
+import {
+  applyMoveWithResolvedDecisionIds,
+  normalizeDecisionParamsForMove,
+  type DecisionOverrideRule,
+} from '../helpers/decision-param-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
@@ -349,6 +354,46 @@ describe('FITL card-65 International Forces', () => {
       limitedProbe.nextDecisionSet?.map((request) => request.min).sort((left, right) => (left ?? 0) - (right ?? 0)),
       [1, 2],
       'When the die roll can exceed availability, stochastic alternatives should cap at reachable exact counts',
+    );
+  });
+
+  it('shaded executes through shared stochastic normalization and persists the sampled roll binding', () => {
+    const def = compileDef();
+    const setup = setupState(def, 65008, 2, {
+      [SAIGON]: [
+        makeToken('if-shared-1', 'troops', 'US'),
+        makeToken('if-shared-2', 'troops', 'US'),
+      ],
+      [HUE]: [makeToken('if-shared-3', 'base', 'US')],
+    });
+
+    const move = findCardMove(def, setup, 'shaded');
+    assert.notEqual(move, undefined, 'Expected International Forces shaded move');
+
+    const overrides: readonly DecisionOverrideRule[] = [
+      {
+        when: (request) => request.name === '$internationalForcesUsMapPieces',
+        value: (request) => request.options
+          .slice(0, request.min ?? 0)
+          .map((option) => option.value as string | number | boolean),
+      },
+    ];
+
+    const normalized = normalizeDecisionParamsForMove(def, setup, move!, {
+      rng: createRng(808n),
+      overrides,
+    });
+    const final = applyMoveWithResolvedDecisionIds(def, setup, move!, {
+      rng: createRng(808n),
+      overrides,
+    }).state;
+
+    assert.equal(typeof normalized.params.$internationalForcesRemovalRoll, 'number');
+    const removedCount = countMatching(final, 'out-of-play-US:none', (token) => token.props.faction === 'US');
+    assert.equal(
+      removedCount,
+      Math.min(Number(normalized.params.$internationalForcesRemovalRoll), 3),
+      'Shared normalization should remove the exact capped count implied by the sampled roll',
     );
   });
 });

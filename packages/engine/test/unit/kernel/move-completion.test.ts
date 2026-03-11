@@ -91,6 +91,41 @@ const createDef = (action: ActionDef, profile: ActionPipelineDef): GameDef => ({
   actionPipelines: [profile],
 });
 
+const createStochasticProfile = (actionId: string): ActionPipelineDef => ({
+  id: `profile-${actionId}`,
+  actionId: asActionId(actionId),
+  legality: null,
+  costValidation: null,
+  costEffects: [],
+  targeting: {},
+  stages: [
+    {
+      stage: 'resolve',
+      effects: [
+        {
+          rollRandom: {
+            bind: '$roll',
+            min: 1,
+            max: 2,
+            in: [
+              {
+                chooseN: {
+                  internalDecisionId: 'decision:$targets',
+                  bind: '$targets',
+                  options: { query: 'enums', values: ['a', 'b', 'c'] },
+                  min: { ref: 'binding', name: '$roll' },
+                  max: { ref: 'binding', name: '$roll' },
+                },
+              } as ActionDef['effects'][number],
+            ],
+          },
+        } as ActionDef['effects'][number],
+      ],
+    },
+  ],
+  atomicity: 'atomic',
+});
+
 describe('template-completion chooseN bounds', () => {
   it('clamps chooseN max to selectable options and never throws from RNG bounds', () => {
     const action = createChooseNAction('bounded-choose-n');
@@ -150,5 +185,26 @@ describe('template-completion chooseN bounds', () => {
     assert.equal(result.kind, 'completed');
     if (result.kind !== 'completed') throw new Error('unreachable');
     assert.deepEqual(result.move.params['decision:$targets'], []);
+  });
+
+  it('persists sampled stochastic bindings and completes exact chooseN branches', () => {
+    const action = createChooseNAction('stochastic-choose-n');
+    const profile = createStochasticProfile('stochastic-choose-n');
+    const def = createDef(action, profile);
+    const templateMove: Move = { actionId: asActionId('stochastic-choose-n'), params: {} };
+
+    const first = completeTemplateMove(def, baseState, templateMove, createRng(9n));
+    const second = completeTemplateMove(def, baseState, templateMove, createRng(9n));
+
+    assert.equal(first.kind, 'completed');
+    assert.equal(second.kind, 'completed');
+    if (first.kind !== 'completed' || second.kind !== 'completed') {
+      throw new Error('Expected deterministic stochastic completion');
+    }
+    assert.deepEqual(first.move.params, second.move.params, 'Identical seeds should sample the same stochastic branch');
+    assert.equal(typeof first.move.params.$roll, 'number', 'Sampled stochastic roll should be persisted on the move');
+    const selected = first.move.params['decision:$targets'];
+    assert.ok(Array.isArray(selected), 'Stochastic chooseN branch should be completed');
+    assert.equal(selected.length, first.move.params.$roll, 'Persisted roll should match exact chooseN cardinality');
   });
 });

@@ -4534,6 +4534,98 @@ describe('validateGameDef constraints and warnings', () => {
     assert.ok(diagnostics.some((diag) => diag.code === 'VAR_BOUNDS_INVALID' && diag.path === 'globalVars[0]'));
   });
 
+  it('reports duplicate marker lattice ids on direct GameDef input', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      markerLattices: [
+        ...(base.markerLattices ?? []),
+        { ...(base.markerLattices ?? [])[0]! },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some((diag) => diag.code === 'DUPLICATE_MARKER_LATTICE_ID' && diag.path === 'markerLattices[1]'),
+    );
+  });
+
+  it('reports direct GameDef marker constraint violations from initial marker states', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zones: [
+        {
+          id: 'province:none',
+          zoneKind: 'board',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'province',
+          attributes: { population: 0 },
+          adjacentTo: [],
+        },
+        base.zones[1],
+      ],
+      markerLattices: [
+        {
+          id: 'supportOpposition',
+          states: ['neutral', 'activeSupport'],
+          defaultState: 'neutral',
+          constraints: [
+            {
+              when: { op: '==', left: { ref: 'zoneProp', zone: '$space', prop: 'population' }, right: 0 },
+              allowedStates: ['neutral'],
+            },
+          ],
+        },
+      ],
+      spaceMarkers: [{ spaceId: 'province:none', markerId: 'supportOpposition', state: 'activeSupport' }],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some((diag) => diag.code === 'SPACE_MARKER_CONSTRAINT_VIOLATION' && diag.path === 'zones[0].id'),
+    );
+  });
+
+  it('reports direct GameDef marker constraints that cannot be evaluated', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zones: [
+        {
+          id: 'province:none',
+          zoneKind: 'board',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'province',
+          adjacentTo: [],
+        },
+        base.zones[1],
+      ],
+      markerLattices: [
+        {
+          id: 'supportOpposition',
+          states: ['neutral'],
+          defaultState: 'neutral',
+          constraints: [
+            {
+              when: { op: '==', left: { ref: 'zoneProp', zone: 'missing:none', prop: 'category' }, right: 'city' },
+              allowedStates: ['neutral'],
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some((diag) => diag.code === 'SPACE_MARKER_CONSTRAINT_EVALUATION_FAILED' && diag.path === 'zones[0].id'),
+    );
+  });
+
   it('reports score end-condition without scoring definition', () => {
     const base = createValidGameDef();
     const def = {

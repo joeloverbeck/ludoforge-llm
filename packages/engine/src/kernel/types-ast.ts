@@ -145,6 +145,12 @@ export type ConditionAST =
       readonly zone: ZoneSel;
       readonly prop: string;
       readonly value: ValueExpr;
+    }
+  | {
+      readonly op: 'markerStateAllowed';
+      readonly space: ZoneSel;
+      readonly marker: string;
+      readonly state: ValueExpr;
     };
 
 export interface TokenFilterPredicate {

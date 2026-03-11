@@ -204,7 +204,10 @@ describe('top-level runtime schemas', () => {
           id: 'support-opposition',
           states: ['neutral', 'passive-support'],
           defaultState: 'neutral',
-          constraints: [{ category: ['city'], allowedStates: ['neutral', 'passive-support'] }],
+          constraints: [{
+            when: { op: '==', left: { ref: 'zoneProp', zone: '$space', prop: 'category' }, right: 'city' },
+            allowedStates: ['neutral', 'passive-support'],
+          }],
         },
       ],
       spaceMarkers: [{ spaceId: 'hue:none', markerId: 'support-opposition', state: 'passive-support' }],

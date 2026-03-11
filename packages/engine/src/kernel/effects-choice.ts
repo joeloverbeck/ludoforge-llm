@@ -1,4 +1,5 @@
 import { evalQuery } from './eval-query.js';
+import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
 import { composeScopedDecisionId } from './decision-id.js';
 import { deriveChoiceTargetKinds } from './choice-target-kinds.js';
@@ -8,6 +9,7 @@ import { resolveBindingTemplate } from './binding-template.js';
 import { nextInt } from './prng.js';
 import { resolveSinglePlayerSel } from './resolve-selectors.js';
 import { resolveZoneWithNormalization, selectorResolutionFailurePolicyForMode } from './selector-resolution-normalization.js';
+import { findSpaceMarkerConstraintViolation } from './space-marker-rules.js';
 import { withTracePath } from './trace-provenance.js';
 import { normalizeChoiceDomain, toChoiceComparableValue, type MembershipScalar } from './value-membership.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
@@ -772,6 +774,22 @@ export const applySetMarker = (effect: Extract<EffectAST, { readonly setMarker: 
     });
   }
 
+  const setViolation = findSpaceMarkerConstraintViolation(lattice, String(spaceId), evaluatedState, evalCtx, evalCondition);
+  if (setViolation !== null) {
+    throw effectRuntimeError(
+      EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+      `Marker state "${evaluatedState}" is illegal for lattice "${marker}" in space "${String(spaceId)}"`,
+      {
+        effectType: 'setMarker',
+        marker,
+        state: evaluatedState,
+        spaceId: String(spaceId),
+        constraintIndex: setViolation.constraintIndex,
+        allowedStates: setViolation.constraint.allowedStates,
+      },
+    );
+  }
+
   const spaceMarkers = ctx.state.markers[String(spaceId)] ?? {};
   return {
     state: {
@@ -828,6 +846,22 @@ export const applyShiftMarker = (effect: Extract<EffectAST, { readonly shiftMark
 
   if (newState === currentState) {
     return { state: ctx.state, rng: ctx.rng };
+  }
+
+  const shiftViolation = findSpaceMarkerConstraintViolation(lattice, String(spaceId), newState, evalCtx, evalCondition);
+  if (shiftViolation !== null) {
+    throw effectRuntimeError(
+      EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+      `Marker state "${newState}" is illegal for lattice "${marker}" in space "${String(spaceId)}"`,
+      {
+        effectType: 'shiftMarker',
+        marker,
+        state: newState,
+        spaceId: String(spaceId),
+        constraintIndex: shiftViolation.constraintIndex,
+        allowedStates: shiftViolation.constraint.allowedStates,
+      },
+    );
   }
 
   return {

@@ -14,6 +14,7 @@ import {
   pushMissingReferenceDiagnostic,
   validatePlayerSelector,
   validateInitialPlacementsAgainstStackingConstraints,
+  validateSpaceMarkerLattices,
   validateStructureSections,
 } from './validate-gamedef-structure.js';
 import { conditionSurfacePathForActionPre } from '../contracts/index.js';
@@ -24,6 +25,7 @@ export const validateGameDef = (def: GameDef): Diagnostic[] => {
   validateStructureSections(diagnostics, def);
 
   const { context, phaseCandidates, actionCandidates } = buildValidationContext(def);
+  validateSpaceMarkerLattices(diagnostics, def, context);
   validateDerivedMetrics(diagnostics, def, context);
 
   validateCoupPlan(diagnostics, def);

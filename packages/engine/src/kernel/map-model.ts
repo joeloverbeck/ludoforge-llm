@@ -1,12 +1,19 @@
 import type { Diagnostic } from './diagnostics.js';
+import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
+import { evalCondition } from './eval-condition.js';
 import { MapPayloadSchema } from './schemas.js';
-import { attributeValueEquals } from './attribute-value-equals.js';
+import { buildAdjacencyGraph } from './spatial.js';
+import { findSpaceMarkerConstraintViolation } from './space-marker-rules.js';
 import type {
+  GameDef,
+  GameState,
   MapPayload,
   MapSpaceInput,
-  SpaceMarkerConstraintDef,
   SpaceMarkerLatticeDef,
 } from './types.js';
+import { asZoneId } from './branded.js';
+import { buildValidationContext } from './validate-gamedef-structure.js';
+import { validateConditionAst } from './validate-conditions.js';
 
 export interface MapPayloadDiagnosticContext {
   readonly assetPath?: string;
@@ -30,16 +37,16 @@ export function validateMapPayload(
     }));
   }
 
-  const mapPayload = parseResult.data as MapPayload;
+  const mapPayload = parseResult.data as unknown as MapPayload;
   const diagnostics: Diagnostic[] = [];
   const spaces = mapPayload.spaces;
   const tracks = mapPayload.tracks ?? [];
   const markerLattices = mapPayload.markerLattices ?? [];
   const spaceMarkers = mapPayload.spaceMarkers ?? [];
+  const validationDef = buildMarkerConstraintValidationDef(spaces, markerLattices);
+  const validationContext = buildValidationContext(validationDef).context;
 
   const spaceIds = new Set(spaces.map((space) => space.id));
-  const categories = new Set(spaces.filter((space) => space.category !== undefined).map((space) => space.category!));
-
   const trackKeys = new Set<string>();
   tracks.forEach((track, trackIndex) => {
     const trackKey = `${track.id}::${track.scope}::${track.seat ?? ''}`;
@@ -165,38 +172,12 @@ export function validateMapPayload(
           context,
         ));
       });
-
-      constraint.spaceIds?.forEach((spaceId, spaceIdIndex) => {
-        if (spaceIds.has(spaceId)) {
-          return;
-        }
-
-        diagnostics.push(withContext(
-          {
-            code: 'MAP_MARKER_CONSTRAINT_SPACE_UNKNOWN',
-            path: `asset.payload.markerLattices[${latticeIndex}].constraints[${constraintIndex}].spaceIds[${spaceIdIndex}]`,
-            severity: 'error',
-            message: `Constraint references unknown space "${spaceId}".`,
-          },
-          context,
-        ));
-      });
-
-      constraint.category?.forEach((cat, catIndex) => {
-        if (categories.has(cat)) {
-          return;
-        }
-
-        diagnostics.push(withContext(
-          {
-            code: 'MAP_MARKER_CONSTRAINT_CATEGORY_UNKNOWN',
-            path: `asset.payload.markerLattices[${latticeIndex}].constraints[${constraintIndex}].category[${catIndex}]`,
-            severity: 'error',
-            message: `Constraint references unknown category "${cat}".`,
-          },
-          context,
-        ));
-      });
+      validateConditionAst(
+        diagnostics,
+        constraint.when,
+        `asset.payload.markerLattices[${latticeIndex}].constraints[${constraintIndex}].when`,
+        validationContext,
+      );
     });
   });
 
@@ -260,57 +241,126 @@ export function validateMapPayload(
     markerValues.set(key, entry.state);
   });
 
+  const markerState = buildMarkerConstraintValidationState(validationDef, markerValues);
+  const markerEvalCtx = createEvalContext({
+    def: validationDef,
+    adjacencyGraph: buildAdjacencyGraph(validationDef.zones),
+    state: markerState,
+    activePlayer: 0 as never,
+    actorPlayer: 0 as never,
+    bindings: {},
+    resources: createEvalRuntimeResources(),
+  });
+
   markerLattices.forEach((lattice) => {
-    lattice.constraints?.forEach((constraint, constraintIndex) => {
-      spaces.forEach((space, spaceIndex) => {
-        if (!constraintApplies(constraint, space)) {
+    spaces.forEach((space, spaceIndex) => {
+      const key = `${space.id}::${lattice.id}`;
+      const state = markerValues.get(key) ?? lattice.defaultState;
+      try {
+        const violation = findSpaceMarkerConstraintViolation(lattice, space.id, state, markerEvalCtx, evalCondition);
+        if (violation === null) {
           return;
         }
-
-        const key = `${space.id}::${lattice.id}`;
-        const state = markerValues.get(key) ?? lattice.defaultState;
-        if (constraint.allowedStates.includes(state)) {
-          return;
-        }
-
         diagnostics.push(withContext(
           {
             code: 'MAP_MARKER_CONSTRAINT_VIOLATION',
             path: `asset.payload.spaces[${spaceIndex}].id`,
             severity: 'error',
-            message: `Space "${space.id}" marker "${lattice.id}" has state "${state}" which violates constraint ${constraintIndex} on marker lattice "${lattice.id}".`,
-            suggestion: `Use one of the allowed states: ${constraint.allowedStates.join(', ')}.`,
+            message: `Space "${space.id}" marker "${lattice.id}" has state "${state}" which violates constraint ${violation.constraintIndex} on marker lattice "${lattice.id}".`,
+            suggestion: `Use one of the allowed states: ${violation.constraint.allowedStates.join(', ')}.`,
           },
           context,
         ));
-      });
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        diagnostics.push(withContext(
+          {
+            code: 'MAP_MARKER_CONSTRAINT_EVALUATION_FAILED',
+            path: `asset.payload.spaces[${spaceIndex}].id`,
+            severity: 'error',
+            message: `Unable to evaluate marker constraint for space "${space.id}" and lattice "${lattice.id}": ${message}`,
+          },
+          context,
+        ));
+      }
     });
   });
 
   return diagnostics;
 }
 
-function constraintApplies(constraint: SpaceMarkerConstraintDef, space: MapSpaceInput): boolean {
-  if (constraint.spaceIds !== undefined && !constraint.spaceIds.includes(space.id)) {
-    return false;
-  }
+function buildMarkerConstraintValidationDef(
+  spaces: readonly MapSpaceInput[],
+  markerLattices: NonNullable<MapPayload['markerLattices']>,
+): GameDef {
+  return {
+    metadata: {
+      id: 'map-payload-validation',
+      players: { min: 1, max: 1 },
+    },
+    constants: {},
+    globalVars: [],
+    perPlayerVars: [],
+    zones: spaces.map((space) => ({
+      id: asZoneId(space.id),
+      zoneKind: 'board',
+      owner: 'none',
+      visibility: 'public',
+      ordering: 'set',
+      adjacentTo: space.adjacentTo.map((adjacency) => ({
+        ...adjacency,
+        to: asZoneId(adjacency.to),
+      })),
+      ...(space.category === undefined ? {} : { category: space.category }),
+      ...(space.attributes === undefined ? {} : { attributes: space.attributes }),
+    })),
+    tokenTypes: [],
+    setup: [],
+    turnStructure: { phases: [{ id: 'validation-phase' as never }] },
+    actions: [],
+    triggers: [],
+    terminal: { conditions: [] },
+    markerLattices,
+  };
+}
 
-  if (constraint.category !== undefined && constraint.category.length > 0) {
-    if (space.category === undefined || !constraint.category.includes(space.category)) {
-      return false;
+function buildMarkerConstraintValidationState(
+  def: GameDef,
+  markerValues: ReadonlyMap<string, string>,
+): GameState {
+  const markers: Record<string, Record<string, string>> = {};
+  for (const [key, state] of markerValues.entries()) {
+    const [spaceId, markerId] = key.split('::');
+    if (spaceId === undefined || markerId === undefined) {
+      continue;
     }
+    markers[spaceId] = {
+      ...(markers[spaceId] ?? {}),
+      [markerId]: state,
+    };
   }
 
-  if (constraint.attributeEquals !== undefined) {
-    for (const [key, expected] of Object.entries(constraint.attributeEquals)) {
-      const actual = space.attributes?.[key];
-      if (!attributeValueEquals(actual, expected)) {
-        return false;
-      }
-    }
-  }
-
-  return true;
+  return {
+    globalVars: {},
+    perPlayerVars: { 0: {} },
+    zoneVars: {},
+    playerCount: 1,
+    zones: Object.fromEntries(def.zones.map((zone) => [zone.id, []])),
+    nextTokenOrdinal: 0,
+    currentPhase: 'validation-phase' as never,
+    activePlayer: 0 as never,
+    turnCount: 0,
+    rng: {
+      algorithm: 'pcg-dxsm-128',
+      version: 1,
+      state: [0n, 0n],
+    },
+    stateHash: 0n,
+    actionUsage: {},
+    turnOrderState: { type: 'roundRobin' },
+    markers,
+    globalMarkers: {},
+  };
 }
 
 function withContext(diagnostic: Diagnostic, context: MapPayloadDiagnosticContext): Diagnostic {

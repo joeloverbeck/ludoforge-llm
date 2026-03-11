@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { BooleanSchema, IntegerSchema, NumberSchema, StringSchema } from './schemas-ast.js';
+import { BooleanSchema, ConditionASTSchema, IntegerSchema, NumberSchema, StringSchema } from './schemas-ast.js';
 
 // Game-agnostic: any non-empty string is a valid dimension name or status value.
 // Each game defines its own dimensions (e.g. 'activity', 'tunnel', 'location')
@@ -129,9 +129,7 @@ export const NumericTrackSchema = z
 
 export const SpaceMarkerConstraintSchema = z
   .object({
-    spaceIds: z.array(StringSchema.min(1)).optional(),
-    category: z.array(StringSchema.min(1)).optional(),
-    attributeEquals: z.record(StringSchema, AttributeValueSchema).optional(),
+    when: ConditionASTSchema,
     allowedStates: z.array(StringSchema.min(1)),
   })
   .strict();

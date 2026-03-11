@@ -813,12 +813,16 @@ dataAssets:
             - activeSupport
           defaultState: neutral
           constraints:
-            - category:
-                - loc
+            - when:
+                op: ==
+                left: { ref: zoneProp, zone: $space, prop: category }
+                right: loc
               allowedStates:
                 - neutral
-            - attributeEquals:
-                population: 0
+            - when:
+                op: ==
+                left: { ref: zoneProp, zone: $space, prop: population }
+                right: 0
               allowedStates:
                 - neutral
         - id: sabotage
@@ -827,9 +831,10 @@ dataAssets:
             - sabotage
           defaultState: none
           constraints:
-            - category:
-                - city
-                - province
+            - when:
+                op: in
+                item: { ref: zoneProp, zone: $space, prop: category }
+                set: { scalarArray: [city, province] }
               allowedStates:
                 - none
         - id: coupPacifySpaceUsage

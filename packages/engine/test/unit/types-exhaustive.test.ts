@@ -172,6 +172,7 @@ const exhaustConditionAST = (cond: ConditionAST): string => {
     case 'adjacent':
     case 'connected':
     case 'zonePropIncludes':
+    case 'markerStateAllowed':
       return cond.op;
     default:
       return assertNever(cond);
@@ -181,7 +182,7 @@ const exhaustConditionAST = (cond: ConditionAST): string => {
 describe('exhaustive kernel unions', () => {
   it('keeps the exact variant counts for key unions', () => {
     const playerSelVariants: UnionSize<PlayerSel> = 7;
-    const conditionVariants: UnionSize<ConditionAST> = 10;
+    const conditionVariants: UnionSize<ConditionAST> = 11;
     const effectVariants: UnionSize<EffectAST> = 34;
     const queryVariants: UnionSize<OptionsQuery> = 18;
     const recursiveQueryVariants: UnionSize<RecursiveOptionsQuery> = 2;

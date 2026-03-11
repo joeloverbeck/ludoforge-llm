@@ -16,7 +16,9 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { makeIsolatedInitialState } from '../helpers/isolated-state-helpers.js';
 import { completeMoveDecisionSequenceOrThrow, pickDeterministicDecisionValue } from '../helpers/move-decision-helpers.js';
-import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
+
+const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 import { withPendingFreeOperationGrant } from '../helpers/turn-order-helpers.js';
 
 describe('FITL COIN operations integration', () => {
@@ -70,7 +72,7 @@ describe('FITL COIN operations integration', () => {
     flattenFilterEntries(filter).some(predicate);
 
   it('compiles COIN Train/Patrol/Sweep/Assault operation profiles from production spec', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -94,7 +96,7 @@ describe('FITL COIN operations integration', () => {
   });
 
   it('routes assault through operation profile runtime (no transitional stub counters)', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const start = makeIsolatedInitialState(def, 73, 4);
@@ -161,7 +163,7 @@ describe('FITL COIN operations integration', () => {
   });
 
   it('executes sweep-us-profile at runtime via decision sequence (no sweep resource spend)', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const start = makeIsolatedInitialState(def, 79, 4);
@@ -226,7 +228,7 @@ describe('FITL COIN operations integration', () => {
   /* eslint-disable @typescript-eslint/no-explicit-any */
   describe('sweep-us-profile structure', () => {
     const getSweepUsProfile = () => {
-      const { compiled } = compileProductionSpec();
+      const { compiled } = FITL_PRODUCTION_FIXTURE;
       assert.notEqual(compiled.gameDef, null);
       const profile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'sweep-us-profile');
       assert.ok(profile, 'sweep-us-profile must exist');
@@ -234,7 +236,7 @@ describe('FITL COIN operations integration', () => {
     };
 
     const parseSweepUsProfile = (): any => {
-      const { parsed } = compileProductionSpec();
+      const { parsed } = FITL_PRODUCTION_FIXTURE;
       const profile = parsed.doc.actionPipelines?.find(
         (p: { id: string }) => p.id === 'sweep-us-profile',
       );
@@ -336,7 +338,7 @@ describe('FITL COIN operations integration', () => {
   /* eslint-disable @typescript-eslint/no-explicit-any */
   describe('sweep-arvn-profile structure', () => {
     const getSweepArvnProfile = () => {
-      const { compiled } = compileProductionSpec();
+      const { compiled } = FITL_PRODUCTION_FIXTURE;
       assert.notEqual(compiled.gameDef, null);
       const profile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'sweep-arvn-profile');
       assert.ok(profile, 'sweep-arvn-profile must exist');
@@ -344,7 +346,7 @@ describe('FITL COIN operations integration', () => {
     };
 
     const parseSweepArvnProfile = (): any => {
-      const { parsed } = compileProductionSpec();
+      const { parsed } = FITL_PRODUCTION_FIXTURE;
       const profile = parsed.doc.actionPipelines?.find(
         (p: { id: string }) => p.id === 'sweep-arvn-profile',
       );
@@ -469,7 +471,7 @@ describe('FITL COIN operations integration', () => {
       };
 
     it('AC8: free operation skips per-space ARVN resource cost', () => {
-      const { compiled } = compileProductionSpec();
+      const { compiled } = FITL_PRODUCTION_FIXTURE;
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
       const start = operationInitialState(def, 97, 4);
@@ -518,7 +520,7 @@ describe('FITL COIN operations integration', () => {
     });
 
     it('AC9: jungle activation uses floor((ARVN cubes + Rangers) / 2)', () => {
-      const { compiled } = compileProductionSpec();
+      const { compiled } = FITL_PRODUCTION_FIXTURE;
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
       const start = operationInitialState(def, 101, 4);
@@ -575,7 +577,7 @@ describe('FITL COIN operations integration', () => {
 
   describe('train-arvn-profile structure', () => {
     const getArvnProfile = () => {
-      const { compiled } = compileProductionSpec();
+      const { compiled } = FITL_PRODUCTION_FIXTURE;
       assert.notEqual(compiled.gameDef, null);
       const profile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'train-arvn-profile');
       assert.ok(profile, 'train-arvn-profile must exist');
@@ -617,7 +619,7 @@ describe('FITL COIN operations integration', () => {
 
   describe('train-arvn-profile acceptance criteria (AC2-AC10)', () => {
     const compileArvnProfile = () => {
-      const { compiled } = compileProductionSpec();
+      const { compiled } = FITL_PRODUCTION_FIXTURE;
       assert.notEqual(compiled.gameDef, null);
       const profile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'train-arvn-profile');
       assert.ok(profile, 'train-arvn-profile must exist');
@@ -627,7 +629,7 @@ describe('FITL COIN operations integration', () => {
     /** Returns the pre-compilation (parsed YAML) profile with full filter detail. */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const parseArvnProfile = (): any => {
-      const { parsed } = compileProductionSpec();
+      const { parsed } = FITL_PRODUCTION_FIXTURE;
       const profile = parsed.doc.actionPipelines?.find(
         (p: { id: string }) => p.id === 'train-arvn-profile',
       );
@@ -865,7 +867,7 @@ describe('FITL COIN operations integration', () => {
   /* eslint-disable @typescript-eslint/no-explicit-any */
   describe('assault-us-profile acceptance criteria', () => {
     const getAssaultUsProfile = () => {
-      const { compiled } = compileProductionSpec();
+      const { compiled } = FITL_PRODUCTION_FIXTURE;
       assert.notEqual(compiled.gameDef, null);
       const profile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'assault-us-profile');
       assert.ok(profile, 'assault-us-profile must exist');
@@ -873,7 +875,7 @@ describe('FITL COIN operations integration', () => {
     };
 
     const parseAssaultUsProfile = (): any => {
-      const { parsed } = compileProductionSpec();
+      const { parsed } = FITL_PRODUCTION_FIXTURE;
       const profile = parsed.doc.actionPipelines?.find(
         (p: { id: string }) => p.id === 'assault-us-profile',
       );
@@ -1008,7 +1010,7 @@ describe('FITL COIN operations integration', () => {
     });
 
     it('runtime: highland without US Base uses floor(usTroops / 2)', () => {
-      const { compiled } = compileProductionSpec();
+      const { compiled } = FITL_PRODUCTION_FIXTURE;
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
       const start = operationInitialState(def, 91, 4);
@@ -1063,7 +1065,7 @@ describe('FITL COIN operations integration', () => {
     });
 
     it('runtime: non-highland without US Base uses 1 enemy per US Troop', () => {
-      const { compiled } = compileProductionSpec();
+      const { compiled } = FITL_PRODUCTION_FIXTURE;
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
       const start = operationInitialState(def, 92, 4);
@@ -1117,7 +1119,7 @@ describe('FITL COIN operations integration', () => {
     });
 
     it('runtime: insurgent Base removal adds +6 Aid', () => {
-      const { compiled } = compileProductionSpec();
+      const { compiled } = FITL_PRODUCTION_FIXTURE;
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
       const start = operationInitialState(def, 93, 4);
@@ -1167,7 +1169,7 @@ describe('FITL COIN operations integration', () => {
     });
 
     it('runtime: ARVN follow-up spends 3 and uses highland floor(arvnCubes / 3)', () => {
-      const { compiled } = compileProductionSpec();
+      const { compiled } = FITL_PRODUCTION_FIXTURE;
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
       const start = operationInitialState(def, 94, 4);
@@ -1233,7 +1235,7 @@ describe('FITL COIN operations integration', () => {
   /* eslint-disable @typescript-eslint/no-explicit-any */
   describe('assault-arvn-profile structure and runtime', () => {
     const getAssaultArvnProfile = () => {
-      const { compiled } = compileProductionSpec();
+      const { compiled } = FITL_PRODUCTION_FIXTURE;
       assert.notEqual(compiled.gameDef, null);
       const profile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'assault-arvn-profile');
       assert.ok(profile, 'assault-arvn-profile must exist');
@@ -1241,7 +1243,7 @@ describe('FITL COIN operations integration', () => {
     };
 
     const parseAssaultArvnProfile = (): any => {
-      const { parsed } = compileProductionSpec();
+      const { parsed } = FITL_PRODUCTION_FIXTURE;
       const profile = parsed.doc.actionPipelines?.find(
         (p: { id: string }) => p.id === 'assault-arvn-profile',
       );
@@ -1352,7 +1354,7 @@ describe('FITL COIN operations integration', () => {
     });
 
     it('AC4/AC9: runtime province assault excludes police from damage and free operation skips cost', () => {
-      const { compiled } = compileProductionSpec();
+      const { compiled } = FITL_PRODUCTION_FIXTURE;
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
       const start = operationInitialState(def, 96, 4);
@@ -1402,7 +1404,7 @@ describe('FITL COIN operations integration', () => {
     });
 
     it('AC5/AC6/AC7/AC8: runtime city/highland formulas and aid-on-base removal apply', () => {
-      const { compiled } = compileProductionSpec();
+      const { compiled } = FITL_PRODUCTION_FIXTURE;
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
       const start = operationInitialState(def, 97, 4);
@@ -1480,7 +1482,7 @@ describe('FITL COIN operations integration', () => {
     });
 
     it('keeps insurgent bases protected while any underground guerrilla of either insurgent faction remains', () => {
-      const { compiled } = compileProductionSpec();
+      const { compiled } = FITL_PRODUCTION_FIXTURE;
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
       const start = operationInitialState(def, 971, 4);
@@ -1546,7 +1548,7 @@ describe('FITL COIN operations integration', () => {
 
   describe('applicability dispatch for train profiles', () => {
     it('compiles applicability conditions for both train profiles', () => {
-      const { compiled } = compileProductionSpec();
+      const { compiled } = FITL_PRODUCTION_FIXTURE;
       assert.notEqual(compiled.gameDef, null);
 
       const usProfile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'train-us-profile');
@@ -1559,7 +1561,7 @@ describe('FITL COIN operations integration', () => {
     });
 
     it('patrol-us-profile has applicability for player 0 (US)', () => {
-      const { compiled } = compileProductionSpec();
+      const { compiled } = FITL_PRODUCTION_FIXTURE;
       assert.notEqual(compiled.gameDef, null);
 
       const patrolProfile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'patrol-us-profile');
@@ -1568,7 +1570,7 @@ describe('FITL COIN operations integration', () => {
     });
 
     it('patrol-arvn-profile has applicability for player 1 (ARVN)', () => {
-      const { compiled } = compileProductionSpec();
+      const { compiled } = FITL_PRODUCTION_FIXTURE;
       assert.notEqual(compiled.gameDef, null);
 
       const patrolProfile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'patrol-arvn-profile');
@@ -1577,7 +1579,7 @@ describe('FITL COIN operations integration', () => {
     });
 
     it('sweep/assault profiles have explicit US/ARVN applicability', () => {
-      const { compiled } = compileProductionSpec();
+      const { compiled } = FITL_PRODUCTION_FIXTURE;
       assert.notEqual(compiled.gameDef, null);
 
       const expected = [
@@ -1597,7 +1599,7 @@ describe('FITL COIN operations integration', () => {
   /* eslint-disable @typescript-eslint/no-explicit-any */
   describe('patrol-us-profile structure', () => {
     const getPatrolProfile = () => {
-      const { compiled } = compileProductionSpec();
+      const { compiled } = FITL_PRODUCTION_FIXTURE;
       assert.notEqual(compiled.gameDef, null);
       const profile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'patrol-us-profile');
       assert.ok(profile, 'patrol-us-profile must exist');
@@ -1605,7 +1607,7 @@ describe('FITL COIN operations integration', () => {
     };
 
     const parsePatrolProfile = (): any => {
-      const { parsed } = compileProductionSpec();
+      const { parsed } = FITL_PRODUCTION_FIXTURE;
       const profile = parsed.doc.actionPipelines?.find(
         (p: { id: string }) => p.id === 'patrol-us-profile',
       );
@@ -1756,7 +1758,7 @@ describe('FITL COIN operations integration', () => {
 
   describe('patrol-arvn-profile structure', () => {
     const getPatrolProfile = () => {
-      const { compiled } = compileProductionSpec();
+      const { compiled } = FITL_PRODUCTION_FIXTURE;
       assert.notEqual(compiled.gameDef, null);
       const profile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'patrol-arvn-profile');
       assert.ok(profile, 'patrol-arvn-profile must exist');
@@ -1764,7 +1766,7 @@ describe('FITL COIN operations integration', () => {
     };
 
     const parsePatrolProfile = (): any => {
-      const { parsed } = compileProductionSpec();
+      const { parsed } = FITL_PRODUCTION_FIXTURE;
       const profile = parsed.doc.actionPipelines?.find(
         (p: { id: string }) => p.id === 'patrol-arvn-profile',
       );

@@ -15,7 +15,9 @@ import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { makeIsolatedInitialState } from '../helpers/isolated-state-helpers.js';
-import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
+
+const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 
 const operationInitialState = (
   def: Parameters<typeof makeIsolatedInitialState>[0],
@@ -73,7 +75,7 @@ const containsSetActivityActive = (value: unknown): boolean => {
 };
 
 const getMapSpace = (spaceId: string): { readonly population: number; readonly econ: number } => {
-  const { parsed } = compileProductionSpec();
+  const { parsed } = FITL_PRODUCTION_FIXTURE;
   const mapAsset = (parsed.doc.dataAssets ?? []).find((asset) => asset.id === 'fitl-map-production' && asset.kind === 'map');
   assert.ok(mapAsset, 'Expected fitl-map-production map asset');
   const mapPayload = mapAsset.payload as MapPayload;
@@ -84,7 +86,7 @@ const getMapSpace = (spaceId: string): { readonly population: number; readonly e
 
 describe('FITL NVA/VC special activities integration', () => {
   it('compiles NVA/VC special-activity profiles from production spec', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -112,7 +114,7 @@ describe('FITL NVA/VC special activities integration', () => {
   });
 
   it('executes infiltrate build-up and guerrilla replacement without spending resources', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -166,7 +168,7 @@ describe('FITL NVA/VC special activities integration', () => {
   });
 
   it('executes infiltrate takeover with opposition shift and tunneled-base tunnel transfer', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -220,7 +222,7 @@ describe('FITL NVA/VC special activities integration', () => {
   });
 
   it('executes bombard with per-space troop choice, faction-correct routing, and no die roll', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -325,7 +327,7 @@ describe('FITL NVA/VC special activities integration', () => {
   });
 
   it('executes NVA ambush with one-guerrilla activation, no attacker losses, and LoC-adjacent targeting', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -377,7 +379,7 @@ describe('FITL NVA/VC special activities integration', () => {
   });
 
   it('executes tax using LoC econ or 2x population gain and shifts province/city support', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -439,7 +441,7 @@ describe('FITL NVA/VC special activities integration', () => {
   });
 
   it('defines Tax province/city support shift without a population gate', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const taxPipeline = (def.actionPipelines ?? []).find((pipeline) => String(pipeline.actionId) === 'tax');
@@ -475,7 +477,7 @@ describe('FITL NVA/VC special activities integration', () => {
   });
 
   it('executes tax support shift for population-0 provinces', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const pop0Province = 'phuoc-long:none';
@@ -518,7 +520,7 @@ describe('FITL NVA/VC special activities integration', () => {
   });
 
   it('does not shift Tax support beyond active support', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const provinceSpace = 'quang-nam:none';
@@ -560,7 +562,7 @@ describe('FITL NVA/VC special activities integration', () => {
   });
 
   it('executes subvert remove/replace modes and applies rounded-down patronage penalty', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const subvertPipeline = (def.actionPipelines ?? []).find((pipeline) => String(pipeline.actionId) === 'subvert');
@@ -651,7 +653,7 @@ describe('FITL NVA/VC special activities integration', () => {
   });
 
   it('executes VC ambush with one-guerrilla activation, no attacker losses, and LoC-adjacent targeting', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -704,7 +706,7 @@ describe('FITL NVA/VC special activities integration', () => {
   });
 
   it('rejects infiltrate when accompanied by an operation outside accompanyingOps', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
 
     const state = operationInitialState(compiled.gameDef!, 313, 4);
@@ -741,7 +743,7 @@ describe('FITL NVA/VC special activities integration', () => {
   });
 
   it('allows bombard when accompanyingOps is any', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
 
     const state = operationInitialState(compiled.gameDef!, 229, 4);
@@ -781,7 +783,7 @@ describe('FITL NVA/VC special activities integration', () => {
   });
 
   it('rejects NVA ambush when SA targetSpaces are not a subset of operation targetSpaces', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
 
     const state = operationInitialState(compiled.gameDef!, 347, 4);

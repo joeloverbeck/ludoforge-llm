@@ -4,7 +4,9 @@ import { describe, it } from 'node:test';
 import { asActionId, asPlayerId, asTokenId, type GameDef, type GameState, type Token } from '../../src/kernel/index.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { makeIsolatedInitialState } from '../helpers/isolated-state-helpers.js';
-import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
+
+const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 
 const TRAIN_A = 'saigon:none';
 const TRAIN_B = 'hue:none';
@@ -59,7 +61,7 @@ const baseUsTrainState = (def: GameDef, seed: number): GameState => {
 
 describe('FITL Combined Action Platoons capability (card 18)', () => {
   it('unshaded grants exactly one ARVN Police placement/relocation per US Train operation', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -90,7 +92,7 @@ describe('FITL Combined Action Platoons capability (card 18)', () => {
   });
 
   it('unshaded destination may be any US-Troops space, including a non-trained space', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -119,7 +121,7 @@ describe('FITL Combined Action Platoons capability (card 18)', () => {
   });
 
   it('unshaded relocates from map when no ARVN police are Available', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -149,7 +151,7 @@ describe('FITL Combined Action Platoons capability (card 18)', () => {
   });
 
   it('unshaded does nothing when no space has US Troops (US Train with base-only presence)', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -180,7 +182,7 @@ describe('FITL Combined Action Platoons capability (card 18)', () => {
   });
 
   it('unshaded does not modify ARVN Train resolution', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -219,7 +221,7 @@ describe('FITL Combined Action Platoons capability (card 18)', () => {
   });
 
   it('shaded caps US Sweep selection to at most 2 spaces', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 

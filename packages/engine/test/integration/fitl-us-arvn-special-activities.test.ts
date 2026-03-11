@@ -15,7 +15,9 @@ import {
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
-import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
+
+const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 
 const makeToken = (id: string, type: string, faction: string, extra?: Record<string, unknown>): Token => ({
   id: asTokenId(id),
@@ -57,7 +59,7 @@ const withMonsoonLookahead = (state: GameState): GameState => {
 
 describe('FITL US/ARVN special activities integration', () => {
   it('compiles US/ARVN special-activity operation profiles with linked windows from production spec', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -83,7 +85,7 @@ describe('FITL US/ARVN special activities integration', () => {
   });
 
   it('defines Air Lift as per-piece multi-destination movement with no shared destination binding', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const profile = (def.actionPipelines ?? []).find((candidate) => candidate.id === 'air-lift-profile');
@@ -146,7 +148,7 @@ describe('FITL US/ARVN special activities integration', () => {
   });
 
   it('executes Advise activate-remove with base-last ordering and optional +6 Aid', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const space = 'quang-nam:none';
@@ -210,7 +212,7 @@ describe('FITL US/ARVN special activities integration', () => {
   });
 
   it('executes Air Lift with per-piece multi-destination movement and a 4-piece ARVN/Ranger/Irregular cap', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -288,7 +290,7 @@ describe('FITL US/ARVN special activities integration', () => {
   });
 
   it('executes Air Strike removing up to 6 active enemy pieces, shifting support, and optionally degrading Trail', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
@@ -396,7 +398,7 @@ describe('FITL US/ARVN special activities integration', () => {
   });
 
   it('executes Govern per-space Aid vs Patronage with ARVN>US cube guard for patronage', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -452,7 +454,7 @@ describe('FITL US/ARVN special activities integration', () => {
   });
 
   it('rejects Govern when selecting Saigon (explicitly excluded by rule)', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -471,7 +473,7 @@ describe('FITL US/ARVN special activities integration', () => {
   });
 
   it('executes baseline Transport moving ARVN troops and Rangers and flipping all Rangers map-wide', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -519,7 +521,7 @@ describe('FITL US/ARVN special activities integration', () => {
   });
 
   it('executes Raid adjacent Ranger movement and optional activate-remove with base-last + tunneled immunity', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -583,7 +585,7 @@ describe('FITL US/ARVN special activities integration', () => {
   });
 
   it('rejects advise when accompanied by an operation outside accompanyingOps', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
 
     assert.notEqual(compiled.gameDef, null);
 
@@ -626,7 +628,7 @@ describe('FITL US/ARVN special activities integration', () => {
   });
 
   it('rejects Advise during compound Train when SA spaces overlap operation $targetSpaces', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
 
     const state = initialState(compiled.gameDef!, 339, 4).state;
@@ -671,7 +673,7 @@ describe('FITL US/ARVN special activities integration', () => {
   });
 
   it('supports per-space Advise mode choices in a single action', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -722,7 +724,7 @@ describe('FITL US/ARVN special activities integration', () => {
   });
 
   it('disallows Advise sweep mode during Monsoon but still allows two non-sweep spaces', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const spaceA = 'quang-nam:none';
@@ -756,7 +758,7 @@ describe('FITL US/ARVN special activities integration', () => {
   });
 
   it('enforces Monsoon Air Lift and Air Strike caps at two selected spaces', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const spaceA = 'da-nang:none';
@@ -817,7 +819,7 @@ describe('FITL US/ARVN special activities integration', () => {
   });
 
   it('blocks Sweep and March action selection during Monsoon turn-flow window', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const baselineState = initialState(def, 461, 4).state;

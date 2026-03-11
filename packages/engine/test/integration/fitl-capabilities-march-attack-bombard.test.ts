@@ -5,7 +5,7 @@ import { asActionId, asPlayerId, asTokenId, type GameDef, type GameState, type M
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { makeIsolatedInitialState } from '../helpers/isolated-state-helpers.js';
-import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
 
 type MarkerState = 'inactive' | 'unshaded' | 'shaded';
 type AttackMode = 'guerrilla-attack' | 'troops-attack';
@@ -18,6 +18,10 @@ const MARCH_ORIGIN = 'quang-nam:none';
 const BOMBARD_SPACE_1 = 'quang-tri-thua-thien:none';
 const BOMBARD_SPACE_2 = 'quang-nam:none';
 const BOMBARD_SPACE_3 = 'quang-tin-quang-ngai:none';
+const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
+assertNoErrors(FITL_PRODUCTION_FIXTURE.parsed);
+assert.equal(FITL_PRODUCTION_FIXTURE.compiled.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+const FITL_PRODUCTION_DEF: GameDef = FITL_PRODUCTION_FIXTURE.gameDef;
 
 const makeToken = (id: string, type: string, faction: string, extra?: Record<string, unknown>): Token => ({
   id: asTokenId(id),
@@ -208,11 +212,7 @@ const bombardSelectionIsLegal = (def: GameDef, marker: MarkerState, $targetSpace
 
 describe('FITL capability branches (March/Attack/Bombard)', () => {
   it('compiles production spec with side-specific capability checks for March, Attack, and Bombard branches', () => {
-    const { parsed, compiled } = compileProductionSpec();
-    assertNoErrors(parsed);
-    assert.notEqual(compiled.gameDef, null);
-
-    const profiles = parsed.doc.actionPipelines ?? [];
+    const profiles = FITL_PRODUCTION_FIXTURE.parsed.doc.actionPipelines ?? [];
     const marchVc = profiles.find((profile) => profile.id === 'march-vc-profile');
     const attackNva = profiles.find((profile) => profile.id === 'attack-nva-profile');
     const bombard = profiles.find((profile) => profile.id === 'bombard-profile');
@@ -232,13 +232,9 @@ describe('FITL capability branches (March/Attack/Bombard)', () => {
   });
 
   it('applies cap_mainForceBns unshaded only to allow VC March activation of more than one guerrilla', () => {
-    const { compiled } = compileProductionSpec();
-    assert.notEqual(compiled.gameDef, null);
-    const def = compiled.gameDef!;
-
-    const inactive = runVcMarchWithMainForceBns(def, 'inactive', 3001);
-    const unshaded = runVcMarchWithMainForceBns(def, 'unshaded', 3002);
-    const shaded = runVcMarchWithMainForceBns(def, 'shaded', 3003);
+    const inactive = runVcMarchWithMainForceBns(FITL_PRODUCTION_DEF, 'inactive', 3001);
+    const unshaded = runVcMarchWithMainForceBns(FITL_PRODUCTION_DEF, 'unshaded', 3002);
+    const shaded = runVcMarchWithMainForceBns(FITL_PRODUCTION_DEF, 'shaded', 3003);
 
     const vcActiveCount = (state: GameState): number =>
       countTokensInZone(
@@ -253,13 +249,9 @@ describe('FITL capability branches (March/Attack/Bombard)', () => {
   });
 
   it('applies cap_pt76 unshaded troop payment when an NVA troop is present in the attacked space', () => {
-    const { compiled } = compileProductionSpec();
-    assert.notEqual(compiled.gameDef, null);
-    const def = compiled.gameDef!;
-
-    const inactive = runNvaAttackWithPt76(def, 'inactive', 3101);
-    const unshaded = runNvaAttackWithPt76(def, 'unshaded', 3102);
-    const shaded = runNvaAttackWithPt76(def, 'shaded', 3103);
+    const inactive = runNvaAttackWithPt76(FITL_PRODUCTION_DEF, 'inactive', 3101);
+    const unshaded = runNvaAttackWithPt76(FITL_PRODUCTION_DEF, 'unshaded', 3102);
+    const shaded = runNvaAttackWithPt76(FITL_PRODUCTION_DEF, 'shaded', 3103);
 
     assert.equal(inactive.globalVars.nvaResources, 6, 'Inactive cap_pt76 should preserve baseline resource spend');
     assert.equal(unshaded.globalVars.nvaResources, 7, 'Unshaded cap_pt76 should skip baseline nvaResources spend');
@@ -283,24 +275,20 @@ describe('FITL capability branches (March/Attack/Bombard)', () => {
   });
 
   it('falls back to normal resource payment for unshaded PT-76 when no NVA troop is present', () => {
-    const { compiled } = compileProductionSpec();
-    assert.notEqual(compiled.gameDef, null);
-    const def = compiled.gameDef!;
-
     const makeNoTroopAttackState = (marker: MarkerState, seed: number): GameState =>
-      addTokensToZone(makePt76State(def, marker, seed), ATTACK_SPACE, [
+      addTokensToZone(makePt76State(FITL_PRODUCTION_DEF, marker, seed), ATTACK_SPACE, [
         makeToken(`pt76-no-troops-${marker}-g`, 'guerrilla', 'NVA', { activity: 'underground' }),
         makeToken(`pt76-no-troops-${marker}-arvn`, 'troops', 'ARVN'),
       ]);
 
     const inactive = runNvaAttack(
-      def,
+      FITL_PRODUCTION_DEF,
       makeNoTroopAttackState('inactive', 3201),
       [ATTACK_SPACE],
       { [ATTACK_SPACE]: 'guerrilla-attack' },
     );
     const unshaded = runNvaAttack(
-      def,
+      FITL_PRODUCTION_DEF,
       makeNoTroopAttackState('unshaded', 3202),
       [ATTACK_SPACE],
       { [ATTACK_SPACE]: 'guerrilla-attack' },
@@ -316,13 +304,9 @@ describe('FITL capability branches (March/Attack/Bombard)', () => {
   });
 
   it('lets unshaded PT-76 fund additional NVA Attack spaces via troop payment when each selected space contains an NVA troop', () => {
-    const { compiled } = compileProductionSpec();
-    assert.notEqual(compiled.gameDef, null);
-    const def = compiled.gameDef!;
-
     const targetSpaces = [ATTACK_SPACE, SECOND_ATTACK_SPACE] as const;
     const makeTwoSpaceState = (marker: MarkerState, seed: number): GameState => {
-      let state = makePt76State(def, marker, seed, 0);
+      let state = makePt76State(FITL_PRODUCTION_DEF, marker, seed, 0);
       state = addTokensToZone(state, ATTACK_SPACE, [
         makeToken(`pt76-afford-${marker}-nva-1`, 'troops', 'NVA'),
         makeToken(`pt76-afford-${marker}-us-1`, 'troops', 'US'),
@@ -336,7 +320,7 @@ describe('FITL capability branches (March/Attack/Bombard)', () => {
     assert.throws(
       () =>
         runNvaAttack(
-          def,
+          FITL_PRODUCTION_DEF,
           makeTwoSpaceState('inactive', 3203),
           targetSpaces,
           { [ATTACK_SPACE]: 'troops-attack', [SECOND_ATTACK_SPACE]: 'troops-attack' },
@@ -346,7 +330,7 @@ describe('FITL capability branches (March/Attack/Bombard)', () => {
     );
 
     const unshaded = runNvaAttack(
-      def,
+      FITL_PRODUCTION_DEF,
       makeTwoSpaceState('unshaded', 3204),
       targetSpaces,
       { [ATTACK_SPACE]: 'troops-attack', [SECOND_ATTACK_SPACE]: 'troops-attack' },
@@ -361,11 +345,7 @@ describe('FITL capability branches (March/Attack/Bombard)', () => {
   });
 
   it('rejects unshaded PT-76 selections whose chosen no-troop spaces exceed NVA resources even when another eligible troop-paying space exists', () => {
-    const { compiled } = compileProductionSpec();
-    assert.notEqual(compiled.gameDef, null);
-    const def = compiled.gameDef!;
-
-    let setup = makePt76State(def, 'unshaded', 3205, 1);
+    let setup = makePt76State(FITL_PRODUCTION_DEF, 'unshaded', 3205, 1);
     setup = addTokensToZone(setup, ATTACK_SPACE, [
       makeToken('pt76-exact-illegal-nva-g-1', 'guerrilla', 'NVA', { activity: 'underground' }),
       makeToken('pt76-exact-illegal-us-1', 'troops', 'US'),
@@ -382,7 +362,7 @@ describe('FITL capability branches (March/Attack/Bombard)', () => {
     assert.throws(
       () =>
         runNvaAttack(
-          def,
+          FITL_PRODUCTION_DEF,
           setup,
           [ATTACK_SPACE, SECOND_ATTACK_SPACE],
           { [ATTACK_SPACE]: 'guerrilla-attack', [SECOND_ATTACK_SPACE]: 'guerrilla-attack' },
@@ -393,11 +373,7 @@ describe('FITL capability branches (March/Attack/Bombard)', () => {
   });
 
   it('allows unshaded PT-76 mixed payment only when the selected subset itself is fundable', () => {
-    const { compiled } = compileProductionSpec();
-    assert.notEqual(compiled.gameDef, null);
-    const def = compiled.gameDef!;
-
-    let setup = makePt76State(def, 'unshaded', 3206, 1);
+    let setup = makePt76State(FITL_PRODUCTION_DEF, 'unshaded', 3206, 1);
     setup = addTokensToZone(setup, ATTACK_SPACE, [
       makeToken('pt76-exact-legal-nva-g-1', 'guerrilla', 'NVA', { activity: 'underground' }),
       makeToken('pt76-exact-legal-us-1', 'troops', 'US'),
@@ -412,7 +388,7 @@ describe('FITL capability branches (March/Attack/Bombard)', () => {
     ]);
 
     const final = runNvaAttack(
-      def,
+      FITL_PRODUCTION_DEF,
       setup,
       [ATTACK_SPACE, THIRD_ATTACK_SPACE],
       { [ATTACK_SPACE]: 'guerrilla-attack', [THIRD_ATTACK_SPACE]: 'troops-attack' },
@@ -432,18 +408,14 @@ describe('FITL capability branches (March/Attack/Bombard)', () => {
   });
 
   it('removes the PT-76 unshaded troop before NVA Attack plus Ambush resolves', () => {
-    const { compiled } = compileProductionSpec();
-    assert.notEqual(compiled.gameDef, null);
-    const def = compiled.gameDef!;
-
-    const setup = addTokensToZone(makePt76State(def, 'unshaded', 3205), ATTACK_SPACE, [
+    const setup = addTokensToZone(makePt76State(FITL_PRODUCTION_DEF, 'unshaded', 3205), ATTACK_SPACE, [
       makeToken('pt76-ambush-t', 'troops', 'NVA'),
       makeToken('pt76-ambush-g', 'guerrilla', 'NVA', { activity: 'underground' }),
       makeToken('pt76-ambush-us', 'troops', 'US'),
     ]);
 
     const final = runNvaAttack(
-      def,
+      FITL_PRODUCTION_DEF,
       setup,
       [ATTACK_SPACE],
       { [ATTACK_SPACE]: 'guerrilla-attack' },
@@ -482,11 +454,7 @@ describe('FITL capability branches (March/Attack/Bombard)', () => {
   });
 
   it('applies cap_pt76 shaded only to one chosen Attack space', () => {
-    const { compiled } = compileProductionSpec();
-    assert.notEqual(compiled.gameDef, null);
-    const def = compiled.gameDef!;
-
-    let setup = makePt76State(def, 'shaded', 3206);
+    let setup = makePt76State(FITL_PRODUCTION_DEF, 'shaded', 3206);
     setup = addTokensToZone(setup, ATTACK_SPACE, [
       makeToken('pt76-shaded-a-nva-1', 'troops', 'NVA'),
       makeToken('pt76-shaded-a-nva-2', 'troops', 'NVA'),
@@ -501,7 +469,7 @@ describe('FITL capability branches (March/Attack/Bombard)', () => {
     ]);
 
     const final = runNvaAttack(
-      def,
+      FITL_PRODUCTION_DEF,
       setup,
       [ATTACK_SPACE, SECOND_ATTACK_SPACE],
       { [ATTACK_SPACE]: 'troops-attack', [SECOND_ATTACK_SPACE]: 'troops-attack' },
@@ -524,11 +492,7 @@ describe('FITL capability branches (March/Attack/Bombard)', () => {
   });
 
   it('applies cap_pt76 shaded to guerrilla attacks when NVA troops are present and has no effect when they are not', () => {
-    const { compiled } = compileProductionSpec();
-    assert.notEqual(compiled.gameDef, null);
-    const def = compiled.gameDef!;
-
-    const withTroops = addTokensToZone(makePt76State(def, 'shaded', 3207), ATTACK_SPACE, [
+    const withTroops = addTokensToZone(makePt76State(FITL_PRODUCTION_DEF, 'shaded', 3207), ATTACK_SPACE, [
       makeToken('pt76-guerrilla-troop-1', 'troops', 'NVA'),
       makeToken('pt76-guerrilla-troop-2', 'troops', 'NVA'),
       makeToken('pt76-guerrilla-g', 'guerrilla', 'NVA', { activity: 'underground' }),
@@ -537,7 +501,7 @@ describe('FITL capability branches (March/Attack/Bombard)', () => {
     ]);
 
     const shadedWithTroops = runNvaAttack(
-      def,
+      FITL_PRODUCTION_DEF,
       withTroops,
       [ATTACK_SPACE],
       { [ATTACK_SPACE]: 'guerrilla-attack' },
@@ -556,20 +520,20 @@ describe('FITL capability branches (March/Attack/Bombard)', () => {
     assert.equal(activatedGuerrilla?.props.activity, 'active', 'Guerrilla attack mode should still activate the NVA guerrilla first');
 
     const makeNoTroopsState = (marker: MarkerState, seed: number): GameState =>
-      addTokensToZone(makePt76State(def, marker, seed), ATTACK_SPACE, [
+      addTokensToZone(makePt76State(FITL_PRODUCTION_DEF, marker, seed), ATTACK_SPACE, [
         makeToken(`pt76-shaded-no-troops-${marker}-g`, 'guerrilla', 'NVA', { activity: 'underground' }),
         makeToken(`pt76-shaded-no-troops-${marker}-arvn`, 'troops', 'ARVN'),
       ]);
 
     const inactiveNoTroops = runNvaAttack(
-      def,
+      FITL_PRODUCTION_DEF,
       makeNoTroopsState('inactive', 3208),
       [ATTACK_SPACE],
       { [ATTACK_SPACE]: 'guerrilla-attack' },
       { freeOperation: true },
     );
     const shadedNoTroops = runNvaAttack(
-      def,
+      FITL_PRODUCTION_DEF,
       makeNoTroopsState('shaded', 3208),
       [ATTACK_SPACE],
       { [ATTACK_SPACE]: 'guerrilla-attack' },
@@ -602,14 +566,10 @@ describe('FITL capability branches (March/Attack/Bombard)', () => {
   });
 
   it('applies cap_pt76 shaded only to increase NVA troops-attack damage to one enemy per troop', () => {
-    const { compiled } = compileProductionSpec();
-    assert.notEqual(compiled.gameDef, null);
-    const def = compiled.gameDef!;
-
-    const inactive = runNvaAttackDamageWithPt76(def, 'inactive', 3209);
+    const inactive = runNvaAttackDamageWithPt76(FITL_PRODUCTION_DEF, 'inactive', 3209);
     const shaded = runNvaAttack(
-      def,
-      addTokensToZone(makePt76State(def, 'shaded', 3210), ATTACK_SPACE, [
+      FITL_PRODUCTION_DEF,
+      addTokensToZone(makePt76State(FITL_PRODUCTION_DEF, 'shaded', 3210), ATTACK_SPACE, [
         makeToken('damage-shaded-nva-1', 'troops', 'NVA'),
         makeToken('damage-shaded-nva-2', 'troops', 'NVA'),
         makeToken('damage-shaded-nva-3', 'troops', 'NVA'),
@@ -624,7 +584,7 @@ describe('FITL capability branches (March/Attack/Bombard)', () => {
         extraParams: { $pt76EnhancedSpace: ATTACK_SPACE },
       },
     );
-    const unshaded = runNvaAttackDamageWithPt76(def, 'unshaded', 3211);
+    const unshaded = runNvaAttackDamageWithPt76(FITL_PRODUCTION_DEF, 'unshaded', 3211);
 
     assert.equal(
       countTokensInZone(inactive, ATTACK_SPACE, (token) => token.props.faction === 'ARVN' && token.type === 'troops'),
@@ -644,24 +604,20 @@ describe('FITL capability branches (March/Attack/Bombard)', () => {
   });
 
   it('applies cap_longRangeGuns side-specific Bombard selection caps (inactive=2, unshaded=1, shaded=3)', () => {
-    const { compiled } = compileProductionSpec();
-    assert.notEqual(compiled.gameDef, null);
-    const def = compiled.gameDef!;
-
     const oneSpace = [BOMBARD_SPACE_1];
     const twoSpaces = [BOMBARD_SPACE_1, BOMBARD_SPACE_2];
     const threeSpaces = [BOMBARD_SPACE_1, BOMBARD_SPACE_2, BOMBARD_SPACE_3];
 
-    assert.equal(bombardSelectionIsLegal(def, 'inactive', oneSpace, 3301), true);
-    assert.equal(bombardSelectionIsLegal(def, 'inactive', twoSpaces, 3302), true);
-    assert.equal(bombardSelectionIsLegal(def, 'inactive', threeSpaces, 3303), false);
+    assert.equal(bombardSelectionIsLegal(FITL_PRODUCTION_DEF, 'inactive', oneSpace, 3301), true);
+    assert.equal(bombardSelectionIsLegal(FITL_PRODUCTION_DEF, 'inactive', twoSpaces, 3302), true);
+    assert.equal(bombardSelectionIsLegal(FITL_PRODUCTION_DEF, 'inactive', threeSpaces, 3303), false);
 
-    assert.equal(bombardSelectionIsLegal(def, 'unshaded', oneSpace, 3304), true);
-    assert.equal(bombardSelectionIsLegal(def, 'unshaded', twoSpaces, 3305), false);
-    assert.equal(bombardSelectionIsLegal(def, 'unshaded', threeSpaces, 3306), false);
+    assert.equal(bombardSelectionIsLegal(FITL_PRODUCTION_DEF, 'unshaded', oneSpace, 3304), true);
+    assert.equal(bombardSelectionIsLegal(FITL_PRODUCTION_DEF, 'unshaded', twoSpaces, 3305), false);
+    assert.equal(bombardSelectionIsLegal(FITL_PRODUCTION_DEF, 'unshaded', threeSpaces, 3306), false);
 
-    assert.equal(bombardSelectionIsLegal(def, 'shaded', oneSpace, 3307), true);
-    assert.equal(bombardSelectionIsLegal(def, 'shaded', twoSpaces, 3308), true);
-    assert.equal(bombardSelectionIsLegal(def, 'shaded', threeSpaces, 3309), true);
+    assert.equal(bombardSelectionIsLegal(FITL_PRODUCTION_DEF, 'shaded', oneSpace, 3307), true);
+    assert.equal(bombardSelectionIsLegal(FITL_PRODUCTION_DEF, 'shaded', twoSpaces, 3308), true);
+    assert.equal(bombardSelectionIsLegal(FITL_PRODUCTION_DEF, 'shaded', threeSpaces, 3309), true);
   });
 });

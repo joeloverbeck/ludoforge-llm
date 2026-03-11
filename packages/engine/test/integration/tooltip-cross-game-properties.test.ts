@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { compileProductionSpec, compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getFitlProductionFixture, getTexasProductionFixture } from '../helpers/production-spec-helpers.js';
 import { createGameDefRuntime } from '../../src/kernel/gamedef-runtime.js';
 import { initialState } from '../../src/kernel/initial-state.js';
 import { describeAction } from '../../src/kernel/condition-annotator.js';
@@ -19,13 +19,11 @@ interface GameFixture {
 }
 
 function loadGameFixtures(): readonly GameFixture[] {
-  const fitl = compileProductionSpec();
-  const texas = compileTexasProductionSpec();
-  assert.ok(fitl.compiled.gameDef !== null, 'FITL must compile');
-  assert.ok(texas.compiled.gameDef !== null, 'Texas must compile');
+  const fitl = getFitlProductionFixture();
+  const texas = getTexasProductionFixture();
   return [
-    { name: 'FITL', def: fitl.compiled.gameDef },
-    { name: 'Texas Hold\'em', def: texas.compiled.gameDef },
+    { name: 'FITL', def: fitl.gameDef },
+    { name: 'Texas Hold\'em', def: texas.gameDef },
   ];
 }
 

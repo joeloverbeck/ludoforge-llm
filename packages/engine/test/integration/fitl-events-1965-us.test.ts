@@ -2,7 +2,9 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
+
+const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 
 const expectedCards = [
   { id: 'card-5', order: 5, title: 'Wild Weasels', seatOrder: ['US', 'NVA', 'ARVN', 'VC'] },
@@ -21,7 +23,7 @@ const expectedCards = [
 
 describe('FITL 1965 US-first event-card production spec', () => {
   it('compiles all 12 US-first 1965 cards with dual side metadata invariants', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -43,7 +45,7 @@ describe('FITL 1965 US-first event-card production spec', () => {
   });
 
   it('encodes 1965 US capability cards as capability marker toggles', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -66,7 +68,7 @@ describe('FITL 1965 US-first event-card production spec', () => {
   });
 
   it('encodes card-8 Arc Light text exactly as rules text', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -78,7 +80,7 @@ describe('FITL 1965 US-first event-card production spec', () => {
   });
 
   it('encodes 1965 US momentum cards using round-lasting setup/teardown toggles', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -104,7 +106,7 @@ describe('FITL 1965 US-first event-card production spec', () => {
   });
 
   it('encodes card-22 shaded as immediate support removal plus round momentum Air Strike ban', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -125,7 +127,7 @@ describe('FITL 1965 US-first event-card production spec', () => {
   });
 
   it('encodes card-23 with tunnel-space chained grants, temporary tunnel override window, and shaded tunnel-space casualty roll', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);

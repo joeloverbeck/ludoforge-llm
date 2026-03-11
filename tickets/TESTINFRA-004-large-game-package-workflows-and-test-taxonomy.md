@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — test scripts/workflows and test classification; no runtime/kernel behavior changes
-**Deps**: `tickets/README.md`, `archive/tickets/ENGINEARCH-207-first-class-gamespec-bundles-and-single-pass-fingerprints.md`, `tickets/TESTINFRA-003-suite-scoped-compiled-game-fixtures-for-large-game-packages.md`, `archive/tickets/TESTINFRA-002-add-cnl-visual-config-import-boundary-guard.md`, `.github/workflows/ci.yml`, `.github/workflows/engine-e2e-all.yml`, `packages/engine/package.json`, `package.json`, `turbo.json`
+**Deps**: `tickets/README.md`, `archive/tickets/ENGINEARCH-207-first-class-gamespec-bundles-and-single-pass-fingerprints.md`, `archive/tickets/TESTINFRA/TESTINFRA-003-suite-scoped-compiled-game-fixtures-for-large-game-packages.md`, `archive/tickets/TESTINFRA-002-add-cnl-visual-config-import-boundary-guard.md`, `.github/workflows/ci.yml`, `.github/workflows/engine-e2e-all.yml`, `packages/engine/package.json`, `package.json`, `turbo.json`
 
 ## Problem
 

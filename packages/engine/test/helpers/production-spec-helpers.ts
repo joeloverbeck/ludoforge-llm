@@ -15,6 +15,10 @@ export interface CompiledProductionSpec {
   readonly compiled: CompileResult & { readonly gameDef: NonNullable<CompileResult['gameDef']> };
 }
 
+export interface ProductionGameFixture extends CompiledProductionSpec {
+  readonly gameDef: NonNullable<CompileResult['gameDef']>;
+}
+
 function resolveRepoRoot(): string {
   const here = fileURLToPath(new URL('.', import.meta.url));
   let cursor = here;
@@ -38,8 +42,10 @@ const FIXTURE_BASE_PATH = join(REPO_ROOT, 'packages', 'engine', 'test', 'fixture
 
 let cachedFitlBundle: LoadedGameSpecBundle | null = null;
 let cachedFitlResult: CompiledProductionSpec | null = null;
+let cachedFitlFixture: ProductionGameFixture | null = null;
 let cachedTexasBundle: LoadedGameSpecBundle | null = null;
 let cachedTexasResult: CompiledProductionSpec | null = null;
+let cachedTexasFixture: ProductionGameFixture | null = null;
 
 /**
  * Loads the FITL production spec through the canonical entrypoint and caches the parsed result.
@@ -80,6 +86,23 @@ export function compileProductionSpec(): CompiledProductionSpec {
 }
 
 /**
+ * Runtime suites should bind this once per file and reuse the explicit fixture.
+ */
+export function getFitlProductionFixture(): ProductionGameFixture {
+  const compiled = compileProductionSpec();
+  if (cachedFitlFixture !== null && cachedFitlFixture.compiled === compiled.compiled) {
+    return cachedFitlFixture;
+  }
+
+  cachedFitlFixture = {
+    ...compiled,
+    gameDef: compiled.compiled.gameDef,
+  };
+
+  return cachedFitlFixture;
+}
+
+/**
  * Lazy-cached parse + validate + compile of the Texas production spec.
  * Cache invalidates when the file content hash changes.
  */
@@ -100,6 +123,23 @@ export function compileTexasProductionSpec(): CompiledProductionSpec {
   };
 
   return cachedTexasResult;
+}
+
+/**
+ * Runtime suites should bind this once per file and reuse the explicit fixture.
+ */
+export function getTexasProductionFixture(): ProductionGameFixture {
+  const compiled = compileTexasProductionSpec();
+  if (cachedTexasFixture !== null && cachedTexasFixture.compiled === compiled.compiled) {
+    return cachedTexasFixture;
+  }
+
+  cachedTexasFixture = {
+    ...compiled,
+    gameDef: compiled.compiled.gameDef,
+  };
+
+  return cachedTexasFixture;
 }
 
 /**

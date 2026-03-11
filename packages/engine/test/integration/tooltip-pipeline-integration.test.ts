@@ -1,12 +1,15 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { compileProductionSpec, compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getFitlProductionFixture, getTexasProductionFixture } from '../helpers/production-spec-helpers.js';
 import { createGameDefRuntime } from '../../src/kernel/gamedef-runtime.js';
 import { initialState } from '../../src/kernel/initial-state.js';
 import { describeAction } from '../../src/kernel/condition-annotator.js';
 import type { AnnotationContext } from '../../src/kernel/condition-annotator.js';
 import { asPlayerId } from '../../src/kernel/branded.js';
+
+const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
+const TEXAS_PRODUCTION_FIXTURE = getTexasProductionFixture();
 
 describe('tooltip pipeline integration', () => {
   // -----------------------------------------------------------------------
@@ -14,7 +17,7 @@ describe('tooltip pipeline integration', () => {
   // -----------------------------------------------------------------------
 
   it('FITL describeAction produces tooltipPayload for a real action', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.ok(compiled.gameDef !== null, 'FITL GameDef must compile');
     const def = compiled.gameDef;
     assert.ok(def.actions.length > 0, 'FITL must have at least one action');
@@ -52,7 +55,7 @@ describe('tooltip pipeline integration', () => {
   });
 
   it('FITL RuleCard is cached across multiple describeAction calls', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     const def = compiled.gameDef!;
     const runtime = createGameDefRuntime(def);
     const { state } = initialState(def, 42);
@@ -79,7 +82,7 @@ describe('tooltip pipeline integration', () => {
   });
 
   it('FITL verbalization labels appear in RuleCard synopsis', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     const def = compiled.gameDef!;
     assert.ok(def.verbalization !== undefined, 'FITL must have verbalization');
 
@@ -114,7 +117,7 @@ describe('tooltip pipeline integration', () => {
   // -----------------------------------------------------------------------
 
   it('FITL Train synopsis uses verbalized action label', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     const def = compiled.gameDef!;
     const runtime = createGameDefRuntime(def);
     const { state } = initialState(def, 42);
@@ -135,7 +138,7 @@ describe('tooltip pipeline integration', () => {
   });
 
   it('FITL Sweep synopsis uses verbalized action label', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     const def = compiled.gameDef!;
     const runtime = createGameDefRuntime(def);
     const { state } = initialState(def, 42);
@@ -156,7 +159,7 @@ describe('tooltip pipeline integration', () => {
   });
 
   it('FITL Rally synopsis uses verbalized action label', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     const def = compiled.gameDef!;
     const runtime = createGameDefRuntime(def);
     const { state } = initialState(def, 42);
@@ -177,7 +180,7 @@ describe('tooltip pipeline integration', () => {
   });
 
   it('FITL verbalization labels cover all major action IDs', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     const def = compiled.gameDef!;
     assert.ok(def.verbalization !== undefined, 'FITL must have verbalization');
 
@@ -194,7 +197,7 @@ describe('tooltip pipeline integration', () => {
   });
 
   it('FITL verbalization labels cover all zone IDs', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     const def = compiled.gameDef!;
     assert.ok(def.verbalization !== undefined);
 
@@ -210,7 +213,7 @@ describe('tooltip pipeline integration', () => {
   });
 
   it('FITL suppress patterns exclude telemetry variables', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     const def = compiled.gameDef!;
     assert.ok(def.verbalization !== undefined);
 
@@ -223,7 +226,7 @@ describe('tooltip pipeline integration', () => {
   });
 
   it('FITL verbalization step text uses resolved labels not raw IDs', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     const def = compiled.gameDef!;
     const runtime = createGameDefRuntime(def);
     const { state } = initialState(def, 42);
@@ -257,7 +260,7 @@ describe('tooltip pipeline integration', () => {
   // -----------------------------------------------------------------------
 
   it('Texas Hold\'em describeAction produces tooltipPayload', () => {
-    const { compiled } = compileTexasProductionSpec();
+    const { compiled } = TEXAS_PRODUCTION_FIXTURE;
     assert.ok(compiled.gameDef !== null, 'Texas GameDef must compile');
     const def = compiled.gameDef;
     assert.ok(def.actions.length > 0, 'Texas must have at least one action');
@@ -286,7 +289,7 @@ describe('tooltip pipeline integration', () => {
   // -----------------------------------------------------------------------
 
   it('Texas Hold\'em Fold synopsis uses verbalized action label', () => {
-    const { compiled } = compileTexasProductionSpec();
+    const { compiled } = TEXAS_PRODUCTION_FIXTURE;
     const def = compiled.gameDef!;
     const runtime = createGameDefRuntime(def);
     const { state } = initialState(def, 99);
@@ -306,7 +309,7 @@ describe('tooltip pipeline integration', () => {
   });
 
   it('Texas Hold\'em Check synopsis uses verbalized action label', () => {
-    const { compiled } = compileTexasProductionSpec();
+    const { compiled } = TEXAS_PRODUCTION_FIXTURE;
     const def = compiled.gameDef!;
     const runtime = createGameDefRuntime(def);
     const { state } = initialState(def, 99);
@@ -326,7 +329,7 @@ describe('tooltip pipeline integration', () => {
   });
 
   it('Texas Hold\'em Call synopsis uses verbalized action label', () => {
-    const { compiled } = compileTexasProductionSpec();
+    const { compiled } = TEXAS_PRODUCTION_FIXTURE;
     const def = compiled.gameDef!;
     const runtime = createGameDefRuntime(def);
     const { state } = initialState(def, 99);
@@ -346,7 +349,7 @@ describe('tooltip pipeline integration', () => {
   });
 
   it('Texas Hold\'em Raise synopsis uses verbalized action label', () => {
-    const { compiled } = compileTexasProductionSpec();
+    const { compiled } = TEXAS_PRODUCTION_FIXTURE;
     const def = compiled.gameDef!;
     const runtime = createGameDefRuntime(def);
     const { state } = initialState(def, 99);
@@ -366,7 +369,7 @@ describe('tooltip pipeline integration', () => {
   });
 
   it('Texas Hold\'em verbalization labels cover all action IDs', () => {
-    const { compiled } = compileTexasProductionSpec();
+    const { compiled } = TEXAS_PRODUCTION_FIXTURE;
     const def = compiled.gameDef!;
     assert.ok(def.verbalization !== undefined, 'Texas must have verbalization');
 
@@ -382,7 +385,7 @@ describe('tooltip pipeline integration', () => {
   });
 
   it('Texas Hold\'em suppress patterns exclude telemetry variables', () => {
-    const { compiled } = compileTexasProductionSpec();
+    const { compiled } = TEXAS_PRODUCTION_FIXTURE;
     const def = compiled.gameDef!;
     assert.ok(def.verbalization !== undefined);
 
@@ -400,7 +403,7 @@ describe('tooltip pipeline integration', () => {
   // -----------------------------------------------------------------------
 
   it('tooltipPayload survives structuredClone (worker transfer)', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     const def = compiled.gameDef!;
     const runtime = createGameDefRuntime(def);
     const { state } = initialState(def, 42);

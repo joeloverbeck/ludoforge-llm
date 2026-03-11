@@ -17,7 +17,9 @@ import {
   type DecisionOverrideRule,
 } from '../helpers/decision-param-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
-import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
+
+const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 
 const expectedCards = [
   { id: 'card-2', order: 2, title: 'Kissinger', seatOrder: ['US', 'NVA', 'ARVN', 'VC'] },
@@ -35,7 +37,7 @@ const expectedCards = [
 ] as const;
 
 const compileDef = (): GameDef => {
-  const { parsed, compiled } = compileProductionSpec();
+  const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
   assertNoErrors(parsed);
   assert.notEqual(compiled.gameDef, null);
   return compiled.gameDef!;
@@ -252,7 +254,7 @@ const setupAmericalState = (
 
 describe('FITL 1968 US-first event-card production spec', () => {
   it('compiles all 12 US-first 1968 cards with dual side metadata invariants', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -272,7 +274,7 @@ describe('FITL 1968 US-first event-card production spec', () => {
   });
 
   it('encodes 1968 US capability cards as capability marker toggles for both sides', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -303,7 +305,7 @@ describe('FITL 1968 US-first event-card production spec', () => {
   });
 
   it('encodes Top Gun unshaded as MiGs shaded cancellation plus marker activation', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -358,7 +360,7 @@ describe('FITL 1968 US-first event-card production spec', () => {
   });
 
   it('encodes card 16 (Blowtorch Komer) as unshaded round momentum toggle', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -388,7 +390,7 @@ describe('FITL 1968 US-first event-card production spec', () => {
   });
 
   it('encodes card 3 (Peace Talks) with Linebacker eligibility state wiring and shaded trail floor', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -479,7 +481,7 @@ describe('FITL 1968 US-first event-card production spec', () => {
   });
 
   it('encodes card 2 (Kissinger) metadata, text, and shaded aid penalty', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -571,7 +573,7 @@ describe('FITL 1968 US-first event-card production spec', () => {
   });
 
   it('encodes card 9 (Psychedelic Cookie) with explicit unshaded/shaded troop-routing effects', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -725,7 +727,7 @@ describe('FITL 1968 US-first event-card production spec', () => {
   });
 
   it('encodes card-21 (Americal) with dual-source troop movement and per-province VC removal effects', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -1063,7 +1065,7 @@ describe('FITL 1968 US-first event-card production spec', () => {
   });
 
   it('encodes card-12 (Capt Buck Adams) with outside-South insurgent flipping and constrained NVA base placement', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -1325,7 +1327,7 @@ describe('FITL 1968 US-first event-card production spec', () => {
   });
 
   it('keeps card 27 (Phoenix Program) rules-accurate as a non-regression anchor', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);

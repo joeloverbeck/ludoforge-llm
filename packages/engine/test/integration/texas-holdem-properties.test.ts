@@ -13,8 +13,10 @@ import {
 } from '../../src/kernel/index.js';
 import { runGame } from '../../src/sim/index.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getTexasProductionFixture } from '../helpers/production-spec-helpers.js';
 import { replayScript } from '../helpers/replay-harness.js';
+
+const TEXAS_PRODUCTION_FIXTURE = getTexasProductionFixture();
 
 interface ReplaySnapshot {
   readonly state: GameState;
@@ -26,13 +28,10 @@ const PLAYER_COUNT = 2;
 const MAX_TURNS = 20;
 
 const compileTexasDef = (): ValidatedGameDef => {
-  const { parsed, compiled } = compileTexasProductionSpec();
+  const { parsed, compiled } = TEXAS_PRODUCTION_FIXTURE;
   assertNoErrors(parsed);
   assertNoDiagnostics(compiled, parsed.sourceMap);
-  if (compiled.gameDef === null) {
-    throw new Error('Expected compiled Texas gameDef to be present');
-  }
-  return assertValidatedGameDef(compiled.gameDef);
+  return assertValidatedGameDef(TEXAS_PRODUCTION_FIXTURE.gameDef);
 };
 
 const totalCardsAcrossZones = (state: GameState): number =>

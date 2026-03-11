@@ -10,10 +10,12 @@ import {
 } from '../../src/kernel/index.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
-import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getTexasProductionFixture } from '../helpers/production-spec-helpers.js';
+
+const TEXAS_PRODUCTION_FIXTURE = getTexasProductionFixture();
 
 const loadEscalateMacro = (): { readonly def: GameDef; readonly effects: readonly EffectAST[] } => {
-  const { parsed, compiled } = compileTexasProductionSpec();
+  const { parsed, compiled } = TEXAS_PRODUCTION_FIXTURE;
   assertNoErrors(parsed);
   assertNoDiagnostics(compiled, parsed.sourceMap);
   assert.notEqual(compiled.gameDef, null);

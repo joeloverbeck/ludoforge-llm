@@ -1,6 +1,6 @@
 # Spec 58 — Event-Based Trace Bus for Move Traceability
 
-## Status: Implemented
+**Status**: ✅ COMPLETED
 
 ## Motivation
 
@@ -104,3 +104,10 @@ interface TraceBus {
 - **Engine unit tests**: subscribe, emit, unsubscribe, unsubscribeAll, no-op on empty bus
 - **Runner unit tests**: console.group/log/groupEnd mock verification for all event types
 - **Existing ai-move-policy tests**: updated for new `AiMoveSelectionResult` return shape
+
+## Outcome
+
+- **Completion date**: 2026-03-09
+- **What changed**: The event trace bus was implemented and remains present in the engine and runner trace modules, with store/runtime wiring and dedicated engine/runner trace tests in the repo.
+- **Deviations from original plan**: None recorded during archival.
+- **Verification results**: `pnpm run check:ticket-deps` passed after archival; no fresh feature test run was added as part of this archival pass.

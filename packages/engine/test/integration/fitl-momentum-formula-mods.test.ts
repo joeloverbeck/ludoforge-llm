@@ -4,7 +4,9 @@ import { describe, it } from 'node:test';
 import { asActionId, asPhaseId, asPlayerId, asTokenId, initialState, legalMoves, type GameState, type Token } from '../../src/kernel/index.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
-import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
+
+const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 
 const LOC_SPACE = 'loc-hue-da-nang:none';
 const RALLY_SPACE = 'quang-nam:none';
@@ -37,7 +39,7 @@ const countEnemyGuerrillas = (state: GameState, zone: string): number =>
 
 describe('FITL momentum formula modifiers', () => {
   it('Wild Weasels limits Air Strike removal to 1 and enforces degrade-vs-remove behavior', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const space = RALLY_SPACE;
@@ -133,7 +135,7 @@ describe('FITL momentum formula modifiers', () => {
   });
 
   it('card-5 unshaded removes shaded SA-2s only when executed, otherwise applies fallback penalty', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const eventDeck = def.eventDecks?.[0];
@@ -186,7 +188,7 @@ describe('FITL momentum formula modifiers', () => {
   });
 
   it('ADSID applies -6 NVA Resources when Trail changes and does not trigger without Trail change', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -350,7 +352,7 @@ describe('FITL momentum formula modifiers', () => {
   });
 
   it('Claymores removes 1 guerrilla from each activated marching group', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -396,7 +398,7 @@ describe('FITL momentum formula modifiers', () => {
   });
 
   it('Claymores does not remove a marching guerrilla when the marching group does not activate', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -441,7 +443,7 @@ describe('FITL momentum formula modifiers', () => {
   });
 
   it('559th Transport Group caps Infiltrate target spaces to 1', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -481,7 +483,7 @@ describe('FITL momentum formula modifiers', () => {
   });
 
   it('Body Count makes ARVN Assault/Patrol cost-eligible at 0 resources and awards +3 Aid on ARVN Assault removals', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 

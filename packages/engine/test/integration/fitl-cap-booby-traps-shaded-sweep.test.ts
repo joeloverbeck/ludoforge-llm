@@ -6,7 +6,9 @@ import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { makeIsolatedInitialState } from '../helpers/isolated-state-helpers.js';
-import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
+
+const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -83,7 +85,7 @@ const makeSweepReadyState = (
 
 describe('FITL Booby Traps shaded sweep integration', () => {
   it('cap-sweep-booby-traps-shaded-cost macro has rollRandom with <= 3 dice gate', () => {
-    const { parsed } = compileProductionSpec();
+    const { parsed } = FITL_PRODUCTION_FIXTURE;
     assertNoErrors(parsed);
 
     const macrosById = new Map(
@@ -102,7 +104,7 @@ describe('FITL Booby Traps shaded sweep integration', () => {
   });
 
   it('shaded US sweep: hit (roll 1-3) sends troop to casualties, miss (roll 4-6) leaves troop', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -129,7 +131,7 @@ describe('FITL Booby Traps shaded sweep integration', () => {
   });
 
   it('shaded ARVN sweep: hit (roll 1-3) routes troop to available, miss (roll 4-6) leaves troop', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -156,7 +158,7 @@ describe('FITL Booby Traps shaded sweep integration', () => {
   });
 
   it('shaded marker: each sweep space gets an independent die roll', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -186,7 +188,7 @@ describe('FITL Booby Traps shaded sweep integration', () => {
   });
 
   it('inactive marker: no troop removal regardless of seed', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -203,7 +205,7 @@ describe('FITL Booby Traps shaded sweep integration', () => {
   });
 
   it('unshaded marker: no troop removal regardless of seed', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 

@@ -2,7 +2,9 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
+
+const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 
 const expectedCards = [
   { id: 'card-64', order: 64, title: 'Honolulu Conference', sideMode: 'single', seatOrder: ['ARVN', 'US', 'NVA', 'VC'] },
@@ -24,7 +26,7 @@ const expectedCards = [
 
 describe('FITL 1965 ARVN-first event-card production spec', () => {
   it('compiles all 15 ARVN-first 1965 cards with side-mode and metadata invariants', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -48,7 +50,7 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
   });
 
   it('encodes card 86 (Mandate of Heaven) as ARVN capability marker toggles', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -62,7 +64,7 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
   });
 
   it('encodes card 70 (ROKs) free grants with executeAsSeat override for as-if-US operations', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -89,7 +91,7 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
   });
 
   it('encodes cards 72/78 as canonical momentum round-lasting toggles', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -114,7 +116,7 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
   });
 
   it('encodes card 73 (Great Society) shaded side as US available-to-out-of-play removal', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -146,7 +148,7 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
   });
 
   it('encodes card 90 (Walt Rostow) with anywhere-ARVN placement and immediate no-base redeploy structure', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);

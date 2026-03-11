@@ -13,7 +13,13 @@ import {
 } from '../../src/cnl/index.js';
 import { assertNoErrors, assertStageBlocked, assertStageNotBlocked } from '../helpers/diagnostic-helpers.js';
 import { readFixtureText } from '../helpers/fixture-reader.js';
-import { compileProductionSpec, compileTexasProductionSpec, readCompilerFixture } from '../helpers/production-spec-helpers.js';
+import {
+  compileProductionSpec,
+  compileTexasProductionSpec,
+  getFitlProductionFixture,
+  getTexasProductionFixture,
+  readCompilerFixture,
+} from '../helpers/production-spec-helpers.js';
 
 const readFixture = (name: string): string => readFixtureText(`cnl/${name}`);
 
@@ -108,6 +114,20 @@ describe('parse + validate full-spec integration', { concurrency: 1 }, () => {
     assert.equal(fitlStaged.sourceFingerprint, fitlBundle.sourceFingerprint);
     assert.equal(texasStaged.sourceFingerprint, texasBundle.sourceFingerprint);
     assert.notEqual(fitlBundle.sourceFingerprint, texasBundle.sourceFingerprint);
+  });
+
+  it('exposes stable explicit production fixtures for runtime suites', () => {
+    const fitlCompiled = compileProductionSpec();
+    const texasCompiled = compileTexasProductionSpec();
+    const fitlFixture = getFitlProductionFixture();
+    const texasFixture = getTexasProductionFixture();
+
+    assert.equal(getFitlProductionFixture(), fitlFixture);
+    assert.equal(getTexasProductionFixture(), texasFixture);
+    assert.equal(fitlFixture.compiled, fitlCompiled.compiled);
+    assert.equal(texasFixture.compiled, texasCompiled.compiled);
+    assert.equal(fitlFixture.gameDef, fitlCompiled.compiled.gameDef);
+    assert.equal(texasFixture.gameDef, texasCompiled.compiled.gameDef);
   });
 
   it('reports stable deterministic diagnostics for a multi-issue spec end-to-end', () => {

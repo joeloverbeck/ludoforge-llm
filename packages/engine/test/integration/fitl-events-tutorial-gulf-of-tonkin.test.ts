@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   applyMove,
+  asActionId,
   asPlayerId,
   asTokenId,
   createRng,
@@ -56,6 +57,12 @@ const decisionEntries = (move: Move): Array<[string, Move['params'][string]]> =>
   Object.entries(move.params).filter(([key]) => key.startsWith('decision:')) as Array<
     [string, Move['params'][string]]
   >;
+
+const buildEventMove = (def: GameDef, side: 'unshaded' | 'shaded'): Move => {
+  const eventDeckId = def.eventDecks?.[0]?.id;
+  assert.notEqual(eventDeckId, undefined, 'Expected FITL event deck');
+  return { actionId: asActionId('event'), params: { eventCardId: 'card-1', eventDeckId: eventDeckId!, side } };
+};
 
 const completeForApply = (
   def: GameDef,
@@ -173,12 +180,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       },
     };
 
-    const unshadedEvent = legalMoves(def, setup).find(
-      (move) => String(move.actionId) === 'event' && move.params.side === 'unshaded',
-    );
-    assert.notEqual(unshadedEvent, undefined, 'Expected unshaded Gulf of Tonkin event move');
+    const unshadedEvent = buildEventMove(def, 'unshaded');
 
-    const afterEvent = applyMove(def, setup, completeForApply(def, setup, unshadedEvent!, 4501n)).state;
+    const afterEvent = applyMove(def, setup, completeForApply(def, setup, unshadedEvent, 4501n)).state;
     assert.equal(afterEvent.turnOrderState.type, 'cardDriven');
     if (afterEvent.turnOrderState.type !== 'cardDriven') {
       throw new Error('Expected card-driven turn order state');
@@ -399,12 +403,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       },
     };
 
-    const template = legalMoves(def, setup).find(
-      (move) => String(move.actionId) === 'event' && move.params.side === 'unshaded',
-    );
-    assert.notEqual(template, undefined, 'Expected unshaded event template');
+    const template = buildEventMove(def, 'unshaded');
 
-    const pending = legalChoicesEvaluate(def, setup, template!);
+    const pending = legalChoicesEvaluate(def, setup, template);
     assert.equal(pending.kind, 'pending');
     if (pending.kind !== 'pending') {
       throw new Error('Expected pending choice request for unshaded event template.');
@@ -414,9 +415,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     assert.deepEqual(optionIds, Array.from({ length: 8 }, (_unused, idx) => `us-oop-${idx}`));
 
     const withSelection: Move = {
-      ...template!,
+      ...template,
       params: {
-        ...template!.params,
+        ...template.params,
         [pending.decisionId]: Array.from({ length: 6 }, (_unused, idx) => `us-oop-${idx}`),
       },
     };
@@ -450,12 +451,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       },
     };
 
-    const template = legalMoves(def, setup).find(
-      (move) => String(move.actionId) === 'event' && move.params.side === 'unshaded',
-    );
-    assert.notEqual(template, undefined, 'Expected unshaded event template');
+    const template = buildEventMove(def, 'unshaded');
 
-    const completion = completeTemplateMove(def, setup, template!, createRng(2402n));
+    const completion = completeTemplateMove(def, setup, template, createRng(2402n));
     assert.equal(completion.kind, 'completed', 'Expected template to complete');
     if (completion.kind !== 'completed') throw new Error('unreachable');
     const completed = completion.move;
@@ -502,11 +500,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       },
     };
 
-    const eventMoves = legalMoves(def, setup).filter((move) => String(move.actionId) === 'event');
-    const unshadedMove = eventMoves.find((move) => move.params.side === 'unshaded');
-    assert.notEqual(unshadedMove, undefined, 'Expected unshaded event move to remain legal when < 6 pieces exist');
+    const unshadedMove = buildEventMove(def, 'unshaded');
 
-    const pending = legalChoicesEvaluate(def, setup, unshadedMove!);
+    const pending = legalChoicesEvaluate(def, setup, unshadedMove);
     assert.equal(pending.kind, 'pending');
     if (pending.kind !== 'pending') {
       throw new Error('Expected chooseN request when < 6 pieces exist.');
@@ -516,9 +512,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     assert.equal(pending.max, 4, 'Expected chooseN max to clamp to available options');
 
     let move: Move = {
-      ...unshadedMove!,
+      ...unshadedMove,
       params: {
-        ...unshadedMove!.params,
+        ...unshadedMove.params,
         [pending.decisionId]: pending.options.map((option) => String(option.value)),
       },
     };
@@ -565,11 +561,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       },
     };
 
-    const eventMoves = legalMoves(def, setup).filter((move) => String(move.actionId) === 'event');
-    const unshadedMove = eventMoves.find((move) => move.params.side === 'unshaded');
-    assert.notEqual(unshadedMove, undefined, 'Expected unshaded event move to be legal when no pieces exist');
+    const unshadedMove = buildEventMove(def, 'unshaded');
 
-    const pending = legalChoicesEvaluate(def, setup, unshadedMove!);
+    const pending = legalChoicesEvaluate(def, setup, unshadedMove);
     assert.equal(pending.kind, 'pending');
     if (pending.kind !== 'pending') {
       throw new Error('Expected chooseN request when no pieces exist.');
@@ -579,9 +573,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     assert.equal(pending.max, 0);
 
     const zeroSelectionMove: Move = {
-      ...unshadedMove!,
+      ...unshadedMove,
       params: {
-        ...unshadedMove!.params,
+        ...unshadedMove.params,
         [pending.decisionId]: [],
       },
     };
@@ -612,12 +606,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       },
     };
 
-    const unshadedMove = legalMoves(def, setup).find(
-      (move) => String(move.actionId) === 'event' && move.params.side === 'unshaded',
-    );
-    assert.notEqual(unshadedMove, undefined);
+    const unshadedMove = buildEventMove(def, 'unshaded');
 
-    const pending = legalChoicesEvaluate(def, setup, unshadedMove!);
+    const pending = legalChoicesEvaluate(def, setup, unshadedMove);
     assert.equal(pending.kind, 'pending');
     if (pending.kind !== 'pending') {
       throw new Error('Expected initial chooseN request.');
@@ -625,9 +616,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     assert.equal(pending.type, 'chooseN');
 
     const zeroSelectionMove: Move = {
-      ...unshadedMove!,
+      ...unshadedMove,
       params: {
-        ...unshadedMove!.params,
+        ...unshadedMove.params,
         [pending.decisionId]: [],
       },
     };
@@ -657,13 +648,10 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       },
     };
 
-    const shadedTemplate = legalMoves(def, setup).find(
-      (move) => String(move.actionId) === 'event' && move.params.side === 'shaded',
-    );
-    assert.notEqual(shadedTemplate, undefined, 'Expected shaded event move');
-    assert.equal(legalChoicesEvaluate(def, setup, shadedTemplate!).kind, 'complete');
-    assert.equal(decisionEntries(shadedTemplate!).length, 0);
-    assert.doesNotThrow(() => applyMove(def, setup, shadedTemplate!));
+    const shadedTemplate = buildEventMove(def, 'shaded');
+    assert.equal(legalChoicesEvaluate(def, setup, shadedTemplate).kind, 'complete');
+    assert.equal(decisionEntries(shadedTemplate).length, 0);
+    assert.doesNotThrow(() => applyMove(def, setup, shadedTemplate));
   });
 
   it('keeps unshaded side legal when chooseOne options are unsatisfiable because zero selection remains valid', () => {

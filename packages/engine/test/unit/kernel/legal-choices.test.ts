@@ -1368,6 +1368,132 @@ phase: [asPhaseId('main')],
       );
     });
 
+    it('marks chooseN source options illegal when every downstream continuation containing them is unsatisfiable', () => {
+      const action: ActionDef = {
+        id: asActionId('dependentChooseNLegalityOp'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [
+          {
+            chooseN: {
+              internalDecisionId: 'decision:$selected',
+              bind: '$selected',
+              options: { query: 'tokensInZone', zone: 'reserve:none' },
+              min: 2,
+              max: 2,
+            },
+          },
+          {
+            forEach: {
+              bind: '$piece',
+              over: { query: 'binding', name: '$selected' },
+              effects: [
+                {
+                  if: {
+                    when: {
+                      op: '==',
+                      left: { ref: 'tokenProp', token: '$piece', prop: 'type' },
+                      right: 'base',
+                    },
+                    then: [
+                      {
+                        chooseOne: {
+                          internalDecisionId: 'decision:$baseDestination@{$piece}',
+                          bind: '$baseDestination@{$piece}',
+                          options: {
+                            query: 'mapSpaces',
+                            filter: {
+                              condition: {
+                                op: '==',
+                                left: { ref: 'zoneProp', zone: '$zone', prop: 'category' },
+                                right: 'city',
+                              },
+                            },
+                          },
+                        },
+                      } as EffectAST,
+                    ],
+                    else: [
+                      {
+                        chooseOne: {
+                          internalDecisionId: 'decision:$troopDestination@{$piece}',
+                          bind: '$troopDestination@{$piece}',
+                          options: {
+                            query: 'mapSpaces',
+                            filter: {
+                              condition: {
+                                op: '==',
+                                left: { ref: 'zoneProp', zone: '$zone', prop: 'category' },
+                                right: 'province',
+                              },
+                            },
+                          },
+                        },
+                      } as EffectAST,
+                    ],
+                  },
+                } as EffectAST,
+              ],
+            },
+          },
+        ],
+        limits: [],
+      };
+
+      const def = makeBaseDef({
+        actions: [action],
+        zones: [
+          { id: asZoneId('reserve:none'), owner: 'none', visibility: 'public', ordering: 'stack' },
+          {
+            id: asZoneId('alpha:none'),
+            zoneKind: 'board',
+            owner: 'none',
+            visibility: 'public',
+            ordering: 'set',
+            category: 'province',
+            attributes: { population: 1, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false },
+          },
+          {
+            id: asZoneId('beta:none'),
+            zoneKind: 'board',
+            owner: 'none',
+            visibility: 'public',
+            ordering: 'set',
+            category: 'province',
+            attributes: { population: 1, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false },
+          },
+        ],
+      });
+      const state = makeBaseState({
+        zones: {
+          'reserve:none': [
+            { id: asTokenId('base-0'), type: 'base', props: { faction: 'US', type: 'base' } },
+            { id: asTokenId('troop-1'), type: 'troops', props: { faction: 'US', type: 'troops' } },
+            { id: asTokenId('troop-2'), type: 'troops', props: { faction: 'US', type: 'troops' } },
+          ],
+          'alpha:none': [],
+          'beta:none': [],
+        },
+      });
+
+      const result = legalChoicesEvaluate(def, state, makeMove('dependentChooseNLegalityOp'));
+      assert.equal(result.kind, 'pending');
+      if (result.kind !== 'pending') {
+        throw new Error('Expected pending chooseN request.');
+      }
+
+      assert.equal(result.type, 'chooseN');
+      assert.deepStrictEqual(result.options, [
+        { value: asTokenId('base-0'), legality: 'illegal', illegalReason: null },
+        { value: asTokenId('troop-1'), legality: 'legal', illegalReason: null },
+        { value: asTokenId('troop-2'), legality: 'legal', illegalReason: null },
+      ]);
+    });
+
     it('computes chooseN option legality from a downstream stage cost validation checkpoint', () => {
       const action: ActionDef = {
         id: asActionId('stageChooseNCostValidationOp'),

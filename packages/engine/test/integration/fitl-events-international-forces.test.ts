@@ -156,6 +156,55 @@ describe('FITL card-65 International Forces', () => {
     assert.equal(optionValues.includes(NORTH_VIETNAM), false, 'US pieces must never be placeable into North Vietnam');
   });
 
+  it('unshaded marks out-of-play US Bases illegal at the source-choice step when every map space is already base-full', () => {
+    const def = compileDef();
+    const fullMapZones = Object.fromEntries(
+      def.zones
+        .filter((zone) => zone.zoneKind === 'board')
+        .map((zone, index) => [
+          String(zone.id),
+          [
+            makeToken(`if-full-map-a-${index}`, 'base', 'ARVN'),
+            makeToken(`if-full-map-b-${index}`, 'base', 'US'),
+          ],
+        ]),
+    );
+
+    const setup = setupState(def, 650015, 1, {
+      'out-of-play-US:none': [
+        makeToken('if-source-base', 'base', 'US'),
+        makeToken('if-source-troop-1', 'troops', 'US'),
+        makeToken('if-source-troop-2', 'troops', 'US'),
+        makeToken('if-source-troop-3', 'troops', 'US'),
+        makeToken('if-source-troop-4', 'troops', 'US'),
+      ],
+      ...fullMapZones,
+    });
+
+    const move = findCardMove(def, setup, 'unshaded');
+    assert.notEqual(move, undefined, 'Expected International Forces unshaded move');
+
+    const firstPending = legalChoicesEvaluate(def, setup, move!);
+    assert.equal(firstPending.kind, 'pending');
+    if (firstPending.kind !== 'pending') {
+      throw new Error('Expected initial chooseN request for International Forces unshaded.');
+    }
+
+    const legalityByTokenId = new Map(
+      firstPending.options.map((option) => [String(option.value), option.legality]),
+    );
+
+    assert.equal(
+      legalityByTokenId.get('if-source-base'),
+      'illegal',
+      'Undeliverable US Base should be illegal at the source-choice step',
+    );
+    assert.equal(legalityByTokenId.get('if-source-troop-1'), 'legal');
+    assert.equal(legalityByTokenId.get('if-source-troop-2'), 'legal');
+    assert.equal(legalityByTokenId.get('if-source-troop-3'), 'legal');
+    assert.equal(legalityByTokenId.get('if-source-troop-4'), 'legal');
+  });
+
   it('unshaded places up to 4 chosen out-of-play US pieces onto any legal map spaces, including Laos, while respecting base stacking', () => {
     const def = compileDef();
     const setup = setupState(def, 65002, 1, {

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None in this ticket — relies on prior engine/compiler fixes
-**Deps**: archive/tickets/ENGINEARCH/ENGINEARCH-165-canonical-rollrandom-chooseN-cardinality-contract.md, archive/tickets/ENGINEARCH/ENGINEARCH-166-generic-stochastic-decision-completion-and-normalization.md, tickets/ENGINEARCH-167-legality-backed-choice-domain-expressiveness.md
+**Deps**: archive/tickets/ENGINEARCH/ENGINEARCH-165-canonical-rollrandom-chooseN-cardinality-contract.md, archive/tickets/ENGINEARCH/ENGINEARCH-166-generic-stochastic-decision-completion-and-normalization.md, archive/tickets/ENGINEARCH/ENGINEARCH-167-legality-backed-choice-domain-expressiveness.md
 
 ## Problem
 
@@ -14,7 +14,7 @@ Card-65 is currently rules-correct but not canonically encoded. The shaded side 
 
 1. `data/games/fire-in-the-lake/41-events/065-096.md` currently encodes card-65 shaded with explicit branches for exact removal counts instead of one dynamic exact `chooseN`.
 2. `packages/engine/test/integration/fitl-events-international-forces.test.ts` currently contains a bespoke `withAllStochasticRemovalChoices()` helper because generic stochastic decision normalization is missing.
-3. The current unshaded implementation is rules-correct but broader than ideal at the source-selection step because dependent legality-backed source filtering is not yet available.
+3. The current unshaded implementation is already protected by generic downstream legality propagation: undeliverable US Bases become illegal at the source-choice step even though the source query itself remains broader than the ideal canonical data shape.
 
 ## Architecture Check
 
@@ -33,9 +33,9 @@ Replace the branch ladder with the declarative sequence:
 3. exact `chooseN` by the US
 4. move selected US pieces to `out-of-play-US:none`
 
-### 2. Tighten unshaded source selection if the generic source-domain fix lands
+### 2. Reassess whether unshaded needs any data change at all
 
-If `ENGINEARCH-167` lands as designed, update the unshaded source domain so out-of-play US Bases are only selectable when they have at least one legal destination. If that dependency lands in a different but equivalent shape, use the canonical replacement.
+Because generic downstream legality already blocks undeliverable US Bases at the source-choice step, only change the unshaded data if there is a clearly simpler canonical encoding than the current declarative flow. Do not add redundant source-domain logic that duplicates downstream legality.
 
 ### 3. Remove bespoke stochastic test scaffolding
 
@@ -58,7 +58,7 @@ Delete the card-specific stochastic helper and rely on shared completion/normali
 
 1. Card-65 shaded no longer uses explicit per-die-result branches in event data.
 2. Card-65 integration coverage passes using shared stochastic completion helpers only.
-3. If the source-domain expressiveness fix lands, unshaded source options exclude undeliverable out-of-play US Bases directly at the source-choice step.
+3. Unshaded source-choice behavior remains correct: undeliverable out-of-play US Bases are illegal at the source-choice step via generic runtime legality propagation, whether or not the source query itself is tightened.
 4. Existing suite: `pnpm -F @ludoforge/engine test`.
 
 ### Invariants

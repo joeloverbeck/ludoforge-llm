@@ -229,7 +229,6 @@ describe('FITL card-63 Fact Finding', () => {
     const def = compileDef();
 
     let chosenSeed: number | null = null;
-    let largeTransfer = 0;
     for (let seed = 1; seed <= 128; seed += 1) {
       const move = findCard63Move(
         def,
@@ -247,7 +246,7 @@ describe('FITL card-63 Fact Finding', () => {
         patronage: 10,
         arvnResources: 20,
       }), move!).state;
-      largeTransfer = Number(final.globalVars.arvnResources) - 20;
+      const largeTransfer = Number(final.globalVars.arvnResources) - 20;
       if (largeTransfer > 2) {
         chosenSeed = seed;
         break;

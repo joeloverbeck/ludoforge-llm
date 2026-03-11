@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { compileGameSpecToGameDef, loadGameSpecSource, parseGameSpec } from '@ludoforge/engine/cnl';
+import { runGameSpecStagesFromEntrypoint } from '@ludoforge/engine/cnl';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
@@ -23,11 +23,20 @@ function readYaml(pathFromRepoRoot: string): unknown {
 }
 
 function compileProductionGameDef(pathFromRepoRoot: string) {
-  const markdown = loadGameSpecSource(resolve(repoRootPath(), pathFromRepoRoot)).markdown;
-  const parsed = parseGameSpec(markdown);
-  const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+  const staged = runGameSpecStagesFromEntrypoint(resolve(repoRootPath(), pathFromRepoRoot));
+  expect(staged.parsed.diagnostics.some((diagnostic) => diagnostic.severity === 'error')).toBe(false);
+  expect(staged.validation.diagnostics.some((diagnostic) => diagnostic.severity === 'error')).toBe(false);
+  expect(staged.compilation.blocked).toBe(false);
+  const compiled = staged.compilation.result;
+  expect(compiled).not.toBeNull();
+  if (compiled === null) {
+    throw new Error(`Expected compiled GameDef for ${pathFromRepoRoot}`);
+  }
   expect(compiled.gameDef).not.toBeNull();
-  return compiled.gameDef!;
+  if (compiled.gameDef === null) {
+    throw new Error(`Expected non-null gameDef for ${pathFromRepoRoot}`);
+  }
+  return compiled.gameDef;
 }
 
 describe('visual-config.yaml files', () => {
@@ -45,7 +54,7 @@ describe('visual-config.yaml files', () => {
     { timeout: 15_000 },
     () => {
     const parsed = VisualConfigSchema.parse(readYaml('data/games/fire-in-the-lake/visual-config.yaml'));
-    const fitlGameDef = compileProductionGameDef('data/games/fire-in-the-lake');
+    const fitlGameDef = compileProductionGameDef('data/games/fire-in-the-lake.game-spec.md');
     const internalScenarioDeckZones = fitlGameDef.zones.filter((zone) => zone.isInternal === true);
 
     const boardZoneIds = new Set(
@@ -135,7 +144,7 @@ describe('visual-config.yaml files', () => {
     { timeout: 15_000 },
     () => {
     const parsed = VisualConfigSchema.parse(readYaml('data/games/fire-in-the-lake/visual-config.yaml'));
-    const fitlGameDef = compileProductionGameDef('data/games/fire-in-the-lake');
+    const fitlGameDef = compileProductionGameDef('data/games/fire-in-the-lake.game-spec.md');
     const provider = new VisualConfigProvider(parsed);
 
     // All action IDs in the visual config must exist in the compiled GameDef
@@ -196,7 +205,7 @@ describe('visual-config.yaml files', () => {
     expect(raw.trimStart().startsWith('version: 1')).toBe(true);
 
     const parsed = VisualConfigSchema.parse(readYaml('data/games/texas-holdem/visual-config.yaml'));
-    const texasGameDef = compileProductionGameDef('data/games/texas-holdem');
+    const texasGameDef = compileProductionGameDef('data/games/texas-holdem.game-spec.md');
     const texasZoneIds = new Set(texasGameDef.zones.map((zone) => zone.id as string));
 
     expect(parsed.layout?.mode).toBe('table');

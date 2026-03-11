@@ -1,17 +1,17 @@
 import { createHash } from 'node:crypto';
 import * as assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import type { Diagnostic } from '../../src/kernel/diagnostics.js';
 import type { CompileResult, RunGameSpecStagesResult } from '../../src/cnl/index.js';
-import { loadGameSpecSource, runGameSpecStages } from '../../src/cnl/index.js';
+import { loadGameSpecSource, runGameSpecStagesFromEntrypoint } from '../../src/cnl/index.js';
 
 export interface CompiledProductionSpec {
   readonly markdown: string;
-  readonly parsed: ReturnType<typeof runGameSpecStages>['parsed'];
-  readonly validatorDiagnostics: ReturnType<typeof runGameSpecStages>['validation']['diagnostics'];
+  readonly parsed: RunGameSpecStagesResult['parsed'];
+  readonly validatorDiagnostics: RunGameSpecStagesResult['validation']['diagnostics'];
   readonly compiled: CompileResult & { readonly gameDef: NonNullable<CompileResult['gameDef']> };
 }
 
@@ -33,6 +33,8 @@ function resolveRepoRoot(): string {
 const REPO_ROOT = resolveRepoRoot();
 const FITL_PRODUCTION_SPEC_PATH = join(REPO_ROOT, 'data', 'games', 'fire-in-the-lake');
 const TEXAS_PRODUCTION_SPEC_PATH = join(REPO_ROOT, 'data', 'games', 'texas-holdem');
+const FITL_PRODUCTION_ENTRYPOINT_PATH = join(REPO_ROOT, 'data', 'games', 'fire-in-the-lake.game-spec.md');
+const TEXAS_PRODUCTION_ENTRYPOINT_PATH = join(REPO_ROOT, 'data', 'games', 'texas-holdem.game-spec.md');
 const FIXTURE_BASE_PATH = join(REPO_ROOT, 'packages', 'engine', 'test', 'fixtures', 'cnl', 'compiler');
 
 let cachedFitlResult: CompiledProductionSpec | null = null;
@@ -61,13 +63,16 @@ export function readTexasProductionSpec(): string {
  */
 export function compileProductionSpec(): CompiledProductionSpec {
   const markdown = readProductionSpec();
-  const hash = createHash('sha256').update(markdown).digest('hex');
+  const hash = createHash('sha256')
+    .update(readFileSync(FITL_PRODUCTION_ENTRYPOINT_PATH, 'utf8'))
+    .update(markdown)
+    .digest('hex');
 
   if (cachedFitlResult !== null && cachedFitlHash === hash) {
     return cachedFitlResult;
   }
 
-  const staged = runGameSpecStages(markdown);
+  const staged = runGameSpecStagesFromEntrypoint(FITL_PRODUCTION_ENTRYPOINT_PATH);
   const compiled = requireSuccessfulProductionCompilation('FITL production spec', staged);
 
   cachedFitlResult = {
@@ -87,13 +92,16 @@ export function compileProductionSpec(): CompiledProductionSpec {
  */
 export function compileTexasProductionSpec(): CompiledProductionSpec {
   const markdown = readTexasProductionSpec();
-  const hash = createHash('sha256').update(markdown).digest('hex');
+  const hash = createHash('sha256')
+    .update(readFileSync(TEXAS_PRODUCTION_ENTRYPOINT_PATH, 'utf8'))
+    .update(markdown)
+    .digest('hex');
 
   if (cachedTexasResult !== null && cachedTexasHash === hash) {
     return cachedTexasResult;
   }
 
-  const staged = runGameSpecStages(markdown);
+  const staged = runGameSpecStagesFromEntrypoint(TEXAS_PRODUCTION_ENTRYPOINT_PATH);
   const compiled = requireSuccessfulProductionCompilation('Texas production spec', staged);
 
   cachedTexasResult = {

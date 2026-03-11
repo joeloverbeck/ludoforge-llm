@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — production-spec helper usage and fragment-aware compile path; no runtime semantics changes
-**Deps**: `tickets/README.md`, `tickets/ENGINEARCH-101-gamespec-fragment-entrypoints.md`, `data/games/fire-in-the-lake/00-metadata.md`, `data/games/fire-in-the-lake/20-macros.md`, `data/games/fire-in-the-lake/41-content-event-decks.md`, `packages/engine/test/helpers/production-spec-helpers.ts`
+**Deps**: `tickets/README.md`, `archive/tickets/ENGINEARCH-101-gamespec-fragment-entrypoints.md`, `data/games/fire-in-the-lake/00-metadata.md`, `data/games/fire-in-the-lake/20-macros.md`, `data/games/fire-in-the-lake/41-content-event-decks.md`, `packages/engine/test/helpers/production-spec-helpers.ts`
 
 ## Problem
 

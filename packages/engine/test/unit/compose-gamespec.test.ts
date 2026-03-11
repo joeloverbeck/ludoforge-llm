@@ -90,4 +90,44 @@ describe('composeGameSpec', () => {
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPOSE_SINGLETON_CONFLICT'), true);
     assert.equal(result.doc.metadata?.id, 'game-a');
   });
+
+  it('preserves victoryStandings singleton sections during composition', () => {
+    const sources: Record<string, string> = {
+      '/spec/root.md': '```yaml\nimports:\n  - ./victory.md\n  - ./terminal.md\n```',
+      '/spec/victory.md': [
+        '```yaml',
+        'victoryStandings:',
+        '  seatGroupConfig:',
+        '    coinSeats: [us]',
+        '    insurgentSeats: [vc]',
+        '    soloSeat: us',
+        '    seatProp: faction',
+        '  markerName: supportOpposition',
+        '  defaultMarkerState: neutral',
+        '  markerConfigs:',
+        '    support:',
+        '      activeState: activeSupport',
+        '      passiveState: passiveSupport',
+        '  tieBreakOrder: [us, vc]',
+        '  entries:',
+        '    - seat: us',
+        '      threshold: 50',
+        '      formula:',
+        '        type: controlledPopulationPlusGlobalVar',
+        '        controlFn: coin',
+        '        varName: patronage',
+        '```',
+      ].join('\n'),
+      '/spec/terminal.md': '```yaml\nterminal:\n  conditions:\n    - when: { op: "==", left: 1, right: 1 }\n      result: { type: draw }\n```',
+    };
+
+    const result = composeGameSpec('/spec/root.md', {
+      loadSource: (sourceId) => sources[sourceId] ?? null,
+      resolveImport,
+    });
+
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+    assert.equal(result.doc.victoryStandings?.entries[0]?.seat, 'us');
+    assert.equal(result.sourceMap.byPath['victoryStandings.entries[0].seat']?.sourceId, '/spec/victory.md');
+  });
 });

@@ -74,6 +74,11 @@ const completeForApply = (
   return completed.move;
 };
 
+// Hoist compilation to module level — avoids per-test cache lookups and
+// repeated structuredClone of the large FITL GameDef (~9 tests).
+const DEF = compileDef();
+const DEF_NO_GRANTS = compileDefWithoutCard1Grants();
+
 describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   it('compiles card 1 (Gulf of Tonkin) with free Air Strike grant and casualty-scaled aid penalty', () => {
     const { parsed, compiled } = compileProductionSpec();
@@ -135,7 +140,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('routes Gulf of Tonkin free Air Strike through seat grant consumption and executeAs delegation at runtime', () => {
-    const def = compileDef();
+    const def = DEF;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
 
@@ -236,7 +241,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('moves mixed piece types (troops, bases, irregulars) from out-of-play', () => {
-    const def = compileDefWithoutCard1Grants();
+    const def = DEF_NO_GRANTS;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
     const cityZoneIds = def.zones
@@ -295,7 +300,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('distributes pieces across multiple cities when decisions specify different targets', () => {
-    const def = compileDefWithoutCard1Grants();
+    const def = DEF_NO_GRANTS;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
     const cityZoneIds = def.zones
@@ -372,7 +377,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('legalChoicesEvaluate returns chooseN first for unshaded template', () => {
-    const def = compileDefWithoutCard1Grants();
+    const def = DEF_NO_GRANTS;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
     const cityZoneIds = def.zones
@@ -427,7 +432,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('completeTemplateMove resolves chooseN plus per-piece city decision params for unshaded Gulf of Tonkin', () => {
-    const def = compileDefWithoutCard1Grants();
+    const def = DEF_NO_GRANTS;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
 
@@ -472,7 +477,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('allows unshaded side when fewer than 6 pieces exist in out-of-play', () => {
-    const def = compileDefWithoutCard1Grants();
+    const def = DEF_NO_GRANTS;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
     const cityZoneIds = def.zones
@@ -541,7 +546,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('allows unshaded side when zero pieces exist in out-of-play and resolves as no-op', () => {
-    const def = compileDefWithoutCard1Grants();
+    const def = DEF_NO_GRANTS;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
     const cityZoneIds = def.zones
@@ -588,7 +593,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('allows explicit zero-token selection when chooseN options exist', () => {
-    const def = compileDefWithoutCard1Grants();
+    const def = DEF_NO_GRANTS;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
     const cityZoneIds = def.zones
@@ -636,7 +641,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('treats Gulf of Tonkin shaded side as complete (no chooseOne required)', () => {
-    const def = compileDef();
+    const def = DEF;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
 
@@ -662,8 +667,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('keeps unshaded side legal when chooseOne options are unsatisfiable because zero selection remains valid', () => {
-    const source = compileDefWithoutCard1Grants();
-    const def = structuredClone(source);
+    const def = structuredClone(DEF_NO_GRANTS);
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
 
@@ -738,7 +742,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('executes card 1 unshaded by moving up to 6 US out-of-play pieces into cities', () => {
-    const def = compileDefWithoutCard1Grants();
+    const def = DEF_NO_GRANTS;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined, 'Expected at least one event deck');
     const cityZoneIds = def.zones.filter((zone: ZoneDef) => zone.category === 'city').map((zone: ZoneDef) => zone.id);
@@ -782,7 +786,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('RandomAgent completes an event template move that already has base params', () => {
-    const def = compileDefWithoutCard1Grants();
+    const def = DEF_NO_GRANTS;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
     const cityZoneIds = def.zones
@@ -838,7 +842,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('GreedyAgent completes an event template move that already has base params', () => {
-    const def = compileDefWithoutCard1Grants();
+    const def = DEF_NO_GRANTS;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
 

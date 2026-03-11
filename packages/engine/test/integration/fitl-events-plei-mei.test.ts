@@ -124,9 +124,13 @@ const buildCardMove = (def: GameDef, side: 'unshaded' | 'shaded'): Move => {
   };
 };
 
+// Hoist compilation to module level — compileProductionSpec() is internally cached,
+// but this avoids per-test assertion overhead and function-call cost.
+const DEF = compileDef();
+
 describe('FITL card-59 Plei Mei', () => {
   it('compiles card 59 with the exact rules text and a March then Attack-or-Ambush grant sequence', () => {
-    const def = compileDef();
+    const def = DEF;
     const card = def.eventDecks?.[0]?.cards.find((entry) => entry.id === CARD_ID);
     assert.notEqual(card, undefined);
 
@@ -170,7 +174,7 @@ describe('FITL card-59 Plei Mei', () => {
   });
 
   it('unshaded removes exactly 3 chosen NVA pieces from one eligible space, including bases', () => {
-    const def = compileDef();
+    const def = DEF;
     const setup = setupCardDrivenState(def, 59001, {
       [PLEIKU]: [
         makeToken('plei-coin-base-adjacent', 'troops', 'US'),
@@ -203,7 +207,7 @@ describe('FITL card-59 Plei Mei', () => {
   });
 
   it('unshaded removes all available NVA pieces when the selected eligible space has fewer than 3', () => {
-    const def = compileDef();
+    const def = DEF;
     const setup = setupCardDrivenState(def, 59002, {
       [QUANG_TRI]: [
         makeToken('plei-few-nva-t1', 'troops', 'NVA'),
@@ -221,7 +225,7 @@ describe('FITL card-59 Plei Mei', () => {
   });
 
   it('unshaded is unavailable when no NVA pieces are in a space with or adjacent to a COIN base', () => {
-    const def = compileDef();
+    const def = DEF;
     const setup = setupCardDrivenState(def, 59003, {
       [PLEIKU]: [makeToken('plei-no-coin-nva', 'troops', 'NVA')],
       [SAIGON]: [makeToken('plei-us-no-adjacent', 'troops', 'US')],
@@ -236,7 +240,7 @@ describe('FITL card-59 Plei Mei', () => {
   });
 
   it('shaded grants a free Monsoon March from outside South Vietnam only, at zero cost, then a free exact-one-space Attack', () => {
-    const def = compileDef();
+    const def = DEF;
     const setup = setupCardDrivenState(
       def,
       59004,
@@ -310,7 +314,7 @@ describe('FITL card-59 Plei Mei', () => {
   });
 
   it('shaded rejects a free March that tries to move any piece from South Vietnam', () => {
-    const def = compileDef();
+    const def = DEF;
     const setup = setupCardDrivenState(
       def,
       59005,
@@ -341,7 +345,7 @@ describe('FITL card-59 Plei Mei', () => {
   });
 
   it('suppresses shaded play when no legal free March origin exists outside South Vietnam', () => {
-    const def = compileDef();
+    const def = DEF;
     const setup = setupCardDrivenState(
       def,
       59007,
@@ -361,7 +365,7 @@ describe('FITL card-59 Plei Mei', () => {
   });
 
   it('shaded allows a free Ambush in any one legal space, not only a March destination', () => {
-    const def = compileDef();
+    const def = DEF;
     const setup = setupCardDrivenState(
       def,
       59006,

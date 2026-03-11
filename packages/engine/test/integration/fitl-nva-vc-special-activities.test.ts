@@ -440,7 +440,7 @@ describe('FITL NVA/VC special activities integration', () => {
     assert.equal(final.markers[provinceSpace]?.supportOpposition, 'passiveSupport', 'Tax should shift province/city one level toward Active Support');
   });
 
-  it('defines Tax province/city support shift without a population gate', () => {
+  it('defines Tax province/city support shift only for populated spaces', () => {
     const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
@@ -463,20 +463,18 @@ describe('FITL NVA/VC special activities integration', () => {
     const supportShiftWhen = (supportShiftBranches[0] as { if: { when: unknown } }).if.when;
     assert.deepEqual(
       supportShiftWhen,
-      { op: '!=', left: { ref: 'markerState', space: '$space', marker: 'supportOpposition' }, right: 'activeSupport' },
-      'Tax support shift should only guard against activeSupport',
-    );
-    assert.equal(
-      findDeep(supportShiftWhen, (node: unknown) => {
-        const candidate = node as { ref?: unknown; prop?: unknown };
-        return candidate.ref === 'zoneProp' && candidate.prop === 'population';
-      }).length,
-      0,
-      'Tax support shift guard must not reference population',
+      {
+        op: 'and',
+        args: [
+          { op: '>', left: { ref: 'zoneProp', zone: '$space', prop: 'population' }, right: 0 },
+          { op: '!=', left: { ref: 'markerState', space: '$space', marker: 'supportOpposition' }, right: 'activeSupport' },
+        ],
+      },
+      'Tax support shift should require population > 0 and skip activeSupport spaces',
     );
   });
 
-  it('executes tax support shift for population-0 provinces', () => {
+  it('does not shift support for population-0 provinces', () => {
     const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
@@ -498,13 +496,6 @@ describe('FITL NVA/VC special activities integration', () => {
           makeToken('tax-pop0-vc-g', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
         ],
       },
-      markers: {
-        ...start.markers,
-        [pop0Province]: {
-          ...(start.markers[pop0Province] ?? {}),
-          supportOpposition: 'passiveSupport',
-        },
-      },
     };
 
     const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
@@ -515,8 +506,14 @@ describe('FITL NVA/VC special activities integration', () => {
     });
 
     const final = result.state;
-    assert.equal(final.markers[pop0Province]?.supportOpposition, 'activeSupport');
-    assert.equal(final.globalVars.vcResources, 3, 'Population-0 province should add 0 resources while still shifting support');
+    assert.equal(final.markers[pop0Province]?.supportOpposition ?? 'neutral', 'neutral');
+    assert.equal(final.globalVars.vcResources, 3, 'Population-0 province should add 0 resources while leaving support neutral');
+    assert.equal(final.globalVars.taxCount, 1, 'Tax should still execute normally in a population-0 province');
+    assert.equal(
+      countTokens(final, pop0Province, (token) => token.props.faction === 'VC' && token.type === 'guerrilla' && token.props.activity === 'active'),
+      1,
+      'Tax should still activate one underground VC guerrilla in a population-0 province',
+    );
   });
 
   it('does not shift Tax support beyond active support', () => {

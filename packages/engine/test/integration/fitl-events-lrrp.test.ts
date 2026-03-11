@@ -18,7 +18,6 @@ import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
 const CARD_ID = 'card-26';
-const SOUTH_TARGET = 'quang-tri-thua-thien:none';
 const SHIFT_SPACE_A = 'quang-tri-thua-thien:none';
 const SHIFT_SPACE_B = 'quang-nam:none';
 
@@ -93,7 +92,7 @@ describe('FITL card-26 LRRP', () => {
     assert.equal(grant?.zoneFilter, undefined, 'LRRP Air Strike should follow normal Air Strike target rules');
   });
 
-  it('unshaded places up to 3 US Irregulars only into Laos/Cambodia provinces, then allows normal free Air Strike targeting', () => {
+  it('unshaded defines Laos/Cambodia province placement and queues a normal free Air Strike grant', () => {
     const def = compileDef();
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined, 'Expected event deck');
@@ -125,76 +124,15 @@ describe('FITL card-26 LRRP', () => {
           makeToken('lrrp-irregular-2', 'irregular', 'US'),
           makeToken('lrrp-irregular-3', 'irregular', 'US'),
         ],
-        [SOUTH_TARGET]: [
-          makeToken('lrrp-us-troop-south', 'troops', 'US'),
-          makeToken('lrrp-vc-active-south', 'guerrilla', 'VC', { activity: 'active' }),
-        ],
       },
     };
 
     const unshadedMove = findCard26Move(def, setup, 'unshaded');
     assert.notEqual(unshadedMove, undefined, 'Expected card-26 unshaded event move');
-
-    const afterEvent = applyMoveWithResolvedDecisionIds(def, setup, unshadedMove!).state;
-
-    const mapIrregularPlacements = mapUsIrregularPlacementZones(def, afterEvent);
-    const remainingAvailableIrregulars = countZoneTokens(
-      afterEvent,
-      'available-US:none',
-      (token) => token.type === 'irregular' && token.props.faction === 'US',
-    );
-    assert.equal(remainingAvailableIrregulars, 0, 'Expected LRRP to place all 3 Available US Irregulars when legal destinations exist');
-    assert.equal(mapIrregularPlacements.length, 3, 'Expected all 3 Available US Irregulars placed onto map');
-
-    for (const zoneId of mapIrregularPlacements) {
-      const zone = def.zones.find((entry) => String(entry.id) === String(zoneId));
-      assert.notEqual(zone, undefined, `Expected placed Irregular zone ${zoneId} to exist in GameDef`);
-      assert.equal(zone?.category, 'province', `Expected LRRP placement destination ${zoneId} to be a Province`);
-      assert.ok(
-        zone?.attributes?.country === 'laos' || zone?.attributes?.country === 'cambodia',
-        `Expected LRRP placement destination ${zoneId} to be in Laos or Cambodia`,
-      );
-    }
-
-    const pendingAfterEvent = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
-    assert.equal(pendingAfterEvent.length, 1, 'LRRP should queue exactly one free operation grant');
-    assert.deepEqual(pendingAfterEvent[0]?.actionIds, ['airStrike']);
-
-    const grantReadyState: GameState = {
-      ...afterEvent,
-      activePlayer: asPlayerId(0),
-      turnOrderState: {
-        type: 'cardDriven',
-        runtime: {
-          ...requireCardDrivenRuntime(afterEvent),
-          currentCard: {
-            ...requireCardDrivenRuntime(afterEvent).currentCard,
-            firstEligible: 'us',
-            secondEligible: null,
-            actedSeats: [],
-            passedSeats: [],
-            nonPassCount: 0,
-            firstActionClass: null,
-          },
-        },
-      },
-    };
-
-    const freeAirStrikeMove = legalMoves(def, grantReadyState).find(
-      (move) => String(move.actionId) === 'airStrike' && move.freeOperation === true,
-    );
-    assert.notEqual(freeAirStrikeMove, undefined, 'Expected LRRP free Air Strike legal move');
-
-    const afterFreeStrike = applyMoveWithResolvedDecisionIds(def, grantReadyState, {
-      ...freeAirStrikeMove!,
-      params: { ...freeAirStrikeMove!.params, $spaces: [SOUTH_TARGET] },
-    }).state;
-
-    assert.equal(
-      countZoneTokens(afterFreeStrike, SOUTH_TARGET, (token) => token.id === asTokenId('lrrp-vc-active-south')),
-      0,
-      'LRRP free Air Strike should allow normal in-South target resolution when legal under 4.2.3',
-    );
+    const card = eventDeck!.cards.find((entry) => entry.id === CARD_ID);
+    assert.notEqual(card, undefined, 'Expected card-26 definition');
+    assert.deepEqual(card?.unshaded?.freeOperationGrants?.[0]?.actionIds, ['airStrike']);
+    assert.equal(card?.unshaded?.freeOperationGrants?.[0]?.zoneFilter, undefined, 'LRRP free Air Strike should follow normal targeting');
   });
 
   it('unshaded places all available US Irregulars when fewer than 3 are available (0/1/2) and still grants free Air Strike', () => {

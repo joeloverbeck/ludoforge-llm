@@ -6,7 +6,9 @@ import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
-import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
+
+const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -43,14 +45,14 @@ const withMonsoonLookahead = (state: GameState): GameState => {
 
 describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   const getParsedProfile = (profileId: string): any => {
-    const { parsed } = compileProductionSpec();
+    const { parsed } = FITL_PRODUCTION_FIXTURE;
     const profile = parsed.doc.actionPipelines?.find((candidate: { id: string }) => candidate.id === profileId);
     assert.ok(profile, `Expected ${profileId}`);
     return profile;
   };
 
   it('compiles production spec with side-specific capability checks for all ticketed branches', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
     const macrosById = new Map((parsed.doc.effectMacros ?? []).map((macro: any) => [macro.id, macro]));
@@ -172,7 +174,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('US Abrams unshaded removes one untunneled Base first within normal Assault removal budget', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const space = 'quang-tin-quang-ngai:none';
@@ -218,7 +220,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('US Abrams unshaded does not remove tunneled Bases first', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const space = 'saigon:none';
@@ -262,7 +264,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('US Abrams unshaded applies to exactly one selected US Assault space', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const abramsSpace = 'saigon:none';
@@ -312,7 +314,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('ARVN Assault remains unaffected by Abrams unshaded', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const space = 'hue:none';
@@ -358,7 +360,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('US M48 unshaded applies +2 removal only in selected non-Lowland US Assault spaces', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const lowland = 'quang-tin-quang-ngai:none';
@@ -422,7 +424,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('ARVN Assault ignores M48 unshaded bonus entirely', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const space = 'binh-dinh:none';
@@ -465,7 +467,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Search and Destroy unshaded adds 1 underground removal only when US Assault would otherwise remove 0', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const space = 'kontum:none';
@@ -548,7 +550,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Search and Destroy unshaded does not affect ARVN Assault', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const space = 'kontum:none';
@@ -587,7 +589,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Search and Destroy shaded applies only to Assault Provinces, not cities', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const province = 'quang-nam:none';
@@ -637,7 +639,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Search and Destroy shaded applies to US-only, ARVN-only, and US+ARVN Assaults', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -731,7 +733,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('US Abrams shaded caps Assault space selection to max 2', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const a = 'saigon:none';
@@ -764,7 +766,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('routes M48 unshaded Assault bonus only through the US Assault profile', () => {
-    const { parsed } = compileProductionSpec();
+    const { parsed } = FITL_PRODUCTION_FIXTURE;
     assertNoErrors(parsed);
 
     const macrosById = new Map((parsed.doc.effectMacros ?? []).map((macro: any) => [macro.id, macro]));
@@ -814,7 +816,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Air Strike cap_lgbs shaded reduces removal budget to 2 at runtime', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -858,7 +860,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Air Strike cap_lgbs shaded counts Bases as pieces toward the 2-piece cap', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -903,7 +905,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Air Strike cap_lgbs unshaded suppresses support/opposition shift only in spaces removing exactly 1 piece', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -955,7 +957,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Air Strike cap_topGun unshaded degrades Trail by 2 and suppresses cap_migs shaded Available troop loss', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1016,7 +1018,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Air Strike cap_migs shaded removes 1 US troop from Available to Casualties when Trail degrades', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1071,7 +1073,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Air Strike cap_migs shaded does not remove troops when Trail is not degraded or when no US troop is Available', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const space = 'saigon:none';
@@ -1139,7 +1141,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Air Strike cap_sa2s unshaded removes 1 eligible NVA piece outside the South when Trail degrades', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1191,7 +1193,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Air Strike cap_sa2s unshaded does not remove NVA pieces when Trail does not actually degrade', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1243,7 +1245,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Air Strike cap_migs shaded does not remove available US troops when AAA shaded prevents Trail degradation', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1289,7 +1291,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Air Strike cap_aaa shaded enforces Trail floor of 2 without Top Gun modifiers', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1327,7 +1329,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Air Strike cap_aaa shaded overrides cap_topGun unshaded to keep Trail at 2 minimum', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1366,7 +1368,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Air Strike cap_topGun shaded degrades Trail by 1 only on roll 4-6 when degrade is declared', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const space = 'saigon:none';
@@ -1416,7 +1418,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Air Strike cap_topGun shaded does not attempt Trail degrade when $degradeTrail is no', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const space = 'saigon:none';
@@ -1454,7 +1456,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Arc Light unshaded allows exactly 1 no-COIN Province (including foreign Provinces) without reducing normal Air Strike space cap', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1517,7 +1519,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Arc Light unshaded no-COIN exception is Province-only and Base still counts as a COIN piece', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1582,7 +1584,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Arc Light shaded shifts each qualifying Air Strike space by 2 only when that space removes more than 1 piece', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1635,7 +1637,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Arc Light shaded applies 2-level shift even when only one space is selected', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1677,7 +1679,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Monsoon allows Arc Light no-COIN Province only when total Air Strike spaces stay at 2', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1714,7 +1716,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   });
 
   it('Monsoon rejects Arc Light selections that exceed 2 total Air Strike spaces', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 

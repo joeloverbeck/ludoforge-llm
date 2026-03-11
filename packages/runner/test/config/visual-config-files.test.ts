@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { runGameSpecStagesFromEntrypoint } from '@ludoforge/engine/cnl';
+import { loadGameSpecBundleFromEntrypoint, runGameSpecStagesFromBundle } from '@ludoforge/engine/cnl';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
@@ -23,7 +23,8 @@ function readYaml(pathFromRepoRoot: string): unknown {
 }
 
 function compileProductionGameDef(pathFromRepoRoot: string) {
-  const staged = runGameSpecStagesFromEntrypoint(resolve(repoRootPath(), pathFromRepoRoot));
+  const bundle = loadGameSpecBundleFromEntrypoint(resolve(repoRootPath(), pathFromRepoRoot));
+  const staged = runGameSpecStagesFromBundle(bundle);
   expect(staged.parsed.diagnostics.some((diagnostic) => diagnostic.severity === 'error')).toBe(false);
   expect(staged.validation.diagnostics.some((diagnostic) => diagnostic.severity === 'error')).toBe(false);
   expect(staged.compilation.blocked).toBe(false);

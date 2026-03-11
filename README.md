@@ -2,6 +2,10 @@
 Evolving board games relying on LLMs for design/judgement, and executable prototypes
 
 ## Testing Lanes
+- Default engine lane: `pnpm -F @ludoforge/engine test` runs schema checks, all unit tests, and only the core integration lane.
+- Engine core integration lane: `pnpm -F @ludoforge/engine test:integration:core`
+- Engine game-package integration lane: `pnpm -F @ludoforge/engine test:integration:game-packages`
+- Full engine integration aggregate: `pnpm -F @ludoforge/engine test:integration`
 - Fast local e2e default: `pnpm -F @ludoforge/engine test:e2e`
 - Slow long-run tournament regression lane: `pnpm -F @ludoforge/engine test:e2e:slow`
 - Full e2e lane (includes slow coverage): `pnpm -F @ludoforge/engine test:e2e:all`

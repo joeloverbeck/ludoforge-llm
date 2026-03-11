@@ -3,7 +3,9 @@ import { describe, it } from 'node:test';
 
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
-import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
+
+const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 
 const expectedCards = [
   { id: 'card-34', order: 34, title: 'SA-2s', sideMode: 'dual', seatOrder: ['NVA', 'US', 'ARVN', 'VC'] },
@@ -19,7 +21,7 @@ const expectedCards = [
 
 describe('FITL 1965 NVA-first event-card production spec', () => {
   it('compiles all 9 NVA-first 1965 cards with side-mode and metadata invariants', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -43,7 +45,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
   });
 
   it('encodes card 34 (SA-2s) as capability marker toggles for cap_sa2s', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -59,7 +61,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
   });
 
   it('encodes momentum cards 38/39/46 as canonical round-lasting toggles', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -85,7 +87,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
   });
 
   it('encodes card 38 as immediate redeploy plus ARVN -12 before momentum lockouts', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -116,7 +118,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
   });
 
   it('encodes card 44 (Ia Drang) as chained US operation grants plus shaded die-roll troop losses', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -182,7 +184,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
   });
 
   it('encodes card 47 (Chu Luc) as ARVN doubling plus targeted NVA-only assault and shaded North Vietnam border placement', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -207,7 +209,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
   });
 
   it('encodes card 56 (Vo Nguyen Giap) as guerrilla replacement plus selected-space March sequencing and per-space follow-up grants', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -281,7 +283,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
   });
 
   it('encodes card 59 (Plei Mei) as one-space NVA removal plus a constrained March followed by Attack or Ambush', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -329,7 +331,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
   });
 
   it('encodes card 53 (Sappers) with South Vietnam troop-removal targeting, remain-eligible, and province-only base removal routing', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);

@@ -4,16 +4,15 @@ import { describe, it } from 'node:test';
 import { applyMove, assertValidatedGameDef, createEvalRuntimeResources, initialState, legalMoves, type GameDef, type GameState, type Move } from '../../src/kernel/index.js';
 import { advancePhase, advanceToDecisionPoint } from '../../src/kernel/phase-advance.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getTexasProductionFixture } from '../helpers/production-spec-helpers.js';
+
+const TEXAS_PRODUCTION_FIXTURE = getTexasProductionFixture();
 
 const compileTexasDef = (): GameDef => {
-  const { parsed, compiled } = compileTexasProductionSpec();
+  const { parsed, compiled } = TEXAS_PRODUCTION_FIXTURE;
   assertNoErrors(parsed);
   assertNoDiagnostics(compiled, parsed.sourceMap);
-  if (compiled.gameDef === null) {
-    throw new Error('Expected compiled Texas gameDef to be present');
-  }
-  return assertValidatedGameDef(compiled.gameDef);
+  return assertValidatedGameDef(TEXAS_PRODUCTION_FIXTURE.gameDef);
 };
 
 const zoneCount = (state: GameState, zoneId: string): number => state.zones[zoneId]?.length ?? 0;

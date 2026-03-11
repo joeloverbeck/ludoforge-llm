@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { describe, it } from 'node:test';
 
-import { loadGameSpecEntrypoint, loadGameSpecSource } from '../../src/cnl/load-gamespec-source.js';
+import { loadGameSpecBundleFromEntrypoint, loadGameSpecSource } from '../../src/cnl/load-gamespec-source.js';
 
 describe('loadGameSpecSource', () => {
   it('loads a single markdown file', () => {
@@ -86,11 +86,37 @@ describe('loadGameSpecSource', () => {
         'utf8',
       );
 
-      const loaded = loadGameSpecEntrypoint(entryPath);
-      assert.deepEqual(loaded.sourcePaths, [metaPath, rulesPath, entryPath]);
+      const loaded = loadGameSpecBundleFromEntrypoint(entryPath);
+      assert.deepEqual(
+        loaded.sources.map((source) => source.path),
+        [metaPath, rulesPath, entryPath],
+      );
       assert.equal(loaded.parsed.doc.metadata?.id, 'test-game');
       assert.equal(loaded.parsed.doc.actions?.[0]?.id, 'pass');
       assert.equal(loaded.parsed.sourceMap.byPath['metadata.id']?.sourceId, metaPath);
+      assert.match(loaded.sourceFingerprint, /^[a-f0-9]{64}$/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('produces a deterministic fingerprint for the same source set and changes it when a fragment changes', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gamespec-fingerprint-'));
+    try {
+      const entryPath = join(dir, 'game-spec.md');
+      const metaPath = join(dir, 'meta.md');
+
+      writeFileSync(entryPath, '```yaml\nimports:\n  - ./meta.md\n```', 'utf8');
+      writeFileSync(metaPath, '```yaml\nmetadata:\n  id: test-game\n  players: { min: 2, max: 2 }\n```', 'utf8');
+
+      const first = loadGameSpecBundleFromEntrypoint(entryPath);
+      const second = loadGameSpecBundleFromEntrypoint(entryPath);
+      assert.equal(first.sourceFingerprint, second.sourceFingerprint);
+
+      writeFileSync(metaPath, '```yaml\nmetadata:\n  id: changed-game\n  players: { min: 2, max: 2 }\n```', 'utf8');
+
+      const changed = loadGameSpecBundleFromEntrypoint(entryPath);
+      assert.notEqual(first.sourceFingerprint, changed.sourceFingerprint);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -99,7 +125,7 @@ describe('loadGameSpecSource', () => {
   it('rejects directory entrypoints for composed loading', () => {
     const dir = mkdtempSync(join(tmpdir(), 'gamespec-entry-dir-'));
     try {
-      assert.throws(() => loadGameSpecEntrypoint(dir), /must be a markdown file/);
+      assert.throws(() => loadGameSpecBundleFromEntrypoint(dir), /must be a markdown file/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

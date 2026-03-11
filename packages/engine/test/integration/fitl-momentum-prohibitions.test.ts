@@ -13,7 +13,9 @@ import {
 } from '../../src/kernel/index.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
-import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
+
+const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 
 const makeToken = (id: string, type: string, faction: string, extra?: Record<string, unknown>): Token => ({
   id: asTokenId(id),
@@ -121,7 +123,7 @@ const withLookaheadCoup = (def: GameDef, state: GameState, isCoup: boolean): Gam
 
 describe('FITL momentum prohibition preconditions', () => {
   it('encodes free-operation legality bypass on momentum-blocked profiles (Rule 5.1.2)', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -158,7 +160,7 @@ describe('FITL momentum prohibition preconditions', () => {
   });
 
   it('keeps Typhoon blocking paid Air Lift but allows granted free Air Lift', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const blocked = withMom(withActivePlayer(initialState(def, 9014, 4).state, 0), { mom_typhoonKate: true });
@@ -186,7 +188,7 @@ describe('FITL momentum prohibition preconditions', () => {
   });
 
   it('allows granted free variants for momentum-blocked Transport when granted', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -213,7 +215,7 @@ describe('FITL momentum prohibition preconditions', () => {
   });
 
   it('prohibits Air Strike when any Air Strike momentum is active, but not from unrelated momentum', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -241,7 +243,7 @@ describe('FITL momentum prohibition preconditions', () => {
   });
 
   it('prohibits Air Lift from Medevac shaded or Typhoon Kate', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -261,7 +263,7 @@ describe('FITL momentum prohibition preconditions', () => {
   });
 
   it('prohibits US Assault only, keeping ARVN Assault legal', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const space = 'quang-nam:none';
@@ -323,7 +325,7 @@ describe('FITL momentum prohibition preconditions', () => {
   });
 
   it('prohibits both NVA and VC Ambush under Claymores', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -389,7 +391,7 @@ describe('FITL momentum prohibition preconditions', () => {
   });
 
   it('prohibits Infiltrate and blocks Rally trail improvement under McNamara Line', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -435,7 +437,7 @@ describe('FITL momentum prohibition preconditions', () => {
   });
 
   it('prohibits Transport and Bombard under Typhoon Kate and caps remaining SAs to 1 space', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -564,7 +566,7 @@ describe('FITL momentum prohibition preconditions', () => {
   });
 
   it('blocks Air Strike trail degrade under Oriskany while still allowing Air Strike', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const space = 'quang-nam:none';

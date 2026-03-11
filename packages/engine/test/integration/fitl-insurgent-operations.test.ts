@@ -6,7 +6,9 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { makeIsolatedInitialState } from '../helpers/isolated-state-helpers.js';
-import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
+
+const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 
 const ATTACK_SPACE = 'quang-tri-thua-thien:none';
 const LOC_SPACE = 'loc-hue-da-nang:none';
@@ -43,14 +45,14 @@ const withSupportState = (state: GameState, zoneId: string, supportState: string
 describe('FITL insurgent operations integration', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const parseProfile = (id: string): any => {
-    const { parsed } = compileProductionSpec();
+    const { parsed } = FITL_PRODUCTION_FIXTURE;
     const profile = parsed.doc.actionPipelines?.find((p: { id: string }) => p.id === id);
     assert.ok(profile, `${id} must exist in parsed doc`);
     return profile;
   };
 
   it('compiles insurgent Rally/March/Attack/Terror operation profiles from production spec', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assertNoErrors(compiled);
@@ -187,7 +189,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('executes terror through terror-nva-profile with province cost, marker placement, and Neutral shift', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -228,7 +230,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('allows NVA Terror in troops-only spaces and does not shift support from opposition', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -269,7 +271,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('places sabotage on LoC and keeps LoC Terror free', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -308,7 +310,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('enforces terror/sabotage marker supply cap and idempotent placement for NVA Terror', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -375,7 +377,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('enforces NVA Terror LimOp max=1 target space', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -417,7 +419,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('executes terror through terror-vc-profile with province cost, marker placement, and Opposition shift', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -458,7 +460,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('requires underground VC guerrilla for VC Terror target selection', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -492,7 +494,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('places sabotage on LoC and keeps VC Terror LoC free (including free operation)', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -531,7 +533,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('enforces terror/sabotage marker cap + idempotency for VC Terror and keeps shift policy distinct from NVA', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -651,7 +653,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('enforces VC Terror LimOp max=1 target space', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -693,7 +695,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('caps paid Terror target selection by resources while preserving LoC/free-operation behavior', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -783,7 +785,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('executes attack through attack-nva-profile when active player is NVA', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
 
     assert.notEqual(compiled.gameDef, null);
 
@@ -822,7 +824,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('executes attack through attack-vc-profile when active player is VC', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -864,7 +866,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('march moves NVA pieces from adjacent spaces and charges Province/City but not LoC destinations', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -920,7 +922,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('activates moving NVA guerrillas when destination is LoC/support and moving+COIN > 3', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -965,7 +967,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('does not activate moving guerrillas when destination is neither LoC nor support', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1014,7 +1016,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('skips March per-space Province/City cost when move is marked freeOperation', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1051,7 +1053,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('march moves VC pieces from adjacent spaces and charges Province/City but not LoC destinations', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1107,7 +1109,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('skips VC March per-space Province/City cost when move is marked freeOperation', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1144,7 +1146,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('caps paid March destination selection by resources while preserving LoC/free-operation behavior', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1226,7 +1228,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('activates moving VC guerrillas when destination is LoC/support and moving+COIN > 3', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1271,7 +1273,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('does not allow VC March Trail chain continuation', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1312,7 +1314,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('enforces VC March LimOp max=1 destination', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1346,7 +1348,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('enforces March LimOp max=1 destination', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1380,7 +1382,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('supports NVA Trail-chain continuation through Laos/Cambodia when trail > 0 and not LimOp', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1420,7 +1422,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('blocks NVA Trail-chain continuation when trail is 0 or action is LimOp', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1487,7 +1489,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('makes NVA March free in Laos/Cambodia when Trail is 4', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1526,7 +1528,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('treats attack as illegal when active player is not an insurgent faction', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
 
     assert.notEqual(compiled.gameDef, null);
 
@@ -1543,7 +1545,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('applies troops-attack damage as floor(nvaTroops/2) and applies attrition equal to US removed', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1624,7 +1626,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('skips nvaResources attack spend when move is marked freeOperation', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1672,7 +1674,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('skips vcResources attack spend when move is marked freeOperation', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1718,7 +1720,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('caps paid Attack target selection by resources and bypasses cap on free operations', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1834,7 +1836,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('treats rally as illegal when active player is not an insurgent faction', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1856,7 +1858,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('enforces rally space filter: excludes support and includes neutral/opposition', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1912,7 +1914,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('charges per-space rally cost normally and skips only that cost on free operations', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -1950,7 +1952,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('caps paid Rally target-space selection by NVA resources and bypasses cap on free operations', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -2035,7 +2037,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('supports no-base replacement branch and with-base guerrilla placement limit', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -2130,7 +2132,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('allows standalone trail improvement (including LimOp) and charges it even on free operations', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -2163,7 +2165,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('enforces rally LimOp max=1 with min=0', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -2205,7 +2207,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('executes rally through rally-vc-profile and does not perform trail-improvement behavior', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -2241,7 +2243,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('applies VC rally space filter, free-op cost skip, and LimOp max=1', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -2310,7 +2312,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('caps paid Rally target-space selection by VC resources and bypasses cap on free operations', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -2381,7 +2383,7 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('supports VC rally no-base replacement plus with-base place/flip branches', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 

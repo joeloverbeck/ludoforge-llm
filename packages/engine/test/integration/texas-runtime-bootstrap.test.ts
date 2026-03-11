@@ -5,7 +5,7 @@ import { applyMove, assertValidatedGameDef, initialState, legalMoves } from '../
 import type { GameState } from '../../src/kernel/index.js';
 import { advanceToDecisionPoint } from '../../src/kernel/phase-advance.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getTexasProductionFixture } from '../helpers/production-spec-helpers.js';
 import {
   firstLegalPolicy,
   runRuntimeSmokeGate,
@@ -15,14 +15,13 @@ import {
 } from '../helpers/runtime-smoke-harness.js';
 
 const compileTexasDef = () => {
-  const { parsed, compiled } = compileTexasProductionSpec();
+  const { parsed, compiled } = TEXAS_PRODUCTION_FIXTURE;
   assertNoErrors(parsed);
   assertNoDiagnostics(compiled, parsed.sourceMap);
-  if (compiled.gameDef === null) {
-    throw new Error('Expected compiled Texas gameDef to be present');
-  }
-  return assertValidatedGameDef(compiled.gameDef);
+  return assertValidatedGameDef(TEXAS_PRODUCTION_FIXTURE.gameDef);
 };
+
+const TEXAS_PRODUCTION_FIXTURE = getTexasProductionFixture();
 
 const totalCardsAcrossZones = (zones: Readonly<Record<string, readonly unknown[]>>): number =>
   Object.values(zones).reduce((sum, entries) => sum + entries.length, 0);

@@ -14,6 +14,7 @@ export * from './compile-zones.js';
 export * from './compile-conditions.js';
 export * from './compile-effects.js';
 export * from './game-spec-doc.js';
+export * from './gamespec-bundle.js';
 export * from './source-map.js';
 export * from './parser.js';
 export * from './compose-gamespec.js';

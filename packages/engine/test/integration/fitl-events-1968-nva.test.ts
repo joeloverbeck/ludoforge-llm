@@ -17,7 +17,9 @@ import {
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds, type DecisionOverrideRule } from '../helpers/decision-param-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
-import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
+
+const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
 const expectedCards = [
@@ -52,7 +54,7 @@ const RAND_US_CAPABILITY_MARKERS = [
 const WAR_PHOTOGRAPHER_SEAT_ORDER = ['NVA', 'VC', 'ARVN', 'US'] as const;
 
 const compileDef = (): GameDef => {
-  const { parsed, compiled } = compileProductionSpec();
+  const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
   assertNoErrors(parsed);
   assert.notEqual(compiled.gameDef, null);
   return compiled.gameDef!;
@@ -135,7 +137,7 @@ const findWarPhotographerMove = (def: GameDef, state: GameState, side: 'unshaded
 
 describe('FITL 1968 NVA-first event-card production spec', () => {
   it('compiles all 15 NVA-first 1968 cards with dual-side metadata invariants', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -160,7 +162,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
   });
 
   it('encodes 1968 NVA capability cards as capability marker toggles for both sides', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -197,7 +199,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
   });
 
   it('encodes MiGs exact card text and shaded Top Gun unshaded cancellation guard', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -226,7 +228,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
   });
 
   it('encodes card 35 (Thanh Hoa) as direct Trail degradation and post-improvement Trail-scaled NVA resource gain', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -310,7 +312,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
   });
 
   it('encodes card 41 (Bombing Pause) as unshaded round momentum toggle', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -343,7 +345,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
   });
 
   it('encodes card 42 (Chou En Lai) with NVA-selected die-roll troop removal and shaded trail-value resource gain', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -392,7 +394,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
   });
 
   it('encodes card 52 (RAND) with generic capability-side flip over active global markers', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
@@ -584,7 +586,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
   });
 
   it('encodes card 60 (War Photographer) with exact routing, placement, resources, and conditional eligibility behavior', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);

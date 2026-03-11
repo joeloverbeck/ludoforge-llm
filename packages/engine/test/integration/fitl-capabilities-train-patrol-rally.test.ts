@@ -16,7 +16,9 @@ import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
-import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
+
+const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -32,7 +34,7 @@ const countTokens = (state: GameState, zone: string, predicate: (token: Token) =
   (state.zones[zone] ?? []).filter(predicate).length;
 
 function getParsedProfile(profileId: string): any {
-  const { parsed } = compileProductionSpec();
+  const { parsed } = FITL_PRODUCTION_FIXTURE;
   const profile = parsed.doc.actionPipelines?.find((candidate: { id: string }) => candidate.id === profileId);
   assert.ok(profile, `Expected ${profileId}`);
   return profile;
@@ -60,7 +62,7 @@ function collectReferencedMacros(profile: any, macrosById: Map<string, any>): an
 }
 
 function collectMarkerSides(profileId: string, marker: string): Set<CapabilitySide> {
-  const { parsed } = compileProductionSpec();
+  const { parsed } = FITL_PRODUCTION_FIXTURE;
   const profile = getParsedProfile(profileId);
   const macrosById = new Map((parsed.doc.effectMacros ?? []).map((macro: any) => [macro.id, macro]));
   const macroDefs = collectReferencedMacros(profile, macrosById);
@@ -85,7 +87,7 @@ function collectMarkerSides(profileId: string, marker: string): Set<CapabilitySi
 
 describe('FITL capability branches (Train/Patrol/Rally)', () => {
   it('compiles production spec with train/patrol/rally capability side checks', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
 
@@ -126,7 +128,7 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
   });
 
   it('declares m48PatrolMoved as a boolean runtime prop on Patrol-moved cube types', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -197,7 +199,7 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
   });
 
   it('applies Patrol M48 shaded penalty through a shared post-patrol up-to-2 moved-cube macro', () => {
-    const { parsed } = compileProductionSpec();
+    const { parsed } = FITL_PRODUCTION_FIXTURE;
     const macrosById = new Map((parsed.doc.effectMacros ?? []).map((macro: any) => [macro.id, macro]));
 
     const penaltyMacro = macrosById.get('cap-patrol-m48-shaded-moved-cube-penalty');
@@ -244,7 +246,7 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
   });
 
   it('M48 shaded patrol penalty compiles chooser NVA to player id 2 in GameDef', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -258,7 +260,7 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
   });
 
   it('M48 shaded after US Patrol removes up to 2 moved US cubes to Casualties', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const locA = 'loc-saigon-can-tho:none';
@@ -328,7 +330,7 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
   });
 
   it('M48 shaded after ARVN Patrol sends moved ARVN cubes to ARVN Available, not Casualties', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const loc = 'loc-saigon-can-tho:none';
@@ -394,7 +396,7 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
   });
 
   it('AAA unshaded allows multi-space Rally only when not improving Trail', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -445,7 +447,7 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
   });
 
   it('AAA unshaded still allows single-space Rally to improve Trail', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -482,7 +484,7 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
   });
 
   it('SA-2s shaded improves Trail by 2 boxes instead of 1 during Rally', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -515,7 +517,7 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
   });
 
   it('SA-2s shaded Rally Trail boost still clamps at the maximum Trail value of 4', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 

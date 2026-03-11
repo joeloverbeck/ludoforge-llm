@@ -13,7 +13,9 @@ import {
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
-import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
+
+const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -50,7 +52,7 @@ const operationInitialState = (def: GameDef, seed: number, playerCount: number):
 });
 
 function getParsedProfile(profileId: string): any {
-  const { parsed } = compileProductionSpec();
+  const { parsed } = FITL_PRODUCTION_FIXTURE;
   const profile = parsed.doc.actionPipelines?.find((candidate: { id: string }) => candidate.id === profileId);
   assert.ok(profile, `Expected ${profileId}`);
   return profile;
@@ -78,7 +80,7 @@ function collectReferencedMacros(profile: any, macrosById: Map<string, any>): an
 }
 
 function collectMarkerSides(profileId: string, marker: string): Set<'unshaded' | 'shaded'> {
-  const { parsed } = compileProductionSpec();
+  const { parsed } = FITL_PRODUCTION_FIXTURE;
   const profile = getParsedProfile(profileId);
   const macrosById = new Map((parsed.doc.effectMacros ?? []).map((macro: any) => [macro.id, macro]));
   const macroDefs = collectReferencedMacros(profile, macrosById);
@@ -103,7 +105,7 @@ function collectMarkerSides(profileId: string, marker: string): Set<'unshaded' |
 
 describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
   it('compiles production spec with expected side-specific checks for ticketed branches', () => {
-    const { parsed, compiled } = compileProductionSpec();
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
 
@@ -151,7 +153,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
   });
 
   it('moves ARVN Troops normally, restricts shaded Transport to Rangers only, and flips Rangers map-wide', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -224,7 +226,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
   });
 
   it('grants unshaded Armored Cavalry a free ARVN Assault in the Transport destination after movement', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -280,7 +282,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
   });
 
   it('allows declining the unshaded Armored Cavalry free Assault and preserves shaded destinations from free removals', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -335,7 +337,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
   });
 
   it('uses the ARVN Highland Assault formula for unshaded Armored Cavalry follow-up assaults', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -374,7 +376,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
   });
 
   it('applies cap_mandateOfHeaven shaded max-1 Govern selection and unshaded one-space no-shift override', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -464,7 +466,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
   });
 
   it('applies cap_boobyTraps unshaded Ambush max-1-space limit (inactive/shaded preserve max-2)', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -514,7 +516,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
   });
 
   it('applies cap_mainForceBns shaded VC Ambush double removal (inactive/unshaded remain single)', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
@@ -558,7 +560,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
   });
 
   it('applies cap_cadres unshaded VC Terror guerrilla-cost reduction by suppressing activation', () => {
-    const { compiled } = compileProductionSpec();
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 

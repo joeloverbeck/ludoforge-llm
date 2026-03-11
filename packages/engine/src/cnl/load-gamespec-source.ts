@@ -1,19 +1,14 @@
+import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, extname, join, resolve } from 'node:path';
 
-import type { ParseGameSpecOptions, ParseGameSpecResult } from './parser.js';
 import { composeGameSpec } from './compose-gamespec.js';
+import type { LoadedGameSpecBundle } from './gamespec-bundle.js';
+import type { ParseGameSpecOptions } from './parser.js';
 
 export interface LoadedGameSpecSource {
   readonly markdown: string;
   readonly sourcePaths: readonly string[];
-}
-
-export interface LoadedGameSpecEntrypointSource {
-  readonly entryPath: string;
-  readonly parsed: ParseGameSpecResult;
-  readonly sourcePaths: readonly string[];
-  readonly sourceOrder: readonly string[];
 }
 
 const MARKDOWN_EXTENSION = '.md';
@@ -47,20 +42,21 @@ export function loadGameSpecSource(entryPath: string): LoadedGameSpecSource {
   return { markdown, sourcePaths: markdownFiles };
 }
 
-export function loadGameSpecEntrypoint(
+export function loadGameSpecBundleFromEntrypoint(
   entryPath: string,
   options: {
     readonly parseOptions?: Omit<ParseGameSpecOptions, 'sourceId'>;
   } = {},
-): LoadedGameSpecEntrypointSource {
+): LoadedGameSpecBundle {
   const resolvedEntryPath = resolve(entryPath);
   const entryStats = statSync(resolvedEntryPath);
   if (!entryStats.isFile()) {
     throw new Error(`GameSpec entrypoint must be a markdown file: ${entryPath}`);
   }
+  const sourceMarkdownByPath = new Map<string, string>();
 
   const composeOptions = {
-    loadSource: (sourceId: string) => loadEntrypointSource(sourceId),
+    loadSource: (sourceId: string) => loadEntrypointSource(sourceId, sourceMarkdownByPath),
     resolveImport: (importPath: string, importerSourceId: string) => resolve(dirname(importerSourceId), importPath),
     ...(options.parseOptions === undefined ? {} : { parseOptions: options.parseOptions }),
   };
@@ -69,19 +65,27 @@ export function loadGameSpecEntrypoint(
     ...composeOptions,
   });
 
+  const sources = result.sourceOrder.map((sourcePath) => {
+    const markdown = sourceMarkdownByPath.get(sourcePath);
+    if (markdown === undefined) {
+      throw new Error(`Missing loaded source content for "${sourcePath}".`);
+    }
+    return { path: sourcePath, markdown };
+  });
+
   return {
     entryPath: resolvedEntryPath,
+    sources,
+    sourceFingerprint: fingerprintGameSpecBundleSources(sources),
     parsed: {
       doc: result.doc,
       sourceMap: result.sourceMap,
       diagnostics: result.diagnostics,
     },
-    sourcePaths: result.sourceOrder,
-    sourceOrder: result.sourceOrder,
   };
 }
 
-function loadEntrypointSource(sourceId: string): string | null {
+function loadEntrypointSource(sourceId: string, sourceMarkdownByPath: Map<string, string>): string | null {
   const resolvedSourceId = resolve(sourceId);
   try {
     const stats = statSync(resolvedSourceId);
@@ -91,5 +95,16 @@ function loadEntrypointSource(sourceId: string): string | null {
   } catch {
     return null;
   }
-  return readFileSync(resolvedSourceId, 'utf8');
+  const markdown = readFileSync(resolvedSourceId, 'utf8');
+  sourceMarkdownByPath.set(resolvedSourceId, markdown);
+  return markdown;
+}
+
+function fingerprintGameSpecBundleSources(sources: readonly LoadedGameSpecBundle['sources'][number][]): string {
+  return sources
+    .reduce(
+      (hash, source) => hash.update(source.path).update('\0').update(source.markdown).update('\0'),
+      createHash('sha256'),
+    )
+    .digest('hex');
 }

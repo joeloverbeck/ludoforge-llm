@@ -17,6 +17,8 @@
     "test": "pnpm run check:ticket-deps && pnpm run guard:gitnexus-header-stats && turbo test",
     "test:engine:unit": "pnpm -F @ludoforge/engine test:unit",
     "test:engine:integration": "pnpm -F @ludoforge/engine test:integration",
+    "test:engine:integration:core": "pnpm -F @ludoforge/engine test:integration:core",
+    "test:engine:game-packages": "pnpm -F @ludoforge/engine test:integration:game-packages",
     "test:engine:performance": "pnpm -F @ludoforge/engine test:performance",
     "test:engine:memory": "pnpm -F @ludoforge/engine test:memory",
     "dev": "turbo dev",

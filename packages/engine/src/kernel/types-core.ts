@@ -12,6 +12,7 @@ import type {
   ActionExecutorSel,
   ConditionAST,
   EffectAST,
+  MoveParamScalar,
   MoveParamValue,
   NumericValueExpr,
   OptionsQuery,
@@ -632,11 +633,17 @@ export interface ChoicePendingRequest {
   readonly reason?: ChoiceIllegalReason;
 }
 
+export interface ChoiceStochasticOutcome {
+  readonly bindings: Readonly<Record<string, MoveParamScalar>>;
+  readonly nextDecision?: ChoicePendingRequest;
+}
+
 export interface ChoiceStochasticPendingRequest {
   readonly kind: 'pendingStochastic';
   readonly complete: false;
   readonly source: 'rollRandom';
   readonly alternatives: readonly ChoicePendingRequest[];
+  readonly outcomes: readonly ChoiceStochasticOutcome[];
   readonly reason?: ChoiceIllegalReason;
 }
 

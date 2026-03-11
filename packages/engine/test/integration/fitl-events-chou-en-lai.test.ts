@@ -5,6 +5,7 @@ import {
   applyMove,
   asPlayerId,
   asTokenId,
+  completeMoveDecisionSequence,
   initialState,
   legalMoves,
   pickDeterministicChoiceValue,
@@ -101,12 +102,21 @@ describe('FITL card-42 Chou En Lai', () => {
         return pickDeterministicChoiceValue(request);
       },
     });
-    assert.equal(pendingProbe.complete, false, 'Expected unresolved pending choice before explicit unshaded troop-removal selection');
-    assert.equal(pendingProbe.nextDecision?.type, 'chooseN', 'Expected pending chooseN troop-removal decision');
-    assert.equal(pendingProbe.nextDecision?.decisionPlayer, 2, 'Expected pending decision owner to be NVA (player 2)');
-    assert.equal(assertedNvaOwnedTroopRemoval, true, 'Expected unshaded discovery to surface NVA-owned troop-removal choice');
+    assert.equal(pendingProbe.complete, false, 'Expected unresolved stochastic or troop-removal choice before explicit unshaded troop-removal selection');
+    assert.equal(
+      pendingProbe.nextDecision?.type === 'chooseN'
+      || pendingProbe.stochasticDecision?.alternatives.some((alternative) => alternative.type === 'chooseN'),
+      true,
+      'Expected discovery to surface the unshaded troop-removal decision directly or as a stochastic alternative',
+    );
+    assert.equal(
+      pendingProbe.nextDecision?.decisionPlayer === 2
+      || pendingProbe.stochasticDecision?.alternatives.some((alternative) => alternative.type === 'chooseN' && alternative.decisionPlayer === 2),
+      true,
+      'Expected troop-removal decision ownership to stay routed to NVA (player 2)',
+    );
 
-    const resolved = resolveMoveDecisionSequence(def, setup, pendingProbe.move, {
+    const resolved = completeMoveDecisionSequence(def, setup, pendingProbe.move, {
       choose: (request): MoveParamValue | undefined => {
         if (request.type === 'chooseN') {
           assert.equal(
@@ -118,12 +128,15 @@ describe('FITL card-42 Chou En Lai', () => {
           if (request.options.length < required) {
             return undefined;
           }
+          assertedNvaOwnedTroopRemoval = true;
           return request.options.slice(0, required).map((option) => option.value as string | number | boolean);
         }
         return pickDeterministicChoiceValue(request);
       },
+      chooseStochastic: (request) => request.outcomes[0]?.bindings,
     });
     assert.equal(resolved.complete, true, 'Expected discovery-driven decision resolution for card-42 unshaded');
+    assert.equal(assertedNvaOwnedTroopRemoval, true, 'Expected completion to route troop-removal choice back to NVA once the stochastic branch is fixed');
 
     const after = applyMove(def, setup, resolved.move).state;
     assert.equal(after.globalVars.nvaResources, 0, 'Unshaded should subtract 10 NVA resources with floor at 0');

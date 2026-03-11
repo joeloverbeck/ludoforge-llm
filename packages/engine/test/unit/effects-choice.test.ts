@@ -616,7 +616,7 @@ describe('effects choice assertions', () => {
     assert.deepEqual(result.pendingChoice?.options.map((option) => option.value), ['x']);
   });
 
-  it('rollRandom discovery merges chooseN bounds conservatively across outcomes', () => {
+  it('rollRandom discovery preserves chooseN alternatives when exact cardinality differs across outcomes', () => {
     const ctx = makeDiscoveryCtx();
     const effect: EffectAST = {
       rollRandom: {
@@ -638,12 +638,22 @@ describe('effects choice assertions', () => {
     };
 
     const result = applyEffect(effect, ctx);
-    assert.equal(result.pendingChoice?.kind, 'pending');
-    assert.equal(result.pendingChoice?.type, 'chooseN');
-    assert.equal(result.pendingChoice?.decisionId, 'decision:$inside');
-    assert.equal(result.pendingChoice?.min, 1);
-    assert.equal(result.pendingChoice?.max, 1);
-    assert.deepEqual(result.pendingChoice?.options.map((option) => option.value), ['a', 'b', 'c']);
+    assert.equal(result.pendingChoice?.kind, 'pendingStochastic');
+    if (result.pendingChoice?.kind !== 'pendingStochastic') {
+      throw new Error('expected stochastic pending choice');
+    }
+    assert.deepEqual(
+      result.pendingChoice.alternatives.map((alternative) => ({
+        decisionId: alternative.decisionId,
+        min: alternative.min,
+        max: alternative.max,
+        options: alternative.options.map((option) => option.value),
+      })),
+      [
+        { decisionId: 'decision:$inside', min: 1, max: 1, options: ['a', 'b', 'c'] },
+        { decisionId: 'decision:$inside', min: 1, max: 2, options: ['a', 'b', 'c'] },
+      ],
+    );
   });
 
   it('rollRandom discovery returns stochastic pending alternatives when outcome branches require different decisions', () => {

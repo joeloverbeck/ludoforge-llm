@@ -454,6 +454,81 @@ describe('decision sequence integration', () => {
     assert.equal(first.move.actionId, second.move.actionId, 'action IDs should be identical');
   });
 
+  it('completeTemplateMove persists a sampled stochastic binding before branch-local completion', () => {
+    const stochasticActionId = asActionId('stochasticDeploy');
+    const baseDef = createDecisionSequenceDef();
+    const def: GameDef = {
+      ...baseDef,
+      actions: [
+        ...baseDef.actions.filter((action) => action.id !== stochasticActionId),
+        {
+          id: stochasticActionId,
+          actor: 'active',
+          executor: 'actor',
+          phase: [PHASE_MAIN],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      actionPipelines: [
+        ...(baseDef.actionPipelines ?? []),
+        {
+          id: 'stochasticDeployProfile',
+          actionId: stochasticActionId,
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [
+            {
+              stage: 'resolve',
+              effects: [
+                {
+                  rollRandom: {
+                    bind: '$roll',
+                    min: 1,
+                    max: 2,
+                    in: [
+                      {
+                        chooseN: {
+                          internalDecisionId: 'decision:$selectedTokens',
+                          bind: '$selectedTokens',
+                          options: { query: 'tokensInZone', zone: 'reserve:none' },
+                          min: { ref: 'binding', name: '$roll' },
+                          max: { ref: 'binding', name: '$roll' },
+                        },
+                      } as ActionPipelineDef['stages'][number]['effects'][number],
+                    ],
+                  },
+                } as ActionPipelineDef['stages'][number]['effects'][number],
+              ],
+            },
+          ],
+          atomicity: 'atomic',
+        },
+      ],
+    };
+
+    const state = initialState(def, 42, 2).state;
+    const template: Move = { actionId: stochasticActionId, params: {} };
+
+    const first = completeTemplateMove(def, state, template, createRng(77n));
+    const second = completeTemplateMove(def, state, template, createRng(77n));
+
+    assert.equal(first.kind, 'completed');
+    assert.equal(second.kind, 'completed');
+    if (first.kind !== 'completed' || second.kind !== 'completed') {
+      throw new Error('Expected stochastic template move to complete');
+    }
+    assert.deepEqual(first.move.params, second.move.params);
+    assert.equal(typeof first.move.params.$roll, 'number');
+    const selectedTokens = first.move.params['decision:$selectedTokens'] as readonly string[];
+    assert.equal(selectedTokens.length, first.move.params.$roll);
+  });
+
   it('free operation via template move skips per-space cost (resources unchanged)', () => {
     const def = createDecisionSequenceDef();
     const state = initialState(def, 42, 2).state;

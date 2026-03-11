@@ -1,6 +1,6 @@
 import {
+  completeMoveDecisionSequence,
   pickDeterministicChoiceValue,
-  resolveMoveDecisionSequence,
   type ChoicePendingRequest,
   type GameDef,
   type GameState,
@@ -19,7 +19,10 @@ export const completeMoveDecisionSequenceOrThrow = (
   choose: (request: ChoicePendingRequest) => MoveParamValue | undefined,
   errorPrefix?: string,
 ): Move => {
-  const result = resolveMoveDecisionSequence(def, state, baseMove, { choose });
+  const result = completeMoveDecisionSequence(def, state, baseMove, {
+    choose,
+    chooseStochastic: (request) => request.outcomes[0]?.bindings,
+  });
   if (result.complete) {
     return result.move;
   }

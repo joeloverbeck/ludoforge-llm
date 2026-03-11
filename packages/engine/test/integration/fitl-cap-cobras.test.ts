@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import { asActionId, asPlayerId, asTokenId, type GameDef, type GameState, type Token } from '../../src/kernel/index.js';
 import type { DecisionOverrideRule } from '../helpers/decision-param-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
-import { makeIsolatedInitialState } from '../helpers/isolated-state-helpers.js';
+import { clearAllZones, makeIsolatedInitialState } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const SWEEP_A = 'quang-tri-thua-thien:none';
@@ -233,7 +233,7 @@ describe('FITL Cobras capability integration', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    let twoSpaceState = makeIsolatedInitialState(def, COBRAS_TWO_SPACE_MIXED_SEED, 4, { turnOrderMode: 'roundRobin' });
+    let twoSpaceState = clearAllZones(makeIsolatedInitialState(def, COBRAS_TWO_SPACE_MIXED_SEED, 4, { turnOrderMode: 'roundRobin' }));
     twoSpaceState = {
       ...twoSpaceState,
       activePlayer: asPlayerId(0),
@@ -245,13 +245,17 @@ describe('FITL Cobras capability integration', () => {
     twoSpaceState = addToken(twoSpaceState, ASSAULT_A, makeTroop(`cobras-us-multi-a-${COBRAS_TWO_SPACE_MIXED_SEED}`, 'US'));
     twoSpaceState = addToken(twoSpaceState, ASSAULT_A, makeGuerrilla(`cobras-vc-multi-a-${COBRAS_TWO_SPACE_MIXED_SEED}`, 'VC', 'active'));
     twoSpaceState = addToken(twoSpaceState, ASSAULT_B, makeTroop(`cobras-us-multi-b-${COBRAS_TWO_SPACE_MIXED_SEED}`, 'US'));
-    twoSpaceState = addToken(twoSpaceState, ASSAULT_B, makeGuerrilla(`cobras-nva-multi-b-${COBRAS_TWO_SPACE_MIXED_SEED}`, 'NVA', 'active'));
+    twoSpaceState = addToken(twoSpaceState, ASSAULT_B, makeGuerrilla(`cobras-vc-multi-b-${COBRAS_TWO_SPACE_MIXED_SEED}`, 'VC', 'active'));
 
     const twoSpaceFinal = applyMoveWithResolvedDecisionIds(def, twoSpaceState, {
       actionId: asActionId('assault'),
       params: {
         $targetSpaces: [ASSAULT_A, ASSAULT_B],
         $arvnFollowupSpaces: [],
+        '$targetFactionFirst#1': 'VC',
+        '$targetFactionFirst#2': 'VC',
+        'decision:doc.actionPipelines.6.stages[2].effects.0.forEach.effects.1.let.in.0.let.in.0.let.in.0.let.in.0.let.in.0.let.in.1.let.in.0.if.then.0.let.in.0.chooseOne[0]': 'VC',
+        'decision:doc.actionPipelines.6.stages[2].effects.0.forEach.effects.1.let.in.0.let.in.0.let.in.0.let.in.0.let.in.0.let.in.1.let.in.0.if.then.0.let.in.0.chooseOne[1]': 'VC',
       },
     }).state;
     const lossesA = countTokens(twoSpaceFinal, ASSAULT_A, (token) => token.props.faction === 'US' && token.props.type === 'troops') === 0;

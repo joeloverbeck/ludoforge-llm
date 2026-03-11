@@ -675,6 +675,12 @@ const withActiveFromFirstEligible = (
   };
 };
 
+const isInterruptPhaseId = (
+  def: GameDef,
+  phaseId: GameState['currentPhase'],
+): boolean =>
+  (def.turnStructure.interrupts ?? []).some((phase) => phase.id === phaseId);
+
 const resolveCardSeatOrder = (
   def: GameDef,
   state: GameState,
@@ -773,6 +779,10 @@ export const isActiveSeatEligibleForTurnFlow = (
   state: GameState,
   seatResolution: SeatResolutionContext,
 ): boolean => {
+  if (isInterruptPhaseId(def, state.currentPhase)) {
+    return true;
+  }
+
   if (state.turnOrderState.type === 'simultaneous') {
     return state.turnOrderState.submitted[state.activePlayer] !== true;
   }
@@ -848,54 +858,22 @@ export const applyTurnFlowEligibilityAfterMove = (
   state: GameState,
   move: Move,
   deferredEventEffect?: TurnFlowDeferredEventEffectPayload,
+  options?: {
+    readonly originatingPhase?: GameState['currentPhase'];
+  },
 ): TurnFlowTransitionResult => {
   const runtime = cardDrivenRuntime(state);
   if (runtime === null) {
     return { state, traceEntries: [] };
   }
+  const originatingPhase = options?.originatingPhase ?? state.currentPhase;
   const seatResolution = createSeatResolutionContext(def, state.playerCount);
-
   const activeSeat = requireCardDrivenActiveSeat(
     def,
     state,
     TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.POST_MOVE_ELIGIBILITY_APPLICATION,
     seatResolution,
   );
-
-  const coupPhaseIds = def.turnOrder?.type === 'cardDriven'
-    ? new Set((def.turnOrder.config.coupPlan?.phases ?? []).map((p) => p.id))
-    : new Set<string>();
-  const inCoupPhase = coupPhaseIds.has(String(state.currentPhase));
-
-  const before = runtime.currentCard;
-  const acted = new Set(before.actedSeats);
-  if (!inCoupPhase || isPassAction(def, move)) {
-    acted.add(activeSeat);
-  }
-  const passed = new Set(before.passedSeats);
-  let nonPassCount = before.nonPassCount;
-  const rewards: Array<{ resource: string; amount: number }> = [];
-  let step: 'candidateScan' | 'passChain' = 'candidateScan';
-
-  if (isPassAction(def, move)) {
-    step = 'passChain';
-    passed.add(activeSeat);
-    if (!inCoupPhase) {
-      for (const reward of cardDrivenConfig(def)?.turnFlow.passRewards ?? []) {
-        if (reward.seat !== activeSeat) {
-          continue;
-        }
-        if (state.globalVars[reward.resource] === undefined) {
-          continue;
-        }
-        rewards.push({ resource: reward.resource, amount: reward.amount });
-      }
-    }
-  } else if (!inCoupPhase) {
-    nonPassCount += 1;
-  }
-
-  const moveClass = resolveTurnFlowActionClass(def, move);
   const existingPendingFreeOperationGrants = runtime.pendingFreeOperationGrants ?? [];
   const existingPendingDeferredEventEffects = runtime.pendingDeferredEventEffects ?? [];
   const newOverrides = extractPendingEligibilityOverrides(def, state, move, activeSeat, runtime.seatOrder);
@@ -936,6 +914,91 @@ export const applyTurnFlowEligibilityAfterMove = (
   const releasedDeferredEventEffects = deferredCandidate !== undefined && deferredCandidate.requiredGrantBatchIds.length === 0
     ? [deferredCandidate]
     : [];
+
+  if (isInterruptPhaseId(def, originatingPhase)) {
+    const traceEntries: TriggerLogEntry[] = [];
+    if (newOverrides.length > 0) {
+      traceEntries.push({
+        kind: 'turnFlowEligibility',
+        step: 'overrideCreate',
+        seat: activeSeat,
+        before: cardSnapshot(runtime.currentCard),
+        after: cardSnapshot(runtime.currentCard),
+        ...(immediateOverrides.length === 0 ? {} : {
+          eligibilityBefore: runtime.eligibility,
+          eligibilityAfter: effectiveEligibility,
+        }),
+        overrides: newOverrides,
+      });
+    }
+    if (deferredCandidate !== undefined && deferredCandidate.requiredGrantBatchIds.length > 0) {
+      traceEntries.push(createDeferredLifecycleTraceEntry('queued', deferredCandidate));
+    }
+    if (releasedDeferredEventEffects.length > 0) {
+      for (const released of releasedDeferredEventEffects) {
+        traceEntries.push(createDeferredLifecycleTraceEntry('released', released));
+      }
+    }
+
+    const nextRuntime = withPendingDeferredEventEffects(
+      withPendingFreeOperationGrants({
+        ...runtime,
+        eligibility: effectiveEligibility,
+        pendingEligibilityOverrides: pendingOverrides,
+        currentCard: withRequiredGrantCandidates(pendingFreeOperationGrants, runtime.seatOrder, runtime.currentCard),
+      }, toPendingFreeOperationGrants(pendingFreeOperationGrants)),
+      toPendingDeferredEventEffects(deferredEventEffects),
+    );
+    const stateWithTurnFlow: GameState = {
+      ...state,
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: nextRuntime,
+      },
+    };
+    return {
+      state: isInterruptPhaseId(def, stateWithTurnFlow.currentPhase)
+        ? stateWithTurnFlow
+        : withActiveFromFirstEligible(stateWithTurnFlow, nextRuntime.currentCard.firstEligible, seatResolution),
+      traceEntries,
+      ...(releasedDeferredEventEffects.length === 0 ? {} : { releasedDeferredEventEffects }),
+    };
+  }
+
+  const coupPhaseIds = def.turnOrder?.type === 'cardDriven'
+    ? new Set((def.turnOrder.config.coupPlan?.phases ?? []).map((p) => p.id))
+    : new Set<string>();
+  const inCoupPhase = coupPhaseIds.has(String(state.currentPhase));
+
+  const before = runtime.currentCard;
+  const acted = new Set(before.actedSeats);
+  if (!inCoupPhase || isPassAction(def, move)) {
+    acted.add(activeSeat);
+  }
+  const passed = new Set(before.passedSeats);
+  let nonPassCount = before.nonPassCount;
+  const rewards: Array<{ resource: string; amount: number }> = [];
+  let step: 'candidateScan' | 'passChain' = 'candidateScan';
+
+  if (isPassAction(def, move)) {
+    step = 'passChain';
+    passed.add(activeSeat);
+    if (!inCoupPhase) {
+      for (const reward of cardDrivenConfig(def)?.turnFlow.passRewards ?? []) {
+        if (reward.seat !== activeSeat) {
+          continue;
+        }
+        if (state.globalVars[reward.resource] === undefined) {
+          continue;
+        }
+        rewards.push({ resource: reward.resource, amount: reward.amount });
+      }
+    }
+  } else if (!inCoupPhase) {
+    nonPassCount += 1;
+  }
+
+  const moveClass = resolveTurnFlowActionClass(def, move);
   const firstActionClass =
     before.firstActionClass ??
     (before.nonPassCount === 0 && moveClass !== 'pass' ? normalizeFirstActionClass(moveClass) : null);
@@ -1063,7 +1126,9 @@ export const applyTurnFlowEligibilityAfterMove = (
   };
 
   return {
-    state: withActiveFromFirstEligible(stateWithTurnFlow, currentCard.firstEligible, seatResolution),
+    state: isInterruptPhaseId(def, stateWithTurnFlow.currentPhase)
+      ? stateWithTurnFlow
+      : withActiveFromFirstEligible(stateWithTurnFlow, currentCard.firstEligible, seatResolution),
     traceEntries,
     ...(releasedDeferredEventEffects.length === 0 ? {} : { releasedDeferredEventEffects }),
   };

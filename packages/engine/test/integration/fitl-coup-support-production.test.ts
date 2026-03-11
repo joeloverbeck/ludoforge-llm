@@ -10,7 +10,7 @@ const compileProductionDef = (): GameDef => {
   assertNoErrors(parsed);
   assert.equal(compiled.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
   assert.notEqual(compiled.gameDef, null);
-  return structuredClone(compiled.gameDef!);
+  return compiled.gameDef!;
 };
 
 const withClearedZones = (state: GameState): GameState => ({
@@ -74,9 +74,13 @@ const withCoupSupportPhase = (
   } as GameState;
 };
 
+// Hoist compilation to module level — avoids per-test structuredClone of the large FITL GameDef.
+// Tests only read from def, so sharing is safe.
+const DEF = compileProductionDef();
+
 describe('FITL coup support phase production actions', () => {
   it('defines production support actions for US/ARVN pacification and VC agitation', () => {
-    const def = compileProductionDef();
+    const def = DEF;
     const ids = new Set(def.actions.map((action) => String(action.id)));
 
     assert.equal(ids.has('coupPacifyUS'), true);
@@ -85,7 +89,7 @@ describe('FITL coup support phase production actions', () => {
   });
 
   it('allows US pacification terror removal at the totalEcon floor boundary and applies leader-adjusted cost', () => {
-    const def = compileProductionDef();
+    const def = DEF;
     const base = withClearedZones(initialState(def, 8701, 4).state);
     const target = 'quang-nam:none';
 
@@ -133,7 +137,7 @@ describe('FITL coup support phase production actions', () => {
   });
 
   it('applies Blowtorch Komer reduced Coup pacification cost (1) for US terror removal', () => {
-    const def = compileProductionDef();
+    const def = DEF;
     const base = withClearedZones(initialState(def, 8711, 4).state);
     const target = 'quang-nam:none';
 
@@ -178,7 +182,7 @@ describe('FITL coup support phase production actions', () => {
   });
 
   it('blocks US pacification if it would drop ARVN resources below totalEcon', () => {
-    const def = compileProductionDef();
+    const def = DEF;
     const base = withClearedZones(initialState(def, 8702, 4).state);
     const target = 'quang-nam:none';
 
@@ -215,7 +219,7 @@ describe('FITL coup support phase production actions', () => {
   });
 
   it('requires terror removal before US can shift support in a space', () => {
-    const def = compileProductionDef();
+    const def = DEF;
     const base = withClearedZones(initialState(def, 8705, 4).state);
     const target = 'quang-nam:none';
 
@@ -293,7 +297,7 @@ describe('FITL coup support phase production actions', () => {
   });
 
   it('enforces shared US+ARVN 4-space pacification limit and per-space 2-shift cap', () => {
-    const def = compileProductionDef();
+    const def = DEF;
     const base = withClearedZones(initialState(def, 8703, 4).state);
     const blockedTarget = 'quang-nam:none';
 
@@ -360,7 +364,7 @@ describe('FITL coup support phase production actions', () => {
   });
 
   it('requires terror removal before ARVN can shift support in a space', () => {
-    const def = compileProductionDef();
+    const def = DEF;
     const base = withClearedZones(initialState(def, 8706, 4).state);
     const target = 'quang-nam:none';
 
@@ -436,7 +440,7 @@ describe('FITL coup support phase production actions', () => {
   });
 
   it('applies Blowtorch Komer reduced Coup pacification cost (1) for ARVN shift support, overriding Ky rate', () => {
-    const def = compileProductionDef();
+    const def = DEF;
     const base = withClearedZones(initialState(def, 8712, 4).state);
     const target = 'quang-nam:none';
 
@@ -473,7 +477,7 @@ describe('FITL coup support phase production actions', () => {
   });
 
   it('requires terror removal before VC can shift opposition in a space', () => {
-    const def = compileProductionDef();
+    const def = DEF;
     const base = withClearedZones(initialState(def, 8704, 4).state);
     const target = 'quang-tri-thua-thien:none';
 
@@ -544,7 +548,7 @@ describe('FITL coup support phase production actions', () => {
   });
 
   it('enforces 4-space agitation cap for VC', () => {
-    const def = compileProductionDef();
+    const def = DEF;
     const base = withClearedZones(initialState(def, 8707, 4).state);
     const blockedBySpaceCap = withCoupSupportPhase(base, {
       activePlayer: 3 as GameState['activePlayer'],

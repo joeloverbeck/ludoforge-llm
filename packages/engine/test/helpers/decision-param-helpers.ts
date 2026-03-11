@@ -156,16 +156,6 @@ const normalizeDecisionParamsForMoveInternal = (
   preserveIncomplete: boolean,
   options?: ResolveDecisionParamsOptions,
 ): Move => {
-  const viabilityProbe = resolveMoveDecisionSequence(def, state, move, {
-    budgets: {
-      maxDecisionProbeSteps: options?.maxDecisionProbeSteps ?? MAX_DECISION_STEPS,
-    },
-    choose: () => undefined,
-  });
-  if (viabilityProbe.complete || (viabilityProbe.stochasticDecision !== undefined && (viabilityProbe.nextDecisionSet?.length ?? 0) === 0)) {
-    return move;
-  }
-
   const resolutionContext: DecisionResolutionContext = {
     byDecisionId: new Map<string, number>(),
     byName: new Map<string, number>(),

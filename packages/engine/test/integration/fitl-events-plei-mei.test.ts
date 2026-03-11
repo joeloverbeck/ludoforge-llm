@@ -15,7 +15,6 @@ import {
   asPlayerId,
   asTokenId,
   initialState,
-  legalMoves,
   probeMoveViability,
   type GameDef,
   type GameState,
@@ -124,9 +123,13 @@ const buildCardMove = (def: GameDef, side: 'unshaded' | 'shaded'): Move => {
   };
 };
 
+// Hoist compilation to module level — compileProductionSpec() is internally cached,
+// but this avoids per-test assertion overhead and function-call cost.
+const DEF = compileDef();
+
 describe('FITL card-59 Plei Mei', () => {
   it('compiles card 59 with the exact rules text and a March then Attack-or-Ambush grant sequence', () => {
-    const def = compileDef();
+    const def = DEF;
     const card = def.eventDecks?.[0]?.cards.find((entry) => entry.id === CARD_ID);
     assert.notEqual(card, undefined);
 
@@ -170,7 +173,7 @@ describe('FITL card-59 Plei Mei', () => {
   });
 
   it('unshaded removes exactly 3 chosen NVA pieces from one eligible space, including bases', () => {
-    const def = compileDef();
+    const def = DEF;
     const setup = setupCardDrivenState(def, 59001, {
       [PLEIKU]: [
         makeToken('plei-coin-base-adjacent', 'troops', 'US'),
@@ -203,7 +206,7 @@ describe('FITL card-59 Plei Mei', () => {
   });
 
   it('unshaded removes all available NVA pieces when the selected eligible space has fewer than 3', () => {
-    const def = compileDef();
+    const def = DEF;
     const setup = setupCardDrivenState(def, 59002, {
       [QUANG_TRI]: [
         makeToken('plei-few-nva-t1', 'troops', 'NVA'),
@@ -221,7 +224,7 @@ describe('FITL card-59 Plei Mei', () => {
   });
 
   it('unshaded is unavailable when no NVA pieces are in a space with or adjacent to a COIN base', () => {
-    const def = compileDef();
+    const def = DEF;
     const setup = setupCardDrivenState(def, 59003, {
       [PLEIKU]: [makeToken('plei-no-coin-nva', 'troops', 'NVA')],
       [SAIGON]: [makeToken('plei-us-no-adjacent', 'troops', 'US')],
@@ -236,7 +239,7 @@ describe('FITL card-59 Plei Mei', () => {
   });
 
   it('shaded grants a free Monsoon March from outside South Vietnam only, at zero cost, then a free exact-one-space Attack', () => {
-    const def = compileDef();
+    const def = DEF;
     const setup = setupCardDrivenState(
       def,
       59004,
@@ -255,20 +258,23 @@ describe('FITL card-59 Plei Mei', () => {
     const afterEvent = applyMoveWithResolvedDecisionIds(def, setup, buildCardMove(def, 'shaded')).state;
     const afterEventRuntime = requireCardDrivenRuntime(afterEvent);
     assert.equal(afterEventRuntime.pendingFreeOperationGrants?.length, 2);
-    const movesAfterEvent = legalMoves(def, afterEvent);
-    assert.ok(
-      movesAfterEvent.some((move) => String(move.actionId) === 'march' && move.freeOperation === true),
-      'The shaded event should surface a free March immediately after resolving',
-    );
-    assert.equal(
-      movesAfterEvent.some(
-        (move) =>
-          (String(move.actionId) === 'attack' || String(move.actionId) === 'ambushNva')
-          && move.freeOperation === true,
-      ),
-      false,
-      'Only the first sequence step should surface before the March resolves',
-    );
+    const marchProbe = probeMoveViability(def, afterEvent, {
+      actionId: asActionId('march'),
+      freeOperation: true,
+      params: {
+        $targetSpaces: [QUANG_TRI],
+        $chainSpaces: [],
+        [`$movingGuerrillas@${QUANG_TRI}`]: [],
+        [`$movingTroops@${QUANG_TRI}`]: [asTokenId('plei-march-t1'), asTokenId('plei-march-t2')],
+      },
+    });
+    assert.equal(marchProbe.viable, true, 'The shaded event should surface a free March immediately after resolving');
+    const attackNotYetProbe = probeMoveViability(def, afterEvent, {
+      actionId: asActionId('attack'),
+      freeOperation: true,
+      params: { $targetSpaces: [QUANG_TRI], $attackMode: 'troops-attack' },
+    });
+    assert.equal(attackNotYetProbe.viable, false, 'Only the first sequence step should surface before the March resolves');
 
     const afterMarch = applyMoveWithResolvedDecisionIds(def, afterEvent, {
       actionId: asActionId('march'),
@@ -284,16 +290,23 @@ describe('FITL card-59 Plei Mei', () => {
     assert.equal(afterMarch.globalVars.nvaResources, setup.globalVars.nvaResources, 'The free March should cost 0 Resources');
     assert.equal(countTokens(afterMarch, QUANG_TRI, (token) => token.props.faction === 'NVA' && token.type === 'troops'), 2);
     assert.equal(requireCardDrivenRuntime(afterMarch).pendingFreeOperationGrants?.length, 1);
-    const movesAfterMarch = legalMoves(def, afterMarch);
-    assert.equal(
-      movesAfterMarch.some((move) => String(move.actionId) === 'march' && move.freeOperation === true),
-      false,
-      'The March grant should stop surfacing after its required step resolves',
-    );
-    assert.ok(
-      movesAfterMarch.some((move) => String(move.actionId) === 'attack' && move.freeOperation === true),
-      'The follow-up free Attack should appear only after the March resolves',
-    );
+    const marchDoneProbe = probeMoveViability(def, afterMarch, {
+      actionId: asActionId('march'),
+      freeOperation: true,
+      params: {
+        $targetSpaces: [QUANG_TRI],
+        $chainSpaces: [],
+        [`$movingGuerrillas@${QUANG_TRI}`]: [],
+        [`$movingTroops@${QUANG_TRI}`]: [asTokenId('plei-march-t1'), asTokenId('plei-march-t2')],
+      },
+    });
+    assert.equal(marchDoneProbe.viable, false, 'The March grant should stop surfacing after its required step resolves');
+    const attackViableProbe = probeMoveViability(def, afterMarch, {
+      actionId: asActionId('attack'),
+      freeOperation: true,
+      params: { $targetSpaces: [QUANG_TRI], $attackMode: 'troops-attack' },
+    });
+    assert.equal(attackViableProbe.viable, true, 'The follow-up free Attack should appear only after the March resolves');
 
     const afterAttack = applyMoveWithResolvedDecisionIds(def, afterMarch, {
       actionId: asActionId('attack'),
@@ -310,7 +323,7 @@ describe('FITL card-59 Plei Mei', () => {
   });
 
   it('shaded rejects a free March that tries to move any piece from South Vietnam', () => {
-    const def = compileDef();
+    const def = DEF;
     const setup = setupCardDrivenState(
       def,
       59005,
@@ -341,7 +354,7 @@ describe('FITL card-59 Plei Mei', () => {
   });
 
   it('suppresses shaded play when no legal free March origin exists outside South Vietnam', () => {
-    const def = compileDef();
+    const def = DEF;
     const setup = setupCardDrivenState(
       def,
       59007,
@@ -361,7 +374,7 @@ describe('FITL card-59 Plei Mei', () => {
   });
 
   it('shaded allows a free Ambush in any one legal space, not only a March destination', () => {
-    const def = compileDef();
+    const def = DEF;
     const setup = setupCardDrivenState(
       def,
       59006,
@@ -392,16 +405,26 @@ describe('FITL card-59 Plei Mei', () => {
       },
     }).state;
 
-    const movesAfterMarch = legalMoves(def, afterMarch);
-    assert.equal(
-      movesAfterMarch.some((move) => String(move.actionId) === 'march' && move.freeOperation === true),
-      false,
-      'The March grant should stop surfacing once the sequence advances to the Ambush step',
-    );
-    assert.ok(
-      movesAfterMarch.some((move) => String(move.actionId) === 'ambushNva' && move.freeOperation === true),
-      'The follow-up free Ambush should surface once the March resolves in a legal Ambush state',
-    );
+    const marchDoneProbe = probeMoveViability(def, afterMarch, {
+      actionId: asActionId('march'),
+      freeOperation: true,
+      params: {
+        $targetSpaces: [QUANG_TRI],
+        $chainSpaces: [],
+        [`$movingGuerrillas@${QUANG_TRI}`]: [],
+        [`$movingTroops@${QUANG_TRI}`]: [asTokenId('plei-ambush-marcher')],
+      },
+    });
+    assert.equal(marchDoneProbe.viable, false, 'The March grant should stop surfacing once the sequence advances to the Ambush step');
+    const ambushViableProbe = probeMoveViability(def, afterMarch, {
+      actionId: asActionId('ambushNva'),
+      freeOperation: true,
+      params: {
+        $targetSpaces: [SAIGON],
+        [`$ambushTargetMode@${SAIGON}`]: 'self',
+      },
+    });
+    assert.equal(ambushViableProbe.viable, true, 'The follow-up free Ambush should surface once the March resolves in a legal Ambush state');
 
     assert.throws(
       () =>

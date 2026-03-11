@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   applyMove,
+  asActionId,
   asPlayerId,
   asTokenId,
   createRng,
@@ -57,6 +58,12 @@ const decisionEntries = (move: Move): Array<[string, Move['params'][string]]> =>
     [string, Move['params'][string]]
   >;
 
+const buildEventMove = (def: GameDef, side: 'unshaded' | 'shaded'): Move => {
+  const eventDeckId = def.eventDecks?.[0]?.id;
+  assert.notEqual(eventDeckId, undefined, 'Expected FITL event deck');
+  return { actionId: asActionId('event'), params: { eventCardId: 'card-1', eventDeckId: eventDeckId!, side } };
+};
+
 const completeForApply = (
   def: GameDef,
   state: GameState,
@@ -73,6 +80,11 @@ const completeForApply = (
   if (completed.kind !== 'completed') throw new Error('unreachable');
   return completed.move;
 };
+
+// Hoist compilation to module level — avoids per-test cache lookups and
+// repeated structuredClone of the large FITL GameDef (~9 tests).
+const DEF = compileDef();
+const DEF_NO_GRANTS = compileDefWithoutCard1Grants();
 
 describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   it('compiles card 1 (Gulf of Tonkin) with free Air Strike grant and casualty-scaled aid penalty', () => {
@@ -135,7 +147,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('routes Gulf of Tonkin free Air Strike through seat grant consumption and executeAs delegation at runtime', () => {
-    const def = compileDef();
+    const def = DEF;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
 
@@ -168,12 +180,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       },
     };
 
-    const unshadedEvent = legalMoves(def, setup).find(
-      (move) => String(move.actionId) === 'event' && move.params.side === 'unshaded',
-    );
-    assert.notEqual(unshadedEvent, undefined, 'Expected unshaded Gulf of Tonkin event move');
+    const unshadedEvent = buildEventMove(def, 'unshaded');
 
-    const afterEvent = applyMove(def, setup, completeForApply(def, setup, unshadedEvent!, 4501n)).state;
+    const afterEvent = applyMove(def, setup, completeForApply(def, setup, unshadedEvent, 4501n)).state;
     assert.equal(afterEvent.turnOrderState.type, 'cardDriven');
     if (afterEvent.turnOrderState.type !== 'cardDriven') {
       throw new Error('Expected card-driven turn order state');
@@ -236,7 +245,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('moves mixed piece types (troops, bases, irregulars) from out-of-play', () => {
-    const def = compileDefWithoutCard1Grants();
+    const def = DEF_NO_GRANTS;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
     const cityZoneIds = def.zones
@@ -295,7 +304,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('distributes pieces across multiple cities when decisions specify different targets', () => {
-    const def = compileDefWithoutCard1Grants();
+    const def = DEF_NO_GRANTS;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
     const cityZoneIds = def.zones
@@ -372,7 +381,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('legalChoicesEvaluate returns chooseN first for unshaded template', () => {
-    const def = compileDefWithoutCard1Grants();
+    const def = DEF_NO_GRANTS;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
     const cityZoneIds = def.zones
@@ -394,12 +403,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       },
     };
 
-    const template = legalMoves(def, setup).find(
-      (move) => String(move.actionId) === 'event' && move.params.side === 'unshaded',
-    );
-    assert.notEqual(template, undefined, 'Expected unshaded event template');
+    const template = buildEventMove(def, 'unshaded');
 
-    const pending = legalChoicesEvaluate(def, setup, template!);
+    const pending = legalChoicesEvaluate(def, setup, template);
     assert.equal(pending.kind, 'pending');
     if (pending.kind !== 'pending') {
       throw new Error('Expected pending choice request for unshaded event template.');
@@ -409,9 +415,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     assert.deepEqual(optionIds, Array.from({ length: 8 }, (_unused, idx) => `us-oop-${idx}`));
 
     const withSelection: Move = {
-      ...template!,
+      ...template,
       params: {
-        ...template!.params,
+        ...template.params,
         [pending.decisionId]: Array.from({ length: 6 }, (_unused, idx) => `us-oop-${idx}`),
       },
     };
@@ -427,7 +433,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('completeTemplateMove resolves chooseN plus per-piece city decision params for unshaded Gulf of Tonkin', () => {
-    const def = compileDefWithoutCard1Grants();
+    const def = DEF_NO_GRANTS;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
 
@@ -445,12 +451,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       },
     };
 
-    const template = legalMoves(def, setup).find(
-      (move) => String(move.actionId) === 'event' && move.params.side === 'unshaded',
-    );
-    assert.notEqual(template, undefined, 'Expected unshaded event template');
+    const template = buildEventMove(def, 'unshaded');
 
-    const completion = completeTemplateMove(def, setup, template!, createRng(2402n));
+    const completion = completeTemplateMove(def, setup, template, createRng(2402n));
     assert.equal(completion.kind, 'completed', 'Expected template to complete');
     if (completion.kind !== 'completed') throw new Error('unreachable');
     const completed = completion.move;
@@ -472,7 +475,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('allows unshaded side when fewer than 6 pieces exist in out-of-play', () => {
-    const def = compileDefWithoutCard1Grants();
+    const def = DEF_NO_GRANTS;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
     const cityZoneIds = def.zones
@@ -497,11 +500,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       },
     };
 
-    const eventMoves = legalMoves(def, setup).filter((move) => String(move.actionId) === 'event');
-    const unshadedMove = eventMoves.find((move) => move.params.side === 'unshaded');
-    assert.notEqual(unshadedMove, undefined, 'Expected unshaded event move to remain legal when < 6 pieces exist');
+    const unshadedMove = buildEventMove(def, 'unshaded');
 
-    const pending = legalChoicesEvaluate(def, setup, unshadedMove!);
+    const pending = legalChoicesEvaluate(def, setup, unshadedMove);
     assert.equal(pending.kind, 'pending');
     if (pending.kind !== 'pending') {
       throw new Error('Expected chooseN request when < 6 pieces exist.');
@@ -511,9 +512,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     assert.equal(pending.max, 4, 'Expected chooseN max to clamp to available options');
 
     let move: Move = {
-      ...unshadedMove!,
+      ...unshadedMove,
       params: {
-        ...unshadedMove!.params,
+        ...unshadedMove.params,
         [pending.decisionId]: pending.options.map((option) => String(option.value)),
       },
     };
@@ -541,7 +542,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('allows unshaded side when zero pieces exist in out-of-play and resolves as no-op', () => {
-    const def = compileDefWithoutCard1Grants();
+    const def = DEF_NO_GRANTS;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
     const cityZoneIds = def.zones
@@ -560,11 +561,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       },
     };
 
-    const eventMoves = legalMoves(def, setup).filter((move) => String(move.actionId) === 'event');
-    const unshadedMove = eventMoves.find((move) => move.params.side === 'unshaded');
-    assert.notEqual(unshadedMove, undefined, 'Expected unshaded event move to be legal when no pieces exist');
+    const unshadedMove = buildEventMove(def, 'unshaded');
 
-    const pending = legalChoicesEvaluate(def, setup, unshadedMove!);
+    const pending = legalChoicesEvaluate(def, setup, unshadedMove);
     assert.equal(pending.kind, 'pending');
     if (pending.kind !== 'pending') {
       throw new Error('Expected chooseN request when no pieces exist.');
@@ -574,9 +573,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     assert.equal(pending.max, 0);
 
     const zeroSelectionMove: Move = {
-      ...unshadedMove!,
+      ...unshadedMove,
       params: {
-        ...unshadedMove!.params,
+        ...unshadedMove.params,
         [pending.decisionId]: [],
       },
     };
@@ -588,7 +587,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('allows explicit zero-token selection when chooseN options exist', () => {
-    const def = compileDefWithoutCard1Grants();
+    const def = DEF_NO_GRANTS;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
     const cityZoneIds = def.zones
@@ -607,12 +606,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       },
     };
 
-    const unshadedMove = legalMoves(def, setup).find(
-      (move) => String(move.actionId) === 'event' && move.params.side === 'unshaded',
-    );
-    assert.notEqual(unshadedMove, undefined);
+    const unshadedMove = buildEventMove(def, 'unshaded');
 
-    const pending = legalChoicesEvaluate(def, setup, unshadedMove!);
+    const pending = legalChoicesEvaluate(def, setup, unshadedMove);
     assert.equal(pending.kind, 'pending');
     if (pending.kind !== 'pending') {
       throw new Error('Expected initial chooseN request.');
@@ -620,9 +616,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     assert.equal(pending.type, 'chooseN');
 
     const zeroSelectionMove: Move = {
-      ...unshadedMove!,
+      ...unshadedMove,
       params: {
-        ...unshadedMove!.params,
+        ...unshadedMove.params,
         [pending.decisionId]: [],
       },
     };
@@ -636,7 +632,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('treats Gulf of Tonkin shaded side as complete (no chooseOne required)', () => {
-    const def = compileDef();
+    const def = DEF;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
 
@@ -652,18 +648,14 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       },
     };
 
-    const shadedTemplate = legalMoves(def, setup).find(
-      (move) => String(move.actionId) === 'event' && move.params.side === 'shaded',
-    );
-    assert.notEqual(shadedTemplate, undefined, 'Expected shaded event move');
-    assert.equal(legalChoicesEvaluate(def, setup, shadedTemplate!).kind, 'complete');
-    assert.equal(decisionEntries(shadedTemplate!).length, 0);
-    assert.doesNotThrow(() => applyMove(def, setup, shadedTemplate!));
+    const shadedTemplate = buildEventMove(def, 'shaded');
+    assert.equal(legalChoicesEvaluate(def, setup, shadedTemplate).kind, 'complete');
+    assert.equal(decisionEntries(shadedTemplate).length, 0);
+    assert.doesNotThrow(() => applyMove(def, setup, shadedTemplate));
   });
 
   it('keeps unshaded side legal when chooseOne options are unsatisfiable because zero selection remains valid', () => {
-    const source = compileDefWithoutCard1Grants();
-    const def = structuredClone(source);
+    const def = structuredClone(DEF_NO_GRANTS);
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
 
@@ -716,11 +708,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       },
     };
 
-    const eventMoves = legalMoves(def, setup).filter((move) => String(move.actionId) === 'event');
-    const unshaded = eventMoves.find((move) => move.params.side === 'unshaded');
-    assert.notEqual(unshaded, undefined, 'Expected unshaded side to remain legal because chooseN can select zero');
+    const unshaded = buildEventMove(def, 'unshaded');
 
-    const pending = legalChoicesEvaluate(def, setup, unshaded!);
+    const pending = legalChoicesEvaluate(def, setup, unshaded);
     assert.equal(pending.kind, 'pending');
     if (pending.kind !== 'pending') {
       throw new Error('Expected chooseN request.');
@@ -728,9 +718,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     assert.equal(pending.type, 'chooseN');
 
     const zeroSelectionMove: Move = {
-      ...unshaded!,
+      ...unshaded,
       params: {
-        ...unshaded!.params,
+        ...unshaded.params,
         [pending.decisionId]: [],
       },
     };
@@ -738,7 +728,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('executes card 1 unshaded by moving up to 6 US out-of-play pieces into cities', () => {
-    const def = compileDefWithoutCard1Grants();
+    const def = DEF_NO_GRANTS;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined, 'Expected at least one event deck');
     const cityZoneIds = def.zones.filter((zone: ZoneDef) => zone.category === 'city').map((zone: ZoneDef) => zone.id);
@@ -782,7 +772,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('RandomAgent completes an event template move that already has base params', () => {
-    const def = compileDefWithoutCard1Grants();
+    const def = DEF_NO_GRANTS;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
     const cityZoneIds = def.zones
@@ -838,7 +828,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
   });
 
   it('GreedyAgent completes an event template move that already has base params', () => {
-    const def = compileDefWithoutCard1Grants();
+    const def = DEF_NO_GRANTS;
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
 

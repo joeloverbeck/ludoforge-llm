@@ -4,7 +4,7 @@ import {
   buildSeatResolutionIndex,
   normalizeSeatKey,
   resolvePlayerIndexForTurnFlowSeat,
-} from './seat-resolution.js';
+} from './identity.js';
 import {
   CARD_SEAT_ORDER_MIN_DISTINCT_SEATS,
   isCardSeatOrderDistinctSeatCountValid,

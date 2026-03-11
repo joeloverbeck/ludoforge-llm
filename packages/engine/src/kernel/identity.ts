@@ -1,0 +1,178 @@
+import type { GameDef } from './types.js';
+
+export const normalizeSeatKey = (value: string): string =>
+  value.trim().toLowerCase().replace(/[^a-z0-9]/gu, '');
+
+export const normalizeSeatOrder = (seats: readonly string[]): readonly string[] => {
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+  for (const seat of seats) {
+    if (seen.has(seat)) {
+      continue;
+    }
+    seen.add(seat);
+    ordered.push(seat);
+  }
+  return ordered;
+};
+
+export interface SeatOrderShapeAnalysis {
+  readonly duplicateSeats: readonly string[];
+  readonly distinctSeatCount: number;
+}
+
+export const analyzeSeatOrderShape = (seatOrder: readonly string[]): SeatOrderShapeAnalysis => {
+  const seen = new Set<string>();
+  const duplicateSeats: string[] = [];
+  for (const seat of seatOrder) {
+    if (seen.has(seat)) {
+      if (!duplicateSeats.includes(seat)) {
+        duplicateSeats.push(seat);
+      }
+      continue;
+    }
+    seen.add(seat);
+  }
+  return {
+    duplicateSeats,
+    distinctSeatCount: seen.size,
+  };
+};
+
+export interface SeatResolutionIndex {
+  readonly seatIdByPlayerIndex: readonly (string | null)[];
+  readonly playerIndexBySeatId: ReadonlyMap<string, number>;
+  readonly playerIndexByNormalizedSeatId: ReadonlyMap<string, number>;
+  readonly playerIndexByCardSeatKey: ReadonlyMap<string, number>;
+  readonly playerIndexByNormalizedCardSeatKey: ReadonlyMap<string, number>;
+}
+
+/** Alias for SeatResolutionIndex — preferred name for new code. */
+export type IdentityIndex = SeatResolutionIndex;
+
+export interface SeatResolutionContext {
+  readonly index: SeatResolutionIndex;
+}
+
+export const buildSeatResolutionIndex = (
+  def: Pick<GameDef, 'seats' | 'turnOrder'>,
+  playerCount: number,
+): SeatResolutionIndex => {
+  const seatIdByPlayerIndex: (string | null)[] = Array.from({ length: playerCount }, () => null);
+  const playerIndexBySeatId = new Map<string, number>();
+  const playerIndexByNormalizedSeatId = new Map<string, number>();
+
+  for (let index = 0; index < playerCount; index += 1) {
+    const seatId = def.seats?.[index]?.id;
+    if (typeof seatId !== 'string' || seatId.length === 0) {
+      continue;
+    }
+    seatIdByPlayerIndex[index] = seatId;
+    if (!playerIndexBySeatId.has(seatId)) {
+      playerIndexBySeatId.set(seatId, index);
+    }
+    const normalizedSeatId = normalizeSeatKey(seatId);
+    if (normalizedSeatId.length > 0 && !playerIndexByNormalizedSeatId.has(normalizedSeatId)) {
+      playerIndexByNormalizedSeatId.set(normalizedSeatId, index);
+    }
+  }
+
+  const playerIndexByCardSeatKey = new Map<string, number>();
+  const playerIndexByNormalizedCardSeatKey = new Map<string, number>();
+  const cardSeatOrderMapping = def.turnOrder?.type === 'cardDriven'
+    ? def.turnOrder.config.turnFlow.cardSeatOrderMapping
+    : undefined;
+  for (const [cardSeatKey, seatId] of Object.entries(cardSeatOrderMapping ?? {})) {
+    const mappedPlayerIndex = playerIndexBySeatId.get(seatId)
+      ?? playerIndexByNormalizedSeatId.get(normalizeSeatKey(seatId))
+      ?? null;
+    if (mappedPlayerIndex === null) {
+      continue;
+    }
+
+    if (!playerIndexByCardSeatKey.has(cardSeatKey)) {
+      playerIndexByCardSeatKey.set(cardSeatKey, mappedPlayerIndex);
+    }
+
+    const normalizedCardSeatKey = normalizeSeatKey(cardSeatKey);
+    if (normalizedCardSeatKey.length > 0 && !playerIndexByNormalizedCardSeatKey.has(normalizedCardSeatKey)) {
+      playerIndexByNormalizedCardSeatKey.set(normalizedCardSeatKey, mappedPlayerIndex);
+    }
+  }
+
+  return {
+    seatIdByPlayerIndex,
+    playerIndexBySeatId,
+    playerIndexByNormalizedSeatId,
+    playerIndexByCardSeatKey,
+    playerIndexByNormalizedCardSeatKey,
+  };
+};
+
+/** Alias for buildSeatResolutionIndex — preferred name for new code. */
+export const buildIdentityIndex = buildSeatResolutionIndex;
+
+export const createSeatResolutionContext = (
+  def: Pick<GameDef, 'seats' | 'turnOrder'>,
+  playerCount: number,
+): SeatResolutionContext => ({
+  index: buildSeatResolutionIndex(def, playerCount),
+});
+
+export const resolvePlayerIndexForSeatValue = (
+  seatValue: string,
+  index: SeatResolutionIndex,
+): number | null => {
+  const fromCardSeat = index.playerIndexByCardSeatKey.get(seatValue);
+  if (fromCardSeat !== undefined) {
+    return fromCardSeat;
+  }
+
+  const normalizedSeatValue = normalizeSeatKey(seatValue);
+  if (normalizedSeatValue.length > 0) {
+    const fromNormalizedCardSeat = index.playerIndexByNormalizedCardSeatKey.get(normalizedSeatValue);
+    if (fromNormalizedCardSeat !== undefined) {
+      return fromNormalizedCardSeat;
+    }
+  }
+
+  const fromSeatId = index.playerIndexBySeatId.get(seatValue);
+  if (fromSeatId !== undefined) {
+    return fromSeatId;
+  }
+
+  if (normalizedSeatValue.length > 0) {
+    const fromNormalizedSeatId = index.playerIndexByNormalizedSeatId.get(normalizedSeatValue);
+    if (fromNormalizedSeatId !== undefined) {
+      return fromNormalizedSeatId;
+    }
+  }
+
+  return null;
+};
+
+/** Alias for resolvePlayerIndexForSeatValue — preferred name for new code. */
+export const seatToPlayer = resolvePlayerIndexForSeatValue;
+
+export const resolvePlayerIndexForTurnFlowSeat = (
+  seat: string,
+  index: SeatResolutionIndex,
+): number | null => {
+  return resolvePlayerIndexForSeatValue(seat, index);
+};
+
+export const resolveTurnFlowSeatForPlayerIndex = (
+  seatOrder: readonly string[],
+  playerIndex: number,
+  index: SeatResolutionIndex,
+): string | null => {
+  for (const seat of seatOrder) {
+    if (resolvePlayerIndexForTurnFlowSeat(seat, index) === playerIndex) {
+      return seat;
+    }
+  }
+  return null;
+};
+
+/** Alias for resolveTurnFlowSeatForPlayerIndex — preferred name for new code. */
+export const playerToSeat = resolveTurnFlowSeatForPlayerIndex;

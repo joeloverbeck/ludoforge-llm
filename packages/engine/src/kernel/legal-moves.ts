@@ -44,7 +44,7 @@ import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import type { FreeOperationExecutionOverlay } from './free-operation-overlay.js';
 import { kernelRuntimeError } from './runtime-error.js';
-import { createSeatResolutionContext } from './seat-resolution.js';
+import { createSeatResolutionContext } from './identity.js';
 import { requireCardDrivenActiveSeat, validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { findPhaseDef } from './phase-lookup.js';

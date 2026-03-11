@@ -28,7 +28,7 @@ import type {
   TurnFlowFreeOperationGrantContract,
   TurnFlowPendingFreeOperationGrant,
 } from './types.js';
-import { createSeatResolutionContext, resolveTurnFlowSeatForPlayerIndex } from './seat-resolution.js';
+import { createSeatResolutionContext, resolveTurnFlowSeatForPlayerIndex } from './identity.js';
 import {
   activeSeatUnresolvableInvariantMessage,
   makeActiveSeatUnresolvableInvariantContext,

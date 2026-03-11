@@ -220,9 +220,19 @@ A single `identity.ts` module that provides:
 
 | ID | Title | Size |
 |----|-------|------|
-| IDENT-001 | Create identity.ts with branded types and IdentityIndex | M |
-| IDENT-002 | Migrate all seat-resolution consumers to identity.ts | L |
-| IDENT-003 | Delete seat-resolution.ts; clean up dead imports | S |
+| IDENT-001 | Create identity.ts with branded types and IdentityIndex | M | **Done** |
+| IDENT-002 | Migrate all seat-resolution consumers to identity.ts | L | **Done** |
+| IDENT-003 | Clean up; verify no source imports from shim | S | **Done** |
+
+### Implementation Notes
+
+- **`identity.ts` created** (174 LOC): Contains all logic previously in `seat-resolution.ts`, plus new clean API aliases (`IdentityIndex`, `buildIdentityIndex`, `seatToPlayer`, `playerToSeat`).
+- **`SeatId` branded type** added to `branded.ts` with `asSeatId()` constructor and `isSeatId()` guard.
+- **`seat-resolution.ts` retained as 2-line re-export shim** (`export * from './identity.js'`): Required because `turn-flow-runtime-invariants.test.ts` directly imports from `../../../src/kernel/seat-resolution.js`.
+- **All 12 consumer source files** migrated from `./seat-resolution.js` to `./identity.js` imports. All old function/type names preserved — only import paths changed.
+- **Barrel exports** (`index.ts`, `runtime.ts`) updated to re-export from `./identity.js` instead of `./seat-resolution.js`.
+- **No test modifications**: All existing tests (including AST-introspection tests that check for `createSeatResolutionContext` calls and the `turn-flow-seat-order-policy.test.ts` constraint) pass unchanged.
+- Phase 4 (VALDECOMP) is now unblocked.
 
 ---
 

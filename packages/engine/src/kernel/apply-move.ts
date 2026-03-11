@@ -55,7 +55,7 @@ import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { findPhaseDef } from './phase-lookup.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { toMoveExecutionPolicy } from './execution-policy.js';
-import { createSeatResolutionContext } from './seat-resolution.js';
+import { createSeatResolutionContext } from './identity.js';
 import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';

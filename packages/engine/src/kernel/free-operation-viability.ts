@@ -21,7 +21,7 @@ import {
   evaluatePipelinePredicateStatus,
   evaluateStagePredicateStatus,
 } from './pipeline-viability-policy.js';
-import { resolvePlayerIndexForTurnFlowSeat, type SeatResolutionContext } from './seat-resolution.js';
+import { resolvePlayerIndexForTurnFlowSeat, type SeatResolutionContext } from './identity.js';
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import {
   resolveFreeOperationDiscoveryAnalysis,

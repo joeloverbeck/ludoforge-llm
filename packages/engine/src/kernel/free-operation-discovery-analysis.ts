@@ -13,7 +13,7 @@ import {
   moveOperationClass,
   resolveAuthorizedPendingFreeOperationGrantOverlapAmbiguity,
 } from './free-operation-grant-authorization.js';
-import { resolvePlayerIndexForTurnFlowSeat, type SeatResolutionContext } from './seat-resolution.js';
+import { resolvePlayerIndexForTurnFlowSeat, type SeatResolutionContext } from './identity.js';
 import { isTurnFlowErrorCode } from './turn-flow-error.js';
 import type { ResolvedTurnFlowActionClass } from './turn-flow-action-class.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';

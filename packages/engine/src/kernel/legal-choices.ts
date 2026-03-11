@@ -24,7 +24,7 @@ import {
 } from './decision-sequence-satisfiability.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
-import { createSeatResolutionContext, type SeatResolutionContext } from './seat-resolution.js';
+import { createSeatResolutionContext, type SeatResolutionContext } from './identity.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import {
   toFreeOperationChoiceIllegalReason,

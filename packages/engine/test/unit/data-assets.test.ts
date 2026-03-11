@@ -86,7 +86,10 @@ describe('data asset loader scaffold', () => {
                 id: 'support-opposition',
                 states: ['neutral', 'passive-support'],
                 defaultState: 'neutral',
-                constraints: [{ category: ['city'], allowedStates: ['neutral', 'passive-support'] }],
+                constraints: [{
+                  when: { op: '==', left: { ref: 'zoneProp', zone: '$space', prop: 'category' }, right: 'city' },
+                  allowedStates: ['neutral', 'passive-support'],
+                }],
               },
             ],
             spaceMarkers: [{ spaceId: 'hue:none', markerId: 'support-opposition', state: 'passive-support' }],
@@ -314,7 +317,7 @@ describe('data asset loader scaffold', () => {
     }
   });
 
-  it('rejects map lattice constraints that reference unknown spaces', () => {
+  it('reports marker constraints that cannot be evaluated against map spaces', () => {
     const dir = mkdtempSync(join(tmpdir(), 'ludoforge-assets-'));
     try {
       const assetPath = join(dir, 'foundation-map-marker-constraint-space-invalid.v1.json');
@@ -324,13 +327,16 @@ describe('data asset loader scaffold', () => {
           id: 'fitl-map-marker-constraint-space-invalid',
           kind: 'map',
           payload: {
-            spaces: [],
+            spaces: [{ id: 'hue:none', category: 'city', adjacentTo: [] }],
             markerLattices: [
               {
                 id: 'support-opposition',
                 states: ['neutral'],
                 defaultState: 'neutral',
-                constraints: [{ spaceIds: ['missing:none'], allowedStates: ['neutral'] }],
+                constraints: [{
+                  when: { op: '==', left: { ref: 'zoneProp', zone: 'missing:none', prop: 'category' }, right: 'city' },
+                  allowedStates: ['neutral'],
+                }],
               },
             ],
           },
@@ -340,9 +346,9 @@ describe('data asset loader scaffold', () => {
 
       const result = loadDataAssetEnvelopeFromFile(assetPath);
       assert.equal(result.asset, null);
-      const diag = result.diagnostics.find((entry) => entry.code === 'MAP_MARKER_CONSTRAINT_SPACE_UNKNOWN');
+      const diag = result.diagnostics.find((entry) => entry.code === 'MAP_MARKER_CONSTRAINT_EVALUATION_FAILED');
       assert.notEqual(diag, undefined);
-      assert.equal(diag?.path, 'asset.payload.markerLattices[0].constraints[0].spaceIds[0]');
+      assert.equal(diag?.path, 'asset.payload.spaces[0].id');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -373,7 +379,12 @@ describe('data asset loader scaffold', () => {
                 defaultState: 'neutral',
                 constraints: [
                   {
-                    attributeEquals: { terrainTags: ['urban', 'coastal'] },
+                    when: {
+                      op: 'zonePropIncludes',
+                      zone: '$space',
+                      prop: 'terrainTags',
+                      value: 'urban',
+                    },
                     allowedStates: ['neutral'],
                   },
                 ],

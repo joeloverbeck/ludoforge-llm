@@ -147,6 +147,11 @@ const describeLeafBlocker = (
       const value = humanizeValueExpr(cond.value, ctx);
       return { astPath: path, description: `Need ${zone}.${cond.prop} to include ${value}` };
     }
+    case 'markerStateAllowed': {
+      const state = humanizeValueExpr(cond.state, ctx);
+      const zone = humanizeValueExpr(cond.space, ctx);
+      return { astPath: path, description: `Need ${cond.marker} to allow ${state} in ${zone}` };
+    }
     default: {
       const _exhaustive: never = cond;
       return _exhaustive;
@@ -203,6 +208,11 @@ const describeNotBlocker = (
       const zone = humanizeValueExpr(inner.zone, ctx);
       const value = humanizeValueExpr(inner.value, ctx);
       return `Need ${zone}.${inner.prop} to not include ${value}`;
+    }
+    case 'markerStateAllowed': {
+      const state = humanizeValueExpr(inner.state, ctx);
+      const zone = humanizeValueExpr(inner.space, ctx);
+      return `Need ${inner.marker} to not allow ${state} in ${zone}`;
     }
     case 'and':
     case 'or':

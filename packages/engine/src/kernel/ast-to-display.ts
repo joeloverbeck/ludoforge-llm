@@ -320,6 +320,18 @@ const conditionLeafToInlineNodes = (cond: ConditionLeaf): DisplayInlineNode[] =>
         SPACE,
         ...valueExprToInlineNodes(cond.value),
       ];
+    case 'markerStateAllowed':
+      return [
+        ref(cond.marker, 'marker'),
+        SPACE,
+        kw('allows'),
+        SPACE,
+        ...valueExprToInlineNodes(cond.state),
+        SPACE,
+        kw('in'),
+        SPACE,
+        ...zoneSelToInlineNodes(cond.space),
+      ];
     default: {
       const _exhaustive: never = cond;
       return [kw(String((_exhaustive as { readonly op: string }).op))];

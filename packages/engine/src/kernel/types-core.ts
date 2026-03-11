@@ -342,9 +342,7 @@ export interface NumericTrackDef {
 }
 
 export interface SpaceMarkerConstraintDef {
-  readonly spaceIds?: readonly string[];
-  readonly category?: readonly string[];
-  readonly attributeEquals?: Readonly<Record<string, AttributeValue>>;
+  readonly when: ConditionAST;
   readonly allowedStates: readonly string[];
 }
 

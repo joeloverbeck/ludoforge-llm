@@ -71,6 +71,18 @@ export const validateConditionAst = (
       validateValueExpr(diagnostics, condition.value, `${path}.value`, context);
       return;
     }
+    case 'markerStateAllowed': {
+      validateZoneSelector(diagnostics, condition.space, `${path}.space`, context);
+      validateValueExpr(diagnostics, condition.state, `${path}.state`, context);
+      validateMarkerStateLiteral(
+        diagnostics,
+        condition.marker,
+        condition.state,
+        `${path}.state`,
+        context.markerLatticeStatesById,
+      );
+      return;
+    }
     default: {
       validateValueExpr(diagnostics, condition.left, `${path}.left`, context);
       validateValueExpr(diagnostics, condition.right, `${path}.right`, context);

@@ -39,7 +39,9 @@ function extractConditionNames(cond: ConditionAST): readonly string[] {
   if (c.item !== undefined) names.push(...extractValueNames(c.item as ValueExpr));
   if (c.set !== undefined) names.push(...extractValueNames(c.set as ValueExpr));
   if (c.value !== undefined) names.push(...extractValueNames(c.value as ValueExpr));
+  if (c.state !== undefined) names.push(...extractValueNames(c.state as ValueExpr));
   if (typeof c.prop === 'string') names.push(c.prop);
+  if (typeof c.marker === 'string') names.push(c.marker);
   return names;
 }
 
@@ -88,6 +90,9 @@ function humanizeConditionInner(cond: ConditionAST, ctx: LabelContext, count?: n
   }
   if (c.op === 'zonePropIncludes') {
     return `${resolveLabel(c.prop as string, ctx, count)} includes ${humanizeValueExpr(c.value as ValueExpr, ctx, count)}`;
+  }
+  if (c.op === 'markerStateAllowed') {
+    return `${resolveLabel(c.marker as string, ctx, count)} allows ${humanizeValueExpr(c.state as ValueExpr, ctx, count)}`;
   }
 
   // Comparison operators

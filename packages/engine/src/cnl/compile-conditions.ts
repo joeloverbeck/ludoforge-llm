@@ -76,7 +76,7 @@ function lowerBooleanArityTuple<TValue>(
   };
 }
 
-const SUPPORTED_CONDITION_OPS = ['and', 'or', 'not', '==', '!=', '<', '<=', '>', '>=', 'in', 'adjacent', 'connected', 'zonePropIncludes'];
+const SUPPORTED_CONDITION_OPS = ['and', 'or', 'not', '==', '!=', '<', '<=', '>', '>=', 'in', 'adjacent', 'connected', 'zonePropIncludes', 'markerStateAllowed'];
 const SUPPORTED_QUERY_KINDS = [
   'concat',
   'tokenZones',
@@ -226,6 +226,23 @@ export function lowerConditionNode(
       return {
         value: { op: 'zonePropIncludes', zone: zpiZone.value, prop: source.prop, value: zpiValue.value },
         diagnostics: zpiDiagnostics,
+      };
+    }
+    case 'markerStateAllowed': {
+      if (typeof source.marker !== 'string') {
+        return missingCapability(path, 'markerStateAllowed condition', source, [
+          '{ op: "markerStateAllowed", space: <ZoneSel>, marker: string, state: <ValueExpr> }',
+        ]);
+      }
+      const space = lowerZoneSelector(source.space, context, `${path}.space`);
+      const state = lowerValueNode(source.state, context, `${path}.state`);
+      const diagnostics = [...space.diagnostics, ...state.diagnostics];
+      if (space.value === null || state.value === null) {
+        return { value: null, diagnostics };
+      }
+      return {
+        value: { op: 'markerStateAllowed', space: space.value, marker: source.marker, state: state.value },
+        diagnostics,
       };
     }
     case 'connected': {

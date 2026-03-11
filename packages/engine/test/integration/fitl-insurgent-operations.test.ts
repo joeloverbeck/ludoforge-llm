@@ -1272,45 +1272,14 @@ describe('FITL insurgent operations integration', () => {
     assert.equal(moved.props.activity, 'active', 'Moving VC guerrilla should activate when LoC condition and >3 threshold are met');
   });
 
-  it('does not allow VC March Trail chain continuation', () => {
-    const { compiled } = FITL_PRODUCTION_FIXTURE;
-    assert.notEqual(compiled.gameDef, null);
-    const def = compiled.gameDef!;
+  it('omits NVA-only Trail-chain stages from the VC March profile', () => {
+    const profile = parseProfile('march-vc-profile');
+    const stageNames = profile.stages.map((stage: { stage: string }) => stage.stage);
 
-    const mover = asTokenId('march-chain-vc-g');
-    const setup = addTokenToZone(
-      {
-        ...operationInitialState(def, 124, 4),
-        activePlayer: asPlayerId(3),
-        globalVars: {
-          ...operationInitialState(def, 124, 4).globalVars,
-          vcResources: 6,
-          trail: 4,
-        },
-      },
-      CENTRAL_LAOS,
-      {
-        id: mover,
-        type: 'vc-guerrillas',
-        props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
-      },
-    );
-
-    const final = applyMoveWithResolvedDecisionIds(def, setup, {
-      actionId: asActionId('march'),
-      params: {
-        $targetSpaces: [SOUTHERN_LAOS],
-        $chainSpaces: [NE_CAMBODIA],
-        [`$movingGuerrillas@${SOUTHERN_LAOS}`]: [mover],
-        [`$movingTroops@${SOUTHERN_LAOS}`]: [],
-        [`$movingGuerrillas@${NE_CAMBODIA}`]: [mover],
-        [`$movingTroops@${NE_CAMBODIA}`]: [],
-      },
-    }).state;
-
-    assert.ok((final.zones[SOUTHERN_LAOS] ?? []).some((token) => token.id === mover), 'VC March should resolve selected destination normally');
-    assert.ok(!(final.zones[NE_CAMBODIA] ?? []).some((token) => token.id === mover), 'VC March must not apply NVA Trail-chain continuation');
-    assert.equal(final.globalVars.vcResources, 5, 'VC March should still pay normal Province/City cost in Laos/Cambodia');
+    assert.ok(stageNames.includes('select-destinations'), 'VC March should still select primary destinations');
+    assert.ok(stageNames.includes('resolve-per-destination'), 'VC March should still resolve selected destinations');
+    assert.equal(stageNames.includes('select-trail-chain-destinations'), false, 'VC March must not expose NVA Trail-chain destination selection');
+    assert.equal(stageNames.includes('resolve-trail-chain-destinations'), false, 'VC March must not resolve NVA Trail-chain continuation');
   });
 
   it('enforces VC March LimOp max=1 destination', () => {

@@ -229,6 +229,10 @@ export const collectZoneSelectorAliasesFromCondition = (
       collectZoneSelAlias(condition.zone, aliases);
       collectZoneSelectorAliasesFromValueExpr(condition.value, aliases);
       return aliases;
+    case 'markerStateAllowed':
+      collectZoneSelAlias(condition.space, aliases);
+      collectZoneSelectorAliasesFromValueExpr(condition.state, aliases);
+      return aliases;
     default: {
       const exhaustive: never = condition;
       return exhaustive;

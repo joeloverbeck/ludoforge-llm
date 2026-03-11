@@ -1,10 +1,15 @@
 import type { Diagnostic } from './diagnostics.js';
 import { attributeValueEquals } from './attribute-value-equals.js';
+import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
+import { evalCondition } from './eval-condition.js';
 import { RUNTIME_RESERVED_MOVE_BINDING_NAMES } from './move-runtime-bindings.js';
 import { resolveRuntimeTableRowsByPath } from './runtime-table-path.js';
-import type { GameDef, PlayerSel, ScenarioPiecePlacement, StackingConstraint, VariableDef, ZoneDef } from './types.js';
+import { findSpaceMarkerConstraintViolation } from './space-marker-rules.js';
+import { buildAdjacencyGraph } from './spatial.js';
+import type { GameDef, GameState, PlayerSel, ScenarioPiecePlacement, StackingConstraint, VariableDef, ZoneDef } from './types.js';
 import { buildMissingReferenceSuggestion } from '../contracts/index.js';
 import { isCanonicalLimitIdForAction } from './limit-identity.js';
+import { validateConditionAst } from './validate-conditions.js';
 
 const PLAYER_ZONE_QUALIFIER_PATTERN = /^[0-9]+$/;
 const RESERVED_RUNTIME_PARAM_NAMES: ReadonlySet<string> = new Set(RUNTIME_RESERVED_MOVE_BINDING_NAMES);
@@ -429,6 +434,13 @@ export const validateStructureSections = (diagnostics: Diagnostic[], def: GameDe
     'DUPLICATE_OPERATION_PROFILE_ID',
     'operation profile id',
     'actionPipelines',
+  );
+  checkDuplicateIds(
+    diagnostics,
+    (def.markerLattices ?? []).map((lattice) => lattice.id),
+    'DUPLICATE_MARKER_LATTICE_ID',
+    'marker lattice id',
+    'markerLattices',
   );
   checkDuplicateIds(
     diagnostics,
@@ -898,6 +910,204 @@ export const validateStructureSections = (diagnostics: Diagnostic[], def: GameDe
         suggestion: `Use a qualifier in [0, ${def.metadata.players.max - 1}] or increase metadata.players.max.`,
       });
     }
+  });
+};
+
+export const validateSpaceMarkerLattices = (
+  diagnostics: Diagnostic[],
+  def: GameDef,
+  context: ValidationContext,
+): void => {
+  const lattices = def.markerLattices ?? [];
+  const markerValues = new Map<string, string>();
+  const markerCandidateZones = def.zones.filter((zone) => zone.zoneKind === 'board');
+
+  lattices.forEach((lattice, latticeIndex) => {
+    if (lattice.states.length === 0) {
+      diagnostics.push({
+        code: 'MARKER_LATTICE_STATES_EMPTY',
+        path: `markerLattices[${latticeIndex}].states`,
+        severity: 'error',
+        message: `Marker lattice "${lattice.id}" must declare at least one state.`,
+      });
+      return;
+    }
+
+    if (!lattice.states.includes(lattice.defaultState)) {
+      diagnostics.push({
+        code: 'MARKER_LATTICE_DEFAULT_INVALID',
+        path: `markerLattices[${latticeIndex}].defaultState`,
+        severity: 'error',
+        message: `Marker lattice "${lattice.id}" defaultState "${lattice.defaultState}" must exist in states.`,
+        suggestion: 'Set defaultState to one of the declared states.',
+      });
+    }
+
+    checkDuplicateIds(
+      diagnostics,
+      lattice.states,
+      'DUPLICATE_MARKER_STATE_ID',
+      'marker state id',
+      `markerLattices[${latticeIndex}].states`,
+    );
+
+    lattice.constraints?.forEach((constraint, constraintIndex) => {
+      if (constraint.allowedStates.length === 0) {
+        diagnostics.push({
+          code: 'MARKER_CONSTRAINT_STATES_EMPTY',
+          path: `markerLattices[${latticeIndex}].constraints[${constraintIndex}].allowedStates`,
+          severity: 'error',
+          message: `Marker lattice "${lattice.id}" constraint must declare at least one allowed state.`,
+        });
+      }
+
+      constraint.allowedStates.forEach((state, stateIndex) => {
+        if (lattice.states.includes(state)) {
+          return;
+        }
+
+        diagnostics.push({
+          code: 'MARKER_CONSTRAINT_STATE_UNKNOWN',
+          path: `markerLattices[${latticeIndex}].constraints[${constraintIndex}].allowedStates[${stateIndex}]`,
+          severity: 'error',
+          message: `Constraint state "${state}" is not declared in marker lattice "${lattice.id}".`,
+          alternatives: [...lattice.states],
+        });
+      });
+
+      validateConditionAst(
+        diagnostics,
+        constraint.when,
+        `markerLattices[${latticeIndex}].constraints[${constraintIndex}].when`,
+        context,
+      );
+    });
+  });
+
+  (def.spaceMarkers ?? []).forEach((entry, entryIndex) => {
+    if (!context.zoneNames.has(entry.spaceId)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'SPACE_MARKER_SPACE_UNKNOWN',
+        `spaceMarkers[${entryIndex}].spaceId`,
+        `Marker value references unknown space "${entry.spaceId}".`,
+        entry.spaceId,
+        context.zoneCandidates,
+      );
+      return;
+    }
+
+    const lattice = lattices.find((candidate) => candidate.id === entry.markerId);
+    if (lattice === undefined) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'SPACE_MARKER_LATTICE_UNKNOWN',
+        `spaceMarkers[${entryIndex}].markerId`,
+        `Marker value references unknown lattice "${entry.markerId}".`,
+        entry.markerId,
+        context.markerLatticeCandidates,
+      );
+      return;
+    }
+
+    if (!lattice.states.includes(entry.state)) {
+      diagnostics.push({
+        code: 'SPACE_MARKER_STATE_UNKNOWN',
+        path: `spaceMarkers[${entryIndex}].state`,
+        severity: 'error',
+        message: `State "${entry.state}" is not declared by marker lattice "${entry.markerId}".`,
+        alternatives: [...lattice.states],
+      });
+      return;
+    }
+
+    const key = `${entry.spaceId}::${entry.markerId}`;
+    if (markerValues.has(key)) {
+      diagnostics.push({
+        code: 'SPACE_MARKER_DUPLICATE',
+        path: `spaceMarkers[${entryIndex}]`,
+        severity: 'error',
+        message: `Duplicate marker value declaration for space "${entry.spaceId}" and marker "${entry.markerId}".`,
+      });
+      return;
+    }
+
+    markerValues.set(key, entry.state);
+  });
+
+  const evalState: GameState = {
+    globalVars: Object.fromEntries(def.globalVars.map((variable) => [variable.name, variable.init])),
+    perPlayerVars: { 0: Object.fromEntries(def.perPlayerVars.map((variable) => [variable.name, variable.init])) },
+    zoneVars: Object.fromEntries((def.zoneVars ?? []).length === 0
+      ? []
+      : def.zones.map((zone) => [
+          zone.id,
+          Object.fromEntries((def.zoneVars ?? []).map((variable) => [variable.name, variable.init as number])),
+        ])),
+    playerCount: 1,
+    zones: Object.fromEntries(def.zones.map((zone) => [zone.id, []])),
+    nextTokenOrdinal: 0,
+    currentPhase: (def.turnStructure.phases[0]?.id ?? 'validation-phase') as GameState['currentPhase'],
+    activePlayer: 0 as GameState['activePlayer'],
+    turnCount: 0,
+    rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 0n] },
+    stateHash: 0n,
+    actionUsage: {},
+    turnOrderState: { type: 'roundRobin' },
+    markers: (() => {
+      const markers: Record<string, Record<string, string>> = {};
+      for (const [key, state] of markerValues.entries()) {
+        const [spaceId, markerId] = key.split('::');
+        if (spaceId === undefined || markerId === undefined) {
+          continue;
+        }
+        markers[spaceId] = {
+          ...(markers[spaceId] ?? {}),
+          [markerId]: state,
+        };
+      }
+      return markers;
+    })(),
+    globalMarkers: {},
+  };
+
+  const evalCtx = createEvalContext({
+    def,
+    adjacencyGraph: buildAdjacencyGraph(def.zones),
+    state: evalState,
+    activePlayer: 0 as GameState['activePlayer'],
+    actorPlayer: 0 as GameState['activePlayer'],
+    bindings: {},
+    resources: createEvalRuntimeResources(),
+  });
+
+  lattices.forEach((lattice) => {
+    markerCandidateZones.forEach((zone) => {
+      const zoneIndex = def.zones.indexOf(zone);
+      const state = markerValues.get(`${zone.id}::${lattice.id}`) ?? lattice.defaultState;
+      try {
+        const violation = findSpaceMarkerConstraintViolation(lattice, zone.id, state, evalCtx, evalCondition);
+        if (violation === null) {
+          return;
+        }
+
+        diagnostics.push({
+          code: 'SPACE_MARKER_CONSTRAINT_VIOLATION',
+          path: `zones[${zoneIndex}].id`,
+          severity: 'error',
+          message: `Space "${zone.id}" marker "${lattice.id}" has state "${state}" which violates constraint ${violation.constraintIndex} on marker lattice "${lattice.id}".`,
+          suggestion: `Use one of the allowed states: ${violation.constraint.allowedStates.join(', ')}.`,
+        });
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        diagnostics.push({
+          code: 'SPACE_MARKER_CONSTRAINT_EVALUATION_FAILED',
+          path: `zones[${zoneIndex}].id`,
+          severity: 'error',
+          message: `Unable to evaluate marker constraint for space "${zone.id}" and lattice "${lattice.id}": ${message}`,
+        });
+      }
+    });
   });
 };
 

@@ -2156,8 +2156,16 @@ actionPipelines:
   - id: sweep-arvn-profile
     actionId: sweep
     applicability: { op: '==', left: { ref: activePlayer }, right: 1 }
-    legality: { op: '>=', left: { ref: gvar, var: arvnResources }, right: 3 }
-    costValidation: { op: '>=', left: { ref: gvar, var: arvnResources }, right: 3 }
+    legality:
+      op: or
+      args:
+        - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+        - { op: '>=', left: { ref: gvar, var: arvnResources }, right: 3 }
+    costValidation:
+      op: or
+      args:
+        - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+        - { op: '>=', left: { ref: gvar, var: arvnResources }, right: 3 }
     costEffects: []
     targeting: {}
     stages:
@@ -2198,12 +2206,16 @@ actionPipelines:
                                 - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'northVietnam' }
                           min: 1
                           max:
-                            op: min
-                            left: 2
-                            right:
-                              op: floorDiv
-                              left: { ref: gvar, var: arvnResources }
-                              right: 3
+                            if:
+                              when: { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                              then: 2
+                              else:
+                                op: min
+                                left: 2
+                                right:
+                                  op: floorDiv
+                                  left: { ref: gvar, var: arvnResources }
+                                  right: 3
                     else:
                       - chooseN:
                           bind: $targetSpaces
@@ -2219,9 +2231,13 @@ actionPipelines:
                                 - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'northVietnam' }
                           min: 1
                           max:
-                            op: floorDiv
-                            left: { ref: gvar, var: arvnResources }
-                            right: 3
+                            if:
+                              when: { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                              then: 99
+                              else:
+                                op: floorDiv
+                                left: { ref: gvar, var: arvnResources }
+                                right: 3
 
       - stage: resolve-per-space
         effects:
@@ -2498,11 +2514,13 @@ actionPipelines:
       op: or
       args:
         - { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
+        - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
         - { op: '>=', left: { ref: gvar, var: arvnResources }, right: 3 }
     costValidation:
       op: or
       args:
         - { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
+        - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
         - { op: '>=', left: { ref: gvar, var: arvnResources }, right: 3 }
     costEffects: []
     targeting: {}
@@ -2544,7 +2562,11 @@ actionPipelines:
                     min: 1
                     max:
                       if:
-                        when: { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
+                        when:
+                          op: or
+                          args:
+                            - { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
+                            - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
                         then: 99
                         else:
                           op: floorDiv
@@ -5411,7 +5433,11 @@ actionPipelines:
                             left: { ref: zoneProp, zone: $space, prop: population }
                             right: 2
                       - if:
-                          when: { op: '!=', left: { ref: markerState, space: $space, marker: supportOpposition }, right: activeSupport }
+                          when:
+                            op: and
+                            args:
+                              - { op: '>', left: { ref: zoneProp, zone: $space, prop: population }, right: 0 }
+                              - { op: '!=', left: { ref: markerState, space: $space, marker: supportOpposition }, right: activeSupport }
                           then:
                             - shiftMarker: { space: $space, marker: supportOpposition, delta: 1 }
       - stage: tax-telemetry

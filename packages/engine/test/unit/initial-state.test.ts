@@ -77,6 +77,13 @@ describe('initialState', () => {
         ...baseDef.zones,
         { id: asZoneId('alpha:none'), owner: 'none', visibility: 'public', ordering: 'set' },
       ],
+      markerLattices: [
+        {
+          id: 'supportOpposition',
+          states: ['neutral', 'support'],
+          defaultState: 'neutral',
+        },
+      ],
       spaceMarkers: [{ spaceId: 'alpha:none', markerId: 'supportOpposition', state: 'support' }],
       triggers: [],
     };

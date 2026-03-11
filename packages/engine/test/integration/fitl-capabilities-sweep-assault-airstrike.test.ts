@@ -133,22 +133,32 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
       node?.if?.when?.right === 'shaded',
     );
     assert.ok(arvnShadedChecks.length >= 1);
-    const arvnHasMinCap = findDeep(arvnShadedChecks[0], (node: any) =>
-      node?.chooseN?.max?.op === 'min' &&
-      node?.chooseN?.max?.left === 2 &&
-      node?.chooseN?.max?.right?.op === 'floorDiv' &&
-      node?.chooseN?.max?.right?.left?.ref === 'gvar' &&
-      node?.chooseN?.max?.right?.left?.var === 'arvnResources' &&
-      node?.chooseN?.max?.right?.right === 3,
+    const arvnHasFreeOperationCap = findDeep(arvnShadedChecks[0], (node: any) =>
+      node?.chooseN?.max?.if?.when?.op === '==' &&
+      node?.chooseN?.max?.if?.when?.left?.ref === 'binding' &&
+      node?.chooseN?.max?.if?.when?.left?.name === '__freeOperation' &&
+      node?.chooseN?.max?.if?.when?.right === true &&
+      node?.chooseN?.max?.if?.then === 2 &&
+      node?.chooseN?.max?.if?.else?.op === 'min' &&
+      node?.chooseN?.max?.if?.else?.left === 2 &&
+      node?.chooseN?.max?.if?.else?.right?.op === 'floorDiv' &&
+      node?.chooseN?.max?.if?.else?.right?.left?.ref === 'gvar' &&
+      node?.chooseN?.max?.if?.else?.right?.left?.var === 'arvnResources' &&
+      node?.chooseN?.max?.if?.else?.right?.right === 3,
     );
     const arvnHasAffordabilityElse = findDeep(arvnShadedChecks[0], (node: any) =>
-      node?.chooseN?.max?.op === 'floorDiv' &&
-      node?.chooseN?.max?.left?.ref === 'gvar' &&
-      node?.chooseN?.max?.left?.var === 'arvnResources' &&
-      node?.chooseN?.max?.right === 3,
+      node?.chooseN?.max?.if?.when?.op === '==' &&
+      node?.chooseN?.max?.if?.when?.left?.ref === 'binding' &&
+      node?.chooseN?.max?.if?.when?.left?.name === '__freeOperation' &&
+      node?.chooseN?.max?.if?.when?.right === true &&
+      node?.chooseN?.max?.if?.then === 99 &&
+      node?.chooseN?.max?.if?.else?.op === 'floorDiv' &&
+      node?.chooseN?.max?.if?.else?.left?.ref === 'gvar' &&
+      node?.chooseN?.max?.if?.else?.left?.var === 'arvnResources' &&
+      node?.chooseN?.max?.if?.else?.right === 3,
     );
-    assert.ok(arvnHasMinCap.length >= 1, 'Expected ARVN cap_caps shaded branch max equivalent to min(2, floorDiv(arvnResources, 3))');
-    assert.ok(arvnHasAffordabilityElse.length >= 1, 'Expected ARVN cap_caps else branch to use floorDiv(arvnResources, 3)');
+    assert.ok(arvnHasFreeOperationCap.length >= 1, 'Expected ARVN cap_caps shaded branch to preserve the free-operation max 2 override over affordability');
+    assert.ok(arvnHasAffordabilityElse.length >= 1, 'Expected ARVN non-cap_caps branch to preserve the free-operation max 99 override over affordability');
   });
 
   it('caps Assault space selection for cap_abrams shaded branch in US profile only', () => {

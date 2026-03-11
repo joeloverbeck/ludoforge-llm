@@ -1,10 +1,11 @@
 import type { ReadContext } from './eval-context.js';
-import { typeMismatchError, zonePropNotFoundError } from './eval-error.js';
+import { missingVarError, typeMismatchError, zonePropNotFoundError } from './eval-error.js';
 import { booleanArityMessage, isNonEmptyArray } from './boolean-arity-policy.js';
 import { evalValue } from './eval-value.js';
 import { resolvePredicateValue } from './predicate-value-resolution.js';
 import { resolveMapSpaceId, resolveSingleZoneSel } from './resolve-selectors.js';
 import { queryConnectedZones } from './spatial.js';
+import { isSpaceMarkerStateAllowed } from './space-marker-rules.js';
 import { matchesMembership } from './query-predicate.js';
 import type { ConditionAST, ScalarArrayValue, ScalarValue } from './types.js';
 
@@ -160,6 +161,33 @@ export function evalCondition(cond: ConditionAST, ctx: ReadContext): boolean {
 
       const needle = evalValue(cond.value, ctx);
       return propValue.includes(needle);
+    }
+
+    case 'markerStateAllowed': {
+      const spaceId = resolveMapSpaceId(cond.space, ctx);
+      const candidateState = evalValue(cond.state, ctx);
+      if (typeof candidateState !== 'string') {
+        throw typeMismatchError('markerStateAllowed.state must evaluate to a string', {
+          condition: cond,
+          actualType: typeof candidateState,
+          value: candidateState,
+        });
+      }
+
+      const lattice = ctx.def.markerLattices?.find((candidate) => candidate.id === cond.marker);
+      if (lattice === undefined) {
+        throw missingVarError(`Marker lattice not found: ${cond.marker}`, {
+          condition: cond,
+          markerId: cond.marker,
+          availableMarkerLattices: (ctx.def.markerLattices ?? []).map((candidate) => candidate.id).sort(),
+        });
+      }
+
+      if (!lattice.states.includes(candidateState)) {
+        return false;
+      }
+
+      return isSpaceMarkerStateAllowed(lattice, String(spaceId), candidateState, ctx, evalCondition);
     }
 
     default: {

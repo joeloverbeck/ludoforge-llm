@@ -5,8 +5,7 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { parseProductionSpec } from '../helpers/production-spec-helpers.js';
 
 type MarkerConstraintDef = {
-  readonly category?: readonly string[];
-  readonly attributeEquals?: Readonly<Record<string, unknown>>;
+  readonly when: Readonly<Record<string, unknown>>;
   readonly allowedStates: readonly string[];
 };
 
@@ -42,7 +41,7 @@ const readMapLattices = (): {
 };
 
 describe('FITL production support/opposition marker lattice', () => {
-  it('encodes the canonical supportOpposition lattice with LoC and pop-0 neutral constraints', () => {
+  it('encodes the canonical supportOpposition lattice with declarative neutral-only legality constraints', () => {
     const { markerLattices, spaceMarkers } = readMapLattices();
     assert.equal(markerLattices.length, 5);
 
@@ -57,14 +56,24 @@ describe('FITL production support/opposition marker lattice', () => {
     assert.ok(Array.isArray(supportOpposition.constraints));
     assert.equal(supportOpposition.constraints.length, 2);
 
-    const locConstraint = supportOpposition.constraints.find((constraint) => constraint.category !== undefined);
+    const locConstraint = supportOpposition.constraints.find((constraint) => constraint.when.op === '==');
     assert.notEqual(locConstraint, undefined);
-    assert.deepEqual(locConstraint?.category, ['loc']);
+    assert.deepEqual(locConstraint?.when, {
+      op: '==',
+      left: { ref: 'zoneProp', zone: '$space', prop: 'category' },
+      right: 'loc',
+    });
     assert.deepEqual(locConstraint?.allowedStates, ['neutral']);
 
-    const popZeroConstraint = supportOpposition.constraints.find((constraint) => constraint.attributeEquals !== undefined);
+    const popZeroConstraint = supportOpposition.constraints.find(
+      (constraint) => constraint.when.op === '==' && JSON.stringify(constraint.when).includes('"population"'),
+    );
     assert.notEqual(popZeroConstraint, undefined);
-    assert.equal((popZeroConstraint?.attributeEquals as Record<string, unknown> | undefined)?.population, 0);
+    assert.deepEqual(popZeroConstraint?.when, {
+      op: '==',
+      left: { ref: 'zoneProp', zone: '$space', prop: 'population' },
+      right: 0,
+    });
     assert.deepEqual(popZeroConstraint?.allowedStates, ['neutral']);
 
     const sabotageLattice = markerLattices.find((lattice) => lattice.id === 'sabotage');
@@ -72,8 +81,12 @@ describe('FITL production support/opposition marker lattice', () => {
     assert.deepEqual(sabotageLattice.states, ['none', 'sabotage']);
     assert.equal(sabotageLattice.defaultState, 'none');
     assert.ok(Array.isArray(sabotageLattice.constraints));
-    const sabotageConstraint = sabotageLattice.constraints.find((constraint) => constraint.category !== undefined);
-    assert.deepEqual(sabotageConstraint?.category, ['city', 'province']);
+    const sabotageConstraint = sabotageLattice.constraints.find((constraint) => constraint.when.op === 'in');
+    assert.deepEqual(sabotageConstraint?.when, {
+      op: 'in',
+      item: { ref: 'zoneProp', zone: '$space', prop: 'category' },
+      set: { scalarArray: ['city', 'province'] },
+    });
     assert.deepEqual(sabotageConstraint?.allowedStates, ['none']);
 
     const coupPacifyUsage = markerLattices.find((lattice) => lattice.id === 'coupPacifySpaceUsage');

@@ -129,8 +129,17 @@ describe('FITL text-only card behavior backfill', () => {
     );
 
     const card69 = cardById.get('card-69');
-    assert.equal(card69?.unshaded?.freeOperationGrants?.[0]?.seat, 'arvn');
-    assert.equal(card69?.unshaded?.freeOperationGrants?.[0]?.operationClass, 'limitedOperation');
+    assert.deepEqual(card69?.unshaded?.eligibilityOverrides, [
+      { target: { kind: 'active' }, eligible: true, windowId: 'remain-eligible' },
+    ]);
+    assert.deepEqual(
+      [...(card69?.unshaded?.branches?.map((branch) => branch.id) ?? [])].sort(),
+      ['macv-nva-then-vc', 'macv-us-then-arvn'],
+    );
+    const macvUsThenArvn = card69?.unshaded?.branches?.find((branch) => branch.id === 'macv-us-then-arvn');
+    const macvNvaThenVc = card69?.unshaded?.branches?.find((branch) => branch.id === 'macv-nva-then-vc');
+    assert.equal(macvUsThenArvn?.freeOperationGrants?.[0]?.operationClass, 'specialActivity');
+    assert.equal(macvNvaThenVc?.freeOperationGrants?.[1]?.seat, 'vc');
 
     const card76 = cardById.get('card-76');
     assert.deepEqual(card76?.unshaded?.effects, [

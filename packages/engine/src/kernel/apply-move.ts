@@ -352,6 +352,9 @@ const validateDecisionSequenceForMove = (
         detail: result.illegal.reason,
       });
     }
+    if (result.stochasticDecision !== undefined && (result.nextDecisionSet?.length ?? 0) === 0) {
+      return;
+    }
     if (options?.allowIncomplete === true) {
       return;
     }

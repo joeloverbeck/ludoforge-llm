@@ -3,6 +3,7 @@ import {
   completeMoveDecisionSequence,
   nextInt,
   pickDeterministicChoiceValue,
+  resolveMoveDecisionSequence,
   type ApplyMoveResult,
   type ChoicePendingRequest,
   type GameDef,
@@ -114,6 +115,40 @@ const formatResolutionFailure = (move: Move, result: ReturnType<typeof completeM
   return 'decision probing did not complete';
 };
 
+const stripStochasticOnlyBindings = (
+  def: GameDef,
+  state: GameState,
+  baseMove: Move,
+  resolvedMove: Move,
+  maxDecisionProbeSteps: number,
+): Move => {
+  const baseKeys = new Set(Object.keys(baseMove.params));
+  const addedKeys = Object.keys(resolvedMove.params).filter((key) => !baseKeys.has(key));
+  if (addedKeys.length === 0) {
+    return resolvedMove;
+  }
+  const stochasticKeys = addedKeys.filter((key) => key.startsWith('$'));
+  if (stochasticKeys.length === 0) {
+    return resolvedMove;
+  }
+  const params = { ...resolvedMove.params };
+  for (const key of stochasticKeys) {
+    delete params[key];
+  }
+  const candidateMove: Move = {
+    ...resolvedMove,
+    params,
+  };
+  const viabilityProbe = resolveMoveDecisionSequence(def, state, candidateMove, {
+    budgets: { maxDecisionProbeSteps },
+    choose: () => undefined,
+  });
+  if (viabilityProbe.complete || (viabilityProbe.stochasticDecision !== undefined && (viabilityProbe.nextDecisionSet?.length ?? 0) === 0)) {
+    return candidateMove;
+  }
+  return resolvedMove;
+};
+
 const normalizeDecisionParamsForMoveInternal = (
   def: GameDef,
   state: GameState,
@@ -121,6 +156,16 @@ const normalizeDecisionParamsForMoveInternal = (
   preserveIncomplete: boolean,
   options?: ResolveDecisionParamsOptions,
 ): Move => {
+  const viabilityProbe = resolveMoveDecisionSequence(def, state, move, {
+    budgets: {
+      maxDecisionProbeSteps: options?.maxDecisionProbeSteps ?? MAX_DECISION_STEPS,
+    },
+    choose: () => undefined,
+  });
+  if (viabilityProbe.complete || (viabilityProbe.stochasticDecision !== undefined && (viabilityProbe.nextDecisionSet?.length ?? 0) === 0)) {
+    return move;
+  }
+
   const resolutionContext: DecisionResolutionContext = {
     byDecisionId: new Map<string, number>(),
     byName: new Map<string, number>(),
@@ -141,7 +186,13 @@ const normalizeDecisionParamsForMoveInternal = (
     },
   });
   if (result.complete) {
-    return result.move;
+    return stripStochasticOnlyBindings(
+      def,
+      state,
+      move,
+      result.move,
+      options?.maxDecisionProbeSteps ?? MAX_DECISION_STEPS,
+    );
   }
   if (result.illegal !== undefined) {
     // Keep canonical illegal-move behavior for callers that assert applyMove failures.

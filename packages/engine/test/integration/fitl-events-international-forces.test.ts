@@ -2,16 +2,21 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  applyMove,
   asPlayerId,
   asTokenId,
+  completeMoveDecisionSequence,
   createRng,
   initialState,
   legalChoicesEvaluate,
   legalMoves,
+  nextInt,
   resolveMoveDecisionSequence,
   type GameDef,
   type GameState,
   type Move,
+  type MoveParamScalar,
+  type MoveParamValue,
   type Token,
 } from '../../src/kernel/index.js';
 import {
@@ -438,20 +443,37 @@ describe('FITL card-65 International Forces', () => {
       },
     ];
 
-    const normalized = normalizeDecisionParamsForMove(def, setup, move!, {
-      rng: createRng(808n),
-      overrides,
+    let stochasticRng = createRng(808n);
+    const normalized = completeMoveDecisionSequence(def, setup, move!, {
+      choose: (request): MoveParamValue | undefined => {
+        for (const override of overrides) {
+          if (!override.when(request)) {
+            continue;
+          }
+          return typeof override.value === 'function' ? override.value(request) : override.value;
+        }
+        return undefined;
+      },
+      chooseStochastic: (request): Readonly<Record<string, MoveParamScalar>> | undefined => {
+        if (request.outcomes.length === 0) {
+          return undefined;
+        }
+        const [index, nextRngState] = nextInt(stochasticRng, 0, request.outcomes.length - 1);
+        stochasticRng = nextRngState;
+        return request.outcomes[index]?.bindings;
+      },
     });
-    const final = applyMoveWithResolvedDecisionIds(def, setup, move!, {
-      rng: createRng(808n),
-      overrides,
-    }).state;
+    assert.equal(normalized.complete, true, 'Expected shared stochastic completion to produce a fully bound move');
+    if (!normalized.complete) {
+      throw new Error('Expected complete stochastic normalization for International Forces shaded');
+    }
+    const final = applyMove(def, setup, normalized.move).state;
 
-    assert.equal(typeof normalized.params.$internationalForcesRemovalRoll, 'number');
+    assert.equal(typeof normalized.move.params.$internationalForcesRemovalRoll, 'number');
     const removedCount = countMatching(final, 'out-of-play-US:none', (token) => token.props.faction === 'US');
     assert.equal(
       removedCount,
-      Math.min(Number(normalized.params.$internationalForcesRemovalRoll), 3),
+      Math.min(Number(normalized.move.params.$internationalForcesRemovalRoll), 3),
       'Shared normalization should remove the exact capped count implied by the sampled roll',
     );
   });

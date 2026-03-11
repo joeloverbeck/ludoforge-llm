@@ -1,6 +1,6 @@
 # ENG-003: Remove Split Free-Operation Discovery Between Direct Seeding And Retrofit
 
-**Status**: PENDING
+**Status**: DEFERRED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/kernel` free-operation legal-move discovery architecture
@@ -23,53 +23,43 @@ That split keeps the architecture more fragile than necessary:
 
 ## Assumption Reassessment (2026-03-11)
 
-1. The current code is better than before but is not yet architecturally converged. Free-operation discovery remains bifurcated between direct seeding and retrofit.
-2. This problem is broader than the `ENG-002` ordering bug. Even if direct-seeding order is fixed, plain grants still flow through a separate mechanism.
-3. The active FITL rollout ticket assumes the generic free-operation path is stable, but it does not specify this remaining discovery split and should not be overloaded with the kernel refactor.
+1. The current code is better than before but is not yet architecturally converged. Free-operation discovery remains bifurcated between direct seeding in `legal-moves.ts` and retrofit in `applyPendingFreeOperationVariants()`.
+2. This problem is broader than the `ENG-002` ordering bug. Even with order-invariant direct seeding, plain non-`executionContext` grants still depend on retrofit for move creation.
+3. The current suite already covers more behavior than this ticket originally implied. `packages/engine/test/integration/fitl-event-free-operation-grants.test.ts` and `packages/engine/test/unit/kernel/legality-surface-parity.test.ts` already exercise required grants, `executionContext`, `executeAsSeat`, ambiguity handling, and legality/apply parity for many denial cases.
+4. The live architecture gap is still structural, but the full convergence is larger than this ticket first claimed. In local reassessment, removing retrofit behavior regressed current FITL execution-context / staged-grant flows, including `packages/engine/test/integration/fitl-events-cambodian-civil-war.test.ts` and `packages/engine/test/integration/fitl-events-ia-drang.test.ts`.
+5. The comprehensive solution should therefore be split into follow-up tickets: first converge execution-context and staged-grant discovery onto the canonical builder, then retire `applyPendingFreeOperationVariants()` only after those regressions are green under the new model.
 
 ## Architecture Check
 
-1. The cleanest long-term design is a single grant-rooted candidate builder used for all ready pending grants, regardless of `executionContext` or whether the underlying action has a pipeline.
-2. That design keeps game-specific behavior in `GameSpecDoc` and tests while making the kernel’s move-discovery model uniform and easier to reason about.
-3. No backwards-compatibility shim should preserve duplicate discovery explanations. If retrofit becomes redundant after convergence, it should be reduced or removed.
+1. The cleanest long-term design is a single grant-rooted candidate builder used for all ready pending grants, regardless of `executionContext`, `executeAsSeat`, or whether the underlying action has a pipeline.
+2. That design is more beneficial than the current architecture because candidate generation then depends only on the runtime grant contract, not on whether an ordinary non-free template happened to exist first.
+3. The right refactor is not a broad rewrite of authorization or `applyMove()`. The shared grant-analysis modules already provide the right downstream model; the remaining duplication is in discovery-time candidate creation.
+4. No backwards-compatibility shim should preserve duplicate discovery explanations. But the current attempted removal proved that retirement of retrofit must follow parity, not precede it.
+5. This ticket is therefore better treated as an umbrella architecture goal, with concrete implementation split into follow-up tickets rather than forced through one risky change set.
 
 ## What to Change
 
-### 1. Introduce One Canonical Grant-Rooted Candidate Path
+### 1. Split The Convergence Work
 
-Refactor free-operation discovery so all ready pending grants produce candidate free moves through one shared path before general turn-flow filtering.
+Track the comprehensive architecture as two concrete follow-ups:
 
-That path must handle:
+- `ENG-004` should converge execution-context and staged-grant discovery onto the canonical grant-rooted builder in `legal-moves.ts`.
+- `ENG-005` should remove `applyPendingFreeOperationVariants()` only after the canonical builder reproduces the current legal-move surface for those flows.
 
-- pipeline-backed actions
-- plain non-pipeline actions
-- `executionContext`
-- `executeAsSeat`
-- zone-filtered and sequence-filtered grants
-- intrinsic vs grant-derived action class handling
+## Deferred Because
 
-### 2. Collapse Retrofit Responsibilities
-
-Reduce `applyPendingFreeOperationVariants()` so it no longer serves as a second independent explanation for ready free-operation discovery.
-
-If some turn-flow-specific filtering still belongs there, limit it to post-candidate filtering rather than move creation.
-
-### 3. Strengthen Cross-Surface Parity
-
-Add tests proving the unified discovery path remains aligned with:
-
-- `legalChoicesDiscover`
-- `applyMove`
-- ambiguity handling
-- exact move identity for denied and admitted free-operation probes
+1. Current green behavior still depends on retrofit for some execution-context and sequence-driven event chains.
+2. The comprehensive change is still the right direction, but forcing retrofit removal before parity would knowingly regress existing behavior.
+3. The next step should be explicit, ticketed convergence work rather than leaving the remaining architectural debt implicit.
 
 ## Files to Touch
 
 - `/home/joeloverbeck/projects/ludoforge-llm/packages/engine/src/kernel/legal-moves.ts` (modify)
 - `/home/joeloverbeck/projects/ludoforge-llm/packages/engine/src/kernel/legal-moves-turn-order.ts` (modify)
-- `/home/joeloverbeck/projects/ludoforge-llm/packages/engine/test/integration/fitl-event-free-operation-grants.test.ts` (modify)
 - `/home/joeloverbeck/projects/ludoforge-llm/packages/engine/test/unit/kernel/legal-moves.test.ts` (modify)
-- `/home/joeloverbeck/projects/ludoforge-llm/packages/engine/test/unit/kernel/legality-surface-parity.test.ts` (modify)
+- `/home/joeloverbeck/projects/ludoforge-llm/packages/engine/test/integration/fitl-event-free-operation-grants.test.ts` (modify)
+- `/home/joeloverbeck/projects/ludoforge-llm/packages/engine/test/integration/fitl-events-cambodian-civil-war.test.ts` (modify)
+- `/home/joeloverbeck/projects/ludoforge-llm/packages/engine/test/integration/fitl-events-ia-drang.test.ts` (modify)
 
 ## Out of Scope
 
@@ -81,11 +71,10 @@ Add tests proving the unified discovery path remains aligned with:
 
 ### Tests That Must Pass
 
-1. Ready pending free-operation grants are surfaced through one canonical grant-rooted discovery model regardless of pipeline presence.
-2. Plain non-pipeline grants no longer depend on late retrofit to become discoverable free moves.
-3. Existing suite: `node /home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/test/integration/fitl-event-free-operation-grants.test.js`
-4. Existing suite: `node /home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/test/unit/kernel/legality-surface-parity.test.js`
-5. Existing suite: `pnpm -F @ludoforge/engine test`
+1. Canonical builder parity for execution-context and staged-grant flows is proven before retrofit is removed.
+2. `packages/engine/test/integration/fitl-events-cambodian-civil-war.test.ts` remains green under the converged discovery model.
+3. `packages/engine/test/integration/fitl-events-ia-drang.test.ts` remains green under the converged discovery model.
+4. `applyPendingFreeOperationVariants()` is removed only after those flows no longer depend on it.
 
 ### Invariants
 
@@ -97,9 +86,12 @@ Add tests proving the unified discovery path remains aligned with:
 
 ### New/Modified Tests
 
-1. `/home/joeloverbeck/projects/ludoforge-llm/packages/engine/test/unit/kernel/legal-moves.test.ts` — cover plain ready grants, pipeline-backed grants, and mixed cases through one discovery model.
-2. `/home/joeloverbeck/projects/ludoforge-llm/packages/engine/test/integration/fitl-event-free-operation-grants.test.ts` — pin unified discovery behavior across executionContext, execute-as, and required-grant flows.
-3. `/home/joeloverbeck/projects/ludoforge-llm/packages/engine/test/unit/kernel/legality-surface-parity.test.ts` — verify unified discovery stays aligned with legality/authorization surfaces.
+1. `/home/joeloverbeck/projects/ludoforge-llm/packages/engine/test/integration/fitl-events-cambodian-civil-war.test.ts` — keep the Cambodia Air Lift -> Sweep follow-up sequence green while discovery is converged.
+Rationale: current reassessment showed this flow still depends on retrofit semantics.
+2. `/home/joeloverbeck/projects/ludoforge-llm/packages/engine/test/integration/fitl-events-ia-drang.test.ts` — keep the Air Lift -> Sweep -> Assault required chain green while discovery is converged.
+Rationale: this is the clearest staged-grant regression when retrofit is removed too early.
+3. `/home/joeloverbeck/projects/ludoforge-llm/packages/engine/test/unit/kernel/legal-moves.test.ts` and `/home/joeloverbeck/projects/ludoforge-llm/packages/engine/test/integration/fitl-event-free-operation-grants.test.ts` — add focused canonical-builder coverage for the converged discovery path once those staged regressions are solved.
+Rationale: broad parity already exists; the missing work is the builder-level convergence.
 
 ### Commands
 

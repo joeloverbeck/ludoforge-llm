@@ -3620,9 +3620,8 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
       );
     }
 
-    const freeApplicableCalls = collectCallExpressionsByIdentifier(sourceFile, 'isFreeOperationApplicableForMove');
     assert.equal(
-      freeApplicableCalls.some((call) =>
+      collectCallExpressionsByIdentifier(sourceFile, 'isFreeOperationApplicableForMove').some((call) =>
         call.arguments.length === 4 &&
         isIdentifierArgument(call.arguments[0]!, 'def') &&
         isIdentifierArgument(call.arguments[1]!, 'state') &&
@@ -3632,10 +3631,8 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
       true,
       'applyPendingFreeOperationVariants must thread seatResolution into free-operation applicability checks',
     );
-
-    const freeGrantedCalls = collectCallExpressionsByIdentifier(sourceFile, 'isFreeOperationGrantedForMove');
     assert.equal(
-      freeGrantedCalls.some((call) =>
+      collectCallExpressionsByIdentifier(sourceFile, 'isFreeOperationGrantedForMove').some((call) =>
         call.arguments.length === 4 &&
         isIdentifierArgument(call.arguments[0]!, 'def') &&
         isIdentifierArgument(call.arguments[1]!, 'state') &&
@@ -3645,10 +3642,8 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
       true,
       'applyPendingFreeOperationVariants must thread seatResolution into free-operation grant checks',
     );
-
-    const admissionCalls = collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceAdmittedForLegalMove');
     assert.equal(
-      admissionCalls.some((call) => {
+      collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceAdmittedForLegalMove').some((call) => {
         if (call.arguments.length < 4) {
           return false;
         }

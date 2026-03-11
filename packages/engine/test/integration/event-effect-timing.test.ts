@@ -6,6 +6,7 @@ import {
   asActionId,
   asPhaseId,
   asPlayerId,
+  asTokenId,
   initialState,
   type EventDeckDef,
   type GameDef,
@@ -29,12 +30,16 @@ const createDef = (): GameDef =>
       { name: 'branchSideCounter', type: 'int', init: 0, min: 0, max: 99 },
       { name: 'branchSideNoGrantCounter', type: 'int', init: 0, min: 0, max: 99 },
       { name: 'selfGrantCounter', type: 'int', init: 0, min: 0, max: 99 },
+      { name: 'interruptCounter', type: 'int', init: 0, min: 0, max: 99 },
     ],
     perPlayerVars: [],
     zones: [],
     tokenTypes: [],
     setup: [],
-    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    turnStructure: {
+      phases: [{ id: asPhaseId('main') }],
+      interrupts: [{ id: asPhaseId('interrupt') }],
+    },
     turnOrder: {
       type: 'cardDriven',
       config: {
@@ -43,7 +48,7 @@ const createDef = (): GameDef =>
           eligibility: {
             seats: ['0', '1', '2', '3'],
           },
-          windows: [],
+          windows: [{ id: 'remain-eligible', duration: 'nextTurn', usages: ['eligibilityOverride'] }],
           optionMatrix: [{ first: 'event', second: ['operation'] }],
           passRewards: [],
           freeOperationActionIds: ['operation'],
@@ -57,7 +62,7 @@ const createDef = (): GameDef =>
         capabilities: ['cardEvent'],
         actor: 'active',
         executor: 'actor',
-        phase: [asPhaseId('main')],
+        phase: [asPhaseId('main'), asPhaseId('interrupt')],
         params: [
               {
                 name: 'eventCardId',
@@ -73,6 +78,7 @@ const createDef = (): GameDef =>
                     'card-branch',
                     'card-branch-no-grant',
                     'card-self-grant',
+                    'card-interrupt-after',
                   ],
                 },
               },
@@ -88,11 +94,22 @@ const createDef = (): GameDef =>
         id: asActionId('operation'),
         actor: 'active',
         executor: 'actor',
-        phase: [asPhaseId('main')],
+        phase: [asPhaseId('main'), asPhaseId('interrupt')],
         params: [],
         pre: null,
         cost: [],
         effects: [],
+        limits: [],
+      },
+      {
+        id: asActionId('resolveInterrupt'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('interrupt')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [{ popInterruptPhase: {} }],
         limits: [],
       },
     ],
@@ -270,6 +287,30 @@ const createDef = (): GameDef =>
                 },
               ],
               effects: [{ addVar: { scope: 'global', var: 'selfGrantCounter', delta: 1 } }],
+            },
+          },
+          {
+            id: 'card-interrupt-after',
+            title: 'Interrupt deferred side effect',
+            sideMode: 'single',
+            unshaded: {
+              effectTiming: 'afterGrants',
+              eligibilityOverrides: [
+                {
+                  target: { kind: 'active' },
+                  eligible: true,
+                  windowId: 'remain-eligible',
+                },
+              ],
+              freeOperationGrants: [
+                {
+                  seat: '0',
+                  sequence: { batch: 'interrupt-self', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                },
+              ],
+              effects: [{ addVar: { scope: 'global', var: 'interruptCounter', delta: 1 } }],
             },
           },
         ],
@@ -553,5 +594,71 @@ describe('event effect timing integration', () => {
     const lifecycle = deferredLifecycleEntries(afterFreeOpResult.triggerFirings);
     assert.deepEqual(lifecycle.map((entry) => entry.stage), ['released', 'executed']);
     assert.equal(lifecycle[0]?.deferredId, queued[0]?.deferredId);
+  });
+
+  it('persists interrupt-originated deferred grants and resumes the interrupted card flow cleanly', () => {
+    const def = createDef();
+    const base = initialState(def, 41, 4).state;
+    const runtime = requireCardDrivenRuntime(base);
+    const start = {
+      ...base,
+      currentPhase: asPhaseId('interrupt'),
+      activePlayer: asPlayerId(0),
+      interruptPhaseStack: [{ phase: asPhaseId('interrupt'), resumePhase: asPhaseId('main') }],
+      zones: {
+        ...base.zones,
+        'played:none': [{ id: asTokenId('tok-card-interrupt-after'), type: 'card', props: { cardId: 'card-interrupt-after' } }],
+      },
+      turnOrderState: {
+        type: 'cardDriven' as const,
+        runtime: {
+          ...runtime,
+          eligibility: { '0': true, '1': true, '2': true, '3': true },
+          currentCard: {
+            ...runtime.currentCard,
+            firstEligible: '1',
+            secondEligible: '2',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+        },
+      },
+    };
+    const beforeCard = requireCardDrivenRuntime(start).currentCard;
+
+    const afterEventResult = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-interrupt-after', side: 'unshaded', branch: 'none' },
+    });
+    const afterEvent = afterEventResult.state;
+    assert.equal(afterEvent.currentPhase, 'interrupt');
+    assert.equal(afterEvent.globalVars.interruptCounter, 0);
+    assert.deepEqual(requireCardDrivenRuntime(afterEvent).currentCard, beforeCard);
+    assert.equal(requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants?.length, 1);
+    assert.equal(requireCardDrivenRuntime(afterEvent).pendingDeferredEventEffects?.length, 1);
+
+    const afterFreeOp = applyMove(def, afterEvent, {
+      actionId: asActionId('operation'),
+      params: {},
+      freeOperation: true,
+    }).state;
+    assert.equal(afterFreeOp.currentPhase, 'interrupt');
+    assert.equal(afterFreeOp.globalVars.interruptCounter, 1);
+    assert.deepEqual(requireCardDrivenRuntime(afterFreeOp).currentCard, beforeCard);
+    assert.equal(requireCardDrivenRuntime(afterFreeOp).pendingFreeOperationGrants, undefined);
+    assert.equal(requireCardDrivenRuntime(afterFreeOp).pendingDeferredEventEffects, undefined);
+
+    const resumed = applyMove(def, afterFreeOp, {
+      actionId: asActionId('resolveInterrupt'),
+      params: {},
+    }).state;
+    assert.equal(resumed.currentPhase, 'main');
+    assert.equal(resumed.activePlayer, asPlayerId(1));
+    assert.deepEqual(requireCardDrivenRuntime(resumed).currentCard, beforeCard);
+    assert.deepEqual(requireCardDrivenRuntime(resumed).pendingEligibilityOverrides ?? [], [
+      { seat: '0', eligible: true, windowId: 'remain-eligible', duration: 'nextTurn' },
+    ]);
   });
 });

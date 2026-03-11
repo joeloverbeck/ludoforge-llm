@@ -204,6 +204,8 @@ describe('FITL card-64 Honolulu Conference', () => {
     assert.equal(runtimeAfterEvent.currentCard.secondEligible, 'vc');
     assert.equal(runtimeAfterEvent.currentCard.nonPassCount, 1);
     assert.equal(runtimeAfterEvent.currentCard.firstActionClass, 'event');
+    assert.equal(runtimeAfterEvent.pendingFreeOperationGrants, undefined);
+    assert.equal(runtimeAfterEvent.pendingDeferredEventEffects, undefined);
 
     const interruptMoves = legalMoves(def, afterEvent);
     assert.equal(interruptMoves.some((move) => String(move.actionId) === 'coupPacifyUS'), true);
@@ -227,6 +229,8 @@ describe('FITL card-64 Honolulu Conference', () => {
     assert.equal(afterShift.markers[QUANG_NAM]?.coupSupportShiftCount, 'one');
     assert.equal(afterShift.globalVars.arvnResources, 14);
     assert.equal(requireCardDrivenRuntime(afterShift).currentCard.nonPassCount, 1);
+    assert.equal(requireCardDrivenRuntime(afterShift).pendingFreeOperationGrants, undefined);
+    assert.equal(requireCardDrivenRuntime(afterShift).pendingDeferredEventEffects, undefined);
 
     const final = applyMove(def, afterShift, {
       actionId: asActionId('resolveHonoluluPacify'),
@@ -239,6 +243,8 @@ describe('FITL card-64 Honolulu Conference', () => {
     assert.equal(finalRuntime.currentCard.secondEligible, 'vc');
     assert.equal(finalRuntime.currentCard.nonPassCount, 1);
     assert.equal(finalRuntime.currentCard.firstActionClass, 'event');
+    assert.equal(finalRuntime.pendingFreeOperationGrants, undefined);
+    assert.equal(finalRuntime.pendingDeferredEventEffects, undefined);
   });
 
   it('ARVN execution only exposes ARVN pacification and can end immediately when no legal pacify exists', () => {

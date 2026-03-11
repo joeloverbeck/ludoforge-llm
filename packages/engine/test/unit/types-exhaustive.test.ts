@@ -189,7 +189,7 @@ describe('exhaustive kernel unions', () => {
     const leafQueryVariants: UnionSize<LeafOptionsQuery> = 16;
 
     assert.equal(playerSelVariants, 7);
-    assert.equal(conditionVariants, 10);
+    assert.equal(conditionVariants, 11);
     assert.equal(effectVariants, 34);
     assert.equal(queryVariants, 18);
     assert.equal(recursiveQueryVariants, 2);

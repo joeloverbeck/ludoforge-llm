@@ -90,6 +90,114 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
     ]);
   });
 
+  it('encodes card 67 (Amphib Landing) as dual US/ARVN coastal troop relocation branches plus shaded VC relocation and next-card ineligibility', () => {
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-67');
+    assert.notEqual(card, undefined);
+
+    assert.equal(
+      card?.unshaded?.text,
+      'US or ARVN relocates any of its Troops among coastal spaces, then free Sweeps and Assaults in 1 coastal space.',
+    );
+    assert.equal(
+      card?.shaded?.text,
+      'VC relocate up to 3 pieces from any coastal space. US and ARVN Ineligible through next card.',
+    );
+    assert.equal(card?.unshaded?.freeOperationGrants, undefined, 'card-67 should issue grants after relocation choices resolve');
+    assert.deepEqual(
+      card?.unshaded?.branches?.map((branch) => branch.id),
+      ['amphib-landing-execute-as-us', 'amphib-landing-execute-as-arvn'],
+    );
+
+    const usEffects = card?.unshaded?.branches?.[0]?.targets?.[0]?.effects ?? [];
+    const arvnEffects = card?.unshaded?.branches?.[1]?.targets?.[0]?.effects ?? [];
+    assert.equal(typeof (usEffects[0] as { chooseN?: unknown } | undefined)?.chooseN, 'object');
+    assert.equal(typeof (usEffects[1] as { forEach?: unknown } | undefined)?.forEach, 'object');
+    assert.deepEqual((usEffects[2] as { grantFreeOperation?: Record<string, unknown> } | undefined)?.grantFreeOperation, {
+      seat: 'us',
+      sequence: { batch: 'amphib-landing-us', step: 0 },
+      completionPolicy: 'required',
+      postResolutionTurnFlow: 'resumeCardFlow',
+      operationClass: 'operation',
+      actionIds: ['sweep'],
+      allowDuringMonsoon: true,
+      moveZoneBindings: ['$targetSpaces'],
+      executionContext: {
+        selectedSpace: {
+          ref: 'binding',
+          name: '$amphibLandingOperationSpace',
+        },
+      },
+      zoneFilter: {
+        op: '==',
+        left: {
+          ref: 'zoneProp',
+          zone: '$zone',
+          prop: 'id',
+        },
+        right: {
+          ref: 'grantContext',
+          key: 'selectedSpace',
+        },
+      },
+    });
+    assert.deepEqual((usEffects[3] as { grantFreeOperation?: Record<string, unknown> } | undefined)?.grantFreeOperation, {
+      seat: 'us',
+      sequence: { batch: 'amphib-landing-us', step: 1 },
+      completionPolicy: 'required',
+      postResolutionTurnFlow: 'resumeCardFlow',
+      operationClass: 'operation',
+      actionIds: ['assault'],
+      moveZoneBindings: ['$targetSpaces'],
+      executionContext: {
+        selectedSpace: {
+          ref: 'binding',
+          name: '$amphibLandingOperationSpace',
+        },
+      },
+      zoneFilter: {
+        op: '==',
+        left: {
+          ref: 'zoneProp',
+          zone: '$zone',
+          prop: 'id',
+        },
+        right: {
+          ref: 'grantContext',
+          key: 'selectedSpace',
+        },
+      },
+    });
+    assert.equal(typeof (arvnEffects[0] as { chooseN?: unknown } | undefined)?.chooseN, 'object');
+    assert.equal(typeof (arvnEffects[1] as { forEach?: unknown } | undefined)?.forEach, 'object');
+    assert.equal(
+      ((arvnEffects[2] as { grantFreeOperation?: Record<string, unknown> } | undefined)?.grantFreeOperation)?.seat,
+      'arvn',
+    );
+    assert.equal(
+      ((arvnEffects[2] as { grantFreeOperation?: Record<string, unknown> } | undefined)?.grantFreeOperation)?.completionPolicy,
+      'required',
+    );
+    assert.equal(
+      ((arvnEffects[3] as { grantFreeOperation?: Record<string, unknown> } | undefined)?.grantFreeOperation)?.seat,
+      'arvn',
+    );
+    assert.equal(
+      ((arvnEffects[3] as { grantFreeOperation?: Record<string, unknown> } | undefined)?.grantFreeOperation)?.completionPolicy,
+      'required',
+    );
+
+    assert.deepEqual(card?.shaded?.eligibilityOverrides, [
+      { target: { kind: 'seat', seat: 'us' }, eligible: false, windowId: 'make-ineligible' },
+      { target: { kind: 'seat', seat: 'arvn' }, eligible: false, windowId: 'make-ineligible' },
+    ]);
+    assert.equal(typeof (card?.shaded?.effects?.[0] as { if?: unknown } | undefined)?.if, 'object');
+  });
+
   it('encodes cards 72/78 as canonical momentum round-lasting toggles', () => {
     const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 

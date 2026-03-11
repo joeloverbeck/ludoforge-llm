@@ -358,9 +358,15 @@ describe('FITL COIN operations integration', () => {
       getSweepArvnProfile();
     });
 
-    it('AC2: ARVN Sweep has top-level legality/costValidation at arvnResources >= 3', () => {
+    it('AC2: ARVN Sweep top-level legality/costValidation bypasses affordability when __freeOperation is true', () => {
       const profile = getSweepArvnProfile();
-      const expected = { op: '>=', left: { ref: 'gvar', var: 'arvnResources' }, right: 3 };
+      const expected = {
+        op: 'or',
+        args: [
+          { op: '==', left: { ref: 'binding', name: '__freeOperation' }, right: true },
+          { op: '>=', left: { ref: 'gvar', var: 'arvnResources' }, right: 3 },
+        ],
+      };
       assert.deepEqual(profile.legality, expected);
       assert.deepEqual(profile.costValidation, expected);
       assert.deepEqual(profile.costEffects, []);
@@ -389,18 +395,28 @@ describe('FITL COIN operations integration', () => {
 
       const limOpChooseN = findDeep(limOpIf[0].if.then, (node: any) => node?.chooseN?.max === 1);
       const affordabilityCap = findDeep(limOpIf[0].if.else, (node: any) =>
-        node?.chooseN?.max?.op === 'floorDiv' &&
-        node?.chooseN?.max?.left?.ref === 'gvar' &&
-        node?.chooseN?.max?.left?.var === 'arvnResources' &&
-        node?.chooseN?.max?.right === 3,
+        node?.chooseN?.max?.if?.when?.op === '==' &&
+        node?.chooseN?.max?.if?.when?.left?.ref === 'binding' &&
+        node?.chooseN?.max?.if?.when?.left?.name === '__freeOperation' &&
+        node?.chooseN?.max?.if?.when?.right === true &&
+        node?.chooseN?.max?.if?.then === 99 &&
+        node?.chooseN?.max?.if?.else?.op === 'floorDiv' &&
+        node?.chooseN?.max?.if?.else?.left?.ref === 'gvar' &&
+        node?.chooseN?.max?.if?.else?.left?.var === 'arvnResources' &&
+        node?.chooseN?.max?.if?.else?.right === 3,
       );
       const capabilityMinCap = findDeep(limOpIf[0].if.else, (node: any) =>
-        node?.chooseN?.max?.op === 'min' &&
-        node?.chooseN?.max?.left === 2 &&
-        node?.chooseN?.max?.right?.op === 'floorDiv' &&
-        node?.chooseN?.max?.right?.left?.ref === 'gvar' &&
-        node?.chooseN?.max?.right?.left?.var === 'arvnResources' &&
-        node?.chooseN?.max?.right?.right === 3,
+        node?.chooseN?.max?.if?.when?.op === '==' &&
+        node?.chooseN?.max?.if?.when?.left?.ref === 'binding' &&
+        node?.chooseN?.max?.if?.when?.left?.name === '__freeOperation' &&
+        node?.chooseN?.max?.if?.when?.right === true &&
+        node?.chooseN?.max?.if?.then === 2 &&
+        node?.chooseN?.max?.if?.else?.op === 'min' &&
+        node?.chooseN?.max?.if?.else?.left === 2 &&
+        node?.chooseN?.max?.if?.else?.right?.op === 'floorDiv' &&
+        node?.chooseN?.max?.if?.else?.right?.left?.ref === 'gvar' &&
+        node?.chooseN?.max?.if?.else?.right?.left?.var === 'arvnResources' &&
+        node?.chooseN?.max?.if?.else?.right?.right === 3,
       );
       assert.ok(limOpChooseN.length >= 1, 'Expected chooseN max:1 in LimOp branch');
       assert.ok(affordabilityCap.length >= 1, 'Expected full-op branch affordability max floorDiv(arvnResources, 3)');
@@ -1251,12 +1267,13 @@ describe('FITL COIN operations integration', () => {
       return profile;
     };
 
-    it('AC1/AC2/AC3: compiles with momentum-aware arvnResources gating and per-space cost model', () => {
+    it('AC1/AC2/AC3: compiles with momentum/free-op-aware arvnResources gating and per-space cost model', () => {
       const profile = getAssaultArvnProfile();
       const expected = {
         op: 'or',
         args: [
           { op: '==', left: { ref: 'gvar', var: 'mom_bodyCount' }, right: true },
+          { op: '==', left: { ref: 'binding', name: '__freeOperation' }, right: true },
           { op: '>=', left: { ref: 'gvar', var: 'arvnResources' }, right: 3 },
         ],
       };
@@ -1288,10 +1305,20 @@ describe('FITL COIN operations integration', () => {
       const limOpChooseN = findDeep(limOpIf[0].if.then, (node: any) => node?.chooseN?.max === 1);
       assert.ok(limOpChooseN.length >= 1, 'Expected chooseN max:1 in LimOp branch');
       const bodyCountBypass = findDeep(limOpIf[0].if.else, (node: any) =>
-        node?.chooseN?.max?.if?.when?.op === '==' &&
-        node?.chooseN?.max?.if?.when?.left?.ref === 'gvar' &&
-        node?.chooseN?.max?.if?.when?.left?.var === 'mom_bodyCount' &&
-        node?.chooseN?.max?.if?.when?.right === true &&
+        node?.chooseN?.max?.if?.when?.op === 'or' &&
+        Array.isArray(node?.chooseN?.max?.if?.when?.args) &&
+        node.chooseN.max.if.when.args.some((arg: any) =>
+          arg?.op === '==' &&
+          arg?.left?.ref === 'gvar' &&
+          arg?.left?.var === 'mom_bodyCount' &&
+          arg?.right === true,
+        ) &&
+        node.chooseN.max.if.when.args.some((arg: any) =>
+          arg?.op === '==' &&
+          arg?.left?.ref === 'binding' &&
+          arg?.left?.name === '__freeOperation' &&
+          arg?.right === true,
+        ) &&
         node?.chooseN?.max?.if?.then === 99,
       );
       const affordabilityCap = findDeep(limOpIf[0].if.else, (node: any) =>

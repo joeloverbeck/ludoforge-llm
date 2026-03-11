@@ -25,6 +25,9 @@ coverage/
 .DS_Store
 Thumbs.db
 
+# Campaign artifacts (improve-loop)
+campaigns/*/results.tsv
+
 # Worktrees
 .worktrees/
 .claude/worktrees/

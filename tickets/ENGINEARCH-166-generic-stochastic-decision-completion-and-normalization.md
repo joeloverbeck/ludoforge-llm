@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — move completion, test helpers, stochastic completion policy
-**Deps**: tickets/ENGINEARCH-165-canonical-rollrandom-chooseN-cardinality-contract.md, archive/tickets/ENGINEARCH-009-helper-decision-fallback-contract-hardening.md
+**Deps**: archive/tickets/ENGINEARCH/ENGINEARCH-165-canonical-rollrandom-chooseN-cardinality-contract.md, archive/tickets/ENGINEARCH-009-helper-decision-fallback-contract-hardening.md
 
 ## Problem
 

@@ -2,7 +2,6 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-  applyMove,
   asPlayerId,
   asTokenId,
   initialState,
@@ -84,29 +83,6 @@ const countMatching = (state: GameState, zone: string, predicate: (token: Token)
 
 const tokenIds = (state: GameState, zone: string): string[] =>
   (state.zones[zone] ?? []).map((token) => String((token as Token).id));
-
-const withAllStochasticRemovalChoices = (def: GameDef, state: GameState, move: Move): Move => {
-  const probe = resolveMoveDecisionSequence(def, state, move, {
-    choose: () => undefined,
-  });
-
-  if (probe.complete || probe.nextDecisionSet === undefined) {
-    throw new Error('Expected stochastic chooser-owned decision set for International Forces shaded.');
-  }
-
-  return {
-    ...move,
-    params: {
-      ...move.params,
-      ...Object.fromEntries(
-        probe.nextDecisionSet.map((request) => [
-          request.decisionId,
-          request.options.slice(0, request.max ?? 0).map((option) => String(option.value)),
-        ]),
-      ),
-    },
-  };
-};
 
 describe('FITL card-65 International Forces', () => {
   it('encodes exact text, legal-map placement constraints, and US-owned shaded removal choices', () => {
@@ -316,30 +292,23 @@ describe('FITL card-65 International Forces', () => {
     assert.equal(probe.complete, false);
     assert.notEqual(probe.nextDecisionSet, undefined, 'Expected shaded to expose chooser-owned stochastic alternatives');
     const chooserRequests = probe.nextDecisionSet?.filter((request) => request.name === '$internationalForcesUsMapPieces') ?? [];
-    assert.equal(chooserRequests.length > 0, true, 'Expected shaded removal alternatives for US piece choice');
+    assert.equal(chooserRequests.length, 3, 'Expected one exact chooser-owned alternative per reachable removal count');
     for (const request of chooserRequests) {
       assert.equal(request.decisionPlayer, asPlayerId(0));
       assert.equal(request.type, 'chooseN');
       assert.equal(request.min, request.max, 'Each stochastic branch should require an exact number of US pieces');
     }
+    assert.deepEqual(
+      chooserRequests.map((request) => request.min).sort((left, right) => (left ?? 0) - (right ?? 0)),
+      [1, 2, 3],
+      'With 3 available US map pieces, the natural encoding should preserve exact branch-local counts 1..3',
+    );
   });
 
-  it('shaded removes an exact deterministic die-roll number of US map pieces to out of play and caps at availability', () => {
+  it('shaded exposes one exact chooser-owned stochastic alternative per reachable removal count and caps at availability', () => {
     const def = compileDef();
 
     const fullSetup = setupState(def, 65006, 2, {
-      [SAIGON]: [
-        makeToken('if-full-1', 'troops', 'US'),
-        makeToken('if-full-2', 'troops', 'US'),
-        makeToken('if-full-3', 'base', 'US'),
-      ],
-      [HUE]: [
-        makeToken('if-full-4', 'irregular', 'US', { activity: 'underground' }),
-        makeToken('if-full-5', 'troops', 'US'),
-        makeToken('if-full-6', 'troops', 'US'),
-      ],
-    });
-    const duplicateSetup = setupState(def, 65006, 2, {
       [SAIGON]: [
         makeToken('if-full-1', 'troops', 'US'),
         makeToken('if-full-2', 'troops', 'US'),
@@ -355,12 +324,15 @@ describe('FITL card-65 International Forces', () => {
     const fullMove = findCardMove(def, fullSetup, 'shaded');
     assert.notEqual(fullMove, undefined, 'Expected International Forces shaded move with 6 US map pieces');
 
-    const fullFinal = applyMove(def, fullSetup, withAllStochasticRemovalChoices(def, fullSetup, fullMove!)).state;
-    const duplicateFinal = applyMove(def, duplicateSetup, withAllStochasticRemovalChoices(def, duplicateSetup, fullMove!)).state;
-    const fullRemoved = countMatching(fullFinal, 'out-of-play-US:none', (token) => token.props.faction === 'US');
-
-    assert.ok(fullRemoved >= 1 && fullRemoved <= 6, 'Shaded should remove exactly one d6 of US map pieces');
-    assert.deepEqual(fullFinal.zones, duplicateFinal.zones, 'Shaded die roll and removals should be deterministic for the same seed');
+    const fullProbe = resolveMoveDecisionSequence(def, fullSetup, fullMove!, {
+      choose: () => undefined,
+    });
+    assert.equal(fullProbe.stochasticDecision?.kind, 'pendingStochastic');
+    assert.deepEqual(
+      fullProbe.nextDecisionSet?.map((request) => request.min).sort((left, right) => (left ?? 0) - (right ?? 0)),
+      [1, 2, 3, 4, 5, 6],
+      'With 6 available US map pieces, each reachable die result should remain an exact stochastic alternative',
+    );
 
     const limitedSetup = setupState(def, 65007, 2, {
       [SAIGON]: [makeToken('if-limited-1', 'troops', 'US')],
@@ -369,13 +341,14 @@ describe('FITL card-65 International Forces', () => {
     const limitedMove = findCardMove(def, limitedSetup, 'shaded');
     assert.notEqual(limitedMove, undefined, 'Expected International Forces shaded move with only 2 US map pieces');
 
-    const limitedFinal = applyMove(def, limitedSetup, withAllStochasticRemovalChoices(def, limitedSetup, limitedMove!)).state;
-    assert.equal(
-      countMatching(limitedFinal, 'out-of-play-US:none', (token) => token.props.faction === 'US'),
-      2,
-      'Shaded should remove all available US map pieces when the die roll exceeds availability',
+    const limitedProbe = resolveMoveDecisionSequence(def, limitedSetup, limitedMove!, {
+      choose: () => undefined,
+    });
+    assert.equal(limitedProbe.stochasticDecision?.kind, 'pendingStochastic');
+    assert.deepEqual(
+      limitedProbe.nextDecisionSet?.map((request) => request.min).sort((left, right) => (left ?? 0) - (right ?? 0)),
+      [1, 2],
+      'When the die roll can exceed availability, stochastic alternatives should cap at reachable exact counts',
     );
-    assert.equal(countMatching(limitedFinal, SAIGON, (token) => token.props.faction === 'US'), 0);
-    assert.equal(countMatching(limitedFinal, HUE, (token) => token.props.faction === 'US'), 0);
   });
 });

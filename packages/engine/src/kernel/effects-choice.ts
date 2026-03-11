@@ -12,16 +12,40 @@ import { withTracePath } from './trace-provenance.js';
 import { normalizeChoiceDomain, toChoiceComparableValue, type MembershipScalar } from './value-membership.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
-import type { ChoiceOption, ChoicePendingRequest, ChoiceStochasticPendingRequest, EffectAST, PlayerSel } from './types.js';
+import type { ChoicePendingRequest, ChoiceStochasticPendingRequest, EffectAST, PlayerSel } from './types.js';
 import type { EffectBudgetState } from './effects-control.js';
 
 type ApplyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContext, budget: EffectBudgetState) => EffectResult;
 
 const choiceOptionKey = (value: unknown): string => JSON.stringify([typeof value, value]);
 
+const normalizePendingChoiceRequest = (pendingChoice: ChoicePendingRequest): ChoicePendingRequest => ({
+  ...pendingChoice,
+  options: pendingChoice.options.map((option) => ({
+    value: option.value,
+    legality: 'unknown',
+    illegalReason: null,
+  })),
+  targetKinds: [...pendingChoice.targetKinds],
+});
+
+const pendingChoiceStructuralKey = (pendingChoice: ChoicePendingRequest): string => {
+  const normalized = normalizePendingChoiceRequest(pendingChoice);
+  return JSON.stringify({
+    decisionPlayer: normalized.decisionPlayer ?? null,
+    decisionId: normalized.decisionId,
+    name: normalized.name,
+    type: normalized.type,
+    options: normalized.options.map((option) => choiceOptionKey(option.value)),
+    targetKinds: normalized.targetKinds,
+    min: normalized.type === 'chooseN' ? normalized.min ?? 0 : null,
+    max: normalized.type === 'chooseN' ? normalized.max ?? normalized.options.length : null,
+  });
+};
+
 const mergePendingChoiceRequests = (
   pendingChoices: readonly ChoicePendingRequest[],
-): ChoicePendingRequest => {
+): readonly ChoicePendingRequest[] => {
   const [first, ...rest] = pendingChoices;
   if (first === undefined) {
     throw new Error('mergePendingChoiceRequests requires at least one pending choice');
@@ -66,58 +90,23 @@ const mergePendingChoiceRequests = (
     }
   }
 
-  const intersectedKeys = new Set<string>(first.options.map((option) => choiceOptionKey(option.value)));
+  const normalizedFirst = normalizePendingChoiceRequest(first);
+  const firstKey = pendingChoiceStructuralKey(normalizedFirst);
+  const distinctAlternatives = new Map<string, ChoicePendingRequest>([[firstKey, normalizedFirst]]);
+
   for (const pending of rest) {
-    const keys = new Set<string>(pending.options.map((option) => choiceOptionKey(option.value)));
-    for (const key of [...intersectedKeys]) {
-      if (!keys.has(key)) {
-        intersectedKeys.delete(key);
-      }
+    const normalized = normalizePendingChoiceRequest(pending);
+    const key = pendingChoiceStructuralKey(normalized);
+    if (!distinctAlternatives.has(key)) {
+      distinctAlternatives.set(key, normalized);
     }
   }
-  const mergedOptions: ChoiceOption[] = first.options
-    .filter((option) => intersectedKeys.has(choiceOptionKey(option.value)))
-    .map((option) => ({
-      value: option.value,
-      legality: 'unknown',
-      illegalReason: null,
-    }));
-  const targetKinds = [...new Set(pendingChoices.flatMap((pending) => pending.targetKinds))];
 
-  if (first.type === 'chooseOne') {
-    return {
-      kind: 'pending',
-      complete: false,
-      ...(first.decisionPlayer === undefined ? {} : { decisionPlayer: first.decisionPlayer }),
-      decisionId: first.decisionId,
-      name: first.name,
-      type: 'chooseOne',
-      options: mergedOptions,
-      targetKinds,
-    };
+  if (distinctAlternatives.size === 1) {
+    return [normalizedFirst];
   }
 
-  const mergedMin = pendingChoices.reduce((maxMin, pending) => Math.max(maxMin, pending.min ?? 0), 0);
-  const mergedMaxUnclamped = pendingChoices.reduce(
-    (minMax, pending) => Math.min(minMax, pending.max ?? pending.options.length),
-    Number.POSITIVE_INFINITY,
-  );
-  const mergedMax = Math.min(
-    Number.isFinite(mergedMaxUnclamped) ? mergedMaxUnclamped : mergedOptions.length,
-    mergedOptions.length,
-  );
-  return {
-    kind: 'pending',
-    complete: false,
-    ...(first.decisionPlayer === undefined ? {} : { decisionPlayer: first.decisionPlayer }),
-    decisionId: first.decisionId,
-    name: first.name,
-    type: 'chooseN',
-    options: mergedOptions,
-    targetKinds,
-    min: mergedMin,
-    max: mergedMax,
-  };
+  return [...distinctAlternatives.values()];
 };
 
 const toStochasticPendingChoice = (
@@ -125,7 +114,7 @@ const toStochasticPendingChoice = (
 ): ChoiceStochasticPendingRequest => {
   const alternatives = [...pendingByDecisionId.entries()]
     .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
-    .map(([, requests]) => mergePendingChoiceRequests(requests));
+    .flatMap(([, requests]) => mergePendingChoiceRequests(requests));
   return {
     kind: 'pendingStochastic',
     complete: false,
@@ -617,12 +606,20 @@ export const applyRollRandom = (
     }
 
     const selectedDecisionId = pendingByDecisionId.keys().next().value as string;
-    const mergedPendingChoice = mergePendingChoiceRequests(pendingByDecisionId.get(selectedDecisionId)!);
+    const mergedPendingChoices = mergePendingChoiceRequests(pendingByDecisionId.get(selectedDecisionId)!);
+    const pendingChoice: ChoicePendingRequest | ChoiceStochasticPendingRequest = mergedPendingChoices.length === 1
+      ? mergedPendingChoices[0]!
+      : {
+        kind: 'pendingStochastic',
+        complete: false,
+        source: 'rollRandom',
+        alternatives: mergedPendingChoices,
+      };
     return {
       state: ctx.state,
       rng: ctx.rng,
       bindings: ctx.bindings,
-      pendingChoice: mergedPendingChoice,
+      pendingChoice,
     };
   }
 

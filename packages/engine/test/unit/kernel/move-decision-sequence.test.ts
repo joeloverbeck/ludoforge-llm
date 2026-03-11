@@ -232,6 +232,59 @@ phase: [asPhaseId('main')],
     assert.deepEqual(result.nextDecisionSet?.map((request) => request.decisionId), ['decision:$alpha', 'decision:$beta']);
   });
 
+  it('returns stochastic alternatives when rollRandom outcomes change exact chooseN cardinality for the same decision', () => {
+    const action: ActionDef = {
+      id: asActionId('random-exact-choose-n-op'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          rollRandom: {
+            bind: '$roll',
+            min: 1,
+            max: 2,
+            in: [
+              {
+                chooseN: {
+                  internalDecisionId: 'decision:$targets',
+                  bind: '$targets',
+                  options: { query: 'enums', values: ['a', 'b', 'c'] },
+                  min: { ref: 'binding', name: '$roll' },
+                  max: { ref: 'binding', name: '$roll' },
+                },
+              } as GameDef['actions'][number]['effects'][number],
+            ],
+          },
+        } as GameDef['actions'][number]['effects'][number],
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const result = resolveMoveDecisionSequence(def, makeBaseState(), makeMove('random-exact-choose-n-op'), {
+      choose: () => undefined,
+    });
+
+    assert.equal(result.complete, false);
+    assert.equal(result.nextDecision, undefined);
+    assert.equal(result.stochasticDecision?.kind, 'pendingStochastic');
+    assert.deepEqual(
+      result.nextDecisionSet?.map((request) => ({
+        decisionId: request.decisionId,
+        min: request.min,
+        max: request.max,
+      })),
+      [
+        { decisionId: 'decision:$targets', min: 1, max: 1 },
+        { decisionId: 'decision:$targets', min: 2, max: 2 },
+      ],
+    );
+  });
+
   it('returns incomplete for unsatisfiable chooseN', () => {
     const action: ActionDef = {
       id: asActionId('unsat-op'),

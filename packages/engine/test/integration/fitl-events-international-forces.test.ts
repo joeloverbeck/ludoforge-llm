@@ -21,7 +21,6 @@ import {
 } from '../../src/kernel/index.js';
 import {
   applyMoveWithResolvedDecisionIds,
-  normalizeDecisionParamsForMove,
   type DecisionOverrideRule,
 } from '../helpers/decision-param-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';

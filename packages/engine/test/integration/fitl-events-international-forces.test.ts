@@ -89,8 +89,10 @@ const countMatching = (state: GameState, zone: string, predicate: (token: Token)
 const tokenIds = (state: GameState, zone: string): string[] =>
   (state.zones[zone] ?? []).map((token) => String((token as Token).id));
 
+const countPattern = (text: string, pattern: RegExp): number => text.match(pattern)?.length ?? 0;
+
 describe('FITL card-65 International Forces', () => {
-  it('encodes exact text, legal-map placement constraints, and US-owned shaded removal choices', () => {
+  it('encodes exact text, legal-map placement constraints, and the compact shaded chooseN form', () => {
     const def = compileDef();
     const card = def.eventDecks?.[0]?.cards.find((entry) => entry.id === CARD_ID);
     assert.notEqual(card, undefined, 'Expected card-65 in production deck');
@@ -111,10 +113,18 @@ describe('FITL card-65 International Forces', () => {
 
     const shadedText = JSON.stringify(card?.shaded?.effects ?? []);
     assert.match(shadedText, /"bind":"\$internationalForcesRemovalRoll"/);
+    assert.match(shadedText, /"bind":"\$internationalForcesPiecesToRemove"/);
     assert.match(shadedText, /"bind":"\$internationalForcesUsMapPieces"/);
     assert.match(shadedText, /"chooser":\{"id":0\}/);
     assert.match(shadedText, /"query":"tokensInMapSpaces"/);
+    assert.match(shadedText, /"min":\{"ref":"binding","name":"\$internationalForcesPiecesToRemove"\}/);
+    assert.match(shadedText, /"max":\{"ref":"binding","name":"\$internationalForcesPiecesToRemove"\}/);
     assert.match(shadedText, /"zoneExpr":"out-of-play-US:none"/);
+    assert.equal(
+      countPattern(shadedText, /"bind":"\$internationalForcesUsMapPieces"/g),
+      1,
+      'Shaded should author one chooser-owned chooseN instead of a per-count branch ladder',
+    );
   });
 
   it('unshaded excludes North Vietnam and full 2-base spaces from destination choices for out-of-play US bases', () => {

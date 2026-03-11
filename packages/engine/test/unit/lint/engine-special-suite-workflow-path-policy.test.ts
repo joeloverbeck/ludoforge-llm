@@ -8,6 +8,7 @@ import { findRepoRootFile } from '../../helpers/lint-policy-helpers.js';
 
 const WORKFLOW_FILES = [
   '.github/workflows/engine-e2e-all.yml',
+  '.github/workflows/engine-game-packages.yml',
   '.github/workflows/engine-memory.yml',
   '.github/workflows/engine-performance.yml',
 ] as const;

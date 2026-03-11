@@ -758,6 +758,70 @@ phase: [asPhaseId('main')],
     assert.equal(isMoveAllowedByTurnFlowOptionMatrix(def, state, move), true);
   });
 
+  it('surfaces required special-activity grants as direct free moves even without executionContext', () => {
+    const def = {
+      ...makeBaseDef({
+        actions: [
+          {
+            id: asActionId('infiltrate'),
+            actor: 'active',
+            executor: 'actor',
+            phase: [asPhaseId('main')],
+            params: [],
+            pre: null,
+            cost: [],
+            effects: [],
+            limits: [],
+          },
+        ],
+      }),
+      metadata: { id: 'legal-moves-required-special-activity-grant', players: { min: 2, max: 2 } },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'] },
+            windows: [],
+            actionClassByActionId: {
+              infiltrate: 'specialActivity',
+            },
+            optionMatrix: [{ first: 'event', second: ['operation'] }],
+            passRewards: [],
+            freeOperationActionIds: ['infiltrate'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeCardDrivenState({
+      currentCard: {
+        firstEligible: '0',
+        secondEligible: null,
+        actedSeats: ['0'],
+        passedSeats: [],
+        nonPassCount: 1,
+        firstActionClass: 'event',
+      },
+      pendingFreeOperationGrants: [
+        {
+          grantId: 'required-infiltrate',
+          seat: '0',
+          operationClass: 'specialActivity',
+          actionIds: ['infiltrate'],
+          completionPolicy: 'required',
+          postResolutionTurnFlow: 'resumeCardFlow',
+          remainingUses: 1,
+        },
+      ],
+    });
+
+    const moves = legalMoves(def, state).filter((move) => String(move.actionId) === 'infiltrate');
+    assert.equal(moves.some((move) => move.freeOperation === true), true);
+    assert.equal(moves.some((move) => move.freeOperation !== true), false);
+  });
+
   it('2. simple action (no profile) still emits fully-enumerated moves', () => {
     const action: ActionDef = {
       id: asActionId('simpleAction'),
@@ -2383,6 +2447,77 @@ phase: [asPhaseId('main')],
     assert.deepEqual(secondRun, firstRun);
   });
 
+  it('surfaces a later executeAsSeat direct-seeded free-operation grant when an earlier same-action grant is pipeline-inapplicable', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'operation-as-seat-1',
+      actionId: asActionId('operation'),
+      applicability: { op: '==', left: { ref: 'activePlayer' }, right: 1 },
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [{ effects: [] }],
+      atomicity: 'atomic',
+    };
+
+    const def = {
+      ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'] },
+            windows: [],
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeCardDrivenState({
+      pendingFreeOperationGrants: [
+        {
+          grantId: 'grant-invalid-first',
+          seat: '0',
+          executeAsSeat: '0',
+          operationClass: 'operation',
+          actionIds: ['operation'],
+          remainingUses: 1,
+        },
+        {
+          grantId: 'grant-valid-second',
+          seat: '0',
+          executeAsSeat: '1',
+          operationClass: 'operation',
+          actionIds: ['operation'],
+          remainingUses: 1,
+        },
+      ],
+    });
+
+    const freeMoves = legalMoves(def, state).filter(
+      (move) => String(move.actionId) === 'operation' && move.freeOperation === true,
+    );
+
+    assert.equal(freeMoves.length, 1);
+  });
+
   it('does not expose free-operation variants when grant and turn-flow action domains are both absent', () => {
     const action: ActionDef = {
       id: asActionId('operation'),
@@ -2932,6 +3067,210 @@ phase: [asPhaseId('main')],
     assert.equal(moves.some((move) => move.freeOperation !== true), true);
   });
 
+  it('surfaces only executionContext-scoped free moves during a required grant window', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [{ name: 'target', domain: { query: 'intsInRange', min: 1, max: 2 } }],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'operation-with-grant-context',
+      actionId: asActionId('operation'),
+      legality: {
+        op: 'in',
+        item: { ref: 'binding', name: 'target' },
+        set: { ref: 'grantContext', key: 'allowedTargets' },
+      },
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [{ effects: [] }],
+      atomicity: 'atomic',
+    };
+
+    const def = {
+      ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
+            optionMatrix: [{ first: 'event', second: ['operation'] }],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            actionClassByActionId: { operation: 'operation' },
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeCardDrivenState({
+      currentCard: {
+        firstEligible: '0',
+        secondEligible: null,
+        actedSeats: ['0'],
+        passedSeats: [],
+        nonPassCount: 1,
+        firstActionClass: 'event',
+      },
+      pendingFreeOperationGrants: [
+        {
+          grantId: 'grant-context',
+          seat: '0',
+          operationClass: 'operation',
+          actionIds: ['operation'],
+          completionPolicy: 'required',
+          postResolutionTurnFlow: 'resumeCardFlow',
+          executionContext: { allowedTargets: [2] },
+          remainingUses: 1,
+        },
+      ],
+    });
+
+    const moves = legalMoves(def, state).filter((move) => String(move.actionId) === 'operation');
+    assert.deepEqual(moves, [
+      {
+        actionId: asActionId('operation'),
+        params: { target: 2 },
+        freeOperation: true,
+        actionClass: 'operation',
+      },
+    ]);
+  });
+
+  it('keeps staged pending grants locked to the current ready pipeline step', () => {
+    const airLift: ActionDef = {
+      id: asActionId('airLift'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const sweep: ActionDef = {
+      id: asActionId('sweep'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const emptyPipeline = (id: string, actionId: ReturnType<typeof asActionId>): ActionPipelineDef => ({
+      id,
+      actionId,
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [{ effects: [] }],
+      atomicity: 'partial',
+    });
+
+    const def = {
+      ...makeBaseDef({
+        actions: [airLift, sweep],
+        actionPipelines: [
+          emptyPipeline('airlift-profile', asActionId('airLift')),
+          emptyPipeline('sweep-profile', asActionId('sweep')),
+        ],
+      }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
+            optionMatrix: [{ first: 'event', second: ['operation'] }],
+            passRewards: [],
+            freeOperationActionIds: ['airLift', 'sweep'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            actionClassByActionId: { airLift: 'operation', sweep: 'operation' },
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const start = makeCardDrivenState({
+      currentCard: {
+        firstEligible: '0',
+        secondEligible: null,
+        actedSeats: ['0'],
+        passedSeats: [],
+        nonPassCount: 1,
+        firstActionClass: 'event',
+      },
+      pendingFreeOperationGrants: [
+        {
+          grantId: 'grant-airlift',
+          seat: '0',
+          operationClass: 'operation',
+          actionIds: ['airLift'],
+          completionPolicy: 'required',
+          sequenceBatchId: 'chain',
+          sequenceIndex: 0,
+          remainingUses: 1,
+        },
+        {
+          grantId: 'grant-sweep',
+          seat: '0',
+          operationClass: 'operation',
+          actionIds: ['sweep'],
+          completionPolicy: 'required',
+          postResolutionTurnFlow: 'resumeCardFlow',
+          sequenceBatchId: 'chain',
+          sequenceIndex: 1,
+          remainingUses: 1,
+        },
+      ],
+    });
+
+    const firstMoves = legalMoves(def, start);
+    assert.equal(
+      firstMoves.some((move) => String(move.actionId) === 'airLift' && move.freeOperation === true),
+      true,
+    );
+    assert.equal(
+      firstMoves.some((move) => String(move.actionId) === 'sweep' && move.freeOperation === true),
+      false,
+    );
+
+    const afterAirLift = applyMove(def, start, {
+      actionId: asActionId('airLift'),
+      params: {},
+      freeOperation: true,
+    }).state;
+
+    const secondMoves = legalMoves(def, afterAirLift);
+    assert.equal(
+      secondMoves.some((move) => String(move.actionId) === 'airLift' && move.freeOperation === true),
+      false,
+    );
+    assert.equal(
+      secondMoves.some((move) => String(move.actionId) === 'sweep' && move.freeOperation === true),
+      true,
+    );
+  });
+
   it('26. preserves event moves when event decision probing hits deferrable missing bindings', () => {
     const { def, state, actionId } = makeEventLegalMovesFixture({
       id: 'event-deferrable-binding',
@@ -3450,14 +3789,14 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
     );
   });
 
-  it('requires legal-moves turn-order helpers to consume explicit seat-resolution context', () => {
+  it('keeps free-operation move creation out of legal-moves turn-order helpers', () => {
     const source = readKernelSource('src/kernel/legal-moves-turn-order.ts');
     const sourceFile = parseTypeScriptSource(source, 'legal-moves-turn-order.ts');
     const imports = collectNamedImportsByLocalName(sourceFile, './move-decision-sequence.js');
     assert.equal(
-      imports.get('isMoveDecisionSequenceAdmittedForLegalMove'),
-      'isMoveDecisionSequenceAdmittedForLegalMove',
-      'legal-moves-turn-order.ts must import canonical legal-move decision admission helper',
+      imports.has('isMoveDecisionSequenceAdmittedForLegalMove'),
+      false,
+      'legal-moves-turn-order.ts must not import free-operation decision admission helpers once canonical builder owns move creation',
     );
     assert.equal(
       imports.has('isMoveDecisionSequenceNotUnsatisfiable'),
@@ -3466,13 +3805,24 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
     );
     const missingBindingImports = collectNamedImportsByLocalName(sourceFile, './missing-binding-policy.js');
     assert.equal(
-      missingBindingImports.get('MISSING_BINDING_POLICY_CONTEXTS'),
-      'MISSING_BINDING_POLICY_CONTEXTS',
-      'legal-moves-turn-order.ts must import canonical missing-binding policy context identifiers',
+      missingBindingImports.has('MISSING_BINDING_POLICY_CONTEXTS'),
+      false,
+      'legal-moves-turn-order.ts must not import free-operation move-creation missing-binding contexts',
+    );
+    const discoveryImports = collectNamedImportsByLocalName(sourceFile, './free-operation-discovery-analysis.js');
+    assert.equal(
+      discoveryImports.has('isFreeOperationApplicableForMove'),
+      false,
+      'legal-moves-turn-order.ts must not import free-operation applicability helpers for move creation',
+    );
+    assert.equal(
+      discoveryImports.has('isFreeOperationGrantedForMove'),
+      false,
+      'legal-moves-turn-order.ts must not import free-operation grant helpers for move creation',
     );
 
     const activeSeatCalls = collectCallExpressionsByIdentifier(sourceFile, 'requireCardDrivenActiveSeat');
-    assert.equal(activeSeatCalls.length >= 2, true, 'turn-order helpers should resolve active seat at guarded boundaries');
+    assert.equal(activeSeatCalls.length >= 1, true, 'turn-order helpers should still resolve active seat at guarded boundaries');
     for (const call of activeSeatCalls) {
       assert.equal(
         call.arguments.length === 4 &&
@@ -3485,48 +3835,20 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
       );
     }
 
-    const freeApplicableCalls = collectCallExpressionsByIdentifier(sourceFile, 'isFreeOperationApplicableForMove');
     assert.equal(
-      freeApplicableCalls.some((call) =>
-        call.arguments.length === 4 &&
-        isIdentifierArgument(call.arguments[0]!, 'def') &&
-        isIdentifierArgument(call.arguments[1]!, 'state') &&
-        isIdentifierArgument(call.arguments[2]!, 'candidate') &&
-        isIdentifierArgument(call.arguments[3]!, 'seatResolution'),
-      ),
-      true,
-      'applyPendingFreeOperationVariants must thread seatResolution into free-operation applicability checks',
+      collectCallExpressionsByIdentifier(sourceFile, 'isFreeOperationApplicableForMove').length,
+      0,
+      'legal-moves-turn-order.ts must not perform free-operation applicability checks for move creation',
     );
-
-    const freeGrantedCalls = collectCallExpressionsByIdentifier(sourceFile, 'isFreeOperationGrantedForMove');
     assert.equal(
-      freeGrantedCalls.some((call) =>
-        call.arguments.length === 4 &&
-        isIdentifierArgument(call.arguments[0]!, 'def') &&
-        isIdentifierArgument(call.arguments[1]!, 'state') &&
-        isIdentifierArgument(call.arguments[2]!, 'candidate') &&
-        isIdentifierArgument(call.arguments[3]!, 'seatResolution'),
-      ),
-      true,
-      'applyPendingFreeOperationVariants must thread seatResolution into free-operation grant checks',
+      collectCallExpressionsByIdentifier(sourceFile, 'isFreeOperationGrantedForMove').length,
+      0,
+      'legal-moves-turn-order.ts must not perform free-operation grant checks for move creation',
     );
-
-    const admissionCalls = collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceAdmittedForLegalMove');
     assert.equal(
-      admissionCalls.some((call) => {
-        if (call.arguments.length < 4) {
-          return false;
-        }
-        const contextArg = unwrapTypeScriptExpression(call.arguments[3]!);
-        return (
-          ts.isPropertyAccessExpression(contextArg) &&
-          ts.isIdentifier(contextArg.expression) &&
-          contextArg.expression.text === 'MISSING_BINDING_POLICY_CONTEXTS' &&
-          contextArg.name.text === 'LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE'
-        );
-      }),
-      true,
-      'free-operation unresolved admission must use canonical helper with legalMoves.freeOperationDecisionSequence context',
+      collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceAdmittedForLegalMove').length,
+      0,
+      'legal-moves-turn-order.ts must not perform free-operation decision admission for move creation',
     );
 
     const legacyAdmissionCalls = collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceNotUnsatisfiable');

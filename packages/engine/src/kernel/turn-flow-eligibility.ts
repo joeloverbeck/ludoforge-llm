@@ -791,7 +791,8 @@ export const isActiveSeatEligibleForTurnFlow = (
 
   return (
     activeSeat === runtime.currentCard.firstEligible ||
-    activeSeat === runtime.currentCard.secondEligible
+    activeSeat === runtime.currentCard.secondEligible ||
+    hasReadyRequiredPendingFreeOperationGrantForSeat(runtime.pendingFreeOperationGrants ?? [], activeSeat)
   );
 };
 

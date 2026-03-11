@@ -123,6 +123,7 @@ export const EventCardEligibilityOverrideTargetSchema = z.union([
 export const EventCardEligibilityOverrideSchema = z
   .object({
     target: EventCardEligibilityOverrideTargetSchema,
+    when: ConditionASTSchema.optional(),
     eligible: BooleanSchema,
     windowId: StringSchema.min(1),
   })

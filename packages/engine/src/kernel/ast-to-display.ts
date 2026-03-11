@@ -148,6 +148,8 @@ const referenceToInlineNodes = (r: Reference): DisplayInlineNode[] => {
       return [ref(r.zone, 'zone'), DOT, ref(r.prop, 'prop')];
     case 'activePlayer':
       return [ref('activePlayer', 'player')];
+    case 'activeSeat':
+      return [ref('activeSeat', 'player')];
     case 'grantContext':
       return [kw('grantCtx'), LPAREN, ref(r.key, 'binding'), RPAREN];
     default: {
@@ -299,6 +301,9 @@ const conditionLeafToInlineNodes = (cond: ConditionLeaf): DisplayInlineNode[] =>
       );
       if (cond.via !== undefined) {
         nodes.push(SPACE, kw('via'), SPACE, ...conditionToInlinePreview(cond.via));
+      }
+      if (cond.allowTargetOutsideVia === true) {
+        nodes.push(SPACE, kw('allowTargetOutsideVia'));
       }
       if (cond.maxDepth !== undefined) {
         nodes.push(SPACE, kw('maxDepth'), SPACE, val(String(cond.maxDepth), 'number'));

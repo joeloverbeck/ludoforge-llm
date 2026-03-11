@@ -54,6 +54,7 @@ export type EventEligibilityOverrideTarget =
 
 export interface EventEligibilityOverrideDef {
   readonly target: EventEligibilityOverrideTarget;
+  readonly when?: ConditionAST;
   readonly eligible: boolean;
   readonly windowId: string;
 }

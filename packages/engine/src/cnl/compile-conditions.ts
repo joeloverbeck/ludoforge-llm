@@ -110,6 +110,7 @@ const SUPPORTED_REFERENCE_KINDS = [
   'zoneProp',
   'zoneVar',
   'activePlayer',
+  'activeSeat',
   'grantContext',
 ];
 const PREDICATE_ALIAS_KEYS = Object.freeze({
@@ -232,6 +233,20 @@ export function lowerConditionNode(
       const to = lowerZoneSelector(source.to, context, `${path}.to`);
       const via =
         source.via === undefined ? { value: undefined, diagnostics: [] as readonly Diagnostic[] } : lowerConditionNode(source.via, context, `${path}.via`);
+      const allowTargetOutsideVia = source.allowTargetOutsideVia;
+      const allowTargetOutsideViaValue = typeof allowTargetOutsideVia === 'boolean' ? allowTargetOutsideVia : undefined;
+      const allowTargetOutsideViaDiagnostic =
+        allowTargetOutsideVia === undefined || allowTargetOutsideViaValue !== undefined
+          ? []
+          : [
+              {
+                code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
+                path: `${path}.allowTargetOutsideVia`,
+                severity: 'error' as const,
+                message: 'connected.allowTargetOutsideVia must be a boolean literal.',
+                suggestion: 'Use allowTargetOutsideVia: true or allowTargetOutsideVia: false.',
+              },
+            ];
       const maxDepth = source.maxDepth;
       const maxDepthValue = typeof maxDepth === 'number' && Number.isInteger(maxDepth) && maxDepth >= 0 ? maxDepth : undefined;
       const maxDepthDiagnostic =
@@ -246,8 +261,14 @@ export function lowerConditionNode(
                 suggestion: 'Use a non-negative integer literal maxDepth.',
               },
             ];
-      const diagnostics = [...from.diagnostics, ...to.diagnostics, ...via.diagnostics, ...maxDepthDiagnostic];
-      if (from.value === null || to.value === null || via.value === null || maxDepthDiagnostic.length > 0) {
+      const diagnostics = [...from.diagnostics, ...to.diagnostics, ...via.diagnostics, ...allowTargetOutsideViaDiagnostic, ...maxDepthDiagnostic];
+      if (
+        from.value === null
+        || to.value === null
+        || via.value === null
+        || allowTargetOutsideViaDiagnostic.length > 0
+        || maxDepthDiagnostic.length > 0
+      ) {
         return { value: null, diagnostics };
       }
       return {
@@ -256,6 +277,7 @@ export function lowerConditionNode(
           from: from.value,
           to: to.value,
           ...(via.value === undefined ? {} : { via: via.value }),
+          ...(allowTargetOutsideViaValue === undefined ? {} : { allowTargetOutsideVia: allowTargetOutsideViaValue }),
           ...(maxDepthValue === undefined ? {} : { maxDepth: maxDepthValue }),
         },
         diagnostics,
@@ -1315,6 +1337,20 @@ export function lowerQueryNode(
                 suggestion: 'Use includeStart: true or includeStart: false.',
               },
             ];
+      const allowTargetOutsideVia = source.allowTargetOutsideVia;
+      const allowTargetOutsideViaValue = typeof allowTargetOutsideVia === 'boolean' ? allowTargetOutsideVia : undefined;
+      const allowTargetOutsideViaDiagnostic =
+        allowTargetOutsideVia === undefined || allowTargetOutsideViaValue !== undefined
+          ? []
+          : [
+              {
+                code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
+                path: `${path}.allowTargetOutsideVia`,
+                severity: 'error' as const,
+                message: 'connectedZones.allowTargetOutsideVia must be a boolean literal.',
+                suggestion: 'Use allowTargetOutsideVia: true or allowTargetOutsideVia: false.',
+              },
+            ];
       const maxDepth = source.maxDepth;
       const maxDepthValue = typeof maxDepth === 'number' && Number.isInteger(maxDepth) && maxDepth >= 0 ? maxDepth : undefined;
       const maxDepthDiagnostic =
@@ -1329,8 +1365,20 @@ export function lowerQueryNode(
                 suggestion: 'Use a non-negative integer literal maxDepth.',
               },
             ];
-      const diagnostics = [...zone.diagnostics, ...via.diagnostics, ...includeStartDiagnostic, ...maxDepthDiagnostic];
-      if (zone.value === null || via.value === null || includeStartDiagnostic.length > 0 || maxDepthDiagnostic.length > 0) {
+      const diagnostics = [
+        ...zone.diagnostics,
+        ...via.diagnostics,
+        ...includeStartDiagnostic,
+        ...allowTargetOutsideViaDiagnostic,
+        ...maxDepthDiagnostic,
+      ];
+      if (
+        zone.value === null
+        || via.value === null
+        || includeStartDiagnostic.length > 0
+        || allowTargetOutsideViaDiagnostic.length > 0
+        || maxDepthDiagnostic.length > 0
+      ) {
         return { value: null, diagnostics };
       }
       return {
@@ -1339,6 +1387,7 @@ export function lowerQueryNode(
           zone: zone.value,
           ...(via.value === undefined ? {} : { via: via.value }),
           ...(includeStartValue === undefined ? {} : { includeStart: includeStartValue }),
+          ...(allowTargetOutsideViaValue === undefined ? {} : { allowTargetOutsideVia: allowTargetOutsideViaValue }),
           ...(maxDepthValue === undefined ? {} : { maxDepth: maxDepthValue }),
         },
         diagnostics,
@@ -1682,6 +1731,8 @@ function lowerReference(
     }
     case 'activePlayer':
       return { value: { ref: 'activePlayer' }, diagnostics: [] };
+    case 'activeSeat':
+      return { value: { ref: 'activeSeat' }, diagnostics: [] };
     case 'binding':
       if (typeof source.name === 'string') {
         if (context.bindingScope !== undefined && !hasBindingIdentifier(source.name, context.bindingScope)) {

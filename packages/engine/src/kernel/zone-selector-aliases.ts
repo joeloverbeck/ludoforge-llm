@@ -149,6 +149,7 @@ export const collectZoneSelectorAliasesFromValueExpr = (
       case 'globalMarkerState':
       case 'tokenZone':
       case 'activePlayer':
+      case 'activeSeat':
         return aliases;
       default: {
         const exhaustive: never = value;

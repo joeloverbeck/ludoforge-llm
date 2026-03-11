@@ -52,6 +52,8 @@ describe('FITL 1968 ARVN-first event-card production spec', () => {
     assert.notEqual(card, undefined);
     assert.equal(card?.tags?.includes('capability'), true);
     assert.equal(card?.tags?.includes('ARVN'), true);
+    assert.equal(card?.unshaded?.text, 'ARVN in 1 Transport destination after Ops may free Assault.');
+    assert.equal(card?.shaded?.text, 'Transport Rangers only.');
     assert.deepEqual(card?.unshaded?.effects, [{ setGlobalMarker: { marker: 'cap_armoredCavalry', state: 'unshaded' } }]);
     assert.deepEqual(card?.shaded?.effects, [{ setGlobalMarker: { marker: 'cap_armoredCavalry', state: 'shaded' } }]);
   });

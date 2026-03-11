@@ -50,6 +50,7 @@ export type Reference =
   | { readonly ref: 'tokenZone'; readonly token: TokenSel }
   | { readonly ref: 'zoneProp'; readonly zone: ZoneSel; readonly prop: string }
   | { readonly ref: 'activePlayer' }
+  | { readonly ref: 'activeSeat' }
   | { readonly ref: 'grantContext'; readonly key: string };
 
 export type ValueExpr =
@@ -136,6 +137,7 @@ export type ConditionAST =
       readonly from: ZoneSel;
       readonly to: ZoneSel;
       readonly via?: ConditionAST;
+      readonly allowTargetOutsideVia?: boolean;
       readonly maxDepth?: number;
     }
   | {
@@ -222,6 +224,7 @@ export type OptionsQuery =
       readonly zone: ZoneRef;
       readonly via?: ConditionAST;
       readonly includeStart?: boolean;
+      readonly allowTargetOutsideVia?: boolean;
       readonly maxDepth?: number;
     }
   | { readonly query: 'binding'; readonly name: string; readonly displayName?: string }

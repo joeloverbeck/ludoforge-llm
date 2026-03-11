@@ -9049,11 +9049,61 @@ eventDecks:
             - VC
             - ARVN
             - US
-          flavorText: Images from the front alter force posture and political appetite.
+          flavorText: Pulitzer photo inspires.
         unshaded:
-          text: Place pieces from Out of Play into selected spaces.
+          text: 3 out of play US pieces to Available.
+          effects:
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: $usOutOfPlayPiece
+                    over:
+                      query: tokensInZone
+                      zone: out-of-play-US:none
+                      filter:
+                        prop: faction
+                        op: eq
+                        value: US
+                    to:
+                      zoneExpr: available-US:none
         shaded:
-          text: Media backlash moves selected forces back out of theater.
+          text: "Photos galvanize home front: NVA place 6 Troops outside South Vietnam, add +6 Resources, and, if executing, stay Eligible."
+          eligibilityOverrides:
+            - target:
+                kind: active
+              when:
+                op: ==
+                left:
+                  ref: activeSeat
+                right: NVA
+              eligible: true
+              windowId: remain-eligible
+          effects:
+            - distributeTokens:
+                tokens:
+                  query: tokensInZone
+                  zone: available-NVA:none
+                  filter:
+                    op: and
+                    args:
+                      - prop: faction
+                        op: eq
+                        value: NVA
+                      - prop: type
+                        op: eq
+                        value: troops
+                destinations:
+                  query: mapSpaces
+                  filter:
+                    condition:
+                      conditionMacro: fitl-space-outside-south
+                      args:
+                        spaceExpr: $zone
+                max: 6
+            - addVar:
+                scope: global
+                var: nvaResources
+                delta: 6
       - id: card-61
         title: Armored Cavalry
         sideMode: dual
@@ -9070,14 +9120,14 @@ eventDecks:
             - VC
           flavorText: Mechanized formations increase ARVN operational reach.
         unshaded:
-          text: "ARVN capability: Armored columns improve ARVN mobile operation efficiency."
+          text: "ARVN in 1 Transport destination after Ops may free Assault."
           effects:
             - macro: set-global-marker
               args:
                 markerId: cap_armoredCavalry
                 markerState: unshaded
         shaded:
-          text: "ARVN capability (shaded): armored commitments create vulnerabilities around ARVN moves."
+          text: "Transport Rangers only."
           effects:
             - macro: set-global-marker
               args:
@@ -9097,9 +9147,236 @@ eventDecks:
             - VC
           flavorText: Border conflict opens corridors for rapid intervention and disruption.
         unshaded:
-          text: COIN executes free Air Lift then free Sweep; remove one insurgent Base from Cambodia.
+          text: US free Air Lifts into and US or ARVN free Sweeps within Cambodia. Remove 2 NVA/VC Bases from Cambodia.
+          effectTiming: afterGrants
+          branches:
+            - id: cambodian-civil-war-us-sweep
+              order: 1
+              freeOperationGrants:
+                - seat: us
+                  viabilityPolicy: requireUsableForEventPlay
+                  completionPolicy: required
+                  outcomePolicy: mustChangeGameplayState
+                  postResolutionTurnFlow: resumeCardFlow
+                  executionContext:
+                    airLiftDestinationProfile: [cambodia-only]
+                  sequence:
+                    batch: cambodian-civil-war-us
+                    step: 0
+                  operationClass: operation
+                  actionIds:
+                    - airLift
+                - seat: us
+                  completionPolicy: required
+                  postResolutionTurnFlow: resumeCardFlow
+                  sequence:
+                    batch: cambodian-civil-war-us
+                    step: 1
+                  operationClass: operation
+                  actionIds:
+                    - sweep
+                  allowDuringMonsoon: true
+                  zoneFilter:
+                    op: ==
+                    left:
+                      ref: zoneProp
+                      zone: $zone
+                      prop: country
+                    right: cambodia
+            - id: cambodian-civil-war-arvn-sweep
+              order: 2
+              freeOperationGrants:
+                - seat: us
+                  viabilityPolicy: requireUsableForEventPlay
+                  completionPolicy: required
+                  outcomePolicy: mustChangeGameplayState
+                  postResolutionTurnFlow: resumeCardFlow
+                  executionContext:
+                    airLiftDestinationProfile: [cambodia-only]
+                  sequence:
+                    batch: cambodian-civil-war-arvn
+                    step: 0
+                  operationClass: operation
+                  actionIds:
+                    - airLift
+                - seat: arvn
+                  completionPolicy: required
+                  postResolutionTurnFlow: resumeCardFlow
+                  sequence:
+                    batch: cambodian-civil-war-arvn
+                    step: 1
+                  operationClass: operation
+                  actionIds:
+                    - sweep
+                  allowDuringMonsoon: true
+                  zoneFilter:
+                    op: ==
+                    left:
+                      ref: zoneProp
+                      zone: $zone
+                      prop: country
+                    right: cambodia
+          effects:
+            - let:
+                bind: $removableBaseCount
+                value:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInMapSpaces
+                      spaceFilter:
+                        op: ==
+                        left:
+                          ref: zoneProp
+                          zone: $zone
+                          prop: country
+                        right: cambodia
+                      filter:
+                        op: and
+                        args:
+                          - prop: faction
+                            op: in
+                            value:
+                              - NVA
+                              - VC
+                          - prop: type
+                            op: eq
+                            value: base
+                          - prop: tunnel
+                            op: eq
+                            value: untunneled
+                in:
+                  - let:
+                      bind: $baseRemovalCount
+                      value:
+                        op: min
+                        left: 2
+                        right:
+                          ref: binding
+                          name: $removableBaseCount
+                      in:
+                        - if:
+                            when:
+                              op: ">"
+                              left:
+                                ref: binding
+                                name: $baseRemovalCount
+                              right: 0
+                            then:
+                              - chooseN:
+                                  bind: $cambodianCivilWarBases
+                                  options:
+                                    query: tokensInMapSpaces
+                                    spaceFilter:
+                                      op: ==
+                                      left:
+                                        ref: zoneProp
+                                        zone: $zone
+                                        prop: country
+                                      right: cambodia
+                                    filter:
+                                      op: and
+                                      args:
+                                        - prop: faction
+                                          op: in
+                                          value:
+                                            - NVA
+                                            - VC
+                                        - prop: type
+                                          op: eq
+                                          value: base
+                                        - prop: tunnel
+                                          op: eq
+                                          value: untunneled
+                                  min:
+                                    ref: binding
+                                    name: $baseRemovalCount
+                                  max:
+                                    ref: binding
+                                    name: $baseRemovalCount
+                              - forEach:
+                                  bind: $cambodianCivilWarBase
+                                  over:
+                                    query: binding
+                                    name: $cambodianCivilWarBases
+                                  effects:
+                                    - moveToken:
+                                        token: $cambodianCivilWarBase
+                                        from:
+                                          zoneExpr:
+                                            ref: tokenZone
+                                            token: $cambodianCivilWarBase
+                                        to:
+                                          zoneExpr:
+                                            concat:
+                                              - available-
+                                              - ref: tokenProp
+                                                token: $cambodianCivilWarBase
+                                                prop: faction
+                                              - :none
+                            else: []
         shaded:
-          text: "Regional escalation favors insurgents: remove one COIN Base from Cambodia."
+          text: NVA places a total of 12 NVA Troops and Guerrillas in Cambodia.
+          effects:
+            - let:
+                bind: $placeableNvaCount
+                value:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInZone
+                      zone: available-NVA:none
+                      filter:
+                        op: and
+                        args:
+                          - prop: faction
+                            op: eq
+                            value: NVA
+                          - prop: type
+                            op: in
+                            value:
+                              - troops
+                              - guerrilla
+                in:
+                  - let:
+                      bind: $nvaPlacementCount
+                      value:
+                        op: min
+                        left: 12
+                        right:
+                          ref: binding
+                          name: $placeableNvaCount
+                      in:
+                        - distributeTokens:
+                            tokens:
+                              query: tokensInZone
+                              zone: available-NVA:none
+                              filter:
+                                op: and
+                                args:
+                                  - prop: faction
+                                    op: eq
+                                    value: NVA
+                                  - prop: type
+                                    op: in
+                                    value:
+                                      - troops
+                                      - guerrilla
+                            destinations:
+                              query: mapSpaces
+                              filter:
+                                op: ==
+                                left:
+                                  ref: zoneProp
+                                  zone: $zone
+                                  prop: country
+                                right: cambodia
+                            min:
+                              ref: binding
+                              name: $nvaPlacementCount
+                            max:
+                              ref: binding
+                              name: $nvaPlacementCount
       - id: card-65
         title: International Forces
         sideMode: dual

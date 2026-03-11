@@ -251,6 +251,7 @@ export const stringifyValueExpr = (expr: ValueExpr): string => {
         return `${expr.zone}.${expr.prop}`;
       }
       case 'activePlayer': return 'activePlayer';
+      case 'activeSeat': return 'activeSeat';
       case 'tokenZone': return `zone of ${expr.token}`;
       case 'zoneVar': return `${expr.var} of ${expr.zone}`;
       default: return '<ref>';
@@ -336,6 +337,7 @@ export const humanizeValueExpr = (
         return `${zoneName} ${propName}`;
       }
       case 'activePlayer': return 'active player';
+      case 'activeSeat': return 'active seat';
       case 'tokenZone': return `zone of ${resolveLabel(expr.token as string, ctx, count)}`;
       case 'zoneVar': return `${resolveLabel(expr.var, ctx, count)} of ${resolveLabel(expr.zone as string, ctx, count)}`;
       default: {

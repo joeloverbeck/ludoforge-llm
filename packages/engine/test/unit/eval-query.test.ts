@@ -2068,6 +2068,32 @@ describe('evalQuery', () => {
     );
   });
 
+  it('evaluates connectedZones queries with allowTargetOutsideVia', () => {
+    const ctx = makeCtx({
+      bindings: {
+        $origin: 'deck:none',
+        $allowed: [asZoneId('hand:0')],
+      },
+    });
+
+    assert.deepEqual(
+      evalQuery(
+        {
+          query: 'connectedZones',
+          zone: { zoneExpr: { ref: 'binding', name: '$origin' } },
+          via: {
+            op: 'in',
+            item: { ref: 'binding', name: '$zone' },
+            set: { ref: 'binding', name: '$allowed' },
+          },
+          allowTargetOutsideVia: true,
+        },
+        ctx,
+      ),
+      [asZoneId('hand:0'), asZoneId('hand:1'), asZoneId('bench:1')],
+    );
+  });
+
   it('tokensInZone with no filter returns all tokens (backward-compatible)', () => {
     const ctx = makeCtx();
 

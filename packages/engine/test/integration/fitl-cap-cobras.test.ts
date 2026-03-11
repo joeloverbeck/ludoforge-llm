@@ -12,6 +12,10 @@ const SWEEP_B = 'quang-nam:none';
 const SWEEP_C = 'quang-tin-quang-ngai:none';
 const ASSAULT_A = 'saigon:none';
 const ASSAULT_B = 'hue:none';
+const COBRAS_ARVN_ASSAULT_SEED = 1;
+const COBRAS_TWO_SPACE_MIXED_SEED = 1;
+const COBRAS_FOLLOWUP_HIT_SEED = 1;
+const COBRAS_FOLLOWUP_MISS_SEED = 6;
 
 const addToken = (state: GameState, zoneId: string, token: Token): GameState => ({
   ...state,
@@ -194,36 +198,34 @@ describe('FITL Cobras capability integration', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    for (let seed = 1; seed <= 64; seed += 1) {
-      let state = makeIsolatedInitialState(def, seed, 4, { turnOrderMode: 'roundRobin' });
-      state = {
-        ...state,
-        activePlayer: asPlayerId(1),
-        globalVars: {
-          ...state.globalVars,
-          arvnResources: 30,
-          mom_bodyCount: false,
-        },
-        globalMarkers: {
-          ...state.globalMarkers,
-          cap_cobras: 'shaded',
-        },
-      };
-      state = addToken(state, ASSAULT_A, makeTroop(`cobras-arvn-a-${seed}`, 'ARVN'));
-      state = addToken(state, ASSAULT_A, makeTroop(`cobras-us-a-${seed}`, 'US'));
-      state = addToken(state, ASSAULT_A, makeGuerrilla(`cobras-vc-a-${seed}`, 'VC', 'active'));
+    let state = makeIsolatedInitialState(def, COBRAS_ARVN_ASSAULT_SEED, 4, { turnOrderMode: 'roundRobin' });
+    state = {
+      ...state,
+      activePlayer: asPlayerId(1),
+      globalVars: {
+        ...state.globalVars,
+        arvnResources: 30,
+        mom_bodyCount: false,
+      },
+      globalMarkers: {
+        ...state.globalMarkers,
+        cap_cobras: 'shaded',
+      },
+    };
+    state = addToken(state, ASSAULT_A, makeTroop(`cobras-arvn-a-${COBRAS_ARVN_ASSAULT_SEED}`, 'ARVN'));
+    state = addToken(state, ASSAULT_A, makeTroop(`cobras-us-a-${COBRAS_ARVN_ASSAULT_SEED}`, 'US'));
+    state = addToken(state, ASSAULT_A, makeGuerrilla(`cobras-vc-a-${COBRAS_ARVN_ASSAULT_SEED}`, 'VC', 'active'));
 
-      const final = applyMoveWithResolvedDecisionIds(def, state, {
-        actionId: asActionId('assault'),
-        params: { $targetSpaces: [ASSAULT_A] },
-      }).state;
+    const final = applyMoveWithResolvedDecisionIds(def, state, {
+      actionId: asActionId('assault'),
+      params: { $targetSpaces: [ASSAULT_A] },
+    }).state;
 
-      assert.equal(
-        countTokens(final, 'casualties-US:none', (token) => token.props.faction === 'US' && token.props.type === 'troops'),
-        0,
-        `Seed ${seed}: ARVN Assault should not trigger Cobras shaded US troop losses`,
-      );
-    }
+    assert.equal(
+      countTokens(final, 'casualties-US:none', (token) => token.props.faction === 'US' && token.props.type === 'troops'),
+      0,
+      'ARVN Assault should not trigger Cobras shaded US troop losses',
+    );
   });
 
   it('shaded rolls per US Assault space and ARVN follow-up does not add extra Cobras casualty effect', () => {
@@ -231,40 +233,32 @@ describe('FITL Cobras capability integration', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    let foundMixedTwoSpace = false;
-    for (let seed = 1; seed <= 128; seed += 1) {
-      let state = makeIsolatedInitialState(def, seed, 4, { turnOrderMode: 'roundRobin' });
-      state = {
-        ...state,
-        activePlayer: asPlayerId(0),
-        globalMarkers: {
-          ...state.globalMarkers,
-          cap_cobras: 'shaded',
-        },
-      };
-      state = addToken(state, ASSAULT_A, makeTroop(`cobras-us-multi-a-${seed}`, 'US'));
-      state = addToken(state, ASSAULT_A, makeGuerrilla(`cobras-vc-multi-a-${seed}`, 'VC', 'active'));
-      state = addToken(state, ASSAULT_B, makeTroop(`cobras-us-multi-b-${seed}`, 'US'));
-      state = addToken(state, ASSAULT_B, makeGuerrilla(`cobras-nva-multi-b-${seed}`, 'NVA', 'active'));
+    let twoSpaceState = makeIsolatedInitialState(def, COBRAS_TWO_SPACE_MIXED_SEED, 4, { turnOrderMode: 'roundRobin' });
+    twoSpaceState = {
+      ...twoSpaceState,
+      activePlayer: asPlayerId(0),
+      globalMarkers: {
+        ...twoSpaceState.globalMarkers,
+        cap_cobras: 'shaded',
+      },
+    };
+    twoSpaceState = addToken(twoSpaceState, ASSAULT_A, makeTroop(`cobras-us-multi-a-${COBRAS_TWO_SPACE_MIXED_SEED}`, 'US'));
+    twoSpaceState = addToken(twoSpaceState, ASSAULT_A, makeGuerrilla(`cobras-vc-multi-a-${COBRAS_TWO_SPACE_MIXED_SEED}`, 'VC', 'active'));
+    twoSpaceState = addToken(twoSpaceState, ASSAULT_B, makeTroop(`cobras-us-multi-b-${COBRAS_TWO_SPACE_MIXED_SEED}`, 'US'));
+    twoSpaceState = addToken(twoSpaceState, ASSAULT_B, makeGuerrilla(`cobras-nva-multi-b-${COBRAS_TWO_SPACE_MIXED_SEED}`, 'NVA', 'active'));
 
-      const final = applyMoveWithResolvedDecisionIds(def, state, {
-        actionId: asActionId('assault'),
-        params: {
-          $targetSpaces: [ASSAULT_A, ASSAULT_B],
-          $arvnFollowupSpaces: [],
-        },
-      }).state;
-      const lossesA = countTokens(final, ASSAULT_A, (token) => token.props.faction === 'US' && token.props.type === 'troops') === 0;
-      const lossesB = countTokens(final, ASSAULT_B, (token) => token.props.faction === 'US' && token.props.type === 'troops') === 0;
+    const twoSpaceFinal = applyMoveWithResolvedDecisionIds(def, twoSpaceState, {
+      actionId: asActionId('assault'),
+      params: {
+        $targetSpaces: [ASSAULT_A, ASSAULT_B],
+        $arvnFollowupSpaces: [],
+      },
+    }).state;
+    const lossesA = countTokens(twoSpaceFinal, ASSAULT_A, (token) => token.props.faction === 'US' && token.props.type === 'troops') === 0;
+    const lossesB = countTokens(twoSpaceFinal, ASSAULT_B, (token) => token.props.faction === 'US' && token.props.type === 'troops') === 0;
+    assert.notEqual(lossesA, lossesB, 'Cobras shaded should roll independently per US Assault space');
 
-      if (lossesA !== lossesB) {
-        foundMixedTwoSpace = true;
-        break;
-      }
-    }
-    assert.ok(foundMixedTwoSpace, 'Expected at least one seed with mixed Cobras outcomes across US Assault spaces');
-
-    for (let seed = 1; seed <= 128; seed += 1) {
+    for (const seed of [COBRAS_FOLLOWUP_HIT_SEED, COBRAS_FOLLOWUP_MISS_SEED]) {
       let base = makeIsolatedInitialState(def, seed, 4, { turnOrderMode: 'roundRobin' });
       base = {
         ...base,

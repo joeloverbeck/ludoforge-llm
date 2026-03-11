@@ -11,6 +11,7 @@ export interface AdjacencyGraph {
 
 export interface ConnectedQueryOptions {
   readonly includeStart?: boolean;
+  readonly allowTargetOutsideVia?: boolean;
   readonly maxDepth?: number;
 }
 
@@ -240,6 +241,7 @@ export function queryConnectedZones(
   options?: ConnectedQueryOptions,
 ): readonly ZoneId[] {
   const includeStart = options?.includeStart ?? false;
+  const allowTargetOutsideVia = options?.allowTargetOutsideVia ?? false;
   const maxDepth = normalizeMaxDepth(options?.maxDepth, graph);
 
   const discovered: ZoneId[] = [];
@@ -264,13 +266,16 @@ export function queryConnectedZones(
         continue;
       }
 
-      if (!evaluateVia(via, neighborZone, state, evalCtx)) {
+      const passesVia = evaluateVia(via, neighborZone, state, evalCtx);
+      if (!passesVia && !allowTargetOutsideVia) {
         continue;
       }
 
       visited.add(neighborZone);
       discovered.push(neighborZone);
-      queue.push({ zone: neighborZone, depth: entry.depth + 1 });
+      if (passesVia) {
+        queue.push({ zone: neighborZone, depth: entry.depth + 1 });
+      }
     }
   }
 

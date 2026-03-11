@@ -353,7 +353,7 @@ verbalization:
       summary: "Shift support and collect resources"
     transport-profile:
       class: specialActivity
-      summary: "Move ARVN forces along LoCs"
+      summary: "Move ARVN forces and flip Rangers underground"
     raid-profile:
       class: specialActivity
       summary: "Remove enemy pieces and steal resources"
@@ -637,9 +637,9 @@ verbalization:
         effect: "NVA Attack: 1 chosen Attack space removes 1 enemy per NVA Troop there"
     cap_armoredCavalry:
       - condition: "Armored Cavalry is Unshaded"
-        effect: "Transport: move ARVN pieces from Cities (not just LoCs)"
+        effect: "Transport: ARVN in the destination may free Assault after Ops"
       - condition: "Armored Cavalry is Shaded"
-        effect: "No additional effect"
+        effect: "Transport: move Rangers only"
     cap_mandateOfHeaven:
       - condition: "Mandate of Heaven is Unshaded"
         effect: "Govern: shift 2 levels toward Active Support per Pacify step"

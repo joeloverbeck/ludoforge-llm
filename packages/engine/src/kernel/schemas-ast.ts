@@ -91,6 +91,7 @@ export const ReferenceSchema = z.union([
   z.object({ ref: z.literal('tokenZone'), token: TokenSelSchema }).strict(),
   z.object({ ref: z.literal('zoneProp'), zone: ZoneSelSchema, prop: StringSchema }).strict(),
   z.object({ ref: z.literal('activePlayer') }).strict(),
+  z.object({ ref: z.literal('activeSeat') }).strict(),
   z.object({ ref: z.literal('grantContext'), key: StringSchema }).strict(),
 ]);
 
@@ -302,6 +303,7 @@ optionsQuerySchemaInternal = z.union([
       zone: ZoneRefSchema,
       via: ConditionASTSchema.optional(),
       includeStart: BooleanSchema.optional(),
+      allowTargetOutsideVia: BooleanSchema.optional(),
       maxDepth: NumberSchema.optional(),
     })
     .strict(),
@@ -446,6 +448,7 @@ conditionAstSchemaInternal = z.union([
       from: ZoneSelSchema,
       to: ZoneSelSchema,
       via: ConditionASTSchema.optional(),
+      allowTargetOutsideVia: BooleanSchema.optional(),
       maxDepth: NumberSchema.optional(),
     })
     .strict(),

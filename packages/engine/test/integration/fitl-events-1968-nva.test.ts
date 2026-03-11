@@ -3,19 +3,22 @@ import { describe, it } from 'node:test';
 
 import {
   applyMove,
+  asActionId,
   asPlayerId,
   asTokenId,
   initialState,
   legalMoves,
+  resolveEventEligibilityOverrides,
   resolveMoveDecisionSequence,
   type GameDef,
   type GameState,
   type Token,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
+import { applyMoveWithResolvedDecisionIds, type DecisionOverrideRule } from '../helpers/decision-param-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
 const expectedCards = [
   { id: 'card-32', order: 32, title: 'Long Range Guns', seatOrder: ['NVA', 'US', 'ARVN', 'VC'] },
@@ -46,6 +49,8 @@ const RAND_US_CAPABILITY_MARKERS = [
   'cap_lgbs',
 ] as const;
 
+const WAR_PHOTOGRAPHER_SEAT_ORDER = ['NVA', 'VC', 'ARVN', 'US'] as const;
+
 const compileDef = (): GameDef => {
   const { parsed, compiled } = compileProductionSpec();
   assertNoErrors(parsed);
@@ -58,6 +63,75 @@ const makeToken = (id: string, type: string, faction: string): Token => ({
   type,
   props: { faction, type },
 });
+
+const countTokens = (state: GameState, zoneId: string, predicate: (token: Token) => boolean): number =>
+  (state.zones[zoneId] ?? []).filter((token) => predicate(token)).length;
+
+const usSupportAvailableScoreWithNeutralSupport = (state: GameState): number =>
+  countTokens(state, 'available-US:none', (token) => token.props.faction === 'US' && (token.type === 'troops' || token.type === 'base'));
+
+const setupWarPhotographerState = (
+  def: GameDef,
+  overrides?: {
+    readonly zoneTokens?: Readonly<Record<string, readonly Token[]>>;
+    readonly activePlayer?: 0 | 1 | 2 | 3;
+    readonly useRoundRobin?: boolean;
+    readonly firstEligible?: 'US' | 'ARVN' | 'NVA' | 'VC';
+    readonly secondEligible?: 'US' | 'ARVN' | 'NVA' | 'VC' | null;
+  },
+): GameState => {
+  const eventDeck = def.eventDecks?.[0];
+  assert.notEqual(eventDeck, undefined, 'Expected at least one event deck');
+
+  const base = clearAllZones(initialState(def, 196860, 4).state);
+  if (overrides?.useRoundRobin === true) {
+    return {
+      ...base,
+      activePlayer: asPlayerId(overrides.activePlayer ?? 0),
+      turnOrderState: { type: 'roundRobin' },
+      zones: {
+        ...base.zones,
+        [eventDeck!.discardZone]: [makeToken('card-60', 'card', 'none')],
+        ...(overrides?.zoneTokens ?? {}),
+      },
+    };
+  }
+
+  const runtime = requireCardDrivenRuntime(base);
+  return {
+    ...base,
+    activePlayer: asPlayerId(overrides?.activePlayer ?? 2),
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: {
+        ...runtime,
+        seatOrder: [...WAR_PHOTOGRAPHER_SEAT_ORDER],
+        currentCard: {
+          ...runtime.currentCard,
+          firstEligible: overrides?.firstEligible ?? 'NVA',
+          secondEligible: overrides?.secondEligible ?? 'VC',
+          actedSeats: [],
+          passedSeats: [],
+          nonPassCount: 0,
+          firstActionClass: null,
+        },
+      },
+    },
+    zones: {
+      ...base.zones,
+      [eventDeck!.discardZone]: [makeToken('card-60', 'card', 'none')],
+      ...(overrides?.zoneTokens ?? {}),
+    },
+  };
+};
+
+const findWarPhotographerMove = (def: GameDef, state: GameState, side: 'unshaded' | 'shaded') =>
+  legalMoves(def, state).find(
+    (move) =>
+      String(move.actionId) === 'event'
+      && move.params.side === side
+      && (move.params.eventCardId === undefined || move.params.eventCardId === 'card-60'),
+  );
 
 describe('FITL 1968 NVA-first event-card production spec', () => {
   it('compiles all 15 NVA-first 1968 cards with dual-side metadata invariants', () => {
@@ -507,5 +581,196 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
       (candidate) => String(candidate.actionId) === 'event' && candidate.params.eventCardId === 'card-52',
     );
     assert.deepEqual(randMoves, [], 'RAND should be illegal when no matching US capability can be flipped');
+  });
+
+  it('encodes card 60 (War Photographer) with exact routing, placement, resources, and conditional eligibility behavior', () => {
+    const { parsed, compiled } = compileProductionSpec();
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-60');
+    assert.notEqual(card, undefined);
+    assert.equal(card?.metadata?.flavorText, 'Pulitzer photo inspires.');
+    assert.equal(card?.unshaded?.text, '3 out of play US pieces to Available.');
+    assert.equal(
+      card?.shaded?.text,
+      'Photos galvanize home front: NVA place 6 Troops outside South Vietnam, add +6 Resources, and, if executing, stay Eligible.',
+    );
+    assert.deepEqual(card?.unshaded?.effects, [
+      {
+        removeByPriority: {
+          budget: 3,
+          groups: [
+            {
+              bind: '$usOutOfPlayPiece',
+              over: {
+                query: 'tokensInZone',
+                zone: 'out-of-play-US:none',
+                filter: {
+                  prop: 'faction',
+                  op: 'eq',
+                  value: 'US',
+                },
+              },
+              to: { zoneExpr: 'available-US:none' },
+            },
+          ],
+        },
+      },
+    ]);
+    assert.equal(card?.shaded?.effects?.length, 3);
+    assert.equal(card?.shaded?.effects?.[0] !== undefined && 'chooseN' in card.shaded.effects[0], true);
+    assert.equal(card?.shaded?.effects?.[1] !== undefined && 'forEach' in card.shaded.effects[1], true);
+    assert.deepEqual(card?.shaded?.effects?.[2], { addVar: { scope: 'global', var: 'nvaResources', delta: 6 } });
+    assert.deepEqual(card?.shaded?.eligibilityOverrides, [
+      {
+        target: { kind: 'active' },
+        when: { op: '==', left: { ref: 'activeSeat' }, right: 'NVA' },
+        eligible: true,
+        windowId: 'remain-eligible',
+      },
+    ]);
+  });
+
+  it('applies card 60 unshaded by moving exactly 3 US out-of-play pieces to Available and updating Support+Available only for troops and bases', () => {
+    const def = compileDef();
+    const setup = setupWarPhotographerState(def, {
+      useRoundRobin: true,
+      activePlayer: 2,
+      zoneTokens: {
+        'out-of-play-US:none': [
+          makeToken('wp-us-t-1', 'troops', 'US'),
+          makeToken('wp-us-b-1', 'base', 'US'),
+          makeToken('wp-us-ir-1', 'irregular', 'US'),
+          makeToken('wp-us-t-2', 'troops', 'US'),
+        ],
+      },
+    });
+    const move = findWarPhotographerMove(def, setup, 'unshaded');
+    assert.notEqual(move, undefined, 'Expected War Photographer unshaded event move');
+
+    const scoreBefore = usSupportAvailableScoreWithNeutralSupport(setup);
+    const final = applyMove(def, setup, move!).state;
+    const scoreAfter = usSupportAvailableScoreWithNeutralSupport(final);
+
+    assert.equal(countTokens(final, 'available-US:none', (token) => token.props.faction === 'US' && token.type === 'troops'), 1);
+    assert.equal(countTokens(final, 'available-US:none', (token) => token.props.faction === 'US' && token.type === 'base'), 1);
+    assert.equal(countTokens(final, 'available-US:none', (token) => token.props.faction === 'US' && token.type === 'irregular'), 1);
+    assert.equal(countTokens(final, 'out-of-play-US:none', (token) => token.props.faction === 'US'), 1);
+    assert.equal(
+      (final.zones['out-of-play-US:none'] ?? [])[0]?.id,
+      asTokenId('wp-us-t-2'),
+      'Only the fourth unselected out-of-play US piece should remain',
+    );
+    assert.equal(scoreAfter - scoreBefore, 2, 'Only Troops and Bases entering Available should affect the US Support+Available score');
+  });
+
+  it('applies card 60 shaded by placing up to 6 NVA Troops outside South Vietnam, adding 6 Resources, and never placing into South Vietnam', () => {
+    const def = compileDef();
+    const setup = setupWarPhotographerState(def, {
+      useRoundRobin: true,
+      activePlayer: 2,
+      zoneTokens: {
+        'available-NVA:none': Array.from({ length: 7 }, (_, index) => makeToken(`wp-nva-t-${index + 1}`, 'troops', 'NVA')),
+      },
+    });
+    const move = findWarPhotographerMove(def, setup, 'shaded');
+    assert.notEqual(move, undefined, 'Expected War Photographer shaded event move');
+
+    const overrides: readonly DecisionOverrideRule[] = [
+      {
+        when: (request) => request.decisionId.includes('distributeTokens.selectTokens'),
+        value: Array.from({ length: 6 }, (_, index) => asTokenId(`wp-nva-t-${index + 1}`)),
+      },
+      { when: (request) => request.decisionId.endsWith('chooseDestination[0]'), value: 'north-vietnam:none' },
+      { when: (request) => request.decisionId.endsWith('chooseDestination[1]'), value: 'north-vietnam:none' },
+      { when: (request) => request.decisionId.endsWith('chooseDestination[2]'), value: 'central-laos:none' },
+      { when: (request) => request.decisionId.endsWith('chooseDestination[3]'), value: 'central-laos:none' },
+      { when: (request) => request.decisionId.endsWith('chooseDestination[4]'), value: 'northeast-cambodia:none' },
+      { when: (request) => request.decisionId.endsWith('chooseDestination[5]'), value: 'northeast-cambodia:none' },
+    ];
+
+    const beforeResources = Number(setup.globalVars.nvaResources ?? 0);
+    const final = applyMoveWithResolvedDecisionIds(def, setup, move!, { overrides }).state;
+
+    assert.equal(Number(final.globalVars.nvaResources) - beforeResources, 6, 'Shaded should add exactly 6 NVA Resources');
+    assert.equal(countTokens(final, 'available-NVA:none', (token) => token.props.faction === 'NVA' && token.type === 'troops'), 1);
+    assert.equal(countTokens(final, 'north-vietnam:none', (token) => token.props.faction === 'NVA' && token.type === 'troops'), 2);
+    assert.equal(countTokens(final, 'central-laos:none', (token) => token.props.faction === 'NVA' && token.type === 'troops'), 2);
+    assert.equal(countTokens(final, 'northeast-cambodia:none', (token) => token.props.faction === 'NVA' && token.type === 'troops'), 2);
+    assert.equal(countTokens(final, 'quang-tri-thua-thien:none', (token) => token.props.faction === 'NVA'), 0, 'Shaded must not place NVA troops in South Vietnam');
+  });
+
+  it('resolves card 60 shaded partially when fewer than 6 NVA Troops are available', () => {
+    const def = compileDef();
+    const setup = setupWarPhotographerState(def, {
+      useRoundRobin: true,
+      activePlayer: 2,
+      zoneTokens: {
+        'available-NVA:none': [
+          makeToken('wp-few-1', 'troops', 'NVA'),
+          makeToken('wp-few-2', 'troops', 'NVA'),
+          makeToken('wp-few-3', 'troops', 'NVA'),
+        ],
+      },
+    });
+    const move = findWarPhotographerMove(def, setup, 'shaded');
+    assert.notEqual(move, undefined, 'Expected War Photographer shaded event move');
+
+    const beforeResources = Number(setup.globalVars.nvaResources ?? 0);
+    const final = applyMoveWithResolvedDecisionIds(def, setup, move!, {
+      overrides: [
+        {
+          when: (request) => request.decisionId.includes('distributeTokens.selectTokens'),
+          value: [asTokenId('wp-few-1'), asTokenId('wp-few-2'), asTokenId('wp-few-3')],
+        },
+        { when: (request) => request.decisionId.endsWith('chooseDestination[0]'), value: 'north-vietnam:none' },
+        { when: (request) => request.decisionId.endsWith('chooseDestination[1]'), value: 'central-laos:none' },
+        { when: (request) => request.decisionId.endsWith('chooseDestination[2]'), value: 'northeast-cambodia:none' },
+      ],
+    }).state;
+
+    assert.equal(countTokens(final, 'available-NVA:none', (token) => token.props.faction === 'NVA' && token.type === 'troops'), 0);
+    assert.equal(countTokens(final, 'north-vietnam:none', (token) => token.props.faction === 'NVA' && token.type === 'troops'), 1);
+    assert.equal(countTokens(final, 'central-laos:none', (token) => token.props.faction === 'NVA' && token.type === 'troops'), 1);
+    assert.equal(countTokens(final, 'northeast-cambodia:none', (token) => token.props.faction === 'NVA' && token.type === 'troops'), 1);
+    assert.equal(
+      Number(final.globalVars.nvaResources) - beforeResources,
+      6,
+      'Resource gain should not depend on how many troops were available to place',
+    );
+  });
+
+  it('resolves War Photographer shaded stay-eligible only for NVA executors', () => {
+    const def = compileDef();
+    const nvaSetup = setupWarPhotographerState(def, {
+      activePlayer: 0,
+      firstEligible: 'NVA',
+      secondEligible: 'VC',
+      zoneTokens: {
+        'available-NVA:none': [makeToken('wp-cond-nva', 'troops', 'NVA')],
+      },
+    });
+    const nvaMove = { actionId: asActionId('event'), params: { eventCardId: 'card-60', side: 'shaded' } } as const;
+    assert.deepEqual(resolveEventEligibilityOverrides(def, nvaSetup, nvaMove), [
+      {
+        target: { kind: 'active' },
+        when: { op: '==', left: { ref: 'activeSeat' }, right: 'NVA' },
+        eligible: true,
+        windowId: 'remain-eligible',
+      },
+    ]);
+
+    const arvnSetup = setupWarPhotographerState(def, {
+      activePlayer: 2,
+      firstEligible: 'ARVN',
+      secondEligible: 'US',
+      zoneTokens: {
+        'available-NVA:none': [makeToken('wp-cond-arvn', 'troops', 'NVA')],
+      },
+    });
+    const arvnMove = { actionId: asActionId('event'), params: { eventCardId: 'card-60', side: 'shaded' } } as const;
+    assert.deepEqual(resolveEventEligibilityOverrides(def, arvnSetup, arvnMove), []);
   });
 });

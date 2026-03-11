@@ -3551,6 +3551,151 @@ actionPipelines:
               delta: 1
     atomicity: atomic
     linkedWindows: [us-special-window]
+  - id: air-lift-cambodia-destination-profile
+    actionId: airLift
+    applicability:
+      op: and
+      args:
+        - { op: '==', left: { ref: activePlayer }, right: 0 }
+        - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+        - op: in
+          item: cambodia-only
+          set: { ref: grantContext, key: airLiftDestinationProfile }
+    accompanyingOps: any
+    legality:
+      op: or
+      args:
+        - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+        - op: and
+          args:
+            - { op: '!=', left: { ref: gvar, var: mom_medevacShaded }, right: true }
+            - { op: '!=', left: { ref: gvar, var: mom_typhoonKate }, right: true }
+    costValidation: null
+    costEffects: []
+    targeting: {}
+    stages:
+      - stage: select-spaces
+        effects:
+          - chooseN:
+              bind: $spaces
+              options:
+                query: mapSpaces
+                filter:
+                  op: '!='
+                  left: { ref: zoneProp, zone: $zone, prop: country }
+                  right: northVietnam
+              min: 1
+              max: 4
+      - stage: select-cambodia-destinations
+        effects:
+          - chooseN:
+              bind: $cambodiaDestinations
+              options:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - op: in
+                      item: { ref: zoneProp, zone: $zone, prop: id }
+                      set: { ref: binding, name: $spaces }
+                    - op: '=='
+                      left: { ref: zoneProp, zone: $zone, prop: country }
+                      right: cambodia
+              min: 1
+              max:
+                aggregate:
+                  op: count
+                  query:
+                    query: binding
+                    name: $spaces
+      - stage: move-us-troops
+        effects:
+          - chooseN:
+              bind: $usLiftTroops
+              options:
+                query: tokensInMapSpaces
+                spaceFilter:
+                  op: in
+                  item: { ref: zoneProp, zone: $zone, prop: id }
+                  set: { ref: binding, name: $spaces }
+                filter:
+                  op: and
+                  args:
+                    - { prop: faction, op: eq, value: US }
+                    - { prop: type, op: eq, value: troops }
+              min: 0
+              max: 99
+          - forEach:
+              bind: $usTroop
+              over: { query: binding, name: $usLiftTroops }
+              effects:
+                - chooseOne:
+                    bind: '$usLiftDestination@{$usTroop}'
+                    options: { query: binding, name: $cambodiaDestinations }
+                - if:
+                    when:
+                      op: '!='
+                      left: { ref: tokenZone, token: $usTroop }
+                      right: { ref: binding, name: '$usLiftDestination@{$usTroop}' }
+                    then:
+                      - moveToken:
+                          token: $usTroop
+                          from: { zoneExpr: { ref: tokenZone, token: $usTroop } }
+                          to: { zoneExpr: { ref: binding, name: '$usLiftDestination@{$usTroop}' } }
+      - stage: move-coin-lift-pieces
+        effects:
+          - chooseN:
+              bind: $coinLiftPieces
+              options:
+                query: concat
+                sources:
+                  - query: tokensInMapSpaces
+                    spaceFilter:
+                      op: in
+                      item: { ref: zoneProp, zone: $zone, prop: id }
+                      set: { ref: binding, name: $spaces }
+                    filter:
+                      op: and
+                      args:
+                        - { prop: faction, op: eq, value: ARVN }
+                        - { prop: type, op: in, value: [troops, ranger] }
+                  - query: tokensInMapSpaces
+                    spaceFilter:
+                      op: in
+                      item: { ref: zoneProp, zone: $zone, prop: id }
+                      set: { ref: binding, name: $spaces }
+                    filter:
+                      op: and
+                      args:
+                        - { prop: faction, op: eq, value: US }
+                        - { prop: type, op: eq, value: irregular }
+              min: 0
+              max: 4
+          - forEach:
+              bind: $coinLiftPiece
+              over: { query: binding, name: $coinLiftPieces }
+              effects:
+                - chooseOne:
+                    bind: '$coinLiftDestination@{$coinLiftPiece}'
+                    options: { query: binding, name: $cambodiaDestinations }
+                - if:
+                    when:
+                      op: '!='
+                      left: { ref: tokenZone, token: $coinLiftPiece }
+                      right: { ref: binding, name: '$coinLiftDestination@{$coinLiftPiece}' }
+                    then:
+                      - moveToken:
+                          token: $coinLiftPiece
+                          from: { zoneExpr: { ref: tokenZone, token: $coinLiftPiece } }
+                          to: { zoneExpr: { ref: binding, name: '$coinLiftDestination@{$coinLiftPiece}' } }
+      - stage: air-lift-telemetry
+        effects:
+          - addVar:
+              scope: global
+              var: airLiftCount
+              delta: 1
+    atomicity: atomic
+    linkedWindows: [us-special-window]
   - id: air-lift-profile
     actionId: airLift
     applicability: { op: '==', left: { ref: activePlayer }, right: 0 }
@@ -4316,27 +4461,52 @@ actionPipelines:
     stages:
       - stage: select-origin
         effects:
-          - chooseOne:
-              bind: $transportOrigin
-              options:
-                query: mapSpaces
-                filter:
-                  op: and
-                  args:
-                    - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
-                    - op: '>'
-                      left:
-                        aggregate:
-                          op: count
-                          query:
-                            query: tokensInZone
-                            zone: $zone
-                            filter:
-                              op: and
-                              args:
-                                - { prop: faction, op: eq, value: ARVN }
-                                - { prop: type, op: in, value: { ref: namedSet, name: ARVNTransportEligibleTypes } }
-                      right: 0
+          - if:
+              when: { op: '==', left: { ref: globalMarkerState, marker: cap_armoredCavalry }, right: shaded }
+              then:
+                - chooseOne:
+                    bind: $transportOrigin
+                    options:
+                      query: mapSpaces
+                      filter:
+                        op: and
+                        args:
+                          - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                          - op: '>'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: eq, value: ARVN }
+                                      - { prop: type, op: eq, value: ranger }
+                            right: 0
+              else:
+                - chooseOne:
+                    bind: $transportOrigin
+                    options:
+                      query: mapSpaces
+                      filter:
+                        op: and
+                        args:
+                          - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                          - op: '>'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: eq, value: ARVN }
+                                      - { prop: type, op: in, value: { ref: namedSet, name: ARVNTransportEligibleTypes } }
+                            right: 0
       - stage: select-destination
         effects:
           - chooseOne:
@@ -4355,6 +4525,7 @@ actionPipelines:
                             - op: connected
                               from: $transportOrigin
                               to: $zone
+                              allowTargetOutsideVia: true
                               maxDepth: 2
                               via:
                                 op: and
@@ -4382,6 +4553,7 @@ actionPipelines:
                             - op: connected
                               from: $transportOrigin
                               to: $zone
+                              allowTargetOutsideVia: true
                               via:
                                 op: and
                                 args:
@@ -4404,25 +4576,48 @@ actionPipelines:
                                     right: 0
       - stage: move-selected-pieces
         effects:
-          - forEach:
-              bind: $piece
-              over:
-                query: tokensInZone
-                zone: $transportOrigin
-                filter:
-                  op: and
-                  args:
-                    - { prop: faction, op: eq, value: ARVN }
-                    - { prop: type, op: in, value: { ref: namedSet, name: ARVNTransportEligibleTypes } }
-              limit: 6
-              effects:
-                - if:
-                    when: { op: '!=', left: { ref: tokenZone, token: $piece }, right: { ref: binding, name: $transportDestination } }
-                    then:
-                      - moveToken:
-                          token: $piece
-                          from: { zoneExpr: { ref: tokenZone, token: $piece } }
-                          to: { zoneExpr: { ref: binding, name: $transportDestination } }
+          - if:
+              when: { op: '==', left: { ref: globalMarkerState, marker: cap_armoredCavalry }, right: shaded }
+              then:
+                - forEach:
+                    bind: $piece
+                    over:
+                      query: tokensInZone
+                      zone: $transportOrigin
+                      filter:
+                        op: and
+                        args:
+                          - { prop: faction, op: eq, value: ARVN }
+                          - { prop: type, op: eq, value: ranger }
+                    limit: 6
+                    effects:
+                      - if:
+                          when: { op: '!=', left: { ref: tokenZone, token: $piece }, right: { ref: binding, name: $transportDestination } }
+                          then:
+                            - moveToken:
+                                token: $piece
+                                from: { zoneExpr: { ref: tokenZone, token: $piece } }
+                                to: { zoneExpr: { ref: binding, name: $transportDestination } }
+              else:
+                - forEach:
+                    bind: $piece
+                    over:
+                      query: tokensInZone
+                      zone: $transportOrigin
+                      filter:
+                        op: and
+                        args:
+                          - { prop: faction, op: eq, value: ARVN }
+                          - { prop: type, op: in, value: { ref: namedSet, name: ARVNTransportEligibleTypes } }
+                    limit: 6
+                    effects:
+                      - if:
+                          when: { op: '!=', left: { ref: tokenZone, token: $piece }, right: { ref: binding, name: $transportDestination } }
+                          then:
+                            - moveToken:
+                                token: $piece
+                                from: { zoneExpr: { ref: tokenZone, token: $piece } }
+                                to: { zoneExpr: { ref: binding, name: $transportDestination } }
       - stage: flip-rangers-underground
         effects:
           - forEach:
@@ -4441,16 +4636,77 @@ actionPipelines:
                           - { prop: type, op: eq, value: ranger }
                     effects:
                       - setTokenProp: { token: $ranger, prop: activity, value: underground }
-      - stage: cap-armored-cavalry-unshaded-assault
+      - stage: cap-armored-cavalry-free-assault
         effects:
           - if:
               when: { op: '==', left: { ref: globalMarkerState, marker: cap_armoredCavalry }, right: unshaded }
               then:
-                - macro: us-sa-remove-insurgents
-                  args:
-                    space: $transportDestination
-                    budgetExpr: 1
-                    activeGuerrillasOnly: false
+                - chooseOne:
+                    bind: $armoredCavalryFreeAssault
+                    options: { query: intsInRange, min: 0, max: 1 }
+                - if:
+                    when: { op: '==', left: { ref: binding, name: $armoredCavalryFreeAssault }, right: 1 }
+                    then:
+                      - if:
+                          when:
+                            op: and
+                            args:
+                              - op: '>'
+                                left:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInZone
+                                      zone: $transportDestination
+                                      filter:
+                                        op: and
+                                        args:
+                                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                right: 0
+                              - op: '>'
+                                left:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInZone
+                                      zone: $transportDestination
+                                      filter:
+                                        op: and
+                                        args:
+                                          - { prop: faction, op: eq, value: 'ARVN' }
+                                          - { prop: type, op: in, value: ['troops', 'police'] }
+                                right: 0
+                          then:
+                            - let:
+                                bind: $arvnCubes
+                                value:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInZone
+                                      zone: $transportDestination
+                                      filter:
+                                        op: and
+                                        args:
+                                          - { prop: faction, op: eq, value: 'ARVN' }
+                                          - { prop: type, op: in, value: ['troops', 'police'] }
+                                in:
+                                  - let:
+                                      bind: $armoredCavalryDamage
+                                      value:
+                                        if:
+                                          when: { op: zonePropIncludes, zone: $transportDestination, prop: terrainTags, value: 'highland' }
+                                          then: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 3 }
+                                          else: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 2 }
+                                      in:
+                                        - macro: coin-assault-removal-order
+                                          args:
+                                            space: $transportDestination
+                                            damageExpr: { ref: binding, name: $armoredCavalryDamage }
+                                            bodyCountEligible: true
+                                            forceUntunneledBaseFirst: false
+                                            treatTunneledBasesAsUntunneled: false
+                                            targetFactions: [NVA, VC]
       - stage: transport-telemetry
         effects:
           - addVar:

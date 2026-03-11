@@ -56,7 +56,7 @@ function extractValueNames(expr: ValueExpr): readonly string[] {
     if (expr.ref === 'tokenProp') return [expr.token, expr.prop];
     if (expr.ref === 'assetField') return [expr.field];
     if (expr.ref === 'zoneProp') return [expr.zone, expr.prop];
-    if (expr.ref === 'activePlayer') return [];
+    if (expr.ref === 'activePlayer' || expr.ref === 'activeSeat') return [];
     if (expr.ref === 'tokenZone') return [expr.token];
     if (expr.ref === 'zoneVar') return [expr.zone, expr.var];
   }

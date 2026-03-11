@@ -47,6 +47,24 @@ function findTokenByIdInZones(ctx: EvalContext, tokenId: string): Token | null {
   return getTokenStateIndexEntry(ctx.state, tokenId)?.token ?? null;
 }
 
+function resolveActiveSeatId(ctx: EvalContext): string | null {
+  const runtimeSeatOrder = ctx.state.turnOrderState.type === 'cardDriven'
+    && 'runtime' in ctx.state.turnOrderState
+    && Array.isArray(ctx.state.turnOrderState.runtime?.seatOrder)
+    ? ctx.state.turnOrderState.runtime.seatOrder
+    : undefined;
+  const configuredSeatOrder = ctx.def.turnOrder?.type === 'cardDriven'
+    ? ctx.def.turnOrder.config.turnFlow.eligibility.seats
+    : undefined;
+  const seatId = runtimeSeatOrder?.[ctx.activePlayer]
+    ?? configuredSeatOrder?.[ctx.activePlayer]
+    ?? ctx.def.seats?.[ctx.activePlayer]?.id;
+  if (typeof seatId === 'string' && seatId.length > 0) {
+    return seatId;
+  }
+  return String(ctx.activePlayer);
+}
+
 export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean | string | ScalarArrayValue {
   if (ref.ref === 'gvar') {
     const value = ctx.state.globalVars[ref.var];
@@ -163,6 +181,22 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
     }
 
     return propValue;
+  }
+
+  if (ref.ref === 'activeSeat') {
+    const seatId = resolveActiveSeatId(ctx);
+    if (seatId === null) {
+      throw missingVarError(`Seat not found for active player ${ctx.activePlayer}`, {
+        reference: ref,
+        activePlayer: ctx.activePlayer,
+        availableSeatIds: [
+          ...(ctx.def.seats ?? []).map((seat) => seat.id),
+          ...((ctx.state.turnOrderState.type === 'cardDriven' ? ctx.state.turnOrderState.runtime.seatOrder : []) ?? []),
+          ...((ctx.def.turnOrder?.type === 'cardDriven' ? ctx.def.turnOrder.config.turnFlow.eligibility.seats : []) ?? []),
+        ].sort(),
+      });
+    }
+    return seatId;
   }
 
   if (ref.ref === 'assetField') {

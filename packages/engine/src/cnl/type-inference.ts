@@ -71,6 +71,8 @@ function inferReferenceType(ref: Reference, ctx: TypeInferenceContext): Inferred
       return 'number';
     case 'activePlayer':
       return 'number';
+    case 'activeSeat':
+      return 'string';
     case 'tokenProp': {
       const tokenTypes = Object.values(ctx.tokenPropTypes);
       const propTypes = tokenTypes

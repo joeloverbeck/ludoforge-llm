@@ -66,6 +66,27 @@ const collectEligibilityOverrides = (context: EventExecutionContext): readonly E
   return overrides;
 };
 
+const evaluateEligibilityOverrideCondition = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  override: EventEligibilityOverrideDef,
+): boolean => {
+  if (override.when === undefined) {
+    return true;
+  }
+  return evalCondition(override.when, createEvalContext({
+    def,
+    adjacencyGraph: buildAdjacencyGraph(def.zones),
+    runtimeTableIndex: buildRuntimeTableIndex(def),
+    state,
+    activePlayer: state.activePlayer,
+    actorPlayer: state.activePlayer,
+    bindings: { ...move.params },
+    resources: createEvalRuntimeResources({ collector: createCollector() }),
+  }));
+};
+
 export const resolveEventTargetDefs = (
   side: NonNullable<EventCardDef['unshaded']>,
   branch: EventBranchDef | null,
@@ -546,7 +567,9 @@ export const resolveEventEligibilityOverrides = (
   if (context === null) {
     return [];
   }
-  return collectEligibilityOverrides(context);
+  return collectEligibilityOverrides(context).filter((override) =>
+    evaluateEligibilityOverrideCondition(def, state, move, override)
+  );
 };
 
 export const expireLastingEffectsAtBoundaries = (

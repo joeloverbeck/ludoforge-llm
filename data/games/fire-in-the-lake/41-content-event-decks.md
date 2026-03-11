@@ -11874,81 +11874,207 @@ eventDecks:
             - VC
           flavorText: Investigations expose gaps in pacification claims.
         unshaded:
-          text: Return pieces from Out of Play; transfer die-roll Patronage to Aid.
-          effects:
-            - removeByPriority:
-                budget: 3
-                groups:
-                  - bind: $usOutOfPlay
-                    over:
+          text: 2 US pieces from out-of-play to South Vietnam, or transfer a die roll from Patronage to ARVN Resources. Aid +6.
+          branches:
+            - id: us-oop-aid
+              order: 1
+              effects:
+                - chooseN:
+                    bind: $ffUs
+                    options:
                       query: tokensInZone
                       zone: out-of-play-US:none
                       filter:
-                        op: and
-                        args:
-                          - prop: faction
-                            op: eq
-                            value: US
-                    to:
-                      zoneExpr: available-US:none
-            - removeByPriority:
-                budget: 3
-                groups:
-                  - bind: $arvnOutOfPlay
+                        prop: faction
+                        op: eq
+                        value: US
+                    min: 0
+                    max:
+                      op: min
+                      left: 2
+                      right:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: out-of-play-US:none
+                            filter:
+                              prop: faction
+                              op: eq
+                              value: US
+                - forEach:
+                    bind: $ffPiece
                     over:
-                      query: tokensInZone
-                      zone: out-of-play-ARVN:none
-                      filter:
-                        op: and
-                        args:
-                          - prop: faction
-                            op: eq
-                            value: ARVN
-                    to:
-                      zoneExpr: available-ARVN:none
-            - rollRandom:
-                bind: $dieRoll
-                min: 1
-                max: 6
-                in:
-                  - addVar:
-                      scope: global
-                      var: patronage
-                      delta:
-                        op: "*"
-                        left: -1
-                        right:
-                          ref: binding
-                          name: $dieRoll
-                  - addVar:
-                      scope: global
-                      var: aid
-                      delta:
-                        ref: binding
-                        name: $dieRoll
+                      query: binding
+                      name: $ffUs
+                    effects:
+                      - if:
+                          when:
+                            op: ==
+                            left:
+                              ref: tokenProp
+                              token: $ffPiece
+                              prop: type
+                            right: base
+                          then:
+                            - chooseOne:
+                                bind: $ffDest@{$ffPiece}
+                                options:
+                                  query: mapSpaces
+                                  filter:
+                                    op: and
+                                    args:
+                                      - op: ==
+                                        left:
+                                          ref: zoneProp
+                                          zone: $zone
+                                          prop: country
+                                        right: southVietnam
+                                      - op: "!="
+                                        left:
+                                          ref: zoneProp
+                                          zone: $zone
+                                          prop: category
+                                        right: loc
+                                      - op: <
+                                        left:
+                                          aggregate:
+                                            op: count
+                                            query:
+                                              query: tokensInZone
+                                              zone: $zone
+                                              filter:
+                                                prop: type
+                                                op: eq
+                                                value: base
+                                        right: 2
+                            - moveToken:
+                                token: $ffPiece
+                                from:
+                                  zoneExpr:
+                                    ref: tokenZone
+                                    token: $ffPiece
+                                to:
+                                  zoneExpr:
+                                    ref: binding
+                                    name: $ffDest@{$ffPiece}
+                          else:
+                            - chooseOne:
+                                bind: $ffDest@{$ffPiece}
+                                options:
+                                  query: mapSpaces
+                                  filter:
+                                    op: ==
+                                    left:
+                                      ref: zoneProp
+                                      zone: $zone
+                                      prop: country
+                                    right: southVietnam
+                            - moveToken:
+                                token: $ffPiece
+                                from:
+                                  zoneExpr:
+                                    ref: tokenZone
+                                    token: $ffPiece
+                                to:
+                                  zoneExpr:
+                                    ref: binding
+                                    name: $ffDest@{$ffPiece}
+                - addVar:
+                    scope: global
+                    var: aid
+                    delta: 6
+            - id: pat-aid
+              order: 2
+              effects:
+                - rollRandom:
+                    bind: $ffRoll
+                    min: 1
+                    max: 6
+                    in:
+                      - let:
+                          bind: $ffXfer
+                          value:
+                            if:
+                              when:
+                                op: ">"
+                                left:
+                                  ref: binding
+                                  name: $ffRoll
+                                right:
+                                  ref: gvar
+                                  var: patronage
+                              then:
+                                ref: gvar
+                                var: patronage
+                              else:
+                                ref: binding
+                                name: $ffRoll
+                          in:
+                            - addVar:
+                                scope: global
+                                var: patronage
+                                delta:
+                                  op: "-"
+                                  left: 0
+                                  right:
+                                    ref: binding
+                                    name: $ffXfer
+                            - addVar:
+                                scope: global
+                                var: arvnResources
+                                delta:
+                                  ref: binding
+                                  name: $ffXfer
+                            - addVar:
+                                scope: global
+                                var: aid
+                                delta: 6
         shaded:
-          text: "Scandal fallout: transfer die-roll Aid to Patronage."
-          effects:
-            - rollRandom:
-                bind: $dieRoll
-                min: 1
-                max: 6
-                in:
-                  - addVar:
-                      scope: global
-                      var: aid
-                      delta:
-                        op: "*"
-                        left: -1
-                        right:
-                          ref: binding
-                          name: $dieRoll
-                  - addVar:
-                      scope: global
-                      var: patronage
-                      delta:
-                        ref: binding
-                        name: $dieRoll
+          text: Remove Support from a COIN-Controlled City outside Saigon. Patronage +4 or VC Resources +4.
+          branches:
+            - id: rm-sup-patronage
+              order: 1
+              targets:
+                - id: $targetCity
+                  selector:
+                    query: mapSpaces
+                    filter:
+                      conditionMacro: fitl-space-sup-coin-city-no-saigon
+                      args:
+                        spaceExpr: $zone
+                  cardinality:
+                    max: 1
+                  application: aggregate
+                  effects:
+                    - macro: remove-support-from-space
+                      args:
+                        space: $targetCity
+                    - addVar:
+                        scope: global
+                        var: patronage
+                        delta: 4
+            - id: rm-sup-vc
+              order: 2
+              targets:
+                - id: $targetCity
+                  selector:
+                    query: mapSpaces
+                    filter:
+                      conditionMacro: fitl-space-sup-coin-city-no-saigon
+                      args:
+                        spaceExpr: $zone
+                  cardinality:
+                    max: 1
+                  application: aggregate
+                  effects:
+                    - macro: remove-support-from-space
+                      args:
+                        space: $targetCity
+                    - addVar:
+                        scope: global
+                        var: vcResources
+                        delta: 4
       - id: card-66
         title: Ambassador Taylor
         sideMode: dual

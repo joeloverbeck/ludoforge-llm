@@ -1,6 +1,6 @@
 # ENG-003: Remove Split Free-Operation Discovery Between Direct Seeding And Retrofit
 
-**Status**: DEFERRED
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/kernel` free-operation legal-move discovery architecture
@@ -103,3 +103,24 @@ Rationale: broad parity already exists; the missing work is the builder-level co
 6. `pnpm -F @ludoforge/engine test`
 7. `pnpm -F @ludoforge/engine lint`
 8. `pnpm -F @ludoforge/engine typecheck`
+
+## Outcome
+
+Completed: 2026-03-11
+
+What actually changed:
+
+1. This umbrella ticket was completed through the two follow-up tickets it explicitly spawned:
+   - `ENG-004` verified and documented the direct canonical-builder convergence already present for execution-context and staged-grant discovery.
+   - `ENG-005` finished the remaining canonical-builder parity work and removed `applyPendingFreeOperationVariants()` from turn-order move creation.
+2. The final architecture now has one canonical ready-grant move creation path in [`packages/engine/src/kernel/legal-moves.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/src/kernel/legal-moves.ts), while [`packages/engine/src/kernel/legal-moves-turn-order.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/src/kernel/legal-moves-turn-order.ts) is back to turn-flow filtering only.
+
+Deviations from original plan:
+
+1. `ENG-003` was not executed as a single large refactor. Reassessment correctly split the work into `ENG-004` and `ENG-005`, which turned out to be the cleaner and safer architectural path.
+2. The final implementation had to absorb additional real regressions that the original umbrella wording did not enumerate, especially staged FITL follow-up chains and momentum-blocked free-operation grants.
+
+Verification results:
+
+1. `ENG-004` archived as completed with direct-builder verification.
+2. `ENG-005` completed with focused kernel/integration verification plus full `pnpm -F @ludoforge/engine test`, `lint`, and `typecheck`.

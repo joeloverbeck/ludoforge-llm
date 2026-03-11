@@ -3789,14 +3789,14 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
     );
   });
 
-  it('requires legal-moves turn-order helpers to consume explicit seat-resolution context', () => {
+  it('keeps free-operation move creation out of legal-moves turn-order helpers', () => {
     const source = readKernelSource('src/kernel/legal-moves-turn-order.ts');
     const sourceFile = parseTypeScriptSource(source, 'legal-moves-turn-order.ts');
     const imports = collectNamedImportsByLocalName(sourceFile, './move-decision-sequence.js');
     assert.equal(
-      imports.get('isMoveDecisionSequenceAdmittedForLegalMove'),
-      'isMoveDecisionSequenceAdmittedForLegalMove',
-      'legal-moves-turn-order.ts must import canonical legal-move decision admission helper',
+      imports.has('isMoveDecisionSequenceAdmittedForLegalMove'),
+      false,
+      'legal-moves-turn-order.ts must not import free-operation decision admission helpers once canonical builder owns move creation',
     );
     assert.equal(
       imports.has('isMoveDecisionSequenceNotUnsatisfiable'),
@@ -3805,13 +3805,24 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
     );
     const missingBindingImports = collectNamedImportsByLocalName(sourceFile, './missing-binding-policy.js');
     assert.equal(
-      missingBindingImports.get('MISSING_BINDING_POLICY_CONTEXTS'),
-      'MISSING_BINDING_POLICY_CONTEXTS',
-      'legal-moves-turn-order.ts must import canonical missing-binding policy context identifiers',
+      missingBindingImports.has('MISSING_BINDING_POLICY_CONTEXTS'),
+      false,
+      'legal-moves-turn-order.ts must not import free-operation move-creation missing-binding contexts',
+    );
+    const discoveryImports = collectNamedImportsByLocalName(sourceFile, './free-operation-discovery-analysis.js');
+    assert.equal(
+      discoveryImports.has('isFreeOperationApplicableForMove'),
+      false,
+      'legal-moves-turn-order.ts must not import free-operation applicability helpers for move creation',
+    );
+    assert.equal(
+      discoveryImports.has('isFreeOperationGrantedForMove'),
+      false,
+      'legal-moves-turn-order.ts must not import free-operation grant helpers for move creation',
     );
 
     const activeSeatCalls = collectCallExpressionsByIdentifier(sourceFile, 'requireCardDrivenActiveSeat');
-    assert.equal(activeSeatCalls.length >= 2, true, 'turn-order helpers should resolve active seat at guarded boundaries');
+    assert.equal(activeSeatCalls.length >= 1, true, 'turn-order helpers should still resolve active seat at guarded boundaries');
     for (const call of activeSeatCalls) {
       assert.equal(
         call.arguments.length === 4 &&
@@ -3825,42 +3836,19 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
     }
 
     assert.equal(
-      collectCallExpressionsByIdentifier(sourceFile, 'isFreeOperationApplicableForMove').some((call) =>
-        call.arguments.length === 4 &&
-        isIdentifierArgument(call.arguments[0]!, 'def') &&
-        isIdentifierArgument(call.arguments[1]!, 'state') &&
-        isIdentifierArgument(call.arguments[2]!, 'candidate') &&
-        isIdentifierArgument(call.arguments[3]!, 'seatResolution'),
-      ),
-      true,
-      'applyPendingFreeOperationVariants must thread seatResolution into free-operation applicability checks',
+      collectCallExpressionsByIdentifier(sourceFile, 'isFreeOperationApplicableForMove').length,
+      0,
+      'legal-moves-turn-order.ts must not perform free-operation applicability checks for move creation',
     );
     assert.equal(
-      collectCallExpressionsByIdentifier(sourceFile, 'isFreeOperationGrantedForMove').some((call) =>
-        call.arguments.length === 4 &&
-        isIdentifierArgument(call.arguments[0]!, 'def') &&
-        isIdentifierArgument(call.arguments[1]!, 'state') &&
-        isIdentifierArgument(call.arguments[2]!, 'candidate') &&
-        isIdentifierArgument(call.arguments[3]!, 'seatResolution'),
-      ),
-      true,
-      'applyPendingFreeOperationVariants must thread seatResolution into free-operation grant checks',
+      collectCallExpressionsByIdentifier(sourceFile, 'isFreeOperationGrantedForMove').length,
+      0,
+      'legal-moves-turn-order.ts must not perform free-operation grant checks for move creation',
     );
     assert.equal(
-      collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceAdmittedForLegalMove').some((call) => {
-        if (call.arguments.length < 4) {
-          return false;
-        }
-        const contextArg = unwrapTypeScriptExpression(call.arguments[3]!);
-        return (
-          ts.isPropertyAccessExpression(contextArg) &&
-          ts.isIdentifier(contextArg.expression) &&
-          contextArg.expression.text === 'MISSING_BINDING_POLICY_CONTEXTS' &&
-          contextArg.name.text === 'LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE'
-        );
-      }),
-      true,
-      'free-operation unresolved admission must use canonical helper with legalMoves.freeOperationDecisionSequence context',
+      collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceAdmittedForLegalMove').length,
+      0,
+      'legal-moves-turn-order.ts must not perform free-operation decision admission for move creation',
     );
 
     const legacyAdmissionCalls = collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceNotUnsatisfiable');

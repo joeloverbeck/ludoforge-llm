@@ -1,24 +1,13 @@
-import { isMoveDecisionSequenceAdmittedForLegalMove } from './move-decision-sequence.js';
-import type { MoveEnumerationBudgets } from './move-enumeration-budgets.js';
-import {
-  isFreeOperationApplicableForMove,
-  isFreeOperationAllowedDuringMonsoonForMove,
-  isFreeOperationGrantedForMove,
-} from './free-operation-discovery-analysis.js';
-import { canResolveAmbiguousFreeOperationOverlapInCurrentState } from './free-operation-viability.js';
+import { isFreeOperationAllowedDuringMonsoonForMove } from './free-operation-discovery-analysis.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import {
   hasActiveSeatRequiredPendingFreeOperationGrant,
   isMoveAllowedByRequiredPendingFreeOperationGrant,
   isEventMovePlayableUnderGrantViabilityPolicy,
 } from './turn-flow-eligibility.js';
-import { resolveEffectiveFreeOperationActionDomain, resolveTurnFlowDefaultFreeOperationActionDomain } from './free-operation-action-domain.js';
-import { toMoveIdentityKey } from './move-identity.js';
-import type { GameDef, GameState, Move, MoveParamValue, RuntimeWarning } from './types.js';
+import type { GameDef, GameState, Move, MoveParamValue } from './types.js';
 import type { TurnFlowActionClass, TurnFlowInterruptMoveSelectorDef } from './types-turn-flow.js';
-import { asActionId } from './branded.js';
 import { createSeatResolutionContext, type SeatResolutionContext } from './seat-resolution.js';
-import { MISSING_BINDING_POLICY_CONTEXTS } from './missing-binding-policy.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
 
@@ -357,98 +346,4 @@ export function applyTurnFlowWindowFilters(
   return filtered
     .filter((move) => !canceledMoves.has(move))
     .filter((move) => isMoveAllowedByRequiredPendingFreeOperationGrant(def, state, move, seatResolution));
-}
-
-export function applyPendingFreeOperationVariants(
-  def: GameDef,
-  state: GameState,
-  moves: readonly Move[],
-  seatResolution: SeatResolutionContext,
-  options?: {
-    readonly budgets?: Partial<MoveEnumerationBudgets>;
-    readonly onWarning?: (warning: RuntimeWarning) => void;
-  },
-): readonly Move[] {
-  const runtime = cardDrivenRuntime(state);
-  if (runtime === null) {
-    return moves;
-  }
-
-  const pendingGrants = runtime.pendingFreeOperationGrants ?? [];
-  const activeSeat = requireCardDrivenActiveSeat(
-    def,
-    state,
-    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.PENDING_FREE_OPERATION_VARIANT_APPLICATION,
-    seatResolution,
-  );
-  if (!pendingGrants.some((grant) => grant.seat === activeSeat)) {
-    return moves;
-  }
-
-  const variants: Move[] = [...moves];
-  const seen = new Set(moves.map((move) => toMoveIdentityKey(def, move)));
-  const existingBaseMoveKeys = new Set(
-    moves.map((move) => `${String(move.actionId)}:${resolveTurnFlowActionClass(def, move) ?? ''}`),
-  );
-  const turnFlowDefaults = resolveTurnFlowDefaultFreeOperationActionDomain(def);
-  const pendingGrantMoves = pendingGrants
-    .filter((grant) => grant.seat === activeSeat)
-    .flatMap((grant) =>
-      resolveEffectiveFreeOperationActionDomain(grant.actionIds, turnFlowDefaults).map((actionId) => ({
-        actionId,
-        operationClass: grant.operationClass,
-      }))
-    );
-  const extraBaseMoves: Move[] = pendingGrantMoves
-    .filter(({ actionId, operationClass }) => !existingBaseMoveKeys.has(`${actionId}:${operationClass}`))
-    .map(({ actionId, operationClass }) => {
-      const mappedActionClass = resolveTurnFlowActionClass(def, { actionId: asActionId(actionId), params: {} });
-      return {
-        actionId: asActionId(actionId),
-        ...(mappedActionClass === null ? { actionClass: operationClass } : {}),
-        params: {},
-      };
-    });
-
-  for (const move of [...moves, ...extraBaseMoves]) {
-    if (move.freeOperation === true) {
-      continue;
-    }
-    const candidate: Move = {
-      ...move,
-      freeOperation: true,
-    };
-    if (!isFreeOperationApplicableForMove(def, state, candidate, seatResolution)) {
-      continue;
-    }
-    if (
-      !isMoveDecisionSequenceAdmittedForLegalMove(
-        def,
-        state,
-        candidate,
-        MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
-        {
-          ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
-          ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
-        },
-      )
-    ) {
-      continue;
-    }
-    if (!isFreeOperationGrantedForMove(def, state, candidate, seatResolution)) {
-      if (!canResolveAmbiguousFreeOperationOverlapInCurrentState(def, state, candidate, seatResolution, {
-        ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
-      })) {
-        continue;
-      }
-    }
-
-    const key = toMoveIdentityKey(def, candidate);
-    if (seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-    variants.push(candidate);
-  }
-  return variants;
 }

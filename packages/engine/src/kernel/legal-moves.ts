@@ -7,7 +7,6 @@ import { createEvalContext, createEvalRuntimeResources } from './eval-context.js
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import { isMoveDecisionSequenceAdmittedForLegalMove } from './move-decision-sequence.js';
 import {
-  applyPendingFreeOperationVariants,
   applyTurnFlowWindowFilters,
   isMoveAllowedByTurnFlowOptionMatrix,
   resolveConstrainedSecondEligibleActionClasses,
@@ -129,9 +128,22 @@ const tryPushOptionMatrixFilteredMove = (
   move: Move,
   action: ActionDef,
 ): boolean => {
+  const baseClass = resolveTurnFlowActionClass(def, move);
+  if (move.freeOperation === true && isMoveAllowedByTurnFlowOptionMatrix(def, state, move)) {
+    return tryPushTemplateMove(
+      enumeration,
+      baseClass !== null && move.actionClass === undefined
+        ? {
+            ...move,
+            actionClass: baseClass,
+          }
+        : move,
+      action.id,
+    );
+  }
+
   const constrainedClasses = resolveConstrainedSecondEligibleActionClasses(def, state);
   const variants: Move[] = [];
-  const baseClass = resolveTurnFlowActionClass(def, move);
   if (constrainedClasses !== null && String(action.id) !== 'pass' && !isCardEventAction(action)) {
     if (baseClass === null) {
       for (const actionClass of constrainedClasses) {
@@ -235,6 +247,7 @@ function enumerateParams(
     readonly executionPlayerOverride?: GameState['activePlayer'];
     readonly freeOperationOverlay?: FreeOperationExecutionOverlay;
     readonly moveOverrides?: Partial<Move>;
+    readonly moveFilter?: (move: Move) => boolean;
     readonly runtime?: GameDefRuntime;
   },
 ): void {
@@ -334,6 +347,10 @@ function enumerateParams(
       }
     }
 
+    if (options?.moveFilter !== undefined && !options.moveFilter(move)) {
+      return;
+    }
+
     tryPushOptionMatrixFilteredMove(enumeration, def, state, move, action);
     return;
   }
@@ -423,6 +440,60 @@ function enumeratePendingFreeOperationMoves(
   const seenGrantMoveKeys = new Set<string>();
   const defaultActionDomain = resolveTurnFlowDefaultFreeOperationActionDomain(def);
   const isCurrentReadyGrant = (grantId: string): boolean => readyGrants.some((grant) => grant.grantId === grantId);
+  const createReadyGrantScopedState = (grantIds: readonly string[]): GameState => ({
+    ...state,
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: {
+        ...runtime,
+        pendingFreeOperationGrants: pending.filter(
+          (pendingGrant) => grantIds.includes(pendingGrant.grantId) || !isCurrentReadyGrant(pendingGrant.grantId),
+        ),
+      },
+    },
+  });
+  const isFreeOperationCandidateAdmitted = (candidateState: GameState, candidateMove: Move): boolean => {
+    if (!isFreeOperationApplicableForMove(def, candidateState, candidateMove, seatResolution)) {
+      return false;
+    }
+    if (!isFreeOperationGrantedForMove(def, candidateState, candidateMove, seatResolution)) {
+      if (!canResolveAmbiguousFreeOperationOverlapInCurrentState(def, candidateState, candidateMove, seatResolution)) {
+        return false;
+      }
+    }
+    return isMoveDecisionSequenceAdmittedForLegalMove(
+      def,
+      candidateState,
+      candidateMove,
+      MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
+      {
+        budgets: enumeration.budgets,
+        onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
+      },
+    );
+  };
+  const collectViableNonExecutionContextReadyGrantIds = (candidateMove: Move): readonly string[] =>
+    readyGrants
+      .filter((candidateGrant) => {
+        const candidateExecutionPlayer = resolvePendingFreeOperationGrantExecutionPlayer(def, state, candidateGrant);
+        if (candidateExecutionPlayer === undefined || candidateGrant.executionContext !== undefined) {
+          return false;
+        }
+        const candidateIdentityMove: Move = {
+          ...candidateMove,
+          ...(resolveTurnFlowActionClass(def, { actionId: candidateMove.actionId, params: candidateMove.params }) === null
+            ? { actionClass: candidateGrant.operationClass }
+            : {}),
+        };
+        if (toMoveIdentityKey(def, candidateIdentityMove) !== toMoveIdentityKey(def, candidateMove)) {
+          return false;
+        }
+        return isFreeOperationCandidateAdmitted(
+          createReadyGrantScopedState([candidateGrant.grantId]),
+          candidateMove,
+        );
+      })
+      .map((candidateGrant) => candidateGrant.grantId);
 
   for (const grant of readyGrants) {
     const executionPlayer = resolvePendingFreeOperationGrantExecutionPlayer(def, state, grant);
@@ -437,6 +508,20 @@ function enumeratePendingFreeOperationMoves(
       }
 
       const hasActionPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
+      const mappedActionClass = resolveTurnFlowActionClass(def, { actionId: action.id, params: {} });
+      const targetActionClass = mappedActionClass ?? grant.operationClass;
+      const grantRootedProbeMove: Move = {
+        actionId: action.id,
+        params: {},
+        freeOperation: true,
+        ...(mappedActionClass === null ? { actionClass: grant.operationClass } : {}),
+      };
+      const hasEnumeratedBaseTemplate = enumeration.moves.some(
+        (move) =>
+          move.freeOperation !== true
+          && String(move.actionId) === actionId
+          && (resolveTurnFlowActionClass(def, move) ?? 'operation') === targetActionClass,
+      );
 
       const freeOperationPreflightOverlay = buildFreeOperationPreflightOverlay(
         {
@@ -454,16 +539,13 @@ function enumeratePendingFreeOperationMoves(
         action,
         adjacencyGraph,
         decisionPlayer: state.activePlayer,
-        bindings: buildMoveRuntimeBindings({ actionId: action.id, params: {} }),
+        bindings: buildMoveRuntimeBindings(grantRootedProbeMove),
         runtimeTableIndex,
         evalRuntimeResources,
         skipExecutorCheck: !hasActionPipeline,
         skipPipelineDispatch: !hasActionPipeline,
         ...freeOperationPreflightOverlay,
       });
-      if (preflight.kind === 'notApplicable') {
-        continue;
-      }
       if (preflight.kind === 'invalidSpec') {
         throw selectorInvalidSpecError(
           'legalMoves',
@@ -475,6 +557,14 @@ function enumeratePendingFreeOperationMoves(
       }
 
       if (grant.executionContext !== undefined) {
+        if (
+          preflight.kind === 'notApplicable'
+          && preflight.reason !== 'pipelineNotApplicable'
+          && preflight.reason !== 'phaseMismatch'
+          && !hasEnumeratedBaseTemplate
+        ) {
+          continue;
+        }
         enumerateParams(
           action,
           def,
@@ -487,7 +577,11 @@ function enumeratePendingFreeOperationMoves(
           enumeration,
           currentPhaseDef,
           {
-            ...(preflight.pipelineDispatch.kind === 'matched' ? { pipeline: preflight.pipelineDispatch.profile } : {}),
+            ...(
+              preflight.kind === 'applicable' && preflight.pipelineDispatch.kind === 'matched'
+                ? { pipeline: preflight.pipelineDispatch.profile }
+                : {}
+            ),
             ...freeOperationPreflightOverlay,
             moveOverrides: { freeOperation: true },
           },
@@ -499,27 +593,79 @@ function enumeratePendingFreeOperationMoves(
       }
 
       if (!hasActionPipeline) {
-        continue;
-      }
-
-      if (preflight.pipelineDispatch.kind !== 'matched') {
-        continue;
-      }
-
-      const pipeline = preflight.pipelineDispatch.profile;
-      const status = evaluateDiscoveryPipelinePredicateStatus(action, pipeline, preflight.evalCtx, {
-        includeCostValidation: pipeline.atomicity === 'atomic',
-      });
-      const viabilityDecision = decideDiscoveryLegalMovesPipelineViability(status);
-      if (viabilityDecision.kind === 'excludeTemplate') {
-        if (
-          viabilityDecision.outcome !== 'pipelineLegalityFailed'
-          || !shouldEnumerateLegalMoveForOutcome(viabilityDecision.outcome)
-        ) {
+        if (preflight.kind === 'notApplicable') {
           continue;
         }
+        enumerateParams(
+          action,
+          def,
+          adjacencyGraph,
+          runtimeTableIndex,
+          evalRuntimeResources,
+          state,
+          0,
+          {},
+          enumeration,
+          currentPhaseDef,
+          {
+            moveOverrides: {
+              freeOperation: true,
+              ...(mappedActionClass === null ? { actionClass: grant.operationClass } : {}),
+            },
+            moveFilter: (candidateMove) => {
+              const grantMoveKey = toMoveIdentityKey(def, candidateMove);
+              if (seenGrantMoveKeys.has(grantMoveKey)) {
+                return false;
+              }
+              const viableReadyGrantIds = collectViableNonExecutionContextReadyGrantIds(candidateMove);
+              if (viableReadyGrantIds.length === 0) {
+                return false;
+              }
+              if (!isFreeOperationCandidateAdmitted(createReadyGrantScopedState(viableReadyGrantIds), candidateMove)) {
+                return false;
+              }
+              seenGrantMoveKeys.add(grantMoveKey);
+              return true;
+            },
+          },
+        );
+        if (enumeration.paramExpansionBudgetExceeded || enumeration.templateBudgetExceeded) {
+          return;
+        }
+        continue;
       }
-      const mappedActionClass = resolveTurnFlowActionClass(def, { actionId: action.id, params: {} });
+
+      const pipeline =
+        preflight.kind === 'applicable' && preflight.pipelineDispatch.kind === 'matched'
+          ? preflight.pipelineDispatch.profile
+          : undefined;
+      if (
+        pipeline === undefined
+        && !hasEnumeratedBaseTemplate
+        && !(
+          preflight.kind === 'notApplicable'
+          && (preflight.reason === 'pipelineNotApplicable' || preflight.reason === 'phaseMismatch')
+        )
+      ) {
+        continue;
+      }
+      if (pipeline !== undefined) {
+        if (preflight.kind !== 'applicable' || preflight.pipelineDispatch.kind !== 'matched') {
+          continue;
+        }
+        const status = evaluateDiscoveryPipelinePredicateStatus(action, pipeline, preflight.evalCtx, {
+          includeCostValidation: pipeline.atomicity === 'atomic',
+        });
+        const viabilityDecision = decideDiscoveryLegalMovesPipelineViability(status);
+        if (viabilityDecision.kind === 'excludeTemplate') {
+          if (
+            viabilityDecision.outcome !== 'pipelineLegalityFailed'
+            || !shouldEnumerateLegalMoveForOutcome(viabilityDecision.outcome)
+          ) {
+            continue;
+          }
+        }
+      }
       const baseMove: Move = {
         actionId: action.id,
         params: {},
@@ -549,16 +695,18 @@ function enumeratePendingFreeOperationMoves(
             action,
             adjacencyGraph,
             decisionPlayer: state.activePlayer,
-            bindings: buildMoveRuntimeBindings({ actionId: action.id, params: {} }),
+            bindings: buildMoveRuntimeBindings({
+              actionId: action.id,
+              params: {},
+              freeOperation: true,
+              ...(mappedActionClass === null ? { actionClass: candidateGrant.operationClass } : {}),
+            }),
             runtimeTableIndex,
             evalRuntimeResources,
             skipExecutorCheck: !hasActionPipeline,
             skipPipelineDispatch: !hasActionPipeline,
             ...candidatePreflightOverlay,
           });
-          if (candidatePreflight.kind === 'notApplicable') {
-            return false;
-          }
           if (candidatePreflight.kind === 'invalidSpec') {
             throw selectorInvalidSpecError(
               'legalMoves',
@@ -568,23 +716,45 @@ function enumeratePendingFreeOperationMoves(
               candidatePreflight.selectorContractViolations,
             );
           }
-          if (!hasActionPipeline || candidatePreflight.pipelineDispatch.kind !== 'matched') {
-            return false;
-          }
-
-          const candidatePipeline = candidatePreflight.pipelineDispatch.profile;
-          const candidateStatus = evaluateDiscoveryPipelinePredicateStatus(action, candidatePipeline, candidatePreflight.evalCtx, {
-            includeCostValidation: candidatePipeline.atomicity === 'atomic',
-          });
-          const candidateViabilityDecision = decideDiscoveryLegalMovesPipelineViability(candidateStatus);
+          const candidatePipeline =
+            candidatePreflight.kind === 'applicable' && candidatePreflight.pipelineDispatch.kind === 'matched'
+              ? candidatePreflight.pipelineDispatch.profile
+              : undefined;
           if (
-            candidateViabilityDecision.kind === 'excludeTemplate'
-            && (
-              candidateViabilityDecision.outcome !== 'pipelineLegalityFailed'
-              || !shouldEnumerateLegalMoveForOutcome(candidateViabilityDecision.outcome)
+            candidatePipeline === undefined
+            && !hasEnumeratedBaseTemplate
+            && !(
+              candidatePreflight.kind === 'notApplicable'
+              && (
+                candidatePreflight.reason === 'pipelineNotApplicable'
+                || candidatePreflight.reason === 'phaseMismatch'
+              )
             )
           ) {
             return false;
+          }
+          if (candidatePipeline !== undefined) {
+            if (candidatePreflight.kind !== 'applicable' || candidatePreflight.pipelineDispatch.kind !== 'matched') {
+              return false;
+            }
+            const candidateStatus = evaluateDiscoveryPipelinePredicateStatus(
+              action,
+              candidatePipeline,
+              candidatePreflight.evalCtx,
+              {
+                includeCostValidation: candidatePipeline.atomicity === 'atomic',
+              },
+            );
+            const candidateViabilityDecision = decideDiscoveryLegalMovesPipelineViability(candidateStatus);
+            if (
+              candidateViabilityDecision.kind === 'excludeTemplate'
+              && (
+                candidateViabilityDecision.outcome !== 'pipelineLegalityFailed'
+                || !shouldEnumerateLegalMoveForOutcome(candidateViabilityDecision.outcome)
+              )
+            ) {
+              return false;
+            }
           }
 
           const candidateMove: Move = {
@@ -627,39 +797,9 @@ function enumeratePendingFreeOperationMoves(
         })
         .map((candidateGrant) => candidateGrant.grantId);
 
-      const viableReadyGrantState: GameState = {
-        ...state,
-        turnOrderState: {
-          type: 'cardDriven',
-          runtime: {
-            ...runtime,
-            pendingFreeOperationGrants: pending.filter(
-              (pendingGrant) => viableReadyGrantIds.includes(pendingGrant.grantId) || !isCurrentReadyGrant(pendingGrant.grantId),
-            ),
-          },
-        },
-      };
+      const viableReadyGrantState = createReadyGrantScopedState(viableReadyGrantIds);
 
-      if (!isFreeOperationApplicableForMove(def, viableReadyGrantState, baseMove, seatResolution)) {
-        continue;
-      }
-      if (!isFreeOperationGrantedForMove(def, viableReadyGrantState, baseMove, seatResolution)) {
-        if (!canResolveAmbiguousFreeOperationOverlapInCurrentState(def, viableReadyGrantState, baseMove, seatResolution)) {
-          continue;
-        }
-      }
-      if (
-        !isMoveDecisionSequenceAdmittedForLegalMove(
-          def,
-          viableReadyGrantState,
-          baseMove,
-          MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
-          {
-            budgets: enumeration.budgets,
-            onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
-          },
-        )
-      ) {
+      if (!isFreeOperationCandidateAdmitted(viableReadyGrantState, baseMove)) {
         continue;
       }
 
@@ -896,11 +1036,7 @@ export const enumerateLegalMoves = (
     seatResolution,
   );
 
-  const variantExpandedMoves = applyPendingFreeOperationVariants(def, state, enumeration.moves, seatResolution, {
-    budgets: enumeration.budgets,
-    onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
-  });
-  const finalMoves = applyTurnFlowWindowFilters(def, state, variantExpandedMoves, seatResolution);
+  const finalMoves = applyTurnFlowWindowFilters(def, state, enumeration.moves, seatResolution);
   return { moves: finalMoves, warnings };
 };
 

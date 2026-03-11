@@ -175,6 +175,7 @@ verbalization:
     coupArvnRedeployPolice: "ARVN Police Redeploy"
     coupNvaRedeployTroops: "NVA Troop Redeploy"
     coupCommitmentResolve: "Resolve Commitment"
+    resolveHonoluluPacify: "End Honolulu Pacification"
     coupPacifyPass: "Pass (Pacify)"
     coupAgitatePass: "Pass (Agitate)"
     coupRedeployPass: "Pass (Redeploy)"

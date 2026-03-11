@@ -675,6 +675,12 @@ const withActiveFromFirstEligible = (
   };
 };
 
+const isInterruptPhaseId = (
+  def: GameDef,
+  phaseId: GameState['currentPhase'],
+): boolean =>
+  (def.turnStructure.interrupts ?? []).some((phase) => phase.id === phaseId);
+
 const resolveCardSeatOrder = (
   def: GameDef,
   state: GameState,
@@ -773,6 +779,10 @@ export const isActiveSeatEligibleForTurnFlow = (
   state: GameState,
   seatResolution: SeatResolutionContext,
 ): boolean => {
+  if (isInterruptPhaseId(def, state.currentPhase)) {
+    return true;
+  }
+
   if (state.turnOrderState.type === 'simultaneous') {
     return state.turnOrderState.submitted[state.activePlayer] !== true;
   }
@@ -848,12 +858,25 @@ export const applyTurnFlowEligibilityAfterMove = (
   state: GameState,
   move: Move,
   deferredEventEffect?: TurnFlowDeferredEventEffectPayload,
+  options?: {
+    readonly originatingPhase?: GameState['currentPhase'];
+  },
 ): TurnFlowTransitionResult => {
   const runtime = cardDrivenRuntime(state);
   if (runtime === null) {
     return { state, traceEntries: [] };
   }
+  const originatingPhase = options?.originatingPhase ?? state.currentPhase;
   const seatResolution = createSeatResolutionContext(def, state.playerCount);
+
+  if (isInterruptPhaseId(def, originatingPhase)) {
+    return {
+      state: isInterruptPhaseId(def, state.currentPhase)
+        ? state
+        : withActiveFromFirstEligible(state, runtime.currentCard.firstEligible, seatResolution),
+      traceEntries: [],
+    };
+  }
 
   const activeSeat = requireCardDrivenActiveSeat(
     def,
@@ -1063,7 +1086,9 @@ export const applyTurnFlowEligibilityAfterMove = (
   };
 
   return {
-    state: withActiveFromFirstEligible(stateWithTurnFlow, currentCard.firstEligible, seatResolution),
+    state: isInterruptPhaseId(def, stateWithTurnFlow.currentPhase)
+      ? stateWithTurnFlow
+      : withActiveFromFirstEligible(stateWithTurnFlow, currentCard.firstEligible, seatResolution),
     traceEntries,
     ...(releasedDeferredEventEffects.length === 0 ? {} : { releasedDeferredEventEffects }),
   };

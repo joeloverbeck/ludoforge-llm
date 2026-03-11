@@ -107,10 +107,26 @@ describe('FITL text-only card behavior backfill', () => {
     assert.equal(typeof (card53?.shaded?.effects?.[3] as { forEach?: unknown } | undefined)?.forEach, 'object');
 
     const card64 = cardById.get('card-64');
-    assert.deepEqual(card64?.unshaded?.effects, [
-      { addVar: { scope: 'global', var: 'aid', delta: 6 } },
-      { addVar: { scope: 'global', var: 'patronage', delta: 6 } },
+    assert.equal(card64?.unshaded?.branches?.length, 4);
+    assert.deepEqual(card64?.unshaded?.eligibilityOverrides, [
+      {
+        target: { kind: 'active' },
+        eligible: true,
+        windowId: 'remain-eligible',
+        when: {
+          op: 'or',
+          args: [
+            { op: '==', left: { ref: 'activeSeat' }, right: 'nva' },
+            { op: '==', left: { ref: 'activeSeat' }, right: 'vc' },
+          ],
+        },
+      },
     ]);
+    assert.equal(
+      ((card64?.unshaded?.branches?.[0]?.effects?.[2] as { if?: { then?: Array<{ pushInterruptPhase?: { phase?: string } }> } } | undefined)
+        ?.if?.then?.[0]?.pushInterruptPhase?.phase),
+      'honoluluPacify',
+    );
 
     const card69 = cardById.get('card-69');
     assert.equal(card69?.unshaded?.freeOperationGrants?.[0]?.seat, 'arvn');

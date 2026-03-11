@@ -12,6 +12,7 @@ turnStructure:
     - id: coupReset
   interrupts:
     - id: commitment
+    - id: honoluluPacify
 
 
 turnOrder:
@@ -83,6 +84,7 @@ turnOrder:
         coupArvnRedeployPolice: operation
         coupNvaRedeployTroops: operation
         coupCommitmentResolve: operation
+        resolveHonoluluPacify: pass
         coupPacifyPass: pass
         coupAgitatePass: pass
         coupRedeployPass: pass
@@ -198,7 +200,7 @@ actions:
   - id: coupPacifyUS
     actor: active
     executor: 'actor'
-    phase: [coupSupport]
+    phase: [coupSupport, honoluluPacify]
     params:
       - name: targetSpace
         domain:
@@ -320,7 +322,7 @@ actions:
   - id: coupPacifyARVN
     actor: active
     executor: 'actor'
-    phase: [coupSupport]
+    phase: [coupSupport, honoluluPacify]
     params:
       - name: targetSpace
         domain:
@@ -1190,10 +1192,20 @@ actions:
       - macro: coup-process-commitment
       - popInterruptPhase: {}
     limits: []
-
-# ══════════════════════════════════════════════════════════════════════════════
-# Triggers
-# ══════════════════════════════════════════════════════════════════════════════
+  - id: resolveHonoluluPacify
+    actor: active
+    executor: 'actor'
+    phase: [honoluluPacify]
+    params: []
+    pre:
+      op: or
+      args:
+        - { op: '==', left: { ref: activePlayer }, right: 0 }
+        - { op: '==', left: { ref: activePlayer }, right: 1 }
+    cost: []
+    effects:
+      - popInterruptPhase: {}
+    limits: []
 
 actionPipelines:
   # ── train-us-profile ──────────────────────────────────────────────────────────
@@ -5739,6 +5751,12 @@ triggers:
     event:
       type: phaseEnter
       phase: coupSupport
+    effects:
+      - macro: coup-support-reset-trackers
+  - id: on-honolulu-pacify-enter
+    event:
+      type: phaseEnter
+      phase: honoluluPacify
     effects:
       - macro: coup-support-reset-trackers
   - id: on-coup-redeploy-enter

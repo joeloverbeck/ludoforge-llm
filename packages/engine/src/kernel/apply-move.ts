@@ -1226,7 +1226,9 @@ const applyMoveCore = (
           releasedDeferredEventEffects: consumed.releasedDeferredEventEffects,
         };
       }
-      const progressed = applyTurnFlowEligibilityAfterMove(def, consumed.state, move);
+      const progressed = applyTurnFlowEligibilityAfterMove(def, consumed.state, move, undefined, {
+        originatingPhase: state.currentPhase,
+      });
       return {
         state: progressed.state,
         traceEntries: [...consumed.traceEntries, ...progressed.traceEntries],
@@ -1237,7 +1239,9 @@ const applyMoveCore = (
         ],
       };
     })()
-    : applyTurnFlowEligibilityAfterMove(def, executed.stateWithRng, move, executed.deferredEventEffect);
+    : applyTurnFlowEligibilityAfterMove(def, executed.stateWithRng, move, executed.deferredEventEffect, {
+      originatingPhase: state.currentPhase,
+    });
   const deferredExecution = applyReleasedDeferredEventEffects(
     def,
     turnFlowResult.state,

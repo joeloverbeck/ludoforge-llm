@@ -71,7 +71,7 @@ describe('FITL commitment phase production wiring', () => {
       'coupCommitment',
       'coupReset',
     ]);
-    assert.deepEqual(interruptIds, ['commitment']);
+    assert.deepEqual(interruptIds, ['commitment', 'honoluluPacify']);
 
     const card73 = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-73');
     assert.notEqual(card73, undefined);

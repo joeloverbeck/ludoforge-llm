@@ -80,6 +80,10 @@ export function inferValueRuntimeShapes(
       return ['number'];
     }
 
+    if (valueExpr.ref === 'activeSeat') {
+      return ['string'];
+    }
+
     if (valueExpr.ref === 'markerState' || valueExpr.ref === 'globalMarkerState' || valueExpr.ref === 'tokenZone') {
       return ['string'];
     }

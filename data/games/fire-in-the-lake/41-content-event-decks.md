@@ -9049,11 +9049,61 @@ eventDecks:
             - VC
             - ARVN
             - US
-          flavorText: Images from the front alter force posture and political appetite.
+          flavorText: Pulitzer photo inspires.
         unshaded:
-          text: Place pieces from Out of Play into selected spaces.
+          text: 3 out of play US pieces to Available.
+          effects:
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: $usOutOfPlayPiece
+                    over:
+                      query: tokensInZone
+                      zone: out-of-play-US:none
+                      filter:
+                        prop: faction
+                        op: eq
+                        value: US
+                    to:
+                      zoneExpr: available-US:none
         shaded:
-          text: Media backlash moves selected forces back out of theater.
+          text: "Photos galvanize home front: NVA place 6 Troops outside South Vietnam, add +6 Resources, and, if executing, stay Eligible."
+          eligibilityOverrides:
+            - target:
+                kind: active
+              when:
+                op: ==
+                left:
+                  ref: activeSeat
+                right: NVA
+              eligible: true
+              windowId: remain-eligible
+          effects:
+            - distributeTokens:
+                tokens:
+                  query: tokensInZone
+                  zone: available-NVA:none
+                  filter:
+                    op: and
+                    args:
+                      - prop: faction
+                        op: eq
+                        value: NVA
+                      - prop: type
+                        op: eq
+                        value: troops
+                destinations:
+                  query: mapSpaces
+                  filter:
+                    condition:
+                      conditionMacro: fitl-space-outside-south
+                      args:
+                        spaceExpr: $zone
+                max: 6
+            - addVar:
+                scope: global
+                var: nvaResources
+                delta: 6
       - id: card-61
         title: Armored Cavalry
         sideMode: dual

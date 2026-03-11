@@ -201,7 +201,12 @@ export function lowerEventCardSide(
     `${pathPrefix}.freeOperationGrants`,
     context,
   );
-  const loweredEligibilityOverrides = lowerEventEligibilityOverrides(side.eligibilityOverrides);
+  const loweredEligibilityOverrides = lowerEventEligibilityOverrides(
+    side.eligibilityOverrides,
+    diagnostics,
+    `${pathPrefix}.eligibilityOverrides`,
+    context,
+  );
   const loweredLastingEffects = lowerEventLastingEffects(
     side.lastingEffects,
     diagnostics,
@@ -275,7 +280,12 @@ export function lowerEventCardSide(
       `${branchPath}.freeOperationGrants`,
       context,
     );
-    const loweredBranchEligibilityOverrides = lowerEventEligibilityOverrides(branch.eligibilityOverrides);
+    const loweredBranchEligibilityOverrides = lowerEventEligibilityOverrides(
+      branch.eligibilityOverrides,
+      diagnostics,
+      `${branchPath}.eligibilityOverrides`,
+      context,
+    );
     const loweredBranchLastingEffects = lowerEventLastingEffects(
       branch.lastingEffects,
       diagnostics,
@@ -331,19 +341,33 @@ export function lowerEventCardSide(
 
 function lowerEventEligibilityOverrides(
   overrides: readonly EventEligibilityOverrideDef[] | undefined,
+  diagnostics: Diagnostic[],
+  pathPrefix: string,
+  context: ConditionLoweringSharedContext,
 ): readonly EventEligibilityOverrideDef[] | undefined {
   if (overrides === undefined) {
     return undefined;
   }
-  return overrides.map((override) => ({
-    ...override,
-    target:
-      override.target.kind === 'active'
-        ? override.target
-        : {
-            ...override.target,
-          },
-  }));
+  return overrides.map((override, index) => {
+    const loweredWhen = override.when === undefined
+      ? undefined
+      : lowerConditionNode(
+        override.when,
+        buildConditionLoweringContext(context),
+        `${pathPrefix}.${index}.when`,
+      );
+    diagnostics.push(...(loweredWhen?.diagnostics ?? []));
+    return {
+      ...override,
+      target:
+        override.target.kind === 'active'
+          ? override.target
+          : {
+              ...override.target,
+            },
+      ...(loweredWhen?.value === undefined || loweredWhen.value === null ? {} : { when: loweredWhen.value }),
+    };
+  });
 }
 
 function lowerEventFreeOperationGrants(

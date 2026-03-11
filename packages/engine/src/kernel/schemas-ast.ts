@@ -91,6 +91,7 @@ export const ReferenceSchema = z.union([
   z.object({ ref: z.literal('tokenZone'), token: TokenSelSchema }).strict(),
   z.object({ ref: z.literal('zoneProp'), zone: ZoneSelSchema, prop: StringSchema }).strict(),
   z.object({ ref: z.literal('activePlayer') }).strict(),
+  z.object({ ref: z.literal('activeSeat') }).strict(),
   z.object({ ref: z.literal('grantContext'), key: StringSchema }).strict(),
 ]);
 

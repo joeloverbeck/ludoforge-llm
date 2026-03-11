@@ -421,4 +421,48 @@ describe('event playability context parity', () => {
     assert.equal(result.deferredEventEffect?.effects.length, 1);
     assert.equal(result.deferredEventEffect?.actionId, 'event');
   });
+
+  it('filters conditional eligibility overrides using activeSeat', () => {
+    const conditionalCard: EventCardDef = {
+      ...eventCard,
+      unshaded: {
+        ...eventCard.unshaded!,
+        eligibilityOverrides: [
+          {
+            target: { kind: 'active' },
+            when: { op: '==', left: { ref: 'activeSeat' }, right: '0' },
+            eligible: true,
+            windowId: 'window-a',
+          },
+          {
+            target: { kind: 'seat', seat: '1' },
+            when: { op: '==', left: { ref: 'activeSeat' }, right: '1' },
+            eligible: false,
+            windowId: 'window-a',
+          },
+        ],
+      },
+    };
+    const def = withActions(
+      {
+        ...makeBaseDef(conditionalCard),
+        globalVars: [{ name: 'canPlay', type: 'int', init: 1, min: 0, max: 1 }, { name: 'resolved', type: 'int', init: 0, min: 0, max: 10 }],
+      } as unknown as GameDef,
+      [eventAction],
+    );
+    const state = withCardDrivenState({
+      ...makeBaseState(conditionalCard.id),
+      activePlayer: asPlayerId(0),
+      globalVars: { canPlay: 1, resolved: 0 },
+    });
+
+    assert.deepEqual(resolveEventEligibilityOverrides(def, state, move), [
+      {
+        target: { kind: 'active' },
+        when: { op: '==', left: { ref: 'activeSeat' }, right: '0' },
+        eligible: true,
+        windowId: 'window-a',
+      },
+    ]);
+  });
 });

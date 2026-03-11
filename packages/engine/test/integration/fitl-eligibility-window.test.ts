@@ -60,7 +60,7 @@ phase: [asPhaseId('main')],
             name: 'eventCardId',
             domain: {
               query: 'enums',
-              values: ['card-overrides', 'card-immediate', 'card-immediate-negative', 'card-mixed-overrides', 'card-free-op'],
+              values: ['card-overrides', 'card-immediate', 'card-immediate-negative', 'card-mixed-overrides', 'card-free-op', 'card-conditional-active-seat'],
             },
           },
           { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
@@ -148,6 +148,22 @@ phase: [asPhaseId('main')],
                   sequence: { batch: 'grant-nva-op', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-conditional-active-seat',
+            title: 'Conditional Active Seat Override',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Only NVA executors stay eligible.',
+              eligibilityOverrides: [
+                {
+                  target: { kind: 'active' },
+                  when: { op: '==', left: { ref: 'activeSeat' }, right: 'NVA' },
+                  eligible: true,
+                  windowId: 'remain-eligible',
                 },
               ],
             },
@@ -390,5 +406,75 @@ describe('FITL eligibility window integration', () => {
     assert.equal(second.activePlayer, asPlayerId(2));
     assert.equal(requireCardDrivenRuntime(second).currentCard.firstEligible, 'NVA');
     assert.equal(requireCardDrivenRuntime(second).currentCard.secondEligible, 'VC');
+  });
+
+  it('applies conditional nextTurn overrides only when the active seat matches', () => {
+    const def = createDef();
+    const base = initialState(def, 46, 4).state;
+    const runtime = requireCardDrivenRuntime(base);
+
+    const nvaConfigured: GameState = {
+      ...base,
+      activePlayer: asPlayerId(2),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...runtime,
+          eligibility: { US: true, ARVN: true, NVA: true, VC: true },
+          currentCard: {
+            ...runtime.currentCard,
+            firstEligible: 'NVA',
+            secondEligible: 'VC',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+        },
+      },
+      zones: {
+        ...base.zones,
+        'played:none': [{
+          id: asTokenId('card-conditional-active-seat'),
+          type: 'card',
+          props: { faction: 'none', type: 'card' },
+        } as Token],
+      },
+    };
+
+    const nvaAfterEvent = applyMove(def, nvaConfigured, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-conditional-active-seat', side: 'unshaded' },
+    }).state;
+    assert.deepEqual(requireCardDrivenRuntime(nvaAfterEvent).pendingEligibilityOverrides ?? [], [
+      { seat: 'NVA', eligible: true, windowId: 'remain-eligible', duration: 'nextTurn' },
+    ]);
+
+    const arvnConfigured: GameState = {
+      ...nvaConfigured,
+      activePlayer: asPlayerId(1),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...runtime,
+          eligibility: { US: true, ARVN: true, NVA: true, VC: true },
+          currentCard: {
+            ...runtime.currentCard,
+            firstEligible: 'ARVN',
+            secondEligible: 'US',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+        },
+      },
+    };
+
+    const arvnAfterEvent = applyMove(def, arvnConfigured, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-conditional-active-seat', side: 'unshaded' },
+    }).state;
+    assert.deepEqual(requireCardDrivenRuntime(arvnAfterEvent).pendingEligibilityOverrides ?? [], []);
   });
 });

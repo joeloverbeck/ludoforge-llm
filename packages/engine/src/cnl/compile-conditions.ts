@@ -110,6 +110,7 @@ const SUPPORTED_REFERENCE_KINDS = [
   'zoneProp',
   'zoneVar',
   'activePlayer',
+  'activeSeat',
   'grantContext',
 ];
 const PREDICATE_ALIAS_KEYS = Object.freeze({
@@ -1682,6 +1683,8 @@ function lowerReference(
     }
     case 'activePlayer':
       return { value: { ref: 'activePlayer' }, diagnostics: [] };
+    case 'activeSeat':
+      return { value: { ref: 'activeSeat' }, diagnostics: [] };
     case 'binding':
       if (typeof source.name === 'string') {
         if (context.bindingScope !== undefined && !hasBindingIdentifier(source.name, context.bindingScope)) {

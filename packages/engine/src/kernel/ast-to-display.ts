@@ -148,6 +148,8 @@ const referenceToInlineNodes = (r: Reference): DisplayInlineNode[] => {
       return [ref(r.zone, 'zone'), DOT, ref(r.prop, 'prop')];
     case 'activePlayer':
       return [ref('activePlayer', 'player')];
+    case 'activeSeat':
+      return [ref('activeSeat', 'player')];
     case 'grantContext':
       return [kw('grantCtx'), LPAREN, ref(r.key, 'binding'), RPAREN];
     default: {

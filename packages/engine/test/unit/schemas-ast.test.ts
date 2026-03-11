@@ -147,6 +147,7 @@ describe('AST and selector schemas', () => {
               to: { zoneExpr: { concat: ['discard:', { ref: 'activePlayer' }] } },
             },
           },
+          { setVar: { scope: 'global', var: 'activeSeatLabel', value: { ref: 'activeSeat' } } },
           { moveAll: { from: 'discard:none', to: 'deck:none', filter: { op: 'not', arg: { op: '==', left: 1, right: 2 } } } },
           { moveAll: { from: { zoneExpr: 'discard:none' }, to: { zoneExpr: 'deck:none' } } },
           { moveTokenAdjacent: { token: '$unit', from: 'board:active', direction: 'north' } },

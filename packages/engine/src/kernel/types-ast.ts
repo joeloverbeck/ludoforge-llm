@@ -50,6 +50,7 @@ export type Reference =
   | { readonly ref: 'tokenZone'; readonly token: TokenSel }
   | { readonly ref: 'zoneProp'; readonly zone: ZoneSel; readonly prop: string }
   | { readonly ref: 'activePlayer' }
+  | { readonly ref: 'activeSeat' }
   | { readonly ref: 'grantContext'; readonly key: string };
 
 export type ValueExpr =

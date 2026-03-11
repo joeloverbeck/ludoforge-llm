@@ -146,6 +146,13 @@ describe('tooltip-value-stringifier', () => {
       );
     });
 
+    it('activeSeat → "activeSeat"', () => {
+      assert.equal(
+        stringifyValueExpr({ ref: 'activeSeat' }),
+        'activeSeat',
+      );
+    });
+
     it('tokenZone → "zone of {token}"', () => {
       assert.equal(
         stringifyValueExpr({ ref: 'tokenZone', token: 'ranger' }),
@@ -379,6 +386,13 @@ describe('tooltip-value-stringifier', () => {
         assert.equal(
           humanizeValueExpr({ ref: 'activePlayer' }, noLabels),
           'active player',
+        );
+      });
+
+      it('activeSeat returns "active seat"', () => {
+        assert.equal(
+          humanizeValueExpr({ ref: 'activeSeat' }, noLabels),
+          'active seat',
         );
       });
 

@@ -21,6 +21,11 @@ const makeDef = (): GameDef => ({
   constants: {},
   globalVars: [],
   perPlayerVars: [],
+  seats: [
+    { id: 'US' },
+    { id: 'ARVN' },
+    { id: 'NVA' },
+  ],
   zones: [
     { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
     { id: asZoneId('hand:0'), owner: 'player', visibility: 'owner', ordering: 'stack' },
@@ -540,5 +545,38 @@ describe('resolveRef', () => {
   it('resolves activePlayer for player 0', () => {
     const ctx = makeCtx({ activePlayer: asPlayerId(0) });
     assert.equal(resolveRef({ ref: 'activePlayer' }, ctx), 0);
+  });
+
+  it('resolves activeSeat from global seat definitions outside card-driven turn flow', () => {
+    const ctx = makeCtx({ activePlayer: asPlayerId(2) });
+    assert.equal(resolveRef({ ref: 'activeSeat' }, ctx), 'NVA');
+  });
+
+  it('resolves activeSeat from card-driven runtime seat order before global seat definitions', () => {
+    const ctx = makeCtx({
+      activePlayer: asPlayerId(2),
+      state: {
+        ...makeState(),
+        activePlayer: asPlayerId(2),
+        turnOrderState: {
+          type: 'cardDriven',
+          runtime: {
+            seatOrder: ['NVA', 'VC', 'ARVN', 'US'],
+            eligibility: { NVA: true, VC: true, ARVN: true, US: true },
+            currentCard: {
+              firstEligible: 'NVA',
+              secondEligible: 'VC',
+              actedSeats: [],
+              passedSeats: [],
+              nonPassCount: 0,
+              firstActionClass: null,
+            },
+            pendingEligibilityOverrides: [],
+            pendingFreeOperationGrants: [],
+          },
+        },
+      },
+    });
+    assert.equal(resolveRef({ ref: 'activeSeat' }, ctx), 'ARVN');
   });
 });

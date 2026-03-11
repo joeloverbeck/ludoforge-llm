@@ -7,7 +7,7 @@ import {
   resolveDeclaredActionParamDomainOptions,
 } from './declared-action-param-domain.js';
 import { createDiscoveryProbeEffectContext, createDiscoveryStrictEffectContext } from './effect-context.js';
-import type { EvalContext } from './eval-context.js';
+import type { ReadContext } from './eval-context.js';
 import { resolveEventEffectList } from './event-execution.js';
 import { buildMoveRuntimeBindings, resolvePipelineDecisionBindingsForMove } from './move-runtime-bindings.js';
 import {
@@ -24,7 +24,7 @@ import {
 } from './decision-sequence-satisfiability.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
-import { createSeatResolutionContext, type SeatResolutionContext } from './seat-resolution.js';
+import { createSeatResolutionContext, type SeatResolutionContext } from './identity.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import {
   toFreeOperationChoiceIllegalReason,
@@ -77,7 +77,7 @@ interface DiscoveryEffectExecutionResult {
 }
 
 const buildDiscoveryEffectContextBase = (
-  evalCtx: EvalContext,
+  evalCtx: ReadContext,
   move: Move,
 ): Parameters<typeof createDiscoveryStrictEffectContext>[0] => ({
   def: evalCtx.def,
@@ -98,7 +98,7 @@ const buildDiscoveryEffectContextBase = (
 
 const executeDiscoveryEffectsStrict = (
   effects: readonly EffectAST[],
-  evalCtx: EvalContext,
+  evalCtx: ReadContext,
   move: Move,
 ): DiscoveryEffectExecutionResult => {
   const baseContext = buildDiscoveryEffectContextBase(evalCtx, move);
@@ -123,7 +123,7 @@ const executeDiscoveryEffectsStrict = (
 
 const executeDiscoveryEffectsProbe = (
   effects: readonly EffectAST[],
-  evalCtx: EvalContext,
+  evalCtx: ReadContext,
   move: Move,
 ): DiscoveryEffectExecutionResult => {
   const baseContext = buildDiscoveryEffectContextBase(evalCtx, move);
@@ -432,7 +432,7 @@ const mapOptionsForPendingChoice = (
 
 const resolveActionParamPendingChoice = (
   action: ActionDef,
-  evalCtx: EvalContext,
+  evalCtx: ReadContext,
   partialMove: Move,
 ): ChoicePendingRequest | null => {
   let bindings: Readonly<Record<string, unknown>> = evalCtx.bindings;
@@ -495,7 +495,7 @@ const resolveActionParamPendingChoice = (
 
 type ExecuteDiscoveryEffects = (
   effects: readonly EffectAST[],
-  evalCtx: EvalContext,
+  evalCtx: ReadContext,
   move: Move,
 ) => DiscoveryEffectExecutionResult;
 
@@ -621,7 +621,7 @@ const legalChoicesWithPreparedContextInternal = (
       partialMove,
       resolvePipelineDecisionBindingsForMove(pipeline, partialMove.params),
     );
-    const pipelineEvalCtx: EvalContext = {
+    const pipelineEvalCtx: ReadContext = {
       ...evalCtx,
       bindings: pipelineBindings,
     };
@@ -639,7 +639,7 @@ const legalChoicesWithPreparedContextInternal = (
     let stageState = state;
     let stageBindings = pipelineEvalCtx.bindings;
     for (const stage of pipeline.stages) {
-      const stageEvalCtx: EvalContext = {
+      const stageEvalCtx: ReadContext = {
         ...pipelineEvalCtx,
         state: stageState,
         bindings: stageBindings,
@@ -677,7 +677,7 @@ const legalChoicesWithPreparedContextInternal = (
         });
       }
     }
-    const eventEvalCtx: EvalContext = {
+    const eventEvalCtx: ReadContext = {
       ...pipelineEvalCtx,
       state: stageState,
       bindings: stageBindings,

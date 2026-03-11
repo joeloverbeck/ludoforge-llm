@@ -6,7 +6,7 @@ import { selectChoiceOptionValuesByLegalityPrecedence, selectUniqueChoiceOptionV
 import { isDeclaredActionParamValueInDomain } from './declared-action-param-domain.js';
 import { deepEqual } from './deep-equal.js';
 import { evalCondition } from './eval-condition.js';
-import { createEvalRuntimeResources, type EvalContext } from './eval-context.js';
+import { createEvalRuntimeResources, type ReadContext } from './eval-context.js';
 import { createExecutionEffectContext } from './effect-context.js';
 import { applyEffects } from './effects.js';
 import { isEffectRuntimeReason } from './effect-error.js';
@@ -21,7 +21,7 @@ import {
   evaluatePipelinePredicateStatus,
   evaluateStagePredicateStatus,
 } from './pipeline-viability-policy.js';
-import { resolvePlayerIndexForTurnFlowSeat, type SeatResolutionContext } from './seat-resolution.js';
+import { resolvePlayerIndexForTurnFlowSeat, type SeatResolutionContext } from './identity.js';
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import {
   resolveFreeOperationDiscoveryAnalysis,
@@ -109,7 +109,7 @@ const toResolvedProbePendingGrant = (
   activeSeat: string,
   seatOrder: readonly string[],
   grantId: string,
-  evalContext?: EvalContext,
+  evalContext?: ReadContext,
 ): TurnFlowPendingFreeOperationGrant | null => {
   const resolvedSeats = resolveProbeGrantSeats(grant, activeSeat, seatOrder);
   if (resolvedSeats === null) {
@@ -136,7 +136,7 @@ const resolveUnusableSequenceProbeBlockers = (
   seatResolution: SeatResolutionContext,
   baseBlockers: readonly TurnFlowPendingFreeOperationGrant[],
   candidates: readonly TurnFlowFreeOperationGrantContract[],
-  evalContext?: EvalContext,
+  evalContext?: ReadContext,
 ): readonly TurnFlowPendingFreeOperationGrant[] => {
   const sequence = grant.sequence;
   if (sequence === undefined) {
@@ -729,7 +729,7 @@ export const isFreeOperationGrantUsableInCurrentState = (
   options?: {
     readonly sequenceProbeBlockers?: readonly TurnFlowPendingFreeOperationGrant[];
     readonly sequenceProbeCandidates?: readonly TurnFlowFreeOperationGrantContract[];
-    readonly evalContext?: EvalContext;
+    readonly evalContext?: ReadContext;
   },
 ): boolean => {
   const runtime = cardDrivenRuntime(state);

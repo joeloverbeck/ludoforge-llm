@@ -7,7 +7,7 @@ import {
 } from './turn-flow-eligibility.js';
 import type { GameDef, GameState, Move, MoveParamValue } from './types.js';
 import type { TurnFlowActionClass, TurnFlowInterruptMoveSelectorDef } from './types-turn-flow.js';
-import { createSeatResolutionContext, type SeatResolutionContext } from './seat-resolution.js';
+import { createSeatResolutionContext, type SeatResolutionContext } from './identity.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
 

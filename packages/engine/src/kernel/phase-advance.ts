@@ -15,7 +15,7 @@ import {
   createSeatResolutionContext,
   resolvePlayerIndexForTurnFlowSeat,
   type SeatResolutionContext,
-} from './seat-resolution.js';
+} from './identity.js';
 import { terminalResult } from './terminal.js';
 import type { GameDef, GameState, TriggerLogEntry } from './types.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';

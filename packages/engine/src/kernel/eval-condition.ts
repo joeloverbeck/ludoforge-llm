@@ -1,4 +1,4 @@
-import type { EvalContext } from './eval-context.js';
+import type { ReadContext } from './eval-context.js';
 import { typeMismatchError, zonePropNotFoundError } from './eval-error.js';
 import { booleanArityMessage, isNonEmptyArray } from './boolean-arity-policy.js';
 import { evalValue } from './eval-value.js';
@@ -25,7 +25,7 @@ function expectOrderingNumber(
   return value;
 }
 
-export function evalCondition(cond: ConditionAST, ctx: EvalContext): boolean {
+export function evalCondition(cond: ConditionAST, ctx: ReadContext): boolean {
   if (typeof cond === 'boolean') return cond;
   switch (cond.op) {
     case 'and':

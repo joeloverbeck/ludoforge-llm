@@ -1,6 +1,7 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { SeatCatalogPayload } from '../kernel/types-core.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
+import type { ExpansionPass } from './expansion-pass.js';
 import type {
   GameSpecDoc,
   GameSpecZoneDef,
@@ -100,6 +101,7 @@ export function expandZoneTemplates(doc: GameSpecDoc): {
     }
 
     // Expand: one zone per seat
+    const origin = { pass: 'zoneTemplates', template: tmpl.idPattern } as const;
     for (const seatId of seatIds) {
       const zoneDef: GameSpecZoneDef = {
         id: tmpl.idPattern.replace(/\{seat\}/g, seatId),
@@ -124,6 +126,7 @@ export function expandZoneTemplates(doc: GameSpecDoc): {
                 : tmpl.behavior,
             }
           : {}),
+        _origin: origin,
       };
       expanded.push(zoneDef);
     }
@@ -148,3 +151,9 @@ export function expandZoneTemplates(doc: GameSpecDoc): {
     diagnostics,
   };
 }
+
+export const zoneTemplatesPass: ExpansionPass = {
+  id: 'zoneTemplates',
+  dependsOn: [],
+  expand: expandZoneTemplates,
+};

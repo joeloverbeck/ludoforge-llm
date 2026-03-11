@@ -1,5 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
+import type { ExpansionPass } from './expansion-pass.js';
 import type {
   GameSpecDoc,
   GameSpecPhaseDef,
@@ -161,8 +162,12 @@ function expandPhaseArray(
 
     // Perform substitution
     const substituted = substituteParams(template.phase, entry.args) as Record<string, unknown>;
+    const phaseWithOrigin = {
+      ...substituted,
+      _origin: { pass: 'phaseTemplates', template: entry.fromTemplate },
+    };
     expanded.push({
-      phase: substituted as unknown as GameSpecPhaseDef,
+      phase: phaseWithOrigin as unknown as GameSpecPhaseDef,
       fromTemplate: entry.fromTemplate,
       inputIndex: entryIdx,
     });
@@ -291,3 +296,9 @@ export function expandPhaseTemplates(doc: GameSpecDoc): {
     diagnostics,
   };
 }
+
+export const phaseTemplatesPass: ExpansionPass = {
+  id: 'phaseTemplates',
+  dependsOn: [],
+  expand: expandPhaseTemplates,
+};

@@ -1,4 +1,5 @@
 import type { EffectAST, NumericValueExpr, PlayerSel, ZoneRef } from '../kernel/types.js';
+import { setVar, addVar, setActivePlayer, transferVar } from '../kernel/ast-builders.js';
 import {
   lowerNumericValueNode,
   lowerValueNode,
@@ -33,13 +34,11 @@ export function lowerSetVarEffect(
 
   if (scopeValue === 'global') {
     return {
-      value: {
-        setVar: {
-          scope: 'global',
-          var: varName,
-          value: value.value,
-        },
-      },
+      value: setVar({
+        scope: 'global',
+        var: varName,
+        value: value.value,
+      }),
       diagnostics,
     };
   }
@@ -51,14 +50,12 @@ export function lowerSetVarEffect(
       return { value: null, diagnostics };
     }
     return {
-      value: {
-        setVar: {
-          scope: 'zoneVar',
-          zone: zone.value,
-          var: varName,
-          value: value.value,
-        },
-      },
+      value: setVar({
+        scope: 'zoneVar',
+        zone: zone.value,
+        var: varName,
+        value: value.value,
+      }),
       diagnostics,
     };
   }
@@ -70,14 +67,12 @@ export function lowerSetVarEffect(
   }
 
   return {
-    value: {
-      setVar: {
-        scope: 'pvar',
-        player: player.value,
-        var: varName,
-        value: value.value,
-      },
-    },
+    value: setVar({
+      scope: 'pvar',
+      player: player.value,
+      var: varName,
+      value: value.value,
+    }),
     diagnostics,
   };
 }
@@ -102,13 +97,11 @@ export function lowerAddVarEffect(
 
   if (scopeValue === 'global') {
     return {
-      value: {
-        addVar: {
-          scope: 'global',
-          var: varName,
-          delta: delta.value,
-        },
-      },
+      value: addVar({
+        scope: 'global',
+        var: varName,
+        delta: delta.value,
+      }),
       diagnostics,
     };
   }
@@ -120,14 +113,12 @@ export function lowerAddVarEffect(
       return { value: null, diagnostics };
     }
     return {
-      value: {
-        addVar: {
-          scope: 'zoneVar',
-          zone: zone.value,
-          var: varName,
-          delta: delta.value,
-        },
-      },
+      value: addVar({
+        scope: 'zoneVar',
+        zone: zone.value,
+        var: varName,
+        delta: delta.value,
+      }),
       diagnostics,
     };
   }
@@ -139,14 +130,12 @@ export function lowerAddVarEffect(
   }
 
   return {
-    value: {
-      addVar: {
-        scope: 'pvar',
-        player: player.value,
-        var: varName,
-        delta: delta.value,
-      },
-    },
+    value: addVar({
+      scope: 'pvar',
+      player: player.value,
+      var: varName,
+      delta: delta.value,
+    }),
     diagnostics,
   };
 }
@@ -163,11 +152,9 @@ export function lowerSetActivePlayerEffect(
   }
 
   return {
-    value: {
-      setActivePlayer: {
-        player: player.value,
-      },
-    },
+    value: setActivePlayer({
+      player: player.value,
+    }),
     diagnostics: player.diagnostics,
   };
 }
@@ -291,16 +278,14 @@ export function lowerTransferVarEffect(
         : { scope: 'zoneVar', zone: toZone!, var: source.to.var };
 
   return {
-    value: {
-      transferVar: {
-        from: fromEndpoint,
-        to: toEndpoint,
-        amount: amount.value,
-        ...(min === undefined ? {} : { min }),
-        ...(max === undefined ? {} : { max }),
-        ...(source.actualBind === undefined ? {} : { actualBind: source.actualBind }),
-      },
-    },
+    value: transferVar({
+      from: fromEndpoint,
+      to: toEndpoint,
+      amount: amount.value,
+      ...(min === undefined ? {} : { min }),
+      ...(max === undefined ? {} : { max }),
+      ...(source.actualBind === undefined ? {} : { actualBind: source.actualBind }),
+    }),
     diagnostics,
   };
 }

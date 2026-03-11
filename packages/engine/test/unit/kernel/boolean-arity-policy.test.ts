@@ -35,11 +35,11 @@ describe('boolean-arity-policy', () => {
 
   it('keeps remaining callsites on shared non-empty-array guards', () => {
     const tokenFilterExprUtils = readKernelSource('src/kernel/token-filter-expr-utils.ts');
-    const validateGameDefBehavior = readKernelSource('src/kernel/validate-gamedef-behavior.ts');
+    const validateConditions = readKernelSource('src/kernel/validate-conditions.ts');
 
     assert.match(tokenFilterExprUtils, /\bisNonEmptyArray\s*\(/);
-    assert.match(validateGameDefBehavior, /\bisNonEmptyArray\s*\(/);
+    assert.match(validateConditions, /\bisNonEmptyArray\s*\(/);
     assert.doesNotMatch(tokenFilterExprUtils, /args\.length\s*===\s*0/);
-    assert.doesNotMatch(validateGameDefBehavior, /condition\.args\.length\s*===\s*0/);
+    assert.doesNotMatch(validateConditions, /condition\.args\.length\s*===\s*0/);
   });
 });

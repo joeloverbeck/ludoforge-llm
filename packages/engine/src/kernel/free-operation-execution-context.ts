@@ -1,4 +1,4 @@
-import type { EvalContext } from './eval-context.js';
+import type { ReadContext } from './eval-context.js';
 import { evalValue } from './eval-value.js';
 import type {
   FreeOperationExecutionContext,
@@ -12,7 +12,7 @@ const isScalar = (value: unknown): value is FreeOperationExecutionContextScalar 
 
 export const resolveFreeOperationExecutionContext = (
   executionContext: FreeOperationExecutionContext | undefined,
-  ctx: EvalContext,
+  ctx: ReadContext,
 ): ResolvedFreeOperationExecutionContext | undefined => {
   if (executionContext === undefined) {
     return undefined;

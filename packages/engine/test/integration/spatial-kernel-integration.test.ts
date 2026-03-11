@@ -14,7 +14,7 @@ import {
   initialState,
   legalMoves,
   validateGameDef,
-  type EvalContext,
+  type ReadContext,
   type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
@@ -90,7 +90,7 @@ const makeRuntimeState = (): GameState => ({
   markers: {},
 });
 
-const makeEvalCtx = (): EvalContext => {
+const makeEvalCtx = (): ReadContext => {
   const def = makeRuntimeDef();
   return makeEvalContext({
     def,

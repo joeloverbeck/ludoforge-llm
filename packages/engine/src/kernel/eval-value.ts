@@ -1,4 +1,4 @@
-import type { EvalContext } from './eval-context.js';
+import type { ReadContext } from './eval-context.js';
 import { evalCondition } from './eval-condition.js';
 import { divisionByZeroError, typeMismatchError } from './eval-error.js';
 import { evalQuery } from './eval-query.js';
@@ -17,7 +17,54 @@ function expectSafeInteger(value: unknown, message: string, context: Readonly<Re
   return value;
 }
 
-export function evalValue(expr: ValueExpr, ctx: EvalContext): ScalarValue | ScalarArrayValue {
+export function evalNumericValue(expr: ValueExpr, ctx: ReadContext, label?: string): number {
+  const result = evalValue(expr, ctx);
+  if (typeof result !== 'number') {
+    throw typeMismatchError(`Expected numeric value${label ? ` for ${label}` : ''}, got ${typeof result}`, {
+      expr,
+      result,
+      expectedType: 'number',
+    });
+  }
+  return result;
+}
+
+export function evalStringValue(expr: ValueExpr, ctx: ReadContext, label?: string): string {
+  const result = evalValue(expr, ctx);
+  if (typeof result !== 'string') {
+    throw typeMismatchError(`Expected string value${label ? ` for ${label}` : ''}, got ${typeof result}`, {
+      expr,
+      result,
+      expectedType: 'string',
+    });
+  }
+  return result;
+}
+
+export function evalBooleanValue(expr: ValueExpr, ctx: ReadContext, label?: string): boolean {
+  const result = evalValue(expr, ctx);
+  if (typeof result !== 'boolean') {
+    throw typeMismatchError(
+      `Expected boolean value${label ? ` for ${label}` : ''}, got ${typeof result}`,
+      { expr, result, expectedType: 'boolean' },
+    );
+  }
+  return result;
+}
+
+export function evalIntegerValue(expr: ValueExpr, ctx: ReadContext, label?: string): number {
+  const result = evalValue(expr, ctx);
+  if (typeof result !== 'number' || !Number.isSafeInteger(result)) {
+    throw typeMismatchError(`Expected integer value${label ? ` for ${label}` : ''}, got ${result}`, {
+      expr,
+      result,
+      expectedType: 'integer',
+    });
+  }
+  return result;
+}
+
+export function evalValue(expr: ValueExpr, ctx: ReadContext): ScalarValue | ScalarArrayValue {
   if (typeof expr === 'number' || typeof expr === 'boolean' || typeof expr === 'string') {
     return expr;
   }

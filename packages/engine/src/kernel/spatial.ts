@@ -1,7 +1,7 @@
 import type { Diagnostic } from './diagnostics.js';
 import type { ZoneId } from './branded.js';
 import { evalCondition } from './eval-condition.js';
-import type { EvalContext } from './eval-context.js';
+import type { ReadContext } from './eval-context.js';
 import type { ConditionAST, GameState, Token, ZoneDef } from './types.js';
 
 export interface AdjacencyGraph {
@@ -199,7 +199,7 @@ function evaluateVia(
   via: ConditionAST | undefined,
   candidateZone: ZoneId,
   state: GameState,
-  evalCtx: EvalContext,
+  evalCtx: ReadContext,
 ): boolean {
   if (via === undefined) {
     return true;
@@ -236,7 +236,7 @@ export function queryConnectedZones(
   graph: AdjacencyGraph,
   state: GameState,
   zone: ZoneId,
-  evalCtx: EvalContext,
+  evalCtx: ReadContext,
   via?: ConditionAST,
   options?: ConnectedQueryOptions,
 ): readonly ZoneId[] {

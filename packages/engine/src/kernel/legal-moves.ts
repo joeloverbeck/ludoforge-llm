@@ -2,7 +2,7 @@ import { evalCondition } from './eval-condition.js';
 import { resolveActionExecutor } from './action-executor.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { resolveDeclaredActionParamDomainOptions } from './declared-action-param-domain.js';
-import type { EvalContext, EvalRuntimeResources } from './eval-context.js';
+import type { ReadContext, EvalRuntimeResources } from './eval-context.js';
 import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import { isMoveDecisionSequenceAdmittedForLegalMove } from './move-decision-sequence.js';
@@ -44,7 +44,7 @@ import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import type { FreeOperationExecutionOverlay } from './free-operation-overlay.js';
 import { kernelRuntimeError } from './runtime-error.js';
-import { createSeatResolutionContext } from './seat-resolution.js';
+import { createSeatResolutionContext } from './identity.js';
 import { requireCardDrivenActiveSeat, validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { findPhaseDef } from './phase-lookup.js';
@@ -217,7 +217,7 @@ function makeEvalContext(
   options?: {
     readonly freeOperationOverlay?: FreeOperationExecutionOverlay;
   },
-): EvalContext {
+): ReadContext {
   return createEvalContext({
     def,
     adjacencyGraph,

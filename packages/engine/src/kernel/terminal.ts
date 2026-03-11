@@ -3,7 +3,7 @@ import { evalCondition } from './eval-condition.js';
 import { resolveSinglePlayerSel } from './resolve-selectors.js';
 import { evalValue } from './eval-value.js';
 import { kernelRuntimeError } from './runtime-error.js';
-import { createEvalContext, createEvalRuntimeResources, type EvalContext, type EvalRuntimeResources } from './eval-context.js';
+import { createEvalContext, createEvalRuntimeResources, type ReadContext, type EvalRuntimeResources } from './eval-context.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
@@ -17,7 +17,7 @@ function buildEvalContext(
   state: GameState,
   resources: EvalRuntimeResources,
   actorPlayer = state.activePlayer,
-): EvalContext {
+): ReadContext {
   return createEvalContext({
     def,
     adjacencyGraph,

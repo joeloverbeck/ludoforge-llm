@@ -10,7 +10,7 @@ import {
   evalValue,
   isEvalErrorCode,
   type ConditionAST,
-  type EvalContext,
+  type ReadContext,
   type GameDef,
   type SerializedGameState,
   type ValueExpr,
@@ -18,7 +18,7 @@ import {
 import { makeEvalContext } from '../../helpers/eval-context-test-helpers.js';
 import { readFixtureJson } from '../../helpers/fixture-reader.js';
 
-const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
+const makeCtx = (overrides?: Partial<ReadContext>): ReadContext => {
   const def = readFixtureJson<GameDef>('gamedef/eval-complex-valid.json');
   const serializedState = readFixtureJson<SerializedGameState>('trace/eval-state-snapshot.json');
 

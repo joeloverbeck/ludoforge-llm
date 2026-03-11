@@ -8,7 +8,7 @@ import {
   asZoneId,
   evalCondition,
   isEvalErrorCode,
-  type EvalContext,
+  type ReadContext,
   type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
@@ -51,7 +51,7 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-const makeCtx = (overrides?: Partial<EvalContext>): EvalContext =>
+const makeCtx = (overrides?: Partial<ReadContext>): ReadContext =>
   makeEvalContext({
     def: makeDef(),
     adjacencyGraph: buildAdjacencyGraph([]),

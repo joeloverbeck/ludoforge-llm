@@ -12,7 +12,7 @@ import {
   analyzeSeatOrderShape,
   resolveTurnFlowSeatForPlayerIndex,
   type SeatResolutionContext,
-} from './seat-resolution.js';
+} from './identity.js';
 import {
   isCardSeatOrderDistinctSeatCountValid,
 } from './turn-flow-seat-order-policy.js';

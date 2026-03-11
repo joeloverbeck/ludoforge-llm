@@ -1,5 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
+import type { ExpansionPass } from './expansion-pass.js';
 import type {
   GameSpecDataAsset,
   GameSpecDoc,
@@ -362,3 +363,9 @@ export function expandPieceGeneration(doc: GameSpecDoc): {
     diagnostics,
   };
 }
+
+export const pieceGenerationPass: ExpansionPass = {
+  id: 'pieceGeneration',
+  dependsOn: [],
+  expand: expandPieceGeneration,
+};

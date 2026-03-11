@@ -1,4 +1,4 @@
-import type { EvalContext } from './eval-context.js';
+import type { ReadContext } from './eval-context.js';
 import { evalValue } from './eval-value.js';
 import type { EffectAST } from './types.js';
 
@@ -43,7 +43,7 @@ export interface ChooseNCardinality {
 
 export function resolveChooseNCardinality(
   chooseN: ChooseNDef,
-  evalCtx: EvalContext,
+  evalCtx: ReadContext,
   onIssue: (issue: ChooseNCardinalityIssue) => never,
 ): ChooseNCardinality {
   const hasN = 'n' in chooseN && chooseN.n !== undefined;

@@ -1,5 +1,5 @@
 import { asPlayerId, asZoneId, isPlayerId, type PlayerId, type ZoneId } from './branded.js';
-import type { EvalContext } from './eval-context.js';
+import type { ReadContext } from './eval-context.js';
 import { EVAL_ERROR_DEFER_CLASS } from './eval-error-defer-class.js';
 import {
   missingBindingError,
@@ -16,7 +16,7 @@ import type { PlayerSel, ZoneSel } from './types.js';
 
 const OWNER_SPEC_SEPARATOR = ':';
 
-function listPlayers(ctx: Pick<EvalContext, 'state'>): readonly PlayerId[] {
+function listPlayers(ctx: Pick<ReadContext, 'state'>): readonly PlayerId[] {
   return Array.from({ length: ctx.state.playerCount }, (_, index) => asPlayerId(index));
 }
 
@@ -28,7 +28,7 @@ function sortAndDedupeZones(zones: readonly ZoneId[]): readonly ZoneId[] {
   return [...new Set(zones)].sort((left, right) => left.localeCompare(right));
 }
 
-function assertKnownPlayer(player: PlayerId, ctx: EvalContext, source: PlayerSel): void {
+function assertKnownPlayer(player: PlayerId, ctx: ReadContext, source: PlayerSel): void {
   const players = listPlayers(ctx);
   if (!players.includes(player)) {
     throw missingVarError(`Player selector resolved to unknown player id ${player}`, {
@@ -73,16 +73,16 @@ function parseOwnerSpec(ownerSpec: string): PlayerSel | null {
   return null;
 }
 
-function listZoneIds(ctx: Pick<EvalContext, 'def'>): readonly ZoneId[] {
+function listZoneIds(ctx: Pick<ReadContext, 'def'>): readonly ZoneId[] {
   return sortAndDedupeZones(ctx.def.zones.map((zone) => zone.id));
 }
 
-function listZoneCandidatesByBase(zoneBase: string, ctx: Pick<EvalContext, 'def'>): readonly ZoneId[] {
+function listZoneCandidatesByBase(zoneBase: string, ctx: Pick<ReadContext, 'def'>): readonly ZoneId[] {
   const prefix = `${zoneBase}${OWNER_SPEC_SEPARATOR}`;
   return listZoneIds(ctx).filter((zoneId) => zoneId.startsWith(prefix));
 }
 
-function resolveBoundZoneBinding(zoneBinding: ZoneSel, ctx: Pick<EvalContext, 'bindings'>): unknown {
+function resolveBoundZoneBinding(zoneBinding: ZoneSel, ctx: Pick<ReadContext, 'bindings'>): unknown {
   const boundValue = ctx.bindings[zoneBinding];
   if (boundValue === undefined) {
     throw missingBindingError(`Zone binding not found: ${zoneBinding}`, {
@@ -95,7 +95,7 @@ function resolveBoundZoneBinding(zoneBinding: ZoneSel, ctx: Pick<EvalContext, 'b
   return boundValue;
 }
 
-export function resolvePlayerSel(sel: PlayerSel, ctx: EvalContext): readonly PlayerId[] {
+export function resolvePlayerSel(sel: PlayerSel, ctx: ReadContext): readonly PlayerId[] {
   const players = listPlayers(ctx);
 
   if (sel === 'actor') {
@@ -161,7 +161,7 @@ export function resolvePlayerSel(sel: PlayerSel, ctx: EvalContext): readonly Pla
   return [asPlayerId(wrappedIndex)];
 }
 
-export function resolveSinglePlayerSel(sel: PlayerSel, ctx: EvalContext): PlayerId {
+export function resolveSinglePlayerSel(sel: PlayerSel, ctx: ReadContext): PlayerId {
   const resolved = resolvePlayerSel(sel, ctx);
   if (resolved.length !== 1) {
     throw selectorCardinalityError(
@@ -173,7 +173,7 @@ export function resolveSinglePlayerSel(sel: PlayerSel, ctx: EvalContext): Player
   return resolved[0]!;
 }
 
-export function resolveZoneSel(sel: ZoneSel, ctx: EvalContext): readonly ZoneId[] {
+export function resolveZoneSel(sel: ZoneSel, ctx: ReadContext): readonly ZoneId[] {
   if (sel.startsWith('$')) {
     const boundValue = resolveBoundZoneBinding(sel, ctx);
 
@@ -291,7 +291,7 @@ export function resolveZoneSel(sel: ZoneSel, ctx: EvalContext): readonly ZoneId[
   return sortAndDedupeZones(resolved);
 }
 
-export function resolveSingleZoneSel(sel: ZoneSel, ctx: EvalContext): ZoneId {
+export function resolveSingleZoneSel(sel: ZoneSel, ctx: ReadContext): ZoneId {
   const resolved = resolveZoneSel(sel, ctx);
   if (resolved.length !== 1) {
     throw selectorCardinalityError(
@@ -309,7 +309,7 @@ export function resolveSingleZoneSel(sel: ZoneSel, ctx: EvalContext): ZoneId {
   return resolved[0]!;
 }
 
-export function resolveMapSpaceId(zone: ZoneSel, ctx: Pick<EvalContext, 'bindings'>): ZoneId {
+export function resolveMapSpaceId(zone: ZoneSel, ctx: Pick<ReadContext, 'bindings'>): ZoneId {
   if (zone.startsWith('$')) {
     const bound = resolveBoundZoneBinding(zone, ctx);
     if (typeof bound !== 'string') {

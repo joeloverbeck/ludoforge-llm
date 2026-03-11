@@ -5,7 +5,7 @@ import {
   evaluateActionSelectorContracts,
   type ActionSelectorContractViolation,
 } from '../contracts/index.js';
-import { createEvalContext, createEvalRuntimeResources, type EvalContext, type EvalRuntimeResources } from './eval-context.js';
+import { createEvalContext, createEvalRuntimeResources, type ReadContext, type EvalRuntimeResources } from './eval-context.js';
 import { assertEvalRuntimeResourcesContract } from './eval-runtime-resources-contract.js';
 import type { FreeOperationExecutionOverlay } from './free-operation-overlay.js';
 import type { ActionApplicabilityNotApplicableReason } from './legality-reasons.js';
@@ -17,7 +17,7 @@ export type ActionApplicabilityPreflightResult =
   | {
       readonly kind: 'applicable';
       readonly executionPlayer: GameState['activePlayer'];
-      readonly evalCtx: EvalContext;
+      readonly evalCtx: ReadContext;
       readonly pipelineDispatch: ActionPipelineDispatch;
     }
   | {

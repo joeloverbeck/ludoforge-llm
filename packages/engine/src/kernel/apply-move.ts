@@ -19,7 +19,7 @@ import {
 import { resolveActionExecutor } from './action-executor.js';
 import { evalCondition } from './eval-condition.js';
 import { isDeclaredActionParamValueInDomain } from './declared-action-param-domain.js';
-import { createEvalContext, createEvalRuntimeResources, type EvalContext, type EvalRuntimeResources } from './eval-context.js';
+import { createEvalContext, createEvalRuntimeResources, type ReadContext, type EvalRuntimeResources } from './eval-context.js';
 import {
   buildMoveRuntimeBindings,
   deriveDecisionBindingsFromMoveParams,
@@ -55,7 +55,7 @@ import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { findPhaseDef } from './phase-lookup.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { toMoveExecutionPolicy } from './execution-policy.js';
-import { createSeatResolutionContext } from './seat-resolution.js';
+import { createSeatResolutionContext } from './identity.js';
 import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
@@ -385,7 +385,7 @@ const validateDecisionSequenceForMove = (
   }
 };
 
-const validateDeclaredActionParams = (action: ActionDef, evalCtx: EvalContext, move: Move): void => {
+const validateDeclaredActionParams = (action: ActionDef, evalCtx: ReadContext, move: Move): void => {
   for (const param of action.params) {
     if (!isDeclaredActionParamValueInDomain(param, move.params[param.name], evalCtx)) {
       throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_NOT_LEGAL_FOR_ACTION);
@@ -444,7 +444,7 @@ export type MoveViabilityProbeResult =
 interface MovePreflightContext {
   readonly action: ActionDef;
   readonly executionPlayer: GameState['activePlayer'];
-  readonly evalCtx: EvalContext;
+  readonly evalCtx: ReadContext;
   readonly baseBindings: Readonly<Record<string, MoveParamValue | boolean | string>>;
   readonly actionPipeline: ActionPipelineDef | undefined;
   readonly executionProfile: ReturnType<typeof toExecutionPipeline> | undefined;
@@ -510,7 +510,7 @@ const resolvePipelineCostValidationStatus = (
   move: Move,
   action: ActionDef,
   pipeline: ActionPipelineDef | undefined,
-  evalCtx: EvalContext,
+  evalCtx: ReadContext,
   isFreeOperationPipeline: boolean,
 ): boolean => {
   if (pipeline === undefined) {
@@ -955,7 +955,7 @@ const executeMoveAction = (
   } else {
     const insertAfter = move.compound?.timing === 'during' ? (move.compound.insertAfterStage ?? 0) : -1;
     for (const [stageIdx, stage] of executionProfile.resolutionStages.entries()) {
-      const stageEvalCtx: EvalContext = {
+      const stageEvalCtx: ReadContext = {
         ...preflight.evalCtx,
         state: effectState,
         bindings: progressedBindings,

@@ -1,5 +1,5 @@
 import { evalCondition } from './eval-condition.js';
-import type { EvalContext } from './eval-context.js';
+import type { ReadContext } from './eval-context.js';
 import { MISSING_BINDING_POLICY_CONTEXTS, shouldDeferMissingBinding } from './missing-binding-policy.js';
 import { pipelinePredicateEvaluationError } from './runtime-error.js';
 import type { ActionDef, ConditionAST } from './types.js';
@@ -12,7 +12,7 @@ export const evalActionPipelinePredicate = (
   profileId: string,
   predicate: PipelinePredicateName,
   condition: ConditionAST,
-  ctx: EvalContext,
+  ctx: ReadContext,
 ): boolean => {
   try {
     return evalCondition(condition, ctx);
@@ -26,7 +26,7 @@ export const evalActionPipelinePredicateForDiscovery = (
   profileId: string,
   predicate: PipelinePredicateName,
   condition: ConditionAST,
-  ctx: EvalContext,
+  ctx: ReadContext,
 ): DiscoveryPredicateState => {
   try {
     return evalCondition(condition, ctx) ? 'passed' : 'failed';

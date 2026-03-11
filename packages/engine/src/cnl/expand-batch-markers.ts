@@ -1,5 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
+import type { ExpansionPass } from './expansion-pass.js';
 import type {
   GameSpecBatchGlobalMarkerLattice,
   GameSpecDoc,
@@ -69,6 +70,7 @@ export function expandBatchMarkers(doc: GameSpecDoc): {
         id,
         states: entry.batch.states,
         defaultState: entry.batch.defaultState,
+        _origin: { pass: 'batchMarkers' },
       });
     }
   }
@@ -96,3 +98,9 @@ export function expandBatchMarkers(doc: GameSpecDoc): {
     diagnostics,
   };
 }
+
+export const batchMarkersPass: ExpansionPass = {
+  id: 'batchMarkers',
+  dependsOn: [],
+  expand: expandBatchMarkers,
+};

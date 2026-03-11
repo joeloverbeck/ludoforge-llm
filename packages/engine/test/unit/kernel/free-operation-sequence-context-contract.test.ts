@@ -38,13 +38,13 @@ describe('free-operation sequence-context canonical schema contract', () => {
     );
   });
 
-  it('requires validate-gamedef-behavior to import the canonical structural grant helper', () => {
-    const behaviorSource = readSourceFile('src/kernel/validate-gamedef-behavior.ts', 'validate-gamedef-behavior.ts');
+  it('requires validate-events to import the canonical structural grant helper', () => {
+    const eventsSource = readSourceFile('src/kernel/validate-events.ts', 'validate-events.ts');
 
     assert.equal(
-      hasDirectNamedImport(behaviorSource, canonicalContractModuleSpecifier, 'FreeOperationSequenceContextGrantLike'),
+      hasDirectNamedImport(eventsSource, canonicalContractModuleSpecifier, 'FreeOperationSequenceContextGrantLike'),
       true,
-      'validate-gamedef-behavior.ts must import FreeOperationSequenceContextGrantLike from the canonical contract module',
+      'validate-events.ts must import FreeOperationSequenceContextGrantLike from the canonical contract module',
     );
   });
 
@@ -69,13 +69,13 @@ describe('free-operation sequence-context canonical schema contract', () => {
     }
   });
 
-  it('forbids reintroducing local SequenceContextGrantLike definitions in validate-gamedef-behavior', () => {
-    const source = readKernelSource('src/kernel/validate-gamedef-behavior.ts');
+  it('forbids reintroducing local SequenceContextGrantLike definitions in validate-events', () => {
+    const source = readKernelSource('src/kernel/validate-events.ts');
 
     assert.equal(
       /interface\s+SequenceContextGrantLike\b/u.test(source),
       false,
-      'validate-gamedef-behavior.ts must not redeclare SequenceContextGrantLike locally',
+      'validate-events.ts must not redeclare SequenceContextGrantLike locally',
     );
   });
 

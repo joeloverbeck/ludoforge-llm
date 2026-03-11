@@ -12,7 +12,7 @@ import {
   normalizeSeatOrder,
   resolvePlayerIndexForTurnFlowSeat,
   type SeatResolutionContext,
-} from './seat-resolution.js';
+} from './identity.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import {
   collectGrantMoveZoneCandidates,

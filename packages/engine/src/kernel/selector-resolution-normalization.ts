@@ -3,7 +3,7 @@ import { isEvalError } from './eval-error.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
 import { resolveZoneRef } from './resolve-zone-ref.js';
 import type { EffectRuntimeReason } from './runtime-reasons.js';
-import type { EvalContext } from './eval-context.js';
+import type { ReadContext } from './eval-context.js';
 import type { InterpreterMode } from './interpreter-mode.js';
 import type { PlayerId, ZoneId } from './branded.js';
 import type { PlayerSel, ZoneRef } from './types.js';
@@ -65,7 +65,7 @@ export const normalizeSelectorResolutionError = (
 
 export const resolveSinglePlayerWithNormalization = (
   selector: PlayerSel,
-  evalCtx: EvalContext,
+  evalCtx: ReadContext,
   options: Readonly<{
     code: NormalizedResolverCode;
     effectType: NormalizedResolverEffectType;
@@ -110,7 +110,7 @@ export const resolveSinglePlayerWithNormalization = (
 
 export const resolvePlayersWithNormalization = (
   selector: PlayerSel,
-  evalCtx: EvalContext,
+  evalCtx: ReadContext,
   options: Readonly<{
     code: NormalizedResolverCode;
     effectType: NormalizedResolverEffectType;
@@ -140,7 +140,7 @@ export const resolvePlayersWithNormalization = (
 
 export const resolveZoneWithNormalization = (
   zoneRef: ZoneRef,
-  evalCtx: EvalContext,
+  evalCtx: ReadContext,
   options: Readonly<{
     code: NormalizedResolverCode;
     effectType: NormalizedResolverEffectType;

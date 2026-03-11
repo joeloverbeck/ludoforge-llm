@@ -1,10 +1,10 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { buildAdjacencyGraph, asPlayerId, asPhaseId, resolveChooseNCardinality, type EvalContext } from '../../src/kernel/index.js';
+import { buildAdjacencyGraph, asPlayerId, asPhaseId, resolveChooseNCardinality, type ReadContext } from '../../src/kernel/index.js';
 import { makeEvalContext as makeSharedEvalContext } from '../helpers/eval-context-test-helpers.js';
 
-const makeChooseNContext = (globalVars: Record<string, number | boolean> = {}): EvalContext => {
+const makeChooseNContext = (globalVars: Record<string, number | boolean> = {}): ReadContext => {
   return makeSharedEvalContext({
     def: {
     metadata: { id: 'choose-n-cardinality-test', players: { min: 1, max: 2 } },

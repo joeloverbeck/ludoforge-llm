@@ -9,7 +9,7 @@ import {
   asZoneId,
   isEvalErrorCode,
   resolveRef,
-  type EvalContext,
+  type ReadContext,
   type GameDef,
   type GameState,
   type Token,
@@ -94,7 +94,7 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-const makeCtx = (overrides?: Partial<EvalContext>): EvalContext =>
+const makeCtx = (overrides?: Partial<ReadContext>): ReadContext =>
   makeEvalContext({
     def: makeDef(),
     adjacencyGraph: buildAdjacencyGraph([]),

@@ -2,7 +2,7 @@ import {
   createCollector,
   createEvalContext as createKernelEvalContext,
   createEvalRuntimeResources,
-  type EvalContext,
+  type ReadContext,
   type EvalRuntimeResources,
   type ExecutionCollector,
 } from '../../src/kernel/index.js';
@@ -11,7 +11,7 @@ interface EvalRuntimeResourceTestOptions {
   readonly collector?: ExecutionCollector;
 }
 
-type EvalContextTestInput = Omit<EvalContext, 'collector' | 'resources'> & {
+type EvalContextTestInput = Omit<ReadContext, 'collector' | 'resources'> & {
   readonly resources?: EvalRuntimeResources;
   readonly collector?: ExecutionCollector;
 };
@@ -25,7 +25,7 @@ export const makeEvalContext = ({
   resources,
   collector,
   ...context
-}: EvalContextTestInput): EvalContext => {
+}: EvalContextTestInput): ReadContext => {
   const runtimeResources = resources ?? makeEvalRuntimeResources({
     ...(collector === undefined ? {} : { collector }),
   });

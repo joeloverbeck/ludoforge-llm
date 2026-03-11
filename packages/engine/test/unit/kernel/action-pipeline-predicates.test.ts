@@ -16,7 +16,7 @@ import {
   type GameDef,
   type GameState,
 } from '../../../src/kernel/index.js';
-import type { EvalContext } from '../../../src/kernel/eval-context.js';
+import type { ReadContext } from '../../../src/kernel/eval-context.js';
 import { makeEvalContext } from '../../helpers/eval-context-test-helpers.js';
 
 const makeDef = (): GameDef => ({
@@ -60,7 +60,7 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-const makeCtx = (def: GameDef, state: GameState): EvalContext => {
+const makeCtx = (def: GameDef, state: GameState): ReadContext => {
   return makeEvalContext({
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),

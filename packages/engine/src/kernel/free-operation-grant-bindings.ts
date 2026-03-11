@@ -10,7 +10,7 @@ import {
 import {
   createSeatResolutionContext,
   resolvePlayerIndexForTurnFlowSeat,
-} from './seat-resolution.js';
+} from './identity.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import type { GameDef, GameState, Move, TurnFlowPendingFreeOperationGrant } from './types.js';

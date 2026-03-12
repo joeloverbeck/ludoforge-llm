@@ -2484,6 +2484,66 @@ describe('event free-operation grants integration', () => {
     assert.equal(runtimeAfterSecond.freeOperationSequenceContexts, undefined);
   });
 
+  it('keeps requireUsableForEventPlay events playable when the witness move captures downstream sequence context', () => {
+    const baseDef = createSequenceContextDef();
+    const def = {
+      ...baseDef,
+      eventDecks: baseDef.eventDecks?.map((deck) => ({
+        ...deck,
+        cards: deck.cards.map((entry) =>
+          entry.id !== 'card-sequence-context'
+            ? entry
+            : {
+                ...entry,
+                unshaded: {
+                  ...entry.unshaded,
+                  freeOperationGrants: entry.unshaded?.freeOperationGrants?.map((grant, index) =>
+                    index !== 0
+                      ? grant
+                      : {
+                          ...grant,
+                          viabilityPolicy: 'requireUsableForEventPlay' as const,
+                        }),
+                },
+              }),
+      })),
+    } as GameDef & {
+      eventDecks: EventDeckDef[];
+    };
+
+    const start = initialState(def, 124, 2).state;
+    const eventMoves = legalMoves(def, start).filter(
+      (move) => String(move.actionId) === 'event' && move.params.eventCardId === 'card-sequence-context',
+    );
+    assert.equal(eventMoves.some((move) => move.params.side === 'unshaded' && move.params.branch === 'none'), true);
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-sequence-context', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const runtime = requireCardDrivenRuntime(afterEvent);
+    assert.deepEqual(
+      runtime.pendingFreeOperationGrants?.map((grant) => ({
+        sequenceIndex: grant.sequenceIndex,
+        viabilityPolicy: grant.viabilityPolicy,
+        sequenceContext: grant.sequenceContext,
+      })),
+      [
+        {
+          sequenceIndex: 0,
+          viabilityPolicy: 'requireUsableForEventPlay',
+          sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+        },
+        {
+          sequenceIndex: 1,
+          viabilityPolicy: undefined,
+          sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+        },
+      ],
+    );
+  });
+
   it('accepts side capture plus branch require for event free-operation grants and enforces the captured zone at runtime', () => {
     const def = createSequenceContextDef();
     const start = initialState(def, 122, 2).state;

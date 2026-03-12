@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None in this ticket beyond depending on ENG-227
-**Deps**: tickets/ENG-227-constrained-event-grant-viability-preflight.md, data/games/fire-in-the-lake/41-events/065-096.md, packages/engine/test/integration/fitl-events-an-loc.test.ts
+**Deps**: archive/tickets/ENG-227-constrained-event-grant-viability-preflight.md, data/games/fire-in-the-lake/41-events/065-096.md, packages/engine/test/integration/fitl-events-an-loc.test.ts
 
 ## Problem
 

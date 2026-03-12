@@ -10,11 +10,13 @@ import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 import {
+  applyMove,
   ILLEGAL_MOVE_REASONS,
   asActionId,
   asPlayerId,
   asTokenId,
   initialState,
+  legalMoves,
   probeMoveViability,
   type GameDef,
   type GameState,
@@ -169,7 +171,7 @@ describe('FITL card-71 An Loc', () => {
         sequence: { batch: 'an-loc-nva', step: 0 },
         uses: undefined,
         actionIds: ['march'],
-        viabilityPolicy: undefined,
+        viabilityPolicy: 'requireUsableForEventPlay',
         allowDuringMonsoon: true,
         completionPolicy: 'required',
         outcomePolicy: 'mustChangeGameplayState',
@@ -263,6 +265,43 @@ describe('FITL card-71 An Loc', () => {
     if (result.code === 'ILLEGAL_MOVE') {
       assert.equal(result.context.reason, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE);
     }
+  });
+
+  it('suppresses shaded when no legal troop March into a City witness exists', () => {
+    const def = DEF;
+    const setup = setupCardDrivenState(
+      def,
+      710031,
+      'nva',
+      {
+        [QUANG_TRI]: [
+          makeToken('an-loc-no-troop-g1', 'guerrilla', 'NVA', { activity: 'underground' }),
+        ],
+        [HUE]: [
+          makeToken('an-loc-no-troop-us-1', 'troops', 'US'),
+        ],
+      },
+      { monsoon: true },
+    );
+
+    const moves = legalMoves(def, setup).filter(
+      (move) =>
+        String(move.actionId) === 'event'
+        && move.params.eventCardId === CARD_ID
+        && move.params.side === 'shaded',
+    );
+    assert.equal(moves.length, 0);
+
+    assert.throws(
+      () => applyMove(def, setup, buildCardMove(def, 'shaded')),
+      (error: unknown) => {
+        if (!(error instanceof Error)) {
+          return false;
+        }
+        const details = error as Error & { readonly reason?: string };
+        return details.reason === ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE;
+      },
+    );
   });
 
   it('shaded grants a zero-cost Monsoon March into exactly one City and then forces two same-city Attacks', () => {

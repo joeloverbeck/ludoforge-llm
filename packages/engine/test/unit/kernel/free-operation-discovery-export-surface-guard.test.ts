@@ -13,6 +13,7 @@ const expectedDiscoveryExports = [
   'isFreeOperationApplicableForMove',
   'isFreeOperationAllowedDuringMonsoonForMove',
   'isFreeOperationGrantedForMove',
+  'isFreeOperationPotentiallyGrantedForMove',
 ] as const;
 
 describe('free-operation discovery export surface architecture guard', () => {

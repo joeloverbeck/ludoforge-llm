@@ -398,24 +398,69 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
     assert.deepEqual(card?.unshaded?.effects, [
       { pushInterruptPhase: { phase: 'commitment', resumePhase: 'main' } },
     ]);
-    assert.deepEqual(card?.shaded?.effects, [
-      {
-        removeByPriority: {
-          budget: 3,
-          groups: [
-            {
-                bind: '$usAvailablePiece',
-                over: {
-                  query: 'tokensInZone',
-                  zone: 'available-US:none',
-                  filter: { prop: 'faction', op: 'eq', value: 'US' },
-                },
-                to: { zoneExpr: 'out-of-play-US:none' },
-              },
-          ],
+    assert.equal(card?.shaded?.effects?.length, 2);
+    const choosePieces = (card?.shaded?.effects?.[0] as { chooseN?: Record<string, unknown> } | undefined)?.chooseN;
+    assert.notEqual(choosePieces, undefined);
+    assert.equal(choosePieces?.bind, '$greatSocietyUsPieces');
+    assert.deepEqual(choosePieces?.chooser, { id: 0 });
+    assert.deepEqual(choosePieces?.options, {
+      query: 'tokensInZone',
+      zone: 'available-US:none',
+      filter: { prop: 'faction', op: 'eq', value: 'US' },
+    });
+    assert.deepEqual(choosePieces?.min, {
+      op: 'min',
+      left: 3,
+      right: {
+        aggregate: {
+          op: 'count',
+          query: {
+            query: 'tokensInZone',
+            zone: 'available-US:none',
+            filter: { prop: 'faction', op: 'eq', value: 'US' },
+          },
         },
       },
-    ]);
+    });
+    assert.deepEqual(choosePieces?.max, {
+      op: 'min',
+      left: 3,
+      right: {
+        aggregate: {
+          op: 'count',
+          query: {
+            query: 'tokensInZone',
+            zone: 'available-US:none',
+            filter: { prop: 'faction', op: 'eq', value: 'US' },
+          },
+        },
+      },
+    });
+    assert.deepEqual(card?.shaded?.effects?.[1], {
+      forEach: {
+        bind: '$greatSocietyUsPiece',
+        over: {
+          query: 'binding',
+          name: '$greatSocietyUsPieces',
+        },
+        effects: [
+          {
+            moveToken: {
+              token: '$greatSocietyUsPiece',
+              from: {
+                zoneExpr: {
+                  ref: 'tokenZone',
+                  token: '$greatSocietyUsPiece',
+                },
+              },
+              to: {
+                zoneExpr: 'out-of-play-US:none',
+              },
+            },
+          },
+        ],
+      },
+    });
   });
 
   it('encodes card 90 (Walt Rostow) with anywhere-ARVN placement and immediate no-base redeploy structure', () => {

@@ -520,6 +520,7 @@ export interface EffectKindMap {
       readonly sequence?: {
         readonly batch: string;
         readonly step: number;
+        readonly progressionPolicy?: import('../contracts/index.js').TurnFlowFreeOperationGrantProgressionPolicy;
       };
       readonly sequenceContext?: FreeOperationSequenceContextContract;
       readonly executionContext?: FreeOperationExecutionContext;

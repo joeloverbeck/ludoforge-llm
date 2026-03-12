@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — validator logic in validate-events.ts and validate-effects.ts
-**Deps**: FREEOPEORDPROCON-001 (needs the `progressionPolicy` field on the contract surface)
+**Deps**: archive/tickets/FREEOPEORDPROCON-001-progression-policy-contract-surface.md
 
 ## Problem
 
@@ -57,7 +57,7 @@ Ensure `validateFreeOperationGrantContract` also checks the cross-step context r
 
 - Runtime behavior changes (readiness engine, emission logic) — those are FREEOPEORDPROCON-004 and FREEOPEORDPROCON-005.
 - MACV data changes — that is FREEOPEORDPROCON-006.
-- The mixed-policy-within-batch violation — that is already in FREEOPEORDPROCON-001's contract violation collector.
+- The mixed-policy-within-batch violation — that is already handled by FREEOPEORDPROCON-001's cross-grant validation layer.
 - Schema/type changes — those are in tickets 001 and 002.
 
 ## Acceptance Criteria

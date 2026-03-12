@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel readiness logic
-**Deps**: FREEOPEORDPROCON-002 (needs `skippedStepIndices` on batch context type)
+**Deps**: tickets/FREEOPEORDPROCON-002-batch-context-runtime-state.md
 
 ## Problem
 

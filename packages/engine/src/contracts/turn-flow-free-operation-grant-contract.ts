@@ -66,6 +66,23 @@ export const isTurnFlowFreeOperationGrantPostResolutionTurnFlow = (
 ): value is TurnFlowFreeOperationGrantPostResolutionTurnFlow =>
   TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_SET.has(value);
 
+export const TURN_FLOW_FREE_OPERATION_GRANT_PROGRESSION_POLICY_VALUES = [
+  'strictInOrder',
+  'implementWhatCanInOrder',
+] as const;
+
+export type TurnFlowFreeOperationGrantProgressionPolicy =
+  (typeof TURN_FLOW_FREE_OPERATION_GRANT_PROGRESSION_POLICY_VALUES)[number];
+
+const TURN_FLOW_FREE_OPERATION_GRANT_PROGRESSION_POLICY_SET = new Set<string>(
+  TURN_FLOW_FREE_OPERATION_GRANT_PROGRESSION_POLICY_VALUES,
+);
+
+export const isTurnFlowFreeOperationGrantProgressionPolicy = (
+  value: string,
+): value is TurnFlowFreeOperationGrantProgressionPolicy =>
+  TURN_FLOW_FREE_OPERATION_GRANT_PROGRESSION_POLICY_SET.has(value);
+
 export type TurnFlowFreeOperationGrantContractCandidate = {
   readonly operationClass?: string;
   readonly uses?: number;
@@ -78,6 +95,7 @@ export type TurnFlowFreeOperationGrantContractCandidate = {
   readonly sequence?: {
     readonly batch?: unknown;
     readonly step?: unknown;
+    readonly progressionPolicy?: unknown;
   } | null;
   readonly sequenceContext?: {
     readonly captureMoveZoneCandidatesAs?: unknown;
@@ -141,6 +159,7 @@ export type TurnFlowFreeOperationGrantContractViolationCode =
   | 'completionPolicyInvalid'
   | 'outcomePolicyInvalid'
   | 'postResolutionTurnFlowInvalid'
+  | 'progressionPolicyInvalid'
   | 'requiredPostResolutionTurnFlowMissing'
   | 'postResolutionTurnFlowRequiresRequiredCompletionPolicy'
   | 'sequenceBatchInvalid'
@@ -331,6 +350,23 @@ export const collectTurnFlowFreeOperationGrantContractViolations = (
       code: 'sequenceStepInvalid',
       path: ['sequence', 'step'],
       message: 'sequence.step must be a non-negative integer.',
+    });
+  }
+
+  if (
+    grant.sequence !== undefined
+    && grant.sequence !== null
+    && grant.sequence.progressionPolicy !== undefined
+    && grant.sequence.progressionPolicy !== null
+    && (
+      typeof grant.sequence.progressionPolicy !== 'string'
+      || !isTurnFlowFreeOperationGrantProgressionPolicy(grant.sequence.progressionPolicy)
+    )
+  ) {
+    violations.push({
+      code: 'progressionPolicyInvalid',
+      path: ['sequence', 'progressionPolicy'],
+      message: `sequence.progressionPolicy is invalid: "${String(grant.sequence.progressionPolicy)}".`,
     });
   }
 

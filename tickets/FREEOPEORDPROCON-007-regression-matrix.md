@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: No — test-only
-**Deps**: FREEOPEORDPROCON-004 (readiness engine), FREEOPEORDPROCON-005 (emission logic), FREEOPEORDPROCON-006 (MACV rework)
+**Deps**: tickets/FREEOPEORDPROCON-004-sequence-readiness-engine.md, tickets/FREEOPEORDPROCON-005-emission-time-skip-evaluation.md, tickets/FREEOPEORDPROCON-006-macv-data-rework.md
 
 ## Problem
 

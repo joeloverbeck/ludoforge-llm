@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel types, Zod runtime schema, JSON schema artifacts
-**Deps**: FREEOPEORDPROCON-001 (needs the `progressionPolicy` type)
+**Deps**: archive/tickets/FREEOPEORDPROCON-001-progression-policy-contract-surface.md
 
 ## Problem
 

@@ -14,6 +14,7 @@ import {
   TURN_FLOW_INTERRUPT_SELECTOR_EMPTY_MESSAGE,
   TURN_FLOW_ACTION_CLASS_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES,
+  TURN_FLOW_FREE_OPERATION_GRANT_PROGRESSION_POLICY_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
   TURN_FLOW_DURATION_VALUES,
   TURN_FLOW_WINDOW_USAGE_VALUES,
@@ -88,6 +89,7 @@ export const EventCardFreeOperationGrantSchema = createTurnFlowFreeOperationGran
     .object({
       batch: StringSchema.min(1),
       step: IntegerSchema.min(0),
+      progressionPolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_PROGRESSION_POLICY_VALUES).optional(),
     })
     .strict(),
   id: StringSchema.min(1).optional(),

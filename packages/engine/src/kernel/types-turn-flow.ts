@@ -13,6 +13,8 @@ export type TurnFlowFreeOperationGrantOutcomePolicy =
   import('../contracts/index.js').TurnFlowFreeOperationGrantOutcomePolicy;
 export type TurnFlowFreeOperationGrantPostResolutionTurnFlow =
   import('../contracts/index.js').TurnFlowFreeOperationGrantPostResolutionTurnFlow;
+export type TurnFlowFreeOperationGrantProgressionPolicy =
+  import('../contracts/index.js').TurnFlowFreeOperationGrantProgressionPolicy;
 
 export interface TurnFlowFreeOperationGrantContract {
   readonly id?: string;
@@ -31,6 +33,7 @@ export interface TurnFlowFreeOperationGrantContract {
   readonly sequence?: {
     readonly batch: string;
     readonly step: number;
+    readonly progressionPolicy?: TurnFlowFreeOperationGrantProgressionPolicy;
   };
   readonly sequenceContext?: FreeOperationSequenceContextContract;
   readonly executionContext?: import('./types-ast.js').FreeOperationExecutionContext;

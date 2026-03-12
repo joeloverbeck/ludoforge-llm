@@ -9,6 +9,7 @@ import type {
   GameDef,
 } from './types.js';
 import type { FreeOperationSequenceContextGrantLike } from './free-operation-sequence-context-contract.js';
+import type { TurnFlowFreeOperationGrantProgressionPolicy } from '../contracts/index.js';
 import {
   appendEventConditionSurfacePath,
   CONDITION_SURFACE_SUFFIX,
@@ -61,6 +62,14 @@ type EffectFreeOperationGrantValidationScopeEntry = Readonly<{
   readonly path: string;
 }>;
 
+type SequencedFreeOperationGrant = {
+  readonly sequence?: {
+    readonly batch?: unknown;
+    readonly step?: unknown;
+    readonly progressionPolicy?: unknown;
+  };
+};
+
 const freeOperationGrantsCanCoissue = (
   left: { readonly sequence?: { readonly batch?: unknown; readonly step?: unknown } },
   right: { readonly sequence?: { readonly batch?: unknown; readonly step?: unknown } },
@@ -69,6 +78,55 @@ const freeOperationGrantsCanCoissue = (
     return true;
   }
   return left.sequence.batch !== right.sequence.batch || left.sequence.step === right.sequence.step;
+};
+
+const DEFAULT_FREE_OPERATION_PROGRESSION_POLICY: TurnFlowFreeOperationGrantProgressionPolicy = 'strictInOrder';
+
+const normalizeFreeOperationGrantProgressionPolicy = (
+  grant: SequencedFreeOperationGrant,
+): TurnFlowFreeOperationGrantProgressionPolicy => {
+  const progressionPolicy = grant.sequence?.progressionPolicy;
+  return progressionPolicy === 'implementWhatCanInOrder'
+    ? progressionPolicy
+    : DEFAULT_FREE_OPERATION_PROGRESSION_POLICY;
+};
+
+const validateMixedProgressionPolicyWithinBatch = <TGrant extends SequencedFreeOperationGrant>(
+  diagnostics: Diagnostic[],
+  grants: readonly Readonly<{ readonly grant: TGrant; readonly path: string }>[],
+): void => {
+  const byBatch = new Map<string, readonly Readonly<{ readonly grant: TGrant; readonly path: string }>[]>();
+  for (const entry of grants) {
+    const batch = entry.grant.sequence?.batch;
+    if (typeof batch !== 'string' || batch.length === 0) {
+      continue;
+    }
+    byBatch.set(batch, [...(byBatch.get(batch) ?? []), entry]);
+  }
+
+  for (const [batch, batchEntries] of byBatch.entries()) {
+    if (batchEntries.length < 2) {
+      continue;
+    }
+    const baselinePolicy = normalizeFreeOperationGrantProgressionPolicy(batchEntries[0]!.grant);
+    const offenders = batchEntries.filter(
+      (entry) => normalizeFreeOperationGrantProgressionPolicy(entry.grant) !== baselinePolicy,
+    );
+    if (offenders.length === 0) {
+      continue;
+    }
+    for (const offender of batchEntries) {
+      diagnostics.push({
+        code: 'FREE_OPERATION_SEQUENCE_MIXED_PROGRESSION_POLICY',
+        path: `${offender.path}.sequence.progressionPolicy`,
+        severity: 'error',
+        message:
+          `freeOperationGrant sequence batch "${batch}" mixes progressionPolicy values; every step in a batch must resolve to the same policy.`,
+        suggestion:
+          'Set sequence.progressionPolicy consistently across the whole batch, or omit it everywhere to use the default strictInOrder contract.',
+      });
+    }
+  }
 };
 
 const validateAmbiguousFreeOperationGrantOverlap = <TGrant extends {
@@ -141,6 +199,7 @@ const validateAmbiguousEventFreeOperationGrantOverlap = (
     overlapSurfaceKey: (grant) => eventFreeOperationGrantOverlapSurfaceKey(def, grant),
     equivalenceKey: (grant) => eventFreeOperationGrantEquivalenceKey(def, grant),
   });
+  validateMixedProgressionPolicyWithinBatch(diagnostics, grants);
 };
 
 const validateAmbiguousEffectIssuedFreeOperationGrantOverlap = (
@@ -152,6 +211,7 @@ const validateAmbiguousEffectIssuedFreeOperationGrantOverlap = (
     overlapSurfaceKey: (grant) => effectIssuedFreeOperationGrantOverlapSurfaceKey(def, grant),
     equivalenceKey: (grant) => effectIssuedFreeOperationGrantEquivalenceKey(def, grant),
   });
+  validateMixedProgressionPolicyWithinBatch(diagnostics, grants);
 };
 
 export const validatePostAdjacencyBehavior = (

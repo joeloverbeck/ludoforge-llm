@@ -95,7 +95,7 @@ Do not duplicate or drift this procedure in other files; update `docs/archival-w
 <!-- gitnexus:start -->
 # GitNexus MCP
 
-This project is indexed by GitNexus as **ludoforge-llm** (9172 symbols, 26547 relationships, 300 execution flows).
+This project is indexed by GitNexus as **ludoforge-llm** (9185 symbols, 26585 relationships, 300 execution flows).
 
 ## Always Start Here
 

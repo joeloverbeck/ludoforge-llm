@@ -66,7 +66,7 @@ Add integration and/or unit coverage proving that:
 
 ### 5. Preserve `ROKs` as a reevaluation client, not a one-off workaround
 
-Do not bake card-70-specific escape hatches into the kernel. Track card-70 authored-data follow-up separately in `tickets/FITL70-001-reevaluate-roks-after-engine-rework.md`.
+Do not bake card-70-specific escape hatches into the kernel. Track card-70 authored-data follow-up separately in `archive/tickets/FITLEVENTARCH/FITL70-001-reevaluate-roks-after-engine-rework.md`.
 
 ## Files to Touch
 

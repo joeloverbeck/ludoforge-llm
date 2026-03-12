@@ -8,7 +8,7 @@
 
 ## Problem
 
-`TurnFlowFreeOperationSequenceBatchContext` still stores only `capturedMoveZonesByKey`, and batch context is created opportunistically when a consumed grant captures move-zone candidates. That is too weak for the ordered-progression architecture in [specs/60-free-operation-ordered-progression-contract.md](/home/joeloverbeck/projects/ludoforge-llm/specs/60-free-operation-ordered-progression-contract.md):
+`TurnFlowFreeOperationSequenceBatchContext` still stores only `capturedMoveZonesByKey`, and batch context is created opportunistically when a consumed grant captures move-zone candidates. That is too weak for the ordered-progression architecture in [archive/specs/60-free-operation-ordered-progression-contract.md](/home/joeloverbeck/projects/ludoforge-llm/archive/specs/60-free-operation-ordered-progression-contract.md):
 
 1. later tickets need a canonical per-batch place to read/write ordered progression state
 2. context creation tied to capture-side effects is an architectural leak

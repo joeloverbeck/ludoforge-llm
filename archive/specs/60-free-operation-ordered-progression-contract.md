@@ -394,6 +394,15 @@ If implemented, this spec should become the sole architectural path for partial 
 ## Outcome
 
 - Completion date: 2026-03-12
-- What changed: the engine now supports explicit free-operation sequence `progressionPolicy` authoring (`strictInOrder` and `implementWhatCanInOrder`) across contracts, compiler lowering, validation, runtime batch context, readiness/progression logic, and schema artifacts. MACV authoring in `data/games/fire-in-the-lake/41-events/065-096.md` was reworked to use the generic `implementWhatCanInOrder` contract, and regression coverage was added across unit and integration suites for strict ordering, skipped-step progression, validation failures, and event/effect parity.
-- Deviations from original plan: implementation landed as a ticketed workstream series (`FREEOPEORDPROCON-001` through `FREEOPEORDPROCON-008`, with `-004` archived during the series) rather than as one monolithic change. Sequence readiness/progression behavior was centralized in `packages/engine/src/kernel/free-operation-sequence-progression.ts`, and the final series also folded in related discovery/status-unification and required-seat parity cleanup needed to keep runtime behavior coherent.
-- Verification results: committed tests cover schema parsing/validation, batch context state, readiness behavior, event-issued and effect-issued parity, and MACV regression scenarios in `packages/engine/test/unit/` and `packages/engine/test/integration/`, including `fitl-event-free-operation-grants.test.ts`, `fitl-events-macv.test.ts`, and `free-operation-grant-sequence-readiness.test.ts`.
+- What actually changed:
+  - Added the shared `sequence.progressionPolicy` contract surface with `strictInOrder` and `implementWhatCanInOrder` across types, schemas, lowering, and validation.
+  - Extended runtime batch context to carry canonical progression metadata, including `progressionPolicy` and `skippedStepIndices`, for both event-issued and effect-issued free-operation batches.
+  - Implemented shared emission-time skip evaluation and canonical sequence-status handling so ordered progression, readiness, and blocker reporting stay aligned.
+  - Reworked FITL card 69 (MACV) data to use the generic `implementWhatCanInOrder` policy and expanded regression coverage around skip behavior and required-seat parity.
+  - Landed the remaining regression-matrix coverage in the existing generic integration harness instead of a duplicate test matrix.
+- Deviations from original plan:
+  - Task 60.3 did not land exactly as originally written. An intermediate ticket retired the first readiness-layer proposal, then later work reinstated a narrower generic readiness/status fix after implementation exposed a real consumed-step blocking bug.
+  - The regression matrix was completed by extending existing generic and MACV-specific tests rather than by introducing a separate new matrix file.
+- Verification results:
+  - The implementation ticket outcomes record passing engine unit, integration, and e2e coverage, including targeted MACV and progression regression tests.
+  - `pnpm turbo test`, `pnpm -F @ludoforge/engine test:e2e`, `pnpm turbo typecheck`, `pnpm turbo lint`, and `pnpm turbo schema:artifacts` were all recorded as passing during the completion of the ticket series, with lint only reporting pre-existing repository warnings.

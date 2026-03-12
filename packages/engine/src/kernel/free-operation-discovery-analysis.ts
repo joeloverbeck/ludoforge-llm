@@ -378,3 +378,50 @@ export const isFreeOperationGrantedForMove = (
   }
   return analysis.zoneMatchedGrants.length > 0;
 };
+
+export const isFreeOperationPotentiallyGrantedForMove = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  seatResolution: SeatResolutionContext,
+): boolean => {
+  if (move.freeOperation !== true || state.turnOrderState.type !== 'cardDriven') {
+    return move.freeOperation !== true;
+  }
+  const analysis = analyzeFreeOperationGrantMatch(def, state, move, seatResolution, {
+    evaluateZoneFilters: false,
+  });
+  if (analysis === null) {
+    return false;
+  }
+  return analysis.sequenceReadyGrants.some((grant) => {
+    try {
+      return doesGrantPotentiallyAuthorizeMove(def, state, analysis.pending, grant, move);
+    } catch (cause) {
+      const turnFlowCauseCode = (
+        typeof cause === 'object'
+        && cause !== null
+        && 'code' in cause
+        && (cause as { readonly code?: unknown }).code === 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED'
+      )
+        ? (
+            typeof (cause as { readonly context?: unknown }).context === 'object'
+            && (cause as { readonly context?: unknown }).context !== null
+            && 'causeCode' in ((cause as { readonly context?: unknown }).context as Record<string, unknown>)
+              ? (((cause as { readonly context?: unknown }).context as Record<string, unknown>).causeCode as string | undefined)
+              : undefined
+          )
+        : undefined;
+      const underlyingCause = isTurnFlowErrorCode(cause, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED')
+        ? (cause as Error & { cause?: unknown }).cause
+        : cause;
+      if (turnFlowCauseCode === 'MISSING_BINDING' || turnFlowCauseCode === 'MISSING_VAR') {
+        return true;
+      }
+      if (isEvalErrorCode(underlyingCause, 'MISSING_BINDING') || isEvalErrorCode(underlyingCause, 'MISSING_VAR')) {
+        return true;
+      }
+      throw cause;
+    }
+  });
+};

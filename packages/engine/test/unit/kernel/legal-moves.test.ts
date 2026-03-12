@@ -3335,6 +3335,46 @@ phase: [asPhaseId('main')],
     );
   });
 
+  it('27a. surfaces satisfiable choiceful event moves with multiple legal completions', () => {
+    const { def, state, actionId } = makeEventLegalMovesFixture({
+      id: 'event-choiceful-sat',
+      title: 'Choiceful satisfiable event',
+      sideMode: 'single',
+      unshaded: {
+        effects: [
+          {
+            chooseN: {
+              internalDecisionId: 'decision:$targets',
+              bind: '$targets',
+              options: { query: 'enums', values: ['a', 'b', 'c'] },
+              min: 2,
+              max: 2,
+            },
+          } as GameDef['actions'][number]['effects'][number],
+        ],
+      },
+    });
+
+    const moves = legalMoves(def, state);
+    assert.deepEqual(moves, [
+      {
+        actionId,
+        params: {
+          eventCardId: 'event-choiceful-sat',
+          eventDeckId: 'deck',
+          side: 'unshaded',
+        },
+      },
+    ]);
+
+    const pending = resolveMoveDecisionSequence(def, state, moves[0]!, { choose: () => undefined });
+    assert.equal(pending.complete, false);
+    assert.equal(pending.nextDecision?.type, 'chooseN');
+    assert.equal(pending.nextDecision?.min, 2);
+    assert.equal(pending.nextDecision?.max, 2);
+    assert.equal(pending.nextDecision?.options.length, 3);
+  });
+
   it('28. excludes event moves when event decision sequence is unsatisfiable', () => {
     const { def, state } = makeEventLegalMovesFixture({
       id: 'event-unsat',

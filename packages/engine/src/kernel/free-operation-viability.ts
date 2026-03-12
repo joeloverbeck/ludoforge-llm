@@ -12,6 +12,7 @@ import { applyEffects } from './effects.js';
 import { isEffectRuntimeReason } from './effect-error.js';
 import {
   collectGrantAwareMoveZoneCandidates,
+  resolveGrantMoveActionClassOverride,
 } from './free-operation-grant-bindings.js';
 import {
   resolveMoveDecisionSequence,
@@ -28,6 +29,7 @@ import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolu
 import {
   resolveFreeOperationDiscoveryAnalysis,
   isFreeOperationApplicableForMove,
+  isFreeOperationPotentiallyGrantedForMove,
   isFreeOperationGrantedForMove,
 } from './free-operation-discovery-analysis.js';
 import { resolveGrantFreeOperationActionDomain } from './free-operation-action-domain.js';
@@ -275,12 +277,7 @@ const visitSelectableDecisionValues = (
     .sort((left, right) => probeValue(right) - probeValue(left));
   const min = request.min ?? 0;
   const max = Math.min(request.max ?? selectableValues.length, selectableValues.length);
-  const preferredSize = Math.max(min, Math.min(max, 2));
-  const sizeOrder = [...new Set([
-    preferredSize,
-    ...Array.from({ length: max - min + 1 }, (_, index) => min + index),
-    ...Array.from({ length: max - min + 1 }, (_, index) => max - index),
-  ])].filter((size) => size >= min && size <= max);
+  const sizeOrder = Array.from({ length: max - min + 1 }, (_, index) => min + index);
   const current: MoveParamScalar[] = [];
 
   const enumerate = (start: number, remaining: number): boolean => {
@@ -651,6 +648,9 @@ const hasLegalCompletedProbeMove = (
     if (request.illegal !== undefined || request.stochasticDecision !== undefined) {
       return false;
     }
+    if (!isFreeOperationPotentiallyGrantedForMove(def, authorizationState, request.move, seatResolution)) {
+      return false;
+    }
 
     const nextDecision = request.nextDecision;
     if (nextDecision === undefined) {
@@ -826,10 +826,14 @@ export const isFreeOperationGrantUsableInCurrentState = (
   };
   const actionIds = resolveGrantFreeOperationActionDomain(def, probeGrant);
   for (const actionId of actionIds) {
+    const actionIdBrand = asActionId(actionId);
     const probeMove: Move = {
-      actionId: asActionId(actionId),
+      actionId: actionIdBrand,
       params: {},
       freeOperation: true,
+      ...(resolveGrantMoveActionClassOverride(def, actionIdBrand, probeGrant.operationClass) === undefined
+        ? {}
+        : { actionClass: probeGrant.operationClass }),
     };
     if (!isFreeOperationApplicableForMove(def, explorationState, probeMove, seatResolution)) {
       continue;

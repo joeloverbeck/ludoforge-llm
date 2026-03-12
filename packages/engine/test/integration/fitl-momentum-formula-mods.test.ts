@@ -548,4 +548,48 @@ describe('FITL momentum formula modifiers', () => {
     assert.equal(withoutBodyCount, false, 'ARVN Patrol should be unavailable at 0 resources without Body Count');
     assert.equal(withBodyCount, true, 'ARVN Patrol should become available at 0 resources with Body Count');
   });
+
+  it('Body Count makes the ARVN follow-up on a normal US Assault cost 0 even when the operation is not free', () => {
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const state = withActivePlayer(
+      {
+        ...initialState(def, 9107, 4).state,
+        globalVars: {
+          ...initialState(def, 9107, 4).state.globalVars,
+          arvnResources: 0,
+          aid: 10,
+          mom_bodyCount: true,
+        },
+        zones: {
+          ...initialState(def, 9107, 4).state.zones,
+          [ATTACK_SPACE]: [
+            makeToken('bodycount-us-assault-us', 'troops', 'US', { type: 'troops' }),
+            makeToken('bodycount-us-assault-us-2', 'troops', 'US', { type: 'troops' }),
+            makeToken('bodycount-us-assault-arvn', 'troops', 'ARVN', { type: 'troops' }),
+            makeToken('bodycount-us-assault-vc', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+            makeToken('bodycount-us-assault-nva', 'guerrilla', 'NVA', { type: 'guerrilla', activity: 'active' }),
+          ],
+        },
+      },
+      0,
+    );
+
+    const beforeArvnResources = Number(state.globalVars.arvnResources);
+    const result = applyMoveWithResolvedDecisionIds(def, state, {
+      actionId: asActionId('assault'),
+      params: {
+        $targetSpaces: [ATTACK_SPACE],
+        $arvnFollowupSpaces: [ATTACK_SPACE],
+      },
+    }).state;
+
+    assert.equal(
+      result.globalVars.arvnResources,
+      beforeArvnResources,
+      'Body Count should make the ARVN follow-up on a normal US Assault cost 0 resources',
+    );
+  });
 });

@@ -153,7 +153,9 @@ describe('FITL text-only card behavior backfill', () => {
     assert.deepEqual(card73?.unshaded?.effects, [
       { pushInterruptPhase: { phase: 'commitment', resumePhase: 'main' } },
     ]);
-    assert.equal((card73?.shaded?.effects?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 3);
+    assert.equal((card73?.shaded?.effects?.[0] as { chooseN?: { bind?: string; chooser?: unknown } })?.chooseN?.bind, '$greatSocietyUsPieces');
+    assert.deepEqual((card73?.shaded?.effects?.[0] as { chooseN?: { chooser?: unknown } })?.chooseN?.chooser, { id: 0 });
+    assert.equal(typeof (card73?.shaded?.effects?.[1] as { forEach?: unknown } | undefined)?.forEach, 'object');
 
     const card81 = cardById.get('card-81');
     assert.equal((card81?.unshaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 2);

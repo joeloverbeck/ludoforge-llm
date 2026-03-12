@@ -167,9 +167,6 @@ globalVars:
   - name: fitl_operationAttleboroTunnelOverride
     type: boolean
     init: false
-  - name: fitl_roksMixedUsOperation
-    type: boolean
-    init: false
   - name: linebacker11Allowed
     type: boolean
     init: false

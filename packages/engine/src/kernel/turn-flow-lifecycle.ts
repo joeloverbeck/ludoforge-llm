@@ -1,4 +1,5 @@
 import type { GameDef, GameState, Token, TriggerLogEntry, TurnFlowLifecycleStep } from './types.js';
+import { resolveTokenViewFieldValue } from './token-view.js';
 
 interface LifecycleSlots {
   readonly played: string;
@@ -135,7 +136,7 @@ const prependToken = (state: GameState, zoneId: string, token: Token): GameState
   };
 };
 
-const isCoupCard = (token: Token): boolean => token.props.isCoup === true;
+const isCoupCard = (token: Token): boolean => resolveTokenViewFieldValue(token, 'isCoup') === true;
 
 const withConsecutiveCoupRounds = (state: GameState, rounds: number): GameState => {
   const runtime = cardDrivenRuntime(state);

@@ -31,6 +31,10 @@ export type TokenSel = string;
 export type FreeOperationExecutionContextScalar = string | number | boolean;
 export type ScalarValue = FreeOperationExecutionContextScalar;
 export type ScalarArrayValue = readonly ScalarValue[];
+export interface FreeOperationTokenInterpretationRule {
+  readonly when: TokenFilterExpr;
+  readonly assign: Readonly<Record<string, ScalarValue>>;
+}
 
 export interface EffectMacroOrigin {
   readonly macroId: string;
@@ -509,6 +513,7 @@ export interface EffectKindMap {
       readonly operationClass: TurnFlowActionClass;
       readonly actionIds?: readonly string[];
       readonly zoneFilter?: ConditionAST;
+      readonly tokenInterpretations?: readonly FreeOperationTokenInterpretationRule[];
       readonly moveZoneBindings?: readonly string[];
       readonly moveZoneProbeBindings?: readonly string[];
       readonly allowDuringMonsoon?: boolean;

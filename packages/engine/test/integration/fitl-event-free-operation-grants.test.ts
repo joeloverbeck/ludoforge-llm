@@ -30,7 +30,7 @@ const createDef = (): GameDef =>
     globalVars: [],
     perPlayerVars: [],
     zones: [],
-    tokenTypes: [],
+    tokenTypes: [{ id: 'cube', props: { faction: 'string', type: 'string' } }],
     setup: [],
     turnStructure: { phases: [{ id: asPhaseId('main') }] },
     turnOrder: {
@@ -313,7 +313,7 @@ const createRequiredGrantResumeDef = (): GameDef =>
     globalVars: [{ name: 'opCount', type: 'int', init: 0, min: 0, max: 10 }],
     perPlayerVars: [],
     zones: [],
-    tokenTypes: [],
+    tokenTypes: [{ id: 'cube', props: { faction: 'string', type: 'string' } }],
     setup: [],
     turnStructure: { phases: [{ id: asPhaseId('main') }] },
     turnOrder: {

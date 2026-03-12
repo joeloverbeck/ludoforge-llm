@@ -139,7 +139,7 @@ describe('FITL production data integration compilation', () => {
     const operationProfiles = (compiled.gameDef!.actionPipelines ?? []).filter((profile) =>
       operationActionIds.has(String(profile.actionId)),
     );
-    assert.equal(operationProfiles.length, 18, 'Expected canonical faction profiles plus mixed-US ROKs sweep/assault profiles');
+    assert.equal(operationProfiles.length, 16, 'Expected canonical FITL faction-specific operation profiles');
     assert.deepEqual(
       new Set(operationProfiles.map((profile) => String(profile.id))),
       new Set([
@@ -149,10 +149,8 @@ describe('FITL production data integration compilation', () => {
         'patrol-arvn-profile',
         'sweep-us-profile',
         'sweep-arvn-profile',
-        'sweep-roks-mixed-us-profile',
         'assault-us-profile',
         'assault-arvn-profile',
-        'assault-roks-mixed-us-profile',
         'rally-nva-profile',
         'rally-vc-profile',
         'march-nva-profile',
@@ -166,7 +164,7 @@ describe('FITL production data integration compilation', () => {
     );
     for (const actionId of operationActionIds) {
       const profilesForAction = operationProfiles.filter((profile) => String(profile.actionId) === actionId);
-      const expectedProfileCount = actionId === 'sweep' || actionId === 'assault' ? 3 : 2;
+      const expectedProfileCount = 2;
       assert.equal(
         profilesForAction.length,
         expectedProfileCount,

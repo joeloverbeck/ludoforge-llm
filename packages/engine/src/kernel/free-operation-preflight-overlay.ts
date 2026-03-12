@@ -7,6 +7,7 @@ interface FreeOperationPreflightOverlayInput {
   readonly executionPlayer: PlayerId;
   readonly zoneFilter?: FreeOperationExecutionOverlay['zoneFilter'];
   readonly executionContext?: FreeOperationExecutionOverlay['grantContext'] | undefined;
+  readonly tokenInterpretations?: FreeOperationExecutionOverlay['tokenInterpretations'] | undefined;
 }
 
 interface FreeOperationPreflightOverlayDiagnostics {
@@ -36,7 +37,7 @@ export const buildFreeOperationPreflightOverlay = (
   return {
     executionPlayerOverride: analysis.executionPlayer,
     ...(options?.skipPhaseCheck === false ? {} : { skipPhaseCheck: true }),
-    ...((analysis.zoneFilter === undefined && analysis.executionContext === undefined)
+    ...((analysis.zoneFilter === undefined && analysis.executionContext === undefined && analysis.tokenInterpretations === undefined)
       ? {}
       : {
           freeOperationOverlay: {
@@ -51,6 +52,7 @@ export const buildFreeOperationPreflightOverlay = (
                   } satisfies FreeOperationPreflightOverlayDiagnostics,
                 }),
             ...(analysis.executionContext === undefined ? {} : { grantContext: analysis.executionContext }),
+            ...(analysis.tokenInterpretations === undefined ? {} : { tokenInterpretations: analysis.tokenInterpretations }),
           },
         }),
   };

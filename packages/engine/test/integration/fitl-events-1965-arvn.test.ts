@@ -5,6 +5,50 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
 
 const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
+const ROKS_SWEEP_ZONE_FILTER = {
+  op: 'in',
+  item: { ref: 'zoneProp', zone: '$zone', prop: 'id' },
+  set: { scalarArray: [
+    'qui-nhon:none',
+    'binh-dinh:none',
+    'kontum:none',
+    'pleiku-darlac:none',
+    'phu-bon-phu-yen:none',
+    'khanh-hoa:none',
+    'cam-ranh:none',
+  ] },
+} as const;
+const ROKS_ASSAULT_ZONE_FILTER = {
+  op: 'in',
+  item: { ref: 'zoneProp', zone: '$zone', prop: 'id' },
+  set: { scalarArray: [
+    'qui-nhon:none',
+    'binh-dinh:none',
+    'kontum:none',
+    'pleiku-darlac:none',
+    'phu-bon-phu-yen:none',
+    'khanh-hoa:none',
+    'cam-ranh:none',
+    'loc-da-nang-qui-nhon:none',
+    'loc-kontum-qui-nhon:none',
+    'loc-qui-nhon-cam-ranh:none',
+  ] },
+} as const;
+const ROKS_TOKEN_INTERPRETATIONS = [
+  {
+    when: {
+      op: 'and',
+      args: [
+        { prop: 'faction', op: 'eq', value: 'ARVN' },
+        { prop: 'type', op: 'in', value: ['troops', 'police'] },
+      ],
+    },
+    assign: {
+      faction: 'US',
+      type: 'troops',
+    },
+  },
+] as const;
 
 const expectedCards = [
   { id: 'card-64', order: 64, title: 'Honolulu Conference', sideMode: 'single', seatOrder: ['ARVN', 'US', 'NVA', 'VC'] },
@@ -81,17 +125,8 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
       'Shift Qui Nhon, Phu Bon, and Khanh Hoa each 1 level toward Active Opposition.',
     );
     assert.deepEqual(card?.unshaded?.branches?.map((branch) => branch.id), ['roks-execute-as-us', 'roks-execute-as-arvn']);
-    assert.deepEqual(card?.unshaded?.lastingEffects, [
-      {
-        id: 'evt-roks-mixed-us-window',
-        duration: 'turn',
-        setupEffects: [{ setVar: { scope: 'global', var: 'fitl_roksMixedUsOperation', value: true } }],
-        teardownEffects: [{ setVar: { scope: 'global', var: 'fitl_roksMixedUsOperation', value: false } }],
-      },
-    ]);
-    assert.deepEqual(card?.unshaded?.effects, [
-      { setVar: { scope: 'global', var: 'fitl_roksMixedUsOperation', value: false } },
-    ]);
+    assert.equal(card?.unshaded?.lastingEffects, undefined);
+    assert.equal(card?.unshaded?.effects, undefined);
 
     const usBranch = card?.unshaded?.branches?.find((branch) => branch.id === 'roks-execute-as-us');
     const arvnBranch = card?.unshaded?.branches?.find((branch) => branch.id === 'roks-execute-as-arvn');
@@ -106,6 +141,8 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
         postResolutionTurnFlow: 'resumeCardFlow',
         operationClass: 'operation',
         actionIds: ['sweep'],
+        zoneFilter: ROKS_SWEEP_ZONE_FILTER,
+        tokenInterpretations: ROKS_TOKEN_INTERPRETATIONS,
         allowDuringMonsoon: true,
       },
       {
@@ -116,6 +153,8 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
         postResolutionTurnFlow: 'resumeCardFlow',
         operationClass: 'operation',
         actionIds: ['assault'],
+        zoneFilter: ROKS_ASSAULT_ZONE_FILTER,
+        tokenInterpretations: ROKS_TOKEN_INTERPRETATIONS,
       },
     ]);
     assert.deepEqual(arvnBranch?.freeOperationGrants, [
@@ -128,6 +167,8 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
         postResolutionTurnFlow: 'resumeCardFlow',
         operationClass: 'operation',
         actionIds: ['sweep'],
+        zoneFilter: ROKS_SWEEP_ZONE_FILTER,
+        tokenInterpretations: ROKS_TOKEN_INTERPRETATIONS,
         allowDuringMonsoon: true,
       },
       {
@@ -138,6 +179,8 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
         postResolutionTurnFlow: 'resumeCardFlow',
         operationClass: 'operation',
         actionIds: ['assault'],
+        zoneFilter: ROKS_ASSAULT_ZONE_FILTER,
+        tokenInterpretations: ROKS_TOKEN_INTERPRETATIONS,
       },
     ]);
     assert.deepEqual(card?.shaded?.effects, [

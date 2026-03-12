@@ -72,6 +72,7 @@ const toPendingFreeOperationGrant = (
   operationClass: grant.operationClass,
   ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
   ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
+  ...(grant.tokenInterpretations === undefined ? {} : { tokenInterpretations: grant.tokenInterpretations }),
   ...(grant.moveZoneBindings === undefined ? {} : { moveZoneBindings: [...grant.moveZoneBindings] }),
   ...(grant.moveZoneProbeBindings === undefined ? {} : { moveZoneProbeBindings: [...grant.moveZoneProbeBindings] }),
   ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),

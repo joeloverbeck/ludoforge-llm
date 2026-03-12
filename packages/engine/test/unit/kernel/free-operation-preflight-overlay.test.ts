@@ -82,6 +82,38 @@ describe('free-operation preflight overlay builder', () => {
     });
   });
 
+  it('threads token interpretations inside the overlay object', () => {
+    const tokenInterpretations = [
+      {
+        when: {
+          op: 'and' as const,
+          args: [
+            { prop: 'faction', op: 'eq' as const, value: 'ARVN' },
+            { prop: 'type', op: 'in' as const, value: ['troops', 'police'] },
+          ],
+        },
+        assign: {
+          faction: 'US',
+          type: 'troops',
+        },
+      },
+    ] as const;
+
+    const overlay = buildFreeOperationPreflightOverlay(
+      { executionPlayer: asPlayerId(0), tokenInterpretations },
+      { actionId: asActionId('operation:free'), params: { target: 2 } },
+      'turnFlowEligibility',
+    );
+
+    assert.deepEqual(overlay, {
+      executionPlayerOverride: asPlayerId(0),
+      skipPhaseCheck: true,
+      freeOperationOverlay: {
+        tokenInterpretations,
+      },
+    });
+  });
+
   it('can omit skipPhaseCheck when the caller needs ordinary phase gating', () => {
     const overlay = buildFreeOperationPreflightOverlay(
       { executionPlayer: asPlayerId(0), executionContext: { allowedTargets: [2] } },

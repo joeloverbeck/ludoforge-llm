@@ -9,7 +9,11 @@ import type {
 } from '../kernel/types.js';
 import { lowerConditionNode, lowerQueryNode } from './compile-conditions.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
-import { lowerEffectArray, lowerFreeOperationExecutionContextNode } from './compile-effects.js';
+import {
+  lowerEffectArray,
+  lowerFreeOperationExecutionContextNode,
+  lowerFreeOperationTokenInterpretationsNode,
+} from './compile-effects.js';
 import {
   buildConditionLoweringContext,
   buildEffectLoweringContext,
@@ -396,9 +400,21 @@ function lowerEventFreeOperationGrants(
         loweringContext,
         `${path}.executionContext`,
       );
+    const loweredTokenInterpretations = grant.tokenInterpretations === undefined
+      ? undefined
+      : lowerFreeOperationTokenInterpretationsNode(
+        grant.tokenInterpretations,
+        loweringContext,
+        `${path}.tokenInterpretations`,
+      );
     diagnostics.push(...(loweredZoneFilter?.diagnostics ?? []));
     diagnostics.push(...(loweredExecutionContext?.diagnostics ?? []));
-    if (loweredZoneFilter === undefined && loweredExecutionContext === undefined) {
+    diagnostics.push(...(loweredTokenInterpretations?.diagnostics ?? []));
+    if (
+      loweredZoneFilter === undefined
+      && loweredExecutionContext === undefined
+      && loweredTokenInterpretations === undefined
+    ) {
       return grant;
     }
     return {
@@ -407,6 +423,9 @@ function lowerEventFreeOperationGrants(
       ...(loweredExecutionContext === undefined || loweredExecutionContext.value === null
         ? {}
         : { executionContext: loweredExecutionContext.value }),
+      ...(loweredTokenInterpretations === undefined || loweredTokenInterpretations.value === null
+        ? {}
+        : { tokenInterpretations: loweredTokenInterpretations.value }),
     };
   });
 }

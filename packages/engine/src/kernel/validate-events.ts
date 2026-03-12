@@ -172,7 +172,7 @@ const validateAmbiguousFreeOperationGrantOverlap = <TGrant extends {
           `freeOperationGrant overlaps ambiguously with ${right.path}; top-ranked overlapping grants must be `
           + 'contract-equivalent duplicates or differ by deterministic grant semantics.',
         suggestion:
-          'Differentiate the grants by policy strength, actionIds, zoneFilter, moveZoneBindings, moveZoneProbeBindings, sequenceContext, or executionContext, or collapse them '
+          'Differentiate the grants by policy strength, actionIds, zoneFilter, tokenInterpretations, moveZoneBindings, moveZoneProbeBindings, sequenceContext, or executionContext, or collapse them '
           + 'into equivalent duplicates.',
       });
       diagnostics.push({
@@ -183,7 +183,7 @@ const validateAmbiguousFreeOperationGrantOverlap = <TGrant extends {
           `freeOperationGrant overlaps ambiguously with ${left.path}; top-ranked overlapping grants must be `
           + 'contract-equivalent duplicates or differ by deterministic grant semantics.',
         suggestion:
-          'Differentiate the grants by policy strength, actionIds, zoneFilter, moveZoneBindings, moveZoneProbeBindings, sequenceContext, or executionContext, or collapse them '
+          'Differentiate the grants by policy strength, actionIds, zoneFilter, tokenInterpretations, moveZoneBindings, moveZoneProbeBindings, sequenceContext, or executionContext, or collapse them '
           + 'into equivalent duplicates.',
       });
     }

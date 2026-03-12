@@ -13,6 +13,7 @@ import {
   runtimeTableRowBindingTypeEvalError,
 } from './runtime-table-eval-errors.js';
 import { resolveRuntimeTokenBindingValue } from './token-binding.js';
+import { resolveTokenViewFieldValue } from './token-view.js';
 import type { Reference, ScalarArrayValue, Token } from './types.js';
 
 function isScalarValue(value: unknown): value is number | boolean | string {
@@ -160,23 +161,13 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
       });
     }
 
-    const propValue = token.props[ref.prop];
+    const propValue = resolveTokenViewFieldValue(token, ref.prop, ctx.freeOperationOverlay);
     if (propValue === undefined) {
       throw missingVarError(`Token property not found: ${ref.prop}`, {
         reference: ref,
         binding: ref.token,
         availableBindings: Object.keys(ctx.bindings).sort(),
         availableTokenProps: Object.keys(token.props).sort(),
-      });
-    }
-
-    if (!isScalarValue(propValue)) {
-      throw typeMismatchError(`Token property ${ref.prop} must be a scalar`, {
-        reference: ref,
-        binding: ref.token,
-        prop: ref.prop,
-        actualType: typeof propValue,
-        value: propValue,
       });
     }
 

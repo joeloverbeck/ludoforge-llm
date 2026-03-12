@@ -8,6 +8,7 @@ import {
   NumberSchema,
   OptionsQuerySchema,
   StringSchema,
+  TokenFilterExprSchema,
   ValueExprSchema,
 } from './schemas-ast.js';
 import {
@@ -98,6 +99,12 @@ export const EventCardFreeOperationGrantSchema = createTurnFlowFreeOperationGran
   operationClass: z.enum(TURN_FLOW_ACTION_CLASS_VALUES),
   actionIds: z.array(StringSchema.min(1)).min(1).optional(),
   zoneFilter: ConditionASTSchema.optional(),
+  tokenInterpretations: z.array(
+    z.object({
+      when: TokenFilterExprSchema,
+      assign: z.record(StringSchema.min(1), z.union([StringSchema, IntegerSchema, BooleanSchema])),
+    }).strict(),
+  ).min(1).optional(),
   moveZoneBindings: z.array(StringSchema.min(1)).min(1).optional(),
   moveZoneProbeBindings: z.array(StringSchema.min(1)).min(1).optional(),
   allowDuringMonsoon: z.boolean().optional(),
@@ -521,6 +528,12 @@ export const TurnFlowRuntimeStateSchema = z
           operationClass: TurnFlowActionClassSchema,
           actionIds: z.array(StringSchema.min(1)).min(1).optional(),
           zoneFilter: ConditionASTSchema.optional(),
+          tokenInterpretations: z.array(
+            z.object({
+              when: TokenFilterExprSchema,
+              assign: z.record(StringSchema.min(1), z.union([StringSchema, IntegerSchema, BooleanSchema])),
+            }).strict(),
+          ).min(1).optional(),
           moveZoneBindings: z.array(StringSchema.min(1)).min(1).optional(),
           moveZoneProbeBindings: z.array(StringSchema.min(1)).min(1).optional(),
           allowDuringMonsoon: BooleanSchema.optional(),

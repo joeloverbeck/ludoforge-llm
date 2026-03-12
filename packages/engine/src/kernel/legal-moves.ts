@@ -528,6 +528,7 @@ function enumeratePendingFreeOperationMoves(
           executionPlayer,
           ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
           ...(grant.executionContext === undefined ? {} : { executionContext: grant.executionContext }),
+          ...(grant.tokenInterpretations === undefined ? {} : { tokenInterpretations: grant.tokenInterpretations }),
         },
         { actionId: action.id, params: {} },
         'turnFlowEligibility',
@@ -684,6 +685,7 @@ function enumeratePendingFreeOperationMoves(
             {
               executionPlayer: candidateExecutionPlayer,
               ...(candidateGrant.zoneFilter === undefined ? {} : { zoneFilter: candidateGrant.zoneFilter }),
+              ...(candidateGrant.tokenInterpretations === undefined ? {} : { tokenInterpretations: candidateGrant.tokenInterpretations }),
             },
             { actionId: action.id, params: {} },
             'turnFlowEligibility',

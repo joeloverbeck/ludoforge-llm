@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None expected in this ticket; FITL `GameSpecDoc` and tests should consume shared engine contracts from dependencies
-**Deps**: `tickets/README.md`, `archive/tickets/FREEOP/FREEOP-ROKS-001-free-operation-probe-scaling.md`, `tickets/OPEROVERLAY-001-generic-operation-execution-overlay.md`, `data/games/fire-in-the-lake/30-rules-actions.md`, `data/games/fire-in-the-lake/41-events/065-096.md`, `reports/fire-in-the-lake-rules-section-3.md`, `reports/fire-in-the-lake-rules-section-5.md`, `packages/engine/test/integration/fitl-events-roks.test.ts`, `packages/engine/test/integration/fitl-events-1965-arvn.test.ts`
+**Deps**: `tickets/README.md`, `archive/tickets/FREEOP/FREEOP-ROKS-001-free-operation-probe-scaling.md`, `archive/tickets/OPEROVERLAY-001-generic-operation-execution-overlay.md`, `data/games/fire-in-the-lake/30-rules-actions.md`, `data/games/fire-in-the-lake/41-events/065-096.md`, `reports/fire-in-the-lake-rules-section-3.md`, `reports/fire-in-the-lake-rules-section-5.md`, `packages/engine/test/integration/fitl-events-roks.test.ts`, `packages/engine/test/integration/fitl-events-1965-arvn.test.ts`
 
 ## Problem
 

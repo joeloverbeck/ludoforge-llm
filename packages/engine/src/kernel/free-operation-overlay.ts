@@ -1,4 +1,8 @@
-import type { ConditionAST, ResolvedFreeOperationExecutionContext } from './types.js';
+import type {
+  ConditionAST,
+  FreeOperationTokenInterpretationRule,
+  ResolvedFreeOperationExecutionContext,
+} from './types.js';
 import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
 
 export interface FreeOperationZoneFilterDiagnostics {
@@ -11,4 +15,5 @@ export interface FreeOperationExecutionOverlay {
   readonly zoneFilter?: ConditionAST;
   readonly zoneFilterDiagnostics?: FreeOperationZoneFilterDiagnostics;
   readonly grantContext?: ResolvedFreeOperationExecutionContext;
+  readonly tokenInterpretations?: readonly FreeOperationTokenInterpretationRule[];
 }

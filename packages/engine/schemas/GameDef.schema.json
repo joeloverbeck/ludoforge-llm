@@ -533,7 +533,7 @@
     "setup": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/anon_d13c3ba0"
+        "$ref": "#/definitions/anon_b4019e8c"
       }
     },
     "turnStructure": {
@@ -550,13 +550,13 @@
               "onEnter": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/anon_d13c3ba0"
+                  "$ref": "#/definitions/anon_b4019e8c"
                 }
               },
               "onExit": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/anon_d13c3ba0"
+                  "$ref": "#/definitions/anon_b4019e8c"
                 }
               },
               "actionDefaults": {
@@ -572,7 +572,7 @@
                   "afterEffects": {
                     "type": "array",
                     "items": {
-                      "$ref": "#/definitions/anon_d13c3ba0"
+                      "$ref": "#/definitions/anon_b4019e8c"
                     }
                   }
                 },
@@ -596,13 +596,13 @@
               "onEnter": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/anon_d13c3ba0"
+                  "$ref": "#/definitions/anon_b4019e8c"
                 }
               },
               "onExit": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/anon_d13c3ba0"
+                  "$ref": "#/definitions/anon_b4019e8c"
                 }
               },
               "actionDefaults": {
@@ -618,7 +618,7 @@
                   "afterEffects": {
                     "type": "array",
                     "items": {
-                      "$ref": "#/definitions/anon_d13c3ba0"
+                      "$ref": "#/definitions/anon_b4019e8c"
                     }
                   }
                 },
@@ -1312,7 +1312,7 @@
           "costEffects": {
             "type": "array",
             "items": {
-              "$ref": "#/definitions/anon_d13c3ba0"
+              "$ref": "#/definitions/anon_b4019e8c"
             }
           },
           "targeting": {
@@ -1387,7 +1387,7 @@
                 "effects": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_d13c3ba0"
+                    "$ref": "#/definitions/anon_b4019e8c"
                   }
                 }
               },
@@ -1722,13 +1722,13 @@
           "cost": {
             "type": "array",
             "items": {
-              "$ref": "#/definitions/anon_d13c3ba0"
+              "$ref": "#/definitions/anon_b4019e8c"
             }
           },
           "effects": {
             "type": "array",
             "items": {
-              "$ref": "#/definitions/anon_d13c3ba0"
+              "$ref": "#/definitions/anon_b4019e8c"
             }
           },
           "limits": {
@@ -1963,7 +1963,7 @@
           "effects": {
             "type": "array",
             "items": {
-              "$ref": "#/definitions/anon_d13c3ba0"
+              "$ref": "#/definitions/anon_b4019e8c"
             }
           }
         },
@@ -2414,6 +2414,45 @@
                                   }
                                 ]
                               },
+                              "tokenInterpretations": {
+                                "minItems": 1,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "when": {
+                                      "$ref": "#/definitions/anon_677ef278"
+                                    },
+                                    "assign": {
+                                      "type": "object",
+                                      "propertyNames": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "additionalProperties": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "when",
+                                    "assign"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
                               "moveZoneBindings": {
                                 "minItems": 1,
                                 "type": "array",
@@ -2549,6 +2588,45 @@
                                     "$ref": "#/definitions/anon_dbcd228e"
                                   }
                                 ]
+                              },
+                              "tokenInterpretations": {
+                                "minItems": 1,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "when": {
+                                      "$ref": "#/definitions/anon_677ef278"
+                                    },
+                                    "assign": {
+                                      "type": "object",
+                                      "propertyNames": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "additionalProperties": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "when",
+                                    "assign"
+                                  ],
+                                  "additionalProperties": false
+                                }
                               },
                               "moveZoneBindings": {
                                 "minItems": 1,
@@ -2700,7 +2778,7 @@
                       "minItems": 1,
                       "type": "array",
                       "items": {
-                        "$ref": "#/definitions/anon_d13c3ba0"
+                        "$ref": "#/definitions/anon_b4019e8c"
                       }
                     },
                     "branches": {
@@ -2801,6 +2879,45 @@
                                           "$ref": "#/definitions/anon_dbcd228e"
                                         }
                                       ]
+                                    },
+                                    "tokenInterpretations": {
+                                      "minItems": 1,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "when": {
+                                            "$ref": "#/definitions/anon_677ef278"
+                                          },
+                                          "assign": {
+                                            "type": "object",
+                                            "propertyNames": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "additionalProperties": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "type": "integer",
+                                                  "minimum": -9007199254740991,
+                                                  "maximum": 9007199254740991
+                                                },
+                                                {
+                                                  "type": "boolean"
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        },
+                                        "required": [
+                                          "when",
+                                          "assign"
+                                        ],
+                                        "additionalProperties": false
+                                      }
                                     },
                                     "moveZoneBindings": {
                                       "minItems": 1,
@@ -2937,6 +3054,45 @@
                                           "$ref": "#/definitions/anon_dbcd228e"
                                         }
                                       ]
+                                    },
+                                    "tokenInterpretations": {
+                                      "minItems": 1,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "when": {
+                                            "$ref": "#/definitions/anon_677ef278"
+                                          },
+                                          "assign": {
+                                            "type": "object",
+                                            "propertyNames": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "additionalProperties": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "type": "integer",
+                                                  "minimum": -9007199254740991,
+                                                  "maximum": 9007199254740991
+                                                },
+                                                {
+                                                  "type": "boolean"
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        },
+                                        "required": [
+                                          "when",
+                                          "assign"
+                                        ],
+                                        "additionalProperties": false
+                                      }
                                     },
                                     "moveZoneBindings": {
                                       "minItems": 1,
@@ -3088,7 +3244,7 @@
                             "minItems": 1,
                             "type": "array",
                             "items": {
-                              "$ref": "#/definitions/anon_d13c3ba0"
+                              "$ref": "#/definitions/anon_b4019e8c"
                             }
                           },
                           "targets": {
@@ -3150,7 +3306,7 @@
                                       "minItems": 1,
                                       "type": "array",
                                       "items": {
-                                        "$ref": "#/definitions/anon_d13c3ba0"
+                                        "$ref": "#/definitions/anon_b4019e8c"
                                       }
                                     }
                                   },
@@ -3218,7 +3374,7 @@
                                       "minItems": 1,
                                       "type": "array",
                                       "items": {
-                                        "$ref": "#/definitions/anon_d13c3ba0"
+                                        "$ref": "#/definitions/anon_b4019e8c"
                                       }
                                     }
                                   },
@@ -3256,14 +3412,14 @@
                                   "minItems": 1,
                                   "type": "array",
                                   "items": {
-                                    "$ref": "#/definitions/anon_d13c3ba0"
+                                    "$ref": "#/definitions/anon_b4019e8c"
                                   }
                                 },
                                 "teardownEffects": {
                                   "minItems": 1,
                                   "type": "array",
                                   "items": {
-                                    "$ref": "#/definitions/anon_d13c3ba0"
+                                    "$ref": "#/definitions/anon_b4019e8c"
                                   }
                                 }
                               },
@@ -3341,7 +3497,7 @@
                                 "minItems": 1,
                                 "type": "array",
                                 "items": {
-                                  "$ref": "#/definitions/anon_d13c3ba0"
+                                  "$ref": "#/definitions/anon_b4019e8c"
                                 }
                               }
                             },
@@ -3409,7 +3565,7 @@
                                 "minItems": 1,
                                 "type": "array",
                                 "items": {
-                                  "$ref": "#/definitions/anon_d13c3ba0"
+                                  "$ref": "#/definitions/anon_b4019e8c"
                                 }
                               }
                             },
@@ -3447,14 +3603,14 @@
                             "minItems": 1,
                             "type": "array",
                             "items": {
-                              "$ref": "#/definitions/anon_d13c3ba0"
+                              "$ref": "#/definitions/anon_b4019e8c"
                             }
                           },
                           "teardownEffects": {
                             "minItems": 1,
                             "type": "array",
                             "items": {
-                              "$ref": "#/definitions/anon_d13c3ba0"
+                              "$ref": "#/definitions/anon_b4019e8c"
                             }
                           }
                         },
@@ -3559,6 +3715,45 @@
                                   }
                                 ]
                               },
+                              "tokenInterpretations": {
+                                "minItems": 1,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "when": {
+                                      "$ref": "#/definitions/anon_677ef278"
+                                    },
+                                    "assign": {
+                                      "type": "object",
+                                      "propertyNames": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "additionalProperties": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "when",
+                                    "assign"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
                               "moveZoneBindings": {
                                 "minItems": 1,
                                 "type": "array",
@@ -3694,6 +3889,45 @@
                                     "$ref": "#/definitions/anon_dbcd228e"
                                   }
                                 ]
+                              },
+                              "tokenInterpretations": {
+                                "minItems": 1,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "when": {
+                                      "$ref": "#/definitions/anon_677ef278"
+                                    },
+                                    "assign": {
+                                      "type": "object",
+                                      "propertyNames": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "additionalProperties": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "when",
+                                    "assign"
+                                  ],
+                                  "additionalProperties": false
+                                }
                               },
                               "moveZoneBindings": {
                                 "minItems": 1,
@@ -3845,7 +4079,7 @@
                       "minItems": 1,
                       "type": "array",
                       "items": {
-                        "$ref": "#/definitions/anon_d13c3ba0"
+                        "$ref": "#/definitions/anon_b4019e8c"
                       }
                     },
                     "branches": {
@@ -3946,6 +4180,45 @@
                                           "$ref": "#/definitions/anon_dbcd228e"
                                         }
                                       ]
+                                    },
+                                    "tokenInterpretations": {
+                                      "minItems": 1,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "when": {
+                                            "$ref": "#/definitions/anon_677ef278"
+                                          },
+                                          "assign": {
+                                            "type": "object",
+                                            "propertyNames": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "additionalProperties": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "type": "integer",
+                                                  "minimum": -9007199254740991,
+                                                  "maximum": 9007199254740991
+                                                },
+                                                {
+                                                  "type": "boolean"
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        },
+                                        "required": [
+                                          "when",
+                                          "assign"
+                                        ],
+                                        "additionalProperties": false
+                                      }
                                     },
                                     "moveZoneBindings": {
                                       "minItems": 1,
@@ -4082,6 +4355,45 @@
                                           "$ref": "#/definitions/anon_dbcd228e"
                                         }
                                       ]
+                                    },
+                                    "tokenInterpretations": {
+                                      "minItems": 1,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "when": {
+                                            "$ref": "#/definitions/anon_677ef278"
+                                          },
+                                          "assign": {
+                                            "type": "object",
+                                            "propertyNames": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "additionalProperties": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "type": "integer",
+                                                  "minimum": -9007199254740991,
+                                                  "maximum": 9007199254740991
+                                                },
+                                                {
+                                                  "type": "boolean"
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        },
+                                        "required": [
+                                          "when",
+                                          "assign"
+                                        ],
+                                        "additionalProperties": false
+                                      }
                                     },
                                     "moveZoneBindings": {
                                       "minItems": 1,
@@ -4233,7 +4545,7 @@
                             "minItems": 1,
                             "type": "array",
                             "items": {
-                              "$ref": "#/definitions/anon_d13c3ba0"
+                              "$ref": "#/definitions/anon_b4019e8c"
                             }
                           },
                           "targets": {
@@ -4295,7 +4607,7 @@
                                       "minItems": 1,
                                       "type": "array",
                                       "items": {
-                                        "$ref": "#/definitions/anon_d13c3ba0"
+                                        "$ref": "#/definitions/anon_b4019e8c"
                                       }
                                     }
                                   },
@@ -4363,7 +4675,7 @@
                                       "minItems": 1,
                                       "type": "array",
                                       "items": {
-                                        "$ref": "#/definitions/anon_d13c3ba0"
+                                        "$ref": "#/definitions/anon_b4019e8c"
                                       }
                                     }
                                   },
@@ -4401,14 +4713,14 @@
                                   "minItems": 1,
                                   "type": "array",
                                   "items": {
-                                    "$ref": "#/definitions/anon_d13c3ba0"
+                                    "$ref": "#/definitions/anon_b4019e8c"
                                   }
                                 },
                                 "teardownEffects": {
                                   "minItems": 1,
                                   "type": "array",
                                   "items": {
-                                    "$ref": "#/definitions/anon_d13c3ba0"
+                                    "$ref": "#/definitions/anon_b4019e8c"
                                   }
                                 }
                               },
@@ -4486,7 +4798,7 @@
                                 "minItems": 1,
                                 "type": "array",
                                 "items": {
-                                  "$ref": "#/definitions/anon_d13c3ba0"
+                                  "$ref": "#/definitions/anon_b4019e8c"
                                 }
                               }
                             },
@@ -4554,7 +4866,7 @@
                                 "minItems": 1,
                                 "type": "array",
                                 "items": {
-                                  "$ref": "#/definitions/anon_d13c3ba0"
+                                  "$ref": "#/definitions/anon_b4019e8c"
                                 }
                               }
                             },
@@ -4592,14 +4904,14 @@
                             "minItems": 1,
                             "type": "array",
                             "items": {
-                              "$ref": "#/definitions/anon_d13c3ba0"
+                              "$ref": "#/definitions/anon_b4019e8c"
                             }
                           },
                           "teardownEffects": {
                             "minItems": 1,
                             "type": "array",
                             "items": {
-                              "$ref": "#/definitions/anon_d13c3ba0"
+                              "$ref": "#/definitions/anon_b4019e8c"
                             }
                           }
                         },
@@ -6056,7 +6368,7 @@
         }
       ]
     },
-    "anon_d13c3ba0": {
+    "anon_b4019e8c": {
       "anyOf": [
         {
           "type": "object",
@@ -7448,13 +7760,13 @@
                 "then": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_d13c3ba0"
+                    "$ref": "#/definitions/anon_b4019e8c"
                   }
                 },
                 "else": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_d13c3ba0"
+                    "$ref": "#/definitions/anon_b4019e8c"
                   }
                 }
               },
@@ -7502,7 +7814,7 @@
                 "effects": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_d13c3ba0"
+                    "$ref": "#/definitions/anon_b4019e8c"
                   }
                 },
                 "limit": {
@@ -7519,7 +7831,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_d13c3ba0"
+                    "$ref": "#/definitions/anon_b4019e8c"
                   }
                 }
               },
@@ -7621,7 +7933,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_d13c3ba0"
+                    "$ref": "#/definitions/anon_b4019e8c"
                   }
                 }
               },
@@ -7737,7 +8049,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_d13c3ba0"
+                    "$ref": "#/definitions/anon_b4019e8c"
                   }
                 },
                 "macroOrigin": {
@@ -7785,7 +8097,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_d13c3ba0"
+                    "$ref": "#/definitions/anon_b4019e8c"
                   }
                 },
                 "macroOrigin": {
@@ -7879,7 +8191,7 @@
                 "compute": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_d13c3ba0"
+                    "$ref": "#/definitions/anon_b4019e8c"
                   }
                 },
                 "scoreExpr": {
@@ -7896,7 +8208,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_d13c3ba0"
+                    "$ref": "#/definitions/anon_b4019e8c"
                   }
                 },
                 "macroOrigin": {
@@ -8301,7 +8613,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_d13c3ba0"
+                    "$ref": "#/definitions/anon_b4019e8c"
                   }
                 },
                 "macroOrigin": {
@@ -8545,6 +8857,42 @@
                         }
                       ]
                     },
+                    "tokenInterpretations": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "when": {
+                            "$ref": "#/definitions/anon_677ef278"
+                          },
+                          "assign": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "boolean"
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "when",
+                          "assign"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
                     "moveZoneBindings": {
                       "minItems": 1,
                       "type": "array",
@@ -8667,6 +9015,42 @@
                           "$ref": "#/definitions/anon_dbcd228e"
                         }
                       ]
+                    },
+                    "tokenInterpretations": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "when": {
+                            "$ref": "#/definitions/anon_677ef278"
+                          },
+                          "assign": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "boolean"
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "when",
+                          "assign"
+                        ],
+                        "additionalProperties": false
+                      }
                     },
                     "moveZoneBindings": {
                       "minItems": 1,

@@ -17,7 +17,7 @@ import type { GameDef, GameState, Move, TurnFlowPendingFreeOperationGrant } from
 
 type GrantBindingContext = Pick<
   TurnFlowPendingFreeOperationGrant,
-  'seat' | 'executeAsSeat' | 'executionContext' | 'moveZoneBindings' | 'moveZoneProbeBindings'
+  'seat' | 'executeAsSeat' | 'executionContext' | 'tokenInterpretations' | 'moveZoneBindings' | 'moveZoneProbeBindings'
 >;
 
 const zoneCandidateSetFromMove = (def: GameDef, move: Move): Set<string> => {
@@ -108,6 +108,7 @@ export const resolveGrantAwareMoveRuntimeBindings = (
       {
         executionPlayer: executionPlayerOverride ?? state.activePlayer,
         ...(grant.executionContext === undefined ? {} : { executionContext: grant.executionContext }),
+        ...(grant.tokenInterpretations === undefined ? {} : { tokenInterpretations: grant.tokenInterpretations }),
       },
       move,
       'turnFlowEligibility',

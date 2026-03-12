@@ -25,7 +25,10 @@ import {
   makeConditionContext,
   missingCapability,
 } from './compile-effects-utils.js';
-import { lowerFreeOperationExecutionContextNode } from './compile-effects-core.js';
+import {
+  lowerFreeOperationExecutionContextNode,
+  lowerFreeOperationTokenInterpretationsNode,
+} from './compile-effects-core.js';
 import { grantFreeOperation as grantFreeOperationBuilder } from '../kernel/ast-builders.js';
 
 export function lowerGrantFreeOperationEffect(
@@ -275,6 +278,19 @@ export function lowerGrantFreeOperationEffect(
     }
   }
 
+  let loweredTokenInterpretations: import('../kernel/types.js').FreeOperationTokenInterpretationRule[] | undefined;
+  if (source.tokenInterpretations !== undefined) {
+    const tokenInterpretations = lowerFreeOperationTokenInterpretationsNode(
+      source.tokenInterpretations,
+      makeConditionContext(context, scope),
+      `${path}.tokenInterpretations`,
+    );
+    diagnostics.push(...tokenInterpretations.diagnostics);
+    if (tokenInterpretations.value !== null) {
+      loweredTokenInterpretations = [...tokenInterpretations.value];
+    }
+  }
+
   for (const violation of collectTurnFlowFreeOperationGrantContractViolations({
     operationClass: source.operationClass,
     ...(uses === undefined ? {} : { uses }),
@@ -287,6 +303,7 @@ export function lowerGrantFreeOperationEffect(
     ...(loweredSequence === undefined ? {} : { sequence: loweredSequence }),
     ...(loweredSequenceContext === undefined ? {} : { sequenceContext: loweredSequenceContext }),
     ...(loweredExecutionContext === undefined ? {} : { executionContext: loweredExecutionContext }),
+    ...(loweredTokenInterpretations === undefined ? {} : { tokenInterpretations: loweredTokenInterpretations }),
   })) {
     const surface = renderTurnFlowFreeOperationGrantContractViolation(violation, {
       basePath: path,
@@ -341,6 +358,7 @@ export function lowerGrantFreeOperationEffect(
       ...(loweredSequence === undefined ? {} : { sequence: loweredSequence }),
       ...(loweredSequenceContext === undefined ? {} : { sequenceContext: loweredSequenceContext }),
       ...(loweredExecutionContext === undefined ? {} : { executionContext: loweredExecutionContext }),
+      ...(loweredTokenInterpretations === undefined ? {} : { tokenInterpretations: loweredTokenInterpretations }),
     }),
     diagnostics,
   };

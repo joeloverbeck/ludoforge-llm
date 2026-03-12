@@ -255,6 +255,7 @@ export interface FreeOperationDiscoveryAnalysisResult {
   readonly executionPlayer: ReturnType<typeof asPlayerId>;
   readonly zoneFilter?: ConditionAST;
   readonly executionContext?: TurnFlowPendingFreeOperationGrant['executionContext'] | undefined;
+  readonly tokenInterpretations?: TurnFlowPendingFreeOperationGrant['tokenInterpretations'] | undefined;
 }
 
 const parsePlayerId = (
@@ -312,6 +313,7 @@ export const resolveFreeOperationDiscoveryAnalysis = (
     executionPlayer,
     ...(zoneFilter === undefined ? {} : { zoneFilter }),
     ...(prioritized?.executionContext === undefined ? {} : { executionContext: prioritized.executionContext }),
+    ...(prioritized?.tokenInterpretations === undefined ? {} : { tokenInterpretations: prioritized.tokenInterpretations }),
   };
 };
 

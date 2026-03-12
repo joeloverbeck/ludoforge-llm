@@ -21,6 +21,26 @@ const QUI_NHON = 'qui-nhon:none';
 const PHU_BON = 'phu-bon-phu-yen:none';
 const KHANH_HOA = 'khanh-hoa:none';
 const LOC_KONTUM_QUI_NHON = 'loc-kontum-qui-nhon:none';
+const ROKS_TOKEN_INTERPRETATIONS = [
+  {
+    when: {
+      op: 'and',
+      args: [
+        { prop: 'faction', op: 'eq', value: 'ARVN' },
+        { prop: 'type', op: 'in', value: ['troops', 'police'] },
+      ],
+    },
+    assign: {
+      faction: 'US',
+      type: 'troops',
+    },
+  },
+] as const;
+const ROKS_SWEEP_ZONE_FILTER = {
+  op: 'in',
+  item: { ref: 'zoneProp', zone: '$zone', prop: 'id' },
+  set: { scalarArray: [QUI_NHON, 'binh-dinh:none', 'kontum:none', 'pleiku-darlac:none', PHU_BON, KHANH_HOA, 'cam-ranh:none'] },
+} as const;
 
 const makeToken = (
   id: string,
@@ -162,11 +182,12 @@ describe('FITL card-70 ROKs', () => {
       },
     }).state;
     const pendingAfterEvent = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
-    assert.equal(afterEvent.globalVars.fitl_roksMixedUsOperation, true, 'ROKs mixed-cube window should be open after event play');
     assert.equal(pendingAfterEvent.length, 2);
     assert.equal(pendingAfterEvent[0]?.seat, 'arvn');
     assert.equal(pendingAfterEvent[0]?.executeAsSeat, 'us');
     assert.deepEqual(pendingAfterEvent[0]?.actionIds, ['sweep']);
+    assert.deepEqual(pendingAfterEvent[0]?.zoneFilter, ROKS_SWEEP_ZONE_FILTER);
+    assert.deepEqual(pendingAfterEvent[0]?.tokenInterpretations, ROKS_TOKEN_INTERPRETATIONS);
     assert.equal(pendingAfterEvent[0]?.allowDuringMonsoon, true);
 
     const grantReadyState: GameState = {
@@ -194,9 +215,7 @@ describe('FITL card-70 ROKs', () => {
       freeOperation: true,
       params: {
         $targetSpaces: [PHU_BON],
-        $movingAdjacentCubes: ['roks-us-troop-adj', 'roks-arvn-police-adj'],
-        $hopLocs: [],
-        $movingHopCubes: [],
+        $movingAdjacentTroops: ['roks-us-troop-adj', 'roks-arvn-police-adj'],
       },
     }).state;
     assert.equal(
@@ -234,7 +253,7 @@ describe('FITL card-70 ROKs', () => {
       1,
       'ROKs Assault should apply Abrams base-first removal with the mixed-cube US profile',
     );
-    assert.equal(final.globalVars.fitl_roksMixedUsOperation, false, 'ROKs mixed-cube window should close after the grant chain resolves');
+    assert.equal(final.globalVars.fitl_roksMixedUsOperation, undefined);
   });
 
   it('US branch hands decision control to US and allows assault on the Phu Bon-linked LoC using ARVN cubes as US troops', () => {
@@ -263,6 +282,7 @@ describe('FITL card-70 ROKs', () => {
     assert.equal(afterEvent.activePlayer, asPlayerId(0), 'US branch should hand the free-operation decisions to US');
     assert.equal(pendingAfterEvent[0]?.seat, 'us');
     assert.equal(pendingAfterEvent[0]?.executeAsSeat, 'us');
+    assert.deepEqual(pendingAfterEvent[0]?.tokenInterpretations, ROKS_TOKEN_INTERPRETATIONS);
 
     const grantReadyState: GameState = {
       ...afterEvent,
@@ -289,9 +309,7 @@ describe('FITL card-70 ROKs', () => {
       freeOperation: true,
       params: {
         $targetSpaces: [PHU_BON],
-        $movingAdjacentCubes: [],
-        $hopLocs: [],
-        $movingHopCubes: [],
+        $movingAdjacentTroops: [],
       },
     }).state;
 

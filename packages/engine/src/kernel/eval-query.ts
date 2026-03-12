@@ -249,7 +249,7 @@ function resolveGrantContextQuery(
 }
 
 function applyTokenFilter(tokens: readonly Token[], filter: TokenFilterExpr, ctx: ReadContext): readonly Token[] {
-  return filterTokensByExpr(tokens, filter, (value) => resolvePredicateValue(value, ctx));
+  return filterTokensByExpr(tokens, filter, (value) => resolvePredicateValue(value, ctx), ctx.freeOperationOverlay);
 }
 
 function tokenFilterPredicateCount(filter: TokenFilterExpr): number {

@@ -113,6 +113,12 @@ export const FreeOperationExecutionContextSchema: z.ZodTypeAny = z.lazy(() => z.
   StringSchema,
   ValueExprSchema,
 ));
+export const FreeOperationTokenInterpretationRuleSchema: z.ZodTypeAny = z.lazy(() =>
+  z.object({
+    when: TokenFilterExprSchema,
+    assign: z.record(StringSchema, PredicateScalarLiteralSchema),
+  }).strict(),
+);
 const IntDomainBoundSchema = z
   .union([IntegerSchema, NumericValueExprSchema])
   .refine((value) => typeof value !== 'number' || Number.isSafeInteger(value), {
@@ -828,6 +834,7 @@ effectAstSchemaInternal = z.union([
         operationClass: z.enum(TURN_FLOW_ACTION_CLASS_VALUES),
         actionIds: z.array(StringSchema).optional(),
         zoneFilter: ConditionASTSchema.optional(),
+        tokenInterpretations: z.array(FreeOperationTokenInterpretationRuleSchema).min(1).optional(),
         moveZoneBindings: z.array(StringSchema).min(1).optional(),
         moveZoneProbeBindings: z.array(StringSchema).min(1).optional(),
         allowDuringMonsoon: z.boolean().optional(),

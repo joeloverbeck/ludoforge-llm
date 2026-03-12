@@ -1,9 +1,20 @@
 import type { FreeOperationSequenceContextGrantLike } from './free-operation-sequence-context-contract.js';
+import type { TurnFlowFreeOperationGrantProgressionPolicy } from '../contracts/index.js';
+
+const DEFAULT_FREE_OPERATION_PROGRESSION_POLICY: TurnFlowFreeOperationGrantProgressionPolicy = 'strictInOrder';
+
+const normalizeProgressionPolicy = (
+  grant: FreeOperationSequenceContextGrantLike,
+): TurnFlowFreeOperationGrantProgressionPolicy =>
+  grant.sequence?.progressionPolicy === 'implementWhatCanInOrder'
+    ? 'implementWhatCanInOrder'
+    : DEFAULT_FREE_OPERATION_PROGRESSION_POLICY;
 
 export interface SequenceContextLinkageGrantReference {
   readonly batch: string;
   readonly step: number;
   readonly path: string;
+  readonly progressionPolicy: TurnFlowFreeOperationGrantProgressionPolicy;
   readonly captureKey?: string;
   readonly requireKey?: string;
 }
@@ -43,6 +54,7 @@ export const collectSequenceContextLinkageGrantReference = (
     batch: sequence.batch,
     step,
     path,
+    progressionPolicy: normalizeProgressionPolicy(grant),
     ...(captureKey === undefined ? {} : { captureKey }),
     ...(requireKey === undefined ? {} : { requireKey }),
   };

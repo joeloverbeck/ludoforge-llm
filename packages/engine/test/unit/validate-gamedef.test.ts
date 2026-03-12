@@ -5928,6 +5928,60 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
     );
   });
 
+  it('rejects same-batch cross-step sequence context under implementWhatCanInOrder for declarative grants', () => {
+    const def = withEventFreeOperationGrants([
+      {
+        seat: '0',
+        sequence: { batch: 'ctx-chain', step: 0, progressionPolicy: 'implementWhatCanInOrder' },
+        operationClass: 'operation',
+        actionIds: ['playCard'],
+        sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+      },
+      {
+        seat: '0',
+        sequence: { batch: 'ctx-chain', step: 1, progressionPolicy: 'implementWhatCanInOrder' },
+        operationClass: 'operation',
+        actionIds: ['playCard'],
+        sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+      },
+    ]);
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_GRANT_SKIP_CAPABLE_CROSS_STEP_CONTEXT'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[1].sequenceContext.requireMoveZoneCandidatesFrom',
+      ),
+      true,
+    );
+  });
+
+  it('allows same-batch cross-step sequence context under strictInOrder for declarative grants', () => {
+    const def = withEventFreeOperationGrants([
+      {
+        seat: '0',
+        sequence: { batch: 'ctx-chain', step: 0, progressionPolicy: 'strictInOrder' },
+        operationClass: 'operation',
+        actionIds: ['playCard'],
+        sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+      },
+      {
+        seat: '0',
+        sequence: { batch: 'ctx-chain', step: 1, progressionPolicy: 'strictInOrder' },
+        operationClass: 'operation',
+        actionIds: ['playCard'],
+        sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+      },
+    ]);
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code === 'FREE_OPERATION_GRANT_SKIP_CAPABLE_CROSS_STEP_CONTEXT'),
+      false,
+    );
+  });
+
   it('rejects mixed progressionPolicy values within one effect-issued free-operation batch', () => {
     const effects: readonly EffectAST[] = [
       {
@@ -6297,6 +6351,48 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
     assert.equal(
       diagnostics.some((diag) => diag.code.startsWith('FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_')),
       false,
+    );
+  });
+
+  it('rejects same-batch cross-step sequence context under implementWhatCanInOrder for effect-issued grants', () => {
+    const def = withEventCardSideConfig({
+      effects: [
+        {
+          if: {
+            when: { op: '==', left: 1, right: 1 },
+            then: [
+              {
+                grantFreeOperation: {
+                  seat: '0',
+                  sequence: { batch: 'ctx-effect-skip-chain', step: 0, progressionPolicy: 'implementWhatCanInOrder' },
+                  operationClass: 'operation',
+                  actionIds: ['playCard'],
+                  sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                },
+              },
+              {
+                grantFreeOperation: {
+                  seat: '0',
+                  sequence: { batch: 'ctx-effect-skip-chain', step: 1, progressionPolicy: 'implementWhatCanInOrder' },
+                  operationClass: 'operation',
+                  actionIds: ['playCard'],
+                  sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_GRANT_SKIP_CAPABLE_CROSS_STEP_CONTEXT'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.effects[0].if.then[1].grantFreeOperation.sequenceContext.requireMoveZoneCandidatesFrom',
+      ),
+      true,
     );
   });
 

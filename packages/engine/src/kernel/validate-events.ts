@@ -540,6 +540,17 @@ const validateSequenceContextLinkageForReferences = (
         && candidate.captureKey === requireKey,
     );
     if (matchingCaptures.some((candidate) => candidate.step < reference.step)) {
+      if (reference.progressionPolicy === 'implementWhatCanInOrder') {
+        diagnostics.push({
+          code: 'FREE_OPERATION_GRANT_SKIP_CAPABLE_CROSS_STEP_CONTEXT',
+          path: `${reference.path}.sequenceContext.requireMoveZoneCandidatesFrom`,
+          severity: 'error',
+          message:
+            `requireMoveZoneCandidatesFrom "${requireKey}" in sequence batch "${reference.batch}" cannot depend on an earlier step when progressionPolicy is implementWhatCanInOrder.`,
+          suggestion:
+            `Remove the same-batch cross-step context dependency, or change batch "${reference.batch}" to strictInOrder.`,
+        });
+      }
       continue;
     }
 

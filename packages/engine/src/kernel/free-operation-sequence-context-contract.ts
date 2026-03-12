@@ -7,6 +7,7 @@ export interface FreeOperationSequenceContextGrantLike {
   readonly sequence?: {
     readonly batch?: unknown;
     readonly step?: unknown;
+    readonly progressionPolicy?: unknown;
   };
   readonly sequenceContext?: {
     readonly captureMoveZoneCandidatesAs?: unknown;

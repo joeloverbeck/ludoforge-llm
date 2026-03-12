@@ -198,6 +198,22 @@ describe('FITL card-69 MACV', () => {
     assert.deepEqual(requireCardDrivenRuntime(afterGovern).pendingFreeOperationGrants ?? [], []);
   });
 
+  it('treats Advise as a usable US MACV free special activity on an otherwise empty board', () => {
+    const def = compileDef();
+    const setup = setupMacvState(def, 69005, 0, 'us', 'vc');
+
+    const eventMove = findMacvMove(def, setup, 'macv-us-then-arvn');
+    assert.notEqual(eventMove, undefined, 'Expected MACV US->ARVN branch move');
+
+    const afterEvent = applyMove(def, setup, eventMove!).state;
+
+    assert.equal(
+      findFreeMove(def, afterEvent, 'advise') !== undefined,
+      true,
+      'MACV should treat Advise as a usable free special activity under the authored permissive contract',
+    );
+  });
+
   it('resolves the NVA-then-VC branch as sequential required free special activities and keeps the executing NVA eligible', () => {
     const def = compileDef();
     const setup = setupMacvState(def, 69002, 2, 'nva', null, {

@@ -275,4 +275,54 @@ describe('FITL card-69 MACV', () => {
     );
     assert.deepEqual(requireCardDrivenRuntime(afterTax).pendingFreeOperationGrants ?? [], []);
   });
+
+  it('skips the unusable NVA step and immediately issues the later VC step under implementWhatCanInOrder', () => {
+    const def = compileDef();
+    const setup = setupMacvState(def, 69003, 2, 'nva', null, {
+      zones: {
+        [TAX_SPACE]: [
+          makeToken('macv-vc-taxer', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+        ],
+      },
+      markers: {
+        [TAX_SPACE]: { supportOpposition: 'neutral' },
+      },
+    });
+
+    const eventMove = findMacvMove(def, setup, 'macv-nva-then-vc');
+    assert.notEqual(eventMove, undefined, 'Expected MACV NVA->VC branch move');
+
+    const afterEvent = applyMove(def, setup, eventMove!).state;
+    const runtime = requireCardDrivenRuntime(afterEvent);
+    const grants = runtime.pendingFreeOperationGrants ?? [];
+    assert.deepEqual(grants.map((grant) => ({ seat: grant.seat, sequenceIndex: grant.sequenceIndex })), [
+      { seat: 'vc', sequenceIndex: 1 },
+    ]);
+    const batchId = grants[0]?.sequenceBatchId;
+    assert.notEqual(batchId, undefined);
+    assert.deepEqual(runtime.freeOperationSequenceContexts?.[batchId!], {
+      capturedMoveZonesByKey: {},
+      progressionPolicy: 'implementWhatCanInOrder',
+      skippedStepIndices: [0],
+    });
+    assert.equal(findFreeMove(def, afterEvent, 'infiltrate'), undefined);
+    assert.equal(findFreeMove(def, afterEvent, 'bombard'), undefined);
+    assert.equal(findFreeMove(def, afterEvent, 'ambushNva'), undefined);
+    assert.equal(findFreeMove(def, afterEvent, 'tax') !== undefined, true);
+  });
+
+  it('completes the chosen NVA-then-VC batch without issuing grants when neither step is usable', () => {
+    const def = compileDef();
+    const setup = setupMacvState(def, 69004, 2, 'nva', null);
+
+    const eventMove = findMacvMove(def, setup, 'macv-nva-then-vc');
+    assert.notEqual(eventMove, undefined, 'Expected MACV NVA->VC branch move');
+
+    const afterEvent = applyMove(def, setup, eventMove!).state;
+    const runtime = requireCardDrivenRuntime(afterEvent);
+    assert.deepEqual(runtime.pendingFreeOperationGrants ?? [], []);
+    assert.equal(runtime.freeOperationSequenceContexts, undefined);
+    assert.equal(findFreeMove(def, afterEvent, 'infiltrate'), undefined);
+    assert.equal(findFreeMove(def, afterEvent, 'tax'), undefined);
+  });
 });

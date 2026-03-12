@@ -19,7 +19,6 @@ import { shouldDeferFreeOperationZoneFilterFailure } from './missing-binding-pol
 import { kernelRuntimeError } from './runtime-error.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
-import { isSequenceStepSkipped } from './free-operation-sequence-progression.js';
 import type {
   ConditionAST,
   GameDef,
@@ -79,7 +78,7 @@ export const isPendingFreeOperationGrantSequenceReady = (
           && candidate.sequenceBatchId === batchId
           && candidate.sequenceIndex === step,
       );
-      if (!hasEarlierPendingGrant && !isSequenceStepSkipped(sequenceContexts, batchId, step)) {
+      if (hasEarlierPendingGrant) {
         return false;
       }
     }

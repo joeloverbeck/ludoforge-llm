@@ -114,7 +114,7 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
     assert.deepEqual(usThenArvn?.freeOperationGrants, [
       {
         seat: 'us',
-        sequence: { batch: 'macv-us-then-arvn', step: 0 },
+        sequence: { batch: 'macv-us-then-arvn', step: 0, progressionPolicy: 'implementWhatCanInOrder' },
         actionIds: ['advise', 'airLift', 'airStrike'],
         viabilityPolicy: 'requireUsableAtIssue',
         completionPolicy: 'required',
@@ -123,7 +123,7 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
       },
       {
         seat: 'arvn',
-        sequence: { batch: 'macv-us-then-arvn', step: 1 },
+        sequence: { batch: 'macv-us-then-arvn', step: 1, progressionPolicy: 'implementWhatCanInOrder' },
         actionIds: ['govern', 'transport', 'raid'],
         viabilityPolicy: 'requireUsableAtIssue',
         completionPolicy: 'required',
@@ -134,7 +134,7 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
     assert.deepEqual(nvaThenVc?.freeOperationGrants, [
       {
         seat: 'nva',
-        sequence: { batch: 'macv-nva-then-vc', step: 0 },
+        sequence: { batch: 'macv-nva-then-vc', step: 0, progressionPolicy: 'implementWhatCanInOrder' },
         actionIds: ['infiltrate', 'bombard', 'ambushNva'],
         viabilityPolicy: 'requireUsableAtIssue',
         completionPolicy: 'required',
@@ -143,7 +143,7 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
       },
       {
         seat: 'vc',
-        sequence: { batch: 'macv-nva-then-vc', step: 1 },
+        sequence: { batch: 'macv-nva-then-vc', step: 1, progressionPolicy: 'implementWhatCanInOrder' },
         actionIds: ['tax', 'subvert', 'ambushVc'],
         viabilityPolicy: 'requireUsableAtIssue',
         completionPolicy: 'required',

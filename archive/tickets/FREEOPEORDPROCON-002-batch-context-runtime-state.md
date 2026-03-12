@@ -113,7 +113,7 @@ Regenerate schema artifacts so runtime schemas reflect the extended batch contex
 - Evaluating viability and populating non-empty `skippedStepIndices` — that is `tickets/FREEOPEORDPROCON-005-emission-time-skip-evaluation.md`
 - Consulting `skippedStepIndices` in readiness/discovery — that is `tickets/FREEOPEORDPROCON-004-sequence-readiness-engine.md`
 - Cross-step validation rules for skip-capable batches — that is `tickets/FREEOPEORDPROCON-003-validation-rules-cross-step-context-rejection.md`
-- MACV game-data rework — that is `tickets/FREEOPEORDPROCON-006-macv-data-rework.md`
+- MACV game-data rework — that is `archive/tickets/FREEOPEORDPROCON-006-macv-data-rework.md`
 
 ## Acceptance Criteria
 

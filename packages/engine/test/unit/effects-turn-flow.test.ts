@@ -575,6 +575,78 @@ describe('applyGrantFreeOperation', () => {
     const grants = tos.runtime.pendingFreeOperationGrants ?? [];
     assert.equal(grants.length, 0);
   });
+
+  it('records skippedStepIndices for implementWhatCanInOrder effect-issued sequences and still emits later usable steps', () => {
+    const ctx = makeCtx();
+    const result = applyEffects(
+      [
+        {
+          grantFreeOperation: {
+            seat: 'self',
+            operationClass: 'operation',
+            actionIds: ['attack'],
+            viabilityPolicy: 'requireUsableAtIssue',
+            sequence: { batch: 'implement-what-can', step: 0, progressionPolicy: 'implementWhatCanInOrder' },
+            zoneFilter: { op: '==', left: 1, right: 2 },
+          },
+        },
+        {
+          grantFreeOperation: {
+            seat: 'self',
+            operationClass: 'operation',
+            actionIds: ['attack'],
+            viabilityPolicy: 'requireUsableAtIssue',
+            sequence: { batch: 'implement-what-can', step: 1, progressionPolicy: 'implementWhatCanInOrder' },
+          },
+        },
+      ],
+      ctx,
+    );
+    const tos = result.state.turnOrderState;
+    if (tos.type !== 'cardDriven') throw new Error('Expected cardDriven');
+    const grants = tos.runtime.pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 1);
+    assert.deepEqual(grants.map((grant) => grant.sequenceIndex), [1]);
+    const sequenceBatchId = grants[0]?.sequenceBatchId;
+    assert.notEqual(sequenceBatchId, undefined);
+    assert.deepEqual(tos.runtime.freeOperationSequenceContexts?.[sequenceBatchId!], {
+      capturedMoveZonesByKey: {},
+      progressionPolicy: 'implementWhatCanInOrder',
+      skippedStepIndices: [0],
+    });
+  });
+
+  it('preserves strictInOrder suppression without recording skippedStepIndices', () => {
+    const ctx = makeCtx();
+    const result = applyEffects(
+      [
+        {
+          grantFreeOperation: {
+            seat: 'self',
+            operationClass: 'operation',
+            actionIds: ['attack'],
+            viabilityPolicy: 'requireUsableAtIssue',
+            sequence: { batch: 'strict-sequence', step: 0, progressionPolicy: 'strictInOrder' },
+            zoneFilter: { op: '==', left: 1, right: 2 },
+          },
+        },
+        {
+          grantFreeOperation: {
+            seat: 'self',
+            operationClass: 'operation',
+            actionIds: ['attack'],
+            viabilityPolicy: 'requireUsableAtIssue',
+            sequence: { batch: 'strict-sequence', step: 1, progressionPolicy: 'strictInOrder' },
+          },
+        },
+      ],
+      ctx,
+    );
+    const tos = result.state.turnOrderState;
+    if (tos.type !== 'cardDriven') throw new Error('Expected cardDriven');
+    assert.deepEqual(tos.runtime.pendingFreeOperationGrants ?? [], []);
+    assert.equal(tos.runtime.freeOperationSequenceContexts, undefined);
+  });
 });
 
 describe('applyGotoPhaseExact', () => {

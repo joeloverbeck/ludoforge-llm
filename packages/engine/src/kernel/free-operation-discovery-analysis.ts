@@ -64,11 +64,17 @@ const analyzeFreeOperationGrantMatch = (
     TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_MATCH_EVALUATION,
     seatResolution,
   );
+  const runtime = state.turnOrderState.runtime;
   const actionClass = moveOperationClass(def, move);
   const actionId = String(move.actionId);
-  const pending = state.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
+  const pending = runtime.pendingFreeOperationGrants ?? [];
   const activeGrants = pending.filter((grant) => grant.seat === activeSeat);
-  const sequenceReadyGrants = activeGrants.filter((grant) => isPendingFreeOperationGrantSequenceReady(pending, grant));
+  const sequenceReadyGrants = activeGrants.filter((grant) =>
+    isPendingFreeOperationGrantSequenceReady(
+      pending,
+      grant,
+      runtime.freeOperationSequenceContexts,
+    ));
   const actionClassMatchedGrants = sequenceReadyGrants.filter((grant) => isGrantOperationClassCompatible(grant.operationClass, actionClass));
   const actionMatchedGrants = actionClassMatchedGrants.filter((grant) => grantActionIds(def, grant).includes(actionId));
   const contextMatchedGrants = actionMatchedGrants.filter((grant) => doesGrantRequireSequenceContextMatch(

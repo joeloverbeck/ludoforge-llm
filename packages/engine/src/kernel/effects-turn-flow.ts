@@ -18,6 +18,11 @@ import {
   grantRequiresUsableProbe,
   isFreeOperationGrantUsableInCurrentState,
 } from './free-operation-viability.js';
+import {
+  appendSkippedSequenceStep,
+  ensureFreeOperationSequenceBatchContext,
+  resolveSequenceProgressionPolicy,
+} from './free-operation-sequence-progression.js';
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import { resolveFreeOperationExecutionContext } from './free-operation-execution-context.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
@@ -26,9 +31,7 @@ import type {
   EffectAST,
   GameState,
   TurnFlowFreeOperationGrantContract,
-  TurnFlowFreeOperationGrantProgressionPolicy,
   TurnFlowPendingFreeOperationGrant,
-  TurnFlowRuntimeState,
 } from './types.js';
 import { createSeatResolutionContext, resolveTurnFlowSeatForPlayerIndex } from './identity.js';
 import {
@@ -104,24 +107,6 @@ const resolveTemplateTree = <T>(value: T, bindings: Readonly<Record<string, unkn
   }
   return value;
 };
-
-const resolveSequenceProgressionPolicy = (
-  grant: Pick<TurnFlowFreeOperationGrantContract, 'sequence'>,
-): TurnFlowFreeOperationGrantProgressionPolicy =>
-  (grant.sequence?.progressionPolicy ?? 'strictInOrder');
-
-const ensureFreeOperationSequenceBatchContext = (
-  contexts: TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined,
-  batchId: string,
-  progressionPolicy: ReturnType<typeof resolveSequenceProgressionPolicy>,
-): TurnFlowRuntimeState['freeOperationSequenceContexts'] => ({
-  ...(contexts ?? {}),
-  [batchId]: {
-    capturedMoveZonesByKey: contexts?.[batchId]?.capturedMoveZonesByKey ?? {},
-    progressionPolicy,
-    skippedStepIndices: contexts?.[batchId]?.skippedStepIndices ?? [],
-  },
-});
 
 export const applyGrantFreeOperation = (
   effect: Extract<EffectAST, { readonly grantFreeOperation: unknown }>,
@@ -243,6 +228,7 @@ export const applyGrantFreeOperation = (
     : grant.id ?? `${ctx.traceContext?.effectPathRoot ?? 'freeOpEffect'}:${activeSeat}`;
   const sequenceBatchId = grant.sequence === undefined ? undefined : `${sequenceBatchBaseId}:${grant.sequence.batch}`;
   const sequenceIndex = grant.sequence?.step;
+  const sequenceProgressionPolicy = resolveSequenceProgressionPolicy(grant);
 
   const resolvedZoneFilter = grant.zoneFilter === undefined
     ? undefined
@@ -286,8 +272,30 @@ export const applyGrantFreeOperation = (
       },
     )
   ) {
+    const nextSequenceContexts =
+      sequenceBatchId !== undefined
+      && sequenceIndex !== undefined
+      && sequenceProgressionPolicy === 'implementWhatCanInOrder'
+        ? appendSkippedSequenceStep(
+          runtime.freeOperationSequenceContexts,
+          sequenceBatchId,
+          sequenceProgressionPolicy,
+          sequenceIndex,
+        )
+        : runtime.freeOperationSequenceContexts;
     return {
-      state: ctx.state,
+      state: nextSequenceContexts === runtime.freeOperationSequenceContexts
+        ? ctx.state
+        : {
+          ...ctx.state,
+          turnOrderState: {
+            type: 'cardDriven',
+            runtime: {
+              ...runtime,
+              ...(nextSequenceContexts === undefined ? {} : { freeOperationSequenceContexts: nextSequenceContexts }),
+            },
+          },
+        },
       rng: ctx.rng,
     };
   }
@@ -319,7 +327,7 @@ export const applyGrantFreeOperation = (
     : ensureFreeOperationSequenceBatchContext(
       runtime.freeOperationSequenceContexts,
       sequenceBatchId,
-      resolveSequenceProgressionPolicy(grant),
+      sequenceProgressionPolicy,
     );
   return {
     state: {

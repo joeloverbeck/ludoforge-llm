@@ -1602,6 +1602,92 @@ phase: [asPhaseId('main')],
     ],
   }) as unknown as GameDef;
 
+const createImplementWhatCanInOrderGrantDef = (): GameDef => {
+  const def = createGrantViabilityPolicyDef() as unknown as {
+    eventDecks: EventDeckDef[];
+    actions: Array<{ id: ReturnType<typeof asActionId>; params: Array<{ name: string; domain?: { query: string; values?: string[] } }> }>;
+  };
+  const eventAction = def.actions.find((action) => String(action.id) === 'event');
+  const eventCardParam = eventAction?.params.find((param) => param.name === 'eventCardId');
+  const eventCardValues = eventCardParam?.domain?.values;
+  if (Array.isArray(eventCardValues)) {
+    for (const cardId of [
+      'card-require-usable-issue-implement-what-can',
+      'card-effect-require-usable-issue-sequence-implement-what-can',
+    ]) {
+      if (!eventCardValues.includes(cardId)) {
+        eventCardValues.push(cardId);
+      }
+    }
+  }
+
+  const primaryDeck = def.eventDecks[0];
+  if (primaryDeck !== undefined) {
+    def.eventDecks[0] = {
+      ...primaryDeck,
+      cards: [
+        ...primaryDeck.cards,
+        {
+          id: 'card-require-usable-issue-implement-what-can',
+          title: 'Issue-time Viability Implement What Can',
+          sideMode: 'single',
+          unshaded: {
+            text: 'Skip unusable earlier steps and still emit later usable steps.',
+            freeOperationGrants: [
+              {
+                seat: 'self',
+                sequence: { batch: 'issue-implement-what-can', step: 0, progressionPolicy: 'implementWhatCanInOrder' },
+                operationClass: 'operation',
+                actionIds: ['operation'],
+                viabilityPolicy: 'requireUsableAtIssue',
+                zoneFilter: { op: '==', left: 1, right: 2 },
+              },
+              {
+                seat: 'self',
+                sequence: { batch: 'issue-implement-what-can', step: 1, progressionPolicy: 'implementWhatCanInOrder' },
+                operationClass: 'operation',
+                actionIds: ['operation'],
+                viabilityPolicy: 'requireUsableAtIssue',
+              },
+            ],
+          },
+        } as EventCardDef,
+        {
+          id: 'card-effect-require-usable-issue-sequence-implement-what-can',
+          title: 'Effect Issue-time Viability Implement What Can',
+          sideMode: 'single',
+          unshaded: {
+            text: 'Effect-issued batches skip unusable earlier steps and still emit later usable steps.',
+            effects: [
+              {
+                grantFreeOperation: {
+                  seat: 'self',
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  sequence: { batch: 'effect-issue-implement-what-can', step: 0, progressionPolicy: 'implementWhatCanInOrder' },
+                  viabilityPolicy: 'requireUsableAtIssue',
+                  zoneFilter: { op: '==', left: 1, right: 2 },
+                },
+              },
+              {
+                grantFreeOperation: {
+                  seat: 'self',
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  sequence: { batch: 'effect-issue-implement-what-can', step: 1, progressionPolicy: 'implementWhatCanInOrder' },
+                  viabilityPolicy: 'requireUsableAtIssue',
+                },
+              },
+            ],
+          },
+        } as EventCardDef,
+      ],
+    };
+  }
+
+  return def as unknown as GameDef;
+};
+
 const createExecuteAsSeatSpecialActivityDef = (): GameDef =>
   ({
     metadata: { id: 'event-free-op-execute-as-special-activity-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
@@ -2540,6 +2626,58 @@ describe('event free-operation grants integration', () => {
     const grants = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
     assert.equal(grants.length, 2);
     assert.deepEqual(grants.map((grant) => grant.sequenceIndex), [0, 1]);
+  });
+
+  it('records skippedStepIndices for event-issued implementWhatCanInOrder grants and emits the later usable step', () => {
+    const def = createImplementWhatCanInOrderGrantDef();
+    const start = initialState(def, 118, 3).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-require-usable-issue-implement-what-can', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const runtime = requireCardDrivenRuntime(afterEvent);
+    const grants = runtime.pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 1);
+    assert.deepEqual(grants.map((grant) => grant.sequenceIndex), [1]);
+    const sequenceBatchId = grants[0]?.sequenceBatchId;
+    assert.notEqual(sequenceBatchId, undefined);
+    assert.deepEqual(runtime.freeOperationSequenceContexts?.[sequenceBatchId!], {
+      capturedMoveZonesByKey: {},
+      progressionPolicy: 'implementWhatCanInOrder',
+      skippedStepIndices: [0],
+    });
+  });
+
+  it('keeps event-issued and effect-issued implementWhatCanInOrder batch context state aligned', () => {
+    const def = createImplementWhatCanInOrderGrantDef();
+    const start = initialState(def, 119, 3).state;
+
+    const afterEventIssued = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-require-usable-issue-implement-what-can', side: 'unshaded', branch: 'none' },
+    }).state;
+    const eventRuntime = requireCardDrivenRuntime(afterEventIssued);
+    const eventGrants = eventRuntime.pendingFreeOperationGrants ?? [];
+
+    const afterEffectIssued = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-effect-require-usable-issue-sequence-implement-what-can', side: 'unshaded', branch: 'none' },
+    }).state;
+    const effectRuntime = requireCardDrivenRuntime(afterEffectIssued);
+    const effectGrants = effectRuntime.pendingFreeOperationGrants ?? [];
+
+    assert.deepEqual(
+      eventGrants.map((grant) => ({ seat: grant.seat, sequenceIndex: grant.sequenceIndex, viabilityPolicy: grant.viabilityPolicy })),
+      effectGrants.map((grant) => ({ seat: grant.seat, sequenceIndex: grant.sequenceIndex, viabilityPolicy: grant.viabilityPolicy })),
+    );
+
+    const eventBatchId = eventGrants[0]?.sequenceBatchId;
+    const effectBatchId = effectGrants[0]?.sequenceBatchId;
+    assert.notEqual(eventBatchId, undefined);
+    assert.notEqual(effectBatchId, undefined);
+    assert.deepEqual(eventRuntime.freeOperationSequenceContexts?.[eventBatchId!], effectRuntime.freeOperationSequenceContexts?.[effectBatchId!]);
   });
 
   it('does not emit nested sequence-later effect grants when earlier nested requireUsableAtIssue steps are currently unusable', () => {

@@ -31,6 +31,7 @@ import {
 import { resolveGrantFreeOperationActionDomain } from './free-operation-action-domain.js';
 import { resolveFreeOperationExecutionContext } from './free-operation-execution-context.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
+import { resolveSequenceProgressionPolicy } from './free-operation-sequence-progression.js';
 import {
   buildMoveRuntimeBindings,
   deriveDecisionBindingsFromMoveParams,
@@ -140,6 +141,9 @@ const resolveUnusableSequenceProbeBlockers = (
 ): readonly TurnFlowPendingFreeOperationGrant[] => {
   const sequence = grant.sequence;
   if (sequence === undefined) {
+    return baseBlockers;
+  }
+  if (resolveSequenceProgressionPolicy(grant) === 'implementWhatCanInOrder') {
     return baseBlockers;
   }
 

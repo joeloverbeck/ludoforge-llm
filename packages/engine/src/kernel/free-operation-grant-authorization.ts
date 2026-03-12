@@ -19,12 +19,14 @@ import { shouldDeferFreeOperationZoneFilterFailure } from './missing-binding-pol
 import { kernelRuntimeError } from './runtime-error.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
+import { isSequenceStepSkipped } from './free-operation-sequence-progression.js';
 import type {
   ConditionAST,
   GameDef,
   GameState,
   Move,
   TurnFlowPendingFreeOperationGrant,
+  TurnFlowRuntimeState,
 } from './types.js';
 
 export const grantActionIds = (
@@ -61,10 +63,26 @@ export const moveOperationClass = (
 export const isPendingFreeOperationGrantSequenceReady = (
   pending: readonly TurnFlowPendingFreeOperationGrant[],
   grant: TurnFlowPendingFreeOperationGrant,
+  sequenceContexts?: TurnFlowRuntimeState['freeOperationSequenceContexts'],
 ): boolean => {
   const batchId = grant.sequenceBatchId;
   const sequenceIndex = grant.sequenceIndex;
   if (batchId === undefined || sequenceIndex === undefined) {
+    return true;
+  }
+  const progressionPolicy = sequenceContexts?.[batchId]?.progressionPolicy ?? 'strictInOrder';
+  if (progressionPolicy === 'implementWhatCanInOrder') {
+    for (let step = 0; step < sequenceIndex; step += 1) {
+      const hasEarlierPendingGrant = pending.some(
+        (candidate) =>
+          candidate.grantId !== grant.grantId
+          && candidate.sequenceBatchId === batchId
+          && candidate.sequenceIndex === step,
+      );
+      if (!hasEarlierPendingGrant && !isSequenceStepSkipped(sequenceContexts, batchId, step)) {
+        return false;
+      }
+    }
     return true;
   }
   return !pending.some(
@@ -242,7 +260,11 @@ export const doesGrantAuthorizeMove = (
   grant: TurnFlowPendingFreeOperationGrant,
   move: Move,
 ): boolean =>
-  isPendingFreeOperationGrantSequenceReady(pending, grant) &&
+  isPendingFreeOperationGrantSequenceReady(
+    pending,
+    grant,
+    state.turnOrderState.type === 'cardDriven' ? state.turnOrderState.runtime.freeOperationSequenceContexts : undefined,
+  ) &&
   doesGrantApplyToMove(def, grant, move) &&
   doesGrantSatisfySequenceContext(def, state, grant, move) &&
   (
@@ -257,7 +279,11 @@ export const doesGrantPotentiallyAuthorizeMove = (
   grant: TurnFlowPendingFreeOperationGrant,
   move: Move,
 ): boolean =>
-  isPendingFreeOperationGrantSequenceReady(pending, grant) &&
+  isPendingFreeOperationGrantSequenceReady(
+    pending,
+    grant,
+    state.turnOrderState.type === 'cardDriven' ? state.turnOrderState.runtime.freeOperationSequenceContexts : undefined,
+  ) &&
   doesGrantApplyToMove(def, grant, move) &&
   doesGrantSatisfySequenceContext(def, state, grant, move, { allowUnresolvedMoveZones: true }) &&
   (

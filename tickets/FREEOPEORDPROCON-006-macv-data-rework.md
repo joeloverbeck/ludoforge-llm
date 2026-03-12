@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: No — game data and tests only
-**Deps**: archive/tickets/FREEOPEORDPROCON-001-progression-policy-contract-surface.md, tickets/FREEOPEORDPROCON-005-emission-time-skip-evaluation.md
+**Deps**: archive/tickets/FREEOPEORDPROCON-001-progression-policy-contract-surface.md, archive/tickets/FREEOPEORDPROCON-005-emission-time-skip-evaluation.md
 
 ## Problem
 

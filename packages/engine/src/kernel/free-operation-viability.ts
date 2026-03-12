@@ -36,7 +36,6 @@ import { resolveGrantFreeOperationActionDomain } from './free-operation-action-d
 import { resolveFreeOperationExecutionContext } from './free-operation-execution-context.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import { resolveSequenceProgressionPolicy } from './free-operation-sequence-progression.js';
-import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import {
   buildMoveRuntimeBindings,
   deriveDecisionBindingsFromMoveParams,

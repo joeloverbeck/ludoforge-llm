@@ -813,6 +813,35 @@ describe('json schema artifacts', () => {
     assert.equal(validate(valid), true, JSON.stringify(validate.errors, null, 2));
   });
 
+  it('eventDeck freeOperationGrants accept sequence progressionPolicy', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(gameDefSchema);
+    const valid = {
+      ...gameDefWithModernEventDeck,
+      eventDecks: [
+        {
+          ...gameDefWithModernEventDeck.eventDecks![0],
+          cards: [
+            {
+              ...gameDefWithModernEventDeck.eventDecks![0]!.cards[0],
+              unshaded: {
+                ...gameDefWithModernEventDeck.eventDecks![0]!.cards[0]!.unshaded!,
+                freeOperationGrants: [
+                  {
+                    ...gameDefWithModernEventDeck.eventDecks![0]!.cards[0]!.unshaded!.freeOperationGrants![0],
+                    sequence: { batch: 'play-card-grant', step: 0, progressionPolicy: 'implementWhatCanInOrder' },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    assert.equal(validate(valid), true, JSON.stringify(validate.errors, null, 2));
+  });
+
   it('grantFreeOperation effects accept the explicit required completion contract shape', () => {
     const ajv = new Ajv({ allErrors: true, strict: false });
     const validate = ajv.compile(gameDefSchema);
@@ -828,6 +857,30 @@ describe('json schema artifacts', () => {
                 operationClass: 'operation',
                 completionPolicy: 'required',
                 postResolutionTurnFlow: 'resumeCardFlow',
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    assert.equal(validate(valid), true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  it('grantFreeOperation effects accept sequence progressionPolicy', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(gameDefSchema);
+    const valid = {
+      ...fullGameDef,
+      actions: [
+        {
+          ...fullGameDef.actions[0],
+          effects: [
+            {
+              grantFreeOperation: {
+                seat: '0',
+                operationClass: 'operation',
+                sequence: { batch: 'effect-chain', step: 0, progressionPolicy: 'implementWhatCanInOrder' },
               },
             },
           ],

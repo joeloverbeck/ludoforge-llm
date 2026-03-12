@@ -18,6 +18,11 @@ import {
   grantRequiresUsableProbe,
   isFreeOperationGrantUsableInCurrentState,
 } from './free-operation-viability.js';
+import {
+  appendSkippedSequenceStep,
+  ensureFreeOperationSequenceBatchContext,
+  resolveSequenceProgressionPolicy,
+} from './free-operation-sequence-progression.js';
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import { resolveFreeOperationExecutionContext } from './free-operation-execution-context.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
@@ -223,6 +228,7 @@ export const applyGrantFreeOperation = (
     : grant.id ?? `${ctx.traceContext?.effectPathRoot ?? 'freeOpEffect'}:${activeSeat}`;
   const sequenceBatchId = grant.sequence === undefined ? undefined : `${sequenceBatchBaseId}:${grant.sequence.batch}`;
   const sequenceIndex = grant.sequence?.step;
+  const sequenceProgressionPolicy = resolveSequenceProgressionPolicy(grant);
 
   const resolvedZoneFilter = grant.zoneFilter === undefined
     ? undefined
@@ -266,8 +272,30 @@ export const applyGrantFreeOperation = (
       },
     )
   ) {
+    const nextSequenceContexts =
+      sequenceBatchId !== undefined
+      && sequenceIndex !== undefined
+      && sequenceProgressionPolicy === 'implementWhatCanInOrder'
+        ? appendSkippedSequenceStep(
+          runtime.freeOperationSequenceContexts,
+          sequenceBatchId,
+          sequenceProgressionPolicy,
+          sequenceIndex,
+        )
+        : runtime.freeOperationSequenceContexts;
     return {
-      state: ctx.state,
+      state: nextSequenceContexts === runtime.freeOperationSequenceContexts
+        ? ctx.state
+        : {
+          ...ctx.state,
+          turnOrderState: {
+            type: 'cardDriven',
+            runtime: {
+              ...runtime,
+              ...(nextSequenceContexts === undefined ? {} : { freeOperationSequenceContexts: nextSequenceContexts }),
+            },
+          },
+        },
       rng: ctx.rng,
     };
   }
@@ -294,6 +322,13 @@ export const applyGrantFreeOperation = (
   };
 
   const nextPending = [...existing, appended];
+  const nextSequenceContexts = sequenceBatchId === undefined
+    ? runtime.freeOperationSequenceContexts
+    : ensureFreeOperationSequenceBatchContext(
+      runtime.freeOperationSequenceContexts,
+      sequenceBatchId,
+      sequenceProgressionPolicy,
+    );
   return {
     state: {
       ...ctx.state,
@@ -302,6 +337,7 @@ export const applyGrantFreeOperation = (
         runtime: {
           ...runtime,
           pendingFreeOperationGrants: nextPending,
+          ...(nextSequenceContexts === undefined ? {} : { freeOperationSequenceContexts: nextSequenceContexts }),
         },
       },
     },

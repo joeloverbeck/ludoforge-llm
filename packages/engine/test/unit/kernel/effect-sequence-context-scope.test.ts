@@ -41,6 +41,7 @@ const captureReference = (batch: string, step: number, path: string) => ({
   batch,
   step,
   path,
+  progressionPolicy: 'strictInOrder',
   captureKey: 'selected-space',
 });
 
@@ -48,6 +49,7 @@ const requireReference = (batch: string, step: number, path: string) => ({
   batch,
   step,
   path,
+  progressionPolicy: 'strictInOrder',
   requireKey: 'selected-space',
 });
 

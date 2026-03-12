@@ -16,6 +16,7 @@ import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
+import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
 const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 
@@ -209,6 +210,53 @@ describe('FITL US/ARVN special activities integration', () => {
       1,
       'Advise should not remove tunneled bases',
     );
+  });
+
+  it('keeps Advise directly legal on an otherwise empty eligible space', () => {
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const targetSpace = 'quang-nam:none';
+    const seeded = initialState(def, 183, 4).state;
+    const runtime = requireCardDrivenRuntime(seeded);
+    const state: GameState = {
+      ...seeded,
+      activePlayer: asPlayerId(0),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...runtime,
+          currentCard: {
+            ...runtime.currentCard,
+            firstEligible: 'us',
+            secondEligible: 'arvn',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+        },
+      },
+      zones: {
+        ...seeded.zones,
+        [targetSpace]: [],
+      },
+    };
+
+    const moves = legalMoves(def, state).filter((move) => String(move.actionId) === 'advise');
+    assert.ok(moves.length > 0, 'Advise should still be discoverable on an otherwise empty eligible space');
+
+    const result = applyMoveWithResolvedDecisionIds(def, state, {
+      actionId: asActionId('advise'),
+      params: {
+        $targetSpaces: [targetSpace],
+        [`$adviseMode@${targetSpace}`]: 'assault',
+        $adviseAid: 'no',
+      },
+    });
+
+    assert.equal(result.state.globalVars.aid, state.globalVars.aid, 'Advise should not require the optional Aid rider');
+    assert.equal(result.state.globalVars.adviseCount, Number(state.globalVars.adviseCount ?? 0) + 1);
   });
 
   it('executes Air Lift with per-piece multi-destination movement and a 4-piece ARVN/Ranger/Irregular cap', () => {

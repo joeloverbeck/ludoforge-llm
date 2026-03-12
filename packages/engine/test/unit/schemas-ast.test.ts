@@ -501,6 +501,54 @@ describe('AST and selector schemas', () => {
       assert.deepEqual(EventCardFreeOperationGrantSchema.parse(grant), grant);
     });
 
+    it('parses progressionPolicy on event-card and effect-issued free-operation sequences', () => {
+      const policies = ['strictInOrder', 'implementWhatCanInOrder'] as const;
+
+      for (const progressionPolicy of policies) {
+        const effect = {
+          grantFreeOperation: {
+            seat: '3',
+            operationClass: 'operation',
+            sequence: { batch: 'ctx-chain', step: 0, progressionPolicy },
+          },
+        } as const;
+        const grant = {
+          seat: '3',
+          operationClass: 'operation',
+          sequence: { batch: 'ctx-chain', step: 0, progressionPolicy },
+        } as const;
+
+        assert.deepEqual(EffectASTSchema.parse(effect), effect);
+        assert.deepEqual(EventCardFreeOperationGrantSchema.parse(grant), grant);
+      }
+    });
+
+    it('rejects invalid progressionPolicy on event-card and effect-issued free-operation sequences', () => {
+      const effectResult = EffectASTSchema.safeParse({
+        grantFreeOperation: {
+          seat: '3',
+          operationClass: 'operation',
+          sequence: { batch: 'ctx-chain', step: 0, progressionPolicy: 'bogus' },
+        },
+      });
+      const grantResult = EventCardFreeOperationGrantSchema.safeParse({
+        seat: '3',
+        operationClass: 'operation',
+        sequence: { batch: 'ctx-chain', step: 0, progressionPolicy: 'bogus' },
+      });
+
+      assert.equal(effectResult.success, false);
+      assert.equal(
+        effectResult.error.issues.some((issue) => issue.path.join('.') === 'grantFreeOperation.sequence.progressionPolicy'),
+        true,
+      );
+      assert.equal(grantResult.success, false);
+      assert.equal(
+        grantResult.error.issues.some((issue) => issue.path.join('.') === 'sequence.progressionPolicy'),
+        true,
+      );
+    });
+
     it('rejects event-card freeOperationGrants that require completion without postResolutionTurnFlow', () => {
       const result = EventCardFreeOperationGrantSchema.safeParse({
         seat: '3',

@@ -431,7 +431,7 @@ function enumeratePendingFreeOperationMoves(
   const readyGrants = pending.filter(
     (grant) =>
       grant.seat === activeSeat &&
-      isPendingFreeOperationGrantSequenceReady(pending, grant),
+      isPendingFreeOperationGrantSequenceReady(pending, grant, runtime.freeOperationSequenceContexts),
   );
   if (readyGrants.length === 0) {
     return;

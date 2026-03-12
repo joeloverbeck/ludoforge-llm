@@ -1509,6 +1509,33 @@ describe('compile-effects lowering', () => {
     ]);
   });
 
+  it('lowers grantFreeOperation sequence progressionPolicy through the CNL effect compiler', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          grantFreeOperation: {
+            seat: '3',
+            operationClass: 'operation',
+            sequence: { batch: 'ctx-chain', step: 0, progressionPolicy: 'implementWhatCanInOrder' },
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, [
+      {
+        grantFreeOperation: {
+          seat: '3',
+          operationClass: 'operation',
+          sequence: { batch: 'ctx-chain', step: 0, progressionPolicy: 'implementWhatCanInOrder' },
+        },
+      },
+    ]);
+  });
+
   it('lowers grantFreeOperation sequenceContext through the CNL effect compiler', () => {
     const result = lowerEffectArray(
       [

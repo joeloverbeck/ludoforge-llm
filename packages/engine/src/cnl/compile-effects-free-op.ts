@@ -10,6 +10,7 @@ import {
   TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
   isTurnFlowActionClass,
+  isTurnFlowFreeOperationGrantProgressionPolicy,
   isTurnFlowFreeOperationGrantViabilityPolicy,
 } from '../contracts/index.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
@@ -196,18 +197,37 @@ export function lowerGrantFreeOperationEffect(
     postResolutionTurnFlow = source.postResolutionTurnFlow as import('../contracts/index.js').TurnFlowFreeOperationGrantPostResolutionTurnFlow;
   }
 
-  let loweredSequence: { readonly batch: string; readonly step: number } | undefined;
+  let loweredSequence:
+    | {
+        readonly batch: string;
+        readonly step: number;
+        readonly progressionPolicy?: import('../contracts/index.js').TurnFlowFreeOperationGrantProgressionPolicy;
+      }
+    | undefined;
   if (source.sequence !== undefined) {
-    if (!isRecord(source.sequence) || typeof source.sequence.batch !== 'string' || !isInteger(source.sequence.step) || source.sequence.step < 0) {
+    if (
+      !isRecord(source.sequence)
+      || typeof source.sequence.batch !== 'string'
+      || !isInteger(source.sequence.step)
+      || source.sequence.step < 0
+      || (
+        source.sequence.progressionPolicy !== undefined
+        && (
+          typeof source.sequence.progressionPolicy !== 'string'
+          || !isTurnFlowFreeOperationGrantProgressionPolicy(source.sequence.progressionPolicy)
+        )
+      )
+    ) {
       diagnostics.push(
         ...missingCapability(`${path}.sequence`, 'grantFreeOperation sequence', source.sequence, [
-          '{ batch: string, step: non-negative integer }',
+          '{ batch: string, step: non-negative integer, progressionPolicy?: strictInOrder|implementWhatCanInOrder }',
         ]).diagnostics,
       );
     } else {
       loweredSequence = {
         batch: source.sequence.batch,
         step: source.sequence.step,
+        ...(source.sequence.progressionPolicy === undefined ? {} : { progressionPolicy: source.sequence.progressionPolicy }),
       };
     }
   }

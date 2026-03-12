@@ -60,6 +60,7 @@ describe('sequence-context linkage grant reference extraction', () => {
         batch: 'ctx-chain',
         step: 0,
         path: 'grants[0]',
+        progressionPolicy: 'strictInOrder',
         captureKey: 'selected-space',
       },
     );
@@ -75,6 +76,26 @@ describe('sequence-context linkage grant reference extraction', () => {
         batch: 'ctx-chain',
         step: 1,
         path: 'grants[1]',
+        progressionPolicy: 'strictInOrder',
+        requireKey: 'selected-space',
+      },
+    );
+  });
+
+  it('normalizes implementWhatCanInOrder progression policy onto extracted references', () => {
+    assert.deepEqual(
+      collectSequenceContextLinkageGrantReference(
+        {
+          sequence: { batch: 'ctx-chain', step: 1, progressionPolicy: 'implementWhatCanInOrder' },
+          sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+        },
+        'grants[1]',
+      ),
+      {
+        batch: 'ctx-chain',
+        step: 1,
+        path: 'grants[1]',
+        progressionPolicy: 'implementWhatCanInOrder',
         requireKey: 'selected-space',
       },
     );

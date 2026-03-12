@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   CARD_SEAT_ORDER_MIN_DISTINCT_SEATS,
+  type EffectAST,
   type GameDef,
   type ScenarioPiecePlacement,
   type StackingConstraint,
@@ -5708,6 +5709,64 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
     );
   });
 
+  it('rejects mixed progressionPolicy values within one declarative free-operation batch', () => {
+    const def = withEventFreeOperationGrants([
+      {
+        seat: '0',
+        sequence: { batch: 'ctx-chain', step: 0, progressionPolicy: 'strictInOrder' },
+        operationClass: 'operation',
+        actionIds: ['playCard'],
+      },
+      {
+        seat: '0',
+        sequence: { batch: 'ctx-chain', step: 1, progressionPolicy: 'implementWhatCanInOrder' },
+        operationClass: 'operation',
+        actionIds: ['playCard'],
+      },
+    ]);
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_SEQUENCE_MIXED_PROGRESSION_POLICY'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[0].sequence.progressionPolicy',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_SEQUENCE_MIXED_PROGRESSION_POLICY'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[1].sequence.progressionPolicy',
+      ),
+      true,
+    );
+  });
+
+  it('treats omitted progressionPolicy as strictInOrder for declarative batch validation', () => {
+    const def = withEventFreeOperationGrants([
+      {
+        seat: '0',
+        sequence: { batch: 'ctx-chain', step: 0 },
+        operationClass: 'operation',
+        actionIds: ['playCard'],
+      },
+      {
+        seat: '0',
+        sequence: { batch: 'ctx-chain', step: 1, progressionPolicy: 'strictInOrder' },
+        operationClass: 'operation',
+        actionIds: ['playCard'],
+      },
+    ]);
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code === 'FREE_OPERATION_SEQUENCE_MIXED_PROGRESSION_POLICY'),
+      false,
+    );
+  });
+
   it('renders sequenceContext requires sequence against the correct freeOperationGrant surface', () => {
     const def = withEventCardSideConfig({
       freeOperationGrants: [
@@ -5866,6 +5925,106 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
     assert.equal(
       diagnostics.some((diag) => diag.code.startsWith('FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_')),
       false,
+    );
+  });
+
+  it('rejects same-batch cross-step sequence context under implementWhatCanInOrder for declarative grants', () => {
+    const def = withEventFreeOperationGrants([
+      {
+        seat: '0',
+        sequence: { batch: 'ctx-chain', step: 0, progressionPolicy: 'implementWhatCanInOrder' },
+        operationClass: 'operation',
+        actionIds: ['playCard'],
+        sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+      },
+      {
+        seat: '0',
+        sequence: { batch: 'ctx-chain', step: 1, progressionPolicy: 'implementWhatCanInOrder' },
+        operationClass: 'operation',
+        actionIds: ['playCard'],
+        sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+      },
+    ]);
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_GRANT_SKIP_CAPABLE_CROSS_STEP_CONTEXT'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.freeOperationGrants[1].sequenceContext.requireMoveZoneCandidatesFrom',
+      ),
+      true,
+    );
+  });
+
+  it('allows same-batch cross-step sequence context under strictInOrder for declarative grants', () => {
+    const def = withEventFreeOperationGrants([
+      {
+        seat: '0',
+        sequence: { batch: 'ctx-chain', step: 0, progressionPolicy: 'strictInOrder' },
+        operationClass: 'operation',
+        actionIds: ['playCard'],
+        sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+      },
+      {
+        seat: '0',
+        sequence: { batch: 'ctx-chain', step: 1, progressionPolicy: 'strictInOrder' },
+        operationClass: 'operation',
+        actionIds: ['playCard'],
+        sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+      },
+    ]);
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code === 'FREE_OPERATION_GRANT_SKIP_CAPABLE_CROSS_STEP_CONTEXT'),
+      false,
+    );
+  });
+
+  it('rejects mixed progressionPolicy values within one effect-issued free-operation batch', () => {
+    const effects: readonly EffectAST[] = [
+      {
+        grantFreeOperation: {
+          seat: '0',
+          operationClass: 'operation',
+          sequence: { batch: 'effect-chain', step: 0, progressionPolicy: 'strictInOrder' },
+        },
+      },
+      {
+        grantFreeOperation: {
+          seat: '0',
+          operationClass: 'operation',
+          sequence: { batch: 'effect-chain', step: 1, progressionPolicy: 'implementWhatCanInOrder' },
+        },
+      },
+    ] as const;
+    const def = {
+      ...createValidGameDef(),
+      actions: [
+        {
+          ...createValidGameDef().actions[0]!,
+          effects,
+        },
+      ],
+    };
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_SEQUENCE_MIXED_PROGRESSION_POLICY'
+          && diag.path === 'actions[0].effects[0].grantFreeOperation.sequence.progressionPolicy',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_SEQUENCE_MIXED_PROGRESSION_POLICY'
+          && diag.path === 'actions[0].effects[1].grantFreeOperation.sequence.progressionPolicy',
+      ),
+      true,
     );
   });
 
@@ -6192,6 +6351,48 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
     assert.equal(
       diagnostics.some((diag) => diag.code.startsWith('FREE_OPERATION_SEQUENCE_CONTEXT_REQUIRE_CAPTURE_')),
       false,
+    );
+  });
+
+  it('rejects same-batch cross-step sequence context under implementWhatCanInOrder for effect-issued grants', () => {
+    const def = withEventCardSideConfig({
+      effects: [
+        {
+          if: {
+            when: { op: '==', left: 1, right: 1 },
+            then: [
+              {
+                grantFreeOperation: {
+                  seat: '0',
+                  sequence: { batch: 'ctx-effect-skip-chain', step: 0, progressionPolicy: 'implementWhatCanInOrder' },
+                  operationClass: 'operation',
+                  actionIds: ['playCard'],
+                  sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
+                },
+              },
+              {
+                grantFreeOperation: {
+                  seat: '0',
+                  sequence: { batch: 'ctx-effect-skip-chain', step: 1, progressionPolicy: 'implementWhatCanInOrder' },
+                  operationClass: 'operation',
+                  actionIds: ['playCard'],
+                  sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'FREE_OPERATION_GRANT_SKIP_CAPABLE_CROSS_STEP_CONTEXT'
+          && diag.path === 'eventDecks[0].cards[0].unshaded.effects[0].if.then[1].grantFreeOperation.sequenceContext.requireMoveZoneCandidatesFrom',
+      ),
+      true,
     );
   });
 

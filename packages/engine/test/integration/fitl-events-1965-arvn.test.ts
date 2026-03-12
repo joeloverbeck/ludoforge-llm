@@ -90,6 +90,69 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
     ]);
   });
 
+  it('encodes card 69 (MACV) as a stay-eligible paired special-activity branch choice', () => {
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-69');
+    assert.notEqual(card, undefined);
+    assert.equal(
+      card?.unshaded?.text,
+      'Either US then ARVN or NVA then VC each executes any 1 free Special Activity. Faction executing Event stays Eligible.',
+    );
+    assert.deepEqual(card?.unshaded?.eligibilityOverrides, [
+      { target: { kind: 'active' }, eligible: true, windowId: 'remain-eligible' },
+    ]);
+    assert.deepEqual(
+      [...(card?.unshaded?.branches?.map((branch) => branch.id) ?? [])].sort(),
+      ['macv-nva-then-vc', 'macv-us-then-arvn'],
+    );
+    const usThenArvn = card?.unshaded?.branches?.find((branch) => branch.id === 'macv-us-then-arvn');
+    const nvaThenVc = card?.unshaded?.branches?.find((branch) => branch.id === 'macv-nva-then-vc');
+    assert.deepEqual(usThenArvn?.freeOperationGrants, [
+      {
+        seat: 'us',
+        sequence: { batch: 'macv-us-then-arvn', step: 0, progressionPolicy: 'implementWhatCanInOrder' },
+        actionIds: ['advise', 'airLift', 'airStrike'],
+        viabilityPolicy: 'requireUsableAtIssue',
+        completionPolicy: 'required',
+        postResolutionTurnFlow: 'resumeCardFlow',
+        operationClass: 'specialActivity',
+      },
+      {
+        seat: 'arvn',
+        sequence: { batch: 'macv-us-then-arvn', step: 1, progressionPolicy: 'implementWhatCanInOrder' },
+        actionIds: ['govern', 'transport', 'raid'],
+        viabilityPolicy: 'requireUsableAtIssue',
+        completionPolicy: 'required',
+        postResolutionTurnFlow: 'resumeCardFlow',
+        operationClass: 'specialActivity',
+      },
+    ]);
+    assert.deepEqual(nvaThenVc?.freeOperationGrants, [
+      {
+        seat: 'nva',
+        sequence: { batch: 'macv-nva-then-vc', step: 0, progressionPolicy: 'implementWhatCanInOrder' },
+        actionIds: ['infiltrate', 'bombard', 'ambushNva'],
+        viabilityPolicy: 'requireUsableAtIssue',
+        completionPolicy: 'required',
+        postResolutionTurnFlow: 'resumeCardFlow',
+        operationClass: 'specialActivity',
+      },
+      {
+        seat: 'vc',
+        sequence: { batch: 'macv-nva-then-vc', step: 1, progressionPolicy: 'implementWhatCanInOrder' },
+        actionIds: ['tax', 'subvert', 'ambushVc'],
+        viabilityPolicy: 'requireUsableAtIssue',
+        completionPolicy: 'required',
+        postResolutionTurnFlow: 'resumeCardFlow',
+        operationClass: 'specialActivity',
+      },
+    ]);
+  });
+
   it('encodes card 67 (Amphib Landing) as dual US/ARVN coastal troop relocation branches plus shaded VC relocation and next-card ineligibility', () => {
     const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 

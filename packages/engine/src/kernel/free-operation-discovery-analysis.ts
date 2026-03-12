@@ -13,6 +13,7 @@ import {
   moveOperationClass,
   resolveAuthorizedPendingFreeOperationGrantOverlapAmbiguity,
 } from './free-operation-grant-authorization.js';
+import { resolvePendingFreeOperationGrantSequenceStatus } from './free-operation-sequence-progression.js';
 import { resolvePlayerIndexForTurnFlowSeat, type SeatResolutionContext } from './identity.js';
 import { isTurnFlowErrorCode } from './turn-flow-error.js';
 import type { ResolvedTurnFlowActionClass } from './turn-flow-action-class.js';
@@ -24,6 +25,7 @@ import type {
   GameState,
   Move,
   TurnFlowPendingFreeOperationGrant,
+  TurnFlowRuntimeState,
 } from './types.js';
 
 interface FreeOperationGrantAnalysis {
@@ -31,6 +33,7 @@ interface FreeOperationGrantAnalysis {
   readonly actionClass: ResolvedTurnFlowActionClass;
   readonly actionId: string;
   readonly pending: readonly TurnFlowPendingFreeOperationGrant[];
+  readonly sequenceContexts: TurnFlowRuntimeState['freeOperationSequenceContexts'];
   readonly activeGrants: readonly TurnFlowPendingFreeOperationGrant[];
   readonly sequenceReadyGrants: readonly TurnFlowPendingFreeOperationGrant[];
   readonly actionClassMatchedGrants: readonly TurnFlowPendingFreeOperationGrant[];
@@ -64,11 +67,17 @@ const analyzeFreeOperationGrantMatch = (
     TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_MATCH_EVALUATION,
     seatResolution,
   );
+  const runtime = state.turnOrderState.runtime;
   const actionClass = moveOperationClass(def, move);
   const actionId = String(move.actionId);
-  const pending = state.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
+  const pending = runtime.pendingFreeOperationGrants ?? [];
   const activeGrants = pending.filter((grant) => grant.seat === activeSeat);
-  const sequenceReadyGrants = activeGrants.filter((grant) => isPendingFreeOperationGrantSequenceReady(pending, grant));
+  const sequenceReadyGrants = activeGrants.filter((grant) =>
+    isPendingFreeOperationGrantSequenceReady(
+      pending,
+      grant,
+      runtime.freeOperationSequenceContexts,
+    ));
   const actionClassMatchedGrants = sequenceReadyGrants.filter((grant) => isGrantOperationClassCompatible(grant.operationClass, actionClass));
   const actionMatchedGrants = actionClassMatchedGrants.filter((grant) => grantActionIds(def, grant).includes(actionId));
   const contextMatchedGrants = actionMatchedGrants.filter((grant) => doesGrantRequireSequenceContextMatch(
@@ -123,6 +132,7 @@ const analyzeFreeOperationGrantMatch = (
     actionClass,
     actionId,
     pending,
+    sequenceContexts: runtime.freeOperationSequenceContexts,
     activeGrants,
     sequenceReadyGrants,
     actionClassMatchedGrants,
@@ -138,25 +148,6 @@ const analyzeFreeOperationGrantMatch = (
   };
 };
 
-const sequenceBlockingGrantIds = (
-  pending: readonly TurnFlowPendingFreeOperationGrant[],
-  grant: TurnFlowPendingFreeOperationGrant,
-): readonly string[] => {
-  const batchId = grant.sequenceBatchId;
-  const sequenceIndex = grant.sequenceIndex;
-  if (batchId === undefined || sequenceIndex === undefined) {
-    return [];
-  }
-  return pending
-    .filter(
-      (candidate) =>
-        candidate.grantId !== grant.grantId &&
-        candidate.sequenceBatchId === batchId &&
-        (candidate.sequenceIndex ?? Number.POSITIVE_INFINITY) < sequenceIndex,
-    )
-    .map((candidate) => candidate.grantId);
-};
-
 const explainFreeOperationBlockFromAnalysis = (
   analysis: FreeOperationGrantAnalysis,
 ): FreeOperationBlockExplanation => {
@@ -165,6 +156,7 @@ const explainFreeOperationBlockFromAnalysis = (
     actionClass,
     actionId,
     pending,
+    sequenceContexts,
     activeGrants,
     sequenceReadyGrants,
     actionClassMatchedGrants,
@@ -181,7 +173,11 @@ const explainFreeOperationBlockFromAnalysis = (
   if (sequenceReadyGrants.length === 0) {
     const blockers = new Set<string>();
     for (const grant of activeGrants) {
-      for (const blocker of sequenceBlockingGrantIds(pending, grant)) {
+      for (const blocker of resolvePendingFreeOperationGrantSequenceStatus(
+        pending,
+        grant,
+        sequenceContexts,
+      ).blockingGrantIds) {
         blockers.add(blocker);
       }
     }

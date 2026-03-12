@@ -14,6 +14,7 @@ const PREFLIGHT_CONTRACT_VIOLATION_CODES = new Set<TurnFlowFreeOperationGrantCon
   'moveZoneBindingsInvalid',
   'moveZoneProbeBindingsInvalid',
   'postResolutionTurnFlowInvalid',
+  'progressionPolicyInvalid',
   'requiredPostResolutionTurnFlowMissing',
   'postResolutionTurnFlowRequiresRequiredCompletionPolicy',
   'executionContextInvalid',

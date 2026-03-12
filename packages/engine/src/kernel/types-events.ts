@@ -36,6 +36,7 @@ export interface EventFreeOperationGrantDef extends TurnFlowFreeOperationGrantCo
   readonly sequence: {
     readonly batch: string;
     readonly step: number;
+    readonly progressionPolicy?: import('./types-turn-flow.js').TurnFlowFreeOperationGrantProgressionPolicy;
   };
 }
 

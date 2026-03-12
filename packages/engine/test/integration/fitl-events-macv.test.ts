@@ -295,6 +295,7 @@ describe('FITL card-69 MACV', () => {
     const afterEvent = applyMove(def, setup, eventMove!).state;
     const runtime = requireCardDrivenRuntime(afterEvent);
     const grants = runtime.pendingFreeOperationGrants ?? [];
+    const movesAfterEvent = legalMoves(def, afterEvent);
     assert.deepEqual(grants.map((grant) => ({ seat: grant.seat, sequenceIndex: grant.sequenceIndex })), [
       { seat: 'vc', sequenceIndex: 1 },
     ]);
@@ -305,10 +306,13 @@ describe('FITL card-69 MACV', () => {
       progressionPolicy: 'implementWhatCanInOrder',
       skippedStepIndices: [0],
     });
-    assert.equal(findFreeMove(def, afterEvent, 'infiltrate'), undefined);
-    assert.equal(findFreeMove(def, afterEvent, 'bombard'), undefined);
-    assert.equal(findFreeMove(def, afterEvent, 'ambushNva'), undefined);
-    assert.equal(findFreeMove(def, afterEvent, 'tax') !== undefined, true);
+    assert.equal(runtime.currentCard.firstEligible, 'vc');
+    assert.equal(runtime.currentCard.secondEligible, null);
+    assert.equal(movesAfterEvent.some((move) => move.freeOperation !== true), false);
+    assert.equal(movesAfterEvent.some((move) => String(move.actionId) === 'infiltrate' && move.freeOperation === true), false);
+    assert.equal(movesAfterEvent.some((move) => String(move.actionId) === 'bombard' && move.freeOperation === true), false);
+    assert.equal(movesAfterEvent.some((move) => String(move.actionId) === 'ambushNva' && move.freeOperation === true), false);
+    assert.equal(movesAfterEvent.some((move) => String(move.actionId) === 'tax' && move.freeOperation === true), true);
   });
 
   it('completes the chosen NVA-then-VC batch without issuing grants when neither step is usable', () => {

@@ -9,6 +9,7 @@ import {
   resolveGrantAwareMoveRuntimeBindings,
 } from './free-operation-grant-bindings.js';
 import { pendingFreeOperationGrantEquivalenceKey } from './free-operation-grant-overlap.js';
+import { resolvePendingFreeOperationGrantSequenceStatus } from './free-operation-sequence-progression.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
 import {
@@ -64,32 +65,7 @@ export const isPendingFreeOperationGrantSequenceReady = (
   grant: TurnFlowPendingFreeOperationGrant,
   sequenceContexts?: TurnFlowRuntimeState['freeOperationSequenceContexts'],
 ): boolean => {
-  const batchId = grant.sequenceBatchId;
-  const sequenceIndex = grant.sequenceIndex;
-  if (batchId === undefined || sequenceIndex === undefined) {
-    return true;
-  }
-  const progressionPolicy = sequenceContexts?.[batchId]?.progressionPolicy ?? 'strictInOrder';
-  if (progressionPolicy === 'implementWhatCanInOrder') {
-    for (let step = 0; step < sequenceIndex; step += 1) {
-      const hasEarlierPendingGrant = pending.some(
-        (candidate) =>
-          candidate.grantId !== grant.grantId
-          && candidate.sequenceBatchId === batchId
-          && candidate.sequenceIndex === step,
-      );
-      if (hasEarlierPendingGrant) {
-        return false;
-      }
-    }
-    return true;
-  }
-  return !pending.some(
-    (candidate) =>
-      candidate.grantId !== grant.grantId &&
-      candidate.sequenceBatchId === batchId &&
-      (candidate.sequenceIndex ?? Number.POSITIVE_INFINITY) < sequenceIndex,
-  );
+  return resolvePendingFreeOperationGrantSequenceStatus(pending, grant, sequenceContexts).ready;
 };
 
 export const isGrantOperationClassCompatible = (

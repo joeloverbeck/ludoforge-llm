@@ -2063,7 +2063,7 @@ actionPipelines:
                         op: and
                         args:
                           - op: in
-                            item: $zone
+                            item: { ref: zoneProp, zone: $zone, prop: id }
                             set:
                               - qui-nhon:none
                               - binh-dinh:none
@@ -2151,7 +2151,7 @@ actionPipelines:
                         op: and
                         args:
                           - op: in
-                            item: $zone
+                            item: { ref: zoneProp, zone: $zone, prop: id }
                             set:
                               - qui-nhon:none
                               - binh-dinh:none
@@ -2641,7 +2641,7 @@ actionPipelines:
                         op: and
                         args:
                           - op: in
-                            item: $zone
+                            item: { ref: zoneProp, zone: $zone, prop: id }
                             set:
                               - qui-nhon:none
                               - binh-dinh:none
@@ -2692,7 +2692,7 @@ actionPipelines:
                               op: and
                               args:
                                 - op: in
-                                  item: $zone
+                                  item: { ref: zoneProp, zone: $zone, prop: id }
                                   set:
                                     - qui-nhon:none
                                     - binh-dinh:none
@@ -2740,7 +2740,7 @@ actionPipelines:
                               op: and
                               args:
                                 - op: in
-                                  item: $zone
+                                  item: { ref: zoneProp, zone: $zone, prop: id }
                                   set:
                                     - qui-nhon:none
                                     - binh-dinh:none

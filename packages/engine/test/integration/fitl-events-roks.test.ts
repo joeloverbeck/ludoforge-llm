@@ -2,7 +2,6 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-  applyMove,
   asActionId,
   asPlayerId,
   asTokenId,
@@ -190,7 +189,7 @@ describe('FITL card-70 ROKs', () => {
       },
     };
 
-    const afterSweep = applyMove(def, grantReadyState, {
+    const afterSweep = applyMoveWithResolvedDecisionIds(def, grantReadyState, {
       actionId: asActionId('sweep'),
       freeOperation: true,
       params: {
@@ -285,7 +284,7 @@ describe('FITL card-70 ROKs', () => {
       },
     };
 
-    const afterSweep = applyMove(def, grantReadyState, {
+    const afterSweep = applyMoveWithResolvedDecisionIds(def, grantReadyState, {
       actionId: asActionId('sweep'),
       freeOperation: true,
       params: {

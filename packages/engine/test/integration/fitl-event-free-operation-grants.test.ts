@@ -2944,6 +2944,53 @@ describe('event free-operation grants integration', () => {
     assert.equal(freeMoves.length, 1);
   });
 
+  it('keeps requireUsableForEventPlay executeAsSeat grants playable when viability depends on the overridden profile', () => {
+    const baseDef = createExecuteAsSeatDef();
+    const def = {
+      ...baseDef,
+      eventDecks: baseDef.eventDecks?.map((deck) => ({
+        ...deck,
+        cards: deck.cards.map((entry) =>
+          entry.id !== 'card-8'
+            ? entry
+            : {
+                ...entry,
+                unshaded: {
+                  ...entry.unshaded,
+                  freeOperationGrants: entry.unshaded?.freeOperationGrants?.map((grant, index) =>
+                    index !== 0
+                      ? grant
+                      : {
+                          ...grant,
+                          viabilityPolicy: 'requireUsableForEventPlay' as const,
+                        }),
+                },
+              }),
+      })),
+    } as GameDef & {
+      eventDecks: EventDeckDef[];
+    };
+
+    const start = initialState(def, 336, 2).state;
+    const eventMoves = legalMoves(def, start).filter(
+      (move) => String(move.actionId) === 'event' && move.params.eventCardId === 'card-8',
+    );
+    assert.equal(eventMoves.length, 1);
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-8', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const runtime = requireCardDrivenRuntime(afterEvent);
+    assert.equal(runtime.pendingFreeOperationGrants?.length, 1);
+    assert.equal(runtime.pendingFreeOperationGrants?.[0]?.executeAsSeat, 'US');
+    const freeMoves = legalMoves(def, afterEvent).filter(
+      (move) => String(move.actionId) === 'operation' && move.freeOperation === true,
+    );
+    assert.equal(freeMoves.length, 1);
+  });
+
   it('applies executeAsSeat free-operation grants to special-activity actionIds', () => {
     const def = createExecuteAsSeatSpecialActivityDef();
     const start = initialState(def, 34, 2).state;

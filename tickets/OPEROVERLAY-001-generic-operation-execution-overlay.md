@@ -85,7 +85,7 @@ Do not finalize card-70 data in this ticket. Instead, provide the generic contra
 
 ## Out of Scope
 
-- Fixing the free-operation probing/OOM issue itself — tracked by `tickets/FREEOP-ROKS-001-free-operation-probe-scaling.md`
+- Fixing the free-operation probing/OOM issue itself — tracked by `archive/tickets/FREEOP/FREEOP-ROKS-001-free-operation-probe-scaling.md`
 - Final `ROKs` authored-data cleanup
 - Any FITL-only kernel branching
 - Visual presentation changes

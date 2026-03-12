@@ -10,7 +10,9 @@ import { createEvalRuntimeResources, type ReadContext } from './eval-context.js'
 import { createExecutionEffectContext } from './effect-context.js';
 import { applyEffects } from './effects.js';
 import { isEffectRuntimeReason } from './effect-error.js';
-import { collectGrantAwareMoveZoneCandidates } from './free-operation-grant-bindings.js';
+import {
+  collectGrantAwareMoveZoneCandidates,
+} from './free-operation-grant-bindings.js';
 import {
   resolveMoveDecisionSequence,
   type ResolveMoveDecisionSequenceResult,
@@ -230,13 +232,14 @@ const rankProbeOptionValue = (
   return 0;
 };
 
-const selectableDecisionValues = (
+const visitSelectableDecisionValues = (
   def: GameDef,
   state: GameState,
   probeGrant: TurnFlowPendingFreeOperationGrant | null,
   currentMove: Move,
   request: ChoicePendingRequest,
-): readonly MoveParamValue[] => {
+  visit: (value: MoveParamValue) => boolean,
+): boolean => {
   const probeValue = (value: MoveParamValue): number => {
     if (probeGrant === null) {
       return rankProbeOptionValue(state, value);
@@ -258,8 +261,13 @@ const selectableDecisionValues = (
     return rankProbeOptionValue(state, value);
   };
   if (request.type === 'chooseOne') {
-    return [...selectChoiceOptionValuesByLegalityPrecedence(request)]
-      .sort((left, right) => probeValue(right) - probeValue(left));
+    for (const selection of [...selectChoiceOptionValuesByLegalityPrecedence(request)]
+      .sort((left, right) => probeValue(right) - probeValue(left))) {
+      if (visit(selection)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   const selectableValues = [...selectUniqueChoiceOptionValuesByLegalityPrecedence(request)]
@@ -272,31 +280,37 @@ const selectableDecisionValues = (
     ...Array.from({ length: max - min + 1 }, (_, index) => min + index),
     ...Array.from({ length: max - min + 1 }, (_, index) => max - index),
   ])].filter((size) => size >= min && size <= max);
-  const selections: MoveParamValue[] = [];
   const current: MoveParamScalar[] = [];
 
-  const enumerate = (start: number, remaining: number): void => {
+  const enumerate = (start: number, remaining: number): boolean => {
     if (remaining === 0) {
-      selections.push([...current]);
-      return;
+      return visit([...current]);
     }
     const upper = selectableValues.length - remaining;
     for (let index = start; index <= upper; index += 1) {
       current.push(selectableValues[index] as MoveParamScalar);
-      enumerate(index + 1, remaining - 1);
+      if (enumerate(index + 1, remaining - 1)) {
+        current.pop();
+        return true;
+      }
       current.pop();
     }
+    return false;
   };
 
   for (const size of sizeOrder) {
     if (size === 0) {
-      selections.push([]);
+      if (visit([])) {
+        return true;
+      }
       continue;
     }
-    enumerate(0, size);
+    if (enumerate(0, size)) {
+      return true;
+    }
   }
 
-  return selections;
+  return false;
 };
 
 const decisionBindingsForMove = (
@@ -573,7 +587,10 @@ const hasLegalCompletedProbeMove = (
     readonly resolveDecisionSequence?: FreeOperationDecisionSequenceResolver;
   },
 ): boolean => {
-  const budgets = resolveMoveEnumerationBudgets(STRICT_FREE_OPERATION_PROBE_BUDGETS);
+  const budgets = resolveMoveEnumerationBudgets({
+    ...STRICT_FREE_OPERATION_PROBE_BUDGETS,
+    ...(options?.budgets ?? {}),
+  });
   let decisionProbeSteps = 0;
   let paramExpansions = 0;
   const resolveDecisionSequence = options?.resolveDecisionSequence ?? ((move, resolveOptions) =>
@@ -643,40 +660,26 @@ const hasLegalCompletedProbeMove = (
       ?? (authorizationState.turnOrderState.type === 'cardDriven'
         ? authorizationState.turnOrderState.runtime.pendingFreeOperationGrants?.find((grant) => grant.grantId === '__probe__') ?? null
         : null);
-    if (probeGrant === null) {
-      for (const selection of selectableDecisionValues(def, authorizationState, null, request.move, nextDecision)) {
+    return visitSelectableDecisionValues(
+      def,
+      authorizationState,
+      probeGrant,
+      request.move,
+      nextDecision,
+      (selection) => {
         paramExpansions += 1;
         if (paramExpansions > budgets.maxParamExpansions) {
           return false;
         }
-        if (visit({
+        return visit({
           ...request.move,
           params: {
             ...request.move.params,
             [nextDecision.decisionId]: selection,
           },
-        })) {
-          return true;
-        }
-      }
-      return false;
-    }
-    for (const selection of selectableDecisionValues(def, authorizationState, probeGrant, request.move, nextDecision)) {
-      paramExpansions += 1;
-      if (paramExpansions > budgets.maxParamExpansions) {
-        return false;
-      }
-      if (visit({
-        ...request.move,
-        params: {
-          ...request.move.params,
-          [nextDecision.decisionId]: selection,
-        },
-      })) {
-        return true;
-      }
-    }
-    return false;
+        });
+      },
+    );
   };
 
   return visit(baseMove);
@@ -731,6 +734,7 @@ export const isFreeOperationGrantUsableInCurrentState = (
   seatOrder: readonly string[],
   seatResolution: SeatResolutionContext,
   options?: {
+    readonly budgets?: Partial<ReturnType<typeof resolveMoveEnumerationBudgets>>;
     readonly sequenceProbeBlockers?: readonly TurnFlowPendingFreeOperationGrant[];
     readonly sequenceProbeCandidates?: readonly TurnFlowFreeOperationGrantContract[];
     readonly evalContext?: ReadContext;
@@ -829,7 +833,9 @@ export const isFreeOperationGrantUsableInCurrentState = (
     if (!isFreeOperationApplicableForMove(def, explorationState, probeMove, seatResolution)) {
       continue;
     }
-    if (hasLegalCompletedProbeMove(def, explorationState, authorizationState, probeMove, seatResolution)) {
+    if (hasLegalCompletedProbeMove(def, explorationState, authorizationState, probeMove, seatResolution, {
+      ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
+    })) {
       return true;
     }
   }

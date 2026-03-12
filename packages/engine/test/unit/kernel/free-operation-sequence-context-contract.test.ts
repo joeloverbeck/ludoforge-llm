@@ -7,13 +7,14 @@ import {
   parseTypeScriptSource,
 } from '../../helpers/kernel-source-ast-guard.js';
 import { readKernelSource } from '../../helpers/kernel-source-guard.js';
+import { createSequenceContextMismatchTurnOrderState } from '../../helpers/free-operation-sequence-context-fixtures.js';
 import {
   collectTurnFlowFreeOperationGrantContractViolations,
   TURN_FLOW_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID_MESSAGE,
 } from '../../../src/contracts/turn-flow-free-operation-grant-contract.js';
 import { FreeOperationSequenceContextSchema } from '../../../src/kernel/free-operation-sequence-context-schema.js';
 import { EffectASTSchema } from '../../../src/kernel/schemas-ast.js';
-import { EventCardFreeOperationGrantSchema } from '../../../src/kernel/schemas-extensions.js';
+import { EventCardFreeOperationGrantSchema, TurnFlowRuntimeStateSchema } from '../../../src/kernel/schemas-extensions.js';
 
 const canonicalSchemaModuleSpecifier = './free-operation-sequence-context-schema.js';
 const canonicalContractModuleSpecifier = './free-operation-sequence-context-contract.js';
@@ -162,5 +163,44 @@ describe('free-operation sequence-context canonical schema contract', () => {
     assert.ok(violation);
     assert.equal(schemaResult.error.issues[0]?.message, TURN_FLOW_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID_MESSAGE);
     assert.equal(violation.message, TURN_FLOW_FREE_OPERATION_SEQUENCE_CONTEXT_INVALID_MESSAGE);
+  });
+
+  it('requires canonical runtime batch context fields on turn-flow runtime state', () => {
+    const runtime = createSequenceContextMismatchTurnOrderState().runtime;
+    assert.equal(TurnFlowRuntimeStateSchema.safeParse(runtime).success, true);
+
+    const missingProgressionPolicy = {
+      ...runtime,
+      freeOperationSequenceContexts: {
+        batch0: {
+          capturedMoveZonesByKey: {},
+          skippedStepIndices: [],
+        },
+      },
+    };
+    assert.equal(TurnFlowRuntimeStateSchema.safeParse(missingProgressionPolicy).success, false);
+
+    const missingSkippedStepIndices = {
+      ...runtime,
+      freeOperationSequenceContexts: {
+        batch0: {
+          capturedMoveZonesByKey: {},
+          progressionPolicy: 'strictInOrder',
+        },
+      },
+    };
+    assert.equal(TurnFlowRuntimeStateSchema.safeParse(missingSkippedStepIndices).success, false);
+
+    const negativeSkippedIndex = {
+      ...runtime,
+      freeOperationSequenceContexts: {
+        batch0: {
+          capturedMoveZonesByKey: {},
+          progressionPolicy: 'implementWhatCanInOrder',
+          skippedStepIndices: [-1],
+        },
+      },
+    };
+    assert.equal(TurnFlowRuntimeStateSchema.safeParse(negativeSkippedIndex).success, false);
   });
 });

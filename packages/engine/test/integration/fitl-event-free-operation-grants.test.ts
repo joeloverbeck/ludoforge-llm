@@ -2172,6 +2172,14 @@ describe('event free-operation grants integration', () => {
       actionId: asActionId('event'),
       params: { eventCardId: 'card-sequence-context', side: 'unshaded', branch: 'none' },
     }).state;
+    const runtimeAfterEvent = requireCardDrivenRuntime(afterEvent);
+    const emittedBatchId = runtimeAfterEvent.pendingFreeOperationGrants?.[0]?.sequenceBatchId;
+    assert.notEqual(emittedBatchId, undefined);
+    assert.deepEqual(runtimeAfterEvent.freeOperationSequenceContexts?.[emittedBatchId!], {
+      capturedMoveZonesByKey: {},
+      progressionPolicy: 'strictInOrder',
+      skippedStepIndices: [],
+    });
 
     const grantReadyState: GameState = {
       ...afterEvent,
@@ -2204,8 +2212,14 @@ describe('event free-operation grants integration', () => {
     const sequenceBatchId = runtimeAfterFirst.pendingFreeOperationGrants?.[0]?.sequenceBatchId;
     assert.notEqual(sequenceBatchId, undefined);
     assert.deepEqual(
-      runtimeAfterFirst.freeOperationSequenceContexts?.[sequenceBatchId!]?.capturedMoveZonesByKey?.['selected-space'],
-      ['boardCambodia:none'],
+      runtimeAfterFirst.freeOperationSequenceContexts?.[sequenceBatchId!],
+      {
+        capturedMoveZonesByKey: {
+          'selected-space': ['boardCambodia:none'],
+        },
+        progressionPolicy: 'strictInOrder',
+        skippedStepIndices: [],
+      },
     );
 
     assert.throws(
@@ -2319,6 +2333,13 @@ describe('event free-operation grants integration', () => {
     const grants = runtime.pendingFreeOperationGrants ?? [];
     assert.equal(grants.length, 2);
     assert.deepEqual(grants.map((grant) => grant.sequenceIndex), [0, 1]);
+    const sequenceBatchId = grants[0]?.sequenceBatchId;
+    assert.notEqual(sequenceBatchId, undefined);
+    assert.deepEqual(runtime.freeOperationSequenceContexts?.[sequenceBatchId!], {
+      capturedMoveZonesByKey: {},
+      progressionPolicy: 'strictInOrder',
+      skippedStepIndices: [],
+    });
   });
 
   it('rejects nested effect-issued sequence context requires without an earlier capture', () => {

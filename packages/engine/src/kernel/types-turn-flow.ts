@@ -193,6 +193,8 @@ export interface TurnFlowSuspendedCardEnd {
 
 export interface TurnFlowFreeOperationSequenceBatchContext {
   readonly capturedMoveZonesByKey: Readonly<Record<string, readonly string[]>>;
+  readonly progressionPolicy: TurnFlowFreeOperationGrantProgressionPolicy;
+  readonly skippedStepIndices: readonly number[];
 }
 
 export interface TurnFlowDeferredEventEffectPayload {

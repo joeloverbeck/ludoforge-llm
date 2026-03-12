@@ -79,6 +79,8 @@ export const createSequenceContextMismatchTurnOrderState = (): Extract<GameState
         capturedMoveZonesByKey: {
           [SEQUENCE_CONTEXT_KEY]: [SEQUENCE_CONTEXT_CAPTURE_ZONE_ID],
         },
+        progressionPolicy: 'strictInOrder',
+        skippedStepIndices: [],
       },
     },
   },

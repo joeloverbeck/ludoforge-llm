@@ -540,6 +540,8 @@ export const TurnFlowRuntimeStateSchema = z
         z
           .object({
             capturedMoveZonesByKey: z.record(StringSchema.min(1), z.array(StringSchema.min(1))),
+            progressionPolicy: z.enum(TURN_FLOW_FREE_OPERATION_GRANT_PROGRESSION_POLICY_VALUES),
+            skippedStepIndices: z.array(IntegerSchema.min(0)),
           })
           .strict(),
       )

@@ -48,6 +48,7 @@ import type {
   TriggerLogEntry,
   TurnFlowDuration,
   TurnFlowDeferredEventEffectPayload,
+  TurnFlowFreeOperationGrantProgressionPolicy,
   TurnFlowPendingDeferredEventEffect,
   TurnFlowPendingEligibilityOverride,
   TurnFlowPendingFreeOperationGrant,
@@ -303,6 +304,24 @@ const toPendingFreeOperationGrant = (
   ...(grant.sequence === undefined ? {} : { sequenceIndex: grant.sequence.step }),
 });
 
+const resolveSequenceProgressionPolicy = (
+  grant: Pick<TurnFlowFreeOperationGrantContract, 'sequence'>,
+): TurnFlowFreeOperationGrantProgressionPolicy =>
+  (grant.sequence?.progressionPolicy ?? 'strictInOrder');
+
+const ensureFreeOperationSequenceBatchContext = (
+  contexts: TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined,
+  batchId: string,
+  progressionPolicy: ReturnType<typeof resolveSequenceProgressionPolicy>,
+): TurnFlowRuntimeState['freeOperationSequenceContexts'] => ({
+  ...(contexts ?? {}),
+  [batchId]: {
+    capturedMoveZonesByKey: contexts?.[batchId]?.capturedMoveZonesByKey ?? {},
+    progressionPolicy,
+    skippedStepIndices: contexts?.[batchId]?.skippedStepIndices ?? [],
+  },
+});
+
 const pendingFreeOperationGrantBaseId = (
   state: GameState,
   move: Move,
@@ -342,8 +361,13 @@ const extractPendingFreeOperationGrants = (
   seatOrder: readonly string[],
   seatResolution: SeatResolutionContext,
   existingPendingFreeOperationGrants: readonly TurnFlowPendingFreeOperationGrant[],
-): readonly TurnFlowPendingFreeOperationGrant[] => {
+  existingSequenceContexts: TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined,
+): {
+  readonly grants: readonly TurnFlowPendingFreeOperationGrant[];
+  readonly sequenceContexts: TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined;
+} => {
   const extracted: TurnFlowPendingFreeOperationGrant[] = [];
+  let sequenceContexts = existingSequenceContexts;
   const emittedBatchBaseId = pendingFreeOperationGrantBatchBaseId(state, move);
   const declaredGrants = resolveEventFreeOperationGrants(def, state, move);
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
@@ -403,8 +427,16 @@ const extractPendingFreeOperationGrants = (
       seat,
       ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
     });
+    sequenceContexts = ensureFreeOperationSequenceBatchContext(
+      sequenceContexts,
+      sequenceBatchId,
+      resolveSequenceProgressionPolicy(grant),
+    );
   }
-  return extracted;
+  return {
+    grants: extracted,
+    sequenceContexts,
+  };
 };
 
 const toPendingFreeOperationGrants = (
@@ -887,14 +919,19 @@ export const applyTurnFlowEligibilityAfterMove = (
     runtime.seatOrder,
     seatResolution,
     existingPendingFreeOperationGrants,
+    runtime.freeOperationSequenceContexts,
   );
   const effectiveEligibility = applyEligibilityOverrides(runtime.eligibility, immediateOverrides);
   const pendingOverrides = [...(runtime.pendingEligibilityOverrides ?? []), ...deferredOverrides];
   const pendingFreeOperationGrants = [
     ...existingPendingFreeOperationGrants,
-    ...newFreeOpGrants,
+    ...newFreeOpGrants.grants,
   ];
-  const deferredRequiredBatchIds = uniqueBatchIds(newFreeOpGrants);
+  const nextSequenceContexts = trimFreeOperationSequenceContextsToPendingBatches(
+    newFreeOpGrants.sequenceContexts,
+    pendingFreeOperationGrants,
+  );
+  const deferredRequiredBatchIds = uniqueBatchIds(newFreeOpGrants.grants);
   const deferredCandidate = deferredEventEffect === undefined
     ? undefined
     : {
@@ -941,12 +978,15 @@ export const applyTurnFlowEligibilityAfterMove = (
     }
 
     const nextRuntime = withPendingDeferredEventEffects(
-      withPendingFreeOperationGrants({
-        ...runtime,
-        eligibility: effectiveEligibility,
-        pendingEligibilityOverrides: pendingOverrides,
-        currentCard: withRequiredGrantCandidates(pendingFreeOperationGrants, runtime.seatOrder, runtime.currentCard),
-      }, toPendingFreeOperationGrants(pendingFreeOperationGrants)),
+      withFreeOperationSequenceContexts(
+        withPendingFreeOperationGrants({
+          ...runtime,
+          eligibility: effectiveEligibility,
+          pendingEligibilityOverrides: pendingOverrides,
+          currentCard: withRequiredGrantCandidates(pendingFreeOperationGrants, runtime.seatOrder, runtime.currentCard),
+        }, toPendingFreeOperationGrants(pendingFreeOperationGrants)),
+        nextSequenceContexts,
+      ),
       toPendingDeferredEventEffects(deferredEventEffects),
     );
     const stateWithTurnFlow: GameState = {
@@ -1082,6 +1122,7 @@ export const applyTurnFlowEligibilityAfterMove = (
       {
         ...runtime,
         eligibility: effectiveEligibility,
+        ...(nextSequenceContexts === undefined ? {} : { freeOperationSequenceContexts: nextSequenceContexts }),
       },
       seatResolution,
       currentCard,
@@ -1102,18 +1143,21 @@ export const applyTurnFlowEligibilityAfterMove = (
   const normalizedPendingFreeOperationGrants = toPendingFreeOperationGrants(pendingFreeOperationGrants);
   const normalizedPendingDeferredEventEffects = toPendingDeferredEventEffects(deferredEventEffects);
   const nextRuntime = withPendingDeferredEventEffects(
-    withPendingFreeOperationGrants(
-      withSuspendedCardEnd({
-        ...runtime,
-        eligibility: effectiveEligibility,
-        pendingEligibilityOverrides: pendingOverrides,
-        currentCard,
-      }, hasRequiredGrantWindow
-        && (before.nonPassCount >= 1 || step === 'passChain')
-        && ((step === 'passChain' && activeCardCandidates.first === null && activeCardCandidates.second === null) || currentCard.nonPassCount >= 2)
-        ? { reason: step === 'passChain' && activeCardCandidates.first === null && activeCardCandidates.second === null ? 'rightmostPass' : 'twoNonPass' }
-        : runtime.suspendedCardEnd),
-      normalizedPendingFreeOperationGrants,
+    withFreeOperationSequenceContexts(
+      withPendingFreeOperationGrants(
+        withSuspendedCardEnd({
+          ...runtime,
+          eligibility: effectiveEligibility,
+          pendingEligibilityOverrides: pendingOverrides,
+          currentCard,
+        }, hasRequiredGrantWindow
+          && (before.nonPassCount >= 1 || step === 'passChain')
+          && ((step === 'passChain' && activeCardCandidates.first === null && activeCardCandidates.second === null) || currentCard.nonPassCount >= 2)
+          ? { reason: step === 'passChain' && activeCardCandidates.first === null && activeCardCandidates.second === null ? 'rightmostPass' : 'twoNonPass' }
+          : runtime.suspendedCardEnd),
+        normalizedPendingFreeOperationGrants,
+      ),
+      nextSequenceContexts,
     ),
     normalizedPendingDeferredEventEffects,
   );
@@ -1210,6 +1254,8 @@ export const consumeTurnFlowFreeOperationGrant = (
             ...(baseSequenceContexts?.[capturedBatchId]?.capturedMoveZonesByKey ?? {}),
             [captureKey]: [...capturedZones],
           },
+          progressionPolicy: baseSequenceContexts?.[capturedBatchId]?.progressionPolicy ?? 'strictInOrder',
+          skippedStepIndices: baseSequenceContexts?.[capturedBatchId]?.skippedStepIndices ?? [],
         },
       }, nextPending);
   const splitDeferred = splitReadyDeferredEventEffects(runtime.pendingDeferredEventEffects ?? [], nextPending);

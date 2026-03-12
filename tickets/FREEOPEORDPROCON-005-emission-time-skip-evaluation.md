@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — kernel grant emission logic, batch context population
-**Deps**: archive/tickets/FREEOPEORDPROCON-001-progression-policy-contract-surface.md, tickets/FREEOPEORDPROCON-002-batch-context-runtime-state.md
+**Deps**: archive/tickets/FREEOPEORDPROCON-001-progression-policy-contract-surface.md, archive/tickets/FREEOPEORDPROCON-002-batch-context-runtime-state.md
 
 ## Problem
 

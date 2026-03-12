@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel readiness logic
-**Deps**: tickets/FREEOPEORDPROCON-002-batch-context-runtime-state.md
+**Deps**: archive/tickets/FREEOPEORDPROCON-002-batch-context-runtime-state.md
 
 ## Problem
 

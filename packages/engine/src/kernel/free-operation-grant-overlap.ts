@@ -90,7 +90,8 @@ const grantHasSequenceBatchScopedSemantics = (
   if (batchId === undefined) {
     return false;
   }
-  return grant.sequenceContext !== undefined || state.turnOrderState.runtime.freeOperationSequenceContexts?.[batchId] !== undefined;
+  const batchContext = state.turnOrderState.runtime.freeOperationSequenceContexts?.[batchId];
+  return grant.sequenceContext !== undefined || Object.keys(batchContext?.capturedMoveZonesByKey ?? {}).length > 0;
 };
 
 const grantDeferredDependencyProfile = (

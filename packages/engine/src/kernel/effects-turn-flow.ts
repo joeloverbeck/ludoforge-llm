@@ -26,7 +26,9 @@ import type {
   EffectAST,
   GameState,
   TurnFlowFreeOperationGrantContract,
+  TurnFlowFreeOperationGrantProgressionPolicy,
   TurnFlowPendingFreeOperationGrant,
+  TurnFlowRuntimeState,
 } from './types.js';
 import { createSeatResolutionContext, resolveTurnFlowSeatForPlayerIndex } from './identity.js';
 import {
@@ -102,6 +104,24 @@ const resolveTemplateTree = <T>(value: T, bindings: Readonly<Record<string, unkn
   }
   return value;
 };
+
+const resolveSequenceProgressionPolicy = (
+  grant: Pick<TurnFlowFreeOperationGrantContract, 'sequence'>,
+): TurnFlowFreeOperationGrantProgressionPolicy =>
+  (grant.sequence?.progressionPolicy ?? 'strictInOrder');
+
+const ensureFreeOperationSequenceBatchContext = (
+  contexts: TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined,
+  batchId: string,
+  progressionPolicy: ReturnType<typeof resolveSequenceProgressionPolicy>,
+): TurnFlowRuntimeState['freeOperationSequenceContexts'] => ({
+  ...(contexts ?? {}),
+  [batchId]: {
+    capturedMoveZonesByKey: contexts?.[batchId]?.capturedMoveZonesByKey ?? {},
+    progressionPolicy,
+    skippedStepIndices: contexts?.[batchId]?.skippedStepIndices ?? [],
+  },
+});
 
 export const applyGrantFreeOperation = (
   effect: Extract<EffectAST, { readonly grantFreeOperation: unknown }>,
@@ -294,6 +314,13 @@ export const applyGrantFreeOperation = (
   };
 
   const nextPending = [...existing, appended];
+  const nextSequenceContexts = sequenceBatchId === undefined
+    ? runtime.freeOperationSequenceContexts
+    : ensureFreeOperationSequenceBatchContext(
+      runtime.freeOperationSequenceContexts,
+      sequenceBatchId,
+      resolveSequenceProgressionPolicy(grant),
+    );
   return {
     state: {
       ...ctx.state,
@@ -302,6 +329,7 @@ export const applyGrantFreeOperation = (
         runtime: {
           ...runtime,
           pendingFreeOperationGrants: nextPending,
+          ...(nextSequenceContexts === undefined ? {} : { freeOperationSequenceContexts: nextSequenceContexts }),
         },
       },
     },

@@ -19,6 +19,7 @@ import {
   type GameState,
   type KernelRuntimeErrorContext,
 } from '../../src/kernel/index.js';
+import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
 const createDef = (): GameDef =>
@@ -647,10 +648,41 @@ const assertSurfacedFreeMovesApply = (def: GameDef, state: GameState): void => {
   assert.notEqual(moves.length, 0, 'Expected at least one surfaced free-operation move');
   for (const move of moves) {
     assert.doesNotThrow(
-      () => applyMove(def, state, move),
+      () => applyMoveWithResolvedDecisionIds(def, state, move),
       `Surfaced free-operation move should apply without rejection: ${String(move.actionId)}`,
     );
   }
+};
+
+const makeGrantReadyState = (
+  def: GameDef,
+  state: GameState,
+  seat: string,
+): GameState => {
+  const seats = def.seats;
+  assert.notEqual(seats, undefined, 'Expected GameDef seats to be defined');
+  const activePlayerIndex = seats!.findIndex((candidate) => candidate.id === seat);
+  assert.notEqual(activePlayerIndex, -1, `Expected seat ${seat} to exist in GameDef`);
+  const runtime = requireCardDrivenRuntime(state);
+  return {
+    ...state,
+    activePlayer: asPlayerId(activePlayerIndex),
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: {
+        ...runtime,
+        currentCard: {
+          ...runtime.currentCard,
+          firstEligible: seat,
+          secondEligible: null,
+          actedSeats: [],
+          passedSeats: [],
+          nonPassCount: 0,
+          firstActionClass: null,
+        },
+      },
+    },
+  };
 };
 
 const createZoneFilteredDef = (): GameDef =>
@@ -2814,9 +2846,17 @@ describe('event free-operation grants integration', () => {
       params: { eventCardId: 'card-effect-require-usable-issue-sequence-implement-what-can', side: 'unshaded', branch: 'none' },
     }).state;
 
-    assert.deepEqual(projectFreeOperationMoves(def, afterEventIssued), projectFreeOperationMoves(def, afterEffectIssued));
-    assertSurfacedFreeMovesApply(def, afterEventIssued);
-    assertSurfacedFreeMovesApply(def, afterEffectIssued);
+    const eventSeat = requireCardDrivenRuntime(afterEventIssued).pendingFreeOperationGrants?.[0]?.seat;
+    const effectSeat = requireCardDrivenRuntime(afterEffectIssued).pendingFreeOperationGrants?.[0]?.seat;
+    assert.notEqual(eventSeat, undefined);
+    assert.notEqual(effectSeat, undefined);
+
+    const eventGrantReadyState = makeGrantReadyState(def, afterEventIssued, eventSeat!);
+    const effectGrantReadyState = makeGrantReadyState(def, afterEffectIssued, effectSeat!);
+
+    assert.deepEqual(projectFreeOperationMoves(def, eventGrantReadyState), projectFreeOperationMoves(def, effectGrantReadyState));
+    assertSurfacedFreeMovesApply(def, eventGrantReadyState);
+    assertSurfacedFreeMovesApply(def, effectGrantReadyState);
   });
 
   it('does not emit nested sequence-later effect grants when earlier nested requireUsableAtIssue steps are currently unusable', () => {

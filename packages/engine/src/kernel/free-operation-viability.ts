@@ -12,8 +12,8 @@ import { applyEffects } from './effects.js';
 import { isEffectRuntimeReason } from './effect-error.js';
 import {
   collectGrantAwareMoveZoneCandidates,
+  resolveGrantMoveActionClassOverride,
 } from './free-operation-grant-bindings.js';
-import { resolveGrantMoveActionClassOverride } from './free-operation-grant-authorization.js';
 import {
   resolveMoveDecisionSequence,
   type ResolveMoveDecisionSequenceResult,

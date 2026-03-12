@@ -14,10 +14,12 @@ import {
 import {
   grantActionIds,
   isPendingFreeOperationGrantSequenceReady,
-  resolveGrantMoveActionClassOverride,
 } from './free-operation-grant-authorization.js';
 import { resolveTurnFlowDefaultFreeOperationActionDomain } from './free-operation-action-domain.js';
-import { resolvePendingFreeOperationGrantExecutionPlayer } from './free-operation-grant-bindings.js';
+import {
+  resolveGrantMoveActionClassOverride,
+  resolvePendingFreeOperationGrantExecutionPlayer,
+} from './free-operation-grant-bindings.js';
 import {
   isFreeOperationApplicableForMove,
   isFreeOperationGrantedForMove,

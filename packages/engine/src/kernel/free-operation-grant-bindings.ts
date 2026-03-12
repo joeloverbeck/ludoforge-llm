@@ -13,6 +13,7 @@ import {
 } from './identity.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { buildAdjacencyGraph } from './spatial.js';
+import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import type { GameDef, GameState, Move, TurnFlowPendingFreeOperationGrant } from './types.js';
 
 type GrantBindingContext = Pick<
@@ -140,6 +141,24 @@ export const collectMoveZoneCandidates = (
   def: GameDef,
   move: Move,
 ): readonly string[] => [...zoneCandidateSetFromMove(def, move)];
+
+export const resolveGrantMoveActionClassOverride = (
+  def: GameDef,
+  actionId: Move['actionId'],
+  grantClass: TurnFlowPendingFreeOperationGrant['operationClass'],
+): TurnFlowPendingFreeOperationGrant['operationClass'] | undefined => {
+  const mappedClass = resolveTurnFlowActionClass(def, { actionId, params: {} });
+  if (mappedClass === null) {
+    return grantClass;
+  }
+  if (grantClass === mappedClass) {
+    return undefined;
+  }
+  if (grantClass === 'operation' && mappedClass === 'specialActivity') {
+    return undefined;
+  }
+  return grantClass;
+};
 
 export const collectGrantAwareMoveZoneCandidates = (
   def: GameDef,

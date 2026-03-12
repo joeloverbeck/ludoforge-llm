@@ -2056,6 +2056,53 @@ effectMacros:
                                               from: $space
                                               to: { zoneExpr: 'available-ARVN:none' }
 
+  # ── cap-sweep-booby-traps-shaded-cost-mixed-us-arvn ──────────────────────
+  # ROKs mixed sweep: each Sweep space, on roll 1-3, lose 1 mixed US/ARVN cube
+  # with US losses routed to Casualties and ARVN losses routed to Available.
+  - id: cap-sweep-booby-traps-shaded-cost-mixed-us-arvn
+    params:
+      - { name: targetSpaces, type: value }
+    exports: []
+    effects:
+      - if:
+          when: { op: '==', left: { ref: globalMarkerState, marker: cap_boobyTraps }, right: shaded }
+          then:
+            - forEach:
+                bind: $space
+                over: { query: binding, name: { param: targetSpaces } }
+                effects:
+                  - rollRandom:
+                      bind: $boobyDie
+                      min: 1
+                      max: 6
+                      in:
+                        - if:
+                            when: { op: '<=', left: { ref: binding, name: $boobyDie }, right: 3 }
+                            then:
+                              - removeByPriority:
+                                  budget: 1
+                                  groups:
+                                    - bind: $lossCube
+                                      over:
+                                        query: tokensInZone
+                                        zone: $space
+                                        filter:
+                                          op: and
+                                          args:
+                                            - { prop: faction, op: eq, value: US }
+                                            - { prop: type, op: in, value: ['troops', 'police'] }
+                                      to: { zoneExpr: casualties-US:none }
+                                    - bind: $lossCube
+                                      over:
+                                        query: tokensInZone
+                                        zone: $space
+                                        filter:
+                                          op: and
+                                          args:
+                                            - { prop: faction, op: eq, value: ARVN }
+                                            - { prop: type, op: in, value: ['troops', 'police'] }
+                                      to: { zoneExpr: available-ARVN:none }
+
   # ── cap-assault-cobras-shaded-cost ────────────────────────────────────────
   # Cobras shaded: each Assault space, on roll 1-3, loses 1 US troop to Casualties.
   - id: cap-assault-cobras-shaded-cost

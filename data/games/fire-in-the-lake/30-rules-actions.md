@@ -2038,6 +2038,328 @@ actionPipelines:
   # Cost: 0 (US pays nothing)
   # Resolution: move US Troops from adjacent spaces; optional 1-LoC hop if LoC is free of NVA/VC;
   #             activate underground guerrillas via sweep-activation macro (US cubes + irregulars; jungle halving)
+  - id: sweep-roks-mixed-us-profile
+    actionId: sweep
+    applicability:
+      op: and
+      args:
+        - { op: '==', left: { ref: activePlayer }, right: 0 }
+        - { op: '==', left: { ref: gvar, var: fitl_roksMixedUsOperation }, right: true }
+    legality: true
+    costValidation: null
+    costEffects: []
+    targeting: {}
+    stages:
+      - stage: select-spaces
+        effects:
+          - if:
+              when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
+              then:
+                - chooseN:
+                    bind: $targetSpaces
+                    options:
+                      query: mapSpaces
+                      filter:
+                        op: and
+                        args:
+                          - op: in
+                            item: $zone
+                            set:
+                              - qui-nhon:none
+                              - binh-dinh:none
+                              - kontum:none
+                              - pleiku-darlac:none
+                              - phu-bon-phu-yen:none
+                              - khanh-hoa:none
+                              - cam-ranh:none
+                          - op: or
+                            args:
+                              - op: ">"
+                                left:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInZone
+                                      zone: $zone
+                                      filter:
+                                        op: and
+                                        args:
+                                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                          - { prop: type, op: in, value: ['troops', 'police'] }
+                                right: 0
+                              - op: ">"
+                                left:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInAdjacentZones
+                                      zone: $zone
+                                      filter:
+                                        op: and
+                                        args:
+                                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                          - { prop: type, op: in, value: ['troops', 'police'] }
+                                right: 0
+                              - op: ">"
+                                left:
+                                  aggregate:
+                                    op: sum
+                                    query: { query: adjacentZones, zone: $zone }
+                                    bind: $adj
+                                    valueExpr:
+                                      if:
+                                        when:
+                                          op: and
+                                          args:
+                                            - { op: '==', left: { ref: zoneProp, zone: $adj, prop: category }, right: 'loc' }
+                                            - op: "=="
+                                              left:
+                                                aggregate:
+                                                  op: count
+                                                  query:
+                                                    query: tokensInZone
+                                                    zone: $adj
+                                                    filter:
+                                                      op: and
+                                                      args:
+                                                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                              right: 0
+                                            - op: ">"
+                                              left:
+                                                aggregate:
+                                                  op: count
+                                                  query:
+                                                    query: tokensInAdjacentZones
+                                                    zone: $adj
+                                                    filter:
+                                                      op: and
+                                                      args:
+                                                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                                        - { prop: type, op: in, value: ['troops', 'police'] }
+                                              right: 0
+                                        then: 1
+                                        else: 0
+                                right: 0
+                    min: 1
+                    max: 1
+              else:
+                - chooseN:
+                    bind: $targetSpaces
+                    options:
+                      query: mapSpaces
+                      filter:
+                        op: and
+                        args:
+                          - op: in
+                            item: $zone
+                            set:
+                              - qui-nhon:none
+                              - binh-dinh:none
+                              - kontum:none
+                              - pleiku-darlac:none
+                              - phu-bon-phu-yen:none
+                              - khanh-hoa:none
+                              - cam-ranh:none
+                          - op: or
+                            args:
+                              - op: ">"
+                                left:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInZone
+                                      zone: $zone
+                                      filter:
+                                        op: and
+                                        args:
+                                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                          - { prop: type, op: in, value: ['troops', 'police'] }
+                                right: 0
+                              - op: ">"
+                                left:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInAdjacentZones
+                                      zone: $zone
+                                      filter:
+                                        op: and
+                                        args:
+                                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                          - { prop: type, op: in, value: ['troops', 'police'] }
+                                right: 0
+                              - op: ">"
+                                left:
+                                  aggregate:
+                                    op: sum
+                                    query: { query: adjacentZones, zone: $zone }
+                                    bind: $adj
+                                    valueExpr:
+                                      if:
+                                        when:
+                                          op: and
+                                          args:
+                                            - { op: '==', left: { ref: zoneProp, zone: $adj, prop: category }, right: 'loc' }
+                                            - op: "=="
+                                              left:
+                                                aggregate:
+                                                  op: count
+                                                  query:
+                                                    query: tokensInZone
+                                                    zone: $adj
+                                                    filter:
+                                                      op: and
+                                                      args:
+                                                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                              right: 0
+                                            - op: ">"
+                                              left:
+                                                aggregate:
+                                                  op: count
+                                                  query:
+                                                    query: tokensInAdjacentZones
+                                                    zone: $adj
+                                                    filter:
+                                                      op: and
+                                                      args:
+                                                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                                        - { prop: type, op: in, value: ['troops', 'police'] }
+                                              right: 0
+                                        then: 1
+                                        else: 0
+                                right: 0
+                    min: 1
+                    max: 99
+      - stage: move-cubes
+        effects:
+          - forEach:
+              bind: $space
+              over: { query: binding, name: $targetSpaces }
+              effects:
+                - chooseN:
+                    bind: $movingAdjacentCubes
+                    options:
+                      query: tokensInAdjacentZones
+                      zone: $space
+                      filter:
+                        op: and
+                        args:
+                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                          - { prop: type, op: in, value: ['troops', 'police'] }
+                    min: 0
+                    max: 99
+                - forEach:
+                    bind: $cube
+                    over: { query: binding, name: $movingAdjacentCubes }
+                    effects:
+                      - moveToken:
+                          token: $cube
+                          from: { zoneExpr: { ref: tokenZone, token: $cube } }
+                          to: $space
+                - chooseN:
+                    bind: $hopLocs
+                    options:
+                      query: adjacentZones
+                      zone: $space
+                    min: 0
+                    max: 99
+                - forEach:
+                    bind: $hopLoc
+                    over: { query: binding, name: $hopLocs }
+                    effects:
+                      - if:
+                          when:
+                            op: and
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $hopLoc, prop: category }, right: 'loc' }
+                              - op: '=='
+                                left:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInZone
+                                      zone: $hopLoc
+                                      filter:
+                                        op: and
+                                        args:
+                                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                right: 0
+                          then:
+                            - chooseN:
+                                bind: $movingHopCubes
+                                options:
+                                  query: tokensInAdjacentZones
+                                  zone: $hopLoc
+                                  filter:
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                      - { prop: type, op: in, value: ['troops', 'police'] }
+                                min: 0
+                                max: 99
+                            - forEach:
+                                bind: $hopCube
+                                over: { query: binding, name: $movingHopCubes }
+                                effects:
+                                  - moveToken:
+                                      token: $hopCube
+                                      from: { zoneExpr: { ref: tokenZone, token: $hopCube } }
+                                      to: $space
+      - stage: activate-guerrillas
+        effects:
+          - forEach:
+              bind: $space
+              over: { query: binding, name: $targetSpaces }
+              effects:
+                - let:
+                    bind: $mixedCubeCount
+                    value:
+                      aggregate:
+                        op: count
+                        query:
+                          query: tokensInZone
+                          zone: $space
+                          filter:
+                            op: and
+                            args:
+                              - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                              - { prop: type, op: in, value: ['troops', 'police'] }
+                    in:
+                      - let:
+                          bind: $activationLimit
+                          value:
+                            if:
+                              when: { op: zonePropIncludes, zone: $space, prop: terrainTags, value: 'jungle' }
+                              then: { op: '/', left: { ref: binding, name: $mixedCubeCount }, right: 2 }
+                              else: { ref: binding, name: $mixedCubeCount }
+                          in:
+                            - if:
+                                when: { op: '>', left: { ref: binding, name: $activationLimit }, right: 0 }
+                                then:
+                                  - forEach:
+                                      bind: $guerrilla
+                                      over:
+                                        query: tokensInZone
+                                        zone: $space
+                                        filter:
+                                          op: and
+                                          args:
+                                            - { prop: type, op: eq, value: guerrilla }
+                                            - { prop: activity, op: eq, value: underground }
+                                      limit: { ref: binding, name: $activationLimit }
+                                      effects:
+                                        - setTokenProp: { token: $guerrilla, prop: activity, value: active }
+      - stage: cap-cobras-bonus-removal
+        effects:
+          - macro: cap-sweep-cobras-unshaded-removal
+            args:
+              targetSpaces: $targetSpaces
+      - stage: cap-booby-traps-troop-cost
+        effects:
+          - macro: cap-sweep-booby-traps-shaded-cost-mixed-us-arvn
+            args:
+              targetSpaces: $targetSpaces
+    atomicity: atomic
   - id: sweep-us-profile
     actionId: sweep
     applicability: { op: '==', left: { ref: activePlayer }, right: 0 }
@@ -2289,6 +2611,288 @@ actionPipelines:
             args:
               targetSpaces: $targetSpaces
               actorFaction: ARVN
+    atomicity: atomic
+  - id: assault-roks-mixed-us-profile
+    actionId: assault
+    applicability:
+      op: and
+      args:
+        - { op: '==', left: { ref: activePlayer }, right: 0 }
+        - { op: '==', left: { ref: gvar, var: fitl_roksMixedUsOperation }, right: true }
+    legality:
+      op: or
+      args:
+        - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+        - { op: '!=', left: { ref: gvar, var: mom_generalLansdale }, right: true }
+    costValidation: null
+    costEffects: []
+    targeting: {}
+    stages:
+      - stage: select-spaces
+        effects:
+          - if:
+              when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
+              then:
+                - chooseN:
+                    bind: $targetSpaces
+                    options:
+                      query: mapSpaces
+                      filter:
+                        op: and
+                        args:
+                          - op: in
+                            item: $zone
+                            set:
+                              - qui-nhon:none
+                              - binh-dinh:none
+                              - kontum:none
+                              - pleiku-darlac:none
+                              - phu-bon-phu-yen:none
+                              - khanh-hoa:none
+                              - cam-ranh:none
+                              - loc-da-nang-qui-nhon:none
+                              - loc-kontum-qui-nhon:none
+                              - loc-qui-nhon-cam-ranh:none
+                          - op: ">"
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                      - { prop: type, op: in, value: ['troops', 'police'] }
+                            right: 0
+                          - op: ">"
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                            right: 0
+                    min: 1
+                    max: 1
+              else:
+                - if:
+                    when: { op: '==', left: { ref: globalMarkerState, marker: cap_abrams }, right: shaded }
+                    then:
+                      - chooseN:
+                          bind: $targetSpaces
+                          options:
+                            query: mapSpaces
+                            filter:
+                              op: and
+                              args:
+                                - op: in
+                                  item: $zone
+                                  set:
+                                    - qui-nhon:none
+                                    - binh-dinh:none
+                                    - kontum:none
+                                    - pleiku-darlac:none
+                                    - phu-bon-phu-yen:none
+                                    - khanh-hoa:none
+                                    - cam-ranh:none
+                                    - loc-da-nang-qui-nhon:none
+                                    - loc-kontum-qui-nhon:none
+                                    - loc-qui-nhon-cam-ranh:none
+                                - op: ">"
+                                  left:
+                                    aggregate:
+                                      op: count
+                                      query:
+                                        query: tokensInZone
+                                        zone: $zone
+                                        filter:
+                                          op: and
+                                          args:
+                                            - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                            - { prop: type, op: in, value: ['troops', 'police'] }
+                                  right: 0
+                                - op: ">"
+                                  left:
+                                    aggregate:
+                                      op: count
+                                      query:
+                                        query: tokensInZone
+                                        zone: $zone
+                                        filter:
+                                          op: and
+                                          args:
+                                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                  right: 0
+                          min: 1
+                          max: 2
+                    else:
+                      - chooseN:
+                          bind: $targetSpaces
+                          options:
+                            query: mapSpaces
+                            filter:
+                              op: and
+                              args:
+                                - op: in
+                                  item: $zone
+                                  set:
+                                    - qui-nhon:none
+                                    - binh-dinh:none
+                                    - kontum:none
+                                    - pleiku-darlac:none
+                                    - phu-bon-phu-yen:none
+                                    - khanh-hoa:none
+                                    - cam-ranh:none
+                                    - loc-da-nang-qui-nhon:none
+                                    - loc-kontum-qui-nhon:none
+                                    - loc-qui-nhon-cam-ranh:none
+                                - op: ">"
+                                  left:
+                                    aggregate:
+                                      op: count
+                                      query:
+                                        query: tokensInZone
+                                        zone: $zone
+                                        filter:
+                                          op: and
+                                          args:
+                                            - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                            - { prop: type, op: in, value: ['troops', 'police'] }
+                                  right: 0
+                                - op: ">"
+                                  left:
+                                    aggregate:
+                                      op: count
+                                      query:
+                                        query: tokensInZone
+                                        zone: $zone
+                                        filter:
+                                          op: and
+                                          args:
+                                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                  right: 0
+                          min: 1
+                          max: 99
+      - stage: abrams-select-space
+        effects:
+          - chooseN:
+              bind: $abramsSpace
+              options: { query: binding, name: $targetSpaces }
+              min: 0
+              max:
+                if:
+                  when: { op: '==', left: { ref: globalMarkerState, marker: cap_abrams }, right: unshaded }
+                  then: 1
+                  else: 0
+      - stage: resolve-per-space
+        effects:
+          - forEach:
+              bind: $space
+              over: { query: binding, name: $targetSpaces }
+              effects:
+                - macro: cap-assault-cobras-shaded-cost
+                  args:
+                    space: $space
+                - let:
+                    bind: $insurgentBefore
+                    value:
+                      aggregate:
+                        op: count
+                        query:
+                          query: tokensInZone
+                          zone: $space
+                          filter:
+                            op: and
+                            args:
+                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                    in:
+                      - let:
+                          bind: $mixedCubes
+                          value:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $space
+                                filter:
+                                  op: and
+                                  args:
+                                    - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                    - { prop: type, op: in, value: ['troops', 'police'] }
+                          in:
+                            - let:
+                                bind: $hasUSBase
+                                value:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInZone
+                                      zone: $space
+                                      filter:
+                                        op: and
+                                        args:
+                                          - { prop: faction, op: eq, value: 'US' }
+                                          - { prop: type, op: eq, value: base }
+                                in:
+                                  - let:
+                                      bind: $damage
+                                      value:
+                                        if:
+                                          when: { op: '>', left: { ref: binding, name: $hasUSBase }, right: 0 }
+                                          then: { op: '*', left: { ref: binding, name: $mixedCubes }, right: 2 }
+                                          else:
+                                            if:
+                                              when: { op: zonePropIncludes, zone: $space, prop: terrainTags, value: 'highland' }
+                                              then: { op: '/', left: { ref: binding, name: $mixedCubes }, right: 2 }
+                                              else: { ref: binding, name: $mixedCubes }
+                                      in:
+                                        - macro: coin-assault-removal-order
+                                          args:
+                                            space: $space
+                                            damageExpr: { ref: binding, name: $damage }
+                                            bodyCountEligible: true
+                                            forceUntunneledBaseFirst:
+                                              if:
+                                                when:
+                                                  op: in
+                                                  item: { ref: binding, name: $space }
+                                                  set: { ref: binding, name: $abramsSpace }
+                                                then: true
+                                                else: false
+                                            treatTunneledBasesAsUntunneled: false
+                                            targetFactions: [NVA, VC]
+                                        - let:
+                                            bind: $insurgentAfter
+                                            value:
+                                              aggregate:
+                                                op: count
+                                                query:
+                                                  query: tokensInZone
+                                                  zone: $space
+                                                  filter:
+                                                    op: and
+                                                    args:
+                                                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                            in:
+                                              - macro: cap-assault-search-and-destroy
+                                                args:
+                                                  space: $space
+                                                  actorFaction: US
+                                                  assaultRemovedCount:
+                                                    op: '-'
+                                                    left: { ref: binding, name: $insurgentBefore }
+                                                    right: { ref: binding, name: $insurgentAfter }
+      - stage: cap-m48-patton-bonus-removal
+        effects:
+          - macro: cap-assault-m48-unshaded-bonus-removal
+            args:
+              targetSpaces: $targetSpaces
     atomicity: atomic
   - id: assault-us-profile
     actionId: assault

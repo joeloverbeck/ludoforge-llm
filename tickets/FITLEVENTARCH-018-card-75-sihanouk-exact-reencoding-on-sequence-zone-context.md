@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — depends on generic free-operation captured-zone support; FITL data/test changes required
-**Deps**: `tickets/README.md`, `tickets/ENGINEARCH-209-sequence-captured-zone-sets-for-later-grant-evaluation.md`, `data/games/fire-in-the-lake/41-events/065-096.md`, `reports/fire-in-the-lake-rules-section-3.md`, `reports/fire-in-the-lake-rules-section-5.md`, `packages/engine/test/integration/fitl-events-tutorial-medium.test.ts`, `packages/engine/test/integration/fitl-events-vo-nguyen-giap.test.ts`, `packages/engine/test/integration/fitl-events-operation-attleboro.test.ts`, `packages/engine/test/integration/fitl-insurgent-operations.test.ts`
+**Deps**: `tickets/README.md`, `archive/tickets/ENGINEARCH-209-sequence-captured-zone-sets-for-later-grant-evaluation.md`, `data/games/fire-in-the-lake/41-events/065-096.md`, `reports/fire-in-the-lake-rules-section-3.md`, `reports/fire-in-the-lake-rules-section-5.md`, `packages/engine/test/integration/fitl-events-tutorial-medium.test.ts`, `packages/engine/test/integration/fitl-events-vo-nguyen-giap.test.ts`, `packages/engine/test/integration/fitl-events-operation-attleboro.test.ts`, `packages/engine/test/integration/fitl-insurgent-operations.test.ts`
 
 ## Problem
 
@@ -72,7 +72,7 @@ Add tests that lock in:
 ## Out of Scope
 
 - Broader refactoring of unrelated FITL event cards unless card 75 reuse falls out naturally.
-- Generic engine work already covered by `tickets/ENGINEARCH-209-sequence-captured-zone-sets-for-later-grant-evaluation.md`.
+- Generic engine work already covered by `archive/tickets/ENGINEARCH-209-sequence-captured-zone-sets-for-later-grant-evaluation.md`.
 - Visual presentation changes.
 
 ## Acceptance Criteria

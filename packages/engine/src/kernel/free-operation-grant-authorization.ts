@@ -3,6 +3,7 @@ import { compareTurnFlowFreeOperationGrantPriority, isTurnFlowActionClass } from
 import { createCollector } from './execution-collector.js';
 import { evalCondition } from './eval-condition.js';
 import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
+import { resolveCapturedSequenceZonesByKey } from './free-operation-captured-sequence-zones.js';
 import { resolveGrantFreeOperationActionDomain } from './free-operation-action-domain.js';
 import {
   collectGrantAwareMoveZoneCandidates,
@@ -124,11 +125,7 @@ const doesGrantSatisfySequenceContext = (
   if (state.turnOrderState.type !== 'cardDriven') {
     return false;
   }
-  const batchId = grant.sequenceBatchId;
-  if (batchId === undefined) {
-    return false;
-  }
-  const captured = state.turnOrderState.runtime.freeOperationSequenceContexts?.[batchId]?.capturedMoveZonesByKey?.[contextKey];
+  const captured = resolveCapturedSequenceZonesByKey(state, grant)?.[contextKey];
   if (captured === undefined || captured.length === 0) {
     return false;
   }
@@ -144,7 +141,10 @@ export const evaluateZoneFilterForMove = (
   def: GameDef,
   state: GameState,
   move: Move,
-  grant: Pick<TurnFlowPendingFreeOperationGrant, 'seat' | 'executeAsSeat' | 'executionContext' | 'moveZoneBindings'>,
+  grant: Pick<
+    TurnFlowPendingFreeOperationGrant,
+    'seat' | 'executeAsSeat' | 'executionContext' | 'moveZoneBindings' | 'sequenceBatchId'
+  >,
   zoneFilter: ConditionAST,
   surface: FreeOperationZoneFilterSurface,
 ): boolean => {
@@ -152,6 +152,7 @@ export const evaluateZoneFilterForMove = (
     shouldDeferFreeOperationZoneFilterFailure(surface, cause);
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   const baseBindings = resolveGrantAwareMoveRuntimeBindings(def, state, move, grant);
+  const capturedSequenceZonesByKey = resolveCapturedSequenceZonesByKey(state, grant);
   const rebindableAliases = collectFreeOperationZoneFilterProbeRebindableAliases(zoneFilter);
   const zones = collectGrantMoveZoneCandidates(def, state, move, grant);
   if (zones.length === 0) {
@@ -167,11 +168,14 @@ export const evaluateZoneFilterForMove = (
         actorPlayer: state.activePlayer,
         bindings: baseBindings,
         resources: createEvalRuntimeResources({ collector: createCollector() }),
-        ...(
-          grant.executionContext === undefined
-            ? {}
-            : { freeOperationOverlay: { grantContext: grant.executionContext } }
-        ),
+        ...(grant.executionContext === undefined && capturedSequenceZonesByKey === undefined
+          ? {}
+          : {
+              freeOperationOverlay: {
+                ...(grant.executionContext === undefined ? {} : { grantContext: grant.executionContext }),
+                ...(capturedSequenceZonesByKey === undefined ? {} : { capturedSequenceZonesByKey }),
+              },
+            }),
       }));
     } catch (cause) {
       if (shouldDeferZoneFilterFailure(cause)) {
@@ -201,11 +205,14 @@ export const evaluateZoneFilterForMove = (
           actorPlayer: state.activePlayer,
           bindings,
           resources: createEvalRuntimeResources({ collector: createCollector() }),
-          ...(
-            grant.executionContext === undefined
-              ? {}
-              : { freeOperationOverlay: { grantContext: grant.executionContext } }
-          ),
+          ...(grant.executionContext === undefined && capturedSequenceZonesByKey === undefined
+            ? {}
+            : {
+                freeOperationOverlay: {
+                  ...(grant.executionContext === undefined ? {} : { grantContext: grant.executionContext }),
+                  ...(capturedSequenceZonesByKey === undefined ? {} : { capturedSequenceZonesByKey }),
+                },
+              }),
         })),
       })) {
         return true;

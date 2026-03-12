@@ -716,7 +716,8 @@ export const validateOptionsQuery = (
     }
     case 'enums':
     case 'players':
-    case 'grantContext': {
+    case 'grantContext':
+    case 'capturedSequenceZones': {
       return;
     }
     case 'globalMarkers': {

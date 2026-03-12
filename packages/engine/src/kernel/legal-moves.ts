@@ -4,6 +4,7 @@ import { resolveActionApplicabilityPreflight } from './action-applicability-pref
 import { resolveDeclaredActionParamDomainOptions } from './declared-action-param-domain.js';
 import type { ReadContext, EvalRuntimeResources } from './eval-context.js';
 import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
+import { resolveCapturedSequenceZonesByKey } from './free-operation-captured-sequence-zones.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import { isMoveDecisionSequenceAdmittedForLegalMove } from './move-decision-sequence.js';
 import {
@@ -541,6 +542,9 @@ function enumeratePendingFreeOperationMoves(
           executionPlayer,
           ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
           ...(grant.executionContext === undefined ? {} : { executionContext: grant.executionContext }),
+          ...(resolveCapturedSequenceZonesByKey(state, grant) === undefined
+            ? {}
+            : { capturedSequenceZonesByKey: resolveCapturedSequenceZonesByKey(state, grant) }),
           ...(grant.tokenInterpretations === undefined ? {} : { tokenInterpretations: grant.tokenInterpretations }),
         },
         { actionId: action.id, params: {} },
@@ -701,6 +705,9 @@ function enumeratePendingFreeOperationMoves(
             {
               executionPlayer: candidateExecutionPlayer,
               ...(candidateGrant.zoneFilter === undefined ? {} : { zoneFilter: candidateGrant.zoneFilter }),
+              ...(resolveCapturedSequenceZonesByKey(state, candidateGrant) === undefined
+                ? {}
+                : { capturedSequenceZonesByKey: resolveCapturedSequenceZonesByKey(state, candidateGrant) }),
               ...(candidateGrant.tokenInterpretations === undefined ? {} : { tokenInterpretations: candidateGrant.tokenInterpretations }),
             },
             { actionId: action.id, params: {} },

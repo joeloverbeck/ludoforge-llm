@@ -248,6 +248,13 @@ function resolveGrantContextQuery(
   return Array.isArray(value) ? value : [value as string | number | boolean];
 }
 
+function resolveCapturedSequenceZonesQuery(
+  key: string,
+  ctx: ReadContext,
+): readonly string[] {
+  return ctx.freeOperationOverlay?.capturedSequenceZonesByKey?.[key] ?? [];
+}
+
 function applyTokenFilter(tokens: readonly Token[], filter: TokenFilterExpr, ctx: ReadContext): readonly Token[] {
   return filterTokensByExpr(tokens, filter, (value) => resolvePredicateValue(value, ctx), ctx.freeOperationOverlay);
 }
@@ -856,6 +863,12 @@ export function evalQuery(query: OptionsQuery, ctx: ReadContext): readonly Query
 
     case 'grantContext': {
       const values = resolveGrantContextQuery(query.key, ctx);
+      assertWithinBounds(values.length, query, maxQueryResults);
+      return values;
+    }
+
+    case 'capturedSequenceZones': {
+      const values = resolveCapturedSequenceZonesQuery(query.key, ctx);
       assertWithinBounds(values.length, query, maxQueryResults);
       return values;
     }

@@ -150,6 +150,7 @@ const exhaustOptionsQuery = (query: OptionsQuery): string => {
     case 'connectedZones':
     case 'binding':
     case 'grantContext':
+    case 'capturedSequenceZones':
       return query.query;
     default:
       return assertNever(query);
@@ -184,16 +185,16 @@ describe('exhaustive kernel unions', () => {
     const playerSelVariants: UnionSize<PlayerSel> = 7;
     const conditionVariants: UnionSize<ConditionAST> = 11;
     const effectVariants: UnionSize<EffectAST> = 34;
-    const queryVariants: UnionSize<OptionsQuery> = 18;
+    const queryVariants: UnionSize<OptionsQuery> = 19;
     const recursiveQueryVariants: UnionSize<RecursiveOptionsQuery> = 2;
-    const leafQueryVariants: UnionSize<LeafOptionsQuery> = 16;
+    const leafQueryVariants: UnionSize<LeafOptionsQuery> = 17;
 
     assert.equal(playerSelVariants, 7);
     assert.equal(conditionVariants, 11);
     assert.equal(effectVariants, 34);
-    assert.equal(queryVariants, 18);
+    assert.equal(queryVariants, 19);
     assert.equal(recursiveQueryVariants, 2);
-    assert.equal(leafQueryVariants, 16);
+    assert.equal(leafQueryVariants, 17);
   });
 
   it('keeps recursive and leaf OptionsQuery kind partitions aligned', () => {
@@ -228,8 +229,8 @@ describe('exhaustive kernel unions', () => {
       ? true
       : false;
     const recursiveKinds: UnionSize<RecursiveOptionsQueryKind> = 2;
-    const leafKinds: UnionSize<LeafOptionsQueryKind> = 16;
-    const leafContractKinds: UnionSize<LeafOptionsQueryKindFromContractMap> = 16;
+    const leafKinds: UnionSize<LeafOptionsQueryKind> = 17;
+    const leafContractKinds: UnionSize<LeafOptionsQueryKindFromContractMap> = 17;
     const transformKinds: UnionSize<LeafOptionsQueryTransformKind> = 1;
     const contractMapCoverage: ContractMapCoverage = true;
     const leafContractViewCoverage: LeafContractViewCoverage = true;
@@ -243,8 +244,8 @@ describe('exhaustive kernel unions', () => {
     const overlapVariants: UnionSize<Overlap> = 0;
 
     assert.equal(recursiveKinds, 2);
-    assert.equal(leafKinds, 16);
-    assert.equal(leafContractKinds, 16);
+    assert.equal(leafKinds, 17);
+    assert.equal(leafContractKinds, 17);
     assert.equal(transformKinds, 1);
     assert.equal(contractMapCoverage, true);
     assert.equal(leafContractViewCoverage, true);

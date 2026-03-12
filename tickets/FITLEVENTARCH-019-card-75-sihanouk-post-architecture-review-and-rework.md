@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None expected — review ticket; may trigger follow-up tickets if architecture still falls short
-**Deps**: `tickets/README.md`, `tickets/ENGINEARCH-209-sequence-captured-zone-sets-for-later-grant-evaluation.md`, `tickets/FITLEVENTARCH-018-card-75-sihanouk-exact-reencoding-on-sequence-zone-context.md`, `data/games/fire-in-the-lake/41-events/065-096.md`, `packages/engine/test/integration/fitl-events-tutorial-medium.test.ts`, `reports/fire-in-the-lake-rules-section-3.md`, `reports/fire-in-the-lake-rules-section-5.md`
+**Deps**: `tickets/README.md`, `archive/tickets/ENGINEARCH-209-sequence-captured-zone-sets-for-later-grant-evaluation.md`, `tickets/FITLEVENTARCH-018-card-75-sihanouk-exact-reencoding-on-sequence-zone-context.md`, `data/games/fire-in-the-lake/41-events/065-096.md`, `packages/engine/test/integration/fitl-events-tutorial-medium.test.ts`, `reports/fire-in-the-lake-rules-section-3.md`, `reports/fire-in-the-lake-rules-section-5.md`
 
 ## Problem
 

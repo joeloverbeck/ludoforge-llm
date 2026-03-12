@@ -1,5 +1,6 @@
 import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
 import type { PlayerId } from './branded.js';
+import type { CapturedSequenceZonesByKey } from './free-operation-captured-sequence-zones.js';
 import type { FreeOperationExecutionOverlay } from './free-operation-overlay.js';
 import type { Move } from './types.js';
 
@@ -7,6 +8,7 @@ interface FreeOperationPreflightOverlayInput {
   readonly executionPlayer: PlayerId;
   readonly zoneFilter?: FreeOperationExecutionOverlay['zoneFilter'];
   readonly executionContext?: FreeOperationExecutionOverlay['grantContext'] | undefined;
+  readonly capturedSequenceZonesByKey?: CapturedSequenceZonesByKey | undefined;
   readonly tokenInterpretations?: FreeOperationExecutionOverlay['tokenInterpretations'] | undefined;
 }
 
@@ -37,7 +39,12 @@ export const buildFreeOperationPreflightOverlay = (
   return {
     executionPlayerOverride: analysis.executionPlayer,
     ...(options?.skipPhaseCheck === false ? {} : { skipPhaseCheck: true }),
-    ...((analysis.zoneFilter === undefined && analysis.executionContext === undefined && analysis.tokenInterpretations === undefined)
+    ...((
+      analysis.zoneFilter === undefined
+      && analysis.executionContext === undefined
+      && analysis.capturedSequenceZonesByKey === undefined
+      && analysis.tokenInterpretations === undefined
+    )
       ? {}
       : {
           freeOperationOverlay: {
@@ -52,6 +59,9 @@ export const buildFreeOperationPreflightOverlay = (
                   } satisfies FreeOperationPreflightOverlayDiagnostics,
                 }),
             ...(analysis.executionContext === undefined ? {} : { grantContext: analysis.executionContext }),
+            ...(analysis.capturedSequenceZonesByKey === undefined
+              ? {}
+              : { capturedSequenceZonesByKey: analysis.capturedSequenceZonesByKey }),
             ...(analysis.tokenInterpretations === undefined ? {} : { tokenInterpretations: analysis.tokenInterpretations }),
           },
         }),

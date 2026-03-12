@@ -285,6 +285,17 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
     return value;
   }
 
+  if (ref.ref === 'capturedSequenceZones') {
+    const value = ctx.freeOperationOverlay?.capturedSequenceZonesByKey?.[ref.key];
+    if (value === undefined) {
+      throw missingVarError(`Captured free-operation sequence zones not found: ${ref.key}`, {
+        reference: ref,
+        availableCapturedSequenceZoneKeys: Object.keys(ctx.freeOperationOverlay?.capturedSequenceZonesByKey ?? {}).sort(),
+      });
+    }
+    return value;
+  }
+
   if (ref.ref === 'tokenZone') {
     const boundToken = ctx.bindings[ref.token];
     if (boundToken === undefined) {

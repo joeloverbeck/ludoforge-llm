@@ -55,7 +55,8 @@ export type Reference =
   | { readonly ref: 'zoneProp'; readonly zone: ZoneSel; readonly prop: string }
   | { readonly ref: 'activePlayer' }
   | { readonly ref: 'activeSeat' }
-  | { readonly ref: 'grantContext'; readonly key: string };
+  | { readonly ref: 'grantContext'; readonly key: string }
+  | { readonly ref: 'capturedSequenceZones'; readonly key: string };
 
 export type ValueExpr =
   | number
@@ -238,7 +239,8 @@ export type OptionsQuery =
       readonly maxDepth?: number;
     }
   | { readonly query: 'binding'; readonly name: string; readonly displayName?: string }
-  | { readonly query: 'grantContext'; readonly key: string };
+  | { readonly query: 'grantContext'; readonly key: string }
+  | { readonly query: 'capturedSequenceZones'; readonly key: string };
 
 export type TransferVarEndpoint = ScopedVarEndpointContract<
   'global',

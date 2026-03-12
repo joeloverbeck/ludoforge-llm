@@ -35,6 +35,7 @@ import { resolveGrantFreeOperationActionDomain } from './free-operation-action-d
 import { resolveFreeOperationExecutionContext } from './free-operation-execution-context.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import { resolveSequenceProgressionPolicy } from './free-operation-sequence-progression.js';
+import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import {
   buildMoveRuntimeBindings,
   deriveDecisionBindingsFromMoveParams,
@@ -825,10 +826,19 @@ export const isFreeOperationGrantUsableInCurrentState = (
   };
   const actionIds = resolveGrantFreeOperationActionDomain(def, probeGrant);
   for (const actionId of actionIds) {
+    const mappedActionClass = resolveTurnFlowActionClass(def, {
+      actionId: asActionId(actionId),
+      params: {},
+    });
     const probeMove: Move = {
       actionId: asActionId(actionId),
       params: {},
       freeOperation: true,
+      ...(
+        mappedActionClass !== probeGrant.operationClass
+          ? { actionClass: probeGrant.operationClass }
+          : {}
+      ),
     };
     if (!isFreeOperationApplicableForMove(def, explorationState, probeMove, seatResolution)) {
       continue;

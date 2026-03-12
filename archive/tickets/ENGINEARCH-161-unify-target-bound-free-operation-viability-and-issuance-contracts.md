@@ -1,6 +1,6 @@
 # ENGINEARCH-161: Unify Target-Bound Free-Operation Viability and Issuance Contracts
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — free-operation viability probing, grant authorization, legal-move discovery, and GameDef behavior validation
@@ -108,3 +108,24 @@ Cover cases where viability depends on event-selected context and constrained mo
 6. `node --test packages/engine/dist/test/integration/fitl-events-lam-son-719.test.js`
 7. `pnpm -F @ludoforge/engine test`
 8. `pnpm run check:ticket-deps`
+
+## Outcome
+
+- Completion date: 2026-03-12
+- What actually changed:
+  - The targeted parity gap described by this ticket was closed by the Lam Son 719 alignment work and the accompanying shared-kernel fixes.
+  - `packages/engine/src/kernel/free-operation-viability.ts` now preserves constrained action classes during `requireUsableAtIssue` probing, so constrained target-bound grants are evaluated against the same action-class shape they execute with.
+  - `packages/engine/src/kernel/legal-moves.ts` now preserves constrained action classes during ready-grant legal move discovery, so issuance-time viability and discovery-time surfacing stay aligned for the same grant state.
+  - `packages/engine/test/integration/fitl-event-free-operation-grants.test.ts` gained focused effect-issued cross-seat required execution-context coverage.
+  - `packages/engine/test/integration/fitl-events-lam-son-719.test.ts` now exercises the production Lam Son path without a manual grant-ready-state workaround, and the production card data no longer needs author-side suppression for the resolved target-bound limited-operation case.
+- Deviations from original plan:
+  - No broad contract redesign or new validation layer was needed. The real issue was narrower: constrained action classes were being dropped in shared probe/discovery paths.
+  - `packages/engine/src/kernel/free-operation-grant-authorization.ts`, `packages/engine/src/kernel/free-operation-grant-bindings.ts`, `packages/engine/src/kernel/validate-gamedef-behavior.ts`, and `packages/engine/src/kernel/types.ts` did not require changes for this fix.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build`
+  - `node --test packages/engine/dist/test/integration/fitl-event-free-operation-grants.test.js`
+  - `node --test packages/engine/dist/test/integration/fitl-events-lam-son-719.test.js`
+  - `node --test packages/engine/dist/test/unit/kernel/legal-moves.test.js`
+  - `node --test packages/engine/dist/test/unit/kernel/apply-move.test.js`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm run check:ticket-deps`

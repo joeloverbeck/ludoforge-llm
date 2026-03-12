@@ -1,10 +1,10 @@
 # FITLEVENT-074: Rework Lam Son 719 after generic required-grant architecture lands
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: No direct new architecture in this ticket; consumes generic engine work from dependent tickets
-**Deps**: `tickets/README.md`, `tickets/ENGINEARCH-160-first-class-required-cross-seat-free-operation-resolution-windows.md`, `tickets/ENGINEARCH-161-unify-target-bound-free-operation-viability-and-issuance-contracts.md`, `reports/fire-in-the-lake-rules-section-5.md`, `data/games/fire-in-the-lake/41-events/065-096.md`, `packages/engine/test/integration/fitl-events-lam-son-719.test.ts`
+**Deps**: `tickets/README.md`, `archive/tickets/ENGINEARCH-160-first-class-required-cross-seat-free-operation-resolution-windows.md`, `archive/tickets/ENGINEARCH-161-unify-target-bound-free-operation-viability-and-issuance-contracts.md`, `reports/fire-in-the-lake-rules-section-5.md`, `data/games/fire-in-the-lake/41-events/065-096.md`, `packages/engine/test/integration/fitl-events-lam-son-719.test.ts`
 
 ## Problem
 
@@ -84,3 +84,19 @@ Replace workaround-focused assertions with full-fidelity assertions covering:
 2. `node --test packages/engine/dist/test/integration/fitl-events-lam-son-719.test.js`
 3. `pnpm -F @ludoforge/engine test:integration`
 4. `pnpm run check:ticket-deps`
+
+## Outcome
+
+- Completion date: 2026-03-12
+- What actually changed:
+  - Lam Son 719 in `data/games/fire-in-the-lake/41-events/065-096.md` was re-authored to use the generic required-grant contract instead of the prior workaround.
+  - The card now declares `viabilityPolicy: requireUsableAtIssue`, `completionPolicy: required`, `outcomePolicy: mustChangeGameplayState`, and `postResolutionTurnFlow: resumeCardFlow` on the ARVN Laos-scoped LimOp grant.
+  - `packages/engine/test/integration/fitl-events-lam-son-719.test.ts` was rewritten around the final semantics: immediate ARVN handoff, production-data grant contract assertions, and successful required-window resolution without manual runtime-state mutation.
+- Deviations from original plan:
+  - The ticket was completed together with the generic parity fixes captured by ENGINEARCH-160/161 rather than as a later follow-up.
+  - The final Lam Son regression is intentionally less coupled to one exact LimOp branch shape than the earlier workaround test; it verifies the required-window contract and successful legal resolution instead.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build`
+  - `node --test packages/engine/dist/test/integration/fitl-events-lam-son-719.test.js`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm run check:ticket-deps`

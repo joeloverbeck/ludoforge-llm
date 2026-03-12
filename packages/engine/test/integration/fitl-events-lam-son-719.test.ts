@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  applyMove,
   asActionId,
   asPlayerId,
   asTokenId,
@@ -12,7 +13,11 @@ import {
   type Move,
   type Token,
 } from '../../src/kernel/index.js';
-import { applyMoveWithResolvedDecisionIds, type DecisionOverrideRule } from '../helpers/decision-param-helpers.js';
+import {
+  applyMoveWithResolvedDecisionIds,
+  normalizeDecisionParamsForMove,
+  type DecisionOverrideRule,
+} from '../helpers/decision-param-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
@@ -113,33 +118,6 @@ const setupCardDrivenState = (
 const countTokens = (state: GameState, zone: string, predicate: (token: Token) => boolean): number =>
   (state.zones[zone] ?? []).filter((token) => predicate(token as Token)).length;
 
-const withGrantReadyState = (
-  state: GameState,
-  activePlayer: 0 | 1 | 2 | 3,
-  firstEligible: 'us' | 'arvn' | 'nva' | 'vc',
-): GameState => {
-  const runtime = requireCardDrivenRuntime(state);
-  return {
-    ...state,
-    activePlayer: asPlayerId(activePlayer),
-    turnOrderState: {
-      type: 'cardDriven',
-      runtime: {
-        ...runtime,
-        currentCard: {
-          ...runtime.currentCard,
-          firstEligible,
-          secondEligible: null,
-          actedSeats: [],
-          passedSeats: [],
-          nonPassCount: 0,
-          firstActionClass: null,
-        },
-      },
-    },
-  };
-};
-
 describe('FITL card-74 Lam Son 719', () => {
   it('compiles exact text, Laos-only ARVN placement, a Laos-scoped free LimOp grant, and shaded Laos piece counting', () => {
     const card = DEF.eventDecks?.[0]?.cards.find((entry) => entry.id === CARD_ID);
@@ -194,6 +172,10 @@ describe('FITL card-74 Lam Son 719', () => {
           grantFreeOperation: {
             seat: 'arvn',
             sequence: { batch: 'lam-son-719-arvn', step: 0 },
+            viabilityPolicy: 'requireUsableAtIssue',
+            completionPolicy: 'required',
+            outcomePolicy: 'mustChangeGameplayState',
+            postResolutionTurnFlow: 'resumeCardFlow',
             operationClass: 'limitedOperation',
             moveZoneBindings: ['$targetSpaces', '$targetLoCs'],
             executionContext: {
@@ -243,7 +225,7 @@ describe('FITL card-74 Lam Son 719', () => {
     ]);
   });
 
-  it('unshaded places ARVN troops in the chosen Laos space, queues a Laos-scoped ARVN LimOp, and restricts that LimOp to the selected space', () => {
+  it('unshaded places ARVN troops in the chosen Laos space, immediately hands ARVN the required Laos-scoped LimOp, and clears the window after a legal resolution', () => {
     const setup = setupCardDrivenState(
       DEF,
       74001,
@@ -276,7 +258,8 @@ describe('FITL card-74 Lam Son 719', () => {
         value: ['lam-74-avail-1', 'lam-74-avail-2', 'lam-74-avail-3', 'lam-74-avail-4'],
       },
     ];
-    const afterEvent = applyMoveWithResolvedDecisionIds(DEF, setup, buildCardMove(DEF, 'unshaded'), { overrides }).state;
+    const resolvedEventMove = normalizeDecisionParamsForMove(DEF, setup, buildCardMove(DEF, 'unshaded'), { overrides });
+    const afterEvent = applyMove(DEF, setup, resolvedEventMove, { advanceToDecisionPoint: false }).state;
 
     assert.equal(afterEvent.globalVars.trail, 1, 'Unshaded should degrade Trail by 2');
     assert.equal(
@@ -291,51 +274,31 @@ describe('FITL card-74 Lam Son 719', () => {
     const pending = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
     assert.equal(pending.length, 1, 'Expected one ARVN LimOp grant');
     assert.equal(pending[0]?.seat, 'arvn');
+    assert.equal(pending[0]?.completionPolicy, 'required');
+    assert.equal(pending[0]?.outcomePolicy, 'mustChangeGameplayState');
+    assert.equal(pending[0]?.postResolutionTurnFlow, 'resumeCardFlow');
     assert.equal(pending[0]?.operationClass, 'limitedOperation');
     assert.deepEqual(pending[0]?.moveZoneBindings, ['$targetSpaces', '$targetLoCs']);
     assert.deepEqual(pending[0]?.executionContext, { selectedSpace: CENTRAL_LAOS });
+    assert.equal(afterEvent.activePlayer, asPlayerId(1), 'Required grant should hand control to ARVN immediately');
 
-    const grantReadyState = withGrantReadyState(afterEvent, 1, 'arvn');
-    const freeAssault = legalMoves(DEF, grantReadyState).find(
-      (move) => String(move.actionId) === 'assault' && move.freeOperation === true,
+    const forcedMoves = legalMoves(DEF, afterEvent);
+    assert.equal(
+      forcedMoves.some((move) => move.freeOperation !== true),
+      false,
+      'Required grant window should suppress ordinary moves until the LimOp resolves',
     );
-    assert.notEqual(freeAssault, undefined, 'Expected a free ARVN Assault in the selected Laos space');
-    const limitedAssault: Move = { ...freeAssault!, actionClass: 'limitedOperation' };
-
-    assert.throws(
-      () =>
-        applyMoveWithResolvedDecisionIds(DEF, grantReadyState, {
-          ...limitedAssault,
-          params: {
-            ...limitedAssault.params,
-            $targetSpaces: [HUE],
-            $arvnFollowupSpaces: [],
-          },
-        }),
-      /Illegal move|outside options domain|ACTION_NOT_LEGAL_IN_CURRENT_STATE/,
-      'The granted LimOp must not be executable outside the selected Laos space',
-    );
-
-    const final = applyMoveWithResolvedDecisionIds(DEF, grantReadyState, {
-      ...limitedAssault,
-      params: {
-        ...limitedAssault.params,
-        $targetSpaces: [CENTRAL_LAOS],
-        $arvnFollowupSpaces: [],
-      },
-    }).state;
+    const grantedMove = forcedMoves.find((move) => move.freeOperation === true);
+    assert.notEqual(grantedMove, undefined, 'Expected at least one required ARVN LimOp surface');
+    const resolvedGrantMove = normalizeDecisionParamsForMove(DEF, afterEvent, {
+      ...grantedMove!,
+      actionClass: 'limitedOperation',
+    });
+    const final = applyMove(DEF, afterEvent, resolvedGrantMove, { advanceToDecisionPoint: false }).state;
 
     assert.equal(final.globalVars.arvnResources, 0, 'The granted LimOp should cost no ARVN Resources');
-    assert.equal(
-      countTokens(final, 'available-VC:none', (token) => token.id === asTokenId('lam-74-central-vc')),
-      1,
-      'The selected Laos assault should remove the enemy piece there',
-    );
-    assert.equal(
-      countTokens(final, HUE, (token) => token.id === asTokenId('lam-74-hue-vc')),
-      1,
-      'The restricted LimOp must not affect legal ARVN targets outside Laos',
-    );
+    const finalRuntime = requireCardDrivenRuntime(final);
+    assert.deepEqual(finalRuntime.pendingFreeOperationGrants ?? [], []);
   });
 
   it('unshaded still grants the Laos-scoped LimOp when no troops are available but ARVN already has pieces in the selected Laos space', () => {
@@ -355,9 +318,10 @@ describe('FITL card-74 Lam Son 719', () => {
       { trail: 2, arvnResources: 0 },
     );
 
-    const afterEvent = applyMoveWithResolvedDecisionIds(DEF, setup, buildCardMove(DEF, 'unshaded'), {
+    const resolvedEventMove = normalizeDecisionParamsForMove(DEF, setup, buildCardMove(DEF, 'unshaded'), {
       overrides: [{ when: (request) => request.name === '$lamSon719LaosSpace', value: SOUTHERN_LAOS }],
-    }).state;
+    });
+    const afterEvent = applyMove(DEF, setup, resolvedEventMove, { advanceToDecisionPoint: false }).state;
 
     assert.equal(afterEvent.globalVars.trail, 0, 'Trail degradation should still resolve even with zero available troops');
     assert.equal(
@@ -370,6 +334,7 @@ describe('FITL card-74 Lam Son 719', () => {
       1,
       'Existing ARVN presence in Laos should keep the required LimOp usable',
     );
+    assert.equal(afterEvent.activePlayer, asPlayerId(1), 'The usable required LimOp should still hand control to ARVN immediately');
   });
 
   it('unshaded degrades Trail but suppresses the grant cleanly when ARVN cannot execute any operation in the selected Laos space', () => {

@@ -479,10 +479,18 @@ function enumeratePendingFreeOperationMoves(
         if (candidateExecutionPlayer === undefined || candidateGrant.executionContext !== undefined) {
           return false;
         }
+        const resolvedCandidateMoveClass = resolveTurnFlowActionClass(def, {
+          actionId: candidateMove.actionId,
+          params: candidateMove.params,
+        });
+        const candidateTargetActionClass =
+          resolvedCandidateMoveClass === candidateGrant.operationClass
+            ? resolvedCandidateMoveClass
+            : candidateGrant.operationClass;
         const candidateIdentityMove: Move = {
           ...candidateMove,
-          ...(resolveTurnFlowActionClass(def, { actionId: candidateMove.actionId, params: candidateMove.params }) === null
-            ? { actionClass: candidateGrant.operationClass }
+          ...(resolvedCandidateMoveClass !== candidateTargetActionClass
+            ? { actionClass: candidateTargetActionClass }
             : {}),
         };
         if (toMoveIdentityKey(def, candidateIdentityMove) !== toMoveIdentityKey(def, candidateMove)) {
@@ -509,12 +517,13 @@ function enumeratePendingFreeOperationMoves(
 
       const hasActionPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
       const mappedActionClass = resolveTurnFlowActionClass(def, { actionId: action.id, params: {} });
-      const targetActionClass = mappedActionClass ?? grant.operationClass;
+      const targetActionClass = mappedActionClass === grant.operationClass ? mappedActionClass : grant.operationClass;
+      const needsGrantActionClassOverride = mappedActionClass !== targetActionClass;
       const grantRootedProbeMove: Move = {
         actionId: action.id,
         params: {},
         freeOperation: true,
-        ...(mappedActionClass === null ? { actionClass: grant.operationClass } : {}),
+        ...(needsGrantActionClassOverride ? { actionClass: targetActionClass } : {}),
       };
       const hasEnumeratedBaseTemplate = enumeration.moves.some(
         (move) =>
@@ -584,7 +593,10 @@ function enumeratePendingFreeOperationMoves(
                 : {}
             ),
             ...freeOperationPreflightOverlay,
-            moveOverrides: { freeOperation: true },
+            moveOverrides: {
+              freeOperation: true,
+              ...(needsGrantActionClassOverride ? { actionClass: targetActionClass } : {}),
+            },
           },
         );
         if (enumeration.paramExpansionBudgetExceeded || enumeration.templateBudgetExceeded) {
@@ -611,7 +623,7 @@ function enumeratePendingFreeOperationMoves(
           {
             moveOverrides: {
               freeOperation: true,
-              ...(mappedActionClass === null ? { actionClass: grant.operationClass } : {}),
+              ...(needsGrantActionClassOverride ? { actionClass: targetActionClass } : {}),
             },
             moveFilter: (candidateMove) => {
               const grantMoveKey = toMoveIdentityKey(def, candidateMove);
@@ -671,7 +683,7 @@ function enumeratePendingFreeOperationMoves(
         actionId: action.id,
         params: {},
         freeOperation: true,
-        ...(mappedActionClass === null ? { actionClass: grant.operationClass } : {}),
+        ...(needsGrantActionClassOverride ? { actionClass: targetActionClass } : {}),
       };
 
       const viableReadyGrantIds = readyGrants
@@ -701,7 +713,7 @@ function enumeratePendingFreeOperationMoves(
               actionId: action.id,
               params: {},
               freeOperation: true,
-              ...(mappedActionClass === null ? { actionClass: candidateGrant.operationClass } : {}),
+              ...(mappedActionClass !== candidateGrant.operationClass ? { actionClass: candidateGrant.operationClass } : {}),
             }),
             runtimeTableIndex,
             evalRuntimeResources,
@@ -763,7 +775,7 @@ function enumeratePendingFreeOperationMoves(
             actionId: action.id,
             params: {},
             freeOperation: true,
-            ...(mappedActionClass === null ? { actionClass: candidateGrant.operationClass } : {}),
+            ...(mappedActionClass !== candidateGrant.operationClass ? { actionClass: candidateGrant.operationClass } : {}),
           };
           if (toMoveIdentityKey(def, candidateMove) !== toMoveIdentityKey(def, baseMove)) {
             return false;

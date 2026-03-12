@@ -81,6 +81,18 @@ export const isGrantOperationClassCompatible = (
   return false;
 };
 
+export const resolveGrantMoveActionClassOverride = (
+  def: GameDef,
+  actionId: Move['actionId'],
+  grantClass: TurnFlowPendingFreeOperationGrant['operationClass'],
+): TurnFlowPendingFreeOperationGrant['operationClass'] | undefined => {
+  const mappedClass = resolveTurnFlowActionClass(def, { actionId, params: {} });
+  if (mappedClass === null) {
+    return grantClass;
+  }
+  return isGrantOperationClassCompatible(grantClass, mappedClass) ? undefined : grantClass;
+};
+
 const doesGrantApplyToMove = (
   def: GameDef,
   grant: TurnFlowPendingFreeOperationGrant,

@@ -13,6 +13,7 @@ import { isEffectRuntimeReason } from './effect-error.js';
 import {
   collectGrantAwareMoveZoneCandidates,
 } from './free-operation-grant-bindings.js';
+import { resolveGrantMoveActionClassOverride } from './free-operation-grant-authorization.js';
 import {
   resolveMoveDecisionSequence,
   type ResolveMoveDecisionSequenceResult,
@@ -826,19 +827,14 @@ export const isFreeOperationGrantUsableInCurrentState = (
   };
   const actionIds = resolveGrantFreeOperationActionDomain(def, probeGrant);
   for (const actionId of actionIds) {
-    const mappedActionClass = resolveTurnFlowActionClass(def, {
-      actionId: asActionId(actionId),
-      params: {},
-    });
+    const actionIdBrand = asActionId(actionId);
     const probeMove: Move = {
-      actionId: asActionId(actionId),
+      actionId: actionIdBrand,
       params: {},
       freeOperation: true,
-      ...(
-        mappedActionClass !== probeGrant.operationClass
-          ? { actionClass: probeGrant.operationClass }
-          : {}
-      ),
+      ...(resolveGrantMoveActionClassOverride(def, actionIdBrand, probeGrant.operationClass) === undefined
+        ? {}
+        : { actionClass: probeGrant.operationClass }),
     };
     if (!isFreeOperationApplicableForMove(def, explorationState, probeMove, seatResolution)) {
       continue;

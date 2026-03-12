@@ -14,6 +14,7 @@ import {
 import {
   grantActionIds,
   isPendingFreeOperationGrantSequenceReady,
+  resolveGrantMoveActionClassOverride,
 } from './free-operation-grant-authorization.js';
 import { resolveTurnFlowDefaultFreeOperationActionDomain } from './free-operation-action-domain.js';
 import { resolvePendingFreeOperationGrantExecutionPlayer } from './free-operation-grant-bindings.js';
@@ -517,8 +518,9 @@ function enumeratePendingFreeOperationMoves(
 
       const hasActionPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
       const mappedActionClass = resolveTurnFlowActionClass(def, { actionId: action.id, params: {} });
-      const targetActionClass = mappedActionClass === grant.operationClass ? mappedActionClass : grant.operationClass;
-      const needsGrantActionClassOverride = mappedActionClass !== targetActionClass;
+      const grantActionClassOverride = resolveGrantMoveActionClassOverride(def, action.id, grant.operationClass);
+      const targetActionClass = grantActionClassOverride ?? mappedActionClass ?? 'operation';
+      const needsGrantActionClassOverride = grantActionClassOverride !== undefined;
       const grantRootedProbeMove: Move = {
         actionId: action.id,
         params: {},
@@ -713,7 +715,9 @@ function enumeratePendingFreeOperationMoves(
               actionId: action.id,
               params: {},
               freeOperation: true,
-              ...(mappedActionClass !== candidateGrant.operationClass ? { actionClass: candidateGrant.operationClass } : {}),
+              ...(resolveGrantMoveActionClassOverride(def, action.id, candidateGrant.operationClass) === undefined
+                ? {}
+                : { actionClass: candidateGrant.operationClass }),
             }),
             runtimeTableIndex,
             evalRuntimeResources,
@@ -775,7 +779,9 @@ function enumeratePendingFreeOperationMoves(
             actionId: action.id,
             params: {},
             freeOperation: true,
-            ...(mappedActionClass !== candidateGrant.operationClass ? { actionClass: candidateGrant.operationClass } : {}),
+            ...(resolveGrantMoveActionClassOverride(def, action.id, candidateGrant.operationClass) === undefined
+              ? {}
+              : { actionClass: candidateGrant.operationClass }),
           };
           if (toMoveIdentityKey(def, candidateMove) !== toMoveIdentityKey(def, baseMove)) {
             return false;

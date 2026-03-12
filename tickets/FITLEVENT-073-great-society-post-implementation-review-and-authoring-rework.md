@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None by default — review may identify a follow-up engine ticket, but this ticket is primarily FITL authoring and architecture review
-**Deps**: `tickets/README.md`, `reports/fire-in-the-lake-rules-section-5.md`, `reports/fire-in-the-lake-rules-section-6.md`, `data/games/fire-in-the-lake/41-events/065-096.md`, `packages/engine/test/integration/fitl-commitment-phase.test.ts`, `packages/engine/test/integration/fitl-events-1965-arvn.test.ts`, `tickets/ENGINEARCH-152-legal-moves-choiceful-event-discoverability-contract.md`
+**Deps**: `tickets/README.md`, `reports/fire-in-the-lake-rules-section-5.md`, `reports/fire-in-the-lake-rules-section-6.md`, `data/games/fire-in-the-lake/41-events/065-096.md`, `packages/engine/test/integration/fitl-commitment-phase.test.ts`, `packages/engine/test/integration/fitl-events-1965-arvn.test.ts`, `archive/tickets/ENGINEARCH-152-legal-moves-choiceful-event-discoverability-contract.md`
 
 ## Problem
 

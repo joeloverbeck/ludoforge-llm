@@ -319,6 +319,44 @@ describe('FITL commitment phase production wiring', () => {
     assert.equal(countTokens(result, 'available-US:none', 'US', 'troops'), 1, 'Unchosen Available US pieces should remain');
   });
 
+  it('surfaces Great Society shaded from legalMoves() when the executing seat is turn-flow eligible', () => {
+    const def = compileDef();
+    const eventDeck = def.eventDecks?.[0];
+    assert.notEqual(eventDeck, undefined, 'Expected at least one event deck');
+
+    const baseState = clearAllZones(initialState(def, 7314, 4).state);
+    const setup: GameState = {
+      ...baseState,
+      zones: {
+        ...baseState.zones,
+        [eventDeck!.discardZone]: [makeToken('card-73', 'card', 'none')],
+        'available-US:none': [
+          makeToken('great-surface-base-1', 'base', 'US'),
+          makeToken('great-surface-troop-1', 'troops', 'US'),
+          makeToken('great-surface-troop-2', 'troops', 'US'),
+          makeToken('great-surface-troop-3', 'troops', 'US'),
+        ],
+      },
+    };
+
+    const eventMove = legalMoves(def, setup).find(
+      (move) =>
+        String(move.actionId) === 'event'
+        && move.params.side === 'shaded'
+        && (move.params.eventCardId === undefined || move.params.eventCardId === 'card-73'),
+    );
+    assert.notEqual(eventMove, undefined, 'Expected Great Society shaded event move to be surfaced by legalMoves()');
+
+    const pending = resolveMoveDecisionSequence(def, setup, eventMove!, { choose: () => undefined });
+    assert.equal(pending.complete, false);
+    assert.notEqual(pending.nextDecision, undefined, 'Expected Great Society shaded surfaced move to remain choiceful');
+    assert.equal(pending.nextDecision?.name, '$greatSocietyUsPieces');
+    assert.equal(pending.nextDecision?.decisionPlayer, asPlayerId(0), 'US should still own the shaded choice');
+    assert.equal(pending.nextDecision?.type, 'chooseN');
+    assert.equal(pending.nextDecision?.min, 3);
+    assert.equal(pending.nextDecision?.max, 3);
+  });
+
   it('caps Great Society shaded removal at the number of Available US pieces', () => {
     const def = compileDef();
     const eventDeck = def.eventDecks?.[0];

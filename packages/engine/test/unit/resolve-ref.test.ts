@@ -157,6 +157,34 @@ describe('resolveRef', () => {
     );
   });
 
+  it('applies free-operation token interpretations when resolving tokenProp references', () => {
+    const ctx = makeCtx({
+      freeOperationOverlay: {
+        tokenInterpretations: [
+          {
+            when: {
+              op: 'and',
+              args: [
+                { prop: 'faction', op: 'eq', value: 'ARVN' },
+                { prop: 'type', op: 'in', value: ['troops', 'police'] },
+              ],
+            },
+            assign: {
+              faction: 'US',
+              type: 'troops',
+            },
+          },
+        ],
+      },
+      bindings: {
+        '$card': makeToken('bound-2', { faction: 'ARVN', type: 'police' }),
+      },
+    });
+
+    assert.equal(resolveRef({ ref: 'tokenProp', token: '$card', prop: 'faction' }, ctx), 'US');
+    assert.equal(resolveRef({ ref: 'tokenProp', token: '$card', prop: 'type' }, ctx), 'troops');
+  });
+
   it('resolves binding scalars and scalar arrays, and rejects unsupported binding values', () => {
     const ctx = makeCtx();
 

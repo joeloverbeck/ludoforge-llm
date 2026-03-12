@@ -1,6 +1,7 @@
 import type { DerivedMetricDef, GameDef, GameState, VictoryStandingsDef, ZoneDef, Token } from './types.js';
 import { attributeValueEquals } from './attribute-value-equals.js';
 import { kernelRuntimeError } from './runtime-error.js';
+import { resolveTokenViewFieldValue } from './token-view.js';
 
 type DerivedComputationId = 'computeMarkerTotal' | 'computeTotalEcon' | 'sumControlledPopulation';
 
@@ -155,7 +156,7 @@ export function countSeatTokens(
   const tokens = getZoneTokens(state, spaceId);
   let count = 0;
   for (const token of tokens) {
-    const value = token.props[seatProp];
+    const value = resolveTokenViewFieldValue(token, seatProp);
     if (typeof value === 'string' && seats.includes(value)) {
       count++;
     }
@@ -348,7 +349,7 @@ export function countBasesOnMap(
   for (const space of spaces) {
     const tokens = getZoneTokens(state, space.id);
     for (const token of tokens) {
-      if (basePieceTypes.includes(token.type) && token.props[seatProp] === seat) {
+      if (basePieceTypes.includes(token.type) && resolveTokenViewFieldValue(token, seatProp) === seat) {
         total++;
       }
     }
@@ -529,4 +530,3 @@ export function computeAllVictoryStandings(
 
   return results;
 }
-

@@ -10,6 +10,7 @@ import {
   matchesTokenFilterPredicate,
   resolveLiteralTokenFilterValue,
 } from '../../src/kernel/token-filter.js';
+import type { FreeOperationExecutionOverlay } from '../../src/kernel/free-operation-overlay.js';
 import type { Token, TokenFilterExpr, TokenFilterPredicate } from '../../src/kernel/types.js';
 
 function makeToken(id: string, props: Token['props']): Token {
@@ -120,6 +121,31 @@ describe('token-filter', () => {
       ],
     });
     assert.deepEqual(filtered.map((token) => token.id), [asTokenId('a'), asTokenId('c')]);
+  });
+
+  it('applies free-operation token interpretations when matching token props', () => {
+    const token = makeToken('cube-1', { faction: 'ARVN', type: 'police' });
+    const overlay: FreeOperationExecutionOverlay = {
+      tokenInterpretations: [
+        {
+          when: {
+            op: 'and' as const,
+            args: [
+              { prop: 'faction', op: 'eq' as const, value: 'ARVN' },
+              { prop: 'type', op: 'in' as const, value: ['troops', 'police'] },
+            ],
+          },
+          assign: {
+            faction: 'US',
+            type: 'troops',
+          },
+        },
+      ],
+    };
+
+    assert.equal(matchesTokenFilterPredicate(token, { prop: 'faction', op: 'eq', value: 'US' }, undefined, overlay), true);
+    assert.equal(matchesTokenFilterPredicate(token, { prop: 'type', op: 'eq', value: 'troops' }, undefined, overlay), true);
+    assert.equal(matchesTokenFilterPredicate(token, { prop: 'faction', op: 'eq', value: 'ARVN' }, undefined, overlay), false);
   });
 
   it('evaluates nested and/or/not token-filter trees', () => {

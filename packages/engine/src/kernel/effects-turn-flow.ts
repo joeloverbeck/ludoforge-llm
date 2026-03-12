@@ -187,6 +187,7 @@ export const applyGrantFreeOperation = (
     ...(grant.sequence === undefined ? {} : { sequence: grant.sequence }),
     ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),
     ...(grant.executionContext === undefined ? {} : { executionContext: grant.executionContext }),
+    ...(grant.tokenInterpretations === undefined ? {} : { tokenInterpretations: grant.tokenInterpretations }),
   })) {
     if (
       violation.code === 'viabilityPolicyInvalid'
@@ -236,9 +237,9 @@ export const applyGrantFreeOperation = (
   const resolvedGrant = resolvedZoneFilter === undefined
     ? grant
     : {
-      ...grant,
-      zoneFilter: resolvedZoneFilter,
-    };
+        ...grant,
+        zoneFilter: resolvedZoneFilter,
+      };
   const grantEvalContext = createEvalContext({
     def: ctx.def,
     adjacencyGraph: ctx.adjacencyGraph,
@@ -307,6 +308,7 @@ export const applyGrantFreeOperation = (
     operationClass: grant.operationClass,
     ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
     ...(resolvedZoneFilter === undefined ? {} : { zoneFilter: resolvedZoneFilter }),
+    ...(grant.tokenInterpretations === undefined ? {} : { tokenInterpretations: grant.tokenInterpretations }),
     ...(grant.moveZoneBindings === undefined ? {} : { moveZoneBindings: [...grant.moveZoneBindings] }),
     ...(grant.moveZoneProbeBindings === undefined ? {} : { moveZoneProbeBindings: [...grant.moveZoneProbeBindings] }),
     ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),

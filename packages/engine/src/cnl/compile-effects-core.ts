@@ -1,6 +1,10 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import type { EffectAST, FreeOperationExecutionContext } from '../kernel/types.js';
-import { lowerValueNode, type ConditionLoweringContext } from './compile-conditions.js';
+import type {
+  EffectAST,
+  FreeOperationExecutionContext,
+  FreeOperationTokenInterpretationRule,
+} from '../kernel/types.js';
+import { lowerTokenFilterExpr, lowerValueNode, type ConditionLoweringContext } from './compile-conditions.js';
 import { SUPPORTED_EFFECT_KINDS } from './effect-kind-registry.js';
 import type { EffectLoweringContext, EffectLoweringResult } from './compile-effects-types.js';
 import { EFFECT_KIND_KEYS, isExecutionContextScalar } from './compile-effects-types.js';
@@ -97,6 +101,56 @@ export function lowerFreeOperationExecutionContextNode(
 
   return {
     value: Object.fromEntries(loweredEntries),
+    diagnostics,
+  };
+}
+
+export function lowerFreeOperationTokenInterpretationsNode(
+  source: unknown,
+  context: ConditionLoweringContext,
+  path: string,
+): EffectLoweringResult<readonly FreeOperationTokenInterpretationRule[]> {
+  if (!Array.isArray(source) || source.length === 0) {
+    return missingCapability(path, 'grantFreeOperation tokenInterpretations', source, [
+      '[{ when: <TokenFilterExpr>, assign: { prop: <scalar> } }]',
+    ]);
+  }
+
+  const diagnostics: Diagnostic[] = [];
+  const loweredRules: FreeOperationTokenInterpretationRule[] = [];
+  for (const [index, entry] of source.entries()) {
+    if (!isRecord(entry) || !isRecord(entry.assign)) {
+      diagnostics.push(...missingCapability(`${path}.${index}`, 'grantFreeOperation tokenInterpretations entry', entry, [
+        '{ when: <TokenFilterExpr>, assign: { prop: <scalar> } }',
+      ]).diagnostics);
+      continue;
+    }
+    const loweredWhen = lowerTokenFilterExpr(entry.when, context, `${path}.${index}.when`);
+    diagnostics.push(...loweredWhen.diagnostics);
+    const loweredAssignEntries: Array<readonly [string, string | number | boolean]> = [];
+    for (const [key, value] of Object.entries(entry.assign)) {
+      if (key.length === 0 || !isExecutionContextScalar(value)) {
+        diagnostics.push(...missingCapability(`${path}.${index}.assign.${key}`, 'grantFreeOperation tokenInterpretations assign value', value, [
+          'scalar literal',
+        ]).diagnostics);
+        continue;
+      }
+      loweredAssignEntries.push([key, value]);
+    }
+    if (loweredWhen.value !== null && loweredAssignEntries.length > 0) {
+      loweredRules.push({
+        when: loweredWhen.value,
+        assign: Object.fromEntries(loweredAssignEntries),
+      });
+    }
+  }
+
+  if (diagnostics.some((diagnostic) => diagnostic.severity === 'error')) {
+    return { value: null, diagnostics };
+  }
+
+  return {
+    value: loweredRules,
     diagnostics,
   };
 }

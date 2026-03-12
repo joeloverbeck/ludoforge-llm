@@ -30,7 +30,7 @@ const createDef = (): GameDef =>
     globalVars: [],
     perPlayerVars: [],
     zones: [],
-    tokenTypes: [],
+    tokenTypes: [{ id: 'cube', props: { faction: 'string', type: 'string' } }],
     setup: [],
     turnStructure: { phases: [{ id: asPhaseId('main') }] },
     turnOrder: {
@@ -313,7 +313,7 @@ const createRequiredGrantResumeDef = (): GameDef =>
     globalVars: [{ name: 'opCount', type: 'int', init: 0, min: 0, max: 10 }],
     perPlayerVars: [],
     zones: [],
-    tokenTypes: [],
+    tokenTypes: [{ id: 'cube', props: { faction: 'string', type: 'string' } }],
     setup: [],
     turnStructure: { phases: [{ id: asPhaseId('main') }] },
     turnOrder: {
@@ -2939,6 +2939,53 @@ describe('event free-operation grants integration', () => {
     } satisfies GameState;
 
     const freeMoves = legalMoves(def, reordered).filter(
+      (move) => String(move.actionId) === 'operation' && move.freeOperation === true,
+    );
+    assert.equal(freeMoves.length, 1);
+  });
+
+  it('keeps requireUsableForEventPlay executeAsSeat grants playable when viability depends on the overridden profile', () => {
+    const baseDef = createExecuteAsSeatDef();
+    const def = {
+      ...baseDef,
+      eventDecks: baseDef.eventDecks?.map((deck) => ({
+        ...deck,
+        cards: deck.cards.map((entry) =>
+          entry.id !== 'card-8'
+            ? entry
+            : {
+                ...entry,
+                unshaded: {
+                  ...entry.unshaded,
+                  freeOperationGrants: entry.unshaded?.freeOperationGrants?.map((grant, index) =>
+                    index !== 0
+                      ? grant
+                      : {
+                          ...grant,
+                          viabilityPolicy: 'requireUsableForEventPlay' as const,
+                        }),
+                },
+              }),
+      })),
+    } as GameDef & {
+      eventDecks: EventDeckDef[];
+    };
+
+    const start = initialState(def, 336, 2).state;
+    const eventMoves = legalMoves(def, start).filter(
+      (move) => String(move.actionId) === 'event' && move.params.eventCardId === 'card-8',
+    );
+    assert.equal(eventMoves.length, 1);
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-8', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const runtime = requireCardDrivenRuntime(afterEvent);
+    assert.equal(runtime.pendingFreeOperationGrants?.length, 1);
+    assert.equal(runtime.pendingFreeOperationGrants?.[0]?.executeAsSeat, 'US');
+    const freeMoves = legalMoves(def, afterEvent).filter(
       (move) => String(move.actionId) === 'operation' && move.freeOperation === true,
     );
     assert.equal(freeMoves.length, 1);

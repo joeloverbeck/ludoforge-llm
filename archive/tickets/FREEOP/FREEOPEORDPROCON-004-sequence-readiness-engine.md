@@ -10,7 +10,7 @@
 
 This ticket originally proposed changing `isPendingFreeOperationGrantSequenceReady` so readiness would consult `skippedStepIndices`.
 
-After reassessing the current engine and tests against [Spec 60](/home/joeloverbeck/projects/ludoforge-llm/specs/60-free-operation-ordered-progression-contract.md), that proposal is not the right architecture.
+After reassessing the current engine and tests against [Spec 60](/home/joeloverbeck/projects/ludoforge-llm/archive/specs/60-free-operation-ordered-progression-contract.md), that proposal is not the right architecture.
 
 ## Assumption Reassessment (2026-03-12)
 

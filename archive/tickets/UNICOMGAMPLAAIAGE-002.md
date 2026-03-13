@@ -1,6 +1,6 @@
 # UNICOMGAMPLAAIAGE-002: Node Structure, Node Pool, and Move-Key Canonicalization
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new files in agents/mcts/
@@ -106,3 +106,15 @@ Add re-exports for `move-key.ts`, `node.ts`, `node-pool.ts`.
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/test/unit/agents/mcts/`
 2. `pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-13
+- **What changed**:
+  - Created `packages/engine/src/agents/mcts/move-key.ts` — `MoveKey` type alias + `canonicalMoveKey()` with sorted-param serialization and recursive compound payload handling
+  - Created `packages/engine/src/agents/mcts/node.ts` — `MctsNode` interface (mutable stats), `ProvenResult` type, `createRootNode()`, `createChildNode()`
+  - Created `packages/engine/src/agents/mcts/node-pool.ts` — `NodePool` interface, `createNodePool()` with pre-allocation, capacity enforcement, and reset
+  - Updated `packages/engine/src/agents/mcts/index.ts` — re-exports for all new modules
+  - Created 3 test files: `move-key.test.ts` (12 tests), `node.test.ts` (18 tests), `node-pool.test.ts` (9 tests)
+- **Deviations**: None
+- **Verification**: 39/39 new tests pass, 4247/4247 full engine suite pass, lint 0 errors, typecheck clean

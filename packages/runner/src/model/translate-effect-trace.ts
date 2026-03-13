@@ -1,4 +1,4 @@
-import type { EffectTraceEntry, GameDef, TokenFilterExpr, TriggerEvent, TriggerLogEntry } from '@ludoforge/engine/runtime';
+import type { EffectTraceEntry, GameDef, TokenFilterExpr, TokenFilterPredicate, TriggerEvent, TriggerLogEntry } from '@ludoforge/engine/runtime';
 
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
@@ -398,7 +398,7 @@ function formatOptionalFilter(filter: TokenFilterExpr | undefined): string {
 }
 
 function formatTokenFilterExpr(expr: TokenFilterExpr): string {
-  if ('prop' in expr) {
+  if (isTokenFilterPredicate(expr)) {
     return formatFilterPredicate(expr);
   }
   if (expr.op === 'not') {
@@ -413,16 +413,26 @@ function formatTokenFilterExpr(expr: TokenFilterExpr): string {
   }
 
   return expr.args
-    .map((arg) => ('prop' in arg ? formatTokenFilterExpr(arg) : `(${formatTokenFilterExpr(arg)})`))
+    .map((arg: TokenFilterExpr) => (isTokenFilterPredicate(arg) ? formatTokenFilterExpr(arg) : `(${formatTokenFilterExpr(arg)})`))
     .join(joiner);
 }
 
-function formatFilterPredicate(predicate: {
-  readonly prop: string;
-  readonly op: 'eq' | 'neq' | 'in' | 'notIn';
-  readonly value: unknown;
-}): string {
-  return `${formatIdAsDisplayName(predicate.prop)} ${formatFilterOp(predicate.op)} ${formatValue(predicate.value)}`;
+function isTokenFilterPredicate(expr: TokenFilterExpr): expr is TokenFilterPredicate {
+  return expr.op === 'eq' || expr.op === 'neq' || expr.op === 'in' || expr.op === 'notIn';
+}
+
+function formatFilterPredicate(predicate: TokenFilterPredicate): string {
+  return `${formatIdAsDisplayName(resolveFilterPredicateFieldName(predicate))} ${formatFilterOp(predicate.op)} ${formatValue(predicate.value)}`;
+}
+
+function resolveFilterPredicateFieldName(predicate: TokenFilterPredicate): string {
+  if (predicate.prop !== undefined) {
+    return predicate.prop;
+  }
+  if (predicate.field?.kind === 'prop') {
+    return predicate.field.prop;
+  }
+  return predicate.field?.kind ?? 'field';
 }
 
 function formatFilterOp(op: 'eq' | 'neq' | 'in' | 'notIn'): string {

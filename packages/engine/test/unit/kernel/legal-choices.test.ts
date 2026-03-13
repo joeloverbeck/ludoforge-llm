@@ -109,6 +109,39 @@ describe('legalChoicesDiscover()', () => {
     assert.deepStrictEqual(result, { kind: 'illegal', complete: false, reason: 'phaseMismatch' });
   });
 
+  it('does not satisfy an effect choice from a legacy bind-name param alias', () => {
+    const action: ActionDef = {
+      id: asActionId('legacyAliasChoiceAction'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          chooseOne: {
+            internalDecisionId: 'decision:$target',
+            bind: '$target',
+            options: { query: 'enums', values: ['a', 'b'] },
+          },
+        },
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState();
+
+    const result = legalChoicesDiscover(def, state, makeMove('legacyAliasChoiceAction', { $target: 'a' }));
+    assert.equal(result.kind, 'pending');
+    if (result.kind !== 'pending') {
+      throw new Error('expected pending request');
+    }
+    assert.equal(result.decisionKey, 'decision:$target');
+    assert.deepStrictEqual(result.options.map((option) => option.value), ['a', 'b']);
+  });
+
   it('returns illegal with actionLimitExceeded when action limit has been reached', () => {
     const action: ActionDef = {
       id: asActionId('limitedAction'),

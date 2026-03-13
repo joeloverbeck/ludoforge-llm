@@ -120,6 +120,60 @@ phase: [asPhaseId('main')],
     assert.equal(result.move.params['decision:$target'], 'a');
   });
 
+  it('does not satisfy a DecisionKey choice from a legacy bind-name param alias', () => {
+    const action: ActionDef = {
+      id: asActionId('legacy-alias-op'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'legacy-alias-profile',
+      actionId: asActionId('legacy-alias-op'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              chooseOne: {
+                internalDecisionId: 'decision:$target',
+                bind: '$target',
+                options: { query: 'enums', values: ['a', 'b'] },
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    const result = resolveMoveDecisionSequence(
+      def,
+      makeBaseState(),
+      {
+        actionId: asActionId('legacy-alias-op'),
+        params: { $target: 'a' },
+      },
+      {
+        choose: () => undefined,
+      },
+    );
+
+    assert.equal(result.complete, false);
+    assert.equal(result.nextDecision?.decisionKey, 'decision:$target');
+    assert.deepEqual(result.move.params, { $target: 'a' });
+  });
+
   it('default chooser follows canonical legality precedence', () => {
     const request: ChoicePendingRequest = {
       kind: 'pending',

@@ -235,6 +235,63 @@ describe('compile-effects lowering', () => {
     assert.ok(result.diagnostics.every((diagnostic) => diagnostic.code === 'CNL_COMPILER_MISSING_CAPABILITY'));
   });
 
+  it('reports field-specific canonical token-binding diagnostics for token-consuming effects', () => {
+    const scopedContext: EffectLoweringContext = {
+      ...context,
+      bindingScope: ['$actor', '$tok'],
+    };
+    const result = lowerEffectArray(
+      [
+        {
+          moveToken: {
+            token: { ref: 'binding', name: '$tok' },
+            from: 'deck:none',
+            to: 'discard:none',
+          },
+        },
+        {
+          moveTokenAdjacent: {
+            token: { ref: 'binding', name: '$tok' },
+            from: 'board:none',
+          },
+        },
+        {
+          destroyToken: {
+            token: { ref: 'binding', name: '$tok' },
+          },
+        },
+        {
+          setTokenProp: {
+            token: { ref: 'binding', name: '$tok' },
+            prop: 'activity',
+            value: 'underground',
+          },
+        },
+      ],
+      scopedContext,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    assert.deepEqual(
+      result.diagnostics.map((diagnostic) => diagnostic.path),
+      [
+        'doc.actions.0.effects.0.moveToken.token',
+        'doc.actions.0.effects.1.moveTokenAdjacent.token',
+        'doc.actions.0.effects.2.destroyToken.token',
+        'doc.actions.0.effects.3.setTokenProp.token',
+      ],
+    );
+    for (const diagnostic of result.diagnostics) {
+      assert.equal(diagnostic.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+      assert.match(diagnostic.message, /must be a canonical token binding string like "\$token"/);
+      assert.equal(
+        diagnostic.suggestion,
+        'Bind the token with chooseOne, chooseN, or forEach, then reference it directly as token: $token.',
+      );
+    }
+  });
+
   it('canonicalizes boolean token-filter wrappers on reveal/conceal effects', () => {
     const result = lowerEffectArray(
       [

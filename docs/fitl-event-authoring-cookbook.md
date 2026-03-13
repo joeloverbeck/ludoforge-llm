@@ -122,6 +122,59 @@ Production references:
 - Card 90 per-piece destination loop
 - `place-from-available-or-map` macro
 
+## State Capture Before Mutation
+
+Selector queries are live. If an effect mutates the board and a later effect re-runs the same query, the later effect sees the post-mutation state, not the earlier eligibility set.
+
+That is often correct, but it is a common source of authoring bugs when the event text means:
+
+1. identify a set of spaces or pieces
+2. change the board
+3. continue working from the originally identified set
+
+When that sequencing matters, snapshot the set into a binding before any mutation and consume the binding later.
+
+Canonical pattern:
+
+```yaml
+- chooseN:
+    bind: $capturedSpaces
+    options:
+      query: mapSpaces
+      filter: ...
+    min:
+      aggregate:
+        op: count
+        query:
+          query: mapSpaces
+          filter: ...
+    max:
+      aggregate:
+        op: count
+        query:
+          query: mapSpaces
+          filter: ...
+- forEach:
+    bind: $capturedSpace
+    over:
+      query: binding
+      name: $capturedSpaces
+    effects:
+      - ...
+- chooseN:
+    bind: $laterChoice
+    options:
+      query: binding
+      name: $capturedSpaces
+```
+
+Use this whenever later choices mean "from the spaces that qualified earlier" rather than "from whatever qualifies now".
+
+Production references:
+
+- Card 81 (`CIDG`) unshaded source-zone capture before replacement
+- Card 84 (`To Quoc`) shaded capture of spaces where ARVN must remove cubes, then later VC placement into that captured set
+
 ## Replacement Semantics
 
 Replacement is a sequence, not a primitive.
@@ -256,6 +309,11 @@ By default, event decisions surface as pending choices for the event executor. O
 
 Use `chooser` on the choice effect when ownership is rule-driven.
 
+Testing note:
+
+- Default executor-owned choices may not surface an explicit `decisionPlayer` override in pending-choice objects.
+- Choices with `chooser` should surface the overridden owner explicitly and should be tested as such.
+
 Production references:
 
 - Card 73 (`Great Society`) uses `chooser: { id: 0 }` so US owns the removal choice even when another faction executes the event.
@@ -315,6 +373,7 @@ Patterns still open-coded today:
 - piece-for-piece replacement from mixed Available pools
 - replacement plus posture assignment
 - Highland-space selection plus occupant-specific purge
+- pre-mutation snapshotting of later target spaces when a card must keep working from an earlier eligibility set
 
 For those, use the current production card pattern, especially Card 81, until the dedicated macro tickets land.
 

@@ -53,6 +53,9 @@ effectMacros:
   # ── rvn-leader-failed-attempt-desertion ────────────────────────────────────
   # Deferred-use helper for cards 129-130 (Spec 29 wiring):
   # remove floor(ARVN cubes / 3) in each map space.
+  # Authoring note: queries are live. If a later effect must keep working from
+  # "spaces where cubes were removed", capture that space set into a binding
+  # before any removal instead of re-querying after mutation.
   - id: rvn-leader-failed-attempt-desertion
     params: []
     exports: []

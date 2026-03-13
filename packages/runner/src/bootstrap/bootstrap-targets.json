@@ -1,21 +1,13 @@
 [
   {
-    "id": "default",
-    "queryValue": "default",
-    "defaultSeed": 42,
-    "defaultPlayerId": 0,
-    "sourceLabel": "runner bootstrap fixture",
-    "fixtureFile": "default-game-def.json",
-    "generatedFromSpecPath": "data/games/runner-bootstrap-default"
-  },
-  {
     "id": "fitl",
     "queryValue": "fitl",
     "defaultSeed": 42,
     "defaultPlayerId": 0,
     "sourceLabel": "FITL bootstrap fixture",
     "fixtureFile": "fitl-game-def.json",
-    "generatedFromSpecPath": "data/games/fire-in-the-lake"
+    "generatedFromSpecPath": "data/games/fire-in-the-lake",
+    "specEntrypoint": "data/games/fire-in-the-lake.game-spec.md"
   },
   {
     "id": "texas",
@@ -24,6 +16,7 @@
     "defaultPlayerId": 0,
     "sourceLabel": "Texas Hold'em bootstrap fixture",
     "fixtureFile": "texas-game-def.json",
-    "generatedFromSpecPath": "data/games/texas-holdem"
+    "generatedFromSpecPath": "data/games/texas-holdem",
+    "specEntrypoint": "data/games/texas-holdem.game-spec.md"
   }
 ]

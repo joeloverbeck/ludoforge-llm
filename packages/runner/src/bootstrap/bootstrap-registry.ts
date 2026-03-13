@@ -8,6 +8,7 @@ export interface BootstrapTargetDefinition {
   readonly sourceLabel: string;
   readonly fixtureFile: string;
   readonly generatedFromSpecPath: string;
+  readonly specEntrypoint: string;
 }
 
 export interface BootstrapDescriptor {
@@ -143,6 +144,10 @@ export function assertBootstrapTargetDefinitions(targetsInput: unknown): readonl
       candidate.generatedFromSpecPath,
       `Bootstrap target generatedFromSpecPath (id=${id})`,
     );
+    const specEntrypoint = requireNonEmptyString(
+      candidate.specEntrypoint,
+      `Bootstrap target specEntrypoint (id=${id})`,
+    );
 
     if (ids.has(id)) {
       throw new Error(`Bootstrap target id must be unique (id=${id})`);
@@ -166,6 +171,7 @@ export function assertBootstrapTargetDefinitions(targetsInput: unknown): readonl
       sourceLabel,
       fixtureFile,
       generatedFromSpecPath,
+      specEntrypoint,
     } satisfies BootstrapTargetDefinition;
   });
 
@@ -175,9 +181,9 @@ export function assertBootstrapTargetDefinitions(targetsInput: unknown): readonl
 function resolveDefaultBootstrapDescriptor(
   descriptors: readonly BootstrapDescriptor[],
 ): BootstrapDescriptor {
-  const descriptor = descriptors.find((entry) => entry.id === 'default');
+  const descriptor = descriptors.find((entry) => entry.id === 'texas');
   if (descriptor === undefined) {
-    throw new Error('Bootstrap registry must define a default descriptor (id=default)');
+    throw new Error('Bootstrap registry must define a default descriptor (id=texas)');
   }
   return descriptor;
 }

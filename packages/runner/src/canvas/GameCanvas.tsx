@@ -24,6 +24,7 @@ import { ContainerPool } from './renderers/container-pool';
 import { createDisposalQueue, type DisposalQueue } from './renderers/disposal-queue';
 import { VisualConfigFactionColorProvider } from './renderers/faction-colors';
 import type { AdjacencyRenderer, TableOverlayRenderer, TokenRenderer, ZoneRenderer } from './renderers/renderer-types';
+import { createRegionBoundaryRenderer } from './renderers/region-boundary-renderer.js';
 import { createTableOverlayRenderer } from './renderers/table-overlay-renderer.js';
 import { createTokenRenderer, type TokenLayoutConfig } from './renderers/token-renderer';
 import { drawTableBackground } from './renderers/table-background-renderer.js';
@@ -266,6 +267,11 @@ export async function createGameCanvasRuntime(
 
   const adjacencyRenderer = deps.createAdjacencyRenderer(gameCanvas.layers.adjacencyLayer, options.visualConfigProvider);
 
+  const regionBoundaryRenderer = createRegionBoundaryRenderer(
+    gameCanvas.layers.regionLayer,
+    { visualConfigProvider: options.visualConfigProvider },
+  );
+
   const factionColorProvider = new VisualConfigFactionColorProvider(options.visualConfigProvider);
   const tokenLayoutConfig = buildTokenLayoutConfig(options.visualConfigProvider);
   const tokenRenderer = deps.createTokenRenderer(gameCanvas.layers.tokenGroup, factionColorProvider, {
@@ -306,6 +312,7 @@ export async function createGameCanvasRuntime(
     adjacencyRenderer,
     tokenRenderer,
     tableOverlayRenderer,
+    regionBoundaryRenderer,
     viewport: viewportResult,
     getInteractionHighlights: () => options.interactionHighlights ?? EMPTY_INTERACTION_HIGHLIGHTS,
   });
@@ -523,6 +530,7 @@ export async function createGameCanvasRuntime(
       aiPlaybackController?.destroy();
       animationController?.destroy();
       ariaAnnouncer.destroy();
+      regionBoundaryRenderer.destroy();
       destroyCanvasPipeline(
         canvasUpdater,
         zoneRenderer,

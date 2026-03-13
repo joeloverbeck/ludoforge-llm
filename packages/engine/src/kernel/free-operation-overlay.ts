@@ -3,6 +3,7 @@ import type {
   FreeOperationTokenInterpretationRule,
   ResolvedFreeOperationExecutionContext,
 } from './types.js';
+import type { CapturedSequenceZonesByKey } from './free-operation-captured-sequence-zones.js';
 import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
 
 export interface FreeOperationZoneFilterDiagnostics {
@@ -15,5 +16,6 @@ export interface FreeOperationExecutionOverlay {
   readonly zoneFilter?: ConditionAST;
   readonly zoneFilterDiagnostics?: FreeOperationZoneFilterDiagnostics;
   readonly grantContext?: ResolvedFreeOperationExecutionContext;
+  readonly capturedSequenceZonesByKey?: CapturedSequenceZonesByKey;
   readonly tokenInterpretations?: readonly FreeOperationTokenInterpretationRule[];
 }

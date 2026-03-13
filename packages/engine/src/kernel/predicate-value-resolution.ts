@@ -75,6 +75,10 @@ function resolveRuntimePredicateReference(
     });
   }
 
+  if (value.ref === 'capturedSequenceZones') {
+    return ctx.freeOperationOverlay?.capturedSequenceZonesByKey?.[value.key] ?? [];
+  }
+
   return null;
 }
 

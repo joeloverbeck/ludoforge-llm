@@ -2,6 +2,7 @@ import { findActionById } from './action-capabilities.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { asPlayerId } from './branded.js';
 import { createEvalRuntimeResources } from './eval-context.js';
+import { resolveCapturedSequenceZonesByKey } from './free-operation-captured-sequence-zones.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import {
   buildMoveRuntimeBindings,
@@ -18,7 +19,13 @@ import type { GameDef, GameState, Move, TurnFlowPendingFreeOperationGrant } from
 
 type GrantBindingContext = Pick<
   TurnFlowPendingFreeOperationGrant,
-  'seat' | 'executeAsSeat' | 'executionContext' | 'tokenInterpretations' | 'moveZoneBindings' | 'moveZoneProbeBindings'
+  | 'seat'
+  | 'executeAsSeat'
+  | 'executionContext'
+  | 'tokenInterpretations'
+  | 'moveZoneBindings'
+  | 'moveZoneProbeBindings'
+  | 'sequenceBatchId'
 >;
 
 const zoneCandidateSetFromMove = (def: GameDef, move: Move): Set<string> => {
@@ -105,15 +112,19 @@ export const resolveGrantAwareMoveRuntimeBindings = (
     : resolvePendingFreeOperationGrantExecutionPlayer(def, state, grant);
   const preflightOverlay = grant === undefined
     ? {}
-    : buildFreeOperationPreflightOverlay(
-      {
-        executionPlayer: executionPlayerOverride ?? state.activePlayer,
-        ...(grant.executionContext === undefined ? {} : { executionContext: grant.executionContext }),
-        ...(grant.tokenInterpretations === undefined ? {} : { tokenInterpretations: grant.tokenInterpretations }),
-      },
-      move,
-      'turnFlowEligibility',
-    );
+    : (() => {
+        const capturedSequenceZonesByKey = resolveCapturedSequenceZonesByKey(state, grant);
+        return buildFreeOperationPreflightOverlay(
+          {
+            executionPlayer: executionPlayerOverride ?? state.activePlayer,
+            ...(grant.executionContext === undefined ? {} : { executionContext: grant.executionContext }),
+            ...(capturedSequenceZonesByKey === undefined ? {} : { capturedSequenceZonesByKey }),
+            ...(grant.tokenInterpretations === undefined ? {} : { tokenInterpretations: grant.tokenInterpretations }),
+          },
+          move,
+          'turnFlowEligibility',
+        );
+      })();
 
   const preflight = resolveActionApplicabilityPreflight({
     def,

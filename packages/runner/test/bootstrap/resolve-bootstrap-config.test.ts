@@ -7,21 +7,15 @@ async function importFreshResolver() {
 }
 
 describe('resolveBootstrapConfig', () => {
-  it('returns default bootstrap config when query is empty', async () => {
+  it('returns Texas bootstrap config when query is empty (default fallback)', async () => {
     const resolved = resolveBootstrapConfig('');
     const gameDef = await resolved.resolveGameDef();
 
     expect(resolved.seed).toBe(42);
     expect(resolved.playerId).toBe(0);
-    expect(resolved.visualConfigProvider.resolveZoneVisual('zone:any', null, null)).toEqual({
-      shape: 'rectangle',
-      width: 160,
-      height: 100,
-      color: null,
-    });
-    expect(gameDef.metadata.id).toBe('runner-bootstrap-default');
-    expect(gameDef.metadata.name).toBe('Runner Bootstrap Default');
-    expect(gameDef.metadata.description).toBe('Minimal game for development testing');
+    expect(gameDef.metadata.id).toBe('texas-holdem-nlhe-tournament');
+    expect(gameDef.metadata.name).toBe("Texas Hold'em");
+    expect(gameDef.metadata.description).toBe("No-limit Texas Hold'em poker tournament");
   });
 
   it('returns FITL bootstrap config when game=fitl and applies params', async () => {
@@ -107,35 +101,22 @@ describe('resolveBootstrapConfig', () => {
     expect(gameDef.metadata.id).toBe('fire-in-the-lake');
   });
 
-  it('falls back to default bootstrap descriptor for unknown game ids', async () => {
+  it('falls back to Texas bootstrap descriptor for unknown game ids', async () => {
     const resolved = resolveBootstrapConfig('?game=unknown-game-id');
     const gameDef = await resolved.resolveGameDef();
 
     expect(resolved.seed).toBe(42);
     expect(resolved.playerId).toBe(0);
-    expect(gameDef.metadata.id).toBe('runner-bootstrap-default');
+    expect(gameDef.metadata.id).toBe('texas-holdem-nlhe-tournament');
   });
 });
 
 describe('resolveBootstrapConfig with mocked bootstrap inputs', () => {
   afterEach(() => {
     vi.resetModules();
-    vi.doUnmock('../../src/bootstrap/default-game-def.json');
     vi.doUnmock('../../src/bootstrap/fitl-game-def.json');
     vi.doUnmock('../../src/bootstrap/texas-game-def.json');
     vi.doUnmock('../../src/bootstrap/bootstrap-registry');
-  });
-
-  it('fails fast when default bootstrap fixture is invalid', async () => {
-    vi.doMock('../../src/bootstrap/default-game-def.json', () => ({
-      default: { invalid: true },
-    }));
-
-    const { resolveBootstrapConfig } = await importFreshResolver();
-    const resolved = resolveBootstrapConfig('');
-    await expect(resolved.resolveGameDef()).rejects.toThrowError(
-      /Invalid GameDef input from runner bootstrap fixture/u,
-    );
   });
 
   it('fails fast when FITL bootstrap fixture is invalid', async () => {
@@ -164,15 +145,15 @@ describe('resolveBootstrapConfig with mocked bootstrap inputs', () => {
 
   it('fails fast when visual config contains invalid cross-reference ids', async () => {
     vi.doMock('../../src/bootstrap/bootstrap-registry', async () => {
-      const defaultFixture = (await import('../../src/bootstrap/default-game-def.json')).default;
+      const texasFixture = (await import('../../src/bootstrap/texas-game-def.json')).default;
       return {
         resolveBootstrapDescriptor: () => ({
-          id: 'default',
-          queryValue: 'default',
+          id: 'texas',
+          queryValue: 'texas',
           defaultSeed: 42,
           defaultPlayerId: 0,
-          sourceLabel: 'runner bootstrap fixture',
-          resolveGameDefInput: async () => defaultFixture,
+          sourceLabel: 'Texas Hold\'em bootstrap fixture',
+          resolveGameDefInput: async () => texasFixture,
           resolveVisualConfigYaml: () => ({
             version: 1,
             zones: {

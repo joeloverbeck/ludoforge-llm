@@ -887,6 +887,21 @@ describe('AST and selector schemas', () => {
     assert.deepEqual(OptionsQuerySchema.parse(query), query);
   });
 
+  it('parses capturedSequenceZones query', () => {
+    const query: OptionsQuery = { query: 'capturedSequenceZones', key: 'selected-space' };
+    assert.deepEqual(OptionsQuerySchema.parse(query), query);
+  });
+
+  it('parses capturedSequenceZones ref', () => {
+    const expr = { ref: 'capturedSequenceZones', key: 'selected-space' };
+    assert.deepEqual(ValueExprSchema.parse(expr), expr);
+  });
+
+  it('rejects capturedSequenceZones surfaces with empty keys', () => {
+    assert.equal(OptionsQuerySchema.safeParse({ query: 'capturedSequenceZones', key: '' }).success, false);
+    assert.equal(ValueExprSchema.safeParse({ ref: 'capturedSequenceZones', key: '' }).success, false);
+  });
+
   it('parses concat query with non-empty nested sources', () => {
     const query: OptionsQuery = {
       query: 'concat',

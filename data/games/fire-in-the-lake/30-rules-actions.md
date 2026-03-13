@@ -152,6 +152,7 @@ turnOrder:
 
 actions:
   - { id: pass, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: event, actor: active, executor: 'actor', phase: [main], capabilities: [cardEvent], params: [], pre: null, cost: [], effects: [], limits: [] }
   - id: coupVictoryCheck
     actor: active
     executor: 'actor'

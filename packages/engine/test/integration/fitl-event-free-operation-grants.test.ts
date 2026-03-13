@@ -878,7 +878,7 @@ const createSequenceContextDef = (): GameDef =>
           windows: [],
           optionMatrix: [{ first: 'event', second: ['operation'] }],
           passRewards: [],
-          freeOperationActionIds: ['operation'],
+          freeOperationActionIds: ['operation', 'operationCapturedQuery'],
           durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
         },
       },
@@ -895,7 +895,13 @@ phase: [asPhaseId('main')],
             name: 'eventCardId',
             domain: {
               query: 'enums',
-              values: ['card-sequence-context', 'card-sequence-context-branch', 'card-sequence-context-effect-branch'],
+              values: [
+                'card-sequence-context',
+                'card-sequence-context-branch',
+                'card-sequence-context-effect-branch',
+                'card-sequence-context-zone-filter-surface',
+                'card-sequence-context-query-surface',
+              ],
             },
           },
           { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
@@ -908,6 +914,17 @@ phase: [asPhaseId('main')],
       },
       {
         id: asActionId('operation'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+      {
+        id: asActionId('operationCapturedQuery'),
 actor: 'active',
 executor: 'actor',
 phase: [asPhaseId('main')],
@@ -934,6 +951,28 @@ phase: [asPhaseId('main')],
                   internalDecisionId: 'decision:$zone',
                   bind: '$zone',
                   options: { query: 'zones' },
+                },
+              },
+            ],
+          },
+        ],
+        atomicity: 'partial',
+      },
+      {
+        id: 'operation-captured-query-select-zone',
+        actionId: asActionId('operationCapturedQuery'),
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [
+          {
+            effects: [
+              {
+                chooseOne: {
+                  internalDecisionId: 'decision:$zone',
+                  bind: '$zone',
+                  options: { query: 'capturedSequenceZones', key: 'selected-space' },
                 },
               },
             ],
@@ -1048,6 +1087,61 @@ phase: [asPhaseId('main')],
                       },
                     },
                   ],
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-sequence-context-zone-filter-surface',
+            title: 'Sequence Context Via Zone Filter Surface',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Capture first free-op space; later grant reads it through capturedSequenceZones in zoneFilter.',
+              freeOperationGrants: [
+                {
+                  seat: 'NVA',
+                  sequence: { batch: 'nva-sequence-context-zone-filter', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  sequenceContext: {
+                    captureMoveZoneCandidatesAs: 'selected-space',
+                  },
+                },
+                {
+                  seat: 'NVA',
+                  sequence: { batch: 'nva-sequence-context-zone-filter', step: 1 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  zoneFilter: {
+                    op: 'in',
+                    item: { ref: 'binding', name: '$zone' },
+                    set: { ref: 'capturedSequenceZones', key: 'selected-space' },
+                  },
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-sequence-context-query-surface',
+            title: 'Sequence Context Via Query Surface',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Capture first free-op space; later grant targets it through capturedSequenceZones query.',
+              freeOperationGrants: [
+                {
+                  seat: 'NVA',
+                  sequence: { batch: 'nva-sequence-context-query-surface', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  sequenceContext: {
+                    captureMoveZoneCandidatesAs: 'selected-space',
+                  },
+                },
+                {
+                  seat: 'NVA',
+                  sequence: { batch: 'nva-sequence-context-query-surface', step: 1 },
+                  operationClass: 'operation',
+                  actionIds: ['operationCapturedQuery'],
                 },
               ],
             },
@@ -2614,6 +2708,108 @@ describe('event free-operation grants integration', () => {
 
     const afterSecondFreeOp = applyMove(def, afterFirstFreeOp, {
       actionId: asActionId('operation'),
+      params: { 'decision:$zone': 'boardCambodia:none' },
+      freeOperation: true,
+    }).state;
+
+    const runtimeAfterSecond = requireCardDrivenRuntime(afterSecondFreeOp);
+    assert.deepEqual(runtimeAfterSecond.pendingFreeOperationGrants ?? [], []);
+    assert.equal(runtimeAfterSecond.freeOperationSequenceContexts, undefined);
+  });
+
+  it('exposes captured sequence zones to later grant zoneFilter evaluation', () => {
+    const def = createSequenceContextDef();
+    const start = initialState(def, 125, 2).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-sequence-context-zone-filter-surface', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const grantReadyState: GameState = {
+      ...afterEvent,
+      activePlayer: asPlayerId(1),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...requireCardDrivenRuntime(afterEvent),
+          currentCard: {
+            ...requireCardDrivenRuntime(afterEvent).currentCard,
+            firstEligible: 'NVA',
+            secondEligible: null,
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+        },
+      },
+    };
+
+    const afterFirstFreeOp = applyMove(def, grantReadyState, {
+      actionId: asActionId('operation'),
+      params: { 'decision:$zone': 'boardCambodia:none' },
+      freeOperation: true,
+    }).state;
+
+    const freeMoves = legalMoves(def, afterFirstFreeOp).filter(
+      (move) => String(move.actionId) === 'operation' && move.freeOperation === true,
+    );
+    assert.equal(freeMoves.length > 0, true);
+
+    assert.throws(
+      () =>
+        applyMove(def, afterFirstFreeOp, {
+          actionId: asActionId('operation'),
+          params: { 'decision:$zone': 'boardVietnam:none' },
+          freeOperation: true,
+        }),
+      (error: unknown) => assertFreeOperationDenial(error, 'zoneFilterMismatch'),
+    );
+  });
+
+  it('exposes captured sequence zones to later grant query-driven targeting', () => {
+    const def = createSequenceContextDef();
+    const start = initialState(def, 126, 2).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-sequence-context-query-surface', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const grantReadyState: GameState = {
+      ...afterEvent,
+      activePlayer: asPlayerId(1),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...requireCardDrivenRuntime(afterEvent),
+          currentCard: {
+            ...requireCardDrivenRuntime(afterEvent).currentCard,
+            firstEligible: 'NVA',
+            secondEligible: null,
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+        },
+      },
+    };
+
+    const afterFirstFreeOp = applyMove(def, grantReadyState, {
+      actionId: asActionId('operation'),
+      params: { 'decision:$zone': 'boardCambodia:none' },
+      freeOperation: true,
+    }).state;
+
+    const freeMoves = legalMoves(def, afterFirstFreeOp).filter(
+      (move) => String(move.actionId) === 'operationCapturedQuery' && move.freeOperation === true,
+    );
+    assert.equal(freeMoves.length > 0, true);
+
+    const afterSecondFreeOp = applyMove(def, afterFirstFreeOp, {
+      actionId: asActionId('operationCapturedQuery'),
       params: { 'decision:$zone': 'boardCambodia:none' },
       freeOperation: true,
     }).state;

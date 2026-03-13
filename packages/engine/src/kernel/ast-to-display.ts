@@ -152,6 +152,8 @@ const referenceToInlineNodes = (r: Reference): DisplayInlineNode[] => {
       return [ref('activeSeat', 'player')];
     case 'grantContext':
       return [kw('grantCtx'), LPAREN, ref(r.key, 'binding'), RPAREN];
+    case 'capturedSequenceZones':
+      return [kw('capturedSeqZones'), LPAREN, ref(r.key, 'binding'), RPAREN];
     default: {
       const _exhaustive: never = r;
       return [kw(String((_exhaustive as Reference).ref))];
@@ -260,6 +262,8 @@ export const optionsQueryToInlineNodes = (query: OptionsQuery): DisplayInlineNod
       return [ref(query.displayName ?? query.name, 'binding')];
     case 'grantContext':
       return [kw('grantCtx'), LPAREN, ref(query.key, 'binding'), RPAREN];
+    case 'capturedSequenceZones':
+      return [kw('capturedSeqZones'), LPAREN, ref(query.key, 'binding'), RPAREN];
     case 'concat':
       return [
         kw('concat'),

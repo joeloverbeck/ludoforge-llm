@@ -437,3 +437,37 @@ victoryStandings:
           description: "Population-weighted opposition (active x2, passive x1)"
         - label: "VC Bases on Map"
           description: "VC bases across all map spaces"
+
+regions:
+  groupByAttribute: country
+  padding: 40
+  cornerRadius: 30
+  styles:
+    southVietnam:
+      fillColor: "#2a6e3f"
+      fillAlpha: 0.15
+      borderColor: "#4a9e6f"
+      borderStyle: dashed
+      borderWidth: 6
+      label: South Vietnam
+    northVietnam:
+      fillColor: "#8b2020"
+      fillAlpha: 0.12
+      borderColor: "#c04040"
+      borderStyle: dashed
+      borderWidth: 6
+      label: North Vietnam
+    laos:
+      fillColor: "#6b5b3e"
+      fillAlpha: 0.12
+      borderColor: "#9e8b5e"
+      borderStyle: dashed
+      borderWidth: 6
+      label: Laos
+    cambodia:
+      fillColor: "#3b4f8a"
+      fillAlpha: 0.12
+      borderColor: "#6b7fba"
+      borderStyle: dashed
+      borderWidth: 6
+      label: Cambodia

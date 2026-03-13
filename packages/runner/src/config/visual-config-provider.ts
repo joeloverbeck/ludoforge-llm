@@ -22,6 +22,8 @@ import type {
   CardAnimationConfig,
   CardTemplate,
   MarkerBadgeConfig,
+  RegionBoundaryConfig,
+  RegionStyle,
   TableBackgroundConfig,
   TableOverlaysConfig,
   TokenTypeDefault,
@@ -335,6 +337,14 @@ export class VisualConfigProvider {
 
   getActionGroupPolicy(): ActionGroupPolicy | null {
     return this.config?.actionGroupPolicy ?? null;
+  }
+
+  getRegionBoundaryConfig(): RegionBoundaryConfig | null {
+    return this.config?.regions ?? null;
+  }
+
+  getRegionStyle(attributeValue: string): RegionStyle | null {
+    return this.config?.regions?.styles?.[attributeValue] ?? null;
   }
 
   getHiddenZones(): ReadonlySet<string> {

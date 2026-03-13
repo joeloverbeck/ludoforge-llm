@@ -1,5 +1,6 @@
 import { asPlayerId } from './branded.js';
 import { isEvalErrorCode } from './eval-error.js';
+import { resolveCapturedSequenceZonesByKey } from './free-operation-captured-sequence-zones.js';
 import type { FreeOperationBlockExplanation } from './free-operation-denial-contract.js';
 import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
 import {
@@ -255,6 +256,7 @@ export interface FreeOperationDiscoveryAnalysisResult {
   readonly executionPlayer: ReturnType<typeof asPlayerId>;
   readonly zoneFilter?: ConditionAST;
   readonly executionContext?: TurnFlowPendingFreeOperationGrant['executionContext'] | undefined;
+  readonly capturedSequenceZonesByKey?: Readonly<Record<string, readonly string[]>> | undefined;
   readonly tokenInterpretations?: TurnFlowPendingFreeOperationGrant['tokenInterpretations'] | undefined;
 }
 
@@ -313,6 +315,7 @@ export const resolveFreeOperationDiscoveryAnalysis = (
     executionPlayer,
     ...(zoneFilter === undefined ? {} : { zoneFilter }),
     ...(prioritized?.executionContext === undefined ? {} : { executionContext: prioritized.executionContext }),
+    ...(prioritized === undefined ? {} : { capturedSequenceZonesByKey: resolveCapturedSequenceZonesByKey(state, prioritized) }),
     ...(prioritized?.tokenInterpretations === undefined ? {} : { tokenInterpretations: prioritized.tokenInterpretations }),
   };
 };

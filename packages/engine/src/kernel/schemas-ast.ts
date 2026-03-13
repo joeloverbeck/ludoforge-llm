@@ -10,6 +10,7 @@ import {
 import { PREDICATE_OPERATORS } from '../contracts/index.js';
 import { FreeOperationSequenceContextSchema } from './free-operation-sequence-context-schema.js';
 import { createTurnFlowFreeOperationGrantSchema } from './free-operation-grant-zod.js';
+import { FreeOperationSequenceKeySchema } from './free-operation-sequence-key-schema.js';
 import { AST_SCOPED_VAR_SCOPES, createScopedVarContractSchema } from './scoped-var-contract.js';
 
 export const OBJECT_STRICTNESS_POLICY = 'strict' as const;
@@ -94,6 +95,7 @@ export const ReferenceSchema = z.union([
   z.object({ ref: z.literal('activePlayer') }).strict(),
   z.object({ ref: z.literal('activeSeat') }).strict(),
   z.object({ ref: z.literal('grantContext'), key: StringSchema }).strict(),
+  z.object({ ref: z.literal('capturedSequenceZones'), key: FreeOperationSequenceKeySchema }).strict(),
 ]);
 
 let conditionAstSchemaInternal: z.ZodTypeAny;
@@ -316,6 +318,7 @@ optionsQuerySchemaInternal = z.union([
     .strict(),
   z.object({ query: z.literal('binding'), name: StringSchema, displayName: StringSchema.optional() }).strict(),
   z.object({ query: z.literal('grantContext'), key: StringSchema }).strict(),
+  z.object({ query: z.literal('capturedSequenceZones'), key: FreeOperationSequenceKeySchema }).strict(),
 ]);
 
 valueExprSchemaInternal = z.union([

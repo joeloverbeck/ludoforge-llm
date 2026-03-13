@@ -55,9 +55,9 @@ describe('bootstrap-fixtures script', () => {
     const targets = loadBootstrapFixtureTargets() as readonly FixtureTarget[];
     const ids = targets.map((target) => target.id);
 
-    expect(ids).toContain('default');
     expect(ids).toContain('fitl');
     expect(ids).toContain('texas');
+    expect(ids).not.toContain('default');
   });
 
   it('builds engine before running bootstrap fixture scripts', () => {

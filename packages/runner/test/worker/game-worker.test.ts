@@ -588,4 +588,45 @@ describe('createGameWorker', () => {
     const result = await worker.describeAction('nonexistent');
     expect(result).toBeNull();
   });
+
+  // -----------------------------------------------------------------------
+  // requestAgentMove
+  // -----------------------------------------------------------------------
+
+  it('requestAgentMove selects a legal move using MCTS agent', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(TEST_DEF, 42, undefined, nextStamp());
+
+    const result = await worker.requestAgentMove('ai-mcts-fast');
+    expect(result.move).toBeDefined();
+    expect(result.move.actionId).toBeDefined();
+    expect(result.candidateCount).toBeGreaterThan(0);
+  });
+
+  it('requestAgentMove with ai-mcts-default returns a valid move', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(TEST_DEF, 42, undefined, nextStamp());
+
+    const result = await worker.requestAgentMove('ai-mcts-default');
+    expect(result.move).toBeDefined();
+    expect(result.candidateCount).toBeGreaterThan(0);
+  });
+
+  it('requestAgentMove throws for unknown seat type', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(TEST_DEF, 42, undefined, nextStamp());
+
+    await expect(worker.requestAgentMove('ai-random')).rejects.toThrow(/Unknown MCTS seat type/u);
+  });
+
+  it('requestAgentMove throws NOT_INITIALIZED when not initialized', async () => {
+    const worker = createGameWorker();
+
+    await expect(worker.requestAgentMove('ai-mcts-fast')).rejects.toMatchObject({
+      code: 'NOT_INITIALIZED',
+    });
+  });
 });

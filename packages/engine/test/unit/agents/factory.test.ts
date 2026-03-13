@@ -109,4 +109,52 @@ describe('parseAgentSpec', () => {
     assert.ok(agents[0] instanceof MctsAgent);
     assert.equal((agents[0] as MctsAgent).config.iterations, 1500);
   });
+
+  // -----------------------------------------------------------------------
+  // Preset parsing
+  // -----------------------------------------------------------------------
+
+  it('parses "mcts:fast,random" for 2 players', () => {
+    const agents = parseAgentSpec('mcts:fast,random', 2);
+    assert.equal(agents.length, 2);
+    assert.ok(agents[0] instanceof MctsAgent);
+    assert.equal((agents[0] as MctsAgent).config.iterations, 200);
+    assert.ok(agents[1] instanceof RandomAgent);
+  });
+
+  it('parses "mcts:strong,mcts:fast" for 2 players with different configs', () => {
+    const agents = parseAgentSpec('mcts:strong,mcts:fast', 2);
+    assert.equal(agents.length, 2);
+    assert.ok(agents[0] instanceof MctsAgent);
+    assert.equal((agents[0] as MctsAgent).config.iterations, 5000);
+    assert.ok(agents[1] instanceof MctsAgent);
+    assert.equal((agents[1] as MctsAgent).config.iterations, 200);
+  });
+
+  it('parses "mcts:default,greedy" for 2 players', () => {
+    const agents = parseAgentSpec('mcts:default,greedy', 2);
+    assert.equal(agents.length, 2);
+    assert.ok(agents[0] instanceof MctsAgent);
+    assert.equal((agents[0] as MctsAgent).config.iterations, DEFAULT_MCTS_CONFIG.iterations);
+    assert.ok(agents[1] instanceof GreedyAgent);
+  });
+
+  it('throws descriptive error for invalid preset name', () => {
+    assert.throws(
+      () => parseAgentSpec('mcts:invalid', 1),
+      /Unknown MCTS preset or iteration count: "invalid"/,
+    );
+  });
+
+  it('backwards compatible: bare "mcts" still uses default config', () => {
+    const agents = parseAgentSpec('mcts', 1);
+    assert.ok(agents[0] instanceof MctsAgent);
+    assert.equal((agents[0] as MctsAgent).config.iterations, DEFAULT_MCTS_CONFIG.iterations);
+  });
+
+  it('backwards compatible: "mcts:500" still uses numeric iterations', () => {
+    const agents = parseAgentSpec('mcts:500', 1);
+    assert.ok(agents[0] instanceof MctsAgent);
+    assert.equal((agents[0] as MctsAgent).config.iterations, 500);
+  });
 });

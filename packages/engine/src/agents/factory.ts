@@ -1,5 +1,6 @@
 import type { Agent } from '../kernel/types.js';
-import type { MctsConfig } from './mcts/config.js';
+import { MCTS_PRESET_NAMES, resolvePreset } from './mcts/config.js';
+import type { MctsConfig, MctsPreset } from './mcts/config.js';
 import { GreedyAgent } from './greedy-agent.js';
 import { RandomAgent } from './random-agent.js';
 import { MctsAgent } from './mcts/mcts-agent.js';
@@ -28,8 +29,11 @@ const isAgentType = (value: string): value is AgentType =>
  * Supported formats per slot:
  *   - `random`
  *   - `greedy`
- *   - `mcts`          — default config
- *   - `mcts:1500`     — override `iterations`
+ *   - `mcts`            — default preset
+ *   - `mcts:1500`       — override `iterations`
+ *   - `mcts:fast`       — named preset
+ *   - `mcts:default`    — named preset (same as bare `mcts`)
+ *   - `mcts:strong`     — named preset
  */
 export const parseAgentSpec = (spec: string, playerCount: number): readonly Agent[] => {
   const parts = spec
@@ -42,14 +46,30 @@ export const parseAgentSpec = (spec: string, playerCount: number): readonly Agen
   }
 
   return parts.map((part) => {
-    // Handle mcts:N syntax
-    const mctsMatch = part.match(/^mcts(?::(\d+))?$/);
-    if (mctsMatch) {
-      const iterationsStr = mctsMatch[1];
-      const config: Partial<MctsConfig> | undefined = iterationsStr !== undefined
-        ? { iterations: Number(iterationsStr) }
-        : undefined;
-      return createAgent('mcts', config);
+    // Handle bare `mcts`
+    if (part === 'mcts') {
+      return createAgent('mcts');
+    }
+
+    // Handle mcts:<suffix> — preset name, numeric iterations, or error
+    const mctsColonMatch = part.match(/^mcts:(.+)$/);
+    if (mctsColonMatch) {
+      const suffix = mctsColonMatch[1]!;
+
+      // Named preset?
+      if ((MCTS_PRESET_NAMES as readonly string[]).includes(suffix)) {
+        return new MctsAgent(resolvePreset(suffix as MctsPreset));
+      }
+
+      // Numeric iterations?
+      if (/^\d+$/.test(suffix)) {
+        return createAgent('mcts', { iterations: Number(suffix) });
+      }
+
+      throw new Error(
+        `Unknown MCTS preset or iteration count: "${suffix}". `
+        + `Allowed presets: ${MCTS_PRESET_NAMES.join(', ')}; or a positive integer for iterations`,
+      );
     }
 
     if (!isAgentType(part)) {

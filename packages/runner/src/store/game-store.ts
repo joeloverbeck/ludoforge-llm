@@ -23,7 +23,7 @@ import type { PlayerSeatConfig } from '../session/session-types.js';
 import { assertLifecycleTransition, lifecycleFromTerminal, type GameLifecycle } from './lifecycle-transition.js';
 import type { PartialChoice, PlayerSeat, RenderContext } from './store-types.js';
 import type { AnimationDetailLevel, AnimationPlaybackSpeed } from '../animation/animation-types.js';
-import { resolveAiPlaybackDelayMs, resolveAiSeat, selectAiMove, type AiPlaybackSpeed } from './ai-move-policy.js';
+import { isMctsSeat, resolveAiPlaybackDelayMs, resolveAiSeat, selectAiMove, type AiPlaybackSpeed } from './ai-move-policy.js';
 import type { GameWorkerAPI, OperationStamp, WorkerError } from '../worker/game-worker-api.js';
 import type { AiDecisionTrace, TraceBus } from '@ludoforge/engine/trace';
 
@@ -718,16 +718,34 @@ export function createGameStore(
 
         const legalMoveResult = state.legalMoveResult ?? await bridge.enumerateLegalMoves();
         const activeSeat = resolveAiSeat(state.playerSeats.get(state.renderModel.activePlayerID));
-        const aiSelection = selectAiMove(activeSeat, legalMoveResult.moves);
-        if (aiSelection === null) {
-          guardSetAndDerive(ctx, {
-            legalMoveResult,
-            error: null,
-          });
-          return 'no-legal-moves';
+
+        // MCTS seats delegate move selection to the worker (off-main-thread search).
+        // Simple seats (random/greedy) select client-side.
+        let selectedMove: Move;
+        let candidateCount: number;
+        let selectedIndex: number;
+
+        if (isMctsSeat(activeSeat)) {
+          if (legalMoveResult.moves.length === 0) {
+            guardSetAndDerive(ctx, { legalMoveResult, error: null });
+            return 'no-legal-moves';
+          }
+          const agentResult = await bridge.requestAgentMove(activeSeat);
+          selectedMove = agentResult.move;
+          candidateCount = agentResult.candidateCount;
+          selectedIndex = 0; // MCTS does not expose a meaningful index
+        } else {
+          const aiSelection = selectAiMove(activeSeat, legalMoveResult.moves);
+          if (aiSelection === null) {
+            guardSetAndDerive(ctx, { legalMoveResult, error: null });
+            return 'no-legal-moves';
+          }
+          selectedMove = aiSelection.move;
+          candidateCount = aiSelection.candidateCount;
+          selectedIndex = aiSelection.selectedIndex;
         }
 
-        const templateMoveResult = await bridge.applyTemplateMove(aiSelection.move, undefined, toOperationStamp(ctx));
+        const templateMoveResult = await bridge.applyTemplateMove(selectedMove, undefined, toOperationStamp(ctx));
         if (templateMoveResult.outcome === 'uncompletable') {
           const nextDiagnosticSequence = state.orchestrationDiagnosticSequence + 1;
           guardSetAndDerive(ctx, {
@@ -735,7 +753,7 @@ export function createGameStore(
             orchestrationDiagnosticSequence: nextDiagnosticSequence,
             orchestrationDiagnostic: buildUncompletableTemplateDiagnostic(
               nextDiagnosticSequence,
-              aiSelection.move,
+              selectedMove,
               state.renderModel?.activePlayerID ?? null,
               legalMoveResult.moves.length,
             ),
@@ -780,8 +798,8 @@ export function createGameStore(
         if (options?.traceBus !== undefined) {
           const aiDecision: AiDecisionTrace = {
             seatType: activeSeat,
-            candidateCount: aiSelection.candidateCount,
-            selectedIndex: aiSelection.selectedIndex,
+            candidateCount,
+            selectedIndex,
           };
           options.traceBus.emit({
             kind: 'move-applied',

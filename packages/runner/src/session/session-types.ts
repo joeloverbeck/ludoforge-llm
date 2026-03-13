@@ -35,5 +35,5 @@ export type SessionState =
 
 export interface PlayerSeatConfig {
   readonly playerId: number;
-  readonly type: 'human' | 'ai-random' | 'ai-greedy';
+  readonly type: 'human' | 'ai-random' | 'ai-greedy' | 'ai-mcts-fast' | 'ai-mcts-default' | 'ai-mcts-strong';
 }

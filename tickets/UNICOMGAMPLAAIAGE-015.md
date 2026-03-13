@@ -1,6 +1,6 @@
 # UNICOMGAMPLAAIAGE-015: Search Presets (fast / default / strong)
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — new file in agents/mcts/, modify factory

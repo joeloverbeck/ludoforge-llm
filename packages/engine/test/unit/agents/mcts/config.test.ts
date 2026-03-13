@@ -3,7 +3,10 @@ import { describe, it } from 'node:test';
 
 import {
   DEFAULT_MCTS_CONFIG,
+  MCTS_PRESETS,
+  MCTS_PRESET_NAMES,
   validateMctsConfig,
+  resolvePreset,
   type MctsConfig,
 } from '../../../../src/agents/mcts/config.js';
 
@@ -148,5 +151,72 @@ describe('validateMctsConfig', () => {
     assert.equal(result.explorationConstant, 0.001);
     assert.equal(result.rolloutEpsilon, 0);
     assert.equal(result.rolloutCandidateSample, 1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// MCTS_PRESETS
+// ---------------------------------------------------------------------------
+
+describe('MCTS_PRESETS', () => {
+  it('contains exactly fast, default, and strong', () => {
+    assert.deepEqual(
+      [...MCTS_PRESET_NAMES].sort(),
+      ['default', 'fast', 'strong'],
+    );
+  });
+
+  it('is frozen at the top level', () => {
+    assert.ok(Object.isFrozen(MCTS_PRESETS));
+  });
+
+  it('each preset partial is frozen (immutability)', () => {
+    for (const name of MCTS_PRESET_NAMES) {
+      assert.ok(Object.isFrozen(MCTS_PRESETS[name]), `MCTS_PRESETS.${name} should be frozen`);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolvePreset
+// ---------------------------------------------------------------------------
+
+describe('resolvePreset', () => {
+  it('resolvePreset("fast") returns config with iterations: 200', () => {
+    const cfg = resolvePreset('fast');
+    assert.equal(cfg.iterations, 200);
+    assert.equal(cfg.maxSimulationDepth, 16);
+    assert.equal(cfg.rolloutPolicy, 'random');
+  });
+
+  it('resolvePreset("default") returns DEFAULT_MCTS_CONFIG', () => {
+    const cfg = resolvePreset('default');
+    assert.deepEqual(cfg, DEFAULT_MCTS_CONFIG);
+  });
+
+  it('resolvePreset("strong") returns config with iterations: 5000', () => {
+    const cfg = resolvePreset('strong');
+    assert.equal(cfg.iterations, 5000);
+    assert.equal(cfg.maxSimulationDepth, 64);
+    assert.equal(cfg.templateCompletionsPerVisit, 4);
+  });
+
+  it('all presets pass validateMctsConfig (no invalid values)', () => {
+    for (const name of MCTS_PRESET_NAMES) {
+      assert.doesNotThrow(() => resolvePreset(name), `preset "${name}" should validate`);
+    }
+  });
+
+  it('resolved configs are frozen/immutable', () => {
+    for (const name of MCTS_PRESET_NAMES) {
+      const cfg = resolvePreset(name);
+      assert.ok(Object.isFrozen(cfg), `resolved "${name}" config should be frozen`);
+    }
+  });
+
+  it('resolving twice returns equal but independent objects', () => {
+    const a = resolvePreset('fast');
+    const b = resolvePreset('fast');
+    assert.deepEqual(a, b);
   });
 });

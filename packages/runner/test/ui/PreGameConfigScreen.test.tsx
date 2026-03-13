@@ -63,7 +63,7 @@ describe('PreGameConfigScreen', () => {
 
     const select = screen.getByTestId('pre-game-seat-type-0');
     const optionLabels = Array.from(select.querySelectorAll('option')).map((option) => option.textContent);
-    expect(optionLabels).toEqual(['Human', 'AI - Random', 'AI - Greedy']);
+    expect(optionLabels).toEqual(['Human', 'AI - MCTS', 'AI - MCTS (Fast)', 'AI - MCTS (Strong)', 'AI - Random', 'AI - Greedy']);
   });
 
   it('uses provided seed when valid and emits PlayerSeatConfig[]', () => {
@@ -77,8 +77,8 @@ describe('PreGameConfigScreen', () => {
     expect(onStartGame).toHaveBeenCalledWith(12345, [
       { playerId: 0, type: 'human' },
       { playerId: 1, type: 'ai-greedy' },
-      { playerId: 2, type: 'ai-random' },
-      { playerId: 3, type: 'ai-random' },
+      { playerId: 2, type: 'ai-mcts-default' },
+      { playerId: 3, type: 'ai-mcts-default' },
     ]);
   });
 

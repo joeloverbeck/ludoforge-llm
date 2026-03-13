@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { asActionId, type Move } from '@ludoforge/engine/runtime';
 
-import { resolveAiPlaybackDelayMs, resolveAiSeat, selectAiMove } from '../../src/store/ai-move-policy.js';
+import { isMctsSeat, resolveAiPlaybackDelayMs, resolveAiSeat, selectAiMove } from '../../src/store/ai-move-policy.js';
 
 const MOVE_A: Move = { actionId: asActionId('a'), params: {} };
 const MOVE_B: Move = { actionId: asActionId('b'), params: {} };
@@ -16,6 +16,21 @@ describe('ai-move-policy', () => {
 
   it('resolveAiSeat preserves ai-greedy', () => {
     expect(resolveAiSeat('ai-greedy')).toBe('ai-greedy');
+  });
+
+  it('resolveAiSeat preserves MCTS seat types', () => {
+    expect(resolveAiSeat('ai-mcts-fast')).toBe('ai-mcts-fast');
+    expect(resolveAiSeat('ai-mcts-default')).toBe('ai-mcts-default');
+    expect(resolveAiSeat('ai-mcts-strong')).toBe('ai-mcts-strong');
+  });
+
+  it('isMctsSeat returns true for MCTS seats and false for others', () => {
+    expect(isMctsSeat('ai-mcts-fast')).toBe(true);
+    expect(isMctsSeat('ai-mcts-default')).toBe(true);
+    expect(isMctsSeat('ai-mcts-strong')).toBe(true);
+    expect(isMctsSeat('ai-random')).toBe(false);
+    expect(isMctsSeat('ai-greedy')).toBe(false);
+    expect(isMctsSeat('human')).toBe(false);
   });
 
   it('selectAiMove returns null when there are no legal moves', () => {

@@ -114,6 +114,28 @@ function assertOneOf<T>(name: string, value: T, allowed: readonly T[]): void {
 }
 
 // ---------------------------------------------------------------------------
+// Presets
+// ---------------------------------------------------------------------------
+
+/** Named search-strength presets. */
+export type MctsPreset = 'fast' | 'default' | 'strong';
+
+/**
+ * Named config partials keyed by preset name.
+ * `default` is an empty partial — it resolves to `DEFAULT_MCTS_CONFIG`.
+ */
+export const MCTS_PRESETS: Readonly<Record<MctsPreset, Partial<MctsConfig>>> = Object.freeze({
+  fast: Object.freeze({ iterations: 200, maxSimulationDepth: 16, rolloutPolicy: 'random' as const }),
+  default: Object.freeze({}),
+  strong: Object.freeze({ iterations: 5000, maxSimulationDepth: 64, templateCompletionsPerVisit: 4 }),
+});
+
+/** All recognised preset names (for validation). */
+export const MCTS_PRESET_NAMES: readonly MctsPreset[] = Object.freeze(
+  Object.keys(MCTS_PRESETS) as MctsPreset[],
+);
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -150,4 +172,11 @@ export function validateMctsConfig(partial: Partial<MctsConfig>): MctsConfig {
   }
 
   return Object.freeze(merged);
+}
+
+/**
+ * Resolve a named preset into a fully validated, immutable `MctsConfig`.
+ */
+export function resolvePreset(preset: MctsPreset): MctsConfig {
+  return validateMctsConfig(MCTS_PRESETS[preset]);
 }

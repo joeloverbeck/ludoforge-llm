@@ -1134,8 +1134,10 @@ dataAssets:
           outOfPlayZoneId: out-of-play-ARVN:none
         - seat: nva
           availableZoneId: available-NVA:none
+          outOfPlayZoneId: out-of-play-NVA:none
         - seat: vc
           availableZoneId: available-VC:none
+          outOfPlayZoneId: out-of-play-VC:none
       initializations:
         - markerId: activeLeader
           state: minh
@@ -1459,8 +1461,10 @@ dataAssets:
           outOfPlayZoneId: out-of-play-ARVN:none
         - seat: nva
           availableZoneId: available-NVA:none
+          outOfPlayZoneId: out-of-play-NVA:none
         - seat: vc
           availableZoneId: available-VC:none
+          outOfPlayZoneId: out-of-play-VC:none
       initializations:
         - markerId: activeLeader
           state: youngTurks
@@ -1836,8 +1840,10 @@ dataAssets:
           outOfPlayZoneId: out-of-play-ARVN:none
         - seat: nva
           availableZoneId: available-NVA:none
+          outOfPlayZoneId: out-of-play-NVA:none
         - seat: vc
           availableZoneId: available-VC:none
+          outOfPlayZoneId: out-of-play-VC:none
       initializations:
         - markerId: activeLeader
           state: ky

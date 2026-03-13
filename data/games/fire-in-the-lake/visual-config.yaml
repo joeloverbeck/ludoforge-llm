@@ -238,6 +238,8 @@ zones:
     "leader:none": card
     "out-of-play-ARVN:none": forcePool
     "out-of-play-US:none": forcePool
+    "out-of-play-NVA:none": forcePool
+    "out-of-play-VC:none": forcePool
 
 edges:
   default:

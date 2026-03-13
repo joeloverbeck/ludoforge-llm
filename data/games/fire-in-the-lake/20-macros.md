@@ -1122,7 +1122,17 @@ effectMacros:
                 max:
                   if:
                     when: { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
-                    then: 99
+                    then:
+                      if:
+                        when:
+                          op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query: { query: grantContext, key: maxSpaces }
+                          right: 0
+                        then: { ref: grantContext, key: maxSpaces }
+                        else: 99
                     else: { ref: gvar, var: { param: resourceVar } }
 
   # ── insurgent-terror-resolve-space ────────────────────────────────────────

@@ -142,11 +142,14 @@ describe('FITL text-only card behavior backfill', () => {
     assert.equal(macvNvaThenVc?.freeOperationGrants?.[1]?.seat, 'vc');
 
     const card76 = cardById.get('card-76');
-    assert.deepEqual(card76?.unshaded?.effects, [
-      { addVar: { scope: 'global', var: 'nvaResources', delta: -3 } },
-      { addVar: { scope: 'global', var: 'vcResources', delta: -3 } },
-      { addVar: { scope: 'global', var: 'patronage', delta: 3 } },
-    ]);
+    assert.equal(card76?.unshaded?.text, 'NVA and VC -1 Resource each per space with both. Patronage +2.');
+    assert.equal(typeof (card76?.unshaded?.effects?.[0] as { let?: unknown } | undefined)?.let, 'object');
+    assert.deepEqual(card76?.unshaded?.effects?.[1], { addVar: { scope: 'global', var: 'patronage', delta: 2 } });
+    assert.equal(card76?.shaded?.text, 'Remove Support from Hue, Da Nang, and an adjacent Province.');
+    assert.equal(typeof (card76?.shaded?.effects?.[0] as { if?: unknown } | undefined)?.if, 'object');
+    assert.equal(typeof (card76?.shaded?.effects?.[1] as { if?: unknown } | undefined)?.if, 'object');
+    assert.equal((card76?.shaded?.effects?.[2] as { chooseN?: { bind?: string } } | undefined)?.chooseN?.bind, '$annamAdjacentProvince');
+    assert.equal(typeof (card76?.shaded?.effects?.[3] as { forEach?: unknown } | undefined)?.forEach, 'object');
 
     const card73 = cardById.get('card-73');
     assert.equal(card73?.unshaded?.text, 'Conduct a Commitment Phase.');

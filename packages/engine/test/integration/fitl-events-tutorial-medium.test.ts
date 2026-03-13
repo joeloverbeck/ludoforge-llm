@@ -69,13 +69,17 @@ describe('FITL tutorial medium event-card production spec', () => {
     assert.equal(card?.shaded?.effects, undefined);
 
     // Terror placement via zoneVar + global counter sync
-    const shadedTerror = card?.shaded?.targets?.[0]?.effects?.filter((effect) => 'addVar' in effect);
-    assert.equal(shadedTerror?.length, 2, 'Expected 2 addVar effects (zoneVar terrorCount + global counter)');
-    const zoneVarTerror = shadedTerror?.find(
+    const terrorGuard = card?.shaded?.targets?.[0]?.effects?.find((effect) => 'if' in effect && effect.if.then.some((nested) => 'addVar' in nested));
+    assert.notEqual(terrorGuard, undefined, 'Expected shaded Brinks Hotel to guard terror placement behind a conditional effect');
+    const shadedTerror = 'if' in terrorGuard!
+      ? terrorGuard.if.then.filter((effect) => 'addVar' in effect)
+      : [];
+    assert.equal(shadedTerror.length, 2, 'Expected 2 guarded addVar effects (zoneVar terrorCount + global counter)');
+    const zoneVarTerror = shadedTerror.find(
       (effect) => effect.addVar.scope === 'zoneVar' && effect.addVar.var === 'terrorCount',
     );
     assert.notEqual(zoneVarTerror, undefined, 'Expected addVar zoneVar terrorCount effect');
-    const globalCounter = shadedTerror?.find(
+    const globalCounter = shadedTerror.find(
       (effect) => effect.addVar.scope === 'global' && effect.addVar.var === 'terrorSabotageMarkersPlaced',
     );
     assert.notEqual(globalCounter, undefined, 'Expected addVar global terrorSabotageMarkersPlaced effect');

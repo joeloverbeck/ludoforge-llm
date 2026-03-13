@@ -12,6 +12,7 @@ import {
   type Move,
   type Token,
 } from '../../src/kernel/index.js';
+import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds, type DecisionOverrideRule } from '../helpers/decision-param-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
@@ -90,6 +91,24 @@ const countFactionType = (state: GameState, zone: string, faction: string, type:
   (state.zones[zone] ?? []).filter((token) => token.props.faction === faction && token.type === type).length;
 
 describe('FITL card-51 301st Supply Bn', () => {
+  it('encodes exact text and uses the canonical routing macro for unshaded removals', () => {
+    const { parsed, compiled } = compileProductionSpec();
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === CARD_ID);
+    const parsedCard = parsed.doc.eventDecks?.[0]?.cards.find((entry) => entry.id === CARD_ID);
+    assert.notEqual(card, undefined);
+    assert.notEqual(parsedCard, undefined);
+
+    assert.equal(card?.title, '301st Supply Bn');
+    assert.equal(card?.unshaded?.text, 'Remove 6 non-base Insurgent pieces from outside South Vietnam.');
+    assert.equal(card?.shaded?.text, 'Improve Trail by 2 boxes and add a die roll of NVA Resources.');
+
+    const routeCalls = findDeep(parsedCard?.unshaded ?? {}, (node) => node?.macro === 'fitl-route-removed-piece-to-force-pool');
+    assert.equal(routeCalls.length, 1, '301st Supply Bn unshaded should route removed insurgents through the canonical routing macro');
+  });
+
   it('unshaded removes exactly 6 selected non-base Insurgent pieces from outside South Vietnam and routes them by faction', () => {
     const def = compileDef();
     const setup = setupState(def, 5101, {

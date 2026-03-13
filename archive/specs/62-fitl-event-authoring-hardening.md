@@ -1,6 +1,6 @@
 # Spec 62 — FITL Event Authoring Hardening
 
-**Status**: Proposed
+**Status**: ✅ COMPLETED
 **Priority**: High
 **Complexity**: Medium
 **Dependencies**: engine CNL compiler diagnostics, `data/games/fire-in-the-lake/20-macros.md`, Fire in the Lake event integration tests
@@ -122,3 +122,19 @@ Rework target:
 ## Notes
 
 The immediate compiler-diagnostic hardening can proceed independently. This spec is for the larger authoring, macro, documentation, and test-infrastructure cleanup that should prevent CIDG-class friction from recurring on later cards.
+
+## Outcome
+
+- Completion date: 2026-03-13
+- What actually changed:
+  - Added the FITL event authoring cookbook in `docs/fitl-event-authoring-cookbook.md` and updated repository guidance to treat it as the living authoring reference instead of archived Spec 29.
+  - Expanded FITL-local event macros for replacement/routing authoring patterns in `data/games/fire-in-the-lake/20-macros.md`.
+  - Added shared FITL event-fidelity helpers and migrated complex event coverage onto the stronger helper pattern.
+  - Reworked `CIDG` and later exact-fit cards onto the canonical macro/test-helper architecture where that materially improved authoring quality.
+- Deviations from original plan:
+  - The macro migration remained selective rather than exhaustive; cards that were clearer in explicit form were intentionally left unchanged.
+  - The spec was completed through a sequence of focused ticket-sized changes instead of a single all-at-once hardening pass.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build`
+  - `pnpm -F @ludoforge/engine test`
+  - Targeted FITL event integration suites were added and maintained as part of the implementation series.

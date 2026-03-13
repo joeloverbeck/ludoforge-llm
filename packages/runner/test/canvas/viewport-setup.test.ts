@@ -21,14 +21,14 @@ interface MockViewport extends Container {
   clamp: ReturnType<typeof vi.fn>;
   moveCenter: ReturnType<typeof vi.fn>;
   resize: ReturnType<typeof vi.fn>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  removeFromParent: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  destroy: any;
+  removeFromParentSpy: ReturnType<typeof vi.fn>;
+  destroySpy: ReturnType<typeof vi.fn>;
 }
 
 function createMockViewport(): MockViewport {
   const viewport = new Container() as MockViewport;
+  const removeFromParentSpy = vi.fn();
+  const destroySpy = vi.fn();
   viewport.plugins = {
     removeAll: vi.fn(),
   };
@@ -41,12 +41,16 @@ function createMockViewport(): MockViewport {
   viewport.moveCenter = vi.fn(() => viewport);
   viewport.resize = vi.fn(() => viewport);
 
-  viewport.removeFromParent = vi.fn(() => {
+  viewport.removeFromParentSpy = removeFromParentSpy;
+  viewport.removeFromParent = (() => {
+    removeFromParentSpy();
     viewport.parent?.removeChild(viewport);
-    return viewport;
-  });
+  }) as Container['removeFromParent'];
 
-  viewport.destroy = vi.fn();
+  viewport.destroySpy = destroySpy;
+  viewport.destroy = ((options?: Parameters<Container['destroy']>[0]) => {
+    destroySpy(options);
+  }) as Container['destroy'];
 
   return viewport;
 }
@@ -245,8 +249,8 @@ describe('setupViewport', () => {
     expect(config.layers.effectsGroup.parent).toBeNull();
     expect(config.layers.interfaceGroup.parent).toBeNull();
     expect(config.stage.children).not.toContain(viewport);
-    expect(viewport.removeFromParent).toHaveBeenCalledTimes(1);
-    expect(viewport.destroy).toHaveBeenCalledTimes(1);
+    expect(viewport.removeFromParentSpy).toHaveBeenCalledTimes(1);
+    expect(viewport.destroySpy).toHaveBeenCalledTimes(1);
   });
 
   it('throws when minScale is greater than maxScale', () => {

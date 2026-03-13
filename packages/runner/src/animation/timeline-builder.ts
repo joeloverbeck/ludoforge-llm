@@ -10,7 +10,7 @@ import type {
   EphemeralCardContentResolver,
   VisualAnimationDescriptorKind,
 } from './animation-types.js';
-import type { ArcGeometryDiagnostic, DiagnosticPosition, TweenLogEntry } from './animation-diagnostics.js';
+import type { ArcGeometryDiagnostic, DiagnosticPosition, SpriteResolutionEntry, TweenLogEntry } from './animation-diagnostics.js';
 import type { EphemeralContainerFactory } from './ephemeral-container-factory.js';
 import type { GsapLike, GsapTimelineLike } from './gsap-setup.js';
 import type { PresetRegistry, PresetTweenContext } from './preset-registry.js';
@@ -507,7 +507,7 @@ function buildSpriteResolutionEntry(
   spriteRefs: TimelineSpriteRefs,
   resolved: boolean,
   reason?: string,
-) {
+): SpriteResolutionEntry {
   const tokenId = getDescriptorTokenId(descriptor);
   const zoneId = getDescriptorZoneId(descriptor);
   const containerType = getDescriptorContainerType(descriptor, spriteRefs);

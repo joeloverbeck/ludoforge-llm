@@ -161,8 +161,8 @@ describe('FITL text-only card behavior backfill', () => {
     assert.equal(typeof (card73?.shaded?.effects?.[1] as { forEach?: unknown } | undefined)?.forEach, 'object');
 
     const card81 = cardById.get('card-81');
-    assert.equal((card81?.unshaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 2);
-    assert.equal((card81?.shaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 2);
+    assert.equal(typeof (card81?.unshaded?.effects?.[0] as { rollRandom?: unknown } | undefined)?.rollRandom, 'object');
+    assert.equal(typeof (card81?.shaded?.effects?.[0] as { let?: unknown } | undefined)?.let, 'object');
 
     const card83 = cardById.get('card-83');
     assert.equal((card83?.unshaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 3);

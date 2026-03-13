@@ -1,5 +1,9 @@
 import type { GameDef, GameState } from './types.js';
 
+export type MaterialGameplayStateProjection =
+  Pick<GameState, 'globalVars' | 'perPlayerVars' | 'zoneVars' | 'zones' | 'nextTokenOrdinal' | 'markers'>
+  & Partial<Pick<GameState, 'reveals' | 'globalMarkers' | 'activeLastingEffects' | 'interruptPhaseStack'>>;
+
 const materialVarNames = (
   variables: readonly { readonly name: string; readonly material?: boolean }[],
 ): ReadonlySet<string> =>
@@ -34,7 +38,7 @@ const materialZoneVars = (def: GameDef, state: GameState): GameState['zoneVars']
   );
 };
 
-export const materialGameplayStateProjection = (def: GameDef, state: GameState) => ({
+export const materialGameplayStateProjection = (def: GameDef, state: GameState): MaterialGameplayStateProjection => ({
   globalVars: materialGlobalVars(def, state),
   perPlayerVars: materialPerPlayerVars(def, state),
   zoneVars: materialZoneVars(def, state),

@@ -12,6 +12,7 @@ import {
   type Move,
   type Token,
 } from '../../src/kernel/index.js';
+import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
@@ -93,10 +94,16 @@ const setupEventState = (
 };
 
 describe('FITL card-29 Tribesmen', () => {
-  it('encodes exact text and seat order metadata', () => {
-    const def = compileDef();
+  it('encodes exact text, seat order metadata, and canonical shaded macro usage', () => {
+    const { parsed, compiled } = compileProductionSpec();
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const def = compiled.gameDef!;
     const card = def.eventDecks?.[0]?.cards.find((entry) => entry.id === CARD_ID);
+    const parsedCard = parsed.doc.eventDecks?.[0]?.cards.find((entry) => entry.id === CARD_ID);
     assert.notEqual(card, undefined);
+    assert.notEqual(parsedCard, undefined);
 
     assert.equal(card?.title, 'Tribesmen');
     assert.equal(card?.sideMode, 'dual');
@@ -109,6 +116,18 @@ describe('FITL card-29 Tribesmen', () => {
     assert.equal(
       card?.shaded?.text,
       'Replace all Irregulars with VC Guerrillas. 1 Neutral Highland to Active Opposition. -3 Patronage.',
+    );
+
+    const shadedRouteCalls = findDeep(parsedCard?.shaded ?? {}, (node) => node?.macro === 'fitl-route-removed-piece-to-force-pool');
+    const shadedPlacementCalls = findDeep(
+      parsedCard?.shaded ?? {},
+      (node) => node?.macro === 'fitl-place-selected-piece-in-zone-underground-by-type',
+    );
+    assert.equal(shadedRouteCalls.length, 1, 'Tribesmen shaded should route removed Irregulars through the canonical routing macro');
+    assert.equal(
+      shadedPlacementCalls.length,
+      1,
+      'Tribesmen shaded should place replacement VC guerrillas through the canonical placement/posture macro',
     );
   });
 

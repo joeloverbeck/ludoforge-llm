@@ -1,6 +1,6 @@
 # Spec 29: FITL Event Card Encoding
 
-**Status**: Draft
+**Status**: COMPLETED
 **Priority**: P1
 **Complexity**: XL
 **Dependencies**: Spec 26 (operations), Spec 27 (SAs), Spec 28 (capabilities + momentum)
@@ -1450,3 +1450,10 @@ RVN Leader (card printed on map)
 Duong Van Minh
 General pledges democracy.
 Each ARVN Train Operation adds +5 bonus aid.
+
+## Outcome
+
+- **Completion date**: 2026-03-13
+- **What actually changed**: Full FITL event-card support was delivered incrementally across subsequent tickets, tests, and supporting specs rather than by continuing to use this document as the living implementation tracker. The durable authoring guidance now lives in `docs/fitl-event-authoring-cookbook.md`, and this spec is being archived as historical record.
+- **Deviations from original plan**: The original plan assumed one large active spec would remain the working home for card encoding. In practice, the work was completed through smaller tickets and follow-up specs, and the authoring guidance was intentionally split out into dedicated documentation.
+- **Verification results**: `pnpm run check:ticket-deps` and `pnpm -F @ludoforge/engine test` passed as part of the archival pass on 2026-03-13.

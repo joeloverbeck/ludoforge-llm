@@ -56,10 +56,12 @@ import type {
   RuntimeWarning,
   TurnFlowFreeOperationGrantContract,
   TurnFlowFreeOperationGrantViabilityPolicy,
-  TurnFlowPendingFreeOperationGrant,
+ TurnFlowPendingFreeOperationGrant,
 } from './types.js';
 
-const cardDrivenRuntime = (state: GameState) =>
+type CardDrivenRuntime = Extract<GameState['turnOrderState'], { readonly type: 'cardDriven' }>['runtime'];
+
+const cardDrivenRuntime = (state: GameState): CardDrivenRuntime | null =>
   state.turnOrderState.type === 'cardDriven' ? state.turnOrderState.runtime : null;
 
 const toPendingFreeOperationGrant = (

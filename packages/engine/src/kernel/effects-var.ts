@@ -14,6 +14,7 @@ import { toTraceVarChangePayload, toVarChangedEvent, type RuntimeScopedVarEndpoi
 import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST } from './types.js';
+import type { TriggerEvent } from './types.js';
 
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 
@@ -53,7 +54,7 @@ const emitVarChangeArtifacts = (
   endpoint: RuntimeScopedVarEndpoint,
   oldValue: number | boolean,
   newValue: number | boolean,
-) => {
+): TriggerEvent | undefined => {
   const tracePayload = toTraceVarChangePayload(endpoint, oldValue, newValue);
   if (!emitVarChangeTraceIfChanged(ctx, tracePayload)) {
     return undefined;

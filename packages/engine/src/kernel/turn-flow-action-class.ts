@@ -3,7 +3,9 @@ import type { GameDef, Move, TurnFlowActionClass } from './types.js';
 
 export type ResolvedTurnFlowActionClass = TurnFlowActionClass;
 
-const cardDrivenConfig = (def: GameDef) =>
+type CardDrivenConfig = NonNullable<Extract<GameDef['turnOrder'], { readonly type: 'cardDriven' }>['config']>;
+
+const cardDrivenConfig = (def: GameDef): CardDrivenConfig | null =>
   def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config : null;
 
 const resolveMappedTurnFlowActionClass = (

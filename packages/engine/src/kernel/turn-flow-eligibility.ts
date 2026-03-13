@@ -75,13 +75,16 @@ interface FreeOperationGrantConsumptionResult {
   readonly consumedGrant?: TurnFlowPendingFreeOperationGrant;
 }
 
+type CardDrivenConfig = NonNullable<Extract<GameDef['turnOrder'], { readonly type: 'cardDriven' }>['config']>;
+type CardDrivenRuntime = Extract<GameState['turnOrderState'], { readonly type: 'cardDriven' }>['runtime'];
+
 const isPassAction = (def: GameDef, move: Move): boolean =>
   String(move.actionId) === 'pass' || resolveTurnFlowActionClass(def, move) === 'pass';
 
-const cardDrivenConfig = (def: GameDef) =>
+const cardDrivenConfig = (def: GameDef): CardDrivenConfig | null =>
   def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config : null;
 
-const cardDrivenRuntime = (state: GameState) =>
+const cardDrivenRuntime = (state: GameState): CardDrivenRuntime | null =>
   state.turnOrderState.type === 'cardDriven' ? state.turnOrderState.runtime : null;
 
 const normalizeFirstActionClass = (
@@ -178,7 +181,7 @@ const hasReadyRequiredPendingFreeOperationGrantForSeat = (
     && isRequiredPendingFreeOperationGrant(grant)
     && isPendingFreeOperationGrantSequenceReady(pending, grant, sequenceContexts));
 
-const cardSnapshot = (card: TurnFlowRuntimeCardState) => ({
+const cardSnapshot = (card: TurnFlowRuntimeCardState): Pick<TurnFlowRuntimeCardState, 'firstEligible' | 'secondEligible' | 'actedSeats' | 'passedSeats' | 'nonPassCount' | 'firstActionClass'> => ({
   firstEligible: card.firstEligible,
   secondEligible: card.secondEligible,
   actedSeats: card.actedSeats,
@@ -479,7 +482,7 @@ const toPendingDeferredEventEffects = (
 const withPendingFreeOperationGrants = (
   runtime: TurnFlowRuntimeState,
   grants: readonly TurnFlowPendingFreeOperationGrant[] | undefined,
-) => {
+): TurnFlowRuntimeState => {
   const nextRuntime = {
     ...runtime,
     ...(grants === undefined ? {} : { pendingFreeOperationGrants: grants }),
@@ -493,7 +496,7 @@ const withPendingFreeOperationGrants = (
 const withPendingDeferredEventEffects = (
   runtime: TurnFlowRuntimeState,
   deferred: readonly TurnFlowPendingDeferredEventEffect[] | undefined,
-) => {
+): TurnFlowRuntimeState => {
   const nextRuntime = {
     ...runtime,
     ...(deferred === undefined ? {} : { pendingDeferredEventEffects: deferred }),
@@ -507,7 +510,7 @@ const withPendingDeferredEventEffects = (
 const withSuspendedCardEnd = (
   runtime: TurnFlowRuntimeState,
   suspendedCardEnd: TurnFlowRuntimeState['suspendedCardEnd'] | undefined,
-) => {
+): TurnFlowRuntimeState => {
   const nextRuntime = {
     ...runtime,
     ...(suspendedCardEnd === undefined ? {} : { suspendedCardEnd }),
@@ -521,7 +524,7 @@ const withSuspendedCardEnd = (
 const withFreeOperationSequenceContexts = (
   runtime: TurnFlowRuntimeState,
   contexts: TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined,
-) => {
+): TurnFlowRuntimeState => {
   const nextRuntime = {
     ...runtime,
     ...(contexts === undefined ? {} : { freeOperationSequenceContexts: contexts }),

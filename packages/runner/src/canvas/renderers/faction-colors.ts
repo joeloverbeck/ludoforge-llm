@@ -1,8 +1,9 @@
 import type { PlayerId } from '@ludoforge/engine/runtime';
 
-import type { ResolvedTokenVisual, VisualConfigProvider } from '../../config/visual-config-provider.js';
+import type { ResolvedTokenSymbols, ResolvedTokenVisual, VisualConfigProvider } from '../../config/visual-config-provider.js';
 import type { FactionColorProvider } from './renderer-types';
 import { DEFAULT_FACTION_PALETTE } from '../../config/visual-config-defaults.js';
+import type { CardTemplate } from '../../config/visual-config-types.js';
 import { VisualConfigProvider as RuntimeVisualConfigProvider } from '../../config/visual-config-provider.js';
 
 export { DEFAULT_FACTION_PALETTE };
@@ -17,11 +18,11 @@ export class DefaultFactionColorProvider implements FactionColorProvider {
   resolveTokenSymbols(
     tokenTypeId: string,
     tokenProperties: Readonly<Record<string, string | number | boolean>>,
-  ) {
+  ): ResolvedTokenSymbols {
     return this.provider.resolveTokenSymbols(tokenTypeId, tokenProperties);
   }
 
-  getCardTemplateForTokenType(_tokenTypeId: string) {
+  getCardTemplateForTokenType(_tokenTypeId: string): CardTemplate | null {
     return null;
   }
 
@@ -43,11 +44,11 @@ export class VisualConfigFactionColorProvider implements FactionColorProvider {
   resolveTokenSymbols(
     tokenTypeId: string,
     tokenProperties: Readonly<Record<string, string | number | boolean>>,
-  ) {
+  ): ResolvedTokenSymbols {
     return this.provider.resolveTokenSymbols(tokenTypeId, tokenProperties);
   }
 
-  getCardTemplateForTokenType(tokenTypeId: string) {
+  getCardTemplateForTokenType(tokenTypeId: string): CardTemplate | null {
     return this.provider.getCardTemplateForTokenType(tokenTypeId);
   }
 

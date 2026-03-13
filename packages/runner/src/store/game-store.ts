@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { create, type StoreApi, type UseBoundStore } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import type {
   ActionId,
@@ -564,7 +564,7 @@ export function createGameStore(
   bridge: GameWorkerAPI,
   visualConfigProvider: VisualConfigProvider,
   options?: CreateGameStoreOptions,
-) {
+): UseBoundStore<StoreApi<GameStore>> {
   return create<GameStore>()(
     subscribeWithSelector((set, get) => {
       let sessionEpoch = 0;

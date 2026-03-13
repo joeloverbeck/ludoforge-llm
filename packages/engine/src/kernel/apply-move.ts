@@ -63,6 +63,7 @@ import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycl
 import { createExecutionEffectContext, type PhaseTransitionBudget } from './effect-context.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import { materialGameplayStateProjection } from './material-gameplay-state.js';
+import type { SimultaneousMoveSubmission } from './types-turn-flow.js';
 import type {
   ActionDef,
   ActionPipelineDef,
@@ -1309,7 +1310,7 @@ const applyMoveCore = (
 const createSimultaneousSubmittedMap = (playerCount: number): Readonly<Record<number, boolean>> =>
   Object.fromEntries(Array.from({ length: playerCount }, (_unused, index) => [index, false]));
 
-const toSimultaneousSubmission = (move: Move) => ({
+const toSimultaneousSubmission = (move: Move): SimultaneousMoveSubmission => ({
   actionId: String(move.actionId),
   params: move.params,
   ...(move.freeOperation === undefined ? {} : { freeOperation: move.freeOperation }),

@@ -1,6 +1,6 @@
 # UNICOMGAMPLAAIAGE-012: Fairness and Property Tests
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new test files only
@@ -91,3 +91,14 @@ Place in `packages/engine/test/fixtures/mcts/` if files needed, or inline in tes
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/test/unit/agents/mcts/fairness.test.ts`
 2. `pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-13
+- **What changed**: Created `packages/engine/test/unit/agents/mcts/fairness.test.ts` (16 tests across 7 suites) covering all 6 mandatory fairness/property tests. All fixtures are inline — no fixture directory needed.
+- **Deviations from plan**: No fixture files created in `packages/engine/test/fixtures/mcts/` — inline `GameDef`/`GameState` construction sufficed (ticket allowed this).
+- **Verification results**:
+  - `fairness.test.ts`: 16/16 pass
+  - Full engine suite: 4395/4395 pass
+  - Lint: 0 errors
+  - Typecheck: 0 errors

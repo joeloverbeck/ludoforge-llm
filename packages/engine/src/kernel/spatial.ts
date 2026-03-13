@@ -15,7 +15,14 @@ export interface ConnectedQueryOptions {
   readonly maxDepth?: number;
 }
 
+const adjacencyGraphCache = new WeakMap<readonly ZoneDef[], AdjacencyGraph>();
+
 export function buildAdjacencyGraph(zones: readonly ZoneDef[]): AdjacencyGraph {
+  const cached = adjacencyGraphCache.get(zones);
+  if (cached !== undefined) {
+    return cached;
+  }
+
   const zoneIds = new Set<ZoneId>(zones.map((zone) => zone.id));
   const normalizedNeighbors = new Map<ZoneId, Set<ZoneId>>();
 
@@ -45,10 +52,12 @@ export function buildAdjacencyGraph(zones: readonly ZoneDef[]): AdjacencyGraph {
     neighbors[zoneId] = [...entries].sort((left, right) => left.localeCompare(right));
   });
 
-  return {
+  const result: AdjacencyGraph = {
     neighbors,
     zoneCount: zones.length,
   };
+  adjacencyGraphCache.set(zones, result);
+  return result;
 }
 
 export function validateAdjacency(graph: AdjacencyGraph, zones: readonly ZoneDef[]): readonly Diagnostic[] {

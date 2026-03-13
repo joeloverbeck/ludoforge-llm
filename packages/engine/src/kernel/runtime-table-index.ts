@@ -87,7 +87,19 @@ function buildKeyIndexes(
   return keyIndexesByTuple;
 }
 
+const runtimeTableIndexCache = new WeakMap<GameDef, RuntimeTableIndex>();
+
 export function buildRuntimeTableIndex(def: GameDef): RuntimeTableIndex {
+  const cached = runtimeTableIndexCache.get(def);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const result = buildRuntimeTableIndexUncached(def);
+  runtimeTableIndexCache.set(def, result);
+  return result;
+}
+
+function buildRuntimeTableIndexUncached(def: GameDef): RuntimeTableIndex {
   const runtimeAssets = def.runtimeDataAssets ?? [];
   const assetsByNormalizedId = new Map<string, (typeof runtimeAssets)[number]>();
   for (const asset of runtimeAssets) {

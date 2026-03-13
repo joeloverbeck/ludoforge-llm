@@ -253,6 +253,24 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
     ]);
   });
 
+  it('encodes card 76 (Annam) with shared-space resource loss and supported adjacent-province targeting', () => {
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-76');
+    assert.notEqual(card, undefined);
+    assert.equal(card?.unshaded?.text, 'NVA and VC -1 Resource each per space with both. Patronage +2.');
+    assert.equal(card?.shaded?.text, 'Remove Support from Hue, Da Nang, and an adjacent Province.');
+    assert.equal(typeof (card?.unshaded?.effects?.[0] as { let?: unknown } | undefined)?.let, 'object');
+    assert.deepEqual(card?.unshaded?.effects?.[1], { addVar: { scope: 'global', var: 'patronage', delta: 2 } });
+    assert.equal(typeof (card?.shaded?.effects?.[0] as { if?: unknown } | undefined)?.if, 'object');
+    assert.equal(typeof (card?.shaded?.effects?.[1] as { if?: unknown } | undefined)?.if, 'object');
+    assert.equal((card?.shaded?.effects?.[2] as { chooseN?: { bind?: string } } | undefined)?.chooseN?.bind, '$annamAdjacentProvince');
+    assert.equal(typeof (card?.shaded?.effects?.[3] as { forEach?: unknown } | undefined)?.forEach, 'object');
+  });
+
   it('encodes card 67 (Amphib Landing) as dual US/ARVN coastal troop relocation branches plus shaded VC relocation and next-card ineligibility', () => {
     const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 

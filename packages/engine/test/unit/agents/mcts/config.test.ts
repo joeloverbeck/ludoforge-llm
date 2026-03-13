@@ -182,23 +182,29 @@ describe('MCTS_PRESETS', () => {
 // ---------------------------------------------------------------------------
 
 describe('resolvePreset', () => {
-  it('resolvePreset("fast") returns config with iterations: 200', () => {
+  it('resolvePreset("fast") returns config with iterations: 200 and timeLimitMs: 2000', () => {
     const cfg = resolvePreset('fast');
     assert.equal(cfg.iterations, 200);
     assert.equal(cfg.maxSimulationDepth, 16);
     assert.equal(cfg.rolloutPolicy, 'random');
+    assert.equal(cfg.timeLimitMs, 2_000);
   });
 
-  it('resolvePreset("default") returns DEFAULT_MCTS_CONFIG', () => {
+  it('resolvePreset("default") returns DEFAULT_MCTS_CONFIG with timeLimitMs: 10000', () => {
     const cfg = resolvePreset('default');
-    assert.deepEqual(cfg, DEFAULT_MCTS_CONFIG);
+    assert.equal(cfg.timeLimitMs, 10_000);
+    // All other fields should match defaults
+    assert.equal(cfg.iterations, DEFAULT_MCTS_CONFIG.iterations);
+    assert.equal(cfg.explorationConstant, DEFAULT_MCTS_CONFIG.explorationConstant);
+    assert.equal(cfg.rolloutPolicy, DEFAULT_MCTS_CONFIG.rolloutPolicy);
   });
 
-  it('resolvePreset("strong") returns config with iterations: 5000', () => {
+  it('resolvePreset("strong") returns config with iterations: 5000 and timeLimitMs: 30000', () => {
     const cfg = resolvePreset('strong');
     assert.equal(cfg.iterations, 5000);
     assert.equal(cfg.maxSimulationDepth, 64);
     assert.equal(cfg.templateCompletionsPerVisit, 4);
+    assert.equal(cfg.timeLimitMs, 30_000);
   });
 
   it('all presets pass validateMctsConfig (no invalid values)', () => {

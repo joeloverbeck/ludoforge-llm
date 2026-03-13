@@ -108,7 +108,7 @@ export function selectExpansionCandidate(
     if (terminal !== null && isWinForPlayer(terminal, actingPlayer)) {
       scored.push({ index: i, score: Infinity, isTerminalWin: true });
     } else {
-      const heuristic = evaluateState(def, result.state, actingPlayer);
+      const heuristic = evaluateState(def, result.state, actingPlayer, runtime);
       scored.push({ index: i, score: heuristic, isTerminalWin: false });
     }
   }

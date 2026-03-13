@@ -125,9 +125,9 @@ export type MctsPreset = 'fast' | 'default' | 'strong';
  * `default` is an empty partial — it resolves to `DEFAULT_MCTS_CONFIG`.
  */
 export const MCTS_PRESETS: Readonly<Record<MctsPreset, Partial<MctsConfig>>> = Object.freeze({
-  fast: Object.freeze({ iterations: 200, maxSimulationDepth: 16, rolloutPolicy: 'random' as const }),
-  default: Object.freeze({}),
-  strong: Object.freeze({ iterations: 5000, maxSimulationDepth: 64, templateCompletionsPerVisit: 4 }),
+  fast: Object.freeze({ iterations: 200, maxSimulationDepth: 16, rolloutPolicy: 'random' as const, timeLimitMs: 2_000 }),
+  default: Object.freeze({ timeLimitMs: 10_000 }),
+  strong: Object.freeze({ iterations: 5000, maxSimulationDepth: 64, templateCompletionsPerVisit: 4, timeLimitMs: 30_000 }),
 });
 
 /** All recognised preset names (for validation). */

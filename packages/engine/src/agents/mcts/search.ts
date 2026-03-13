@@ -200,7 +200,7 @@ export function runOneIteration(
     if (endTerminal !== null) {
       rewards = terminalToRewards(endTerminal, sampledState.playerCount);
     } else {
-      rewards = evaluateForAllPlayers(def, rolloutResult.state, config.heuristicTemperature);
+      rewards = evaluateForAllPlayers(def, rolloutResult.state, config.heuristicTemperature, runtime);
     }
   }
 

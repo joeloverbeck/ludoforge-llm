@@ -181,6 +181,7 @@ function createBridgeStub(overrides: BridgeOverrides): GameWorkerAPI {
     undo: resolveOverride('undo'),
     reset: resolveOverride('reset'),
     loadFromUrl: resolveOverride('loadFromUrl'),
+    requestAgentMove: resolveOverride('requestAgentMove'),
   };
 }
 

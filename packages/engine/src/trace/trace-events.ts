@@ -10,7 +10,7 @@ import type { PlayerId } from '../kernel/branded.js';
 // ── AI Decision Trace ───────────────────────────────────
 
 export interface AiDecisionTrace {
-  readonly seatType: 'ai-random' | 'ai-greedy';
+  readonly seatType: 'ai-random' | 'ai-greedy' | 'ai-mcts-fast' | 'ai-mcts-default' | 'ai-mcts-strong';
   readonly candidateCount: number;
   readonly selectedIndex: number;
 }

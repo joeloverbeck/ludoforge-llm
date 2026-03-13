@@ -55,7 +55,7 @@ interface AnnouncementPayload {
 }
 
 function isAiSeat(seat: AppliedMoveEvent['actorSeat']): boolean {
-  return seat === 'ai-random' || seat === 'ai-greedy';
+  return seat !== 'human' && seat !== 'unknown';
 }
 
 function formatMoveSummary(move: Move): string {

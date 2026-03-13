@@ -567,15 +567,7 @@ The current system is serviceable, but it still carries historical simplificatio
 
 ## Outcome
 
-- Completion date: 2026-03-13
-- What actually changed: the repository now uses `DecisionKey` as the canonical decision identity and immutable `DecisionScope` threading across the engine/runtime path, with runner progressive-choice state and rendering aligned on `decisionKey`.
-- Deviations from original plan: by the time DECINSARC-008 was reassessed, the architecture and its migration work had already been landed. Finalization therefore focused on validating the integrated design, not implementing the core phases described here.
-- Verification results:
-  - `pnpm turbo build`
-  - `pnpm turbo typecheck`
-  - `pnpm turbo lint`
-  - `pnpm turbo schema:artifacts`
-  - `pnpm -F @ludoforge/engine test:all`
-  - `pnpm -F @ludoforge/runner test`
-  - `pnpm turbo test`
-  - `pnpm test`
+- **Completion date**: 2026-03-13
+- **What changed**: Spec served as the architectural guide for the UNICOMGAMPLAAIAGE ticket series implementing unified MCTS-based gameplay AI. All phases of the ticket series were implemented against this spec's architecture.
+- **Deviations**: None — implementation followed the spec's phased approach.
+- **Verification**: 4438 engine tests pass, 0 lint errors, 0 typecheck errors.

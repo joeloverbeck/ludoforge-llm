@@ -1,6 +1,6 @@
 # UNICOMGAMPLAAIAGE-004: Belief Sampling (Hidden-State + Future-RNG Resampling)
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — new file in agents/mcts/, may need kernel state-hash helper
@@ -13,10 +13,10 @@ The MCTS agent must sample plausible hidden states consistent with what the acti
 ## Assumption Reassessment (2026-03-13)
 
 1. `PlayerObservation` from ticket 003 provides the visibility projection needed.
-2. `GameState` has `zones` (Record<string, ZoneState>), `rng` (Rng), `stateHash` (bigint).
-3. `ZoneState` contains `tokens` (ordered array of token instances with id, typeId, ownerPlayer).
-4. `fork` from `kernel/prng.ts` can create independent RNG streams.
-5. `stateHash` must be recomputed for synthetic search states — may need a helper if `computeStateHash` is not already exported.
+2. `GameState` has `zones` (`Record<string, readonly Token[]>`), `rng` (`RngState` — not `Rng`; `Rng` wraps `RngState` as `{ state: RngState }`), `stateHash` (`bigint`).
+3. No `ZoneState` type exists — zones map directly to `readonly Token[]`. `Token` has `id: TokenId`, `type: string`, `props: Record<string, number | string | boolean>`. No `ownerPlayer` field on Token — ownership is a zone-level concept via `ZoneDef.ownerPlayerIndex`.
+4. `fork` from `kernel/prng.ts` can create independent RNG streams — takes `Rng`, returns `readonly [Rng, Rng]`.
+5. `computeFullHash(table: ZobristTable, state: GameState): bigint` in `zobrist.ts` serves the state-hash role. `createZobristTable(def)` creates the table. No new `state-hash.ts` file needed.
 
 ## Architecture Check
 
@@ -47,9 +47,9 @@ Conservative default:
 - Fisher-Yates shuffle within each uncertainty class using the search RNG.
 - Do NOT redistribute tokens across zones — too aggressive and can create impossible states.
 
-### 2. Possibly create `packages/engine/src/kernel/state-hash.ts` (if not already available)
+### 2. ~~Possibly create `packages/engine/src/kernel/state-hash.ts`~~ — NOT NEEDED
 
-If `computeStateHash` / `computeZobristHash` is not already exported as a standalone utility, expose a minimal helper. Check `zobrist.ts` first — if it provides what's needed, just import from there.
+`computeFullHash` from `zobrist.ts` + `createZobristTable` already provide full state-hash recomputation. Import directly from kernel.
 
 ### 3. Update `packages/engine/src/agents/mcts/index.ts`
 
@@ -59,7 +59,7 @@ Add re-export for `belief.ts`.
 
 - `packages/engine/src/agents/mcts/belief.ts` (new)
 - `packages/engine/src/agents/mcts/index.ts` (modify)
-- `packages/engine/src/kernel/state-hash.ts` (new — only if needed; otherwise skip)
+- ~~`packages/engine/src/kernel/state-hash.ts`~~ — NOT NEEDED (use `computeFullHash` from `zobrist.ts`)
 - `packages/engine/test/unit/agents/mcts/belief.test.ts` (new)
 
 ## Out of Scope
@@ -100,3 +100,15 @@ Add re-export for `belief.ts`.
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/test/unit/agents/mcts/belief.test.ts`
 2. `pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-13
+- **What changed**:
+  - Created `packages/engine/src/agents/mcts/belief.ts` with `sampleBeliefState` and `BeliefSample` type.
+  - Updated `packages/engine/src/agents/mcts/index.ts` with re-exports.
+  - Created `packages/engine/test/unit/agents/mcts/belief.test.ts` (11 tests).
+- **Deviations from original plan**:
+  - `state-hash.ts` was NOT created — `computeFullHash` from `zobrist.ts` already provides the capability. Used `stateHash = 0n` search-only marker instead of recomputing.
+  - Ticket assumptions corrected: `GameState.rng` is `RngState` (not `Rng`), no `ZoneState` type exists, `Token` has no `ownerPlayer` field.
+- **Verification**: 4270 tests pass (0 fail), lint 0 errors, typecheck clean.

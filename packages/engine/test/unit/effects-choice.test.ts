@@ -10,6 +10,7 @@ import {
 import {
   buildAdjacencyGraph,
   applyEffect,
+  applyEffects,
   asPhaseId,
   asPlayerId,
   asTokenId,
@@ -216,6 +217,57 @@ describe('effects choice assertions', () => {
     const result = applyEffect(effect, ctx);
     assert.ok(result.bindings !== undefined);
     assert.equal(result.bindings['$choice@saigon:none'], 'beta');
+  });
+
+  it('chooseOne threads scope across sequential effects and requires #2 for the second occurrence', () => {
+    const ctx = makeCtx({
+      moveParams: {
+        'decision:$choice': 'alpha',
+      },
+    });
+    const effects: readonly EffectAST[] = [
+      {
+        chooseOne: {
+          internalDecisionId: 'decision:$choice',
+          bind: '$choice',
+          options: { query: 'enums', values: ['alpha', 'beta'] },
+        },
+      },
+      {
+        chooseOne: {
+          internalDecisionId: 'decision:$choice',
+          bind: '$choice',
+          options: { query: 'enums', values: ['alpha', 'beta'] },
+        },
+      },
+    ];
+
+    assert.throws(() => applyEffects(effects, ctx), (error: unknown) => {
+      return isEffectErrorCode(error, 'EFFECT_RUNTIME')
+        && String(error).includes('decision:$choice#2');
+    });
+  });
+
+  it('chooseOne starts from a fresh scope on separate top-level calls', () => {
+    const ctx = makeDiscoveryCtx();
+    const effect: EffectAST = {
+      chooseOne: {
+        internalDecisionId: 'decision:$choice',
+        bind: '$choice',
+        options: { query: 'enums', values: ['alpha', 'beta'] },
+      },
+    };
+
+    const first = applyEffect(effect, ctx);
+    const second = applyEffect(effect, ctx);
+
+    assert.equal(first.pendingChoice?.kind, 'pending');
+    assert.equal(second.pendingChoice?.kind, 'pending');
+    if (first.pendingChoice?.kind !== 'pending' || second.pendingChoice?.kind !== 'pending') {
+      throw new Error('expected pending choices');
+    }
+    assert.equal(first.pendingChoice.decisionKey, 'decision:$choice');
+    assert.equal(second.pendingChoice.decisionKey, 'decision:$choice');
   });
 
   it('chooseOne throws when selected value is outside domain', () => {

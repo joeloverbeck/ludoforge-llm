@@ -1,7 +1,7 @@
 import { evalCondition } from './eval-condition.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
-import { withIterationSegment } from './decision-scope.js';
+import { rebaseIterationPath, withIterationSegment } from './decision-scope.js';
 import { resolveControlFlowIterationLimit } from './control-flow-limit.js';
 import { buildForEachTraceEntry, buildReduceTraceEntry } from './control-flow-trace.js';
 import { effectRuntimeError } from './effect-error.js';
@@ -153,10 +153,7 @@ export const applyForEach = (
       ...ctx,
       state: currentState,
       rng: currentRng,
-      decisionScope: withIterationSegment({
-        iterationPath: parentIterationPath,
-        counters: currentDecisionScope.counters,
-      }, iterIdx),
+      decisionScope: withIterationSegment(rebaseIterationPath(currentDecisionScope, parentIterationPath), iterIdx),
       bindings: {
         ...ctx.bindings,
         [effect.forEach.bind]: item,

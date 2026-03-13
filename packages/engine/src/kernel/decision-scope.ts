@@ -54,6 +54,11 @@ export const withIterationSegment = (scope: DecisionScope, index: number): Decis
   counters: scope.counters,
 });
 
+export const rebaseIterationPath = (scope: DecisionScope, iterationPath: string): DecisionScope => ({
+  iterationPath,
+  counters: scope.counters,
+});
+
 export const formatDecisionKey = (
   internalDecisionId: string,
   resolvedBind: string,

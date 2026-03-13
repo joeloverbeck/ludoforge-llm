@@ -6,6 +6,7 @@ import {
   emptyScope,
   formatDecisionKey,
   parseDecisionKey,
+  rebaseIterationPath,
   withIterationSegment,
   type DecisionKey,
 } from '../../../src/kernel/index.js';
@@ -82,6 +83,18 @@ describe('decision-scope codec', () => {
     assert.equal(nested.iterationPath, '[0][1]');
     assert.equal(advanced.counters, original.counters);
     assert.equal(nested.counters, advanced.counters);
+  });
+
+  it('rebases iteration path without dropping accumulated counters', () => {
+    const inLoop = withIterationSegment(emptyScope(), 0);
+    const advanced = advanceScope(inLoop, 'decision:train', 'Saigon');
+    const rebound = rebaseIterationPath(advanced.scope, '');
+
+    assert.equal(rebound.iterationPath, '');
+    assert.deepEqual(rebound.counters, {
+      'decision:train::Saigon[0]': 1,
+    });
+    assert.notEqual(rebound, advanced.scope);
   });
 
   it('advances occurrence counters immutably for repeated calls with the same base key', () => {

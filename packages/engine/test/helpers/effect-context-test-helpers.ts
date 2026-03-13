@@ -10,7 +10,7 @@ import {
 import { createCollector } from '../../src/kernel/execution-collector.js';
 import type { FreeOperationExecutionOverlay } from '../../src/kernel/free-operation-overlay.js';
 import { createRng } from '../../src/kernel/prng.js';
-import { emptyScope, type DecisionScope } from '../../src/kernel/decision-scope.js';
+import { emptyScope, withIterationSegment, type DecisionScope } from '../../src/kernel/decision-scope.js';
 import { buildAdjacencyGraph } from '../../src/kernel/spatial.js';
 import type { RuntimeTableIndex } from '../../src/kernel/runtime-table-index.js';
 import type { AdjacencyGraph } from '../../src/kernel/spatial.js';
@@ -101,10 +101,7 @@ const makeRuntimeEffectContextOptions = ({
     }
     const indices = [...iterationPath.matchAll(/\[(\d+)\]/gu)].map((match) => Number.parseInt(match[1]!, 10));
     return indices.reduce<DecisionScope>(
-      (scope, index) => ({
-        iterationPath: `${scope.iterationPath}[${index}]`,
-        counters: scope.counters,
-      }),
+      (scope, index) => withIterationSegment(scope, index),
       emptyScope(),
     );
   })(),

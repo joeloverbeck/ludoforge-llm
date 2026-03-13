@@ -229,6 +229,84 @@ describe('effects control-flow handlers', () => {
     ]);
   });
 
+  it('forEach resolves iteration-scoped decision keys during execution', () => {
+    const ctx = makeCtx({
+      moveParams: {
+        'decision:$pick[0]': 'alpha',
+        'decision:$pick[1]': 'beta',
+      },
+    });
+    const effect: EffectAST = {
+      forEach: {
+        bind: '$n',
+        over: { query: 'intsInRange', min: 1, max: 2 },
+        effects: [
+          {
+            chooseOne: {
+              internalDecisionId: 'decision:$pick',
+              bind: '$pick',
+              options: { query: 'enums', values: ['alpha', 'beta'] },
+            },
+          },
+          {
+            if: {
+              when: { op: '==', left: { ref: 'binding', name: '$pick' }, right: 'alpha' },
+              then: [{ addVar: { scope: 'global', var: 'sum', delta: 1 } }],
+              else: [{ addVar: { scope: 'global', var: 'sum', delta: 10 } }],
+            },
+          },
+        ],
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.globalVars.sum, 11);
+  });
+
+  it('nested forEach resolves nested iteration-scoped decision keys during execution', () => {
+    const ctx = makeCtx({
+      moveParams: {
+        'decision:$pick[0][0]': 'alpha',
+        'decision:$pick[0][1]': 'beta',
+        'decision:$pick[1][0]': 'beta',
+        'decision:$pick[1][1]': 'alpha',
+      },
+    });
+    const effect: EffectAST = {
+      forEach: {
+        bind: '$outer',
+        over: { query: 'intsInRange', min: 1, max: 2 },
+        effects: [
+          {
+            forEach: {
+              bind: '$inner',
+              over: { query: 'intsInRange', min: 1, max: 2 },
+              effects: [
+                {
+                  chooseOne: {
+                    internalDecisionId: 'decision:$pick',
+                    bind: '$pick',
+                    options: { query: 'enums', values: ['alpha', 'beta'] },
+                  },
+                },
+                {
+                  if: {
+                    when: { op: '==', left: { ref: 'binding', name: '$pick' }, right: 'alpha' },
+                    then: [{ addVar: { scope: 'global', var: 'sum', delta: 1 } }],
+                    else: [{ addVar: { scope: 'global', var: 'sum', delta: 10 } }],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.globalVars.sum, 22);
+  });
+
   it('forEach throws runtime error for invalid limit values', () => {
     const ctx = makeCtx();
 

@@ -1,6 +1,6 @@
 # UNICOMGAMPLAAIAGE-003: Observation Projection Utilities
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new shared kernel file
@@ -41,7 +41,7 @@ Visibility rules to implement:
 - `public` zones: all tokens visible to all players.
 - `owner` zones: tokens visible only to zone owner (matched by `ownerPlayerIndex` against `observer`).
 - `hidden` zones: no tokens visible unless reveal grants apply.
-- Dynamic `RevealGrant`s: grants in `state.revealGrants` that include the observer expand visibility.
+- Dynamic `RevealGrant`s: grants in `state.reveals` that include the observer expand visibility.
 - Filtered reveals: reveal grants with `filter` only expose tokens matching the filter.
 - `requiresHiddenSampling` = true if any zone has tokens the observer cannot see.
 
@@ -92,3 +92,13 @@ Add `export * from './observation.js';`
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/test/unit/kernel/observation.test.ts`
 2. `pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-13
+- **What changed**:
+  - Created `packages/engine/src/kernel/observation.ts` — `PlayerObservation` interface and `derivePlayerObservation` pure function
+  - Added `export * from './observation.js'` to `packages/engine/src/kernel/index.ts`
+  - Created `packages/engine/test/unit/kernel/observation.test.ts` — 12 tests covering all acceptance criteria
+- **Deviations**: Ticket description referenced `state.revealGrants` but the actual field is `state.reveals`; corrected in ticket before implementation. No code deviations.
+- **Verification**: `pnpm turbo test --force` all pass, `pnpm turbo lint` 0 errors, `pnpm turbo typecheck` 0 errors

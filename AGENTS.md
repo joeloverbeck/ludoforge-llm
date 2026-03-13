@@ -54,7 +54,7 @@ For documentation updates:
 - Use concise Markdown with clear headings and short sections.
 - Keep spec filenames numeric and ordered (example: `specs/08b-game-spec-compiler.md`).
 - Preserve deterministic terminology (`GameDef`, `GameSpecDoc`, `GameTrace`) exactly.
-- For Fire in the Lake event authoring guidance, use `docs/fitl-event-authoring-cookbook.md`; treat `specs/29-fitl-event-card-encoding.md` as historical implementation tracking, not the living authoring guide.
+- For Fire in the Lake event authoring guidance, use `docs/fitl-event-authoring-cookbook.md`; treat `archive/specs/29-fitl-event-card-encoding.md` as historical implementation tracking, not the living authoring guide.
 
 For TypeScript code:
 - strict TypeScript, immutable state updates, side-effect-free kernel logic.

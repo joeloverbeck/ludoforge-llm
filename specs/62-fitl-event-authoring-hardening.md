@@ -36,11 +36,11 @@ The current architecture is close to correct, but the authoring layer is still u
 1. Authors can use intuitive but unsupported token-reference shapes and only discover the correct form after compiler iteration.
 2. Reusable FITL event patterns are still encoded too often as open-coded effect sequences instead of macro-level verbs.
 3. Event fidelity tests are not yet standardized enough to catch subtle rule drift early.
-4. `specs/29-fitl-event-card-encoding.md` is an implementation holdout from the failed “encode everything at once” push and should not remain the long-term home for an event-authoring cookbook.
+4. `archive/specs/29-fitl-event-card-encoding.md` is the archived implementation holdout from the failed “encode everything at once” push and should not remain the long-term home for an event-authoring cookbook.
 
 ## Architecture Direction
 
-### 1. Move cookbook guidance out of `specs/29-fitl-event-card-encoding.md`
+### 1. Move cookbook guidance out of archived Spec 29
 
 Create a dedicated cookbook in `docs/` for Fire in the Lake event authoring patterns. That cookbook should become the canonical guidance for:
 
@@ -51,7 +51,7 @@ Create a dedicated cookbook in `docs/` for Fire in the Lake event authoring patt
 - terrain/country filtering patterns
 - chooser ownership and pending-decision expectations
 
-`specs/29-fitl-event-card-encoding.md` should be archived after its living guidance is migrated or superseded.
+`archive/specs/29-fitl-event-card-encoding.md` should remain archived now that its living guidance has been migrated or superseded.
 
 ### 2. Expand FITL macros instead of adding FITL engine primitives
 
@@ -98,11 +98,11 @@ Rework target:
 
 - `data/games/fire-in-the-lake/20-macros.md`
 - targeted FITL event test files that should migrate to the new helper pattern
-- repository guidance documents such as `AGENTS.md` and `CLAUDE.md` so they point to the cookbook rather than to `specs/29-fitl-event-card-encoding.md`
+- repository guidance documents such as `AGENTS.md` and `CLAUDE.md` so they point to the cookbook rather than to active Spec 29 guidance
 
 ### Archive
 
-- `specs/29-fitl-event-card-encoding.md` once its still-useful guidance has been migrated or explicitly replaced
+- `archive/specs/29-fitl-event-card-encoding.md` as historical reference only, once its still-useful guidance has been migrated or explicitly replaced
 
 ## Acceptance Criteria
 

@@ -18,6 +18,7 @@ The runner tightly couples to `ChoicePendingRequest` shape. After collapsing occ
 4. `derive-render-model.ts` passes `decisionId` to `parseIterationContext()` — confirmed, update to `decisionKey`.
 5. Worker bridge passes `Move`/`ChoiceRequest` transparently — confirmed, no changes needed.
 6. `ChoicePanel.tsx` receives render model which abstracts key format — confirmed, minimal or no changes.
+7. Runner code/tests must not assume every `DecisionKey` starts with `decision:`: simple static binds now serialize as raw keys like `$target`, while templated authored decision ids still keep the `decision:...::resolvedBind` shape.
 
 ## Architecture Check
 

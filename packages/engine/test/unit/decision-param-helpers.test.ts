@@ -368,7 +368,7 @@ describe('decision param helper', () => {
     );
 
     const repeatedChoices = Object.entries(resolved.params)
-      .filter(([decisionKey]) => decisionKey.includes('decision:$mode'))
+      .filter(([decisionKey]) => decisionKey.includes('$mode'))
       .map((entry) => String(entry[1]));
     assert.deepEqual(repeatedChoices, ['hold', 'advance']);
   });
@@ -380,7 +380,7 @@ describe('decision param helper', () => {
       makeMove(),
     );
     const repeatedDecisionIds = Object.keys(baseline.params)
-      .filter((decisionKey) => decisionKey.includes('decision:$mode'));
+      .filter((decisionKey) => decisionKey.includes('$mode'));
     assert.equal(repeatedDecisionIds.length, 2);
 
     const resolved = normalizeDecisionParamsForMove(
@@ -422,14 +422,14 @@ describe('decision param helper', () => {
 
     assert.equal(typeof resolved.params.$roll, 'number');
     if (resolved.params.$roll === 1) {
-      assert.equal(resolved.params['decision:$alpha'], 'a1');
-      assert.equal(Object.prototype.hasOwnProperty.call(resolved.params, 'decision:$beta'), false);
+      assert.equal(resolved.params['$alpha'], 'a1');
+      assert.equal(Object.prototype.hasOwnProperty.call(resolved.params, '$beta'), false);
       return;
     }
 
     assert.equal(resolved.params.$roll, 2);
-    assert.equal(resolved.params['decision:$beta'], 'b1');
-    assert.equal(Object.prototype.hasOwnProperty.call(resolved.params, 'decision:$alpha'), false);
+    assert.equal(resolved.params['$beta'], 'b1');
+    assert.equal(Object.prototype.hasOwnProperty.call(resolved.params, '$alpha'), false);
   });
 
   it('fails with diagnostics when canonical selection cannot resolve a pending decision', () => {
@@ -459,7 +459,7 @@ describe('decision param helper', () => {
 
     assert.throws(
       () => normalizeDecisionParamsForMove(unresolvedDef, makeBaseState(), makeMove()),
-      /Could not normalize decision params for actionId=nested-choice-op: unresolved decisionKey=decision:\$target name=\$target type=chooseOne options=0 min=0/,
+      /Could not normalize decision params for actionId=nested-choice-op: unresolved decisionKey=\$target name=\$target type=chooseOne options=0 min=0/,
     );
   });
 

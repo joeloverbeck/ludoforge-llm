@@ -117,7 +117,7 @@ phase: [asPhaseId('main')],
     const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
     const result = resolveMoveDecisionSequence(def, makeBaseState(), makeMove('choose-one-op'));
     assert.equal(result.complete, true);
-    assert.equal(result.move.params['decision:$target'], 'a');
+    assert.equal(result.move.params['$target'], 'a');
   });
 
   it('does not satisfy a DecisionKey choice from a legacy bind-name param alias', () => {
@@ -162,7 +162,7 @@ phase: [asPhaseId('main')],
       makeBaseState(),
       {
         actionId: asActionId('legacy-alias-op'),
-        params: { $target: 'a' },
+        params: { 'decision:$target': 'a' },
       },
       {
         choose: () => undefined,
@@ -170,15 +170,15 @@ phase: [asPhaseId('main')],
     );
 
     assert.equal(result.complete, false);
-    assert.equal(result.nextDecision?.decisionKey, 'decision:$target');
-    assert.deepEqual(result.move.params, { $target: 'a' });
+    assert.equal(result.nextDecision?.decisionKey, '$target');
+    assert.deepEqual(result.move.params, { 'decision:$target': 'a' });
   });
 
   it('default chooser follows canonical legality precedence', () => {
     const request: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
-      decisionKey: asDecisionKey('decision:$mode'),
+      decisionKey: asDecisionKey('$mode'),
       name: '$mode',
       type: 'chooseOne',
       options: [
@@ -229,7 +229,7 @@ phase: [asPhaseId('main')],
 
     assert.equal(result.complete, false);
     const nestedDecision = result.nextDecision ?? result.nextDecisionSet?.[0];
-    assert.equal(nestedDecision?.decisionKey, 'decision:$target');
+    assert.equal(nestedDecision?.decisionKey, '$target');
     assert.deepEqual(nestedDecision?.options.map((option) => option.value), ['a', 'b']);
   });
 
@@ -287,7 +287,7 @@ phase: [asPhaseId('main')],
     assert.equal(result.complete, false);
     assert.equal(result.nextDecision, undefined);
     assert.equal(result.stochasticDecision?.kind, 'pendingStochastic');
-    assert.deepEqual(result.nextDecisionSet?.map((request) => request.decisionKey), ['decision:$alpha', 'decision:$beta']);
+    assert.deepEqual(result.nextDecisionSet?.map((request) => request.decisionKey), ['$alpha', '$beta']);
   });
 
   it('returns stochastic alternatives when rollRandom outcomes change exact chooseN cardinality for the same decision', () => {
@@ -337,8 +337,8 @@ phase: [asPhaseId('main')],
         max: request.max,
       })),
       [
-        { decisionKey: 'decision:$targets', min: 1, max: 1 },
-        { decisionKey: 'decision:$targets', min: 2, max: 2 },
+        { decisionKey: '$targets', min: 1, max: 1 },
+        { decisionKey: '$targets', min: 2, max: 2 },
       ],
     );
   });
@@ -499,7 +499,7 @@ phase: [asPhaseId('main')],
       choose: (request) => request.options[2]?.value,
     });
     assert.equal(result.complete, true);
-    assert.equal(result.move.params['decision:$target'], 'c');
+    assert.equal(result.move.params['$target'], 'c');
   });
 
   it('returns incomplete with warning when decision probe step budget is exceeded', () => {
@@ -954,7 +954,7 @@ phase: [asPhaseId('main')],
     );
 
     assert.equal(result.complete, false);
-    assert.equal(result.nextDecision?.decisionKey, 'decision:$zone');
+    assert.equal(result.nextDecision?.decisionKey, '$zone');
     assert.deepEqual(result.nextDecision?.options.map((option) => option.value), ['board:cambodia']);
   });
 
@@ -1059,7 +1059,7 @@ phase: [asPhaseId('main')],
     );
 
     assert.equal(result.complete, false);
-    assert.equal(result.nextDecision?.decisionKey, 'decision:$targetProvince');
+    assert.equal(result.nextDecision?.decisionKey, '$targetProvince');
     assert.deepEqual(result.nextDecision?.options.map((option) => option.value), ['board:cambodia']);
   });
 
@@ -1164,7 +1164,7 @@ phase: [asPhaseId('main')],
     );
 
     assert.equal(result.complete, false);
-    assert.equal(result.nextDecision?.decisionKey, 'decision:$targetProvince');
+    assert.equal(result.nextDecision?.decisionKey, '$targetProvince');
     assert.deepEqual(result.nextDecision?.options.map((option) => option.value), ['board:cambodia', 'board:vietnam']);
   });
 
@@ -1279,7 +1279,7 @@ phase: [asPhaseId('main')],
     );
 
     assert.equal(result.complete, false);
-    assert.equal(result.nextDecision?.decisionKey, 'decision:$targetProvince');
+    assert.equal(result.nextDecision?.decisionKey, '$targetProvince');
     assert.deepEqual(result.nextDecision?.options.map((option) => option.value), ['board:cambodia']);
   });
 
@@ -1378,7 +1378,7 @@ phase: [asPhaseId('main')],
 
     const result = resolveMoveDecisionSequence(def, state, {
       actionId: asActionId('operation'),
-      params: { 'decision:$zone': 'board:vietnam' },
+      params: { '$zone': 'board:vietnam' },
       freeOperation: true,
     });
     assert.equal(result.complete, false);
@@ -1455,7 +1455,7 @@ phase: [asPhaseId('main')],
 
     const result = resolveMoveDecisionSequence(def, state, {
       actionId: asActionId('operation'),
-      params: { 'decision:$zone': SEQUENCE_CONTEXT_DENIED_ZONE_ID },
+      params: { '$zone': SEQUENCE_CONTEXT_DENIED_ZONE_ID },
       freeOperation: true,
     });
     assert.equal(result.complete, false);
@@ -1490,7 +1490,7 @@ phase: [asPhaseId('main')],
 
       const resolved = resolveMoveDecisionSequence(def, state, {
         actionId: asActionId(actionId),
-        params: { 'decision:$target': ownershipSelection(primitive, 'a') },
+        params: { '$target': ownershipSelection(primitive, 'a') },
       });
       assert.equal(resolved.complete, true, `Expected cross-seat ${primitive} resolution to complete`);
     }
@@ -1532,7 +1532,7 @@ phase: [asPhaseId('main')],
 
       const resolved = resolveMoveDecisionSequence(def, state, {
         actionId: asActionId(actionId),
-        params: { 'decision:$target': ownershipSelection(primitive, 'a') },
+        params: { '$target': ownershipSelection(primitive, 'a') },
       });
       assert.equal(resolved.complete, true, `Expected cross-seat pipeline ${primitive} resolution to complete`);
     }

@@ -118,12 +118,12 @@ describe('choice authority runtime invariants', () => {
   describe('implicit chooser (default active) enforces authority mismatch', () => {
     it('emits choiceProbeAuthorityMismatch in discovery+probe when authority differs from active player', () => {
       for (const primitive of primitives) {
-        const effect = buildImplicitChooserEffect(primitive, 'decision:$target', '$target', ['a', 'b']);
+        const effect = buildImplicitChooserEffect(primitive, '$target', '$target', ['a', 'b']);
         const context = makeDiscoveryProbeEffectContext({
           def: makeDef([effect]),
           state: makeState(),
           decisionAuthorityPlayer: CHOICE_OWNER_PLAYER,
-          moveParams: { 'decision:$target': ownershipSelection(primitive, 'a') },
+          moveParams: { '$target': ownershipSelection(primitive, 'a') },
           collector: createCollector(),
         });
 
@@ -136,12 +136,12 @@ describe('choice authority runtime invariants', () => {
 
     it('emits choiceRuntimeValidationFailed in discovery+strict when authority differs from active player', () => {
       for (const primitive of primitives) {
-        const effect = buildImplicitChooserEffect(primitive, 'decision:$target', '$target', ['a', 'b']);
+        const effect = buildImplicitChooserEffect(primitive, '$target', '$target', ['a', 'b']);
         const context = makeDiscoveryEffectContext({
           def: makeDef([effect]),
           state: makeState(),
           decisionAuthorityPlayer: CHOICE_OWNER_PLAYER,
-          moveParams: { 'decision:$target': ownershipSelection(primitive, 'a') },
+          moveParams: { '$target': ownershipSelection(primitive, 'a') },
           collector: createCollector(),
         });
 
@@ -154,12 +154,12 @@ describe('choice authority runtime invariants', () => {
 
     it('emits choiceRuntimeValidationFailed in execution+strict when authority differs from active player', () => {
       for (const primitive of primitives) {
-        const effect = buildImplicitChooserEffect(primitive, 'decision:$target', '$target', ['a', 'b']);
+        const effect = buildImplicitChooserEffect(primitive, '$target', '$target', ['a', 'b']);
         const context = makeExecutionEffectContext({
           def: makeDef([effect]),
           state: makeState(),
           decisionAuthorityPlayer: CHOICE_OWNER_PLAYER,
-          moveParams: { 'decision:$target': ownershipSelection(primitive, 'a') },
+          moveParams: { '$target': ownershipSelection(primitive, 'a') },
           collector: createCollector(),
         });
 
@@ -172,8 +172,8 @@ describe('choice authority runtime invariants', () => {
 
     it('keeps discovery ownership-enforcement parity between applyEffect and applyEffects', () => {
       for (const primitive of primitives) {
-        const effect = buildImplicitChooserEffect(primitive, 'decision:$target', '$target', ['a', 'b']);
-        const moveParams = { 'decision:$target': ownershipSelection(primitive, 'a') };
+        const effect = buildImplicitChooserEffect(primitive, '$target', '$target', ['a', 'b']);
+        const moveParams = { '$target': ownershipSelection(primitive, 'a') };
 
         const probeContext = makeDiscoveryProbeEffectContext({
           def: makeDef([effect]),
@@ -217,7 +217,7 @@ describe('choice authority runtime invariants', () => {
         const context = makeDiscoveryProbeEffectContext({
           def: makeDef([effect]),
           state: makeState(),
-          moveParams: { 'decision:$target': ownershipSelection(primitive, 'a') },
+          moveParams: { '$target': ownershipSelection(primitive, 'a') },
           collector: createCollector(),
         });
 
@@ -232,7 +232,7 @@ describe('choice authority runtime invariants', () => {
         const context = makeDiscoveryEffectContext({
           def: makeDef([effect]),
           state: makeState(),
-          moveParams: { 'decision:$target': ownershipSelection(primitive, 'a') },
+          moveParams: { '$target': ownershipSelection(primitive, 'a') },
           collector: createCollector(),
         });
 
@@ -247,7 +247,7 @@ describe('choice authority runtime invariants', () => {
         const context = makeExecutionEffectContext({
           def: makeDef([effect]),
           state: makeState(),
-          moveParams: { 'decision:$target': ownershipSelection(primitive, 'a') },
+          moveParams: { '$target': ownershipSelection(primitive, 'a') },
           collector: createCollector(),
         });
 
@@ -259,7 +259,7 @@ describe('choice authority runtime invariants', () => {
     it('keeps cross-seat parity between applyEffect and applyEffects', () => {
       for (const primitive of primitives) {
         const effect = buildChooserOwnedChoiceEffect(primitive, 'decision:$target', '$target', ['a', 'b']);
-        const moveParams = { 'decision:$target': ownershipSelection(primitive, 'a') };
+        const moveParams = { '$target': ownershipSelection(primitive, 'a') };
 
         const probeContext = makeDiscoveryProbeEffectContext({
           def: makeDef([effect]),
@@ -294,7 +294,7 @@ describe('choice authority runtime invariants', () => {
         state: makeState(),
         activePlayer: asPlayerId(0),
         decisionAuthorityPlayer: CHOICE_OWNER_PLAYER,
-        moveParams: { 'decision:$target': ownershipSelection(primitive, 'a') },
+        moveParams: { '$target': ownershipSelection(primitive, 'a') },
         collector: createCollector(),
       });
 

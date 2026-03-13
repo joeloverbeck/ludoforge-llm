@@ -489,7 +489,7 @@ phase: [asPhaseId('main')],
   it('accepts cross-seat chooser-owned submissions across choice primitives without caller override options', () => {
     for (const primitive of ownershipPrimitives) {
       const actionId = `decide-${primitive}`;
-      const decisionKey = 'decision:$pick';
+      const decisionKey = '$pick';
       const def: GameDef = {
         metadata: { id: `non-pipeline-choice-owner-${primitive}`, players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
         constants: {},
@@ -549,7 +549,7 @@ phase: [asPhaseId('main')],
   it('accepts cross-seat chooser-owned submissions for pipeline-generated decisions across choice primitives', () => {
     for (const primitive of ownershipPrimitives) {
       const actionId = `pipeline-decide-${primitive}`;
-      const decisionKey = 'decision:$pick';
+      const decisionKey = '$pick';
       const def: GameDef = {
         metadata: { id: `pipeline-choice-owner-${primitive}`, players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
         constants: {},
@@ -2756,7 +2756,7 @@ phase: [asPhaseId('main')],
         const details = error as { readonly code?: string; readonly reason?: string; readonly context?: { readonly nextDecisionKey?: string } };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS);
-        assert.equal(details.context?.nextDecisionKey, 'decision:$delta');
+        assert.equal(details.context?.nextDecisionKey, '$delta');
         return true;
       },
     );
@@ -2783,7 +2783,7 @@ phase: [asPhaseId('main')],
         const details = error as { readonly code?: string; readonly reason?: string; readonly context?: { readonly nextDecisionKey?: string } };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS);
-        assert.equal(details.context?.nextDecisionKey, 'decision:$delta');
+        assert.equal(details.context?.nextDecisionKey, '$delta');
         return true;
       },
     );
@@ -2800,7 +2800,7 @@ phase: [asPhaseId('main')],
         const details = error as { readonly code?: string; readonly reason?: string; readonly context?: { readonly nextDecisionKey?: string } };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS);
-        assert.equal(details.context?.nextDecisionKey, 'decision:$delta');
+        assert.equal(details.context?.nextDecisionKey, '$delta');
         return true;
       },
     );
@@ -2817,7 +2817,7 @@ phase: [asPhaseId('main')],
         const details = error as { readonly code?: string; readonly reason?: string; readonly context?: { readonly nextDecisionKey?: string } };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS);
-        assert.equal(details.context?.nextDecisionKey, 'decision:$opDelta');
+        assert.equal(details.context?.nextDecisionKey, '$opDelta');
         return true;
       },
     );
@@ -2828,7 +2828,7 @@ phase: [asPhaseId('main')],
     const state = createEventDynamicDecisionState();
 
     assert.throws(
-      () => applyMove(def, state, { actionId: asActionId('event'), params: { 'decision:$delta': 99 } }),
+      () => applyMove(def, state, { actionId: asActionId('event'), params: { '$delta': 99 } }),
       (error: unknown) => {
         const details = error as { readonly code?: string; readonly reason?: string };
         assert.equal(details.code, 'ILLEGAL_MOVE');
@@ -2843,7 +2843,7 @@ phase: [asPhaseId('main')],
     const state = createEventDynamicDecisionState();
 
     assert.throws(
-      () => applyMove(def, state, { actionId: asActionId('event'), params: { 'decision:$targets': ['alpha'] } }),
+      () => applyMove(def, state, { actionId: asActionId('event'), params: { '$targets': ['alpha'] } }),
       (error: unknown) => {
         const details = error as { readonly code?: string; readonly reason?: string; readonly context?: { readonly detail?: string } };
         assert.equal(details.code, 'ILLEGAL_MOVE');
@@ -2854,7 +2854,7 @@ phase: [asPhaseId('main')],
     );
 
     assert.throws(
-      () => applyMove(def, state, { actionId: asActionId('event'), params: { 'decision:$targets': ['alpha', 'delta'] } }),
+      () => applyMove(def, state, { actionId: asActionId('event'), params: { '$targets': ['alpha', 'delta'] } }),
       (error: unknown) => {
         const details = error as { readonly code?: string; readonly reason?: string; readonly context?: { readonly detail?: string } };
         assert.equal(details.code, 'ILLEGAL_MOVE');
@@ -2873,7 +2873,7 @@ phase: [asPhaseId('main')],
       () =>
         applyMove(def, state, {
           actionId: asActionId('event'),
-          params: { ticket: 'not-ok', 'decision:$delta': 1 },
+          params: { ticket: 'not-ok', '$delta': 1 },
         }),
       (error: unknown) => {
         const details = error as { readonly code?: string; readonly reason?: string; readonly context?: { readonly code?: string } };

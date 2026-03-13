@@ -26,12 +26,6 @@ const toDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 const splitDecisionBase = (base: string): { readonly baseId: string; readonly resolvedBind: string } => {
   const separatorIndex = base.indexOf('::');
   if (separatorIndex < 0) {
-    if (base.startsWith('decision:$')) {
-      return {
-        baseId: base,
-        resolvedBind: base.slice('decision:'.length),
-      };
-    }
     return {
       baseId: base,
       resolvedBind: base,
@@ -70,7 +64,7 @@ export const formatDecisionKey = (
       return `${resolvedBind}${iterationPath}`;
     }
     if (internalDecisionId === `decision:${resolvedBind}`) {
-      return `${internalDecisionId}${iterationPath}`;
+      return `${resolvedBind}${iterationPath}`;
     }
     if (internalDecisionId.endsWith(`::${resolvedBind}`)) {
       return `${internalDecisionId}${iterationPath}`;

@@ -16,6 +16,7 @@
 2. `normalizeDecisionParamsForMove()` in helpers uses a 6-step fallback chain to match input hints to canonical decision ids — confirmed, replace with direct `DecisionKey` usage.
 3. Many test files construct `ChoicePendingRequest` objects with old occurrence fields — need comprehensive grep to find all instances.
 4. FITL integration tests and e2e tests use `decision-param-helpers` heavily — confirmed.
+5. Canonical `DecisionKey` serialization is shape-sensitive: true simple static binds collapse to raw keys like `$target`, while templated authored decision ids remain `decision:...::resolvedBind` — confirmed by the current codec and must be reflected in migrated tests/helpers.
 
 ## Architecture Check
 

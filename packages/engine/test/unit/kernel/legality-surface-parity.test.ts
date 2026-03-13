@@ -575,7 +575,7 @@ describe('legality surface parity', () => {
     });
     const deniedMove: Move = {
       actionId: operationActionId,
-      params: { 'decision:$zone': SEQUENCE_CONTEXT_DENIED_ZONE_ID },
+      params: { '$zone': SEQUENCE_CONTEXT_DENIED_ZONE_ID },
       freeOperation: true,
     };
 
@@ -1292,7 +1292,7 @@ describe('legality surface parity', () => {
     assert.deepEqual(trace.map((step) => step.requestKind), ['pending', 'pending', 'complete']);
     assert.deepEqual(
       trace.filter((step) => step.requestKind === 'pending').map((step) => step.decisionKey),
-      ['decision:$mode', 'decision:$token'],
+      ['$mode', '$token'],
     );
   });
 
@@ -1352,7 +1352,7 @@ describe('legality surface parity', () => {
     assert.deepEqual(trace.map((step) => step.requestKind), ['pending', 'pending', 'complete']);
     assert.deepEqual(
       trace.filter((step) => step.requestKind === 'pending').map((step) => step.decisionKey),
-      ['decision:$branch', 'decision:$targets'],
+      ['$branch', '$targets'],
     );
   });
 
@@ -1401,7 +1401,7 @@ describe('legality surface parity', () => {
 
     assert.throws(
       () => assertLegalitySurfaceParityForMove(def, state, move),
-      /surface=legalChoices step=0 actionId=op: no value selected for pending decision decision:\$target/,
+      /surface=legalChoices step=0 actionId=op: no value selected for pending decision \$target/,
     );
   });
 });

@@ -109,7 +109,7 @@ const makeDiscoveryProbeCtx = (overrides?: EffectContextTestOverrides): EffectCo
 
 describe('effects choice assertions', () => {
   it('chooseOne succeeds when selected move param is in evaluated domain', () => {
-    const ctx = makeCtx({ moveParams: { 'decision:$choice': 'beta' } });
+    const ctx = makeCtx({ moveParams: { '$choice': 'beta' } });
     const effect: EffectAST = {
       chooseOne: {
         internalDecisionId: 'decision:$choice',
@@ -154,7 +154,7 @@ describe('effects choice assertions', () => {
       throw new Error('expected pending choice');
     }
     assert.equal(result.pendingChoice.type, 'chooseOne');
-    assert.equal(result.pendingChoice.decisionKey, 'decision:$choice');
+    assert.equal(result.pendingChoice.decisionKey, '$choice');
     assert.deepEqual(result.pendingChoice.options, [
       { value: 'alpha', legality: 'unknown', illegalReason: null },
       { value: 'beta', legality: 'unknown', illegalReason: null },
@@ -176,7 +176,7 @@ describe('effects choice assertions', () => {
     if (result.pendingChoice?.kind !== 'pending') {
       throw new Error('expected pending choice');
     }
-    assert.equal(result.pendingChoice.decisionKey, 'decision:$choice[2]');
+    assert.equal(result.pendingChoice.decisionKey, '$choice[2]');
   });
 
   it('chooseOne appends iterationPath to templated decision IDs in discovery mode', () => {
@@ -222,7 +222,7 @@ describe('effects choice assertions', () => {
   it('chooseOne threads scope across sequential effects and requires #2 for the second occurrence', () => {
     const ctx = makeCtx({
       moveParams: {
-        'decision:$choice': 'alpha',
+        '$choice': 'alpha',
       },
     });
     const effects: readonly EffectAST[] = [
@@ -244,7 +244,7 @@ describe('effects choice assertions', () => {
 
     assert.throws(() => applyEffects(effects, ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME')
-        && String(error).includes('decision:$choice#2');
+        && String(error).includes('$choice#2');
     });
   });
 
@@ -266,12 +266,12 @@ describe('effects choice assertions', () => {
     if (first.pendingChoice?.kind !== 'pending' || second.pendingChoice?.kind !== 'pending') {
       throw new Error('expected pending choices');
     }
-    assert.equal(first.pendingChoice.decisionKey, 'decision:$choice');
-    assert.equal(second.pendingChoice.decisionKey, 'decision:$choice');
+    assert.equal(first.pendingChoice.decisionKey, '$choice');
+    assert.equal(second.pendingChoice.decisionKey, '$choice');
   });
 
   it('chooseOne throws when selected value is outside domain', () => {
-    const ctx = makeCtx({ moveParams: { 'decision:$choice': 'delta' } });
+    const ctx = makeCtx({ moveParams: { '$choice': 'delta' } });
     const effect: EffectAST = {
       chooseOne: {
         internalDecisionId: 'decision:$choice',
@@ -288,7 +288,7 @@ describe('effects choice assertions', () => {
   it('chooseOne owner mismatch emits strict validation reason in strict discovery contexts', () => {
     const ctx = makeDiscoveryCtx({
       decisionAuthorityPlayer: asPlayerId(1),
-      moveParams: { 'decision:$choice': 'alpha' },
+      moveParams: { '$choice': 'alpha' },
     });
     const effect: EffectAST = {
       chooseOne: {
@@ -306,7 +306,7 @@ describe('effects choice assertions', () => {
   it('chooseOne owner mismatch emits probe reason in probe discovery contexts', () => {
     const ctx = makeDiscoveryProbeCtx({
       decisionAuthorityPlayer: asPlayerId(1),
-      moveParams: { 'decision:$choice': 'alpha' },
+      moveParams: { '$choice': 'alpha' },
     });
     const effect: EffectAST = {
       chooseOne: {
@@ -352,7 +352,7 @@ describe('effects choice assertions', () => {
         ...makeState(),
         globalMarkers: { cap_topGun: 'unshaded', cap_migs: 'inactive' },
       },
-      moveParams: { 'decision:$marker': 'cap_topGun' },
+      moveParams: { '$marker': 'cap_topGun' },
     });
     const effect: EffectAST = {
       chooseOne: {
@@ -391,7 +391,7 @@ describe('effects choice assertions', () => {
     };
     const ctx = makeCtx({
       def,
-      moveParams: { 'decision:$row': 'irrelevant' },
+      moveParams: { '$row': 'irrelevant' },
     });
     const effect: EffectAST = {
       chooseOne: {
@@ -407,7 +407,7 @@ describe('effects choice assertions', () => {
   });
 
   it('chooseN succeeds for exact-length unique in-domain array', () => {
-    const ctx = makeCtx({ moveParams: { 'decision:$picks': ['alpha', 'gamma'] } });
+    const ctx = makeCtx({ moveParams: { '$picks': ['alpha', 'gamma'] } });
     const effect: EffectAST = {
       chooseN: {
         internalDecisionId: 'decision:$picks',
@@ -437,7 +437,7 @@ describe('effects choice assertions', () => {
           'hand:0': [token],
         },
       },
-      moveParams: { 'decision:$picks': [asTokenId('tok-1')] },
+      moveParams: { '$picks': [asTokenId('tok-1')] },
     });
     const chooseEffect: EffectAST = {
       chooseN: {
@@ -484,7 +484,7 @@ describe('effects choice assertions', () => {
           'hand:0': [tokenA, tokenB],
         },
       },
-      moveParams: { 'decision:$pick': asTokenId('tok-1') },
+      moveParams: { '$pick': asTokenId('tok-1') },
     });
     const effect: EffectAST = {
       chooseOne: {
@@ -516,7 +516,7 @@ describe('effects choice assertions', () => {
           'hand:0': [tokenA, tokenB],
         },
       },
-      moveParams: { 'decision:$picks': [asTokenId('tok-1')] },
+      moveParams: { '$picks': [asTokenId('tok-1')] },
     });
     const effect: EffectAST = {
       chooseN: {
@@ -571,13 +571,13 @@ describe('effects choice assertions', () => {
     if (result.pendingChoice?.kind !== 'pending') {
       throw new Error('expected pending choice');
     }
-    assert.equal(result.pendingChoice.decisionKey, 'decision:$picks[1]');
+    assert.equal(result.pendingChoice.decisionKey, '$picks[1]');
   });
 
   it('chooseN execution appends iterationPath to static decision IDs', () => {
     const ctx = makeCtx({
       iterationPath: '[1]',
-      moveParams: { 'decision:$picks[1]': ['alpha'] },
+      moveParams: { '$picks[1]': ['alpha'] },
     });
     const effect: EffectAST = {
       chooseN: {
@@ -594,7 +594,7 @@ describe('effects choice assertions', () => {
   });
 
   it('chooseN throws on duplicate selections', () => {
-    const ctx = makeCtx({ moveParams: { 'decision:$picks': ['alpha', 'alpha'] } });
+    const ctx = makeCtx({ moveParams: { '$picks': ['alpha', 'alpha'] } });
     const effect: EffectAST = {
       chooseN: {
         internalDecisionId: 'decision:$picks',
@@ -610,7 +610,7 @@ describe('effects choice assertions', () => {
   });
 
   it('chooseN throws on wrong cardinality', () => {
-    const ctx = makeCtx({ moveParams: { 'decision:$picks': ['alpha'] } });
+    const ctx = makeCtx({ moveParams: { '$picks': ['alpha'] } });
     const effect: EffectAST = {
       chooseN: {
         internalDecisionId: 'decision:$picks',
@@ -626,7 +626,7 @@ describe('effects choice assertions', () => {
   });
 
   it('chooseN throws on out-of-domain selections', () => {
-    const ctx = makeCtx({ moveParams: { 'decision:$picks': ['alpha', 'delta'] } });
+    const ctx = makeCtx({ moveParams: { '$picks': ['alpha', 'delta'] } });
     const effect: EffectAST = {
       chooseN: {
         internalDecisionId: 'decision:$picks',
@@ -664,7 +664,7 @@ describe('effects choice assertions', () => {
     assert.equal(result.state, ctx.state);
     assert.equal(result.rng, ctx.rng);
     assert.equal(result.pendingChoice?.kind, 'pending');
-    assert.equal(result.pendingChoice?.decisionKey, 'decision:$inside');
+    assert.equal(result.pendingChoice?.decisionKey, '$inside');
     assert.deepEqual(result.pendingChoice?.options.map((option) => option.value), ['x']);
   });
 
@@ -702,8 +702,8 @@ describe('effects choice assertions', () => {
         options: alternative.options.map((option) => option.value),
       })),
       [
-        { decisionKey: 'decision:$inside', min: 1, max: 1, options: ['a', 'b', 'c'] },
-        { decisionKey: 'decision:$inside', min: 1, max: 2, options: ['a', 'b', 'c'] },
+        { decisionKey: '$inside', min: 1, max: 1, options: ['a', 'b', 'c'] },
+        { decisionKey: '$inside', min: 1, max: 2, options: ['a', 'b', 'c'] },
       ],
     );
   });
@@ -749,11 +749,11 @@ describe('effects choice assertions', () => {
       throw new Error('expected stochastic pending choice');
     }
     assert.equal(result.pendingChoice.source, 'rollRandom');
-    assert.deepEqual(result.pendingChoice.alternatives.map((alt) => alt.decisionKey), ['decision:$alpha', 'decision:$beta']);
+    assert.deepEqual(result.pendingChoice.alternatives.map((alt) => alt.decisionKey), ['$alpha', '$beta']);
   });
 
   it('chooseN supports up-to cardinality with max only', () => {
-    const ctx = makeCtx({ moveParams: { 'decision:$picks': ['alpha'] } });
+    const ctx = makeCtx({ moveParams: { '$picks': ['alpha'] } });
     const effect: EffectAST = {
       chooseN: {
         internalDecisionId: 'decision:$picks',
@@ -769,7 +769,7 @@ describe('effects choice assertions', () => {
   });
 
   it('chooseN supports min..max cardinality ranges', () => {
-    const ctx = makeCtx({ moveParams: { 'decision:$picks': ['alpha', 'beta'] } });
+    const ctx = makeCtx({ moveParams: { '$picks': ['alpha', 'beta'] } });
     const effect: EffectAST = {
       chooseN: {
         internalDecisionId: 'decision:$picks',
@@ -788,7 +788,7 @@ describe('effects choice assertions', () => {
   it('chooseN evaluates expression-valued min/max bounds', () => {
     const ctx = makeCtx({
       state: { ...makeState(), globalVars: { score: 2 } },
-      moveParams: { 'decision:$picks': ['alpha', 'beta'] },
+      moveParams: { '$picks': ['alpha', 'beta'] },
     });
     const effect: EffectAST = {
       chooseN: {
@@ -806,7 +806,7 @@ describe('effects choice assertions', () => {
   });
 
   it('chooseN resolves min/max from a let binding in the same authored scope', () => {
-    const ctx = makeCtx({ moveParams: { 'decision:$picks': ['alpha', 'beta'] } });
+    const ctx = makeCtx({ moveParams: { '$picks': ['alpha', 'beta'] } });
     const effect: EffectAST = {
       let: {
         bind: '$pickCount',
@@ -831,7 +831,7 @@ describe('effects choice assertions', () => {
   });
 
   it('chooseN throws when expression-valued bounds evaluate to non-integers', () => {
-    const ctx = makeCtx({ moveParams: { 'decision:$picks': ['alpha'] } });
+    const ctx = makeCtx({ moveParams: { '$picks': ['alpha'] } });
     const effect: EffectAST = {
       chooseN: {
         internalDecisionId: 'decision:$picks',
@@ -848,7 +848,7 @@ describe('effects choice assertions', () => {
   });
 
   it('chooseN range throws when selected count is outside min..max', () => {
-    const ctx = makeCtx({ moveParams: { 'decision:$picks': [] } });
+    const ctx = makeCtx({ moveParams: { '$picks': [] } });
     const effect: EffectAST = {
       chooseN: {
         internalDecisionId: 'decision:$picks',
@@ -865,8 +865,8 @@ describe('effects choice assertions', () => {
   });
 
   it('chooseN throws when n is negative or non-integer', () => {
-    const negativeCtx = makeCtx({ moveParams: { 'decision:$picks': [] } });
-    const nonIntegerCtx = makeCtx({ moveParams: { 'decision:$picks': ['alpha'] } });
+    const negativeCtx = makeCtx({ moveParams: { '$picks': [] } });
+    const nonIntegerCtx = makeCtx({ moveParams: { '$picks': ['alpha'] } });
 
     assert.throws(
       () =>
@@ -902,7 +902,7 @@ describe('effects choice assertions', () => {
   });
 
   it('chooseN throws when cardinality declaration mixes n with max', () => {
-    const ctx = makeCtx({ moveParams: { 'decision:$picks': ['alpha'] } });
+    const ctx = makeCtx({ moveParams: { '$picks': ['alpha'] } });
     const effect = {
       chooseN: {
         internalDecisionId: 'decision:$picks',
@@ -921,7 +921,7 @@ describe('effects choice assertions', () => {
 
   it('bindings shadow moveParams in options query evaluation for chooseOne', () => {
     const ctx = makeCtx({
-      moveParams: { $owner: asPlayerId(0), 'decision:$pickedZone': 'hand:1' },
+      moveParams: { $owner: asPlayerId(0), '$pickedZone': 'hand:1' },
       bindings: { $owner: asPlayerId(1) },
     });
     const effect: EffectAST = {

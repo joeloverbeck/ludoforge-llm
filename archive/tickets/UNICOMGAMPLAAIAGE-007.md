@@ -1,6 +1,6 @@
 # UNICOMGAMPLAAIAGE-007: Lazy Template Move Materialization for Search
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new file in agents/mcts/, possible kernel helper
@@ -92,3 +92,20 @@ Add re-export for `materialization.ts`.
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/test/unit/agents/mcts/materialization.test.ts`
 2. `pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+**Completed**: 2026-03-13
+
+**What changed**:
+- Created `packages/engine/src/agents/mcts/materialization.ts` with `materializeConcreteCandidates` and `filterAvailableCandidates`
+- Updated `packages/engine/src/agents/mcts/index.ts` with re-exports
+- Created `packages/engine/test/unit/agents/mcts/materialization.test.ts` with 14 tests (10 for materialization, 4 for filtering)
+
+**Deviations from plan**:
+- `ConcreteMoveCandidate` interface was already defined in `expansion.ts` (ticket 006 forward-placed it), so materialization imports it rather than defining it
+- Template detection uses `legalChoicesEvaluate` checking `kind === 'pending'` (matching greedy-agent pattern) rather than inspecting params directly
+- Added `illegal` kind handling — moves that `legalChoicesEvaluate` reports as illegal are skipped
+- Catches exceptions from `legalChoicesEvaluate` (e.g. unknown actions) and skips those moves
+
+**Verification**: All 14 unit tests pass, full engine + runner test suites pass, typecheck clean, lint 0 errors

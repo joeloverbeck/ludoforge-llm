@@ -15,5 +15,7 @@ export { selectChild } from './isuct.js';
 export { maxChildren, shouldExpand, selectExpansionCandidate } from './expansion.js';
 export type { ConcreteMoveCandidate } from './expansion.js';
 
+export { materializeConcreteCandidates, filterAvailableCandidates } from './materialization.js';
+
 export { createNodePool } from './node-pool.js';
 export type { NodePool } from './node-pool.js';

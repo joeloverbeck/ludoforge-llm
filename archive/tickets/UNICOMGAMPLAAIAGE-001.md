@@ -1,6 +1,6 @@
 # UNICOMGAMPLAAIAGE-001: MCTS Config Types, Defaults, and Validation
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — new file in agents/mcts/
@@ -91,3 +91,13 @@ Barrel export for the mcts module. Initially re-exports only `config.ts`.
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/test/unit/agents/mcts/config.test.ts`
 2. `pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-13
+- **What changed**:
+  - Created `packages/engine/src/agents/mcts/config.ts` — `MctsConfig` interface (14 fields), `DEFAULT_MCTS_CONFIG` (frozen), `validateMctsConfig()` with range/type validation
+  - Created `packages/engine/src/agents/mcts/index.ts` — barrel export
+  - Created `packages/engine/test/unit/agents/mcts/config.test.ts` — 17 tests covering all acceptance criteria
+- **Deviations**: None. Implementation matches ticket and Spec 61 §MCTS Configuration exactly.
+- **Verification**: 17/17 new tests pass, 4208/4208 full engine suite pass, 0 lint errors, typecheck clean across all 3 packages.

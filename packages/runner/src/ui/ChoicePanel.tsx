@@ -360,7 +360,7 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
             if (segment.kind === 'flat') {
               return (
                 <button
-                  key={`${segment.step.decisionId}:${segment.step.chosenValueId}`}
+                  key={`${segment.step.decisionKey}:${segment.step.chosenValueId}`}
                   type="button"
                   className={styles.breadcrumbStep}
                   data-testid={`choice-breadcrumb-step-${segment.originalIndex}`}
@@ -377,7 +377,7 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
                 <div className={styles.breadcrumbGroupChildren}>
                   {segment.steps.map(({ step, originalIndex }) => (
                     <button
-                      key={`${step.decisionId}:${step.chosenValueId}`}
+                      key={`${step.decisionKey}:${step.chosenValueId}`}
                       type="button"
                       className={styles.breadcrumbStepIndented}
                       data-testid={`choice-breadcrumb-step-${originalIndex}`}
@@ -437,7 +437,7 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
 
         {choiceUi.kind === 'discreteMany' ? (
           <MultiSelectMode
-            key={choiceUi.decisionId}
+            key={choiceUi.decisionKey}
             choiceUi={choiceUi}
             chooseN={async (selectedValues) => {
               await store.getState().chooseN(selectedValues);
@@ -447,7 +447,7 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
 
         {choiceUi.kind === 'numeric' ? (
           <NumericMode
-            key={choiceUi.decisionId}
+            key={choiceUi.decisionKey}
             choiceUi={choiceUi}
             chooseOne={async (value) => {
               await store.getState().chooseOne(value);

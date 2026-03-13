@@ -164,7 +164,7 @@ describe('FITL card-50 Uncle Ho', () => {
 
     const overrides: readonly DecisionOverrideRule[] = [
       {
-        when: (request) => request.decisionId.includes('distributeTokens.selectTokens'),
+        when: (request) => request.decisionKey.includes('distributeTokens.selectTokens'),
         value: [
           asTokenId('uncle-ho-us-oop-1'),
           asTokenId('uncle-ho-us-oop-2'),
@@ -172,10 +172,10 @@ describe('FITL card-50 Uncle Ho', () => {
           asTokenId('uncle-ho-us-oop-4'),
         ],
       },
-      { when: (request) => request.decisionId.endsWith('chooseDestination[0]'), value: SAIGON },
-      { when: (request) => request.decisionId.endsWith('chooseDestination[1]'), value: HUE },
-      { when: (request) => request.decisionId.endsWith('chooseDestination[2]'), value: QUANG_TRI },
-      { when: (request) => request.decisionId.endsWith('chooseDestination[3]'), value: CAN_THO },
+      { when: (request) => request.decisionKey.endsWith('chooseDestination[0]'), value: SAIGON },
+      { when: (request) => request.decisionKey.endsWith('chooseDestination[1]'), value: HUE },
+      { when: (request) => request.decisionKey.endsWith('chooseDestination[2]'), value: QUANG_TRI },
+      { when: (request) => request.decisionKey.endsWith('chooseDestination[3]'), value: CAN_THO },
     ];
 
     const final = applyMoveWithResolvedDecisionIds(def, setup, move!, { overrides }).state;
@@ -231,11 +231,11 @@ describe('FITL card-50 Uncle Ho', () => {
     const final = applyMoveWithResolvedDecisionIds(def, setup, move!, {
       overrides: [
         {
-          when: (request) => request.decisionId.includes('distributeTokens.selectTokens'),
+          when: (request) => request.decisionKey.includes('distributeTokens.selectTokens'),
           value: [asTokenId('uncle-ho-few-1'), asTokenId('uncle-ho-few-2')],
         },
-        { when: (request) => request.decisionId.endsWith('chooseDestination[0]'), value: SAIGON },
-        { when: (request) => request.decisionId.endsWith('chooseDestination[1]'), value: HUE },
+        { when: (request) => request.decisionKey.endsWith('chooseDestination[0]'), value: SAIGON },
+        { when: (request) => request.decisionKey.endsWith('chooseDestination[1]'), value: HUE },
       ],
     }).state;
 

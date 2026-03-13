@@ -85,7 +85,7 @@ describe('ChoicePanel', () => {
   }
 
   function makeBreadcrumbStep(
-    decisionId: string,
+    decisionKey: string,
     name: string,
     chosenValue: string | number | boolean | readonly (string | number | boolean)[],
     chosenDisplayName: string,
@@ -93,7 +93,7 @@ describe('ChoicePanel', () => {
     iterationLabel: string | null = null,
   ) {
     return {
-      decisionId,
+      decisionKey,
       name,
       displayName: name,
       chosenValueId: serializeChoiceValueIdentity(chosenValue),
@@ -116,7 +116,7 @@ describe('ChoicePanel', () => {
           renderModel: makeRenderModel({
             choiceUi: {
               kind: 'discreteOne',
-              decisionId: 'test-decision',
+              decisionKey: 'test-decision',
               options: [makeChoiceOption('zone-c', 'Zone C')],
             },
             choiceBreadcrumb: [
@@ -159,7 +159,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteOne',
-            decisionId: 'test-decision',
+            decisionKey: 'test-decision',
             options: [makeChoiceOption('zone-a', 'Zone A')],
           },
           choiceBreadcrumb: [],
@@ -181,7 +181,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteOne',
-            decisionId: 'test-decision',
+            decisionKey: 'test-decision',
             options: [makeChoiceOption('zone-a', 'Zone A')],
           },
           choiceBreadcrumb: [
@@ -206,7 +206,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteOne',
-            decisionId: 'test-decision',
+            decisionKey: 'test-decision',
             options: [makeChoiceOption('zone-a', 'Zone A')],
           },
         }),
@@ -227,7 +227,7 @@ describe('ChoicePanel', () => {
           renderModel: makeRenderModel({
             choiceUi: {
               kind: 'discreteOne',
-              decisionId: 'test-decision',
+              decisionKey: 'test-decision',
               options: [
                 makeChoiceOption('zone-a', 'Zone A'),
                 makeChoiceOption('zone-b', 'Zone B', 'illegal', 'blocked'),
@@ -253,7 +253,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteOne',
-            decisionId: 'test-decision',
+            decisionKey: 'test-decision',
             options: [makeChoiceOption('zone-a', 'Zone A')],
           },
         }),
@@ -276,7 +276,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteOne',
-            decisionId: 'test-decision',
+            decisionKey: 'test-decision',
             options: [makeChoiceOption('zone-u', 'Zone U', 'unknown', null)],
           },
         }),
@@ -297,7 +297,7 @@ describe('ChoicePanel', () => {
           renderModel: makeRenderModel({
             choiceUi: {
               kind: 'discreteOne',
-              decisionId: 'test-decision',
+              decisionKey: 'test-decision',
               options: [makeChoiceOption('zone-u', 'Zone U', 'unknown', null)],
             },
           }),
@@ -315,7 +315,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteMany',
-            decisionId: 'test-decision',
+            decisionKey: 'test-decision',
             options: [
               makeChoiceOption('zone-a', 'Zone A', 'unknown', null),
               makeChoiceOption('zone-b', 'Zone B', 'unknown', null),
@@ -355,7 +355,7 @@ describe('ChoicePanel', () => {
           renderModel: makeRenderModel({
             choiceUi: {
               kind: 'discreteOne',
-              decisionId: 'test-decision',
+              decisionKey: 'test-decision',
               options: [
                 makeChoiceOption('a,b', 'A B String'),
                 makeChoiceOption(['a', 'b'] as const, 'A B Array'),
@@ -397,7 +397,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteMany',
-            decisionId: 'test-decision',
+            decisionKey: 'test-decision',
             options: [
               makeChoiceOption('zone-a', 'Zone A'),
               makeChoiceOption('zone-b', 'Zone B'),
@@ -423,7 +423,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteMany',
-            decisionId: 'test-decision',
+            decisionKey: 'test-decision',
             options: [
               makeChoiceOption('zone-a', 'Zone A'),
               makeChoiceOption('zone-b', 'Zone B'),
@@ -457,7 +457,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteMany',
-            decisionId: 'test-decision',
+            decisionKey: 'test-decision',
             options: [
               makeChoiceOption('zone-a', 'Zone A'),
               makeChoiceOption('zone-b', 'Zone B', 'illegal', 'blocked'),
@@ -486,7 +486,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteMany',
-            decisionId: 'test-decision',
+            decisionKey: 'test-decision',
             options: [
               makeChoiceOption('zone-a', 'Zone A'),
               makeChoiceOption('zone-b', 'Zone B'),
@@ -512,7 +512,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'numeric',
-            decisionId: 'test-numeric',
+            decisionKey: 'test-numeric',
             domain: { min: 0, max: 10, step: 2 },
           },
         }),
@@ -540,7 +540,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'numeric',
-            decisionId: 'test-numeric-quick',
+            decisionKey: 'test-numeric-quick',
             domain: { min: 1, max: 11, step: 2 },
           },
         }),
@@ -568,7 +568,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'numeric',
-            decisionId: 'test-numeric-confirm',
+            decisionKey: 'test-numeric-confirm',
             domain: { min: 0, max: 10, step: 1 },
           },
         }),
@@ -582,13 +582,13 @@ describe('ChoicePanel', () => {
     expect(chooseOne).toHaveBeenCalledWith(8);
   });
 
-  it('resets NumericMode value when decisionId changes (stale state regression)', () => {
+  it('resets NumericMode value when decisionKey changes (stale state regression)', () => {
     const chooseOne = vi.fn(async () => {});
 
     const firstDecision = makeRenderModel({
       choiceUi: {
         kind: 'numeric',
-        decisionId: 'numeric-decision-1',
+        decisionKey: 'numeric-decision-1',
         domain: { min: 0, max: 10, step: 1 },
       },
     });
@@ -596,7 +596,7 @@ describe('ChoicePanel', () => {
     const secondDecision = makeRenderModel({
       choiceUi: {
         kind: 'numeric',
-        decisionId: 'numeric-decision-2',
+        decisionKey: 'numeric-decision-2',
         domain: { min: 0, max: 10, step: 1 },
       },
     });
@@ -632,7 +632,7 @@ describe('ChoicePanel', () => {
           renderModel: makeRenderModel({
             choiceUi: {
               kind: 'discreteMany',
-              decisionId: 'test-decision',
+              decisionKey: 'test-decision',
               options: [makeChoiceOption('zone-a', 'Zone A')],
               min: 1,
               max: 1,
@@ -702,7 +702,7 @@ describe('ChoicePanel', () => {
           renderModel: makeRenderModel({
             choiceUi: {
               kind: 'discreteOne',
-              decisionId: 'test-decision',
+              decisionKey: 'test-decision',
               options: [makeChoiceOption('zone-a', 'Zone A')],
             },
           }),
@@ -761,7 +761,7 @@ describe('ChoicePanel', () => {
             },
             choiceUi: {
               kind: 'discreteOne',
-              decisionId: 'test-decision',
+              decisionKey: 'test-decision',
               options: [makeChoiceOption('zone-a', 'Zone A')],
             },
           }),
@@ -785,7 +785,7 @@ describe('ChoicePanel', () => {
             choiceContext: null,
             choiceUi: {
               kind: 'discreteOne',
-              decisionId: 'test-decision',
+              decisionKey: 'test-decision',
               options: [makeChoiceOption('zone-a', 'Zone A')],
             },
           }),
@@ -812,7 +812,7 @@ describe('ChoicePanel', () => {
             },
             choiceUi: {
               kind: 'discreteOne',
-              decisionId: 'test-decision',
+              decisionKey: 'test-decision',
               options: [makeChoiceOption('yes', 'Yes')],
             },
           }),
@@ -826,13 +826,13 @@ describe('ChoicePanel', () => {
     expect(html).not.toContain('of');
   });
 
-  it('resets MultiSelectMode selections when decisionId changes (stale state regression)', () => {
+  it('resets MultiSelectMode selections when decisionKey changes (stale state regression)', () => {
     const chooseN = vi.fn(async () => {});
 
     const firstDecision = makeRenderModel({
       choiceUi: {
         kind: 'discreteMany',
-        decisionId: 'decision-1',
+        decisionKey: 'decision-1',
         options: [
           makeChoiceOption('zone-a', 'Zone A'),
           makeChoiceOption('zone-b', 'Zone B'),
@@ -845,7 +845,7 @@ describe('ChoicePanel', () => {
     const secondDecision = makeRenderModel({
       choiceUi: {
         kind: 'discreteMany',
-        decisionId: 'decision-2',
+        decisionKey: 'decision-2',
         options: [
           makeChoiceOption('zone-a', 'Zone A'),
           makeChoiceOption('zone-b', 'Zone B'),
@@ -888,7 +888,7 @@ describe('ChoicePanel', () => {
           renderModel: makeRenderModel({
             choiceUi: {
               kind: 'discreteOne',
-              decisionId: 'decision:placeType::zone-c',
+              decisionKey: 'decision:placeType::zone-c',
               options: [makeChoiceOption('irregulars', 'Irregulars')],
             },
             choiceBreadcrumb: [
@@ -914,7 +914,7 @@ describe('ChoicePanel', () => {
           renderModel: makeRenderModel({
             choiceUi: {
               kind: 'discreteOne',
-              decisionId: 'target',
+              decisionKey: 'target',
               options: [makeChoiceOption('zone-c', 'Zone C')],
             },
             choiceBreadcrumb: [
@@ -939,7 +939,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteOne',
-            decisionId: 'decision:placeType::zone-c',
+            decisionKey: 'decision:placeType::zone-c',
             options: [makeChoiceOption('irregulars', 'Irregulars')],
           },
           choiceBreadcrumb: [

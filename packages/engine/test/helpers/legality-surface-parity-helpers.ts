@@ -18,7 +18,7 @@ export interface LegalityParityStep {
   readonly step: number;
   readonly actionId: string;
   readonly requestKind: 'pending' | 'pendingStochastic' | 'complete' | 'illegal';
-  readonly decisionId?: string;
+  readonly decisionKey?: string;
   readonly decisionName?: string;
 }
 
@@ -125,26 +125,26 @@ export const assertLegalitySurfaceParityForMove = (
       step,
       actionId: String(move.actionId),
       requestKind: 'pending',
-      decisionId: request.decisionId,
+      decisionKey: request.decisionKey,
       decisionName: request.name,
     });
 
     assert.equal(
       actionPresent,
       true,
-      parityContext('legalMoves', step, move, `action should appear in legalMoves while pending decision ${request.decisionId}`),
+      parityContext('legalMoves', step, move, `action should appear in legalMoves while pending decision ${request.decisionKey}`),
     );
 
     const selected = choose(request, step);
     if (selected === undefined) {
-      throw new Error(parityContext('legalChoices', step, move, `no value selected for pending decision ${request.decisionId}`));
+      throw new Error(parityContext('legalChoices', step, move, `no value selected for pending decision ${request.decisionKey}`));
     }
 
     move = {
       ...move,
       params: {
         ...move.params,
-        [request.decisionId]: selected,
+        [request.decisionKey]: selected,
       },
     };
   }

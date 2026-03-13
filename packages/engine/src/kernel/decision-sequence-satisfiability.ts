@@ -179,7 +179,7 @@ export const classifyDecisionSequenceSatisfiability = (
         ...move,
         params: {
           ...move.params,
-          [request.decisionId]: selection,
+          [request.decisionKey]: selection,
         },
       });
       if (outcome === 'satisfiable') {

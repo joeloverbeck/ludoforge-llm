@@ -145,7 +145,7 @@ describe('FITL card-36 Hamburger Hill', () => {
       ...move!,
       params: {
         ...move!.params,
-        [firstPending.decisionId]: PLEIKU_DARLAC,
+        [firstPending.decisionKey]: PLEIKU_DARLAC,
       },
     });
     assert.equal(secondPending.kind, 'pending');
@@ -167,15 +167,15 @@ describe('FITL card-36 Hamburger Hill', () => {
 
     const overrides: readonly DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$targetHighland' || request.decisionId.includes('targetHighland'),
+        when: (request) => request.name === '$targetHighland' || request.decisionKey.includes('targetHighland'),
         value: PLEIKU_DARLAC,
       },
       {
-        when: (request) => request.name === '$usTroopsToMove' || request.decisionId.includes('usTroopsToMove'),
+        when: (request) => request.name === '$usTroopsToMove' || request.decisionKey.includes('usTroopsToMove'),
         value: ['hh-us-kontum-1', 'hh-us-kontum-2', 'hh-us-quang-nam-1', 'hh-us-quang-nam-2'],
       },
       {
-        when: (request) => request.name === '$baseToRemove' || request.decisionId.includes('baseToRemove'),
+        when: (request) => request.name === '$baseToRemove' || request.decisionKey.includes('baseToRemove'),
         value: 'hh-vc-base-pleiku',
       },
     ];
@@ -214,11 +214,11 @@ describe('FITL card-36 Hamburger Hill', () => {
     const final = applyMoveWithResolvedDecisionIds(def, state, move!, {
       overrides: [
         {
-          when: (request) => request.name === '$targetHighland' || request.decisionId.includes('targetHighland'),
+          when: (request) => request.name === '$targetHighland' || request.decisionKey.includes('targetHighland'),
           value: QUANG_TRI,
         },
         {
-          when: (request) => request.name === '$baseToRemove' || request.decisionId.includes('baseToRemove'),
+          when: (request) => request.name === '$baseToRemove' || request.decisionKey.includes('baseToRemove'),
           value: 'hh-nva-base-kontum',
         },
       ],
@@ -272,7 +272,7 @@ describe('FITL card-36 Hamburger Hill', () => {
       ...move!,
       params: {
         ...move!.params,
-        [firstPending.decisionId]: 'hh-sh-base-pleiku',
+        [firstPending.decisionKey]: 'hh-sh-base-pleiku',
       },
     });
     assert.equal(secondPending.kind, 'pending');
@@ -290,11 +290,11 @@ describe('FITL card-36 Hamburger Hill', () => {
     const final = applyMoveWithResolvedDecisionIds(def, state, move!, {
       overrides: [
         {
-          when: (request) => request.name === '$highlandBaseTarget' || request.decisionId.includes('highlandBaseTarget'),
+          when: (request) => request.name === '$highlandBaseTarget' || request.decisionKey.includes('highlandBaseTarget'),
           value: 'hh-sh-base-pleiku',
         },
         {
-          when: (request) => request.name === '$usTroopsToCasualties' || request.decisionId.includes('usTroopsToCasualties'),
+          when: (request) => request.name === '$usTroopsToCasualties' || request.decisionKey.includes('usTroopsToCasualties'),
           value: ['hh-sh-us-1', 'hh-sh-us-2', 'hh-sh-us-3'],
         },
       ],
@@ -330,7 +330,7 @@ describe('FITL card-36 Hamburger Hill', () => {
     const final = applyMoveWithResolvedDecisionIds(def, state, move!, {
       overrides: [
         {
-          when: (request) => request.name === '$highlandBaseTarget' || request.decisionId.includes('highlandBaseTarget'),
+          when: (request) => request.name === '$highlandBaseTarget' || request.decisionKey.includes('highlandBaseTarget'),
           value: 'hh-sh-tunneled-base',
         },
       ],

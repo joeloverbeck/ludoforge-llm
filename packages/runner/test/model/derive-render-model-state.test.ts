@@ -6,6 +6,7 @@ import {
   asPlayerId,
   asTokenId,
   initialState,
+  type DecisionKey,
   type MoveParamValue,
   type ChoicePendingRequest,
   type GameDef,
@@ -20,6 +21,8 @@ import { VisualConfigProvider } from '../../src/config/visual-config-provider.js
 import { deriveRenderModel } from '../../src/model/derive-render-model.js';
 import { serializeChoiceValueIdentity } from '../../src/model/choice-value-utils.js';
 import type { RenderContext } from '../../src/store/store-types.js';
+
+const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 
 function compileFixture(): GameDef {
   const compiled = compileGameSpecToGameDef({
@@ -169,7 +172,7 @@ function expectedRenderChoiceOption(
 }
 
 function expectedRenderChoiceStep(
-  decisionId: string,
+  decisionKey: string,
   name: string,
   displayName: string,
   chosenValue: MoveParamValue,
@@ -178,7 +181,7 @@ function expectedRenderChoiceStep(
   iterationLabel: string | null = null,
 ) {
   return {
-    decisionId,
+    decisionKey: asDecisionKey(decisionKey),
     name,
     displayName,
     chosenValueId: serializeChoiceValueIdentity(chosenValue),
@@ -750,7 +753,7 @@ describe('deriveRenderModel state metadata', () => {
     const choicePending: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
-      decisionId: 'pick-target',
+      decisionKey: asDecisionKey('pick-target'),
       name: 'pickTarget',
       type: 'chooseN',
       min: 1,
@@ -770,7 +773,7 @@ describe('deriveRenderModel state metadata', () => {
         choicePending,
         selectedAction: asActionId('train-us'),
         partialMove: { actionId: asActionId('train-us'), params: {} },
-        choiceStack: [{ decisionId: 'pick-action', name: 'pickAction', value: 'train-us' }],
+        choiceStack: [{ decisionKey: asDecisionKey('pick-action'), name: 'pickAction', value: 'train-us' }],
       }),
     );
 
@@ -788,7 +791,7 @@ describe('deriveRenderModel state metadata', () => {
     ]);
     expect(model.choiceUi).toEqual({
       kind: 'discreteMany',
-      decisionId: 'pick-target',
+      decisionKey: 'pick-target',
       options: [
         expectedRenderChoiceOption('table:none', 'Table None', 'legal', null),
         expectedRenderChoiceOption('token-a', 'Token A', 'legal', null),
@@ -811,7 +814,7 @@ describe('deriveRenderModel state metadata', () => {
     const choicePending: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
-      decisionId: 'target',
+      decisionKey: asDecisionKey('target'),
       name: 'target',
       type: 'chooseOne',
       options: [
@@ -833,7 +836,7 @@ describe('deriveRenderModel state metadata', () => {
 
     expect(model.choiceUi).toEqual({
       kind: 'discreteOne',
-      decisionId: 'target',
+      decisionKey: asDecisionKey('target'),
       options: [
         expectedRenderChoiceOption('table:none', 'Table None', 'legal', null, {
           kind: 'zone',
@@ -859,7 +862,7 @@ describe('deriveRenderModel state metadata', () => {
     const choicePending: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
-      decisionId: 'target',
+      decisionKey: asDecisionKey('target'),
       name: 'target',
       type: 'chooseOne',
       options: [
@@ -880,7 +883,7 @@ describe('deriveRenderModel state metadata', () => {
 
     expect(model.choiceUi).toEqual({
       kind: 'discreteOne',
-      decisionId: 'target',
+      decisionKey: asDecisionKey('target'),
       options: [
         expectedRenderChoiceOption('token-a', 'Agent (Token A)', 'legal', null, {
           kind: 'token',
@@ -898,7 +901,7 @@ describe('deriveRenderModel state metadata', () => {
     const choicePending: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
-      decisionId: 'target',
+      decisionKey: asDecisionKey('target'),
       name: 'target',
       type: 'chooseOne',
       options: [
@@ -915,13 +918,13 @@ describe('deriveRenderModel state metadata', () => {
         choicePending,
         selectedAction: asActionId('tick'),
         partialMove: { actionId: asActionId('tick'), params: {} },
-        choiceStack: [{ decisionId: 'prev', name: 'previousChoice', value: ['table:none', 'token-a'] }],
+        choiceStack: [{ decisionKey: asDecisionKey('prev'), name: 'previousChoice', value: ['table:none', 'token-a'] }],
       }),
     );
 
     expect(model.choiceUi).toEqual({
       kind: 'discreteOne',
-      decisionId: 'target',
+      decisionKey: asDecisionKey('target'),
       options: [
         expectedRenderChoiceOption('a,b', 'A,b', 'legal', null),
         expectedRenderChoiceOption(['a', 'b'], '[A, B]', 'legal', null),
@@ -945,7 +948,7 @@ describe('deriveRenderModel state metadata', () => {
     const choicePending: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
-      decisionId: 'target',
+      decisionKey: asDecisionKey('target'),
       name: 'target',
       type: 'chooseOne',
       options: [
@@ -967,7 +970,7 @@ describe('deriveRenderModel state metadata', () => {
 
     expect(model.choiceUi).toEqual({
       kind: 'discreteOne',
-      decisionId: 'target',
+      decisionKey: asDecisionKey('target'),
       options: [
         expectedRenderChoiceOption('table:none', 'Table None', 'legal', null, {
           kind: 'zone',
@@ -985,7 +988,7 @@ describe('deriveRenderModel state metadata', () => {
     const choicePending: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
-      decisionId: 'target',
+      decisionKey: asDecisionKey('target'),
       name: 'target',
       type: 'chooseOne',
       min: 1,
@@ -1004,7 +1007,7 @@ describe('deriveRenderModel state metadata', () => {
     );
     expect(model.choiceUi).toEqual({
       kind: 'discreteOne',
-      decisionId: 'target',
+      decisionKey: asDecisionKey('target'),
       options: [],
     });
   });
@@ -1015,7 +1018,7 @@ describe('deriveRenderModel state metadata', () => {
     const choicePending: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
-      decisionId: 'target',
+      decisionKey: asDecisionKey('target'),
       name: 'target',
       type: 'chooseN',
       min: 3,
@@ -1034,7 +1037,7 @@ describe('deriveRenderModel state metadata', () => {
     );
     expect(model.choiceUi).toEqual({
       kind: 'discreteMany',
-      decisionId: 'target',
+      decisionKey: asDecisionKey('target'),
       options: [expectedRenderChoiceOption('table:none', 'Table None', 'legal', null, {
         kind: 'zone',
         entityId: 'table:none',
@@ -1066,7 +1069,7 @@ describe('deriveRenderModel state metadata', () => {
     const choicePending: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
-      decisionId: 'target',
+      decisionKey: asDecisionKey('target'),
       name: 'target',
       type: 'chooseOne',
       options: [{ value: 'table:none', legality: 'legal', illegalReason: null }],
@@ -1090,7 +1093,7 @@ describe('deriveRenderModel state metadata', () => {
     const choicePending: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
-      decisionId: 'target',
+      decisionKey: asDecisionKey('target'),
       name: 'target',
       type: 'chooseOne',
       options: [{ value: 'table:none', legality: 'legal', illegalReason: null }],
@@ -1639,7 +1642,7 @@ describe('deriveRenderModel choiceContext', () => {
       choicePending: {
         kind: 'pending',
         complete: false,
-        decisionId: 'd1',
+        decisionKey: asDecisionKey('d1'),
         name: 'target',
         type: 'chooseOne',
         options: [],
@@ -1667,7 +1670,7 @@ describe('deriveRenderModel choiceContext', () => {
       choicePending: {
         kind: 'pending',
         complete: false,
-        decisionId: 'd1',
+        decisionKey: asDecisionKey('d1'),
         name: 'target',
         type: 'chooseOne',
         options: [],
@@ -1690,7 +1693,7 @@ describe('deriveRenderModel choiceContext', () => {
       choicePending: {
         kind: 'pending',
         complete: false,
-        decisionId: 'd1',
+        decisionKey: asDecisionKey('d1'),
         name: 'target',
         type: 'chooseOne',
         options: [],
@@ -1709,7 +1712,7 @@ describe('deriveRenderModel choiceContext', () => {
       choicePending: {
         kind: 'pending',
         complete: false,
-        decisionId: 'd1',
+        decisionKey: asDecisionKey('d1'),
         name: 'targetSpace',
         type: 'chooseOne',
         options: [],
@@ -1731,7 +1734,7 @@ describe('deriveRenderModel choiceContext', () => {
       choicePending: {
         kind: 'pending',
         complete: false,
-        decisionId: 'd1',
+        decisionKey: asDecisionKey('d1'),
         name: 'spaces',
         type: 'chooseN',
         options: [],
@@ -1751,7 +1754,7 @@ describe('deriveRenderModel choiceContext', () => {
       choicePending: {
         kind: 'pending',
         complete: false,
-        decisionId: 'd1',
+        decisionKey: asDecisionKey('d1'),
         name: 'spaces',
         type: 'chooseN',
         options: [],
@@ -1771,7 +1774,7 @@ describe('deriveRenderModel choiceContext', () => {
       choicePending: {
         kind: 'pending',
         complete: false,
-        decisionId: 'd1',
+        decisionKey: asDecisionKey('d1'),
         name: 'target',
         type: 'chooseOne',
         options: [],
@@ -1789,14 +1792,14 @@ describe('deriveRenderModel choiceContext', () => {
       choicePending: {
         kind: 'pending',
         complete: false,
-        decisionId: 'decision:troopCount[0]',
+        decisionKey: asDecisionKey('decision:troopCount[0]'),
         name: 'troopCount',
         type: 'chooseOne',
         options: [],
         targetKinds: [],
       },
       choiceStack: [
-        { decisionId: 'spaces', name: 'spaces', value: ['table', 'hand'] as unknown as MoveParamValue },
+        { decisionKey: asDecisionKey('spaces'), name: 'spaces', value: ['table', 'hand'] as unknown as MoveParamValue },
       ],
     });
     const model = deriveRenderModel(state, def, ctx);
@@ -1811,7 +1814,7 @@ describe('deriveRenderModel choiceContext', () => {
       choicePending: {
         kind: 'pending',
         complete: false,
-        decisionId: 'simple-decision',
+        decisionKey: asDecisionKey('simple-decision'),
         name: 'target',
         type: 'chooseOne',
         options: [],
@@ -1830,7 +1833,7 @@ describe('deriveRenderModel choiceContext', () => {
       choicePending: {
         kind: 'pending',
         complete: false,
-        decisionId: 'd1',
+        decisionKey: asDecisionKey('d1'),
         name: 'targetProvince',
         type: 'chooseOne',
         options: [],
@@ -1848,7 +1851,7 @@ describe('deriveRenderModel choiceContext', () => {
     const choicePending: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
-      decisionId: 'target',
+      decisionKey: asDecisionKey('target'),
       name: 'target',
       type: 'chooseOne',
       options: [{ value: 'table:none', legality: 'legal', illegalReason: null }],
@@ -1862,7 +1865,7 @@ describe('deriveRenderModel choiceContext', () => {
         choicePending,
         selectedAction: asActionId('tick'),
         partialMove: { actionId: asActionId('tick'), params: {} },
-        choiceStack: [{ decisionId: 'pick-action', name: 'pickAction', value: 'train-us' }],
+        choiceStack: [{ decisionKey: asDecisionKey('pick-action'), name: 'pickAction', value: 'train-us' }],
       }),
     );
 
@@ -1878,7 +1881,7 @@ describe('deriveRenderModel choiceContext', () => {
     const choicePending: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
-      decisionId: 'decision:placeType::token-a',
+      decisionKey: asDecisionKey('decision:placeType::token-a'),
       name: 'placeType',
       type: 'chooseOne',
       options: [{ value: 'regular', legality: 'legal', illegalReason: null }],
@@ -1893,8 +1896,8 @@ describe('deriveRenderModel choiceContext', () => {
         selectedAction: asActionId('tick'),
         partialMove: { actionId: asActionId('tick'), params: {} },
         choiceStack: [
-          { decisionId: 'pick-spaces', name: 'pickSpaces', value: ['table:none', 'token-a'] },
-          { decisionId: 'decision:placeType::table:none', name: 'placeType', value: 'irregulars' },
+          { decisionKey: asDecisionKey('pick-spaces'), name: 'pickSpaces', value: ['table:none', 'token-a'] },
+          { decisionKey: asDecisionKey('decision:placeType::table:none'), name: 'placeType', value: 'irregulars' },
         ],
       }),
     );
@@ -1911,7 +1914,7 @@ describe('deriveRenderModel choiceContext', () => {
     const choicePending: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
-      decisionId: 'placeType[1]',
+      decisionKey: asDecisionKey('placeType[1]'),
       name: 'placeType',
       type: 'chooseOne',
       options: [{ value: 'regular', legality: 'legal', illegalReason: null }],
@@ -1926,8 +1929,8 @@ describe('deriveRenderModel choiceContext', () => {
         selectedAction: asActionId('tick'),
         partialMove: { actionId: asActionId('tick'), params: {} },
         choiceStack: [
-          { decisionId: 'pick-spaces', name: 'pickSpaces', value: ['table:none', 'token-a'] },
-          { decisionId: 'placeType[0]', name: 'placeType', value: 'irregulars' },
+          { decisionKey: asDecisionKey('pick-spaces'), name: 'pickSpaces', value: ['table:none', 'token-a'] },
+          { decisionKey: asDecisionKey('placeType[0]'), name: 'placeType', value: 'irregulars' },
         ],
       }),
     );

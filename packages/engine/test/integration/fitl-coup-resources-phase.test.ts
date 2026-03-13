@@ -85,9 +85,9 @@ const enterCoupResources = (def: GameDef, state: GameState): GameState => {
 const resolveResources = (def: GameDef, state: GameState, params: Move['params'] = {}): GameState =>
   applyMove(def, state, { actionId: asActionId('coupResourcesResolve'), params }).state;
 
-const pickPendingChoice = (decisionId: string, selected: readonly string[]): Move['params'] => {
+const pickPendingChoice = (decisionKey: string, selected: readonly string[]): Move['params'] => {
   return {
-    [decisionId]: selected,
+    [decisionKey]: selected,
   };
 };
 
@@ -98,7 +98,7 @@ const resolveResourcesWithDefaultChoice = (def: GameDef, state: GameState): Game
     return resolveResources(def, state);
   }
   const selected = pending.options.slice(0, pending.max ?? 0).map((option) => String(option.value));
-  return resolveResources(def, state, pickPendingChoice(pending.decisionId, selected));
+  return resolveResources(def, state, pickPendingChoice(pending.decisionKey, selected));
 };
 
 describe('FITL coup resources phase (production data)', () => {
@@ -139,7 +139,7 @@ describe('FITL coup resources phase (production data)', () => {
     assert.equal(options.includes('loc-hue-da-nang:none'), true);
 
     const selected = ['loc-hue-da-nang:none'];
-    const next = resolveResources(def, atResources, pickPendingChoice(pending.decisionId, selected));
+    const next = resolveResources(def, atResources, pickPendingChoice(pending.decisionKey, selected));
 
     assert.equal(next.globalVars.terrorSabotageMarkersPlaced, 15);
     assert.equal(next.markers['loc-hue-da-nang:none']?.sabotage, 'sabotage');

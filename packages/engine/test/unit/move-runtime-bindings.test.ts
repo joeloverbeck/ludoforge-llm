@@ -3,23 +3,24 @@ import { describe, it } from 'node:test';
 
 import {
   buildMoveRuntimeBindings,
-  collectDecisionBindingsFromEffects,
   deriveDecisionBindingsFromMoveParams,
-  type EffectAST,
+  formatDecisionKey,
+  resolvePipelineDecisionBindingsForMove,
   type Move,
 } from '../../src/kernel/index.js';
 
 describe('move runtime bindings', () => {
-  it('derives decision bindings only from composed decision ids', () => {
+  it('derives decision bindings from canonical decision keys', () => {
     const moveParams = {
       x: 1,
-      'decision:$plain': 'a',
-      'decision:$template::$choice@north': 'north',
-      'decision:$target::$target@zone-1': 'zone-1',
+      [formatDecisionKey('decision:$plain', '$plain', '', 1)]: 'a',
+      [formatDecisionKey('decision:$template', '$choice@north', '', 1)]: 'north',
+      [formatDecisionKey('decision:$target', '$target@zone-1', '', 1)]: 'zone-1',
     } as Move['params'];
 
     const derived = deriveDecisionBindingsFromMoveParams(moveParams);
     assert.deepEqual(derived, {
+      '$plain': 'a',
       '$choice@north': 'north',
       '$target@zone-1': 'zone-1',
     });
@@ -47,88 +48,59 @@ describe('move runtime bindings', () => {
     );
   });
 
-  it('collects decision binding declarations across nested effect surfaces', () => {
-    const effects: readonly EffectAST[] = [
+  it('resolves pipeline decision bindings back to compiler-local binds without leaking them into decision keys', () => {
+    const moveParams = {
+      'decision:doc.actions.0.effects.0.distributeTokens.selectTokens': ['tok-1'],
+      'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination[0]': 'adjacent:none',
+    } as Move['params'];
+
+    const bindings = resolvePipelineDecisionBindingsForMove(
       {
-        chooseOne: {
-          internalDecisionId: 'decision:$top',
-          bind: '$top',
-          options: { query: 'enums', values: ['a'] },
-        },
-      },
-      {
-        if: {
-          when: true,
-          then: [
-            {
-              chooseN: {
-                internalDecisionId: 'decision:$inIf',
-                bind: '$inIf',
-                options: { query: 'enums', values: ['a', 'b'] },
-                n: 1,
+        id: 'pipeline' as const,
+        actionId: 'op' as Move['actionId'],
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [
+          {
+            effects: [
+              {
+                chooseN: {
+                  internalDecisionId: 'decision:doc.actions.0.effects.0.distributeTokens.selectTokens',
+                  bind: '$__selected_doc_actions_0_effects_0_distributeTokens',
+                  decisionIdentity: 'decision:doc.actions.0.effects.0.distributeTokens.selectTokens',
+                  options: { query: 'tokensInZone', zone: 'board:none' },
+                  n: 1,
+                },
               },
-            },
-          ],
-          else: [
-            {
-              let: {
-                bind: '$x',
-                value: 1,
-                in: [
-                  {
-                    chooseOne: {
-                      internalDecisionId: 'decision:$inLet',
-                      bind: '$inLet',
-                      options: { query: 'enums', values: ['b'] },
+              {
+                forEach: {
+                  bind: '$__token_doc_actions_0_effects_0_distributeTokens',
+                  over: { query: 'binding', name: '$__selected_doc_actions_0_effects_0_distributeTokens' },
+                  effects: [
+                    {
+                      chooseOne: {
+                        internalDecisionId: 'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination',
+                        bind: '$__destination_doc_actions_0_effects_0_distributeTokens',
+                        decisionIdentity: 'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination',
+                        options: { query: 'zones' },
+                      },
                     },
-                  },
-                ],
+                  ],
+                },
               },
-            },
-          ],
-        },
+            ],
+          },
+        ],
+        atomicity: 'partial',
       },
-      {
-        forEach: {
-          bind: '$zone',
-          over: { query: 'enums', values: ['z'] },
-          effects: [],
-          in: [
-            {
-              chooseOne: {
-                internalDecisionId: 'decision:$inForEachIn',
-                bind: '$inForEachIn',
-                options: { query: 'enums', values: ['c'] },
-              },
-            },
-          ],
-        },
-      },
-      {
-        rollRandom: {
-          bind: '$r',
-          min: 1,
-          max: 1,
-          in: [
-            {
-              chooseOne: {
-                internalDecisionId: 'decision:$inRoll',
-                bind: '$inRoll',
-                options: { query: 'enums', values: ['d'] },
-              },
-            },
-          ],
-        },
-      },
-    ];
+      moveParams,
+    );
 
-    const collected = new Map<string, string>();
-    collectDecisionBindingsFromEffects(effects, collected);
-
-    assert.equal(collected.get('decision:$top'), '$top');
-    assert.equal(collected.get('decision:$inIf'), '$inIf');
-    assert.equal(collected.get('decision:$inLet'), '$inLet');
-    assert.equal(collected.get('decision:$inForEachIn'), '$inForEachIn');
-    assert.equal(collected.get('decision:$inRoll'), '$inRoll');
+    assert.deepEqual(bindings, {
+      '$__selected_doc_actions_0_effects_0_distributeTokens': ['tok-1'],
+      '$__destination_doc_actions_0_effects_0_distributeTokens': 'adjacent:none',
+    });
   });
 });

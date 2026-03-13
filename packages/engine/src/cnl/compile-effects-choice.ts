@@ -292,6 +292,8 @@ export function lowerDistributeTokensEffects(
   const selectedBind = makeSyntheticBinding(path, 'selected');
   const tokenBind = makeSyntheticBinding(path, 'token');
   const destinationBind = makeSyntheticBinding(path, 'destination');
+  const selectTokensDecisionId = toInternalDecisionId(`${path}.selectTokens`);
+  const chooseDestinationDecisionId = toInternalDecisionId(`${path}.chooseDestination`);
 
   const cardinality =
     hasN && isInteger(source.n)
@@ -304,8 +306,9 @@ export function lowerDistributeTokensEffects(
   return {
     value: [
       chooseNBuilder({
-        internalDecisionId: toInternalDecisionId(`${path}.selectTokens`),
+        internalDecisionId: selectTokensDecisionId,
         bind: selectedBind,
+        decisionIdentity: selectTokensDecisionId,
         options: tokenOptions.value,
         ...cardinality,
       }),
@@ -317,8 +320,9 @@ export function lowerDistributeTokensEffects(
         },
         effects: [
           chooseOneBuilder({
-            internalDecisionId: toInternalDecisionId(`${path}.chooseDestination`),
+            internalDecisionId: chooseDestinationDecisionId,
             bind: destinationBind,
+            decisionIdentity: chooseDestinationDecisionId,
             options: destinationOptions.value,
           }),
           moveTokenBuilder({

@@ -8,6 +8,7 @@ import {
   type Move,
   type MoveParamValue,
   type NumericTrackDef,
+  parseDecisionKey,
   type PlayerId,
   type RevealGrant,
   resolvePlayerIndexForSeatValue,
@@ -1208,7 +1209,7 @@ function deriveChoiceContext(
 
   let iterationLabel: string | null = null;
   let iterationProgress: string | null = null;
-  const iterCtx = parseIterationContext(choicePending.decisionId, context.choiceStack, zonesById);
+  const iterCtx = parseIterationContext(choicePending.decisionKey, context.choiceStack, zonesById);
   if (iterCtx !== null) {
     iterationLabel = iterCtx.currentEntityDisplayName;
     iterationProgress = `${iterCtx.iterationIndex + 1} of ${iterCtx.iterationTotal}`;
@@ -1224,14 +1225,14 @@ function deriveChoiceContext(
   };
 }
 
-const ITERATION_SUFFIX_PATTERN = /(?:::.*|\[\d+\])$/;
-
-function extractIterationGroupId(decisionId: string): string | null {
-  const match = ITERATION_SUFFIX_PATTERN.exec(decisionId);
-  if (match === null) {
+function extractIterationGroupId(decisionKey: string): string | null {
+  const parsedDecisionKey = parseDecisionKey(decisionKey as Parameters<typeof parseDecisionKey>[0]);
+  if (parsedDecisionKey === null) {
     return null;
   }
-  return decisionId.slice(0, match.index);
+  return parsedDecisionKey.baseId === parsedDecisionKey.resolvedBind && parsedDecisionKey.iterationPath === ''
+    ? null
+    : parsedDecisionKey.baseId;
 }
 
 function deriveChoiceBreadcrumb(
@@ -1240,12 +1241,12 @@ function deriveChoiceBreadcrumb(
 ): RenderModel['choiceBreadcrumb'] {
   return context.choiceStack.map((step, index) => {
     const choiceStackUpToHere = context.choiceStack.slice(0, index + 1);
-    const iterCtx = parseIterationContext(step.decisionId, choiceStackUpToHere, zonesById);
-    const iterationGroupId = iterCtx !== null ? extractIterationGroupId(step.decisionId) : null;
+    const iterCtx = parseIterationContext(step.decisionKey, choiceStackUpToHere, zonesById);
+    const iterationGroupId = iterCtx !== null ? extractIterationGroupId(step.decisionKey) : null;
     const iterationLabel = iterCtx?.currentEntityDisplayName ?? null;
 
     return {
-      decisionId: step.decisionId,
+      decisionKey: step.decisionKey,
       name: step.name,
       displayName: formatIdAsDisplayName(step.name),
       chosenValueId: serializeChoiceValueIdentity(step.value),
@@ -1395,7 +1396,7 @@ function deriveChoiceUi(
       const max = min !== null && rawMax !== null && rawMax < min ? min : rawMax;
       return {
         kind: 'discreteMany',
-        decisionId: pending.decisionId,
+        decisionKey: pending.decisionKey,
         options,
         min,
         max,
@@ -1404,7 +1405,7 @@ function deriveChoiceUi(
 
     return {
       kind: 'discreteOne',
-      decisionId: pending.decisionId,
+      decisionKey: pending.decisionKey,
       options,
     };
   }

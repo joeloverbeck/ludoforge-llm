@@ -614,7 +614,7 @@ describe('decision sequence integration', () => {
     if (choices.kind !== 'pending') {
       throw new Error('Expected pending first decision with actionClass.');
     }
-    assert.equal(choices.decisionId, 'decision:$mode', 'first decision should be decision:$mode');
+    assert.equal(choices.decisionKey, 'decision:$mode', 'first decision should be decision:$mode');
     assert.equal(choices.name, '$mode', 'first decision should be $mode');
 
     // Without actionClass (default 'operation'), same behavior
@@ -625,7 +625,7 @@ describe('decision sequence integration', () => {
     if (choicesDefault.kind !== 'pending') {
       throw new Error('Expected pending first decision without actionClass.');
     }
-    assert.equal(choicesDefault.decisionId, 'decision:$mode', 'first decision should be decision:$mode');
+    assert.equal(choicesDefault.decisionKey, 'decision:$mode', 'first decision should be decision:$mode');
     assert.equal(choicesDefault.name, '$mode', 'first decision should be $mode');
   });
 
@@ -644,7 +644,7 @@ describe('decision sequence integration', () => {
     if (first.kind !== 'pending') {
       throw new Error('Expected pending first decision.');
     }
-    assert.equal(first.decisionId, 'decision:$mode');
+    assert.equal(first.decisionKey, 'decision:$mode');
     assert.equal(first.name, '$mode');
     assert.equal(first.type, 'chooseOne');
     assert.deepEqual(first.options.map((option) => option.value), ['normal', 'bonus']);
@@ -657,7 +657,7 @@ describe('decision sequence integration', () => {
     if (second.kind !== 'pending') {
       throw new Error('Expected pending second decision.');
     }
-    assert.equal(second.decisionId, 'decision:$selectedTokens');
+    assert.equal(second.decisionKey, 'decision:$selectedTokens');
     assert.equal(second.name, '$selectedTokens');
     assert.equal(second.type, 'chooseN');
     assert.equal(second.min, 1);

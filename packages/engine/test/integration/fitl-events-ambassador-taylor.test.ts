@@ -196,7 +196,7 @@ describe('FITL card-66 Ambassador Taylor', () => {
       ...move!,
       params: {
         ...move!.params,
-        [firstPending.decisionId]: [asTokenId('at-us-base')],
+        [firstPending.decisionKey]: [asTokenId('at-us-base')],
       },
     });
     assert.equal(baseDestinationPending.kind, 'pending');

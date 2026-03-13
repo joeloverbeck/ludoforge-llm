@@ -184,7 +184,7 @@ describe('FITL card-78 General Lansdale', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$targetSpace' || request.decisionId.includes('targetSpace'),
+        when: (request) => request.name === '$targetSpace' || request.decisionKey.includes('targetSpace'),
         value: HUE,
       },
     ];
@@ -220,7 +220,7 @@ describe('FITL card-78 General Lansdale', () => {
     const final = applyMoveWithResolvedDecisionIds(def, setup, move!, {
       overrides: [
         {
-          when: (request) => request.name === '$targetSpace' || request.decisionId.includes('targetSpace'),
+          when: (request) => request.name === '$targetSpace' || request.decisionKey.includes('targetSpace'),
           value: QUANG_NAM,
         },
       ],

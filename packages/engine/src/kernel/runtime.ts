@@ -59,4 +59,4 @@ export * from './tooltip-rule-card.js';
 export * from './display-node.js';
 export * from './ast-to-display.js';
 export * from './condition-annotator.js';
-export { extractResolvedBindFromDecisionId } from './decision-id.js';
+export * from './decision-scope.js';

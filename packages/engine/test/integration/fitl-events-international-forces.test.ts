@@ -156,7 +156,7 @@ describe('FITL card-65 International Forces', () => {
       ...move!,
       params: {
         ...move!.params,
-        [firstPending.decisionId]: [asTokenId('if-base')],
+        [firstPending.decisionKey]: [asTokenId('if-base')],
       },
     });
     assert.equal(destinationPending.kind, 'pending');

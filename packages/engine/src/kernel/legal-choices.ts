@@ -285,7 +285,7 @@ const mapChooseNOptions = (
             ...partialMove,
             params: {
               ...partialMove.params,
-              [request.decisionId]: selectedChoice,
+              [request.decisionKey]: selectedChoice,
             },
           },
         );
@@ -312,7 +312,7 @@ const mapChooseNOptions = (
               ...partialMove,
               params: {
                 ...partialMove.params,
-                [request.decisionId]: selectedChoice,
+                [request.decisionKey]: selectedChoice,
               },
             },
           );
@@ -387,7 +387,7 @@ const mapOptionsForPendingChoice = (
           ...partialMove,
           params: {
             ...partialMove.params,
-            [request.decisionId]: option.value,
+            [request.decisionKey]: option.value,
           },
         },
       );
@@ -409,11 +409,11 @@ const mapOptionsForPendingChoice = (
           {
             ...partialMove,
             params: {
-              ...partialMove.params,
-              [request.decisionId]: option.value,
+                ...partialMove.params,
+                [request.decisionKey]: option.value,
+              },
             },
-          },
-        );
+          );
       } catch (error: unknown) {
         if (!isChoiceDecisionOwnerMismatchDuringProbe(error)) {
           throw error;
@@ -478,7 +478,7 @@ const resolveActionParamPendingChoice = (
       kind: 'pending',
       complete: false,
       decisionPlayer: evalCtx.activePlayer,
-      decisionId: param.name,
+      decisionKey: param.name as ChoicePendingRequest['decisionKey'],
       name: param.name,
       type: 'chooseOne',
       options: resolution.options.map((value) => ({

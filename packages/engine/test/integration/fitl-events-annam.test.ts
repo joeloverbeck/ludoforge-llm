@@ -221,7 +221,7 @@ describe('FITL card-76 Annam', () => {
           ...move!,
           params: {
             ...move!.params,
-            [pending.decisionId]: ['loc-hue-da-nang:none'],
+            [pending.decisionKey]: ['loc-hue-da-nang:none'],
           },
         }),
       (error: unknown) => {
@@ -238,7 +238,7 @@ describe('FITL card-76 Annam', () => {
           ...move!,
           params: {
             ...move!.params,
-            [pending.decisionId]: [],
+            [pending.decisionKey]: [],
           },
         }),
       (error: unknown) => {

@@ -76,7 +76,7 @@ describe('FITL card-79 Henry Cabot Lodge shaded — ARVN piece removal + patrona
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.decisionId.includes('arvnPiecesToRemove') || req.name === '$arvnPiecesToRemove',
+        when: (req) => req.decisionKey.includes('arvnPiecesToRemove') || req.name === '$arvnPiecesToRemove',
         value: [arvnTroop.id, arvnPolice.id],
       },
     ];
@@ -114,7 +114,7 @@ describe('FITL card-79 Henry Cabot Lodge shaded — ARVN piece removal + patrona
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.decisionId.includes('arvnPiecesToRemove') || req.name === '$arvnPiecesToRemove',
+        when: (req) => req.decisionKey.includes('arvnPiecesToRemove') || req.name === '$arvnPiecesToRemove',
         value: [],
       },
     ];
@@ -145,7 +145,7 @@ describe('FITL card-79 Henry Cabot Lodge shaded — ARVN piece removal + patrona
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.decisionId.includes('arvnPiecesToRemove') || req.name === '$arvnPiecesToRemove',
+        when: (req) => req.decisionKey.includes('arvnPiecesToRemove') || req.name === '$arvnPiecesToRemove',
         value: [arvnTroop.id, arvnRanger.id, arvnBase.id],
       },
     ];
@@ -184,7 +184,7 @@ describe('FITL card-79 Henry Cabot Lodge shaded — ARVN piece removal + patrona
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.decisionId.includes('arvnPiecesToRemove') || req.name === '$arvnPiecesToRemove',
+        when: (req) => req.decisionKey.includes('arvnPiecesToRemove') || req.name === '$arvnPiecesToRemove',
         value: [arvnBase.id],
       },
     ];

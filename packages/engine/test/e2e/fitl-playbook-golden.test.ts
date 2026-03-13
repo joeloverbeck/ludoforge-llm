@@ -70,7 +70,7 @@ const createTurn4EventDecisionOverrides = (): readonly DecisionOverrideRule[] =>
         request.type === 'chooseN'
         && (
           request.name.includes('$selectedPieces')
-          || request.decisionId.includes('distributeTokens.selectTokens')
+          || request.decisionKey.includes('distributeTokens.selectTokens')
         ),
       value: (request: ChoicePendingRequest) => {
         const allValues = request.options
@@ -85,7 +85,7 @@ const createTurn4EventDecisionOverrides = (): readonly DecisionOverrideRule[] =>
     {
       when: (request: ChoicePendingRequest) =>
         request.name.includes('$targetCity@')
-        || request.decisionId.includes('distributeTokens.chooseDestination'),
+        || request.decisionKey.includes('distributeTokens.chooseDestination'),
       value: (request: ChoicePendingRequest) => {
         const saigon = request.options.find((option) => option.value === 'saigon:none')?.value;
         const hue = request.options.find((option) => option.value === 'hue:none')?.value;
@@ -117,7 +117,7 @@ const createTurn4NvaReportBranchDecisionOverrides = (): readonly DecisionOverrid
   {
     when: (request: ChoicePendingRequest) =>
       request.name === '$targetSpaces'
-      && request.decisionId.includes('doc.actionPipelines.10.stages[0].effects.0'),
+      && request.decisionKey.includes('doc.actionPipelines.10.stages[0].effects.0'),
     value: [
       'kien-phong:none',
       'kien-giang-an-xuyen:none',

@@ -257,7 +257,7 @@ describe('createGameStore async serialization', () => {
       params: {},
     });
     expect(state.choicePending?.type).toBe('chooseOne');
-    expect(state.choicePending?.decisionId.startsWith('decision:')).toBe(true);
+    expect(state.choicePending?.decisionKey.startsWith('decision:')).toBe(true);
     expect(state.error).toBeNull();
   });
 
@@ -291,7 +291,7 @@ describe('createGameStore async serialization', () => {
       params: {},
     });
     expect(state.choicePending?.type).toBe('chooseOne');
-    expect(state.choicePending?.decisionId.startsWith('decision:')).toBe(true);
+    expect(state.choicePending?.decisionKey.startsWith('decision:')).toBe(true);
     expect(state.error).toBeNull();
   });
 

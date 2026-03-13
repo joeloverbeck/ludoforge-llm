@@ -10,6 +10,7 @@ import {
 import { createCollector } from '../../src/kernel/execution-collector.js';
 import type { FreeOperationExecutionOverlay } from '../../src/kernel/free-operation-overlay.js';
 import { createRng } from '../../src/kernel/prng.js';
+import { emptyScope, withIterationSegment, type DecisionScope } from '../../src/kernel/decision-scope.js';
 import { buildAdjacencyGraph } from '../../src/kernel/spatial.js';
 import type { RuntimeTableIndex } from '../../src/kernel/runtime-table-index.js';
 import type { AdjacencyGraph } from '../../src/kernel/spatial.js';
@@ -44,11 +45,13 @@ interface EffectContextTestOptions {
   readonly collector?: ExecutionCollector;
   readonly resources?: RuntimeEffectContextOptions['resources'];
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
+  readonly decisionScope?: DecisionScope;
   readonly iterationPath?: string;
 }
 
 export type EffectContextTestOverrides = Partial<RuntimeEffectContextOptions> & {
   readonly collector?: ExecutionCollector;
+  readonly iterationPath?: string;
 };
 
 const makeRuntimeEffectContextOptions = ({
@@ -71,6 +74,7 @@ const makeRuntimeEffectContextOptions = ({
   freeOperationOverlay,
   maxQueryResults,
   phaseTransitionBudget,
+  decisionScope,
   iterationPath,
 }: EffectContextTestOptions): RuntimeEffectContextOptions => ({
   def,
@@ -91,7 +95,16 @@ const makeRuntimeEffectContextOptions = ({
   ...(maxQueryResults === undefined ? {} : { maxQueryResults }),
   resources: resources ?? makeEvalRuntimeResources({ collector }),
   ...(phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget }),
-  ...(iterationPath === undefined ? {} : { iterationPath }),
+  decisionScope: decisionScope ?? (() => {
+    if (iterationPath === undefined || iterationPath === '') {
+      return emptyScope();
+    }
+    const indices = [...iterationPath.matchAll(/\[(\d+)\]/gu)].map((match) => Number.parseInt(match[1]!, 10));
+    return indices.reduce<DecisionScope>(
+      (scope, index) => withIterationSegment(scope, index),
+      emptyScope(),
+    );
+  })(),
 });
 
 export const makeExecutionEffectContext = (options: EffectContextTestOptions): EffectContext =>

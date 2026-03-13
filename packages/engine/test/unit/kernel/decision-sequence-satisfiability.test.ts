@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   asActionId,
+  type DecisionKey,
   type ChoiceRequest,
   type Move,
 } from '../../../src/kernel/index.js';
@@ -15,18 +16,20 @@ const makeMove = (): Move => ({
   params: {},
 });
 
+const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
+
 describe('decision sequence satisfiability', () => {
   it('explores legal options before unknown or illegal options', () => {
     const explored: unknown[] = [];
     const result = classifyDecisionSequenceSatisfiability(
       makeMove(),
       (move: Move): ChoiceRequest => {
-        const selected = move.params['decision:$pick'];
+        const selected = move.params[asDecisionKey('decision:$pick')];
         if (selected === undefined) {
           return {
             kind: 'pending',
             complete: false,
-            decisionId: 'decision:$pick',
+            decisionKey: asDecisionKey('decision:$pick'),
             name: '$pick',
             type: 'chooseOne',
             targetKinds: [],
@@ -55,12 +58,12 @@ describe('decision sequence satisfiability', () => {
     const result = classifyDecisionSequenceSatisfiability(
       makeMove(),
       (move: Move): ChoiceRequest => {
-        const selected = move.params['decision:$pick'];
+        const selected = move.params[asDecisionKey('decision:$pick')];
         if (selected === undefined) {
           return {
             kind: 'pending',
             complete: false,
-            decisionId: 'decision:$pick',
+            decisionKey: asDecisionKey('decision:$pick'),
             name: '$pick',
             type: 'chooseOne',
             targetKinds: [],
@@ -90,7 +93,7 @@ describe('decision sequence satisfiability', () => {
       (): ChoiceRequest => ({
         kind: 'pending',
         complete: false,
-        decisionId: 'decision:$pick',
+        decisionKey: asDecisionKey('decision:$pick'),
         name: '$pick',
         type: 'chooseOne',
         targetKinds: [],
@@ -108,14 +111,14 @@ describe('decision sequence satisfiability', () => {
     const result = classifyDecisionSequenceSatisfiability(
       makeMove(),
       (move: Move): ChoiceRequest => {
-        const selected = move.params['decision:$pickMany'];
+        const selected = move.params[asDecisionKey('decision:$pickMany')];
         if (selected !== undefined) {
           return { kind: 'illegal', complete: false, reason: 'pipelineLegalityFailed' };
         }
         return {
           kind: 'pending',
           complete: false,
-          decisionId: 'decision:$pickMany',
+          decisionKey: asDecisionKey('decision:$pickMany'),
           name: '$pickMany',
           type: 'chooseN',
           min: 50,
@@ -150,7 +153,7 @@ describe('decision sequence satisfiability', () => {
           {
             kind: 'pending',
             complete: false,
-            decisionId: 'decision:$alpha',
+            decisionKey: asDecisionKey('decision:$alpha'),
             name: '$alpha',
             type: 'chooseOne',
             targetKinds: [],
@@ -159,7 +162,7 @@ describe('decision sequence satisfiability', () => {
           {
             kind: 'pending',
             complete: false,
-            decisionId: 'decision:$beta',
+            decisionKey: asDecisionKey('decision:$beta'),
             name: '$beta',
             type: 'chooseOne',
             targetKinds: [],
@@ -170,7 +173,7 @@ describe('decision sequence satisfiability', () => {
           { bindings: { $roll: 1 }, nextDecision: {
             kind: 'pending',
             complete: false,
-            decisionId: 'decision:$alpha',
+            decisionKey: asDecisionKey('decision:$alpha'),
             name: '$alpha',
             type: 'chooseOne',
             targetKinds: [],
@@ -179,7 +182,7 @@ describe('decision sequence satisfiability', () => {
           { bindings: { $roll: 2 }, nextDecision: {
             kind: 'pending',
             complete: false,
-            decisionId: 'decision:$beta',
+            decisionKey: asDecisionKey('decision:$beta'),
             name: '$beta',
             type: 'chooseOne',
             targetKinds: [],

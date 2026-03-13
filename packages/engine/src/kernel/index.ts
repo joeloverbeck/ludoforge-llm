@@ -1,6 +1,7 @@
 export * from './branded.js';
 export * from './gamedef-runtime.js';
 export * from './choice-option-policy.js';
+export * from './decision-scope.js';
 export * from './decision-occurrence.js';
 export * from './choose-n-cardinality.js';
 export * from './initial-state.js';
@@ -94,4 +95,4 @@ export * from './tooltip-label-resolver.js';
 export * from './tooltip-template-realizer.js';
 export * from './tooltip-modifier-humanizer.js';
 export * from './tooltip-blocker-extractor.js';
-export { extractResolvedBindFromDecisionId } from './decision-id.js';
+export * from './decision-scope.js';

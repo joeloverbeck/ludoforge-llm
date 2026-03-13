@@ -3116,7 +3116,12 @@ describe('applyMove seat-resolution lifecycle architecture guard', () => {
     const validateTurnFlowWindowAccessCalls = collectCallExpressionsByIdentifier(sourceFile, 'validateTurnFlowWindowAccess');
     assert.equal(
       validateTurnFlowWindowAccessCalls.some(
-        (call) => expressionToText(sourceFile, call).includes('validateTurnFlowWindowAccess(def, state, move, seatResolution)'),
+        (call) => call.arguments.length === 5
+          && expressionToText(sourceFile, call.arguments[0]!) === 'def'
+          && expressionToText(sourceFile, call.arguments[1]!) === 'state'
+          && expressionToText(sourceFile, call.arguments[2]!) === 'move'
+          && expressionToText(sourceFile, call.arguments[3]!) === 'preflight.actionPipeline'
+          && expressionToText(sourceFile, call.arguments[4]!) === 'seatResolution',
       ),
       true,
       'validateMove must thread seatResolution into validateTurnFlowWindowAccess',
@@ -3125,7 +3130,11 @@ describe('applyMove seat-resolution lifecycle architecture guard', () => {
     const windowFilterCalls = collectCallExpressionsByIdentifier(sourceFile, 'applyTurnFlowWindowFilters');
     assert.equal(
       windowFilterCalls.some(
-        (call) => expressionToText(sourceFile, call).includes('applyTurnFlowWindowFilters(def, state, [move], seatResolution)'),
+        (call) => call.arguments.length === 4
+          && expressionToText(sourceFile, call.arguments[0]!) === 'def'
+          && expressionToText(sourceFile, call.arguments[1]!) === 'state'
+          && expressionToText(sourceFile, call.arguments[2]!) === '[turnFlowMove]'
+          && expressionToText(sourceFile, call.arguments[3]!) === 'seatResolution',
       ),
       true,
       'validateTurnFlowWindowAccess must pass explicit seatResolution to applyTurnFlowWindowFilters',

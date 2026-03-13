@@ -1,18 +1,12 @@
 import { evalQuery } from './eval-query.js';
 import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
-import { composeScopedDecisionId } from './decision-id.js';
+import { advanceScope } from './decision-scope.js';
 import { deriveChoiceTargetKinds } from './choice-target-kinds.js';
 import { resolveChooseNCardinality } from './choose-n-cardinality.js';
 import { effectRuntimeError } from './effect-error.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { nextInt } from './prng.js';
-import {
-  cloneDecisionOccurrenceContext,
-  createDecisionOccurrenceContext,
-  consumeDecisionOccurrence,
-  resolveMoveParamForDecisionOccurrence,
-} from './decision-occurrence.js';
 import { resolveSinglePlayerSel } from './resolve-selectors.js';
 import { resolveZoneWithNormalization, selectorResolutionFailurePolicyForMode } from './selector-resolution-normalization.js';
 import { findSpaceMarkerConstraintViolation } from './space-marker-rules.js';
@@ -48,9 +42,7 @@ const pendingChoiceStructuralKey = (pendingChoice: ChoicePendingRequest): string
   const normalized = normalizePendingChoiceRequest(pendingChoice);
   return JSON.stringify({
     decisionPlayer: normalized.decisionPlayer ?? null,
-    decisionId: normalized.decisionId,
-    occurrenceIndex: normalized.occurrenceIndex,
-    occurrenceKey: normalized.occurrenceKey,
+    decisionKey: normalized.decisionKey,
     name: normalized.name,
     type: normalized.type,
     options: normalized.options.map((option) => choiceOptionKey(option.value)),
@@ -72,10 +64,10 @@ const mergePendingChoiceRequests = (
     if (pending.type !== first.type) {
       throw effectRuntimeError(
         EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
-        `rollRandom discovery found incompatible pending decision types for ${first.decisionId}`,
+        `rollRandom discovery found incompatible pending decision types for ${first.decisionKey}`,
         {
           effectType: 'rollRandom',
-          decisionId: first.decisionId,
+          decisionKey: first.decisionKey,
           expectedType: first.type,
           actualType: pending.type,
         },
@@ -84,10 +76,10 @@ const mergePendingChoiceRequests = (
     if (pending.name !== first.name) {
       throw effectRuntimeError(
         EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
-        `rollRandom discovery found incompatible pending decision names for ${first.decisionId}`,
+        `rollRandom discovery found incompatible pending decision names for ${first.decisionKey}`,
         {
           effectType: 'rollRandom',
-          decisionId: first.decisionId,
+          decisionKey: first.decisionKey,
           expectedName: first.name,
           actualName: pending.name,
         },
@@ -96,10 +88,10 @@ const mergePendingChoiceRequests = (
     if (!Object.is(pending.decisionPlayer, first.decisionPlayer)) {
       throw effectRuntimeError(
         EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
-        `rollRandom discovery found incompatible decision owners for ${first.decisionId}`,
+        `rollRandom discovery found incompatible decision owners for ${first.decisionKey}`,
         {
           effectType: 'rollRandom',
-          decisionId: first.decisionId,
+          decisionKey: first.decisionKey,
           expectedDecisionPlayer: first.decisionPlayer,
           actualDecisionPlayer: pending.decisionPlayer,
         },
@@ -129,19 +121,20 @@ const mergePendingChoiceRequests = (
 const toStochasticPendingChoice = (
   outcomes: readonly ChoiceStochasticOutcome[],
 ): ChoiceStochasticPendingRequest => {
-  const pendingByDecisionId = new Map<string, ChoicePendingRequest[]>();
+  const pendingByDecisionKey = new Map<string, ChoicePendingRequest[]>();
   for (const outcome of outcomes) {
     if (outcome.nextDecision === undefined) {
       continue;
     }
-    const existing = pendingByDecisionId.get(outcome.nextDecision.decisionId);
+    const decisionKey = outcome.nextDecision.decisionKey as string;
+    const existing = pendingByDecisionKey.get(decisionKey);
     if (existing === undefined) {
-      pendingByDecisionId.set(outcome.nextDecision.decisionId, [outcome.nextDecision]);
+      pendingByDecisionKey.set(decisionKey, [outcome.nextDecision]);
     } else {
       existing.push(outcome.nextDecision);
     }
   }
-  const alternatives = [...pendingByDecisionId.entries()]
+  const alternatives = [...pendingByDecisionKey.entries()]
     .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
     .flatMap(([, requests]) => mergePendingChoiceRequests(requests));
   return {
@@ -318,15 +311,15 @@ const buildComparableDomainBindingMap = (
 
 export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: unknown }>, ctx: EffectContext): EffectResult => {
   const resolvedBind = resolveBindingTemplate(effect.chooseOne.bind, ctx.bindings);
-  const decisionId = composeScopedDecisionId(
-    effect.chooseOne.internalDecisionId,
-    effect.chooseOne.bind,
-    resolvedBind,
-    ctx.iterationPath,
+  const resolvedDecisionIdentity = resolveBindingTemplate(
+    effect.chooseOne.decisionIdentity ?? effect.chooseOne.bind,
+    ctx.bindings,
   );
+  const scopeAdvance = advanceScope(ctx.decisionScope, effect.chooseOne.internalDecisionId, resolvedDecisionIdentity);
+  const decisionKey = scopeAdvance.key;
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const chooser = effect.chooseOne.chooser ?? 'active';
-  const choiceDecisionPlayer = resolveChoiceDecisionPlayer('chooseOne', chooser, evalCtx, resolvedBind, decisionId);
+  const choiceDecisionPlayer = resolveChoiceDecisionPlayer('chooseOne', chooser, evalCtx, resolvedBind, decisionKey);
   const providedDecisionPlayer = ctx.decisionAuthority.player;
   const options = evalQuery(effect.chooseOne.options, evalCtx);
   const normalizedOptions = normalizeChoiceDomain(options, (issue) => {
@@ -334,19 +327,14 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
       effectType: 'chooseOne',
       bind: resolvedBind,
       bindTemplate: effect.chooseOne.bind,
-      decisionId,
+      decisionKey,
       index: issue.index,
       actualType: issue.actualType,
       value: issue.value,
     });
   });
-  const comparableBindingMap = buildComparableDomainBindingMap('chooseOne', resolvedBind, decisionId, options, normalizedOptions);
-  const occurrence = consumeDecisionOccurrence(
-    ctx.decisionOccurrences ?? createDecisionOccurrenceContext(),
-    decisionId,
-    resolvedBind,
-  );
-  const selected = resolveMoveParamForDecisionOccurrence(ctx.moveParams, occurrence);
+  const comparableBindingMap = buildComparableDomainBindingMap('chooseOne', resolvedBind, decisionKey, options, normalizedOptions);
+  const selected = ctx.moveParams[decisionKey];
   if (selected === undefined) {
     if (ctx.mode === 'discovery') {
       const targetKinds = deriveChoiceTargetKinds(effect.chooseOne.options);
@@ -354,22 +342,12 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
         state: ctx.state,
         rng: ctx.rng,
         bindings: ctx.bindings,
+        decisionScope: scopeAdvance.scope,
         pendingChoice: {
           kind: 'pending',
           complete: false,
           ...(effect.chooseOne.chooser === undefined ? {} : { decisionPlayer: choiceDecisionPlayer }),
-          decisionId,
-          occurrenceIndex: occurrence.decisionIndex,
-          occurrenceKey: occurrence.decisionOccurrenceKey,
-          nameOccurrenceIndex: occurrence.nameIndex,
-          nameOccurrenceKey: occurrence.nameOccurrenceKey,
-          ...(occurrence.canonicalAlias === null ? {} : { canonicalAlias: occurrence.canonicalAlias }),
-          ...(occurrence.canonicalAliasIndex === null
-            ? {}
-            : { canonicalAliasOccurrenceIndex: occurrence.canonicalAliasIndex }),
-          ...(occurrence.canonicalAliasOccurrenceKey === null
-            ? {}
-            : { canonicalAliasOccurrenceKey: occurrence.canonicalAliasOccurrenceKey }),
+          decisionKey,
           name: resolvedBind,
           type: 'chooseOne',
           options: normalizedOptions.map((value) => ({
@@ -381,12 +359,10 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
         },
       };
     }
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseOne missing move param binding: ${resolvedBind} (${decisionId})`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseOne missing move param binding: ${resolvedBind} (${decisionKey})`, {
       effectType: 'chooseOne',
       bind: resolvedBind,
-      decisionId,
-      occurrenceIndex: occurrence.decisionIndex,
-      occurrenceKey: occurrence.decisionOccurrenceKey,
+      decisionKey,
       bindTemplate: effect.chooseOne.bind,
       availableMoveParams: Object.keys(ctx.moveParams).sort(),
     });
@@ -397,11 +373,11 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
       : EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED;
     throw effectRuntimeError(
       runtimeReason,
-      `chooseOne decision owner mismatch for "${resolvedBind}" (${decisionId})`,
+      `chooseOne decision owner mismatch for "${resolvedBind}" (${decisionKey})`,
       {
         effectType: 'chooseOne',
         bind: resolvedBind,
-        decisionId,
+        decisionKey,
         chooser,
         expectedDecisionPlayer: choiceDecisionPlayer,
         providedDecisionPlayer,
@@ -413,13 +389,13 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
   if (selectedComparable === null || !comparableBindingMap.has(selectedComparable)) {
     throw effectRuntimeError(
       EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
-      `invalid selection for chooseOne "${resolvedBind}" (${decisionId}): outside options domain`,
+      `invalid selection for chooseOne "${resolvedBind}" (${decisionKey}): outside options domain`,
       {
-      effectType: 'chooseOne',
-      bind: resolvedBind,
-      bindTemplate: effect.chooseOne.bind,
-      selected,
-      optionsCount: normalizedOptions.length,
+        effectType: 'chooseOne',
+        bind: resolvedBind,
+        bindTemplate: effect.chooseOne.bind,
+        selected,
+        optionsCount: normalizedOptions.length,
       },
     );
   }
@@ -428,6 +404,7 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
   return {
     state: ctx.state,
     rng: ctx.rng,
+    decisionScope: scopeAdvance.scope,
     bindings: {
       ...ctx.bindings,
       [resolvedBind]: selectedBinding,
@@ -439,10 +416,12 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   const chooseN = effect.chooseN;
   const bindTemplate = chooseN.bind;
   const bind = resolveBindingTemplate(bindTemplate, ctx.bindings);
-  const decisionId = composeScopedDecisionId(chooseN.internalDecisionId, bindTemplate, bind, ctx.iterationPath);
+  const resolvedDecisionIdentity = resolveBindingTemplate(chooseN.decisionIdentity ?? chooseN.bind, ctx.bindings);
+  const scopeAdvance = advanceScope(ctx.decisionScope, chooseN.internalDecisionId, resolvedDecisionIdentity);
+  const decisionKey = scopeAdvance.key;
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const chooser = chooseN.chooser ?? 'active';
-  const choiceDecisionPlayer = resolveChoiceDecisionPlayer('chooseN', chooser, evalCtx, bind, decisionId);
+  const choiceDecisionPlayer = resolveChoiceDecisionPlayer('chooseN', chooser, evalCtx, bind, decisionKey);
   const providedDecisionPlayer = ctx.decisionAuthority.player;
   const { minCardinality, maxCardinality } = resolveChooseNCardinality(chooseN, evalCtx, (issue) => {
     if (issue.code === 'CHOOSE_N_MODE_INVALID') {
@@ -501,20 +480,15 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseN options domain item is not move-param encodable: ${bind}`, {
       effectType: 'chooseN',
       bind,
-      decisionId,
+      decisionKey,
       index: issue.index,
       actualType: issue.actualType,
       value: issue.value,
     });
   });
-  const comparableBindingMap = buildComparableDomainBindingMap('chooseN', bind, decisionId, options, normalizedOptions);
+  const comparableBindingMap = buildComparableDomainBindingMap('chooseN', bind, decisionKey, options, normalizedOptions);
   const clampedMax = Math.min(maxCardinality, normalizedOptions.length);
-  const occurrence = consumeDecisionOccurrence(
-    ctx.decisionOccurrences ?? createDecisionOccurrenceContext(),
-    decisionId,
-    bind,
-  );
-  const selectedValue = resolveMoveParamForDecisionOccurrence(ctx.moveParams, occurrence);
+  const selectedValue = ctx.moveParams[decisionKey];
   if (selectedValue === undefined) {
     if (ctx.mode === 'discovery') {
       const targetKinds = deriveChoiceTargetKinds(chooseN.options);
@@ -522,22 +496,12 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
         state: ctx.state,
         rng: ctx.rng,
         bindings: ctx.bindings,
+        decisionScope: scopeAdvance.scope,
         pendingChoice: {
           kind: 'pending',
           complete: false,
           ...(chooseN.chooser === undefined ? {} : { decisionPlayer: choiceDecisionPlayer }),
-          decisionId,
-          occurrenceIndex: occurrence.decisionIndex,
-          occurrenceKey: occurrence.decisionOccurrenceKey,
-          nameOccurrenceIndex: occurrence.nameIndex,
-          nameOccurrenceKey: occurrence.nameOccurrenceKey,
-          ...(occurrence.canonicalAlias === null ? {} : { canonicalAlias: occurrence.canonicalAlias }),
-          ...(occurrence.canonicalAliasIndex === null
-            ? {}
-            : { canonicalAliasOccurrenceIndex: occurrence.canonicalAliasIndex }),
-          ...(occurrence.canonicalAliasOccurrenceKey === null
-            ? {}
-            : { canonicalAliasOccurrenceKey: occurrence.canonicalAliasOccurrenceKey }),
+          decisionKey,
           name: bind,
           type: 'chooseN',
           options: normalizedOptions.map((value) => ({
@@ -551,12 +515,10 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
         },
       };
     }
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseN missing move param binding: ${bind} (${decisionId})`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseN missing move param binding: ${bind} (${decisionKey})`, {
       effectType: 'chooseN',
       bind,
-      decisionId,
-      occurrenceIndex: occurrence.decisionIndex,
-      occurrenceKey: occurrence.decisionOccurrenceKey,
+      decisionKey,
       availableMoveParams: Object.keys(ctx.moveParams).sort(),
     });
   }
@@ -566,11 +528,11 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
       : EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED;
     throw effectRuntimeError(
       runtimeReason,
-      `chooseN decision owner mismatch for "${bind}" (${decisionId})`,
+      `chooseN decision owner mismatch for "${bind}" (${decisionKey})`,
       {
         effectType: 'chooseN',
         bind,
-        decisionId,
+        decisionKey,
         chooser,
         expectedDecisionPlayer: choiceDecisionPlayer,
         providedDecisionPlayer,
@@ -603,7 +565,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
       throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseN selection is not move-param encodable: ${bind}`, {
         effectType: 'chooseN',
         bind,
-        decisionId,
+        decisionKey,
         selected: selectedValue[index],
         selectedIndex: index,
       });
@@ -627,7 +589,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
     if (!comparableBindingMap.has(selected)) {
       throw effectRuntimeError(
         EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
-        `invalid selection for chooseN "${bind}" (${decisionId}): outside options domain`,
+        `invalid selection for chooseN "${bind}" (${decisionKey}): outside options domain`,
         {
           effectType: 'chooseN',
           bind,
@@ -642,6 +604,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   return {
     state: ctx.state,
     rng: ctx.rng,
+    decisionScope: scopeAdvance.scope,
     bindings: {
       ...ctx.bindings,
       [bind]: selectedBindings,
@@ -708,9 +671,6 @@ export const applyRollRandom = (
     for (let rolledValue = minValue; rolledValue <= maxValue; rolledValue += 1) {
       const nestedCtx: EffectContext = {
         ...ctx,
-        decisionOccurrences: cloneDecisionOccurrenceContext(
-          ctx.decisionOccurrences ?? createDecisionOccurrenceContext(),
-        ),
         bindings: {
           ...ctx.bindings,
           [effect.rollRandom.bind]: rolledValue,
@@ -732,24 +692,25 @@ export const applyRollRandom = (
       };
     }
 
-    const pendingByDecisionId = new Map<string, ChoicePendingRequest[]>();
+    const pendingByDecisionKey = new Map<string, ChoicePendingRequest[]>();
     for (const outcome of outcomes) {
       if (outcome.nextDecision === undefined) {
         continue;
       }
-      const existing = pendingByDecisionId.get(outcome.nextDecision.decisionId);
+      const decisionKey = outcome.nextDecision.decisionKey as string;
+      const existing = pendingByDecisionKey.get(decisionKey);
       if (existing === undefined) {
-        pendingByDecisionId.set(outcome.nextDecision.decisionId, [outcome.nextDecision]);
+        pendingByDecisionKey.set(decisionKey, [outcome.nextDecision]);
       } else {
         existing.push(outcome.nextDecision);
       }
     }
 
     const pendingChoice: ChoicePendingRequest | ChoiceStochasticPendingRequest =
-      pendingByDecisionId.size === 1 && outcomes.every((outcome) => outcome.nextDecision !== undefined)
+      pendingByDecisionKey.size === 1 && outcomes.every((outcome) => outcome.nextDecision !== undefined)
         ? (() => {
-          const selectedDecisionId = pendingByDecisionId.keys().next().value as string;
-          const mergedPendingChoices = mergePendingChoiceRequests(pendingByDecisionId.get(selectedDecisionId)!);
+          const selectedDecisionKey = pendingByDecisionKey.keys().next().value as string;
+          const mergedPendingChoices = mergePendingChoiceRequests(pendingByDecisionKey.get(selectedDecisionKey)!);
           return mergedPendingChoices.length === 1
             ? mergedPendingChoices[0]!
             : {

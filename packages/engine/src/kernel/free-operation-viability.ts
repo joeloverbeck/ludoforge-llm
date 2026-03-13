@@ -251,7 +251,7 @@ const visitSelectableDecisionValues = (
       actionId: currentMove.actionId,
       params: {
         ...currentMove.params,
-        [request.decisionId]: value,
+        [request.decisionKey]: value,
       },
       freeOperation: true,
     };
@@ -676,7 +676,7 @@ const hasLegalCompletedProbeMove = (
           ...request.move,
           params: {
             ...request.move.params,
-            [nextDecision.decisionId]: selection,
+            [nextDecision.decisionKey]: selection,
           },
         });
       },

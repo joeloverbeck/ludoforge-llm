@@ -89,14 +89,14 @@ const assertEffectRuntimeReason = (fn: () => unknown, expectedReason: string): v
 
 const buildImplicitChooserEffect = (
   primitive: ChoiceOwnershipPrimitive,
-  decisionId: string,
+  decisionKey: string,
   bind: string,
   values: readonly string[],
 ): EffectAST => {
   if (primitive === 'chooseOne') {
     return {
       chooseOne: {
-        internalDecisionId: decisionId,
+        internalDecisionId: decisionKey,
         bind,
         options: { query: 'enums', values },
       },
@@ -104,7 +104,7 @@ const buildImplicitChooserEffect = (
   }
   return {
     chooseN: {
-      internalDecisionId: decisionId,
+      internalDecisionId: decisionKey,
       bind,
       options: { query: 'enums', values },
       n: 1,

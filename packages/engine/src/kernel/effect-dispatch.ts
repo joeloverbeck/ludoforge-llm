@@ -1,5 +1,5 @@
 import { getMaxEffectOps, type EffectContext, type EffectResult, type FreeOperationProbeScope } from './effect-context.js';
-import { createDecisionOccurrenceContext } from './decision-occurrence.js';
+import { emptyScope } from './decision-scope.js';
 import {
   EffectBudgetExceededError,
   effectRuntimeError,
@@ -51,6 +51,7 @@ const applyEffectWithBudget = (effect: EffectAST, ctx: EffectContext, budget: Ef
     rng: result.rng,
     emittedEvents: result.emittedEvents ?? [],
     bindings: result.bindings ?? ctx.bindings,
+    decisionScope: result.decisionScope ?? ctx.decisionScope,
     ...(result.pendingChoice === undefined ? {} : { pendingChoice: result.pendingChoice }),
   };
 };
@@ -59,6 +60,7 @@ const applyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContex
   let currentState = ctx.state;
   let currentRng = ctx.rng;
   let currentBindings = ctx.bindings;
+  let currentDecisionScope = ctx.decisionScope;
   const emittedEvents: TriggerEvent[] = [];
 
   for (const [effectIndex, effect] of effects.entries()) {
@@ -69,6 +71,7 @@ const applyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContex
         state: currentState,
         rng: currentRng,
         bindings: currentBindings,
+        decisionScope: currentDecisionScope,
         effectPath: `${ctx.effectPath ?? ''}[${effectIndex}]`,
       },
       budget,
@@ -76,13 +79,27 @@ const applyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContex
     currentState = result.state;
     currentRng = result.rng;
     currentBindings = result.bindings ?? currentBindings;
+    currentDecisionScope = result.decisionScope ?? currentDecisionScope;
     emittedEvents.push(...(result.emittedEvents ?? []));
     if (result.pendingChoice !== undefined) {
-      return { state: currentState, rng: currentRng, emittedEvents, bindings: currentBindings, pendingChoice: result.pendingChoice };
+      return {
+        state: currentState,
+        rng: currentRng,
+        emittedEvents,
+        bindings: currentBindings,
+        decisionScope: currentDecisionScope,
+        pendingChoice: result.pendingChoice,
+      };
     }
   }
 
-  return { state: currentState, rng: currentRng, emittedEvents, bindings: currentBindings };
+  return {
+    state: currentState,
+    rng: currentRng,
+    emittedEvents,
+    bindings: currentBindings,
+    decisionScope: currentDecisionScope,
+  };
 };
 
 export function applyEffect(effect: EffectAST, ctx: EffectContext): EffectResult {
@@ -94,7 +111,7 @@ export function applyEffect(effect: EffectAST, ctx: EffectContext): EffectResult
   };
   const result = applyEffectWithBudget(
     effect,
-    { ...ctx, freeOperationProbeScope, decisionOccurrences: createDecisionOccurrenceContext() },
+    { ...ctx, freeOperationProbeScope, decisionScope: ctx.decisionScope ?? emptyScope() },
     budget,
   );
   return {
@@ -115,7 +132,7 @@ export function applyEffects(effects: readonly EffectAST[], ctx: EffectContext):
   };
   const result = applyEffectsWithBudget(
     effects,
-    { ...ctx, freeOperationProbeScope, decisionOccurrences: createDecisionOccurrenceContext() },
+    { ...ctx, freeOperationProbeScope, decisionScope: ctx.decisionScope ?? emptyScope() },
     budget,
   );
   return {

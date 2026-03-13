@@ -1,6 +1,7 @@
 import { evalCondition } from './eval-condition.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
+import { rebaseIterationPath, withIterationSegment } from './decision-scope.js';
 import { resolveControlFlowIterationLimit } from './control-flow-limit.js';
 import { buildForEachTraceEntry, buildReduceTraceEntry } from './control-flow-trace.js';
 import { effectRuntimeError } from './effect-error.js';
@@ -39,6 +40,7 @@ export const applyIf = (
       rng: thenResult.rng,
       ...(thenResult.emittedEvents === undefined ? {} : { emittedEvents: thenResult.emittedEvents }),
       bindings: thenResult.bindings ?? ctx.bindings,
+      ...(thenResult.decisionScope === undefined ? {} : { decisionScope: thenResult.decisionScope }),
       ...(thenResult.pendingChoice === undefined ? {} : { pendingChoice: thenResult.pendingChoice }),
     };
   }
@@ -50,11 +52,12 @@ export const applyIf = (
       rng: elseResult.rng,
       ...(elseResult.emittedEvents === undefined ? {} : { emittedEvents: elseResult.emittedEvents }),
       bindings: elseResult.bindings ?? ctx.bindings,
+      ...(elseResult.decisionScope === undefined ? {} : { decisionScope: elseResult.decisionScope }),
       ...(elseResult.pendingChoice === undefined ? {} : { pendingChoice: elseResult.pendingChoice }),
     };
   }
 
-  return { state: ctx.state, rng: ctx.rng, bindings: ctx.bindings };
+  return { state: ctx.state, rng: ctx.rng, bindings: ctx.bindings, decisionScope: ctx.decisionScope };
 };
 
 export const applyLet = (
@@ -80,6 +83,7 @@ export const applyLet = (
       rng: nestedResult.rng,
       ...(nestedResult.emittedEvents === undefined ? {} : { emittedEvents: nestedResult.emittedEvents }),
       bindings: ctx.bindings,
+      ...(nestedResult.decisionScope === undefined ? {} : { decisionScope: nestedResult.decisionScope }),
       pendingChoice: nestedResult.pendingChoice,
     };
   }
@@ -95,6 +99,7 @@ export const applyLet = (
     state: nestedResult.state,
     rng: nestedResult.rng,
     ...(nestedResult.emittedEvents === undefined ? {} : { emittedEvents: nestedResult.emittedEvents }),
+    ...(nestedResult.decisionScope === undefined ? {} : { decisionScope: nestedResult.decisionScope }),
     bindings: {
       ...ctx.bindings,
       ...exportedBindings,
@@ -139,6 +144,8 @@ export const applyForEach = (
 
   let currentState = ctx.state;
   let currentRng = ctx.rng;
+  let currentDecisionScope = ctx.decisionScope;
+  const parentIterationPath = ctx.decisionScope.iterationPath;
   const emittedEvents: TriggerEvent[] = [];
   for (let iterIdx = 0; iterIdx < boundedItems.length; iterIdx += 1) {
     const item = boundedItems[iterIdx]!;
@@ -146,15 +153,16 @@ export const applyForEach = (
       ...ctx,
       state: currentState,
       rng: currentRng,
+      decisionScope: withIterationSegment(rebaseIterationPath(currentDecisionScope, parentIterationPath), iterIdx),
       bindings: {
         ...ctx.bindings,
         [effect.forEach.bind]: item,
       },
-      iterationPath: `${ctx.iterationPath ?? ''}[${iterIdx}]`,
     };
     const iterationResult = applyEffectsWithBudget(effect.forEach.effects, withTracePath(iterationCtx, '.forEach.effects'), budget);
     currentState = iterationResult.state;
     currentRng = iterationResult.rng;
+    currentDecisionScope = iterationResult.decisionScope ?? currentDecisionScope;
     emittedEvents.push(...(iterationResult.emittedEvents ?? []));
     if (iterationResult.pendingChoice !== undefined) {
       return {
@@ -162,6 +170,7 @@ export const applyForEach = (
         rng: currentRng,
         emittedEvents,
         bindings: ctx.bindings,
+        decisionScope: currentDecisionScope,
         pendingChoice: iterationResult.pendingChoice,
       };
     }
@@ -182,6 +191,7 @@ export const applyForEach = (
       ...ctx,
       state: currentState,
       rng: currentRng,
+      decisionScope: currentDecisionScope,
       bindings: {
         ...ctx.bindings,
         [effect.forEach.countBind]: boundedItems.length,
@@ -190,6 +200,7 @@ export const applyForEach = (
     const countResult = applyEffectsWithBudget(effect.forEach.in, withTracePath(countCtx, '.forEach.in'), budget);
     currentState = countResult.state;
     currentRng = countResult.rng;
+    currentDecisionScope = countResult.decisionScope ?? currentDecisionScope;
     emittedEvents.push(...(countResult.emittedEvents ?? []));
     if (countResult.pendingChoice !== undefined) {
       return {
@@ -197,12 +208,19 @@ export const applyForEach = (
         rng: currentRng,
         emittedEvents,
         bindings: ctx.bindings,
+        decisionScope: currentDecisionScope,
         pendingChoice: countResult.pendingChoice,
       };
     }
   }
 
-  return { state: currentState, rng: currentRng, emittedEvents, bindings: ctx.bindings };
+  return {
+    state: currentState,
+    rng: currentRng,
+    emittedEvents,
+    bindings: ctx.bindings,
+    decisionScope: currentDecisionScope,
+  };
 };
 
 export const applyReduce = (
@@ -261,6 +279,7 @@ export const applyReduce = (
       rng: continuationResult.rng,
       ...(continuationResult.emittedEvents === undefined ? {} : { emittedEvents: continuationResult.emittedEvents }),
       bindings: ctx.bindings,
+      ...(continuationResult.decisionScope === undefined ? {} : { decisionScope: continuationResult.decisionScope }),
       pendingChoice: continuationResult.pendingChoice,
     };
   }
@@ -276,6 +295,7 @@ export const applyReduce = (
     state: continuationResult.state,
     rng: continuationResult.rng,
     ...(continuationResult.emittedEvents === undefined ? {} : { emittedEvents: continuationResult.emittedEvents }),
+    ...(continuationResult.decisionScope === undefined ? {} : { decisionScope: continuationResult.decisionScope }),
     bindings: {
       ...ctx.bindings,
       ...exportedBindings,
@@ -303,6 +323,7 @@ export const applyRemoveByPriority = (
   let remainingBudget = resolveRemovalBudget(evalValue(effect.removeByPriority.budget, evalCtx), 'removeByPriority');
   let currentState = ctx.state;
   let currentRng = ctx.rng;
+  let currentDecisionScope = ctx.decisionScope;
   const emittedEvents: TriggerEvent[] = [];
   const countBindings: Record<string, number> = {};
 
@@ -333,6 +354,7 @@ export const applyRemoveByPriority = (
           ...ctx,
           state: currentState,
           rng: currentRng,
+          decisionScope: currentDecisionScope,
           bindings: {
             ...ctx.bindings,
             [group.bind]: item,
@@ -355,6 +377,7 @@ export const applyRemoveByPriority = (
 
         currentState = moveResult.state;
         currentRng = moveResult.rng;
+        currentDecisionScope = moveResult.decisionScope ?? currentDecisionScope;
         emittedEvents.push(...(moveResult.emittedEvents ?? []));
         removedInGroup += 1;
         remainingBudget -= 1;
@@ -380,27 +403,36 @@ export const applyRemoveByPriority = (
   };
 
   if (effect.removeByPriority.in !== undefined) {
-    const inCtx: EffectContext = {
-      ...ctx,
-      state: currentState,
-      rng: currentRng,
-      bindings: exportedBindings,
-    };
-
-    const inResult = applyEffectsWithBudget(effect.removeByPriority.in, withTracePath(inCtx, '.removeByPriority.in'), budget);
-    currentState = inResult.state;
-    currentRng = inResult.rng;
-    emittedEvents.push(...(inResult.emittedEvents ?? []));
-    if (inResult.pendingChoice !== undefined) {
-      return {
+      const inCtx: EffectContext = {
+        ...ctx,
         state: currentState,
         rng: currentRng,
-        emittedEvents,
+        decisionScope: currentDecisionScope,
         bindings: exportedBindings,
-        pendingChoice: inResult.pendingChoice,
       };
-    }
-  }
 
-  return { state: currentState, rng: currentRng, emittedEvents, bindings: exportedBindings };
+      const inResult = applyEffectsWithBudget(effect.removeByPriority.in, withTracePath(inCtx, '.removeByPriority.in'), budget);
+      currentState = inResult.state;
+      currentRng = inResult.rng;
+      currentDecisionScope = inResult.decisionScope ?? currentDecisionScope;
+      emittedEvents.push(...(inResult.emittedEvents ?? []));
+      if (inResult.pendingChoice !== undefined) {
+        return {
+          state: currentState,
+          rng: currentRng,
+          emittedEvents,
+          bindings: exportedBindings,
+          decisionScope: currentDecisionScope,
+          pendingChoice: inResult.pendingChoice,
+        };
+      }
+    }
+
+  return {
+    state: currentState,
+    rng: currentRng,
+    emittedEvents,
+    bindings: exportedBindings,
+    decisionScope: currentDecisionScope,
+  };
 };

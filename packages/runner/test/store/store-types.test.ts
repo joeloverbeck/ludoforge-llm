@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import type {
   ChoicePendingRequest,
+  DecisionKey,
   LegalMoveEnumerationResult,
   MoveParamValue,
   TerminalResult,
@@ -10,21 +11,23 @@ import { asActionId, asPlayerId } from '@ludoforge/engine/runtime';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import type { PartialChoice, RenderContext } from '../../src/store/store-types';
 
+const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
+
 describe('store-types', () => {
   it('constructs PartialChoice with valid MoveParamValue values', () => {
     const scalarChoice: PartialChoice = {
-      decisionId: 'target-zone',
+      decisionKey: asDecisionKey('target-zone'),
       name: 'Target Zone',
       value: 'zone:main' as MoveParamValue,
     };
 
     const vectorChoice: PartialChoice = {
-      decisionId: 'targets',
+      decisionKey: asDecisionKey('targets'),
       name: 'Targets',
       value: ['zone:main', asPlayerId(1)] as MoveParamValue,
     };
 
-    expect(scalarChoice.decisionId).toBe('target-zone');
+    expect(scalarChoice.decisionKey).toBe('target-zone');
     expect(vectorChoice.name).toBe('Targets');
     expectTypeOf(vectorChoice.value).toMatchTypeOf<MoveParamValue>();
   });
@@ -38,7 +41,7 @@ describe('store-types', () => {
     const choicePending: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
-      decisionId: 'choose-card',
+      decisionKey: asDecisionKey('choose-card'),
       name: 'Choose Card',
       type: 'chooseOne',
       options: [{ value: 'card:a', legality: 'legal', illegalReason: null }],

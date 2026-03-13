@@ -1195,6 +1195,7 @@ describe('compile-effects lowering', () => {
         chooseN: {
           internalDecisionId: 'decision:doc.actions.0.effects.0.distributeTokens.selectTokens',
           bind: '$__selected_doc_actions_0_effects_0_distributeTokens',
+          decisionIdentity: 'decision:doc.actions.0.effects.0.distributeTokens.selectTokens',
           options: {
             query: 'tokensInZone',
             zone: 'deck:none',
@@ -1215,6 +1216,7 @@ describe('compile-effects lowering', () => {
               chooseOne: {
                 internalDecisionId: 'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination',
                 bind: '$__destination_doc_actions_0_effects_0_distributeTokens',
+                decisionIdentity: 'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination',
                 options: {
                   query: 'zones',
                 },

@@ -267,7 +267,7 @@ describe('FITL card-30 USS New Jersey', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$targetProvince' || request.decisionId.includes('targetProvince'),
+        when: (request) => request.name === '$targetProvince' || request.decisionKey.includes('targetProvince'),
         value: [SHADED_PROVINCE_A, SHADED_PROVINCE_B],
       },
     ];

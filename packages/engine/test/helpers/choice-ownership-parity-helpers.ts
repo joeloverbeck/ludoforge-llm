@@ -14,14 +14,14 @@ export const CHOICE_OWNER_PLAYER: PlayerId = asPlayerId(1);
 
 export const buildChooserOwnedChoiceEffect = (
   primitive: ChoiceOwnershipPrimitive,
-  decisionId: string,
+  decisionKey: string,
   bind: string,
   values: readonly string[],
 ): EffectAST => {
   if (primitive === 'chooseOne') {
     return {
       chooseOne: {
-        internalDecisionId: decisionId,
+        internalDecisionId: decisionKey,
         bind,
         chooser: { id: CHOICE_OWNER_PLAYER },
         options: { query: 'enums', values },
@@ -31,7 +31,7 @@ export const buildChooserOwnedChoiceEffect = (
 
   return {
     chooseN: {
-      internalDecisionId: decisionId,
+      internalDecisionId: decisionKey,
       bind,
       chooser: { id: CHOICE_OWNER_PLAYER },
       options: { query: 'enums', values },

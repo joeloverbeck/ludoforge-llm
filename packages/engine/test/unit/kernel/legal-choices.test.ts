@@ -109,6 +109,39 @@ describe('legalChoicesDiscover()', () => {
     assert.deepStrictEqual(result, { kind: 'illegal', complete: false, reason: 'phaseMismatch' });
   });
 
+  it('does not satisfy an effect choice from a legacy bind-name param alias', () => {
+    const action: ActionDef = {
+      id: asActionId('legacyAliasChoiceAction'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          chooseOne: {
+            internalDecisionId: 'decision:$target',
+            bind: '$target',
+            options: { query: 'enums', values: ['a', 'b'] },
+          },
+        },
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState();
+
+    const result = legalChoicesDiscover(def, state, makeMove('legacyAliasChoiceAction', { $target: 'a' }));
+    assert.equal(result.kind, 'pending');
+    if (result.kind !== 'pending') {
+      throw new Error('expected pending request');
+    }
+    assert.equal(result.decisionKey, 'decision:$target');
+    assert.deepStrictEqual(result.options.map((option) => option.value), ['a', 'b']);
+  });
+
   it('returns illegal with actionLimitExceeded when action limit has been reached', () => {
     const action: ActionDef = {
       id: asActionId('limitedAction'),
@@ -192,7 +225,7 @@ phase: [asPhaseId('main')],
     const pending = legalChoicesDiscover(def, state, makeMove('raiseLikeAction'));
     assert.equal(pending.kind, 'pending');
     assert.equal(pending.type, 'chooseOne');
-    assert.equal(pending.decisionId, 'amount');
+    assert.equal(pending.decisionKey, 'amount');
     assert.equal(pending.name, 'amount');
     assert.deepStrictEqual(pending.options.map((option) => option.value), [2, 3, 4]);
 
@@ -232,13 +265,13 @@ phase: [asPhaseId('main')],
 
     const requestB = legalChoicesDiscover(def, state, makeMove('rebindChoiceAction', {
       mode: 'b',
-      [requestA.decisionId]: 2,
+      [requestA.decisionKey]: 2,
     }));
     assert.equal(requestB.kind, 'pending');
     if (requestB.kind !== 'pending') {
       throw new Error('expected pending request for mode=b');
     }
-    assert.notEqual(requestB.decisionId, requestA.decisionId);
+    assert.notEqual(requestB.decisionKey, requestA.decisionKey);
     assert.equal(requestB.name, '$pick@b');
   });
 
@@ -452,7 +485,7 @@ phase: [asPhaseId('main')],
     const result1 = legalChoicesDiscover(def, state, makeMove('pickColor'));
     assert.equal(result1.complete, false);
     assert.equal(result1.kind, 'pending');
-    assert.equal(result1.decisionId, 'decision:$color');
+    assert.equal(result1.decisionKey, 'decision:$color');
     assert.equal(result1.name, '$color');
     assert.equal(result1.type, 'chooseOne');
     assert.deepStrictEqual(result1.options.map((option) => option.value), ['red', 'blue', 'green']);
@@ -562,7 +595,7 @@ phase: [asPhaseId('main')],
     assert.deepStrictEqual(request.targetKinds, ['token']);
   });
 
-  it('3f. target metadata is stable across decisionId formatting changes', () => {
+  it('3f. target metadata is stable across decisionKey formatting changes', () => {
     const plainAction: ActionDef = {
       id: asActionId('pickZonePlain'),
       actor: 'active',
@@ -608,7 +641,7 @@ phase: [asPhaseId('main')],
     const reformattedRequest = legalChoicesDiscover(def, state, makeMove('pickZoneReformatted'));
     assert.equal(plainRequest.kind, 'pending');
     assert.equal(reformattedRequest.kind, 'pending');
-    assert.notEqual(plainRequest.decisionId, reformattedRequest.decisionId);
+    assert.notEqual(plainRequest.decisionKey, reformattedRequest.decisionKey);
     assert.deepStrictEqual(plainRequest.targetKinds, ['zone']);
     assert.deepStrictEqual(reformattedRequest.targetKinds, ['zone']);
   });
@@ -1052,7 +1085,7 @@ phase: [asPhaseId('main')],
     if (result.kind !== 'pending') {
       throw new Error('expected pending choice');
     }
-    assert.equal(result.decisionId, 'decision:$innerChoice');
+    assert.equal(result.decisionKey, 'decision:$innerChoice');
     assert.deepEqual(result.options.map((option) => option.value), ['a', 'b']);
   });
 
@@ -1287,7 +1320,7 @@ phase: [asPhaseId('main')],
       assert.equal(discoverResult.complete, false);
       assert.equal(discoverResult.kind, 'pending');
       assert.equal(discoverResult.type, 'chooseOne');
-      assert.equal(discoverResult.decisionId, 'decision:probe::$target');
+      assert.equal(discoverResult.decisionKey, 'decision:probe::$target');
       assert.deepStrictEqual(
         discoverResult.options.map((entry) => entry.legality),
         ['unknown', 'unknown'],
@@ -1297,7 +1330,7 @@ phase: [asPhaseId('main')],
       assert.equal(evaluateResult.complete, false);
       assert.equal(evaluateResult.kind, 'pending');
       assert.equal(evaluateResult.type, 'chooseOne');
-      assert.equal(evaluateResult.decisionId, 'decision:probe::$target');
+      assert.equal(evaluateResult.decisionKey, 'decision:probe::$target');
       assert.deepStrictEqual(evaluateResult.options, [
         { value: 'a', legality: 'legal', illegalReason: null },
         { value: 'b', legality: 'illegal', illegalReason: 'pipelineAtomicCostValidationFailed' },
@@ -1356,7 +1389,7 @@ phase: [asPhaseId('main')],
       assert.equal(result.complete, false);
       assert.equal(result.kind, 'pending');
       assert.equal(result.type, 'chooseN');
-      assert.equal(result.decisionId, 'decision:probe::$targets');
+      assert.equal(result.decisionKey, 'decision:probe::$targets');
       assert.deepStrictEqual(result.options, [
         { value: 'a', legality: 'legal', illegalReason: null },
         { value: 'b', legality: 'illegal', illegalReason: 'pipelineAtomicCostValidationFailed' },
@@ -1550,7 +1583,7 @@ phase: [asPhaseId('main')],
       assert.equal(result.complete, false);
       assert.equal(result.kind, 'pending');
       assert.equal(result.type, 'chooseN');
-      assert.equal(result.decisionId, 'decision:probe::$targets');
+      assert.equal(result.decisionKey, 'decision:probe::$targets');
       assert.deepStrictEqual(result.options, [
         { value: 'a', legality: 'legal', illegalReason: null },
         { value: 'b', legality: 'illegal', illegalReason: 'pipelineAtomicCostValidationFailed' },
@@ -1667,7 +1700,7 @@ phase: [asPhaseId('main')],
       const result = legalChoicesEvaluate(def, makeBaseState(), makeMove('nestedUnsatLegalityOp'));
 
       assert.equal(result.kind, 'pending');
-      assert.equal(result.decisionId, 'decision:$mode');
+      assert.equal(result.decisionKey, 'decision:$mode');
       assert.deepStrictEqual(result.options, [
         { value: 'trap', legality: 'illegal', illegalReason: null },
         { value: 'safe', legality: 'legal', illegalReason: null },
@@ -1727,7 +1760,7 @@ phase: [asPhaseId('main')],
 
       assert.equal(result.kind, 'pending');
       assert.equal(result.type, 'chooseOne');
-      assert.equal(result.decisionId, 'decision:$mode');
+      assert.equal(result.decisionKey, 'decision:$mode');
       assert.deepStrictEqual(result.options, [
         { value: 'stochastic', legality: 'unknown', illegalReason: null },
         { value: 'safe', legality: 'legal', illegalReason: null },
@@ -1793,7 +1826,7 @@ phase: [asPhaseId('main')],
 
       assert.equal(result.kind, 'pending');
       assert.equal(result.type, 'chooseN');
-      assert.equal(result.decisionId, 'decision:$targets');
+      assert.equal(result.decisionKey, 'decision:$targets');
       assert.deepStrictEqual(result.options, [
         { value: 'a', legality: 'legal', illegalReason: null },
         { value: 'b', legality: 'unknown', illegalReason: null },
@@ -2503,7 +2536,7 @@ phase: [asPhaseId('main')],
       const request = legalChoicesDiscover(def, state, { actionId: asActionId('operation'), params: {}, freeOperation: true });
       assert.equal(request.kind, 'pending');
       assert.equal(request.complete, false);
-      assert.equal(request.decisionId, 'decision:$targetProvince');
+      assert.equal(request.decisionKey, 'decision:$targetProvince');
       assert.deepEqual(request.options.map((option) => option.value), ['board:cambodia']);
     });
 
@@ -2774,7 +2807,7 @@ phase: [asPhaseId('main')],
       const request = legalChoicesDiscover(def, state, { actionId: asActionId('operation'), params: {}, freeOperation: true });
       assert.equal(request.kind, 'pending');
       assert.equal(request.complete, false);
-      assert.equal(request.decisionId, 'decision:$targetProvince');
+      assert.equal(request.decisionKey, 'decision:$targetProvince');
       assert.deepEqual(request.options.map((option) => option.value), ['board:cambodia']);
     });
 
@@ -3421,7 +3454,7 @@ phase: [asPhaseId('main')],
         );
 
         const crossSeatResult = legalChoicesEvaluate(def, state, makeMove(actionId, {
-          [request.decisionId]: ownershipSelection(primitive, 'a'),
+          [request.decisionKey]: ownershipSelection(primitive, 'a'),
         }));
         assert.deepStrictEqual(crossSeatResult, { kind: 'complete', complete: true });
       }
@@ -3480,14 +3513,14 @@ phase: [asPhaseId('main')],
         );
 
         const crossSeatResult = legalChoicesEvaluate(def, state, makeMove(actionId, {
-          [pending.decisionId]: ownershipSelection(primitive, 'a'),
+          [pending.decisionKey]: ownershipSelection(primitive, 'a'),
         }));
         assert.deepStrictEqual(crossSeatResult, { kind: 'complete', complete: true });
 
         const ownerResult = legalChoicesEvaluate(
           def,
           { ...state, activePlayer: CHOICE_OWNER_PLAYER },
-          makeMove(actionId, { [pending.decisionId]: ownershipSelection(primitive, 'a') }),
+          makeMove(actionId, { [pending.decisionKey]: ownershipSelection(primitive, 'a') }),
         );
         assert.deepStrictEqual(ownerResult, { kind: 'complete', complete: true });
       }

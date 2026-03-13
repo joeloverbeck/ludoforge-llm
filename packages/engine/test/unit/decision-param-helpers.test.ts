@@ -293,8 +293,8 @@ describe('decision param helper', () => {
   it('fills nested templated decision ids with deterministic defaults', () => {
     const resolved = normalizeDecisionParamsForMove(makeDefWithNestedTemplatedChoices(), makeBaseState(), makeMove());
 
-    assert.equal(resolved.params['decision:$mode@{$region}::$mode@north'], 'advance');
-    assert.equal(resolved.params['decision:$mode@{$region}::$mode@south'], 'advance');
+    assert.equal(resolved.params['decision:$mode@{$region}::$mode@north[0]'], 'advance');
+    assert.equal(resolved.params['decision:$mode@{$region}::$mode@south[1]'], 'advance');
   });
 
   it('supports decision-name pattern overrides', () => {
@@ -307,8 +307,8 @@ describe('decision param helper', () => {
       ],
     });
 
-    assert.equal(resolved.params['decision:$mode@{$region}::$mode@north'], 'hold');
-    assert.equal(resolved.params['decision:$mode@{$region}::$mode@south'], 'hold');
+    assert.equal(resolved.params['decision:$mode@{$region}::$mode@north[0]'], 'hold');
+    assert.equal(resolved.params['decision:$mode@{$region}::$mode@south[1]'], 'hold');
   });
 
   it('keeps name-based overrides stable across decision-id prefix changes', () => {
@@ -327,7 +327,7 @@ describe('decision param helper', () => {
         },
       );
       return Object.entries(resolved.params)
-        .filter(([decisionId]) => decisionId.includes('::$mode@'))
+        .filter(([decisionKey]) => decisionKey.includes('::$mode@'))
         .map((entry) => String(entry[1]));
     };
 
@@ -340,7 +340,7 @@ describe('decision param helper', () => {
       makeDefWithNestedTemplatedChoices(),
       makeBaseState(),
       makeMove({
-        'decision:$mode@{$region}::$mode@north': 'hold',
+        'decision:$mode@{$region}::$mode@north[0]': 'hold',
         '$mode@south': 'hold',
       }),
       {
@@ -353,8 +353,8 @@ describe('decision param helper', () => {
       },
     );
 
-    assert.equal(resolved.params['decision:$mode@{$region}::$mode@north'], 'hold');
-    assert.equal(resolved.params['decision:$mode@{$region}::$mode@south'], 'hold');
+    assert.equal(resolved.params['decision:$mode@{$region}::$mode@north[0]'], 'hold');
+    assert.equal(resolved.params['decision:$mode@{$region}::$mode@south[1]'], 'hold');
   });
 
   it('supports indexed decision-name params for repeated nested choices', () => {
@@ -368,7 +368,7 @@ describe('decision param helper', () => {
     );
 
     const repeatedChoices = Object.entries(resolved.params)
-      .filter(([decisionId]) => decisionId.includes('decision:$mode'))
+      .filter(([decisionKey]) => decisionKey.includes('decision:$mode'))
       .map((entry) => String(entry[1]));
     assert.deepEqual(repeatedChoices, ['hold', 'advance']);
   });
@@ -380,7 +380,7 @@ describe('decision param helper', () => {
       makeMove(),
     );
     const repeatedDecisionIds = Object.keys(baseline.params)
-      .filter((decisionId) => decisionId.includes('decision:$mode'));
+      .filter((decisionKey) => decisionKey.includes('decision:$mode'));
     assert.equal(repeatedDecisionIds.length, 2);
 
     const resolved = normalizeDecisionParamsForMove(
@@ -407,7 +407,7 @@ describe('decision param helper', () => {
     );
 
     const repeatedChoices = Object.entries(resolved.params)
-      .filter(([decisionId]) => decisionId.includes('$__macro_caps__bonusSpace'))
+      .filter(([decisionKey]) => decisionKey.includes('$__macro_caps__bonusSpace'))
       .map((entry) => String(entry[1]));
     assert.deepEqual(repeatedChoices, ['hold', 'advance']);
   });
@@ -459,7 +459,7 @@ describe('decision param helper', () => {
 
     assert.throws(
       () => normalizeDecisionParamsForMove(unresolvedDef, makeBaseState(), makeMove()),
-      /Could not normalize decision params for actionId=nested-choice-op: unresolved decisionId=decision:\$target name=\$target type=chooseOne options=0 min=0/,
+      /Could not normalize decision params for actionId=nested-choice-op: unresolved decisionKey=decision:\$target name=\$target type=chooseOne options=0 min=0/,
     );
   });
 

@@ -6,6 +6,7 @@ import {
   asPlayerId,
   asTokenId,
   initialState,
+  type DecisionKey,
   type GameDef,
   type GameState,
   type Token,
@@ -14,6 +15,8 @@ import {
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import { deriveRenderModel } from '../../src/model/derive-render-model.js';
 import type { RenderContext } from '../../src/store/store-types.js';
+
+const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 
 interface CompileFixtureOptions {
   readonly zones: readonly {
@@ -607,13 +610,13 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         choicePending: {
           kind: 'pending',
           complete: false,
-          decisionId: 'targetZone',
+          decisionKey: asDecisionKey('targetZone'),
           name: 'pick-target',
           type: 'chooseOne',
           options: [{ value: 'reserve:none', legality: 'legal', illegalReason: null }],
           targetKinds: ['zone'],
         },
-        choiceStack: [{ decisionId: 'fromZone', name: 'from-zone', value: 'table:none' }],
+        choiceStack: [{ decisionKey: asDecisionKey('fromZone'), name: 'from-zone', value: 'table:none' }],
       }),
     );
 
@@ -974,7 +977,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         choicePending: {
           kind: 'pending',
           complete: false,
-          decisionId: 'targetZone',
+          decisionKey: asDecisionKey('targetZone'),
           name: 'pick-target',
           type: 'chooseOne',
           options: [
@@ -1001,7 +1004,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         choicePending: {
           kind: 'pending',
           complete: false,
-          decisionId: 'targetToken',
+          decisionKey: asDecisionKey('targetToken'),
           name: 'pick-target',
           type: 'chooseOne',
           options: [
@@ -1026,7 +1029,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         choicePending: {
           kind: 'pending',
           complete: false,
-          decisionId: 'decision:internal::targetZone',
+          decisionKey: asDecisionKey('decision:internal::targetZone'),
           name: 'pick-target',
           type: 'chooseOne',
           options: [{ value: 'table:none', legality: 'legal', illegalReason: null }],
@@ -1066,7 +1069,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         choicePending: {
           kind: 'pending',
           complete: false,
-          decisionId: 'targetZone',
+          decisionKey: asDecisionKey('targetZone'),
           name: 'pick-target',
           type: 'chooseOne',
           options: [
@@ -1111,7 +1114,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         choicePending: {
           kind: 'pending',
           complete: false,
-          decisionId: 'targetZone',
+          decisionKey: asDecisionKey('targetZone'),
           name: 'pick-target',
           type: 'chooseOne',
           options: [

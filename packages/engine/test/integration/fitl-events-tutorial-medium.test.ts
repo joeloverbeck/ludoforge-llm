@@ -81,7 +81,7 @@ describe('FITL tutorial medium event-card production spec', () => {
     assert.notEqual(globalCounter, undefined, 'Expected addVar global terrorSabotageMarkersPlaced effect');
   });
 
-  it('compiles card 75 (Sihanouk) with structured free-operation grants', () => {
+  it('compiles card 75 (Sihanouk) with exact branch structure and staged shaded follow-ups', () => {
     const { parsed, compiled } = compileProductionSpec();
 
     assertNoErrors(parsed);
@@ -94,23 +94,33 @@ describe('FITL tutorial medium event-card production spec', () => {
     assert.equal(card?.metadata?.period, '1964');
     assert.deepEqual(card?.metadata?.seatOrder, ['ARVN', 'NVA', 'US', 'VC']);
 
-    assert.deepEqual(card?.unshaded?.freeOperationGrants, [
-      {
-        seat: 'arvn',
-        sequence: { batch: 'sihanouk-unshaded-arvn', step: 0 },
-        operationClass: 'operation',
-        actionIds: ['sweep', 'assault'],
-        zoneFilter: {
-          op: '==',
-          left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
-          right: 'cambodia',
-        },
-      },
-    ]);
-    assert.deepEqual(card?.shaded?.freeOperationGrants, [
-      { seat: 'vc', sequence: { batch: 'sihanouk-shaded-vc-nva', step: 0 }, operationClass: 'operation' },
-      { seat: 'nva', sequence: { batch: 'sihanouk-shaded-vc-nva', step: 1 }, operationClass: 'operation' },
-    ]);
+    assert.equal(card?.unshaded?.freeOperationGrants, undefined);
+    assert.deepEqual(
+      card?.unshaded?.branches?.map((branch) => branch.id),
+      ['sihanouk-execute-as-us', 'sihanouk-execute-as-arvn'],
+    );
+
+    const usBranch = card?.unshaded?.branches?.[0]?.freeOperationGrants ?? [];
+    const arvnBranch = card?.unshaded?.branches?.[1]?.freeOperationGrants ?? [];
+    assert.equal(usBranch[0]?.seat, 'us');
+    assert.equal(usBranch[0]?.executeAsSeat, 'us');
+    assert.equal(usBranch[0]?.allowDuringMonsoon, true);
+    assert.equal(usBranch[1]?.operationClass, 'limitedOperation');
+    assert.equal(arvnBranch[0]?.seat, 'arvn');
+    assert.equal(arvnBranch[0]?.allowDuringMonsoon, true);
+    assert.equal(arvnBranch[1]?.operationClass, 'limitedOperation');
+
+    assert.equal(card?.shaded?.effectTiming, 'afterGrants');
+    assert.equal(card?.shaded?.freeOperationGrants?.[0]?.seat, 'vc');
+    assert.equal(card?.shaded?.freeOperationGrants?.[0]?.actionIds?.[0], 'rally');
+    const shadedEffects = card?.shaded?.effects ?? [];
+    assert.equal(shadedEffects.length, 3);
+    const followUpMarch = (shadedEffects[0] as { grantFreeOperation?: Record<string, unknown> }).grantFreeOperation;
+    assert.deepEqual(followUpMarch?.executionContext, { originRestrictionKey: 'sihanouk-rally-spaces' });
+    assert.equal(followUpMarch?.allowDuringMonsoon, true);
+    const nvaMarch = (shadedEffects[2] as { grantFreeOperation?: Record<string, unknown> }).grantFreeOperation;
+    assert.deepEqual(nvaMarch?.executionContext, { originRestrictionKey: 'sihanouk-rally-spaces' });
+    assert.equal(nvaMarch?.allowDuringMonsoon, true);
   });
 
   it('compiles card 51 (301st Supply Bn) with cross-space insurgent removal and shaded rollRandom resource gain', () => {

@@ -149,8 +149,18 @@ export const normalizeTokenFilterTraversalError = (
 
 export const isTokenFilterPredicateExpr = (expr: unknown): expr is TokenFilterPredicate =>
   isRecord(expr)
-  && typeof expr.prop === 'string'
   && isTokenFilterPredicateOperator(expr.op)
+  && (
+    typeof expr.prop === 'string'
+    || (
+      isRecord(expr.field)
+      && (
+        expr.field.kind === 'tokenId'
+        || expr.field.kind === 'tokenZone'
+        || (expr.field.kind === 'prop' && typeof expr.field.prop === 'string')
+      )
+    )
+  )
   && 'value' in expr;
 
 const isTokenFilterNotExpr = (expr: unknown): expr is TokenFilterNotExpr =>

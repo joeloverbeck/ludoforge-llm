@@ -56,7 +56,12 @@ export type Reference =
   | { readonly ref: 'activePlayer' }
   | { readonly ref: 'activeSeat' }
   | { readonly ref: 'grantContext'; readonly key: string }
-  | { readonly ref: 'capturedSequenceZones'; readonly key: string };
+  | { readonly ref: 'capturedSequenceZones'; readonly key: FreeOperationSequenceKeyExpr };
+
+export type FreeOperationSequenceKeyExpr =
+  | string
+  | { readonly ref: 'binding'; readonly name: string; readonly displayName?: string }
+  | { readonly ref: 'grantContext'; readonly key: string };
 
 export type ValueExpr =
   | number
@@ -158,8 +163,14 @@ export type ConditionAST =
       readonly state: ValueExpr;
     };
 
+export type TokenFilterFieldSelector =
+  | { readonly kind: 'prop'; readonly prop: string }
+  | { readonly kind: 'tokenId' }
+  | { readonly kind: 'tokenZone' };
+
 export interface TokenFilterPredicate {
-  readonly prop: string;
+  readonly prop?: string;
+  readonly field?: TokenFilterFieldSelector;
   readonly op: PredicateOp;
   readonly value: ValueExpr | readonly (string | number | boolean)[];
 }
@@ -240,7 +251,7 @@ export type OptionsQuery =
     }
   | { readonly query: 'binding'; readonly name: string; readonly displayName?: string }
   | { readonly query: 'grantContext'; readonly key: string }
-  | { readonly query: 'capturedSequenceZones'; readonly key: string };
+  | { readonly query: 'capturedSequenceZones'; readonly key: FreeOperationSequenceKeyExpr };
 
 export type TransferVarEndpoint = ScopedVarEndpointContract<
   'global',

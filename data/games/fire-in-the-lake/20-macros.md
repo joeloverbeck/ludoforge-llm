@@ -1231,31 +1231,79 @@ effectMacros:
       - { name: resourceVar, type: string }
       - { name: allowTrailCountryFreeCost, type: value }
       - { name: maxActivatedGuerrillas, type: value }
+      - { name: enforceOriginRestriction, type: value }
     effects:
-      - chooseN:
-          bind: '$movingGuerrillas@{$destSpace}'
-          options:
-            query: tokensInAdjacentZones
-            zone: { param: destSpace }
-            filter:
-              op: and
-              args:
-                - { prop: faction, op: eq, value:  { param: faction } }
-                - { prop: type, op: eq, value: guerrilla }
-          min: 0
-          max: 99
-      - chooseN:
-          bind: '$movingTroops@{$destSpace}'
-          options:
-            query: tokensInAdjacentZones
-            zone: { param: destSpace }
-            filter:
-              op: and
-              args:
-                - { prop: faction, op: eq, value:  { param: faction } }
-                - { prop: type, op: eq, value: troops }
-          min: 0
-          max: 99
+      - if:
+          when:
+            op: and
+            args:
+              - { op: '==', left: { param: enforceOriginRestriction }, right: true }
+              - op: '>'
+                left:
+                  aggregate:
+                    op: count
+                    query: { query: grantContext, key: originRestrictionKey }
+                right: 0
+          then:
+            - chooseN:
+                bind: '$movingGuerrillas@{$destSpace}'
+                options:
+                  query: tokensInAdjacentZones
+                  zone: { param: destSpace }
+                  filter:
+                    op: and
+                    args:
+                      - { prop: faction, op: eq, value:  { param: faction } }
+                      - { prop: type, op: eq, value: guerrilla }
+                      - field: { kind: tokenZone }
+                        op: in
+                        value:
+                          ref: capturedSequenceZones
+                          key: { ref: grantContext, key: originRestrictionKey }
+                min: 0
+                max: 99
+            - chooseN:
+                bind: '$movingTroops@{$destSpace}'
+                options:
+                  query: tokensInAdjacentZones
+                  zone: { param: destSpace }
+                  filter:
+                    op: and
+                    args:
+                      - { prop: faction, op: eq, value:  { param: faction } }
+                      - { prop: type, op: eq, value: troops }
+                      - field: { kind: tokenZone }
+                        op: in
+                        value:
+                          ref: capturedSequenceZones
+                          key: { ref: grantContext, key: originRestrictionKey }
+                min: 0
+                max: 99
+          else:
+            - chooseN:
+                bind: '$movingGuerrillas@{$destSpace}'
+                options:
+                  query: tokensInAdjacentZones
+                  zone: { param: destSpace }
+                  filter:
+                    op: and
+                    args:
+                      - { prop: faction, op: eq, value:  { param: faction } }
+                      - { prop: type, op: eq, value: guerrilla }
+                min: 0
+                max: 99
+            - chooseN:
+                bind: '$movingTroops@{$destSpace}'
+                options:
+                  query: tokensInAdjacentZones
+                  zone: { param: destSpace }
+                  filter:
+                    op: and
+                    args:
+                      - { prop: faction, op: eq, value:  { param: faction } }
+                      - { prop: type, op: eq, value: troops }
+                min: 0
+                max: 99
       - let:
           bind: $movingCount
           value:
@@ -1381,7 +1429,16 @@ effectMacros:
     exports: [$targetSpaces]
     effects:
       - if:
-          when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
+          when:
+            op: and
+            args:
+              - { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
+              - op: '>'
+                left:
+                  aggregate:
+                    op: count
+                    query: { query: grantContext, key: originRestrictionKey }
+                right: 0
           then:
             - chooseN:
                 bind: $targetSpaces
@@ -1415,53 +1472,124 @@ effectMacros:
                                 args:
                                   - { prop: faction, op: eq, value:  { param: faction } }
                                   - { prop: type, op: in, value: ['guerrilla', 'troops'] }
+                                  - field: { kind: tokenZone }
+                                    op: in
+                                    value:
+                                      ref: capturedSequenceZones
+                                      key: { ref: grantContext, key: originRestrictionKey }
                         right: 0
                 min: 1
                 max: 1
           else:
-            - chooseN:
-                bind: $targetSpaces
-                options:
-                  query: mapSpaces
-                  filter:
-                    op: and
-                    args:
-                      - op: or
-                        args:
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
-                          - op: and
-                            args:
-                              - op: or
-                                args:
-                                  - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
-                                  - { op: '>', left: { ref: gvar, var: { param: resourceVar } }, right: 0 }
-                              - op: or
-                                args:
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
-                      - op: '>'
-                        left:
-                          aggregate:
-                            op: count
-                            query:
-                              query: tokensInAdjacentZones
-                              zone: $zone
-                              filter:
-                                op: and
-                                args:
-                                  - { prop: faction, op: eq, value:  { param: faction } }
-                                  - { prop: type, op: in, value: ['guerrilla', 'troops'] }
-                        right: 0
-                min: 1
-                max:
-                  if:
-                    when: { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
-                    then: 99
-                    else:
-                      if:
-                        when: { op: '>', left: { ref: gvar, var: { param: resourceVar } }, right: 0 }
-                        then: { ref: gvar, var: { param: resourceVar } }
-                        else: 99
+            - if:
+                when:
+                  op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query: { query: grantContext, key: originRestrictionKey }
+                  right: 0
+                then:
+                  - chooseN:
+                      bind: $targetSpaces
+                      options:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - op: or
+                              args:
+                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
+                                - op: and
+                                  args:
+                                    - op: or
+                                      args:
+                                        - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                                        - { op: '>', left: { ref: gvar, var: { param: resourceVar } }, right: 0 }
+                                    - op: or
+                                      args:
+                                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInAdjacentZones
+                                    zone: $zone
+                                    filter:
+                                      op: and
+                                      args:
+                                        - { prop: faction, op: eq, value:  { param: faction } }
+                                        - { prop: type, op: in, value: ['guerrilla', 'troops'] }
+                                        - field: { kind: tokenZone }
+                                          op: in
+                                          value:
+                                            ref: capturedSequenceZones
+                                            key: { ref: grantContext, key: originRestrictionKey }
+                              right: 0
+                      min: 1
+                      max:
+                        if:
+                          when: { op: '==', left: { ref: binding, name: __actionClass }, right: limitedOperation }
+                          then: 1
+                          else:
+                            if:
+                              when: { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                              then: 99
+                              else:
+                                if:
+                                  when: { op: '>', left: { ref: gvar, var: { param: resourceVar } }, right: 0 }
+                                  then: { ref: gvar, var: { param: resourceVar } }
+                                  else: 99
+                else:
+                  - chooseN:
+                      bind: $targetSpaces
+                      options:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - op: or
+                              args:
+                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
+                                - op: and
+                                  args:
+                                    - op: or
+                                      args:
+                                        - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                                        - { op: '>', left: { ref: gvar, var: { param: resourceVar } }, right: 0 }
+                                    - op: or
+                                      args:
+                                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInAdjacentZones
+                                    zone: $zone
+                                    filter:
+                                      op: and
+                                      args:
+                                        - { prop: faction, op: eq, value:  { param: faction } }
+                                        - { prop: type, op: in, value: ['guerrilla', 'troops'] }
+                              right: 0
+                      min: 1
+                      max:
+                        if:
+                          when: { op: '==', left: { ref: binding, name: __actionClass }, right: limitedOperation }
+                          then: 1
+                          else:
+                            if:
+                              when: { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                              then: 99
+                              else:
+                                if:
+                                  when: { op: '>', left: { ref: gvar, var: { param: resourceVar } }, right: 0 }
+                                  then: { ref: gvar, var: { param: resourceVar } }
+                                  else: 99
 
   # ── bombard-select-spaces ──────────────────────────────────────────────────
   # Shared Bombard target-space selector with capability-conditioned max spaces.
@@ -2168,6 +2296,7 @@ effectMacros:
             op: and
             args:
               - { op: '==', left: { ref: globalMarkerState, marker: cap_searchAndDestroy }, right: shaded }
+              - { op: '==', left: { ref: zoneProp, zone: { param: space }, prop: country }, right: southVietnam }
               - { op: '==', left: { ref: zoneProp, zone: { param: space }, prop: category }, right: province }
               - { op: '>', left: { ref: zoneProp, zone: { param: space }, prop: population }, right: 0 }
               - { op: '!=', left: { ref: markerState, space: { param: space }, marker: supportOpposition }, right: activeOpposition }

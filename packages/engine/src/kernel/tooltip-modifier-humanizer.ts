@@ -41,6 +41,13 @@ function extractConditionNames(cond: ConditionAST): readonly string[] {
   if (c.value !== undefined) names.push(...extractValueNames(c.value as ValueExpr));
   if (c.state !== undefined) names.push(...extractValueNames(c.state as ValueExpr));
   if (typeof c.prop === 'string') names.push(c.prop);
+  if (typeof c.field === 'object' && c.field !== null) {
+    if ('prop' in c.field && typeof c.field.prop === 'string') {
+      names.push(c.field.prop);
+    } else if ('kind' in c.field && typeof c.field.kind === 'string') {
+      names.push(c.field.kind);
+    }
+  }
   if (typeof c.marker === 'string') names.push(c.marker);
   return names;
 }

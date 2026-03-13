@@ -2,6 +2,7 @@ import { resolveBindingTemplate } from './binding-template.js';
 import type { ReadContext } from './eval-context.js';
 import { missingBindingError, missingVarError, typeMismatchError } from './eval-error.js';
 import { evalValue } from './eval-value.js';
+import { resolveFreeOperationSequenceKey } from './free-operation-sequence-key.js';
 import type { AssetRowPredicate, TokenFilterPredicate, ValueExpr } from './types.js';
 import type { PredicateValue } from './query-predicate.js';
 
@@ -76,7 +77,10 @@ function resolveRuntimePredicateReference(
   }
 
   if (value.ref === 'capturedSequenceZones') {
-    return ctx.freeOperationOverlay?.capturedSequenceZonesByKey?.[value.key] ?? [];
+    const resolvedKey = resolveFreeOperationSequenceKey(value.key, ctx);
+    return resolvedKey === undefined
+      ? []
+      : (ctx.freeOperationOverlay?.capturedSequenceZonesByKey?.[resolvedKey] ?? []);
   }
 
   return null;

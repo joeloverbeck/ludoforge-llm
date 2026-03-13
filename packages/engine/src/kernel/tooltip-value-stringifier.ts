@@ -9,6 +9,7 @@
 
 import type { ValueExpr, NumericValueExpr, ZoneRef, OptionsQuery, TokenFilterExpr } from './types-ast.js';
 import type { LabelContext } from './tooltip-label-resolver.js';
+import { isTokenFilterPredicateExpr } from './token-filter-expr-utils.js';
 import { resolveLabel } from './tooltip-label-resolver.js';
 import { humanizeIdentifier } from './tooltip-humanizer.js';
 
@@ -148,9 +149,15 @@ const stringifyPredicateValue = (value: ValueExpr | readonly (string | number | 
 };
 
 export const stringifyTokenFilter = (filter: TokenFilterExpr): string => {
-  if ('prop' in filter) return `${filter.prop} ${filter.op} ${stringifyPredicateValue(filter.value)}`;
+  if (isTokenFilterPredicateExpr(filter)) {
+    const field =
+      filter.prop
+      ?? (filter.field?.kind === 'prop' ? filter.field.prop : filter.field?.kind)
+      ?? '<field>';
+    return `${field} ${filter.op} ${stringifyPredicateValue(filter.value)}`;
+  }
   if (filter.op === 'not') return `NOT ${stringifyTokenFilter(filter.arg)}`;
-  return (filter.args as readonly TokenFilterExpr[]).map(stringifyTokenFilter).join(` ${filter.op.toUpperCase()} `);
+  return filter.args.map(stringifyTokenFilter).join(` ${filter.op.toUpperCase()} `);
 };
 
 // ---------------------------------------------------------------------------
@@ -162,8 +169,12 @@ export const stringifyTokenFilter = (filter: TokenFilterExpr): string => {
  * expressions. E.g. `{ prop: 'faction', op: 'eq', value: 'US' }` → "US".
  */
 const humanizeTokenFilterForCount = (filter: TokenFilterExpr, ctx: LabelContext): string => {
-  if ('prop' in filter) {
-    const { prop, op, value } = filter;
+  if (isTokenFilterPredicateExpr(filter)) {
+    const prop = filter.prop ?? (filter.field?.kind === 'prop' ? filter.field.prop : filter.field?.kind);
+    const { op, value } = filter;
+    if (prop === undefined) {
+      return '';
+    }
     // Array values (e.g., in operator): "Alpha/Bravo"
     if (Array.isArray(value)) {
       return (value as readonly (string | number | boolean)[])
@@ -184,12 +195,12 @@ const humanizeTokenFilterForCount = (filter: TokenFilterExpr, ctx: LabelContext)
   if (filter.op === 'not') return humanizeTokenFilterForCount(filter.arg, ctx);
   if (filter.op === 'and') {
     // AND combinator: concatenate parts (e.g., "US Bases")
-    return (filter.args as readonly TokenFilterExpr[])
+    return filter.args
       .map((f) => humanizeTokenFilterForCount(f, ctx))
       .join(' ');
   }
   // OR combinator: slash-separate (e.g., "Alpha/Bravo")
-  return (filter.args as readonly TokenFilterExpr[])
+  return filter.args
     .map((f) => humanizeTokenFilterForCount(f, ctx))
     .join('/');
 };

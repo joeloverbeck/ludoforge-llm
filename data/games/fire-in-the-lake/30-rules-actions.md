@@ -2975,6 +2975,7 @@ actionPipelines:
                     resourceVar: nvaResources
                     allowTrailCountryFreeCost: true
                     maxActivatedGuerrillas: 99
+                    enforceOriginRestriction: true
       - stage: select-trail-chain-destinations
         effects:
           - if:
@@ -3013,6 +3014,7 @@ actionPipelines:
                           resourceVar: nvaResources
                           allowTrailCountryFreeCost: true
                           maxActivatedGuerrillas: 99
+                          enforceOriginRestriction: false
     atomicity: atomic
   - id: march-vc-profile
     actionId: march
@@ -3045,6 +3047,7 @@ actionPipelines:
                         when: { op: '==', left: { ref: globalMarkerState, marker: cap_mainForceBns }, right: unshaded }
                         then: 99
                         else: 1
+                    enforceOriginRestriction: true
     atomicity: atomic
   - id: attack-nva-profile
     actionId: attack

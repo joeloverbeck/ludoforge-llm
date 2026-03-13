@@ -2,6 +2,7 @@ import { resolveMapSpaceId, resolveSinglePlayerSel, resolveSingleZoneSel } from 
 import type { ReadContext } from './eval-context.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { missingBindingError, missingVarError, typeMismatchError, zonePropNotFoundError } from './eval-error.js';
+import { resolveFreeOperationSequenceKey } from './free-operation-sequence-key.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { getTokenStateIndexEntry } from './token-state-index.js';
 import {
@@ -286,10 +287,14 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
   }
 
   if (ref.ref === 'capturedSequenceZones') {
-    const value = ctx.freeOperationOverlay?.capturedSequenceZonesByKey?.[ref.key];
+    const resolvedKey = resolveFreeOperationSequenceKey(ref.key, ctx);
+    const value = resolvedKey === undefined
+      ? undefined
+      : ctx.freeOperationOverlay?.capturedSequenceZonesByKey?.[resolvedKey];
     if (value === undefined) {
-      throw missingVarError(`Captured free-operation sequence zones not found: ${ref.key}`, {
+      throw missingVarError('Captured free-operation sequence zones not found', {
         reference: ref,
+        key: resolvedKey,
         availableCapturedSequenceZoneKeys: Object.keys(ctx.freeOperationOverlay?.capturedSequenceZonesByKey ?? {}).sort(),
       });
     }

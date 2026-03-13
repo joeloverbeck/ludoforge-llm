@@ -32,11 +32,15 @@ function matchesTokenInterpretationPredicate(token: Token, predicate: TokenFilte
   if (value === null) {
     return false;
   }
+  const fieldName = predicate.prop ?? (predicate.field?.kind === 'prop' ? predicate.field.prop : predicate.field?.kind);
+  if (fieldName === undefined) {
+    return false;
+  }
 
   return matchesResolvedPredicate(
-    resolveLiteralTokenFieldValue(token, predicate.prop),
+    resolveLiteralTokenFieldValue(token, fieldName),
     {
-      field: predicate.prop,
+      field: fieldName,
       op: predicate.op,
       value,
     },

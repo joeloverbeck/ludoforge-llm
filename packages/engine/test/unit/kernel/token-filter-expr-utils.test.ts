@@ -55,8 +55,9 @@ describe('token-filter-expr-utils', () => {
     const visited: string[] = [];
     foldTokenFilterExpr(expr, {
       predicate: (predicate) => {
-        visited.push(`predicate:${predicate.prop}`);
-        return predicate.prop;
+        const field = predicate.prop ?? (predicate.field?.kind === 'prop' ? predicate.field.prop : predicate.field?.kind) ?? 'unknown';
+        visited.push(`predicate:${field}`);
+        return field;
       },
       not: () => {
         visited.push('not');
@@ -86,7 +87,9 @@ describe('token-filter-expr-utils', () => {
 
     const visited: string[] = [];
     walkTokenFilterExpr(expr, (entry, path) => {
-      const node = 'prop' in entry ? `predicate:${entry.prop}` : `op:${entry.op}`;
+      const node = 'value' in entry
+        ? `predicate:${entry.prop ?? (entry.field?.kind === 'prop' ? entry.field.prop : entry.field?.kind)}`
+        : `op:${entry.op}`;
       visited.push(`${tokenFilterPathSuffix(path)}=${node}`);
     });
 
@@ -96,6 +99,21 @@ describe('token-filter-expr-utils', () => {
       '.args[1]=op:not',
       '.args[1].arg=predicate:faction',
     ]);
+  });
+
+  it('treats field-based token predicates as canonical predicate leaves', () => {
+    const expr: TokenFilterExpr = {
+      field: { kind: 'tokenZone' },
+      op: 'in',
+      value: ['tay-ninh:none'],
+    };
+    const visited: string[] = [];
+    walkTokenFilterExpr(expr, (entry) => {
+      if ('value' in entry) {
+        visited.push(entry.field?.kind ?? entry.prop ?? 'unknown');
+      }
+    });
+    assert.deepEqual(visited, ['tokenZone']);
   });
 
   it('walkTokenFilterExprRecovering continues across siblings and reports traversal errors deterministically', () => {

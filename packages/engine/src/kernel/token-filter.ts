@@ -8,6 +8,11 @@ import { resolveTokenViewFieldValue } from './token-view.js';
 type TokenFilterScalar = string | number | boolean;
 
 export type TokenFilterValueResolver = (value: TokenFilterPredicate['value']) => PredicateValue | null;
+export type TokenFilterFieldResolver = (
+  token: Token,
+  predicate: TokenFilterPredicate,
+  overlay?: FreeOperationExecutionOverlay,
+) => unknown;
 
 function isTokenFilterScalar(value: unknown): value is TokenFilterScalar {
   return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
@@ -23,11 +28,35 @@ export function resolveLiteralTokenFilterValue(value: TokenFilterPredicate['valu
   return null;
 }
 
+const resolveTokenFilterFieldName = (predicate: TokenFilterPredicate): string =>
+  predicate.prop
+  ?? (predicate.field?.kind === 'prop' ? predicate.field.prop : predicate.field?.kind ?? 'unknown');
+
+const resolveTokenFilterFieldValue = (
+  token: Token,
+  predicate: TokenFilterPredicate,
+  overlay?: FreeOperationExecutionOverlay,
+  resolveField?: TokenFilterFieldResolver,
+): unknown => {
+  if (predicate.field?.kind === 'tokenId') {
+    return token.id;
+  }
+  if (predicate.field?.kind === 'tokenZone') {
+    return resolveField?.(token, predicate, overlay);
+  }
+  return resolveTokenViewFieldValue(
+    token,
+    predicate.prop ?? predicate.field?.prop ?? '',
+    overlay,
+  );
+};
+
 export function matchesTokenFilterPredicate(
   token: Token,
   predicate: TokenFilterPredicate,
   resolveValue: TokenFilterValueResolver = resolveLiteralTokenFilterValue,
   overlay?: FreeOperationExecutionOverlay,
+  resolveField?: TokenFilterFieldResolver,
 ): boolean {
   const value = resolveValue(predicate.value);
   if (value === null) {
@@ -35,9 +64,9 @@ export function matchesTokenFilterPredicate(
   }
 
   return matchesResolvedPredicate(
-    resolveTokenViewFieldValue(token, predicate.prop, overlay),
+    resolveTokenFilterFieldValue(token, predicate, overlay, resolveField),
     {
-      field: predicate.prop,
+      field: resolveTokenFilterFieldName(predicate),
       op: predicate.op,
       value,
     },
@@ -54,10 +83,11 @@ export function matchesTokenFilterExpr(
   expr: TokenFilterExpr,
   resolveValue: TokenFilterValueResolver = resolveLiteralTokenFilterValue,
   overlay?: FreeOperationExecutionOverlay,
+  resolveField?: TokenFilterFieldResolver,
 ): boolean {
   try {
     return foldTokenFilterExpr(expr, {
-      predicate: (predicate) => matchesTokenFilterPredicate(token, predicate, resolveValue, overlay),
+      predicate: (predicate) => matchesTokenFilterPredicate(token, predicate, resolveValue, overlay, resolveField),
       not: (_entry, arg) => !arg,
       and: (_entry, args) => args.every(Boolean),
       or: (_entry, args) => args.some(Boolean),
@@ -72,6 +102,7 @@ export function filterTokensByExpr(
   expr: TokenFilterExpr,
   resolveValue: TokenFilterValueResolver = resolveLiteralTokenFilterValue,
   overlay?: FreeOperationExecutionOverlay,
+  resolveField?: TokenFilterFieldResolver,
 ): readonly Token[] {
-  return tokens.filter((token) => matchesTokenFilterExpr(token, expr, resolveValue, overlay));
+  return tokens.filter((token) => matchesTokenFilterExpr(token, expr, resolveValue, overlay, resolveField));
 }

@@ -219,6 +219,7 @@ describe('effects complex integration chains', () => {
         { name: 'aid', type: 'int', init: 0, min: 0, max: 10 },
         { name: 'patronage', type: 'int', init: 0, min: 0, max: 10 },
       ],
+      zones: [],
       turnStructure: { phases: [{ id: 'main' }] },
       terminal: { conditions: [] },
       setup: [
@@ -257,8 +258,8 @@ describe('effects complex integration chains', () => {
         ...makeState(),
         globalVars: { aid: 0, patronage: 0 },
       },
-      bindings: {
-        $tracks: ['aid', 'patronage'],
+      moveParams: {
+        'decision:doc.setup.0.chooseN::$tracks': ['aid', 'patronage'],
       },
     });
 

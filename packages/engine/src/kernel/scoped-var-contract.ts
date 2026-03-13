@@ -80,7 +80,7 @@ export interface ScopedVarContractSchemaConfig<
 
 const RESERVED_SCOPE_FIELD = 'scope';
 
-const assertNoDuplicateValues = (label: string, entries: ReadonlyArray<readonly [string, string]>) => {
+const assertNoDuplicateValues = (label: string, entries: ReadonlyArray<readonly [string, string]>): void => {
   const groups = new Map<string, string[]>();
   for (const [entryName, entryValue] of entries) {
     const values = groups.get(entryValue);
@@ -99,7 +99,7 @@ const assertNoDuplicateValues = (label: string, entries: ReadonlyArray<readonly 
   }
 };
 
-const assertNoReservedFieldCollision = (fieldName: string, value: string) => {
+const assertNoReservedFieldCollision = (fieldName: string, value: string): void => {
   if (value === RESERVED_SCOPE_FIELD) {
     throw new Error(`Field "${fieldName}" cannot use reserved discriminator key "${RESERVED_SCOPE_FIELD}"`);
   }
@@ -109,7 +109,7 @@ const assertNoReservedShapeKeys = (
   shapeName: string,
   shape: ZodRawShape | undefined,
   reservedKeys: ReadonlySet<string>,
-) => {
+): void => {
   if (shape === undefined) {
     return;
   }
@@ -124,7 +124,7 @@ const assertNoReservedShapeKeys = (
 
 const assertScopedVarContractConfig = <GlobalScope extends string, PlayerScope extends string, ZoneScope extends string>(
   config: ScopedVarContractSchemaConfig<GlobalScope, PlayerScope, ZoneScope>,
-) => {
+): void => {
   assertNoDuplicateValues('Scope literals', [
     ['scopes.global', config.scopes.global],
     ['scopes.player', config.scopes.player],
@@ -174,7 +174,7 @@ export const createScopedVarContractSchema = <
   ZoneScope extends string,
 >(
   config: ScopedVarContractSchemaConfig<GlobalScope, PlayerScope, ZoneScope>,
-) => {
+): z.ZodTypeAny => {
   assertScopedVarContractConfig(config);
 
   const globalSchema = z

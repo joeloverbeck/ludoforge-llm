@@ -5,9 +5,10 @@ import { asPlayerId, asActionId } from '@ludoforge/engine/runtime';
 import { createConsoleTraceSubscriber } from '../../src/trace/console-trace-subscriber.js';
 
 describe('createConsoleTraceSubscriber', () => {
-  const originalGroup = console.group;
-  const originalGroupEnd = console.groupEnd;
-  const originalLog = console.log;
+  const globalConsole = globalThis.console;
+  const originalGroup = globalConsole.group;
+  const originalGroupEnd = globalConsole.groupEnd;
+  const originalLog = globalConsole.log;
 
   let groupSpy: ReturnType<typeof vi.fn<(...args: unknown[]) => void>>;
   let groupEndSpy: ReturnType<typeof vi.fn<() => void>>;
@@ -17,15 +18,15 @@ describe('createConsoleTraceSubscriber', () => {
     groupSpy = vi.fn<(...args: unknown[]) => void>();
     groupEndSpy = vi.fn<() => void>();
     logSpy = vi.fn<(...args: unknown[]) => void>();
-    console.group = groupSpy as typeof console.group;
-    console.groupEnd = groupEndSpy;
-    console.log = logSpy as typeof console.log;
+    globalConsole.group = groupSpy as typeof globalConsole.group;
+    globalConsole.groupEnd = groupEndSpy;
+    globalConsole.log = logSpy as typeof globalConsole.log;
   });
 
   afterEach(() => {
-    console.group = originalGroup;
-    console.groupEnd = originalGroupEnd;
-    console.log = originalLog;
+    globalConsole.group = originalGroup;
+    globalConsole.groupEnd = originalGroupEnd;
+    globalConsole.log = originalLog;
   });
 
   it('logs game-initialized events', () => {

@@ -3502,6 +3502,108 @@ effectMacros:
       - setVar: { scope: global, var: fitl_operationAttleboroTunnelOverride, value: false }
       - setGlobalMarker: { marker: leaderFlipped, state: normal }
 
+  # ── fitl-route-removed-piece-to-force-pool ───────────────────────────────
+  # Route a removed FITL piece to its standard force pool:
+  # - US Irregulars -> available-US:none
+  # - other US pieces -> casualties-US:none
+  # - ARVN pieces -> available-ARVN:none
+  # - VC/NVA pieces -> available-<faction>:none
+  - id: fitl-route-removed-piece-to-force-pool
+    params:
+      - { name: piece, type: value }
+    exports: []
+    effects:
+      - moveToken:
+          token: { param: piece }
+          from:
+            zoneExpr:
+              ref: tokenZone
+              token: { param: piece }
+          to:
+            zoneExpr:
+              if:
+                when:
+                  op: ==
+                  left:
+                    ref: tokenProp
+                    token: { param: piece }
+                    prop: faction
+                  right: US
+                then:
+                  if:
+                    when:
+                      op: ==
+                      left:
+                        ref: tokenProp
+                        token: { param: piece }
+                        prop: type
+                      right: irregular
+                    then: available-US:none
+                    else: casualties-US:none
+                else:
+                  if:
+                    when:
+                      op: ==
+                      left:
+                        ref: tokenProp
+                        token: { param: piece }
+                        prop: faction
+                      right: ARVN
+                    then: available-ARVN:none
+                    else:
+                      concat:
+                        - available-
+                        - ref: tokenProp
+                          token: { param: piece }
+                          prop: faction
+                        - :none
+
+  # ── fitl-place-selected-piece-in-zone ────────────────────────────────────
+  # Move a selected Available piece into an explicit destination zone.
+  - id: fitl-place-selected-piece-in-zone
+    params:
+      - { name: piece, type: value }
+      - { name: zone, type: zoneSelector }
+    exports: []
+    effects:
+      - moveToken:
+          token: { param: piece }
+          from:
+            zoneExpr:
+              ref: tokenZone
+              token: { param: piece }
+          to:
+            zoneExpr: { param: zone }
+
+  # ── fitl-place-selected-piece-in-zone-underground-by-type ────────────────
+  # Place a selected Available piece into a destination zone, then set it
+  # underground only when its type is in the supplied allow-list.
+  - id: fitl-place-selected-piece-in-zone-underground-by-type
+    params:
+      - { name: piece, type: value }
+      - { name: zone, type: zoneSelector }
+      - { name: undergroundTypes, type: value }
+    exports: []
+    effects:
+      - macro: fitl-place-selected-piece-in-zone
+        args:
+          piece: { param: piece }
+          zone: { param: zone }
+      - if:
+          when:
+            op: in
+            left:
+              ref: tokenProp
+              token: { param: piece }
+              prop: type
+            right: { param: undergroundTypes }
+          then:
+            - setTokenProp:
+                token: { param: piece }
+                prop: activity
+                value: underground
+          else: []
+
 conditionMacros:
   # Shared geography predicate: Laos or Cambodia map space.
   - id: fitl-space-in-laos-cambodia

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 export const findDeep = (obj: any, predicate: (node: any) => boolean): any[] => {
   const results: any[] = [];
 
@@ -19,4 +18,3 @@ export const findDeep = (obj: any, predicate: (node: any) => boolean): any[] => 
   walk(obj);
   return results;
 };
-/* eslint-enable @typescript-eslint/no-explicit-any */

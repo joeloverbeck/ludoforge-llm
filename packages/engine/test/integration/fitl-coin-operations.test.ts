@@ -225,7 +225,6 @@ describe('FITL COIN operations integration', () => {
     );
   });
 
-  /* eslint-disable @typescript-eslint/no-explicit-any */
   describe('sweep-us-profile structure', () => {
     const getSweepUsProfile = () => {
       const { compiled } = FITL_PRODUCTION_FIXTURE;
@@ -333,9 +332,7 @@ describe('FITL COIN operations integration', () => {
       assert.ok(sweepMacroCall.length >= 1, 'Expected sweep-activation macro call with US/irregular args');
     });
   });
-  /* eslint-enable @typescript-eslint/no-explicit-any */
 
-  /* eslint-disable @typescript-eslint/no-explicit-any */
   describe('sweep-arvn-profile structure', () => {
     const getSweepArvnProfile = () => {
       const { compiled } = FITL_PRODUCTION_FIXTURE;
@@ -476,7 +473,6 @@ describe('FITL COIN operations integration', () => {
       assert.ok(sweepMacroCall.length >= 1, 'Expected sweep-activation macro call with ARVN/ranger args');
     });
   });
-  /* eslint-enable @typescript-eslint/no-explicit-any */
 
   describe('sweep-arvn-profile runtime behavior', () => {
     const chooseSweepArvnParams = (targetSpace: string, movingTroops: readonly string[]) =>
@@ -643,7 +639,6 @@ describe('FITL COIN operations integration', () => {
     };
 
     /** Returns the pre-compilation (parsed YAML) profile with full filter detail. */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const parseArvnProfile = (): any => {
       const { parsed } = FITL_PRODUCTION_FIXTURE;
       const profile = parsed.doc.actionPipelines?.find(
@@ -653,7 +648,6 @@ describe('FITL COIN operations integration', () => {
       return profile;
     };
 
-    /* eslint-disable @typescript-eslint/no-explicit-any */
     it('AC2: space filter excludes spaces with NVA Control', () => {
       // Verify the compiled GameDef preserves map-space query filters including
       // explicit "without NVA control" token-count predicate.
@@ -878,9 +872,7 @@ describe('FITL COIN operations integration', () => {
       }
     });
   });
-  /* eslint-enable @typescript-eslint/no-explicit-any */
 
-  /* eslint-disable @typescript-eslint/no-explicit-any */
   describe('assault-us-profile acceptance criteria', () => {
     const getAssaultUsProfile = () => {
       const { compiled } = FITL_PRODUCTION_FIXTURE;
@@ -1246,9 +1238,7 @@ describe('FITL COIN operations integration', () => {
       );
     });
   });
-  /* eslint-enable @typescript-eslint/no-explicit-any */
 
-  /* eslint-disable @typescript-eslint/no-explicit-any */
   describe('assault-arvn-profile structure and runtime', () => {
     const getAssaultArvnProfile = () => {
       const { compiled } = FITL_PRODUCTION_FIXTURE;
@@ -1571,7 +1561,6 @@ describe('FITL COIN operations integration', () => {
       );
     });
   });
-  /* eslint-enable @typescript-eslint/no-explicit-any */
 
   describe('applicability dispatch for train profiles', () => {
     it('compiles applicability conditions for both train profiles', () => {
@@ -1623,7 +1612,6 @@ describe('FITL COIN operations integration', () => {
     });
   });
 
-  /* eslint-disable @typescript-eslint/no-explicit-any */
   describe('patrol-us-profile structure', () => {
     const getPatrolProfile = () => {
       const { compiled } = FITL_PRODUCTION_FIXTURE;
@@ -1907,5 +1895,4 @@ describe('FITL COIN operations integration', () => {
       );
     });
   });
-  /* eslint-enable @typescript-eslint/no-explicit-any */
 });

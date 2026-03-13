@@ -1,5 +1,5 @@
 import type { Move } from '@ludoforge/engine/runtime';
-import { create } from 'zustand';
+import { create, type StoreApi, type UseBoundStore } from 'zustand';
 
 import type {
   ActiveGameState,
@@ -65,7 +65,7 @@ function expectActiveGameState(state: SessionState, action: string): ActiveGameS
   return state;
 }
 
-export function createSessionStore() {
+export function createSessionStore(): UseBoundStore<StoreApi<SessionStore>> {
   return create<SessionStore>()((set, get) => ({
     sessionState: SESSION_MENU_STATE,
     unsavedChanges: false,

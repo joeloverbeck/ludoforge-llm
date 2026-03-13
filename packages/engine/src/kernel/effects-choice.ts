@@ -219,7 +219,7 @@ const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unkn
   return merged;
 };
 
-const resolveMarkerLattice = (ctx: EffectContext, markerId: string, effectType: string) => {
+const resolveMarkerLattice = (ctx: EffectContext, markerId: string, effectType: string): NonNullable<EffectContext['def']['markerLattices']>[number] => {
   const lattice = ctx.def.markerLattices?.find((l) => l.id === markerId);
   if (lattice === undefined) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `Unknown marker lattice: ${markerId}`, {
@@ -232,7 +232,7 @@ const resolveMarkerLattice = (ctx: EffectContext, markerId: string, effectType: 
   return lattice;
 };
 
-const resolveGlobalMarkerLattice = (ctx: EffectContext, markerId: string, effectType: string) => {
+const resolveGlobalMarkerLattice = (ctx: EffectContext, markerId: string, effectType: string): NonNullable<EffectContext['def']['globalMarkerLattices']>[number] => {
   const lattice = ctx.def.globalMarkerLattices?.find((l) => l.id === markerId);
   if (lattice === undefined) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `Unknown global marker lattice: ${markerId}`, {
@@ -251,7 +251,7 @@ const resolveChoiceDecisionPlayer = (
   evalCtx: EffectContext,
   bind: string,
   decisionId: string,
-) => {
+): ReturnType<typeof resolveSinglePlayerSel> => {
   try {
     return resolveSinglePlayerSel(chooser, evalCtx);
   } catch (error) {

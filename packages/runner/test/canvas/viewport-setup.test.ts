@@ -21,10 +21,8 @@ interface MockViewport extends Container {
   clamp: ReturnType<typeof vi.fn>;
   moveCenter: ReturnType<typeof vi.fn>;
   resize: ReturnType<typeof vi.fn>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  removeFromParent: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  destroy: any;
+  removeFromParent: ReturnType<typeof vi.fn>;
+  destroy: ReturnType<typeof vi.fn>;
 }
 
 function createMockViewport(): MockViewport {

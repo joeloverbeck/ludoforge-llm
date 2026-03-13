@@ -20,7 +20,6 @@ import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js'
 
 const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 type CapabilitySide = 'unshaded' | 'shaded';
 
@@ -604,5 +603,3 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
     assert.ok(cadresShift.length >= 1, 'Expected cap_cadres shaded to add Rally agitate shift effect');
   });
 });
-
-/* eslint-enable @typescript-eslint/no-explicit-any */

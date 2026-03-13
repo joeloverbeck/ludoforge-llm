@@ -143,16 +143,17 @@ export function canonicalizeZoneSelector(
   path: string,
   seatIds?: readonly string[],
 ): ZoneCompileResult<string | null> {
+  let normalizedSelector = selector;
   // Static concat resolution: { concat: ['available:', 'US'] } → "available:US"
-  const resolved = tryStaticConcatResolution(selector, path);
+  const resolved = tryStaticConcatResolution(normalizedSelector, path);
   if (resolved !== undefined) {
     if (resolved.value === null) {
       return resolved;
     }
-    selector = resolved.value;
+    normalizedSelector = resolved.value;
   }
 
-  if (typeof selector !== 'string' || selector.trim() === '') {
+  if (typeof normalizedSelector !== 'string' || normalizedSelector.trim() === '') {
     return {
       value: null,
       diagnostics: [
@@ -168,15 +169,15 @@ export function canonicalizeZoneSelector(
   }
 
   // Binding references (e.g. "$space") resolve at runtime — pass through.
-  if (selector.startsWith('$')) {
-    return { value: selector, diagnostics: [] };
+  if (normalizedSelector.startsWith('$')) {
+    return { value: normalizedSelector, diagnostics: [] };
   }
 
-  const splitIndex = selector.indexOf(':');
+  const splitIndex = normalizedSelector.indexOf(':');
   if (splitIndex < 0) {
-    const ownership = ownershipByBase[selector];
+    const ownership = ownershipByBase[normalizedSelector];
     if (ownership === 'none') {
-      return { value: `${selector}:none`, diagnostics: [] };
+      return { value: `${normalizedSelector}:none`, diagnostics: [] };
     }
     if (ownership === 'player' || ownership === 'mixed') {
       return {
@@ -186,7 +187,7 @@ export function canonicalizeZoneSelector(
             code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_SELECTOR_AMBIGUOUS,
             path,
             severity: 'error',
-            message: `Bare zone selector "${selector}" is ambiguous.`,
+            message: `Bare zone selector "${normalizedSelector}" is ambiguous.`,
             suggestion: 'Use an explicit owner qualifier such as :active, :actor, :all, :0, or :$binding.',
           },
         ],
@@ -199,7 +200,7 @@ export function canonicalizeZoneSelector(
           code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_SELECTOR_UNKNOWN_BASE,
           path,
           severity: 'error',
-          message: `Unknown zone base "${selector}".`,
+          message: `Unknown zone base "${normalizedSelector}".`,
           suggestion: 'Use a zone base declared in doc.zones.',
           alternatives: Object.keys(ownershipByBase).sort(),
         },
@@ -207,8 +208,8 @@ export function canonicalizeZoneSelector(
     };
   }
 
-  const zoneBase = selector.slice(0, splitIndex);
-  const qualifierRaw = selector.slice(splitIndex + 1);
+  const zoneBase = normalizedSelector.slice(0, splitIndex);
+  const qualifierRaw = normalizedSelector.slice(splitIndex + 1);
   if (zoneBase.length === 0 || qualifierRaw.length === 0) {
     return {
       value: null,
@@ -217,7 +218,7 @@ export function canonicalizeZoneSelector(
           code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_SELECTOR_INVALID,
           path,
           severity: 'error',
-          message: `Zone selector "${selector}" must use "zoneBase:qualifier" format.`,
+          message: `Zone selector "${normalizedSelector}" must use "zoneBase:qualifier" format.`,
           suggestion: 'Use a non-empty base and qualifier, for example "deck:none".',
         },
       ],

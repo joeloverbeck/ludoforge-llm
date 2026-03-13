@@ -13,7 +13,7 @@ export const selectorInvalidSpecError = (
   action: ActionDef,
   cause: unknown,
   selectorContractViolations?: readonly ActionSelectorContractViolation[],
-) =>
+): Error =>
   runtimeContractInvalidError(
     `${boundary}: invalid ${selector} selector for actionId=${String(action.id)}`,
     {

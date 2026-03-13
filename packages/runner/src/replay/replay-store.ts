@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { create, type StoreApi, type UseBoundStore } from 'zustand';
 
 import type { ReplayController } from './replay-controller.js';
 
@@ -31,7 +31,7 @@ function snapshotFromController(controller: ReplayController): ReplayStoreState 
   };
 }
 
-export function createReplayStore(controller: ReplayController) {
+export function createReplayStore(controller: ReplayController): UseBoundStore<StoreApi<ReplayStore>> {
   return create<ReplayStore>()((set, get) => ({
     ...snapshotFromController(controller),
 

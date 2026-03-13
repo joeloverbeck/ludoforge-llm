@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — tests and verification only
-**Deps**: DECINSARC-001 through DECINSARC-007
+**Deps**: DECINSARC-001, DECINSARC-002, DECINSARC-003, DECINSARC-004, DECINSARC-005, DECINSARC-006, DECINSARC-007
 
 ## Problem
 

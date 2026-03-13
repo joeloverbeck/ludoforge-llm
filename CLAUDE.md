@@ -185,6 +185,8 @@ reports/           # Analysis and evaluation reports
 - **Property tests** (quickcheck style): applyMove never produces invalid var bounds, tokens never duplicate across zones, legalMoves pass preconditions, no crash on random play for N turns
 - **Golden tests**: known Game Spec -> expected JSON, known seed trace -> expected output
 - **FITL game-rule tests**: compile `data/games/fire-in-the-lake/*.md` via `compileProductionSpec()` from `packages/engine/test/helpers/production-spec-helpers.ts`. Do NOT create separate fixture files for FITL profiles, events, or special activities. Foundation fixtures (`fitl-foundation-inline-assets.md`, `fitl-foundation-coup-victory-inline-assets.md`) are kept for engine-level testing with minimal setups.
+- **FITL event-selector tests**: when legality depends on broad map predicates such as "any city", "supported spaces", or "outside Saigon", neutralize the relevant support/opposition slice first and then apply explicit overrides. Do not assume untouched production defaults outside the spaces under direct assertion.
+- **FITL fidelity cross-checks**: `archive/specs/29-fitl-event-card-encoding.md` is acceptable as a historical cross-check for suspicious placeholder cards, but rules reports, playbook guidance, and `docs/fitl-event-authoring-cookbook.md` are the source of truth.
 - **Texas Hold'em tests**: compile `data/games/texas-holdem/*.md` similarly. Texas Hold'em serves as the engine-agnosticism validation game — tests should confirm that no FITL-specific logic leaks into the kernel.
 
 ## Coding Conventions
@@ -253,7 +255,7 @@ Do not duplicate or drift this procedure in other files; update `docs/archival-w
 <!-- gitnexus:start -->
 # GitNexus MCP
 
-This project is indexed by GitNexus as **ludoforge-llm** (9435 symbols, 27476 relationships, 300 execution flows).
+This project is indexed by GitNexus as **ludoforge-llm** (9440 symbols, 27474 relationships, 300 execution flows).
 
 ## Always Start Here
 

@@ -18,6 +18,15 @@ Keep FITL behavior in FITL YAML and FITL-local macros.
 - Prefer existing macros in `data/games/fire-in-the-lake/20-macros.md` when they already encode the rule.
 - If no macro exists yet, follow an existing production card pattern rather than inventing a new shape.
 - Treat this document as the durable reference for event authoring; Spec 29 is not the long-term home for cookbook guidance.
+- Archived Spec 29 may still be used as a historical fidelity cross-check when a live card block looks incomplete or placeholder-like, but rules reports, playbook notes, and production cookbook guidance are authoritative.
+
+## Testing Selector-Driven Cards
+
+Selector-heavy FITL event tests should control the whole relevant legality surface, not just the named example spaces.
+
+- If a card targets broad predicates such as "any city", "supported spaces", or "outside Saigon", neutralize the relevant support/opposition slice first and then apply explicit overrides.
+- Do not assume untouched production defaults outside the spaces named in the assertion. Hidden legal spaces can turn a correct implementation into a false-negative test.
+- Prefer shared FITL test helpers for support/opposition normalization over ad hoc per-test copies.
 
 ## Canonical Binder Contract
 

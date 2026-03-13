@@ -74,6 +74,8 @@ For code changes:
 - run at least `pnpm turbo test` before finalizing; include `pnpm -F @ludoforge/engine test:e2e` when behavior spans CLI/pipeline flows.
 - for runner changes, run at least `pnpm -F @ludoforge/runner test`.
 - when you need a guaranteed fresh engine test execution, prefer `pnpm -F @ludoforge/engine test` (or `test:all`) or run `pnpm turbo test --force` to bypass Turbo cache.
+- for FITL event-selector legality tests, normalize the relevant support/opposition board slice first (for example all cities or all populated spaces) before applying explicit overrides; do not rely on untouched production defaults outside the spaces you assert about.
+- for FITL event fidelity work, `archive/specs/29-fitl-event-card-encoding.md` may be used as a cross-check, but rules reports, playbook notes, and `docs/fitl-event-authoring-cookbook.md` remain authoritative.
 
 ## Commit & Pull Request Guidelines
 Keep commit subjects short and imperative. Common patterns in this repo include:
@@ -96,7 +98,7 @@ Do not duplicate or drift this procedure in other files; update `docs/archival-w
 <!-- gitnexus:start -->
 # GitNexus MCP
 
-This project is indexed by GitNexus as **ludoforge-llm** (9435 symbols, 27476 relationships, 300 execution flows).
+This project is indexed by GitNexus as **ludoforge-llm** (9440 symbols, 27474 relationships, 300 execution flows).
 
 ## Always Start Here
 

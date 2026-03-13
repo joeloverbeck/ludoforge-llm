@@ -17,7 +17,10 @@ import {
   applyMoveWithResolvedDecisionIds,
   type DecisionOverrideRule,
 } from '../helpers/decision-param-helpers.js';
-import { clearAllZones } from '../helpers/isolated-state-helpers.js';
+import {
+  clearAllZones,
+  withNeutralSupportOppositionMarkers,
+} from '../helpers/isolated-state-helpers.js';
 import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
 
 const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
@@ -62,16 +65,6 @@ const makeVcBase = (id: string, tunnel: 'tunneled' | 'untunneled'): Token => ({
   props: { faction: 'VC', type: 'base', tunnel },
 });
 
-const withNeutralSupportMarkers = (state: GameState): GameState['markers'] =>
-  Object.fromEntries(
-    Object.entries(state.markers).map(([zoneId, zoneMarkers]) => [
-      zoneId,
-      zoneMarkers.supportOpposition === undefined
-        ? zoneMarkers
-        : { ...zoneMarkers, supportOpposition: 'neutral' },
-    ]),
-  ) as GameState['markers'];
-
 const setupPeaceTalksState = (
   def: GameDef,
   overrides: {
@@ -104,7 +97,7 @@ const setupPeaceTalksState = (
       linebacker11Allowed: false,
       linebacker11SupportAvailable: 0,
     },
-    markers: withNeutralSupportMarkers(baseState),
+    markers: withNeutralSupportOppositionMarkers(baseState),
     zones: {
       ...baseState.zones,
       [eventDeck!.discardZone]: [makeToken('card-3', 'card', 'none')],
@@ -127,7 +120,7 @@ const setupPsychedelicCookieState = (
     ...baseState,
     activePlayer: asPlayerId(0),
     turnOrderState: { type: 'roundRobin' },
-    markers: withNeutralSupportMarkers(baseState),
+    markers: withNeutralSupportOppositionMarkers(baseState),
     zones: {
       ...baseState.zones,
       [eventDeck!.discardZone]: [makeToken('card-9', 'card', 'none')],
@@ -155,7 +148,7 @@ const setupKissingerState = (
       ...baseState.globalVars,
       aid: overrides.aid ?? (baseState.globalVars.aid as number | undefined) ?? 0,
     },
-    markers: withNeutralSupportMarkers(baseState),
+    markers: withNeutralSupportOppositionMarkers(baseState),
     zones: {
       ...baseState.zones,
       [eventDeck!.discardZone]: [makeToken('card-2', 'card', 'none')],
@@ -220,7 +213,7 @@ const setupBuckAdamsState = (
     ...baseState,
     activePlayer: asPlayerId(overrides.activePlayer ?? 0),
     turnOrderState: { type: 'roundRobin' },
-    markers: withNeutralSupportMarkers(baseState),
+    markers: withNeutralSupportOppositionMarkers(baseState),
     zones: {
       ...baseState.zones,
       [eventDeck!.discardZone]: [makeToken('card-12', 'card', 'none')],
@@ -244,7 +237,7 @@ const setupAmericalState = (
     ...baseState,
     activePlayer: asPlayerId(overrides.activePlayer ?? 0),
     turnOrderState: { type: 'roundRobin' },
-    markers: withNeutralSupportMarkers(baseState),
+    markers: withNeutralSupportOppositionMarkers(baseState),
     zones: {
       ...baseState.zones,
       [eventDeck!.discardZone]: [makeToken('card-21', 'card', 'none')],

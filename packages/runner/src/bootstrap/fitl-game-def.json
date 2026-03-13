@@ -56685,6 +56685,7 @@
                 "chooseN": {
                   "internalDecisionId": "decision:doc.eventDecks.0.cards.0.unshaded.effects.0.distributeTokens.selectTokens",
                   "bind": "$__selected_doc_eventDecks_0_cards_0_unshaded_effects_0_distributeTokens",
+                  "decisionIdentity": "decision:doc.eventDecks.0.cards.0.unshaded.effects.0.distributeTokens.selectTokens",
                   "options": {
                     "query": "tokensInZone",
                     "zone": "out-of-play-US:none",
@@ -56709,6 +56710,7 @@
                       "chooseOne": {
                         "internalDecisionId": "decision:doc.eventDecks.0.cards.0.unshaded.effects.0.distributeTokens.chooseDestination",
                         "bind": "$__destination_doc_eventDecks_0_cards_0_unshaded_effects_0_distributeTokens",
+                        "decisionIdentity": "decision:doc.eventDecks.0.cards.0.unshaded.effects.0.distributeTokens.chooseDestination",
                         "options": {
                           "query": "mapSpaces",
                           "filter": {
@@ -56971,6 +56973,7 @@
                 "chooseN": {
                   "internalDecisionId": "decision:doc.eventDecks.0.cards.1.shaded.effects.0.distributeTokens.selectTokens",
                   "bind": "$__selected_doc_eventDecks_0_cards_1_shaded_effects_0_distributeTokens",
+                  "decisionIdentity": "decision:doc.eventDecks.0.cards.1.shaded.effects.0.distributeTokens.selectTokens",
                   "options": {
                     "query": "tokensInZone",
                     "zone": "available-NVA:none",
@@ -56996,6 +56999,7 @@
                       "chooseOne": {
                         "internalDecisionId": "decision:doc.eventDecks.0.cards.1.shaded.effects.0.distributeTokens.chooseDestination",
                         "bind": "$__destination_doc_eventDecks_0_cards_1_shaded_effects_0_distributeTokens",
+                        "decisionIdentity": "decision:doc.eventDecks.0.cards.1.shaded.effects.0.distributeTokens.chooseDestination",
                         "options": {
                           "query": "mapSpaces",
                           "filter": {
@@ -61975,21 +61979,31 @@
                         "op": "and",
                         "args": [
                           {
-                            "op": "==",
-                            "left": {
-                              "ref": "zoneVar",
-                              "zone": "$targetSpace",
-                              "var": "terrorCount"
-                            },
-                            "right": 0
-                          },
-                          {
                             "op": "<",
                             "left": {
                               "ref": "gvar",
                               "var": "terrorSabotageMarkersPlaced"
                             },
                             "right": 15
+                          },
+                          {
+                            "op": "or",
+                            "args": [
+                              {
+                                "op": "==",
+                                "left": false,
+                                "right": true
+                              },
+                              {
+                                "op": "==",
+                                "left": {
+                                  "ref": "zoneVar",
+                                  "zone": "$targetSpace",
+                                  "var": "terrorCount"
+                                },
+                                "right": 0
+                              }
+                            ]
                           }
                         ]
                       },
@@ -62450,52 +62464,213 @@
                               },
                               "effects": [
                                 {
-                                  "removeByPriority": {
-                                    "budget": 1,
-                                    "groups": [
+                                  "let": {
+                                    "bind": "$irregularZone",
+                                    "value": {
+                                      "ref": "tokenZone",
+                                      "token": "$irregular"
+                                    },
+                                    "in": [
                                       {
-                                        "bind": "$vcReplacementGuerrilla",
-                                        "over": {
-                                          "query": "tokensInZone",
-                                          "zone": "available-VC:none",
-                                          "filter": {
-                                            "op": "and",
-                                            "args": [
-                                              {
-                                                "prop": "faction",
-                                                "op": "eq",
-                                                "value": "VC"
-                                              },
-                                              {
-                                                "prop": "type",
-                                                "op": "eq",
-                                                "value": "guerrilla"
+                                        "chooseN": {
+                                          "internalDecisionId": "decision:doc.eventDecks.0.cards.28.shaded.effects.0.let.in.0.if.then.1.forEach.effects.0.let.in.0.chooseN",
+                                          "bind": "$vcReplacementGuerrillas@{$irregular}",
+                                          "options": {
+                                            "query": "tokensInZone",
+                                            "zone": "available-VC:none",
+                                            "filter": {
+                                              "op": "and",
+                                              "args": [
+                                                {
+                                                  "prop": "faction",
+                                                  "op": "eq",
+                                                  "value": "VC"
+                                                },
+                                                {
+                                                  "prop": "type",
+                                                  "op": "eq",
+                                                  "value": "guerrilla"
+                                                }
+                                              ]
+                                            }
+                                          },
+                                          "max": {
+                                            "op": "min",
+                                            "left": 1,
+                                            "right": {
+                                              "aggregate": {
+                                                "op": "count",
+                                                "query": {
+                                                  "query": "tokensInZone",
+                                                  "zone": "available-VC:none",
+                                                  "filter": {
+                                                    "op": "and",
+                                                    "args": [
+                                                      {
+                                                        "prop": "faction",
+                                                        "op": "eq",
+                                                        "value": "VC"
+                                                      },
+                                                      {
+                                                        "prop": "type",
+                                                        "op": "eq",
+                                                        "value": "guerrilla"
+                                                      }
+                                                    ]
+                                                  }
+                                                }
                                               }
-                                            ]
+                                            }
+                                          },
+                                          "min": {
+                                            "op": "min",
+                                            "left": 1,
+                                            "right": {
+                                              "aggregate": {
+                                                "op": "count",
+                                                "query": {
+                                                  "query": "tokensInZone",
+                                                  "zone": "available-VC:none",
+                                                  "filter": {
+                                                    "op": "and",
+                                                    "args": [
+                                                      {
+                                                        "prop": "faction",
+                                                        "op": "eq",
+                                                        "value": "VC"
+                                                      },
+                                                      {
+                                                        "prop": "type",
+                                                        "op": "eq",
+                                                        "value": "guerrilla"
+                                                      }
+                                                    ]
+                                                  }
+                                                }
+                                              }
+                                            }
                                           }
-                                        },
-                                        "to": {
-                                          "zoneExpr": {
-                                            "ref": "tokenZone",
-                                            "token": "$irregular"
+                                        }
+                                      },
+                                      {
+                                        "forEach": {
+                                          "bind": "$vcReplacementGuerrilla",
+                                          "over": {
+                                            "query": "binding",
+                                            "name": "$vcReplacementGuerrillas@{$irregular}"
+                                          },
+                                          "effects": [
+                                            {
+                                              "moveToken": {
+                                                "token": "$vcReplacementGuerrilla",
+                                                "from": {
+                                                  "zoneExpr": {
+                                                    "ref": "tokenZone",
+                                                    "token": "$vcReplacementGuerrilla"
+                                                  }
+                                                },
+                                                "to": {
+                                                  "zoneExpr": "$irregularZone"
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "if": {
+                                                "when": {
+                                                  "op": "in",
+                                                  "item": {
+                                                    "ref": "tokenProp",
+                                                    "token": "$vcReplacementGuerrilla",
+                                                    "prop": "type"
+                                                  },
+                                                  "set": {
+                                                    "scalarArray": [
+                                                      "guerrilla"
+                                                    ]
+                                                  }
+                                                },
+                                                "then": [
+                                                  {
+                                                    "setTokenProp": {
+                                                      "token": "$vcReplacementGuerrilla",
+                                                      "prop": "activity",
+                                                      "value": "underground"
+                                                    }
+                                                  }
+                                                ],
+                                                "else": []
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      },
+                                      {
+                                        "moveToken": {
+                                          "token": "$irregular",
+                                          "from": {
+                                            "zoneExpr": {
+                                              "ref": "tokenZone",
+                                              "token": "$irregular"
+                                            }
+                                          },
+                                          "to": {
+                                            "zoneExpr": {
+                                              "if": {
+                                                "when": {
+                                                  "op": "==",
+                                                  "left": {
+                                                    "ref": "tokenProp",
+                                                    "token": "$irregular",
+                                                    "prop": "faction"
+                                                  },
+                                                  "right": "US"
+                                                },
+                                                "then": {
+                                                  "if": {
+                                                    "when": {
+                                                      "op": "==",
+                                                      "left": {
+                                                        "ref": "tokenProp",
+                                                        "token": "$irregular",
+                                                        "prop": "type"
+                                                      },
+                                                      "right": "irregular"
+                                                    },
+                                                    "then": "available-US:none",
+                                                    "else": "casualties-US:none"
+                                                  }
+                                                },
+                                                "else": {
+                                                  "if": {
+                                                    "when": {
+                                                      "op": "==",
+                                                      "left": {
+                                                        "ref": "tokenProp",
+                                                        "token": "$irregular",
+                                                        "prop": "faction"
+                                                      },
+                                                      "right": "ARVN"
+                                                    },
+                                                    "then": "available-ARVN:none",
+                                                    "else": {
+                                                      "concat": [
+                                                        "available-",
+                                                        {
+                                                          "ref": "tokenProp",
+                                                          "token": "$irregular",
+                                                          "prop": "faction"
+                                                        },
+                                                        ":none"
+                                                      ]
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
                                           }
                                         }
                                       }
                                     ]
-                                  }
-                                },
-                                {
-                                  "moveToken": {
-                                    "token": "$irregular",
-                                    "from": {
-                                      "zoneExpr": {
-                                        "ref": "tokenZone",
-                                        "token": "$irregular"
-                                      }
-                                    },
-                                    "to": {
-                                      "zoneExpr": "available-US:none"
-                                    }
                                   }
                                 }
                               ]
@@ -68516,6 +68691,7 @@
                     "chooseN": {
                       "internalDecisionId": "decision:doc.eventDecks.0.cards.49.unshaded.branches.0.effects.0.distributeTokens.selectTokens",
                       "bind": "$__selected_doc_eventDecks_0_cards_49_unshaded_branches_0_effects_0_distributeTokens",
+                      "decisionIdentity": "decision:doc.eventDecks.0.cards.49.unshaded.branches.0.effects.0.distributeTokens.selectTokens",
                       "options": {
                         "query": "tokensInZone",
                         "zone": "out-of-play-US:none",
@@ -68550,6 +68726,7 @@
                           "chooseOne": {
                             "internalDecisionId": "decision:doc.eventDecks.0.cards.49.unshaded.branches.0.effects.0.distributeTokens.chooseDestination",
                             "bind": "$__destination_doc_eventDecks_0_cards_49_unshaded_branches_0_effects_0_distributeTokens",
+                            "decisionIdentity": "decision:doc.eventDecks.0.cards.49.unshaded.branches.0.effects.0.distributeTokens.chooseDestination",
                             "options": {
                               "query": "mapSpaces",
                               "filter": {
@@ -68899,48 +69076,69 @@
                                     },
                                     "effects": [
                                       {
-                                        "if": {
-                                          "when": {
-                                            "op": "==",
-                                            "left": {
-                                              "ref": "tokenProp",
-                                              "token": "$insurgentPiece",
-                                              "prop": "faction"
-                                            },
-                                            "right": "NVA"
+                                        "moveToken": {
+                                          "token": "$insurgentPiece",
+                                          "from": {
+                                            "zoneExpr": {
+                                              "ref": "tokenZone",
+                                              "token": "$insurgentPiece"
+                                            }
                                           },
-                                          "then": [
-                                            {
-                                              "moveToken": {
-                                                "token": "$insurgentPiece",
-                                                "from": {
-                                                  "zoneExpr": {
-                                                    "ref": "tokenZone",
-                                                    "token": "$insurgentPiece"
+                                          "to": {
+                                            "zoneExpr": {
+                                              "if": {
+                                                "when": {
+                                                  "op": "==",
+                                                  "left": {
+                                                    "ref": "tokenProp",
+                                                    "token": "$insurgentPiece",
+                                                    "prop": "faction"
+                                                  },
+                                                  "right": "US"
+                                                },
+                                                "then": {
+                                                  "if": {
+                                                    "when": {
+                                                      "op": "==",
+                                                      "left": {
+                                                        "ref": "tokenProp",
+                                                        "token": "$insurgentPiece",
+                                                        "prop": "type"
+                                                      },
+                                                      "right": "irregular"
+                                                    },
+                                                    "then": "available-US:none",
+                                                    "else": "casualties-US:none"
                                                   }
                                                 },
-                                                "to": {
-                                                  "zoneExpr": "available-NVA:none"
+                                                "else": {
+                                                  "if": {
+                                                    "when": {
+                                                      "op": "==",
+                                                      "left": {
+                                                        "ref": "tokenProp",
+                                                        "token": "$insurgentPiece",
+                                                        "prop": "faction"
+                                                      },
+                                                      "right": "ARVN"
+                                                    },
+                                                    "then": "available-ARVN:none",
+                                                    "else": {
+                                                      "concat": [
+                                                        "available-",
+                                                        {
+                                                          "ref": "tokenProp",
+                                                          "token": "$insurgentPiece",
+                                                          "prop": "faction"
+                                                        },
+                                                        ":none"
+                                                      ]
+                                                    }
+                                                  }
                                                 }
                                               }
                                             }
-                                          ],
-                                          "else": [
-                                            {
-                                              "moveToken": {
-                                                "token": "$insurgentPiece",
-                                                "from": {
-                                                  "zoneExpr": {
-                                                    "ref": "tokenZone",
-                                                    "token": "$insurgentPiece"
-                                                  }
-                                                },
-                                                "to": {
-                                                  "zoneExpr": "available-VC:none"
-                                                }
-                                              }
-                                            }
-                                          ]
+                                          }
                                         }
                                       }
                                     ]
@@ -71634,6 +71832,7 @@
                 "chooseN": {
                   "internalDecisionId": "decision:doc.eventDecks.0.cards.59.shaded.effects.0.distributeTokens.selectTokens",
                   "bind": "$__selected_doc_eventDecks_0_cards_59_shaded_effects_0_distributeTokens",
+                  "decisionIdentity": "decision:doc.eventDecks.0.cards.59.shaded.effects.0.distributeTokens.selectTokens",
                   "options": {
                     "query": "tokensInZone",
                     "zone": "available-NVA:none",
@@ -71668,6 +71867,7 @@
                       "chooseOne": {
                         "internalDecisionId": "decision:doc.eventDecks.0.cards.59.shaded.effects.0.distributeTokens.chooseDestination",
                         "bind": "$__destination_doc_eventDecks_0_cards_59_shaded_effects_0_distributeTokens",
+                        "decisionIdentity": "decision:doc.eventDecks.0.cards.59.shaded.effects.0.distributeTokens.chooseDestination",
                         "options": {
                           "query": "mapSpaces",
                           "filter": {
@@ -72125,6 +72325,7 @@
                             "chooseN": {
                               "internalDecisionId": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.selectTokens",
                               "bind": "$__selected_doc_eventDecks_0_cards_61_shaded_effects_0_let_in_0_let_in_0_distributeTokens",
+                              "decisionIdentity": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.selectTokens",
                               "options": {
                                 "query": "tokensInZone",
                                 "zone": "available-NVA:none",
@@ -72169,6 +72370,7 @@
                                   "chooseOne": {
                                     "internalDecisionId": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination",
                                     "bind": "$__destination_doc_eventDecks_0_cards_61_shaded_effects_0_let_in_0_let_in_0_distributeTokens",
+                                    "decisionIdentity": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination",
                                     "options": {
                                       "query": "mapSpaces",
                                       "filter": {
@@ -77609,7 +77811,7 @@
         },
         {
           "id": "card-78",
-          "title": "General Landsdale",
+          "title": "General Lansdale",
           "sideMode": "dual",
           "order": 78,
           "tags": [
@@ -77626,10 +77828,145 @@
             "flavorText": "Political warfare effort reshapes pacification tempo."
           },
           "unshaded": {
-            "text": "Landsdale sidelined; no lasting momentum effect."
+            "text": "Set a space outside Saigon with US or ARVN to Active Support. Add a Terror marker there. Patronage +1.",
+            "targets": [
+              {
+                "id": "$targetSpace",
+                "selector": {
+                  "query": "mapSpaces",
+                  "filter": {
+                    "condition": {
+                      "op": "and",
+                      "args": [
+                        {
+                          "op": "!=",
+                          "left": {
+                            "ref": "zoneProp",
+                            "zone": "$zone",
+                            "prop": "id"
+                          },
+                          "right": "saigon:none"
+                        },
+                        {
+                          "op": "markerStateAllowed",
+                          "space": "$zone",
+                          "marker": "supportOpposition",
+                          "state": "activeSupport"
+                        },
+                        {
+                          "op": ">",
+                          "left": {
+                            "aggregate": {
+                              "op": "count",
+                              "query": {
+                                "query": "tokensInZone",
+                                "zone": "$zone",
+                                "filter": {
+                                  "prop": "faction",
+                                  "op": "in",
+                                  "value": [
+                                    "US",
+                                    "ARVN"
+                                  ]
+                                }
+                              }
+                            }
+                          },
+                          "right": 0
+                        }
+                      ]
+                    }
+                  }
+                },
+                "cardinality": {
+                  "max": 1
+                },
+                "application": "aggregate",
+                "effects": [
+                  {
+                    "setMarker": {
+                      "space": "$targetSpace",
+                      "marker": "supportOpposition",
+                      "state": "activeSupport"
+                    }
+                  },
+                  {
+                    "if": {
+                      "when": {
+                        "op": "and",
+                        "args": [
+                          {
+                            "op": "<",
+                            "left": {
+                              "ref": "gvar",
+                              "var": "terrorSabotageMarkersPlaced"
+                            },
+                            "right": 15
+                          },
+                          {
+                            "op": "or",
+                            "args": [
+                              {
+                                "op": "==",
+                                "left": true,
+                                "right": true
+                              },
+                              {
+                                "op": "==",
+                                "left": {
+                                  "ref": "zoneVar",
+                                  "zone": "$targetSpace",
+                                  "var": "terrorCount"
+                                },
+                                "right": 0
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "then": [
+                        {
+                          "addVar": {
+                            "scope": "zoneVar",
+                            "zone": "$targetSpace",
+                            "var": "terrorCount",
+                            "delta": 1
+                          }
+                        },
+                        {
+                          "addVar": {
+                            "scope": "global",
+                            "var": "terrorSabotageMarkersPlaced",
+                            "delta": 1
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ],
+            "effects": [
+              {
+                "addVar": {
+                  "scope": "global",
+                  "var": "patronage",
+                  "delta": 1
+                }
+              }
+            ]
           },
           "shaded": {
-            "text": "Political influence campaign takes hold. MOMENTUM",
+            "text": "Patronage +3. No US Assault until Coup. MOMENTUM",
+            "effects": [
+              {
+                "addVar": {
+                  "scope": "global",
+                  "var": "patronage",
+                  "delta": 3
+                }
+              }
+            ],
             "lastingEffects": [
               {
                 "id": "mom-general-landsdale",
@@ -77772,10 +78109,342 @@
               "VC",
               "US"
             ],
-            "flavorText": "War-weariness and optimism collide in piecemeal force adjustments."
+            "flavorText": "Wind down seen."
           },
           "unshaded": {
-            "text": "Apply piece-by-piece force adjustments across factions as listed on the card."
+            "text": "Remove 1-4 US pieces from map to Available. For each piece, Patronage +2, shift a space 1 level toward Active Opposition, and place 4 NVA Troops outside the South. Stay Eligible.",
+            "eligibilityOverrides": [
+              {
+                "target": {
+                  "kind": "active"
+                },
+                "eligible": true,
+                "windowId": "remain-eligible"
+              }
+            ],
+            "effects": [
+              {
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.79.unshaded.effects.0.chooseN",
+                  "bind": "$usPiecesToRemove",
+                  "options": {
+                    "query": "tokensInMapSpaces",
+                    "filter": {
+                      "prop": "faction",
+                      "op": "eq",
+                      "value": "US"
+                    }
+                  },
+                  "max": {
+                    "op": "min",
+                    "left": 4,
+                    "right": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "tokensInMapSpaces",
+                          "filter": {
+                            "prop": "faction",
+                            "op": "eq",
+                            "value": "US"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "min": {
+                    "op": "min",
+                    "left": 1,
+                    "right": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "tokensInMapSpaces",
+                          "filter": {
+                            "prop": "faction",
+                            "op": "eq",
+                            "value": "US"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$usPieceToRemove",
+                  "over": {
+                    "query": "binding",
+                    "name": "$usPiecesToRemove"
+                  },
+                  "effects": [
+                    {
+                      "moveToken": {
+                        "token": "$usPieceToRemove",
+                        "from": {
+                          "zoneExpr": {
+                            "ref": "tokenZone",
+                            "token": "$usPieceToRemove"
+                          }
+                        },
+                        "to": {
+                          "zoneExpr": "available-US:none"
+                        }
+                      }
+                    },
+                    {
+                      "addVar": {
+                        "scope": "global",
+                        "var": "patronage",
+                        "delta": 2
+                      }
+                    },
+                    {
+                      "if": {
+                        "when": {
+                          "op": ">",
+                          "left": {
+                            "aggregate": {
+                              "op": "count",
+                              "query": {
+                                "query": "mapSpaces",
+                                "filter": {
+                                  "condition": {
+                                    "op": "markerStateAllowed",
+                                    "space": "$zone",
+                                    "marker": "supportOpposition",
+                                    "state": "activeOpposition"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "right": 0
+                        },
+                        "then": [
+                          {
+                            "chooseOne": {
+                              "internalDecisionId": "decision:doc.eventDecks.0.cards.79.unshaded.effects.1.forEach.effects.2.if.then.0.chooseOne",
+                              "bind": "$oppositionShiftSpace@{$usPieceToRemove}",
+                              "options": {
+                                "query": "mapSpaces",
+                                "filter": {
+                                  "condition": {
+                                    "op": "markerStateAllowed",
+                                    "space": "$zone",
+                                    "marker": "supportOpposition",
+                                    "state": "activeOpposition"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "shiftMarker": {
+                              "space": {
+                                "zoneExpr": {
+                                  "ref": "binding",
+                                  "name": "$oppositionShiftSpace@{$usPieceToRemove}"
+                                }
+                              },
+                              "marker": "supportOpposition",
+                              "delta": -1
+                            }
+                          }
+                        ],
+                        "else": []
+                      }
+                    },
+                    {
+                      "chooseN": {
+                        "internalDecisionId": "decision:doc.eventDecks.0.cards.79.unshaded.effects.1.forEach.effects.3.chooseN",
+                        "bind": "$nvaTroopsToPlace@{$usPieceToRemove}",
+                        "options": {
+                          "query": "tokensInZone",
+                          "zone": "available-NVA:none",
+                          "filter": {
+                            "op": "and",
+                            "args": [
+                              {
+                                "prop": "faction",
+                                "op": "eq",
+                                "value": "NVA"
+                              },
+                              {
+                                "prop": "type",
+                                "op": "eq",
+                                "value": "troops"
+                              }
+                            ]
+                          }
+                        },
+                        "max": {
+                          "op": "min",
+                          "left": 4,
+                          "right": {
+                            "aggregate": {
+                              "op": "count",
+                              "query": {
+                                "query": "tokensInZone",
+                                "zone": "available-NVA:none",
+                                "filter": {
+                                  "op": "and",
+                                  "args": [
+                                    {
+                                      "prop": "faction",
+                                      "op": "eq",
+                                      "value": "NVA"
+                                    },
+                                    {
+                                      "prop": "type",
+                                      "op": "eq",
+                                      "value": "troops"
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "min": {
+                          "op": "min",
+                          "left": 4,
+                          "right": {
+                            "aggregate": {
+                              "op": "count",
+                              "query": {
+                                "query": "tokensInZone",
+                                "zone": "available-NVA:none",
+                                "filter": {
+                                  "op": "and",
+                                  "args": [
+                                    {
+                                      "prop": "faction",
+                                      "op": "eq",
+                                      "value": "NVA"
+                                    },
+                                    {
+                                      "prop": "type",
+                                      "op": "eq",
+                                      "value": "troops"
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "forEach": {
+                        "bind": "$nvaTroopToPlace@{$usPieceToRemove}",
+                        "over": {
+                          "query": "binding",
+                          "name": "$nvaTroopsToPlace@{$usPieceToRemove}"
+                        },
+                        "effects": [
+                          {
+                            "chooseOne": {
+                              "internalDecisionId": "decision:doc.eventDecks.0.cards.79.unshaded.effects.1.forEach.effects.4.forEach.effects.0.chooseOne",
+                              "bind": "$nvaTroopDestination@{$nvaTroopToPlace@{$usPieceToRemove}}",
+                              "options": {
+                                "query": "mapSpaces",
+                                "filter": {
+                                  "condition": {
+                                    "op": "and",
+                                    "args": [
+                                      {
+                                        "op": "==",
+                                        "left": {
+                                          "ref": "zoneProp",
+                                          "zone": "$zone",
+                                          "prop": "category"
+                                        },
+                                        "right": "province"
+                                      },
+                                      {
+                                        "op": "and",
+                                        "args": [
+                                          {
+                                            "op": "==",
+                                            "left": {
+                                              "ref": "zoneProp",
+                                              "zone": "$zone",
+                                              "prop": "category"
+                                            },
+                                            "right": "province"
+                                          },
+                                          {
+                                            "op": "or",
+                                            "args": [
+                                              {
+                                                "op": "==",
+                                                "left": {
+                                                  "ref": "zoneProp",
+                                                  "zone": "$zone",
+                                                  "prop": "country"
+                                                },
+                                                "right": "northVietnam"
+                                              },
+                                              {
+                                                "op": "or",
+                                                "args": [
+                                                  {
+                                                    "op": "==",
+                                                    "left": {
+                                                      "ref": "zoneProp",
+                                                      "zone": "$zone",
+                                                      "prop": "country"
+                                                    },
+                                                    "right": "laos"
+                                                  },
+                                                  {
+                                                    "op": "==",
+                                                    "left": {
+                                                      "ref": "zoneProp",
+                                                      "zone": "$zone",
+                                                      "prop": "country"
+                                                    },
+                                                    "right": "cambodia"
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "moveToken": {
+                              "token": "$nvaTroopToPlace@{$usPieceToRemove}",
+                              "from": {
+                                "zoneExpr": {
+                                  "ref": "tokenZone",
+                                  "token": "$nvaTroopToPlace@{$usPieceToRemove}"
+                                }
+                              },
+                              "to": {
+                                "zoneExpr": {
+                                  "ref": "binding",
+                                  "name": "$nvaTroopDestination@{$nvaTroopToPlace@{$usPieceToRemove}}"
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
           }
         },
         {
@@ -77795,132 +78464,842 @@
             "flavorText": "Civilian irregular networks are reorganized."
           },
           "unshaded": {
-            "text": "Replace ARVN pieces with Irregulars/Rangers in selected spaces.",
-            "targets": [
+            "text": "Replace a die roll of VC Guerrillas in South Vietnam with Rangers, Irregulars, or Police.",
+            "effects": [
               {
-                "id": "$targetSpace",
-                "selector": {
-                  "query": "mapSpaces"
-                },
-                "cardinality": {
-                  "max": 2
-                },
-                "application": "aggregate",
-                "effects": [
-                  {
-                    "removeByPriority": {
-                      "budget": 2,
-                      "groups": [
-                        {
-                          "bind": "$irregular",
-                          "over": {
-                            "query": "tokensInZone",
-                            "zone": "available-US:none",
-                            "filter": {
-                              "op": "and",
-                              "args": [
-                                {
-                                  "prop": "faction",
-                                  "op": "eq",
-                                  "value": "US"
+                "rollRandom": {
+                  "bind": "$cidgReplacementRoll",
+                  "min": 1,
+                  "max": 6,
+                  "in": [
+                    {
+                      "let": {
+                        "bind": "$cidgSouthVietnamVcGuerrillaCount",
+                        "value": {
+                          "aggregate": {
+                            "op": "count",
+                            "query": {
+                              "query": "tokensInMapSpaces",
+                              "spaceFilter": {
+                                "condition": {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "country"
+                                  },
+                                  "right": "southVietnam"
+                                }
+                              },
+                              "filter": {
+                                "op": "and",
+                                "args": [
+                                  {
+                                    "prop": "faction",
+                                    "op": "eq",
+                                    "value": "VC"
+                                  },
+                                  {
+                                    "prop": "type",
+                                    "op": "eq",
+                                    "value": "guerrilla"
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        },
+                        "in": [
+                          {
+                            "let": {
+                              "bind": "$cidgGuerrillasToReplaceCount",
+                              "value": {
+                                "op": "min",
+                                "left": {
+                                  "ref": "binding",
+                                  "name": "$cidgReplacementRoll"
                                 },
+                                "right": {
+                                  "ref": "binding",
+                                  "name": "$cidgSouthVietnamVcGuerrillaCount"
+                                }
+                              },
+                              "in": [
                                 {
-                                  "prop": "type",
-                                  "op": "eq",
-                                  "value": "irregular"
+                                  "if": {
+                                    "when": {
+                                      "op": ">",
+                                      "left": {
+                                        "ref": "binding",
+                                        "name": "$cidgGuerrillasToReplaceCount"
+                                      },
+                                      "right": 0
+                                    },
+                                    "then": [
+                                      {
+                                        "chooseN": {
+                                          "internalDecisionId": "decision:doc.eventDecks.0.cards.80.unshaded.effects.0.rollRandom.in.0.let.in.0.let.in.0.if.then.0.chooseN",
+                                          "bind": "$cidgVcGuerrillasToReplace",
+                                          "options": {
+                                            "query": "tokensInMapSpaces",
+                                            "spaceFilter": {
+                                              "condition": {
+                                                "op": "==",
+                                                "left": {
+                                                  "ref": "zoneProp",
+                                                  "zone": "$zone",
+                                                  "prop": "country"
+                                                },
+                                                "right": "southVietnam"
+                                              }
+                                            },
+                                            "filter": {
+                                              "op": "and",
+                                              "args": [
+                                                {
+                                                  "prop": "faction",
+                                                  "op": "eq",
+                                                  "value": "VC"
+                                                },
+                                                {
+                                                  "prop": "type",
+                                                  "op": "eq",
+                                                  "value": "guerrilla"
+                                                }
+                                              ]
+                                            }
+                                          },
+                                          "max": {
+                                            "ref": "binding",
+                                            "name": "$cidgGuerrillasToReplaceCount"
+                                          },
+                                          "min": {
+                                            "ref": "binding",
+                                            "name": "$cidgGuerrillasToReplaceCount"
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "forEach": {
+                                          "bind": "$cidgVcGuerrilla",
+                                          "over": {
+                                            "query": "binding",
+                                            "name": "$cidgVcGuerrillasToReplace"
+                                          },
+                                          "effects": [
+                                            {
+                                              "let": {
+                                                "bind": "$cidgSourceZone",
+                                                "value": {
+                                                  "ref": "tokenZone",
+                                                  "token": "$cidgVcGuerrilla"
+                                                },
+                                                "in": [
+                                                  {
+                                                    "let": {
+                                                      "bind": "$cidgAvailableReplacementCount",
+                                                      "value": {
+                                                        "aggregate": {
+                                                          "op": "count",
+                                                          "query": {
+                                                            "query": "concat",
+                                                            "sources": [
+                                                              {
+                                                                "query": "tokensInZone",
+                                                                "zone": "available-US:none",
+                                                                "filter": {
+                                                                  "op": "and",
+                                                                  "args": [
+                                                                    {
+                                                                      "prop": "faction",
+                                                                      "op": "eq",
+                                                                      "value": "US"
+                                                                    },
+                                                                    {
+                                                                      "prop": "type",
+                                                                      "op": "eq",
+                                                                      "value": "irregular"
+                                                                    }
+                                                                  ]
+                                                                }
+                                                              },
+                                                              {
+                                                                "query": "tokensInZone",
+                                                                "zone": "available-ARVN:none",
+                                                                "filter": {
+                                                                  "op": "and",
+                                                                  "args": [
+                                                                    {
+                                                                      "prop": "faction",
+                                                                      "op": "eq",
+                                                                      "value": "ARVN"
+                                                                    },
+                                                                    {
+                                                                      "prop": "type",
+                                                                      "op": "eq",
+                                                                      "value": "ranger"
+                                                                    }
+                                                                  ]
+                                                                }
+                                                              },
+                                                              {
+                                                                "query": "tokensInZone",
+                                                                "zone": "available-ARVN:none",
+                                                                "filter": {
+                                                                  "op": "and",
+                                                                  "args": [
+                                                                    {
+                                                                      "prop": "faction",
+                                                                      "op": "eq",
+                                                                      "value": "ARVN"
+                                                                    },
+                                                                    {
+                                                                      "prop": "type",
+                                                                      "op": "eq",
+                                                                      "value": "police"
+                                                                    }
+                                                                  ]
+                                                                }
+                                                              }
+                                                            ]
+                                                          }
+                                                        }
+                                                      },
+                                                      "in": [
+                                                        {
+                                                          "if": {
+                                                            "when": {
+                                                              "op": ">",
+                                                              "left": {
+                                                                "ref": "binding",
+                                                                "name": "$cidgAvailableReplacementCount"
+                                                              },
+                                                              "right": 0
+                                                            },
+                                                            "then": [
+                                                              {
+                                                                "chooseOne": {
+                                                                  "internalDecisionId": "decision:doc.eventDecks.0.cards.80.unshaded.effects.0.rollRandom.in.0.let.in.0.let.in.0.if.then.1.forEach.effects.0.let.in.0.let.in.0.if.then.0.chooseOne",
+                                                                  "bind": "$cidgReplacementPiece",
+                                                                  "options": {
+                                                                    "query": "concat",
+                                                                    "sources": [
+                                                                      {
+                                                                        "query": "tokensInZone",
+                                                                        "zone": "available-US:none",
+                                                                        "filter": {
+                                                                          "op": "and",
+                                                                          "args": [
+                                                                            {
+                                                                              "prop": "faction",
+                                                                              "op": "eq",
+                                                                              "value": "US"
+                                                                            },
+                                                                            {
+                                                                              "prop": "type",
+                                                                              "op": "eq",
+                                                                              "value": "irregular"
+                                                                            }
+                                                                          ]
+                                                                        }
+                                                                      },
+                                                                      {
+                                                                        "query": "tokensInZone",
+                                                                        "zone": "available-ARVN:none",
+                                                                        "filter": {
+                                                                          "op": "and",
+                                                                          "args": [
+                                                                            {
+                                                                              "prop": "faction",
+                                                                              "op": "eq",
+                                                                              "value": "ARVN"
+                                                                            },
+                                                                            {
+                                                                              "prop": "type",
+                                                                              "op": "eq",
+                                                                              "value": "ranger"
+                                                                            }
+                                                                          ]
+                                                                        }
+                                                                      },
+                                                                      {
+                                                                        "query": "tokensInZone",
+                                                                        "zone": "available-ARVN:none",
+                                                                        "filter": {
+                                                                          "op": "and",
+                                                                          "args": [
+                                                                            {
+                                                                              "prop": "faction",
+                                                                              "op": "eq",
+                                                                              "value": "ARVN"
+                                                                            },
+                                                                            {
+                                                                              "prop": "type",
+                                                                              "op": "eq",
+                                                                              "value": "police"
+                                                                            }
+                                                                          ]
+                                                                        }
+                                                                      }
+                                                                    ]
+                                                                  }
+                                                                }
+                                                              },
+                                                              {
+                                                                "moveToken": {
+                                                                  "token": "$cidgReplacementPiece",
+                                                                  "from": {
+                                                                    "zoneExpr": {
+                                                                      "ref": "tokenZone",
+                                                                      "token": "$cidgReplacementPiece"
+                                                                    }
+                                                                  },
+                                                                  "to": {
+                                                                    "zoneExpr": "$cidgSourceZone"
+                                                                  }
+                                                                }
+                                                              },
+                                                              {
+                                                                "if": {
+                                                                  "when": {
+                                                                    "op": "in",
+                                                                    "item": {
+                                                                      "ref": "tokenProp",
+                                                                      "token": "$cidgReplacementPiece",
+                                                                      "prop": "type"
+                                                                    },
+                                                                    "set": {
+                                                                      "scalarArray": [
+                                                                        "irregular",
+                                                                        "ranger"
+                                                                      ]
+                                                                    }
+                                                                  },
+                                                                  "then": [
+                                                                    {
+                                                                      "setTokenProp": {
+                                                                        "token": "$cidgReplacementPiece",
+                                                                        "prop": "activity",
+                                                                        "value": "underground"
+                                                                      }
+                                                                    }
+                                                                  ],
+                                                                  "else": []
+                                                                }
+                                                              }
+                                                            ],
+                                                            "else": []
+                                                          }
+                                                        },
+                                                        {
+                                                          "moveToken": {
+                                                            "token": "$cidgVcGuerrilla",
+                                                            "from": {
+                                                              "zoneExpr": {
+                                                                "ref": "tokenZone",
+                                                                "token": "$cidgVcGuerrilla"
+                                                              }
+                                                            },
+                                                            "to": {
+                                                              "zoneExpr": {
+                                                                "if": {
+                                                                  "when": {
+                                                                    "op": "==",
+                                                                    "left": {
+                                                                      "ref": "tokenProp",
+                                                                      "token": "$cidgVcGuerrilla",
+                                                                      "prop": "faction"
+                                                                    },
+                                                                    "right": "US"
+                                                                  },
+                                                                  "then": {
+                                                                    "if": {
+                                                                      "when": {
+                                                                        "op": "==",
+                                                                        "left": {
+                                                                          "ref": "tokenProp",
+                                                                          "token": "$cidgVcGuerrilla",
+                                                                          "prop": "type"
+                                                                        },
+                                                                        "right": "irregular"
+                                                                      },
+                                                                      "then": "available-US:none",
+                                                                      "else": "casualties-US:none"
+                                                                    }
+                                                                  },
+                                                                  "else": {
+                                                                    "if": {
+                                                                      "when": {
+                                                                        "op": "==",
+                                                                        "left": {
+                                                                          "ref": "tokenProp",
+                                                                          "token": "$cidgVcGuerrilla",
+                                                                          "prop": "faction"
+                                                                        },
+                                                                        "right": "ARVN"
+                                                                      },
+                                                                      "then": "available-ARVN:none",
+                                                                      "else": {
+                                                                        "concat": [
+                                                                          "available-",
+                                                                          {
+                                                                            "ref": "tokenProp",
+                                                                            "token": "$cidgVcGuerrilla",
+                                                                            "prop": "faction"
+                                                                          },
+                                                                          ":none"
+                                                                        ]
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      ]
+                                                    }
+                                                  }
+                                                ]
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    ],
+                                    "else": []
+                                  }
                                 }
                               ]
                             }
-                          },
-                          "to": {
-                            "zoneExpr": "$targetSpace"
                           }
-                        }
-                      ]
+                        ]
+                      }
                     }
-                  }
-                ]
+                  ]
+                }
               }
             ]
           },
           "shaded": {
-            "text": "CIDG positions collapse: replace Irregulars with VC Guerrillas.",
-            "targets": [
+            "text": "Replace all Rangers, Police, and Irregulars in a Highland space with 2 VC Guerrillas total.",
+            "effects": [
               {
-                "id": "$targetSpace",
-                "selector": {
-                  "query": "mapSpaces"
-                },
-                "cardinality": {
-                  "max": 2
-                },
-                "application": "aggregate",
-                "effects": [
-                  {
-                    "removeByPriority": {
-                      "budget": 2,
-                      "groups": [
-                        {
-                          "bind": "$irregular",
-                          "over": {
-                            "query": "tokensInZone",
-                            "zone": "$targetSpace",
-                            "filter": {
-                              "op": "and",
-                              "args": [
-                                {
-                                  "prop": "faction",
-                                  "op": "eq",
-                                  "value": "US"
+                "let": {
+                  "bind": "$cidgEligibleHighlandCount",
+                  "value": {
+                    "aggregate": {
+                      "op": "count",
+                      "query": {
+                        "query": "mapSpaces",
+                        "filter": {
+                          "condition": {
+                            "op": "and",
+                            "args": [
+                              {
+                                "op": "zonePropIncludes",
+                                "zone": "$zone",
+                                "prop": "terrainTags",
+                                "value": "highland"
+                              },
+                              {
+                                "op": ">",
+                                "left": {
+                                  "aggregate": {
+                                    "op": "count",
+                                    "query": {
+                                      "query": "tokensInZone",
+                                      "zone": "$zone",
+                                      "filter": {
+                                        "op": "or",
+                                        "args": [
+                                          {
+                                            "op": "and",
+                                            "args": [
+                                              {
+                                                "prop": "faction",
+                                                "op": "eq",
+                                                "value": "US"
+                                              },
+                                              {
+                                                "prop": "type",
+                                                "op": "eq",
+                                                "value": "irregular"
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "op": "and",
+                                            "args": [
+                                              {
+                                                "prop": "faction",
+                                                "op": "eq",
+                                                "value": "ARVN"
+                                              },
+                                              {
+                                                "prop": "type",
+                                                "op": "in",
+                                                "value": [
+                                                  "ranger",
+                                                  "police"
+                                                ]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  }
                                 },
-                                {
-                                  "prop": "type",
-                                  "op": "eq",
-                                  "value": "irregular"
-                                }
-                              ]
-                            }
-                          },
-                          "to": {
-                            "zoneExpr": "available-US:none"
+                                "right": 0
+                              }
+                            ]
                           }
                         }
-                      ]
+                      }
                     }
                   },
-                  {
-                    "removeByPriority": {
-                      "budget": 2,
-                      "groups": [
-                        {
-                          "bind": "$vcGuerrilla",
-                          "over": {
-                            "query": "tokensInZone",
-                            "zone": "available-VC:none",
-                            "filter": {
-                              "op": "and",
-                              "args": [
+                  "in": [
+                    {
+                      "if": {
+                        "when": {
+                          "op": ">",
+                          "left": {
+                            "ref": "binding",
+                            "name": "$cidgEligibleHighlandCount"
+                          },
+                          "right": 0
+                        },
+                        "then": [
+                          {
+                            "chooseOne": {
+                              "internalDecisionId": "decision:doc.eventDecks.0.cards.80.shaded.effects.0.let.in.0.if.then.0.chooseOne",
+                              "bind": "$cidgHighlandSpace",
+                              "options": {
+                                "query": "mapSpaces",
+                                "filter": {
+                                  "condition": {
+                                    "op": "and",
+                                    "args": [
+                                      {
+                                        "op": "zonePropIncludes",
+                                        "zone": "$zone",
+                                        "prop": "terrainTags",
+                                        "value": "highland"
+                                      },
+                                      {
+                                        "op": ">",
+                                        "left": {
+                                          "aggregate": {
+                                            "op": "count",
+                                            "query": {
+                                              "query": "tokensInZone",
+                                              "zone": "$zone",
+                                              "filter": {
+                                                "op": "or",
+                                                "args": [
+                                                  {
+                                                    "op": "and",
+                                                    "args": [
+                                                      {
+                                                        "prop": "faction",
+                                                        "op": "eq",
+                                                        "value": "US"
+                                                      },
+                                                      {
+                                                        "prop": "type",
+                                                        "op": "eq",
+                                                        "value": "irregular"
+                                                      }
+                                                    ]
+                                                  },
+                                                  {
+                                                    "op": "and",
+                                                    "args": [
+                                                      {
+                                                        "prop": "faction",
+                                                        "op": "eq",
+                                                        "value": "ARVN"
+                                                      },
+                                                      {
+                                                        "prop": "type",
+                                                        "op": "in",
+                                                        "value": [
+                                                          "ranger",
+                                                          "police"
+                                                        ]
+                                                      }
+                                                    ]
+                                                  }
+                                                ]
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "right": 0
+                                      }
+                                    ]
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "forEach": {
+                              "bind": "$cidgRemovedCounterPiece",
+                              "over": {
+                                "query": "tokensInZone",
+                                "zone": "$cidgHighlandSpace",
+                                "filter": {
+                                  "op": "or",
+                                  "args": [
+                                    {
+                                      "op": "and",
+                                      "args": [
+                                        {
+                                          "prop": "faction",
+                                          "op": "eq",
+                                          "value": "US"
+                                        },
+                                        {
+                                          "prop": "type",
+                                          "op": "eq",
+                                          "value": "irregular"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "op": "and",
+                                      "args": [
+                                        {
+                                          "prop": "faction",
+                                          "op": "eq",
+                                          "value": "ARVN"
+                                        },
+                                        {
+                                          "prop": "type",
+                                          "op": "in",
+                                          "value": [
+                                            "ranger",
+                                            "police"
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              },
+                              "effects": [
                                 {
-                                  "prop": "faction",
-                                  "op": "eq",
-                                  "value": "VC"
-                                },
-                                {
-                                  "prop": "type",
-                                  "op": "eq",
-                                  "value": "guerrilla"
+                                  "moveToken": {
+                                    "token": "$cidgRemovedCounterPiece",
+                                    "from": {
+                                      "zoneExpr": {
+                                        "ref": "tokenZone",
+                                        "token": "$cidgRemovedCounterPiece"
+                                      }
+                                    },
+                                    "to": {
+                                      "zoneExpr": {
+                                        "if": {
+                                          "when": {
+                                            "op": "==",
+                                            "left": {
+                                              "ref": "tokenProp",
+                                              "token": "$cidgRemovedCounterPiece",
+                                              "prop": "faction"
+                                            },
+                                            "right": "US"
+                                          },
+                                          "then": {
+                                            "if": {
+                                              "when": {
+                                                "op": "==",
+                                                "left": {
+                                                  "ref": "tokenProp",
+                                                  "token": "$cidgRemovedCounterPiece",
+                                                  "prop": "type"
+                                                },
+                                                "right": "irregular"
+                                              },
+                                              "then": "available-US:none",
+                                              "else": "casualties-US:none"
+                                            }
+                                          },
+                                          "else": {
+                                            "if": {
+                                              "when": {
+                                                "op": "==",
+                                                "left": {
+                                                  "ref": "tokenProp",
+                                                  "token": "$cidgRemovedCounterPiece",
+                                                  "prop": "faction"
+                                                },
+                                                "right": "ARVN"
+                                              },
+                                              "then": "available-ARVN:none",
+                                              "else": {
+                                                "concat": [
+                                                  "available-",
+                                                  {
+                                                    "ref": "tokenProp",
+                                                    "token": "$cidgRemovedCounterPiece",
+                                                    "prop": "faction"
+                                                  },
+                                                  ":none"
+                                                ]
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
                                 }
                               ]
                             }
                           },
-                          "to": {
-                            "zoneExpr": "$targetSpace"
+                          {
+                            "let": {
+                              "bind": "$cidgShadedVcCount",
+                              "value": {
+                                "op": "min",
+                                "left": 2,
+                                "right": {
+                                  "aggregate": {
+                                    "op": "count",
+                                    "query": {
+                                      "query": "tokensInZone",
+                                      "zone": "available-VC:none",
+                                      "filter": {
+                                        "op": "and",
+                                        "args": [
+                                          {
+                                            "prop": "faction",
+                                            "op": "eq",
+                                            "value": "VC"
+                                          },
+                                          {
+                                            "prop": "type",
+                                            "op": "eq",
+                                            "value": "guerrilla"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "in": [
+                                {
+                                  "if": {
+                                    "when": {
+                                      "op": ">",
+                                      "left": {
+                                        "ref": "binding",
+                                        "name": "$cidgShadedVcCount"
+                                      },
+                                      "right": 0
+                                    },
+                                    "then": [
+                                      {
+                                        "chooseN": {
+                                          "internalDecisionId": "decision:doc.eventDecks.0.cards.80.shaded.effects.0.let.in.0.if.then.2.let.in.0.if.then.0.chooseN",
+                                          "bind": "$cidgShadedVcGuerrillas",
+                                          "options": {
+                                            "query": "tokensInZone",
+                                            "zone": "available-VC:none",
+                                            "filter": {
+                                              "op": "and",
+                                              "args": [
+                                                {
+                                                  "prop": "faction",
+                                                  "op": "eq",
+                                                  "value": "VC"
+                                                },
+                                                {
+                                                  "prop": "type",
+                                                  "op": "eq",
+                                                  "value": "guerrilla"
+                                                }
+                                              ]
+                                            }
+                                          },
+                                          "max": {
+                                            "ref": "binding",
+                                            "name": "$cidgShadedVcCount"
+                                          },
+                                          "min": {
+                                            "ref": "binding",
+                                            "name": "$cidgShadedVcCount"
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "forEach": {
+                                          "bind": "$cidgShadedVcGuerrilla",
+                                          "over": {
+                                            "query": "binding",
+                                            "name": "$cidgShadedVcGuerrillas"
+                                          },
+                                          "effects": [
+                                            {
+                                              "moveToken": {
+                                                "token": "$cidgShadedVcGuerrilla",
+                                                "from": {
+                                                  "zoneExpr": {
+                                                    "ref": "tokenZone",
+                                                    "token": "$cidgShadedVcGuerrilla"
+                                                  }
+                                                },
+                                                "to": {
+                                                  "zoneExpr": "$cidgHighlandSpace"
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "if": {
+                                                "when": {
+                                                  "op": "in",
+                                                  "item": {
+                                                    "ref": "tokenProp",
+                                                    "token": "$cidgShadedVcGuerrilla",
+                                                    "prop": "type"
+                                                  },
+                                                  "set": {
+                                                    "scalarArray": [
+                                                      "guerrilla"
+                                                    ]
+                                                  }
+                                                },
+                                                "then": [
+                                                  {
+                                                    "setTokenProp": {
+                                                      "token": "$cidgShadedVcGuerrilla",
+                                                      "prop": "activity",
+                                                      "value": "underground"
+                                                    }
+                                                  }
+                                                ],
+                                                "else": []
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    ],
+                                    "else": []
+                                  }
+                                }
+                              ]
+                            }
                           }
-                        }
-                      ]
+                        ],
+                        "else": []
+                      }
                     }
-                  }
-                ]
+                  ]
+                }
               }
             ]
           }
@@ -77942,68 +79321,141 @@
             "flavorText": "U.S. prestige is on the line."
           },
           "unshaded": {
-            "text": "Aid and ARVN Resources each +9. Return pieces from Out of Play.",
+            "text": "Up to 3 US or 6 ARVN out-of-play pieces to Available. Or ARVN Resources and Aid each +9.",
             "branches": [
               {
-                "id": "return-from-out-of-play",
+                "id": "us-out-of-play-to-available",
                 "order": 1,
                 "effects": [
                   {
-                    "removeByPriority": {
-                      "budget": 3,
-                      "groups": [
-                        {
-                          "bind": "$usOutOfPlay",
-                          "over": {
-                            "query": "tokensInZone",
-                            "zone": "out-of-play-US:none",
-                            "filter": {
-                              "prop": "faction",
-                              "op": "eq",
-                              "value": "US"
+                    "chooseN": {
+                      "internalDecisionId": "decision:doc.eventDecks.0.cards.81.unshaded.branches.0.effects.0.chooseN",
+                      "bind": "$dominoTheoryUsPieces",
+                      "options": {
+                        "query": "tokensInZone",
+                        "zone": "out-of-play-US:none",
+                        "filter": {
+                          "prop": "faction",
+                          "op": "eq",
+                          "value": "US"
+                        }
+                      },
+                      "max": {
+                        "op": "min",
+                        "left": 3,
+                        "right": {
+                          "aggregate": {
+                            "op": "count",
+                            "query": {
+                              "query": "tokensInZone",
+                              "zone": "out-of-play-US:none",
+                              "filter": {
+                                "prop": "faction",
+                                "op": "eq",
+                                "value": "US"
+                              }
                             }
-                          },
-                          "to": {
-                            "zoneExpr": "available-US:none"
+                          }
+                        }
+                      },
+                      "min": 0
+                    }
+                  },
+                  {
+                    "forEach": {
+                      "bind": "$dominoTheoryUsPiece",
+                      "over": {
+                        "query": "binding",
+                        "name": "$dominoTheoryUsPieces"
+                      },
+                      "effects": [
+                        {
+                          "moveToken": {
+                            "token": "$dominoTheoryUsPiece",
+                            "from": {
+                              "zoneExpr": {
+                                "ref": "tokenZone",
+                                "token": "$dominoTheoryUsPiece"
+                              }
+                            },
+                            "to": {
+                              "zoneExpr": "available-US:none"
+                            }
                           }
                         }
                       ]
                     }
-                  },
+                  }
+                ]
+              },
+              {
+                "id": "arvn-out-of-play-to-available",
+                "order": 2,
+                "effects": [
                   {
-                    "removeByPriority": {
-                      "budget": 6,
-                      "groups": [
-                        {
-                          "bind": "$arvnOutOfPlay",
-                          "over": {
-                            "query": "tokensInZone",
-                            "zone": "out-of-play-ARVN:none",
-                            "filter": {
-                              "prop": "faction",
-                              "op": "eq",
-                              "value": "ARVN"
+                    "chooseN": {
+                      "internalDecisionId": "decision:doc.eventDecks.0.cards.81.unshaded.branches.1.effects.0.chooseN",
+                      "bind": "$dominoTheoryArvnPieces",
+                      "options": {
+                        "query": "tokensInZone",
+                        "zone": "out-of-play-ARVN:none",
+                        "filter": {
+                          "prop": "faction",
+                          "op": "eq",
+                          "value": "ARVN"
+                        }
+                      },
+                      "max": {
+                        "op": "min",
+                        "left": 6,
+                        "right": {
+                          "aggregate": {
+                            "op": "count",
+                            "query": {
+                              "query": "tokensInZone",
+                              "zone": "out-of-play-ARVN:none",
+                              "filter": {
+                                "prop": "faction",
+                                "op": "eq",
+                                "value": "ARVN"
+                              }
                             }
-                          },
-                          "to": {
-                            "zoneExpr": "available-ARVN:none"
                           }
                         }
-                      ]
+                      },
+                      "min": 0
                     }
                   },
                   {
-                    "addVar": {
-                      "scope": "global",
-                      "var": "aid",
-                      "delta": 1
+                    "forEach": {
+                      "bind": "$dominoTheoryArvnPiece",
+                      "over": {
+                        "query": "binding",
+                        "name": "$dominoTheoryArvnPieces"
+                      },
+                      "effects": [
+                        {
+                          "moveToken": {
+                            "token": "$dominoTheoryArvnPiece",
+                            "from": {
+                              "zoneExpr": {
+                                "ref": "tokenZone",
+                                "token": "$dominoTheoryArvnPiece"
+                              }
+                            },
+                            "to": {
+                              "zoneExpr": "available-ARVN:none"
+                            }
+                          }
+                        }
+                      ]
                     }
                   }
                 ]
               },
               {
                 "id": "resources-and-aid",
-                "order": 2,
+                "order": 3,
                 "effects": [
                   {
                     "addVar": {
@@ -78024,26 +79476,93 @@
             ]
           },
           "shaded": {
-            "text": "Containment falters: Aid -9.",
-            "targets": [
+            "text": "3 Available US Troops out of play. Aid -9.",
+            "effects": [
               {
-                "id": "us-troops-available",
-                "selector": {
-                  "query": "players"
-                },
-                "cardinality": {
-                  "max": 3
-                },
-                "application": "aggregate",
-                "effects": [
-                  {
-                    "addVar": {
-                      "scope": "global",
-                      "var": "aid",
-                      "delta": -9
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.81.shaded.effects.0.chooseN",
+                  "bind": "$dominoTheoryAvailableUsTroops",
+                  "options": {
+                    "query": "tokensInZone",
+                    "zone": "available-US:none",
+                    "filter": {
+                      "op": "and",
+                      "args": [
+                        {
+                          "prop": "faction",
+                          "op": "eq",
+                          "value": "US"
+                        },
+                        {
+                          "prop": "type",
+                          "op": "eq",
+                          "value": "troops"
+                        }
+                      ]
                     }
-                  }
-                ]
+                  },
+                  "max": {
+                    "op": "min",
+                    "left": 3,
+                    "right": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "tokensInZone",
+                          "zone": "available-US:none",
+                          "filter": {
+                            "op": "and",
+                            "args": [
+                              {
+                                "prop": "faction",
+                                "op": "eq",
+                                "value": "US"
+                              },
+                              {
+                                "prop": "type",
+                                "op": "eq",
+                                "value": "troops"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "min": 0
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$dominoTheoryAvailableUsTroop",
+                  "over": {
+                    "query": "binding",
+                    "name": "$dominoTheoryAvailableUsTroops"
+                  },
+                  "effects": [
+                    {
+                      "moveToken": {
+                        "token": "$dominoTheoryAvailableUsTroop",
+                        "from": {
+                          "zoneExpr": {
+                            "ref": "tokenZone",
+                            "token": "$dominoTheoryAvailableUsTroop"
+                          }
+                        },
+                        "to": {
+                          "zoneExpr": "out-of-play-US:none"
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "addVar": {
+                  "scope": "global",
+                  "var": "aid",
+                  "delta": -9
+                }
               }
             ]
           }
@@ -79768,18 +81287,56 @@
                     }
                   },
                   {
-                    "addVar": {
-                      "scope": "zoneVar",
-                      "zone": "$targetCity",
-                      "var": "terrorCount",
-                      "delta": 1
-                    }
-                  },
-                  {
-                    "addVar": {
-                      "scope": "global",
-                      "var": "terrorSabotageMarkersPlaced",
-                      "delta": 1
+                    "if": {
+                      "when": {
+                        "op": "and",
+                        "args": [
+                          {
+                            "op": "<",
+                            "left": {
+                              "ref": "gvar",
+                              "var": "terrorSabotageMarkersPlaced"
+                            },
+                            "right": 15
+                          },
+                          {
+                            "op": "or",
+                            "args": [
+                              {
+                                "op": "==",
+                                "left": true,
+                                "right": true
+                              },
+                              {
+                                "op": "==",
+                                "left": {
+                                  "ref": "zoneVar",
+                                  "zone": "$targetCity",
+                                  "var": "terrorCount"
+                                },
+                                "right": 0
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "then": [
+                        {
+                          "addVar": {
+                            "scope": "zoneVar",
+                            "zone": "$targetCity",
+                            "var": "terrorCount",
+                            "delta": 1
+                          }
+                        },
+                        {
+                          "addVar": {
+                            "scope": "global",
+                            "var": "terrorSabotageMarkersPlaced",
+                            "delta": 1
+                          }
+                        }
+                      ]
                     }
                   }
                 ]

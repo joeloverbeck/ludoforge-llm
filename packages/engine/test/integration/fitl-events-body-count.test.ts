@@ -14,7 +14,10 @@ import {
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
-import { clearAllZones } from '../helpers/isolated-state-helpers.js';
+import {
+  clearAllZones,
+  withNeutralSupportOppositionMarkers,
+} from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
@@ -56,16 +59,6 @@ const findCard72Move = (def: GameDef, state: GameState, side: 'unshaded' | 'shad
 
 const countTokens = (state: GameState, zone: string, predicate: (token: Token) => boolean): number =>
   (state.zones[zone] ?? []).filter((token) => predicate(token as Token)).length;
-
-const withNeutralSupportMarkers = (state: GameState): GameState['markers'] =>
-  Object.fromEntries(
-    Object.entries(state.markers).map(([zoneId, zoneMarkers]) => [
-      zoneId,
-      zoneMarkers.supportOpposition === undefined
-        ? zoneMarkers
-        : { ...zoneMarkers, supportOpposition: 'neutral' },
-    ]),
-  ) as GameState['markers'];
 
 describe('FITL card-72 Body Count', () => {
   it('encodes exact card text, momentum flagging, and shaded selectors through generic event data', () => {
@@ -159,7 +152,7 @@ describe('FITL card-72 Body Count', () => {
       activePlayer: asPlayerId(2),
       turnOrderState: { type: 'roundRobin' },
       markers: {
-        ...withNeutralSupportMarkers(base),
+        ...withNeutralSupportOppositionMarkers(base),
         [ACTIVE_OPPOSITION_A]: { ...(base.markers[ACTIVE_OPPOSITION_A] ?? {}), supportOpposition: 'activeOpposition' },
         [ACTIVE_OPPOSITION_B]: { ...(base.markers[ACTIVE_OPPOSITION_B] ?? {}), supportOpposition: 'activeOpposition' },
         [PASSIVE_OPPOSITION_SPACE]: { ...(base.markers[PASSIVE_OPPOSITION_SPACE] ?? {}), supportOpposition: 'passiveOpposition' },
@@ -239,7 +232,7 @@ describe('FITL card-72 Body Count', () => {
       activePlayer: asPlayerId(3),
       turnOrderState: { type: 'roundRobin' },
       markers: {
-        ...withNeutralSupportMarkers(base),
+        ...withNeutralSupportOppositionMarkers(base),
         [ACTIVE_OPPOSITION_A]: { ...(base.markers[ACTIVE_OPPOSITION_A] ?? {}), supportOpposition: 'activeOpposition' },
         [ACTIVE_OPPOSITION_B]: { ...(base.markers[ACTIVE_OPPOSITION_B] ?? {}), supportOpposition: 'activeOpposition' },
       },

@@ -17,7 +17,10 @@ import {
   type DecisionOverrideRule,
 } from '../helpers/decision-param-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { clearAllZones } from '../helpers/isolated-state-helpers.js';
+import {
+  clearAllZones,
+  withNeutralSupportOppositionMarkers,
+} from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const CARD_ID = 'card-66';
@@ -72,14 +75,7 @@ const setupState = (
 
   const base = clearAllZones(initialState(def, seed, 4).state);
   const normalizedMarkers = options.resetSupportToNeutral === true
-    ? Object.fromEntries(
-      Object.entries(base.markers).map(([zone, zoneMarkers]) => [
-        zone,
-        zoneMarkers?.supportOpposition === undefined
-          ? zoneMarkers
-          : { ...zoneMarkers, supportOpposition: 'neutral' },
-      ]),
-    ) as GameState['markers']
+    ? withNeutralSupportOppositionMarkers(base)
     : base.markers;
   return {
     ...base,

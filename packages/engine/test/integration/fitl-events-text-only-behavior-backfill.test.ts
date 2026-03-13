@@ -165,9 +165,12 @@ describe('FITL text-only card behavior backfill', () => {
     assert.equal(typeof (card81?.shaded?.effects?.[0] as { let?: unknown } | undefined)?.let, 'object');
 
     const card83 = cardById.get('card-83');
-    assert.equal((card83?.unshaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 3);
-    assert.equal(card83?.unshaded?.effects, undefined);
-    assert.equal((card83?.unshaded?.targets?.[0]?.effects?.[1] as { addVar?: { var?: string; delta?: number } })?.addVar?.var, 'aid');
+    assert.equal((card83?.unshaded?.effects?.[0] as { chooseN?: { bind?: string } } | undefined)?.chooseN?.bind, '$electionPassiveSupportSpaces');
+    assert.equal(typeof (card83?.unshaded?.effects?.[1] as { forEach?: unknown } | undefined)?.forEach, 'object');
+    assert.equal((card83?.unshaded?.effects?.[2] as { addVar?: { var?: string; delta?: number } } | undefined)?.addVar?.delta, 10);
+    assert.equal((card83?.shaded?.effects?.[0] as { chooseN?: { bind?: string } } | undefined)?.chooseN?.bind, '$electionCities');
+    assert.equal(typeof (card83?.shaded?.effects?.[1] as { forEach?: unknown } | undefined)?.forEach, 'object');
+    assert.equal((card83?.shaded?.effects?.[2] as { addVar?: { delta?: number } } | undefined)?.addVar?.delta, -15);
 
     const card85 = cardById.get('card-85');
     assert.equal((card85?.unshaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 2);

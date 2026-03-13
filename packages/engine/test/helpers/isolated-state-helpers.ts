@@ -13,6 +13,16 @@ export const clearAllZones = (state: GameState): GameState => ({
   zones: Object.fromEntries(Object.keys(state.zones).map((zoneId) => [zoneId, []])) as GameState['zones'],
 });
 
+export const withNeutralSupportOppositionMarkers = (state: GameState): GameState['markers'] =>
+  Object.fromEntries(
+    Object.entries(state.markers).map(([zoneId, zoneMarkers]) => [
+      zoneId,
+      zoneMarkers?.supportOpposition === undefined
+        ? zoneMarkers
+        : { ...zoneMarkers, supportOpposition: 'neutral' },
+    ]),
+  ) as GameState['markers'];
+
 export const makeIsolatedInitialState = (
   def: GameDef,
   seed: number,

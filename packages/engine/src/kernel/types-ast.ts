@@ -451,6 +451,7 @@ export interface EffectKindMap {
     readonly chooseOne: {
       readonly internalDecisionId: string;
       readonly bind: string;
+      readonly decisionIdentity?: string;
       readonly options: OptionsQuery;
       readonly chooser?: PlayerSel;
       readonly macroOrigin?: EffectMacroOrigin;
@@ -460,6 +461,7 @@ export interface EffectKindMap {
     readonly chooseN: {
       readonly internalDecisionId: string;
       readonly bind: string;
+      readonly decisionIdentity?: string;
       readonly options: OptionsQuery;
       readonly chooser?: PlayerSel;
       readonly macroOrigin?: EffectMacroOrigin;

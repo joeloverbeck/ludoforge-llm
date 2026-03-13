@@ -123,7 +123,7 @@ describe('render-model types', () => {
       ],
       choiceBreadcrumb: [
         {
-          decisionId: 'pick-zone',
+          decisionKey: 'pick-zone',
           name: 'Pick Zone',
           displayName: 'Pick Zone',
           chosenValueId: serializeChoiceValueIdentity('table' as MoveParamValue),
@@ -136,7 +136,7 @@ describe('render-model types', () => {
       choiceContext: null,
       choiceUi: {
         kind: 'discreteMany',
-        decisionId: 'pick-tokens',
+        decisionKey: 'pick-tokens',
         options: [
           {
             choiceValueId: serializeChoiceValueIdentity(['table', asPlayerId(1)] as MoveParamValue),
@@ -264,7 +264,7 @@ describe('render-model types', () => {
       { kind: 'confirmReady' },
       {
         kind: 'discreteOne',
-        decisionId: 'pick-zone',
+        decisionKey: 'pick-zone',
         options: [{
           choiceValueId: serializeChoiceValueIdentity('zone:a' as MoveParamValue),
           value: 'zone:a' as MoveParamValue,
@@ -276,7 +276,7 @@ describe('render-model types', () => {
       },
       {
         kind: 'discreteMany',
-        decisionId: 'pick-zones',
+        decisionKey: 'pick-zones',
         options: [{
           choiceValueId: serializeChoiceValueIdentity('zone:a' as MoveParamValue),
           value: 'zone:a' as MoveParamValue,
@@ -290,7 +290,7 @@ describe('render-model types', () => {
       },
       {
         kind: 'numeric',
-        decisionId: 'pick-amount',
+        decisionKey: 'pick-amount',
         domain: { min: 0, max: 5, step: 1 },
       },
       {

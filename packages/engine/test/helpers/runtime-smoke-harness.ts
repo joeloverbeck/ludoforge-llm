@@ -144,7 +144,7 @@ const resolveMoveDecisionsForPolicy = (
     const detail =
       nextDecision === undefined
         ? `illegal=${decisionResult.illegal?.reason ?? 'unknown'}`
-        : `decision=${nextDecision.decisionId} name=${nextDecision.name}`;
+        : `decision=${nextDecision.decisionKey} name=${nextDecision.name}`;
     throw new Error(`Could not complete move decisions for action ${String(move.actionId)}: ${detail}`);
   }
 

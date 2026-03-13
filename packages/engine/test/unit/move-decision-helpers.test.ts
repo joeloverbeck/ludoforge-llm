@@ -8,11 +8,14 @@ import {
   asZoneId,
   type ActionDef,
   type ChoicePendingRequest,
+  type DecisionKey,
   type GameDef,
   type GameState,
   type Move,
 } from '../../src/kernel/index.js';
 import { completeMoveDecisionSequenceOrThrow, pickDeterministicDecisionValue } from '../helpers/move-decision-helpers.js';
+
+const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 
 const makeDef = (action: ActionDef): GameDef =>
   ({
@@ -53,7 +56,7 @@ describe('move decision helpers', () => {
     const request: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
-      decisionId: 'decision:$target',
+      decisionKey: asDecisionKey('decision:$target'),
       name: '$target',
       type: 'chooseOne',
       options: [],

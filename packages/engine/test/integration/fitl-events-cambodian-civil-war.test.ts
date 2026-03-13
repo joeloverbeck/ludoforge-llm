@@ -424,13 +424,13 @@ describe('FITL card-62 Cambodian Civil War', () => {
 
     const overrides: readonly DecisionOverrideRule[] = [
       {
-        when: (request: ChoicePendingRequest) => request.decisionId.includes('distributeTokens.selectTokens'),
+        when: (request: ChoicePendingRequest) => request.decisionKey.includes('distributeTokens.selectTokens'),
         value: available
           .filter((token) => token.id !== asTokenId('ccw-shaded-g-5') && token.id !== asTokenId('ccw-shaded-base-ignored'))
           .map((token) => String(token.id)),
       },
       {
-        when: (request: ChoicePendingRequest) => request.decisionId.includes('distributeTokens.chooseDestination'),
+        when: (request: ChoicePendingRequest) => request.decisionKey.includes('distributeTokens.chooseDestination'),
         value: NORTHEAST_CAMBODIA,
       },
     ];
@@ -482,7 +482,7 @@ describe('FITL card-62 Cambodian Civil War', () => {
 
     const overrides: readonly DecisionOverrideRule[] = [
       {
-        when: (request: ChoicePendingRequest) => request.decisionId.includes('distributeTokens.chooseDestination'),
+        when: (request: ChoicePendingRequest) => request.decisionKey.includes('distributeTokens.chooseDestination'),
         value: PARROTS_BEAK,
       },
     ];

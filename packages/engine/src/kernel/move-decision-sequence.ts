@@ -4,10 +4,6 @@ import {
   type DecisionSequenceSatisfiabilityResult,
 } from './decision-sequence-satisfiability.js';
 import { pickDeterministicChoiceValue } from './choice-option-policy.js';
-import {
-  decisionOccurrenceKey,
-  writeMoveParamForDecisionOccurrence,
-} from './decision-occurrence.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import { shouldDeferMissingBinding, type MissingBindingPolicyContext } from './missing-binding-policy.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
@@ -103,17 +99,10 @@ export const resolveMoveDecisionSequence = (
 
     move = {
       ...move,
-      params: writeMoveParamForDecisionOccurrence(move.params, {
-        decisionId: request.decisionId,
-        name: request.name,
-        decisionIndex: request.occurrenceIndex ?? 1,
-        decisionOccurrenceKey: request.occurrenceKey ?? decisionOccurrenceKey(request.decisionId, request.occurrenceIndex ?? 1),
-        nameIndex: request.nameOccurrenceIndex ?? request.occurrenceIndex ?? 1,
-        nameOccurrenceKey: request.nameOccurrenceKey ?? `${request.name}#${request.nameOccurrenceIndex ?? request.occurrenceIndex ?? 1}`,
-        canonicalAlias: request.canonicalAlias ?? null,
-        canonicalAliasIndex: request.canonicalAliasOccurrenceIndex ?? null,
-        canonicalAliasOccurrenceKey: request.canonicalAliasOccurrenceKey ?? null,
-      }, selected),
+      params: {
+        ...move.params,
+        [request.decisionKey]: selected,
+      },
     };
   }
 

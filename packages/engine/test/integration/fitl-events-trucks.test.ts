@@ -270,7 +270,7 @@ describe('FITL card-55 Trucks', () => {
       ...move!,
       params: {
         ...move!.params,
-        [firstPending.decisionId]: ['few-laos-1', 'few-laos-2'],
+        [firstPending.decisionKey]: ['few-laos-1', 'few-laos-2'],
       },
     });
     assert.equal(secondPending.kind, 'pending');
@@ -340,7 +340,7 @@ describe('FITL card-55 Trucks', () => {
       ...move!,
       params: {
         ...move!.params,
-        [firstPending.decisionId]: SOUTHERN_LAOS,
+        [firstPending.decisionKey]: SOUTHERN_LAOS,
       },
     };
     const secondPending = legalChoicesEvaluate(def, setup, firstChoiceMove);

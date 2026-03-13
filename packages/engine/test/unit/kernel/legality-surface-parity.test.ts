@@ -1291,7 +1291,7 @@ describe('legality surface parity', () => {
     });
     assert.deepEqual(trace.map((step) => step.requestKind), ['pending', 'pending', 'complete']);
     assert.deepEqual(
-      trace.filter((step) => step.requestKind === 'pending').map((step) => step.decisionId),
+      trace.filter((step) => step.requestKind === 'pending').map((step) => step.decisionKey),
       ['decision:$mode', 'decision:$token'],
     );
   });
@@ -1351,7 +1351,7 @@ describe('legality surface parity', () => {
     });
     assert.deepEqual(trace.map((step) => step.requestKind), ['pending', 'pending', 'complete']);
     assert.deepEqual(
-      trace.filter((step) => step.requestKind === 'pending').map((step) => step.decisionId),
+      trace.filter((step) => step.requestKind === 'pending').map((step) => step.decisionKey),
       ['decision:$branch', 'decision:$targets'],
     );
   });

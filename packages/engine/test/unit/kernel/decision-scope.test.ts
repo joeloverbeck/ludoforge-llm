@@ -21,6 +21,15 @@ describe('decision-scope codec', () => {
     assert.equal(formatDecisionKey('decision:train', 'Saigon', '[0]', 1), 'decision:train::Saigon[0]');
     assert.equal(formatDecisionKey('decision:train', 'Saigon', '[0]', 2), 'decision:train::Saigon[0]#2');
     assert.equal(formatDecisionKey('decision:op', 'Saigon', '[0][1]', 1), 'decision:op::Saigon[0][1]');
+    assert.equal(
+      formatDecisionKey(
+        'decision:doc.actions.0.effects.0.distributeTokens.selectTokens',
+        'decision:doc.actions.0.effects.0.distributeTokens.selectTokens',
+        '',
+        1,
+      ),
+      'decision:doc.actions.0.effects.0.distributeTokens.selectTokens',
+    );
   });
 
   it('round-trips canonical keys through parseDecisionKey', () => {
@@ -32,6 +41,7 @@ describe('decision-scope codec', () => {
       'decision:train::Saigon[0]',
       'decision:train::Saigon[0]#2',
       'decision:op::Saigon[0][1]',
+      'decision:doc.actions.0.effects.0.distributeTokens.selectTokens',
     ] as const;
 
     for (const key of canonicalKeys) {

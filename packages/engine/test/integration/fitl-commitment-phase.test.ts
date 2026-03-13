@@ -310,7 +310,7 @@ describe('FITL commitment phase production wiring', () => {
       ...eventMove,
       params: {
         ...eventMove.params,
-        [pending.nextDecision!.decisionId]: ['great-av-base-1', 'great-av-troop-1', 'great-av-troop-2'],
+        [pending.nextDecision!.decisionKey]: ['great-av-base-1', 'great-av-troop-1', 'great-av-troop-2'],
       },
     }).state;
 

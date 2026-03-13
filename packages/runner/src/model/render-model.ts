@@ -187,7 +187,7 @@ export interface RenderAction {
 }
 
 export interface RenderChoiceStep {
-  readonly decisionId: string;
+  readonly decisionKey: string;
   readonly name: string;
   readonly displayName: string;
   readonly chosenValueId: string;
@@ -231,19 +231,19 @@ export type RenderChoiceUi =
     }
   | {
       readonly kind: 'discreteOne';
-      readonly decisionId: string;
+      readonly decisionKey: string;
       readonly options: readonly RenderChoiceOption[];
     }
   | {
       readonly kind: 'discreteMany';
-      readonly decisionId: string;
+      readonly decisionKey: string;
       readonly options: readonly RenderChoiceOption[];
       readonly min: number | null;
       readonly max: number | null;
     }
   | {
       readonly kind: 'numeric';
-      readonly decisionId: string;
+      readonly decisionKey: string;
       readonly domain: RenderChoiceDomain;
     }
   | {

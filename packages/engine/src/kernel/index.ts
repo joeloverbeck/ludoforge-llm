@@ -95,4 +95,4 @@ export * from './tooltip-label-resolver.js';
 export * from './tooltip-template-realizer.js';
 export * from './tooltip-modifier-humanizer.js';
 export * from './tooltip-blocker-extractor.js';
-export { extractResolvedBindFromDecisionId } from './decision-id.js';
+export * from './decision-scope.js';

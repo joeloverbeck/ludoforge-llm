@@ -1,8 +1,5 @@
 import type { PlayerId } from './branded.js';
-import {
-  createDecisionOccurrenceContext,
-  type DecisionOccurrenceContext,
-} from './decision-occurrence.js';
+import { emptyScope, type DecisionScope } from './decision-scope.js';
 import type {
   DecisionAuthorityProbeContext,
   DecisionAuthorityStrictContext,
@@ -50,12 +47,9 @@ interface EffectContextBase extends WriteContext {
   readonly maxEffectOps?: number;
   readonly freeOperation?: boolean;
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
-  /** Accumulated forEach iteration path for scoping inner decision IDs. */
-  readonly iterationPath?: string;
+  readonly decisionScope: DecisionScope;
   /** Runtime scope carrying previously executed grant definitions for sequence viability probes. */
   readonly freeOperationProbeScope?: FreeOperationProbeScope;
-  /** Mutable occurrence counters so repeated dynamic decisions can be addressed stably. */
-  readonly decisionOccurrences?: DecisionOccurrenceContext;
 }
 
 export interface ExecutionEffectContext extends EffectContextBase {
@@ -83,11 +77,13 @@ export interface EffectResult {
   readonly emittedEvents?: readonly TriggerEvent[];
   readonly bindings?: Readonly<Record<string, unknown>>;
   readonly pendingChoice?: ChoicePendingRequest | ChoiceStochasticPendingRequest;
+  readonly decisionScope?: DecisionScope;
 }
 
-interface RuntimeEffectContextOptions extends Omit<EffectContextBase, 'collector' | 'resources'> {
+interface RuntimeEffectContextOptions extends Omit<EffectContextBase, 'collector' | 'resources' | 'decisionScope'> {
   readonly resources: EvalRuntimeResources;
   readonly decisionAuthorityPlayer?: PlayerId;
+  readonly decisionScope?: DecisionScope;
 }
 
 export const createExecutionEffectContext = (options: RuntimeEffectContextOptions): ExecutionEffectContext => {
@@ -107,7 +103,7 @@ export const createExecutionEffectContext = (options: RuntimeEffectContextOption
       player: decisionAuthorityPlayer,
       ownershipEnforcement: 'strict',
     },
-    decisionOccurrences: ctx.decisionOccurrences ?? createDecisionOccurrenceContext(),
+    decisionScope: ctx.decisionScope ?? emptyScope(),
     mode: 'execution',
   };
 };
@@ -129,7 +125,7 @@ export const createDiscoveryStrictEffectContext = (options: RuntimeEffectContext
       player: decisionAuthorityPlayer,
       ownershipEnforcement: 'strict',
     },
-    decisionOccurrences: ctx.decisionOccurrences ?? createDecisionOccurrenceContext(),
+    decisionScope: ctx.decisionScope ?? emptyScope(),
     mode: 'discovery',
   };
 };
@@ -153,7 +149,7 @@ export const createDiscoveryProbeEffectContext = (
       player: decisionAuthorityPlayer,
       ownershipEnforcement: 'probe',
     },
-    decisionOccurrences: ctx.decisionOccurrences ?? createDecisionOccurrenceContext(),
+    decisionScope: ctx.decisionScope ?? emptyScope(),
     mode: 'discovery',
   };
 };

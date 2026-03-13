@@ -170,7 +170,7 @@ describe('FITL card-97 Brinks Hotel shaded — VC city shift + terror', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.decisionId.includes('targetCity') || req.name === '$targetCity',
+        when: (req) => req.decisionKey.includes('targetCity') || req.name === '$targetCity',
         value: 'saigon:none',
       },
     ];
@@ -197,7 +197,7 @@ describe('FITL card-97 Brinks Hotel shaded — VC city shift + terror', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.decisionId.includes('targetCity') || req.name === '$targetCity',
+        when: (req) => req.decisionKey.includes('targetCity') || req.name === '$targetCity',
         value: 'saigon:none',
       },
     ];
@@ -232,7 +232,7 @@ describe('FITL card-97 Brinks Hotel shaded — VC city shift + terror', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.decisionId.includes('targetCity') || req.name === '$targetCity',
+        when: (req) => req.decisionKey.includes('targetCity') || req.name === '$targetCity',
         value: 'saigon:none',
       },
     ];
@@ -260,7 +260,7 @@ describe('FITL card-97 Brinks Hotel shaded — VC city shift + terror', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.decisionId.includes('targetCity') || req.name === '$targetCity',
+        when: (req) => req.decisionKey.includes('targetCity') || req.name === '$targetCity',
         value: 'saigon:none',
       },
     ];
@@ -296,7 +296,7 @@ describe('FITL card-97 Brinks Hotel shaded — VC city shift + terror', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.decisionId.includes('targetCity') || req.name === '$targetCity',
+        when: (req) => req.decisionKey.includes('targetCity') || req.name === '$targetCity',
         value: 'saigon:none',
       },
     ];

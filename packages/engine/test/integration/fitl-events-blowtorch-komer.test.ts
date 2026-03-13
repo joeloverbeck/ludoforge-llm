@@ -100,7 +100,7 @@ describe('FITL card-16 Blowtorch Komer event execution', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.decisionId.includes('chooseOne') || req.name === '$targetSpace',
+        when: (req) => req.decisionKey.includes('chooseOne') || req.name === '$targetSpace',
         value: target,
       },
     ];

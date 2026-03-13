@@ -275,6 +275,7 @@ describe('effects runtime foundation', () => {
         chooseN: {
           internalDecisionId: 'decision:doc.actions.0.effects.0.distributeTokens.selectTokens',
           bind: '$__selected_doc_actions_0_effects_0_distributeTokens',
+          decisionIdentity: 'decision:doc.actions.0.effects.0.distributeTokens.selectTokens',
           options: { query: 'tokensInZone', zone: 'board:none' },
           n: 1,
         },
@@ -288,6 +289,7 @@ describe('effects runtime foundation', () => {
               chooseOne: {
                 internalDecisionId: 'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination',
                 bind: '$__destination_doc_actions_0_effects_0_distributeTokens',
+                decisionIdentity: 'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination',
                 options: { query: 'zones' },
               },
             },
@@ -314,7 +316,8 @@ describe('effects runtime foundation', () => {
     };
     const moveParams = {
       'decision:doc.actions.0.effects.0.distributeTokens.selectTokens': ['t1'],
-      'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination[0]': 'adjacent:none',
+      'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination[0]':
+        'adjacent:none',
     };
 
     const loweredPass = applyEffects(loweredEffects, makeCtx({ state, moveParams, maxEffectOps: 4 }));

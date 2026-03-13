@@ -3,8 +3,8 @@ import { parseIterationContext } from '../../src/model/iteration-context.js';
 import type { PartialChoice } from '../../src/store/store-types.js';
 import type { RenderZone } from '../../src/model/render-model.js';
 
-function makeChoice(decisionId: string, name: string, value: unknown): PartialChoice {
-  return { decisionId, name, value } as PartialChoice;
+function makeChoice(decisionKey: string, name: string, value: unknown): PartialChoice {
+  return { decisionKey, name, value } as PartialChoice;
 }
 
 function makeZonesMap(...entries: Array<[string, string]>): ReadonlyMap<string, RenderZone> {
@@ -56,7 +56,7 @@ describe('parseIterationContext', () => {
     });
   });
 
-  it('returns null when decisionId has no iteration encoding', () => {
+  it('returns null when decisionKey has no iteration encoding', () => {
     const choiceStack: readonly PartialChoice[] = [
       makeChoice('decision:simple', 'action', 'sweep'),
     ];

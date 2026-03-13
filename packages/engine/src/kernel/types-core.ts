@@ -45,6 +45,7 @@ import type {
 } from './types-victory.js';
 import type { SeatGroupConfig, MarkerWeightConfig, VictoryFormula } from './derived-values.js';
 import type { ScopedVarEndpointContract, ScopedVarPayloadContract } from './scoped-var-contract.js';
+import type { DecisionKey } from './decision-scope.js';
 
 export interface RngState {
   readonly algorithm: 'pcg-dxsm-128';
@@ -621,14 +622,7 @@ export interface ChoicePendingRequest {
   readonly kind: 'pending';
   readonly complete: false;
   readonly decisionPlayer?: PlayerId;
-  readonly decisionId: string;
-  readonly occurrenceIndex?: number;
-  readonly occurrenceKey?: string;
-  readonly nameOccurrenceIndex?: number;
-  readonly nameOccurrenceKey?: string;
-  readonly canonicalAlias?: string;
-  readonly canonicalAliasOccurrenceIndex?: number;
-  readonly canonicalAliasOccurrenceKey?: string;
+  readonly decisionKey: DecisionKey;
   readonly name: string;
   readonly type: 'chooseOne' | 'chooseN';
   readonly options: readonly ChoiceOption[];

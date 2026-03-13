@@ -107,7 +107,7 @@ describe('FITL coup victory phase gating', () => {
       : applyMove(def, applied.state, {
           ...resourcesMove,
           params: {
-            [pending.decisionId]: pending.options.slice(0, pending.max ?? 0).map((option) => String(option.value)),
+            [pending.decisionKey]: pending.options.slice(0, pending.max ?? 0).map((option) => String(option.value)),
           },
         });
 

@@ -95,7 +95,7 @@ describe('FITL card-41 Bombing Pause', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$targetSpace' || request.decisionId.includes('targetSpace'),
+        when: (request) => request.name === '$targetSpace' || request.decisionKey.includes('targetSpace'),
         value: ['saigon:none', 'quang-tri-thua-thien:none'],
       },
     ];
@@ -169,7 +169,7 @@ describe('FITL card-41 Bombing Pause', () => {
     if (pending.kind !== 'pending') {
       throw new Error('Expected pending decision for Bombing Pause target selection');
     }
-    const targetDecisionId = pending.decisionId;
+    const targetDecisionId = pending.decisionKey;
 
     assert.throws(
       () =>

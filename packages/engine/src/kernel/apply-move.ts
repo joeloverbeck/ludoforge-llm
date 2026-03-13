@@ -370,7 +370,7 @@ const validateDecisionSequenceForMove = (
       return;
     }
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS, {
-      ...(result.nextDecision?.decisionId === undefined ? {} : { nextDecisionId: result.nextDecision.decisionId }),
+      ...(result.nextDecision?.decisionKey === undefined ? {} : { nextDecisionKey: result.nextDecision.decisionKey }),
       ...(result.nextDecision?.name === undefined ? {} : { nextDecisionName: result.nextDecision.name }),
       ...(result.nextDecisionSet === undefined ? {} : { nextDecisionSetSize: result.nextDecisionSet.length }),
       ...(result.stochasticDecision === undefined ? {} : { decisionUncertaintySource: result.stochasticDecision.source }),

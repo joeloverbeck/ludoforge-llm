@@ -26,6 +26,12 @@ const toDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 const splitDecisionBase = (base: string): { readonly baseId: string; readonly resolvedBind: string } => {
   const separatorIndex = base.indexOf('::');
   if (separatorIndex < 0) {
+    if (base.startsWith('decision:$')) {
+      return {
+        baseId: base,
+        resolvedBind: base.slice('decision:'.length),
+      };
+    }
     return {
       baseId: base,
       resolvedBind: base,
@@ -54,11 +60,20 @@ export const formatDecisionKey = (
   iterationPath: string,
   occurrence: number,
 ): DecisionKey => {
-  const base = internalDecisionId === resolvedBind
-    ? resolvedBind
-    : `${internalDecisionId}::${resolvedBind}`;
+  const base = (() => {
+    if (internalDecisionId === resolvedBind) {
+      return `${resolvedBind}${iterationPath}`;
+    }
+    if (internalDecisionId === `decision:${resolvedBind}`) {
+      return `${internalDecisionId}${iterationPath}`;
+    }
+    if (internalDecisionId.endsWith(`::${resolvedBind}`)) {
+      return `${internalDecisionId}${iterationPath}`;
+    }
+    return `${internalDecisionId}::${resolvedBind}${iterationPath}`;
+  })();
   const occurrenceSuffix = occurrence > 1 ? `#${occurrence}` : '';
-  return toDecisionKey(`${base}${iterationPath}${occurrenceSuffix}`);
+  return toDecisionKey(`${base}${occurrenceSuffix}`);
 };
 
 export const parseDecisionKey = (key: DecisionKey): ParsedDecisionKey | null => {

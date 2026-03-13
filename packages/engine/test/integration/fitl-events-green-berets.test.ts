@@ -205,7 +205,7 @@ describe('FITL card-68 Green Berets', () => {
     const irregularFinal = applyMoveWithResolvedDecisionIds(def, setup, irregularMove!, {
       overrides: [
         {
-          when: (request) => request.name === '$targetProvince' || request.decisionId.includes('targetProvince'),
+          when: (request) => request.name === '$targetProvince' || request.decisionKey.includes('targetProvince'),
           value: POPULATED_PROVINCE,
         },
       ],
@@ -226,7 +226,7 @@ describe('FITL card-68 Green Berets', () => {
     const rangerFinal = applyMoveWithResolvedDecisionIds(def, setup, rangerMove!, {
       overrides: [
         {
-          when: (request) => request.name === '$targetProvince' || request.decisionId.includes('targetProvince'),
+          when: (request) => request.name === '$targetProvince' || request.decisionKey.includes('targetProvince'),
           value: SECOND_POPULATED_PROVINCE,
         },
       ],
@@ -285,7 +285,7 @@ describe('FITL card-68 Green Berets', () => {
       ...move!,
       params: {
         ...move!.params,
-        [firstPending.decisionId]: POPULATED_PROVINCE,
+        [firstPending.decisionKey]: POPULATED_PROVINCE,
       },
     });
     assert.equal(secondPending.kind, 'pending');
@@ -304,8 +304,8 @@ describe('FITL card-68 Green Berets', () => {
       ...move!,
       params: {
         ...move!.params,
-        [firstPending.decisionId]: POPULATED_PROVINCE,
-        [secondPending.decisionId]: ['gb-shaded-target-1', 'gb-shaded-target-2'],
+        [firstPending.decisionKey]: POPULATED_PROVINCE,
+        [secondPending.decisionKey]: ['gb-shaded-target-1', 'gb-shaded-target-2'],
       },
     });
     assert.equal(thirdPending.kind, 'pending');
@@ -323,15 +323,15 @@ describe('FITL card-68 Green Berets', () => {
 
     const overrides: readonly DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$oppositionProvince' || request.decisionId.includes('oppositionProvince'),
+        when: (request) => request.name === '$oppositionProvince' || request.decisionKey.includes('oppositionProvince'),
         value: POPULATED_PROVINCE,
       },
       {
-        when: (request) => request.name === '$provinceIrregularsToRemove' || request.decisionId.includes('provinceIrregularsToRemove'),
+        when: (request) => request.name === '$provinceIrregularsToRemove' || request.decisionKey.includes('provinceIrregularsToRemove'),
         value: ['gb-shaded-target-1', 'gb-shaded-target-2'],
       },
       {
-        when: (request) => request.name === '$otherIrregularsToRemove' || request.decisionId.includes('otherIrregularsToRemove'),
+        when: (request) => request.name === '$otherIrregularsToRemove' || request.decisionKey.includes('otherIrregularsToRemove'),
         value: ['gb-shaded-pop0-1'],
       },
     ];

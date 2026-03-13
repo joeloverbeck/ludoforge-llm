@@ -6,12 +6,15 @@ import {
   selectChoiceOptionValuesByLegalityPrecedence,
   selectUniqueChoiceOptionValuesByLegalityPrecedence,
   type ChoicePendingRequest,
+  type DecisionKey,
 } from '../../../src/kernel/index.js';
+
+const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 
 const makeChooseOneRequest = (options: ChoicePendingRequest['options']): ChoicePendingRequest => ({
   kind: 'pending',
   complete: false,
-  decisionId: 'decision:$pick',
+  decisionKey: asDecisionKey('decision:$pick'),
   name: '$pick',
   type: 'chooseOne',
   options,
@@ -26,7 +29,7 @@ const makeChooseNRequest = (
   const base: ChoicePendingRequest = {
     kind: 'pending',
     complete: false,
-    decisionId: 'decision:$pickMany',
+    decisionKey: asDecisionKey('decision:$pickMany'),
     name: '$pickMany',
     type: 'chooseN',
     options,

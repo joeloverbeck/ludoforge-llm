@@ -479,7 +479,7 @@ phase: [asPhaseId('main')],
 
     const applied = applyMove(def, state, {
       actionId: asActionId('decide'),
-      params: { [pending.decisionId]: 2 },
+      params: { [pending.decisionKey]: 2 },
     }).state;
     assert.equal(applied.globalVars.score, 2);
   });
@@ -489,7 +489,7 @@ phase: [asPhaseId('main')],
   it('accepts cross-seat chooser-owned submissions across choice primitives without caller override options', () => {
     for (const primitive of ownershipPrimitives) {
       const actionId = `decide-${primitive}`;
-      const decisionId = 'decision:$pick';
+      const decisionKey = 'decision:$pick';
       const def: GameDef = {
         metadata: { id: `non-pipeline-choice-owner-${primitive}`, players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
         constants: {},
@@ -509,7 +509,7 @@ phase: [asPhaseId('main')],
             pre: null,
             cost: [],
             effects: [
-              buildChooserOwnedChoiceEffect(primitive, decisionId, '$pick', ['a', 'b']),
+              buildChooserOwnedChoiceEffect(primitive, decisionKey, '$pick', ['a', 'b']),
               { setVar: { scope: 'global', var: 'score', value: 2 } },
             ],
             limits: [],
@@ -534,13 +534,13 @@ phase: [asPhaseId('main')],
 
       const crossSeatApplied = applyMove(def, state, {
         actionId: asActionId(actionId),
-        params: { [pending.decisionId]: ownershipSelection(primitive, 'b') },
+        params: { [pending.decisionKey]: ownershipSelection(primitive, 'b') },
       });
       assert.equal(crossSeatApplied.state.globalVars.score, 2);
 
       const ownerApplied = applyMove(def, { ...state, activePlayer: CHOICE_OWNER_PLAYER }, {
         actionId: asActionId(actionId),
-        params: { [pending.decisionId]: ownershipSelection(primitive, 'b') },
+        params: { [pending.decisionKey]: ownershipSelection(primitive, 'b') },
       });
       assert.equal(ownerApplied.state.globalVars.score, 2);
     }
@@ -549,7 +549,7 @@ phase: [asPhaseId('main')],
   it('accepts cross-seat chooser-owned submissions for pipeline-generated decisions across choice primitives', () => {
     for (const primitive of ownershipPrimitives) {
       const actionId = `pipeline-decide-${primitive}`;
-      const decisionId = 'decision:$pick';
+      const decisionKey = 'decision:$pick';
       const def: GameDef = {
         metadata: { id: `pipeline-choice-owner-${primitive}`, players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
         constants: {},
@@ -570,7 +570,7 @@ phase: [asPhaseId('main')],
             stages: [
               {
                 effects: [
-                  buildChooserOwnedChoiceEffect(primitive, decisionId, '$pick', ['a', 'b']),
+                  buildChooserOwnedChoiceEffect(primitive, decisionKey, '$pick', ['a', 'b']),
                   { setVar: { scope: 'global', var: 'score', value: 2 } },
                 ],
               },
@@ -610,13 +610,13 @@ phase: [asPhaseId('main')],
 
       const crossSeatApplied = applyMove(def, state, {
         actionId: asActionId(actionId),
-        params: { [pending.decisionId]: ownershipSelection(primitive, 'b') },
+        params: { [pending.decisionKey]: ownershipSelection(primitive, 'b') },
       });
       assert.equal(crossSeatApplied.state.globalVars.score, 2);
 
       const ownerApplied = applyMove(def, { ...state, activePlayer: CHOICE_OWNER_PLAYER }, {
         actionId: asActionId(actionId),
-        params: { [pending.decisionId]: ownershipSelection(primitive, 'b') },
+        params: { [pending.decisionKey]: ownershipSelection(primitive, 'b') },
       });
       assert.equal(ownerApplied.state.globalVars.score, 2);
     }
@@ -678,7 +678,7 @@ phase: [asPhaseId('main')],
           actionId: asActionId('decide'),
           params: {
             mode: 'b',
-            [initialPending.decisionId]: 2,
+            [initialPending.decisionKey]: 2,
           },
         }),
       (error: unknown) => {
@@ -2753,10 +2753,10 @@ phase: [asPhaseId('main')],
     assert.throws(
       () => applyMove(def, state, { actionId: asActionId('event'), params: {} }),
       (error: unknown) => {
-        const details = error as { readonly code?: string; readonly reason?: string; readonly context?: { readonly nextDecisionId?: string } };
+        const details = error as { readonly code?: string; readonly reason?: string; readonly context?: { readonly nextDecisionKey?: string } };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS);
-        assert.equal(details.context?.nextDecisionId, 'decision:$delta');
+        assert.equal(details.context?.nextDecisionKey, 'decision:$delta');
         return true;
       },
     );
@@ -2780,10 +2780,10 @@ phase: [asPhaseId('main')],
     assert.throws(
       () => applyMove(def, state, { actionId: asActionId('event'), params: {} }),
       (error: unknown) => {
-        const details = error as { readonly code?: string; readonly reason?: string; readonly context?: { readonly nextDecisionId?: string } };
+        const details = error as { readonly code?: string; readonly reason?: string; readonly context?: { readonly nextDecisionKey?: string } };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS);
-        assert.equal(details.context?.nextDecisionId, 'decision:$delta');
+        assert.equal(details.context?.nextDecisionKey, 'decision:$delta');
         return true;
       },
     );
@@ -2797,10 +2797,10 @@ phase: [asPhaseId('main')],
     assert.throws(
       () => applyMove(def, state, { actionId: asActionId('event'), params: {} }),
       (error: unknown) => {
-        const details = error as { readonly code?: string; readonly reason?: string; readonly context?: { readonly nextDecisionId?: string } };
+        const details = error as { readonly code?: string; readonly reason?: string; readonly context?: { readonly nextDecisionKey?: string } };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS);
-        assert.equal(details.context?.nextDecisionId, 'decision:$delta');
+        assert.equal(details.context?.nextDecisionKey, 'decision:$delta');
         return true;
       },
     );
@@ -2814,10 +2814,10 @@ phase: [asPhaseId('main')],
     assert.throws(
       () => applyMove(def, afterEvent, { actionId: asActionId('operation'), params: {} }),
       (error: unknown) => {
-        const details = error as { readonly code?: string; readonly reason?: string; readonly context?: { readonly nextDecisionId?: string } };
+        const details = error as { readonly code?: string; readonly reason?: string; readonly context?: { readonly nextDecisionKey?: string } };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS);
-        assert.equal(details.context?.nextDecisionId, 'decision:$opDelta');
+        assert.equal(details.context?.nextDecisionKey, 'decision:$opDelta');
         return true;
       },
     );

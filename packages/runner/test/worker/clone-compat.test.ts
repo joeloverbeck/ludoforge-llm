@@ -6,6 +6,7 @@ import * as runtime from '@ludoforge/engine/runtime';
 import {
   asActionId,
   asPlayerId,
+  type DecisionKey,
   type ChoiceRequest,
   type EffectTraceEntry,
   type LegalMoveEnumerationResult,
@@ -16,6 +17,8 @@ import {
 import { createGameWorker, type GameMetadata, type OperationStamp, type WorkerError } from '../../src/worker/game-worker-api';
 import { TRIGGER_LOG_ENTRIES_EXHAUSTIVE } from '../helpers/trigger-log-fixtures';
 import { LEGAL_TICK_MOVE, TEST_DEF } from './test-fixtures';
+
+const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 
 const roundTripClone = <T>(value: T): T => {
   const cloned = structuredClone(value);
@@ -157,7 +160,7 @@ describe('worker boundary structured clone compatibility', () => {
       {
         kind: 'pending',
         complete: false,
-        decisionId: 'd1',
+        decisionKey: asDecisionKey('d1'),
         name: 'pick',
         type: 'chooseOne',
         options: [

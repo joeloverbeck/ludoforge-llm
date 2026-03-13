@@ -97,7 +97,7 @@ describe('FITL commitment targeting rules', () => {
       ...commitmentMove!,
       params: {
         ...commitmentMove!.params,
-        [firstChoice.decisionId]: ['us-av-troop-1'],
+        [firstChoice.decisionKey]: ['us-av-troop-1'],
       },
     };
 

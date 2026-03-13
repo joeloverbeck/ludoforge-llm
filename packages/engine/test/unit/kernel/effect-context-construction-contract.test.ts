@@ -8,6 +8,7 @@ import {
   createExecutionEffectContext,
 } from '../../../src/kernel/effect-context.js';
 import * as effectContextModule from '../../../src/kernel/effect-context.js';
+import { emptyScope } from '../../../src/kernel/decision-scope.js';
 import { createEvalRuntimeResources } from '../../../src/kernel/eval-context.js';
 import { createCollector } from '../../../src/kernel/execution-collector.js';
 import { createRng } from '../../../src/kernel/prng.js';
@@ -81,7 +82,7 @@ const makeRuntimeEffectContextOptions = (
     ...(overrides.phaseTransitionBudget === undefined
       ? {}
       : { phaseTransitionBudget: overrides.phaseTransitionBudget }),
-    ...(overrides.iterationPath === undefined ? {} : { iterationPath: overrides.iterationPath }),
+    decisionScope: overrides.decisionScope ?? emptyScope(),
   };
 };
 
@@ -110,6 +111,7 @@ describe('effect-context construction contract', () => {
     });
     assert.ok(options.resources !== undefined);
     assert.equal(context.collector, options.resources.collector);
+    assert.deepEqual(context.decisionScope, emptyScope());
   });
 
   it('honors execution decisionAuthorityPlayer override', () => {

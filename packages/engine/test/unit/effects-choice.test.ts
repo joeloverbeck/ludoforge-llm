@@ -153,7 +153,7 @@ describe('effects choice assertions', () => {
       throw new Error('expected pending choice');
     }
     assert.equal(result.pendingChoice.type, 'chooseOne');
-    assert.equal(result.pendingChoice.decisionId, 'decision:$choice');
+    assert.equal(result.pendingChoice.decisionKey, 'decision:$choice');
     assert.deepEqual(result.pendingChoice.options, [
       { value: 'alpha', legality: 'unknown', illegalReason: null },
       { value: 'beta', legality: 'unknown', illegalReason: null },
@@ -175,10 +175,10 @@ describe('effects choice assertions', () => {
     if (result.pendingChoice?.kind !== 'pending') {
       throw new Error('expected pending choice');
     }
-    assert.equal(result.pendingChoice.decisionId, 'decision:$choice[2]');
+    assert.equal(result.pendingChoice.decisionKey, 'decision:$choice[2]');
   });
 
-  it('chooseOne does not append iterationPath when decision ID is template-scoped', () => {
+  it('chooseOne appends iterationPath to templated decision IDs in discovery mode', () => {
     const ctx = makeDiscoveryCtx({
       bindings: { $space: 'saigon:none' },
       iterationPath: '[2]',
@@ -196,14 +196,14 @@ describe('effects choice assertions', () => {
     if (result.pendingChoice?.kind !== 'pending') {
       throw new Error('expected pending choice');
     }
-    assert.equal(result.pendingChoice.decisionId, 'decision:$choice@{$space}::$choice@saigon:none');
+    assert.equal(result.pendingChoice.decisionKey, 'decision:$choice@{$space}::$choice@saigon:none[2]');
   });
 
-  it('chooseOne execution resolves templated decision IDs without appending iterationPath', () => {
+  it('chooseOne execution resolves templated decision IDs with iteration-aware keys', () => {
     const ctx = makeCtx({
       bindings: { $space: 'saigon:none' },
       iterationPath: '[2]',
-      moveParams: { 'decision:$choice@{$space}::$choice@saigon:none': 'beta' },
+      moveParams: { 'decision:$choice@{$space}::$choice@saigon:none[2]': 'beta' },
     });
     const effect: EffectAST = {
       chooseOne: {
@@ -481,7 +481,7 @@ describe('effects choice assertions', () => {
     );
   });
 
-  it('chooseN does not append iterationPath when decision ID is template-scoped', () => {
+  it('chooseN appends iterationPath to templated decision IDs in discovery mode', () => {
     const ctx = makeDiscoveryCtx({
       bindings: { $zone: 'saigon:none' },
       iterationPath: '[1]',
@@ -500,7 +500,7 @@ describe('effects choice assertions', () => {
     if (result.pendingChoice?.kind !== 'pending') {
       throw new Error('expected pending choice');
     }
-    assert.equal(result.pendingChoice.decisionId, 'decision:$picks@{$zone}::$picks@saigon:none');
+    assert.equal(result.pendingChoice.decisionKey, 'decision:$picks@{$zone}::$picks@saigon:none[1]');
   });
 
   it('chooseN appends iterationPath to static decision IDs in discovery mode', () => {
@@ -519,7 +519,7 @@ describe('effects choice assertions', () => {
     if (result.pendingChoice?.kind !== 'pending') {
       throw new Error('expected pending choice');
     }
-    assert.equal(result.pendingChoice.decisionId, 'decision:$picks[1]');
+    assert.equal(result.pendingChoice.decisionKey, 'decision:$picks[1]');
   });
 
   it('chooseN execution appends iterationPath to static decision IDs', () => {
@@ -612,7 +612,7 @@ describe('effects choice assertions', () => {
     assert.equal(result.state, ctx.state);
     assert.equal(result.rng, ctx.rng);
     assert.equal(result.pendingChoice?.kind, 'pending');
-    assert.equal(result.pendingChoice?.decisionId, 'decision:$inside');
+    assert.equal(result.pendingChoice?.decisionKey, 'decision:$inside');
     assert.deepEqual(result.pendingChoice?.options.map((option) => option.value), ['x']);
   });
 
@@ -644,14 +644,14 @@ describe('effects choice assertions', () => {
     }
     assert.deepEqual(
       result.pendingChoice.alternatives.map((alternative) => ({
-        decisionId: alternative.decisionId,
+        decisionKey: alternative.decisionKey,
         min: alternative.min,
         max: alternative.max,
         options: alternative.options.map((option) => option.value),
       })),
       [
-        { decisionId: 'decision:$inside', min: 1, max: 1, options: ['a', 'b', 'c'] },
-        { decisionId: 'decision:$inside', min: 1, max: 2, options: ['a', 'b', 'c'] },
+        { decisionKey: 'decision:$inside', min: 1, max: 1, options: ['a', 'b', 'c'] },
+        { decisionKey: 'decision:$inside', min: 1, max: 2, options: ['a', 'b', 'c'] },
       ],
     );
   });
@@ -697,7 +697,7 @@ describe('effects choice assertions', () => {
       throw new Error('expected stochastic pending choice');
     }
     assert.equal(result.pendingChoice.source, 'rollRandom');
-    assert.deepEqual(result.pendingChoice.alternatives.map((alt) => alt.decisionId), ['decision:$alpha', 'decision:$beta']);
+    assert.deepEqual(result.pendingChoice.alternatives.map((alt) => alt.decisionKey), ['decision:$alpha', 'decision:$beta']);
   });
 
   it('chooseN supports up-to cardinality with max only', () => {

@@ -517,7 +517,7 @@ describe('GameContainer', () => {
           renderModel: makeRenderModel({
             choiceUi: {
               kind: 'discreteOne',
-              decisionId: 'test-decision',
+              decisionKey: 'test-decision',
               options: [{
                 choiceValueId: 's:1:x',
                 value: 'x',

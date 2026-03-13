@@ -168,7 +168,7 @@ describe('FITL card-53 Sappers', () => {
 
     const first = applyMoveWithResolvedDecisionIds(def, setup, move!, {
       overrides: [{
-        when: (request) => request.name === '$targetSouthVietnamSpace' || request.decisionId.includes('targetSouthVietnamSpace'),
+        when: (request) => request.name === '$targetSouthVietnamSpace' || request.decisionKey.includes('targetSouthVietnamSpace'),
         value: [SAIGON, QUANG_NAM, LOC_HUE_DA_NANG],
       }],
     });
@@ -229,7 +229,7 @@ describe('FITL card-53 Sappers', () => {
       ...move!,
       params: {
         ...move!.params,
-        [firstPending.decisionId]: ['sappers-us-province-base'],
+        [firstPending.decisionKey]: ['sappers-us-province-base'],
       },
     });
     assert.equal(secondPending.kind, 'pending');
@@ -247,11 +247,11 @@ describe('FITL card-53 Sappers', () => {
 
     const overrides: readonly DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$usBasesToRemove' || request.decisionId.includes('usBasesToRemove'),
+        when: (request) => request.name === '$usBasesToRemove' || request.decisionKey.includes('usBasesToRemove'),
         value: ['sappers-us-province-base'],
       },
       {
-        when: (request) => request.name === '$arvnBasesToRemove' || request.decisionId.includes('arvnBasesToRemove'),
+        when: (request) => request.name === '$arvnBasesToRemove' || request.decisionKey.includes('arvnBasesToRemove'),
         value: ['sappers-arvn-province-base-1', 'sappers-arvn-province-base-3'],
       },
     ];

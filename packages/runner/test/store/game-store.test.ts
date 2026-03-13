@@ -5,6 +5,7 @@ import {
   asPlayerId,
   asTriggerId,
   initialState,
+  type DecisionKey,
   type EffectTraceEntry,
   type GameDef,
   type GameState,
@@ -17,6 +18,8 @@ import { createGameStore } from '../../src/store/game-store.js';
 import { createGameWorker, type GameWorkerAPI, type WorkerError } from '../../src/worker/game-worker-api.js';
 import { CHOOSE_MIXED_TEST_DEF, CHOOSE_N_TEST_DEF, CHOOSE_ONE_TEST_DEF } from '../worker/test-fixtures.js';
 import type { PlayerSeatConfig } from '../../src/session/session-types.js';
+
+const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 
 const TWO_PLAYER_CONFIG: readonly PlayerSeatConfig[] = [
   { playerId: 0, type: 'human' },
@@ -258,7 +261,7 @@ describe('createGameStore', () => {
     expect(state.choicePending?.type).toBe('chooseOne');
   });
 
-  it('real-worker mixed progressive flow advances through chooseOne -> chooseN and stores decisionId-keyed params', async () => {
+  it('real-worker mixed progressive flow advances through chooseOne -> chooseN and stores decisionKey-keyed params', async () => {
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 14, TWO_PLAYER_CONFIG);
@@ -287,8 +290,8 @@ describe('createGameStore', () => {
     const state = store.getState();
     expect(state.choicePending).toBeNull();
     expect(state.choiceStack).toHaveLength(2);
-    expect(state.partialMove?.params[firstPending.decisionId]).toEqual(firstChoice);
-    expect(state.partialMove?.params[secondPending.decisionId]).toEqual(secondChoiceValues);
+    expect(state.partialMove?.params[firstPending.decisionKey]).toEqual(firstChoice);
+    expect(state.partialMove?.params[secondPending.decisionKey]).toEqual(secondChoiceValues);
     expect(state.partialMove?.params[firstPending.name]).toBeUndefined();
     expect(state.partialMove?.params[secondPending.name]).toBeUndefined();
   });
@@ -322,7 +325,7 @@ describe('createGameStore', () => {
           return {
             kind: 'pending',
             complete: false,
-            decisionId: 'decision:first',
+            decisionKey: asDecisionKey('decision:first'),
             name: 'firstZone',
             type: 'chooseOne',
             options: [
@@ -458,12 +461,12 @@ describe('createGameStore', () => {
 
     const state = store.getState();
     expect(state.choicePending).toBeNull();
-    expect(state.partialMove?.params[pending.decisionId]).toEqual(['a', 'b']);
+    expect(state.partialMove?.params[pending.decisionKey]).toEqual(['a', 'b']);
     expect(state.partialMove?.params[pending.name]).toBeUndefined();
     expect(state.renderModel?.choiceUi.kind).toBe('confirmReady');
   });
 
-  it('real-worker chooseOne stores value under decisionId key (not decision name)', async () => {
+  it('real-worker chooseOne stores value under decisionKey key (not decision name)', async () => {
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, TWO_PLAYER_CONFIG);
@@ -479,7 +482,7 @@ describe('createGameStore', () => {
 
     const state = store.getState();
     expect(state.choicePending).toBeNull();
-    expect(state.partialMove?.params[pending.decisionId]).toEqual(choice);
+    expect(state.partialMove?.params[pending.decisionKey]).toEqual(choice);
     expect(state.partialMove?.params[pending.name]).toBeUndefined();
   });
 
@@ -1105,7 +1108,7 @@ describe('createGameStore', () => {
 
     expect(store.getState().choiceStack).toHaveLength(1);
     expect(store.getState().choicePending?.kind).toBe('pending');
-    expect(store.getState().choicePending?.decisionId).toBe(secondPending.decisionId);
+    expect(store.getState().choicePending?.decisionKey).toBe(secondPending.decisionKey);
     expect(store.getState().choicePending?.type).toBe('chooseN');
   });
 

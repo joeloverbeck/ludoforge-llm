@@ -460,7 +460,7 @@ function validatePlayerConfig(
 function buildMove(actionId: ActionId, choices: readonly PartialChoice[]): Move {
   return {
     actionId,
-    params: Object.fromEntries(choices.map((choice) => [choice.decisionId, choice.value])),
+    params: Object.fromEntries(choices.map((choice) => [choice.decisionKey, choice.value])),
   };
 }
 
@@ -683,7 +683,7 @@ export function createGameStore(
           }
 
           const nextChoice: PartialChoice = {
-            decisionId: state.choicePending.decisionId,
+            decisionKey: state.choicePending.decisionKey,
             name: state.choicePending.name,
             value: choice,
           };

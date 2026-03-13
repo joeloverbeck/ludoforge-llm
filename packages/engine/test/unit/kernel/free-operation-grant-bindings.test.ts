@@ -6,6 +6,7 @@ import {
   resolveGrantAwareMoveRuntimeBindings,
 } from '../../../src/kernel/free-operation-grant-bindings.js';
 import { asActionId, asPhaseId, asPlayerId } from '../../../src/kernel/branded.js';
+import { formatDecisionKey } from '../../../src/kernel/decision-scope.js';
 import type { GameDef, GameState, Move, TurnFlowPendingFreeOperationGrant } from '../../../src/kernel/types.js';
 
 const createExecutionContextBindingDef = (): GameDef =>
@@ -139,7 +140,9 @@ describe('free-operation grant bindings', () => {
     const state = createExecutionContextBindingState();
     const move: Move = {
       actionId: asActionId('operation'),
-      params: { 'decision:$candidateZone': 'boardCambodia:none' },
+      params: {
+        [formatDecisionKey('decision:$candidateZone', '$grantZone', '', 1)]: 'boardCambodia:none',
+      },
       freeOperation: true,
     };
     const grant: TurnFlowPendingFreeOperationGrant = {

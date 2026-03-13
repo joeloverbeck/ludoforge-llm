@@ -1,4 +1,4 @@
-import { extractResolvedBindFromDecisionId } from './decision-id.js';
+import { parseDecisionKey } from './decision-scope.js';
 import type { ActionPipelineDef, EffectAST, Move, MoveParamValue } from './types.js';
 
 export const RUNTIME_RESERVED_MOVE_BINDING_NAMES = ['__freeOperation', '__actionClass'] as const;
@@ -9,59 +9,77 @@ export const deriveDecisionBindingsFromMoveParams = (
 ): Readonly<Record<string, MoveParamValue>> => {
   const bindings: Record<string, MoveParamValue> = {};
   for (const [paramName, paramValue] of Object.entries(moveParams)) {
-    const resolvedBind = extractResolvedBindFromDecisionId(paramName);
-    if (resolvedBind !== null) {
-      bindings[resolvedBind] = paramValue as MoveParamValue;
+    if (!paramName.startsWith('$') && !paramName.startsWith('decision:')) {
+      continue;
+    }
+    const parsed = parseDecisionKey(paramName as Parameters<typeof parseDecisionKey>[0]);
+    if (parsed !== null) {
+      bindings[parsed.resolvedBind] = paramValue as MoveParamValue;
     }
   }
   return bindings;
 };
 
-export const collectDecisionBindingsFromEffects = (
-  effects: readonly EffectAST[],
-  bindings: Map<string, string>,
-): void => {
-  for (const effect of effects) {
-    if ('chooseOne' in effect) {
-      bindings.set(effect.chooseOne.internalDecisionId, effect.chooseOne.bind);
-      continue;
-    }
-    if ('chooseN' in effect) {
-      bindings.set(effect.chooseN.internalDecisionId, effect.chooseN.bind);
-      continue;
-    }
-    if ('if' in effect) {
-      collectDecisionBindingsFromEffects(effect.if.then, bindings);
-      if (effect.if.else !== undefined) {
-        collectDecisionBindingsFromEffects(effect.if.else, bindings);
+const collectChoiceBindingSpecs = (effects: readonly EffectAST[]): readonly { readonly internalDecisionId: string; readonly bind: string }[] => {
+  const specs: { internalDecisionId: string; bind: string }[] = [];
+
+  const visitEffects = (nestedEffects: readonly EffectAST[]): void => {
+    for (const effect of nestedEffects) {
+      if ('chooseOne' in effect) {
+        specs.push({
+          internalDecisionId: effect.chooseOne.internalDecisionId,
+          bind: effect.chooseOne.bind,
+        });
+        continue;
       }
-      continue;
-    }
-    if ('forEach' in effect) {
-      collectDecisionBindingsFromEffects(effect.forEach.effects, bindings);
-      if (effect.forEach.in !== undefined) {
-        collectDecisionBindingsFromEffects(effect.forEach.in, bindings);
+      if ('chooseN' in effect) {
+        specs.push({
+          internalDecisionId: effect.chooseN.internalDecisionId,
+          bind: effect.chooseN.bind,
+        });
+        continue;
       }
-      continue;
-    }
-    if ('reduce' in effect) {
-      collectDecisionBindingsFromEffects(effect.reduce.in, bindings);
-      continue;
-    }
-    if ('removeByPriority' in effect) {
-      if (effect.removeByPriority.in !== undefined) {
-        collectDecisionBindingsFromEffects(effect.removeByPriority.in, bindings);
+      if ('if' in effect) {
+        visitEffects(effect.if.then);
+        if (effect.if.else !== undefined) {
+          visitEffects(effect.if.else);
+        }
+        continue;
       }
-      continue;
+      if ('let' in effect) {
+        visitEffects(effect.let.in);
+        continue;
+      }
+      if ('forEach' in effect) {
+        visitEffects(effect.forEach.effects);
+        if (effect.forEach.in !== undefined) {
+          visitEffects(effect.forEach.in);
+        }
+        continue;
+      }
+      if ('reduce' in effect) {
+        visitEffects(effect.reduce.in);
+        continue;
+      }
+      if ('removeByPriority' in effect) {
+        if (effect.removeByPriority.in !== undefined) {
+          visitEffects(effect.removeByPriority.in);
+        }
+        continue;
+      }
+      if ('evaluateSubset' in effect) {
+        visitEffects(effect.evaluateSubset.compute);
+        visitEffects(effect.evaluateSubset.in);
+        continue;
+      }
+      if ('rollRandom' in effect) {
+        visitEffects(effect.rollRandom.in);
+      }
     }
-    if ('let' in effect) {
-      collectDecisionBindingsFromEffects(effect.let.in, bindings);
-      continue;
-    }
-    if ('rollRandom' in effect) {
-      collectDecisionBindingsFromEffects(effect.rollRandom.in, bindings);
-    }
-  }
+  };
+
+  visitEffects(effects);
+  return specs;
 };
 
 export const buildMoveRuntimeBindings = (
@@ -78,23 +96,25 @@ export const resolvePipelineDecisionBindingsForMove = (
   pipeline: ActionPipelineDef | undefined,
   moveParams: Move['params'],
 ): Readonly<Record<string, MoveParamValue>> => {
-  const bindings: Record<string, MoveParamValue> = {
-    ...deriveDecisionBindingsFromMoveParams(moveParams),
-  };
-
   if (pipeline === undefined) {
-    return bindings;
+    return deriveDecisionBindingsFromMoveParams(moveParams);
   }
 
-  const decisionBindings = new Map<string, string>();
-  collectDecisionBindingsFromEffects(pipeline.costEffects, decisionBindings);
-  for (const stage of pipeline.stages) {
-    collectDecisionBindingsFromEffects(stage.effects, decisionBindings);
-  }
+  const choiceSpecs = collectChoiceBindingSpecs([
+    ...pipeline.costEffects,
+    ...pipeline.stages.flatMap((stage) => stage.effects),
+  ]);
+  const bindByInternalDecisionId = new Map(choiceSpecs.map((spec) => [spec.internalDecisionId, spec.bind]));
+  const bindings: Record<string, MoveParamValue> = {};
 
-  for (const [decisionId, bind] of decisionBindings.entries()) {
-    if (Object.prototype.hasOwnProperty.call(moveParams, decisionId)) {
-      bindings[bind] = moveParams[decisionId] as MoveParamValue;
+  for (const [paramName, paramValue] of Object.entries(moveParams)) {
+    if (!paramName.startsWith('$') && !paramName.startsWith('decision:')) {
+      continue;
+    }
+    const parsed = parseDecisionKey(paramName as Parameters<typeof parseDecisionKey>[0]);
+    if (parsed !== null) {
+      const bindName = bindByInternalDecisionId.get(parsed.baseId) ?? parsed.resolvedBind;
+      bindings[bindName] = paramValue as MoveParamValue;
     }
   }
 

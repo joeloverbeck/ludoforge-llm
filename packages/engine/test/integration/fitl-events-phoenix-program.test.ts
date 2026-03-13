@@ -170,7 +170,7 @@ describe('FITL card-27 Phoenix Program production spec', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.name === '$vcPiecesToRemove' || req.decisionId.includes('vcPiecesToRemove'),
+        when: (req) => req.name === '$vcPiecesToRemove' || req.decisionKey.includes('vcPiecesToRemove'),
         value: [asTokenId('vc-g-hue'), asTokenId('vc-b-hue'), asTokenId('vc-g-dn')],
       },
     ];
@@ -217,7 +217,7 @@ describe('FITL card-27 Phoenix Program production spec', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.name === '$vcPiecesToRemove' || req.decisionId.includes('vcPiecesToRemove'),
+        when: (req) => req.name === '$vcPiecesToRemove' || req.decisionKey.includes('vcPiecesToRemove'),
         value: [asTokenId('vc-g-hue'), asTokenId('vc-b-hue')],
       },
     ];
@@ -275,7 +275,7 @@ describe('FITL card-27 Phoenix Program production spec', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.name === '$targetSpace' || req.decisionId.includes('targetSpace'),
+        when: (req) => req.name === '$targetSpace' || req.decisionKey.includes('targetSpace'),
         value: ['hue:none', 'da-nang:none'],
       },
     ];
@@ -326,7 +326,7 @@ describe('FITL card-27 Phoenix Program production spec', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.name === '$targetSpace' || req.decisionId.includes('targetSpace'),
+        when: (req) => req.name === '$targetSpace' || req.decisionKey.includes('targetSpace'),
         value: ['hue:none'],
       },
     ];

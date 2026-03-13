@@ -283,7 +283,10 @@ describe('effects complex integration chains', () => {
     if (first.kind !== 'pending') {
       return;
     }
-    assert.equal(first.decisionId, 'decision:doc.actions.0.effects.0.distributeTokens.selectTokens');
+    assert.equal(
+      first.decisionKey,
+      'decision:doc.actions.0.effects.0.distributeTokens.selectTokens',
+    );
 
     const withSelected = {
       ...template,
@@ -296,13 +299,17 @@ describe('effects complex integration chains', () => {
     if (second.kind !== 'pending') {
       return;
     }
-    assert.equal(second.decisionId, 'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination[0]');
+    assert.equal(
+      second.decisionKey,
+      'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination[0]',
+    );
 
     const withFirstDestination = {
       ...withSelected,
       params: {
         ...withSelected.params,
-        'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination[0]': 'left:none',
+        'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination[0]':
+          'left:none',
       },
     };
     const third = legalChoicesDiscover(def, state, withFirstDestination);
@@ -310,13 +317,17 @@ describe('effects complex integration chains', () => {
     if (third.kind !== 'pending') {
       return;
     }
-    assert.equal(third.decisionId, 'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination[1]');
+    assert.equal(
+      third.decisionKey,
+      'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination[1]',
+    );
 
     const applied = applyMove(def, state, {
       ...withFirstDestination,
       params: {
         ...withFirstDestination.params,
-        'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination[1]': 'right:none',
+        'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination[1]':
+          'right:none',
       },
     });
 

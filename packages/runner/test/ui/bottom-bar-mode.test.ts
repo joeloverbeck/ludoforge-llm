@@ -68,7 +68,7 @@ describe('deriveBottomBarState', () => {
       makeRenderModel({
         choiceUi: {
           kind: 'discreteOne',
-          decisionId: 'test-decision',
+          decisionKey: 'test-decision',
           options: [{
             choiceValueId: 's:1:x',
             value: 'x',
@@ -114,7 +114,7 @@ describe('deriveBottomBarState', () => {
           activePlayerID: asPlayerId(1),
           choiceUi: {
             kind: 'discreteOne',
-            decisionId: 'test-decision',
+            decisionKey: 'test-decision',
             options: [{
               choiceValueId: 's:1:x',
               value: 'x',

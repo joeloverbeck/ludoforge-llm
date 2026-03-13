@@ -356,7 +356,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
         ...distributedMove,
         params: {
           ...distributedMove.params,
-          [choices.decisionId]: selection,
+          [choices.decisionKey]: selection,
         },
       };
       filledDecisions += 1;
@@ -418,7 +418,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       ...template,
       params: {
         ...template.params,
-        [pending.decisionId]: Array.from({ length: 6 }, (_unused, idx) => `us-oop-${idx}`),
+        [pending.decisionKey]: Array.from({ length: 6 }, (_unused, idx) => `us-oop-${idx}`),
       },
     };
     const nextPending = legalChoicesEvaluate(def, setup, withSelection);
@@ -427,7 +427,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       throw new Error('Expected chooseOne after chooseN selection.');
     }
     assert.equal(nextPending.type, 'chooseOne');
-    assert.equal(nextPending.decisionId.includes('.chooseDestination'), true);
+    assert.equal(nextPending.decisionKey.includes('.chooseDestination'), true);
     const cityOptionIds = nextPending.options.map((option) => String(option.value)).sort();
     assert.deepEqual(cityOptionIds, cityZoneIds);
   });
@@ -465,8 +465,8 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     assert.equal(selectedCount >= 0 && selectedCount <= 6, true, 'Expected chooseN selected count in [0, 6]');
     assert.equal(choices.length, 1 + selectedCount, 'Expected one city decision per selected piece');
 
-    for (const [decisionId, value] of choices) {
-      if (decisionId.includes('$selectedPieces')) {
+    for (const [decisionKey, value] of choices) {
+      if (decisionKey.includes('$selectedPieces')) {
         continue;
       }
       assert.notEqual(value, undefined);
@@ -515,7 +515,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       ...unshadedMove,
       params: {
         ...unshadedMove.params,
-        [pending.decisionId]: pending.options.map((option) => String(option.value)),
+        [pending.decisionKey]: pending.options.map((option) => String(option.value)),
       },
     };
     while (true) {
@@ -529,7 +529,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
         ...move,
         params: {
           ...move.params,
-          [next.decisionId]: cityZoneIds[0]!,
+          [next.decisionKey]: cityZoneIds[0]!,
         },
       };
     }
@@ -576,7 +576,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       ...unshadedMove,
       params: {
         ...unshadedMove.params,
-        [pending.decisionId]: [],
+        [pending.decisionKey]: [],
       },
     };
     assert.equal(legalChoicesEvaluate(def, setup, zeroSelectionMove).kind, 'complete');
@@ -619,7 +619,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       ...unshadedMove,
       params: {
         ...unshadedMove.params,
-        [pending.decisionId]: [],
+        [pending.decisionKey]: [],
       },
     };
     assert.equal(legalChoicesEvaluate(def, setup, zeroSelectionMove).kind, 'complete');
@@ -721,7 +721,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       ...unshaded,
       params: {
         ...unshaded.params,
-        [pending.decisionId]: [],
+        [pending.decisionKey]: [],
       },
     };
     assert.equal(legalChoicesEvaluate(def, setup, zeroSelectionMove).kind, 'complete');

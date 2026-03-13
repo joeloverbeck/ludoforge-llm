@@ -1664,7 +1664,10 @@ phase: [asPhaseId('main')],
     if (firstChoice.kind !== 'pending') {
       return;
     }
-    assert.equal(firstChoice.decisionId, 'decision:doc.actions.0.effects.0.distributeTokens.selectTokens');
+    assert.equal(
+      firstChoice.decisionKey,
+      'decision:doc.actions.0.effects.0.distributeTokens.selectTokens',
+    );
 
     const withTokens: Move = {
       ...template!,
@@ -1678,13 +1681,17 @@ phase: [asPhaseId('main')],
     if (secondChoice.kind !== 'pending') {
       return;
     }
-    assert.equal(secondChoice.decisionId, 'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination[0]');
+    assert.equal(
+      secondChoice.decisionKey,
+      'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination[0]',
+    );
 
     const applied = applyMove(def, state, {
       ...withTokens,
       params: {
         ...withTokens.params,
-        'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination[0]': 'right:none',
+        'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination[0]':
+          'right:none',
       },
     });
 

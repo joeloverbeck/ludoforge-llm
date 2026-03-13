@@ -682,15 +682,15 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
 
     const overrides: readonly DecisionOverrideRule[] = [
       {
-        when: (request) => request.decisionId.includes('distributeTokens.selectTokens'),
+        when: (request) => request.decisionKey.includes('distributeTokens.selectTokens'),
         value: Array.from({ length: 6 }, (_, index) => asTokenId(`wp-nva-t-${index + 1}`)),
       },
-      { when: (request) => request.decisionId.endsWith('chooseDestination[0]'), value: 'north-vietnam:none' },
-      { when: (request) => request.decisionId.endsWith('chooseDestination[1]'), value: 'north-vietnam:none' },
-      { when: (request) => request.decisionId.endsWith('chooseDestination[2]'), value: 'central-laos:none' },
-      { when: (request) => request.decisionId.endsWith('chooseDestination[3]'), value: 'central-laos:none' },
-      { when: (request) => request.decisionId.endsWith('chooseDestination[4]'), value: 'northeast-cambodia:none' },
-      { when: (request) => request.decisionId.endsWith('chooseDestination[5]'), value: 'northeast-cambodia:none' },
+      { when: (request) => request.decisionKey.endsWith('chooseDestination[0]'), value: 'north-vietnam:none' },
+      { when: (request) => request.decisionKey.endsWith('chooseDestination[1]'), value: 'north-vietnam:none' },
+      { when: (request) => request.decisionKey.endsWith('chooseDestination[2]'), value: 'central-laos:none' },
+      { when: (request) => request.decisionKey.endsWith('chooseDestination[3]'), value: 'central-laos:none' },
+      { when: (request) => request.decisionKey.endsWith('chooseDestination[4]'), value: 'northeast-cambodia:none' },
+      { when: (request) => request.decisionKey.endsWith('chooseDestination[5]'), value: 'northeast-cambodia:none' },
     ];
 
     const beforeResources = Number(setup.globalVars.nvaResources ?? 0);
@@ -724,12 +724,12 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
     const final = applyMoveWithResolvedDecisionIds(def, setup, move!, {
       overrides: [
         {
-          when: (request) => request.decisionId.includes('distributeTokens.selectTokens'),
+          when: (request) => request.decisionKey.includes('distributeTokens.selectTokens'),
           value: [asTokenId('wp-few-1'), asTokenId('wp-few-2'), asTokenId('wp-few-3')],
         },
-        { when: (request) => request.decisionId.endsWith('chooseDestination[0]'), value: 'north-vietnam:none' },
-        { when: (request) => request.decisionId.endsWith('chooseDestination[1]'), value: 'central-laos:none' },
-        { when: (request) => request.decisionId.endsWith('chooseDestination[2]'), value: 'northeast-cambodia:none' },
+        { when: (request) => request.decisionKey.endsWith('chooseDestination[0]'), value: 'north-vietnam:none' },
+        { when: (request) => request.decisionKey.endsWith('chooseDestination[1]'), value: 'central-laos:none' },
+        { when: (request) => request.decisionKey.endsWith('chooseDestination[2]'), value: 'northeast-cambodia:none' },
       ],
     }).state;
 

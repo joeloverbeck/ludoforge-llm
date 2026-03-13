@@ -142,7 +142,7 @@ describe('FITL card-48 Nam Dong', () => {
       ...move!,
       params: {
         ...move!.params,
-        [firstPending.decisionId]: QUANG_NAM,
+        [firstPending.decisionKey]: QUANG_NAM,
       },
     });
     assert.equal(secondPending.kind, 'pending');
@@ -159,11 +159,11 @@ describe('FITL card-48 Nam Dong', () => {
 
     const overrides: readonly DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$targetProvince' || request.decisionId.includes('targetProvince'),
+        when: (request) => request.name === '$targetProvince' || request.decisionKey.includes('targetProvince'),
         value: QUANG_NAM,
       },
       {
-        when: (request) => request.name === '$guerrillasToRemove' || request.decisionId.includes('guerrillasToRemove'),
+        when: (request) => request.name === '$guerrillasToRemove' || request.decisionKey.includes('guerrillasToRemove'),
         value: ['nam-dong-vc-g-1', 'nam-dong-vc-g-2', 'nam-dong-nva-g-1'],
       },
     ];
@@ -212,11 +212,11 @@ describe('FITL card-48 Nam Dong', () => {
 
     const overrides: readonly DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$targetProvince' || request.decisionId.includes('targetProvince'),
+        when: (request) => request.name === '$targetProvince' || request.decisionKey.includes('targetProvince'),
         value: QUANG_TIN,
       },
       {
-        when: (request) => request.name === '$guerrillasToRemove' || request.decisionId.includes('guerrillasToRemove'),
+        when: (request) => request.name === '$guerrillasToRemove' || request.decisionKey.includes('guerrillasToRemove'),
         value: [],
       },
     ];
@@ -284,7 +284,7 @@ describe('FITL card-48 Nam Dong', () => {
       ...move!,
       params: {
         ...move!.params,
-        [firstPending.decisionId]: QUANG_NAM,
+        [firstPending.decisionKey]: QUANG_NAM,
       },
     });
     assert.equal(secondPending.kind, 'pending');
@@ -299,11 +299,11 @@ describe('FITL card-48 Nam Dong', () => {
 
     const overrides: readonly DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$targetProvince' || request.decisionId.includes('targetProvince'),
+        when: (request) => request.name === '$targetProvince' || request.decisionKey.includes('targetProvince'),
         value: QUANG_NAM,
       },
       {
-        when: (request) => request.name === '$coinBaseToRemove' || request.decisionId.includes('coinBaseToRemove'),
+        when: (request) => request.name === '$coinBaseToRemove' || request.decisionKey.includes('coinBaseToRemove'),
         value: 'nam-dong-shaded-us-base',
       },
     ];
@@ -345,11 +345,11 @@ describe('FITL card-48 Nam Dong', () => {
 
     const overrides: readonly DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$targetProvince' || request.decisionId.includes('targetProvince'),
+        when: (request) => request.name === '$targetProvince' || request.decisionKey.includes('targetProvince'),
         value: QUANG_NAM,
       },
       {
-        when: (request) => request.name === '$coinBaseToRemove' || request.decisionId.includes('coinBaseToRemove'),
+        when: (request) => request.name === '$coinBaseToRemove' || request.decisionKey.includes('coinBaseToRemove'),
         value: 'nam-dong-arvn-choice-base',
       },
     ];

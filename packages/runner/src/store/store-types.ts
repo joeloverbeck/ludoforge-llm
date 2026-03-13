@@ -1,6 +1,7 @@
 import type {
   ActionId,
   ChoicePendingRequest,
+  DecisionKey,
   LegalMoveEnumerationResult,
   Move,
   MoveParamValue,
@@ -13,7 +14,7 @@ export type PlayerSeat = 'human' | 'ai-random' | 'ai-greedy';
 
 /** One step in the progressive choice breadcrumb. */
 export interface PartialChoice {
-  readonly decisionId: string;
+  readonly decisionKey: DecisionKey;
   readonly name: string;
   readonly value: MoveParamValue;
 }

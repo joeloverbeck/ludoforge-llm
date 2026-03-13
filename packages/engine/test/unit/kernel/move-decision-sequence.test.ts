@@ -12,6 +12,7 @@ import {
   MISSING_BINDING_POLICY_CONTEXTS,
   pickDeterministicChoiceValue,
   resolveMoveDecisionSequence,
+  type DecisionKey,
   type ChoicePendingRequest,
   type ActionDef,
   type ActionPipelineDef,
@@ -19,6 +20,8 @@ import {
   type GameState,
   type Move,
 } from '../../../src/kernel/index.js';
+
+const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 import {
   buildChooserOwnedChoiceEffect,
   ownershipSelection,
@@ -121,7 +124,7 @@ phase: [asPhaseId('main')],
     const request: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
-      decisionId: 'decision:$mode',
+      decisionKey: asDecisionKey('decision:$mode'),
       name: '$mode',
       type: 'chooseOne',
       options: [
@@ -172,7 +175,7 @@ phase: [asPhaseId('main')],
 
     assert.equal(result.complete, false);
     const nestedDecision = result.nextDecision ?? result.nextDecisionSet?.[0];
-    assert.equal(nestedDecision?.decisionId, 'decision:$target');
+    assert.equal(nestedDecision?.decisionKey, 'decision:$target');
     assert.deepEqual(nestedDecision?.options.map((option) => option.value), ['a', 'b']);
   });
 
@@ -230,7 +233,7 @@ phase: [asPhaseId('main')],
     assert.equal(result.complete, false);
     assert.equal(result.nextDecision, undefined);
     assert.equal(result.stochasticDecision?.kind, 'pendingStochastic');
-    assert.deepEqual(result.nextDecisionSet?.map((request) => request.decisionId), ['decision:$alpha', 'decision:$beta']);
+    assert.deepEqual(result.nextDecisionSet?.map((request) => request.decisionKey), ['decision:$alpha', 'decision:$beta']);
   });
 
   it('returns stochastic alternatives when rollRandom outcomes change exact chooseN cardinality for the same decision', () => {
@@ -275,13 +278,13 @@ phase: [asPhaseId('main')],
     assert.equal(result.stochasticDecision?.kind, 'pendingStochastic');
     assert.deepEqual(
       result.nextDecisionSet?.map((request) => ({
-        decisionId: request.decisionId,
+        decisionKey: request.decisionKey,
         min: request.min,
         max: request.max,
       })),
       [
-        { decisionId: 'decision:$targets', min: 1, max: 1 },
-        { decisionId: 'decision:$targets', min: 2, max: 2 },
+        { decisionKey: 'decision:$targets', min: 1, max: 1 },
+        { decisionKey: 'decision:$targets', min: 2, max: 2 },
       ],
     );
   });
@@ -743,18 +746,18 @@ phase: [asPhaseId('main')],
     const selectedDecisionIds: string[] = [];
     const result = resolveMoveDecisionSequence(def, makeBaseState(), makeMove('nested-op'), {
       choose: (request) => {
-        selectedDecisionIds.push(request.decisionId);
+        selectedDecisionIds.push(request.decisionKey);
         return request.options[1]?.value;
       },
     });
 
     assert.equal(result.complete, true);
     assert.deepEqual(selectedDecisionIds, [
-      'decision:$mode@{$region}::$mode@north',
-      'decision:$mode@{$region}::$mode@south',
+      'decision:$mode@{$region}::$mode@north[0]',
+      'decision:$mode@{$region}::$mode@south[1]',
     ]);
-    assert.equal(result.move.params['decision:$mode@{$region}::$mode@north'], 'b');
-    assert.equal(result.move.params['decision:$mode@{$region}::$mode@south'], 'b');
+    assert.equal(result.move.params['decision:$mode@{$region}::$mode@north[0]'], 'b');
+    assert.equal(result.move.params['decision:$mode@{$region}::$mode@south[1]'], 'b');
   });
 
   it('throws for malformed decision-path expressions instead of treating them as unsatisfiable', () => {
@@ -897,7 +900,7 @@ phase: [asPhaseId('main')],
     );
 
     assert.equal(result.complete, false);
-    assert.equal(result.nextDecision?.decisionId, 'decision:$zone');
+    assert.equal(result.nextDecision?.decisionKey, 'decision:$zone');
     assert.deepEqual(result.nextDecision?.options.map((option) => option.value), ['board:cambodia']);
   });
 
@@ -1002,7 +1005,7 @@ phase: [asPhaseId('main')],
     );
 
     assert.equal(result.complete, false);
-    assert.equal(result.nextDecision?.decisionId, 'decision:$targetProvince');
+    assert.equal(result.nextDecision?.decisionKey, 'decision:$targetProvince');
     assert.deepEqual(result.nextDecision?.options.map((option) => option.value), ['board:cambodia']);
   });
 
@@ -1107,7 +1110,7 @@ phase: [asPhaseId('main')],
     );
 
     assert.equal(result.complete, false);
-    assert.equal(result.nextDecision?.decisionId, 'decision:$targetProvince');
+    assert.equal(result.nextDecision?.decisionKey, 'decision:$targetProvince');
     assert.deepEqual(result.nextDecision?.options.map((option) => option.value), ['board:cambodia', 'board:vietnam']);
   });
 
@@ -1222,7 +1225,7 @@ phase: [asPhaseId('main')],
     );
 
     assert.equal(result.complete, false);
-    assert.equal(result.nextDecision?.decisionId, 'decision:$targetProvince');
+    assert.equal(result.nextDecision?.decisionKey, 'decision:$targetProvince');
     assert.deepEqual(result.nextDecision?.options.map((option) => option.value), ['board:cambodia']);
   });
 
@@ -1511,7 +1514,7 @@ phase: [asPhaseId('main')],
       choose: () => undefined,
     });
     assert.equal(requestA.complete, false);
-    const staleDecisionId = requestA.nextDecision?.decisionId;
+    const staleDecisionId = requestA.nextDecision?.decisionKey;
     assert.equal(typeof staleDecisionId, 'string');
 
     const result = resolveMoveDecisionSequence(def, state, {
@@ -1524,7 +1527,7 @@ phase: [asPhaseId('main')],
       choose: () => undefined,
     });
     assert.equal(result.complete, false);
-    assert.notEqual(result.nextDecision?.decisionId, staleDecisionId);
+    assert.notEqual(result.nextDecision?.decisionKey, staleDecisionId);
     assert.equal(result.nextDecision?.name, '$pick@b');
   });
 });

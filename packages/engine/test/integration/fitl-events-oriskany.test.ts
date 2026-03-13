@@ -87,7 +87,7 @@ const resolveResourcesWithDefaultChoice = (def: GameDef, state: GameState): Game
     return applyMove(def, state, move).state;
   }
   const selected = pending.options.slice(0, pending.max ?? 0).map((option) => String(option.value));
-  return applyMove(def, state, { actionId: asActionId('coupResourcesResolve'), params: { [pending.decisionId]: selected } }).state;
+  return applyMove(def, state, { actionId: asActionId('coupResourcesResolve'), params: { [pending.decisionKey]: selected } }).state;
 };
 
 const enterCoupResources = (def: GameDef, state: GameState): GameState => {

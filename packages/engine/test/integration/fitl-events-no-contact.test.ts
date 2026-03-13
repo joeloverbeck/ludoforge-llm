@@ -147,7 +147,7 @@ describe('FITL card-110 No Contact production spec', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.name === '$targetSpace' || req.decisionId.includes('targetSpace'),
+        when: (req) => req.name === '$targetSpace' || req.decisionKey.includes('targetSpace'),
         value: 'hue:none',
       },
     ];
@@ -208,7 +208,7 @@ describe('FITL card-110 No Contact production spec', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.name === '$targetSpace' || req.decisionId.includes('targetSpace'),
+        when: (req) => req.name === '$targetSpace' || req.decisionKey.includes('targetSpace'),
         value: 'da-nang:none',
       },
     ];
@@ -259,7 +259,7 @@ describe('FITL card-110 No Contact production spec', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.name === '$targetSpace' || req.decisionId.includes('targetSpace'),
+        when: (req) => req.name === '$targetSpace' || req.decisionKey.includes('targetSpace'),
         value: 'hue:none',
       },
     ];
@@ -329,7 +329,7 @@ describe('FITL card-110 No Contact production spec', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.name === '$targetSpace' || req.decisionId.includes('targetSpace'),
+        when: (req) => req.name === '$targetSpace' || req.decisionKey.includes('targetSpace'),
         value: 'da-nang:none',
       },
     ];

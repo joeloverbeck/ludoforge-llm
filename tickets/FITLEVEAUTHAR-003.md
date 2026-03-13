@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test infrastructure only
-**Deps**: None (can proceed in parallel with FITLEVEAUTHAR-001 and FITLEVEAUTHAR-002)
+**Deps**: None
 
 ## Problem
 

@@ -4,11 +4,13 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — FITL game data and tests only
-**Deps**: FITLEVEAUTHAR-002 (macros exist), FITLEVEAUTHAR-003 (test helpers exist)
+**Deps**: FITLEVEAUTHAR-002, FITLEVEAUTHAR-003
 
 ## Problem
 
 Card 81 (CIDG) is correctly implemented but uses ~200 lines of verbose open-coded replacement/routing logic in `data/games/fire-in-the-lake/41-events/065-096.md`. Now that FITLEVEAUTHAR-002 introduced reusable macros for these patterns, CIDG should be re-expressed using them — both to validate the macros work in practice and to establish the pattern for future card rework. Its tests should also migrate to the shared fidelity helpers from FITLEVEAUTHAR-003.
+
+This ticket is the exemplar migration, not the full rollout. Remaining cards that share the same architectural debt are tracked separately in FITLEVEAUTHAR-007.
 
 ## Assumption Reassessment (2026-03-13)
 
@@ -54,6 +56,7 @@ In `packages/engine/test/integration/fitl-events-cidg.test.ts`:
 ## Out of Scope
 
 - Modifying any other event cards in `065-096.md` or other event files.
+- Auditing or migrating the rest of the deck onto the new macros — that is FITLEVEAUTHAR-007.
 - Modifying engine source code (compiler, kernel, agents, sim).
 - Modifying macros in `20-macros.md` (those are locked from FITLEVEAUTHAR-002).
 - Modifying test helpers (those are locked from FITLEVEAUTHAR-003).

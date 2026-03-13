@@ -4,7 +4,7 @@
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — documentation/archival only
-**Deps**: FITLEVEAUTHAR-001 (cookbook replaces guidance), FITLEVEAUTHAR-005 (references updated)
+**Deps**: FITLEVEAUTHAR-001, FITLEVEAUTHAR-005
 
 ## Problem
 

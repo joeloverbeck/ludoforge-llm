@@ -23,8 +23,6 @@ import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const CARD_ID = 'card-81';
 const SOUTH_SPACE_A = 'quang-nam:none';
-const SOUTH_SPACE_B = 'saigon:none';
-const SOUTH_SPACE_C = 'kien-phong:none';
 const OUTSIDE_SOUTH_SPACE = 'central-laos:none';
 const TARGET_HIGHLAND = 'pleiku-darlac:none';
 const OTHER_HIGHLAND = 'binh-dinh:none';

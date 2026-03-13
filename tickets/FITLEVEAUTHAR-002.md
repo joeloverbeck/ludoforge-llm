@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — FITL game data only
-**Deps**: FITLEVEAUTHAR-001 (cookbook documents the patterns these macros encapsulate)
+**Deps**: FITLEVEAUTHAR-001
 
 ## Problem
 
@@ -51,7 +51,7 @@ After adding macros, the full FITL spec must still compile cleanly via `compileP
 ## Out of Scope
 
 - Modifying any engine source code (compiler, kernel, agents, sim).
-- Changing existing event card files to use the new macros — that is FITLEVEAUTHAR-004 (CIDG rework) and future card-by-card tickets.
+- Changing existing event card files to use the new macros — that is FITLEVEAUTHAR-004 (CIDG rework) and FITLEVEAUTHAR-007 (remaining audit + migration backlog).
 - Adding macros to engine-level or cross-game locations.
 - Modifying test files.
 

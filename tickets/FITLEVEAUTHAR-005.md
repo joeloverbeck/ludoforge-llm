@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — documentation only
-**Deps**: FITLEVEAUTHAR-001 (cookbook exists)
+**Deps**: FITLEVEAUTHAR-001
 
 ## Problem
 

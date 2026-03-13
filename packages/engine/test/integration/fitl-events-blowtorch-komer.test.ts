@@ -12,6 +12,7 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { matchesDecisionRequest } from '../helpers/decision-key-matchers.js';
 import { applyMoveWithResolvedDecisionIds, type DecisionOverrideRule } from '../helpers/decision-param-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
@@ -100,7 +101,7 @@ describe('FITL card-16 Blowtorch Komer event execution', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.decisionKey.includes('chooseOne') || req.name === '$targetSpace',
+        when: matchesDecisionRequest({ name: '$targetSpace', baseIdPattern: /chooseOne$/u }),
         value: target,
       },
     ];

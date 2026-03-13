@@ -2537,7 +2537,7 @@ describe('event free-operation grants integration', () => {
       actionId: asActionId('event'),
       params: { eventCardId: 'card-75-like', side: 'unshaded', branch: 'none' },
     }).state;
-    const second = applyMove(def, first, { actionId: asActionId('operation'), params: { 'decision:$zone': 'boardCambodia:none' } }).state;
+    const second = applyMove(def, first, { actionId: asActionId('operation'), params: { $zone: 'boardCambodia:none' } }).state;
     assert.equal(second.activePlayer, asPlayerId(2));
 
     const operationMoves = legalMoves(def, second).filter((move) => String(move.actionId) === 'operation');
@@ -2547,7 +2547,7 @@ describe('event free-operation grants integration', () => {
       () =>
         applyMove(def, second, {
           actionId: asActionId('operation'),
-          params: { 'decision:$zone': 'boardVietnam:none' },
+          params: { $zone: 'boardVietnam:none' },
           freeOperation: true,
         }),
       (error: unknown) => assertFreeOperationDenial(error, 'zoneFilterMismatch'),
@@ -2555,7 +2555,7 @@ describe('event free-operation grants integration', () => {
 
     const third = applyMove(def, second, {
       actionId: asActionId('operation'),
-      params: { 'decision:$zone': 'boardCambodia:none' },
+      params: { $zone: 'boardCambodia:none' },
       freeOperation: true,
     }).state;
     assert.deepEqual(requireCardDrivenRuntime(third).pendingFreeOperationGrants ?? [], []);
@@ -2600,7 +2600,7 @@ describe('event free-operation grants integration', () => {
 
     const afterFirstFreeOp = applyMove(def, grantReadyState, {
       actionId: asActionId('operation'),
-      params: { 'decision:$zone': 'boardCambodia:none' },
+      params: { $zone: 'boardCambodia:none' },
       freeOperation: true,
     }).state;
 
@@ -2623,7 +2623,7 @@ describe('event free-operation grants integration', () => {
       () =>
         applyMove(def, afterFirstFreeOp, {
           actionId: asActionId('operation'),
-          params: { 'decision:$zone': 'boardVietnam:none' },
+          params: { $zone: 'boardVietnam:none' },
           freeOperation: true,
         }),
       (error: unknown) => {
@@ -2649,7 +2649,7 @@ describe('event free-operation grants integration', () => {
 
     const afterSecondFreeOp = applyMove(def, afterFirstFreeOp, {
       actionId: asActionId('operation'),
-      params: { 'decision:$zone': 'boardCambodia:none' },
+      params: { $zone: 'boardCambodia:none' },
       freeOperation: true,
     }).state;
     const runtimeAfterSecond = requireCardDrivenRuntime(afterSecondFreeOp);
@@ -2748,7 +2748,7 @@ describe('event free-operation grants integration', () => {
 
     const afterFirstFreeOp = applyMove(def, grantReadyState, {
       actionId: asActionId('operation'),
-      params: { 'decision:$zone': 'boardCambodia:none' },
+      params: { $zone: 'boardCambodia:none' },
       freeOperation: true,
     }).state;
 
@@ -2756,7 +2756,7 @@ describe('event free-operation grants integration', () => {
       () =>
         applyMove(def, afterFirstFreeOp, {
           actionId: asActionId('operation'),
-          params: { 'decision:$zone': 'boardVietnam:none' },
+          params: { $zone: 'boardVietnam:none' },
           freeOperation: true,
         }),
       (error: unknown) => assertFreeOperationDenial(error, 'sequenceContextMismatch'),
@@ -2764,7 +2764,7 @@ describe('event free-operation grants integration', () => {
 
     const afterSecondFreeOp = applyMove(def, afterFirstFreeOp, {
       actionId: asActionId('operation'),
-      params: { 'decision:$zone': 'boardCambodia:none' },
+      params: { $zone: 'boardCambodia:none' },
       freeOperation: true,
     }).state;
 
@@ -2804,7 +2804,7 @@ describe('event free-operation grants integration', () => {
 
     const afterFirstFreeOp = applyMove(def, grantReadyState, {
       actionId: asActionId('operation'),
-      params: { 'decision:$zone': 'boardCambodia:none' },
+      params: { $zone: 'boardCambodia:none' },
       freeOperation: true,
     }).state;
 
@@ -2817,7 +2817,7 @@ describe('event free-operation grants integration', () => {
       () =>
         applyMove(def, afterFirstFreeOp, {
           actionId: asActionId('operation'),
-          params: { 'decision:$zone': 'boardVietnam:none' },
+          params: { $zone: 'boardVietnam:none' },
           freeOperation: true,
         }),
       (error: unknown) => assertFreeOperationDenial(error, 'zoneFilterMismatch'),
@@ -2855,7 +2855,7 @@ describe('event free-operation grants integration', () => {
 
     const afterFirstFreeOp = applyMove(def, grantReadyState, {
       actionId: asActionId('operation'),
-      params: { 'decision:$zone': 'boardCambodia:none' },
+      params: { $zone: 'boardCambodia:none' },
       freeOperation: true,
     }).state;
 
@@ -2866,7 +2866,7 @@ describe('event free-operation grants integration', () => {
 
     const afterSecondFreeOp = applyMove(def, afterFirstFreeOp, {
       actionId: asActionId('operationCapturedQuery'),
-      params: { 'decision:$zone': 'boardCambodia:none' },
+      params: { $zone: 'boardCambodia:none' },
       freeOperation: true,
     }).state;
 
@@ -3409,7 +3409,7 @@ describe('event free-operation grants integration', () => {
     assert.throws(
       () => applyMove(def, afterEvent, {
         actionId: asActionId('operation'),
-        params: { 'decision:$candidateZone': 'boardVietnam:none' },
+        params: { 'decision:$candidateZone::$grantZone': 'boardVietnam:none' },
         freeOperation: true,
       }),
       (error: unknown) => assertFreeOperationDenial(error, 'zoneFilterMismatch'),
@@ -3417,7 +3417,7 @@ describe('event free-operation grants integration', () => {
 
     const afterFreeOperation = applyMove(def, afterEvent, {
       actionId: asActionId('operation'),
-      params: { 'decision:$candidateZone': 'boardCambodia:none' },
+      params: { 'decision:$candidateZone::$grantZone': 'boardCambodia:none' },
       freeOperation: true,
     }).state;
     assert.deepEqual(requireCardDrivenRuntime(afterFreeOperation).pendingFreeOperationGrants ?? [], []);

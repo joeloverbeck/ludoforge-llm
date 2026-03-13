@@ -14,6 +14,7 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { matchesDecisionRequest } from '../helpers/decision-key-matchers.js';
 import {
   applyMoveWithResolvedDecisionIds,
   type DecisionOverrideRule,
@@ -168,7 +169,7 @@ describe('FITL card-53 Sappers', () => {
 
     const first = applyMoveWithResolvedDecisionIds(def, setup, move!, {
       overrides: [{
-        when: (request) => request.name === '$targetSouthVietnamSpace' || request.decisionKey.includes('targetSouthVietnamSpace'),
+        when: matchesDecisionRequest({ name: '$targetSouthVietnamSpace', resolvedBind: '$targetSouthVietnamSpace' }),
         value: [SAIGON, QUANG_NAM, LOC_HUE_DA_NANG],
       }],
     });
@@ -247,11 +248,11 @@ describe('FITL card-53 Sappers', () => {
 
     const overrides: readonly DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$usBasesToRemove' || request.decisionKey.includes('usBasesToRemove'),
+        when: matchesDecisionRequest({ name: '$usBasesToRemove', resolvedBind: '$usBasesToRemove' }),
         value: ['sappers-us-province-base'],
       },
       {
-        when: (request) => request.name === '$arvnBasesToRemove' || request.decisionKey.includes('arvnBasesToRemove'),
+        when: matchesDecisionRequest({ name: '$arvnBasesToRemove', resolvedBind: '$arvnBasesToRemove' }),
         value: ['sappers-arvn-province-base-1', 'sappers-arvn-province-base-3'],
       },
     ];

@@ -12,6 +12,7 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { matchesDecisionRequest } from '../helpers/decision-key-matchers.js';
 import {
   applyMoveWithResolvedDecisionIds,
   type DecisionOverrideRule,
@@ -623,19 +624,28 @@ describe('FITL 1968 US-first event-card production spec', () => {
     const scoreBefore = usSupportAvailableScoreWithNeutralSupport(setup);
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$usTroops' || request.decisionKey.includes('usTroops'),
+        when: matchesDecisionRequest({ name: '$usTroops', resolvedBind: '$usTroops' }),
         value: [asTokenId('us-oop-a'), asTokenId('us-oop-b'), asTokenId('us-map-a')],
       },
       {
-        when: (request) => request.name.includes('oopTroopDestination') && request.decisionKey.includes('us-oop-a'),
+        when: matchesDecisionRequest({
+          namePattern: /oopTroopDestination/u,
+          resolvedBindPattern: /us-oop-a/u,
+        }),
         value: 'available-US:none',
       },
       {
-        when: (request) => request.name.includes('oopTroopDestination') && request.decisionKey.includes('us-oop-b'),
+        when: matchesDecisionRequest({
+          namePattern: /oopTroopDestination/u,
+          resolvedBindPattern: /us-oop-b/u,
+        }),
         value: 'south-vietnam-map',
       },
       {
-        when: (request) => request.name.includes('southVietnamSpace') && request.decisionKey.includes('us-oop-b'),
+        when: matchesDecisionRequest({
+          namePattern: /southVietnamSpace/u,
+          resolvedBindPattern: /us-oop-b/u,
+        }),
         value: 'saigon:none',
       },
     ];
@@ -682,7 +692,7 @@ describe('FITL 1968 US-first event-card production spec', () => {
     const scoreBefore = usSupportAvailableScoreWithNeutralSupport(setup);
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$usMapTroops' || request.decisionKey.includes('usMapTroops'),
+        when: matchesDecisionRequest({ name: '$usMapTroops', resolvedBind: '$usMapTroops' }),
         value: [asTokenId('us-map-a'), asTokenId('us-map-b'), asTokenId('us-map-c')],
       },
     ];
@@ -774,19 +784,19 @@ describe('FITL 1968 US-first event-card production spec', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$usMapTroops' || request.decisionKey.includes('usMapTroops'),
+        when: matchesDecisionRequest({ name: '$usMapTroops', resolvedBind: '$usMapTroops' }),
         value: [asTokenId('us-map-hue-1'), asTokenId('us-map-sai-1')],
       },
       {
-        when: (request) => request.name === '$usOutOfPlayTroops' || request.decisionKey.includes('usOutOfPlayTroops'),
+        when: matchesDecisionRequest({ name: '$usOutOfPlayTroops', resolvedBind: '$usOutOfPlayTroops' }),
         value: [asTokenId('us-oop-1'), asTokenId('us-oop-2')],
       },
       {
-        when: (request) => request.name === '$americalDestinationType' || request.decisionKey.includes('americalDestinationType'),
+        when: matchesDecisionRequest({ name: '$americalDestinationType', resolvedBind: '$americalDestinationType' }),
         value: 'map-space',
       },
       {
-        when: (request) => request.name === '$americalDestinationSpace' || request.decisionKey.includes('americalDestinationSpace'),
+        when: matchesDecisionRequest({ name: '$americalDestinationSpace', resolvedBind: '$americalDestinationSpace' }),
         value: 'da-nang:none',
       },
     ];
@@ -828,15 +838,15 @@ describe('FITL 1968 US-first event-card production spec', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$usMapTroops' || request.decisionKey.includes('usMapTroops'),
+        when: matchesDecisionRequest({ name: '$usMapTroops', resolvedBind: '$usMapTroops' }),
         value: [asTokenId('us-map-a')],
       },
       {
-        when: (request) => request.name === '$usOutOfPlayTroops' || request.decisionKey.includes('usOutOfPlayTroops'),
+        when: matchesDecisionRequest({ name: '$usOutOfPlayTroops', resolvedBind: '$usOutOfPlayTroops' }),
         value: [asTokenId('us-oop-a')],
       },
       {
-        when: (request) => request.name === '$americalDestinationType' || request.decisionKey.includes('americalDestinationType'),
+        when: matchesDecisionRequest({ name: '$americalDestinationType', resolvedBind: '$americalDestinationType' }),
         value: 'available-US:none',
       },
     ];
@@ -888,15 +898,21 @@ describe('FITL 1968 US-first event-card production spec', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$targetProvince' || request.decisionKey.includes('targetProvince'),
+        when: matchesDecisionRequest({ name: '$targetProvince', resolvedBind: '$targetProvince' }),
         value: ['quang-tri-thua-thien:none', 'quang-nam:none'],
       },
       {
-        when: (request) => request.name.includes('vcPieceToRemove') && request.decisionKey.includes('quang-tri-thua-thien:none'),
+        when: matchesDecisionRequest({
+          namePattern: /vcPieceToRemove/u,
+          resolvedBindPattern: /quang-tri-thua-thien:none/u,
+        }),
         value: [asTokenId('vc-qt-g')],
       },
       {
-        when: (request) => request.name.includes('vcPieceToRemove') && request.decisionKey.includes('quang-nam:none'),
+        when: matchesDecisionRequest({
+          namePattern: /vcPieceToRemove/u,
+          resolvedBindPattern: /quang-nam:none/u,
+        }),
         value: [asTokenId('vc-qn-g')],
       },
     ];
@@ -942,7 +958,7 @@ describe('FITL 1968 US-first event-card production spec', () => {
     assert.notEqual(oneProvinceMove, undefined, 'Expected shaded Americal move');
     const oneProvinceOverrides: DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$targetProvince' || request.decisionKey.includes('targetProvince'),
+        when: matchesDecisionRequest({ name: '$targetProvince', resolvedBind: '$targetProvince' }),
         value: ['quang-tri-thua-thien:none'],
       },
       {
@@ -994,7 +1010,7 @@ describe('FITL 1968 US-first event-card production spec', () => {
     assert.notEqual(untunneledMove, undefined, 'Expected shaded Americal move for untunneled-base test');
     const untunneledOverrides: DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$targetProvince' || request.decisionKey.includes('targetProvince'),
+        when: matchesDecisionRequest({ name: '$targetProvince', resolvedBind: '$targetProvince' }),
         value: ['quang-tri-thua-thien:none'],
       },
     ];
@@ -1053,7 +1069,7 @@ describe('FITL 1968 US-first event-card production spec', () => {
 
     const illegalPriorityOverride: DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$targetProvince' || request.decisionKey.includes('targetProvince'),
+        when: matchesDecisionRequest({ name: '$targetProvince', resolvedBind: '$targetProvince' }),
         value: ['quang-tri-thua-thien:none'],
       },
     ];
@@ -1117,7 +1133,7 @@ describe('FITL 1968 US-first event-card production spec', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$nvaBaseToRemove' || request.decisionKey.includes('nvaBaseToRemove'),
+        when: matchesDecisionRequest({ name: '$nvaBaseToRemove', resolvedBind: '$nvaBaseToRemove' }),
         value: [asTokenId('nva-b-laos')],
       },
     ];
@@ -1193,15 +1209,15 @@ describe('FITL 1968 US-first event-card production spec', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$nvaBaseFromAvailable' || request.decisionKey.includes('nvaBaseFromAvailable'),
+        when: matchesDecisionRequest({ name: '$nvaBaseFromAvailable', resolvedBind: '$nvaBaseFromAvailable' }),
         value: [asTokenId('nva-b-av-1')],
       },
       {
-        when: (request) => request.name === '$nvaBaseDestination' || request.decisionKey.includes('nvaBaseDestination'),
+        when: matchesDecisionRequest({ name: '$nvaBaseDestination', resolvedBind: '$nvaBaseDestination' }),
         value: 'central-laos:none',
       },
       {
-        when: (request) => request.name === '$nvaGuerrillasToHide' || request.decisionKey.includes('nvaGuerrillasToHide'),
+        when: matchesDecisionRequest({ name: '$nvaGuerrillasToHide', resolvedBind: '$nvaGuerrillasToHide' }),
         value: [asTokenId('nva-g-1'), asTokenId('nva-g-2'), asTokenId('nva-g-3')],
       },
     ];
@@ -1255,7 +1271,7 @@ describe('FITL 1968 US-first event-card production spec', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$nvaGuerrillasToHide' || request.decisionKey.includes('nvaGuerrillasToHide'),
+        when: matchesDecisionRequest({ name: '$nvaGuerrillasToHide', resolvedBind: '$nvaGuerrillasToHide' }),
         value: [asTokenId('nva-g-edge-1'), asTokenId('nva-g-edge-2')],
       },
     ];
@@ -1296,7 +1312,7 @@ describe('FITL 1968 US-first event-card production spec', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$nvaGuerrillasToHide' || request.decisionKey.includes('nvaGuerrillasToHide'),
+        when: matchesDecisionRequest({ name: '$nvaGuerrillasToHide', resolvedBind: '$nvaGuerrillasToHide' }),
         value: [asTokenId('nva-g-edge-a'), asTokenId('nva-g-edge-b')],
       },
     ];

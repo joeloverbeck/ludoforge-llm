@@ -13,6 +13,7 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { matchesDecisionRequest } from '../helpers/decision-key-matchers.js';
 import {
   applyMoveWithResolvedDecisionIds,
   type DecisionOverrideRule,
@@ -205,7 +206,7 @@ describe('FITL card-68 Green Berets', () => {
     const irregularFinal = applyMoveWithResolvedDecisionIds(def, setup, irregularMove!, {
       overrides: [
         {
-          when: (request) => request.name === '$targetProvince' || request.decisionKey.includes('targetProvince'),
+          when: matchesDecisionRequest({ name: '$targetProvince', resolvedBind: '$targetProvince' }),
           value: POPULATED_PROVINCE,
         },
       ],
@@ -226,7 +227,7 @@ describe('FITL card-68 Green Berets', () => {
     const rangerFinal = applyMoveWithResolvedDecisionIds(def, setup, rangerMove!, {
       overrides: [
         {
-          when: (request) => request.name === '$targetProvince' || request.decisionKey.includes('targetProvince'),
+          when: matchesDecisionRequest({ name: '$targetProvince', resolvedBind: '$targetProvince' }),
           value: SECOND_POPULATED_PROVINCE,
         },
       ],
@@ -323,15 +324,15 @@ describe('FITL card-68 Green Berets', () => {
 
     const overrides: readonly DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$oppositionProvince' || request.decisionKey.includes('oppositionProvince'),
+        when: matchesDecisionRequest({ name: '$oppositionProvince', resolvedBind: '$oppositionProvince' }),
         value: POPULATED_PROVINCE,
       },
       {
-        when: (request) => request.name === '$provinceIrregularsToRemove' || request.decisionKey.includes('provinceIrregularsToRemove'),
+        when: matchesDecisionRequest({ name: '$provinceIrregularsToRemove', resolvedBind: '$provinceIrregularsToRemove' }),
         value: ['gb-shaded-target-1', 'gb-shaded-target-2'],
       },
       {
-        when: (request) => request.name === '$otherIrregularsToRemove' || request.decisionKey.includes('otherIrregularsToRemove'),
+        when: matchesDecisionRequest({ name: '$otherIrregularsToRemove', resolvedBind: '$otherIrregularsToRemove' }),
         value: ['gb-shaded-pop0-1'],
       },
     ];

@@ -11,6 +11,7 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { matchesDecisionRequest } from '../helpers/decision-key-matchers.js';
 import {
   applyMoveWithResolvedDecisionIds,
   type DecisionOverrideRule,
@@ -170,7 +171,7 @@ describe('FITL card-27 Phoenix Program production spec', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.name === '$vcPiecesToRemove' || req.decisionKey.includes('vcPiecesToRemove'),
+        when: matchesDecisionRequest({ name: '$vcPiecesToRemove', resolvedBind: '$vcPiecesToRemove' }),
         value: [asTokenId('vc-g-hue'), asTokenId('vc-b-hue'), asTokenId('vc-g-dn')],
       },
     ];
@@ -217,7 +218,7 @@ describe('FITL card-27 Phoenix Program production spec', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.name === '$vcPiecesToRemove' || req.decisionKey.includes('vcPiecesToRemove'),
+        when: matchesDecisionRequest({ name: '$vcPiecesToRemove', resolvedBind: '$vcPiecesToRemove' }),
         value: [asTokenId('vc-g-hue'), asTokenId('vc-b-hue')],
       },
     ];
@@ -275,7 +276,7 @@ describe('FITL card-27 Phoenix Program production spec', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.name === '$targetSpace' || req.decisionKey.includes('targetSpace'),
+        when: matchesDecisionRequest({ name: '$targetSpace', resolvedBind: '$targetSpace' }),
         value: ['hue:none', 'da-nang:none'],
       },
     ];
@@ -326,7 +327,7 @@ describe('FITL card-27 Phoenix Program production spec', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.name === '$targetSpace' || req.decisionKey.includes('targetSpace'),
+        when: matchesDecisionRequest({ name: '$targetSpace', resolvedBind: '$targetSpace' }),
         value: ['hue:none'],
       },
     ];

@@ -420,6 +420,10 @@ describe('FITL card-44 Ia Drang', () => {
     const setup: GameState = {
       ...base,
       activePlayer: asPlayerId(0),
+      globalVars: {
+        ...base.globalVars,
+        arvnResources: 0,
+      },
       turnOrderState: {
         type: 'cardDriven',
         runtime: {
@@ -441,8 +445,16 @@ describe('FITL card-44 Ia Drang', () => {
         ...(lookaheadZone === null
           ? {}
           : { [lookaheadZone]: [makeToken('ia-drang-seq-lookahead', 'card', 'none', { isCoup: true })] }),
-        [ADJACENT_CITY]: [makeToken('ia-drang-seq-us', 'troops', 'US', { type: 'troops' })],
-        [TARGET_PROVINCE]: [makeToken('ia-drang-seq-nva', 'troops', 'NVA', { type: 'troops' })],
+        [ADJACENT_CITY]: [
+          makeToken('ia-drang-seq-us', 'troops', 'US', { type: 'troops' }),
+          makeToken('ia-drang-seq-nva-alt', 'troops', 'NVA', { type: 'troops' }),
+        ],
+        [TARGET_PROVINCE]: [
+          makeToken('ia-drang-seq-us-target', 'troops', 'US', { type: 'troops' }),
+          makeToken('ia-drang-seq-nva', 'troops', 'NVA', { type: 'troops' }),
+          makeToken('ia-drang-seq-arvn', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('ia-drang-seq-vc', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+        ],
       },
     };
 

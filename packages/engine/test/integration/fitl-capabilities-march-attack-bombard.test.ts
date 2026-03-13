@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 
 import { asActionId, asPlayerId, asTokenId, type GameDef, type GameState, type Move, type MoveParamValue, type Token } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
+import { applyMoveWithResolvedDecisionIds, type DecisionOverrideRule } from '../helpers/decision-param-helpers.js';
 import { makeIsolatedInitialState } from '../helpers/isolated-state-helpers.js';
 import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
 
@@ -75,9 +75,21 @@ const buildAttackModeParams = (
     const firstSpace = targetSpaces[0]!;
     return { $attackMode: modeBySpace[firstSpace] ?? 'troops-attack' };
   }
-  return Object.fromEntries(
-    targetSpaces.map((space, index) => [`$attackMode#${index + 1}`, modeBySpace[space] ?? 'troops-attack']),
-  );
+  return {};
+};
+
+const buildAttackModeOverrides = (
+  targetSpaces: readonly string[],
+  modeBySpace: Readonly<Record<string, AttackMode>>,
+): readonly DecisionOverrideRule[] => {
+  if (targetSpaces.length <= 1) {
+    return [];
+  }
+
+  return targetSpaces.map((space, index) => ({
+    when: (request) => request.name === '$attackMode' && request.decisionKey.endsWith(`[${index}]`),
+    value: modeBySpace[space] ?? 'troops-attack',
+  }));
 };
 
 const runNvaAttack = (
@@ -109,7 +121,11 @@ const runNvaAttack = (
     ...(options?.freeOperation === undefined ? {} : { freeOperation: options.freeOperation }),
     ...(options?.compound === undefined ? {} : { compound: options.compound }),
   };
-  return applyMoveWithResolvedDecisionIds(def, state, move).state;
+  return applyMoveWithResolvedDecisionIds(def, state, move, {
+    overrides: [
+      ...buildAttackModeOverrides(targetSpaces, modeBySpace),
+    ],
+  }).state;
 };
 
 const runVcMarchWithMainForceBns = (def: GameDef, marker: MarkerState, seed: number): GameState => {

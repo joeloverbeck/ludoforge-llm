@@ -11,6 +11,7 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { matchesDecisionRequest } from '../helpers/decision-key-matchers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import {
@@ -170,7 +171,7 @@ describe('FITL card-97 Brinks Hotel shaded — VC city shift + terror', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.decisionKey.includes('targetCity') || req.name === '$targetCity',
+        when: matchesDecisionRequest({ name: '$targetCity', resolvedBind: '$targetCity' }),
         value: 'saigon:none',
       },
     ];
@@ -197,7 +198,7 @@ describe('FITL card-97 Brinks Hotel shaded — VC city shift + terror', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.decisionKey.includes('targetCity') || req.name === '$targetCity',
+        when: matchesDecisionRequest({ name: '$targetCity', resolvedBind: '$targetCity' }),
         value: 'saigon:none',
       },
     ];
@@ -232,7 +233,7 @@ describe('FITL card-97 Brinks Hotel shaded — VC city shift + terror', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.decisionKey.includes('targetCity') || req.name === '$targetCity',
+        when: matchesDecisionRequest({ name: '$targetCity', resolvedBind: '$targetCity' }),
         value: 'saigon:none',
       },
     ];
@@ -260,7 +261,7 @@ describe('FITL card-97 Brinks Hotel shaded — VC city shift + terror', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.decisionKey.includes('targetCity') || req.name === '$targetCity',
+        when: matchesDecisionRequest({ name: '$targetCity', resolvedBind: '$targetCity' }),
         value: 'saigon:none',
       },
     ];
@@ -296,7 +297,7 @@ describe('FITL card-97 Brinks Hotel shaded — VC city shift + terror', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.decisionKey.includes('targetCity') || req.name === '$targetCity',
+        when: matchesDecisionRequest({ name: '$targetCity', resolvedBind: '$targetCity' }),
         value: 'saigon:none',
       },
     ];

@@ -7,13 +7,13 @@ import {
   asTokenId,
   initialState,
   legalMoves,
-  type ChoicePendingRequest,
   type GameDef,
   type GameState,
   type Move,
   type Token,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { matchesDecisionRequest } from '../helpers/decision-key-matchers.js';
 import { applyMoveWithResolvedDecisionIds, type DecisionOverrideRule } from '../helpers/decision-param-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
@@ -253,7 +253,6 @@ describe('FITL card-62 Cambodian Civil War', () => {
       params: {
         ...freeSweep!.params,
         $targetSpaces: [NORTHEAST_CAMBODIA],
-        $movingAdjacentTroops: [],
       },
     }).state;
 
@@ -327,7 +326,6 @@ describe('FITL card-62 Cambodian Civil War', () => {
       params: {
         ...freeSweep!.params,
         $targetSpaces: [PARROTS_BEAK],
-        $movingAdjacentTroops: [],
       },
     }).state;
 
@@ -380,7 +378,6 @@ describe('FITL card-62 Cambodian Civil War', () => {
       params: {
         ...freeSweep!.params,
         $targetSpaces: [NORTHEAST_CAMBODIA],
-        $movingAdjacentTroops: [],
       },
     }).state;
 
@@ -424,13 +421,16 @@ describe('FITL card-62 Cambodian Civil War', () => {
 
     const overrides: readonly DecisionOverrideRule[] = [
       {
-        when: (request: ChoicePendingRequest) => request.decisionKey.includes('distributeTokens.selectTokens'),
+        when: matchesDecisionRequest({
+          type: 'chooseN',
+          baseIdPattern: /distributeTokens\.selectTokens$/u,
+        }),
         value: available
           .filter((token) => token.id !== asTokenId('ccw-shaded-g-5') && token.id !== asTokenId('ccw-shaded-base-ignored'))
           .map((token) => String(token.id)),
       },
       {
-        when: (request: ChoicePendingRequest) => request.decisionKey.includes('distributeTokens.chooseDestination'),
+        when: matchesDecisionRequest({ baseIdPattern: /distributeTokens\.chooseDestination$/u }),
         value: NORTHEAST_CAMBODIA,
       },
     ];
@@ -482,7 +482,7 @@ describe('FITL card-62 Cambodian Civil War', () => {
 
     const overrides: readonly DecisionOverrideRule[] = [
       {
-        when: (request: ChoicePendingRequest) => request.decisionKey.includes('distributeTokens.chooseDestination'),
+        when: matchesDecisionRequest({ baseIdPattern: /distributeTokens\.chooseDestination$/u }),
         value: PARROTS_BEAK,
       },
     ];

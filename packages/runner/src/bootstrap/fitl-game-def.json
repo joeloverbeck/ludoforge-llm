@@ -79581,110 +79581,239 @@
               "US",
               "NVA"
             ],
-            "flavorText": "Balloting reshapes control and aid expectations."
+            "flavorText": "Clean vote."
           },
           "unshaded": {
-            "text": "Shift up to 3 spaces one level toward Active Support; Aid +6.",
-            "targets": [
+            "text": "3 Passive Support spaces to Active Support. Aid +10.",
+            "effects": [
               {
-                "id": "$targetSpace",
-                "selector": {
-                  "query": "mapSpaces",
-                  "filter": {
-                    "condition": {
-                      "op": "or",
-                      "args": [
-                        {
-                          "op": "==",
-                          "left": {
-                            "ref": "zoneProp",
-                            "zone": "$zone",
-                            "prop": "category"
-                          },
-                          "right": "city"
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.82.unshaded.effects.0.chooseN",
+                  "bind": "$electionPassiveSupportSpaces",
+                  "options": {
+                    "query": "mapSpaces",
+                    "filter": {
+                      "condition": {
+                        "op": "==",
+                        "left": {
+                          "ref": "markerState",
+                          "space": "$zone",
+                          "marker": "supportOpposition"
                         },
-                        {
-                          "op": "==",
-                          "left": {
-                            "ref": "zoneProp",
-                            "zone": "$zone",
-                            "prop": "category"
-                          },
-                          "right": "province"
-                        }
-                      ]
-                    }
-                  }
-                },
-                "cardinality": {
-                  "max": 3
-                },
-                "application": "aggregate",
-                "effects": [
-                  {
-                    "shiftMarker": {
-                      "space": "$targetSpace",
-                      "marker": "supportOpposition",
-                      "delta": 1
+                        "right": "passiveSupport"
+                      }
                     }
                   },
-                  {
-                    "addVar": {
-                      "scope": "global",
-                      "var": "aid",
-                      "delta": 6
+                  "max": {
+                    "op": "min",
+                    "left": 3,
+                    "right": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "==",
+                              "left": {
+                                "ref": "markerState",
+                                "space": "$zone",
+                                "marker": "supportOpposition"
+                              },
+                              "right": "passiveSupport"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "min": {
+                    "op": "min",
+                    "left": 3,
+                    "right": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "==",
+                              "left": {
+                                "ref": "markerState",
+                                "space": "$zone",
+                                "marker": "supportOpposition"
+                              },
+                              "right": "passiveSupport"
+                            }
+                          }
+                        }
+                      }
                     }
                   }
-                ]
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$electionPassiveSupportSpace",
+                  "over": {
+                    "query": "binding",
+                    "name": "$electionPassiveSupportSpaces"
+                  },
+                  "effects": [
+                    {
+                      "setMarker": {
+                        "space": "$electionPassiveSupportSpace",
+                        "marker": "supportOpposition",
+                        "state": "activeSupport"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "addVar": {
+                  "scope": "global",
+                  "var": "aid",
+                  "delta": 10
+                }
               }
             ]
           },
           "shaded": {
-            "text": "Shift up to 3 spaces one level toward Active Opposition.",
-            "targets": [
+            "text": "Ballot stuffing defeats opposition candidate Druong Dinh Dzu: Shift 2 Cities each 1 level toward Active Opposition. Aid -15.",
+            "effects": [
               {
-                "id": "$targetSpace",
-                "selector": {
-                  "query": "mapSpaces",
-                  "filter": {
-                    "condition": {
-                      "op": "or",
-                      "args": [
-                        {
-                          "op": "==",
-                          "left": {
-                            "ref": "zoneProp",
-                            "zone": "$zone",
-                            "prop": "category"
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.82.shaded.effects.0.chooseN",
+                  "bind": "$electionCities",
+                  "options": {
+                    "query": "mapSpaces",
+                    "filter": {
+                      "condition": {
+                        "op": "and",
+                        "args": [
+                          {
+                            "op": "==",
+                            "left": {
+                              "ref": "zoneProp",
+                              "zone": "$zone",
+                              "prop": "category"
+                            },
+                            "right": "city"
                           },
-                          "right": "city"
-                        },
-                        {
-                          "op": "==",
-                          "left": {
-                            "ref": "zoneProp",
-                            "zone": "$zone",
-                            "prop": "category"
-                          },
-                          "right": "province"
+                          {
+                            "op": "!=",
+                            "left": {
+                              "ref": "markerState",
+                              "space": "$zone",
+                              "marker": "supportOpposition"
+                            },
+                            "right": "activeOpposition"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "max": {
+                    "op": "min",
+                    "left": 2,
+                    "right": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "category"
+                                  },
+                                  "right": "city"
+                                },
+                                {
+                                  "op": "!=",
+                                  "left": {
+                                    "ref": "markerState",
+                                    "space": "$zone",
+                                    "marker": "supportOpposition"
+                                  },
+                                  "right": "activeOpposition"
+                                }
+                              ]
+                            }
+                          }
                         }
-                      ]
+                      }
+                    }
+                  },
+                  "min": {
+                    "op": "min",
+                    "left": 2,
+                    "right": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "category"
+                                  },
+                                  "right": "city"
+                                },
+                                {
+                                  "op": "!=",
+                                  "left": {
+                                    "ref": "markerState",
+                                    "space": "$zone",
+                                    "marker": "supportOpposition"
+                                  },
+                                  "right": "activeOpposition"
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
                     }
                   }
-                },
-                "cardinality": {
-                  "max": 3
-                },
-                "application": "aggregate",
-                "effects": [
-                  {
-                    "shiftMarker": {
-                      "space": "$targetSpace",
-                      "marker": "supportOpposition",
-                      "delta": -1
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$electionCity",
+                  "over": {
+                    "query": "binding",
+                    "name": "$electionCities"
+                  },
+                  "effects": [
+                    {
+                      "shiftMarker": {
+                        "space": "$electionCity",
+                        "marker": "supportOpposition",
+                        "delta": -1
+                      }
                     }
-                  }
-                ]
+                  ]
+                }
+              },
+              {
+                "addVar": {
+                  "scope": "global",
+                  "var": "aid",
+                  "delta": -15
+                }
               }
             ]
           }
@@ -79706,10 +79835,817 @@
             "flavorText": "Nationalist appeals drive local recruitment and police concentration."
           },
           "unshaded": {
-            "text": "Place ARVN pieces by space and shift support where ARVN presence expands."
+            "text": "Place 1 ARVN Troop and 1 Police in each South Vietnam space with NVA.",
+            "effects": [
+              {
+                "let": {
+                  "bind": "$toQuocSouthSpaceWithNvaCount",
+                  "value": {
+                    "aggregate": {
+                      "op": "count",
+                      "query": {
+                        "query": "mapSpaces",
+                        "filter": {
+                          "condition": {
+                            "op": "and",
+                            "args": [
+                              {
+                                "op": "==",
+                                "left": {
+                                  "ref": "zoneProp",
+                                  "zone": "$zone",
+                                  "prop": "country"
+                                },
+                                "right": "southVietnam"
+                              },
+                              {
+                                "op": ">",
+                                "left": {
+                                  "aggregate": {
+                                    "op": "count",
+                                    "query": {
+                                      "query": "tokensInZone",
+                                      "zone": "$zone",
+                                      "filter": {
+                                        "prop": "faction",
+                                        "op": "eq",
+                                        "value": "NVA"
+                                      }
+                                    }
+                                  }
+                                },
+                                "right": 0
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "in": [
+                    {
+                      "let": {
+                        "bind": "$toQuocAvailableArvnTroops",
+                        "value": {
+                          "aggregate": {
+                            "op": "count",
+                            "query": {
+                              "query": "tokensInZone",
+                              "zone": "available-ARVN:none",
+                              "filter": {
+                                "op": "and",
+                                "args": [
+                                  {
+                                    "prop": "faction",
+                                    "op": "eq",
+                                    "value": "ARVN"
+                                  },
+                                  {
+                                    "prop": "type",
+                                    "op": "eq",
+                                    "value": "troops"
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        },
+                        "in": [
+                          {
+                            "chooseN": {
+                              "internalDecisionId": "decision:doc.eventDecks.0.cards.83.unshaded.effects.0.let.in.0.let.in.0.chooseN",
+                              "bind": "$toQuocTroopPlacementSpaces",
+                              "options": {
+                                "query": "mapSpaces",
+                                "filter": {
+                                  "condition": {
+                                    "op": "and",
+                                    "args": [
+                                      {
+                                        "op": "==",
+                                        "left": {
+                                          "ref": "zoneProp",
+                                          "zone": "$zone",
+                                          "prop": "country"
+                                        },
+                                        "right": "southVietnam"
+                                      },
+                                      {
+                                        "op": ">",
+                                        "left": {
+                                          "aggregate": {
+                                            "op": "count",
+                                            "query": {
+                                              "query": "tokensInZone",
+                                              "zone": "$zone",
+                                              "filter": {
+                                                "prop": "faction",
+                                                "op": "eq",
+                                                "value": "NVA"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "right": 0
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              "max": {
+                                "op": "min",
+                                "left": {
+                                  "ref": "binding",
+                                  "name": "$toQuocSouthSpaceWithNvaCount"
+                                },
+                                "right": {
+                                  "ref": "binding",
+                                  "name": "$toQuocAvailableArvnTroops"
+                                }
+                              },
+                              "min": {
+                                "op": "min",
+                                "left": {
+                                  "ref": "binding",
+                                  "name": "$toQuocSouthSpaceWithNvaCount"
+                                },
+                                "right": {
+                                  "ref": "binding",
+                                  "name": "$toQuocAvailableArvnTroops"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "forEach": {
+                              "bind": "$toQuocTroopPlacementSpace",
+                              "over": {
+                                "query": "binding",
+                                "name": "$toQuocTroopPlacementSpaces"
+                              },
+                              "effects": [
+                                {
+                                  "removeByPriority": {
+                                    "budget": 1,
+                                    "groups": [
+                                      {
+                                        "bind": "$toQuocTroop",
+                                        "over": {
+                                          "query": "tokensInZone",
+                                          "zone": "available-ARVN:none",
+                                          "filter": {
+                                            "op": "and",
+                                            "args": [
+                                              {
+                                                "prop": "faction",
+                                                "op": "eq",
+                                                "value": "ARVN"
+                                              },
+                                              {
+                                                "prop": "type",
+                                                "op": "eq",
+                                                "value": "troops"
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "to": {
+                                          "zoneExpr": {
+                                            "ref": "binding",
+                                            "name": "$toQuocTroopPlacementSpace"
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "let": {
+                        "bind": "$toQuocAvailableArvnPolice",
+                        "value": {
+                          "aggregate": {
+                            "op": "count",
+                            "query": {
+                              "query": "tokensInZone",
+                              "zone": "available-ARVN:none",
+                              "filter": {
+                                "op": "and",
+                                "args": [
+                                  {
+                                    "prop": "faction",
+                                    "op": "eq",
+                                    "value": "ARVN"
+                                  },
+                                  {
+                                    "prop": "type",
+                                    "op": "eq",
+                                    "value": "police"
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        },
+                        "in": [
+                          {
+                            "chooseN": {
+                              "internalDecisionId": "decision:doc.eventDecks.0.cards.83.unshaded.effects.0.let.in.1.let.in.0.chooseN",
+                              "bind": "$toQuocPolicePlacementSpaces",
+                              "options": {
+                                "query": "mapSpaces",
+                                "filter": {
+                                  "condition": {
+                                    "op": "and",
+                                    "args": [
+                                      {
+                                        "op": "==",
+                                        "left": {
+                                          "ref": "zoneProp",
+                                          "zone": "$zone",
+                                          "prop": "country"
+                                        },
+                                        "right": "southVietnam"
+                                      },
+                                      {
+                                        "op": ">",
+                                        "left": {
+                                          "aggregate": {
+                                            "op": "count",
+                                            "query": {
+                                              "query": "tokensInZone",
+                                              "zone": "$zone",
+                                              "filter": {
+                                                "prop": "faction",
+                                                "op": "eq",
+                                                "value": "NVA"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "right": 0
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              "max": {
+                                "op": "min",
+                                "left": {
+                                  "ref": "binding",
+                                  "name": "$toQuocSouthSpaceWithNvaCount"
+                                },
+                                "right": {
+                                  "ref": "binding",
+                                  "name": "$toQuocAvailableArvnPolice"
+                                }
+                              },
+                              "min": {
+                                "op": "min",
+                                "left": {
+                                  "ref": "binding",
+                                  "name": "$toQuocSouthSpaceWithNvaCount"
+                                },
+                                "right": {
+                                  "ref": "binding",
+                                  "name": "$toQuocAvailableArvnPolice"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "forEach": {
+                              "bind": "$toQuocPolicePlacementSpace",
+                              "over": {
+                                "query": "binding",
+                                "name": "$toQuocPolicePlacementSpaces"
+                              },
+                              "effects": [
+                                {
+                                  "removeByPriority": {
+                                    "budget": 1,
+                                    "groups": [
+                                      {
+                                        "bind": "$toQuocPolice",
+                                        "over": {
+                                          "query": "tokensInZone",
+                                          "zone": "available-ARVN:none",
+                                          "filter": {
+                                            "op": "and",
+                                            "args": [
+                                              {
+                                                "prop": "faction",
+                                                "op": "eq",
+                                                "value": "ARVN"
+                                              },
+                                              {
+                                                "prop": "type",
+                                                "op": "eq",
+                                                "value": "police"
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "to": {
+                                          "zoneExpr": {
+                                            "ref": "binding",
+                                            "name": "$toQuocPolicePlacementSpace"
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
           },
           "shaded": {
-            "text": "Insurgent counter-mobilization places guerrillas where ARVN policing is weak."
+            "text": "ARVN remove 1 in 3 cubes (round down) each space. Place a VC Guerrilla in 3 spaces where ARVN removed.",
+            "effects": [
+              {
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.83.shaded.effects.0.chooseN",
+                  "bind": "$toQuocSpacesWhereArvnRemoves",
+                  "options": {
+                    "query": "mapSpaces",
+                    "filter": {
+                      "condition": {
+                        "op": ">",
+                        "left": {
+                          "aggregate": {
+                            "op": "count",
+                            "query": {
+                              "query": "tokensInZone",
+                              "zone": "$zone",
+                              "filter": {
+                                "op": "and",
+                                "args": [
+                                  {
+                                    "prop": "faction",
+                                    "op": "eq",
+                                    "value": "ARVN"
+                                  },
+                                  {
+                                    "prop": "type",
+                                    "op": "in",
+                                    "value": [
+                                      "troops",
+                                      "police"
+                                    ]
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        },
+                        "right": 2
+                      }
+                    }
+                  },
+                  "max": {
+                    "aggregate": {
+                      "op": "count",
+                      "query": {
+                        "query": "mapSpaces",
+                        "filter": {
+                          "condition": {
+                            "op": ">",
+                            "left": {
+                              "aggregate": {
+                                "op": "count",
+                                "query": {
+                                  "query": "tokensInZone",
+                                  "zone": "$zone",
+                                  "filter": {
+                                    "op": "and",
+                                    "args": [
+                                      {
+                                        "prop": "faction",
+                                        "op": "eq",
+                                        "value": "ARVN"
+                                      },
+                                      {
+                                        "prop": "type",
+                                        "op": "in",
+                                        "value": [
+                                          "troops",
+                                          "police"
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                }
+                              }
+                            },
+                            "right": 2
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "min": {
+                    "aggregate": {
+                      "op": "count",
+                      "query": {
+                        "query": "mapSpaces",
+                        "filter": {
+                          "condition": {
+                            "op": ">",
+                            "left": {
+                              "aggregate": {
+                                "op": "count",
+                                "query": {
+                                  "query": "tokensInZone",
+                                  "zone": "$zone",
+                                  "filter": {
+                                    "op": "and",
+                                    "args": [
+                                      {
+                                        "prop": "faction",
+                                        "op": "eq",
+                                        "value": "ARVN"
+                                      },
+                                      {
+                                        "prop": "type",
+                                        "op": "in",
+                                        "value": [
+                                          "troops",
+                                          "police"
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                }
+                              }
+                            },
+                            "right": 2
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$toQuocCubeRemovalSpace",
+                  "over": {
+                    "query": "binding",
+                    "name": "$toQuocSpacesWhereArvnRemoves"
+                  },
+                  "effects": [
+                    {
+                      "let": {
+                        "bind": "$toQuocCubeRemovalCount@{$toQuocCubeRemovalSpace}",
+                        "value": {
+                          "op": "/",
+                          "left": {
+                            "aggregate": {
+                              "op": "count",
+                              "query": {
+                                "query": "tokensInZone",
+                                "zone": {
+                                  "zoneExpr": {
+                                    "ref": "binding",
+                                    "name": "$toQuocCubeRemovalSpace"
+                                  }
+                                },
+                                "filter": {
+                                  "op": "and",
+                                  "args": [
+                                    {
+                                      "prop": "faction",
+                                      "op": "eq",
+                                      "value": "ARVN"
+                                    },
+                                    {
+                                      "prop": "type",
+                                      "op": "in",
+                                      "value": [
+                                        "troops",
+                                        "police"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          },
+                          "right": 3
+                        },
+                        "in": [
+                          {
+                            "chooseN": {
+                              "internalDecisionId": "decision:doc.eventDecks.0.cards.83.shaded.effects.1.forEach.effects.0.let.in.0.chooseN",
+                              "bind": "$toQuocCubesToRemove@{$toQuocCubeRemovalSpace}",
+                              "options": {
+                                "query": "tokensInZone",
+                                "zone": {
+                                  "zoneExpr": {
+                                    "ref": "binding",
+                                    "name": "$toQuocCubeRemovalSpace"
+                                  }
+                                },
+                                "filter": {
+                                  "op": "and",
+                                  "args": [
+                                    {
+                                      "prop": "faction",
+                                      "op": "eq",
+                                      "value": "ARVN"
+                                    },
+                                    {
+                                      "prop": "type",
+                                      "op": "in",
+                                      "value": [
+                                        "troops",
+                                        "police"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              },
+                              "chooser": {
+                                "id": 1
+                              },
+                              "max": {
+                                "ref": "binding",
+                                "name": "$toQuocCubeRemovalCount@{$toQuocCubeRemovalSpace}"
+                              },
+                              "min": {
+                                "ref": "binding",
+                                "name": "$toQuocCubeRemovalCount@{$toQuocCubeRemovalSpace}"
+                              }
+                            }
+                          },
+                          {
+                            "forEach": {
+                              "bind": "$toQuocRemovedCube",
+                              "over": {
+                                "query": "binding",
+                                "name": "$toQuocCubesToRemove@{$toQuocCubeRemovalSpace}"
+                              },
+                              "effects": [
+                                {
+                                  "moveToken": {
+                                    "token": "$toQuocRemovedCube",
+                                    "from": {
+                                      "zoneExpr": {
+                                        "ref": "tokenZone",
+                                        "token": "$toQuocRemovedCube"
+                                      }
+                                    },
+                                    "to": {
+                                      "zoneExpr": {
+                                        "if": {
+                                          "when": {
+                                            "op": "==",
+                                            "left": {
+                                              "ref": "tokenProp",
+                                              "token": "$toQuocRemovedCube",
+                                              "prop": "faction"
+                                            },
+                                            "right": "US"
+                                          },
+                                          "then": {
+                                            "if": {
+                                              "when": {
+                                                "op": "==",
+                                                "left": {
+                                                  "ref": "tokenProp",
+                                                  "token": "$toQuocRemovedCube",
+                                                  "prop": "type"
+                                                },
+                                                "right": "irregular"
+                                              },
+                                              "then": "available-US:none",
+                                              "else": "casualties-US:none"
+                                            }
+                                          },
+                                          "else": {
+                                            "if": {
+                                              "when": {
+                                                "op": "==",
+                                                "left": {
+                                                  "ref": "tokenProp",
+                                                  "token": "$toQuocRemovedCube",
+                                                  "prop": "faction"
+                                                },
+                                                "right": "ARVN"
+                                              },
+                                              "then": "available-ARVN:none",
+                                              "else": {
+                                                "concat": [
+                                                  "available-",
+                                                  {
+                                                    "ref": "tokenProp",
+                                                    "token": "$toQuocRemovedCube",
+                                                    "prop": "faction"
+                                                  },
+                                                  ":none"
+                                                ]
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "let": {
+                  "bind": "$toQuocAvailableVcGuerrillas",
+                  "value": {
+                    "aggregate": {
+                      "op": "count",
+                      "query": {
+                        "query": "tokensInZone",
+                        "zone": "available-VC:none",
+                        "filter": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "prop": "faction",
+                              "op": "eq",
+                              "value": "VC"
+                            },
+                            {
+                              "prop": "type",
+                              "op": "eq",
+                              "value": "guerrilla"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "in": [
+                    {
+                      "chooseN": {
+                        "internalDecisionId": "decision:doc.eventDecks.0.cards.83.shaded.effects.2.let.in.0.chooseN",
+                        "bind": "$toQuocVcPlacementSpaces",
+                        "options": {
+                          "query": "binding",
+                          "name": "$toQuocSpacesWhereArvnRemoves"
+                        },
+                        "max": {
+                          "op": "min",
+                          "left": 3,
+                          "right": {
+                            "op": "min",
+                            "left": {
+                              "aggregate": {
+                                "op": "count",
+                                "query": {
+                                  "query": "binding",
+                                  "name": "$toQuocSpacesWhereArvnRemoves"
+                                }
+                              }
+                            },
+                            "right": {
+                              "ref": "binding",
+                              "name": "$toQuocAvailableVcGuerrillas"
+                            }
+                          }
+                        },
+                        "min": {
+                          "op": "min",
+                          "left": 3,
+                          "right": {
+                            "op": "min",
+                            "left": {
+                              "aggregate": {
+                                "op": "count",
+                                "query": {
+                                  "query": "binding",
+                                  "name": "$toQuocSpacesWhereArvnRemoves"
+                                }
+                              }
+                            },
+                            "right": {
+                              "ref": "binding",
+                              "name": "$toQuocAvailableVcGuerrillas"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "forEach": {
+                        "bind": "$toQuocVcPlacementSpace",
+                        "over": {
+                          "query": "binding",
+                          "name": "$toQuocVcPlacementSpaces"
+                        },
+                        "effects": [
+                          {
+                            "chooseN": {
+                              "internalDecisionId": "decision:doc.eventDecks.0.cards.83.shaded.effects.2.let.in.1.forEach.effects.0.chooseN",
+                              "bind": "$toQuocVcGuerrilla@{$toQuocVcPlacementSpace}",
+                              "options": {
+                                "query": "tokensInZone",
+                                "zone": "available-VC:none",
+                                "filter": {
+                                  "op": "and",
+                                  "args": [
+                                    {
+                                      "prop": "faction",
+                                      "op": "eq",
+                                      "value": "VC"
+                                    },
+                                    {
+                                      "prop": "type",
+                                      "op": "eq",
+                                      "value": "guerrilla"
+                                    }
+                                  ]
+                                }
+                              },
+                              "max": 1,
+                              "min": 1
+                            }
+                          },
+                          {
+                            "forEach": {
+                              "bind": "$toQuocPlacedVcGuerrilla",
+                              "over": {
+                                "query": "binding",
+                                "name": "$toQuocVcGuerrilla@{$toQuocVcPlacementSpace}"
+                              },
+                              "effects": [
+                                {
+                                  "moveToken": {
+                                    "token": "$toQuocPlacedVcGuerrilla",
+                                    "from": {
+                                      "zoneExpr": {
+                                        "ref": "tokenZone",
+                                        "token": "$toQuocPlacedVcGuerrilla"
+                                      }
+                                    },
+                                    "to": {
+                                      "zoneExpr": "$toQuocVcPlacementSpace"
+                                    }
+                                  }
+                                },
+                                {
+                                  "if": {
+                                    "when": {
+                                      "op": "in",
+                                      "item": {
+                                        "ref": "tokenProp",
+                                        "token": "$toQuocPlacedVcGuerrilla",
+                                        "prop": "type"
+                                      },
+                                      "set": {
+                                        "scalarArray": [
+                                          "guerrilla"
+                                        ]
+                                      }
+                                    },
+                                    "then": [
+                                      {
+                                        "setTokenProp": {
+                                          "token": "$toQuocPlacedVcGuerrilla",
+                                          "prop": "activity",
+                                          "value": "underground"
+                                        }
+                                      }
+                                    ],
+                                    "else": []
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
           }
         },
         {

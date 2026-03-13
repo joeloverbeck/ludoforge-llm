@@ -622,6 +622,13 @@ export interface ChoicePendingRequest {
   readonly complete: false;
   readonly decisionPlayer?: PlayerId;
   readonly decisionId: string;
+  readonly occurrenceIndex?: number;
+  readonly occurrenceKey?: string;
+  readonly nameOccurrenceIndex?: number;
+  readonly nameOccurrenceKey?: string;
+  readonly canonicalAlias?: string;
+  readonly canonicalAliasOccurrenceIndex?: number;
+  readonly canonicalAliasOccurrenceKey?: string;
   readonly name: string;
   readonly type: 'chooseOne' | 'chooseN';
   readonly options: readonly ChoiceOption[];

@@ -1,4 +1,5 @@
 import { getMaxEffectOps, type EffectContext, type EffectResult, type FreeOperationProbeScope } from './effect-context.js';
+import { createDecisionOccurrenceContext } from './decision-occurrence.js';
 import {
   EffectBudgetExceededError,
   effectRuntimeError,
@@ -91,7 +92,11 @@ export function applyEffect(effect: EffectAST, ctx: EffectContext): EffectResult
     priorGrantDefinitions: [],
     blockedStrictSequenceBatchIds: [],
   };
-  const result = applyEffectWithBudget(effect, { ...ctx, freeOperationProbeScope }, budget);
+  const result = applyEffectWithBudget(
+    effect,
+    { ...ctx, freeOperationProbeScope, decisionOccurrences: createDecisionOccurrenceContext() },
+    budget,
+  );
   return {
     state: result.state,
     rng: result.rng,
@@ -108,7 +113,11 @@ export function applyEffects(effects: readonly EffectAST[], ctx: EffectContext):
     priorGrantDefinitions: [],
     blockedStrictSequenceBatchIds: [],
   };
-  const result = applyEffectsWithBudget(effects, { ...ctx, freeOperationProbeScope }, budget);
+  const result = applyEffectsWithBudget(
+    effects,
+    { ...ctx, freeOperationProbeScope, decisionOccurrences: createDecisionOccurrenceContext() },
+    budget,
+  );
   return {
     state: result.state,
     rng: result.rng,

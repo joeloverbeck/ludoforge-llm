@@ -171,8 +171,9 @@ phase: [asPhaseId('main')],
     });
 
     assert.equal(result.complete, false);
-    assert.equal(result.nextDecision?.decisionId, 'decision:$target');
-    assert.deepEqual(result.nextDecision?.options.map((option) => option.value), ['a', 'b']);
+    const nestedDecision = result.nextDecision ?? result.nextDecisionSet?.[0];
+    assert.equal(nestedDecision?.decisionId, 'decision:$target');
+    assert.deepEqual(nestedDecision?.options.map((option) => option.value), ['a', 'b']);
   });
 
   it('returns stochastic alternatives when rollRandom outcomes require different pending decisions', () => {

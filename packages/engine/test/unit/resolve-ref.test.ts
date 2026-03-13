@@ -119,6 +119,30 @@ describe('resolveRef', () => {
     );
   });
 
+  it('resolves scoped variable names for refs from bindings and grantContext', () => {
+    const ctx = makeCtx({
+      bindings: { ...makeCtx().bindings, $varName: 'threat' },
+      freeOperationOverlay: { grantContext: { playerVar: 'money' } },
+    });
+
+    assert.equal(resolveRef({ ref: 'gvar', var: { ref: 'binding', name: '$varName' } }, ctx), 5);
+    assert.equal(resolveRef({ ref: 'pvar', player: 'actor', var: { ref: 'grantContext', key: 'playerVar' } }, ctx), 10);
+  });
+
+  it('throws deterministic dynamic scoped variable name errors for refs', () => {
+    const missingBindingCtx = makeCtx();
+    assert.throws(
+      () => resolveRef({ ref: 'gvar', var: { ref: 'binding', name: '$missingVar' } }, missingBindingCtx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'),
+    );
+
+    const badGrantContextCtx = makeCtx({ freeOperationOverlay: { grantContext: { playerVar: false } } });
+    assert.throws(
+      () => resolveRef({ ref: 'pvar', player: 'actor', var: { ref: 'grantContext', key: 'playerVar' } }, badGrantContextCtx),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
   it('resolves pvar and enforces single-player selector cardinality', () => {
     const ctx = makeCtx();
 

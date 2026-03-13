@@ -22,6 +22,11 @@ export const StringSchema = z.string();
 const CanonicalBindingIdentifierSchema = StringSchema.regex(CANONICAL_BINDING_IDENTIFIER_PATTERN, {
   message: CANONICAL_BINDING_IDENTIFIER_MESSAGE,
 });
+export const ScopedVarNameExprSchema = z.union([
+  StringSchema,
+  z.object({ ref: z.literal('binding'), name: StringSchema, displayName: StringSchema.optional() }).strict(),
+  z.object({ ref: z.literal('grantContext'), key: StringSchema }).strict(),
+]);
 const FreeOperationSequenceKeyExprSchema = z.union([
   FreeOperationSequenceKeySchema,
   z.object({ ref: z.literal('binding'), name: StringSchema, displayName: StringSchema.optional() }).strict(),
@@ -80,15 +85,15 @@ export const MacroOriginSchema = z
   .strict();
 
 export const ReferenceSchema = z.union([
-  z.object({ ref: z.literal('gvar'), var: StringSchema }).strict(),
+  z.object({ ref: z.literal('gvar'), var: ScopedVarNameExprSchema }).strict(),
   z
     .object({
       ref: z.literal('pvar'),
       player: PlayerSelSchema,
-      var: StringSchema,
+      var: ScopedVarNameExprSchema,
     })
     .strict(),
-  z.object({ ref: z.literal('zoneVar'), zone: ZoneSelSchema, var: StringSchema }).strict(),
+  z.object({ ref: z.literal('zoneVar'), zone: ZoneSelSchema, var: ScopedVarNameExprSchema }).strict(),
   z.object({ ref: z.literal('zoneCount'), zone: ZoneSelSchema }).strict(),
   z.object({ ref: z.literal('tokenProp'), token: TokenSelSchema, prop: StringSchema }).strict(),
   z.object({ ref: z.literal('assetField'), row: StringSchema, tableId: StringSchema, field: StringSchema }).strict(),
@@ -172,7 +177,7 @@ export const TransferVarEndpointSchema = createScopedVarContractSchema({
     zone: 'zone',
   },
   schemas: {
-    var: StringSchema,
+    var: ScopedVarNameExprSchema,
     player: PlayerSelSchema,
     zone: ZoneRefSchema,
   },
@@ -186,7 +191,7 @@ export const SetVarPayloadSchema = createScopedVarContractSchema({
     zone: 'zone',
   },
   schemas: {
-    var: StringSchema,
+    var: ScopedVarNameExprSchema,
     player: PlayerSelSchema,
     zone: ZoneRefSchema,
   },
@@ -277,7 +282,7 @@ optionsQuerySchemaInternal = z.union([
   z
     .object({
       query: z.literal('intsInVarRange'),
-      var: StringSchema,
+      var: ScopedVarNameExprSchema,
       scope: z.union([z.literal('global'), z.literal('perPlayer')]).optional(),
       min: IntDomainBoundSchema.optional(),
       max: IntDomainBoundSchema.optional(),

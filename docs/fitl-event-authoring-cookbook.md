@@ -175,6 +175,49 @@ Production references:
 - Card 81 (`CIDG`) unshaded source-zone capture before replacement
 - Card 84 (`To Quoc`) shaded capture of spaces where ARVN must remove cubes, then later VC placement into that captured set
 
+## Dynamic Scoped Variable Names
+
+When an earlier choice determines which declared variable to read or mutate later, pass the variable name through a binding or grant context and use that symbol directly in the scoped-var surface.
+
+Canonical pattern:
+
+```yaml
+- chooseN:
+    bind: $tracks
+    options:
+      query: enums
+      values: [aid, patronage, arvnResources]
+    n: 2
+- forEach:
+    bind: $track
+    over:
+      query: binding
+      name: $tracks
+    effects:
+      - addVar:
+          scope: global
+          var:
+            ref: binding
+            name: $track
+          delta: 2
+```
+
+The same `var:` expression shape works across:
+
+- `ref: gvar`, `ref: pvar`, `ref: zoneVar`
+- `setVar`
+- `addVar`
+- `transferVar.from.var`
+- `transferVar.to.var`
+- `intsInVarRange.var`
+
+Keep the expression narrow and symbolic.
+
+- Use a literal string when the variable name is fixed.
+- Use `{ ref: binding, name: $varName }` when an earlier effect selected the variable.
+- Use `{ ref: grantContext, key: someKey }` when a free-operation or grant pipeline passes the variable name in execution context.
+- Do not build variable names with `concat` or other arbitrary `ValueExpr` string construction.
+
 ## Replacement Semantics
 
 Replacement is a sequence, not a primitive.

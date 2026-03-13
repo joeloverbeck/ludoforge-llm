@@ -366,6 +366,36 @@ describe('evalQuery', () => {
     );
   });
 
+  it('evaluates intsInVarRange from dynamic scoped variable names and fails deterministically on bad dynamic sources', () => {
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        globalVars: [
+          { name: 'resourcePool', type: 'int', init: 3, min: 0, max: 5 },
+          { name: 'flag', type: 'boolean', init: false },
+        ],
+      },
+      bindings: { $resourceVar: 'resourcePool', $badVar: 4 },
+      freeOperationOverlay: { grantContext: { selectedVar: 'resourcePool', nonIntVar: 'flag' } },
+    });
+
+    assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: { ref: 'binding', name: '$resourceVar' } }, ctx), [0, 1, 2, 3, 4, 5]);
+    assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: { ref: 'grantContext', key: 'selectedVar' } }, ctx), [0, 1, 2, 3, 4, 5]);
+
+    assert.throws(
+      () => evalQuery({ query: 'intsInVarRange', var: { ref: 'binding', name: '$missingVar' } }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
+    );
+    assert.throws(
+      () => evalQuery({ query: 'intsInVarRange', var: { ref: 'binding', name: '$badVar' } }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+    assert.throws(
+      () => evalQuery({ query: 'intsInVarRange', var: { ref: 'grantContext', key: 'nonIntVar' } }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
   it('returns empty domain for intsInVarRange when source var is missing, non-int, or bounds are invalid', () => {
     const ctx = makeCtx({
       def: {

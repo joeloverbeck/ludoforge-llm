@@ -41,10 +41,15 @@ export interface EffectMacroOrigin {
   readonly stem: string;
 }
 
+export type ScopedVarNameExpr =
+  | string
+  | { readonly ref: 'binding'; readonly name: string; readonly displayName?: string }
+  | { readonly ref: 'grantContext'; readonly key: string };
+
 export type Reference =
-  | { readonly ref: 'gvar'; readonly var: string }
-  | { readonly ref: 'pvar'; readonly player: PlayerSel; readonly var: string }
-  | { readonly ref: 'zoneVar'; readonly zone: ZoneSel; readonly var: string }
+  | { readonly ref: 'gvar'; readonly var: ScopedVarNameExpr }
+  | { readonly ref: 'pvar'; readonly player: PlayerSel; readonly var: ScopedVarNameExpr }
+  | { readonly ref: 'zoneVar'; readonly zone: ZoneSel; readonly var: ScopedVarNameExpr }
   | { readonly ref: 'zoneCount'; readonly zone: ZoneSel }
   | { readonly ref: 'tokenProp'; readonly token: TokenSel; readonly prop: string }
   | { readonly ref: 'assetField'; readonly row: string; readonly tableId: string; readonly field: string }
@@ -232,7 +237,7 @@ export type OptionsQuery =
     }
   | {
       readonly query: 'intsInVarRange';
-      readonly var: string;
+      readonly var: ScopedVarNameExpr;
       readonly scope?: 'global' | 'perPlayer';
       readonly min?: NumericValueExpr;
       readonly max?: NumericValueExpr;
@@ -267,7 +272,8 @@ export type TransferVarEndpoint = ScopedVarEndpointContract<
   'player',
   'zone',
   PlayerSel,
-  ZoneRef
+  ZoneRef,
+  ScopedVarNameExpr
 >;
 
 export type SetVarPayload = ScopedVarPayloadContract<
@@ -279,7 +285,8 @@ export type SetVarPayload = ScopedVarPayloadContract<
   'zone',
   PlayerSel,
   ZoneRef,
-  { readonly value: ValueExpr }
+  { readonly value: ValueExpr },
+  ScopedVarNameExpr
 >;
 
 export type AddVarPayload = ScopedVarPayloadContract<
@@ -291,7 +298,8 @@ export type AddVarPayload = ScopedVarPayloadContract<
   'zone',
   PlayerSel,
   ZoneRef,
-  { readonly delta: NumericValueExpr }
+  { readonly delta: NumericValueExpr },
+  ScopedVarNameExpr
 >;
 
 export interface EffectKindMap {

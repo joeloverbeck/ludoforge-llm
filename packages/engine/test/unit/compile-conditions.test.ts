@@ -324,6 +324,32 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('lowers scoped variable name expressions for refs and intsInVarRange', () => {
+    const refResult = lowerValueNode(
+      { ref: 'gvar', var: { ref: 'binding', name: '$track' } },
+      context,
+      'doc.actions.0.effects.0.setVar.value',
+    );
+    assertNoDiagnostics(refResult);
+    assert.deepEqual(refResult.value, { ref: 'gvar', var: { ref: 'binding', name: '$track' } });
+
+    const queryResult = lowerQueryNode(
+      {
+        query: 'intsInVarRange',
+        var: { ref: 'grantContext', key: 'resourceVar' },
+        scope: 'global',
+      },
+      context,
+      'doc.actions.0.params.0.domain',
+    );
+    assertNoDiagnostics(queryResult);
+    assert.deepEqual(queryResult.value, {
+      query: 'intsInVarRange',
+      var: { ref: 'grantContext', key: 'resourceVar' },
+      scope: 'global',
+    });
+  });
+
   it('lowers nextInOrderByCondition query with dynamic anchor and predicate', () => {
     const result = lowerQueryNode(
       {

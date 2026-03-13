@@ -1,4 +1,5 @@
 import type { ValueExpr, Reference } from '../kernel/types.js';
+import { tryStaticScopedVarNameExpr } from '../kernel/scoped-var-name-resolution.js';
 
 export type InferredType = 'number' | 'boolean' | 'string' | 'unknown';
 
@@ -60,11 +61,13 @@ export function inferValueExprType(expr: ValueExpr, ctx: TypeInferenceContext): 
 function inferReferenceType(ref: Reference, ctx: TypeInferenceContext): InferredType {
   switch (ref.ref) {
     case 'gvar': {
-      const varType = ctx.globalVarTypes[ref.var];
+      const variable = tryStaticScopedVarNameExpr(ref.var);
+      const varType = variable === null ? undefined : ctx.globalVarTypes[variable];
       return varType === undefined ? 'unknown' : varDefTypeToInferred(varType);
     }
     case 'pvar': {
-      const varType = ctx.perPlayerVarTypes[ref.var];
+      const variable = tryStaticScopedVarNameExpr(ref.var);
+      const varType = variable === null ? undefined : ctx.perPlayerVarTypes[variable];
       return varType === undefined ? 'unknown' : varDefTypeToInferred(varType);
     }
     case 'zoneCount':

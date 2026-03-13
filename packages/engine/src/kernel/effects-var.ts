@@ -64,7 +64,7 @@ const emitVarChangeArtifacts = (
 };
 
 export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknown }>, ctx: EffectContext): EffectResult => {
-  const { var: variableName, value } = effect.setVar;
+  const { value } = effect.setVar;
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const evaluatedValue = evalValue(value, evalCtx);
   const endpoint = resolveRuntimeScopedEndpoint(effect.setVar, evalCtx, {
@@ -77,15 +77,15 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
   });
   const variableDef = resolveScopedVarDef(
     ctx,
-    { scope: effect.setVar.scope, var: variableName },
+    { scope: effect.setVar.scope, var: endpoint.var },
     'setVar',
     EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,
   );
   if (endpoint.scope === 'zone' && variableDef.type !== 'int') {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED, `setVar on zone variable only supports int type: ${variableName}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED, `setVar on zone variable only supports int type: ${endpoint.var}`, {
       effectType: 'setVar',
       scope: 'zoneVar',
-      var: variableName,
+      var: endpoint.var,
       actualType: variableDef.type,
     });
   }
@@ -116,7 +116,7 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
 };
 
 export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknown }>, ctx: EffectContext): EffectResult => {
-  const { var: variableName, delta } = effect.addVar;
+  const { delta } = effect.addVar;
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const evaluatedDelta = expectInteger(evalValue(delta, evalCtx), 'addVar', 'delta');
   const endpoint = resolveRuntimeScopedEndpoint(effect.addVar, evalCtx, {
@@ -129,19 +129,19 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
   });
   const variableDef = resolveScopedVarDef(
     ctx,
-    { scope: effect.addVar.scope, var: variableName },
+    { scope: effect.addVar.scope, var: endpoint.var },
     'addVar',
     EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,
   );
   if (variableDef.type !== 'int') {
     const message =
       effect.addVar.scope === 'zoneVar'
-        ? `addVar cannot target non-int zone variable: ${variableName}`
-        : `addVar cannot target non-int variable: ${variableName}`;
+        ? `addVar cannot target non-int zone variable: ${endpoint.var}`
+        : `addVar cannot target non-int variable: ${endpoint.var}`;
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED, message, {
       effectType: 'addVar',
       scope: effect.addVar.scope,
-      var: variableName,
+      var: endpoint.var,
       actualType: variableDef.type,
     });
   }

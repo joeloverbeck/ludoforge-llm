@@ -175,12 +175,51 @@ describe('effects var handlers', () => {
     assert.equal(clampedLow.state.perPlayerVars['0']?.hp, 0);
   });
 
+  it('resolves scoped variable names from bindings and grantContext in setVar/addVar', () => {
+    const ctx = makeCtx({
+      bindings: { $targetVar: 'score' },
+      freeOperationOverlay: { grantContext: { playerVar: 'mana' } },
+    });
+
+    const setResult = applyEffect(
+      { setVar: { scope: 'global', var: { ref: 'binding', name: '$targetVar' }, value: 9 } },
+      ctx,
+    );
+    assert.equal(setResult.state.globalVars.score, 9);
+
+    const addResult = applyEffect(
+      { addVar: { scope: 'pvar', player: 'actor', var: { ref: 'grantContext', key: 'playerVar' }, delta: 3 } },
+      ctx,
+    );
+    assert.equal(addResult.state.perPlayerVars['0']?.mana, 4);
+  });
+
   it('throws EFFECT_RUNTIME for unknown variable names', () => {
     const ctx = makeCtx();
 
     assert.throws(() => applyEffect({ setVar: { scope: 'global', var: 'missing', value: 1 } }, ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('Unknown global variable');
     });
+  });
+
+  it('throws EFFECT_RUNTIME when dynamic scoped variable names resolve to missing or non-string values', () => {
+    const missingBindingCtx = makeCtx();
+    assert.throws(
+      () => applyEffect({ setVar: { scope: 'global', var: { ref: 'binding', name: '$missingVar' }, value: 1 } }, missingBindingCtx),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('setVar variable name binding not found: $missingVar'),
+    );
+
+    const badGrantContextCtx = makeCtx({
+      freeOperationOverlay: { grantContext: { targetVar: 7 } },
+    });
+    assert.throws(
+      () => applyEffect({ addVar: { scope: 'global', var: { ref: 'grantContext', key: 'targetVar' }, delta: 1 } }, badGrantContextCtx),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('addVar variable name grantContext value must resolve to string: targetVar'),
+    );
   });
 
   it('throws EFFECT_RUNTIME when evaluated setVar/addVar numeric inputs are not integers', () => {

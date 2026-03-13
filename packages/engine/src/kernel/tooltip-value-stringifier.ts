@@ -7,7 +7,7 @@
  * to eliminate duplication and provide complete ref-type coverage.
  */
 
-import type { ValueExpr, NumericValueExpr, ZoneRef, OptionsQuery, TokenFilterExpr } from './types-ast.js';
+import type { NumericValueExpr, OptionsQuery, ScopedVarNameExpr, TokenFilterExpr, ValueExpr, ZoneRef } from './types-ast.js';
 import type { LabelContext } from './tooltip-label-resolver.js';
 import { isTokenFilterPredicateExpr } from './token-filter-expr-utils.js';
 import { resolveLabel } from './tooltip-label-resolver.js';
@@ -139,6 +139,12 @@ export const stringifyZoneRef = (ref: ZoneRef): string => {
   return keys.length > 0 ? `zone(${keys.join(', ')})` : 'zone';
 };
 
+export const stringifyScopedVarNameExpr = (expr: ScopedVarNameExpr): string => {
+  if (typeof expr === 'string') return expr;
+  if (expr.ref === 'binding') return sanitizeBindingName(expr.displayName ?? expr.name);
+  return `grantContext.${expr.key}`;
+};
+
 // ---------------------------------------------------------------------------
 // Token filter stringification (moved from tooltip-normalizer-compound.ts)
 // ---------------------------------------------------------------------------
@@ -249,8 +255,8 @@ export const stringifyValueExpr = (expr: ValueExpr): string => {
   // Reference types (all 12)
   if ('ref' in expr) {
     switch (expr.ref) {
-      case 'gvar': return expr.var;
-      case 'pvar': return expr.var;
+      case 'gvar': return stringifyScopedVarNameExpr(expr.var);
+      case 'pvar': return stringifyScopedVarNameExpr(expr.var);
       case 'binding': return sanitizeBindingName(expr.displayName ?? expr.name);
       case 'globalMarkerState': return expr.marker;
       case 'markerState': return `${expr.marker} of ${expr.space}`;
@@ -264,7 +270,7 @@ export const stringifyValueExpr = (expr: ValueExpr): string => {
       case 'activePlayer': return 'activePlayer';
       case 'activeSeat': return 'activeSeat';
       case 'tokenZone': return `zone of ${expr.token}`;
-      case 'zoneVar': return `${expr.var} of ${expr.zone}`;
+      case 'zoneVar': return `${stringifyScopedVarNameExpr(expr.var)} of ${expr.zone}`;
       default: return '<ref>';
     }
   }
@@ -324,11 +330,22 @@ export const humanizeValueExpr = (
   if (typeof expr === 'number' || typeof expr === 'boolean') return String(expr);
   if (typeof expr === 'string') return resolveLabel(expr, ctx, count);
 
+  const humanizeScopedVarNameExpr = (variable: ScopedVarNameExpr): string => {
+    if (typeof variable === 'string') return resolveLabel(variable, ctx, count);
+    if (variable.ref === 'binding') {
+      const raw = variable.displayName ?? variable.name;
+      return raw.startsWith(MACRO_PREFIX)
+        ? sanitizeBindingName(raw, ctx)
+        : resolveLabel(raw, ctx, count);
+    }
+    return `grant context ${resolveLabel(variable.key, ctx, count)}`;
+  };
+
   // Reference types (all 12)
   if ('ref' in expr) {
     switch (expr.ref) {
-      case 'gvar': return resolveLabel(expr.var, ctx, count);
-      case 'pvar': return resolveLabel(expr.var, ctx, count);
+      case 'gvar': return humanizeScopedVarNameExpr(expr.var);
+      case 'pvar': return humanizeScopedVarNameExpr(expr.var);
       case 'binding': {
         const raw = expr.displayName ?? expr.name;
         return raw.startsWith(MACRO_PREFIX)
@@ -350,7 +367,7 @@ export const humanizeValueExpr = (
       case 'activePlayer': return 'active player';
       case 'activeSeat': return 'active seat';
       case 'tokenZone': return `zone of ${resolveLabel(expr.token as string, ctx, count)}`;
-      case 'zoneVar': return `${resolveLabel(expr.var, ctx, count)} of ${resolveLabel(expr.zone as string, ctx, count)}`;
+      case 'zoneVar': return `${humanizeScopedVarNameExpr(expr.var)} of ${resolveLabel(expr.zone as string, ctx, count)}`;
       default: {
         // Exhaustive — all 12 ref types are handled above. This guards
         // against future additions; render the ref type for debugging.

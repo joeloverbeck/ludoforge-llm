@@ -990,6 +990,37 @@ describe('compile-effects lowering', () => {
     ]);
   });
 
+  it('lowers scoped variable name expressions across setVar/addVar/transferVar', () => {
+    const result = lowerEffectArray(
+      [
+        { setVar: { scope: 'global', var: { ref: 'binding', name: '$track' }, value: 1 } },
+        { addVar: { scope: 'pvar', player: 'active', var: { ref: 'grantContext', key: 'targetVar' }, delta: 2 } },
+        {
+          transferVar: {
+            from: { scope: 'global', var: { ref: 'binding', name: '$fromVar' } },
+            to: { scope: 'zoneVar', zone: 'board', var: { ref: 'grantContext', key: 'zoneVar' } },
+            amount: 3,
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, [
+      { setVar: { scope: 'global', var: { ref: 'binding', name: '$track' }, value: 1 } },
+      { addVar: { scope: 'pvar', player: 'active', var: { ref: 'grantContext', key: 'targetVar' }, delta: 2 } },
+      {
+        transferVar: {
+          from: { scope: 'global', var: { ref: 'binding', name: '$fromVar' } },
+          to: { scope: 'zoneVar', zone: 'board:none', var: { ref: 'grantContext', key: 'zoneVar' } },
+          amount: 3,
+        },
+      },
+    ]);
+  });
+
   it('rejects invalid transferVar endpoint field combinations by scope for both endpoints', () => {
     const basePath = 'doc.actions.0.effects.0.transferVar';
     const cases = buildDiscriminatedEndpointMatrix({

@@ -77,7 +77,7 @@ describe('FITL event replacement/routing macros', () => {
       [
         { name: 'piece', type: 'value' },
         { name: 'zone', type: 'zoneSelector' },
-        { name: 'undergroundTypes', type: 'value' },
+        { name: 'undergroundTypes', type: { kind: 'tokenTraitValues', prop: 'type' } },
       ],
       'Expected the placement+posture macro to expose only piece, destination zone, and underground type allow-list',
     );
@@ -104,6 +104,8 @@ describe('FITL event replacement/routing macros', () => {
 
     const serialized = JSON.stringify(placeUndergroundMacro.effects);
     assert.match(serialized, /\"op\":\"in\"/, 'Expected posture assignment to be guarded by an allow-list check');
+    assert.match(serialized, /\"item\":/, 'Expected the membership guard to lower from the canonical "item" field');
+    assert.match(serialized, /\"set\":/, 'Expected the membership guard to lower from the canonical "set" field');
     assert.match(serialized, /\"undergroundTypes\"/, 'Expected posture guard to read the supplied underground type allow-list');
   });
 });

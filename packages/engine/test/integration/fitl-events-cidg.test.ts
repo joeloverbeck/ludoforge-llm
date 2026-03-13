@@ -6,8 +6,11 @@ import {
   legalChoicesEvaluate,
   type GameState,
 } from '../../src/kernel/index.js';
+import { findDeep } from '../helpers/ast-search-helpers.js';
 import { matchesDecisionRequest } from '../helpers/decision-key-matchers.js';
+import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { type DecisionOverrideRule } from '../helpers/decision-param-helpers.js';
+import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import {
   assertEventText,
   assertNoOpEvent,
@@ -31,9 +34,15 @@ const EMPTY_HIGHLAND = 'khanh-hoa:none';
 const NON_HIGHLAND = 'tay-ninh:none';
 
 describe('FITL card-81 CIDG', () => {
-  it('compiles exact text and declarative die-roll / Highland replacement structure', () => {
-    const def = getFitlEventDef();
+  it('compiles exact text and uses shared routing/placement macros while keeping CIDG-specific selectors explicit', () => {
+    const { parsed, compiled } = compileProductionSpec();
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null, 'Expected valid GameDef');
+
+    const def = compiled.gameDef!;
     const card = getEventCard(def, CARD_ID);
+    const parsedCard = parsed.doc.eventDecks?.[0]?.cards.find((entry) => entry.id === CARD_ID);
+    assert.ok(parsedCard, 'Expected parsed CIDG card');
 
     assertEventText(def, CARD_ID, {
       title: 'CIDG',
@@ -48,6 +57,24 @@ describe('FITL card-81 CIDG', () => {
     assert.equal(unshadedRoll?.bind, '$cidgReplacementRoll');
     assert.equal(unshadedRoll?.min, 1);
     assert.equal(unshadedRoll?.max, 6);
+
+    const routeMacroCalls = findDeep(parsedCard, (node) => node?.macro === 'fitl-route-removed-piece-to-force-pool');
+    assert.equal(routeMacroCalls.length, 2, 'CIDG should reuse the shared routing macro in both unshaded and shaded flows');
+
+    const placementMacroCalls = findDeep(parsedCard, (node) => node?.macro === 'fitl-place-selected-piece-in-zone-underground-by-type');
+    assert.equal(
+      placementMacroCalls.length,
+      2,
+      'CIDG should reuse the shared placement/posture macro for both unshaded replacements and shaded VC placement',
+    );
+
+    const parsedUnshaded = JSON.stringify(parsedCard.unshaded?.effects ?? []);
+    assert.match(parsedUnshaded, /"country".*"southVietnam"/, 'Unshaded should keep the South Vietnam source restriction explicit in the card');
+    assert.match(parsedUnshaded, /"query":"concat"/, 'Unshaded should keep the mixed replacement pool explicit in the card');
+
+    const parsedShaded = JSON.stringify(parsedCard.shaded?.effects ?? []);
+    assert.match(parsedShaded, /"terrainTags".*"highland"/, 'Shaded should keep Highland eligibility explicit in the card');
+    assert.match(parsedShaded, /"op":"min".*"left":2/, 'Shaded should keep the capped total of 2 VC guerrillas explicit in the card');
 
     const serializedUnshaded = JSON.stringify(card.unshaded?.effects ?? []);
     assert.match(serializedUnshaded, /"prop":"country".*"right":"southVietnam"/, 'Unshaded should restrict source guerrillas to South Vietnam');

@@ -3582,7 +3582,7 @@ effectMacros:
     params:
       - { name: piece, type: value }
       - { name: zone, type: zoneSelector }
-      - { name: undergroundTypes, type: value }
+      - { name: undergroundTypes, type: { kind: tokenTraitValues, prop: type } }
     exports: []
     effects:
       - macro: fitl-place-selected-piece-in-zone
@@ -3592,11 +3592,11 @@ effectMacros:
       - if:
           when:
             op: in
-            left:
+            item:
               ref: tokenProp
               token: { param: piece }
               prop: type
-            right: { param: undergroundTypes }
+            set: { param: undergroundTypes }
           then:
             - setTokenProp:
                 token: { param: piece }

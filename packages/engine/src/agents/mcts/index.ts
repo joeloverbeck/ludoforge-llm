@@ -22,3 +22,5 @@ export type { NodePool } from './node-pool.js';
 
 export { rollout } from './rollout.js';
 export type { RolloutResult } from './rollout.js';
+
+export { terminalToRewards, sigmoid, evaluateForAllPlayers } from './evaluate.js';

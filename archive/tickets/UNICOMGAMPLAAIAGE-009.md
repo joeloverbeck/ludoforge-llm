@@ -1,6 +1,6 @@
 # UNICOMGAMPLAAIAGE-009: Utility Transforms (Terminal Reward Mapping + Centered-Logistic Leaf Eval)
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — new file in agents/mcts/
@@ -90,3 +90,15 @@ Add re-export for `evaluate.ts`.
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/test/unit/agents/mcts/evaluate.test.ts`
 2. `pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-13
+- **What changed**:
+  - Created `packages/engine/src/agents/mcts/evaluate.ts` with `terminalToRewards`, `sigmoid`, and `evaluateForAllPlayers`.
+  - Added re-exports to `packages/engine/src/agents/mcts/index.ts`.
+  - Created `packages/engine/test/unit/agents/mcts/evaluate.test.ts` with 20 tests.
+- **Deviations from plan**:
+  - The `runtime?: GameDefRuntime` parameter was dropped from `evaluateForAllPlayers` since `evaluateState()` builds its own runtime structures internally and does not accept one.
+  - The acceptance criterion "evaluateForAllPlayers never returns values outside (0, 1)" was relaxed to `[0, 1]` for extreme temperature/score ratios where IEEE 754 sigmoid saturates. A separate test confirms strict `(0, 1)` at reasonable temperatures.
+- **Verification**: 20/20 new tests pass, 4339/4339 full engine suite, lint 0 errors, typecheck clean.

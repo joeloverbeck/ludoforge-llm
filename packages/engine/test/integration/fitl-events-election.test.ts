@@ -14,7 +14,6 @@ import {
 } from '../../src/kernel/index.js';
 import {
   applyMoveWithResolvedDecisionIds,
-  type DecisionOverrideRule,
 } from '../helpers/decision-param-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import {
@@ -33,7 +32,6 @@ const CAM_RANH = 'cam-ranh:none';
 const KONTUM = 'kontum:none';
 const QUI_NHON = 'qui-nhon:none';
 const QUANG_NAM = 'quang-nam:none';
-const KIEN_HOA = 'kien-hoa-vinh-binh:none';
 const QUANG_TRI = 'quang-tri-thua-thien:none';
 const HUE_DA_NANG_LOC = 'loc-hue-da-nang:none';
 const CITY_SPACES = [AN_LOC, CAM_RANH, CAN_THO, DA_NANG, HUE, KONTUM, QUI_NHON, SAIGON] as const;

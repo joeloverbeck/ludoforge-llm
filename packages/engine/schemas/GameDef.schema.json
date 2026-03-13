@@ -565,7 +565,7 @@
                   "pre": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_dbcd228e"
+                        "$ref": "#/definitions/anon_15cb1372"
                       }
                     ]
                   },
@@ -611,7 +611,7 @@
                   "pre": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_dbcd228e"
+                        "$ref": "#/definitions/anon_15cb1372"
                       }
                     ]
                   },
@@ -1236,7 +1236,7 @@
           "applicability": {
             "allOf": [
               {
-                "$ref": "#/definitions/anon_dbcd228e"
+                "$ref": "#/definitions/anon_15cb1372"
               }
             ]
           },
@@ -1292,7 +1292,7 @@
           "legality": {
             "anyOf": [
               {
-                "$ref": "#/definitions/anon_dbcd228e"
+                "$ref": "#/definitions/anon_15cb1372"
               },
               {
                 "type": "null"
@@ -1302,7 +1302,7 @@
           "costValidation": {
             "anyOf": [
               {
-                "$ref": "#/definitions/anon_dbcd228e"
+                "$ref": "#/definitions/anon_15cb1372"
               },
               {
                 "type": "null"
@@ -1342,7 +1342,7 @@
               "filter": {
                 "allOf": [
                   {
-                    "$ref": "#/definitions/anon_dbcd228e"
+                    "$ref": "#/definitions/anon_15cb1372"
                   }
                 ]
               },
@@ -1367,7 +1367,7 @@
                 "legality": {
                   "anyOf": [
                     {
-                      "$ref": "#/definitions/anon_dbcd228e"
+                      "$ref": "#/definitions/anon_15cb1372"
                     },
                     {
                       "type": "null"
@@ -1377,7 +1377,7 @@
                 "costValidation": {
                   "anyOf": [
                     {
-                      "$ref": "#/definitions/anon_dbcd228e"
+                      "$ref": "#/definitions/anon_15cb1372"
                     },
                     {
                       "type": "null"
@@ -1712,7 +1712,7 @@
           "pre": {
             "anyOf": [
               {
-                "$ref": "#/definitions/anon_dbcd228e"
+                "$ref": "#/definitions/anon_15cb1372"
               },
               {
                 "type": "null"
@@ -1949,14 +1949,14 @@
           "match": {
             "allOf": [
               {
-                "$ref": "#/definitions/anon_dbcd228e"
+                "$ref": "#/definitions/anon_15cb1372"
               }
             ]
           },
           "when": {
             "allOf": [
               {
-                "$ref": "#/definitions/anon_dbcd228e"
+                "$ref": "#/definitions/anon_15cb1372"
               }
             ]
           },
@@ -1984,7 +1984,7 @@
             "type": "object",
             "properties": {
               "when": {
-                "$ref": "#/definitions/anon_dbcd228e"
+                "$ref": "#/definitions/anon_15cb1372"
               },
               "result": {
                 "anyOf": [
@@ -2144,7 +2144,7 @@
                 ]
               },
               "when": {
-                "$ref": "#/definitions/anon_dbcd228e"
+                "$ref": "#/definitions/anon_15cb1372"
               }
             },
             "required": [
@@ -2320,7 +2320,7 @@
                 "playCondition": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/anon_dbcd228e"
+                      "$ref": "#/definitions/anon_15cb1372"
                     }
                   ]
                 },
@@ -2410,7 +2410,7 @@
                               "zoneFilter": {
                                 "allOf": [
                                   {
-                                    "$ref": "#/definitions/anon_dbcd228e"
+                                    "$ref": "#/definitions/anon_15cb1372"
                                   }
                                 ]
                               },
@@ -2585,7 +2585,7 @@
                               "zoneFilter": {
                                 "allOf": [
                                   {
-                                    "$ref": "#/definitions/anon_dbcd228e"
+                                    "$ref": "#/definitions/anon_15cb1372"
                                   }
                                 ]
                               },
@@ -2754,7 +2754,7 @@
                           "when": {
                             "allOf": [
                               {
-                                "$ref": "#/definitions/anon_dbcd228e"
+                                "$ref": "#/definitions/anon_15cb1372"
                               }
                             ]
                           },
@@ -2876,7 +2876,7 @@
                                     "zoneFilter": {
                                       "allOf": [
                                         {
-                                          "$ref": "#/definitions/anon_dbcd228e"
+                                          "$ref": "#/definitions/anon_15cb1372"
                                         }
                                       ]
                                     },
@@ -3051,7 +3051,7 @@
                                     "zoneFilter": {
                                       "allOf": [
                                         {
-                                          "$ref": "#/definitions/anon_dbcd228e"
+                                          "$ref": "#/definitions/anon_15cb1372"
                                         }
                                       ]
                                     },
@@ -3220,7 +3220,7 @@
                                 "when": {
                                   "allOf": [
                                     {
-                                      "$ref": "#/definitions/anon_dbcd228e"
+                                      "$ref": "#/definitions/anon_15cb1372"
                                     }
                                   ]
                                 },
@@ -3711,7 +3711,7 @@
                               "zoneFilter": {
                                 "allOf": [
                                   {
-                                    "$ref": "#/definitions/anon_dbcd228e"
+                                    "$ref": "#/definitions/anon_15cb1372"
                                   }
                                 ]
                               },
@@ -3886,7 +3886,7 @@
                               "zoneFilter": {
                                 "allOf": [
                                   {
-                                    "$ref": "#/definitions/anon_dbcd228e"
+                                    "$ref": "#/definitions/anon_15cb1372"
                                   }
                                 ]
                               },
@@ -4055,7 +4055,7 @@
                           "when": {
                             "allOf": [
                               {
-                                "$ref": "#/definitions/anon_dbcd228e"
+                                "$ref": "#/definitions/anon_15cb1372"
                               }
                             ]
                           },
@@ -4177,7 +4177,7 @@
                                     "zoneFilter": {
                                       "allOf": [
                                         {
-                                          "$ref": "#/definitions/anon_dbcd228e"
+                                          "$ref": "#/definitions/anon_15cb1372"
                                         }
                                       ]
                                     },
@@ -4352,7 +4352,7 @@
                                     "zoneFilter": {
                                       "allOf": [
                                         {
-                                          "$ref": "#/definitions/anon_dbcd228e"
+                                          "$ref": "#/definitions/anon_15cb1372"
                                         }
                                       ]
                                     },
@@ -4521,7 +4521,7 @@
                                 "when": {
                                   "allOf": [
                                     {
-                                      "$ref": "#/definitions/anon_dbcd228e"
+                                      "$ref": "#/definitions/anon_15cb1372"
                                     }
                                   ]
                                 },
@@ -5076,7 +5076,7 @@
               "type": "object",
               "properties": {
                 "when": {
-                  "$ref": "#/definitions/anon_dbcd228e"
+                  "$ref": "#/definitions/anon_15cb1372"
                 },
                 "allowedStates": {
                   "type": "array",
@@ -6340,7 +6340,7 @@
               "type": "object",
               "properties": {
                 "when": {
-                  "$ref": "#/definitions/anon_dbcd228e"
+                  "$ref": "#/definitions/anon_15cb1372"
                 },
                 "then": {
                   "$ref": "#/definitions/anon_0138e11b"
@@ -6514,6 +6514,268 @@
           "required": [
             "op",
             "arg"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "anon_15cb1372": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "and"
+            },
+            "args": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/anon_15cb1372"
+              }
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "or"
+            },
+            "args": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/anon_15cb1372"
+              }
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "not"
+            },
+            "arg": {
+              "$ref": "#/definitions/anon_15cb1372"
+            }
+          },
+          "required": [
+            "op",
+            "arg"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "=="
+                },
+                {
+                  "type": "string",
+                  "const": "!="
+                },
+                {
+                  "type": "string",
+                  "const": "<"
+                },
+                {
+                  "type": "string",
+                  "const": "<="
+                },
+                {
+                  "type": "string",
+                  "const": ">"
+                },
+                {
+                  "type": "string",
+                  "const": ">="
+                }
+              ]
+            },
+            "left": {
+              "$ref": "#/definitions/anon_0138e11b"
+            },
+            "right": {
+              "$ref": "#/definitions/anon_0138e11b"
+            }
+          },
+          "required": [
+            "op",
+            "left",
+            "right"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "in"
+            },
+            "item": {
+              "$ref": "#/definitions/anon_0138e11b"
+            },
+            "set": {
+              "$ref": "#/definitions/anon_0138e11b"
+            }
+          },
+          "required": [
+            "op",
+            "item",
+            "set"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "adjacent"
+            },
+            "left": {
+              "type": "string"
+            },
+            "right": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "left",
+            "right"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "connected"
+            },
+            "from": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "via": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/anon_15cb1372"
+                }
+              ]
+            },
+            "allowTargetOutsideVia": {
+              "type": "boolean"
+            },
+            "maxDepth": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "op",
+            "from",
+            "to"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "zonePropIncludes"
+            },
+            "zone": {
+              "type": "string"
+            },
+            "prop": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/definitions/anon_0138e11b"
+            }
+          },
+          "required": [
+            "op",
+            "zone",
+            "prop",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "markerStateAllowed"
+            },
+            "space": {
+              "type": "string"
+            },
+            "marker": {
+              "type": "string"
+            },
+            "state": {
+              "$ref": "#/definitions/anon_0138e11b"
+            }
+          },
+          "required": [
+            "op",
+            "space",
+            "marker",
+            "state"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "markerShiftAllowed"
+            },
+            "space": {
+              "type": "string"
+            },
+            "marker": {
+              "type": "string"
+            },
+            "delta": {
+              "$ref": "#/definitions/anon_d4839499"
+            }
+          },
+          "required": [
+            "op",
+            "space",
+            "marker",
+            "delta"
           ],
           "additionalProperties": false
         }
@@ -7401,7 +7663,7 @@
                 "filter": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/anon_dbcd228e"
+                      "$ref": "#/definitions/anon_15cb1372"
                     }
                   ]
                 }
@@ -7906,7 +8168,7 @@
               "type": "object",
               "properties": {
                 "when": {
-                  "$ref": "#/definitions/anon_dbcd228e"
+                  "$ref": "#/definitions/anon_15cb1372"
                 },
                 "then": {
                   "type": "array",
@@ -9013,7 +9275,7 @@
                     "zoneFilter": {
                       "allOf": [
                         {
-                          "$ref": "#/definitions/anon_dbcd228e"
+                          "$ref": "#/definitions/anon_15cb1372"
                         }
                       ]
                     },
@@ -9172,7 +9434,7 @@
                     "zoneFilter": {
                       "allOf": [
                         {
-                          "$ref": "#/definitions/anon_dbcd228e"
+                          "$ref": "#/definitions/anon_15cb1372"
                         }
                       ]
                     },
@@ -9638,7 +9900,7 @@
                 "condition": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/anon_dbcd228e"
+                      "$ref": "#/definitions/anon_15cb1372"
                     }
                   ]
                 }
@@ -9676,7 +9938,7 @@
               "pattern": "^\\$.+"
             },
             "where": {
-              "$ref": "#/definitions/anon_dbcd228e"
+              "$ref": "#/definitions/anon_15cb1372"
             },
             "includeFrom": {
               "type": "boolean"
@@ -9999,7 +10261,7 @@
                 "condition": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/anon_dbcd228e"
+                      "$ref": "#/definitions/anon_15cb1372"
                     }
                   ]
                 }
@@ -10092,7 +10354,7 @@
                 "condition": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/anon_dbcd228e"
+                      "$ref": "#/definitions/anon_15cb1372"
                     }
                   ]
                 }
@@ -10207,7 +10469,7 @@
             "via": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/anon_dbcd228e"
+                  "$ref": "#/definitions/anon_15cb1372"
                 }
               ]
             },
@@ -10846,7 +11108,7 @@
               "type": "object",
               "properties": {
                 "when": {
-                  "$ref": "#/definitions/anon_dbcd228e"
+                  "$ref": "#/definitions/anon_15cb1372"
                 },
                 "then": {
                   "$ref": "#/definitions/anon_d4839499"
@@ -10865,243 +11127,6 @@
           },
           "required": [
             "if"
-          ],
-          "additionalProperties": false
-        }
-      ]
-    },
-    "anon_dbcd228e": {
-      "anyOf": [
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "and"
-            },
-            "args": {
-              "minItems": 1,
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/anon_dbcd228e"
-              }
-            }
-          },
-          "required": [
-            "op",
-            "args"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "or"
-            },
-            "args": {
-              "minItems": 1,
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/anon_dbcd228e"
-              }
-            }
-          },
-          "required": [
-            "op",
-            "args"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "not"
-            },
-            "arg": {
-              "$ref": "#/definitions/anon_dbcd228e"
-            }
-          },
-          "required": [
-            "op",
-            "arg"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "const": "=="
-                },
-                {
-                  "type": "string",
-                  "const": "!="
-                },
-                {
-                  "type": "string",
-                  "const": "<"
-                },
-                {
-                  "type": "string",
-                  "const": "<="
-                },
-                {
-                  "type": "string",
-                  "const": ">"
-                },
-                {
-                  "type": "string",
-                  "const": ">="
-                }
-              ]
-            },
-            "left": {
-              "$ref": "#/definitions/anon_0138e11b"
-            },
-            "right": {
-              "$ref": "#/definitions/anon_0138e11b"
-            }
-          },
-          "required": [
-            "op",
-            "left",
-            "right"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "in"
-            },
-            "item": {
-              "$ref": "#/definitions/anon_0138e11b"
-            },
-            "set": {
-              "$ref": "#/definitions/anon_0138e11b"
-            }
-          },
-          "required": [
-            "op",
-            "item",
-            "set"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "adjacent"
-            },
-            "left": {
-              "type": "string"
-            },
-            "right": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "op",
-            "left",
-            "right"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "connected"
-            },
-            "from": {
-              "type": "string"
-            },
-            "to": {
-              "type": "string"
-            },
-            "via": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/anon_dbcd228e"
-                }
-              ]
-            },
-            "allowTargetOutsideVia": {
-              "type": "boolean"
-            },
-            "maxDepth": {
-              "type": "number"
-            }
-          },
-          "required": [
-            "op",
-            "from",
-            "to"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "zonePropIncludes"
-            },
-            "zone": {
-              "type": "string"
-            },
-            "prop": {
-              "type": "string"
-            },
-            "value": {
-              "$ref": "#/definitions/anon_0138e11b"
-            }
-          },
-          "required": [
-            "op",
-            "zone",
-            "prop",
-            "value"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "markerStateAllowed"
-            },
-            "space": {
-              "type": "string"
-            },
-            "marker": {
-              "type": "string"
-            },
-            "state": {
-              "$ref": "#/definitions/anon_0138e11b"
-            }
-          },
-          "required": [
-            "op",
-            "space",
-            "marker",
-            "state"
           ],
           "additionalProperties": false
         }

@@ -46,8 +46,9 @@ describe('FITL card-85 USAID', () => {
     assert.match(unshadedJson, /"bind":"\$usaidCoinControlledSpaces"/);
     assert.match(unshadedJson, /"value":\["US","ARVN"\]/);
     assert.match(unshadedJson, /"value":\["NVA","VC"\]/);
-    assert.match(unshadedJson, /"marker":"supportOpposition".*"right":"activeSupport"/);
-    assert.match(unshadedJson, /"op":"markerStateAllowed".*"state":"activeSupport"/);
+    assert.match(unshadedJson, /"marker":"supportOpposition"/);
+    assert.match(unshadedJson, /"op":"markerShiftAllowed".*"delta":1/);
+    assert.doesNotMatch(unshadedJson, /"op":"markerStateAllowed".*"state":"activeSupport"/);
     assert.match(unshadedJson, /"left":3/);
     assert.match(unshadedJson, /"shiftMarker".*"delta":1/);
 

@@ -1,6 +1,6 @@
 # MARKERDSL-001: State-Aware Marker Shift Legality
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — condition AST/schema/runtime, lattice helper reuse, validation/display/tooltips
@@ -20,13 +20,16 @@ This is a DSL gap, not a FITL-specific rule quirk:
 
 1. `packages/engine/src/kernel/eval-condition.ts` currently implements `markerStateAllowed` by checking whether the candidate state is allowed under the lattice constraints for the space.
 2. `packages/engine/src/kernel/space-marker-rules.ts` already centralizes constraint checking, so there is a natural place to add state-aware transition logic without FITL-specific branching.
-3. `shiftMarker` already encodes relative lattice movement semantics at effect execution time, but there is no corresponding condition operator for selectors. The corrected scope is to add a generic transition-aware condition surface rather than layering more author-side guard patterns into FITL YAML.
+3. `shiftMarker` already encodes relative lattice movement semantics at effect execution time, but that logic currently lives inline in `packages/engine/src/kernel/effects-choice.ts`, not in a reusable marker-transition helper. The corrected scope is to extract that transition resolution into shared kernel code and expose it through a generic condition operator rather than layering more author-side guard patterns into FITL YAML.
+4. Existing FITL production/event authoring already works around this gap with extra `markerState` comparisons. For example, USAID currently pairs `markerStateAllowed(... activeSupport)` with an explicit `markerState != activeSupport` guard. The ticket should target removal of that workaround in representative production YAML/tests after the generic primitive exists.
+5. The original test/file map was partially stale. `shiftMarker` behavior is covered primarily in `packages/engine/test/unit/effects-lifecycle.test.ts` and `packages/engine/test/integration/space-marker-rules.test.ts`, not in a dedicated `spatial-effects` ownership path. Exhaustiveness/CNL/schema coverage also need explicit scope.
 
 ## Architecture Check
 
 1. The clean solution is a first-class generic condition operator, not more cookbook guidance or event-local macros. The engine should expose the same transition semantics for legality checks that it already exposes for mutation.
 2. This preserves the boundary: FITL continues to declare support-shift intent in `GameSpecDoc`, while `GameDef`/kernel provide a game-agnostic lattice-transition primitive usable by any package with ordered marker states.
 3. No backwards-compatibility shim is needed. `markerStateAllowed` keeps its current meaning, and the new operator becomes the canonical surface for relative transition checks.
+4. The long-term robust architecture is one shared transition contract for marker lattices. `eval-condition`, `effects-choice`, validation, and presentation should all describe the same primitive instead of partially duplicating shift semantics in different layers.
 
 ## What to Change
 
@@ -67,7 +70,7 @@ Add a shared helper that resolves:
 - whether the shift changes state
 - whether the destination satisfies lattice constraints
 
-Both `shiftMarker` execution and `markerShiftAllowed` should use that helper so selector legality and mutation semantics cannot drift.
+Place this helper in `packages/engine/src/kernel/space-marker-rules.ts` alongside the existing constraint helper. Both `shiftMarker` execution in `packages/engine/src/kernel/effects-choice.ts` and `markerShiftAllowed` should use that helper so selector legality and mutation semantics cannot drift.
 
 ### 3. Wire the new operator through validation, schema, compiler, and diagnostics
 
@@ -75,9 +78,10 @@ Update:
 
 - AST types and Zod schemas
 - condition validation
-- CNL/lowering support if condition operators are enumerated there
+- CNL/lowering support because condition operators are explicitly enumerated there
 - humanization / tooltip rendering / blocker extraction
 - display rendering
+- union exhaustiveness coverage
 
 The error contract should remain explicit:
 
@@ -100,13 +104,16 @@ Include one production-style example showing a support-shift selector expressed 
 - `packages/engine/src/kernel/schemas-ast.ts` (modify)
 - `packages/engine/src/kernel/eval-condition.ts` (modify)
 - `packages/engine/src/kernel/space-marker-rules.ts` (modify)
+- `packages/engine/src/kernel/effects-choice.ts` (modify)
 - `packages/engine/src/kernel/validate-conditions.ts` (modify)
 - `packages/engine/src/kernel/ast-to-display.ts` (modify)
 - `packages/engine/src/kernel/tooltip-blocker-extractor.ts` (modify)
 - `packages/engine/src/kernel/tooltip-modifier-humanizer.ts` (modify)
-- `packages/engine/src/cnl/compile-conditions.ts` (modify if needed by the condition registry path)
-- `packages/engine/test/unit/` (modify/add targeted condition and display tests)
+- `packages/engine/src/cnl/compile-conditions.ts` (modify)
+- `packages/engine/test/unit/types-exhaustive.test.ts` (modify)
+- `packages/engine/test/unit/` (modify/add targeted condition, effect, and tooltip/display tests)
 - `packages/engine/test/integration/` (modify/add lattice-transition legality tests)
+- `data/games/fire-in-the-lake/41-events/065-096.md` (modify representative production event authoring, currently USAID)
 - `docs/fitl-event-authoring-cookbook.md` (modify)
 
 ## Out of Scope
@@ -138,14 +145,38 @@ Include one production-style example showing a support-shift selector expressed 
 ### New/Modified Tests
 
 1. `packages/engine/test/unit/spatial-conditions.test.ts` — add `markerShiftAllowed` truth-table coverage for change/no-op/constraint-failure cases.
-2. `packages/engine/test/unit/spatial-effects.test.ts` — assert `shiftMarker` uses the same destination computation as the new helper.
-3. `packages/engine/test/unit/tooltip-*` tests — verify humanization and blocker text for the new operator.
-4. `packages/engine/test/integration/space-marker-rules.test.ts` — exercise lattice constraints through the new condition in a full eval context.
-5. `packages/engine/test/integration/fitl-events-usaid.test.ts` or successor event tests — confirm a production-style support selector can rely on `markerShiftAllowed`.
+2. `packages/engine/test/unit/effects-lifecycle.test.ts` — assert `shiftMarker` uses the same destination computation as the new helper and preserves no-op/clamp behavior.
+3. `packages/engine/test/unit/kernel/tooltip-blocker-extractor.test.ts` and `packages/engine/test/unit/kernel/tooltip-modifier-humanizer.test.ts` — verify humanization and blocker text for the new operator.
+4. `packages/engine/test/unit/types-exhaustive.test.ts` — keep the condition union exhaustive after adding the new operator.
+5. `packages/engine/test/integration/space-marker-rules.test.ts` — exercise lattice constraints through the new condition in a full eval/apply context.
+6. `packages/engine/test/integration/fitl-events-usaid.test.ts` — confirm a production-style support selector can rely on `markerShiftAllowed` instead of the current explicit current-state exclusion workaround.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/spatial-conditions.test.js`
-2. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/integration/space-marker-rules.test.js`
-3. `pnpm -F @ludoforge/engine test`
-4. `pnpm turbo lint && pnpm turbo typecheck`
+2. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/effects-lifecycle.test.js`
+3. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/integration/space-marker-rules.test.js`
+4. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/integration/fitl-events-usaid.test.js`
+5. `pnpm -F @ludoforge/engine test`
+6. `pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+- Completion date: 2026-03-13
+- What actually changed:
+  - Added a new generic `markerShiftAllowed` condition operator to the kernel AST, schemas, validation, CNL lowering, display output, tooltip humanization, and blocker extraction.
+  - Extracted marker-lattice transition resolution into shared logic in `packages/engine/src/kernel/space-marker-rules.ts` and reused it from both `eval-condition` and `shiftMarker` execution in `packages/engine/src/kernel/effects-choice.ts`.
+  - Updated USAID production authoring to use `markerShiftAllowed` instead of the prior `markerState != activeSupport` plus `markerStateAllowed(activeSupport)` workaround, and documented the preferred authoring split in `docs/fitl-event-authoring-cookbook.md`.
+  - Regenerated checked-in engine schema artifacts and removed two unrelated unused symbols in `packages/engine/test/integration/fitl-events-election.test.ts` so workspace lint would pass.
+- Deviations from original plan:
+  - `packages/engine/test/unit/spatial-effects.test.ts` was not the right ownership point for `shiftMarker`; the durable effect coverage lives in `packages/engine/test/unit/effects-lifecycle.test.ts`, so the test work landed there instead.
+  - The representative production cleanup was limited to USAID rather than broader FITL re-authoring, which remained out of scope.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build`
+  - `node --test packages/engine/dist/test/unit/spatial-conditions.test.js`
+  - `node --test packages/engine/dist/test/unit/effects-lifecycle.test.js`
+  - `node --test packages/engine/dist/test/integration/space-marker-rules.test.js`
+  - `node --test packages/engine/dist/test/integration/fitl-events-usaid.test.js`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm turbo lint`
+  - `pnpm turbo typecheck`

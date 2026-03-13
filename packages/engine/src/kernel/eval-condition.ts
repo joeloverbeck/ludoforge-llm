@@ -5,7 +5,7 @@ import { evalValue } from './eval-value.js';
 import { resolvePredicateValue } from './predicate-value-resolution.js';
 import { resolveMapSpaceId, resolveSingleZoneSel } from './resolve-selectors.js';
 import { queryConnectedZones } from './spatial.js';
-import { isSpaceMarkerStateAllowed } from './space-marker-rules.js';
+import { isSpaceMarkerStateAllowed, resolveSpaceMarkerShift } from './space-marker-rules.js';
 import { matchesMembership } from './query-predicate.js';
 import type { ConditionAST, ScalarArrayValue, ScalarValue } from './types.js';
 
@@ -188,6 +188,30 @@ export function evalCondition(cond: ConditionAST, ctx: ReadContext): boolean {
       }
 
       return isSpaceMarkerStateAllowed(lattice, String(spaceId), candidateState, ctx, evalCondition);
+    }
+
+    case 'markerShiftAllowed': {
+      const spaceId = resolveMapSpaceId(cond.space, ctx);
+      const evaluatedDelta = evalValue(cond.delta, ctx);
+      if (typeof evaluatedDelta !== 'number' || !Number.isSafeInteger(evaluatedDelta)) {
+        throw typeMismatchError('markerShiftAllowed.delta must evaluate to a safe integer', {
+          condition: cond,
+          actualType: typeof evaluatedDelta,
+          value: evaluatedDelta,
+        });
+      }
+
+      const lattice = ctx.def.markerLattices?.find((candidate) => candidate.id === cond.marker);
+      if (lattice === undefined) {
+        throw missingVarError(`Marker lattice not found: ${cond.marker}`, {
+          condition: cond,
+          markerId: cond.marker,
+          availableMarkerLattices: (ctx.def.markerLattices ?? []).map((candidate) => candidate.id).sort(),
+        });
+      }
+
+      const resolution = resolveSpaceMarkerShift(lattice, String(spaceId), evaluatedDelta, ctx, evalCondition);
+      return resolution.changed && resolution.allowed;
     }
 
     default: {

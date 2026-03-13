@@ -11,7 +11,7 @@ import {
 } from './validate-behavior-shared.js';
 
 // Lazy cross-module import (ESM live bindings — safe inside function bodies)
-import { validateValueExpr } from './validate-values.js';
+import { validateNumericValueExpr, validateValueExpr } from './validate-values.js';
 
 // ---------------------------------------------------------------------------
 // Condition AST validation
@@ -81,6 +81,11 @@ export const validateConditionAst = (
         `${path}.state`,
         context.markerLatticeStatesById,
       );
+      return;
+    }
+    case 'markerShiftAllowed': {
+      validateZoneSelector(diagnostics, condition.space, `${path}.space`, context);
+      validateNumericValueExpr(diagnostics, condition.delta, `${path}.delta`, context);
       return;
     }
     default: {

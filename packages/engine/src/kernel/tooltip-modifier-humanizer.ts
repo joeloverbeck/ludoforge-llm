@@ -101,6 +101,9 @@ function humanizeConditionInner(cond: ConditionAST, ctx: LabelContext, count?: n
   if (c.op === 'markerStateAllowed') {
     return `${resolveLabel(c.marker as string, ctx, count)} allows ${humanizeValueExpr(c.state as ValueExpr, ctx, count)}`;
   }
+  if (c.op === 'markerShiftAllowed') {
+    return `${resolveLabel(c.marker as string, ctx, count)} allows shift ${humanizeValueExpr(c.delta as ValueExpr, ctx, count)}`;
+  }
 
   // Comparison operators
   if (c.left !== undefined && c.right !== undefined) {

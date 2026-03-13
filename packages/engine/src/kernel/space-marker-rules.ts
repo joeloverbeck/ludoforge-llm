@@ -9,6 +9,16 @@ export interface SpaceMarkerConstraintViolation {
   readonly constraintIndex: number;
 }
 
+export interface SpaceMarkerShiftResolution {
+  readonly currentState: string;
+  readonly currentIndex: number;
+  readonly destinationState: string;
+  readonly destinationIndex: number;
+  readonly changed: boolean;
+  readonly allowed: boolean;
+  readonly violation: SpaceMarkerConstraintViolation | null;
+}
+
 const withConstraintZoneBinding = (
   ctx: ReadContext,
   spaceId: string,
@@ -47,3 +57,36 @@ export const isSpaceMarkerStateAllowed = (
   ctx: ReadContext,
   evaluateCondition: (condition: ConditionAST, evalCtx: ReadContext) => boolean,
 ): boolean => findSpaceMarkerConstraintViolation(lattice, spaceId, candidateState, ctx, evaluateCondition) === null;
+
+export const resolveSpaceMarkerShift = (
+  lattice: SpaceMarkerLatticeDef,
+  spaceId: string,
+  delta: number,
+  ctx: ReadContext,
+  evaluateCondition: (condition: ConditionAST, evalCtx: ReadContext) => boolean,
+): SpaceMarkerShiftResolution => {
+  const spaceMarkers = ctx.state.markers[spaceId] ?? {};
+  const currentState = String(spaceMarkers[lattice.id] ?? lattice.defaultState);
+  const currentIndex = lattice.states.indexOf(currentState);
+
+  if (currentIndex < 0) {
+    throw new Error(`Current marker state "${currentState}" not found in lattice "${lattice.id}"`);
+  }
+
+  const destinationIndex = Math.max(0, Math.min(lattice.states.length - 1, currentIndex + delta));
+  const destinationState = lattice.states[destinationIndex]!;
+  const changed = destinationState !== currentState;
+  const violation = changed
+    ? findSpaceMarkerConstraintViolation(lattice, spaceId, destinationState, ctx, evaluateCondition)
+    : null;
+
+  return {
+    currentState,
+    currentIndex,
+    destinationState,
+    destinationIndex,
+    changed,
+    allowed: violation === null,
+    violation,
+  };
+};

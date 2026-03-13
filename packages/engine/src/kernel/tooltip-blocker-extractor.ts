@@ -152,6 +152,11 @@ const describeLeafBlocker = (
       const zone = humanizeValueExpr(cond.space, ctx);
       return { astPath: path, description: `Need ${cond.marker} to allow ${state} in ${zone}` };
     }
+    case 'markerShiftAllowed': {
+      const delta = humanizeValueExpr(cond.delta, ctx);
+      const zone = humanizeValueExpr(cond.space, ctx);
+      return { astPath: path, description: `Need ${cond.marker} to allow shift ${delta} in ${zone}` };
+    }
     default: {
       const _exhaustive: never = cond;
       return _exhaustive;
@@ -213,6 +218,11 @@ const describeNotBlocker = (
       const state = humanizeValueExpr(inner.state, ctx);
       const zone = humanizeValueExpr(inner.space, ctx);
       return `Need ${inner.marker} to not allow ${state} in ${zone}`;
+    }
+    case 'markerShiftAllowed': {
+      const delta = humanizeValueExpr(inner.delta, ctx);
+      const zone = humanizeValueExpr(inner.space, ctx);
+      return `Need ${inner.marker} to not allow shift ${delta} in ${zone}`;
     }
     case 'and':
     case 'or':

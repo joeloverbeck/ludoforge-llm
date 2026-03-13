@@ -691,6 +691,21 @@ describe('effects shiftMarker', () => {
     assert.equal(result.rng, ctx.rng);
   });
 
+  it('is a no-op when delta is zero', () => {
+    const state: GameState = {
+      ...makeState(),
+      markers: { 'deck:none': { support: 'neutral' } },
+    };
+    const ctx = makeMarkerCtx({ state });
+    const effect: EffectAST = {
+      shiftMarker: { space: 'deck:none', marker: 'support', delta: 0 },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state, ctx.state);
+    assert.equal(result.rng, ctx.rng);
+  });
+
   it('throws for unknown marker lattice', () => {
     const ctx = makeMarkerCtx();
     const effect: EffectAST = {

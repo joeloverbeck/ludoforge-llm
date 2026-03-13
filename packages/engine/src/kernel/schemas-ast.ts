@@ -499,6 +499,14 @@ conditionAstSchemaInternal = z.union([
       state: ValueExprSchema,
     })
     .strict(),
+  z
+    .object({
+      op: z.literal('markerShiftAllowed'),
+      space: ZoneSelSchema,
+      marker: StringSchema,
+      delta: NumericValueExprSchema,
+    })
+    .strict(),
 ]);
 
 tokenFilterExprSchemaInternal = z.union([

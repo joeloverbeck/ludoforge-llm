@@ -303,6 +303,33 @@ Production references:
 - `fitl-arvn-redeploy-destination-no-bases`
 - `select-laos-cambodia-province`
 
+## Marker Shift Legality
+
+Use `markerStateAllowed` and `markerShiftAllowed` for different jobs.
+
+- `markerStateAllowed` is for absolute target-state legality such as "this space may legally be Active Support".
+- `markerShiftAllowed` is for relative transition legality such as "shifting this marker by 1 would actually produce a legal state change".
+
+For support/opposition events that mean "shift one level toward Support/Opposition", prefer `markerShiftAllowed` instead of pairing `markerStateAllowed` with an extra current-state exclusion.
+
+```yaml
+- chooseN:
+    bind: $spaces
+    options:
+      query: mapSpaces
+      filter:
+        condition:
+          op: and
+          args:
+            - conditionMacro: fitl-space-coin-controlled
+              args:
+                spaceExpr: $zone
+            - op: markerShiftAllowed
+              space: $zone
+              marker: supportOpposition
+              delta: 1
+```
+
 ## Chooser Ownership And Pending Decisions
 
 By default, event decisions surface as pending choices for the event executor. Override that only when the rules say another faction/player owns the choice.

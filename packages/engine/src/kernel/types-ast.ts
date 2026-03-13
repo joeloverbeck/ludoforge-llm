@@ -161,6 +161,12 @@ export type ConditionAST =
       readonly space: ZoneSel;
       readonly marker: string;
       readonly state: ValueExpr;
+    }
+  | {
+      readonly op: 'markerShiftAllowed';
+      readonly space: ZoneSel;
+      readonly marker: string;
+      readonly delta: NumericValueExpr;
     };
 
 export type TokenFilterFieldSelector =

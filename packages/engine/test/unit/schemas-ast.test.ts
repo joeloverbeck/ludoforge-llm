@@ -651,6 +651,7 @@ describe('AST and selector schemas', () => {
       },
       { op: 'connected', from: 'board:a', to: 'board:c' },
       { op: 'zonePropIncludes', zone: 'board:a', prop: 'terrainTags', value: 'jungle' },
+      { op: 'markerShiftAllowed', space: 'board:a', marker: 'supportOpposition', delta: 1 },
     ];
 
     for (const condition of conditions) {

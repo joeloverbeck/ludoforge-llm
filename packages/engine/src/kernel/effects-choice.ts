@@ -9,7 +9,7 @@ import { resolveBindingTemplate } from './binding-template.js';
 import { nextInt } from './prng.js';
 import { resolveSinglePlayerSel } from './resolve-selectors.js';
 import { resolveZoneWithNormalization, selectorResolutionFailurePolicyForMode } from './selector-resolution-normalization.js';
-import { findSpaceMarkerConstraintViolation } from './space-marker-rules.js';
+import { findSpaceMarkerConstraintViolation, resolveSpaceMarkerShift } from './space-marker-rules.js';
 import { withTracePath } from './trace-provenance.js';
 import { normalizeChoiceDomain, toChoiceComparableValue, type MembershipScalar } from './value-membership.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
@@ -835,26 +835,28 @@ export const applyShiftMarker = (effect: Extract<EffectAST, { readonly shiftMark
 
   const lattice = resolveMarkerLattice(ctx, marker, 'shiftMarker');
   const spaceMarkers = ctx.state.markers[String(spaceId)] ?? {};
-  const currentState = spaceMarkers[marker] ?? lattice.defaultState;
-  const currentIndex = lattice.states.indexOf(currentState);
-
-  if (currentIndex < 0) {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `Current marker state "${currentState}" not found in lattice "${marker}"`, {
-      effectType: 'shiftMarker',
-      marker,
-      currentState,
-      validStates: lattice.states,
-    });
+  let resolution;
+  try {
+    resolution = resolveSpaceMarkerShift(lattice, String(spaceId), evaluatedDelta, evalCtx, evalCondition);
+  } catch (error) {
+    throw effectRuntimeError(
+      EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+      error instanceof Error ? error.message : `Failed to resolve marker shift for lattice "${marker}"`,
+      {
+        effectType: 'shiftMarker',
+        marker,
+        cause: error,
+        validStates: lattice.states,
+      },
+    );
   }
+  const newState = resolution.destinationState;
 
-  const newIndex = Math.max(0, Math.min(lattice.states.length - 1, currentIndex + evaluatedDelta));
-  const newState = lattice.states[newIndex]!;
-
-  if (newState === currentState) {
+  if (!resolution.changed) {
     return { state: ctx.state, rng: ctx.rng };
   }
 
-  const shiftViolation = findSpaceMarkerConstraintViolation(lattice, String(spaceId), newState, evalCtx, evalCondition);
+  const shiftViolation = resolution.violation;
   if (shiftViolation !== null) {
     throw effectRuntimeError(
       EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,

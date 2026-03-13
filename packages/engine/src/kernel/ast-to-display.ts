@@ -346,6 +346,18 @@ const conditionLeafToInlineNodes = (cond: ConditionLeaf): DisplayInlineNode[] =>
         SPACE,
         ...zoneSelToInlineNodes(cond.space),
       ];
+    case 'markerShiftAllowed':
+      return [
+        ref(cond.marker, 'marker'),
+        SPACE,
+        kw('allows shift'),
+        SPACE,
+        ...numericValueExprToInlineNodes(cond.delta),
+        SPACE,
+        kw('in'),
+        SPACE,
+        ...zoneSelToInlineNodes(cond.space),
+      ];
     default: {
       const _exhaustive: never = cond;
       return [kw(String((_exhaustive as { readonly op: string }).op))];

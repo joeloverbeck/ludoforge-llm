@@ -82,7 +82,7 @@ function lowerBooleanArityTuple<TValue>(
   };
 }
 
-const SUPPORTED_CONDITION_OPS = ['and', 'or', 'not', '==', '!=', '<', '<=', '>', '>=', 'in', 'adjacent', 'connected', 'zonePropIncludes', 'markerStateAllowed'];
+const SUPPORTED_CONDITION_OPS = ['and', 'or', 'not', '==', '!=', '<', '<=', '>', '>=', 'in', 'adjacent', 'connected', 'zonePropIncludes', 'markerStateAllowed', 'markerShiftAllowed'];
 const SUPPORTED_QUERY_KINDS = [
   'concat',
   'tokenZones',
@@ -250,6 +250,23 @@ export function lowerConditionNode(
       }
       return {
         value: { op: 'markerStateAllowed', space: space.value, marker: source.marker, state: state.value },
+        diagnostics,
+      };
+    }
+    case 'markerShiftAllowed': {
+      if (typeof source.marker !== 'string') {
+        return missingCapability(path, 'markerShiftAllowed condition', source, [
+          '{ op: "markerShiftAllowed", space: <ZoneSel>, marker: string, delta: <NumericValueExpr> }',
+        ]);
+      }
+      const space = lowerZoneSelector(source.space, context, `${path}.space`);
+      const delta = lowerNumericValueNode(source.delta, context, `${path}.delta`);
+      const diagnostics = [...space.diagnostics, ...delta.diagnostics];
+      if (space.value === null || delta.value === null) {
+        return { value: null, diagnostics };
+      }
+      return {
+        value: { op: 'markerShiftAllowed', space: space.value, marker: source.marker, delta: delta.value },
         diagnostics,
       };
     }

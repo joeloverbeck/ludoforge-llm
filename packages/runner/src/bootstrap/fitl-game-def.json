@@ -2449,6 +2449,13 @@
       "ordering": "set"
     },
     {
+      "id": "out-of-play-NVA:none",
+      "zoneKind": "aux",
+      "owner": "none",
+      "visibility": "public",
+      "ordering": "set"
+    },
+    {
       "id": "trucks-base-staging:none",
       "zoneKind": "aux",
       "owner": "none",
@@ -2457,6 +2464,13 @@
     },
     {
       "id": "available-VC:none",
+      "zoneKind": "aux",
+      "owner": "none",
+      "visibility": "public",
+      "ordering": "set"
+    },
+    {
+      "id": "out-of-play-VC:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
@@ -5146,11 +5160,13 @@
           },
           {
             "seat": "nva",
-            "availableZoneId": "available-NVA:none"
+            "availableZoneId": "available-NVA:none",
+            "outOfPlayZoneId": "out-of-play-NVA:none"
           },
           {
             "seat": "vc",
-            "availableZoneId": "available-VC:none"
+            "availableZoneId": "available-VC:none",
+            "outOfPlayZoneId": "out-of-play-VC:none"
           }
         ],
         "initializations": [
@@ -5661,11 +5677,13 @@
           },
           {
             "seat": "nva",
-            "availableZoneId": "available-NVA:none"
+            "availableZoneId": "available-NVA:none",
+            "outOfPlayZoneId": "out-of-play-NVA:none"
           },
           {
             "seat": "vc",
-            "availableZoneId": "available-VC:none"
+            "availableZoneId": "available-VC:none",
+            "outOfPlayZoneId": "out-of-play-VC:none"
           }
         ],
         "initializations": [
@@ -6260,11 +6278,13 @@
           },
           {
             "seat": "nva",
-            "availableZoneId": "available-NVA:none"
+            "availableZoneId": "available-NVA:none",
+            "outOfPlayZoneId": "out-of-play-NVA:none"
           },
           {
             "seat": "vc",
-            "availableZoneId": "available-VC:none"
+            "availableZoneId": "available-VC:none",
+            "outOfPlayZoneId": "out-of-play-VC:none"
           }
         ],
         "initializations": [
@@ -7203,6 +7223,9 @@
           "availableZoneId"
         ],
         [
+          "outOfPlayZoneId"
+        ],
+        [
           "seat"
         ]
       ]
@@ -7282,6 +7305,9 @@
       "uniqueBy": [
         [
           "availableZoneId"
+        ],
+        [
+          "outOfPlayZoneId"
         ],
         [
           "seat"
@@ -7383,6 +7409,9 @@
       "uniqueBy": [
         [
           "availableZoneId"
+        ],
+        [
+          "outOfPlayZoneId"
         ],
         [
           "seat"
@@ -21466,6 +21495,15 @@
                                                           "left": {
                                                             "ref": "zoneProp",
                                                             "zone": "$space",
+                                                            "prop": "country"
+                                                          },
+                                                          "right": "southVietnam"
+                                                        },
+                                                        {
+                                                          "op": "==",
+                                                          "left": {
+                                                            "ref": "zoneProp",
+                                                            "zone": "$space",
                                                             "prop": "category"
                                                           },
                                                           "right": "province"
@@ -23365,6 +23403,15 @@
                                                           "left": {
                                                             "ref": "zoneProp",
                                                             "zone": "$arvnSpace",
+                                                            "prop": "country"
+                                                          },
+                                                          "right": "southVietnam"
+                                                        },
+                                                        {
+                                                          "op": "==",
+                                                          "left": {
+                                                            "ref": "zoneProp",
+                                                            "zone": "$arvnSpace",
                                                             "prop": "category"
                                                           },
                                                           "right": "province"
@@ -24739,6 +24786,15 @@
                                                           "left": {
                                                             "ref": "zoneProp",
                                                             "zone": "$space",
+                                                            "prop": "country"
+                                                          },
+                                                          "right": "southVietnam"
+                                                        },
+                                                        {
+                                                          "op": "==",
+                                                          "left": {
+                                                            "ref": "zoneProp",
+                                                            "zone": "$space",
                                                             "prop": "category"
                                                           },
                                                           "right": "province"
@@ -24954,7 +25010,28 @@
                             },
                             "right": true
                           },
-                          "then": 99,
+                          "then": {
+                            "if": {
+                              "when": {
+                                "op": ">",
+                                "left": {
+                                  "aggregate": {
+                                    "op": "count",
+                                    "query": {
+                                      "query": "grantContext",
+                                      "key": "maxSpaces"
+                                    }
+                                  }
+                                },
+                                "right": 0
+                              },
+                              "then": {
+                                "ref": "grantContext",
+                                "key": "maxSpaces"
+                              },
+                              "else": 99
+                            }
+                          },
                           "else": {
                             "ref": "gvar",
                             "var": "nvaResources"
@@ -26250,7 +26327,28 @@
                             },
                             "right": true
                           },
-                          "then": 99,
+                          "then": {
+                            "if": {
+                              "when": {
+                                "op": ">",
+                                "left": {
+                                  "aggregate": {
+                                    "op": "count",
+                                    "query": {
+                                      "query": "grantContext",
+                                      "key": "maxSpaces"
+                                    }
+                                  }
+                                },
+                                "right": 0
+                              },
+                              "then": {
+                                "ref": "grantContext",
+                                "key": "maxSpaces"
+                              },
+                              "else": 99
+                            }
+                          },
                           "else": {
                             "ref": "gvar",
                             "var": "vcResources"
@@ -27342,12 +27440,30 @@
             {
               "if": {
                 "when": {
-                  "op": "==",
-                  "left": {
-                    "ref": "binding",
-                    "name": "__actionClass"
-                  },
-                  "right": "limitedOperation"
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "==",
+                      "left": {
+                        "ref": "binding",
+                        "name": "__actionClass"
+                      },
+                      "right": "limitedOperation"
+                    },
+                    {
+                      "op": ">",
+                      "left": {
+                        "aggregate": {
+                          "op": "count",
+                          "query": {
+                            "query": "grantContext",
+                            "key": "originRestrictionKey"
+                          }
+                        }
+                      },
+                      "right": 0
+                    }
+                  ]
                 },
                 "then": [
                   {
@@ -27446,6 +27562,19 @@
                                               "guerrilla",
                                               "troops"
                                             ]
+                                          },
+                                          {
+                                            "field": {
+                                              "kind": "tokenZone"
+                                            },
+                                            "op": "in",
+                                            "value": {
+                                              "ref": "capturedSequenceZones",
+                                              "key": {
+                                                "ref": "grantContext",
+                                                "key": "originRestrictionKey"
+                                              }
+                                            }
                                           }
                                         ]
                                       }
@@ -27465,144 +27594,345 @@
                 ],
                 "else": [
                   {
-                    "chooseN": {
-                      "internalDecisionId": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.chooseN",
-                      "bind": "$targetSpaces",
-                      "options": {
-                        "query": "mapSpaces",
-                        "filter": {
-                          "condition": {
-                            "op": "and",
-                            "args": [
-                              {
-                                "op": "or",
-                                "args": [
-                                  {
-                                    "op": "==",
-                                    "left": {
-                                      "ref": "zoneProp",
-                                      "zone": "$zone",
-                                      "prop": "category"
+                    "if": {
+                      "when": {
+                        "op": ">",
+                        "left": {
+                          "aggregate": {
+                            "op": "count",
+                            "query": {
+                              "query": "grantContext",
+                              "key": "originRestrictionKey"
+                            }
+                          }
+                        },
+                        "right": 0
+                      },
+                      "then": [
+                        {
+                          "chooseN": {
+                            "internalDecisionId": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.then.0.chooseN",
+                            "bind": "$targetSpaces",
+                            "options": {
+                              "query": "mapSpaces",
+                              "filter": {
+                                "condition": {
+                                  "op": "and",
+                                  "args": [
+                                    {
+                                      "op": "or",
+                                      "args": [
+                                        {
+                                          "op": "==",
+                                          "left": {
+                                            "ref": "zoneProp",
+                                            "zone": "$zone",
+                                            "prop": "category"
+                                          },
+                                          "right": "loc"
+                                        },
+                                        {
+                                          "op": "and",
+                                          "args": [
+                                            {
+                                              "op": "or",
+                                              "args": [
+                                                {
+                                                  "op": "==",
+                                                  "left": {
+                                                    "ref": "binding",
+                                                    "name": "__freeOperation"
+                                                  },
+                                                  "right": true
+                                                },
+                                                {
+                                                  "op": ">",
+                                                  "left": {
+                                                    "ref": "gvar",
+                                                    "var": "nvaResources"
+                                                  },
+                                                  "right": 0
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "op": "or",
+                                              "args": [
+                                                {
+                                                  "op": "==",
+                                                  "left": {
+                                                    "ref": "zoneProp",
+                                                    "zone": "$zone",
+                                                    "prop": "category"
+                                                  },
+                                                  "right": "province"
+                                                },
+                                                {
+                                                  "op": "==",
+                                                  "left": {
+                                                    "ref": "zoneProp",
+                                                    "zone": "$zone",
+                                                    "prop": "category"
+                                                  },
+                                                  "right": "city"
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
                                     },
-                                    "right": "loc"
-                                  },
-                                  {
-                                    "op": "and",
-                                    "args": [
-                                      {
-                                        "op": "or",
-                                        "args": [
-                                          {
-                                            "op": "==",
-                                            "left": {
-                                              "ref": "binding",
-                                              "name": "__freeOperation"
-                                            },
-                                            "right": true
-                                          },
-                                          {
-                                            "op": ">",
-                                            "left": {
-                                              "ref": "gvar",
-                                              "var": "nvaResources"
-                                            },
-                                            "right": 0
+                                    {
+                                      "op": ">",
+                                      "left": {
+                                        "aggregate": {
+                                          "op": "count",
+                                          "query": {
+                                            "query": "tokensInAdjacentZones",
+                                            "zone": "$zone",
+                                            "filter": {
+                                              "op": "and",
+                                              "args": [
+                                                {
+                                                  "prop": "faction",
+                                                  "op": "eq",
+                                                  "value": "NVA"
+                                                },
+                                                {
+                                                  "prop": "type",
+                                                  "op": "in",
+                                                  "value": [
+                                                    "guerrilla",
+                                                    "troops"
+                                                  ]
+                                                },
+                                                {
+                                                  "field": {
+                                                    "kind": "tokenZone"
+                                                  },
+                                                  "op": "in",
+                                                  "value": {
+                                                    "ref": "capturedSequenceZones",
+                                                    "key": {
+                                                      "ref": "grantContext",
+                                                      "key": "originRestrictionKey"
+                                                    }
+                                                  }
+                                                }
+                                              ]
+                                            }
                                           }
-                                        ]
+                                        }
                                       },
-                                      {
-                                        "op": "or",
-                                        "args": [
-                                          {
-                                            "op": "==",
-                                            "left": {
-                                              "ref": "zoneProp",
-                                              "zone": "$zone",
-                                              "prop": "category"
-                                            },
-                                            "right": "province"
+                                      "right": 0
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            "max": {
+                              "if": {
+                                "when": {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "binding",
+                                    "name": "__actionClass"
+                                  },
+                                  "right": "limitedOperation"
+                                },
+                                "then": 1,
+                                "else": {
+                                  "if": {
+                                    "when": {
+                                      "op": "==",
+                                      "left": {
+                                        "ref": "binding",
+                                        "name": "__freeOperation"
+                                      },
+                                      "right": true
+                                    },
+                                    "then": 99,
+                                    "else": {
+                                      "if": {
+                                        "when": {
+                                          "op": ">",
+                                          "left": {
+                                            "ref": "gvar",
+                                            "var": "nvaResources"
                                           },
-                                          {
-                                            "op": "==",
-                                            "left": {
-                                              "ref": "zoneProp",
-                                              "zone": "$zone",
-                                              "prop": "category"
-                                            },
-                                            "right": "city"
-                                          }
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ]
-                              },
-                              {
-                                "op": ">",
-                                "left": {
-                                  "aggregate": {
-                                    "op": "count",
-                                    "query": {
-                                      "query": "tokensInAdjacentZones",
-                                      "zone": "$zone",
-                                      "filter": {
-                                        "op": "and",
-                                        "args": [
-                                          {
-                                            "prop": "faction",
-                                            "op": "eq",
-                                            "value": "NVA"
-                                          },
-                                          {
-                                            "prop": "type",
-                                            "op": "in",
-                                            "value": [
-                                              "guerrilla",
-                                              "troops"
-                                            ]
-                                          }
-                                        ]
+                                          "right": 0
+                                        },
+                                        "then": {
+                                          "ref": "gvar",
+                                          "var": "nvaResources"
+                                        },
+                                        "else": 99
                                       }
                                     }
                                   }
-                                },
-                                "right": 0
+                                }
                               }
-                            ]
-                          }
-                        }
-                      },
-                      "max": {
-                        "if": {
-                          "when": {
-                            "op": "==",
-                            "left": {
-                              "ref": "binding",
-                              "name": "__freeOperation"
                             },
-                            "right": true
-                          },
-                          "then": 99,
-                          "else": {
-                            "if": {
-                              "when": {
-                                "op": ">",
-                                "left": {
-                                  "ref": "gvar",
-                                  "var": "nvaResources"
-                                },
-                                "right": 0
-                              },
-                              "then": {
-                                "ref": "gvar",
-                                "var": "nvaResources"
-                              },
-                              "else": 99
-                            }
+                            "min": 1
                           }
                         }
-                      },
-                      "min": 1
+                      ],
+                      "else": [
+                        {
+                          "chooseN": {
+                            "internalDecisionId": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN",
+                            "bind": "$targetSpaces",
+                            "options": {
+                              "query": "mapSpaces",
+                              "filter": {
+                                "condition": {
+                                  "op": "and",
+                                  "args": [
+                                    {
+                                      "op": "or",
+                                      "args": [
+                                        {
+                                          "op": "==",
+                                          "left": {
+                                            "ref": "zoneProp",
+                                            "zone": "$zone",
+                                            "prop": "category"
+                                          },
+                                          "right": "loc"
+                                        },
+                                        {
+                                          "op": "and",
+                                          "args": [
+                                            {
+                                              "op": "or",
+                                              "args": [
+                                                {
+                                                  "op": "==",
+                                                  "left": {
+                                                    "ref": "binding",
+                                                    "name": "__freeOperation"
+                                                  },
+                                                  "right": true
+                                                },
+                                                {
+                                                  "op": ">",
+                                                  "left": {
+                                                    "ref": "gvar",
+                                                    "var": "nvaResources"
+                                                  },
+                                                  "right": 0
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "op": "or",
+                                              "args": [
+                                                {
+                                                  "op": "==",
+                                                  "left": {
+                                                    "ref": "zoneProp",
+                                                    "zone": "$zone",
+                                                    "prop": "category"
+                                                  },
+                                                  "right": "province"
+                                                },
+                                                {
+                                                  "op": "==",
+                                                  "left": {
+                                                    "ref": "zoneProp",
+                                                    "zone": "$zone",
+                                                    "prop": "category"
+                                                  },
+                                                  "right": "city"
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "op": ">",
+                                      "left": {
+                                        "aggregate": {
+                                          "op": "count",
+                                          "query": {
+                                            "query": "tokensInAdjacentZones",
+                                            "zone": "$zone",
+                                            "filter": {
+                                              "op": "and",
+                                              "args": [
+                                                {
+                                                  "prop": "faction",
+                                                  "op": "eq",
+                                                  "value": "NVA"
+                                                },
+                                                {
+                                                  "prop": "type",
+                                                  "op": "in",
+                                                  "value": [
+                                                    "guerrilla",
+                                                    "troops"
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "right": 0
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            "max": {
+                              "if": {
+                                "when": {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "binding",
+                                    "name": "__actionClass"
+                                  },
+                                  "right": "limitedOperation"
+                                },
+                                "then": 1,
+                                "else": {
+                                  "if": {
+                                    "when": {
+                                      "op": "==",
+                                      "left": {
+                                        "ref": "binding",
+                                        "name": "__freeOperation"
+                                      },
+                                      "right": true
+                                    },
+                                    "then": 99,
+                                    "else": {
+                                      "if": {
+                                        "when": {
+                                          "op": ">",
+                                          "left": {
+                                            "ref": "gvar",
+                                            "var": "nvaResources"
+                                          },
+                                          "right": 0
+                                        },
+                                        "then": {
+                                          "ref": "gvar",
+                                          "var": "nvaResources"
+                                        },
+                                        "else": 99
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "min": 1
+                          }
+                        }
+                      ]
                     }
                   }
                 ]
@@ -27624,57 +27954,168 @@
                 },
                 "effects": [
                   {
-                    "chooseN": {
-                      "internalDecisionId": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.0.chooseN",
-                      "bind": "$movingGuerrillas@{$destSpace}",
-                      "options": {
-                        "query": "tokensInAdjacentZones",
-                        "zone": "$destSpace",
-                        "filter": {
-                          "op": "and",
-                          "args": [
-                            {
-                              "prop": "faction",
-                              "op": "eq",
-                              "value": "NVA"
+                    "if": {
+                      "when": {
+                        "op": "and",
+                        "args": [
+                          {
+                            "op": "==",
+                            "left": true,
+                            "right": true
+                          },
+                          {
+                            "op": ">",
+                            "left": {
+                              "aggregate": {
+                                "op": "count",
+                                "query": {
+                                  "query": "grantContext",
+                                  "key": "originRestrictionKey"
+                                }
+                              }
                             },
-                            {
-                              "prop": "type",
-                              "op": "eq",
-                              "value": "guerrilla"
-                            }
-                          ]
-                        }
+                            "right": 0
+                          }
+                        ]
                       },
-                      "max": 99,
-                      "min": 0
-                    }
-                  },
-                  {
-                    "chooseN": {
-                      "internalDecisionId": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.1.chooseN",
-                      "bind": "$movingTroops@{$destSpace}",
-                      "options": {
-                        "query": "tokensInAdjacentZones",
-                        "zone": "$destSpace",
-                        "filter": {
-                          "op": "and",
-                          "args": [
-                            {
-                              "prop": "faction",
-                              "op": "eq",
-                              "value": "NVA"
+                      "then": [
+                        {
+                          "chooseN": {
+                            "internalDecisionId": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.0.if.then.0.chooseN",
+                            "bind": "$movingGuerrillas@{$destSpace}",
+                            "options": {
+                              "query": "tokensInAdjacentZones",
+                              "zone": "$destSpace",
+                              "filter": {
+                                "op": "and",
+                                "args": [
+                                  {
+                                    "prop": "faction",
+                                    "op": "eq",
+                                    "value": "NVA"
+                                  },
+                                  {
+                                    "prop": "type",
+                                    "op": "eq",
+                                    "value": "guerrilla"
+                                  },
+                                  {
+                                    "field": {
+                                      "kind": "tokenZone"
+                                    },
+                                    "op": "in",
+                                    "value": {
+                                      "ref": "capturedSequenceZones",
+                                      "key": {
+                                        "ref": "grantContext",
+                                        "key": "originRestrictionKey"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
                             },
-                            {
-                              "prop": "type",
-                              "op": "eq",
-                              "value": "troops"
-                            }
-                          ]
+                            "max": 99,
+                            "min": 0
+                          }
+                        },
+                        {
+                          "chooseN": {
+                            "internalDecisionId": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.0.if.then.1.chooseN",
+                            "bind": "$movingTroops@{$destSpace}",
+                            "options": {
+                              "query": "tokensInAdjacentZones",
+                              "zone": "$destSpace",
+                              "filter": {
+                                "op": "and",
+                                "args": [
+                                  {
+                                    "prop": "faction",
+                                    "op": "eq",
+                                    "value": "NVA"
+                                  },
+                                  {
+                                    "prop": "type",
+                                    "op": "eq",
+                                    "value": "troops"
+                                  },
+                                  {
+                                    "field": {
+                                      "kind": "tokenZone"
+                                    },
+                                    "op": "in",
+                                    "value": {
+                                      "ref": "capturedSequenceZones",
+                                      "key": {
+                                        "ref": "grantContext",
+                                        "key": "originRestrictionKey"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            "max": 99,
+                            "min": 0
+                          }
                         }
-                      },
-                      "max": 99,
-                      "min": 0
+                      ],
+                      "else": [
+                        {
+                          "chooseN": {
+                            "internalDecisionId": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.0.if.else.0.chooseN",
+                            "bind": "$movingGuerrillas@{$destSpace}",
+                            "options": {
+                              "query": "tokensInAdjacentZones",
+                              "zone": "$destSpace",
+                              "filter": {
+                                "op": "and",
+                                "args": [
+                                  {
+                                    "prop": "faction",
+                                    "op": "eq",
+                                    "value": "NVA"
+                                  },
+                                  {
+                                    "prop": "type",
+                                    "op": "eq",
+                                    "value": "guerrilla"
+                                  }
+                                ]
+                              }
+                            },
+                            "max": 99,
+                            "min": 0
+                          }
+                        },
+                        {
+                          "chooseN": {
+                            "internalDecisionId": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.0.if.else.1.chooseN",
+                            "bind": "$movingTroops@{$destSpace}",
+                            "options": {
+                              "query": "tokensInAdjacentZones",
+                              "zone": "$destSpace",
+                              "filter": {
+                                "op": "and",
+                                "args": [
+                                  {
+                                    "prop": "faction",
+                                    "op": "eq",
+                                    "value": "NVA"
+                                  },
+                                  {
+                                    "prop": "type",
+                                    "op": "eq",
+                                    "value": "troops"
+                                  }
+                                ]
+                              }
+                            },
+                            "max": 99,
+                            "min": 0
+                          }
+                        }
+                      ]
                     }
                   },
                   {
@@ -28187,57 +28628,168 @@
                       },
                       "effects": [
                         {
-                          "chooseN": {
-                            "internalDecisionId": "decision:doc.actionPipelines.10.stages[3].effects.0.if.then.0.forEach.effects.0.chooseN",
-                            "bind": "$movingGuerrillas@{$destSpace}",
-                            "options": {
-                              "query": "tokensInAdjacentZones",
-                              "zone": "$destSpace",
-                              "filter": {
-                                "op": "and",
-                                "args": [
-                                  {
-                                    "prop": "faction",
-                                    "op": "eq",
-                                    "value": "NVA"
+                          "if": {
+                            "when": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": "==",
+                                  "left": false,
+                                  "right": true
+                                },
+                                {
+                                  "op": ">",
+                                  "left": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "grantContext",
+                                        "key": "originRestrictionKey"
+                                      }
+                                    }
                                   },
-                                  {
-                                    "prop": "type",
-                                    "op": "eq",
-                                    "value": "guerrilla"
-                                  }
-                                ]
-                              }
+                                  "right": 0
+                                }
+                              ]
                             },
-                            "max": 99,
-                            "min": 0
-                          }
-                        },
-                        {
-                          "chooseN": {
-                            "internalDecisionId": "decision:doc.actionPipelines.10.stages[3].effects.0.if.then.0.forEach.effects.1.chooseN",
-                            "bind": "$movingTroops@{$destSpace}",
-                            "options": {
-                              "query": "tokensInAdjacentZones",
-                              "zone": "$destSpace",
-                              "filter": {
-                                "op": "and",
-                                "args": [
-                                  {
-                                    "prop": "faction",
-                                    "op": "eq",
-                                    "value": "NVA"
+                            "then": [
+                              {
+                                "chooseN": {
+                                  "internalDecisionId": "decision:doc.actionPipelines.10.stages[3].effects.0.if.then.0.forEach.effects.0.if.then.0.chooseN",
+                                  "bind": "$movingGuerrillas@{$destSpace}",
+                                  "options": {
+                                    "query": "tokensInAdjacentZones",
+                                    "zone": "$destSpace",
+                                    "filter": {
+                                      "op": "and",
+                                      "args": [
+                                        {
+                                          "prop": "faction",
+                                          "op": "eq",
+                                          "value": "NVA"
+                                        },
+                                        {
+                                          "prop": "type",
+                                          "op": "eq",
+                                          "value": "guerrilla"
+                                        },
+                                        {
+                                          "field": {
+                                            "kind": "tokenZone"
+                                          },
+                                          "op": "in",
+                                          "value": {
+                                            "ref": "capturedSequenceZones",
+                                            "key": {
+                                              "ref": "grantContext",
+                                              "key": "originRestrictionKey"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
                                   },
-                                  {
-                                    "prop": "type",
-                                    "op": "eq",
-                                    "value": "troops"
-                                  }
-                                ]
+                                  "max": 99,
+                                  "min": 0
+                                }
+                              },
+                              {
+                                "chooseN": {
+                                  "internalDecisionId": "decision:doc.actionPipelines.10.stages[3].effects.0.if.then.0.forEach.effects.0.if.then.1.chooseN",
+                                  "bind": "$movingTroops@{$destSpace}",
+                                  "options": {
+                                    "query": "tokensInAdjacentZones",
+                                    "zone": "$destSpace",
+                                    "filter": {
+                                      "op": "and",
+                                      "args": [
+                                        {
+                                          "prop": "faction",
+                                          "op": "eq",
+                                          "value": "NVA"
+                                        },
+                                        {
+                                          "prop": "type",
+                                          "op": "eq",
+                                          "value": "troops"
+                                        },
+                                        {
+                                          "field": {
+                                            "kind": "tokenZone"
+                                          },
+                                          "op": "in",
+                                          "value": {
+                                            "ref": "capturedSequenceZones",
+                                            "key": {
+                                              "ref": "grantContext",
+                                              "key": "originRestrictionKey"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "max": 99,
+                                  "min": 0
+                                }
                               }
-                            },
-                            "max": 99,
-                            "min": 0
+                            ],
+                            "else": [
+                              {
+                                "chooseN": {
+                                  "internalDecisionId": "decision:doc.actionPipelines.10.stages[3].effects.0.if.then.0.forEach.effects.0.if.else.0.chooseN",
+                                  "bind": "$movingGuerrillas@{$destSpace}",
+                                  "options": {
+                                    "query": "tokensInAdjacentZones",
+                                    "zone": "$destSpace",
+                                    "filter": {
+                                      "op": "and",
+                                      "args": [
+                                        {
+                                          "prop": "faction",
+                                          "op": "eq",
+                                          "value": "NVA"
+                                        },
+                                        {
+                                          "prop": "type",
+                                          "op": "eq",
+                                          "value": "guerrilla"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "max": 99,
+                                  "min": 0
+                                }
+                              },
+                              {
+                                "chooseN": {
+                                  "internalDecisionId": "decision:doc.actionPipelines.10.stages[3].effects.0.if.then.0.forEach.effects.0.if.else.1.chooseN",
+                                  "bind": "$movingTroops@{$destSpace}",
+                                  "options": {
+                                    "query": "tokensInAdjacentZones",
+                                    "zone": "$destSpace",
+                                    "filter": {
+                                      "op": "and",
+                                      "args": [
+                                        {
+                                          "prop": "faction",
+                                          "op": "eq",
+                                          "value": "NVA"
+                                        },
+                                        {
+                                          "prop": "type",
+                                          "op": "eq",
+                                          "value": "troops"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "max": 99,
+                                  "min": 0
+                                }
+                              }
+                            ]
                           }
                         },
                         {
@@ -28671,12 +29223,30 @@
             {
               "if": {
                 "when": {
-                  "op": "==",
-                  "left": {
-                    "ref": "binding",
-                    "name": "__actionClass"
-                  },
-                  "right": "limitedOperation"
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "==",
+                      "left": {
+                        "ref": "binding",
+                        "name": "__actionClass"
+                      },
+                      "right": "limitedOperation"
+                    },
+                    {
+                      "op": ">",
+                      "left": {
+                        "aggregate": {
+                          "op": "count",
+                          "query": {
+                            "query": "grantContext",
+                            "key": "originRestrictionKey"
+                          }
+                        }
+                      },
+                      "right": 0
+                    }
+                  ]
                 },
                 "then": [
                   {
@@ -28775,6 +29345,19 @@
                                               "guerrilla",
                                               "troops"
                                             ]
+                                          },
+                                          {
+                                            "field": {
+                                              "kind": "tokenZone"
+                                            },
+                                            "op": "in",
+                                            "value": {
+                                              "ref": "capturedSequenceZones",
+                                              "key": {
+                                                "ref": "grantContext",
+                                                "key": "originRestrictionKey"
+                                              }
+                                            }
                                           }
                                         ]
                                       }
@@ -28794,144 +29377,345 @@
                 ],
                 "else": [
                   {
-                    "chooseN": {
-                      "internalDecisionId": "decision:doc.actionPipelines.11.stages[0].effects.0.if.else.0.chooseN",
-                      "bind": "$targetSpaces",
-                      "options": {
-                        "query": "mapSpaces",
-                        "filter": {
-                          "condition": {
-                            "op": "and",
-                            "args": [
-                              {
-                                "op": "or",
-                                "args": [
-                                  {
-                                    "op": "==",
-                                    "left": {
-                                      "ref": "zoneProp",
-                                      "zone": "$zone",
-                                      "prop": "category"
+                    "if": {
+                      "when": {
+                        "op": ">",
+                        "left": {
+                          "aggregate": {
+                            "op": "count",
+                            "query": {
+                              "query": "grantContext",
+                              "key": "originRestrictionKey"
+                            }
+                          }
+                        },
+                        "right": 0
+                      },
+                      "then": [
+                        {
+                          "chooseN": {
+                            "internalDecisionId": "decision:doc.actionPipelines.11.stages[0].effects.0.if.else.0.if.then.0.chooseN",
+                            "bind": "$targetSpaces",
+                            "options": {
+                              "query": "mapSpaces",
+                              "filter": {
+                                "condition": {
+                                  "op": "and",
+                                  "args": [
+                                    {
+                                      "op": "or",
+                                      "args": [
+                                        {
+                                          "op": "==",
+                                          "left": {
+                                            "ref": "zoneProp",
+                                            "zone": "$zone",
+                                            "prop": "category"
+                                          },
+                                          "right": "loc"
+                                        },
+                                        {
+                                          "op": "and",
+                                          "args": [
+                                            {
+                                              "op": "or",
+                                              "args": [
+                                                {
+                                                  "op": "==",
+                                                  "left": {
+                                                    "ref": "binding",
+                                                    "name": "__freeOperation"
+                                                  },
+                                                  "right": true
+                                                },
+                                                {
+                                                  "op": ">",
+                                                  "left": {
+                                                    "ref": "gvar",
+                                                    "var": "vcResources"
+                                                  },
+                                                  "right": 0
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "op": "or",
+                                              "args": [
+                                                {
+                                                  "op": "==",
+                                                  "left": {
+                                                    "ref": "zoneProp",
+                                                    "zone": "$zone",
+                                                    "prop": "category"
+                                                  },
+                                                  "right": "province"
+                                                },
+                                                {
+                                                  "op": "==",
+                                                  "left": {
+                                                    "ref": "zoneProp",
+                                                    "zone": "$zone",
+                                                    "prop": "category"
+                                                  },
+                                                  "right": "city"
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
                                     },
-                                    "right": "loc"
-                                  },
-                                  {
-                                    "op": "and",
-                                    "args": [
-                                      {
-                                        "op": "or",
-                                        "args": [
-                                          {
-                                            "op": "==",
-                                            "left": {
-                                              "ref": "binding",
-                                              "name": "__freeOperation"
-                                            },
-                                            "right": true
-                                          },
-                                          {
-                                            "op": ">",
-                                            "left": {
-                                              "ref": "gvar",
-                                              "var": "vcResources"
-                                            },
-                                            "right": 0
+                                    {
+                                      "op": ">",
+                                      "left": {
+                                        "aggregate": {
+                                          "op": "count",
+                                          "query": {
+                                            "query": "tokensInAdjacentZones",
+                                            "zone": "$zone",
+                                            "filter": {
+                                              "op": "and",
+                                              "args": [
+                                                {
+                                                  "prop": "faction",
+                                                  "op": "eq",
+                                                  "value": "VC"
+                                                },
+                                                {
+                                                  "prop": "type",
+                                                  "op": "in",
+                                                  "value": [
+                                                    "guerrilla",
+                                                    "troops"
+                                                  ]
+                                                },
+                                                {
+                                                  "field": {
+                                                    "kind": "tokenZone"
+                                                  },
+                                                  "op": "in",
+                                                  "value": {
+                                                    "ref": "capturedSequenceZones",
+                                                    "key": {
+                                                      "ref": "grantContext",
+                                                      "key": "originRestrictionKey"
+                                                    }
+                                                  }
+                                                }
+                                              ]
+                                            }
                                           }
-                                        ]
+                                        }
                                       },
-                                      {
-                                        "op": "or",
-                                        "args": [
-                                          {
-                                            "op": "==",
-                                            "left": {
-                                              "ref": "zoneProp",
-                                              "zone": "$zone",
-                                              "prop": "category"
-                                            },
-                                            "right": "province"
+                                      "right": 0
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            "max": {
+                              "if": {
+                                "when": {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "binding",
+                                    "name": "__actionClass"
+                                  },
+                                  "right": "limitedOperation"
+                                },
+                                "then": 1,
+                                "else": {
+                                  "if": {
+                                    "when": {
+                                      "op": "==",
+                                      "left": {
+                                        "ref": "binding",
+                                        "name": "__freeOperation"
+                                      },
+                                      "right": true
+                                    },
+                                    "then": 99,
+                                    "else": {
+                                      "if": {
+                                        "when": {
+                                          "op": ">",
+                                          "left": {
+                                            "ref": "gvar",
+                                            "var": "vcResources"
                                           },
-                                          {
-                                            "op": "==",
-                                            "left": {
-                                              "ref": "zoneProp",
-                                              "zone": "$zone",
-                                              "prop": "category"
-                                            },
-                                            "right": "city"
-                                          }
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ]
-                              },
-                              {
-                                "op": ">",
-                                "left": {
-                                  "aggregate": {
-                                    "op": "count",
-                                    "query": {
-                                      "query": "tokensInAdjacentZones",
-                                      "zone": "$zone",
-                                      "filter": {
-                                        "op": "and",
-                                        "args": [
-                                          {
-                                            "prop": "faction",
-                                            "op": "eq",
-                                            "value": "VC"
-                                          },
-                                          {
-                                            "prop": "type",
-                                            "op": "in",
-                                            "value": [
-                                              "guerrilla",
-                                              "troops"
-                                            ]
-                                          }
-                                        ]
+                                          "right": 0
+                                        },
+                                        "then": {
+                                          "ref": "gvar",
+                                          "var": "vcResources"
+                                        },
+                                        "else": 99
                                       }
                                     }
                                   }
-                                },
-                                "right": 0
+                                }
                               }
-                            ]
-                          }
-                        }
-                      },
-                      "max": {
-                        "if": {
-                          "when": {
-                            "op": "==",
-                            "left": {
-                              "ref": "binding",
-                              "name": "__freeOperation"
                             },
-                            "right": true
-                          },
-                          "then": 99,
-                          "else": {
-                            "if": {
-                              "when": {
-                                "op": ">",
-                                "left": {
-                                  "ref": "gvar",
-                                  "var": "vcResources"
-                                },
-                                "right": 0
-                              },
-                              "then": {
-                                "ref": "gvar",
-                                "var": "vcResources"
-                              },
-                              "else": 99
-                            }
+                            "min": 1
                           }
                         }
-                      },
-                      "min": 1
+                      ],
+                      "else": [
+                        {
+                          "chooseN": {
+                            "internalDecisionId": "decision:doc.actionPipelines.11.stages[0].effects.0.if.else.0.if.else.0.chooseN",
+                            "bind": "$targetSpaces",
+                            "options": {
+                              "query": "mapSpaces",
+                              "filter": {
+                                "condition": {
+                                  "op": "and",
+                                  "args": [
+                                    {
+                                      "op": "or",
+                                      "args": [
+                                        {
+                                          "op": "==",
+                                          "left": {
+                                            "ref": "zoneProp",
+                                            "zone": "$zone",
+                                            "prop": "category"
+                                          },
+                                          "right": "loc"
+                                        },
+                                        {
+                                          "op": "and",
+                                          "args": [
+                                            {
+                                              "op": "or",
+                                              "args": [
+                                                {
+                                                  "op": "==",
+                                                  "left": {
+                                                    "ref": "binding",
+                                                    "name": "__freeOperation"
+                                                  },
+                                                  "right": true
+                                                },
+                                                {
+                                                  "op": ">",
+                                                  "left": {
+                                                    "ref": "gvar",
+                                                    "var": "vcResources"
+                                                  },
+                                                  "right": 0
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "op": "or",
+                                              "args": [
+                                                {
+                                                  "op": "==",
+                                                  "left": {
+                                                    "ref": "zoneProp",
+                                                    "zone": "$zone",
+                                                    "prop": "category"
+                                                  },
+                                                  "right": "province"
+                                                },
+                                                {
+                                                  "op": "==",
+                                                  "left": {
+                                                    "ref": "zoneProp",
+                                                    "zone": "$zone",
+                                                    "prop": "category"
+                                                  },
+                                                  "right": "city"
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "op": ">",
+                                      "left": {
+                                        "aggregate": {
+                                          "op": "count",
+                                          "query": {
+                                            "query": "tokensInAdjacentZones",
+                                            "zone": "$zone",
+                                            "filter": {
+                                              "op": "and",
+                                              "args": [
+                                                {
+                                                  "prop": "faction",
+                                                  "op": "eq",
+                                                  "value": "VC"
+                                                },
+                                                {
+                                                  "prop": "type",
+                                                  "op": "in",
+                                                  "value": [
+                                                    "guerrilla",
+                                                    "troops"
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "right": 0
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            "max": {
+                              "if": {
+                                "when": {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "binding",
+                                    "name": "__actionClass"
+                                  },
+                                  "right": "limitedOperation"
+                                },
+                                "then": 1,
+                                "else": {
+                                  "if": {
+                                    "when": {
+                                      "op": "==",
+                                      "left": {
+                                        "ref": "binding",
+                                        "name": "__freeOperation"
+                                      },
+                                      "right": true
+                                    },
+                                    "then": 99,
+                                    "else": {
+                                      "if": {
+                                        "when": {
+                                          "op": ">",
+                                          "left": {
+                                            "ref": "gvar",
+                                            "var": "vcResources"
+                                          },
+                                          "right": 0
+                                        },
+                                        "then": {
+                                          "ref": "gvar",
+                                          "var": "vcResources"
+                                        },
+                                        "else": 99
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "min": 1
+                          }
+                        }
+                      ]
                     }
                   }
                 ]
@@ -28953,57 +29737,168 @@
                 },
                 "effects": [
                   {
-                    "chooseN": {
-                      "internalDecisionId": "decision:doc.actionPipelines.11.stages[1].effects.0.forEach.effects.0.chooseN",
-                      "bind": "$movingGuerrillas@{$destSpace}",
-                      "options": {
-                        "query": "tokensInAdjacentZones",
-                        "zone": "$destSpace",
-                        "filter": {
-                          "op": "and",
-                          "args": [
-                            {
-                              "prop": "faction",
-                              "op": "eq",
-                              "value": "VC"
+                    "if": {
+                      "when": {
+                        "op": "and",
+                        "args": [
+                          {
+                            "op": "==",
+                            "left": true,
+                            "right": true
+                          },
+                          {
+                            "op": ">",
+                            "left": {
+                              "aggregate": {
+                                "op": "count",
+                                "query": {
+                                  "query": "grantContext",
+                                  "key": "originRestrictionKey"
+                                }
+                              }
                             },
-                            {
-                              "prop": "type",
-                              "op": "eq",
-                              "value": "guerrilla"
-                            }
-                          ]
-                        }
+                            "right": 0
+                          }
+                        ]
                       },
-                      "max": 99,
-                      "min": 0
-                    }
-                  },
-                  {
-                    "chooseN": {
-                      "internalDecisionId": "decision:doc.actionPipelines.11.stages[1].effects.0.forEach.effects.1.chooseN",
-                      "bind": "$movingTroops@{$destSpace}",
-                      "options": {
-                        "query": "tokensInAdjacentZones",
-                        "zone": "$destSpace",
-                        "filter": {
-                          "op": "and",
-                          "args": [
-                            {
-                              "prop": "faction",
-                              "op": "eq",
-                              "value": "VC"
+                      "then": [
+                        {
+                          "chooseN": {
+                            "internalDecisionId": "decision:doc.actionPipelines.11.stages[1].effects.0.forEach.effects.0.if.then.0.chooseN",
+                            "bind": "$movingGuerrillas@{$destSpace}",
+                            "options": {
+                              "query": "tokensInAdjacentZones",
+                              "zone": "$destSpace",
+                              "filter": {
+                                "op": "and",
+                                "args": [
+                                  {
+                                    "prop": "faction",
+                                    "op": "eq",
+                                    "value": "VC"
+                                  },
+                                  {
+                                    "prop": "type",
+                                    "op": "eq",
+                                    "value": "guerrilla"
+                                  },
+                                  {
+                                    "field": {
+                                      "kind": "tokenZone"
+                                    },
+                                    "op": "in",
+                                    "value": {
+                                      "ref": "capturedSequenceZones",
+                                      "key": {
+                                        "ref": "grantContext",
+                                        "key": "originRestrictionKey"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
                             },
-                            {
-                              "prop": "type",
-                              "op": "eq",
-                              "value": "troops"
-                            }
-                          ]
+                            "max": 99,
+                            "min": 0
+                          }
+                        },
+                        {
+                          "chooseN": {
+                            "internalDecisionId": "decision:doc.actionPipelines.11.stages[1].effects.0.forEach.effects.0.if.then.1.chooseN",
+                            "bind": "$movingTroops@{$destSpace}",
+                            "options": {
+                              "query": "tokensInAdjacentZones",
+                              "zone": "$destSpace",
+                              "filter": {
+                                "op": "and",
+                                "args": [
+                                  {
+                                    "prop": "faction",
+                                    "op": "eq",
+                                    "value": "VC"
+                                  },
+                                  {
+                                    "prop": "type",
+                                    "op": "eq",
+                                    "value": "troops"
+                                  },
+                                  {
+                                    "field": {
+                                      "kind": "tokenZone"
+                                    },
+                                    "op": "in",
+                                    "value": {
+                                      "ref": "capturedSequenceZones",
+                                      "key": {
+                                        "ref": "grantContext",
+                                        "key": "originRestrictionKey"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            "max": 99,
+                            "min": 0
+                          }
                         }
-                      },
-                      "max": 99,
-                      "min": 0
+                      ],
+                      "else": [
+                        {
+                          "chooseN": {
+                            "internalDecisionId": "decision:doc.actionPipelines.11.stages[1].effects.0.forEach.effects.0.if.else.0.chooseN",
+                            "bind": "$movingGuerrillas@{$destSpace}",
+                            "options": {
+                              "query": "tokensInAdjacentZones",
+                              "zone": "$destSpace",
+                              "filter": {
+                                "op": "and",
+                                "args": [
+                                  {
+                                    "prop": "faction",
+                                    "op": "eq",
+                                    "value": "VC"
+                                  },
+                                  {
+                                    "prop": "type",
+                                    "op": "eq",
+                                    "value": "guerrilla"
+                                  }
+                                ]
+                              }
+                            },
+                            "max": 99,
+                            "min": 0
+                          }
+                        },
+                        {
+                          "chooseN": {
+                            "internalDecisionId": "decision:doc.actionPipelines.11.stages[1].effects.0.forEach.effects.0.if.else.1.chooseN",
+                            "bind": "$movingTroops@{$destSpace}",
+                            "options": {
+                              "query": "tokensInAdjacentZones",
+                              "zone": "$destSpace",
+                              "filter": {
+                                "op": "and",
+                                "args": [
+                                  {
+                                    "prop": "faction",
+                                    "op": "eq",
+                                    "value": "VC"
+                                  },
+                                  {
+                                    "prop": "type",
+                                    "op": "eq",
+                                    "value": "troops"
+                                  }
+                                ]
+                              }
+                            },
+                            "max": 99,
+                            "min": 0
+                          }
+                        }
+                      ]
                     }
                   },
                   {
@@ -75834,19 +76729,142 @@
             "flavorText": "Cambodian maneuvering."
           },
           "unshaded": {
-            "text": "ARVN free Sweep or Assault in Cambodia.",
+            "text": "US or ARVN executes free Sweep into/in Cambodia, then free Assault in 1 Cambodia space.",
+            "branches": [
+              {
+                "id": "sihanouk-execute-as-us",
+                "order": 1,
+                "freeOperationGrants": [
+                  {
+                    "seat": "us",
+                    "executeAsSeat": "us",
+                    "viabilityPolicy": "requireUsableForEventPlay",
+                    "sequence": {
+                      "batch": "sihanouk-unshaded-us",
+                      "step": 0
+                    },
+                    "completionPolicy": "required",
+                    "postResolutionTurnFlow": "resumeCardFlow",
+                    "operationClass": "operation",
+                    "actionIds": [
+                      "sweep"
+                    ],
+                    "allowDuringMonsoon": true,
+                    "zoneFilter": {
+                      "op": "==",
+                      "left": {
+                        "ref": "zoneProp",
+                        "zone": "$zone",
+                        "prop": "country"
+                      },
+                      "right": "cambodia"
+                    }
+                  },
+                  {
+                    "seat": "us",
+                    "executeAsSeat": "us",
+                    "sequence": {
+                      "batch": "sihanouk-unshaded-us",
+                      "step": 1
+                    },
+                    "completionPolicy": "required",
+                    "postResolutionTurnFlow": "resumeCardFlow",
+                    "operationClass": "limitedOperation",
+                    "actionIds": [
+                      "assault"
+                    ],
+                    "zoneFilter": {
+                      "op": "==",
+                      "left": {
+                        "ref": "zoneProp",
+                        "zone": "$zone",
+                        "prop": "country"
+                      },
+                      "right": "cambodia"
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "sihanouk-execute-as-arvn",
+                "order": 2,
+                "freeOperationGrants": [
+                  {
+                    "seat": "arvn",
+                    "executeAsSeat": "arvn",
+                    "viabilityPolicy": "requireUsableForEventPlay",
+                    "sequence": {
+                      "batch": "sihanouk-unshaded-arvn",
+                      "step": 0
+                    },
+                    "completionPolicy": "required",
+                    "postResolutionTurnFlow": "resumeCardFlow",
+                    "operationClass": "operation",
+                    "actionIds": [
+                      "sweep"
+                    ],
+                    "allowDuringMonsoon": true,
+                    "zoneFilter": {
+                      "op": "==",
+                      "left": {
+                        "ref": "zoneProp",
+                        "zone": "$zone",
+                        "prop": "country"
+                      },
+                      "right": "cambodia"
+                    }
+                  },
+                  {
+                    "seat": "arvn",
+                    "executeAsSeat": "arvn",
+                    "sequence": {
+                      "batch": "sihanouk-unshaded-arvn",
+                      "step": 1
+                    },
+                    "completionPolicy": "required",
+                    "postResolutionTurnFlow": "resumeCardFlow",
+                    "operationClass": "limitedOperation",
+                    "actionIds": [
+                      "assault"
+                    ],
+                    "zoneFilter": {
+                      "op": "==",
+                      "left": {
+                        "ref": "zoneProp",
+                        "zone": "$zone",
+                        "prop": "country"
+                      },
+                      "right": "cambodia"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "shaded": {
+            "text": "VC, then NVA, each free Rally in Cambodia, then free March from spaces that just Rally’d.",
+            "effectTiming": "afterGrants",
             "freeOperationGrants": [
               {
-                "seat": "arvn",
+                "seat": "vc",
                 "sequence": {
-                  "batch": "sihanouk-unshaded-arvn",
+                  "batch": "sihanouk-shaded-vc",
                   "step": 0
                 },
+                "viabilityPolicy": "requireUsableAtIssue",
+                "completionPolicy": "required",
+                "outcomePolicy": "mustChangeGameplayState",
+                "postResolutionTurnFlow": "resumeCardFlow",
                 "operationClass": "operation",
                 "actionIds": [
-                  "sweep",
-                  "assault"
+                  "rally"
                 ],
+                "moveZoneBindings": [
+                  "$targetSpaces"
+                ],
+                "sequenceContext": {
+                  "captureMoveZoneCandidatesAs": "sihanouk-rally-spaces"
+                },
                 "zoneFilter": {
                   "op": "==",
                   "left": {
@@ -75856,27 +76874,94 @@
                   },
                   "right": "cambodia"
                 }
-              }
-            ]
-          },
-          "shaded": {
-            "text": "VC then NVA each get a free operation.",
-            "freeOperationGrants": [
+              },
               {
                 "seat": "vc",
                 "sequence": {
-                  "batch": "sihanouk-shaded-vc-nva",
-                  "step": 0
-                },
-                "operationClass": "operation"
-              },
-              {
-                "seat": "nva",
-                "sequence": {
-                  "batch": "sihanouk-shaded-vc-nva",
+                  "batch": "sihanouk-shaded-vc",
                   "step": 1
                 },
-                "operationClass": "operation"
+                "completionPolicy": "required",
+                "postResolutionTurnFlow": "resumeCardFlow",
+                "operationClass": "operation",
+                "actionIds": [
+                  "march"
+                ],
+                "moveZoneBindings": [
+                  "$targetSpaces",
+                  "$chainSpaces"
+                ],
+                "moveZoneProbeBindings": [
+                  "$targetSpaces",
+                  "$chainSpaces"
+                ],
+                "allowDuringMonsoon": true,
+                "outcomePolicy": "mustChangeGameplayState",
+                "executionContext": {
+                  "originRestrictionKey": "sihanouk-rally-spaces"
+                }
+              }
+            ],
+            "effects": [
+              {
+                "grantFreeOperation": {
+                  "seat": "nva",
+                  "operationClass": "operation",
+                  "actionIds": [
+                    "rally"
+                  ],
+                  "zoneFilter": {
+                    "op": "==",
+                    "left": {
+                      "ref": "zoneProp",
+                      "zone": "$zone",
+                      "prop": "country"
+                    },
+                    "right": "cambodia"
+                  },
+                  "moveZoneBindings": [
+                    "$targetSpaces"
+                  ],
+                  "viabilityPolicy": "requireUsableAtIssue",
+                  "completionPolicy": "required",
+                  "outcomePolicy": "mustChangeGameplayState",
+                  "postResolutionTurnFlow": "resumeCardFlow",
+                  "sequence": {
+                    "batch": "sihanouk-shaded-nva",
+                    "step": 0
+                  },
+                  "sequenceContext": {
+                    "captureMoveZoneCandidatesAs": "sihanouk-rally-spaces"
+                  }
+                }
+              },
+              {
+                "grantFreeOperation": {
+                  "seat": "nva",
+                  "operationClass": "operation",
+                  "actionIds": [
+                    "march"
+                  ],
+                  "moveZoneBindings": [
+                    "$targetSpaces",
+                    "$chainSpaces"
+                  ],
+                  "moveZoneProbeBindings": [
+                    "$targetSpaces",
+                    "$chainSpaces"
+                  ],
+                  "allowDuringMonsoon": true,
+                  "completionPolicy": "required",
+                  "outcomePolicy": "mustChangeGameplayState",
+                  "postResolutionTurnFlow": "resumeCardFlow",
+                  "sequence": {
+                    "batch": "sihanouk-shaded-nva",
+                    "step": 1
+                  },
+                  "executionContext": {
+                    "originRestrictionKey": "sihanouk-rally-spaces"
+                  }
+                }
               }
             ]
           }
@@ -75898,46 +76983,451 @@
             "flavorText": "Regional instability strains Saigon's finances."
           },
           "unshaded": {
-            "text": "NVA and VC Resources each -3; Patronage +3.",
+            "text": "NVA and VC -1 Resource each per space with both. Patronage +2.",
             "effects": [
               {
-                "addVar": {
-                  "scope": "global",
-                  "var": "nvaResources",
-                  "delta": -3
-                }
-              },
-              {
-                "addVar": {
-                  "scope": "global",
-                  "var": "vcResources",
-                  "delta": -3
+                "let": {
+                  "bind": "$spacesWithBothCount",
+                  "value": {
+                    "aggregate": {
+                      "op": "count",
+                      "query": {
+                        "query": "mapSpaces",
+                        "filter": {
+                          "condition": {
+                            "op": "and",
+                            "args": [
+                              {
+                                "op": ">",
+                                "left": {
+                                  "aggregate": {
+                                    "op": "count",
+                                    "query": {
+                                      "query": "tokensInZone",
+                                      "zone": "$zone",
+                                      "filter": {
+                                        "prop": "faction",
+                                        "op": "eq",
+                                        "value": "NVA"
+                                      }
+                                    }
+                                  }
+                                },
+                                "right": 0
+                              },
+                              {
+                                "op": ">",
+                                "left": {
+                                  "aggregate": {
+                                    "op": "count",
+                                    "query": {
+                                      "query": "tokensInZone",
+                                      "zone": "$zone",
+                                      "filter": {
+                                        "prop": "faction",
+                                        "op": "eq",
+                                        "value": "VC"
+                                      }
+                                    }
+                                  }
+                                },
+                                "right": 0
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "in": [
+                    {
+                      "addVar": {
+                        "scope": "global",
+                        "var": "nvaResources",
+                        "delta": {
+                          "op": "*",
+                          "left": -1,
+                          "right": {
+                            "ref": "binding",
+                            "name": "$spacesWithBothCount"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "addVar": {
+                        "scope": "global",
+                        "var": "vcResources",
+                        "delta": {
+                          "op": "*",
+                          "left": -1,
+                          "right": {
+                            "ref": "binding",
+                            "name": "$spacesWithBothCount"
+                          }
+                        }
+                      }
+                    }
+                  ]
                 }
               },
               {
                 "addVar": {
                   "scope": "global",
                   "var": "patronage",
-                  "delta": 3
+                  "delta": 2
                 }
               }
             ]
           },
           "shaded": {
-            "text": "Patronage -3 and ARVN Resources -6.",
+            "text": "Remove Support from Hue, Da Nang, and an adjacent Province.",
             "effects": [
               {
-                "addVar": {
-                  "scope": "global",
-                  "var": "patronage",
-                  "delta": -3
+                "if": {
+                  "when": {
+                    "op": "==",
+                    "left": {
+                      "ref": "markerState",
+                      "space": "hue:none",
+                      "marker": "supportOpposition"
+                    },
+                    "right": "activeSupport"
+                  },
+                  "then": [
+                    {
+                      "shiftMarker": {
+                        "space": "hue:none",
+                        "marker": "supportOpposition",
+                        "delta": -2
+                      }
+                    }
+                  ],
+                  "else": [
+                    {
+                      "if": {
+                        "when": {
+                          "op": "==",
+                          "left": {
+                            "ref": "markerState",
+                            "space": "hue:none",
+                            "marker": "supportOpposition"
+                          },
+                          "right": "passiveSupport"
+                        },
+                        "then": [
+                          {
+                            "shiftMarker": {
+                              "space": "hue:none",
+                              "marker": "supportOpposition",
+                              "delta": -1
+                            }
+                          }
+                        ],
+                        "else": []
+                      }
+                    }
+                  ]
                 }
               },
               {
-                "addVar": {
-                  "scope": "global",
-                  "var": "arvnResources",
-                  "delta": -6
+                "if": {
+                  "when": {
+                    "op": "==",
+                    "left": {
+                      "ref": "markerState",
+                      "space": "da-nang:none",
+                      "marker": "supportOpposition"
+                    },
+                    "right": "activeSupport"
+                  },
+                  "then": [
+                    {
+                      "shiftMarker": {
+                        "space": "da-nang:none",
+                        "marker": "supportOpposition",
+                        "delta": -2
+                      }
+                    }
+                  ],
+                  "else": [
+                    {
+                      "if": {
+                        "when": {
+                          "op": "==",
+                          "left": {
+                            "ref": "markerState",
+                            "space": "da-nang:none",
+                            "marker": "supportOpposition"
+                          },
+                          "right": "passiveSupport"
+                        },
+                        "then": [
+                          {
+                            "shiftMarker": {
+                              "space": "da-nang:none",
+                              "marker": "supportOpposition",
+                              "delta": -1
+                            }
+                          }
+                        ],
+                        "else": []
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.75.shaded.effects.2.chooseN",
+                  "bind": "$annamAdjacentProvince",
+                  "options": {
+                    "query": "mapSpaces",
+                    "filter": {
+                      "condition": {
+                        "op": "and",
+                        "args": [
+                          {
+                            "op": "==",
+                            "left": {
+                              "ref": "zoneProp",
+                              "zone": "$zone",
+                              "prop": "category"
+                            },
+                            "right": "province"
+                          },
+                          {
+                            "op": "or",
+                            "args": [
+                              {
+                                "op": "adjacent",
+                                "left": "$zone",
+                                "right": "hue:none"
+                              },
+                              {
+                                "op": "adjacent",
+                                "left": "$zone",
+                                "right": "da-nang:none"
+                              }
+                            ]
+                          },
+                          {
+                            "op": "or",
+                            "args": [
+                              {
+                                "op": "==",
+                                "left": {
+                                  "ref": "markerState",
+                                  "space": "$zone",
+                                  "marker": "supportOpposition"
+                                },
+                                "right": "passiveSupport"
+                              },
+                              {
+                                "op": "==",
+                                "left": {
+                                  "ref": "markerState",
+                                  "space": "$zone",
+                                  "marker": "supportOpposition"
+                                },
+                                "right": "activeSupport"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "max": {
+                    "op": "min",
+                    "left": 1,
+                    "right": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "category"
+                                  },
+                                  "right": "province"
+                                },
+                                {
+                                  "op": "or",
+                                  "args": [
+                                    {
+                                      "op": "adjacent",
+                                      "left": "$zone",
+                                      "right": "hue:none"
+                                    },
+                                    {
+                                      "op": "adjacent",
+                                      "left": "$zone",
+                                      "right": "da-nang:none"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "or",
+                                  "args": [
+                                    {
+                                      "op": "==",
+                                      "left": {
+                                        "ref": "markerState",
+                                        "space": "$zone",
+                                        "marker": "supportOpposition"
+                                      },
+                                      "right": "passiveSupport"
+                                    },
+                                    {
+                                      "op": "==",
+                                      "left": {
+                                        "ref": "markerState",
+                                        "space": "$zone",
+                                        "marker": "supportOpposition"
+                                      },
+                                      "right": "activeSupport"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "min": {
+                    "op": "min",
+                    "left": 1,
+                    "right": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "category"
+                                  },
+                                  "right": "province"
+                                },
+                                {
+                                  "op": "or",
+                                  "args": [
+                                    {
+                                      "op": "adjacent",
+                                      "left": "$zone",
+                                      "right": "hue:none"
+                                    },
+                                    {
+                                      "op": "adjacent",
+                                      "left": "$zone",
+                                      "right": "da-nang:none"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "or",
+                                  "args": [
+                                    {
+                                      "op": "==",
+                                      "left": {
+                                        "ref": "markerState",
+                                        "space": "$zone",
+                                        "marker": "supportOpposition"
+                                      },
+                                      "right": "passiveSupport"
+                                    },
+                                    {
+                                      "op": "==",
+                                      "left": {
+                                        "ref": "markerState",
+                                        "space": "$zone",
+                                        "marker": "supportOpposition"
+                                      },
+                                      "right": "activeSupport"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$annamProvince",
+                  "over": {
+                    "query": "binding",
+                    "name": "$annamAdjacentProvince"
+                  },
+                  "effects": [
+                    {
+                      "if": {
+                        "when": {
+                          "op": "==",
+                          "left": {
+                            "ref": "markerState",
+                            "space": "$annamProvince",
+                            "marker": "supportOpposition"
+                          },
+                          "right": "activeSupport"
+                        },
+                        "then": [
+                          {
+                            "shiftMarker": {
+                              "space": "$annamProvince",
+                              "marker": "supportOpposition",
+                              "delta": -2
+                            }
+                          }
+                        ],
+                        "else": [
+                          {
+                            "if": {
+                              "when": {
+                                "op": "==",
+                                "left": {
+                                  "ref": "markerState",
+                                  "space": "$annamProvince",
+                                  "marker": "supportOpposition"
+                                },
+                                "right": "passiveSupport"
+                              },
+                              "then": [
+                                {
+                                  "shiftMarker": {
+                                    "space": "$annamProvince",
+                                    "marker": "supportOpposition",
+                                    "delta": -1
+                                  }
+                                }
+                              ],
+                              "else": []
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
                 }
               }
             ]
@@ -75960,28 +77450,14 @@
             "flavorText": "Great-power easing cools conflict intensity and shrinks wartime budgets."
           },
           "unshaded": {
-            "text": "Cut ARVN, NVA, and VC Resources in half.",
+            "text": "Cut NVA and VC Resources each to half their total (round down). 5 Available NVA Troops out of play.",
             "effects": [
-              {
-                "setVar": {
-                  "scope": "global",
-                  "var": "arvnResources",
-                  "value": {
-                    "op": "/",
-                    "left": {
-                      "ref": "gvar",
-                      "var": "arvnResources"
-                    },
-                    "right": 2
-                  }
-                }
-              },
               {
                 "setVar": {
                   "scope": "global",
                   "var": "nvaResources",
                   "value": {
-                    "op": "/",
+                    "op": "floorDiv",
                     "left": {
                       "ref": "gvar",
                       "var": "nvaResources"
@@ -75995,61 +77471,138 @@
                   "scope": "global",
                   "var": "vcResources",
                   "value": {
-                    "op": "/",
+                    "op": "floorDiv",
                     "left": {
                       "ref": "gvar",
                       "var": "vcResources"
                     },
                     "right": 2
                   }
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$nvaTroopOutOfPlay",
+                  "over": {
+                    "query": "tokensInZone",
+                    "zone": "available-NVA:none",
+                    "filter": {
+                      "op": "and",
+                      "args": [
+                        {
+                          "prop": "faction",
+                          "op": "eq",
+                          "value": "NVA"
+                        },
+                        {
+                          "prop": "type",
+                          "op": "eq",
+                          "value": "troops"
+                        }
+                      ]
+                    }
+                  },
+                  "effects": [
+                    {
+                      "moveToken": {
+                        "token": "$nvaTroopOutOfPlay",
+                        "from": "available-NVA:none",
+                        "to": {
+                          "zoneExpr": "out-of-play-NVA:none"
+                        }
+                      }
+                    }
+                  ],
+                  "limit": 5
                 }
               }
             ]
           },
           "shaded": {
-            "text": "Cut ARVN, NVA, and VC Resources in half.",
-            "effects": [
+            "text": "NVA add +9 Resources or free Infiltrate. Then VC free Rally in up to 6 spaces.",
+            "branches": [
               {
-                "setVar": {
-                  "scope": "global",
-                  "var": "arvnResources",
-                  "value": {
-                    "op": "/",
-                    "left": {
-                      "ref": "gvar",
-                      "var": "arvnResources"
-                    },
-                    "right": 2
+                "id": "detente-nva-add-resources",
+                "order": 1,
+                "effects": [
+                  {
+                    "addVar": {
+                      "scope": "global",
+                      "var": "nvaResources",
+                      "delta": 9
+                    }
+                  },
+                  {
+                    "grantFreeOperation": {
+                      "seat": "vc",
+                      "operationClass": "operation",
+                      "actionIds": [
+                        "rally"
+                      ],
+                      "moveZoneBindings": [
+                        "$targetSpaces"
+                      ],
+                      "viabilityPolicy": "requireUsableAtIssue",
+                      "completionPolicy": "required",
+                      "outcomePolicy": "mustChangeGameplayState",
+                      "postResolutionTurnFlow": "resumeCardFlow",
+                      "sequence": {
+                        "batch": "detente-vc-rally",
+                        "step": 0
+                      },
+                      "executionContext": {
+                        "maxSpaces": 6
+                      }
+                    }
                   }
-                }
+                ]
               },
               {
-                "setVar": {
-                  "scope": "global",
-                  "var": "nvaResources",
-                  "value": {
-                    "op": "/",
-                    "left": {
-                      "ref": "gvar",
-                      "var": "nvaResources"
+                "id": "detente-nva-infiltrate",
+                "order": 2,
+                "effectTiming": "afterGrants",
+                "freeOperationGrants": [
+                  {
+                    "seat": "nva",
+                    "sequence": {
+                      "batch": "detente-nva",
+                      "step": 0
                     },
-                    "right": 2
+                    "viabilityPolicy": "requireUsableForEventPlay",
+                    "completionPolicy": "required",
+                    "outcomePolicy": "mustChangeGameplayState",
+                    "postResolutionTurnFlow": "resumeCardFlow",
+                    "operationClass": "specialActivity",
+                    "actionIds": [
+                      "infiltrate"
+                    ]
                   }
-                }
-              },
-              {
-                "setVar": {
-                  "scope": "global",
-                  "var": "vcResources",
-                  "value": {
-                    "op": "/",
-                    "left": {
-                      "ref": "gvar",
-                      "var": "vcResources"
-                    },
-                    "right": 2
+                ],
+                "effects": [
+                  {
+                    "grantFreeOperation": {
+                      "seat": "vc",
+                      "operationClass": "operation",
+                      "actionIds": [
+                        "rally"
+                      ],
+                      "moveZoneBindings": [
+                        "$targetSpaces"
+                      ],
+                      "viabilityPolicy": "requireUsableAtIssue",
+                      "completionPolicy": "required",
+                      "outcomePolicy": "mustChangeGameplayState",
+                      "postResolutionTurnFlow": "resumeCardFlow",
+                      "sequence": {
+                        "batch": "detente-vc-rally",
+                        "step": 0
+                      },
+                      "executionContext": {
+                        "maxSpaces": 6
+                      }
+                    }
                   }
-                }
+                ]
               }
             ]
           }
@@ -82040,6 +83593,8 @@
       "available-VC:none": "VC Available Forces",
       "out-of-play-US:none": "US Out of Play",
       "out-of-play-ARVN:none": "ARVN Out of Play",
+      "out-of-play-NVA:none": "NVA Out of Play",
+      "out-of-play-VC:none": "VC Out of Play",
       "casualties-US:none": "US Casualties",
       "deck:none": "Event Deck",
       "leader:none": "Leader Box",

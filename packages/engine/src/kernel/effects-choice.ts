@@ -7,6 +7,12 @@ import { resolveChooseNCardinality } from './choose-n-cardinality.js';
 import { effectRuntimeError } from './effect-error.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { nextInt } from './prng.js';
+import {
+  cloneDecisionOccurrenceContext,
+  createDecisionOccurrenceContext,
+  consumeDecisionOccurrence,
+  resolveMoveParamForDecisionOccurrence,
+} from './decision-occurrence.js';
 import { resolveSinglePlayerSel } from './resolve-selectors.js';
 import { resolveZoneWithNormalization, selectorResolutionFailurePolicyForMode } from './selector-resolution-normalization.js';
 import { findSpaceMarkerConstraintViolation } from './space-marker-rules.js';
@@ -43,6 +49,8 @@ const pendingChoiceStructuralKey = (pendingChoice: ChoicePendingRequest): string
   return JSON.stringify({
     decisionPlayer: normalized.decisionPlayer ?? null,
     decisionId: normalized.decisionId,
+    occurrenceIndex: normalized.occurrenceIndex,
+    occurrenceKey: normalized.occurrenceKey,
     name: normalized.name,
     type: normalized.type,
     options: normalized.options.map((option) => choiceOptionKey(option.value)),
@@ -333,7 +341,13 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
     });
   });
   const comparableBindingMap = buildComparableDomainBindingMap('chooseOne', resolvedBind, decisionId, options, normalizedOptions);
-  if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, decisionId)) {
+  const occurrence = consumeDecisionOccurrence(
+    ctx.decisionOccurrences ?? createDecisionOccurrenceContext(),
+    decisionId,
+    resolvedBind,
+  );
+  const selected = resolveMoveParamForDecisionOccurrence(ctx.moveParams, occurrence);
+  if (selected === undefined) {
     if (ctx.mode === 'discovery') {
       const targetKinds = deriveChoiceTargetKinds(effect.chooseOne.options);
       return {
@@ -345,6 +359,17 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
           complete: false,
           ...(effect.chooseOne.chooser === undefined ? {} : { decisionPlayer: choiceDecisionPlayer }),
           decisionId,
+          occurrenceIndex: occurrence.decisionIndex,
+          occurrenceKey: occurrence.decisionOccurrenceKey,
+          nameOccurrenceIndex: occurrence.nameIndex,
+          nameOccurrenceKey: occurrence.nameOccurrenceKey,
+          ...(occurrence.canonicalAlias === null ? {} : { canonicalAlias: occurrence.canonicalAlias }),
+          ...(occurrence.canonicalAliasIndex === null
+            ? {}
+            : { canonicalAliasOccurrenceIndex: occurrence.canonicalAliasIndex }),
+          ...(occurrence.canonicalAliasOccurrenceKey === null
+            ? {}
+            : { canonicalAliasOccurrenceKey: occurrence.canonicalAliasOccurrenceKey }),
           name: resolvedBind,
           type: 'chooseOne',
           options: normalizedOptions.map((value) => ({
@@ -360,12 +385,12 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
       effectType: 'chooseOne',
       bind: resolvedBind,
       decisionId,
+      occurrenceIndex: occurrence.decisionIndex,
+      occurrenceKey: occurrence.decisionOccurrenceKey,
       bindTemplate: effect.chooseOne.bind,
       availableMoveParams: Object.keys(ctx.moveParams).sort(),
     });
   }
-
-  const selected = ctx.moveParams[decisionId];
   if (effect.chooseOne.chooser === undefined && providedDecisionPlayer !== choiceDecisionPlayer) {
     const runtimeReason = ctx.decisionAuthority.ownershipEnforcement === 'probe'
       ? EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH
@@ -484,7 +509,13 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   });
   const comparableBindingMap = buildComparableDomainBindingMap('chooseN', bind, decisionId, options, normalizedOptions);
   const clampedMax = Math.min(maxCardinality, normalizedOptions.length);
-  if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, decisionId)) {
+  const occurrence = consumeDecisionOccurrence(
+    ctx.decisionOccurrences ?? createDecisionOccurrenceContext(),
+    decisionId,
+    bind,
+  );
+  const selectedValue = resolveMoveParamForDecisionOccurrence(ctx.moveParams, occurrence);
+  if (selectedValue === undefined) {
     if (ctx.mode === 'discovery') {
       const targetKinds = deriveChoiceTargetKinds(chooseN.options);
       return {
@@ -496,6 +527,17 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
           complete: false,
           ...(chooseN.chooser === undefined ? {} : { decisionPlayer: choiceDecisionPlayer }),
           decisionId,
+          occurrenceIndex: occurrence.decisionIndex,
+          occurrenceKey: occurrence.decisionOccurrenceKey,
+          nameOccurrenceIndex: occurrence.nameIndex,
+          nameOccurrenceKey: occurrence.nameOccurrenceKey,
+          ...(occurrence.canonicalAlias === null ? {} : { canonicalAlias: occurrence.canonicalAlias }),
+          ...(occurrence.canonicalAliasIndex === null
+            ? {}
+            : { canonicalAliasOccurrenceIndex: occurrence.canonicalAliasIndex }),
+          ...(occurrence.canonicalAliasOccurrenceKey === null
+            ? {}
+            : { canonicalAliasOccurrenceKey: occurrence.canonicalAliasOccurrenceKey }),
           name: bind,
           type: 'chooseN',
           options: normalizedOptions.map((value) => ({
@@ -513,11 +555,11 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
       effectType: 'chooseN',
       bind,
       decisionId,
+      occurrenceIndex: occurrence.decisionIndex,
+      occurrenceKey: occurrence.decisionOccurrenceKey,
       availableMoveParams: Object.keys(ctx.moveParams).sort(),
     });
   }
-
-  const selectedValue = ctx.moveParams[decisionId];
   if (chooseN.chooser === undefined && providedDecisionPlayer !== choiceDecisionPlayer) {
     const runtimeReason = ctx.decisionAuthority.ownershipEnforcement === 'probe'
       ? EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH
@@ -666,6 +708,9 @@ export const applyRollRandom = (
     for (let rolledValue = minValue; rolledValue <= maxValue; rolledValue += 1) {
       const nestedCtx: EffectContext = {
         ...ctx,
+        decisionOccurrences: cloneDecisionOccurrenceContext(
+          ctx.decisionOccurrences ?? createDecisionOccurrenceContext(),
+        ),
         bindings: {
           ...ctx.bindings,
           [effect.rollRandom.bind]: rolledValue,

@@ -272,6 +272,44 @@ describe('FITL card-97 Brinks Hotel shaded — VC city shift + terror', () => {
     );
   });
 
+  it('does not stack terror beyond the shared marker pool cap, even when terror already exists there', () => {
+    const def = compileDef();
+    const baseZoneVars = clearAllZones(initialState(def, 3001, 4).state).zoneVars ?? {};
+    const state = setupBrinksState(def, {
+      terrorSabotageMarkersPlaced: 15,
+      zoneTokens: {
+        'saigon:none': [makeToken('vc-g-0', 'guerrilla', 'VC')],
+      },
+      markers: {
+        'saigon:none': { supportOpposition: 'neutral' },
+      },
+      zoneVars: {
+        ...baseZoneVars,
+        'saigon:none': {
+          ...(baseZoneVars['saigon:none'] ?? {}),
+          terrorCount: 2,
+        },
+      },
+    });
+    const move = findShadedMove(def, state);
+    assert.notEqual(move, undefined, 'Expected shaded event move');
+
+    const overrides: DecisionOverrideRule[] = [
+      {
+        when: (req) => req.decisionId.includes('targetCity') || req.name === '$targetCity',
+        value: 'saigon:none',
+      },
+    ];
+    const result = applyMoveWithResolvedDecisionIds(def, state, move!, { overrides });
+    assert.equal(result.state.zoneVars?.['saigon:none']?.['terrorCount'], 2);
+    assert.equal(result.state.globalVars['terrorSabotageMarkersPlaced'], 15);
+    assert.equal(
+      result.state.markers['saigon:none']?.['supportOpposition'],
+      'activeOpposition',
+      'Support shift should still apply even when no Terror markers remain',
+    );
+  });
+
   it('only targets cities with VC presence (skips cities without VC)', () => {
     const def = compileDef();
     const state = setupBrinksState(def, {

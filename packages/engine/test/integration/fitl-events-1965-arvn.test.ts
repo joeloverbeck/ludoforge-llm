@@ -58,7 +58,7 @@ const expectedCards = [
   { id: 'card-72', order: 72, title: 'Body Count', sideMode: 'dual', seatOrder: ['ARVN', 'NVA', 'US', 'VC'] },
   { id: 'card-73', order: 73, title: 'Great Society', sideMode: 'dual', seatOrder: ['ARVN', 'NVA', 'US', 'VC'] },
   { id: 'card-76', order: 76, title: 'Annam', sideMode: 'dual', seatOrder: ['ARVN', 'NVA', 'VC', 'US'] },
-  { id: 'card-78', order: 78, title: 'General Landsdale', sideMode: 'dual', seatOrder: ['ARVN', 'NVA', 'VC', 'US'] },
+  { id: 'card-78', order: 78, title: 'General Lansdale', sideMode: 'dual', seatOrder: ['ARVN', 'NVA', 'VC', 'US'] },
   { id: 'card-81', order: 81, title: 'CIDG', sideMode: 'dual', seatOrder: ['ARVN', 'VC', 'US', 'NVA'] },
   { id: 'card-83', order: 83, title: 'Election', sideMode: 'dual', seatOrder: ['ARVN', 'VC', 'US', 'NVA'] },
   { id: 'card-85', order: 85, title: 'USAID', sideMode: 'dual', seatOrder: ['ARVN', 'VC', 'US', 'NVA'] },

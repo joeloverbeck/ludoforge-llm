@@ -1209,6 +1209,29 @@ effectMacros:
                       then:
                         - shiftMarker: { space: { param: space }, marker: supportOpposition, delta: -1 }
 
+  # ── place-terror-marker ───────────────────────────────────────────────────
+  # Shared terror placement for Province/City events.
+  # Supports either idempotent placement or explicit stacking, always bounded
+  # by the shared terror/sabotage marker pool.
+  - id: place-terror-marker
+    params:
+      - { name: space, type: string }
+      - { name: allowExistingTerror, type: value }
+    exports: []
+    effects:
+      - if:
+          when:
+            op: and
+            args:
+              - { op: '<', left: { ref: gvar, var: terrorSabotageMarkersPlaced }, right: 15 }
+              - op: or
+                args:
+                  - { op: '==', left: { param: allowExistingTerror }, right: true }
+                  - { op: '==', left: { ref: zoneVar, zone: { param: space }, var: terrorCount }, right: 0 }
+          then:
+            - addVar: { scope: zoneVar, zone: { param: space }, var: terrorCount, delta: 1 }
+            - addVar: { scope: global, var: terrorSabotageMarkersPlaced, delta: 1 }
+
   # ── per-province-city-cost ─────────────────────────────────────────────────
   # Faction-conditional per-space cost that charges 0 for LoCs.
   - id: per-province-city-cost

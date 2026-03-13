@@ -108,6 +108,17 @@ const runtimeBindingsForMove = (
 ): Readonly<Record<string, MoveParamValue | boolean | string>> =>
   buildMoveRuntimeBindings(move, decisionBindingsForMove(actionPipeline, move.params));
 
+const canonicalTurnFlowMove = (
+  move: Move,
+  actionPipeline: ActionPipelineDef | undefined,
+): Move => ({
+  ...move,
+  params: {
+    ...decisionBindingsForMove(actionPipeline, move.params),
+    ...move.params,
+  },
+});
+
 const validateFreeOperationOutcomePolicy = (
   def: GameDef,
   beforeState: GameState,
@@ -456,14 +467,16 @@ const validateTurnFlowWindowAccess = (
   def: GameDef,
   state: GameState,
   move: Move,
+  actionPipeline: ActionPipelineDef | undefined,
   seatResolution: ReturnType<typeof createSeatResolutionContext>,
 ): void => {
+  const turnFlowMove = canonicalTurnFlowMove(move, actionPipeline);
   if (!isMoveAllowedByTurnFlowOptionMatrix(def, state, move)) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
       detail: 'turnFlow option matrix rejected move action class',
     });
   }
-  if (applyTurnFlowWindowFilters(def, state, [move], seatResolution).length === 0) {
+  if (applyTurnFlowWindowFilters(def, state, [turnFlowMove], seatResolution).length === 0) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
       detail: 'turnFlow window filters rejected move',
     });
@@ -729,7 +742,7 @@ const validateMove = (
   validateDecisionSequenceForMove(def, state, move, {
     allowIncomplete,
   });
-  validateTurnFlowWindowAccess(def, state, move, seatResolution);
+  validateTurnFlowWindowAccess(def, state, move, preflight.actionPipeline, seatResolution);
   return {
     preflight,
   };
@@ -1583,7 +1596,7 @@ export const probeMoveViability = (
         }
       }
     }
-    validateTurnFlowWindowAccess(def, state, move, seatResolution);
+    validateTurnFlowWindowAccess(def, state, move, preflight.actionPipeline, seatResolution);
 
     const sequence = resolveMoveDecisionSequence(def, state, move, { choose: () => undefined }, runtime);
     if (sequence.illegal !== undefined) {

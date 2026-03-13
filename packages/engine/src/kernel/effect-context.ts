@@ -1,4 +1,8 @@
 import type { PlayerId } from './branded.js';
+import {
+  createDecisionOccurrenceContext,
+  type DecisionOccurrenceContext,
+} from './decision-occurrence.js';
 import type {
   DecisionAuthorityProbeContext,
   DecisionAuthorityStrictContext,
@@ -50,6 +54,8 @@ interface EffectContextBase extends WriteContext {
   readonly iterationPath?: string;
   /** Runtime scope carrying previously executed grant definitions for sequence viability probes. */
   readonly freeOperationProbeScope?: FreeOperationProbeScope;
+  /** Mutable occurrence counters so repeated dynamic decisions can be addressed stably. */
+  readonly decisionOccurrences?: DecisionOccurrenceContext;
 }
 
 export interface ExecutionEffectContext extends EffectContextBase {
@@ -101,6 +107,7 @@ export const createExecutionEffectContext = (options: RuntimeEffectContextOption
       player: decisionAuthorityPlayer,
       ownershipEnforcement: 'strict',
     },
+    decisionOccurrences: ctx.decisionOccurrences ?? createDecisionOccurrenceContext(),
     mode: 'execution',
   };
 };
@@ -122,6 +129,7 @@ export const createDiscoveryStrictEffectContext = (options: RuntimeEffectContext
       player: decisionAuthorityPlayer,
       ownershipEnforcement: 'strict',
     },
+    decisionOccurrences: ctx.decisionOccurrences ?? createDecisionOccurrenceContext(),
     mode: 'discovery',
   };
 };
@@ -145,6 +153,7 @@ export const createDiscoveryProbeEffectContext = (
       player: decisionAuthorityPlayer,
       ownershipEnforcement: 'probe',
     },
+    decisionOccurrences: ctx.decisionOccurrences ?? createDecisionOccurrenceContext(),
     mode: 'discovery',
   };
 };

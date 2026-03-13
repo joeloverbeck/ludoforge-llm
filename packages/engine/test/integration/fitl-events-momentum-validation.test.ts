@@ -28,7 +28,7 @@ const expectedMomentumCards = [
   { id: 'card-41', title: 'Bombing Pause', sides: ['unshaded'] },
   { id: 'card-46', title: '559th Transport Grp', sides: ['unshaded'] },
   { id: 'card-72', title: 'Body Count', sides: ['unshaded'] },
-  { id: 'card-78', title: 'General Landsdale', sides: ['shaded'] },
+  { id: 'card-78', title: 'General Lansdale', sides: ['shaded'] },
   { id: 'card-115', title: 'Typhoon Kate', sides: ['unshaded'] },
 ] as const satisfies ReadonlyArray<{ readonly id: string; readonly title: string; readonly sides: readonly EventSide[] }>;
 

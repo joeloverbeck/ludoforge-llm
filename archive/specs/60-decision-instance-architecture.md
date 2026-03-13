@@ -1,6 +1,6 @@
 # Spec 60: First-Class Decision Instance Architecture
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P1
 **Complexity**: L
 **Dependencies**: None
@@ -564,3 +564,18 @@ Mitigation:
 This spec intentionally treats the current occurrence-based patch as a useful bridge, not the end-state architecture.
 
 The current system is serviceable, but it still carries historical simplifications. This spec defines the cleaner endpoint: `DecisionKey` becomes an explicit kernel concept, `DecisionScope` provides immutable isolation, serialization is a codec concern, and repeated/nested/stochastic authored choices become routine rather than exceptional.
+
+## Outcome
+
+- Completion date: 2026-03-13
+- What actually changed: the repository now uses `DecisionKey` as the canonical decision identity and immutable `DecisionScope` threading across the engine/runtime path, with runner progressive-choice state and rendering aligned on `decisionKey`.
+- Deviations from original plan: by the time DECINSARC-008 was reassessed, the architecture and its migration work had already been landed. Finalization therefore focused on validating the integrated design, not implementing the core phases described here.
+- Verification results:
+  - `pnpm turbo build`
+  - `pnpm turbo typecheck`
+  - `pnpm turbo lint`
+  - `pnpm turbo schema:artifacts`
+  - `pnpm -F @ludoforge/engine test:all`
+  - `pnpm -F @ludoforge/runner test`
+  - `pnpm turbo test`
+  - `pnpm test`

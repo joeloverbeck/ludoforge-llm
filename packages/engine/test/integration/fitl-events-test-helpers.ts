@@ -1,4 +1,5 @@
 import type { EventEligibilityOverrideDef } from '../../src/kernel/index.js';
+export * from '../helpers/fitl-event-fidelity-helpers.js';
 
 export type FactionRef = number | string;
 

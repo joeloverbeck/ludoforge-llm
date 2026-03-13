@@ -9,7 +9,7 @@
     "bootstrap:fixtures": "pnpm -F @ludoforge/engine build && node scripts/bootstrap-fixtures.mjs generate",
     "bootstrap:fixtures:check": "pnpm -F @ludoforge/engine build && node scripts/bootstrap-fixtures.mjs check",
     "clean": "rm -rf dist",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "eslint . --ext .ts,.tsx --max-warnings 0",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview"

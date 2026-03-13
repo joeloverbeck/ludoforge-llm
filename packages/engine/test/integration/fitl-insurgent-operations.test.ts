@@ -43,7 +43,6 @@ const withSupportState = (state: GameState, zoneId: string, supportState: string
 });
 
 describe('FITL insurgent operations integration', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const parseProfile = (id: string): any => {
     const { parsed } = FITL_PRODUCTION_FIXTURE;
     const profile = parsed.doc.actionPipelines?.find((p: { id: string }) => p.id === id);

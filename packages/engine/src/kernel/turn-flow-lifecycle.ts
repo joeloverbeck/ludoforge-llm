@@ -12,15 +12,18 @@ interface LifecycleResult {
   readonly traceEntries: readonly TriggerLogEntry[];
 }
 
-const cardDrivenConfig = (def: GameDef) =>
+type CardDrivenConfig = NonNullable<Extract<GameDef['turnOrder'], { readonly type: 'cardDriven' }>['config']>;
+type CardDrivenRuntime = Extract<GameState['turnOrderState'], { readonly type: 'cardDriven' }>['runtime'];
+
+const cardDrivenConfig = (def: GameDef): CardDrivenConfig | null =>
   def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config : null;
 
-const cardDrivenRuntime = (state: GameState) =>
+const cardDrivenRuntime = (state: GameState): CardDrivenRuntime | null =>
   state.turnOrderState.type === 'cardDriven' ? state.turnOrderState.runtime : null;
 
 const topCardId = (state: GameState, zoneId: string): string | null => state.zones[zoneId]?.[0]?.id ?? null;
 
-const snapshot = (state: GameState, slots: LifecycleSlots) => ({
+const snapshot = (state: GameState, slots: LifecycleSlots): { readonly playedCardId: string | null; readonly lookaheadCardId: string | null; readonly leaderCardId: string | null } => ({
   playedCardId: topCardId(state, slots.played),
   lookaheadCardId: topCardId(state, slots.lookahead),
   leaderCardId: topCardId(state, slots.leader),

@@ -17,7 +17,6 @@ import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js'
 
 const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 type MarkerState = 'inactive' | 'unshaded' | 'shaded';
 
@@ -604,5 +603,3 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
     assert.equal(unshadedToken?.props.activity, 'underground', 'cap_cadres unshaded should reduce VC Terror guerrilla activation cost to 0 in current model');
   });
 });
-
-/* eslint-enable @typescript-eslint/no-explicit-any */

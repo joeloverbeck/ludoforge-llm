@@ -10,7 +10,6 @@ import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js'
 
 const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 const SWEEP_SPACE = 'quang-tri-thua-thien:none';
 const SWEEP_SPACE_2 = 'quang-nam:none';
@@ -221,5 +220,3 @@ describe('FITL Booby Traps shaded sweep integration', () => {
     }
   });
 });
-
-/* eslint-enable @typescript-eslint/no-explicit-any */

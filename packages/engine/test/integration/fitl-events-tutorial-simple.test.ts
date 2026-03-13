@@ -102,8 +102,15 @@ describe('FITL tutorial simple event-card production spec', () => {
     ]);
 
     // Shaded: chooseN for ARVN pieces from any map space
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- EffectAST union narrowing
-    const chooseEffect = card?.shaded?.effects?.[0] as any;
+    const chooseEffect = card?.shaded?.effects?.[0] as { chooseN: {
+      bind: string;
+      min: number;
+      max: number;
+      options: {
+        query: string;
+        filter: unknown;
+      };
+    } };
     assert.notEqual(chooseEffect, undefined);
     assert.equal('chooseN' in chooseEffect, true);
     assert.equal(chooseEffect.chooseN.bind, '$arvnPiecesToRemove');
@@ -113,8 +120,11 @@ describe('FITL tutorial simple event-card production spec', () => {
     assert.deepEqual(chooseEffect.chooseN.options.filter, { prop: 'faction', op: 'eq', value: 'ARVN' });
 
     // Shaded: forEach with countBind + in for patronage
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- EffectAST union narrowing
-    const forEachEffect = card?.shaded?.effects?.[1] as any;
+    const forEachEffect = card?.shaded?.effects?.[1] as { forEach: {
+      bind: string;
+      countBind?: string;
+      in: readonly unknown[];
+    } };
     assert.notEqual(forEachEffect, undefined);
     assert.equal('forEach' in forEachEffect, true);
     assert.equal(forEachEffect.forEach.bind, '$arvnPiece');

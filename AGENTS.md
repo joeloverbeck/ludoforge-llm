@@ -54,6 +54,7 @@ For documentation updates:
 - Use concise Markdown with clear headings and short sections.
 - Keep spec filenames numeric and ordered (example: `specs/08b-game-spec-compiler.md`).
 - Preserve deterministic terminology (`GameDef`, `GameSpecDoc`, `GameTrace`) exactly.
+- For Fire in the Lake event authoring guidance, use `docs/fitl-event-authoring-cookbook.md`; treat `archive/specs/29-fitl-event-card-encoding.md` as historical implementation tracking, not the living authoring guide.
 
 For TypeScript code:
 - strict TypeScript, immutable state updates, side-effect-free kernel logic.
@@ -95,7 +96,7 @@ Do not duplicate or drift this procedure in other files; update `docs/archival-w
 <!-- gitnexus:start -->
 # GitNexus MCP
 
-This project is indexed by GitNexus as **ludoforge-llm** (9385 symbols, 27287 relationships, 300 execution flows).
+This project is indexed by GitNexus as **ludoforge-llm** (9435 symbols, 27476 relationships, 300 execution flows).
 
 ## Always Start Here
 

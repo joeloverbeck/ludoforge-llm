@@ -32,7 +32,7 @@
   "scripts": {
     "build": "node scripts/run-with-dist-lock.mjs \"pnpm run clean && tsc\"",
     "clean": "rm -rf dist",
-    "lint": "eslint . --ext .ts",
+    "lint": "eslint . --ext .ts --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "schema:artifacts": "node scripts/run-with-dist-lock.mjs \"node scripts/schema-artifacts.mjs\"",
     "schema:artifacts:check": "node scripts/schema-artifacts.mjs --check",

@@ -1,3 +1,4 @@
+import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { EffectAST, PlayerSel, TokenFilterExpr, ValueExpr } from '../kernel/types.js';
 import {
   lowerConditionNode,
@@ -31,13 +32,35 @@ import {
   setTokenProp as setTokenPropBuilder,
 } from '../kernel/ast-builders.js';
 
+function validateCanonicalTokenBindingField(
+  effectKind: 'moveToken' | 'moveTokenAdjacent' | 'destroyToken' | 'setTokenProp',
+  token: unknown,
+  scope: BindingScope,
+  path: string,
+): readonly Diagnostic[] {
+  if (typeof token !== 'string') {
+    return [
+      {
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
+        path,
+        severity: 'error',
+        message: `${effectKind}.token must be a canonical token binding string like "$token", but received ${formatValue(token)}.`,
+        suggestion: 'Bind the token with chooseOne, chooseN, or forEach, then reference it directly as token: $token.',
+        alternatives: ['$token'],
+      },
+    ];
+  }
+  return validateBindingReference(token, scope, path);
+}
+
 export function lowerMoveTokenEffect(
   source: Record<string, unknown>,
   context: EffectLoweringContext,
   scope: BindingScope,
   path: string,
 ): EffectLoweringResult<EffectAST> {
-  if (typeof source.token !== 'string') {
+  const token = source.token;
+  if (token === undefined) {
     return missingCapability(path, 'moveToken effect', source, ['{ moveToken: { token, from, to, position? } }']);
   }
 
@@ -51,7 +74,7 @@ export function lowerMoveTokenEffect(
   const diagnostics = [
     ...from.diagnostics,
     ...to.diagnostics,
-    ...validateBindingReference(source.token, scope, `${path}.token`),
+    ...validateCanonicalTokenBindingField('moveToken', token, scope, `${path}.token`),
   ];
   if (position === null) {
     diagnostics.push({
@@ -63,13 +86,19 @@ export function lowerMoveTokenEffect(
       alternatives: ['top', 'bottom', 'random'],
     });
   }
-  if (from.value === null || to.value === null || position === null) {
+  if (
+    diagnostics.some((diagnostic) => diagnostic.severity === 'error')
+    || typeof token !== 'string'
+    || from.value === null
+    || to.value === null
+    || position === null
+  ) {
     return { value: null, diagnostics };
   }
 
   return {
     value: moveTokenBuilder({
-      token: source.token,
+      token,
       from: from.value,
       to: to.value,
       ...(position === undefined ? {} : { position }),
@@ -110,13 +139,14 @@ export function lowerMoveTokenAdjacentEffect(
   scope: BindingScope,
   path: string,
 ): EffectLoweringResult<EffectAST> {
-  if (typeof source.token !== 'string') {
+  const token = source.token;
+  if (token === undefined) {
     return missingCapability(path, 'moveTokenAdjacent effect', source, ['{ moveTokenAdjacent: { token, from, direction? } }']);
   }
 
   const from = lowerZoneSelector(source.from, context, scope, `${path}.from`);
   const directionValue = source.direction;
-  const diagnostics = [...from.diagnostics, ...validateBindingReference(source.token, scope, `${path}.token`)];
+  const diagnostics = [...from.diagnostics, ...validateCanonicalTokenBindingField('moveTokenAdjacent', token, scope, `${path}.token`)];
 
   if (directionValue !== undefined && typeof directionValue !== 'string') {
     diagnostics.push(...missingCapability(`${path}.direction`, 'moveTokenAdjacent direction', directionValue, ['string']).diagnostics);
@@ -124,13 +154,18 @@ export function lowerMoveTokenAdjacentEffect(
   if (typeof directionValue === 'string') {
     diagnostics.push(...validatePrefixedBindingReference(directionValue, scope, `${path}.direction`));
   }
-  if (from.value === null || (directionValue !== undefined && typeof directionValue !== 'string')) {
+  if (
+    diagnostics.some((diagnostic) => diagnostic.severity === 'error')
+    || typeof token !== 'string'
+    || from.value === null
+    || (directionValue !== undefined && typeof directionValue !== 'string')
+  ) {
     return { value: null, diagnostics };
   }
 
   return {
     value: moveTokenAdjacentBuilder({
-      token: source.token,
+      token,
       from: from.value,
       ...(directionValue === undefined ? {} : { direction: directionValue }),
     }),
@@ -323,15 +358,16 @@ export function lowerDestroyTokenEffect(
   scope: BindingScope,
   path: string,
 ): EffectLoweringResult<EffectAST> {
-  if (typeof source.token !== 'string') {
+  const token = source.token;
+  if (token === undefined) {
     return missingCapability(path, 'destroyToken effect', source, ['{ destroyToken: { token } }']);
   }
-  const diagnostics = validateBindingReference(source.token, scope, `${path}.token`);
-  if (diagnostics.some((diagnostic) => diagnostic.severity === 'error')) {
+  const diagnostics = validateCanonicalTokenBindingField('destroyToken', token, scope, `${path}.token`);
+  if (diagnostics.some((diagnostic) => diagnostic.severity === 'error') || typeof token !== 'string') {
     return { value: null, diagnostics };
   }
   return {
-    value: destroyTokenBuilder({ token: source.token }),
+    value: destroyTokenBuilder({ token }),
     diagnostics,
   };
 }
@@ -342,20 +378,21 @@ export function lowerSetTokenPropEffect(
   scope: BindingScope,
   path: string,
 ): EffectLoweringResult<EffectAST> {
-  if (typeof source.token !== 'string' || typeof source.prop !== 'string') {
+  const token = source.token;
+  if (token === undefined || typeof source.prop !== 'string') {
     return missingCapability(path, 'setTokenProp effect', source, ['{ setTokenProp: { token, prop, value } }']);
   }
 
-  const bindingDiagnostics = validateBindingReference(source.token, scope, `${path}.token`);
+  const bindingDiagnostics = validateCanonicalTokenBindingField('setTokenProp', token, scope, `${path}.token`);
   const value = lowerValueNode(source.value, makeConditionContext(context, scope), `${path}.value`);
   const diagnostics = [...bindingDiagnostics, ...value.diagnostics];
 
-  if (diagnostics.some((diagnostic) => diagnostic.severity === 'error') || value.value === null) {
+  if (diagnostics.some((diagnostic) => diagnostic.severity === 'error') || typeof token !== 'string' || value.value === null) {
     return { value: null, diagnostics };
   }
 
   return {
-    value: setTokenPropBuilder({ token: source.token, prop: source.prop, value: value.value }),
+    value: setTokenPropBuilder({ token, prop: source.prop, value: value.value }),
     diagnostics,
   };
 }

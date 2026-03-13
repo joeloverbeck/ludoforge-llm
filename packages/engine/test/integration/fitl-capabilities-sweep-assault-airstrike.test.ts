@@ -10,7 +10,6 @@ import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js'
 
 const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 const makeToken = (id: string, type: string, faction: string, extra?: Record<string, unknown>): Token => ({
   id: asTokenId(id),
@@ -1769,5 +1768,3 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     );
   });
 });
-
-/* eslint-enable @typescript-eslint/no-explicit-any */

@@ -1,4 +1,4 @@
-import { parseDecisionKey, type MoveParamValue } from '@ludoforge/engine/runtime';
+import { parseDecisionKey, type DecisionKey, type MoveParamValue } from '@ludoforge/engine/runtime';
 import type { PartialChoice } from '../store/store-types.js';
 import type { RenderZone } from './render-model.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
@@ -9,12 +9,6 @@ export interface IterationContext {
   readonly currentEntityId: string;
   readonly currentEntityDisplayName: string;
 }
-
-// For nested forEach, iterationPath is multi-segment (e.g. "[0][1]").
-// We capture only the trailing segment — the innermost loop index —
-// which matches findIterationArray's behavior of returning the most
-// recent (innermost) array in the choice stack.
-const ITERATION_INDEX_PATTERN = /\[(\d+)\]$/;
 
 function findIterationArray(
   choiceStack: readonly PartialChoice[],
@@ -28,19 +22,50 @@ function findIterationArray(
   return null;
 }
 
+function getInnermostIterationIndex(iterationPath: string): number | null {
+  if (iterationPath.length < 3 || !iterationPath.endsWith(']')) {
+    return null;
+  }
+
+  const openBracketIndex = iterationPath.lastIndexOf('[');
+  if (openBracketIndex < 0) {
+    return null;
+  }
+
+  const indexText = iterationPath.slice(openBracketIndex + 1, -1);
+  if (indexText.length === 0) {
+    return null;
+  }
+
+  for (const char of indexText) {
+    if (char < '0' || char > '9') {
+      return null;
+    }
+  }
+
+  const index = Number(indexText);
+  if (!Number.isSafeInteger(index)) {
+    return null;
+  }
+
+  return index;
+}
+
 export function parseIterationContext(
-  decisionKey: string,
+  decisionKey: DecisionKey,
   choiceStack: readonly PartialChoice[],
   zonesById: ReadonlyMap<string, RenderZone>,
 ): IterationContext | null {
-  const parsedDecisionKey = parseDecisionKey(decisionKey as Parameters<typeof parseDecisionKey>[0]);
+  const parsedDecisionKey = parseDecisionKey(decisionKey);
   if (parsedDecisionKey === null) {
     return null;
   }
   const hasTemplateResolution = parsedDecisionKey.baseId !== parsedDecisionKey.resolvedBind;
-  const indexMatch = hasTemplateResolution ? null : ITERATION_INDEX_PATTERN.exec(parsedDecisionKey.iterationPath);
+  const iterationIndexFromPath = getInnermostIterationIndex(parsedDecisionKey.iterationPath);
 
-  if (!hasTemplateResolution && indexMatch === null) {
+  // Iteration UI context is only canonical when the key carries an iteration path.
+  // Without it, the runner should not infer loop semantics from prior choices.
+  if (iterationIndexFromPath === null) {
     return null;
   }
 
@@ -52,18 +77,18 @@ export function parseIterationContext(
   let iterationIndex: number;
   let currentEntityId: string;
 
+  iterationIndex = iterationIndexFromPath;
+  if (iterationIndex >= iterationArray.length) {
+    return null;
+  }
+
   if (hasTemplateResolution) {
-    const idx = iterationArray.indexOf(parsedDecisionKey.resolvedBind);
-    if (idx < 0) {
+    const iteratedEntityId = String(iterationArray[iterationIndex]);
+    if (iteratedEntityId !== parsedDecisionKey.resolvedBind) {
       return null;
     }
-    iterationIndex = idx;
     currentEntityId = parsedDecisionKey.resolvedBind;
   } else {
-    iterationIndex = Number(indexMatch![1]);
-    if (iterationIndex >= iterationArray.length) {
-      return null;
-    }
     currentEntityId = String(iterationArray[iterationIndex]);
   }
 

@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { asPlayerId } from '@ludoforge/engine/runtime';
-import type { MoveParamValue, PlayerId } from '@ludoforge/engine/runtime';
+import type { DecisionKey, MoveParamValue, PlayerId } from '@ludoforge/engine/runtime';
 
 import { serializeChoiceValueIdentity } from '../../src/model/choice-value-utils';
 import type {
@@ -11,6 +11,8 @@ import type {
   RenderToken,
   RenderZone,
 } from '../../src/model/render-model';
+
+const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 
 describe('render-model types', () => {
   it('constructs RenderModel with all required fields', () => {
@@ -123,7 +125,7 @@ describe('render-model types', () => {
       ],
       choiceBreadcrumb: [
         {
-          decisionKey: 'pick-zone',
+          decisionKey: asDecisionKey('pick-zone'),
           name: 'Pick Zone',
           displayName: 'Pick Zone',
           chosenValueId: serializeChoiceValueIdentity('table' as MoveParamValue),
@@ -136,7 +138,7 @@ describe('render-model types', () => {
       choiceContext: null,
       choiceUi: {
         kind: 'discreteMany',
-        decisionKey: 'pick-tokens',
+        decisionKey: asDecisionKey('pick-tokens'),
         options: [
           {
             choiceValueId: serializeChoiceValueIdentity(['table', asPlayerId(1)] as MoveParamValue),
@@ -264,7 +266,7 @@ describe('render-model types', () => {
       { kind: 'confirmReady' },
       {
         kind: 'discreteOne',
-        decisionKey: 'pick-zone',
+        decisionKey: asDecisionKey('pick-zone'),
         options: [{
           choiceValueId: serializeChoiceValueIdentity('zone:a' as MoveParamValue),
           value: 'zone:a' as MoveParamValue,
@@ -276,7 +278,7 @@ describe('render-model types', () => {
       },
       {
         kind: 'discreteMany',
-        decisionKey: 'pick-zones',
+        decisionKey: asDecisionKey('pick-zones'),
         options: [{
           choiceValueId: serializeChoiceValueIdentity('zone:a' as MoveParamValue),
           value: 'zone:a' as MoveParamValue,
@@ -290,7 +292,7 @@ describe('render-model types', () => {
       },
       {
         kind: 'numeric',
-        decisionKey: 'pick-amount',
+        decisionKey: asDecisionKey('pick-amount'),
         domain: { min: 0, max: 5, step: 1 },
       },
       {

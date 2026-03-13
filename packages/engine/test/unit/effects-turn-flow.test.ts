@@ -647,6 +647,84 @@ describe('applyGrantFreeOperation', () => {
     assert.deepEqual(tos.runtime.pendingFreeOperationGrants ?? [], []);
     assert.equal(tos.runtime.freeOperationSequenceContexts, undefined);
   });
+
+  it('suppresses later strictInOrder effect-issued grants even when only the earlier step requests issue-time usability gating', () => {
+    const ctx = makeCtx();
+    const result = applyEffects(
+      [
+        {
+          grantFreeOperation: {
+            seat: 'self',
+            operationClass: 'operation',
+            actionIds: ['attack'],
+            viabilityPolicy: 'requireUsableAtIssue',
+            sequence: { batch: 'strict-sequence-no-policy-later', step: 0, progressionPolicy: 'strictInOrder' },
+            zoneFilter: { op: '==', left: 1, right: 2 },
+          },
+        },
+        {
+          grantFreeOperation: {
+            seat: 'self',
+            operationClass: 'operation',
+            actionIds: ['attack'],
+            sequence: { batch: 'strict-sequence-no-policy-later', step: 1, progressionPolicy: 'strictInOrder' },
+          },
+        },
+      ],
+      ctx,
+    );
+    const tos = result.state.turnOrderState;
+    if (tos.type !== 'cardDriven') throw new Error('Expected cardDriven');
+    assert.deepEqual(tos.runtime.pendingFreeOperationGrants ?? [], []);
+    assert.equal(tos.runtime.freeOperationSequenceContexts, undefined);
+  });
+
+  it('keeps strictInOrder suppression scoped to the blocked effect-issued batch', () => {
+    const ctx = makeCtx();
+    const result = applyEffects(
+      [
+        {
+          grantFreeOperation: {
+            seat: 'self',
+            operationClass: 'operation',
+            actionIds: ['attack'],
+            viabilityPolicy: 'requireUsableAtIssue',
+            sequence: { batch: 'strict-sequence-batch-a', step: 0, progressionPolicy: 'strictInOrder' },
+            zoneFilter: { op: '==', left: 1, right: 2 },
+          },
+        },
+        {
+          grantFreeOperation: {
+            seat: 'self',
+            operationClass: 'operation',
+            actionIds: ['attack'],
+            sequence: { batch: 'strict-sequence-batch-a', step: 1, progressionPolicy: 'strictInOrder' },
+          },
+        },
+        {
+          grantFreeOperation: {
+            seat: 'self',
+            operationClass: 'operation',
+            actionIds: ['attack'],
+            sequence: { batch: 'strict-sequence-batch-b', step: 0, progressionPolicy: 'strictInOrder' },
+          },
+        },
+      ],
+      ctx,
+    );
+    const tos = result.state.turnOrderState;
+    if (tos.type !== 'cardDriven') throw new Error('Expected cardDriven');
+    assert.equal(tos.runtime.pendingFreeOperationGrants?.length, 1);
+    assert.equal(tos.runtime.pendingFreeOperationGrants?.[0]?.sequenceBatchId?.endsWith(':strict-sequence-batch-b'), true);
+    assert.equal(tos.runtime.pendingFreeOperationGrants?.[0]?.sequenceIndex, 0);
+    assert.deepEqual(tos.runtime.freeOperationSequenceContexts, {
+      'freeOpEffect:0:strict-sequence-batch-b': {
+        capturedMoveZonesByKey: {},
+        progressionPolicy: 'strictInOrder',
+        skippedStepIndices: [],
+      },
+    });
+  });
 });
 
 describe('applyGotoPhaseExact', () => {

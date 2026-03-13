@@ -362,6 +362,7 @@ const extractPendingFreeOperationGrants = (
 } => {
   const extracted: TurnFlowPendingFreeOperationGrant[] = [];
   let sequenceContexts = existingSequenceContexts;
+  const blockedStrictSequenceBatchIds = new Set<string>();
   const emittedBatchBaseId = pendingFreeOperationGrantBatchBaseId(state, move);
   const declaredGrants = resolveEventFreeOperationGrants(def, state, move);
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
@@ -380,6 +381,13 @@ const extractPendingFreeOperationGrants = (
       : `${emittedBatchBaseId}:${grant.sequence.batch}`;
     const sequenceIndex = grant.sequence?.step;
     const sequenceProgressionPolicy = resolveSequenceProgressionPolicy(grant);
+    if (
+      sequenceBatchId !== undefined
+      && sequenceProgressionPolicy === 'strictInOrder'
+      && blockedStrictSequenceBatchIds.has(sequenceBatchId)
+    ) {
+      continue;
+    }
     const sequenceProbeCandidates = grant.sequence === undefined
       ? []
       : declaredGrants
@@ -396,6 +404,13 @@ const extractPendingFreeOperationGrants = (
         evalContext: grantEvalContext,
       })
     ) {
+      if (
+        sequenceBatchId !== undefined
+        && sequenceIndex !== undefined
+        && sequenceProgressionPolicy === 'strictInOrder'
+      ) {
+        blockedStrictSequenceBatchIds.add(sequenceBatchId);
+      }
       if (
         sequenceBatchId !== undefined
         && sequenceIndex !== undefined

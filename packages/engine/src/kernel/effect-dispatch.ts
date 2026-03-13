@@ -87,7 +87,10 @@ const applyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContex
 export function applyEffect(effect: EffectAST, ctx: EffectContext): EffectResult {
   assertEffectContextEntryInvariant(ctx);
   const budget = createBudgetState(ctx);
-  const freeOperationProbeScope: FreeOperationProbeScope = ctx.freeOperationProbeScope ?? { priorGrantDefinitions: [] };
+  const freeOperationProbeScope: FreeOperationProbeScope = ctx.freeOperationProbeScope ?? {
+    priorGrantDefinitions: [],
+    blockedStrictSequenceBatchIds: [],
+  };
   const result = applyEffectWithBudget(effect, { ...ctx, freeOperationProbeScope }, budget);
   return {
     state: result.state,
@@ -101,7 +104,10 @@ export function applyEffect(effect: EffectAST, ctx: EffectContext): EffectResult
 export function applyEffects(effects: readonly EffectAST[], ctx: EffectContext): EffectResult {
   assertEffectContextEntryInvariant(ctx);
   const budget = createBudgetState(ctx);
-  const freeOperationProbeScope: FreeOperationProbeScope = ctx.freeOperationProbeScope ?? { priorGrantDefinitions: [] };
+  const freeOperationProbeScope: FreeOperationProbeScope = ctx.freeOperationProbeScope ?? {
+    priorGrantDefinitions: [],
+    blockedStrictSequenceBatchIds: [],
+  };
   const result = applyEffectsWithBudget(effects, { ...ctx, freeOperationProbeScope }, budget);
   return {
     state: result.state,

@@ -230,6 +230,16 @@ export const applyGrantFreeOperation = (
   const sequenceBatchId = grant.sequence === undefined ? undefined : `${sequenceBatchBaseId}:${grant.sequence.batch}`;
   const sequenceIndex = grant.sequence?.step;
   const sequenceProgressionPolicy = resolveSequenceProgressionPolicy(grant);
+  if (
+    sequenceBatchId !== undefined
+    && sequenceProgressionPolicy === 'strictInOrder'
+    && ctx.freeOperationProbeScope?.blockedStrictSequenceBatchIds.includes(sequenceBatchId)
+  ) {
+    return {
+      state: ctx.state,
+      rng: ctx.rng,
+    };
+  }
 
   const resolvedZoneFilter = grant.zoneFilter === undefined
     ? undefined
@@ -273,6 +283,14 @@ export const applyGrantFreeOperation = (
       },
     )
   ) {
+    if (
+      sequenceBatchId !== undefined
+      && sequenceIndex !== undefined
+      && sequenceProgressionPolicy === 'strictInOrder'
+      && !ctx.freeOperationProbeScope?.blockedStrictSequenceBatchIds.includes(sequenceBatchId)
+    ) {
+      ctx.freeOperationProbeScope?.blockedStrictSequenceBatchIds.push(sequenceBatchId);
+    }
     const nextSequenceContexts =
       sequenceBatchId !== undefined
       && sequenceIndex !== undefined

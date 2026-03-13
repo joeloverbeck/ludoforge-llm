@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  applyMove,
   asPlayerId,
   asTokenId,
   initialState,
@@ -386,6 +387,74 @@ describe('FITL card-75 Sihanouk', () => {
       countTokens(final, CENTRAL_LAOS, (token) => token.id === asTokenId('sihanouk-nva-rally')),
       1,
       'NVA Trail chaining should still work after the initial origin-restricted move',
+    );
+  });
+
+  it('shaded skips the VC batch when unusable and still unlocks the NVA Rally -> March sequence', () => {
+    const def = compileDef();
+    const setup = setupCardDrivenState(def, 75004, 3, 'vc', 'nva', {
+      'available-NVA:none': [makeToken('sihanouk-nva-skip-vc', 'guerrilla', 'NVA', { type: 'guerrilla', activity: 'underground' })],
+    }, {
+      nvaResources: 5,
+      vcResources: 5,
+      trail: 0,
+    });
+
+    const eventMove = findCardMove(def, setup, 'shaded');
+    assert.notEqual(eventMove, undefined, 'Expected Sihanouk shaded event move');
+
+    const afterEvent = applyMoveWithResolvedDecisionIds(def, setup, eventMove!).state;
+    const pendingAfterEvent = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
+    assert.equal(
+      pendingAfterEvent.some((grant) => grant.seat === 'nva' && grant.actionIds?.[0] === 'rally'),
+      true,
+      'The NVA Rally should be queued even when the earlier VC batch is unusable',
+    );
+    assert.equal(requireCardDrivenRuntime(afterEvent).pendingDeferredEventEffects, undefined);
+
+    const passToNva = legalMoves(def, afterEvent).find((move) => String(move.actionId) === 'pass');
+    assert.notEqual(passToNva, undefined, 'Expected a deterministic pass window before the NVA free grants');
+    const nvaWindow = applyMove(def, afterEvent, passToNva!).state;
+    assert.equal(nvaWindow.activePlayer, asPlayerId(2), 'Expected the pass to hand control directly to NVA');
+
+    const freeRallies = legalMoves(def, nvaWindow).filter(
+      (move) => String(move.actionId) === 'rally' && move.freeOperation === true,
+    );
+
+    assert.equal(freeRallies.length > 0, true, 'Expected a free Rally after the unusable VC batch is skipped');
+    const nvaRally = freeRallies[0];
+    assert.notEqual(nvaRally, undefined, 'Expected NVA free Rally');
+
+    const afterNvaRally = applyMoveWithResolvedDecisionIds(def, nvaWindow, {
+      ...nvaRally!,
+      params: {
+        ...nvaRally!.params,
+        $targetSpaces: [NE_CAMBODIA],
+        $noBaseChoice: 'place-guerrilla',
+        $improveTrail: 'no',
+      },
+    }).state;
+
+    const nvaMarch = legalMoves(def, afterNvaRally).find(
+      (move) => String(move.actionId) === 'march' && move.freeOperation === true,
+    );
+    assert.notEqual(nvaMarch, undefined, 'Expected NVA free March after the skipped VC batch');
+
+    const final = applyMoveWithResolvedDecisionIds(def, afterNvaRally, {
+      ...nvaMarch!,
+      params: {
+        ...nvaMarch!.params,
+        $targetSpaces: [SOUTHERN_LAOS],
+        $chainSpaces: [],
+        [`$movingGuerrillas@${SOUTHERN_LAOS}`]: ['sihanouk-nva-skip-vc'],
+        [`$movingTroops@${SOUTHERN_LAOS}`]: [],
+      },
+    }).state;
+
+    assert.equal(
+      countTokens(final, SOUTHERN_LAOS, (token) => token.id === asTokenId('sihanouk-nva-skip-vc')),
+      1,
+      'NVA should still resolve the exact Rally -> March sequence after the unusable VC batch is skipped',
     );
   });
 });

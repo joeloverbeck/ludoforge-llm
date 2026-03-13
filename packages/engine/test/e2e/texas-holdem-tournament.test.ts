@@ -469,4 +469,44 @@ describe('texas hold\'em tournament e2e', () => {
       assert.equal(finalTerminal.ranking[0]?.player, 0);
     }
   });
+
+  it('terminal scoring reads each player\'s own chipStack, not the active player\'s', () => {
+    const def = compileTexasDef();
+    const base = advanceToDecisionPoint(def, initialState(def, 17, 3).state);
+
+    // Engineer a state where activePlayer differs from the chip leader.
+    // Player 2 has all the chips but activePlayer is player 0.
+    // If the scoring incorrectly uses `player: active`, all scores would be 0
+    // (player 0's chipStack). With the correct `player: actor`, each player's
+    // own chipStack is read.
+    const engineered: GameState = {
+      ...base,
+      activePlayer: asPlayerId(0),
+      globalVars: {
+        ...base.globalVars,
+        activePlayers: 1,
+      },
+      perPlayerVars: {
+        ...base.perPlayerVars,
+        0: { ...base.perPlayerVars[0]!, eliminated: true, chipStack: 0 },
+        1: { ...base.perPlayerVars[1]!, eliminated: true, chipStack: 0 },
+        2: { ...base.perPlayerVars[2]!, eliminated: false, chipStack: 1500 },
+      },
+    };
+
+    const result = terminalResult(def, engineered);
+    assert.notEqual(result, null);
+    assert.equal(result?.type, 'score');
+    if (result?.type !== 'score') {
+      return;
+    }
+
+    // Player 2 (sole survivor) must have the highest score.
+    assert.equal(result.ranking[0]?.player, 2);
+    assert.equal(result.ranking[0]?.score, 1500);
+
+    // Eliminated players must have score 0, not the active player's chipStack.
+    assert.equal(result.ranking[1]?.score, 0);
+    assert.equal(result.ranking[2]?.score, 0);
+  });
 });

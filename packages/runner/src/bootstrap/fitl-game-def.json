@@ -80665,50 +80665,457 @@
             "flavorText": "Development spending competes with local capture."
           },
           "unshaded": {
-            "text": "Shift up to 2 spaces one level toward Active Support.",
-            "targets": [
+            "text": "Shift 3 COIN-Controlled spaces each 1 level toward Active Support.",
+            "effects": [
               {
-                "id": "$targetSpace",
-                "selector": {
-                  "query": "mapSpaces"
-                },
-                "cardinality": {
-                  "max": 2
-                },
-                "application": "aggregate",
-                "effects": [
-                  {
-                    "shiftMarker": {
-                      "space": "$targetSpace",
-                      "marker": "supportOpposition",
-                      "delta": 1
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.84.unshaded.effects.0.chooseN",
+                  "bind": "$usaidCoinControlledSpaces",
+                  "options": {
+                    "query": "mapSpaces",
+                    "filter": {
+                      "condition": {
+                        "op": "and",
+                        "args": [
+                          {
+                            "op": ">",
+                            "left": {
+                              "aggregate": {
+                                "op": "count",
+                                "query": {
+                                  "query": "tokensInZone",
+                                  "zone": "$zone",
+                                  "filter": {
+                                    "prop": "faction",
+                                    "op": "in",
+                                    "value": [
+                                      "US",
+                                      "ARVN"
+                                    ]
+                                  }
+                                }
+                              }
+                            },
+                            "right": {
+                              "aggregate": {
+                                "op": "count",
+                                "query": {
+                                  "query": "tokensInZone",
+                                  "zone": "$zone",
+                                  "filter": {
+                                    "prop": "faction",
+                                    "op": "in",
+                                    "value": [
+                                      "NVA",
+                                      "VC"
+                                    ]
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "op": "markerShiftAllowed",
+                            "space": "$zone",
+                            "marker": "supportOpposition",
+                            "delta": 1
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "max": {
+                    "op": "min",
+                    "left": 3,
+                    "right": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": ">",
+                                  "left": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "tokensInZone",
+                                        "zone": "$zone",
+                                        "filter": {
+                                          "prop": "faction",
+                                          "op": "in",
+                                          "value": [
+                                            "US",
+                                            "ARVN"
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "right": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "tokensInZone",
+                                        "zone": "$zone",
+                                        "filter": {
+                                          "prop": "faction",
+                                          "op": "in",
+                                          "value": [
+                                            "NVA",
+                                            "VC"
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "op": "markerShiftAllowed",
+                                  "space": "$zone",
+                                  "marker": "supportOpposition",
+                                  "delta": 1
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "min": {
+                    "op": "min",
+                    "left": 3,
+                    "right": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": ">",
+                                  "left": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "tokensInZone",
+                                        "zone": "$zone",
+                                        "filter": {
+                                          "prop": "faction",
+                                          "op": "in",
+                                          "value": [
+                                            "US",
+                                            "ARVN"
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "right": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "tokensInZone",
+                                        "zone": "$zone",
+                                        "filter": {
+                                          "prop": "faction",
+                                          "op": "in",
+                                          "value": [
+                                            "NVA",
+                                            "VC"
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "op": "markerShiftAllowed",
+                                  "space": "$zone",
+                                  "marker": "supportOpposition",
+                                  "delta": 1
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
                     }
                   }
-                ]
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$usaidCoinControlledSpace",
+                  "over": {
+                    "query": "binding",
+                    "name": "$usaidCoinControlledSpaces"
+                  },
+                  "effects": [
+                    {
+                      "shiftMarker": {
+                        "space": "$usaidCoinControlledSpace",
+                        "marker": "supportOpposition",
+                        "delta": 1
+                      }
+                    }
+                  ]
+                }
               }
             ]
           },
           "shaded": {
-            "text": "Shift up to 2 spaces one level toward Active Opposition.",
-            "targets": [
+            "text": "Increase or decrease any or all of ARVN Resources, Aid, and Patronage by 2 each.",
+            "effects": [
               {
-                "id": "$targetSpace",
-                "selector": {
-                  "query": "mapSpaces"
-                },
-                "cardinality": {
-                  "max": 2
-                },
-                "application": "aggregate",
-                "effects": [
-                  {
-                    "shiftMarker": {
-                      "space": "$targetSpace",
-                      "marker": "supportOpposition",
-                      "delta": -1
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.84.shaded.effects.0.chooseN",
+                  "bind": "$usaidTracks",
+                  "options": {
+                    "query": "enums",
+                    "values": [
+                      "arvnResources",
+                      "aid",
+                      "patronage"
+                    ]
+                  },
+                  "max": 3,
+                  "min": 1
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$usaidTrack",
+                  "over": {
+                    "query": "binding",
+                    "name": "$usaidTracks"
+                  },
+                  "effects": [
+                    {
+                      "chooseOne": {
+                        "internalDecisionId": "decision:doc.eventDecks.0.cards.84.shaded.effects.1.forEach.effects.0.chooseOne",
+                        "bind": "$usaidDirection@{$usaidTrack}",
+                        "options": {
+                          "query": "enums",
+                          "values": [
+                            "increase",
+                            "decrease"
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "if": {
+                        "when": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "binding",
+                                "name": "$usaidTrack"
+                              },
+                              "right": "arvnResources"
+                            },
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "binding",
+                                "name": "$usaidDirection@{$usaidTrack}"
+                              },
+                              "right": "increase"
+                            }
+                          ]
+                        },
+                        "then": [
+                          {
+                            "addVar": {
+                              "scope": "global",
+                              "var": "arvnResources",
+                              "delta": 2
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "if": {
+                        "when": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "binding",
+                                "name": "$usaidTrack"
+                              },
+                              "right": "arvnResources"
+                            },
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "binding",
+                                "name": "$usaidDirection@{$usaidTrack}"
+                              },
+                              "right": "decrease"
+                            }
+                          ]
+                        },
+                        "then": [
+                          {
+                            "addVar": {
+                              "scope": "global",
+                              "var": "arvnResources",
+                              "delta": -2
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "if": {
+                        "when": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "binding",
+                                "name": "$usaidTrack"
+                              },
+                              "right": "aid"
+                            },
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "binding",
+                                "name": "$usaidDirection@{$usaidTrack}"
+                              },
+                              "right": "increase"
+                            }
+                          ]
+                        },
+                        "then": [
+                          {
+                            "addVar": {
+                              "scope": "global",
+                              "var": "aid",
+                              "delta": 2
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "if": {
+                        "when": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "binding",
+                                "name": "$usaidTrack"
+                              },
+                              "right": "aid"
+                            },
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "binding",
+                                "name": "$usaidDirection@{$usaidTrack}"
+                              },
+                              "right": "decrease"
+                            }
+                          ]
+                        },
+                        "then": [
+                          {
+                            "addVar": {
+                              "scope": "global",
+                              "var": "aid",
+                              "delta": -2
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "if": {
+                        "when": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "binding",
+                                "name": "$usaidTrack"
+                              },
+                              "right": "patronage"
+                            },
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "binding",
+                                "name": "$usaidDirection@{$usaidTrack}"
+                              },
+                              "right": "increase"
+                            }
+                          ]
+                        },
+                        "then": [
+                          {
+                            "addVar": {
+                              "scope": "global",
+                              "var": "patronage",
+                              "delta": 2
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "if": {
+                        "when": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "binding",
+                                "name": "$usaidTrack"
+                              },
+                              "right": "patronage"
+                            },
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "binding",
+                                "name": "$usaidDirection@{$usaidTrack}"
+                              },
+                              "right": "decrease"
+                            }
+                          ]
+                        },
+                        "then": [
+                          {
+                            "addVar": {
+                              "scope": "global",
+                              "var": "patronage",
+                              "delta": -2
+                            }
+                          }
+                        ]
+                      }
                     }
-                  }
-                ]
+                  ]
+                }
               }
             ]
           }

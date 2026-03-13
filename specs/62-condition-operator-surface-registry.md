@@ -1,200 +1,151 @@
-# Spec 62: Condition Operator Surface Registry
+# Spec 62: Condition Operator Metadata
 
 ## Summary
 
-Condition operators currently have no single source of truth. Adding or changing one operator requires hand-editing multiple independent switches and string lists across:
+Condition operators lack a single module declaring what operators exist and what their structural shapes are. Adding a new operator requires updating multiple switches across ~9 files, and while TypeScript exhaustiveness checks prevent missing cases, two specific patterns cause unnecessary duplication:
 
-- kernel runtime evaluation
-- kernel validation
-- AST schema wiring
-- CNL lowering
-- zone-selector alias collection
-- display rendering
-- tooltip blocker extraction
-- tooltip humanization
-- exhaustiveness tests
+1. **Duplicate operator identity lists**: `SUPPORTED_CONDITION_OPS` in CNL (`compile-conditions.ts`) vs the `ConditionAST` discriminated union in `types-ast.ts`.
+2. **Duplicated field-path traversal knowledge**: `zone-selector-aliases.ts` and `validate-conditions.ts` both independently walk operator-specific field paths to find `ZoneSel`, `ValueExpr`, `NumericValueExpr`, and nested `ConditionAST` nodes.
 
-This is not a one-off maintenance inconvenience. It is an architectural ownership gap: the engine has a first-class effect dispatch/registry pattern, and binder surfaces already use centralized contracts, but conditions still rely on distributed procedural knowledge.
-
-This spec defines a game-agnostic condition operator surface registry so each operator’s structural metadata and cross-surface behavior are declared once and consumed consistently.
+This spec introduces a lightweight metadata module that declares operator identity and structural field-path metadata in one place, eliminating these two duplication sites without disturbing the existing switch-based dispatch architecture.
 
 ## Problem
 
-Today, condition operator ownership is fragmented.
+Today, two concrete duplications exist:
 
-Observed examples:
+- `packages/engine/src/cnl/compile-conditions.ts` maintains `SUPPORTED_CONDITION_OPS` as a separate array, duplicating what `ConditionAST`'s discriminated union already defines.
+- `packages/engine/src/kernel/zone-selector-aliases.ts` and `packages/engine/src/kernel/validate-conditions.ts` each independently encode which fields of each operator contain `ZoneSel`, `ValueExpr`, `NumericValueExpr`, or nested `ConditionAST` — the same structural knowledge in two places.
 
-- `packages/engine/src/cnl/compile-conditions.ts` maintains `SUPPORTED_CONDITION_OPS` separately from the actual lowering switch.
-- `packages/engine/src/kernel/validate-conditions.ts` re-describes each operator’s validation shape.
-- `packages/engine/src/kernel/ast-to-display.ts`, `packages/engine/src/kernel/tooltip-blocker-extractor.ts`, and `packages/engine/src/kernel/tooltip-modifier-humanizer.ts` each carry independent condition-specific formatting logic.
-- `packages/engine/src/kernel/zone-selector-aliases.ts` must be updated manually so every operator exposes the correct selector/value traversal.
-- `packages/engine/test/unit/types-exhaustive.test.ts` acts as a downstream guard rather than preventing surface drift at the source.
+The remaining ~7 switch statements (`eval-condition.ts`, `ast-to-display.ts`, `tooltip-blocker-extractor.ts`, `tooltip-modifier-humanizer.ts`, `compile-conditions.ts` lowering, etc.) each handle genuinely different semantic concerns (evaluation, display, lowering). These are **not** a problem — TypeScript exhaustiveness ensures every operator is handled, and the per-operator logic in each switch is semantically distinct. Centralizing those handlers into a mega-descriptor would mix compile-time, runtime, and presentation concerns, making the architecture worse.
 
-This creates three architectural risks:
-
-1. Semantic drift: one operator’s runtime, validation, lowering, and humanization semantics can diverge.
-2. Extensibility drag: every new operator becomes a scavenger hunt through unrelated files.
-3. Weak ownership: there is no single module that answers “what is a supported condition operator and what surfaces must it implement?”
+**Comparison with effects**: The effect registry pattern (`effect-handlers.ts`) is justified because effects have 32+ operators with budget tracking, recursion limits, and complex dispatch. Conditions are simpler — 15 operators, read-only evaluation, no budget — and do not need the same pattern.
 
 ## Goals
 
-1. Make condition operator support explicit and centralized.
-2. Keep `GameDef`, runtime evaluation, and simulation game-agnostic.
-3. Keep game-specific rules in `GameSpecDoc` content, not in kernel branches.
-4. Keep visual presentation concerns in `visual-config.yaml` or tooltip/verbalization layers, not in simulation semantics.
-5. Remove backwards-compatibility burden. This is an internal architecture cleanup; callers should move to the new ownership model directly.
-6. Make adding a new operator require one primary declaration, plus only genuinely operator-specific runtime logic where unavoidable.
+1. Provide a single module answering "what condition operators exist and what are their structural field shapes?"
+2. Eliminate the duplicate `SUPPORTED_CONDITION_OPS` list in CNL.
+3. Eliminate duplicated field-path traversal knowledge across `zone-selector-aliases.ts` and `validate-conditions.ts`.
+4. Keep `GameDef`, runtime evaluation, and simulation game-agnostic.
+5. Keep game-specific rules in `GameSpecDoc` content, not in kernel branches.
+6. Remove backwards-compatibility burden — this is an internal cleanup; callers move to the new module directly.
 
 ## Non-Goals
 
-1. Replacing the core `ConditionAST` union with a loose untyped record shape.
-2. Moving game-specific legality or macro logic into the kernel.
-3. Turning tooltip prose into simulation semantics.
-4. Solving effect/operator registry unification in the same change.
+1. Replacing the `ConditionAST` discriminated union — it stays exactly as-is.
+2. Centralizing runtime evaluation, CNL lowering, display rendering, blocker extraction, or humanization into registry-owned handlers.
+3. Creating a plugin-like handler registration system for conditions.
+4. Moving game-specific legality or macro logic into the kernel.
+5. Unifying the condition metadata with the effect registry in the same change.
 
 ## Architectural Direction
 
-Introduce a condition operator surface registry with two layers:
+Introduce a **metadata-only** module at `packages/engine/src/kernel/condition-operator-meta.ts` with two responsibilities:
 
-### 1. Canonical operator descriptor layer
+### 1. Canonical operator identity
 
-Create a module owned by the kernel/CNL boundary, for example:
-
-- `packages/engine/src/kernel/condition-operator-registry.ts`
-
-This module should define:
-
-- the canonical set of supported condition operator ids
-- structural metadata per operator
-- reusable traversal metadata for references/selectors/value expressions
-- optional humanization/display labels where those are structural rather than game-authored
-
-Representative descriptor shape:
+Export the canonical set of supported condition operator identifiers as a tuple and derived union type, plus a type guard:
 
 ```ts
-interface ConditionOperatorDescriptor<TCondition extends ConditionAST = ConditionAST> {
-  readonly op: ConditionOperator;
-  readonly category: 'boolean' | 'comparison' | 'spatial' | 'marker' | 'membership';
-  readonly valueFieldPaths?: readonly ConditionFieldPath[];
-  readonly numericValueFieldPaths?: readonly ConditionFieldPath[];
-  readonly zoneSelectorFieldPaths?: readonly ConditionFieldPath[];
-  readonly nestedConditionFieldPaths?: readonly ConditionFieldPath[];
-  readonly lower: ConditionLoweringHandler<TCondition>;
-  readonly validate: ConditionValidationHandler<TCondition>;
-  readonly display?: ConditionDisplayHandler<TCondition>;
-  readonly blocker?: ConditionBlockerHandler<TCondition>;
-  readonly humanize?: ConditionHumanizer<TCondition>;
+export const CONDITION_OPERATORS = [
+  'eq', 'neq', 'gt', 'gte', 'lt', 'lte',
+  'and', 'or', 'not',
+  'adjacent', 'connected',
+  'markerStateAllowed', 'markerShiftAllowed',
+  'includes', 'isEmpty',
+] as const;
+
+export type ConditionOperator = (typeof CONDITION_OPERATORS)[number];
+
+export function isConditionOperator(op: string): op is ConditionOperator {
+  return (CONDITION_OPERATORS as readonly string[]).includes(op);
 }
 ```
 
-The exact type shape may differ, but the ownership rule should hold:
+This replaces the ad hoc `SUPPORTED_CONDITION_OPS` array in `compile-conditions.ts`.
 
-- one registry declares the operator surface contract
-- consumers iterate/use registry data instead of open-coding operator lists and duplicated path metadata
+### 2. Structural field-path metadata
 
-### 2. Runtime semantics remain separate where they should
+Declare per-operator metadata describing which fields contain `ValueExpr`, `NumericValueExpr`, `ZoneSel`, and nested `ConditionAST`:
 
-Do not force runtime evaluation into a generic metadata table if doing so weakens type safety or clarity.
+```ts
+interface ConditionOperatorMeta {
+  readonly op: ConditionOperator;
+  readonly category: 'boolean' | 'comparison' | 'spatial' | 'marker' | 'membership';
+  readonly valueFields?: readonly string[];
+  readonly numericValueFields?: readonly string[];
+  readonly zoneSelectorFields?: readonly string[];
+  readonly nestedConditionFields?: readonly string[];
+}
+```
 
-The right split is:
+This metadata drives:
 
-- registry owns operator identity and cross-surface metadata
-- runtime evaluation remains in `eval-condition.ts`, but dispatches through registry-backed typed handlers or a tightly coupled handler map
+- **Zone-selector alias extraction** (`zone-selector-aliases.ts`): iterate metadata instead of a per-operator switch.
+- **Generic validation traversal** (`validate-conditions.ts`): use metadata for structural field walking, keeping only operator-specific validation logic (e.g., `markerStateAllowed` lattice checks, `connected` literal-only constraints) in targeted branches.
 
-That avoids turning simulation logic into stringly-typed config while still centralizing surface ownership.
+### What stays unchanged
+
+All existing switch statements in these files remain as-is — they handle genuinely distinct semantic concerns:
+
+- `eval-condition.ts` — runtime evaluation logic
+- `ast-to-display.ts` — display rendering
+- `tooltip-blocker-extractor.ts` — blocker extraction
+- `tooltip-modifier-humanizer.ts` — humanization
+- `compile-conditions.ts` — CNL lowering (the switch itself stays; only `SUPPORTED_CONDITION_OPS` is removed)
 
 ## Proposed Design
 
-### A. Define `ConditionOperator`
+### A. Create `condition-operator-meta.ts`
 
-Replace ad hoc literal lists like `SUPPORTED_CONDITION_OPS` with a canonical exported union/tuple from the registry module.
+New file at `packages/engine/src/kernel/condition-operator-meta.ts`:
 
-Consumers should import:
+- `CONDITION_OPERATORS` tuple (canonical operator list)
+- `ConditionOperator` type
+- `isConditionOperator()` type guard
+- `CONDITION_OPERATOR_META` map: `ReadonlyMap<ConditionOperator, ConditionOperatorMeta>`
+- `getConditionOperatorMeta(op)` lookup helper
 
-- `SUPPORTED_CONDITION_OPERATORS`
-- `isConditionOperator(...)`
-- descriptor lookup helpers
+### B. Replace `SUPPORTED_CONDITION_OPS` in CNL
 
-This removes duplicated support lists from CNL and tests.
+`compile-conditions.ts` imports `CONDITION_OPERATORS` (or `isConditionOperator`) from the new module instead of maintaining its own list.
 
-### B. Centralize traversal metadata
+### C. Refactor zone-selector alias extraction
 
-The registry should declare which fields contain:
+`zone-selector-aliases.ts` uses `CONDITION_OPERATOR_META` to iterate declared `zoneSelectorFields` instead of a per-operator switch for field-path walking.
 
-- nested conditions
-- generic `ValueExpr`
-- `NumericValueExpr`
-- zone selectors
+### D. Refactor structural validation traversal
 
-This metadata should drive:
+`validate-conditions.ts` uses `CONDITION_OPERATOR_META` for generic field walking (finding nested conditions, value expressions, zone selectors). Operator-specific validation logic (lattice checks, literal constraints) remains in targeted branches.
 
-- zone-selector alias extraction
-- generic validation traversal
-- generic lowering traversal scaffolding
+### E. Add registry-backed tests
 
-This is the highest-value cleanup because it removes the “edit every switch” pattern for structurally similar operators.
+Add tests proving:
 
-### C. Keep operator-specific logic pluggable
-
-Some operators need custom behavior:
-
-- `connected` has literal-only options like `allowTargetOutsideVia` and `maxDepth`
-- `markerStateAllowed` validates state literals against lattice state sets
-- `markerShiftAllowed` requires numeric delta semantics
-
-Those cases should plug into the registry as custom handlers layered on top of the generic traversal metadata, not by bypassing the registry entirely.
-
-### D. Separate structural presentation from game-authored labels
-
-The registry may own structural phrases like:
-
-- `adjacent`
-- `connected`
-- `allows`
-- `allows shift`
-
-But it must not own game-specific display names for markers, states, or spaces.
-
-Those remain resolved through:
-
-- verbalization data
-- label resolver
-- `visual-config.yaml` for presentation-only game-specific visuals
-
-This preserves the boundary:
-
-- registry defines engine structure
-- `GameSpecDoc` defines game behavior/data
-- `visual-config.yaml` defines game-specific visual presentation
-
-### E. Move condition-surface tests to registry-backed invariants
-
-Add tests that prove:
-
-1. every supported operator has a descriptor
-2. every descriptor’s declared field paths are valid
-3. generic alias/validation/lowering traversal uses descriptor metadata
-4. no separate hard-coded operator lists remain in consumer modules
-
-This is better than relying on downstream exhaustiveness counts alone.
+1. Every operator in `ConditionAST` has a corresponding entry in `CONDITION_OPERATOR_META`.
+2. Every metadata entry's declared field paths are valid (fields exist on the corresponding AST node type).
+3. `CONDITION_OPERATORS` tuple matches the `ConditionAST` union's `op` discriminants exactly.
+4. No separate hard-coded operator identity list remains in `compile-conditions.ts`.
 
 ## File-Level Impact
 
-Expected touched files in implementation:
+Files created:
 
-- `packages/engine/src/kernel/condition-operator-registry.ts` (new)
-- `packages/engine/src/kernel/types-ast.ts`
-- `packages/engine/src/cnl/compile-conditions.ts`
-- `packages/engine/src/kernel/validate-conditions.ts`
-- `packages/engine/src/kernel/zone-selector-aliases.ts`
+- `packages/engine/src/kernel/condition-operator-meta.ts` (new)
+- `packages/engine/test/unit/kernel/condition-operator-meta.test.ts` (new)
+
+Files modified:
+
+- `packages/engine/src/cnl/compile-conditions.ts` — remove `SUPPORTED_CONDITION_OPS`, import from new module
+- `packages/engine/src/kernel/zone-selector-aliases.ts` — use metadata for field-path traversal
+- `packages/engine/src/kernel/validate-conditions.ts` — use metadata for structural field walking
+
+Files **not** modified (switches stay as-is):
+
+- `packages/engine/src/kernel/eval-condition.ts`
 - `packages/engine/src/kernel/ast-to-display.ts`
 - `packages/engine/src/kernel/tooltip-blocker-extractor.ts`
 - `packages/engine/src/kernel/tooltip-modifier-humanizer.ts`
-- `packages/engine/src/kernel/eval-condition.ts`
-- `packages/engine/test/unit/types-exhaustive.test.ts`
-- `packages/engine/test/unit/compile-conditions.test.ts`
-- `packages/engine/test/unit/kernel/tooltip-*.test.ts`
-- new registry-focused unit tests
+- `packages/engine/src/kernel/types-ast.ts` (`ConditionAST` union unchanged)
 
 ## Migration Strategy
 
@@ -202,39 +153,31 @@ This is an internal refactor with no backwards-compatibility shim.
 
 Implementation sequence:
 
-1. Introduce registry module with the canonical operator set and descriptor types.
-2. Migrate low-risk consumers first:
-   - supported operator list
-   - zone-selector alias traversal
-   - generic validation field walking
-3. Migrate CNL lowering to use descriptor-owned lowering handlers.
-4. Migrate display/humanization/blocker extraction to descriptor-backed handlers.
-5. Leave runtime eval on typed handlers, but make operator dispatch registry-owned.
-6. Remove stale duplicate operator lists/switch-only ownership patterns.
+1. Create `condition-operator-meta.ts` with the canonical operator set, type guard, and per-operator structural metadata.
+2. Add tests proving metadata completeness and correctness against `ConditionAST`.
+3. Replace `SUPPORTED_CONDITION_OPS` in `compile-conditions.ts` with import from new module.
+4. Refactor `zone-selector-aliases.ts` to use metadata-driven field-path traversal.
+5. Refactor `validate-conditions.ts` to use metadata for structural field walking (keeping operator-specific logic in targeted branches).
+6. Verify all engine tests, lint, and typecheck pass.
 
 ## Acceptance Criteria
 
-1. There is one canonical supported-condition-operator registry.
-2. No consumer module keeps its own independent condition-operator support list.
-3. Zone-selector alias traversal for conditions is derived from registry metadata rather than per-file duplicated switches.
-4. Validation and CNL lowering use registry-backed structural ownership, with custom handlers only where structurally necessary.
-5. Runtime semantics remain type-safe and game-agnostic.
-6. Game-specific rule data remains in `GameSpecDoc`; visual-only game-specific data remains in `visual-config.yaml`.
-7. Adding a new structurally ordinary condition operator requires:
-   - extending `ConditionAST`
-   - adding one registry descriptor
-   - adding operator-specific runtime logic only if semantics are genuinely new
-8. Engine tests, lint, and typecheck pass.
+1. A single `condition-operator-meta.ts` module declares the canonical set of condition operators and their structural field-path metadata.
+2. No consumer module keeps its own independent condition-operator identity list (specifically, `SUPPORTED_CONDITION_OPS` in CNL is removed).
+3. Zone-selector alias traversal for conditions is derived from metadata rather than a per-operator switch duplicating field-path knowledge.
+4. Structural validation field walking uses metadata, with operator-specific checks remaining in targeted branches.
+5. `ConditionAST` discriminated union in `types-ast.ts` is unchanged.
+6. All existing switch statements in `eval-condition.ts`, `ast-to-display.ts`, `tooltip-blocker-extractor.ts`, `tooltip-modifier-humanizer.ts`, and `compile-conditions.ts` (lowering) remain as-is.
+7. Runtime semantics remain type-safe and game-agnostic.
+8. Game-specific rule data remains in `GameSpecDoc`; visual-only data remains in `visual-config.yaml`.
+9. Tests prove metadata completeness: every `ConditionAST` operator has metadata, and every metadata entry's fields are valid.
+10. Engine tests, lint, and typecheck pass.
 
 ## Risks
 
-1. Over-abstracting runtime semantics into generic config would reduce clarity.
-   Mitigation: keep evaluation handlers typed and explicit.
-2. Circular dependencies between kernel and CNL helpers.
-   Mitigation: keep registry ownership in a leaf module with narrow imports.
-3. Partial migration could leave two sources of truth.
-   Mitigation: make duplicate lists a lint/test failure in the same change.
-
-## Why This Should Be A Spec, Not A Ticket
-
-This change defines ownership boundaries for a whole subsystem rather than implementing one localized behavior. The goal is to establish the permanent architecture for future condition operators, not just clean up one current duplication site.
+1. **Over-abstracting traversal**: If metadata-driven traversal becomes harder to read than the original switches, it defeats the purpose.
+   Mitigation: Only use metadata for the two genuinely duplicated concerns (alias extraction, validation walking). Don't force it on semantically distinct switches.
+2. **Circular dependencies**: The new module sits in `kernel/` but is consumed by CNL.
+   Mitigation: Keep `condition-operator-meta.ts` as a leaf module with no imports from CNL or other kernel modules beyond types.
+3. **Metadata staleness**: Metadata could drift from `ConditionAST` types.
+   Mitigation: Tests enforce that metadata entries match `ConditionAST` union members exactly.

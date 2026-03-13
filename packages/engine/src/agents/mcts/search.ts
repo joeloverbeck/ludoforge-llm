@@ -24,6 +24,7 @@ import { materializeConcreteCandidates, filterAvailableCandidates } from './mate
 import { rollout } from './rollout.js';
 import { terminalToRewards, evaluateForAllPlayers } from './evaluate.js';
 import { sampleBeliefState } from './belief.js';
+import { canActivateSolver, updateSolverResult, selectSolverAwareChild } from './solver.js';
 
 // ---------------------------------------------------------------------------
 // Backpropagation
@@ -65,6 +66,7 @@ export function runOneIteration(
   rootLegalMoves: readonly Move[],
   runtime: GameDefRuntime,
   pool: NodePool,
+  solverActive: boolean = false,
 ): { readonly rng: Rng } {
   let currentNode = root;
   let currentState = sampledState;
@@ -159,6 +161,18 @@ export function runOneIteration(
     }
 
     const exploringPlayer = currentState.activePlayer as PlayerId;
+
+    // Solver shortcut: if a proven-win child exists, pick it immediately.
+    if (solverActive) {
+      const solverChild = selectSolverAwareChild(currentNode, exploringPlayer);
+      if (solverChild !== null) {
+        const applied = applyMove(def, currentState, solverChild.move!, undefined, runtime);
+        currentState = applied.state;
+        currentNode = solverChild;
+        continue;
+      }
+    }
+
     const selected = selectChild(
       currentNode,
       exploringPlayer,
@@ -193,6 +207,15 @@ export function runOneIteration(
   // ── Backpropagation ──────────────────────────────────────────────────
   backpropagate(currentNode, rewards);
 
+  // ── Solver proven-result propagation ───────────────────────────────
+  if (solverActive) {
+    let solverNode: MctsNode | null = currentNode;
+    while (solverNode !== null) {
+      updateSolverResult(solverNode, def, currentState, runtime);
+      solverNode = solverNode.parent;
+    }
+  }
+
   return { rng: currentRng };
 }
 
@@ -222,10 +245,18 @@ export function runSearch(
   let currentRng = searchRng;
   let iterations = 0;
 
+  // Check solver activation once at search start.
+  const solverActive = canActivateSolver(def, state, config);
+
   const deadline =
     config.timeLimitMs !== undefined ? Date.now() + config.timeLimitMs : undefined;
 
   while (iterations < config.iterations) {
+    // If root is proven, break search early.
+    if (solverActive && root.provenResult !== null) {
+      break;
+    }
+
     // Optional wall-clock early exit (only after minIterations).
     if (
       deadline !== undefined &&
@@ -252,6 +283,7 @@ export function runSearch(
       rootLegalMoves,
       runtime,
       pool,
+      solverActive,
     );
     // Consume the iteration's RNG output (determinism is via fork chain).
     void result;

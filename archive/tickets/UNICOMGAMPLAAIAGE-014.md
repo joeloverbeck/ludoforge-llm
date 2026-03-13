@@ -1,6 +1,6 @@
 # UNICOMGAMPLAAIAGE-014: Restricted Solver Support
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — new file in agents/mcts/, modify search.ts
@@ -106,3 +106,14 @@ Add re-export for `solver.ts`.
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/test/unit/agents/mcts/solver.test.ts`
 2. `pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-13
+- **What changed**:
+  - Created `packages/engine/src/agents/mcts/solver.ts` with `canActivateSolver`, `updateSolverResult`, `selectSolverAwareChild`, plus `rollRandom` detection helpers for stochastic game rejection.
+  - Modified `packages/engine/src/agents/mcts/search.ts`: solver activation check at search start, solver-aware child selection shortcut before ISUCT, proven-result propagation after backpropagation, early termination when root is proven.
+  - Updated `packages/engine/src/agents/mcts/index.ts` with solver re-exports.
+  - Created `packages/engine/test/unit/agents/mcts/solver.test.ts` with 18 tests covering all 11 acceptance criteria.
+- **Deviations**: None. All deliverables implemented as specified.
+- **Verification**: 18/18 solver tests pass, 4423/4423 engine tests pass, lint 0 errors, typecheck clean.

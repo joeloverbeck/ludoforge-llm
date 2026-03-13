@@ -27,6 +27,8 @@ export { terminalToRewards, sigmoid, evaluateForAllPlayers } from './evaluate.js
 
 export { backpropagate, runOneIteration, runSearch, selectRootDecision } from './search.js';
 
+export { canActivateSolver, updateSolverResult, selectSolverAwareChild } from './solver.js';
+
 export { collectDiagnostics } from './diagnostics.js';
 export type { MctsSearchDiagnostics } from './diagnostics.js';
 

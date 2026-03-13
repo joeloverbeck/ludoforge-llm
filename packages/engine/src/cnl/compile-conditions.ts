@@ -15,6 +15,7 @@ import type {
   AssetRowsCardinality,
   AssetRowPredicate,
   ConditionAST,
+  FreeOperationSequenceKeyExpr,
   NumericValueExpr,
   OptionsQuery,
   PlayerSel,
@@ -24,6 +25,7 @@ import type {
   ValueExpr,
   ZoneRef,
 } from '../kernel/types.js';
+import { isTokenFilterPredicateExpr } from '../kernel/token-filter-expr-utils.js';
 import { bindingShadowWarningsForScope } from './binding-diagnostics.js';
 import { normalizePlayerSelector } from './compile-selectors.js';
 import { canonicalizeZoneSelector } from './compile-zones.js';
@@ -51,6 +53,10 @@ export interface ConditionLoweringResult<TValue> {
   readonly value: TValue | null;
   readonly diagnostics: readonly Diagnostic[];
 }
+
+type LoweredTokenFilterSelector =
+  | { readonly prop: string }
+  | { readonly field: Extract<TokenFilterPredicate['field'], object> };
 
 function lowerBooleanArityTuple<TValue>(
   source: { readonly op: 'and' | 'or'; readonly args?: unknown },
@@ -96,6 +102,7 @@ const SUPPORTED_QUERY_KINDS = [
   'connectedZones',
   'binding',
   'grantContext',
+  'capturedSequenceZones',
 ];
 const SUPPORTED_REFERENCE_KINDS = [
   'gvar',
@@ -112,6 +119,7 @@ const SUPPORTED_REFERENCE_KINDS = [
   'activePlayer',
   'activeSeat',
   'grantContext',
+  'capturedSequenceZones',
 ];
 const PREDICATE_ALIAS_KEYS = Object.freeze({
   eq: true,
@@ -425,22 +433,36 @@ function lowerTokenFilterEntry(
   context: ConditionLoweringContext,
   path: string,
 ): ConditionLoweringResult<TokenFilterPredicate> {
-  if (!isRecord(source) || typeof source.prop !== 'string') {
-    return missingCapability(path, 'token filter entry', source, ['{ prop: string, op: "eq"|"neq"|"in"|"notIn", value: <value> }']);
+  if (!isRecord(source)) {
+    return missingCapability(path, 'token filter entry', source, [
+      '{ prop: string, op: "eq"|"neq"|"in"|"notIn", value: <value> }',
+      '{ field: { kind: "prop", prop: string }|{ kind: "tokenId" }|{ kind: "tokenZone" }, op: "eq"|"neq"|"in"|"notIn", value: <value> }',
+    ]);
   }
   const aliasRejection = rejectPredicateAliasKeysWhenCanonicalShapePresent(
     source,
     path,
     'token filter entry',
-    '{ prop: string, op: "eq"|"neq"|"in"|"notIn", value: <value> }',
+    '{ prop: string, op: "eq"|"neq"|"in"|"notIn", value: <value> } | { field, op, value }',
   );
   if (aliasRejection !== null) {
     return aliasRejection;
   }
-  const prop = source.prop;
-  const propDiagnostics = validateDeclaredTokenFilterProp(context, prop, `${path}.prop`);
-  if (propDiagnostics.length > 0) {
-    return { value: null, diagnostics: propDiagnostics };
+
+  const selector = lowerTokenFilterSelector(source);
+  if (selector === null) {
+    return missingCapability(path, 'token filter entry', source, [
+      '{ prop: string, op: "eq"|"neq"|"in"|"notIn", value: <value> }',
+      '{ field: { kind: "prop", prop: string }|{ kind: "tokenId" }|{ kind: "tokenZone" }, op: "eq"|"neq"|"in"|"notIn", value: <value> }',
+    ]);
+  }
+
+  const prop = tokenFilterSelectorProp(selector);
+  if (prop !== undefined) {
+    const propDiagnostics = validateDeclaredTokenFilterProp(context, prop, tokenFilterSelectorPropPath(selector, path));
+    if (propDiagnostics.length > 0) {
+      return { value: null, diagnostics: propDiagnostics };
+    }
   }
 
   if (!isPredicateOp(source.op)) {
@@ -450,7 +472,7 @@ function lowerTokenFilterEntry(
   const rawValue = source.value;
 
   if (rawValue === undefined) {
-    return missingCapability(path, 'token filter value', source, ['{ prop, op, value: <string|number|boolean|(string|number|boolean)[]|ValueExpr> }']);
+    return missingCapability(path, 'token filter value', source, ['{ prop|field, op, value: <string|number|boolean|(string|number|boolean)[]|ValueExpr> }']);
   }
 
   // For 'in'/'notIn', value may be a literal canonical string array, a named set,
@@ -473,7 +495,7 @@ function lowerTokenFilterEntry(
         };
       }
       return {
-        value: { prop, op, value: [...values] },
+        value: withTokenFilterSelector(selector, op, [...values]),
         diagnostics: [],
       };
     }
@@ -483,16 +505,23 @@ function lowerTokenFilterEntry(
         rawValue,
         `${path}.value`,
         'token filter set value',
-        ['homogeneous (string|number|boolean)[]', '{ ref: "binding", name: string }', '{ ref: "grantContext", key: string }'],
+        [
+          'homogeneous (string|number|boolean)[]',
+          '{ ref: "binding", name: string }',
+          '{ ref: "grantContext", key: string }',
+          '{ ref: "capturedSequenceZones", key: <free-operation sequence key> }',
+        ],
       );
       if (literalSet.value === null) {
         return { value: null, diagnostics: literalSet.diagnostics };
       }
       const diagnostics = literalSet.value.flatMap((item, index) =>
-        typeof item === 'string' ? validateCanonicalTokenTraitLiteral(context, prop, item, `${path}.value.${index}`) : [],
+        typeof item === 'string' && prop !== undefined
+          ? validateCanonicalTokenTraitLiteral(context, prop, item, `${path}.value.${index}`)
+          : [],
       );
       return {
-        value: { prop, op, value: [...literalSet.value] },
+        value: withTokenFilterSelector(selector, op, [...literalSet.value]),
         diagnostics,
       };
     }
@@ -505,17 +534,22 @@ function lowerTokenFilterEntry(
       typeof loweredValue.value !== 'object'
       || loweredValue.value === null
       || !('ref' in loweredValue.value)
-      || (loweredValue.value.ref !== 'binding' && loweredValue.value.ref !== 'grantContext')
+      || (
+        loweredValue.value.ref !== 'binding'
+        && loweredValue.value.ref !== 'grantContext'
+        && loweredValue.value.ref !== 'capturedSequenceZones'
+      )
     ) {
       return missingCapability(`${path}.value`, 'token filter set value', rawValue, [
         'homogeneous (string|number|boolean)[]',
         '{ ref: "binding", name: string }',
         '{ ref: "grantContext", key: string }',
+        '{ ref: "capturedSequenceZones", key: <free-operation sequence key> }',
       ]);
     }
 
     return {
-      value: { prop, op, value: loweredValue.value },
+      value: withTokenFilterSelector(selector, op, loweredValue.value),
       diagnostics: loweredValue.diagnostics,
     };
   }
@@ -527,12 +561,12 @@ function lowerTokenFilterEntry(
   }
 
   const canonicalDiagnostics =
-    typeof loweredValue.value === 'string'
+    typeof loweredValue.value === 'string' && prop !== undefined
       ? validateCanonicalTokenTraitLiteral(context, prop, loweredValue.value, `${path}.value`)
       : [];
 
   return {
-    value: { prop, op, value: loweredValue.value },
+    value: withTokenFilterSelector(selector, op, loweredValue.value),
     diagnostics: [...loweredValue.diagnostics, ...canonicalDiagnostics],
   };
 }
@@ -688,6 +722,79 @@ function lowerScalarMembershipLiteral(
   return { value: values, diagnostics: [] };
 }
 
+function lowerTokenFilterSelector(source: Record<string, unknown>): LoweredTokenFilterSelector | null {
+  if (typeof source.prop === 'string') {
+    return { prop: source.prop };
+  }
+  if (!isRecord(source.field)) {
+    return null;
+  }
+  if (source.field.kind === 'tokenId') {
+    return { field: { kind: 'tokenId' } };
+  }
+  if (source.field.kind === 'tokenZone') {
+    return { field: { kind: 'tokenZone' } };
+  }
+  if (source.field.kind === 'prop' && typeof source.field.prop === 'string') {
+    return { field: { kind: 'prop', prop: source.field.prop } };
+  }
+  return null;
+}
+
+function tokenFilterSelectorProp(selector: LoweredTokenFilterSelector): string | undefined {
+  if ('prop' in selector) {
+    return selector.prop;
+  }
+  return selector.field.kind === 'prop' ? selector.field.prop : undefined;
+}
+
+function tokenFilterSelectorPropPath(selector: LoweredTokenFilterSelector, path: string): string {
+  return 'prop' in selector ? `${path}.prop` : `${path}.field.prop`;
+}
+
+function withTokenFilterSelector(
+  selector: LoweredTokenFilterSelector,
+  op: TokenFilterPredicate['op'],
+  value: TokenFilterPredicate['value'],
+): TokenFilterPredicate {
+  return 'prop' in selector
+    ? { prop: selector.prop, op, value }
+    : { field: selector.field, op, value };
+}
+
+function lowerFreeOperationSequenceKeyExpr(
+  source: unknown,
+  path: string,
+): ConditionLoweringResult<FreeOperationSequenceKeyExpr> {
+  if (typeof source === 'string') {
+    return { value: source, diagnostics: [] };
+  }
+  if (!isRecord(source) || typeof source.ref !== 'string') {
+    return missingCapability(path, 'free-operation sequence key', source, [
+      'string',
+      '{ ref: "binding", name: string }',
+      '{ ref: "grantContext", key: string }',
+    ]);
+  }
+  if (source.ref === 'binding' && typeof source.name === 'string') {
+    return {
+      value: { ref: 'binding', name: source.name },
+      diagnostics: [],
+    };
+  }
+  if (source.ref === 'grantContext' && typeof source.key === 'string') {
+    return {
+      value: { ref: 'grantContext', key: source.key },
+      diagnostics: [],
+    };
+  }
+  return missingCapability(path, 'free-operation sequence key', source, [
+    'string',
+    '{ ref: "binding", name: string }',
+    '{ ref: "grantContext", key: string }',
+  ]);
+}
+
 function validateCanonicalTokenTraitLiteral(
   context: ConditionLoweringContext,
   prop: string,
@@ -717,7 +824,7 @@ function normalizeTokenFilterExprShape(
   expr: TokenFilterExpr,
   path: string,
 ): ConditionLoweringResult<TokenFilterExpr> {
-  if ('prop' in expr) {
+  if (isTokenFilterPredicateExpr(expr)) {
     return { value: expr, diagnostics: [] };
   }
 
@@ -751,7 +858,7 @@ function normalizeTokenFilterExprShape(
   const flattenedArgs: TokenFilterExpr[] = [];
 
   for (const arg of normalizedArgs) {
-    if ('prop' in arg || arg.op === 'not') {
+    if (isTokenFilterPredicateExpr(arg) || arg.op === 'not') {
       flattenedArgs.push(arg);
       continue;
     }
@@ -778,7 +885,7 @@ function normalizeTokenFilterExprShape(
   const [first, ...rest] = flattenedArgs;
   return {
     value: {
-      op: expr.op,
+      op: expr.op as 'and' | 'or',
       args: [first!, ...rest],
     },
     diagnostics,
@@ -1427,6 +1534,16 @@ export function lowerQueryNode(
         };
       }
       return missingCapability(path, 'grantContext query', source, ['{ query: "grantContext", key: string }']);
+    case 'capturedSequenceZones': {
+      const loweredKey = lowerFreeOperationSequenceKeyExpr(source.key, `${path}.key`);
+      if (loweredKey.value === null) {
+        return { value: null, diagnostics: loweredKey.diagnostics };
+      }
+      return {
+        value: { query: 'capturedSequenceZones', key: loweredKey.value },
+        diagnostics: loweredKey.diagnostics,
+      };
+    }
     default:
       return missingCapability(path, 'query kind', source.query, SUPPORTED_QUERY_KINDS);
   }
@@ -1781,6 +1898,16 @@ function lowerReference(
         };
       }
       return missingCapability(path, 'grantContext reference', source, ['{ ref: "grantContext", key: string }']);
+    case 'capturedSequenceZones': {
+      const loweredKey = lowerFreeOperationSequenceKeyExpr(source.key, `${path}.key`);
+      if (loweredKey.value === null) {
+        return { value: null, diagnostics: loweredKey.diagnostics };
+      }
+      return {
+        value: { ref: 'capturedSequenceZones', key: loweredKey.value },
+        diagnostics: loweredKey.diagnostics,
+      };
+    }
     default:
       return missingCapability(path, 'reference kind', source.ref, SUPPORTED_REFERENCE_KINDS);
   }

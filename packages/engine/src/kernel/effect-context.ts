@@ -26,6 +26,7 @@ export interface PhaseTransitionBudget {
 
 export interface FreeOperationProbeScope {
   readonly priorGrantDefinitions: TurnFlowFreeOperationGrantContract[];
+  readonly blockedStrictSequenceBatchIds: string[];
 }
 
 export interface EffectTraceContext {

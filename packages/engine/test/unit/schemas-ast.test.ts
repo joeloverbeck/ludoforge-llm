@@ -892,14 +892,50 @@ describe('AST and selector schemas', () => {
     assert.deepEqual(OptionsQuerySchema.parse(query), query);
   });
 
+  it('parses capturedSequenceZones query with a dynamic grantContext key', () => {
+    const query: OptionsQuery = {
+      query: 'capturedSequenceZones',
+      key: { ref: 'grantContext', key: 'originRestrictionKey' },
+    };
+    assert.deepEqual(OptionsQuerySchema.parse(query), query);
+  });
+
   it('parses capturedSequenceZones ref', () => {
     const expr = { ref: 'capturedSequenceZones', key: 'selected-space' };
+    assert.deepEqual(ValueExprSchema.parse(expr), expr);
+  });
+
+  it('parses capturedSequenceZones ref with a dynamic binding key', () => {
+    const expr = {
+      ref: 'capturedSequenceZones',
+      key: { ref: 'binding', name: '$capturedKey' },
+    };
     assert.deepEqual(ValueExprSchema.parse(expr), expr);
   });
 
   it('rejects capturedSequenceZones surfaces with empty keys', () => {
     assert.equal(OptionsQuerySchema.safeParse({ query: 'capturedSequenceZones', key: '' }).success, false);
     assert.equal(ValueExprSchema.safeParse({ ref: 'capturedSequenceZones', key: '' }).success, false);
+  });
+
+  it('parses token filter predicates that target tokenZone via field selectors', () => {
+    const filter = {
+      field: { kind: 'tokenZone' },
+      op: 'in',
+      value: { ref: 'capturedSequenceZones', key: { ref: 'grantContext', key: 'originRestrictionKey' } },
+    } as const;
+    const parsed = EffectASTSchema.parse({
+      chooseOne: {
+        internalDecisionId: 'token-zone-filter-test',
+        bind: '$piece',
+        options: {
+          query: 'tokensInAdjacentZones',
+          zone: 'saigon:none',
+          filter,
+        },
+      },
+    }) as { chooseOne?: { options?: { filter?: unknown } } };
+    assert.deepEqual(parsed.chooseOne?.options?.filter, filter);
   });
 
   it('parses concat query with non-empty nested sources', () => {

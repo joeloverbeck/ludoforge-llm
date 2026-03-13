@@ -52,13 +52,40 @@ const validateTokenFilterPredicate = (
     });
   }
 
-  if (!isAllowedTokenFilterProp(predicate.prop, context.tokenFilterPropCandidates)) {
+  if (predicate.prop !== undefined && predicate.field !== undefined) {
+    diagnostics.push({
+      code: 'DOMAIN_QUERY_INVALID',
+      path,
+      severity: 'error',
+      message: 'Token filter predicates must not specify both "prop" and "field".',
+      suggestion: 'Keep exactly one token filter field selector.',
+    });
+  } else if (predicate.prop === undefined && predicate.field === undefined) {
+    diagnostics.push({
+      code: 'DOMAIN_QUERY_INVALID',
+      path,
+      severity: 'error',
+      message: 'Token filter predicates must specify one of "prop" or "field".',
+      suggestion: 'Add a token prop selector or a token field selector.',
+    });
+  } else if (predicate.prop !== undefined) {
+    if (!isAllowedTokenFilterProp(predicate.prop, context.tokenFilterPropCandidates)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_TOKEN_FILTER_PROP_MISSING',
+        `${path}.prop`,
+        `Unknown token filter prop "${predicate.prop}".`,
+        predicate.prop,
+        tokenFilterPropAlternatives(context.tokenFilterPropCandidates),
+      );
+    }
+  } else if (predicate.field?.kind === 'prop' && !isAllowedTokenFilterProp(predicate.field.prop, context.tokenFilterPropCandidates)) {
     pushMissingReferenceDiagnostic(
       diagnostics,
       'REF_TOKEN_FILTER_PROP_MISSING',
-      `${path}.prop`,
-      `Unknown token filter prop "${predicate.prop}".`,
-      predicate.prop,
+      `${path}.field.prop`,
+      `Unknown token filter prop "${predicate.field.prop}".`,
+      predicate.field.prop,
       tokenFilterPropAlternatives(context.tokenFilterPropCandidates),
     );
   }
@@ -716,8 +743,19 @@ export const validateOptionsQuery = (
     }
     case 'enums':
     case 'players':
-    case 'grantContext':
+    case 'grantContext': {
+      return;
+    }
     case 'capturedSequenceZones': {
+      if (typeof query.key !== 'string' && query.key.ref === 'binding') {
+        validateCanonicalBinding(
+          diagnostics,
+          query.key.name,
+          `${path}.key.name`,
+          'REF_BINDING_INVALID',
+          'capturedSequenceZones.key',
+        );
+      }
       return;
     }
     case 'globalMarkers': {

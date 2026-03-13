@@ -98,7 +98,8 @@ describe('FITL insurgent operations integration', () => {
         node?.macro === 'insurgent-march-resolve-destination' &&
         node?.args?.faction === expected.faction &&
         node?.args?.resourceVar === expected.resourceVar &&
-        node?.args?.allowTrailCountryFreeCost === expected.allowTrailCountryFreeCost,
+        node?.args?.allowTrailCountryFreeCost === expected.allowTrailCountryFreeCost &&
+        node?.args?.enforceOriginRestriction === true,
       );
       assert.ok(resolveMacroCalls.length >= 1, `${expected.id} should call insurgent-march-resolve-destination macro`);
     }

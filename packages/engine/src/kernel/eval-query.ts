@@ -26,6 +26,7 @@ import {
 } from './runtime-table-eval-errors.js';
 import { filterRowsByPredicates, type ResolvedRowPredicate } from './query-predicate.js';
 import { resolvePredicateValue } from './predicate-value-resolution.js';
+import { resolveFreeOperationSequenceKey } from './free-operation-sequence-key.js';
 import { filterTokensByExpr } from './token-filter.js';
 import { foldTokenFilterExpr } from './token-filter-expr-utils.js';
 import { planAssetRowsLookup } from './runtime-table-lookup-plan.js';
@@ -249,14 +250,29 @@ function resolveGrantContextQuery(
 }
 
 function resolveCapturedSequenceZonesQuery(
-  key: string,
+  key: Extract<OptionsQuery, { readonly query: 'capturedSequenceZones' }>['key'],
   ctx: ReadContext,
 ): readonly string[] {
-  return ctx.freeOperationOverlay?.capturedSequenceZonesByKey?.[key] ?? [];
+  const resolvedKey = resolveFreeOperationSequenceKey(key, ctx);
+  return resolvedKey === undefined
+    ? []
+    : (ctx.freeOperationOverlay?.capturedSequenceZonesByKey?.[resolvedKey] ?? []);
 }
 
 function applyTokenFilter(tokens: readonly Token[], filter: TokenFilterExpr, ctx: ReadContext): readonly Token[] {
-  return filterTokensByExpr(tokens, filter, (value) => resolvePredicateValue(value, ctx), ctx.freeOperationOverlay);
+  const tokenStateIndex = getTokenStateIndex(ctx.state);
+  return filterTokensByExpr(
+    tokens,
+    filter,
+    (value) => resolvePredicateValue(value, ctx),
+    ctx.freeOperationOverlay,
+    (token, predicate) => {
+      if (predicate.field?.kind !== 'tokenZone') {
+        return undefined;
+      }
+      return tokenStateIndex.get(token.id)?.zoneId;
+    },
+  );
 }
 
 function tokenFilterPredicateCount(filter: TokenFilterExpr): number {

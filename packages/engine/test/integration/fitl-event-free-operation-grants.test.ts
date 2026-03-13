@@ -1869,6 +1869,8 @@ const createStrictInOrderGrantDef = (): GameDef => {
     for (const cardId of [
       'card-require-usable-issue-strict-sequence',
       'card-effect-require-usable-issue-strict-sequence',
+      'card-require-usable-issue-strict-sequence-no-policy-later',
+      'card-require-usable-issue-strict-sequence-batch-isolation',
     ]) {
       if (!eventCardValues.includes(cardId)) {
         eventCardValues.push(cardId);
@@ -1932,6 +1934,60 @@ const createStrictInOrderGrantDef = (): GameDef => {
                   sequence: { batch: 'effect-issue-strict-in-order', step: 1 },
                   viabilityPolicy: 'requireUsableAtIssue',
                 },
+              },
+            ],
+          },
+        } as EventCardDef,
+        {
+          id: 'card-require-usable-issue-strict-sequence-no-policy-later',
+          title: 'Issue-time Viability Strict Sequence With Later Non-Probed Step',
+          sideMode: 'single',
+          unshaded: {
+            text: 'Do not emit later strict-in-order steps when an earlier probed step is skipped, even if the later step has no viability policy.',
+            freeOperationGrants: [
+              {
+                seat: 'self',
+                sequence: { batch: 'issue-strict-in-order-no-policy-later', step: 0 },
+                operationClass: 'operation',
+                actionIds: ['operation'],
+                viabilityPolicy: 'requireUsableAtIssue',
+                zoneFilter: { op: '==', left: 1, right: 2 },
+              },
+              {
+                seat: 'self',
+                sequence: { batch: 'issue-strict-in-order-no-policy-later', step: 1 },
+                operationClass: 'operation',
+                actionIds: ['operation'],
+              },
+            ],
+          },
+        } as EventCardDef,
+        {
+          id: 'card-require-usable-issue-strict-sequence-batch-isolation',
+          title: 'Issue-time Viability Strict Sequence Batch Isolation',
+          sideMode: 'single',
+          unshaded: {
+            text: 'Blocking one strict-in-order batch must not suppress a different batch declared in the same event.',
+            freeOperationGrants: [
+              {
+                seat: 'self',
+                sequence: { batch: 'issue-strict-batch-a', step: 0 },
+                operationClass: 'operation',
+                actionIds: ['operation'],
+                viabilityPolicy: 'requireUsableAtIssue',
+                zoneFilter: { op: '==', left: 1, right: 2 },
+              },
+              {
+                seat: 'self',
+                sequence: { batch: 'issue-strict-batch-a', step: 1 },
+                operationClass: 'operation',
+                actionIds: ['operation'],
+              },
+              {
+                seat: 'self',
+                sequence: { batch: 'issue-strict-batch-b', step: 0 },
+                operationClass: 'operation',
+                actionIds: ['operation'],
               },
             ],
           },
@@ -3109,6 +3165,44 @@ describe('event free-operation grants integration', () => {
     const runtime = requireCardDrivenRuntime(afterEvent);
     assert.deepEqual(runtime.pendingFreeOperationGrants ?? [], []);
     assert.equal(runtime.freeOperationSequenceContexts, undefined);
+    assert.deepEqual(projectFreeOperationMoves(def, afterEvent), []);
+  });
+
+  it('suppresses later event-issued strictInOrder grants even when only the earlier step requests issue-time usability gating', () => {
+    const def = createStrictInOrderGrantDef();
+    const start = initialState(def, 1201, 3).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-require-usable-issue-strict-sequence-no-policy-later', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const runtime = requireCardDrivenRuntime(afterEvent);
+    assert.deepEqual(runtime.pendingFreeOperationGrants ?? [], []);
+    assert.equal(runtime.freeOperationSequenceContexts, undefined);
+    assert.deepEqual(projectFreeOperationMoves(def, afterEvent), []);
+  });
+
+  it('keeps event-issued strictInOrder suppression scoped to the blocked batch', () => {
+    const def = createStrictInOrderGrantDef();
+    const start = initialState(def, 1202, 3).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-require-usable-issue-strict-sequence-batch-isolation', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const runtime = requireCardDrivenRuntime(afterEvent);
+    assert.equal(runtime.pendingFreeOperationGrants?.length, 1);
+    assert.equal(runtime.pendingFreeOperationGrants?.[0]?.sequenceBatchId?.endsWith(':issue-strict-batch-b'), true);
+    assert.equal(runtime.pendingFreeOperationGrants?.[0]?.sequenceIndex, 0);
+    assert.deepEqual(runtime.freeOperationSequenceContexts, {
+      'freeOpBatch:0:0:event:issue-strict-batch-b': {
+        capturedMoveZonesByKey: {},
+        progressionPolicy: 'strictInOrder',
+        skippedStepIndices: [],
+      },
+    });
     assert.deepEqual(projectFreeOperationMoves(def, afterEvent), []);
   });
 

@@ -52,6 +52,32 @@ const isOperationSelectorMax = (max: unknown): boolean => {
   return typeof max === 'object' && max !== null;
 };
 
+const isLimitedOperationActionClassCondition = (condition: unknown): boolean => {
+  if (typeof condition !== 'object' || condition === null) {
+    return false;
+  }
+
+  const maybeCondition = condition as {
+    readonly op?: unknown;
+    readonly left?: { readonly ref?: unknown; readonly name?: unknown };
+    readonly right?: unknown;
+    readonly args?: readonly unknown[];
+  };
+
+  if (
+    maybeCondition.op === '==' &&
+    maybeCondition.left?.ref === 'binding' &&
+    maybeCondition.left?.name === '__actionClass' &&
+    maybeCondition.right === 'limitedOperation'
+  ) {
+    return true;
+  }
+
+  return maybeCondition.op === 'and' && Array.isArray(maybeCondition.args)
+    ? maybeCondition.args.some((arg) => isLimitedOperationActionClassCondition(arg))
+    : false;
+};
+
 const addTokenToZone = (state: GameState, zoneId: string, token: Token): GameState => ({
   ...state,
   zones: {
@@ -71,10 +97,7 @@ describe('FITL limited operation integration', () => {
       assert.ok(macro, `Expected selector macro ${macroId}`);
 
       const limOpIfNodes = findDeep(macro.effects, (node) =>
-        node?.if?.when?.op === '==' &&
-        node?.if?.when?.left?.ref === 'binding' &&
-        node?.if?.when?.left?.name === '__actionClass' &&
-        node?.if?.when?.right === 'limitedOperation',
+        isLimitedOperationActionClassCondition(node?.if?.when),
       );
       assert.ok(limOpIfNodes.length >= 1, `Expected LimOp branch in selector macro ${macroId}`);
 
@@ -94,10 +117,7 @@ describe('FITL limited operation integration', () => {
       assert.ok(selectorStage, `Expected selector stage in ${profileId}`);
 
       const directLimOpNodes = findDeep(selectorStage.effects, (node) =>
-        node?.if?.when?.op === '==' &&
-        node?.if?.when?.left?.ref === 'binding' &&
-        node?.if?.when?.left?.name === '__actionClass' &&
-        node?.if?.when?.right === 'limitedOperation',
+        isLimitedOperationActionClassCondition(node?.if?.when),
       );
       const hasDirectContract = directLimOpNodes.some((node) => {
         const limOpChoose = findDeep(node.if.then, (inner) => inner?.chooseN?.max === 1);

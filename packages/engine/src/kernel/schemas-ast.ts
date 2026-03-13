@@ -22,6 +22,11 @@ export const StringSchema = z.string();
 const CanonicalBindingIdentifierSchema = StringSchema.regex(CANONICAL_BINDING_IDENTIFIER_PATTERN, {
   message: CANONICAL_BINDING_IDENTIFIER_MESSAGE,
 });
+const FreeOperationSequenceKeyExprSchema = z.union([
+  FreeOperationSequenceKeySchema,
+  z.object({ ref: z.literal('binding'), name: StringSchema, displayName: StringSchema.optional() }).strict(),
+  z.object({ ref: z.literal('grantContext'), key: StringSchema }).strict(),
+]);
 const PredicateScalarLiteralSchema = z.union([StringSchema, NumberSchema, BooleanSchema]);
 const ScalarValueArraySchema = z
   .array(PredicateScalarLiteralSchema)
@@ -95,7 +100,7 @@ export const ReferenceSchema = z.union([
   z.object({ ref: z.literal('activePlayer') }).strict(),
   z.object({ ref: z.literal('activeSeat') }).strict(),
   z.object({ ref: z.literal('grantContext'), key: StringSchema }).strict(),
-  z.object({ ref: z.literal('capturedSequenceZones'), key: FreeOperationSequenceKeySchema }).strict(),
+  z.object({ ref: z.literal('capturedSequenceZones'), key: FreeOperationSequenceKeyExprSchema }).strict(),
 ]);
 
 let conditionAstSchemaInternal: z.ZodTypeAny;
@@ -129,9 +134,25 @@ const IntDomainBoundSchema = z
 
 export const TokenFilterPredicateSchema = z
   .object({
-    prop: StringSchema,
+    prop: StringSchema.optional(),
+    field: z.union([
+      z.object({ kind: z.literal('prop'), prop: StringSchema }).strict(),
+      z.object({ kind: z.literal('tokenId') }).strict(),
+      z.object({ kind: z.literal('tokenZone') }).strict(),
+    ]).optional(),
     op: PredicateOperatorSchema,
     value: z.union([ValueExprSchema, ScalarValueArraySchema]),
+  })
+  .superRefine((value, refinementCtx) => {
+    const propCount = value.prop === undefined ? 0 : 1;
+    const fieldCount = value.field === undefined ? 0 : 1;
+    if (propCount + fieldCount !== 1) {
+      refinementCtx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Token filter predicates must specify exactly one of "prop" or "field".',
+        path: value.prop === undefined ? ['prop'] : ['field'],
+      });
+    }
   })
   .strict();
 
@@ -318,7 +339,7 @@ optionsQuerySchemaInternal = z.union([
     .strict(),
   z.object({ query: z.literal('binding'), name: StringSchema, displayName: StringSchema.optional() }).strict(),
   z.object({ query: z.literal('grantContext'), key: StringSchema }).strict(),
-  z.object({ query: z.literal('capturedSequenceZones'), key: FreeOperationSequenceKeySchema }).strict(),
+  z.object({ query: z.literal('capturedSequenceZones'), key: FreeOperationSequenceKeyExprSchema }).strict(),
 ]);
 
 valueExprSchemaInternal = z.union([

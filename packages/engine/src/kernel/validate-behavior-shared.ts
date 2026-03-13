@@ -207,6 +207,18 @@ export const validateReference = (
   path: string,
   context: ValidationContext,
 ): void => {
+  if (reference.ref === 'capturedSequenceZones' && typeof reference.key !== 'string') {
+    if (reference.key.ref === 'binding') {
+      validateCanonicalBinding(
+        diagnostics,
+        reference.key.name,
+        `${path}.key.name`,
+        'REF_BINDING_INVALID',
+        'capturedSequenceZones.key',
+      );
+    }
+  }
+
   if (reference.ref === 'gvar' && !context.globalVarNames.has(reference.var)) {
     pushMissingReferenceDiagnostic(
       diagnostics,

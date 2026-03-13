@@ -326,6 +326,34 @@ describe('translateEffectTrace', () => {
     expect(entries[3]?.message).toBe('Conceal in US Hand removed 1 grant(s) from public grants.');
   });
 
+  it('formats token filter summaries that use field selectors', () => {
+    const visualConfig = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        overrides: {
+          'hand:0': { label: 'US Hand' },
+        },
+      },
+      factions: {
+        us: { displayName: 'United States' },
+      },
+    });
+
+    const effectTrace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'reveal',
+        zone: 'hand:0',
+        observers: [asPlayerId(0)],
+        filter: { field: { kind: 'tokenZone' }, op: 'eq', value: 'hand:0' },
+        provenance: provenance(),
+      },
+    ];
+
+    const entries = translateEffectTrace(effectTrace, [], visualConfig, gameDefFixture(), 4);
+
+    expect(entries[0]?.message).toBe('Reveal in US Hand to United States (filter: Token Zone == hand:0).');
+  });
+
   it('falls back to formatted ids and player labels when visual names are missing', () => {
     const visualConfig = new VisualConfigProvider(null);
     const effectTrace: readonly EffectTraceEntry[] = [

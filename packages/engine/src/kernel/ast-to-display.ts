@@ -153,12 +153,22 @@ const referenceToInlineNodes = (r: Reference): DisplayInlineNode[] => {
     case 'grantContext':
       return [kw('grantCtx'), LPAREN, ref(r.key, 'binding'), RPAREN];
     case 'capturedSequenceZones':
-      return [kw('capturedSeqZones'), LPAREN, ref(r.key, 'binding'), RPAREN];
+      return [kw('capturedSeqZones'), LPAREN, ...sequenceKeyExprToInlineNodes(r.key), RPAREN];
     default: {
       const _exhaustive: never = r;
       return [kw(String((_exhaustive as Reference).ref))];
     }
   }
+};
+
+const sequenceKeyExprToInlineNodes = (key: string | { readonly ref: 'binding'; readonly name: string; readonly displayName?: string } | { readonly ref: 'grantContext'; readonly key: string }): DisplayInlineNode[] => {
+  if (typeof key === 'string') {
+    return [val(JSON.stringify(key), 'string')];
+  }
+  if (key.ref === 'binding') {
+    return [ref(key.displayName ?? key.name, 'binding')];
+  }
+  return [kw('grantCtx'), LPAREN, ref(key.key, 'binding'), RPAREN];
 };
 
 const isReference = (expr: ValueExpr): expr is Reference =>
@@ -263,7 +273,7 @@ export const optionsQueryToInlineNodes = (query: OptionsQuery): DisplayInlineNod
     case 'grantContext':
       return [kw('grantCtx'), LPAREN, ref(query.key, 'binding'), RPAREN];
     case 'capturedSequenceZones':
-      return [kw('capturedSeqZones'), LPAREN, ref(query.key, 'binding'), RPAREN];
+      return [kw('capturedSeqZones'), LPAREN, ...sequenceKeyExprToInlineNodes(query.key), RPAREN];
     case 'concat':
       return [
         kw('concat'),

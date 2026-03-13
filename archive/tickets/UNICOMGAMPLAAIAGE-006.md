@@ -1,6 +1,6 @@
 # UNICOMGAMPLAAIAGE-006: Progressive Widening and Expansion Priority
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — new file in agents/mcts/
@@ -84,3 +84,14 @@ Add re-export for `expansion.ts`.
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/test/unit/agents/mcts/expansion.test.ts`
 2. `pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-13
+- **What changed**:
+  - Created `packages/engine/src/agents/mcts/expansion.ts` with `maxChildren`, `shouldExpand`, `selectExpansionCandidate`, and `ConcreteMoveCandidate` interface
+  - Updated `packages/engine/src/agents/mcts/index.ts` with re-exports
+  - Created `packages/engine/test/unit/agents/mcts/expansion.test.ts` (15 tests)
+- **Deviations**:
+  - `ConcreteMoveCandidate` defined in `expansion.ts` (not `materialization.ts` from ticket 007) since this ticket was implemented first. Ticket 007 can import from here or consolidate.
+- **Verification**: `pnpm turbo test --force` all pass, `pnpm turbo lint` 0 errors, `pnpm turbo typecheck` clean

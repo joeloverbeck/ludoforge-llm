@@ -29,3 +29,5 @@ export { backpropagate, runOneIteration, runSearch, selectRootDecision } from '.
 
 export { collectDiagnostics } from './diagnostics.js';
 export type { MctsSearchDiagnostics } from './diagnostics.js';
+
+export { MctsAgent } from './mcts-agent.js';

@@ -1,6 +1,6 @@
 # UNICOMGAMPLAAIAGE-011: MctsAgent Class + Factory Integration + Agent Spec Parsing
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — modify agents/factory.ts, agents/index.ts; new mcts-agent.ts
@@ -32,7 +32,7 @@ The MCTS search loop must be wrapped in a class implementing the `Agent` interfa
   - Constructor takes `Partial<MctsConfig>`, validates via `validateMctsConfig`.
   - `chooseMove(input)`:
     1. If `legalMoves.length === 1`, return immediately.
-    2. Build `runtime` from `input.runtime ?? buildGameDefRuntime(def)`.
+    2. Build `runtime` from `input.runtime ?? createGameDefRuntime(def)`.
     3. Fork RNG: `[searchRng, nextAgentRng] = fork(input.rng)`.
     4. Derive observation: `derivePlayerObservation(def, state, playerId)`.
     5. Create root node and node pool.
@@ -61,7 +61,7 @@ Add re-export for mcts module.
 - `packages/engine/src/agents/factory.ts` (modify)
 - `packages/engine/src/agents/index.ts` (modify)
 - `packages/engine/test/unit/agents/mcts/mcts-agent.test.ts` (new)
-- `packages/engine/test/unit/agents/factory.test.ts` (modify — add mcts cases)
+- `packages/engine/test/unit/agents/factory.test.ts` (new — includes mcts cases)
 
 ## Out of Scope
 
@@ -106,3 +106,18 @@ Add re-export for mcts module.
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/test/unit/agents/mcts/mcts-agent.test.ts`
 2. `pnpm -F @ludoforge/engine build && node --test packages/engine/test/unit/agents/factory.test.ts`
 3. `pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-13
+- **What changed**:
+  - Created `packages/engine/src/agents/mcts/mcts-agent.ts` — `MctsAgent` class implementing `Agent` with single-move short-circuit, RNG isolation via `fork`, runtime reuse, and MCTS search delegation.
+  - Modified `packages/engine/src/agents/factory.ts` — `AgentType` expanded to include `'mcts'`; `createAgent` accepts optional `MctsConfig`; `parseAgentSpec` supports `mcts` and `mcts:N` syntax.
+  - Modified `packages/engine/src/agents/mcts/index.ts` — added `MctsAgent` re-export.
+  - Modified `packages/engine/src/agents/index.ts` — added `mcts/index.js` barrel re-export.
+  - Created `packages/engine/test/unit/agents/mcts/mcts-agent.test.ts` — 8 tests (single-move shortcut, multi-move choice, RNG isolation, determinism, input immutability, runtime reuse with/without, empty moves error).
+  - Created `packages/engine/test/unit/agents/factory.test.ts` — 14 tests (createAgent for all types, parseAgentSpec with mcts/mcts:N, player count validation, backwards compat, whitespace, case insensitivity).
+- **Deviations from original plan**:
+  - Ticket referenced `buildGameDefRuntime` — corrected to `createGameDefRuntime` (actual function name).
+  - `factory.test.ts` was listed as "modify" but didn't exist — created from scratch.
+- **Verification**: `pnpm turbo test` all pass, `pnpm turbo lint` 0 errors, `pnpm turbo typecheck` clean.

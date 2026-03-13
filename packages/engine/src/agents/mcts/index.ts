@@ -24,3 +24,8 @@ export { rollout } from './rollout.js';
 export type { RolloutResult } from './rollout.js';
 
 export { terminalToRewards, sigmoid, evaluateForAllPlayers } from './evaluate.js';
+
+export { backpropagate, runOneIteration, runSearch, selectRootDecision } from './search.js';
+
+export { collectDiagnostics } from './diagnostics.js';
+export type { MctsSearchDiagnostics } from './diagnostics.js';

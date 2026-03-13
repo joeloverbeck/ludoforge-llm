@@ -1,6 +1,6 @@
 # UNICOMGAMPLAAIAGE-010: Backpropagation + Core Search Loop + Diagnostics
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — new files in agents/mcts/
@@ -107,3 +107,15 @@ Add re-exports for `search.ts` and `diagnostics.ts`.
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/test/unit/agents/mcts/`
 2. `pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-13
+- **What changed**:
+  - Created `packages/engine/src/agents/mcts/search.ts` with `backpropagate`, `runOneIteration`, `runSearch`, `selectRootDecision`
+  - Created `packages/engine/src/agents/mcts/diagnostics.ts` with `MctsSearchDiagnostics` interface and `collectDiagnostics`
+  - Updated `packages/engine/src/agents/mcts/index.ts` with re-exports for search and diagnostics
+  - Created `packages/engine/test/unit/agents/mcts/search.test.ts` (12 tests)
+  - Created `packages/engine/test/unit/agents/mcts/diagnostics.test.ts` (6 tests)
+- **Deviations from original plan**: None. All deliverables implemented as specified.
+- **Verification results**: Typecheck clean, lint clean, 154/154 MCTS tests pass, 1659/1659 full engine tests pass.

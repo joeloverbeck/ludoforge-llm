@@ -3,7 +3,6 @@ import { describe, it } from 'node:test';
 
 import {
   applyMove,
-  asActionId,
   asPlayerId,
   asTokenId,
   initialState,

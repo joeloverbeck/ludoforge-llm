@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { describe, expect, it, vi } from 'vitest';
 import { asActionId, asPlayerId } from '@ludoforge/engine/runtime';
+import type { DecisionKey } from '@ludoforge/engine/runtime';
 
 import type { GameStore } from '../../src/store/game-store.js';
 import type { GameBridge } from '../../src/bridge/game-bridge.js';
@@ -10,6 +11,8 @@ import type { DiagnosticBuffer } from '../../src/animation/diagnostic-buffer.js'
 import { GameContainer, resolveTooltipAnchorState } from '../../src/ui/GameContainer.js';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import { computeDefaultFactionColor } from '../../src/config/visual-config-defaults.js';
+
+const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 
 interface CapturedErrorStateProps {
   readonly error: { readonly message: string };
@@ -517,7 +520,7 @@ describe('GameContainer', () => {
           renderModel: makeRenderModel({
             choiceUi: {
               kind: 'discreteOne',
-              decisionKey: 'test-decision',
+              decisionKey: asDecisionKey('test-decision'),
               options: [{
                 choiceValueId: 's:1:x',
                 value: 'x',

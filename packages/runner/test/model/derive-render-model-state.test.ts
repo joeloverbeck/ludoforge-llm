@@ -1881,7 +1881,7 @@ describe('deriveRenderModel choiceContext', () => {
     const choicePending: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
-      decisionKey: asDecisionKey('decision:placeType::token-a'),
+      decisionKey: asDecisionKey('decision:placeType::token-a[1]'),
       name: 'placeType',
       type: 'chooseOne',
       options: [{ value: 'regular', legality: 'legal', illegalReason: null }],
@@ -1897,7 +1897,7 @@ describe('deriveRenderModel choiceContext', () => {
         partialMove: { actionId: asActionId('tick'), params: {} },
         choiceStack: [
           { decisionKey: asDecisionKey('pick-spaces'), name: 'pickSpaces', value: ['table:none', 'token-a'] },
-          { decisionKey: asDecisionKey('decision:placeType::table:none'), name: 'placeType', value: 'irregulars' },
+          { decisionKey: asDecisionKey('decision:placeType::table:none[0]'), name: 'placeType', value: 'irregulars' },
         ],
       }),
     );

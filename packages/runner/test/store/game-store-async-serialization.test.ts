@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '@ludoforge/engine/cnl';
-import { asActionId, asPlayerId, initialState, type GameDef, type Move } from '@ludoforge/engine/runtime';
+import { asActionId, asPlayerId, initialState, parseDecisionKey, type GameDef, type Move } from '@ludoforge/engine/runtime';
 
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import type { PlayerSeatConfig } from '../../src/session/session-types.js';
@@ -245,6 +245,7 @@ describe('createGameStore async serialization', () => {
     const staleChooseOne = store.getState().chooseOne('x');
     const newerSelectAction = store.getState().selectAction(asActionId('pick-mixed'));
     await newerSelectAction;
+    const refreshedPendingKey = store.getState().choicePending?.decisionKey ?? null;
 
     gate.resolve();
     await staleChooseOne;
@@ -257,7 +258,8 @@ describe('createGameStore async serialization', () => {
       params: {},
     });
     expect(state.choicePending?.type).toBe('chooseOne');
-    expect(state.choicePending?.decisionKey.startsWith('decision:')).toBe(true);
+    expect(state.choicePending?.decisionKey).toBe(refreshedPendingKey);
+    expect(state.choicePending === null ? null : parseDecisionKey(state.choicePending.decisionKey)).not.toBeNull();
     expect(state.error).toBeNull();
   });
 
@@ -279,6 +281,7 @@ describe('createGameStore async serialization', () => {
     const staleChooseN = store.getState().chooseN(['m1']);
     const newerSelectAction = store.getState().selectAction(asActionId('pick-mixed'));
     await newerSelectAction;
+    const refreshedPendingKey = store.getState().choicePending?.decisionKey ?? null;
 
     gate.resolve();
     await staleChooseN;
@@ -291,7 +294,8 @@ describe('createGameStore async serialization', () => {
       params: {},
     });
     expect(state.choicePending?.type).toBe('chooseOne');
-    expect(state.choicePending?.decisionKey.startsWith('decision:')).toBe(true);
+    expect(state.choicePending?.decisionKey).toBe(refreshedPendingKey);
+    expect(state.choicePending === null ? null : parseDecisionKey(state.choicePending.decisionKey)).not.toBeNull();
     expect(state.error).toBeNull();
   });
 

@@ -14,6 +14,7 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { matchesDecisionRequest } from '../helpers/decision-key-matchers.js';
 import { applyMoveWithResolvedDecisionIds, type DecisionOverrideRule } from '../helpers/decision-param-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
@@ -164,7 +165,7 @@ describe('FITL card-50 Uncle Ho', () => {
 
     const overrides: readonly DecisionOverrideRule[] = [
       {
-        when: (request) => request.decisionKey.includes('distributeTokens.selectTokens'),
+        when: matchesDecisionRequest({ baseIdPattern: /distributeTokens\.selectTokens$/u }),
         value: [
           asTokenId('uncle-ho-us-oop-1'),
           asTokenId('uncle-ho-us-oop-2'),
@@ -231,7 +232,7 @@ describe('FITL card-50 Uncle Ho', () => {
     const final = applyMoveWithResolvedDecisionIds(def, setup, move!, {
       overrides: [
         {
-          when: (request) => request.decisionKey.includes('distributeTokens.selectTokens'),
+          when: matchesDecisionRequest({ baseIdPattern: /distributeTokens\.selectTokens$/u }),
           value: [asTokenId('uncle-ho-few-1'), asTokenId('uncle-ho-few-2')],
         },
         { when: (request) => request.decisionKey.endsWith('chooseDestination[0]'), value: SAIGON },

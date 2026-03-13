@@ -6,6 +6,7 @@ import {
   type DecisionOverrideRule,
 } from '../helpers/decision-param-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { matchesDecisionRequest } from '../helpers/decision-key-matchers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import {
@@ -191,7 +192,7 @@ describe('FITL card-58 Pathet Lao', () => {
 
     const final = applyMoveWithResolvedDecisionIds(def, setup, move!, {
       overrides: [{
-        when: (request) => request.name === '$nvaPiecesToRemove' || request.decisionKey.includes('nvaPiecesToRemove'),
+        when: matchesDecisionRequest({ name: '$nvaPiecesToRemove', resolvedBind: '$nvaPiecesToRemove' }),
         value: ['nv-t-1', 'nv-g-1', 'nv-b-1', 'laos-t-1', 'laos-g-1', 'laos-b-1'],
       }],
     }).state;
@@ -304,8 +305,10 @@ describe('FITL card-58 Pathet Lao', () => {
     let policeDestinationOptions: string[] = [];
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (request) =>
-          request.name.includes('pathetLaoUsDestination') || request.decisionKey.includes('pathetLaoUsDestination'),
+        when: matchesDecisionRequest({
+          namePattern: /pathetLaoUsDestination/u,
+          resolvedBindPattern: /pathetLaoUsDestination/u,
+        }),
         value: (request) => {
           usDestinationDecisions += 1;
           const preferredDestination = usDestinationDecisions === 1 ? HUE_DA_NANG_LOC : SAIGON;
@@ -314,13 +317,19 @@ describe('FITL card-58 Pathet Lao', () => {
       },
       {
         when: (request) =>
-          (request.name.includes('pathetLaoArvnTroopDestination') || request.decisionKey.includes('pathetLaoArvnTroopDestination'))
+          matchesDecisionRequest({
+            namePattern: /pathetLaoArvnTroopDestination/u,
+            resolvedBindPattern: /pathetLaoArvnTroopDestination/u,
+          })(request)
           && request.options.some((option) => option.value === QUANG_NAM),
         value: QUANG_NAM,
       },
       {
         when: (request) =>
-          (request.name.includes('pathetLaoArvnPoliceDestination') || request.decisionKey.includes('pathetLaoArvnPoliceDestination'))
+          matchesDecisionRequest({
+            namePattern: /pathetLaoArvnPoliceDestination/u,
+            resolvedBindPattern: /pathetLaoArvnPoliceDestination/u,
+          })(request)
           && request.options.some((option) => option.value === HUE_DA_NANG_LOC),
         value: (request) => {
           policeDestinationOptions = request.options.map((option) => String(option.value));

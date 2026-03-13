@@ -17,6 +17,7 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { matchesDecisionRequest } from '../helpers/decision-key-matchers.js';
 import {
   applyMoveWithResolvedDecisionIds,
   type DecisionOverrideRule,
@@ -184,7 +185,7 @@ describe('FITL card-78 General Lansdale', () => {
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (request) => request.name === '$targetSpace' || request.decisionKey.includes('targetSpace'),
+        when: matchesDecisionRequest({ name: '$targetSpace', resolvedBind: '$targetSpace' }),
         value: HUE,
       },
     ];
@@ -220,7 +221,7 @@ describe('FITL card-78 General Lansdale', () => {
     const final = applyMoveWithResolvedDecisionIds(def, setup, move!, {
       overrides: [
         {
-          when: (request) => request.name === '$targetSpace' || request.decisionKey.includes('targetSpace'),
+          when: matchesDecisionRequest({ name: '$targetSpace', resolvedBind: '$targetSpace' }),
           value: QUANG_NAM,
         },
       ],

@@ -24,7 +24,6 @@ const FISHHOOK = 'the-fishhook:none';
 const PARROTS_BEAK = 'the-parrots-beak:none';
 const NE_CAMBODIA = 'northeast-cambodia:none';
 const SOUTHERN_LAOS = 'southern-laos:none';
-const CENTRAL_LAOS = 'central-laos:none';
 
 const makeToken = (
   id: string,
@@ -277,7 +276,7 @@ describe('FITL card-75 Sihanouk', () => {
     );
   });
 
-  it('shaded restricts VC March origins to the just-Rallyd space and preserves NVA Trail chaining after the initial restricted move', () => {
+  it('shaded restricts both VC and NVA free March origins to the just-Rallyd spaces', () => {
     const def = compileDef();
     const setup = setupCardDrivenState(def, 75003, 3, 'vc', 'nva', {
       [TAY_NINH]: [makeToken('sihanouk-vc-outside', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' })],
@@ -319,7 +318,6 @@ describe('FITL card-75 Sihanouk', () => {
           params: {
             ...vcMarch!.params,
             $targetSpaces: [PARROTS_BEAK],
-            $chainSpaces: [],
             [`$movingGuerrillas@${PARROTS_BEAK}`]: ['sihanouk-vc-outside'],
             [`$movingTroops@${PARROTS_BEAK}`]: [],
           },
@@ -333,7 +331,6 @@ describe('FITL card-75 Sihanouk', () => {
       params: {
         ...vcMarch!.params,
         $targetSpaces: [PARROTS_BEAK],
-        $chainSpaces: [],
         [`$movingGuerrillas@${PARROTS_BEAK}`]: ['sihanouk-vc-rally'],
         [`$movingTroops@${PARROTS_BEAK}`]: [],
       },
@@ -375,18 +372,15 @@ describe('FITL card-75 Sihanouk', () => {
       params: {
         ...nvaMarch!.params,
         $targetSpaces: [SOUTHERN_LAOS],
-        $chainSpaces: [CENTRAL_LAOS],
         [`$movingGuerrillas@${SOUTHERN_LAOS}`]: ['sihanouk-nva-rally'],
         [`$movingTroops@${SOUTHERN_LAOS}`]: [],
-        [`$movingGuerrillas@${CENTRAL_LAOS}`]: ['sihanouk-nva-rally'],
-        [`$movingTroops@${CENTRAL_LAOS}`]: [],
       },
     }).state;
 
     assert.equal(
-      countTokens(final, CENTRAL_LAOS, (token) => token.id === asTokenId('sihanouk-nva-rally')),
+      countTokens(final, SOUTHERN_LAOS, (token) => token.id === asTokenId('sihanouk-nva-rally')),
       1,
-      'NVA Trail chaining should still work after the initial origin-restricted move',
+      'The restricted NVA free March should still move from the just-Rallyd space without inheriting broader Trail chaining',
     );
   });
 
@@ -445,7 +439,6 @@ describe('FITL card-75 Sihanouk', () => {
       params: {
         ...nvaMarch!.params,
         $targetSpaces: [SOUTHERN_LAOS],
-        $chainSpaces: [],
         [`$movingGuerrillas@${SOUTHERN_LAOS}`]: ['sihanouk-nva-skip-vc'],
         [`$movingTroops@${SOUTHERN_LAOS}`]: [],
       },

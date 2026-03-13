@@ -11,6 +11,7 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { matchesDecisionRequest } from '../helpers/decision-key-matchers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import {
@@ -76,7 +77,7 @@ describe('FITL card-79 Henry Cabot Lodge shaded — ARVN piece removal + patrona
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.decisionKey.includes('arvnPiecesToRemove') || req.name === '$arvnPiecesToRemove',
+        when: matchesDecisionRequest({ name: '$arvnPiecesToRemove', resolvedBind: '$arvnPiecesToRemove' }),
         value: [arvnTroop.id, arvnPolice.id],
       },
     ];
@@ -114,7 +115,7 @@ describe('FITL card-79 Henry Cabot Lodge shaded — ARVN piece removal + patrona
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.decisionKey.includes('arvnPiecesToRemove') || req.name === '$arvnPiecesToRemove',
+        when: matchesDecisionRequest({ name: '$arvnPiecesToRemove', resolvedBind: '$arvnPiecesToRemove' }),
         value: [],
       },
     ];
@@ -145,7 +146,7 @@ describe('FITL card-79 Henry Cabot Lodge shaded — ARVN piece removal + patrona
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.decisionKey.includes('arvnPiecesToRemove') || req.name === '$arvnPiecesToRemove',
+        when: matchesDecisionRequest({ name: '$arvnPiecesToRemove', resolvedBind: '$arvnPiecesToRemove' }),
         value: [arvnTroop.id, arvnRanger.id, arvnBase.id],
       },
     ];
@@ -184,7 +185,7 @@ describe('FITL card-79 Henry Cabot Lodge shaded — ARVN piece removal + patrona
 
     const overrides: DecisionOverrideRule[] = [
       {
-        when: (req) => req.decisionKey.includes('arvnPiecesToRemove') || req.name === '$arvnPiecesToRemove',
+        when: matchesDecisionRequest({ name: '$arvnPiecesToRemove', resolvedBind: '$arvnPiecesToRemove' }),
         value: [arvnBase.id],
       },
     ];

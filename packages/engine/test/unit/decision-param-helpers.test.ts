@@ -14,6 +14,7 @@ import {
   type GameState,
   type Move,
 } from '../../src/kernel/index.js';
+import { decisionParamEntriesMatching, decisionParamKeysMatching } from '../helpers/decision-key-matchers.js';
 import { applyMoveWithResolvedDecisionIds, normalizeDecisionParamsForMove } from '../helpers/decision-param-helpers.js';
 
 const makeBaseDef = (overrides?: {
@@ -326,8 +327,7 @@ describe('decision param helper', () => {
           ],
         },
       );
-      return Object.entries(resolved.params)
-        .filter(([decisionKey]) => decisionKey.includes('::$mode@'))
+      return decisionParamEntriesMatching(resolved.params, { resolvedBindPattern: /^\$mode@/u })
         .map((entry) => String(entry[1]));
     };
 
@@ -341,7 +341,7 @@ describe('decision param helper', () => {
       makeBaseState(),
       makeMove({
         'decision:$mode@{$region}::$mode@north[0]': 'hold',
-        '$mode@south': 'hold',
+        'decision:$mode@{$region}::$mode@south[1]': 'hold',
       }),
       {
         overrides: [
@@ -357,59 +357,101 @@ describe('decision param helper', () => {
     assert.equal(resolved.params['decision:$mode@{$region}::$mode@south[1]'], 'hold');
   });
 
-  it('supports indexed decision-name params for repeated nested choices', () => {
-    const resolved = normalizeDecisionParamsForMove(
-      makeDefWithRepeatedNamedChoices(),
-      makeBaseState(),
-      makeMove({
-        '$mode#1': 'hold',
-        '$mode#2': 'advance',
-      }),
-    );
-
-    const repeatedChoices = Object.entries(resolved.params)
-      .filter(([decisionKey]) => decisionKey.includes('decision:$mode'))
-      .map((entry) => String(entry[1]));
-    assert.deepEqual(repeatedChoices, ['hold', 'advance']);
-  });
-
-  it('supports indexed decision-id params for repeated nested choices', () => {
+  it('requires canonical decision keys for repeated nested choices', () => {
     const baseline = normalizeDecisionParamsForMove(
       makeDefWithRepeatedNamedChoices(),
       makeBaseState(),
       makeMove(),
     );
-    const repeatedDecisionIds = Object.keys(baseline.params)
-      .filter((decisionKey) => decisionKey.includes('decision:$mode'));
-    assert.equal(repeatedDecisionIds.length, 2);
+    const repeatedDecisionIds = decisionParamKeysMatching(baseline.params, { resolvedBind: '$mode' });
+    assert.deepEqual(repeatedDecisionIds, ['$mode[0]', '$mode[1]']);
 
     const resolved = normalizeDecisionParamsForMove(
       makeDefWithRepeatedNamedChoices(),
       makeBaseState(),
       makeMove({
-        [`${repeatedDecisionIds[0]}#1`]: 'hold',
-        [`${repeatedDecisionIds[1]}#1`]: 'advance',
+        [repeatedDecisionIds[0]!]: 'hold',
+        [repeatedDecisionIds[1]!]: 'advance',
       }),
     );
 
-    assert.equal(resolved.params[repeatedDecisionIds[0]!], 'hold');
-    assert.equal(resolved.params[repeatedDecisionIds[1]!], 'advance');
+    const repeatedChoices = decisionParamEntriesMatching(resolved.params, { resolvedBind: '$mode' })
+      .map((entry) => String(entry[1]));
+    assert.deepEqual(repeatedChoices, ['hold', 'advance']);
   });
 
-  it('supports canonical alias indexed params for macro-expanded decision names', () => {
+  it('rejects alias-style indexed bind params for repeated nested choices', () => {
+    assert.throws(
+      () =>
+        normalizeDecisionParamsForMove(
+          makeDefWithRepeatedNamedChoices(),
+          makeBaseState(),
+          makeMove({
+            '$mode#1': 'hold',
+            '$mode#2': 'advance',
+          }),
+        ),
+      /Could not normalize decision params/,
+    );
+  });
+
+  it('rejects synthetic #1 suffixes on canonical repeated decision keys', () => {
+    const baseline = normalizeDecisionParamsForMove(
+      makeDefWithRepeatedNamedChoices(),
+      makeBaseState(),
+      makeMove(),
+    );
+    const repeatedDecisionIds = decisionParamKeysMatching(baseline.params, { resolvedBind: '$mode' });
+    assert.equal(repeatedDecisionIds.length, 2);
+
+    assert.throws(
+      () =>
+        normalizeDecisionParamsForMove(
+          makeDefWithRepeatedNamedChoices(),
+          makeBaseState(),
+          makeMove({
+            [`${repeatedDecisionIds[0]}#1`]: 'hold',
+            [`${repeatedDecisionIds[1]}#1`]: 'advance',
+          }),
+        ),
+      /Could not normalize decision params/,
+    );
+  });
+
+  it('rejects macro alias params and requires canonical macro-expanded decision keys', () => {
+    const baseline = normalizeDecisionParamsForMove(
+      makeDefWithRepeatedNamedChoices('decision', '$__macro_caps__bonusSpace'),
+      makeBaseState(),
+      makeMove(),
+    );
+    const repeatedDecisionIds = decisionParamKeysMatching(baseline.params, { resolvedBind: '$__macro_caps__bonusSpace' });
+    assert.deepEqual(repeatedDecisionIds, ['$__macro_caps__bonusSpace[0]', '$__macro_caps__bonusSpace[1]']);
+
     const resolved = normalizeDecisionParamsForMove(
       makeDefWithRepeatedNamedChoices('decision', '$__macro_caps__bonusSpace'),
       makeBaseState(),
       makeMove({
-        '$bonusSpace#1': 'hold',
-        '$bonusSpace#2': 'advance',
+        [repeatedDecisionIds[0]!]: 'hold',
+        [repeatedDecisionIds[1]!]: 'advance',
       }),
     );
 
-    const repeatedChoices = Object.entries(resolved.params)
-      .filter(([decisionKey]) => decisionKey.includes('$__macro_caps__bonusSpace'))
+    const repeatedChoices = decisionParamEntriesMatching(resolved.params, { resolvedBind: '$__macro_caps__bonusSpace' })
       .map((entry) => String(entry[1]));
     assert.deepEqual(repeatedChoices, ['hold', 'advance']);
+
+    assert.throws(
+      () =>
+        normalizeDecisionParamsForMove(
+          makeDefWithRepeatedNamedChoices('decision', '$__macro_caps__bonusSpace'),
+          makeBaseState(),
+          makeMove({
+            '$bonusSpace#1': 'hold',
+            '$bonusSpace#2': 'advance',
+          }),
+        ),
+      /Could not normalize decision params/,
+    );
   });
 
   it('completes stochastic branch-local decisions and persists the sampled binding', () => {
@@ -422,14 +464,14 @@ describe('decision param helper', () => {
 
     assert.equal(typeof resolved.params.$roll, 'number');
     if (resolved.params.$roll === 1) {
-      assert.equal(resolved.params['decision:$alpha'], 'a1');
-      assert.equal(Object.prototype.hasOwnProperty.call(resolved.params, 'decision:$beta'), false);
+      assert.equal(resolved.params['$alpha'], 'a1');
+      assert.equal(Object.prototype.hasOwnProperty.call(resolved.params, '$beta'), false);
       return;
     }
 
     assert.equal(resolved.params.$roll, 2);
-    assert.equal(resolved.params['decision:$beta'], 'b1');
-    assert.equal(Object.prototype.hasOwnProperty.call(resolved.params, 'decision:$alpha'), false);
+    assert.equal(resolved.params['$beta'], 'b1');
+    assert.equal(Object.prototype.hasOwnProperty.call(resolved.params, '$alpha'), false);
   });
 
   it('fails with diagnostics when canonical selection cannot resolve a pending decision', () => {
@@ -459,7 +501,7 @@ describe('decision param helper', () => {
 
     assert.throws(
       () => normalizeDecisionParamsForMove(unresolvedDef, makeBaseState(), makeMove()),
-      /Could not normalize decision params for actionId=nested-choice-op: unresolved decisionKey=decision:\$target name=\$target type=chooseOne options=0 min=0/,
+      /Could not normalize decision params for actionId=nested-choice-op: unresolved decisionKey=\$target name=\$target type=chooseOne options=0 min=0/,
     );
   });
 

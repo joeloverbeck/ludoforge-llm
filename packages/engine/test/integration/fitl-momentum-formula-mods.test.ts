@@ -519,7 +519,6 @@ describe('FITL momentum formula modifiers', () => {
       actionId: asActionId('assault'),
       params: {
         $targetSpaces: [assaultSpace],
-        $arvnFollowupSpaces: [],
       },
     }).state;
     assert.equal(assaultFinal.globalVars.aid, assaultBeforeAid + 3, 'Body Count should add +3 Aid on ARVN Assault removals');

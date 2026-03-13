@@ -95,8 +95,8 @@ describe('effects complex integration chains', () => {
     const ctx = makeCtx({
       rng: seedRng,
       moveParams: {
-        'decision:$zoneChoice': 'discard:none',
-        'decision:$tags': ['alpha', 'beta'],
+        '$zoneChoice': 'discard:none',
+        '$tags': ['alpha', 'beta'],
         $label: 'spawned',
       },
       bindings: {

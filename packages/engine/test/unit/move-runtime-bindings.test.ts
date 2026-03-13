@@ -103,4 +103,42 @@ describe('move runtime bindings', () => {
       '$__destination_doc_actions_0_effects_0_distributeTokens': 'adjacent:none',
     });
   });
+
+  it('preserves concrete resolved binds from canonical decision keys for repeated zoned decisions', () => {
+    const moveParams = {
+      [formatDecisionKey('decision:doc.pipeline.moveTroops', '$movingTroops@hue:none', '', 1)]: ['troop-1'],
+    } as Move['params'];
+
+    const bindings = resolvePipelineDecisionBindingsForMove(
+      {
+        id: 'pipeline' as const,
+        actionId: 'op' as Move['actionId'],
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [
+          {
+            effects: [
+              {
+                chooseN: {
+                  internalDecisionId: 'decision:doc.pipeline.moveTroops',
+                  bind: '$movingTroops@{$zone}',
+                  decisionIdentity: 'decision:doc.pipeline.moveTroops',
+                  options: { query: 'tokensInZone', zone: 'hue:none' },
+                  n: 1,
+                },
+              },
+            ],
+          },
+        ],
+        atomicity: 'partial',
+      },
+      moveParams,
+    );
+
+    assert.deepEqual(bindings, {
+      '$movingTroops@hue:none': ['troop-1'],
+    });
+  });
 });

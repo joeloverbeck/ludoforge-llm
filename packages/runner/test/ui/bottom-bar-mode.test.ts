@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { asPlayerId } from '@ludoforge/engine/runtime';
+import type { DecisionKey } from '@ludoforge/engine/runtime';
 
 import type { GameStore } from '../../src/store/game-store.js';
 import { deriveBottomBarState } from '../../src/ui/bottom-bar-mode.js';
+
+const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 
 function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']>> = {}): NonNullable<GameStore['renderModel']> {
   return {
@@ -68,7 +71,7 @@ describe('deriveBottomBarState', () => {
       makeRenderModel({
         choiceUi: {
           kind: 'discreteOne',
-          decisionKey: 'test-decision',
+          decisionKey: asDecisionKey('test-decision'),
           options: [{
             choiceValueId: 's:1:x',
             value: 'x',
@@ -114,7 +117,7 @@ describe('deriveBottomBarState', () => {
           activePlayerID: asPlayerId(1),
           choiceUi: {
             kind: 'discreteOne',
-            decisionKey: 'test-decision',
+            decisionKey: asDecisionKey('test-decision'),
             options: [{
               choiceValueId: 's:1:x',
               value: 'x',

@@ -137,7 +137,7 @@ describe('template-completion chooseN bounds', () => {
       const result = completeTemplateMove(def, baseState, templateMove, createRng(seed));
       assert.equal(result.kind, 'completed', `seed ${seed} should produce a playable completion`);
       if (result.kind !== 'completed') throw new Error('unreachable');
-      const selected = result.move.params['decision:$targets'];
+      const selected = result.move.params['$targets'];
       assert.ok(Array.isArray(selected), `seed ${seed} expected chooseN array result`);
       assert.ok(selected.length >= 1 && selected.length <= 2, `seed ${seed} selected out-of-bounds count`);
       for (const value of selected) {
@@ -166,7 +166,7 @@ describe('template-completion chooseN bounds', () => {
       const result = completeTemplateMove(def, baseState, templateMove, createRng(seed));
       assert.equal(result.kind, 'completed', `seed ${seed} should produce a playable completion`);
       if (result.kind !== 'completed') throw new Error('unreachable');
-      const selected = result.move.params['decision:$targets'];
+      const selected = result.move.params['$targets'];
       assert.ok(Array.isArray(selected));
       assert.ok(selected.length <= 2);
       for (const value of selected) {
@@ -184,7 +184,7 @@ describe('template-completion chooseN bounds', () => {
     const result = completeTemplateMove(def, baseState, templateMove, createRng(7n));
     assert.equal(result.kind, 'completed');
     if (result.kind !== 'completed') throw new Error('unreachable');
-    assert.deepEqual(result.move.params['decision:$targets'], []);
+    assert.deepEqual(result.move.params['$targets'], []);
   });
 
   it('persists sampled stochastic bindings and completes exact chooseN branches', () => {
@@ -203,7 +203,7 @@ describe('template-completion chooseN bounds', () => {
     }
     assert.deepEqual(first.move.params, second.move.params, 'Identical seeds should sample the same stochastic branch');
     assert.equal(typeof first.move.params.$roll, 'number', 'Sampled stochastic roll should be persisted on the move');
-    const selected = first.move.params['decision:$targets'];
+    const selected = first.move.params['$targets'];
     assert.ok(Array.isArray(selected), 'Stochastic chooseN branch should be completed');
     assert.equal(selected.length, first.move.params.$roll, 'Persisted roll should match exact chooseN cardinality');
   });

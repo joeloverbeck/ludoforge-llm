@@ -2,7 +2,6 @@ import {
   applyMove,
   completeMoveDecisionSequence,
   nextInt,
-  parseDecisionKey,
   pickDeterministicChoiceValue,
   resolveMoveDecisionSequence,
   type ApplyMoveResult,
@@ -16,46 +15,6 @@ import {
 
 const MAX_DECISION_STEPS = 256;
 const INDEXED_DECISION_KEY_PATTERN = /^decision:.*#\d+$/;
-
-const canonicalResolvedBindAliases = (resolvedBind: string): readonly string[] => {
-  const aliases = [resolvedBind];
-  const macroAliasMatch = resolvedBind.match(/^\$__(?:[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*)__([A-Za-z0-9_]+)$/u);
-  if (macroAliasMatch?.[1] !== undefined) {
-    aliases.push(`$${macroAliasMatch[1]}`);
-  }
-  return aliases;
-};
-
-const decisionParamLookupKeys = (decisionKey: string): readonly string[] => {
-  const parsed = parseDecisionKey(decisionKey as Parameters<typeof parseDecisionKey>[0]);
-  if (parsed === null) {
-    return [decisionKey];
-  }
-
-  const aliases = canonicalResolvedBindAliases(parsed.resolvedBind);
-  const trailingIterationMatch = parsed.iterationPath.match(/\[(\d+)\]$/u);
-  const iterationOrdinal = trailingIterationMatch?.[1] === undefined
-    ? null
-    : Number.parseInt(trailingIterationMatch[1], 10) + 1;
-  const aliasOrdinals = [
-    ...(iterationOrdinal === null || iterationOrdinal === parsed.occurrence ? [] : [iterationOrdinal]),
-    parsed.occurrence,
-  ];
-
-  const keys = new Set<string>([decisionKey]);
-  for (const ordinal of aliasOrdinals) {
-    keys.add(`${decisionKey}#${ordinal}`);
-  }
-  for (const alias of aliases) {
-    for (const ordinal of aliasOrdinals) {
-      keys.add(`${alias}#${ordinal}`);
-    }
-    if (parsed.occurrence === 1) {
-      keys.add(alias);
-    }
-  }
-  return [...keys];
-};
 
 export interface DecisionOverrideRule {
   readonly when: (request: ChoicePendingRequest) => boolean;
@@ -75,13 +34,19 @@ const deterministicDefault = (request: ChoicePendingRequest): MoveParamValue | u
 const resolveDecisionValue = (
   request: ChoicePendingRequest,
   move: Move,
+  consumedInputKeys: Set<string>,
   options?: ResolveDecisionParamsOptions,
 ): MoveParamValue | undefined => {
-  for (const lookupKey of decisionParamLookupKeys(request.decisionKey)) {
-    const fromMove = move.params[lookupKey];
-    if (fromMove !== undefined) {
-      return fromMove;
-    }
+  const fromMove = move.params[request.decisionKey];
+  if (fromMove !== undefined) {
+    consumedInputKeys.add(request.decisionKey);
+    return fromMove;
+  }
+
+  const fromName = move.params[request.name];
+  if (fromName !== undefined) {
+    consumedInputKeys.add(request.name);
+    return fromName;
   }
 
   for (const rule of options?.overrides ?? []) {
@@ -142,6 +107,18 @@ const stripStochasticOnlyBindings = (
   return resolvedMove;
 };
 
+const assertNoUnsupportedInputParamKeys = (originalMove: Move, consumedInputKeys: ReadonlySet<string>, normalizedMove: Move): Move => {
+  const unsupportedKeys = Object.keys(originalMove.params).filter((key) => !consumedInputKeys.has(key));
+  if (unsupportedKeys.length === 0) {
+    return normalizedMove;
+  }
+
+  throw new Error(
+    `Could not normalize decision params for actionId=${String(originalMove.actionId)}: `
+    + `unsupported input param keys=${unsupportedKeys.join(', ')}`,
+  );
+};
+
 const normalizeDecisionParamsForMoveInternal = (
   def: GameDef,
   state: GameState,
@@ -158,11 +135,12 @@ const normalizeDecisionParamsForMoveInternal = (
     ),
   };
   let stochasticRng: Rng = options?.rng ?? { state: state.rng };
+  const consumedInputKeys = new Set<string>(Object.keys(hintedMove.params));
   const result = completeMoveDecisionSequence(def, state, hintedMove, {
     budgets: {
       maxDecisionProbeSteps: options?.maxDecisionProbeSteps ?? MAX_DECISION_STEPS,
     },
-    choose: (request) => resolveDecisionValue(request, move, options),
+    choose: (request) => resolveDecisionValue(request, move, consumedInputKeys, options),
     chooseStochastic: (request) => {
       if (request.outcomes.length === 0) {
         return undefined;
@@ -173,12 +151,16 @@ const normalizeDecisionParamsForMoveInternal = (
     },
   });
   if (result.complete) {
-    return stripStochasticOnlyBindings(
-      def,
-      state,
-      hintedMove,
-      result.move,
-      options?.maxDecisionProbeSteps ?? MAX_DECISION_STEPS,
+    return assertNoUnsupportedInputParamKeys(
+      move,
+      consumedInputKeys,
+      stripStochasticOnlyBindings(
+        def,
+        state,
+        hintedMove,
+        result.move,
+        options?.maxDecisionProbeSteps ?? MAX_DECISION_STEPS,
+      ),
     );
   }
   if (result.illegal !== undefined) {

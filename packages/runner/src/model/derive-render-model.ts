@@ -6,6 +6,7 @@ import {
   type GameDef,
   type GameState,
   type Move,
+  type DecisionKey,
   type MoveParamValue,
   type NumericTrackDef,
   parseDecisionKey,
@@ -1225,8 +1226,8 @@ function deriveChoiceContext(
   };
 }
 
-function extractIterationGroupId(decisionKey: string): string | null {
-  const parsedDecisionKey = parseDecisionKey(decisionKey as Parameters<typeof parseDecisionKey>[0]);
+function extractIterationGroupId(decisionKey: DecisionKey): string | null {
+  const parsedDecisionKey = parseDecisionKey(decisionKey);
   if (parsedDecisionKey === null) {
     return null;
   }

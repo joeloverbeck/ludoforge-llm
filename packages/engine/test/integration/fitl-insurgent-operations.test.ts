@@ -1418,7 +1418,6 @@ describe('FITL insurgent operations integration', () => {
       actionId: asActionId('march'),
       params: {
         $targetSpaces: [SOUTHERN_LAOS],
-        $chainSpaces: [NE_CAMBODIA],
         [`$movingGuerrillas@${SOUTHERN_LAOS}`]: [moverNoTrail],
         [`$movingTroops@${SOUTHERN_LAOS}`]: [],
       },
@@ -1449,7 +1448,6 @@ describe('FITL insurgent operations integration', () => {
       actionClass: 'limitedOperation',
       params: {
         $targetSpaces: [SOUTHERN_LAOS],
-        $chainSpaces: [NE_CAMBODIA],
         [`$movingGuerrillas@${SOUTHERN_LAOS}`]: [moverLimOp],
         [`$movingTroops@${SOUTHERN_LAOS}`]: [],
       },
@@ -1954,7 +1952,7 @@ describe('FITL insurgent operations integration', () => {
     );
     const paidFinal = applyMoveWithResolvedDecisionIds(def, nvaPaid, {
       actionId: asActionId('rally'),
-      params: { $targetSpaces: [RALLY_SPACE, RALLY_SPACE_2, RALLY_SPACE_3], $improveTrail: 'no' },
+      params: { $targetSpaces: [RALLY_SPACE, RALLY_SPACE_2, RALLY_SPACE_3] },
     }).state;
     assert.equal(paidFinal.globalVars.nvaResources, 0, 'Paid NVA Rally should spend 1 resource per selected space');
 
@@ -1962,7 +1960,7 @@ describe('FITL insurgent operations integration', () => {
       () =>
         applyMoveWithResolvedDecisionIds(def, nvaPaid, {
           actionId: asActionId('rally'),
-          params: { $targetSpaces: [RALLY_SPACE, RALLY_SPACE_2, RALLY_SPACE_3, RALLY_SPACE_4], $improveTrail: 'no' },
+          params: { $targetSpaces: [RALLY_SPACE, RALLY_SPACE_2, RALLY_SPACE_3, RALLY_SPACE_4] },
         }),
       /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
       'Paid NVA Rally with 3 resources should reject selecting 4 spaces',
@@ -1991,7 +1989,7 @@ describe('FITL insurgent operations integration', () => {
     const freeFinal = applyMoveWithResolvedDecisionIds(def, nvaFree, {
       actionId: asActionId('rally'),
       freeOperation: true,
-      params: { $targetSpaces: [RALLY_SPACE, RALLY_SPACE_2], $improveTrail: 'no' },
+      params: { $targetSpaces: [RALLY_SPACE, RALLY_SPACE_2] },
     }).state;
     assert.equal(freeFinal.globalVars.nvaResources, 0, 'Free NVA Rally should bypass paid selection cap at 0 resources');
 
@@ -1999,7 +1997,7 @@ describe('FITL insurgent operations integration', () => {
       () =>
         applyMoveWithResolvedDecisionIds(def, nvaFreeBase, {
           actionId: asActionId('rally'),
-          params: { $targetSpaces: [RALLY_SPACE], $improveTrail: 'no' },
+          params: { $targetSpaces: [RALLY_SPACE] },
         }),
       /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
       'Paid NVA Rally with 0 resources should reject selecting paid spaces',

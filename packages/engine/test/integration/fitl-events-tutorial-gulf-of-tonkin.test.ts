@@ -21,6 +21,7 @@ import { GreedyAgent } from '../../src/agents/greedy-agent.js';
 import { RandomAgent } from '../../src/agents/random-agent.js';
 import { completeTemplateMove } from '../../src/kernel/move-completion.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { matchesDecisionKey } from '../helpers/decision-key-matchers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
@@ -427,7 +428,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       throw new Error('Expected chooseOne after chooseN selection.');
     }
     assert.equal(nextPending.type, 'chooseOne');
-    assert.equal(nextPending.decisionKey.includes('.chooseDestination'), true);
+    assert.equal(matchesDecisionKey(nextPending.decisionKey, { baseIdPattern: /\.chooseDestination$/u }), true);
     const cityOptionIds = nextPending.options.map((option) => String(option.value)).sort();
     assert.deepEqual(cityOptionIds, cityZoneIds);
   });
@@ -466,7 +467,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     assert.equal(choices.length, 1 + selectedCount, 'Expected one city decision per selected piece');
 
     for (const [decisionKey, value] of choices) {
-      if (decisionKey.includes('$selectedPieces')) {
+      if (matchesDecisionKey(decisionKey, { resolvedBind: '$selectedPieces' })) {
         continue;
       }
       assert.notEqual(value, undefined);

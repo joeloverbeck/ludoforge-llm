@@ -56,7 +56,7 @@ describe('move decision helpers', () => {
     const request: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
-      decisionKey: asDecisionKey('decision:$target'),
+      decisionKey: asDecisionKey('$target'),
       name: '$target',
       type: 'chooseOne',
       options: [],
@@ -154,10 +154,10 @@ describe('move decision helpers', () => {
 
     assert.equal(typeof resolved.params.$roll, 'number');
     if (resolved.params.$roll === 1) {
-      assert.equal(resolved.params['decision:$alpha'], 'alpha');
+      assert.equal(resolved.params['$alpha'], 'alpha');
       return;
     }
     assert.equal(resolved.params.$roll, 2);
-    assert.equal(resolved.params['decision:$beta'], 'beta');
+    assert.equal(resolved.params['$beta'], 'beta');
   });
 });

@@ -1,8 +1,9 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { asActionId, asPlayerId, asTokenId, type GameDef, type GameState, type Token } from '../../src/kernel/index.js';
-import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
+import { asActionId, asPlayerId, asTokenId, type GameDef, type GameState, type Move, type Token } from '../../src/kernel/index.js';
+import { decisionParamKeysMatching } from '../helpers/decision-key-matchers.js';
+import { applyMoveWithResolvedDecisionIds, normalizeDecisionParamsForMove } from '../helpers/decision-param-helpers.js';
 import { makeIsolatedInitialState } from '../helpers/isolated-state-helpers.js';
 import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
 
@@ -59,6 +60,18 @@ const baseUsTrainState = (def: GameDef, seed: number): GameState => {
   return state;
 };
 
+const resolveCanonicalDecisionKey = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  fragment: string,
+): string => {
+  const resolved = normalizeDecisionParamsForMove(def, state, move);
+  const matches = decisionParamKeysMatching(resolved.params, { resolvedBindPattern: new RegExp(fragment, 'u') });
+  assert.equal(matches.length, 1, `Expected exactly one canonical decision key for ${fragment}`);
+  return matches[0]!;
+};
+
 describe('FITL Combined Action Platoons capability (card 18)', () => {
   it('unshaded grants exactly one ARVN Police placement/relocation per US Train operation', () => {
     const { compiled } = FITL_PRODUCTION_FIXTURE;
@@ -75,13 +88,21 @@ describe('FITL Combined Action Platoons capability (card 18)', () => {
       },
     };
 
-    const result = applyMoveWithResolvedDecisionIds(def, state, {
+    const baseMove = {
       actionId: asActionId('train'),
       params: {
         $targetSpaces: [TRAIN_A, TRAIN_B],
         $trainChoice: 'place-irregulars',
-        '$capCapsBonusSpace#1': TRAIN_C,
         $subActionSpaces: [],
+      },
+    } as const;
+    const capCapsBonusSpaceKey = resolveCanonicalDecisionKey(def, state, baseMove, 'capCapsBonusSpace');
+
+    const result = applyMoveWithResolvedDecisionIds(def, state, {
+      ...baseMove,
+      params: {
+        ...baseMove.params,
+        [capCapsBonusSpaceKey]: TRAIN_C,
       },
     }).state;
 
@@ -106,13 +127,21 @@ describe('FITL Combined Action Platoons capability (card 18)', () => {
       },
     };
 
-    const result = applyMoveWithResolvedDecisionIds(def, state, {
+    const baseMove = {
       actionId: asActionId('train'),
       params: {
         $targetSpaces: [TRAIN_A],
         $trainChoice: 'place-irregulars',
-        '$capCapsBonusSpace#1': TRAIN_C,
         $subActionSpaces: [],
+      },
+    } as const;
+    const capCapsBonusSpaceKey = resolveCanonicalDecisionKey(def, state, baseMove, 'capCapsBonusSpace');
+
+    const result = applyMoveWithResolvedDecisionIds(def, state, {
+      ...baseMove,
+      params: {
+        ...baseMove.params,
+        [capCapsBonusSpaceKey]: TRAIN_C,
       },
     }).state;
 
@@ -135,14 +164,29 @@ describe('FITL Combined Action Platoons capability (card 18)', () => {
       },
     };
 
-    const result = applyMoveWithResolvedDecisionIds(def, state, {
+    const baseMove = {
       actionId: asActionId('train'),
       params: {
         $targetSpaces: [TRAIN_A],
         $trainChoice: 'place-irregulars',
-        '$capCapsBonusSpace#1': TRAIN_C,
-        '$capCapsRelocateSources#1': [ARVN_SOURCE],
         $subActionSpaces: [],
+      },
+    } as const;
+    const capCapsBonusSpaceKey = resolveCanonicalDecisionKey(def, state, baseMove, 'capCapsBonusSpace');
+    const capCapsRelocateSourcesKey = resolveCanonicalDecisionKey(def, state, {
+      ...baseMove,
+      params: {
+        ...baseMove.params,
+        [capCapsBonusSpaceKey]: TRAIN_C,
+      },
+    }, 'capCapsRelocateSources');
+
+    const result = applyMoveWithResolvedDecisionIds(def, state, {
+      ...baseMove,
+      params: {
+        ...baseMove.params,
+        [capCapsBonusSpaceKey]: TRAIN_C,
+        [capCapsRelocateSourcesKey]: [ARVN_SOURCE],
       },
     }).state;
 

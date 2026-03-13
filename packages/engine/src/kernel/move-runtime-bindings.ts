@@ -113,7 +113,9 @@ export const resolvePipelineDecisionBindingsForMove = (
     }
     const parsed = parseDecisionKey(paramName as Parameters<typeof parseDecisionKey>[0]);
     if (parsed !== null) {
-      const bindName = bindByInternalDecisionId.get(parsed.baseId) ?? parsed.resolvedBind;
+      const bindName = parsed.resolvedBind !== parsed.baseId
+        ? parsed.resolvedBind
+        : (bindByInternalDecisionId.get(parsed.baseId) ?? parsed.resolvedBind);
       bindings[bindName] = paramValue as MoveParamValue;
     }
   }

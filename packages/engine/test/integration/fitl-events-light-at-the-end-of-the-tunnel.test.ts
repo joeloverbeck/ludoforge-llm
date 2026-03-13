@@ -31,8 +31,14 @@ const NORTH_VIETNAM = 'north-vietnam:none';
 const CENTRAL_LAOS = 'central-laos:none';
 const NORTHEAST_CAMBODIA = 'northeast-cambodia:none';
 
-const decisionOccurrence = (decisionKey: string): number =>
-  parseDecisionKey(decisionKey as Parameters<typeof parseDecisionKey>[0])?.occurrence ?? 0;
+const decisionIndex = (decisionKey: string): number => {
+  const parsed = parseDecisionKey(decisionKey as Parameters<typeof parseDecisionKey>[0]);
+  if (parsed === null) {
+    return -1;
+  }
+  const match = parsed.iterationPath.match(/\[(\d+)\]$/u);
+  return match === null ? 0 : Number.parseInt(match[1]!, 10);
+};
 
 const makeToken = (
   id: string,
@@ -193,7 +199,7 @@ describe('FITL card-80 Light at the End of the Tunnel', () => {
       throw new Error('Expected pending card-80 US removal selection.');
     }
     assert.equal(pending.type, 'chooseN');
-    assert.equal(decisionOccurrence(pending.decisionKey), 1, 'First top-level removal choice should expose canonical first occurrence');
+    assert.equal(decisionIndex(pending.decisionKey), 0, 'First top-level removal choice should expose canonical index 0');
     assert.equal(pending.min, 1);
     assert.equal(pending.max, 2);
     assert.deepEqual(
@@ -226,49 +232,49 @@ describe('FITL card-80 Light at the End of the Tunnel', () => {
       {
         when: (request) =>
           request.name === '$nvaTroopDestination@{$nvaTroopToPlace@card80-us-troop}'
-          && decisionOccurrence(request.decisionKey) === 1,
+          && decisionIndex(request.decisionKey) === 0,
         value: NORTH_VIETNAM,
       },
       {
         when: (request) =>
           request.name === '$nvaTroopDestination@{$nvaTroopToPlace@card80-us-troop}'
-          && decisionOccurrence(request.decisionKey) === 2,
+          && decisionIndex(request.decisionKey) === 1,
         value: NORTH_VIETNAM,
       },
       {
         when: (request) =>
           request.name === '$nvaTroopDestination@{$nvaTroopToPlace@card80-us-troop}'
-          && decisionOccurrence(request.decisionKey) === 3,
+          && decisionIndex(request.decisionKey) === 2,
         value: CENTRAL_LAOS,
       },
       {
         when: (request) =>
           request.name === '$nvaTroopDestination@{$nvaTroopToPlace@card80-us-troop}'
-          && decisionOccurrence(request.decisionKey) === 4,
+          && decisionIndex(request.decisionKey) === 3,
         value: CENTRAL_LAOS,
       },
       {
         when: (request) =>
           request.name === '$nvaTroopDestination@{$nvaTroopToPlace@card80-us-base}'
-          && decisionOccurrence(request.decisionKey) === 1,
+          && decisionIndex(request.decisionKey) === 0,
         value: CENTRAL_LAOS,
       },
       {
         when: (request) =>
           request.name === '$nvaTroopDestination@{$nvaTroopToPlace@card80-us-base}'
-          && decisionOccurrence(request.decisionKey) === 2,
+          && decisionIndex(request.decisionKey) === 1,
         value: NORTHEAST_CAMBODIA,
       },
       {
         when: (request) =>
           request.name === '$nvaTroopDestination@{$nvaTroopToPlace@card80-us-base}'
-          && decisionOccurrence(request.decisionKey) === 3,
+          && decisionIndex(request.decisionKey) === 2,
         value: NORTHEAST_CAMBODIA,
       },
       {
         when: (request) =>
           request.name === '$nvaTroopDestination@{$nvaTroopToPlace@card80-us-base}'
-          && decisionOccurrence(request.decisionKey) === 4,
+          && decisionIndex(request.decisionKey) === 3,
         value: NORTHEAST_CAMBODIA,
       },
     ];

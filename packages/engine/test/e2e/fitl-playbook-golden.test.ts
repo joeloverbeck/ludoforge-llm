@@ -19,6 +19,7 @@ import {
 import { advanceToDecisionPoint } from '../../src/kernel/phase-advance.js';
 import { initializeTurnFlowEligibilityState } from '../../src/kernel/turn-flow-eligibility.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { matchesDecisionRequest } from '../helpers/decision-key-matchers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import {
   assertPlaybookSnapshot,
@@ -67,11 +68,11 @@ const createTurn4EventDecisionOverrides = (): readonly DecisionOverrideRule[] =>
   return [
     {
       when: (request: ChoicePendingRequest) =>
-        request.type === 'chooseN'
-        && (
-          request.name.includes('$selectedPieces')
-          || request.decisionKey.includes('distributeTokens.selectTokens')
-        ),
+        (request.type === 'chooseN' && /\$selectedPieces/u.test(request.name))
+        || matchesDecisionRequest({
+          type: 'chooseN',
+          baseIdPattern: /distributeTokens\.selectTokens$/u,
+        })(request),
       value: (request: ChoicePendingRequest) => {
         const allValues = request.options
           .map((option) => option.value)
@@ -84,8 +85,10 @@ const createTurn4EventDecisionOverrides = (): readonly DecisionOverrideRule[] =>
     },
     {
       when: (request: ChoicePendingRequest) =>
-        request.name.includes('$targetCity@')
-        || request.decisionKey.includes('distributeTokens.chooseDestination'),
+        /\$targetCity@/u.test(request.name)
+        || matchesDecisionRequest({
+          baseIdPattern: /distributeTokens\.chooseDestination$/u,
+        })(request),
       value: (request: ChoicePendingRequest) => {
         const saigon = request.options.find((option) => option.value === 'saigon:none')?.value;
         const hue = request.options.find((option) => option.value === 'hue:none')?.value;
@@ -117,7 +120,9 @@ const createTurn4NvaReportBranchDecisionOverrides = (): readonly DecisionOverrid
   {
     when: (request: ChoicePendingRequest) =>
       request.name === '$targetSpaces'
-      && request.decisionKey.includes('doc.actionPipelines.10.stages[0].effects.0'),
+      && matchesDecisionRequest({
+        baseIdPattern: /doc\.actionPipelines\.10\.stages\[0\]\.effects\.0/u,
+      })(request),
     value: [
       'kien-phong:none',
       'kien-giang-an-xuyen:none',

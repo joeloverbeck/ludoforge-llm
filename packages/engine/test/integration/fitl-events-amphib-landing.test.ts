@@ -189,7 +189,7 @@ describe('FITL card-67 Amphib Landing', () => {
       () =>
         applyMoveWithResolvedDecisionIds(def, grantReadyState, {
           ...freeSweep!,
-          params: { ...freeSweep!.params, $targetSpaces: [DA_NANG], $movingAdjacentTroops: [] },
+          params: { ...freeSweep!.params, $targetSpaces: [DA_NANG] },
         }),
       /Illegal move|outside options domain|ACTION_NOT_LEGAL_IN_CURRENT_STATE/,
       'Free Sweep must stay restricted to the event-selected coastal space',
@@ -197,7 +197,7 @@ describe('FITL card-67 Amphib Landing', () => {
 
     const afterSweep = applyMoveWithResolvedDecisionIds(def, grantReadyState, {
       ...freeSweep!,
-      params: { ...freeSweep!.params, $targetSpaces: [HUE], $movingAdjacentTroops: [] },
+      params: { ...freeSweep!.params, $targetSpaces: [HUE] },
     }).state;
 
     const hueGuerrilla = (afterSweep.zones[HUE] ?? []).find(
@@ -214,7 +214,7 @@ describe('FITL card-67 Amphib Landing', () => {
       () =>
         applyMoveWithResolvedDecisionIds(def, afterSweep, {
           ...freeAssault!,
-          params: { ...freeAssault!.params, $targetSpaces: [DA_NANG], $arvnFollowupSpaces: [] },
+          params: { ...freeAssault!.params, $targetSpaces: [DA_NANG] },
         }),
       /Illegal move|outside options domain|ACTION_NOT_LEGAL_IN_CURRENT_STATE/,
       'Free Assault must stay restricted to the same coastal space',
@@ -222,7 +222,7 @@ describe('FITL card-67 Amphib Landing', () => {
 
     const final = applyMoveWithResolvedDecisionIds(def, afterSweep, {
       ...freeAssault!,
-      params: { ...freeAssault!.params, $targetSpaces: [HUE], $arvnFollowupSpaces: [] },
+      params: { ...freeAssault!.params, $targetSpaces: [HUE] },
     }).state;
 
     assert.equal(
@@ -323,7 +323,7 @@ describe('FITL card-67 Amphib Landing', () => {
 
     const afterSweep = applyMoveWithResolvedDecisionIds(def, grantReadyState, {
       ...freeSweep!,
-      params: { ...freeSweep!.params, $targetSpaces: [QUANG_TIN], $movingAdjacentTroops: [] },
+      params: { ...freeSweep!.params, $targetSpaces: [QUANG_TIN] },
     }).state;
 
     const activatedGuerrilla = (afterSweep.zones[QUANG_TIN] ?? []).find(

@@ -1,10 +1,13 @@
 import { describe, it, expect } from 'vitest';
+import type { DecisionKey } from '@ludoforge/engine/runtime';
 import { parseIterationContext } from '../../src/model/iteration-context.js';
 import type { PartialChoice } from '../../src/store/store-types.js';
 import type { RenderZone } from '../../src/model/render-model.js';
 
-function makeChoice(decisionKey: string, name: string, value: unknown): PartialChoice {
-  return { decisionKey, name, value } as PartialChoice;
+const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
+
+function makeChoice(decisionKey: string, name: string, value: PartialChoice['value']): PartialChoice {
+  return { decisionKey: asDecisionKey(decisionKey), name, value };
 }
 
 function makeZonesMap(...entries: Array<[string, string]>): ReadonlyMap<string, RenderZone> {
@@ -23,7 +26,7 @@ describe('parseIterationContext', () => {
     const zones = makeZonesMap(['da-nang:none', 'Da Nang']);
 
     const result = parseIterationContext(
-      'decision:place-type::da-nang:none',
+      asDecisionKey('decision:place-type::da-nang:none[0]'),
       choiceStack,
       zones,
     );
@@ -43,7 +46,7 @@ describe('parseIterationContext', () => {
     const zones = makeZonesMap(['beta', 'Beta Zone']);
 
     const result = parseIterationContext(
-      'decision:place-type[1]',
+      asDecisionKey('place-type[1]'),
       choiceStack,
       zones,
     );
@@ -61,7 +64,21 @@ describe('parseIterationContext', () => {
       makeChoice('decision:simple', 'action', 'sweep'),
     ];
 
-    const result = parseIterationContext('decision:simple', choiceStack, new Map());
+    const result = parseIterationContext(asDecisionKey('decision:simple'), choiceStack, new Map());
+
+    expect(result).toBeNull();
+  });
+
+  it('returns null for templated keys without canonical iterationPath', () => {
+    const choiceStack: readonly PartialChoice[] = [
+      makeChoice('decision:select-spaces', 'spaces', ['alpha', 'beta']),
+    ];
+
+    const result = parseIterationContext(
+      asDecisionKey('decision:place-type::beta'),
+      choiceStack,
+      new Map(),
+    );
 
     expect(result).toBeNull();
   });
@@ -73,7 +90,7 @@ describe('parseIterationContext', () => {
     ];
 
     const result = parseIterationContext(
-      'decision:place-type::da-nang:none',
+      asDecisionKey('decision:place-type::da-nang:none[0]'),
       choiceStack,
       new Map(),
     );
@@ -87,7 +104,21 @@ describe('parseIterationContext', () => {
     ];
 
     const result = parseIterationContext(
-      'decision:place-type::da-nang:none',
+      asDecisionKey('decision:place-type::da-nang:none'),
+      choiceStack,
+      new Map(),
+    );
+
+    expect(result).toBeNull();
+  });
+
+  it('returns null when templated iterationPath and iterated entity disagree', () => {
+    const choiceStack: readonly PartialChoice[] = [
+      makeChoice('decision:select-spaces', 'spaces', ['alpha', 'beta']),
+    ];
+
+    const result = parseIterationContext(
+      asDecisionKey('decision:place-type::alpha[1]'),
       choiceStack,
       new Map(),
     );
@@ -101,7 +132,7 @@ describe('parseIterationContext', () => {
     ];
 
     const result = parseIterationContext(
-      'decision:place-type[5]',
+      asDecisionKey('place-type[5]'),
       choiceStack,
       new Map(),
     );
@@ -115,7 +146,7 @@ describe('parseIterationContext', () => {
     ];
 
     const result = parseIterationContext(
-      'decision:place-type::da-nang:none',
+      asDecisionKey('decision:place-type::da-nang:none[0]'),
       choiceStack,
       new Map(),
     );
@@ -133,7 +164,7 @@ describe('parseIterationContext', () => {
     const zones = makeZonesMap(['beta', 'Beta']);
 
     const result = parseIterationContext(
-      'decision:place-type::beta',
+      asDecisionKey('decision:place-type::beta[1]'),
       choiceStack,
       zones,
     );
@@ -153,7 +184,7 @@ describe('parseIterationContext', () => {
     const zones = makeZonesMap(['first', 'First Zone']);
 
     const result = parseIterationContext(
-      'decision:place[0]',
+      asDecisionKey('place[0]'),
       choiceStack,
       zones,
     );
@@ -163,6 +194,26 @@ describe('parseIterationContext', () => {
       iterationTotal: 2,
       currentEntityId: 'first',
       currentEntityDisplayName: 'First Zone',
+    });
+  });
+
+  it('prefers iterationPath over first-match lookup for templated keys when values repeat', () => {
+    const choiceStack: readonly PartialChoice[] = [
+      makeChoice('pick-spaces', 'spaces', ['alpha', 'beta', 'alpha']),
+    ];
+    const zones = makeZonesMap(['alpha', 'Alpha']);
+
+    const result = parseIterationContext(
+      asDecisionKey('decision:place-type::alpha[2]'),
+      choiceStack,
+      zones,
+    );
+
+    expect(result).toEqual({
+      iterationIndex: 2,
+      iterationTotal: 3,
+      currentEntityId: 'alpha',
+      currentEntityDisplayName: 'Alpha',
     });
   });
 });

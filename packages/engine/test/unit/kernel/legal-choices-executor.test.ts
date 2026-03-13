@@ -77,7 +77,7 @@ describe('legalChoices executor context', () => {
     });
 
     assert.equal(request.kind, 'pending');
-    assert.equal(request.decisionKey, 'decision:$zone');
+    assert.equal(request.decisionKey, '$zone');
     assert.deepEqual(request.options.map((option) => option.value), [asZoneId('hand:1')]);
   });
 

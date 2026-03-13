@@ -112,6 +112,26 @@ describe('decision-scope codec', () => {
     assert.deepEqual(second.scope.counters, { '$target': 2 });
   });
 
+  it('preserves legacy first-occurrence semantics for decision-prefixed static binds', () => {
+    const scope0 = emptyScope();
+    const first = advanceScope(scope0, 'decision:$target', '$target');
+    const second = advanceScope(first.scope, 'decision:$target', '$target');
+
+    assert.equal(first.occurrence, 1);
+    assert.equal(first.key, '$target');
+    assert.equal(second.occurrence, 2);
+    assert.equal(second.key, '$target#2');
+    assert.deepEqual(second.scope.counters, { '$target': 2 });
+
+    const parsed = parseDecisionKey(second.key);
+    assert.deepEqual(parsed, {
+      baseId: '$target',
+      resolvedBind: '$target',
+      iterationPath: '',
+      occurrence: 2,
+    });
+  });
+
   it('tracks counters per iteration path and per distinct decision base', () => {
     const root = emptyScope();
     const inLoop = withIterationSegment(root, 0);

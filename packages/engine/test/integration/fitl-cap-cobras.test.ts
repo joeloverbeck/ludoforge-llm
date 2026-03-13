@@ -252,10 +252,8 @@ describe('FITL Cobras capability integration', () => {
       params: {
         $targetSpaces: [ASSAULT_A, ASSAULT_B],
         $arvnFollowupSpaces: [],
-        '$targetFactionFirst#1': 'VC',
-        '$targetFactionFirst#2': 'VC',
-        'decision:doc.actionPipelines.6.stages[2].effects.0.forEach.effects.1.let.in.0.let.in.0.let.in.0.let.in.0.let.in.0.let.in.1.let.in.0.if.then.0.let.in.0.chooseOne[0]': 'VC',
-        'decision:doc.actionPipelines.6.stages[2].effects.0.forEach.effects.1.let.in.0.let.in.0.let.in.0.let.in.0.let.in.0.let.in.1.let.in.0.if.then.0.let.in.0.chooseOne[1]': 'VC',
+        'decision:doc.actionPipelines.6.stages[2].effects.0.forEach.effects.1.let.in.0.let.in.0.let.in.0.let.in.0.let.in.0.let.in.1.let.in.0.if.then.0.let.in.0.chooseOne::$targetFactionFirst[0]': 'VC',
+        'decision:doc.actionPipelines.6.stages[2].effects.0.forEach.effects.1.let.in.0.let.in.0.let.in.0.let.in.0.let.in.0.let.in.1.let.in.0.if.then.0.let.in.0.chooseOne::$targetFactionFirst[1]': 'VC',
       },
     }).state;
     const lossesA = countTokens(twoSpaceFinal, ASSAULT_A, (token) => token.props.faction === 'US' && token.props.type === 'troops') === 0;

@@ -104,12 +104,12 @@ describe('choice membership parity', () => {
     assert.equal(pending.kind, 'pending');
     assert.deepEqual(pending.options.map((option) => option.value), [asTokenId('tok-1')]);
 
-    assert.deepEqual(legalChoicesDiscover(def, state, makeMove({ 'decision:$token': asTokenId('tok-1') })), {
+    assert.deepEqual(legalChoicesDiscover(def, state, makeMove({ '$token': asTokenId('tok-1') })), {
       kind: 'complete',
       complete: true,
     });
 
-    const effectResult = applyEffect(chooseOneEffect, makeEffectContext({ 'decision:$token': asTokenId('tok-1') }));
+    const effectResult = applyEffect(chooseOneEffect, makeEffectContext({ '$token': asTokenId('tok-1') }));
     assert.equal(effectResult.state.zones['hand:0']?.length, 1);
   });
 
@@ -118,12 +118,12 @@ describe('choice membership parity', () => {
     const state = makeState();
 
     assert.throws(
-      () => legalChoicesDiscover(def, state, makeMove({ 'decision:$token': asTokenId('tok-missing') })),
+      () => legalChoicesDiscover(def, state, makeMove({ '$token': asTokenId('tok-missing') })),
       (error: unknown) => error instanceof Error && error.message.includes('invalid selection for chooseOne'),
     );
 
     assert.throws(
-      () => applyEffect(chooseOneEffect, makeEffectContext({ 'decision:$token': asTokenId('tok-missing') })),
+      () => applyEffect(chooseOneEffect, makeEffectContext({ '$token': asTokenId('tok-missing') })),
       (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('outside options domain'),
     );
   });

@@ -11,9 +11,9 @@ import {
 } from '../../src/bootstrap/bootstrap-registry';
 
 describe('bootstrap-registry', () => {
-  it('resolves default descriptor when game query is omitted', () => {
+  it('resolves texas descriptor as default when game query is omitted', () => {
     const descriptor = resolveBootstrapDescriptor(null);
-    expect(descriptor.id).toBe('default');
+    expect(descriptor.id).toBe('texas');
   });
 
   it('resolves known descriptor by query value', () => {
@@ -26,9 +26,9 @@ describe('bootstrap-registry', () => {
     expect(descriptor.id).toBe('texas');
   });
 
-  it('falls back to default descriptor for unknown query values', () => {
+  it('falls back to texas descriptor for unknown query values', () => {
     const descriptor = resolveBootstrapDescriptor('unknown');
-    expect(descriptor.id).toBe('default');
+    expect(descriptor.id).toBe('texas');
   });
 
   it('exports descriptors with unique ids and query values', () => {
@@ -42,8 +42,8 @@ describe('bootstrap-registry', () => {
 
   it('exports expected descriptors from canonical bootstrap target manifest', () => {
     const descriptors = listBootstrapDescriptors();
-    expect(descriptors.map((descriptor) => descriptor.id)).toEqual(['default', 'fitl', 'texas']);
-    expect(descriptors.map((descriptor) => descriptor.queryValue)).toEqual(['default', 'fitl', 'texas']);
+    expect(descriptors.map((descriptor) => descriptor.id)).toEqual(['fitl', 'texas']);
+    expect(descriptors.map((descriptor) => descriptor.queryValue)).toEqual(['fitl', 'texas']);
   });
 
   it('resolves visual config via generatedFromSpecPath mapping', () => {
@@ -64,13 +64,6 @@ describe('bootstrap-registry', () => {
 
     expect(fitl?.gameMetadata.factionIds).toEqual(['us', 'arvn', 'nva', 'vc']);
     expect(texas?.gameMetadata.factionIds).toEqual(['neutral']);
-  });
-
-  it('returns null when a bootstrap target has no visual config file', () => {
-    const descriptors = listBootstrapDescriptors();
-    const defaultDescriptor = descriptors.find((descriptor) => descriptor.id === 'default');
-    expect(defaultDescriptor).toBeDefined();
-    expect(defaultDescriptor?.resolveVisualConfigYaml()).toBeNull();
   });
 
   it('throws when descriptor validation receives duplicate query values', () => {
@@ -108,10 +101,27 @@ describe('bootstrap-registry', () => {
         defaultPlayerId: 0,
         sourceLabel: 'test fixture',
         fixtureFile: 'd0.json',
+        specEntrypoint: 'data/games/d0.game-spec.md',
       },
     ];
 
     expect(() => assertBootstrapTargetDefinitions(targets)).toThrow(/generatedFromSpecPath/u);
+  });
+
+  it('throws when target manifest omits specEntrypoint', () => {
+    const targets = [
+      {
+        id: 'd0',
+        queryValue: 'd0',
+        defaultSeed: 42,
+        defaultPlayerId: 0,
+        sourceLabel: 'test fixture',
+        fixtureFile: 'd0.json',
+        generatedFromSpecPath: 'data/games/d0',
+      },
+    ];
+
+    expect(() => assertBootstrapTargetDefinitions(targets)).toThrow(/specEntrypoint/u);
   });
 });
 
@@ -151,6 +161,7 @@ function target(
   sourceLabel: string;
   fixtureFile: string;
   generatedFromSpecPath: string;
+  specEntrypoint: string;
 } {
   return {
     id,
@@ -160,5 +171,6 @@ function target(
     sourceLabel: 'test fixture',
     fixtureFile,
     generatedFromSpecPath: `data/games/${id}`,
+    specEntrypoint: `data/games/${id}.game-spec.md`,
   };
 }

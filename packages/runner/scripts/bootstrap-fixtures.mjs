@@ -3,10 +3,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  compileGameSpecToGameDef,
-  loadGameSpecSource,
-  parseGameSpec,
-  validateGameSpec,
+  loadGameSpecBundleFromEntrypoint,
+  runGameSpecStagesFromBundle,
 } from '@ludoforge/engine/cnl';
 
 const SCRIPT_DIR = fileURLToPath(new URL('.', import.meta.url));
@@ -21,7 +19,7 @@ export function loadBootstrapFixtureTargets() {
     .map((target) => ({
       id: target.id,
       label: target.sourceLabel,
-      specPath: resolve(REPO_ROOT, target.generatedFromSpecPath),
+      specPath: resolve(REPO_ROOT, target.specEntrypoint),
       gameDefOutputPath: resolve(RUNNER_ROOT, 'src', 'bootstrap', target.fixtureFile),
       metadataOutputPath: resolve(RUNNER_ROOT, 'src', 'bootstrap', deriveMetadataFileName(target.fixtureFile)),
     }));
@@ -44,9 +42,9 @@ function assertBootstrapFixtureTargets(targetsInput) {
     const sourceLabel = requireNonEmptyString(target.sourceLabel, `Bootstrap target sourceLabel (id=${id})`);
     const fixtureFile = requireNonEmptyString(target.fixtureFile, `Bootstrap target fixtureFile (id=${id})`);
 
-    const generatedFromSpecPath = requireNonEmptyString(
-      target.generatedFromSpecPath,
-      `Bootstrap target generatedFromSpecPath (id=${id})`,
+    const specEntrypoint = requireNonEmptyString(
+      target.specEntrypoint,
+      `Bootstrap target specEntrypoint (id=${id})`,
     );
 
     if (ids.has(id)) {
@@ -63,7 +61,7 @@ function assertBootstrapFixtureTargets(targetsInput) {
       id,
       sourceLabel,
       fixtureFile,
-      generatedFromSpecPath,
+      specEntrypoint,
     };
   });
 }
@@ -76,24 +74,27 @@ function requireNonEmptyString(value, label) {
 }
 
 function compileFixtureGameDef(target) {
-  const loaded = loadGameSpecSource(target.specPath);
-  const parsed = parseGameSpec(loaded.markdown, { sourceId: target.specPath });
-  const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
-  const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+  const bundle = loadGameSpecBundleFromEntrypoint(target.specPath);
+  const staged = runGameSpecStagesFromBundle(bundle);
 
-  const diagnostics = [...parsed.diagnostics, ...validatorDiagnostics, ...compiled.diagnostics];
-  const errors = diagnostics.filter((diagnostic) => diagnostic.severity === 'error');
-  if (errors.length > 0 || compiled.gameDef === null) {
+  const allDiagnostics = [
+    ...staged.parsed.diagnostics,
+    ...staged.validation.diagnostics,
+    ...(staged.compilation.result?.diagnostics ?? []),
+  ];
+  const errors = allDiagnostics.filter((d) => d.severity === 'error');
+
+  if (errors.length > 0 || staged.compilation.result?.gameDef == null) {
     const preview = errors
       .slice(0, 10)
-      .map((diagnostic) => `${diagnostic.code} at ${diagnostic.path}: ${diagnostic.message}`)
+      .map((d) => `${d.code} at ${d.path}: ${d.message}`)
       .join('\n');
     throw new Error(
       `${target.label} bootstrap compilation failed with ${errors.length} error diagnostics.${preview.length > 0 ? `\n${preview}` : ''}`,
     );
   }
 
-  return compiled.gameDef;
+  return staged.compilation.result.gameDef;
 }
 
 export function renderFixtureGameDefContent(target) {

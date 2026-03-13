@@ -171,6 +171,11 @@ function requireSuccessfulProductionCompilation(
   if (compiled === null) {
     assert.fail(`${label} should produce a compile result.`);
   }
+  assert.equal(
+    hasErrorDiagnostics(compiled.diagnostics),
+    false,
+    `${label} should not contain compiler errors (including cross-validation):\n${formatDiagnosticSummary(compiled.diagnostics)}`,
+  );
   if (compiled.gameDef === null) {
     assert.fail(`${label} should produce a compiled gameDef.`);
   }

@@ -29,11 +29,19 @@ zones:
     owner: none
     visibility: public
     ordering: set
+  - id: out-of-play-NVA
+    owner: none
+    visibility: public
+    ordering: set
   - id: trucks-base-staging
     owner: none
     visibility: hidden
     ordering: set
   - id: available-VC
+    owner: none
+    visibility: public
+    ordering: set
+  - id: out-of-play-VC
     owner: none
     visibility: public
     ordering: set

@@ -85,6 +85,8 @@ verbalization:
     "available-VC:none": "VC Available Forces"
     "out-of-play-US:none": "US Out of Play"
     "out-of-play-ARVN:none": "ARVN Out of Play"
+    "out-of-play-NVA:none": "NVA Out of Play"
+    "out-of-play-VC:none": "VC Out of Play"
     "casualties-US:none": "US Casualties"
 
     # ── Infrastructure zones ─────────────────────────────────────────────

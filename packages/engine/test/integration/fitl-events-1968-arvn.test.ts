@@ -58,7 +58,7 @@ describe('FITL 1968 ARVN-first event-card production spec', () => {
     assert.deepEqual(card?.shaded?.effects, [{ setGlobalMarker: { marker: 'cap_armoredCavalry', state: 'shaded' } }]);
   });
 
-  it('encodes card 77 (Detente) as mirrored resource-halving expressions', () => {
+  it('encodes card 77 (Detente) with insurgent-only unshaded losses and the shaded NVA-then-VC branch structure', () => {
     const { parsed, compiled } = compileProductionSpec();
 
     assertNoErrors(parsed);
@@ -66,14 +66,86 @@ describe('FITL 1968 ARVN-first event-card production spec', () => {
 
     const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-77');
     assert.notEqual(card, undefined);
+    assert.equal(
+      card?.unshaded?.text,
+      'Cut NVA and VC Resources each to half their total (round down). 5 Available NVA Troops out of play.',
+    );
+    assert.deepEqual(card?.unshaded?.effects, [
+      { setVar: { scope: 'global', var: 'nvaResources', value: { op: 'floorDiv', left: { ref: 'gvar', var: 'nvaResources' }, right: 2 } } },
+      { setVar: { scope: 'global', var: 'vcResources', value: { op: 'floorDiv', left: { ref: 'gvar', var: 'vcResources' }, right: 2 } } },
+      {
+        forEach: {
+          bind: '$nvaTroopOutOfPlay',
+          over: {
+            query: 'tokensInZone',
+            zone: 'available-NVA:none',
+            filter: {
+              op: 'and',
+              args: [
+                { prop: 'faction', op: 'eq', value: 'NVA' },
+                { prop: 'type', op: 'eq', value: 'troops' },
+              ],
+            },
+          },
+          limit: 5,
+          effects: [
+            { moveToken: { token: '$nvaTroopOutOfPlay', from: 'available-NVA:none', to: { zoneExpr: 'out-of-play-NVA:none' } } },
+          ],
+        },
+      },
+    ]);
 
-    const expectedEffects = [
-      { setVar: { scope: 'global', var: 'arvnResources', value: { op: '/', left: { ref: 'gvar', var: 'arvnResources' }, right: 2 } } },
-      { setVar: { scope: 'global', var: 'nvaResources', value: { op: '/', left: { ref: 'gvar', var: 'nvaResources' }, right: 2 } } },
-      { setVar: { scope: 'global', var: 'vcResources', value: { op: '/', left: { ref: 'gvar', var: 'vcResources' }, right: 2 } } },
-    ] as const;
+    assert.equal(card?.shaded?.text, 'NVA add +9 Resources or free Infiltrate. Then VC free Rally in up to 6 spaces.');
+    assert.deepEqual(card?.shaded?.branches?.map((branch) => branch.id), ['detente-nva-add-resources', 'detente-nva-infiltrate']);
 
-    assert.deepEqual(card?.unshaded?.effects, expectedEffects);
-    assert.deepEqual(card?.shaded?.effects, expectedEffects);
+    const addResources = card?.shaded?.branches?.find((branch) => branch.id === 'detente-nva-add-resources');
+    assert.deepEqual(addResources?.effects, [
+      { addVar: { scope: 'global', var: 'nvaResources', delta: 9 } },
+      {
+        grantFreeOperation: {
+          seat: 'vc',
+          sequence: { batch: 'detente-vc-rally', step: 0 },
+          viabilityPolicy: 'requireUsableAtIssue',
+          completionPolicy: 'required',
+          outcomePolicy: 'mustChangeGameplayState',
+          postResolutionTurnFlow: 'resumeCardFlow',
+          operationClass: 'operation',
+          actionIds: ['rally'],
+          moveZoneBindings: ['$targetSpaces'],
+          executionContext: { maxSpaces: 6 },
+        },
+      },
+    ]);
+
+    const infiltrate = card?.shaded?.branches?.find((branch) => branch.id === 'detente-nva-infiltrate');
+    assert.equal(infiltrate?.effectTiming, 'afterGrants');
+    assert.deepEqual(infiltrate?.freeOperationGrants, [
+      {
+        seat: 'nva',
+        sequence: { batch: 'detente-nva', step: 0 },
+        viabilityPolicy: 'requireUsableForEventPlay',
+        completionPolicy: 'required',
+        outcomePolicy: 'mustChangeGameplayState',
+        postResolutionTurnFlow: 'resumeCardFlow',
+        operationClass: 'specialActivity',
+        actionIds: ['infiltrate'],
+      },
+    ]);
+    assert.deepEqual(infiltrate?.effects, [
+      {
+        grantFreeOperation: {
+          seat: 'vc',
+          sequence: { batch: 'detente-vc-rally', step: 0 },
+          viabilityPolicy: 'requireUsableAtIssue',
+          completionPolicy: 'required',
+          outcomePolicy: 'mustChangeGameplayState',
+          postResolutionTurnFlow: 'resumeCardFlow',
+          operationClass: 'operation',
+          actionIds: ['rally'],
+          moveZoneBindings: ['$targetSpaces'],
+          executionContext: { maxSpaces: 6 },
+        },
+      },
+    ]);
   });
 });

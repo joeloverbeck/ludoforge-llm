@@ -19,3 +19,6 @@ export { materializeConcreteCandidates, filterAvailableCandidates } from './mate
 
 export { createNodePool } from './node-pool.js';
 export type { NodePool } from './node-pool.js';
+
+export { rollout } from './rollout.js';
+export type { RolloutResult } from './rollout.js';

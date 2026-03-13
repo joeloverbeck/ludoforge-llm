@@ -1,6 +1,6 @@
 # UNICOMGAMPLAAIAGE-008: Rollout Policy (Epsilon-Greedy + Random)
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new file in agents/mcts/

@@ -5,7 +5,7 @@ import type { GameStore } from '../store/game-store';
 import { adjacenciesVisuallyEqual, tokensVisuallyEqual, zonesVisuallyEqual } from './canvas-equality';
 import { EMPTY_INTERACTION_HIGHLIGHTS, type InteractionHighlights } from './interaction-highlights.js';
 import type { PositionStore } from './position-store';
-import type { AdjacencyRenderer, TableOverlayRenderer, TokenRenderer, ZoneRenderer } from './renderers/renderer-types';
+import type { AdjacencyRenderer, RegionBoundaryRenderer, TableOverlayRenderer, TokenRenderer, ZoneRenderer } from './renderers/renderer-types';
 import type { ViewportResult } from './viewport-setup';
 
 interface CanvasSnapshotSelectorResult {
@@ -35,6 +35,7 @@ export interface CanvasUpdaterDeps {
   readonly adjacencyRenderer: AdjacencyRenderer;
   readonly tokenRenderer: TokenRenderer;
   readonly tableOverlayRenderer?: TableOverlayRenderer;
+  readonly regionBoundaryRenderer?: RegionBoundaryRenderer;
   readonly viewport: ViewportResult;
   readonly getInteractionHighlights?: () => InteractionHighlights;
 }
@@ -64,6 +65,7 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
   const applySnapshot = (snapshot: CanvasSnapshotSelectorResult): void => {
     const highlightedZoneIDs = new Set(latestInteractionHighlights.zoneIDs);
     const highlightedTokenIDs = new Set(latestInteractionHighlights.tokenIDs);
+    deps.regionBoundaryRenderer?.update(snapshot.zones, latestPositionSnapshot.positions);
     deps.zoneRenderer.update(snapshot.zones, latestPositionSnapshot.positions, highlightedZoneIDs);
     deps.adjacencyRenderer.update(snapshot.adjacencies, latestPositionSnapshot.positions);
     deps.tokenRenderer.update(snapshot.tokens, deps.zoneRenderer.getContainerMap(), highlightedTokenIDs);

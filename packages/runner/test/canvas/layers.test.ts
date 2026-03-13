@@ -10,6 +10,7 @@ describe('createLayerHierarchy', () => {
     expect(layers).toMatchObject({
       boardGroup: expect.any(Container),
       backgroundLayer: expect.any(Container),
+      regionLayer: expect.any(Container),
       adjacencyLayer: expect.any(Container),
       zoneLayer: expect.any(Container),
       tableOverlayLayer: expect.any(Container),
@@ -30,13 +31,15 @@ describe('createLayerHierarchy', () => {
     const layers = createLayerHierarchy();
 
     expect(layers.backgroundLayer.parent).toBe(layers.boardGroup);
+    expect(layers.regionLayer.parent).toBe(layers.boardGroup);
     expect(layers.adjacencyLayer.parent).toBe(layers.boardGroup);
     expect(layers.zoneLayer.parent).toBe(layers.boardGroup);
     expect(layers.tableOverlayLayer.parent).toBe(layers.boardGroup);
     expect(layers.boardGroup.children[0]).toBe(layers.backgroundLayer);
-    expect(layers.boardGroup.children[1]).toBe(layers.adjacencyLayer);
-    expect(layers.boardGroup.children[2]).toBe(layers.zoneLayer);
-    expect(layers.boardGroup.children[3]).toBe(layers.tableOverlayLayer);
+    expect(layers.boardGroup.children[1]).toBe(layers.regionLayer);
+    expect(layers.boardGroup.children[2]).toBe(layers.adjacencyLayer);
+    expect(layers.boardGroup.children[3]).toBe(layers.zoneLayer);
+    expect(layers.boardGroup.children[4]).toBe(layers.tableOverlayLayer);
   });
 
   it('returns detached root layers so viewport setup is the single attach point', () => {

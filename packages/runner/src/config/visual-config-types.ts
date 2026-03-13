@@ -47,6 +47,24 @@ const LayoutHintsSchema = z.object({
   fixed: z.array(FixedPositionHintSchema).optional(),
 });
 
+const RegionBorderStyleSchema = z.enum(['solid', 'dashed']);
+
+const RegionStyleSchema = z.object({
+  fillColor: z.string(),
+  fillAlpha: z.number().optional(),
+  borderColor: z.string().optional(),
+  borderStyle: RegionBorderStyleSchema.optional(),
+  borderWidth: z.number().optional(),
+  label: z.string().optional(),
+});
+
+const RegionBoundaryConfigSchema = z.object({
+  groupByAttribute: z.string().optional(),
+  padding: z.number().optional(),
+  cornerRadius: z.number().optional(),
+  styles: z.record(z.string(), RegionStyleSchema).optional(),
+});
+
 const TableBackgroundSchema = z.object({
   color: z.string().optional(),
   shape: z.enum(['ellipse', 'rectangle', 'roundedRect']).optional(),
@@ -351,6 +369,7 @@ export const VisualConfigSchema = z.object({
   phaseBanners: PhaseBannersSchema.optional(),
   victoryStandings: VictoryStandingsVisualSchema.optional(),
   actionGroupPolicy: ActionGroupPolicySchema.optional(),
+  regions: RegionBoundaryConfigSchema.optional(),
 });
 
 export type LayoutMode = z.infer<typeof LayoutModeSchema>;
@@ -403,4 +422,7 @@ export type ActionChoiceVisual = z.infer<typeof ActionChoiceVisualSchema>;
 export type ActionVisual = z.infer<typeof ActionVisualSchema>;
 export type ActionGroupSynthesizeEntry = z.infer<typeof ActionGroupSynthesizeEntrySchema>;
 export type ActionGroupPolicy = z.infer<typeof ActionGroupPolicySchema>;
+export type RegionBorderStyle = z.infer<typeof RegionBorderStyleSchema>;
+export type RegionStyle = z.infer<typeof RegionStyleSchema>;
+export type RegionBoundaryConfig = z.infer<typeof RegionBoundaryConfigSchema>;
 export type VisualConfig = z.infer<typeof VisualConfigSchema>;

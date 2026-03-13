@@ -53,6 +53,14 @@ export interface TableOverlayRenderer {
   destroy(): void;
 }
 
+export interface RegionBoundaryRenderer {
+  update(
+    zones: readonly RenderZone[],
+    positions: ReadonlyMap<string, Position>,
+  ): void;
+  destroy(): void;
+}
+
 export interface FactionColorProvider {
   getTokenTypeVisual(tokenTypeId: string): ResolvedTokenVisual;
   resolveTokenSymbols(

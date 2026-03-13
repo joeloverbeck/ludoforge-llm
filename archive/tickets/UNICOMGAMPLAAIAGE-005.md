@@ -1,6 +1,6 @@
 # UNICOMGAMPLAAIAGE-005: Availability-Aware ISUCT Selection Formula
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — new file in agents/mcts/
@@ -85,3 +85,13 @@ Add re-export for `isuct.ts`.
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/test/unit/agents/mcts/isuct.test.ts`
 2. `pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-13
+- **What changed**:
+  - Created `packages/engine/src/agents/mcts/isuct.ts` with `selectChild()` implementing ISUCT availability-aware selection
+  - Created `packages/engine/test/unit/agents/mcts/isuct.test.ts` with 10 tests (8 acceptance criteria + 2 invariant checks)
+  - Updated `packages/engine/src/agents/mcts/index.ts` with `selectChild` re-export
+- **Deviations**: None. Implementation matches ticket exactly.
+- **Verification**: 4280 engine tests pass (0 fail), lint 0 errors, typecheck clean.

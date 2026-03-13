@@ -10,5 +10,7 @@ export type { MoveKey } from './move-key.js';
 export { createRootNode, createChildNode } from './node.js';
 export type { MctsNode, ProvenResult } from './node.js';
 
+export { selectChild } from './isuct.js';
+
 export { createNodePool } from './node-pool.js';
 export type { NodePool } from './node-pool.js';

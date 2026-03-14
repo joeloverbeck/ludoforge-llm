@@ -65,7 +65,15 @@ This extends the existing `OptionsQuery` union in `types-ast.ts` (lines 203-265)
 
 #### In `evalQuery` (eval-query.ts)
 
-Evaluate all tiers in order, concatenate results. Tag each result internally with its tier index (runtime metadata, not exposed in authored YAML). The result set is a flat array of all candidates from all tiers.
+Evaluate all tiers in order and concatenate the results. The result set is a flat array of all candidates from all tiers.
+
+`evalQuery` stays a pure query evaluator. It owns:
+
+- deterministic left-to-right tier ordering
+- runtime-shape homogeneity across tiers
+- combined-result bounds enforcement
+
+It does **not** attach hidden per-result tier metadata. Tier-aware legality should be derived from the `prioritized` query AST at the `chooseN` legality layer, not by mutating `QueryResult` items or threading a side-channel map through query evaluation.
 
 #### In `chooseN` legality (legal-choices.ts)
 
@@ -226,7 +234,7 @@ Compilation and validation must reject:
 
 The design supports:
 
-- unit tests on `evalQuery` for the `prioritized` variant (concatenation + tier tagging)
+- unit tests on `evalQuery` for the `prioritized` variant (concatenation, empty-tier behavior, passthrough behavior, bounds enforcement)
 - unit tests on `chooseN` legality with tier-aware constraints
 - unit tests on dynamic re-evaluation as selections are made
 - integration tests on real FITL cards (card 87)
@@ -245,7 +253,7 @@ The design supports:
 ## Implementation Plan
 
 1. **Add `prioritized` variant to `OptionsQuery`** in `types-ast.ts`. Add corresponding Zod schema in the compiler's validation layer.
-2. **Implement `evalQuery` handler** for `prioritized`: evaluate each tier's sub-query, concatenate results, attach internal tier-index metadata to each result.
+2. **Implement `evalQuery` handler** for `prioritized`: evaluate each tier's sub-query, concatenate results, and enforce the same recursive-query runtime contracts as `concat`.
 3. **Implement tier-aware legality in `chooseN`** in `legal-choices.ts`: when options originate from a `prioritized` query, compute per-item legality based on tier priority and qualifier. Use pre-filtering to avoid combination explosion.
 4. **Add unit tests**: query evaluation, legality computation, dynamic re-evaluation, edge cases (empty tiers, missing qualifier property, partial fulfillment).
 5. **Rework card 87** to use `prioritized` query instead of `concat`.
@@ -259,7 +267,9 @@ Query evaluation:
 - `prioritized` with 2 tiers returns concatenated results
 - `prioritized` with 3 tiers returns concatenated results in tier order
 - `prioritized` with an empty tier returns only results from non-empty tiers
-- tier index metadata is correctly attached to each result
+- single-tier `prioritized` behaves like a passthrough
+- combined `maxQueryResults` enforcement applies to the flattened result
+- `qualifierKey` does not change `evalQuery` output
 
 Legality (with `qualifierKey`):
 - tier-2 item with qualifier Q is illegal while tier-1 item with qualifier Q is unselected
@@ -287,7 +297,7 @@ Non-FITL/generic:
 This spec is complete when:
 
 1. `OptionsQuery` union includes a `prioritized` variant with optional `qualifierKey`.
-2. `evalQuery` correctly evaluates `prioritized` queries by concatenating tier results with internal metadata.
+2. `evalQuery` correctly evaluates `prioritized` queries by concatenating tier results without embedding legality metadata in query results.
 3. `chooseN` legality correctly enforces tier priority with per-qualifier independence.
 4. Card 87 is re-authored to use `prioritized` query instead of `concat`.
 5. Card 87 no longer allows selecting on-map ARVN pieces of a type that is still Available.

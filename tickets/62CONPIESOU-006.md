@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — test files only
-**Deps**: tickets/62CONPIESOU-004.md
+**Deps**: archive/tickets/62CONPIESOU-004.md
 
 ## Problem
 
@@ -20,7 +20,7 @@ The `evalQuery` handler for `prioritized` needs comprehensive unit test coverage
 
 1. Tests should use synthetic fixtures — no FITL data. This ensures engine-agnosticism of the test coverage.
 2. Tests should cover the exact list from the spec's "Unit Tests — Query evaluation" section.
-3. `computeTierMembership` utility (from ticket 004) also needs unit tests here.
+3. Ticket 004 confirmed that `evalQuery` should not expose tier metadata or a `computeTierMembership(...)` helper. This ticket should only cover the pure query-evaluation behavior that actually belongs to `evalQuery`.
 
 ## What to Change
 
@@ -32,24 +32,16 @@ In `packages/engine/test/unit/eval-query.test.ts` (or a new focused test file if
 - `prioritized` with 2 tiers returns concatenated results
 - `prioritized` with 3 tiers returns concatenated results in tier order
 - `prioritized` with an empty tier returns only results from non-empty tiers
-- Tier index metadata is correctly attached to each result (via `computeTierMembership`)
+- Combined `maxQueryResults` enforcement applies to the flattened result
 
 **Additional edge cases**:
 - `prioritized` with 1 tier behaves like a passthrough
-- Deduplication: item in both tier 0 and tier 1 appears only once (assigned to tier 0)
 - Shape mismatch across tiers throws (tokens in tier 1, integers in tier 2)
 - `qualifierKey` is passed through but does not affect evalQuery behavior (it's for legality only)
-
-### 2. Add `computeTierMembership` tests
-
-- Returns correct tier index for items from different tiers
-- Items deduplicated to lowest tier
-- Works with token results, zone results, etc.
 
 ## Files to Touch
 
 - `packages/engine/test/unit/eval-query.test.ts` (modify)
-- `packages/engine/test/unit/kernel/prioritized-tier-utils.test.ts` (new — if utility is in separate file)
 
 ## Out of Scope
 
@@ -65,8 +57,7 @@ In `packages/engine/test/unit/eval-query.test.ts` (or a new focused test file if
 
 1. All 4 spec-required query evaluation tests pass
 2. All edge case tests pass
-3. `computeTierMembership` tests pass
-4. Existing suite: `pnpm -F @ludoforge/engine test` (no regressions)
+3. Existing suite: `pnpm -F @ludoforge/engine test` (no regressions)
 
 ### Invariants
 
@@ -79,7 +70,6 @@ In `packages/engine/test/unit/eval-query.test.ts` (or a new focused test file if
 ### New/Modified Tests
 
 1. `packages/engine/test/unit/eval-query.test.ts` — prioritized query evaluation suite
-2. `packages/engine/test/unit/kernel/prioritized-tier-utils.test.ts` — tier membership utility suite
 
 ### Commands
 

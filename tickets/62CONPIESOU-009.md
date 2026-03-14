@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — test files + possibly a test fixture file
-**Deps**: tickets/62CONPIESOU-004.md, tickets/62CONPIESOU-005.md, tickets/62CONPIESOU-008.md
+**Deps**: archive/tickets/62CONPIESOU-004.md, tickets/62CONPIESOU-005.md, tickets/62CONPIESOU-008.md
 
 ## Problem
 

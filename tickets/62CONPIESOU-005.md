@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel runtime (legal-choices, effects-choice)
-**Deps**: archive/tickets/KERQUERY/62CONPIESOU-001-prioritized-query-ast-and-recursive-infrastructure.md, tickets/62CONPIESOU-004.md
+**Deps**: archive/tickets/KERQUERY/62CONPIESOU-001-prioritized-query-ast-and-recursive-infrastructure.md, archive/tickets/62CONPIESOU-004.md
 
 ## Problem
 
@@ -16,13 +16,13 @@ When a `chooseN` effect's `options` is a `prioritized` query, items from lower-p
 2. `legal-choices.ts` (line 54): `MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS = 1024` — the spec says tier-aware legality should be a **pre-filter before combination enumeration**, reducing the search space.
 3. The spec defines two modes: with `qualifierKey` (per-qualifier independence) and without (global tier exhaustion).
 4. `chooseN` already supports incremental multi-select — each selection step can re-evaluate legality on remaining candidates. The tier-aware filter hooks into this existing mechanism.
-5. The `computeTierMembership` utility from ticket 004 provides tier index for each candidate.
+5. Ticket 004 deliberately did **not** add tier metadata or a `computeTierMembership(...)` utility. Tier-aware legality must derive tier membership from the `prioritized` query AST and the currently selected/unselected candidate set.
 
 ## Architecture Check
 
-1. **Pre-filter approach**: Before enumerating combinations, compute which items are currently illegal due to tier priority. Remove them from the candidate set. This reduces combination space (performance win) and is correct because tier illegality is independent of other selection constraints.
+1. **AST-driven pre-filter approach**: Before enumerating combinations, derive each candidate's effective tier from the `prioritized` query structure and compute which items are currently illegal due to tier priority. Remove them from the candidate set. This reduces combination space (performance win) and keeps legality logic out of `evalQuery`.
 2. **Dynamic re-evaluation**: In incremental multi-select mode, after each selection, re-compute tier legality. If selecting all tier-1 items of qualifier Q exhausts that qualifier in tier 1, tier-2 items of qualifier Q become legal. This uses the existing incremental selection model.
-3. **Integration point**: The filter is applied in the discovery phase of `chooseN`, where legal options are computed for the player. The move-application phase validates that the selection respects tier constraints.
+3. **Integration point**: The filter is applied in the discovery phase of `chooseN`, where legal options are computed for the player. The move-application phase validates that the selection respects tier constraints. Both phases must use the same AST-driven legality rule so admissibility stays consistent.
 
 ## What to Change
 
@@ -31,7 +31,7 @@ When a `chooseN` effect's `options` is a `prioritized` query, items from lower-p
 In `effects-choice.ts` or `legal-choices.ts` (whichever computes legal options for `chooseN`):
 
 - Detect when `chooseN.options` is a `prioritized` query
-- Call `computeTierMembership(query, ctx)` to get tier assignments
+- Derive tier membership from the `prioritized` query tiers and the flattened option list produced by `evalQuery`
 - Apply tier filter:
   - **With qualifierKey**: For each candidate, extract `token.props[qualifierKey]`. An item from tier N is illegal if any unselected item from tiers 0..N-1 shares the same qualifier value.
   - **Without qualifierKey**: An item from tier N is illegal if any unselected item from tiers 0..N-1 exists.
@@ -52,7 +52,7 @@ In the move-application path, verify that the player's full selection is consist
 
 - `packages/engine/src/kernel/effects-choice.ts` (modify — chooseN evaluation)
 - `packages/engine/src/kernel/legal-choices.ts` (modify — if legality computation is here)
-- `packages/engine/src/kernel/prioritized-tier-utils.ts` (modify — may need a `computeLegalCandidates` helper)
+- `packages/engine/src/kernel/prioritized-tier-legality.ts` (new or modify only if a focused legality helper materially improves cohesion)
 
 ## Out of Scope
 
@@ -84,6 +84,7 @@ In the move-application path, verify that the player's full selection is consist
 4. The tier pre-filter reduces combination space — `MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS` is never exceeded more than without the filter
 5. No FITL-specific identifiers in any touched file
 6. The player sees one unified choice, not sequential stages (spec invariant 7)
+7. `evalQuery` remains a pure evaluator — no per-result tier metadata or side-channel membership map is introduced here
 
 ## Test Plan
 

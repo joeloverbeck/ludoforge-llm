@@ -1701,6 +1701,50 @@ describe('evalQuery', () => {
     );
   });
 
+  it('tolerates empty-result prioritized tiers and preserves the remaining tier order', () => {
+    const ctx = makeCtx();
+
+    const result = evalQuery(
+      {
+        query: 'prioritized',
+        tiers: [
+          { query: 'tokensInZone', zone: 'bench:1' },
+          { query: 'tokensInZone', zone: 'hand:1' },
+          { query: 'tokensInZone', zone: 'hand:0' },
+        ],
+      },
+      ctx,
+    );
+
+    assert.deepEqual(
+      result.map((token) => (token as Token).id),
+      [asTokenId('hand-1'), asTokenId('hand-0'), asTokenId('hand-0b')],
+    );
+  });
+
+  it('treats a single-tier prioritized query as a passthrough and ignores qualifierKey during evaluation', () => {
+    const ctx = makeCtx();
+
+    const withoutQualifier = evalQuery(
+      {
+        query: 'prioritized',
+        tiers: [{ query: 'tokensInZone', zone: 'hand:0' }],
+      },
+      ctx,
+    );
+    const withQualifier = evalQuery(
+      {
+        query: 'prioritized',
+        qualifierKey: 'faction',
+        tiers: [{ query: 'tokensInZone', zone: 'hand:0' }],
+      },
+      ctx,
+    );
+
+    assert.deepEqual(withoutQualifier, evalQuery({ query: 'tokensInZone', zone: 'hand:0' }, ctx));
+    assert.deepEqual(withQualifier, withoutQualifier);
+  });
+
   it('rejects concat sources that produce incompatible runtime shapes', () => {
     const ctx = makeCtx({
       bindings: {
@@ -2703,6 +2747,21 @@ describe('evalQuery', () => {
           {
             query: 'concat',
             sources: [
+              { query: 'tokensInZone', zone: 'hand:0' },
+              { query: 'tokensInZone', zone: 'hand:1' },
+            ],
+          },
+          makeCtx({ maxQueryResults: 2 }),
+        ),
+      (error: unknown) => isEvalErrorCode(error, 'QUERY_BOUNDS_EXCEEDED'),
+    );
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'prioritized',
+            qualifierKey: 'faction',
+            tiers: [
               { query: 'tokensInZone', zone: 'hand:0' },
               { query: 'tokensInZone', zone: 'hand:1' },
             ],

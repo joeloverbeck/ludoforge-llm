@@ -523,6 +523,69 @@ describe('ChoicePanel', () => {
     expect(addChooseNItem).toHaveBeenCalledWith('zone-b');
   });
 
+  it('Mode B does not optimistically toggle selection without store-driven rerender', () => {
+    const addChooseNItem = vi.fn(async () => {});
+    renderChoicePanel({
+      mode: 'choicePending',
+      store: createChoiceStore({
+        renderModel: makeRenderModel({
+          choiceUi: {
+            kind: 'discreteMany',
+            decisionKey: asDecisionKey('test-decision'),
+            options: [
+              makeChoiceOption('zone-a', 'Zone A'),
+            ],
+            min: 1,
+            max: 1,
+            selectedChoiceValueIds: [],
+            canConfirm: false,
+          },
+        }),
+        addChooseNItem,
+      }),
+    });
+
+    const option = getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-a')}`) as HTMLButtonElement;
+    expect(option.getAttribute('aria-pressed')).toBe('false');
+
+    fireEvent.click(option);
+
+    expect(addChooseNItem).toHaveBeenCalledWith('zone-a');
+    expect(option.getAttribute('aria-pressed')).toBe('false');
+    expect(getByTestId('choice-multi-count').textContent).toContain('Selected: 0 of 1');
+  });
+
+  it('Mode B treats canConfirm as authoritative even when count bounds are already met', () => {
+    const confirmChooseN = vi.fn(async () => {});
+    renderChoicePanel({
+      mode: 'choicePending',
+      store: createChoiceStore({
+        renderModel: makeRenderModel({
+          choiceUi: {
+            kind: 'discreteMany',
+            decisionKey: asDecisionKey('test-decision'),
+            options: [
+              makeChoiceOption('zone-a', 'Zone A'),
+            ],
+            min: 1,
+            max: 1,
+            selectedChoiceValueIds: [serializeChoiceValueIdentity('zone-a')],
+            canConfirm: false,
+          },
+        }),
+        confirmChooseN,
+      }),
+    });
+
+    const confirm = getByTestId('choice-multi-confirm') as HTMLButtonElement;
+    expect(confirm.disabled).toBe(true);
+
+    fireEvent.click(confirm);
+
+    expect(confirmChooseN).not.toHaveBeenCalled();
+    expect(getByTestId('choice-multi-count').textContent).toContain('Selected: 1 of 1');
+  });
+
   it('Mode C renders slider/number inputs from domain and keeps them synchronized', () => {
     renderChoicePanel({
       mode: 'choicePending',

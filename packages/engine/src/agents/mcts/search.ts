@@ -21,7 +21,7 @@ import { terminalResult } from '../../kernel/terminal.js';
 import { fork } from '../../kernel/prng.js';
 import { selectChild } from './isuct.js';
 import { shouldExpand, selectExpansionCandidate } from './expansion.js';
-import { materializeConcreteCandidates, filterAvailableCandidates } from './materialization.js';
+import { materializeOrFastPath, filterAvailableCandidates } from './materialization.js';
 import { rollout, simulateToCutoff } from './rollout.js';
 import type { SimulationResult } from './rollout.js';
 import { terminalToRewards, evaluateForAllPlayers } from './evaluate.js';
@@ -90,6 +90,10 @@ export function runOneIteration(
   let selectionDepth = 0;
   let selectionRecorded = false;
   const selectionMoveKeys: string[] = [];
+  // Safety cap for forced-sequence compression — prevents infinite loops
+  // when every state has exactly one legal move and no terminal.
+  const maxForcedPlies = config.maxSimulationDepth;
+  let forcedPlies = 0;
 
   // ── Selection ────────────────────────────────────────────────────────
   const selStart = acc !== undefined ? performance.now() : 0;
@@ -112,7 +116,7 @@ export function runOneIteration(
     }
 
     // Materialize concrete candidates from possibly-template moves.
-    const { candidates, rng: postMaterialize } = materializeConcreteCandidates(
+    const matResult = materializeOrFastPath(
       def,
       currentState,
       movesAtNode,
@@ -120,13 +124,59 @@ export function runOneIteration(
       config.templateCompletionsPerVisit,
       runtime,
     );
-    currentRng = postMaterialize;
-    if (acc !== undefined) {
+    const { candidates } = matResult;
+    currentRng = matResult.rng;
+    if (acc !== undefined && !matResult.fastPath) {
       acc.materializeCalls += 1;
     }
 
     if (candidates.length === 0) {
       break;
+    }
+
+    // ── Forced-sequence compression ────────────────────────────────
+    // When there is exactly one concrete candidate, skip node allocation
+    // and advance the state directly.  This compresses forced sequences
+    // into a single tree edge.
+    if (
+      config.compressForcedSequences !== false &&
+      candidates.length === 1
+    ) {
+      // Safety cap: break if forced plies exceed the limit.
+      if (forcedPlies >= maxForcedPlies) {
+        break;
+      }
+      const forced = candidates[0]!;
+      selectionMoveKeys.push(forced.moveKey);
+
+      const applied = applyMove(def, currentState, forced.move, undefined, runtime);
+      if (acc !== undefined) {
+        acc.applyMoveCalls += 1;
+        acc.forcedMovePlies += 1;
+      }
+      currentState = applied.state;
+      selectionDepth += 1;
+      forcedPlies += 1;
+
+      // Check terminal after forced move.
+      const terminal = stateCache !== undefined && maxCacheEntries !== undefined
+        ? getOrComputeTerminal(stateCache, def, currentState, runtime, maxCacheEntries, acc)
+        : (() => {
+            if (acc !== undefined) { acc.terminalCalls += 1; }
+            return terminalResult(def, currentState, runtime);
+          })();
+      if (terminal !== null) {
+        break;
+      }
+
+      // Respect solver logic: if solver is active and a proven result
+      // exists at the current node, stop compressing.
+      if (solverActive && currentNode.provenResult !== null) {
+        break;
+      }
+
+      // Continue selection loop — do NOT allocate a node.
+      continue;
     }
 
     // Build a lookup of candidate moveKeys for availability matching.

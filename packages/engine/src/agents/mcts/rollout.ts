@@ -21,7 +21,7 @@ import { legalMoves } from '../../kernel/legal-moves.js';
 import { applyMove } from '../../kernel/apply-move.js';
 import { terminalResult } from '../../kernel/terminal.js';
 import { evaluateState } from '../evaluate-state.js';
-import { materializeConcreteCandidates } from './materialization.js';
+import { materializeConcreteCandidates, materializeOrFastPath } from './materialization.js';
 import { nextInt, fork } from '../../kernel/prng.js';
 import type { PlayerId } from '../../kernel/branded.js';
 import type { MastStats } from './mast.js';
@@ -53,7 +53,7 @@ type RolloutConfigSlice = Pick<
 /** Config subset for the hybrid cutoff simulation. */
 type CutoffConfigSlice = Pick<
   MctsConfig,
-  'rolloutPolicy' | 'rolloutEpsilon' | 'rolloutCandidateSample' | 'hybridCutoffDepth' | 'templateCompletionsPerVisit' | 'mastWarmUpThreshold'
+  'rolloutPolicy' | 'rolloutEpsilon' | 'rolloutCandidateSample' | 'hybridCutoffDepth' | 'templateCompletionsPerVisit' | 'mastWarmUpThreshold' | 'compressForcedSequences'
 >;
 
 // ---------------------------------------------------------------------------
@@ -188,9 +188,13 @@ export function simulateToCutoff(
   let currentState = state;
   let currentRng = rng;
   let depth = 0;
+  let totalPlies = 0;
+  // Safety cap: forced plies are free but we must bound them to prevent
+  // infinite loops in games where every state has exactly one legal move.
+  const maxTotalPlies = config.hybridCutoffDepth * 8;
   const traversedMoveKeys: string[] = [];
 
-  while (depth < config.hybridCutoffDepth) {
+  while (depth < config.hybridCutoffDepth && totalPlies < maxTotalPlies) {
     // 1. Check terminal
     const terminal = stateCache !== undefined && maxCacheEntries !== undefined
       ? getOrComputeTerminal(stateCache, def, currentState, runtime, maxCacheEntries, acc)
@@ -214,21 +218,41 @@ export function simulateToCutoff(
     }
 
     // 3. Materialize candidates
-    const { candidates, rng: postMaterializeRng } = materializeConcreteCandidates(
-      def,
-      currentState,
-      moves,
-      currentRng,
-      config.templateCompletionsPerVisit,
-      runtime,
-    );
-    currentRng = postMaterializeRng;
-    if (acc !== undefined) {
+    const matResult = runtime !== undefined
+      ? materializeOrFastPath(def, currentState, moves, currentRng, config.templateCompletionsPerVisit, runtime)
+      : { ...materializeConcreteCandidates(def, currentState, moves, currentRng, config.templateCompletionsPerVisit, runtime), fastPath: false };
+    const { candidates } = matResult;
+    currentRng = matResult.rng;
+    if (acc !== undefined && !matResult.fastPath) {
       acc.materializeCalls += 1;
     }
 
     if (candidates.length === 0) {
       return { state: currentState, terminal: null, rng: currentRng, depth, traversedMoveKeys };
+    }
+
+    // ── Forced-sequence compression (simulation phase) ────────────
+    // When exactly one candidate exists, advance without decrementing
+    // the cutoff budget — forced moves don't consume simulation depth.
+    if (
+      config.compressForcedSequences !== false &&
+      candidates.length === 1
+    ) {
+      const forced = candidates[0]!;
+      try {
+        const applied = applyMove(def, currentState, forced.move, undefined, runtime);
+        if (acc !== undefined) {
+          acc.applyMoveCalls += 1;
+          acc.forcedMovePlies += 1;
+        }
+        currentState = applied.state;
+        traversedMoveKeys.push(forced.moveKey);
+      } catch {
+        return { state: currentState, terminal: null, rng: currentRng, depth, traversedMoveKeys };
+      }
+      // Do NOT increment depth — forced moves don't consume cutoff budget.
+      totalPlies += 1;
+      continue;
     }
 
     // 4. Pick move — MAST path avoids expensive per-candidate evaluation.
@@ -278,6 +302,7 @@ export function simulateToCutoff(
     }
 
     depth += 1;
+    totalPlies += 1;
   }
 
   // Reached cutoff — check terminal

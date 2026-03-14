@@ -98,7 +98,9 @@ describe('diagnostics-counters', () => {
       assert.ok(d.legalMovesCalls! > 0, 'legalMovesCalls should be > 0');
       assert.ok(d.applyMoveCalls! > 0, 'applyMoveCalls should be > 0');
       assert.ok(d.terminalCalls! > 0, 'terminalCalls should be > 0');
-      assert.ok(d.materializeCalls! > 0, 'materializeCalls should be > 0');
+      // materializeCalls may be 0 when all actions are fully concrete
+      // (no template params), since the fast path skips materialization.
+      assert.equal(typeof d.materializeCalls, 'number', 'materializeCalls should be a number');
 
       // evaluateStateCalls may be 0 if all rollouts end in terminal states,
       // but it should be a non-negative integer.

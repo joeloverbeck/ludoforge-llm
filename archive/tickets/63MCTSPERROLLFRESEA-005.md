@@ -1,6 +1,6 @@
 # 63MCTSPERROLLFRESEA-005: Forced-sequence compression + concrete-move fast path
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `agents/mcts/search.ts`, `agents/mcts/rollout.ts`, `agents/mcts/materialization.ts`, `kernel/gamedef-runtime.ts`

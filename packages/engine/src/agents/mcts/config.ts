@@ -65,6 +65,9 @@ export interface MctsConfig {
   /** MAST warm-up threshold: minimum `totalUpdates` before exploitation. */
   readonly mastWarmUpThreshold: number;
 
+  /** Compress forced sequences (exactly one legal candidate) during selection and simulation. */
+  readonly compressForcedSequences?: boolean;
+
   /** Enable per-search state-info cache for terminalResult/legalMoves/rewards. */
   readonly enableStateInfoCache?: boolean;
 
@@ -91,6 +94,7 @@ export const DEFAULT_MCTS_CONFIG: MctsConfig = Object.freeze({
   rolloutMode: 'hybrid' as const,
   hybridCutoffDepth: 6,
   mastWarmUpThreshold: 32,
+  compressForcedSequences: true,
 });
 
 // ---------------------------------------------------------------------------

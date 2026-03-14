@@ -29,6 +29,7 @@ describe('MctsConfig defaults', () => {
       rolloutMode: 'hybrid',
       hybridCutoffDepth: 6,
       mastWarmUpThreshold: 32,
+      compressForcedSequences: true,
     };
     assert.deepEqual(DEFAULT_MCTS_CONFIG, expected);
   });
@@ -348,5 +349,26 @@ describe('state-info cache config', () => {
       (err: unknown) =>
         err instanceof RangeError && /maxStateInfoCacheEntries/.test((err as RangeError).message),
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Forced-sequence compression config
+// ---------------------------------------------------------------------------
+
+describe('forced-sequence compression config', () => {
+  it('compressForcedSequences defaults to true', () => {
+    const cfg = validateMctsConfig({});
+    assert.equal(cfg.compressForcedSequences, true);
+  });
+
+  it('compressForcedSequences can be set to false', () => {
+    const cfg = validateMctsConfig({ compressForcedSequences: false });
+    assert.equal(cfg.compressForcedSequences, false);
+  });
+
+  it('compressForcedSequences can be set to true explicitly', () => {
+    const cfg = validateMctsConfig({ compressForcedSequences: true });
+    assert.equal(cfg.compressForcedSequences, true);
   });
 });

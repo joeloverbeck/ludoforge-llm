@@ -8,6 +8,9 @@
  *
  * The rollout stops at terminal states, when no legal moves exist,
  * or when `maxSimulationDepth` plies have been simulated.
+ *
+ * `simulateToCutoff` provides a shallow hybrid cutoff variant used by
+ * the `hybrid` rollout mode (ticket 63MCTSPERROLLFRESEA-002).
  */
 
 import type { GameDef, GameState, Rng, TerminalResult } from '../../kernel/types.js';
@@ -26,11 +29,12 @@ import type { PlayerId } from '../../kernel/branded.js';
 // Types
 // ---------------------------------------------------------------------------
 
-export interface RolloutResult {
+export interface SimulationResult {
   readonly state: GameState;
   readonly terminal: TerminalResult | null;
   readonly rng: Rng;
   readonly depth: number;
+  readonly traversedMoveKeys: readonly string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -42,15 +46,21 @@ type RolloutConfigSlice = Pick<
   'rolloutPolicy' | 'rolloutEpsilon' | 'rolloutCandidateSample' | 'maxSimulationDepth' | 'templateCompletionsPerVisit'
 >;
 
+/** Config subset for the hybrid cutoff simulation. */
+type CutoffConfigSlice = Pick<
+  MctsConfig,
+  'rolloutPolicy' | 'rolloutEpsilon' | 'rolloutCandidateSample' | 'hybridCutoffDepth' | 'templateCompletionsPerVisit'
+>;
+
 // ---------------------------------------------------------------------------
-// rollout
+// rollout (legacy full simulation)
 // ---------------------------------------------------------------------------
 
 /**
  * Simulate play from a given state using an epsilon-greedy or random policy.
  *
  * Returns the final state reached, whether it is terminal, the consumed RNG,
- * and how many plies were simulated.
+ * how many plies were simulated, and the move keys traversed.
  */
 export function rollout(
   def: GameDef,
@@ -59,10 +69,11 @@ export function rollout(
   config: RolloutConfigSlice,
   runtime?: GameDefRuntime,
   acc?: MutableDiagnosticsAccumulator,
-): RolloutResult {
+): SimulationResult {
   let currentState = state;
   let currentRng = rng;
   let depth = 0;
+  const traversedMoveKeys: string[] = [];
 
   while (depth < config.maxSimulationDepth) {
     // 1. Check terminal
@@ -71,7 +82,7 @@ export function rollout(
       acc.terminalCalls += 1;
     }
     if (terminal !== null) {
-      return { state: currentState, terminal, rng: currentRng, depth };
+      return { state: currentState, terminal, rng: currentRng, depth, traversedMoveKeys };
     }
 
     // 2. Enumerate legal moves
@@ -80,7 +91,7 @@ export function rollout(
       acc.legalMovesCalls += 1;
     }
     if (moves.length === 0) {
-      return { state: currentState, terminal: null, rng: currentRng, depth };
+      return { state: currentState, terminal: null, rng: currentRng, depth, traversedMoveKeys };
     }
 
     // 3. Sample up to rolloutCandidateSample candidates
@@ -98,7 +109,7 @@ export function rollout(
     }
 
     if (candidates.length === 0) {
-      return { state: currentState, terminal: null, rng: currentRng, depth };
+      return { state: currentState, terminal: null, rng: currentRng, depth, traversedMoveKeys };
     }
 
     // Sub-sample if we have more candidates than rolloutCandidateSample
@@ -111,63 +122,23 @@ export function rollout(
     }
 
     // 4. Pick a move according to the policy
-    let chosenIndex: number;
-
-    if (config.rolloutPolicy === 'random' || sampled.length === 1) {
-      // Random policy or single candidate — pick uniformly
-      const [idx, rngAfter] = nextInt(currentRng, 0, sampled.length - 1);
-      chosenIndex = idx;
-      currentRng = rngAfter;
-    } else {
-      // Epsilon-greedy: with probability epsilon pick random, else pick best
-      const [epsilonRoll, rngAfterEpsilon] = nextInt(currentRng, 0, 999);
-      currentRng = rngAfterEpsilon;
-      const useRandom = epsilonRoll < Math.round(config.rolloutEpsilon * 1000);
-
-      if (useRandom) {
-        const [idx, rngAfterIdx] = nextInt(currentRng, 0, sampled.length - 1);
-        chosenIndex = idx;
-        currentRng = rngAfterIdx;
-      } else {
-        // Greedy: evaluate each candidate's successor for the acting player
-        const actingPlayer = currentState.activePlayer as PlayerId;
-        let bestScore = -Infinity;
-        let bestIdx = 0;
-
-        for (let i = 0; i < sampled.length; i += 1) {
-          const candidate = sampled[i]!;
-          try {
-            const applied = applyMove(def, currentState, candidate.move, undefined, runtime);
-            if (acc !== undefined) {
-              acc.applyMoveCalls += 1;
-            }
-            const score = evaluateState(def, applied.state, actingPlayer, runtime);
-            if (score > bestScore) {
-              bestScore = score;
-              bestIdx = i;
-            }
-          } catch {
-            // If applying the move fails (e.g. illegal in current state),
-            // skip this candidate.
-            continue;
-          }
-        }
-
-        chosenIndex = bestIdx;
-      }
-    }
+    const { chosenIndex, rng: postChoiceRng } = pickMove(
+      sampled, currentState, def, currentRng, config, runtime, acc,
+    );
+    currentRng = postChoiceRng;
 
     // 5. Apply chosen move
-    const chosenMove = sampled[chosenIndex]!.move;
+    const chosen = sampled[chosenIndex]!;
     try {
-      const applied = applyMove(def, currentState, chosenMove, undefined, runtime);
+      const applied = applyMove(def, currentState, chosen.move, undefined, runtime);
       if (acc !== undefined) {
         acc.applyMoveCalls += 1;
       }
       currentState = applied.state;
+      traversedMoveKeys.push(chosen.moveKey);
     } catch {
       // If the chosen move fails to apply, end the rollout
-      return { state: currentState, terminal: null, rng: currentRng, depth };
+      return { state: currentState, terminal: null, rng: currentRng, depth, traversedMoveKeys };
     }
 
     depth += 1;
@@ -178,12 +149,167 @@ export function rollout(
   if (acc !== undefined) {
     acc.terminalCalls += 1;
   }
-  return { state: currentState, terminal: finalTerminal, rng: currentRng, depth };
+  return { state: currentState, terminal: finalTerminal, rng: currentRng, depth, traversedMoveKeys };
+}
+
+// ---------------------------------------------------------------------------
+// simulateToCutoff (hybrid shallow simulation)
+// ---------------------------------------------------------------------------
+
+/**
+ * Simulate play from a given state up to `hybridCutoffDepth` plies.
+ *
+ * Uses the configured rollout policy for move selection. Stops at terminal
+ * states or no-move states. Collects traversed move keys for MAST updates.
+ */
+export function simulateToCutoff(
+  def: GameDef,
+  state: GameState,
+  rng: Rng,
+  config: CutoffConfigSlice,
+  runtime?: GameDefRuntime,
+  acc?: MutableDiagnosticsAccumulator,
+): SimulationResult {
+  let currentState = state;
+  let currentRng = rng;
+  let depth = 0;
+  const traversedMoveKeys: string[] = [];
+
+  while (depth < config.hybridCutoffDepth) {
+    // 1. Check terminal
+    const terminal = terminalResult(def, currentState, runtime);
+    if (acc !== undefined) {
+      acc.terminalCalls += 1;
+    }
+    if (terminal !== null) {
+      return { state: currentState, terminal, rng: currentRng, depth, traversedMoveKeys };
+    }
+
+    // 2. Enumerate legal moves
+    const moves = legalMoves(def, currentState, undefined, runtime);
+    if (acc !== undefined) {
+      acc.legalMovesCalls += 1;
+    }
+    if (moves.length === 0) {
+      return { state: currentState, terminal: null, rng: currentRng, depth, traversedMoveKeys };
+    }
+
+    // 3. Materialize candidates
+    const { candidates, rng: postMaterializeRng } = materializeConcreteCandidates(
+      def,
+      currentState,
+      moves,
+      currentRng,
+      config.templateCompletionsPerVisit,
+      runtime,
+    );
+    currentRng = postMaterializeRng;
+    if (acc !== undefined) {
+      acc.materializeCalls += 1;
+    }
+
+    if (candidates.length === 0) {
+      return { state: currentState, terminal: null, rng: currentRng, depth, traversedMoveKeys };
+    }
+
+    // Sub-sample if needed
+    let sampled = candidates;
+    if (candidates.length > config.rolloutCandidateSample) {
+      sampled = sampleCandidates(candidates, config.rolloutCandidateSample, currentRng);
+      const [, advancedRng] = fork(currentRng);
+      currentRng = advancedRng;
+    }
+
+    // 4. Pick move
+    const { chosenIndex, rng: postChoiceRng } = pickMove(
+      sampled, currentState, def, currentRng, config, runtime, acc,
+    );
+    currentRng = postChoiceRng;
+
+    // 5. Apply
+    const chosen = sampled[chosenIndex]!;
+    try {
+      const applied = applyMove(def, currentState, chosen.move, undefined, runtime);
+      if (acc !== undefined) {
+        acc.applyMoveCalls += 1;
+        acc.hybridRolloutPlies += 1;
+      }
+      currentState = applied.state;
+      traversedMoveKeys.push(chosen.moveKey);
+    } catch {
+      return { state: currentState, terminal: null, rng: currentRng, depth, traversedMoveKeys };
+    }
+
+    depth += 1;
+  }
+
+  // Reached cutoff — check terminal
+  const finalTerminal = terminalResult(def, currentState, runtime);
+  if (acc !== undefined) {
+    acc.terminalCalls += 1;
+  }
+  return { state: currentState, terminal: finalTerminal, rng: currentRng, depth, traversedMoveKeys };
 }
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/** Policy config subset shared by pickMove. */
+type PolicyConfigSlice = Pick<MctsConfig, 'rolloutPolicy' | 'rolloutEpsilon'>;
+
+/**
+ * Pick a move index according to the rollout policy (random or epsilon-greedy).
+ * Returns the chosen index and the consumed RNG.
+ */
+function pickMove(
+  sampled: readonly { readonly move: import('../../kernel/types.js').Move; readonly moveKey: string }[],
+  currentState: GameState,
+  def: GameDef,
+  rng: Rng,
+  config: PolicyConfigSlice,
+  runtime?: GameDefRuntime,
+  acc?: MutableDiagnosticsAccumulator,
+): { readonly chosenIndex: number; readonly rng: Rng } {
+  if (config.rolloutPolicy === 'random' || sampled.length === 1) {
+    const [idx, rngAfter] = nextInt(rng, 0, sampled.length - 1);
+    return { chosenIndex: idx, rng: rngAfter };
+  }
+
+  // Epsilon-greedy
+  const [epsilonRoll, rngAfterEpsilon] = nextInt(rng, 0, 999);
+  let currentRng = rngAfterEpsilon;
+  const useRandom = epsilonRoll < Math.round(config.rolloutEpsilon * 1000);
+
+  if (useRandom) {
+    const [idx, rngAfterIdx] = nextInt(currentRng, 0, sampled.length - 1);
+    return { chosenIndex: idx, rng: rngAfterIdx };
+  }
+
+  // Greedy: evaluate each candidate's successor for the acting player
+  const actingPlayer = currentState.activePlayer as PlayerId;
+  let bestScore = -Infinity;
+  let bestIdx = 0;
+
+  for (let i = 0; i < sampled.length; i += 1) {
+    const candidate = sampled[i]!;
+    try {
+      const applied = applyMove(def, currentState, candidate.move, undefined, runtime);
+      if (acc !== undefined) {
+        acc.applyMoveCalls += 1;
+      }
+      const score = evaluateState(def, applied.state, actingPlayer, runtime);
+      if (score > bestScore) {
+        bestScore = score;
+        bestIdx = i;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return { chosenIndex: bestIdx, rng: currentRng };
+}
 
 /**
  * Deterministically sample `count` candidates from the full list using

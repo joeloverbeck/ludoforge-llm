@@ -1,6 +1,6 @@
 # 63MCTSPERROLLFRESEA-002: Rollout modes (legacy / hybrid / direct) + SimulationResult type
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `agents/mcts/config.ts`, `agents/mcts/search.ts`, `agents/mcts/rollout.ts`
@@ -131,3 +131,17 @@ Verify that `resolvePreset()` populates `rolloutMode` and `hybridCutoffDepth` co
 1. `pnpm turbo build && node --test packages/engine/dist/test/unit/agents/mcts/hybrid-search.test.js`
 2. `pnpm turbo build && pnpm -F @ludoforge/engine test`
 3. `pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-14
+- **What changed**:
+  - `config.ts`: Added `MctsRolloutMode` type (`'legacy' | 'hybrid' | 'direct'`), `rolloutMode` and `hybridCutoffDepth` fields to `MctsConfig`, updated `DEFAULT_MCTS_CONFIG` (hybrid/6), updated all 3 presets (fast: 4, default: 6, strong: 8), added validation.
+  - `rollout.ts`: Renamed `RolloutResult` → `SimulationResult` with `traversedMoveKeys` field. Extracted shared `pickMove()` helper (DRY). Added `simulateToCutoff()` for hybrid cutoff simulation.
+  - `search.ts`: Added `switch (config.rolloutMode)` dispatch in `runOneIteration()` for legacy/hybrid/direct modes. Wired `rolloutMode` into diagnostics output.
+  - `index.ts`: Updated re-exports (`SimulationResult` replaces `RolloutResult`, added `MctsRolloutMode`, `simulateToCutoff`).
+  - `config.test.ts`: Added preset assertions for new fields, validation tests for invalid `rolloutMode`/`hybridCutoffDepth`.
+  - `rollout.test.ts`: Added `traversedMoveKeys` assertions, `simulateToCutoff` test suite (3 tests).
+  - `hybrid-search.test.ts` (new): 11 tests covering all 3 modes end-to-end, determinism, diagnostics wiring, invariant that no preset uses `direct`.
+- **Deviations**: Extracted `pickMove()` helper in `rollout.ts` to avoid duplicating the move selection logic between `rollout()` and `simulateToCutoff()` (DRY improvement not in original ticket).
+- **Verification**: Typecheck clean, lint clean, 4337 engine unit tests pass (0 failures).

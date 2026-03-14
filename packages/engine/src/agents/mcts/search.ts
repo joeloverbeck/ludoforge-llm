@@ -22,7 +22,8 @@ import { fork } from '../../kernel/prng.js';
 import { selectChild } from './isuct.js';
 import { shouldExpand, selectExpansionCandidate } from './expansion.js';
 import { materializeConcreteCandidates, filterAvailableCandidates } from './materialization.js';
-import { rollout } from './rollout.js';
+import { rollout, simulateToCutoff } from './rollout.js';
+import type { SimulationResult } from './rollout.js';
 import { terminalToRewards, evaluateForAllPlayers } from './evaluate.js';
 import { sampleBeliefState } from './belief.js';
 import { canActivateSolver, updateSolverResult, selectSolverAwareChild } from './solver.js';
@@ -232,10 +233,33 @@ export function runOneIteration(
     acc.selectionDepths.push(selectionDepth);
   }
 
-  // ── Simulation (rollout) ─────────────────────────────────────────────
+  // ── Simulation (rollout mode dispatch) ──────────────────────────────
   const simStart = acc !== undefined ? performance.now() : 0;
-  const rolloutResult = rollout(def, currentState, currentRng, config, runtime, acc);
-  currentRng = rolloutResult.rng;
+  let simResult: SimulationResult;
+
+  switch (config.rolloutMode) {
+    case 'legacy':
+      simResult = rollout(def, currentState, currentRng, config, runtime, acc);
+      break;
+    case 'hybrid':
+      simResult = simulateToCutoff(def, currentState, currentRng, config, runtime, acc);
+      break;
+    case 'direct':
+      // No simulation — evaluate the expansion state directly.
+      simResult = {
+        state: currentState,
+        terminal: terminalResult(def, currentState, runtime),
+        rng: currentRng,
+        depth: 0,
+        traversedMoveKeys: [],
+      };
+      if (acc !== undefined) {
+        acc.terminalCalls += 1;
+      }
+      break;
+  }
+
+  currentRng = simResult.rng;
   if (acc !== undefined) {
     acc.simulationTimeMs += performance.now() - simStart;
   }
@@ -243,18 +267,18 @@ export function runOneIteration(
   // ── Evaluation ───────────────────────────────────────────────────────
   const evalStart = acc !== undefined ? performance.now() : 0;
   let rewards: readonly number[];
-  if (rolloutResult.terminal !== null) {
-    rewards = terminalToRewards(rolloutResult.terminal, sampledState.playerCount);
+  if (simResult.terminal !== null) {
+    rewards = terminalToRewards(simResult.terminal, sampledState.playerCount);
   } else {
-    // Check terminal on rollout end state.
-    const endTerminal = terminalResult(def, rolloutResult.state, runtime);
+    // Check terminal on simulation end state.
+    const endTerminal = terminalResult(def, simResult.state, runtime);
     if (acc !== undefined) {
       acc.terminalCalls += 1;
     }
     if (endTerminal !== null) {
       rewards = terminalToRewards(endTerminal, sampledState.playerCount);
     } else {
-      rewards = evaluateForAllPlayers(def, rolloutResult.state, config.heuristicTemperature, runtime);
+      rewards = evaluateForAllPlayers(def, simResult.state, config.heuristicTemperature, runtime);
       if (acc !== undefined) {
         acc.evaluateStateCalls += 1;
       }
@@ -384,7 +408,7 @@ export function runSearch(
     return {
       rng: currentRng,
       iterations,
-      diagnostics: { ...diag, rootStopReason: stopReason },
+      diagnostics: { ...diag, rolloutMode: config.rolloutMode, rootStopReason: stopReason },
     };
   }
 

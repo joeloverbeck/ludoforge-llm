@@ -1,7 +1,8 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { rollout } from '../../../../src/agents/mcts/rollout.js';
+import { rollout, simulateToCutoff } from '../../../../src/agents/mcts/rollout.js';
+import type { SimulationResult } from '../../../../src/agents/mcts/rollout.js';
 import {
   asActionId,
   asPhaseId,
@@ -295,5 +296,87 @@ describe('rollout', () => {
 
     const result = rollout(def, terminalState, rng, DEFAULT_ROLLOUT_CONFIG);
     assert.equal(result.depth, 0);
+  });
+
+  // AC 10: SimulationResult has traversedMoveKeys field
+  it('SimulationResult includes traversedMoveKeys matching depth', () => {
+    const def = createHeuristicDef();
+    const { state } = initialState(def, 42, 2);
+    const rng = createRng(42n);
+
+    const result: SimulationResult = rollout(def, state, rng, {
+      ...DEFAULT_ROLLOUT_CONFIG,
+      maxSimulationDepth: 5,
+    });
+
+    assert.ok(Array.isArray(result.traversedMoveKeys));
+    assert.equal(result.traversedMoveKeys.length, result.depth);
+  });
+
+  it('traversedMoveKeys is empty when terminal state is given', () => {
+    const def = createTerminalDef();
+    const { state: state0 } = initialState(def, 42, 2);
+    const applied = applyMove(def, state0, { actionId: asActionId('win'), params: {} });
+    const rng = createRng(123n);
+
+    const result = rollout(def, applied.state, rng, DEFAULT_ROLLOUT_CONFIG);
+    assert.deepEqual(result.traversedMoveKeys, []);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// simulateToCutoff
+// ---------------------------------------------------------------------------
+
+describe('simulateToCutoff', () => {
+  const DEFAULT_CUTOFF_CONFIG = {
+    rolloutPolicy: 'random' as const,
+    rolloutEpsilon: 0.15,
+    rolloutCandidateSample: 6,
+    hybridCutoffDepth: 3,
+    templateCompletionsPerVisit: 2,
+  };
+
+  it('caps simulation at hybridCutoffDepth plies', () => {
+    const def = createHeuristicDef();
+    const { state } = initialState(def, 42, 2);
+    const rng = createRng(42n);
+
+    const result = simulateToCutoff(def, state, rng, {
+      ...DEFAULT_CUTOFF_CONFIG,
+      hybridCutoffDepth: 3,
+    });
+
+    assert.ok(result.depth <= 3, `depth ${result.depth} exceeded hybridCutoffDepth 3`);
+    assert.equal(result.traversedMoveKeys.length, result.depth);
+  });
+
+  it('stops at terminal states before cutoff depth', () => {
+    const def = createTerminalDef();
+    const { state: state0 } = initialState(def, 42, 2);
+    const applied = applyMove(def, state0, { actionId: asActionId('win'), params: {} });
+    const rng = createRng(123n);
+
+    const result = simulateToCutoff(def, applied.state, rng, {
+      ...DEFAULT_CUTOFF_CONFIG,
+      hybridCutoffDepth: 10,
+    });
+
+    assert.equal(result.depth, 0);
+    assert.notEqual(result.terminal, null);
+  });
+
+  it('is deterministic: same state and RNG produce identical results', () => {
+    const def = createHeuristicDef();
+    const { state } = initialState(def, 42, 2);
+
+    const result1 = simulateToCutoff(def, state, createRng(123n), DEFAULT_CUTOFF_CONFIG);
+    const result2 = simulateToCutoff(def, state, createRng(123n), DEFAULT_CUTOFF_CONFIG);
+
+    assert.equal(result1.depth, result2.depth);
+    assert.deepEqual(result1.terminal, result2.terminal);
+    assert.deepEqual(result1.state, result2.state);
+    assert.deepEqual(result1.rng, result2.rng);
+    assert.deepEqual(result1.traversedMoveKeys, result2.traversedMoveKeys);
   });
 });

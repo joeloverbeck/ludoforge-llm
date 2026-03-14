@@ -2,7 +2,7 @@ export { sampleBeliefState } from './belief.js';
 export type { BeliefSample } from './belief.js';
 
 export { DEFAULT_MCTS_CONFIG, MCTS_PRESETS, MCTS_PRESET_NAMES, validateMctsConfig, resolvePreset } from './config.js';
-export type { MctsConfig, MctsPreset } from './config.js';
+export type { MctsConfig, MctsPreset, MctsRolloutMode } from './config.js';
 
 export { canonicalMoveKey } from './move-key.js';
 export type { MoveKey } from './move-key.js';
@@ -20,8 +20,8 @@ export { materializeConcreteCandidates, filterAvailableCandidates } from './mate
 export { createNodePool } from './node-pool.js';
 export type { NodePool } from './node-pool.js';
 
-export { rollout } from './rollout.js';
-export type { RolloutResult } from './rollout.js';
+export { rollout, simulateToCutoff } from './rollout.js';
+export type { SimulationResult } from './rollout.js';
 
 export { terminalToRewards, sigmoid, evaluateForAllPlayers } from './evaluate.js';
 

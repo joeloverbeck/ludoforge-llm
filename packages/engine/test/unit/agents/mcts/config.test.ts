@@ -8,6 +8,7 @@ import {
   validateMctsConfig,
   resolvePreset,
   type MctsConfig,
+  type MctsRolloutMode,
 } from '../../../../src/agents/mcts/config.js';
 
 describe('MctsConfig defaults', () => {
@@ -25,6 +26,8 @@ describe('MctsConfig defaults', () => {
       rolloutCandidateSample: 6,
       heuristicTemperature: 10_000,
       solverMode: 'off',
+      rolloutMode: 'hybrid',
+      hybridCutoffDepth: 6,
     };
     assert.deepEqual(DEFAULT_MCTS_CONFIG, expected);
   });
@@ -81,6 +84,29 @@ describe('validateMctsConfig', () => {
     assert.throws(
       () => validateMctsConfig({ solverMode: 'invalid' as 'off' }),
       (err: unknown) => err instanceof TypeError && /solverMode/.test((err as TypeError).message),
+    );
+  });
+
+  it('throws TypeError when rolloutMode is invalid', () => {
+    assert.throws(
+      () => validateMctsConfig({ rolloutMode: 'invalid' as MctsRolloutMode }),
+      (err: unknown) => err instanceof TypeError && /rolloutMode/.test((err as TypeError).message),
+    );
+  });
+
+  it('throws RangeError when hybridCutoffDepth is 0', () => {
+    assert.throws(
+      () => validateMctsConfig({ hybridCutoffDepth: 0 }),
+      (err: unknown) =>
+        err instanceof RangeError && /hybridCutoffDepth/.test((err as RangeError).message),
+    );
+  });
+
+  it('throws RangeError when hybridCutoffDepth is negative', () => {
+    assert.throws(
+      () => validateMctsConfig({ hybridCutoffDepth: -1 }),
+      (err: unknown) =>
+        err instanceof RangeError && /hybridCutoffDepth/.test((err as RangeError).message),
     );
   });
 
@@ -182,29 +208,34 @@ describe('MCTS_PRESETS', () => {
 // ---------------------------------------------------------------------------
 
 describe('resolvePreset', () => {
-  it('resolvePreset("fast") returns config with iterations: 200 and timeLimitMs: 2000', () => {
+  it('resolvePreset("fast") returns config with iterations: 200, timeLimitMs: 2000, rolloutMode: hybrid, hybridCutoffDepth: 4', () => {
     const cfg = resolvePreset('fast');
     assert.equal(cfg.iterations, 200);
     assert.equal(cfg.maxSimulationDepth, 16);
     assert.equal(cfg.rolloutPolicy, 'random');
     assert.equal(cfg.timeLimitMs, 2_000);
+    assert.equal(cfg.rolloutMode, 'hybrid');
+    assert.equal(cfg.hybridCutoffDepth, 4);
   });
 
-  it('resolvePreset("default") returns DEFAULT_MCTS_CONFIG with timeLimitMs: 10000', () => {
+  it('resolvePreset("default") returns rolloutMode: hybrid, hybridCutoffDepth: 6', () => {
     const cfg = resolvePreset('default');
     assert.equal(cfg.timeLimitMs, 10_000);
-    // All other fields should match defaults
     assert.equal(cfg.iterations, DEFAULT_MCTS_CONFIG.iterations);
     assert.equal(cfg.explorationConstant, DEFAULT_MCTS_CONFIG.explorationConstant);
     assert.equal(cfg.rolloutPolicy, DEFAULT_MCTS_CONFIG.rolloutPolicy);
+    assert.equal(cfg.rolloutMode, 'hybrid');
+    assert.equal(cfg.hybridCutoffDepth, 6);
   });
 
-  it('resolvePreset("strong") returns config with iterations: 5000 and timeLimitMs: 30000', () => {
+  it('resolvePreset("strong") returns rolloutMode: hybrid, hybridCutoffDepth: 8', () => {
     const cfg = resolvePreset('strong');
     assert.equal(cfg.iterations, 5000);
     assert.equal(cfg.maxSimulationDepth, 64);
     assert.equal(cfg.templateCompletionsPerVisit, 4);
     assert.equal(cfg.timeLimitMs, 30_000);
+    assert.equal(cfg.rolloutMode, 'hybrid');
+    assert.equal(cfg.hybridCutoffDepth, 8);
   });
 
   it('all presets pass validateMctsConfig (no invalid values)', () => {

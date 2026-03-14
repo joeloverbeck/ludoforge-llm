@@ -45,6 +45,9 @@
     "test:e2e": "node scripts/run-tests.mjs --lane e2e",
     "test:e2e:slow": "RUN_SLOW_E2E=1 node scripts/run-tests.mjs --lane e2e:slow",
     "test:e2e:mcts": "RUN_MCTS_E2E=1 node scripts/run-tests.mjs --lane e2e:mcts",
+    "test:e2e:mcts:fast": "RUN_MCTS_E2E=1 node scripts/run-tests.mjs --lane e2e:mcts:fast",
+    "test:e2e:mcts:default": "RUN_MCTS_E2E=1 node scripts/run-tests.mjs --lane e2e:mcts:default",
+    "test:e2e:mcts:strong": "RUN_MCTS_E2E=1 node scripts/run-tests.mjs --lane e2e:mcts:strong",
     "test:e2e:all": "RUN_SLOW_E2E=1 node scripts/run-tests.mjs --lane e2e",
     "test": "pnpm run schema:artifacts:check && node scripts/run-tests.mjs --lane default",
     "test:all": "node scripts/run-tests.mjs \"dist/test/unit/**/*.test.js\" \"dist/test/integration/**/*.test.js\" \"dist/test/performance/**/*.test.js\" \"dist/test/memory/**/*.test.js\" \"dist/test/e2e/**/*.test.js\""

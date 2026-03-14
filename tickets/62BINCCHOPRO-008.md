@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — data file + test files
-**Deps**: tickets/62BINCCHOPRO-004.md, tickets/62BINCCHOPRO-003.md, tickets/62BINCCHOPRO-002.md
+**Deps**: tickets/62BINCCHOPRO-004.md, tickets/62BINCCHOPRO-003.md, archive/tickets/62BINCCHOPRO-002.md
 
 ## Problem
 

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel runtime (effects-choice.ts, legal-choices.ts)
-**Deps**: tickets/62BINCCHOPRO-002.md
+**Deps**: archive/tickets/62BINCCHOPRO-002.md
 
 ## Problem
 

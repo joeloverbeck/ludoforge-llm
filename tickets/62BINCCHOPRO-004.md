@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — new kernel module + comprehensive unit tests
-**Deps**: archive/tickets/62BINCCHOPRO-001.md, tickets/62BINCCHOPRO-002.md, tickets/62BINCCHOPRO-003.md
+**Deps**: archive/tickets/62BINCCHOPRO-001.md, archive/tickets/62BINCCHOPRO-002.md, tickets/62BINCCHOPRO-003.md
 
 ## Problem
 

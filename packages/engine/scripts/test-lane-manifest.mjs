@@ -84,6 +84,12 @@ export function isMctsE2eTest(sourcePath) {
   return sourcePath.replaceAll('\\', '/').startsWith('test/e2e/mcts/');
 }
 
+export function isMctsProfileTest(sourcePath, profile) {
+  const normalized = sourcePath.replaceAll('\\', '/');
+  const baseName = normalized.split('/').at(-1) ?? normalized;
+  return baseName === `texas-holdem-mcts-${profile}.test.ts`;
+}
+
 export function isSlowE2eTest(sourcePath) {
   const normalized = sourcePath.replaceAll('\\', '/');
   const baseName = normalized.split('/').at(-1) ?? normalized;
@@ -98,6 +104,12 @@ export function listE2eTestsForLane(lane) {
       return ALL_E2E_TESTS.filter((sourcePath) => isSlowE2eTest(sourcePath));
     case 'e2e:mcts':
       return ALL_E2E_TESTS.filter((sourcePath) => isMctsE2eTest(sourcePath));
+    case 'e2e:mcts:fast':
+      return ALL_E2E_TESTS.filter((sourcePath) => isMctsProfileTest(sourcePath, 'fast'));
+    case 'e2e:mcts:default':
+      return ALL_E2E_TESTS.filter((sourcePath) => isMctsProfileTest(sourcePath, 'default'));
+    case 'e2e:mcts:strong':
+      return ALL_E2E_TESTS.filter((sourcePath) => isMctsProfileTest(sourcePath, 'strong'));
     case 'e2e:all':
       return [...ALL_E2E_TESTS];
     default:

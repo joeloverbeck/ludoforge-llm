@@ -4,7 +4,13 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — test files + possibly a test fixture file
-**Deps**: archive/tickets/62CONPIESOU-004.md, tickets/62CONPIESOU-005.md, tickets/62CONPIESOU-008.md
+**Deps**: archive/tickets/62CONPIESOU-004.md, tickets/62CONPIESOU-005.md, tickets/62CONPIESOU-008.md, specs/62b-incremental-choice-protocol.md
+
+## Status Note
+
+This ticket should be re-cut after the Spec 62b protocol lands.
+
+The existing integration-test wording still assumes the old `chooseN` shape and should not be used as the final test design source. Once the engine owns incremental selection state, these tests need to assert stepwise add/remove/confirm behavior in addition to end-state legality.
 
 ## Problem
 

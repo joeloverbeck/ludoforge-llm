@@ -4,7 +4,13 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — data file only
-**Deps**: archive/tickets/KERQUERY/62CONPIESOU-001-prioritized-query-ast-and-recursive-infrastructure.md, archive/tickets/KERQUERY/62CONPIESOU-002-compiler-facing-prioritized-query-support.md, archive/tickets/62CONPIESOU-004.md, tickets/62CONPIESOU-005.md
+**Deps**: archive/tickets/KERQUERY/62CONPIESOU-001-prioritized-query-ast-and-recursive-infrastructure.md, archive/tickets/KERQUERY/62CONPIESOU-002-compiler-facing-prioritized-query-support.md, archive/tickets/62CONPIESOU-004.md, tickets/62CONPIESOU-005.md, specs/62b-incremental-choice-protocol.md
+
+## Status Note
+
+This remains a valid authored-data follow-up, but it should not be executed until the Spec 62b interaction protocol exists.
+
+Re-authoring card 87 to `prioritized` before the engine owns incremental `chooseN` state would recreate the same architecture mismatch that Spec 62b is meant to eliminate.
 
 ## Problem
 

@@ -7,6 +7,12 @@
 **Estimated effort**: 2-3 days
 **Source sections**: FITL card implementation gap discovered during card 87 (`Nguyen Chanh Thi`)
 
+## Status Note
+
+This spec remains the source of truth for the `prioritized` query itself.
+
+Its original interaction-model assumptions about `chooseN` were later found to be too optimistic. The incremental multi-selection protocol required to make prioritized legality clean and engine-owned is specified in [Spec 62b](/home/joeloverbeck/projects/ludoforge-llm/specs/62b-incremental-choice-protocol.md).
+
 ## Overview
 
 Add a new `prioritized` variant to the `OptionsQuery` union that models ordered-tier sourcing with optional per-qualifier priority. Combined with tier-aware legality in `chooseN`, this lets the kernel enforce rules like FITL Rule 1.4.1 without any game-specific logic in the engine.

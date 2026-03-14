@@ -107,6 +107,12 @@ Production references:
 
 Use `chooseN` for token subsets or bounded multi-select choices. Prefer explicit `min` and `max` derived from legal counts rather than assuming the requested amount exists.
 
+Architecture note:
+
+- `chooseN` authoring remains game-rule data in `GameSpecDoc`.
+- The interaction protocol for interactive multi-selection is being redesigned under [Spec 62b](/home/joeloverbeck/projects/ludoforge-llm/specs/62b-incremental-choice-protocol.md).
+- Do not assume the old runner-local "submit one final array" behavior is the intended long-term contract for new prioritized or stepwise legality features.
+
 Production references:
 
 - Card 81 (`CIDG`) unshaded VC-guerrilla selection

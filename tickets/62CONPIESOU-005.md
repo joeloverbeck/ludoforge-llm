@@ -1,58 +1,84 @@
-# 62CONPIESOU-005: Tier-aware legality in `chooseN` for `prioritized` queries
+# 62CONPIESOU-005: Tier-aware admissibility for `chooseN` over `prioritized` queries
 
 **Status**: PENDING
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel runtime (legal-choices, effects-choice)
-**Deps**: archive/tickets/KERQUERY/62CONPIESOU-001-prioritized-query-ast-and-recursive-infrastructure.md, archive/tickets/62CONPIESOU-004.md
+**Deps**: archive/tickets/KERQUERY/62CONPIESOU-001-prioritized-query-ast-and-recursive-infrastructure.md, archive/tickets/62CONPIESOU-004.md, specs/62b-incremental-choice-protocol.md
+
+## Status Note
+
+This ticket is no longer the recommended implementation path.
+
+Spec 62b replaced the underlying interaction architecture: tier-aware prioritized legality should land on top of the incremental engine-owned `chooseN` protocol, not on top of the superseded one-shot array submission model.
+
+Treat this ticket as historical problem analysis. Any implementation ticket replacing it should be cut from [Spec 62b](/home/joeloverbeck/projects/ludoforge-llm/specs/62b-incremental-choice-protocol.md), not from this document's narrower stopgap scope.
 
 ## Problem
 
-When a `chooseN` effect's `options` is a `prioritized` query, items from lower-priority tiers must be marked illegal while same-qualifier higher-priority items remain available. Currently, `chooseN` treats all option items as equally legal. This is the core behavioral change that enforces rules like FITL Rule 1.4.1.
+When a `chooseN` effect's `options` is a `prioritized` query, the engine must reject full selections that violate tier priority. Today, `chooseN` validates only cardinality, uniqueness, and raw domain membership, so a submitted array can include lower-tier items even when higher-tier items of the same qualifier were still available. That breaks rules like FITL Rule 1.4.1.
+
+The original ticket also assumed the engine already supported incremental multi-select re-evaluation, where lower-tier items become clickable only after higher-tier items are exhausted. That assumption is false in the current architecture and must be corrected before implementation.
 
 ## Assumption Reassessment (2026-03-14)
 
-1. `chooseN` evaluation in `effects-choice.ts` (line 478): `const options = evalQuery(chooseN.options, evalCtx)` — the query AST is available as `chooseN.options`. Confirmed.
-2. `legal-choices.ts` (line 54): `MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS = 1024` — the spec says tier-aware legality should be a **pre-filter before combination enumeration**, reducing the search space.
-3. The spec defines two modes: with `qualifierKey` (per-qualifier independence) and without (global tier exhaustion).
-4. `chooseN` already supports incremental multi-select — each selection step can re-evaluate legality on remaining candidates. The tier-aware filter hooks into this existing mechanism.
-5. Ticket 004 deliberately did **not** add tier metadata or a `computeTierMembership(...)` utility. Tier-aware legality must derive tier membership from the `prioritized` query AST and the currently selected/unselected candidate set.
+1. `packages/engine/src/kernel/effects-choice.ts` evaluates `chooseN.options` from the query AST at execution time and owns submitted-array validation. Confirmed.
+2. `packages/engine/src/kernel/legal-choices.ts` computes `chooseN` option legality by probing whether an option can appear in at least one legal final combination. Confirmed.
+3. `packages/runner/src/ui/ChoicePanel.tsx` holds multi-select state locally and submits one completed array through `chooseN(selectedValues)`. There is no engine-level partial `chooseN` submission/re-entry loop today. Confirmed.
+4. Because of that one-shot contract, the current stack does **not** support true kernel-driven stepwise re-evaluation of `chooseN` legality after each click. The original ticket wording about dynamic re-evaluation in existing infrastructure was incorrect.
+5. Ticket 004 deliberately did **not** add tier metadata or a `computeTierMembership(...)` utility. Any tier-aware rule here should derive from the `prioritized` AST and the evaluated tier contents, not from hidden query-result metadata. Confirmed.
+6. `packages/engine/test/unit/kernel/legal-choices.test.ts` exists and is the right unit-test home for legality probing. The original ticket's test section was stale in treating tests as out of scope while also requiring new legality coverage.
 
 ## Architecture Check
 
-1. **AST-driven pre-filter approach**: Before enumerating combinations, derive each candidate's effective tier from the `prioritized` query structure and compute which items are currently illegal due to tier priority. Remove them from the candidate set. This reduces combination space (performance win) and keeps legality logic out of `evalQuery`.
-2. **Dynamic re-evaluation**: In incremental multi-select mode, after each selection, re-compute tier legality. If selecting all tier-1 items of qualifier Q exhausts that qualifier in tier 1, tier-2 items of qualifier Q become legal. This uses the existing incremental selection model.
-3. **Integration point**: The filter is applied in the discovery phase of `chooseN`, where legal options are computed for the player. The move-application phase validates that the selection respects tier constraints. Both phases must use the same AST-driven legality rule so admissibility stays consistent.
+1. **Shared legality helper, not query metadata**: The durable architecture is a pure helper at the choice layer that derives tier admissibility from the `prioritized` AST plus evaluated tier contents. `evalQuery` should remain a pure flattening/evaluation mechanism.
+2. **Apply and discovery must share the same rule**: Discovery-time legality and execution-time validation must use one shared tier-admissibility rule. Duplicating the rule in `legal-choices.ts` and `effects-choice.ts` would drift.
+3. **Current UI contract limits what this ticket can deliver cleanly**: Under today's one-shot `chooseN` API, the engine can robustly answer “is this final selection admissible?” and can expose discovery-time option legality only insofar as it is derivable from the current pending state. True click-by-click legality transitions would require a deeper `chooseN` interaction model change and should not be smuggled into this ticket.
+4. **Recommended scope for this ticket**: Implement robust final-selection admissibility plus discovery-time legality that is consistent with that shared helper. If we later want true stepwise lower-tier unlock behavior in the UI, that should be a separate architecture ticket to make `chooseN` incremental at the kernel/runner contract level.
+
+## Scope Correction
+
+This ticket should no longer claim that it will deliver full engine-driven dynamic multi-select re-evaluation. Under the current architecture, that is a larger product/API change than a narrow legality fix.
+
+This ticket should instead:
+
+- add shared tier-admissibility logic for `chooseN` over `prioritized`
+- enforce that logic during submitted-array validation in `effects-choice.ts`
+- reuse that logic during discovery so `legal-choices.ts` does not contradict apply-time admissibility
+- update card 87 to author the rule declaratively with `prioritized`
+- add regression coverage in the actual legality/apply/integration test files
+
+If the product requirement remains “lower-tier options must become clickable only after higher-tier selections are already chosen in the same open picker”, open a follow-up ticket to redesign `chooseN` as an incremental decision protocol instead of a one-shot array submission.
 
 ## What to Change
 
-### 1. Add tier-aware pre-filter to chooseN option legality
+### 1. Add shared tier-admissibility logic for `chooseN`
 
-In `effects-choice.ts` or `legal-choices.ts` (whichever computes legal options for `chooseN`):
+Create a focused helper that:
 
-- Detect when `chooseN.options` is a `prioritized` query
-- Derive tier membership from the `prioritized` query tiers and the flattened option list produced by `evalQuery`
-- Apply tier filter:
-  - **With qualifierKey**: For each candidate, extract `token.props[qualifierKey]`. An item from tier N is illegal if any unselected item from tiers 0..N-1 shares the same qualifier value.
-  - **Without qualifierKey**: An item from tier N is illegal if any unselected item from tiers 0..N-1 exists.
-- Filter out illegal items before passing to combination enumeration
+- detects `chooseN.options.query === 'prioritized'`
+- derives tier membership from the authored `tiers`
+- computes whether a submitted or candidate item is admissible under tier priority
+  - **With `qualifierKey`**: a lower-tier item is inadmissible while an unselected higher-tier item with the same qualifier remains
+  - **Without `qualifierKey`**: a lower-tier item is inadmissible while any unselected higher-tier item remains
 
-### 2. Support dynamic re-evaluation in multi-select
+### 2. Enforce the rule during execution
 
-When the player makes a selection in a `chooseN` with `prioritized` options:
-- Re-run the tier filter with the selected items removed from the candidate pool
-- Update which lower-tier items are now legal
-- Present updated legal options to the player
+In `effects-choice.ts`, reject submitted `chooseN` arrays that violate the shared tier-admissibility rule, even if cardinality and raw domain membership would otherwise pass.
 
-### 3. Validate selections respect tier constraints on move application
+### 3. Use the same rule during discovery
 
-In the move-application path, verify that the player's full selection is consistent with tier priority. If a tier-2 item was selected while a tier-1 item with the same qualifier was available and unselected, reject the move.
+In discovery/legality evaluation, apply the same shared rule so the pending choice surface does not advertise options that apply-time would reject. If pre-filtering can reduce combination probing safely, do it here through the shared helper rather than by adding query-result metadata.
 
 ## Files to Touch
 
 - `packages/engine/src/kernel/effects-choice.ts` (modify — chooseN evaluation)
-- `packages/engine/src/kernel/legal-choices.ts` (modify — if legality computation is here)
-- `packages/engine/src/kernel/prioritized-tier-legality.ts` (new or modify only if a focused legality helper materially improves cohesion)
+- `packages/engine/src/kernel/legal-choices.ts` (modify — to consume the shared rule)
+- `packages/engine/src/kernel/prioritized-tier-legality.ts` (new — preferred if a focused helper materially improves cohesion)
+- `packages/engine/test/unit/kernel/legal-choices.test.ts` (modify)
+- `packages/engine/test/unit/effects-choice.test.ts` and/or `packages/engine/test/unit/kernel/apply-move.test.ts` (modify)
+- `packages/engine/test/integration/fitl-events-nguyen-chanh-thi.test.ts` (modify)
+- `data/games/fire-in-the-lake/41-events/065-096.md` (modify — card 87)
 
 ## Out of Scope
 
@@ -61,7 +87,9 @@ In the move-application path, verify that the player's full selection is consist
 - Validation diagnostics (ticket 003)
 - `evalQuery` handler (ticket 004)
 - Card 87 YAML (ticket 008)
-- Test files (ticket 007)
+- A full incremental `chooseN` interaction redesign
+- Runner-side per-click legality recomputation
+- Any hidden tier metadata on query results
 - UI/UX presentation of grayed-out items (spec non-goal)
 
 ## Acceptance Criteria
@@ -69,28 +97,30 @@ In the move-application path, verify that the player's full selection is consist
 ### Tests That Must Pass
 
 1. `pnpm turbo build` succeeds
-2. `chooseN` with `prioritized` query (with qualifierKey): tier-2 items with qualifier Q are illegal while tier-1 items with qualifier Q exist
-3. `chooseN` with `prioritized` query (with qualifierKey): tier-2 items with qualifier R are legal even when tier-1 items with qualifier Q remain (qualifier independence)
-4. `chooseN` with `prioritized` query (without qualifierKey): tier-2 items are illegal while any tier-1 item exists
-5. Dynamic re-evaluation: selecting all tier-1 items of qualifier Q makes tier-2 items of qualifier Q legal
-6. Move validation rejects selections that violate tier priority
-7. Existing suite: `pnpm -F @ludoforge/engine test` (no regressions)
+2. Shared tier-admissibility logic exists outside `evalQuery`
+3. `chooseN` execution rejects submitted selections that violate `prioritized` tier rules
+4. Discovery legality and apply-time validation agree on admissibility for `prioritized` `chooseN`
+5. With `qualifierKey`, qualifier independence is enforced
+6. Without `qualifierKey`, whole-tier exhaustion is enforced
+7. Card 87 is re-authored to use `prioritized`
+8. Existing suite: `pnpm -F @ludoforge/engine test` (no regressions)
 
 ### Invariants
 
-1. Legal choice generation and move application agree on admissibility (spec invariant 6)
-2. Lower-priority tiers never contribute while higher tiers can still satisfy the same qualified remainder (spec invariant 2)
+1. Legal choice discovery and move application agree on admissibility (spec invariant 6)
+2. Lower-priority tiers never satisfy the same qualified remainder when higher tiers still can (spec invariant 2)
 3. Qualifier matching is driven entirely by authored data — `qualifierKey` property name (spec invariant 3)
-4. The tier pre-filter reduces combination space — `MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS` is never exceeded more than without the filter
-5. No FITL-specific identifiers in any touched file
-6. The player sees one unified choice, not sequential stages (spec invariant 7)
-7. `evalQuery` remains a pure evaluator — no per-result tier metadata or side-channel membership map is introduced here
+4. `evalQuery` remains a pure evaluator — no per-result tier metadata or side-channel membership map is introduced here
+5. No FITL-specific identifiers appear in shared kernel code
+6. This ticket does not pretend the current stack has true kernel-driven incremental multi-select re-evaluation when it does not
 
 ## Test Plan
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/kernel/legal-choices.test.ts` — tier-aware legality cases (see ticket 007 for full list)
+1. `packages/engine/test/unit/kernel/legal-choices.test.ts` — shared discovery/admissibility cases
+2. `packages/engine/test/unit/effects-choice.test.ts` and/or `packages/engine/test/unit/kernel/apply-move.test.ts` — apply-time rejection for illegal submitted arrays
+3. `packages/engine/test/integration/fitl-events-nguyen-chanh-thi.test.ts` — card 87 rule behavior using `prioritized`
 
 ### Commands
 

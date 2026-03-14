@@ -14,6 +14,10 @@ This spec describes **current engine behavior** in:
 - `src/kernel/apply-move.ts`
 - `src/kernel/action-executor.ts`
 
+Status note:
+- This document describes the current runtime contract before the multi-selection redesign in [Spec 62b](/home/joeloverbeck/projects/ludoforge-llm/specs/62b-incremental-choice-protocol.md).
+- Once Spec 62b lands, the sections that describe `chooseN` and decision-param materialization will need to be revised to reflect engine-owned incremental decision state instead of one-shot array submission.
+
 Static validation boundaries are defined by:
 - `src/kernel/validate-gamedef-core.ts`
 - `src/kernel/validate-gamedef-behavior.ts`

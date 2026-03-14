@@ -112,6 +112,55 @@ export function materializeConcreteCandidates(
 }
 
 // ---------------------------------------------------------------------------
+// materializeOrFastPath
+// ---------------------------------------------------------------------------
+
+/**
+ * Check whether all legal moves come from fully-concrete actions (no template
+ * parameters).  If so, skip the expensive `materializeConcreteCandidates()`
+ * path and return them directly as `ConcreteMoveCandidate`s.
+ *
+ * Falls back to `materializeConcreteCandidates()` when any move comes from
+ * a template action.
+ */
+export function materializeOrFastPath(
+  def: GameDef,
+  state: GameState,
+  moves: readonly Move[],
+  rng: Rng,
+  limitPerTemplate: number,
+  runtime: GameDefRuntime,
+): { readonly candidates: readonly ConcreteMoveCandidate[]; readonly rng: Rng; readonly fastPath: boolean } {
+  // Check if all moves come from fully-concrete actions.
+  const concreteIds = runtime.concreteActionIds;
+  let allConcrete = true;
+  for (let i = 0; i < moves.length; i += 1) {
+    if (!concreteIds.has(moves[i]!.actionId)) {
+      allConcrete = false;
+      break;
+    }
+  }
+
+  if (allConcrete) {
+    // Fast path: convert moves directly to candidates without materialization.
+    const candidates: ConcreteMoveCandidate[] = [];
+    const seenKeys = new Set<string>();
+    for (let i = 0; i < moves.length; i += 1) {
+      const key = canonicalMoveKey(moves[i]!);
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        candidates.push({ move: moves[i]!, moveKey: key });
+      }
+    }
+    return { candidates, rng, fastPath: true };
+  }
+
+  // Slow path: full materialization.
+  const result = materializeConcreteCandidates(def, state, moves, rng, limitPerTemplate, runtime);
+  return { ...result, fastPath: false };
+}
+
+// ---------------------------------------------------------------------------
 // filterAvailableCandidates
 // ---------------------------------------------------------------------------
 

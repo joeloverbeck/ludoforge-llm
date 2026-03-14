@@ -5,12 +5,16 @@
  */
 
 /** Allowed rollout policies. */
-const ROLLOUT_POLICIES = ['random', 'epsilonGreedy'] as const;
+const ROLLOUT_POLICIES = ['random', 'epsilonGreedy', 'mast'] as const;
 type RolloutPolicy = (typeof ROLLOUT_POLICIES)[number];
 
 /** Allowed solver modes. */
 const SOLVER_MODES = ['off', 'perfectInfoDeterministic2P'] as const;
 type SolverMode = (typeof SOLVER_MODES)[number];
+
+/** Allowed rollout modes. */
+const ROLLOUT_MODES = ['legacy', 'hybrid', 'direct'] as const;
+export type MctsRolloutMode = (typeof ROLLOUT_MODES)[number];
 
 export interface MctsConfig {
   /** Hard iteration cap. Deterministic mode uses this as the primary budget. */
@@ -52,6 +56,33 @@ export interface MctsConfig {
   /** Restricted solver support only. */
   readonly solverMode: SolverMode;
 
+  /** Rollout mode: legacy (full rollout), hybrid (cutoff), direct (no simulation). */
+  readonly rolloutMode: MctsRolloutMode;
+
+  /** Maximum plies for hybrid cutoff simulation. */
+  readonly hybridCutoffDepth: number;
+
+  /** MAST warm-up threshold: minimum `totalUpdates` before exploitation. */
+  readonly mastWarmUpThreshold: number;
+
+  /** Compress forced sequences (exactly one legal candidate) during selection and simulation. */
+  readonly compressForcedSequences?: boolean;
+
+  /** Enable per-search state-info cache for terminalResult/legalMoves/rewards. */
+  readonly enableStateInfoCache?: boolean;
+
+  /** Max entries in the state-info cache. Defaults to min(pool.capacity, iterations * 4). */
+  readonly maxStateInfoCacheEntries?: number;
+
+  /** Hoeffding-bound delta for confidence-based root stopping. Must be in (0, 1). */
+  readonly rootStopConfidenceDelta?: number;
+
+  /** Minimum visits per child before confidence stop is considered. Must be a positive integer. */
+  readonly rootStopMinVisits?: number;
+
+  /** Blending weight for heuristic backup in selection.  0 = pure MC (default). */
+  readonly heuristicBackupAlpha?: number;
+
   /** Optional internal diagnostics for tuning/tests. */
   readonly diagnostics?: boolean;
 }
@@ -64,11 +95,17 @@ export const DEFAULT_MCTS_CONFIG: MctsConfig = Object.freeze({
   progressiveWideningK: 2.0,
   progressiveWideningAlpha: 0.5,
   templateCompletionsPerVisit: 2,
-  rolloutPolicy: 'epsilonGreedy' as const,
+  rolloutPolicy: 'mast' as const,
   rolloutEpsilon: 0.15,
   rolloutCandidateSample: 6,
   heuristicTemperature: 10_000,
   solverMode: 'off' as const,
+  rolloutMode: 'hybrid' as const,
+  hybridCutoffDepth: 6,
+  mastWarmUpThreshold: 32,
+  compressForcedSequences: true,
+  rootStopConfidenceDelta: 1e-3,
+  rootStopMinVisits: 16,
 });
 
 // ---------------------------------------------------------------------------
@@ -125,9 +162,9 @@ export type MctsPreset = 'fast' | 'default' | 'strong';
  * `default` is an empty partial — it resolves to `DEFAULT_MCTS_CONFIG`.
  */
 export const MCTS_PRESETS: Readonly<Record<MctsPreset, Partial<MctsConfig>>> = Object.freeze({
-  fast: Object.freeze({ iterations: 200, maxSimulationDepth: 16, rolloutPolicy: 'random' as const, timeLimitMs: 2_000 }),
-  default: Object.freeze({ timeLimitMs: 10_000 }),
-  strong: Object.freeze({ iterations: 5000, maxSimulationDepth: 64, templateCompletionsPerVisit: 4, timeLimitMs: 30_000 }),
+  fast: Object.freeze({ iterations: 200, maxSimulationDepth: 16, rolloutPolicy: 'mast' as const, timeLimitMs: 2_000, rolloutMode: 'hybrid' as const, hybridCutoffDepth: 4 }),
+  default: Object.freeze({ rolloutPolicy: 'mast' as const, timeLimitMs: 10_000, rolloutMode: 'hybrid' as const, hybridCutoffDepth: 6 }),
+  strong: Object.freeze({ iterations: 5000, maxSimulationDepth: 64, rolloutPolicy: 'mast' as const, templateCompletionsPerVisit: 4, timeLimitMs: 30_000, rolloutMode: 'hybrid' as const, hybridCutoffDepth: 8 }),
 });
 
 /** All recognised preset names (for validation). */
@@ -165,10 +202,43 @@ export function validateMctsConfig(partial: Partial<MctsConfig>): MctsConfig {
   // Enums
   assertOneOf('rolloutPolicy', merged.rolloutPolicy, ROLLOUT_POLICIES);
   assertOneOf('solverMode', merged.solverMode, SOLVER_MODES);
+  assertOneOf('rolloutMode', merged.rolloutMode, ROLLOUT_MODES);
+
+  // Hybrid cutoff depth
+  assertPositiveInt('hybridCutoffDepth', merged.hybridCutoffDepth);
+
+  // MAST warm-up threshold
+  assertNonNegativeInt('mastWarmUpThreshold', merged.mastWarmUpThreshold);
 
   // Optional wall-clock
   if (merged.timeLimitMs !== undefined) {
     assertPositive('timeLimitMs', merged.timeLimitMs);
+  }
+
+  // State-info cache
+  if (merged.maxStateInfoCacheEntries !== undefined) {
+    assertPositiveInt('maxStateInfoCacheEntries', merged.maxStateInfoCacheEntries);
+  }
+
+  // Confidence-based root stopping
+  if (merged.rootStopConfidenceDelta !== undefined) {
+    if (
+      !Number.isFinite(merged.rootStopConfidenceDelta) ||
+      merged.rootStopConfidenceDelta <= 0 ||
+      merged.rootStopConfidenceDelta >= 1
+    ) {
+      throw new RangeError(
+        `MctsConfig.rootStopConfidenceDelta must be in (0, 1), got ${merged.rootStopConfidenceDelta}`,
+      );
+    }
+  }
+  if (merged.rootStopMinVisits !== undefined) {
+    assertPositiveInt('rootStopMinVisits', merged.rootStopMinVisits);
+  }
+
+  // Heuristic backup alpha
+  if (merged.heuristicBackupAlpha !== undefined) {
+    assertRange('heuristicBackupAlpha', merged.heuristicBackupAlpha, 0, 1);
   }
 
   return Object.freeze(merged);

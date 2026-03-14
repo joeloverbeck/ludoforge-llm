@@ -8,6 +8,7 @@ import {
   validateMctsConfig,
   resolvePreset,
   type MctsConfig,
+  type MctsRolloutMode,
 } from '../../../../src/agents/mcts/config.js';
 
 describe('MctsConfig defaults', () => {
@@ -20,11 +21,17 @@ describe('MctsConfig defaults', () => {
       progressiveWideningK: 2.0,
       progressiveWideningAlpha: 0.5,
       templateCompletionsPerVisit: 2,
-      rolloutPolicy: 'epsilonGreedy',
+      rolloutPolicy: 'mast',
       rolloutEpsilon: 0.15,
       rolloutCandidateSample: 6,
       heuristicTemperature: 10_000,
       solverMode: 'off',
+      rolloutMode: 'hybrid',
+      hybridCutoffDepth: 6,
+      mastWarmUpThreshold: 32,
+      compressForcedSequences: true,
+      rootStopConfidenceDelta: 1e-3,
+      rootStopMinVisits: 16,
     };
     assert.deepEqual(DEFAULT_MCTS_CONFIG, expected);
   });
@@ -81,6 +88,29 @@ describe('validateMctsConfig', () => {
     assert.throws(
       () => validateMctsConfig({ solverMode: 'invalid' as 'off' }),
       (err: unknown) => err instanceof TypeError && /solverMode/.test((err as TypeError).message),
+    );
+  });
+
+  it('throws TypeError when rolloutMode is invalid', () => {
+    assert.throws(
+      () => validateMctsConfig({ rolloutMode: 'invalid' as MctsRolloutMode }),
+      (err: unknown) => err instanceof TypeError && /rolloutMode/.test((err as TypeError).message),
+    );
+  });
+
+  it('throws RangeError when hybridCutoffDepth is 0', () => {
+    assert.throws(
+      () => validateMctsConfig({ hybridCutoffDepth: 0 }),
+      (err: unknown) =>
+        err instanceof RangeError && /hybridCutoffDepth/.test((err as RangeError).message),
+    );
+  });
+
+  it('throws RangeError when hybridCutoffDepth is negative', () => {
+    assert.throws(
+      () => validateMctsConfig({ hybridCutoffDepth: -1 }),
+      (err: unknown) =>
+        err instanceof RangeError && /hybridCutoffDepth/.test((err as RangeError).message),
     );
   });
 
@@ -182,29 +212,34 @@ describe('MCTS_PRESETS', () => {
 // ---------------------------------------------------------------------------
 
 describe('resolvePreset', () => {
-  it('resolvePreset("fast") returns config with iterations: 200 and timeLimitMs: 2000', () => {
+  it('resolvePreset("fast") returns config with iterations: 200, timeLimitMs: 2000, rolloutMode: hybrid, hybridCutoffDepth: 4', () => {
     const cfg = resolvePreset('fast');
     assert.equal(cfg.iterations, 200);
     assert.equal(cfg.maxSimulationDepth, 16);
-    assert.equal(cfg.rolloutPolicy, 'random');
+    assert.equal(cfg.rolloutPolicy, 'mast');
     assert.equal(cfg.timeLimitMs, 2_000);
+    assert.equal(cfg.rolloutMode, 'hybrid');
+    assert.equal(cfg.hybridCutoffDepth, 4);
   });
 
-  it('resolvePreset("default") returns DEFAULT_MCTS_CONFIG with timeLimitMs: 10000', () => {
+  it('resolvePreset("default") returns rolloutMode: hybrid, hybridCutoffDepth: 6', () => {
     const cfg = resolvePreset('default');
     assert.equal(cfg.timeLimitMs, 10_000);
-    // All other fields should match defaults
     assert.equal(cfg.iterations, DEFAULT_MCTS_CONFIG.iterations);
     assert.equal(cfg.explorationConstant, DEFAULT_MCTS_CONFIG.explorationConstant);
-    assert.equal(cfg.rolloutPolicy, DEFAULT_MCTS_CONFIG.rolloutPolicy);
+    assert.equal(cfg.rolloutPolicy, 'mast');
+    assert.equal(cfg.rolloutMode, 'hybrid');
+    assert.equal(cfg.hybridCutoffDepth, 6);
   });
 
-  it('resolvePreset("strong") returns config with iterations: 5000 and timeLimitMs: 30000', () => {
+  it('resolvePreset("strong") returns rolloutMode: hybrid, hybridCutoffDepth: 8', () => {
     const cfg = resolvePreset('strong');
     assert.equal(cfg.iterations, 5000);
     assert.equal(cfg.maxSimulationDepth, 64);
     assert.equal(cfg.templateCompletionsPerVisit, 4);
     assert.equal(cfg.timeLimitMs, 30_000);
+    assert.equal(cfg.rolloutMode, 'hybrid');
+    assert.equal(cfg.hybridCutoffDepth, 8);
   });
 
   it('all presets pass validateMctsConfig (no invalid values)', () => {
@@ -224,5 +259,250 @@ describe('resolvePreset', () => {
     const a = resolvePreset('fast');
     const b = resolvePreset('fast');
     assert.deepEqual(a, b);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// MAST policy and config
+// ---------------------------------------------------------------------------
+
+describe('MAST config support', () => {
+  it('"mast" is a valid rolloutPolicy value', () => {
+    assert.doesNotThrow(() => validateMctsConfig({ rolloutPolicy: 'mast' }));
+  });
+
+  it('named presets use rolloutPolicy: "mast"', () => {
+    for (const name of MCTS_PRESET_NAMES) {
+      const cfg = resolvePreset(name);
+      assert.equal(cfg.rolloutPolicy, 'mast', `preset "${name}" should use rolloutPolicy "mast"`);
+    }
+  });
+
+  it('mastWarmUpThreshold defaults to 32', () => {
+    const cfg = validateMctsConfig({});
+    assert.equal(cfg.mastWarmUpThreshold, 32);
+  });
+
+  it('mastWarmUpThreshold is validated as non-negative integer', () => {
+    assert.doesNotThrow(() => validateMctsConfig({ mastWarmUpThreshold: 0 }));
+    assert.doesNotThrow(() => validateMctsConfig({ mastWarmUpThreshold: 100 }));
+    assert.throws(
+      () => validateMctsConfig({ mastWarmUpThreshold: -1 }),
+      (err: unknown) =>
+        err instanceof RangeError && /mastWarmUpThreshold/.test((err as RangeError).message),
+    );
+    assert.throws(
+      () => validateMctsConfig({ mastWarmUpThreshold: 1.5 }),
+      (err: unknown) =>
+        err instanceof RangeError && /mastWarmUpThreshold/.test((err as RangeError).message),
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// State-info cache config
+// ---------------------------------------------------------------------------
+
+describe('state-info cache config', () => {
+  it('enableStateInfoCache defaults to undefined (treated as true at runtime)', () => {
+    const cfg = validateMctsConfig({});
+    assert.equal(cfg.enableStateInfoCache, undefined);
+  });
+
+  it('enableStateInfoCache can be set to true', () => {
+    const cfg = validateMctsConfig({ enableStateInfoCache: true });
+    assert.equal(cfg.enableStateInfoCache, true);
+  });
+
+  it('enableStateInfoCache can be set to false', () => {
+    const cfg = validateMctsConfig({ enableStateInfoCache: false });
+    assert.equal(cfg.enableStateInfoCache, false);
+  });
+
+  it('maxStateInfoCacheEntries defaults to undefined', () => {
+    const cfg = validateMctsConfig({});
+    assert.equal(cfg.maxStateInfoCacheEntries, undefined);
+  });
+
+  it('maxStateInfoCacheEntries accepts positive integer', () => {
+    const cfg = validateMctsConfig({ maxStateInfoCacheEntries: 500 });
+    assert.equal(cfg.maxStateInfoCacheEntries, 500);
+  });
+
+  it('maxStateInfoCacheEntries rejects 0', () => {
+    assert.throws(
+      () => validateMctsConfig({ maxStateInfoCacheEntries: 0 }),
+      (err: unknown) =>
+        err instanceof RangeError && /maxStateInfoCacheEntries/.test((err as RangeError).message),
+    );
+  });
+
+  it('maxStateInfoCacheEntries rejects negative', () => {
+    assert.throws(
+      () => validateMctsConfig({ maxStateInfoCacheEntries: -1 }),
+      (err: unknown) =>
+        err instanceof RangeError && /maxStateInfoCacheEntries/.test((err as RangeError).message),
+    );
+  });
+
+  it('maxStateInfoCacheEntries rejects non-integer', () => {
+    assert.throws(
+      () => validateMctsConfig({ maxStateInfoCacheEntries: 1.5 }),
+      (err: unknown) =>
+        err instanceof RangeError && /maxStateInfoCacheEntries/.test((err as RangeError).message),
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Forced-sequence compression config
+// ---------------------------------------------------------------------------
+
+describe('forced-sequence compression config', () => {
+  it('compressForcedSequences defaults to true', () => {
+    const cfg = validateMctsConfig({});
+    assert.equal(cfg.compressForcedSequences, true);
+  });
+
+  it('compressForcedSequences can be set to false', () => {
+    const cfg = validateMctsConfig({ compressForcedSequences: false });
+    assert.equal(cfg.compressForcedSequences, false);
+  });
+
+  it('compressForcedSequences can be set to true explicitly', () => {
+    const cfg = validateMctsConfig({ compressForcedSequences: true });
+    assert.equal(cfg.compressForcedSequences, true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Confidence-based root stopping config
+// ---------------------------------------------------------------------------
+
+describe('confidence-based root stopping config', () => {
+  it('rootStopConfidenceDelta defaults to 1e-3', () => {
+    const cfg = validateMctsConfig({});
+    assert.equal(cfg.rootStopConfidenceDelta, 1e-3);
+  });
+
+  it('rootStopMinVisits defaults to 16', () => {
+    const cfg = validateMctsConfig({});
+    assert.equal(cfg.rootStopMinVisits, 16);
+  });
+
+  it('rootStopConfidenceDelta accepts valid value in (0, 1)', () => {
+    const cfg = validateMctsConfig({ rootStopConfidenceDelta: 0.05 });
+    assert.equal(cfg.rootStopConfidenceDelta, 0.05);
+  });
+
+  it('rootStopConfidenceDelta rejects 0', () => {
+    assert.throws(
+      () => validateMctsConfig({ rootStopConfidenceDelta: 0 }),
+      (err: unknown) =>
+        err instanceof RangeError && /rootStopConfidenceDelta/.test((err as RangeError).message),
+    );
+  });
+
+  it('rootStopConfidenceDelta rejects 1', () => {
+    assert.throws(
+      () => validateMctsConfig({ rootStopConfidenceDelta: 1 }),
+      (err: unknown) =>
+        err instanceof RangeError && /rootStopConfidenceDelta/.test((err as RangeError).message),
+    );
+  });
+
+  it('rootStopConfidenceDelta rejects negative', () => {
+    assert.throws(
+      () => validateMctsConfig({ rootStopConfidenceDelta: -0.1 }),
+      (err: unknown) =>
+        err instanceof RangeError && /rootStopConfidenceDelta/.test((err as RangeError).message),
+    );
+  });
+
+  it('rootStopConfidenceDelta rejects > 1', () => {
+    assert.throws(
+      () => validateMctsConfig({ rootStopConfidenceDelta: 1.5 }),
+      (err: unknown) =>
+        err instanceof RangeError && /rootStopConfidenceDelta/.test((err as RangeError).message),
+    );
+  });
+
+  it('rootStopMinVisits accepts positive integer', () => {
+    const cfg = validateMctsConfig({ rootStopMinVisits: 32 });
+    assert.equal(cfg.rootStopMinVisits, 32);
+  });
+
+  it('rootStopMinVisits rejects 0', () => {
+    assert.throws(
+      () => validateMctsConfig({ rootStopMinVisits: 0 }),
+      (err: unknown) =>
+        err instanceof RangeError && /rootStopMinVisits/.test((err as RangeError).message),
+    );
+  });
+
+  it('rootStopMinVisits rejects negative', () => {
+    assert.throws(
+      () => validateMctsConfig({ rootStopMinVisits: -1 }),
+      (err: unknown) =>
+        err instanceof RangeError && /rootStopMinVisits/.test((err as RangeError).message),
+    );
+  });
+
+  it('rootStopMinVisits rejects non-integer', () => {
+    assert.throws(
+      () => validateMctsConfig({ rootStopMinVisits: 1.5 }),
+      (err: unknown) =>
+        err instanceof RangeError && /rootStopMinVisits/.test((err as RangeError).message),
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Heuristic backup alpha config
+// ---------------------------------------------------------------------------
+
+describe('heuristic backup alpha config', () => {
+  it('heuristicBackupAlpha defaults to undefined (treated as 0 at runtime)', () => {
+    const cfg = validateMctsConfig({});
+    assert.equal(cfg.heuristicBackupAlpha, undefined);
+  });
+
+  it('heuristicBackupAlpha accepts 0', () => {
+    const cfg = validateMctsConfig({ heuristicBackupAlpha: 0 });
+    assert.equal(cfg.heuristicBackupAlpha, 0);
+  });
+
+  it('heuristicBackupAlpha accepts 1', () => {
+    const cfg = validateMctsConfig({ heuristicBackupAlpha: 1 });
+    assert.equal(cfg.heuristicBackupAlpha, 1);
+  });
+
+  it('heuristicBackupAlpha accepts value in (0, 1)', () => {
+    const cfg = validateMctsConfig({ heuristicBackupAlpha: 0.3 });
+    assert.equal(cfg.heuristicBackupAlpha, 0.3);
+  });
+
+  it('heuristicBackupAlpha rejects negative', () => {
+    assert.throws(
+      () => validateMctsConfig({ heuristicBackupAlpha: -0.1 }),
+      (err: unknown) =>
+        err instanceof RangeError && /heuristicBackupAlpha/.test((err as RangeError).message),
+    );
+  });
+
+  it('heuristicBackupAlpha rejects > 1', () => {
+    assert.throws(
+      () => validateMctsConfig({ heuristicBackupAlpha: 1.5 }),
+      (err: unknown) =>
+        err instanceof RangeError && /heuristicBackupAlpha/.test((err as RangeError).message),
+    );
+  });
+
+  it('no named preset enables heuristicBackupAlpha > 0', () => {
+    for (const name of MCTS_PRESET_NAMES) {
+      const cfg = resolvePreset(name);
+      const alpha = cfg.heuristicBackupAlpha ?? 0;
+      assert.equal(alpha, 0, `preset "${name}" should not enable heuristicBackupAlpha`);
+    }
   });
 });

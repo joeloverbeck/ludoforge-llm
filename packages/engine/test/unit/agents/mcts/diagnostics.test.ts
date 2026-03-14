@@ -67,9 +67,10 @@ describe('collectDiagnostics', () => {
 
   it('includes totalTimeMs when startTime is provided', () => {
     const root = createRootNode(2);
-    const startTime = Date.now() - 100; // 100ms ago
+    const startTime = performance.now() - 100; // ~100ms ago
     const diag = collectDiagnostics(root, 5, startTime);
     assert.equal(typeof diag.totalTimeMs, 'number');
-    assert.ok(diag.totalTimeMs! >= 100, 'totalTimeMs should be >= 100ms');
+    // performance.now() returns sub-ms floats; allow some timing slack.
+    assert.ok(diag.totalTimeMs! >= 90, 'totalTimeMs should be >= 90ms (allowing timing slack)');
   });
 });

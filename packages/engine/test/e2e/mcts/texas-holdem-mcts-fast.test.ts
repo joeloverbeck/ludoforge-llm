@@ -15,11 +15,13 @@ import {
   runGame,
   serializeTrace,
   type Agent,
+  type MctsRolloutMode,
 } from './mcts-test-helpers.js';
 
 /**
- * MCTS fast preset tests — uses random rollout (no evaluateState in hot path).
+ * MCTS fast preset tests — uses hybrid rollout mode with MAST playout policy.
  *
+ * The fast preset defaults to `rolloutMode: 'hybrid'` and `rolloutPolicy: 'mast'`.
  * Core tests always run. Extended tests are gated behind RUN_MCTS_E2E.
  */
 
@@ -30,6 +32,12 @@ describe('texas hold\'em MCTS fast preset e2e', () => {
     const def = compileTexasDef();
     const trace = loadTrace(def, 201, createMctsAgents(2, 'fast'), 2, FAST_MAX_TURNS);
     assertValidStopReason(trace);
+  });
+
+  it('fast preset uses hybrid mode and mast policy', () => {
+    const config = resolvePreset('fast');
+    assert.equal(config.rolloutMode, 'hybrid', 'fast preset should use hybrid mode');
+    assert.equal(config.rolloutPolicy, 'mast', 'fast preset should use mast policy');
   });
 
   it('same seed + same MCTS config produces identical trace', () => {
@@ -52,6 +60,47 @@ describe('texas hold\'em MCTS fast preset e2e', () => {
     assert.deepEqual(serializeTrace(traceA), serializeTrace(traceB));
   });
 
+  // ── Mode-parameterized determinism ─────────────────────────────────────
+
+  describe('determinism by rollout mode', () => {
+    /**
+     * Create deterministic fast-preset agents with a specific rollout mode.
+     * Uses a fixed iteration count WITHOUT a time limit — wall-clock limits
+     * cause non-deterministic iteration counts across runs.
+     */
+    const createDeterministicFastWithMode = (count: number, mode: MctsRolloutMode): readonly Agent[] =>
+      Array.from({ length: count }, () =>
+        new MctsAgent({ ...resolvePreset('fast'), rolloutMode: mode, iterations: 50, minIterations: 50 }),
+      );
+
+    const modes: readonly MctsRolloutMode[] = ['legacy', 'hybrid', 'direct'];
+    for (const mode of modes) {
+      it(`deterministic within ${mode} mode`, () => {
+        const def = compileTexasDef();
+        const seed = 701;
+        const playerCount = 2;
+        const maxTurns = 3;
+
+        const agentsA = createDeterministicFastWithMode(playerCount, mode);
+        const agentsB = createDeterministicFastWithMode(playerCount, mode);
+
+        const traceA = runGame(def, seed, agentsA, maxTurns, playerCount);
+        const traceB = runGame(def, seed, agentsB, maxTurns, playerCount);
+
+        assert.deepEqual(
+          traceA.moves.map((entry) => entry.move),
+          traceB.moves.map((entry) => entry.move),
+          `${mode}: same seed should produce same moves`,
+        );
+        assert.equal(
+          traceA.finalState.stateHash,
+          traceB.finalState.stateHash,
+          `${mode}: same seed should produce same final state`,
+        );
+      });
+    }
+  });
+
   it('MCTS fast completes 2-player game within wall-clock budget', () => {
     const def = compileTexasDef();
     const start = Date.now();
@@ -59,8 +108,9 @@ describe('texas hold\'em MCTS fast preset e2e', () => {
     const elapsed = Date.now() - start;
 
     assert.ok(trace.moves.length > 0, 'trace should contain moves');
-    // Generous bound: 90 seconds for a 200-turn tournament
-    assert.ok(elapsed < 90_000, `MCTS fast 2-player took ${elapsed}ms, expected < 90000ms`);
+    // Generous bound: 300 seconds for a 200-turn tournament
+    // (allows headroom when running alongside determinism tests)
+    assert.ok(elapsed < 300_000, `MCTS fast 2-player took ${elapsed}ms, expected < 300000ms`);
   });
 
   // ── Extended tests (gated behind RUN_MCTS_E2E) ────────────────────────

@@ -2,7 +2,7 @@ export { sampleBeliefState } from './belief.js';
 export type { BeliefSample } from './belief.js';
 
 export { DEFAULT_MCTS_CONFIG, MCTS_PRESETS, MCTS_PRESET_NAMES, validateMctsConfig, resolvePreset } from './config.js';
-export type { MctsConfig, MctsPreset } from './config.js';
+export type { MctsConfig, MctsPreset, MctsRolloutMode } from './config.js';
 
 export { canonicalMoveKey } from './move-key.js';
 export type { MoveKey } from './move-key.js';
@@ -20,16 +20,22 @@ export { materializeConcreteCandidates, filterAvailableCandidates } from './mate
 export { createNodePool } from './node-pool.js';
 export type { NodePool } from './node-pool.js';
 
-export { rollout } from './rollout.js';
-export type { RolloutResult } from './rollout.js';
+export { rollout, simulateToCutoff } from './rollout.js';
+export type { SimulationResult } from './rollout.js';
 
 export { terminalToRewards, sigmoid, evaluateForAllPlayers } from './evaluate.js';
+
+export { createMastStats, updateMastStats, mastSelectMove } from './mast.js';
+export type { MastStats, MastEntry } from './mast.js';
 
 export { backpropagate, runOneIteration, runSearch, selectRootDecision } from './search.js';
 
 export { canActivateSolver, updateSolverResult, selectSolverAwareChild } from './solver.js';
 
-export { collectDiagnostics } from './diagnostics.js';
-export type { MctsSearchDiagnostics } from './diagnostics.js';
+export { createStateInfoCache, evictIfNeeded, getOrComputeTerminal, getOrComputeLegalMoves, getOrComputeRewards } from './state-cache.js';
+export type { CachedStateInfo, StateInfoCache } from './state-cache.js';
+
+export { collectDiagnostics, createAccumulator } from './diagnostics.js';
+export type { MctsSearchDiagnostics, MutableDiagnosticsAccumulator } from './diagnostics.js';
 
 export { MctsAgent } from './mcts-agent.js';

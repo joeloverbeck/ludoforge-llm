@@ -14,17 +14,99 @@ import type { MctsNode } from './node.js';
 import type { MctsConfig } from './config.js';
 import type { NodePool } from './node-pool.js';
 import type { MoveKey } from './move-key.js';
+import type { MutableDiagnosticsAccumulator, MctsSearchDiagnostics } from './diagnostics.js';
 import { legalMoves } from '../../kernel/legal-moves.js';
 import { applyMove } from '../../kernel/apply-move.js';
 import { terminalResult } from '../../kernel/terminal.js';
 import { fork } from '../../kernel/prng.js';
 import { selectChild } from './isuct.js';
 import { shouldExpand, selectExpansionCandidate } from './expansion.js';
-import { materializeConcreteCandidates, filterAvailableCandidates } from './materialization.js';
-import { rollout } from './rollout.js';
+import { materializeOrFastPath, filterAvailableCandidates } from './materialization.js';
+import { rollout, simulateToCutoff } from './rollout.js';
+import type { SimulationResult } from './rollout.js';
 import { terminalToRewards, evaluateForAllPlayers } from './evaluate.js';
 import { sampleBeliefState } from './belief.js';
 import { canActivateSolver, updateSolverResult, selectSolverAwareChild } from './solver.js';
+import { createAccumulator, collectDiagnostics } from './diagnostics.js';
+import type { MastStats } from './mast.js';
+import { createMastStats, updateMastStats } from './mast.js';
+import type { StateInfoCache } from './state-cache.js';
+import {
+  createStateInfoCache,
+  getOrComputeTerminal,
+  getOrComputeLegalMoves,
+  getOrComputeRewards,
+} from './state-cache.js';
+
+// ---------------------------------------------------------------------------
+// Confidence-based root stopping (Hoeffding bound)
+// ---------------------------------------------------------------------------
+
+/**
+ * Determine whether the best root action is statistically separated from
+ * the runner-up using Hoeffding's inequality.
+ *
+ * Two guards prevent premature stops:
+ * 1. Both best and runner-up must have >= `minVisits`.
+ * 2. Best must have > 2× the runner-up's visits (visit-ratio guard).
+ *
+ * Rewards are assumed to be in [0, 1] (consistent with sigmoid normalisation
+ * in evaluate.ts), so the Hoeffding bound range parameter is 1.
+ *
+ * @returns `true` when the search can safely stop early.
+ */
+export function shouldStopByConfidence(
+  root: MctsNode,
+  rootPlayerOrdinal: number,
+  delta: number,
+  minVisits: number,
+): boolean {
+  if (root.children.length < 2) {
+    return false;
+  }
+
+  // Find best and runner-up children by mean reward for rootPlayer.
+  let best: MctsNode | null = null;
+  let bestMean = -Infinity;
+  let runnerUp: MctsNode | null = null;
+  let runnerUpMean = -Infinity;
+
+  for (const child of root.children) {
+    if (child.visits === 0) continue;
+    const mean = child.totalReward[rootPlayerOrdinal]! / child.visits;
+    if (mean > bestMean) {
+      runnerUp = best;
+      runnerUpMean = bestMean;
+      best = child;
+      bestMean = mean;
+    } else if (mean > runnerUpMean) {
+      runnerUp = child;
+      runnerUpMean = mean;
+    }
+  }
+
+  if (best === null || runnerUp === null) {
+    return false;
+  }
+
+  // Guard: both must have sufficient visits.
+  if (best.visits < minVisits || runnerUp.visits < minVisits) {
+    return false;
+  }
+
+  // Guard: visit-ratio — best must dominate.
+  if (best.visits <= 2 * runnerUp.visits) {
+    return false;
+  }
+
+  // Hoeffding radius: sqrt(ln(1/delta) / (2 * n)), with range = 1.
+  const lnInvDelta = Math.log(1 / delta);
+  const bestRadius = Math.sqrt(lnInvDelta / (2 * best.visits));
+  const runnerUpRadius = Math.sqrt(lnInvDelta / (2 * runnerUp.visits));
+
+  // Confidence intervals don't overlap ⇒ lower bound of best > upper bound of runner-up.
+  return (bestMean - bestRadius) > (runnerUpMean + runnerUpRadius);
+}
 
 // ---------------------------------------------------------------------------
 // Backpropagation
@@ -67,19 +149,36 @@ export function runOneIteration(
   runtime: GameDefRuntime,
   pool: NodePool,
   solverActive: boolean = false,
+  acc?: MutableDiagnosticsAccumulator,
+  mastStats?: MastStats,
+  stateCache?: StateInfoCache,
+  maxCacheEntries?: number,
 ): { readonly rng: Rng } {
   let currentNode = root;
   let currentState = sampledState;
   let currentRng = rng;
+  let selectionDepth = 0;
+  let selectionRecorded = false;
+  const selectionMoveKeys: string[] = [];
+  // Safety cap for forced-sequence compression — prevents infinite loops
+  // when every state has exactly one legal move and no terminal.
+  const maxForcedPlies = config.maxSimulationDepth;
+  let forcedPlies = 0;
 
   // ── Selection ────────────────────────────────────────────────────────
-  // Traverse the tree following ISUCT selection over available children.
+  const selStart = acc !== undefined ? performance.now() : 0;
+
   while (true) {
     // Determine legal moves at this node in the sampled state.
     const movesAtNode: readonly Move[] =
       currentNode === root
         ? rootLegalMoves
-        : legalMoves(def, currentState, undefined, runtime);
+        : stateCache !== undefined && maxCacheEntries !== undefined
+          ? getOrComputeLegalMoves(stateCache, def, currentState, runtime, maxCacheEntries, acc)
+          : (() => {
+              if (acc !== undefined) { acc.legalMovesCalls += 1; }
+              return legalMoves(def, currentState, undefined, runtime);
+            })();
 
     if (movesAtNode.length === 0) {
       // Terminal or no-move position — evaluate and backprop.
@@ -87,7 +186,7 @@ export function runOneIteration(
     }
 
     // Materialize concrete candidates from possibly-template moves.
-    const { candidates, rng: postMaterialize } = materializeConcreteCandidates(
+    const matResult = materializeOrFastPath(
       def,
       currentState,
       movesAtNode,
@@ -95,10 +194,59 @@ export function runOneIteration(
       config.templateCompletionsPerVisit,
       runtime,
     );
-    currentRng = postMaterialize;
+    const { candidates } = matResult;
+    currentRng = matResult.rng;
+    if (acc !== undefined && !matResult.fastPath) {
+      acc.materializeCalls += 1;
+    }
 
     if (candidates.length === 0) {
       break;
+    }
+
+    // ── Forced-sequence compression ────────────────────────────────
+    // When there is exactly one concrete candidate, skip node allocation
+    // and advance the state directly.  This compresses forced sequences
+    // into a single tree edge.
+    if (
+      config.compressForcedSequences !== false &&
+      candidates.length === 1
+    ) {
+      // Safety cap: break if forced plies exceed the limit.
+      if (forcedPlies >= maxForcedPlies) {
+        break;
+      }
+      const forced = candidates[0]!;
+      selectionMoveKeys.push(forced.moveKey);
+
+      const applied = applyMove(def, currentState, forced.move, undefined, runtime);
+      if (acc !== undefined) {
+        acc.applyMoveCalls += 1;
+        acc.forcedMovePlies += 1;
+      }
+      currentState = applied.state;
+      selectionDepth += 1;
+      forcedPlies += 1;
+
+      // Check terminal after forced move.
+      const terminal = stateCache !== undefined && maxCacheEntries !== undefined
+        ? getOrComputeTerminal(stateCache, def, currentState, runtime, maxCacheEntries, acc)
+        : (() => {
+            if (acc !== undefined) { acc.terminalCalls += 1; }
+            return terminalResult(def, currentState, runtime);
+          })();
+      if (terminal !== null) {
+        break;
+      }
+
+      // Respect solver logic: if solver is active and a proven result
+      // exists at the current node, stop compressing.
+      if (solverActive && currentNode.provenResult !== null) {
+        break;
+      }
+
+      // Continue selection loop — do NOT allocate a node.
+      continue;
     }
 
     // Build a lookup of candidate moveKeys for availability matching.
@@ -125,6 +273,13 @@ export function runOneIteration(
       const unexpanded = filterAvailableCandidates(currentNode, candidates);
 
       if (unexpanded.length > 0) {
+        if (acc !== undefined) {
+          acc.selectionTimeMs += performance.now() - selStart;
+          selectionRecorded = true;
+        }
+
+        const expStart = acc !== undefined ? performance.now() : 0;
+
         const actingPlayer = currentState.activePlayer as PlayerId;
         const { candidate: chosen, rng: postExpansion } = selectExpansionCandidate(
           unexpanded,
@@ -148,8 +303,23 @@ export function runOneIteration(
 
         // Advance into the expanded child.
         const applied = applyMove(def, currentState, chosen.move, undefined, runtime);
+        if (acc !== undefined) {
+          acc.applyMoveCalls += 1;
+        }
         currentState = applied.state;
         currentNode = childNode;
+        selectionDepth += 1;
+        selectionMoveKeys.push(chosen.moveKey);
+
+        // Capture heuristic prior at expansion time (for optional blended selection).
+        childNode.heuristicPrior = [...evaluateForAllPlayers(
+          def, currentState, config.heuristicTemperature, runtime,
+        )];
+
+        if (acc !== undefined) {
+          acc.expansionTimeMs += performance.now() - expStart;
+        }
+
         break; // Proceed to simulation from the expanded node.
       }
     }
@@ -167,8 +337,15 @@ export function runOneIteration(
       const solverChild = selectSolverAwareChild(currentNode, exploringPlayer);
       if (solverChild !== null) {
         const applied = applyMove(def, currentState, solverChild.move!, undefined, runtime);
+        if (acc !== undefined) {
+          acc.applyMoveCalls += 1;
+        }
         currentState = applied.state;
         currentNode = solverChild;
+        selectionDepth += 1;
+        if (solverChild.moveKey !== null) {
+          selectionMoveKeys.push(solverChild.moveKey);
+        }
         continue;
       }
     }
@@ -178,34 +355,107 @@ export function runOneIteration(
       exploringPlayer,
       config.explorationConstant,
       availableChildren,
+      config.heuristicBackupAlpha ?? 0,
     );
 
     // Apply the selected child's move to advance the state.
     const applied = applyMove(def, currentState, selected.move!, undefined, runtime);
+    if (acc !== undefined) {
+      acc.applyMoveCalls += 1;
+    }
     currentState = applied.state;
     currentNode = selected;
-  }
-
-  // ── Simulation (rollout) ─────────────────────────────────────────────
-  const rolloutResult = rollout(def, currentState, currentRng, config, runtime);
-  currentRng = rolloutResult.rng;
-
-  // ── Evaluation ───────────────────────────────────────────────────────
-  let rewards: readonly number[];
-  if (rolloutResult.terminal !== null) {
-    rewards = terminalToRewards(rolloutResult.terminal, sampledState.playerCount);
-  } else {
-    // Check terminal on rollout end state.
-    const endTerminal = terminalResult(def, rolloutResult.state, runtime);
-    if (endTerminal !== null) {
-      rewards = terminalToRewards(endTerminal, sampledState.playerCount);
-    } else {
-      rewards = evaluateForAllPlayers(def, rolloutResult.state, config.heuristicTemperature, runtime);
+    selectionDepth += 1;
+    if (selected.moveKey !== null) {
+      selectionMoveKeys.push(selected.moveKey);
     }
   }
 
+  // Finalize selection timing for non-expansion break paths.
+  if (acc !== undefined && !selectionRecorded) {
+    acc.selectionTimeMs += performance.now() - selStart;
+  }
+
+  if (acc !== undefined) {
+    acc.selectionDepths.push(selectionDepth);
+  }
+
+  // ── Simulation (rollout mode dispatch) ──────────────────────────────
+  const simStart = acc !== undefined ? performance.now() : 0;
+  let simResult: SimulationResult;
+
+  switch (config.rolloutMode) {
+    case 'legacy':
+      simResult = rollout(def, currentState, currentRng, config, runtime, acc, stateCache, maxCacheEntries);
+      break;
+    case 'hybrid':
+      simResult = simulateToCutoff(def, currentState, currentRng, config, runtime, acc, mastStats, stateCache, maxCacheEntries);
+      break;
+    case 'direct':
+      // No simulation — evaluate the expansion state directly.
+      simResult = {
+        state: currentState,
+        terminal: stateCache !== undefined && maxCacheEntries !== undefined
+          ? getOrComputeTerminal(stateCache, def, currentState, runtime, maxCacheEntries, acc)
+          : (() => {
+              if (acc !== undefined) { acc.terminalCalls += 1; }
+              return terminalResult(def, currentState, runtime);
+            })(),
+        rng: currentRng,
+        depth: 0,
+        traversedMoveKeys: [],
+      };
+      break;
+  }
+
+  currentRng = simResult.rng;
+  if (acc !== undefined) {
+    acc.simulationTimeMs += performance.now() - simStart;
+  }
+
+  // ── Evaluation ───────────────────────────────────────────────────────
+  const evalStart = acc !== undefined ? performance.now() : 0;
+  let rewards: readonly number[];
+  if (simResult.terminal !== null) {
+    rewards = terminalToRewards(simResult.terminal, sampledState.playerCount);
+  } else {
+    // Check terminal on simulation end state.
+    const endTerminal = stateCache !== undefined && maxCacheEntries !== undefined
+      ? getOrComputeTerminal(stateCache, def, simResult.state, runtime, maxCacheEntries, acc)
+      : (() => {
+          if (acc !== undefined) { acc.terminalCalls += 1; }
+          return terminalResult(def, simResult.state, runtime);
+        })();
+    if (endTerminal !== null) {
+      rewards = terminalToRewards(endTerminal, sampledState.playerCount);
+    } else {
+      rewards = stateCache !== undefined && maxCacheEntries !== undefined
+        ? getOrComputeRewards(stateCache, def, simResult.state, config, runtime, maxCacheEntries, acc)
+        : (() => {
+            if (acc !== undefined) { acc.evaluateStateCalls += 1; }
+            return evaluateForAllPlayers(def, simResult.state, config.heuristicTemperature, runtime);
+          })();
+    }
+  }
+  if (acc !== undefined) {
+    acc.evaluationTimeMs += performance.now() - evalStart;
+    // Record leaf reward span.
+    const minR = Math.min(...rewards);
+    const maxR = Math.max(...rewards);
+    acc.leafRewardSpans.push(maxR - minR);
+  }
+
   // ── Backpropagation ──────────────────────────────────────────────────
+  const bpStart = acc !== undefined ? performance.now() : 0;
   backpropagate(currentNode, rewards);
+
+  // ── MAST update ────────────────────────────────────────────────────
+  if (mastStats !== undefined) {
+    const allMoveKeys = [...selectionMoveKeys, ...simResult.traversedMoveKeys];
+    if (allMoveKeys.length > 0) {
+      updateMastStats(mastStats, allMoveKeys, rewards);
+    }
+  }
 
   // ── Solver proven-result propagation ───────────────────────────────
   if (solverActive) {
@@ -214,6 +464,10 @@ export function runOneIteration(
       updateSolverResult(solverNode, def, currentState, runtime);
       solverNode = solverNode.parent;
     }
+  }
+
+  if (acc !== undefined) {
+    acc.backpropTimeMs += performance.now() - bpStart;
   }
 
   return { rng: currentRng };
@@ -228,7 +482,7 @@ export function runOneIteration(
  * wall-clock early exit), calling `sampleBeliefState` + `runOneIteration`
  * per iteration.
  *
- * @returns The consumed search RNG and iteration count.
+ * @returns The consumed search RNG, iteration count, and optional diagnostics.
  */
 export function runSearch(
   root: MctsNode,
@@ -241,19 +495,41 @@ export function runSearch(
   rootLegalMoves: readonly Move[],
   runtime: GameDefRuntime,
   pool: NodePool,
-): { readonly rng: Rng; readonly iterations: number } {
+): {
+  readonly rng: Rng;
+  readonly iterations: number;
+  readonly diagnostics?: MctsSearchDiagnostics;
+} {
   let currentRng = searchRng;
   let iterations = 0;
+
+  // Diagnostics instrumentation.
+  const acc = config.diagnostics === true ? createAccumulator() : undefined;
+  const searchStart = config.diagnostics === true ? performance.now() : undefined;
 
   // Check solver activation once at search start.
   const solverActive = canActivateSolver(def, state, config);
 
+  // Create MAST stats local to this search run.
+  const mastStats = config.rolloutPolicy === 'mast' ? createMastStats() : undefined;
+
+  // Create per-search state-info cache when enabled (default: true).
+  const cacheEnabled = config.enableStateInfoCache !== false;
+  const stateCache = cacheEnabled ? createStateInfoCache() : undefined;
+  const maxCacheEntries = cacheEnabled
+    ? (config.maxStateInfoCacheEntries ?? Math.min(pool.capacity, config.iterations * 4))
+    : undefined;
+
   const deadline =
     config.timeLimitMs !== undefined ? Date.now() + config.timeLimitMs : undefined;
+
+  // Track stop reason for diagnostics.
+  let stopReason: 'iterations' | 'solver' | 'time' | 'confidence' | 'none' = 'iterations';
 
   while (iterations < config.iterations) {
     // If root is proven, break search early.
     if (solverActive && root.provenResult !== null) {
+      stopReason = 'solver';
       break;
     }
 
@@ -263,6 +539,21 @@ export function runSearch(
       iterations >= config.minIterations &&
       Date.now() >= deadline
     ) {
+      stopReason = 'time';
+      break;
+    }
+
+    // Confidence-based early exit (only after minIterations).
+    if (
+      iterations >= config.minIterations &&
+      shouldStopByConfidence(
+        root,
+        observer as number,
+        config.rootStopConfidenceDelta ?? 1e-3,
+        config.rootStopMinVisits ?? 16,
+      )
+    ) {
+      stopReason = 'confidence';
       break;
     }
 
@@ -271,7 +562,11 @@ export function runSearch(
     currentRng = nextSearchRng;
 
     // Sample a belief state consistent with the observer's observation.
+    const beliefStart = acc !== undefined ? performance.now() : 0;
     const belief = sampleBeliefState(def, state, observation, observer, iterationRng);
+    if (acc !== undefined) {
+      acc.beliefSamplingTimeMs += performance.now() - beliefStart;
+    }
 
     // Run one full iteration on the sampled state.
     const result = runOneIteration(
@@ -284,11 +579,25 @@ export function runSearch(
       runtime,
       pool,
       solverActive,
+      acc,
+      mastStats,
+      stateCache,
+      maxCacheEntries,
     );
     // Consume the iteration's RNG output (determinism is via fork chain).
     void result;
 
     iterations += 1;
+  }
+
+  // Collect diagnostics if enabled.
+  if (acc !== undefined && searchStart !== undefined) {
+    const diag = collectDiagnostics(root, iterations, searchStart, acc);
+    return {
+      rng: currentRng,
+      iterations,
+      diagnostics: { ...diag, rolloutMode: config.rolloutMode, rootStopReason: stopReason },
+    };
   }
 
   return { rng: currentRng, iterations };

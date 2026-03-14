@@ -276,7 +276,7 @@ export function createGameWorker(): GameWorkerAPI {
       const executionOptions: ExecutionOptions = {
         trace: options?.trace ?? enableTrace,
       };
-      const result = applyMove(currentDef, currentState, move, executionOptions);
+      const result = applyMove(currentDef, currentState, move, executionOptions, runtime ?? undefined);
       state = result.state;
       return result;
     } catch (error) {
@@ -380,7 +380,7 @@ export function createGameWorker(): GameWorkerAPI {
 
           try {
             const executionOptions: ExecutionOptions = { trace: options?.trace ?? enableTrace };
-            const result = applyMove(current.def, currentState, moves[index]!, executionOptions);
+            const result = applyMove(current.def, currentState, moves[index]!, executionOptions, runtime ?? undefined);
             state = result.state;
             results.push(result);
             onStep?.(result, index);

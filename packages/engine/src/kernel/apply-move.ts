@@ -351,11 +351,12 @@ const validateDecisionSequenceForMove = (
   state: GameState,
   move: Move,
   options?: { readonly allowIncomplete?: boolean },
+  runtime?: GameDefRuntime,
 ): void => {
   try {
     const result = resolveMoveDecisionSequence(def, state, move, {
       choose: () => undefined,
-    });
+    }, runtime);
     if (result.complete) {
       return;
     }
@@ -742,7 +743,7 @@ const validateMove = (
   }
   validateDecisionSequenceForMove(def, state, move, {
     allowIncomplete,
-  });
+  }, cachedRuntime);
   validateTurnFlowWindowAccess(def, state, move, preflight.actionPipeline, seatResolution);
   return {
     preflight,

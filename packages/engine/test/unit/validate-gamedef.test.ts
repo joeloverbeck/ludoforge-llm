@@ -1746,6 +1746,70 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('validates metadata-declared condition fields across zone, value, numeric, and nested traversal', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zones: [
+        {
+          id: 'market:none',
+          zoneKind: 'board',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          attributes: { population: 2, econ: 1, terrainTags: ['urban'], country: 'southVietnam', coastal: false },
+          adjacentTo: [],
+        },
+        { id: 'deck:none', zoneKind: 'aux', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+      ],
+      actions: [
+        {
+          ...base.actions[0],
+          pre: {
+            op: 'and',
+            args: [
+              { op: 'adjacent', left: 'missing-adjacent:none', right: 'market:none' },
+              {
+                op: 'zonePropIncludes',
+                zone: 'market:none',
+                prop: 'terrainTags',
+                value: { ref: 'zoneProp', zone: 'missing-value:none', prop: 'country' },
+              },
+              {
+                op: 'markerShiftAllowed',
+                space: 'market:none',
+                marker: 'supportOpposition',
+                delta: { ref: 'zoneCount', zone: 'missing-delta:none' },
+              },
+              {
+                op: 'connected',
+                from: 'market:none',
+                to: 'deck:none',
+                via: { op: 'adjacent', left: 'missing-via:none', right: 'market:none' },
+              },
+            ],
+          },
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    const expected = [
+      { code: 'REF_ZONE_MISSING', path: `${conditionSurfacePathForActionPre(0)}.args[0].left` },
+      { code: 'REF_MAP_SPACE_MISSING', path: `${conditionSurfacePathForActionPre(0)}.args[1].value.zone` },
+      { code: 'REF_ZONE_MISSING', path: `${conditionSurfacePathForActionPre(0)}.args[2].delta.zone` },
+      { code: 'REF_ZONE_MISSING', path: `${conditionSurfacePathForActionPre(0)}.args[3].via.left` },
+    ] as const;
+
+    for (const entry of expected) {
+      assert.ok(
+        diagnostics.some((diag) => diag.code === entry.code && diag.path === entry.path),
+        `Expected ${entry.code} at ${entry.path}`,
+      );
+    }
+  });
+
   it('reports missing zone references in derived metric filters', () => {
     const base = createValidGameDef();
     const def = {

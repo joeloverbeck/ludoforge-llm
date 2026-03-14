@@ -1,7 +1,12 @@
 import type { Diagnostic } from './diagnostics.js';
 import type { ConditionAST } from './types.js';
 import { booleanArityMessage, booleanAritySuggestion, isNonEmptyArray } from './boolean-arity-policy.js';
-import { getConditionOperatorMeta } from './condition-operator-meta.js';
+import {
+  forEachConditionNestedConditionField,
+  forEachConditionNumericValueField,
+  forEachConditionValueField,
+  forEachConditionZoneSelectorField,
+} from './condition-operator-meta.js';
 import {
   type ValidationContext,
   validateZoneSelector,
@@ -30,52 +35,49 @@ const validateConditionStructure = (
     readonly skipNestedConditionFields?: readonly string[];
   },
 ): void => {
-  const conditionRecord = condition as Record<string, unknown>;
-  const meta = getConditionOperatorMeta(condition.op);
   const skipZoneSelectorFields = new Set(options?.skipZoneSelectorFields ?? []);
   const skipValueFields = new Set(options?.skipValueFields ?? []);
   const skipNumericValueFields = new Set(options?.skipNumericValueFields ?? []);
   const skipNestedConditionFields = new Set(options?.skipNestedConditionFields ?? []);
 
-  for (const field of meta.zoneSelectorFields ?? []) {
-    if (skipZoneSelectorFields.has(field)) {
-      continue;
+  forEachConditionZoneSelectorField(condition, (fieldName, value) => {
+    if (skipZoneSelectorFields.has(fieldName)) {
+      return;
     }
-    validateZoneSelector(diagnostics, conditionRecord[field] as string, `${path}.${field}`, context);
-  }
+    validateZoneSelector(diagnostics, value, `${path}.${fieldName}`, context);
+  });
 
-  for (const field of meta.valueFields ?? []) {
-    if (skipValueFields.has(field)) {
-      continue;
+  forEachConditionValueField(condition, (fieldName, value) => {
+    if (skipValueFields.has(fieldName)) {
+      return;
     }
-    validateValueExpr(diagnostics, conditionRecord[field] as Parameters<typeof validateValueExpr>[1], `${path}.${field}`, context);
-  }
+    validateValueExpr(diagnostics, value, `${path}.${fieldName}`, context);
+  });
 
-  for (const field of meta.numericValueFields ?? []) {
-    if (skipNumericValueFields.has(field)) {
-      continue;
+  forEachConditionNumericValueField(condition, (fieldName, value) => {
+    if (skipNumericValueFields.has(fieldName)) {
+      return;
     }
     validateNumericValueExpr(
       diagnostics,
-      conditionRecord[field] as Parameters<typeof validateNumericValueExpr>[1],
-      `${path}.${field}`,
+      value,
+      `${path}.${fieldName}`,
       context,
     );
-  }
+  });
 
-  for (const field of meta.nestedConditionFields ?? []) {
-    if (skipNestedConditionFields.has(field)) {
-      continue;
+  forEachConditionNestedConditionField(condition, (fieldName, nested) => {
+    if (skipNestedConditionFields.has(fieldName)) {
+      return;
     }
-    const nested = conditionRecord[field] as ConditionAST | readonly ConditionAST[] | undefined;
     if (Array.isArray(nested)) {
       nested.forEach((entry, index) => {
-        validateConditionAst(diagnostics, entry, `${path}.${field}[${index}]`, context);
+        validateConditionAst(diagnostics, entry, `${path}.${fieldName}[${index}]`, context);
       });
     } else if (nested !== undefined) {
-      validateConditionAst(diagnostics, nested as ConditionAST, `${path}.${field}`, context);
+      validateConditionAst(diagnostics, nested as ConditionAST, `${path}.${fieldName}`, context);
     }
-  }
+  });
 };
 
 export const validateConditionAst = (

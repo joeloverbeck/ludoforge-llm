@@ -1,4 +1,9 @@
-import { getConditionOperatorMeta } from './condition-operator-meta.js';
+import {
+  forEachConditionNestedConditionField,
+  forEachConditionNumericValueField,
+  forEachConditionValueField,
+  forEachConditionZoneSelectorField,
+} from './condition-operator-meta.js';
 import type { ConditionAST, OptionsQuery, TokenFilterExpr, ValueExpr, ZoneRef, ZoneSel } from './types.js';
 import { isTokenFilterPredicateExpr, walkTokenFilterExpr } from './token-filter-expr-utils.js';
 
@@ -196,19 +201,16 @@ export const collectZoneSelectorAliasesFromCondition = (
   if (condition === undefined || typeof condition === 'boolean') {
     return aliases;
   }
-  const conditionRecord = condition as Record<string, unknown>;
-  const meta = getConditionOperatorMeta(condition.op);
-  for (const field of meta.zoneSelectorFields ?? []) {
-    collectZoneSelAlias(conditionRecord[field] as ZoneSel, aliases);
-  }
-  for (const field of meta.valueFields ?? []) {
-    collectZoneSelectorAliasesFromValueExpr(conditionRecord[field] as ValueExpr, aliases);
-  }
-  for (const field of meta.numericValueFields ?? []) {
-    collectZoneSelectorAliasesFromValueExpr(conditionRecord[field] as ValueExpr, aliases);
-  }
-  for (const field of meta.nestedConditionFields ?? []) {
-    const nested = conditionRecord[field] as ConditionAST | readonly ConditionAST[] | undefined;
+  forEachConditionZoneSelectorField(condition, (_fieldName, value) => {
+    collectZoneSelAlias(value, aliases);
+  });
+  forEachConditionValueField(condition, (_fieldName, value) => {
+    collectZoneSelectorAliasesFromValueExpr(value, aliases);
+  });
+  forEachConditionNumericValueField(condition, (_fieldName, value) => {
+    collectZoneSelectorAliasesFromValueExpr(value, aliases);
+  });
+  forEachConditionNestedConditionField(condition, (_fieldName, nested) => {
     if (Array.isArray(nested)) {
       for (const entry of nested) {
         collectZoneSelectorAliasesFromCondition(entry, aliases);
@@ -216,6 +218,6 @@ export const collectZoneSelectorAliasesFromCondition = (
     } else if (nested !== undefined) {
       collectZoneSelectorAliasesFromCondition(nested as ConditionAST, aliases);
     }
-  }
+  });
   return aliases;
 };

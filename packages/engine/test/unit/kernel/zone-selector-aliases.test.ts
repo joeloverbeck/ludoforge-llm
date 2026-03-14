@@ -41,6 +41,54 @@ describe('zone selector alias collection', () => {
     assert.deepEqual(aliases, ['$destZone', '$fromZone', '$originZone', '$targetProvince', '$toZone', '$viaZone']);
   });
 
+  it('collects aliases through metadata-declared numeric and nested condition fields', () => {
+    const condition: ConditionAST = {
+      op: 'and',
+      args: [
+        {
+          op: 'markerShiftAllowed',
+          space: '$candidateSpace',
+          marker: 'supportOpposition',
+          delta: {
+            if: {
+              when: { op: 'adjacent', left: '$adjacentFrom', right: '$adjacentTo' },
+              then: 1,
+              else: 0,
+            },
+          },
+        },
+        {
+          op: 'connected',
+          from: '$origin',
+          to: '$destination',
+          via: {
+            op: 'markerStateAllowed',
+            space: '$viaSpace',
+            marker: 'supportOpposition',
+            state: {
+              if: {
+                when: { op: '==', left: { ref: 'zoneProp', zone: '$stateProbe', prop: 'country' }, right: 'southVietnam' },
+                then: 'activeSupport',
+                else: 'neutral',
+              },
+            },
+          },
+        },
+      ],
+    };
+
+    const aliases = [...collectZoneSelectorAliasesFromCondition(condition)].sort();
+    assert.deepEqual(aliases, [
+      '$adjacentFrom',
+      '$adjacentTo',
+      '$candidateSpace',
+      '$destination',
+      '$origin',
+      '$stateProbe',
+      '$viaSpace',
+    ]);
+  });
+
   it('excludes non-zone binding refs even when they are unresolved bindings', () => {
     const condition: ConditionAST = {
       op: '==',

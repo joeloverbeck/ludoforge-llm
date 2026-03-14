@@ -1097,6 +1097,39 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('reports malformed boolean ConditionAST nodes without throwing', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$zone',
+              domain: {
+                query: 'connectedZones',
+                zone: 'deck:none',
+                via: { op: 'and' },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    assert.doesNotThrow(() => {
+      const diagnostics = validateGameDef(def);
+      assert.ok(
+        diagnostics.some(
+          (diag) =>
+            diag.code === 'CONDITION_BOOLEAN_ARITY_INVALID'
+            && diag.path === `${appendQueryConditionSurfacePath('actions[0].params[0].domain', CONDITION_SURFACE_SUFFIX.query.via)}.args`,
+        ),
+      );
+    });
+  });
+
   it('uses shared condition boolean-arity message for empty or args', () => {
     const base = createValidGameDef();
     const def = {

@@ -9,6 +9,7 @@ import {
   type ConditionLoweringContext,
 } from '../../src/cnl/compile-conditions.js';
 import { canonicalizeNamedSets } from '../../src/cnl/named-set-utils.js';
+import { CONDITION_OPERATORS } from '../../src/kernel/condition-operator-meta.js';
 import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
 const context: ConditionLoweringContext = {
@@ -686,6 +687,17 @@ describe('compile-conditions lowering', () => {
     assert.equal(result.diagnostics[0]?.severity, 'error');
     assert.ok((result.diagnostics[0]?.message ?? '').length > 0);
     assert.ok((result.diagnostics[0]?.alternatives ?? []).includes('tokensInZone'));
+  });
+
+  it('uses the canonical condition operator registry for unsupported operator diagnostics', () => {
+    const result = lowerConditionNode(
+      { op: 'xor', left: true, right: false },
+      context,
+      'doc.actions.0.pre',
+    );
+
+    assert.equal(result.value, null);
+    assert.deepEqual(result.diagnostics[0]?.alternatives, [...CONDITION_OPERATORS]);
   });
 
   it('lowers query: binding as a pass-through binding reference', () => {

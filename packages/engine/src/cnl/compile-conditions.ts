@@ -26,6 +26,7 @@ import type {
   ValueExpr,
   ZoneRef,
 } from '../kernel/types.js';
+import { CONDITION_OPERATORS } from '../kernel/condition-operator-meta.js';
 import { isTokenFilterPredicateExpr } from '../kernel/token-filter-expr-utils.js';
 import { bindingShadowWarningsForScope } from './binding-diagnostics.js';
 import { normalizePlayerSelector } from './compile-selectors.js';
@@ -83,7 +84,6 @@ function lowerBooleanArityTuple<TValue>(
   };
 }
 
-const SUPPORTED_CONDITION_OPS = ['and', 'or', 'not', '==', '!=', '<', '<=', '>', '>=', 'in', 'adjacent', 'connected', 'zonePropIncludes', 'markerStateAllowed', 'markerShiftAllowed'];
 const SUPPORTED_QUERY_KINDS = [
   'concat',
   'tokenZones',
@@ -138,7 +138,7 @@ export function lowerConditionNode(
     return { value: source, diagnostics: [] };
   }
   if (!isRecord(source) || typeof source.op !== 'string') {
-    return missingCapability(path, 'condition node', source, SUPPORTED_CONDITION_OPS);
+    return missingCapability(path, 'condition node', source, CONDITION_OPERATORS);
   }
 
   switch (source.op) {
@@ -327,7 +327,7 @@ export function lowerConditionNode(
       };
     }
     default:
-      return missingCapability(path, 'condition operator', source.op, SUPPORTED_CONDITION_OPS);
+      return missingCapability(path, 'condition operator', source.op, CONDITION_OPERATORS);
   }
 }
 

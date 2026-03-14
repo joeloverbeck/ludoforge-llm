@@ -2699,6 +2699,65 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('reports prioritized queries with empty tiers', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$choice',
+              domain: {
+                query: 'prioritized',
+                tiers: [],
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'DOMAIN_QUERY_INVALID' && diag.path === 'actions[0].params[0].domain.tiers',
+      ),
+    );
+  });
+
+  it('reports prioritized queries with mixed runtime item shapes', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$choice',
+              domain: {
+                query: 'prioritized',
+                tiers: [
+                  { query: 'players' },
+                  { query: 'zones' },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'DOMAIN_QUERY_SHAPE_MISMATCH' && diag.path === 'actions[0].params[0].domain.tiers',
+      ),
+    );
+  });
+
   it('accepts tokensInZone domains with dynamic zoneExpr selectors', () => {
     const base = createValidGameDef();
     const def = {

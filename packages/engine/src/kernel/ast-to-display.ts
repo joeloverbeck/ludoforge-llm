@@ -292,6 +292,14 @@ export const optionsQueryToInlineNodes = (query: OptionsQuery): DisplayInlineNod
         ...commaSeparated(query.sources.map(optionsQueryToInlineNodes)),
         RPAREN,
       ];
+    case 'prioritized': {
+      const nodes: DisplayInlineNode[] = [kw('prioritized'), LPAREN];
+      if (query.qualifierKey !== undefined) {
+        nodes.push(kw('by'), SPACE, ref(query.qualifierKey, 'prop'), COMMA, SPACE);
+      }
+      nodes.push(...commaSeparated(query.tiers.map(optionsQueryToInlineNodes)), RPAREN);
+      return nodes;
+    }
     default: {
       const _exhaustive: never = query;
       return [kw((_exhaustive as OptionsQuery).query)];

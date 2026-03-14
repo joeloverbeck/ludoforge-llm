@@ -258,37 +258,48 @@ export const validateOptionsQuery = (
   } = {
     tokenZones: (transformQuery) => validateLeafTransformSourceAndOptions('tokenZones', transformQuery),
   };
+  const validateHomogeneousRecursiveQuery = (
+    recursiveQuery: Extract<OptionsQuery, { readonly query: 'concat' | 'prioritized' }>,
+    children: readonly OptionsQuery[],
+    field: 'sources' | 'tiers',
+  ): void => {
+    if (children.length === 0) {
+      diagnostics.push({
+        code: 'DOMAIN_QUERY_INVALID',
+        path: `${path}.${field}`,
+        severity: 'error',
+        message: `${recursiveQuery.query} query requires at least one ${field === 'sources' ? 'source query' : 'tier query'}.`,
+        suggestion: `Provide one or more ${field === 'sources' ? 'source queries in concat.sources' : 'tier queries in prioritized.tiers'}.`,
+      });
+      return;
+    }
+
+    children.forEach((child, index) => {
+      validateOptionsQuery(diagnostics, child, `${path}.${field}[${index}]`, context);
+    });
+
+    const knownShapes = children
+      .flatMap((child) => inferQueryRuntimeShapes(child))
+      .filter((shape) => shape !== 'unknown');
+    const uniqueKnownShapes = dedupeQueryRuntimeShapes(knownShapes);
+    if (uniqueKnownShapes.length > 1) {
+      diagnostics.push({
+        code: 'DOMAIN_QUERY_SHAPE_MISMATCH',
+        path: `${path}.${field}`,
+        severity: 'error',
+        message: `${recursiveQuery.query} ${field} must produce a single runtime item shape; found [${uniqueKnownShapes.join(', ')}].`,
+        suggestion: `Compose only shape-compatible ${field} (string, number, token, or object) in a single ${recursiveQuery.query} query.`,
+      });
+    }
+  };
 
   switch (query.query) {
     case 'concat': {
-      if (query.sources.length === 0) {
-        diagnostics.push({
-          code: 'DOMAIN_QUERY_INVALID',
-          path: `${path}.sources`,
-          severity: 'error',
-          message: 'concat query requires at least one source query.',
-          suggestion: 'Provide one or more source queries in concat.sources.',
-        });
-        return;
-      }
-
-      query.sources.forEach((source, index) => {
-        validateOptionsQuery(diagnostics, source, `${path}.sources[${index}]`, context);
-      });
-
-      const knownShapes = query.sources
-        .flatMap((source) => inferQueryRuntimeShapes(source))
-        .filter((shape) => shape !== 'unknown');
-      const uniqueKnownShapes = dedupeQueryRuntimeShapes(knownShapes);
-      if (uniqueKnownShapes.length > 1) {
-        diagnostics.push({
-          code: 'DOMAIN_QUERY_SHAPE_MISMATCH',
-          path: `${path}.sources`,
-          severity: 'error',
-          message: `concat sources must produce a single runtime item shape; found [${uniqueKnownShapes.join(', ')}].`,
-          suggestion: 'Compose only shape-compatible sources (string, number, token, or object) in a single concat query.',
-        });
-      }
+      validateHomogeneousRecursiveQuery(query, query.sources, 'sources');
+      return;
+    }
+    case 'prioritized': {
+      validateHomogeneousRecursiveQuery(query, query.tiers, 'tiers');
       return;
     }
     case 'tokenZones': {

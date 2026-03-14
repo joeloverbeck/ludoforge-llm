@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — test files only
-**Deps**: 62CONPIESOU-004 (evalQuery handler must exist)
+**Deps**: tickets/62CONPIESOU-004.md
 
 ## Problem
 

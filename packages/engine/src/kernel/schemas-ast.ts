@@ -226,6 +226,13 @@ optionsQuerySchemaInternal = z.union([
     .strict(),
   z
     .object({
+      query: z.literal('prioritized'),
+      tiers: z.array(OptionsQuerySchema).min(1),
+      qualifierKey: StringSchema.optional(),
+    })
+    .strict(),
+  z
+    .object({
       query: z.literal('tokenZones'),
       source: OptionsQuerySchema,
       dedupe: BooleanSchema.optional(),

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel runtime (legal-choices, effects-choice)
-**Deps**: 62CONPIESOU-001 (type), 62CONPIESOU-004 (tier membership utility)
+**Deps**: archive/tickets/KERQUERY/62CONPIESOU-001-prioritized-query-ast-and-recursive-infrastructure.md, tickets/62CONPIESOU-004.md
 
 ## Problem
 

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — test files only
-**Deps**: 62CONPIESOU-005 (tier-aware legality must exist)
+**Deps**: tickets/62CONPIESOU-005.md
 
 ## Problem
 

@@ -1679,6 +1679,28 @@ describe('evalQuery', () => {
     );
   });
 
+  it('concatenates prioritized tiers left-to-right and preserves duplicates', () => {
+    const ctx = makeCtx();
+
+    const result = evalQuery(
+      {
+        query: 'prioritized',
+        qualifierKey: 'type',
+        tiers: [
+          { query: 'tokensInZone', zone: 'hand:0' },
+          { query: 'tokensInZone', zone: 'hand:1' },
+          { query: 'tokensInZone', zone: 'hand:0' },
+        ],
+      },
+      ctx,
+    );
+
+    assert.deepEqual(
+      result.map((token) => (token as Token).id),
+      [asTokenId('hand-0'), asTokenId('hand-0b'), asTokenId('hand-1'), asTokenId('hand-0'), asTokenId('hand-0b')],
+    );
+  });
+
   it('rejects concat sources that produce incompatible runtime shapes', () => {
     const ctx = makeCtx({
       bindings: {
@@ -1692,6 +1714,29 @@ describe('evalQuery', () => {
           {
             query: 'concat',
             sources: [
+              { query: 'binding', name: '$numbers' },
+              { query: 'enums', values: ['x'] },
+            ],
+          },
+          ctx,
+        ),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
+  it('rejects prioritized tiers that produce incompatible runtime shapes', () => {
+    const ctx = makeCtx({
+      bindings: {
+        $numbers: [1, 2],
+      },
+    });
+
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'prioritized',
+            tiers: [
               { query: 'binding', name: '$numbers' },
               { query: 'enums', values: ['x'] },
             ],

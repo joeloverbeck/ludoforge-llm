@@ -310,6 +310,38 @@ describe('zone selector alias collection', () => {
     assert.deepEqual(aliases, ['$candidate', '$source']);
   });
 
+  it('collects zone aliases reachable through prioritized tiers', () => {
+    const valueExpr: ValueExpr = {
+      aggregate: {
+        op: 'count',
+        query: {
+          query: 'prioritized',
+          qualifierKey: 'type',
+          tiers: [
+            { query: 'tokensInZone', zone: '$availableSource' },
+            {
+              query: 'tokensInAdjacentZones',
+              zone: { zoneExpr: { ref: 'zoneProp', zone: '$fallbackAlias', prop: 'linkedZone' } },
+              filter: {
+                op: 'and',
+                args: [
+                  {
+                    prop: 'label',
+                    op: 'eq',
+                    value: { ref: 'zoneProp', zone: '$fallbackOrigin', prop: 'country' },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    };
+
+    const aliases = [...collectZoneSelectorAliasesFromValueExpr(valueExpr)].sort();
+    assert.deepEqual(aliases, ['$availableSource', '$fallbackAlias', '$fallbackOrigin']);
+  });
+
   it('deduplicates aliases and strips canonical $zone from free-operation rebindable set', () => {
     const condition: ConditionAST = {
       op: 'and',

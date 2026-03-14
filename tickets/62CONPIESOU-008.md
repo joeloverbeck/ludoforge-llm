@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — data file only
-**Deps**: 62CONPIESOU-001 (type), 62CONPIESOU-002 (compiler), 62CONPIESOU-004 (evalQuery), 62CONPIESOU-005 (legality)
+**Deps**: archive/tickets/KERQUERY/62CONPIESOU-001-prioritized-query-ast-and-recursive-infrastructure.md, tickets/62CONPIESOU-002.md, tickets/62CONPIESOU-004.md, tickets/62CONPIESOU-005.md
 
 ## Problem
 

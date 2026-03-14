@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — test files + possibly a test fixture file
-**Deps**: 62CONPIESOU-004 (evalQuery), 62CONPIESOU-005 (legality), 62CONPIESOU-008 (card 87 rework)
+**Deps**: tickets/62CONPIESOU-004.md, tickets/62CONPIESOU-005.md, tickets/62CONPIESOU-008.md
 
 ## Problem
 

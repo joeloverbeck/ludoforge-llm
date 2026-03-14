@@ -950,6 +950,18 @@ describe('AST and selector schemas', () => {
     assert.deepEqual(OptionsQuerySchema.parse(query), query);
   });
 
+  it('parses prioritized query with non-empty tiers and an optional qualifierKey', () => {
+    const query: OptionsQuery = {
+      query: 'prioritized',
+      qualifierKey: 'type',
+      tiers: [
+        { query: 'tokensInZone', zone: 'available:arvn' },
+        { query: 'tokensInMapSpaces' },
+      ],
+    };
+    assert.deepEqual(OptionsQuerySchema.parse(query), query);
+  });
+
   it('parses tokenZones query with source and optional dedupe flag', () => {
     const withDefaultDedupe: OptionsQuery = {
       query: 'tokenZones',
@@ -1079,6 +1091,12 @@ describe('AST and selector schemas', () => {
       sources: [],
     });
     assert.equal(emptyConcat.success, false);
+
+    const emptyPrioritized = OptionsQuerySchema.safeParse({
+      query: 'prioritized',
+      tiers: [],
+    });
+    assert.equal(emptyPrioritized.success, false);
   });
 
   it('rejects non-integer numeric literals in intsInRange bounds', () => {

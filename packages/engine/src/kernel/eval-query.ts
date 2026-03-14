@@ -685,42 +685,57 @@ function evalAssetRowsQuery(
   return matchedRows;
 }
 
+function evalHomogeneousRecursiveQuery(
+  query: Extract<OptionsQuery, { readonly query: 'concat' | 'prioritized' }>,
+  children: readonly OptionsQuery[],
+  ctx: ReadContext,
+  labels: {
+    readonly child: 'source' | 'tier';
+    readonly children: 'sources' | 'tiers';
+  },
+): readonly QueryResult[] {
+  const combined: QueryResult[] = [];
+  let expectedShape: Exclude<RuntimeQueryShape, 'empty' | 'mixed'> | null = null;
+
+  for (let childIndex = 0; childIndex < children.length; childIndex += 1) {
+    const child = children[childIndex]!;
+    const childItems = evalQuery(child, ctx);
+    const childShape = classifyQueryResults(childItems);
+    if (childShape === 'mixed') {
+      throw typeMismatchError(`${query.query} ${labels.child} produced mixed item shapes`, {
+        query,
+        [`${labels.child}Index`]: childIndex,
+        [labels.child]: child,
+      });
+    }
+    if (childShape !== 'empty') {
+      if (expectedShape === null) {
+        expectedShape = childShape;
+      } else if (childShape !== expectedShape) {
+        throw typeMismatchError(`${query.query} ${labels.children} must produce a single runtime item shape`, {
+          query,
+          [`${labels.child}Index`]: childIndex,
+          [labels.child]: child,
+          expectedShape,
+          actualShape: childShape,
+        });
+      }
+    }
+    combined.push(...childItems);
+  }
+
+  assertWithinBounds(combined.length, query, getMaxQueryResults(ctx));
+  return combined;
+}
+
 export function evalQuery(query: OptionsQuery, ctx: ReadContext): readonly QueryResult[] {
   const maxQueryResults = getMaxQueryResults(ctx);
 
   switch (query.query) {
-    case 'concat': {
-      const combined: QueryResult[] = [];
-      let expectedShape: Exclude<RuntimeQueryShape, 'empty' | 'mixed'> | null = null;
-      for (let sourceIndex = 0; sourceIndex < query.sources.length; sourceIndex += 1) {
-        const source = query.sources[sourceIndex]!;
-        const sourceItems = evalQuery(source, ctx);
-        const sourceShape = classifyQueryResults(sourceItems);
-        if (sourceShape === 'mixed') {
-          throw typeMismatchError('concat source produced mixed item shapes', {
-            query,
-            sourceIndex,
-            source,
-          });
-        }
-        if (sourceShape !== 'empty') {
-          if (expectedShape === null) {
-            expectedShape = sourceShape;
-          } else if (sourceShape !== expectedShape) {
-            throw typeMismatchError('concat sources must produce a single runtime item shape', {
-              query,
-              sourceIndex,
-              source,
-              expectedShape,
-              actualShape: sourceShape,
-            });
-          }
-        }
-        combined.push(...sourceItems);
-      }
-      assertWithinBounds(combined.length, query, maxQueryResults);
-      return combined;
-    }
+    case 'concat':
+      return evalHomogeneousRecursiveQuery(query, query.sources, ctx, { child: 'source', children: 'sources' });
+    case 'prioritized':
+      return evalHomogeneousRecursiveQuery(query, query.tiers, ctx, { child: 'tier', children: 'tiers' });
     case 'tokenZones': {
       const sourceItems = evalQuery(query.source, ctx);
       const tokenStateIndex = getTokenStateIndex(ctx.state);

@@ -17,6 +17,9 @@ const recursiveOptionsQueryDispatch: RecursiveOptionsQueryDispatchMap = {
   concat: (query, visitLeaf) => {
     query.sources.forEach((source) => forEachOptionsQueryLeaf(source, visitLeaf));
   },
+  prioritized: (query, visitLeaf) => {
+    query.tiers.forEach((tier) => forEachOptionsQueryLeaf(tier, visitLeaf));
+  },
   nextInOrderByCondition: (query, visitLeaf) => {
     forEachOptionsQueryLeaf(query.source, visitLeaf);
   },

@@ -47,6 +47,11 @@ const collectZoneSelectorAliasesFromQuery = (query: OptionsQuery, aliases: Set<s
         collectZoneSelectorAliasesFromQuery(source, aliases);
       }
       return;
+    case 'prioritized':
+      for (const tier of query.tiers) {
+        collectZoneSelectorAliasesFromQuery(tier, aliases);
+      }
+      return;
     case 'tokenZones':
       collectZoneSelectorAliasesFromQuery(query.source, aliases);
       return;

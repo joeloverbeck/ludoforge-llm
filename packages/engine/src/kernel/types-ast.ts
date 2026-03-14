@@ -203,6 +203,11 @@ export type AssetRowsCardinality = 'many' | 'exactlyOne' | 'zeroOrOne';
 export type OptionsQuery =
   | { readonly query: 'concat'; readonly sources: readonly [OptionsQuery, ...OptionsQuery[]] }
   | {
+      readonly query: 'prioritized';
+      readonly tiers: readonly [OptionsQuery, ...OptionsQuery[]];
+      readonly qualifierKey?: string;
+    }
+  | {
       readonly query: 'tokenZones';
       readonly source: OptionsQuery;
       readonly dedupe?: boolean;

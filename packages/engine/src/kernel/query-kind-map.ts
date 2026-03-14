@@ -84,6 +84,7 @@ export const LEAF_OPTIONS_QUERY_TRANSFORM_CONTRACT_MAP = {
 
 export const OPTIONS_QUERY_KIND_CONTRACT_MAP = {
   concat: { partition: 'recursive' },
+  prioritized: { partition: 'recursive' },
   tokenZones: {
     partition: 'leaf',
     domain: LEAF_OPTIONS_QUERY_TRANSFORM_CONTRACT_MAP.tokenZones.domain,

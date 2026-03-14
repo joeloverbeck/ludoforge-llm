@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — CNL compiler
-**Deps**: 62CONPIESOU-001 (type must exist)
+**Deps**: archive/tickets/KERQUERY/62CONPIESOU-001-prioritized-query-ast-and-recursive-infrastructure.md
 
 ## Problem
 

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel runtime (eval-query)
-**Deps**: 62CONPIESOU-001 (type must exist)
+**Deps**: archive/tickets/KERQUERY/62CONPIESOU-001-prioritized-query-ast-and-recursive-infrastructure.md
 
 ## Problem
 

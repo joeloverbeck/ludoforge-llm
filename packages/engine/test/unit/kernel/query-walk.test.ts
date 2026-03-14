@@ -32,6 +32,27 @@ describe('query walk', () => {
     assert.deepEqual(visited, ['tokensInZone', 'zones', 'assetRows', 'players']);
   });
 
+  it('walks prioritized tiers depth-first and left-to-right', () => {
+    const query = {
+      query: 'prioritized',
+      qualifierKey: 'type',
+      tiers: [
+        { query: 'tokensInZone', zone: 'available:none' },
+        {
+          query: 'concat',
+          sources: [{ query: 'players' }, { query: 'zones' }],
+        },
+      ],
+    } as const satisfies OptionsQuery;
+
+    const visited: string[] = [];
+    forEachOptionsQueryLeaf(query, (leaf) => {
+      visited.push(leaf.query);
+    });
+
+    assert.deepEqual(visited, ['tokensInZone', 'players', 'zones']);
+  });
+
   it('supports reducing over visited leaves', () => {
     const query = {
       query: 'concat',

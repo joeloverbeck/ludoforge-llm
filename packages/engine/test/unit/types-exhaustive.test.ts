@@ -133,6 +133,7 @@ const exhaustEffectAST = (effect: EffectAST): string => {
 const exhaustOptionsQuery = (query: OptionsQuery): string => {
   switch (query.query) {
     case 'concat':
+    case 'prioritized':
     case 'tokenZones':
     case 'tokensInZone':
     case 'assetRows':
@@ -186,15 +187,15 @@ describe('exhaustive kernel unions', () => {
     const playerSelVariants: UnionSize<PlayerSel> = 7;
     const conditionVariants: UnionSize<ConditionAST> = 12;
     const effectVariants: UnionSize<EffectAST> = 34;
-    const queryVariants: UnionSize<OptionsQuery> = 19;
-    const recursiveQueryVariants: UnionSize<RecursiveOptionsQuery> = 2;
+    const queryVariants: UnionSize<OptionsQuery> = 20;
+    const recursiveQueryVariants: UnionSize<RecursiveOptionsQuery> = 3;
     const leafQueryVariants: UnionSize<LeafOptionsQuery> = 17;
 
     assert.equal(playerSelVariants, 7);
     assert.equal(conditionVariants, 12);
     assert.equal(effectVariants, 34);
-    assert.equal(queryVariants, 19);
-    assert.equal(recursiveQueryVariants, 2);
+    assert.equal(queryVariants, 20);
+    assert.equal(recursiveQueryVariants, 3);
     assert.equal(leafQueryVariants, 17);
   });
 
@@ -229,7 +230,7 @@ describe('exhaustive kernel unions', () => {
     }[LeafOptionsQueryTransformKind] extends true
       ? true
       : false;
-    const recursiveKinds: UnionSize<RecursiveOptionsQueryKind> = 2;
+    const recursiveKinds: UnionSize<RecursiveOptionsQueryKind> = 3;
     const leafKinds: UnionSize<LeafOptionsQueryKind> = 17;
     const leafContractKinds: UnionSize<LeafOptionsQueryKindFromContractMap> = 17;
     const transformKinds: UnionSize<LeafOptionsQueryTransformKind> = 1;
@@ -244,7 +245,7 @@ describe('exhaustive kernel unions', () => {
     type Overlap = Extract<LeafOptionsQuery, RecursiveOptionsQuery>;
     const overlapVariants: UnionSize<Overlap> = 0;
 
-    assert.equal(recursiveKinds, 2);
+    assert.equal(recursiveKinds, 3);
     assert.equal(leafKinds, 17);
     assert.equal(leafContractKinds, 17);
     assert.equal(transformKinds, 1);

@@ -121,4 +121,61 @@ describe('prioritized tier legality', () => {
       },
     );
   });
+
+  it('keeps later tiers locked until the current non-qualifier tier is exhausted', () => {
+    const tiers: readonly (readonly PrioritizedTierEntry[])[] = [
+      [{ value: 'available-a' }],
+      [{ value: 'map-a' }],
+      [{ value: 'reserve-a' }],
+    ];
+
+    assert.deepEqual(
+      computeTierAdmissibility(tiers, ['available-a'], 'none'),
+      {
+        admissibleValues: ['map-a'],
+        activeTierIndices: [1],
+      },
+    );
+  });
+
+  it('treats a single tier as a passthrough domain', () => {
+    const tiers: readonly (readonly PrioritizedTierEntry[])[] = [
+      [{ value: 'a' }, { value: 'b' }],
+    ];
+
+    assert.deepEqual(
+      computeTierAdmissibility(tiers, [], 'none'),
+      {
+        admissibleValues: ['a', 'b'],
+        activeTierIndices: [0],
+      },
+    );
+  });
+
+  it('treats missing qualifier values as the same null bucket', () => {
+    const tiers: readonly (readonly PrioritizedTierEntry[])[] = [
+      [{ value: 'available-unknown-1' }],
+      [
+        { value: 'map-unknown-1' },
+        { value: 'map-red-1', qualifier: 'red' },
+      ],
+      [{ value: 'reserve-unknown-1' }],
+    ];
+
+    assert.deepEqual(
+      computeTierAdmissibility(tiers, [], 'byQualifier'),
+      {
+        admissibleValues: ['available-unknown-1', 'map-red-1'],
+        activeTierIndices: [0, 1],
+      },
+    );
+
+    assert.deepEqual(
+      computeTierAdmissibility(tiers, ['available-unknown-1'], 'byQualifier'),
+      {
+        admissibleValues: ['map-unknown-1', 'map-red-1'],
+        activeTierIndices: [1],
+      },
+    );
+  });
 });

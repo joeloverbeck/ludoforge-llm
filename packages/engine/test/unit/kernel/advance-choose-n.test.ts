@@ -227,6 +227,145 @@ describe('advanceChooseN', () => {
     ]);
   });
 
+  it('allows early confirm without unlocking lower tiers when min is already satisfied', () => {
+    const action: ActionDef = {
+      id: asActionId('prioritized-early-confirm'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          chooseN: {
+            internalDecisionId: 'decision:$targets',
+            bind: '$targets',
+            options: {
+              query: 'prioritized',
+              tiers: [
+                { query: 'enums', values: ['available-a', 'available-b'] },
+                { query: 'enums', values: ['reserve-a'] },
+              ],
+            },
+            min: 1,
+            max: 2,
+          },
+        } as EffectAST,
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState();
+    const move = makeMove('prioritized-early-confirm');
+
+    const afterFirstAdd = advanceChooseN(
+      def,
+      state,
+      move,
+      asDecisionKey('$targets'),
+      [],
+      { type: 'add', value: 'available-a' },
+    );
+
+    assert.equal(afterFirstAdd.done, false);
+    if (afterFirstAdd.done) {
+      throw new Error('expected pending chooseN state');
+    }
+    assert.deepEqual(afterFirstAdd.pending.selected, ['available-a']);
+    assert.equal(afterFirstAdd.pending.canConfirm, true);
+    assert.deepEqual(afterFirstAdd.pending.options, [
+      { value: 'available-a', legality: 'illegal', illegalReason: null },
+      { value: 'available-b', legality: 'legal', illegalReason: null },
+      { value: 'reserve-a', legality: 'illegal', illegalReason: null },
+    ]);
+
+    const confirmed = advanceChooseN(
+      def,
+      state,
+      move,
+      asDecisionKey('$targets'),
+      afterFirstAdd.pending.selected,
+      { type: 'confirm' },
+    );
+
+    assert.deepEqual(confirmed, { done: true, value: ['available-a'] });
+  });
+
+  it('unlocks one tier at a time across three prioritized tiers', () => {
+    const action: ActionDef = {
+      id: asActionId('prioritized-three-tier'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          chooseN: {
+            internalDecisionId: 'decision:$targets',
+            bind: '$targets',
+            options: {
+              query: 'prioritized',
+              tiers: [
+                { query: 'enums', values: ['available-a'] },
+                { query: 'enums', values: ['map-a'] },
+                { query: 'enums', values: ['reserve-a'] },
+              ],
+            },
+            min: 1,
+            max: 3,
+          },
+        } as EffectAST,
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState();
+    const move = makeMove('prioritized-three-tier');
+
+    const afterAvailable = advanceChooseN(
+      def,
+      state,
+      move,
+      asDecisionKey('$targets'),
+      [],
+      { type: 'add', value: 'available-a' },
+    );
+
+    assert.equal(afterAvailable.done, false);
+    if (afterAvailable.done) {
+      throw new Error('expected pending chooseN state');
+    }
+    assert.deepEqual(afterAvailable.pending.options, [
+      { value: 'available-a', legality: 'illegal', illegalReason: null },
+      { value: 'map-a', legality: 'legal', illegalReason: null },
+      { value: 'reserve-a', legality: 'illegal', illegalReason: null },
+    ]);
+
+    const afterMap = advanceChooseN(
+      def,
+      state,
+      move,
+      asDecisionKey('$targets'),
+      afterAvailable.pending.selected,
+      { type: 'add', value: 'map-a' },
+    );
+
+    assert.equal(afterMap.done, false);
+    if (afterMap.done) {
+      throw new Error('expected pending chooseN state');
+    }
+    assert.deepEqual(afterMap.pending.options, [
+      { value: 'available-a', legality: 'illegal', illegalReason: null },
+      { value: 'map-a', legality: 'illegal', illegalReason: null },
+      { value: 'reserve-a', legality: 'legal', illegalReason: null },
+    ]);
+  });
+
   it('keeps non-prioritized chooseN options legal until max selections are reached', () => {
     const action: ActionDef = {
       id: asActionId('plain-choose-n'),

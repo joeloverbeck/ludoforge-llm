@@ -99,3 +99,10 @@ Ensure preset types and functions are re-exported.
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/test/unit/agents/mcts/config.test.ts`
 2. `pnpm -F @ludoforge/engine build && node --test packages/engine/test/unit/agents/factory.test.ts`
 3. `pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+- Completion date: 2026-03-13
+- What actually changed: Added generic named MCTS presets in `packages/engine/src/agents/mcts/config.ts`, re-exported preset helpers from `packages/engine/src/agents/mcts/index.ts`, and extended `parseAgentSpec` in `packages/engine/src/agents/factory.ts` to support `mcts:fast`, `mcts:default`, `mcts:strong`, while preserving bare `mcts` and numeric `mcts:N`.
+- Deviations from original plan: The shipped presets also include explicit `timeLimitMs` values for each profile, and `default` resolves through a small preset partial instead of an empty object.
+- Verification results: Unit coverage exists in `packages/engine/test/unit/agents/mcts/config.test.ts` and `packages/engine/test/unit/agents/factory.test.ts` for preset resolution, immutability, validation, and parsing behavior. A later 2026-03-14 follow-up also added Texas Hold'em MCTS e2e coverage and performance fixes without changing the ticket scope.

@@ -800,6 +800,8 @@ describe('deriveRenderModel state metadata', () => {
       ],
       min: 1,
       max: 2,
+      selectedChoiceValueIds: [],
+      canConfirm: false,
     });
     expect(model.choiceBreadcrumb).toEqual([
       expectedRenderChoiceStep('pick-action', 'pickAction', 'Pick Action', 'train-us', 'Train Us'),
@@ -1049,6 +1051,8 @@ describe('deriveRenderModel state metadata', () => {
       })],
       min: 3,
       max: 3,
+      selectedChoiceValueIds: [],
+      canConfirm: false,
     });
   });
 

@@ -96,7 +96,9 @@ interface GameStoreActions {
   reportBootstrapFailure(error: unknown): void;
   selectAction(actionId: ActionId, actionClass?: string): Promise<void>;
   chooseOne(choice: Exclude<MoveParamValue, readonly unknown[]>): Promise<void>;
-  chooseN(choice: readonly Exclude<MoveParamValue, readonly unknown[]>[]): Promise<void>;
+  addChooseNItem(choice: Exclude<MoveParamValue, readonly unknown[]>): Promise<void>;
+  removeChooseNItem(choice: Exclude<MoveParamValue, readonly unknown[]>): Promise<void>;
+  confirmChooseN(): Promise<void>;
   confirmMove(): Promise<void>;
   resolveAiStep(): Promise<AiStepOutcome>;
   resolveAiTurn(): Promise<void>;
@@ -433,6 +435,21 @@ function validateChoiceSubmission(
   return null;
 }
 
+function validatePendingChoiceType(
+  pendingType: ChoicePendingRequest['type'],
+  expectedType: ChoicePendingRequest['type'],
+): WorkerError | null {
+  if (pendingType === expectedType) {
+    return null;
+  }
+
+  return toChoiceValidationError({
+    reason: 'CHOICE_TYPE_MISMATCH',
+    expected: expectedType,
+    received: pendingType,
+  });
+}
+
 function buildPlayerSeatsFromConfig(
   playerConfig: readonly PlayerSeatConfig[],
 ): ReadonlyMap<PlayerId, PlayerSeat> {
@@ -686,6 +703,69 @@ export function createGameStore(
             decisionKey: state.choicePending.decisionKey,
             name: state.choicePending.name,
             value: choice,
+          };
+          const nextChoiceStack = [...state.choiceStack, nextChoice];
+          const nextMove = buildMove(state.selectedAction, nextChoiceStack);
+          const choiceRequest = await bridge.legalChoices(nextMove);
+          if (choiceRequest.kind === 'illegal') {
+            guardSet(ctx, { error: toIllegalChoiceError(choiceRequest) });
+            return;
+          }
+
+          guardSetAndDerive(ctx, {
+            partialMove: nextMove,
+            choiceStack: nextChoiceStack,
+            choicePending: choiceRequest.kind === 'pending' ? choiceRequest : null,
+            error: null,
+          });
+        });
+      };
+
+      const advanceChooseN = async (
+        command: Parameters<GameWorkerAPI['advanceChooseN']>[3],
+      ): Promise<void> => {
+        await runActionOperation(async (ctx) => {
+          const state = get();
+          if (state.selectedAction === null || state.partialMove === null || state.choicePending === null) {
+            return;
+          }
+
+          const validationError = validatePendingChoiceType(state.choicePending.type, 'chooseN');
+          if (validationError !== null) {
+            guardSet(ctx, { error: validationError });
+            return;
+          }
+
+          const currentPending = state.choicePending;
+          if (currentPending.type !== 'chooseN') {
+            guardSet(ctx, {
+              error: toChoiceValidationError({
+                reason: 'CHOICE_TYPE_MISMATCH',
+                expected: 'chooseN',
+                received: currentPending.type,
+              }),
+            });
+            return;
+          }
+          const result = await bridge.advanceChooseN(
+            state.partialMove,
+            currentPending.decisionKey,
+            currentPending.selected,
+            command,
+          );
+
+          if (!result.done) {
+            guardSetAndDerive(ctx, {
+              choicePending: result.pending,
+              error: null,
+            });
+            return;
+          }
+
+          const nextChoice: PartialChoice = {
+            decisionKey: currentPending.decisionKey,
+            name: currentPending.name,
+            value: result.value,
           };
           const nextChoiceStack = [...state.choiceStack, nextChoice];
           const nextMove = buildMove(state.selectedAction, nextChoiceStack);
@@ -988,8 +1068,16 @@ export function createGameStore(
           await submitChoice(choice, 'chooseOne');
         },
 
-        async chooseN(choice) {
-          await submitChoice(choice, 'chooseN');
+        async addChooseNItem(choice) {
+          await advanceChooseN({ type: 'add', value: choice });
+        },
+
+        async removeChooseNItem(choice) {
+          await advanceChooseN({ type: 'remove', value: choice });
+        },
+
+        async confirmChooseN() {
+          await advanceChooseN({ type: 'confirm' });
         },
 
         async confirmMove() {

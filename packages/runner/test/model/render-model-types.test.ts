@@ -151,6 +151,8 @@ describe('render-model types', () => {
         ],
         min: 1,
         max: 2,
+        selectedChoiceValueIds: [],
+        canConfirm: false,
       },
       moveEnumerationWarnings: [{ code: 'WARN', message: 'warning message' }],
       runtimeEligible: [],
@@ -289,6 +291,8 @@ describe('render-model types', () => {
         }],
         min: 1,
         max: 2,
+        selectedChoiceValueIds: [],
+        canConfirm: false,
       },
       {
         kind: 'numeric',

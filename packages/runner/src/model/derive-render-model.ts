@@ -1401,6 +1401,8 @@ function deriveChoiceUi(
         options,
         min,
         max,
+        selectedChoiceValueIds: pending.selected.map((value) => serializeChoiceValueIdentity(value)),
+        canConfirm: pending.canConfirm,
       };
     }
 

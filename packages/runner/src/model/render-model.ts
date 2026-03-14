@@ -241,6 +241,8 @@ export type RenderChoiceUi =
       readonly options: readonly RenderChoiceOption[];
       readonly min: number | null;
       readonly max: number | null;
+      readonly selectedChoiceValueIds: readonly string[];
+      readonly canConfirm: boolean;
     }
   | {
       readonly kind: 'numeric';

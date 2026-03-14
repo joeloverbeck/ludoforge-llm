@@ -263,7 +263,7 @@ describe('createGameStore async serialization', () => {
     expect(state.error).toBeNull();
   });
 
-  it('stale chooseN completion after newer selectAction does not mutate current move construction', async () => {
+  it('stale addChooseNItem completion after newer selectAction does not mutate current move construction', async () => {
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 32, P0_HUMAN_CONFIG);
@@ -271,20 +271,20 @@ describe('createGameStore async serialization', () => {
     await store.getState().chooseOne('x');
     expect(store.getState().choicePending?.type).toBe('chooseN');
 
-    const baseLegalChoices = bridge.legalChoices.bind(bridge);
+    const baseAdvanceChooseN = bridge.advanceChooseN.bind(bridge);
     const gate = createDeferred<void>();
-    vi.spyOn(bridge, 'legalChoices').mockImplementationOnce(async (move) => {
+    vi.spyOn(bridge, 'advanceChooseN').mockImplementationOnce(async (move, decisionKey, currentSelected, command) => {
       await gate.promise;
-      return await baseLegalChoices(move);
+      return await baseAdvanceChooseN(move, decisionKey, currentSelected, command);
     });
 
-    const staleChooseN = store.getState().chooseN(['m1']);
+    const staleAddChooseNItem = store.getState().addChooseNItem('m1');
     const newerSelectAction = store.getState().selectAction(asActionId('pick-mixed'));
     await newerSelectAction;
     const refreshedPendingKey = store.getState().choicePending?.decisionKey ?? null;
 
     gate.resolve();
-    await staleChooseN;
+    await staleAddChooseNItem;
 
     const state = store.getState();
     expect(state.selectedAction).toEqual(asActionId('pick-mixed'));

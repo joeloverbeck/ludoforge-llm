@@ -287,7 +287,9 @@ describe('createGameStore', () => {
       .slice(0, 2)
       .map((option) => option.value)
       .filter((value): value is string => typeof value === 'string');
-    await store.getState().chooseN(secondChoiceValues);
+    await store.getState().addChooseNItem(secondChoiceValues[0]!);
+    await store.getState().addChooseNItem(secondChoiceValues[1]!);
+    await store.getState().confirmChooseN();
 
     const state = store.getState();
     expect(state.choicePending).toBeNull();
@@ -359,26 +361,26 @@ describe('createGameStore', () => {
     expect(after.choicePending).toEqual(before.choicePending);
   });
 
-  it('pending chooseOne rejects chooseN action before bridge call without mutating move construction state', async () => {
+  it('pending chooseOne rejects addChooseNItem before bridge call without mutating move construction state', async () => {
     const bridge = createGameWorker();
-    const legalChoicesSpy = vi.spyOn(bridge, 'legalChoices');
+    const advanceChooseNSpy = vi.spyOn(bridge, 'advanceChooseN');
     const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('pick-one'));
 
-    const callsBefore = legalChoicesSpy.mock.calls.length;
+    const callsBefore = advanceChooseNSpy.mock.calls.length;
     const before = store.getState();
-    await store.getState().chooseN(['a']);
+    await store.getState().addChooseNItem('a');
     const after = store.getState();
 
-    expect(legalChoicesSpy).toHaveBeenCalledTimes(callsBefore);
+    expect(advanceChooseNSpy).toHaveBeenCalledTimes(callsBefore);
     expect(after.error).toEqual({
       code: 'VALIDATION_FAILED',
       message: 'Choice input is incompatible with the current pending choice.',
       details: {
         reason: 'CHOICE_TYPE_MISMATCH',
-        expected: 'chooseOne',
-        received: 'chooseN',
+        expected: 'chooseN',
+        received: 'chooseOne',
       },
     });
     expect(after.choiceStack).toEqual(before.choiceStack);
@@ -440,7 +442,7 @@ describe('createGameStore', () => {
     expect(after.choicePending).toEqual(before.choicePending);
   });
 
-  it('chooseN supports options with min/max metadata through createGameWorker', async () => {
+  it('incremental chooseN uses worker-owned pending state and confirms into partialMove params', async () => {
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(CHOOSE_N_TEST_DEF, 15, TWO_PLAYER_CONFIG);
@@ -450,7 +452,7 @@ describe('createGameStore', () => {
     expect(pending?.type).toBe('chooseN');
     expect(pending?.min).toBe(1);
     expect(pending?.max).toBe(2);
-    if (pending === null) {
+    if (pending === null || pending.type !== 'chooseN') {
       throw new Error('Expected chooseN request.');
     }
 
@@ -459,7 +461,24 @@ describe('createGameStore', () => {
       .map((option) => option.value)
       .filter((value): value is string => typeof value === 'string');
     expect(selectedValues).toEqual(['a', 'b']);
-    await store.getState().chooseN(selectedValues);
+    expect(pending.selected).toEqual([]);
+    expect(pending.canConfirm).toBe(false);
+
+    await store.getState().addChooseNItem(selectedValues[0]!);
+    expect(store.getState().choicePending).toMatchObject({
+      type: 'chooseN',
+      selected: ['a'],
+      canConfirm: true,
+    });
+
+    await store.getState().addChooseNItem(selectedValues[1]!);
+    expect(store.getState().choicePending).toMatchObject({
+      type: 'chooseN',
+      selected: ['a', 'b'],
+      canConfirm: true,
+    });
+
+    await store.getState().confirmChooseN();
 
     const state = store.getState();
     expect(state.choicePending).toBeNull();
@@ -1104,7 +1123,9 @@ describe('createGameStore', () => {
       .slice(0, 2)
       .map((option) => option.value)
       .filter((value): value is string => typeof value === 'string');
-    await store.getState().chooseN(selected);
+    await store.getState().addChooseNItem(selected[0]!);
+    await store.getState().addChooseNItem(selected[1]!);
+    await store.getState().confirmChooseN();
     expect(store.getState().choicePending).toBeNull();
 
     await store.getState().cancelChoice();

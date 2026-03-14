@@ -84,7 +84,9 @@ function formatSelectionBounds(min: number, max: number): string {
 
 interface MultiSelectModeProps {
   readonly choiceUi: Extract<NonNullable<GameStore['renderModel']>['choiceUi'], { readonly kind: 'discreteMany' }>;
-  readonly chooseN: (selectedValues: readonly ChoiceScalar[]) => Promise<void>;
+  readonly addChooseNItem: (value: ChoiceScalar) => Promise<void>;
+  readonly removeChooseNItem: (value: ChoiceScalar) => Promise<void>;
+  readonly confirmChooseN: () => Promise<void>;
 }
 
 function isLegalScalarChoiceOption(
@@ -93,35 +95,22 @@ function isLegalScalarChoiceOption(
   return option.legality !== 'illegal' && isChoiceScalar(option.value);
 }
 
-function MultiSelectMode({ choiceUi, chooseN }: MultiSelectModeProps): ReactElement {
+function MultiSelectMode({ choiceUi, addChooseNItem, removeChooseNItem, confirmChooseN }: MultiSelectModeProps): ReactElement {
   const legalScalarOptions = useMemo(
     () => choiceUi.options.filter(isLegalScalarChoiceOption),
     [choiceUi.options],
-  );
-  const legalChoiceValueIds = useMemo(
-    () => new Set(legalScalarOptions.map((option) => option.choiceValueId)),
-    [legalScalarOptions],
   );
   const bounds = useMemo(
     () => deriveMultiSelectBounds(choiceUi.min, choiceUi.max, legalScalarOptions.length),
     [choiceUi.max, choiceUi.min, legalScalarOptions.length],
   );
-
-  const [selectedChoiceValueIds, setSelectedChoiceValueIds] = useState<readonly string[]>([]);
-
-  useEffect(() => {
-    setSelectedChoiceValueIds((previous) => previous.filter((id) => legalChoiceValueIds.has(id)));
-  }, [legalChoiceValueIds]);
-
-  const selectedValues = useMemo(() => {
-    const selected = new Set(selectedChoiceValueIds);
-    return legalScalarOptions
-      .filter((option) => selected.has(option.choiceValueId))
-      .map((option) => option.value);
-  }, [legalScalarOptions, selectedChoiceValueIds]);
-
-  const selectedCount = selectedValues.length;
-  const canConfirm = selectedCount >= bounds.min && selectedCount <= bounds.max;
+  const selectedChoiceValueIds = choiceUi.selectedChoiceValueIds;
+  const selectedChoiceValueIdSet = useMemo(
+    () => new Set(selectedChoiceValueIds),
+    [selectedChoiceValueIds],
+  );
+  const selectedCount = selectedChoiceValueIds.length;
+  const canConfirm = choiceUi.canConfirm;
 
   return (
     <div className={styles.multiSelectMode} data-testid="choice-mode-discrete-many">
@@ -130,10 +119,9 @@ function MultiSelectMode({ choiceUi, chooseN }: MultiSelectModeProps): ReactElem
       </p>
       <div className={styles.options}>
         {choiceUi.options.map((option) => {
-          const isSelected = selectedChoiceValueIds.includes(option.choiceValueId);
+          const isSelected = selectedChoiceValueIdSet.has(option.choiceValueId);
           const isLegalScalar = option.legality !== 'illegal' && isChoiceScalar(option.value);
-          const atSelectionLimit = !isSelected && selectedCount >= bounds.max;
-          const isDisabled = !isLegalScalar || atSelectionLimit;
+          const isDisabled = !isLegalScalar;
 
           return (
             <div key={option.choiceValueId} className={styles.optionRow}>
@@ -148,15 +136,11 @@ function MultiSelectMode({ choiceUi, chooseN }: MultiSelectModeProps): ReactElem
                   if (!isLegalScalar) {
                     return;
                   }
-                  setSelectedChoiceValueIds((previous) => {
-                    if (previous.includes(option.choiceValueId)) {
-                      return previous.filter((id) => id !== option.choiceValueId);
-                    }
-                    if (previous.length >= bounds.max) {
-                      return previous;
-                    }
-                    return [...previous, option.choiceValueId];
-                  });
+                  if (isSelected) {
+                    void removeChooseNItem(option.value);
+                    return;
+                  }
+                  void addChooseNItem(option.value);
                 }}
               >
                 <span className={styles.checkboxIndicator} aria-hidden="true">
@@ -178,7 +162,7 @@ function MultiSelectMode({ choiceUi, chooseN }: MultiSelectModeProps): ReactElem
           if (!canConfirm) {
             return;
           }
-          void chooseN(selectedValues);
+          void confirmChooseN();
         }}
       >
         Confirm selection
@@ -439,8 +423,14 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
           <MultiSelectMode
             key={choiceUi.decisionKey}
             choiceUi={choiceUi}
-            chooseN={async (selectedValues) => {
-              await store.getState().chooseN(selectedValues);
+            addChooseNItem={async (value) => {
+              await store.getState().addChooseNItem(value);
+            }}
+            removeChooseNItem={async (value) => {
+              await store.getState().removeChooseNItem(value);
+            }}
+            confirmChooseN={async () => {
+              await store.getState().confirmChooseN();
             }}
           />
         ) : null}

@@ -34,7 +34,9 @@ function createChoiceStore(state: {
   readonly selectedAction?: GameStore['selectedAction'];
   readonly partialMove?: GameStore['partialMove'];
   readonly chooseOne?: GameStore['chooseOne'];
-  readonly chooseN?: GameStore['chooseN'];
+  readonly addChooseNItem?: GameStore['addChooseNItem'];
+  readonly removeChooseNItem?: GameStore['removeChooseNItem'];
+  readonly confirmChooseN?: GameStore['confirmChooseN'];
   readonly cancelChoice?: GameStore['cancelChoice'];
   readonly cancelMove?: GameStore['cancelMove'];
   readonly confirmMove?: GameStore['confirmMove'];
@@ -45,7 +47,9 @@ function createChoiceStore(state: {
       selectedAction: state.selectedAction ?? null,
       partialMove: state.partialMove ?? null,
       chooseOne: state.chooseOne ?? (async () => {}),
-      chooseN: state.chooseN ?? (async () => {}),
+      addChooseNItem: state.addChooseNItem ?? (async () => {}),
+      removeChooseNItem: state.removeChooseNItem ?? (async () => {}),
+      confirmChooseN: state.confirmChooseN ?? (async () => {}),
       cancelChoice: state.cancelChoice ?? (async () => {}),
       cancelMove: state.cancelMove ?? (() => {}),
       confirmMove: state.confirmMove ?? (async () => {}),
@@ -311,7 +315,7 @@ describe('ChoicePanel', () => {
   });
 
   it('treats unknown-legality options as selectable in discreteMany mode', () => {
-    const chooseN = vi.fn(async () => {});
+    const addChooseNItem = vi.fn(async () => {});
     renderChoicePanel({
       mode: 'choicePending',
       store: createChoiceStore({
@@ -326,9 +330,11 @@ describe('ChoicePanel', () => {
             ],
             min: 1,
             max: 2,
+            selectedChoiceValueIds: [],
+            canConfirm: false,
           },
         }),
-        chooseN,
+        addChooseNItem,
       }),
     });
 
@@ -343,11 +349,10 @@ describe('ChoicePanel', () => {
     // Selection bounds should reflect unknown options (2 legal/unknown), not 0
     expect(getByTestId('choice-multi-count').textContent).toContain('Selected: 0 of 1-2');
 
-    // Select and confirm
+    // Select dispatches incrementally
     fireEvent.click(optionA);
-    fireEvent.click(getByTestId('choice-multi-confirm'));
-    expect(chooseN).toHaveBeenCalledTimes(1);
-    expect(chooseN).toHaveBeenCalledWith(['zone-a']);
+    expect(addChooseNItem).toHaveBeenCalledTimes(1);
+    expect(addChooseNItem).toHaveBeenCalledWith('zone-a');
   });
 
   it('uses stable distinct option identities for scalar/array value collisions', () => {
@@ -407,6 +412,8 @@ describe('ChoicePanel', () => {
             ],
             min: 1,
             max: 2,
+            selectedChoiceValueIds: [],
+            canConfirm: false,
           },
         }),
       }),
@@ -418,8 +425,8 @@ describe('ChoicePanel', () => {
     expect(getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-b')}`)).not.toBeNull();
   });
 
-  it('Mode B enables confirm only within bounds and dispatches chooseN(selectedValues)', () => {
-    const chooseN = vi.fn(async () => {});
+  it('Mode B renders engine-owned selection state and dispatches confirmChooseN', () => {
+    const confirmChooseN = vi.fn(async () => {});
     renderChoicePanel({
       mode: 'choicePending',
       store: createChoiceStore({
@@ -434,26 +441,26 @@ describe('ChoicePanel', () => {
             ],
             min: 2,
             max: 2,
+            selectedChoiceValueIds: [
+              serializeChoiceValueIdentity('zone-a'),
+              serializeChoiceValueIdentity('zone-b'),
+            ],
+            canConfirm: true,
           },
         }),
-        chooseN,
+        confirmChooseN,
       }),
     });
 
     const confirm = getByTestId('choice-multi-confirm') as HTMLButtonElement;
-    expect(confirm.disabled).toBe(true);
-
-    fireEvent.click(getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-a')}`));
-    fireEvent.click(getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-b')}`));
-
-    expect((getByTestId('choice-multi-confirm') as HTMLButtonElement).disabled).toBe(false);
+    expect(confirm.disabled).toBe(false);
+    expect(getByTestId('choice-multi-count').textContent).toContain('Selected: 2 of 2');
     fireEvent.click(getByTestId('choice-multi-confirm'));
-    expect(chooseN).toHaveBeenCalledTimes(1);
-    expect(chooseN).toHaveBeenCalledWith(['zone-a', 'zone-b']);
+    expect(confirmChooseN).toHaveBeenCalledTimes(1);
   });
 
   it('Mode B keeps non-legal options non-selectable and shows illegality feedback', () => {
-    const chooseN = vi.fn(async () => {});
+    const confirmChooseN = vi.fn(async () => {});
     renderChoicePanel({
       mode: 'choicePending',
       store: createChoiceStore({
@@ -467,9 +474,11 @@ describe('ChoicePanel', () => {
             ],
             min: 1,
             max: 1,
+            selectedChoiceValueIds: [],
+            canConfirm: false,
           },
         }),
-        chooseN,
+        confirmChooseN,
       }),
     });
 
@@ -479,10 +488,12 @@ describe('ChoicePanel', () => {
 
     fireEvent.click(illegalButton);
     fireEvent.click(getByTestId('choice-multi-confirm'));
-    expect(chooseN).toHaveBeenCalledTimes(0);
+    expect(confirmChooseN).toHaveBeenCalledTimes(0);
   });
 
-  it('Mode B enforces effective max and deterministic nullable bound text', () => {
+  it('Mode B reflects nullable bounds text and dispatches add/remove incrementally', () => {
+    const addChooseNItem = vi.fn(async () => {});
+    const removeChooseNItem = vi.fn(async () => {});
     renderChoicePanel({
       mode: 'choicePending',
       store: createChoiceStore({
@@ -496,16 +507,20 @@ describe('ChoicePanel', () => {
             ],
             min: null,
             max: null,
+            selectedChoiceValueIds: [serializeChoiceValueIdentity('zone-a')],
+            canConfirm: true,
           },
         }),
+        addChooseNItem,
+        removeChooseNItem,
       }),
     });
 
-    expect(getByTestId('choice-multi-count').textContent).toContain('Selected: 0 of 0-2');
+    expect(getByTestId('choice-multi-count').textContent).toContain('Selected: 1 of 0-2');
     fireEvent.click(getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-a')}`));
     fireEvent.click(getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-b')}`));
-    expect((getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-a')}`) as HTMLButtonElement).disabled).toBe(false);
-    expect((getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-b')}`) as HTMLButtonElement).disabled).toBe(false);
+    expect(removeChooseNItem).toHaveBeenCalledWith('zone-a');
+    expect(addChooseNItem).toHaveBeenCalledWith('zone-b');
   });
 
   it('Mode C renders slider/number inputs from domain and keeps them synchronized', () => {
@@ -639,6 +654,8 @@ describe('ChoicePanel', () => {
               options: [makeChoiceOption('zone-a', 'Zone A')],
               min: 1,
               max: 1,
+              selectedChoiceValueIds: [],
+              canConfirm: false,
             },
           }),
         }),
@@ -829,8 +846,8 @@ describe('ChoicePanel', () => {
     expect(html).not.toContain('of');
   });
 
-  it('resets MultiSelectMode selections when decisionKey changes (stale state regression)', () => {
-    const chooseN = vi.fn(async () => {});
+  it('renders updated engine-owned multi-select state when decisionKey changes', () => {
+    const addChooseNItem = vi.fn(async () => {});
 
     const firstDecision = makeRenderModel({
       choiceUi: {
@@ -842,6 +859,8 @@ describe('ChoicePanel', () => {
         ],
         min: 1,
         max: 2,
+        selectedChoiceValueIds: [serializeChoiceValueIdentity('zone-a'), serializeChoiceValueIdentity('zone-b')],
+        canConfirm: true,
       },
     });
 
@@ -856,6 +875,8 @@ describe('ChoicePanel', () => {
         ],
         min: 1,
         max: 1,
+        selectedChoiceValueIds: [],
+        canConfirm: false,
       },
     });
 
@@ -863,7 +884,9 @@ describe('ChoicePanel', () => {
     const store = {
       getState: () => ({
         renderModel: currentModel,
-        chooseN,
+        addChooseNItem,
+        removeChooseNItem: async () => {},
+        confirmChooseN: async () => {},
         cancelChoice: async () => {},
         cancelMove: () => {},
       }),
@@ -873,8 +896,6 @@ describe('ChoicePanel', () => {
 
     const { rerender } = render(createElement(ChoicePanel, { store, mode: 'choicePending' }));
 
-    fireEvent.click(getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-a')}`));
-    fireEvent.click(getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-b')}`));
     expect(getByTestId('choice-multi-count').textContent).toContain('Selected: 2');
 
     currentModel = secondDecision;

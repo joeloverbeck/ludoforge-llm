@@ -44,6 +44,8 @@ describe('FITL card-87 Nguyen Chanh Thi', () => {
     const unshadedJson = JSON.stringify(card.unshaded?.effects ?? []);
     const shadedJson = JSON.stringify(card.shaded?.effects ?? []);
     assert.match(unshadedJson, /"bind":"\$nguyenChanhThiArvnPieces"/);
+    assert.match(unshadedJson, /"query":"prioritized"/);
+    assert.match(unshadedJson, /"qualifierKey":"type"/);
     assert.match(unshadedJson, /"available-ARVN:none"/);
     assert.match(unshadedJson, /"loc-da-nang-qui-nhon:none"/);
     assert.match(unshadedJson, /"field":\{"kind":"tokenZone"\}/);
@@ -54,6 +56,36 @@ describe('FITL card-87 Nguyen Chanh Thi', () => {
     assert.match(shadedJson, /"available-VC:none"/);
     assert.match(shadedJson, /"available-ARVN:none"/);
     assert.match(shadedJson, /\$nguyenChanhThiPatronageDirection/);
+  });
+
+  it('unshaded enforces prioritized sourcing per ARVN piece type', () => {
+    const def = getFitlEventDef();
+    const state = setupFitlEventState(def, {
+      seed: 87006,
+      cardIdInDiscardZone: CARD_ID,
+      zoneTokens: {
+        [AVAILABLE_ARVN]: [
+          makeFitlToken('thi-available-troop', 'troops', 'ARVN'),
+          makeFitlToken('thi-available-police', 'police', 'ARVN'),
+        ],
+        [QUANG_NAM]: [
+          makeFitlToken('thi-map-troop', 'troops', 'ARVN'),
+          makeFitlToken('thi-map-base', 'base', 'ARVN'),
+        ],
+      },
+    });
+
+    const pending = legalChoicesEvaluate(def, state, requireEventMove(def, state, CARD_ID, 'unshaded'));
+    assert.equal(pending.kind, 'pending');
+    if (pending.kind !== 'pending') throw new Error('Expected unshaded ARVN-piece selector.');
+
+    const legalityByValue = new Map(
+      pending.options.map((option) => [String(option.value), option.legality]),
+    );
+    assert.equal(legalityByValue.get('thi-available-troop'), 'legal');
+    assert.equal(legalityByValue.get('thi-available-police'), 'legal');
+    assert.equal(legalityByValue.get('thi-map-troop'), 'illegal');
+    assert.equal(legalityByValue.get('thi-map-base'), 'legal');
   });
 
   it('unshaded places up to 3 ARVN pieces within 3 spaces of Hue and shifts each receiving space only once', () => {

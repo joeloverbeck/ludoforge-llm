@@ -746,6 +746,52 @@ describe('effects choice assertions', () => {
     assert.equal(result.rng, ctx.rng);
   });
 
+  it('chooseN rejects qualifier-aware prioritized selections that skip an available same-type token', () => {
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        zones: [
+          { id: asZoneId('available:none'), owner: 'none', visibility: 'public', ordering: 'stack' },
+          { id: asZoneId('map:none'), owner: 'none', visibility: 'public', ordering: 'stack' },
+        ],
+        tokenTypes: [{ id: 'piece', props: { type: 'string' } }],
+      },
+      state: {
+        ...makeState(),
+        zones: {
+          'available:none': [
+            { id: asTokenId('available-troop'), type: 'piece', props: { type: 'troops' } },
+          ],
+          'map:none': [
+            { id: asTokenId('map-troop'), type: 'piece', props: { type: 'troops' } },
+            { id: asTokenId('map-base'), type: 'piece', props: { type: 'base' } },
+          ],
+        },
+      },
+      moveParams: { '$picks': [asTokenId('map-troop'), asTokenId('map-base')] },
+    });
+    const effect: EffectAST = {
+      chooseN: {
+        internalDecisionId: 'decision:$picks',
+        bind: '$picks',
+        options: {
+          query: 'prioritized',
+          qualifierKey: 'type',
+          tiers: [
+            { query: 'tokensInZone', zone: 'available:none' },
+            { query: 'tokensInZone', zone: 'map:none' },
+          ],
+        },
+        n: 2,
+      },
+    };
+
+    assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
+      return isEffectErrorCode(error, 'EFFECT_RUNTIME')
+        && String(error).includes('violates prioritized tier ordering');
+    });
+  });
+
   it('chooseN leaves non-prioritized selections unchanged', () => {
     const ctx = makeCtx({ moveParams: { '$picks': ['reserve-a'] } });
     const effect: EffectAST = {

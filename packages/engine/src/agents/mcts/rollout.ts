@@ -13,6 +13,7 @@
 import type { GameDef, GameState, Rng, TerminalResult } from '../../kernel/types.js';
 import type { GameDefRuntime } from '../../kernel/gamedef-runtime.js';
 import type { MctsConfig } from './config.js';
+import type { MutableDiagnosticsAccumulator } from './diagnostics.js';
 import { legalMoves } from '../../kernel/legal-moves.js';
 import { applyMove } from '../../kernel/apply-move.js';
 import { terminalResult } from '../../kernel/terminal.js';
@@ -57,6 +58,7 @@ export function rollout(
   rng: Rng,
   config: RolloutConfigSlice,
   runtime?: GameDefRuntime,
+  acc?: MutableDiagnosticsAccumulator,
 ): RolloutResult {
   let currentState = state;
   let currentRng = rng;
@@ -65,12 +67,18 @@ export function rollout(
   while (depth < config.maxSimulationDepth) {
     // 1. Check terminal
     const terminal = terminalResult(def, currentState, runtime);
+    if (acc !== undefined) {
+      acc.terminalCalls += 1;
+    }
     if (terminal !== null) {
       return { state: currentState, terminal, rng: currentRng, depth };
     }
 
     // 2. Enumerate legal moves
     const moves = legalMoves(def, currentState, undefined, runtime);
+    if (acc !== undefined) {
+      acc.legalMovesCalls += 1;
+    }
     if (moves.length === 0) {
       return { state: currentState, terminal: null, rng: currentRng, depth };
     }
@@ -85,6 +93,9 @@ export function rollout(
       runtime,
     );
     currentRng = postMaterializeRng;
+    if (acc !== undefined) {
+      acc.materializeCalls += 1;
+    }
 
     if (candidates.length === 0) {
       return { state: currentState, terminal: null, rng: currentRng, depth };
@@ -127,6 +138,9 @@ export function rollout(
           const candidate = sampled[i]!;
           try {
             const applied = applyMove(def, currentState, candidate.move, undefined, runtime);
+            if (acc !== undefined) {
+              acc.applyMoveCalls += 1;
+            }
             const score = evaluateState(def, applied.state, actingPlayer, runtime);
             if (score > bestScore) {
               bestScore = score;
@@ -147,6 +161,9 @@ export function rollout(
     const chosenMove = sampled[chosenIndex]!.move;
     try {
       const applied = applyMove(def, currentState, chosenMove, undefined, runtime);
+      if (acc !== undefined) {
+        acc.applyMoveCalls += 1;
+      }
       currentState = applied.state;
     } catch {
       // If the chosen move fails to apply, end the rollout
@@ -158,6 +175,9 @@ export function rollout(
 
   // Reached maxSimulationDepth — check terminal one more time
   const finalTerminal = terminalResult(def, currentState, runtime);
+  if (acc !== undefined) {
+    acc.terminalCalls += 1;
+  }
   return { state: currentState, terminal: finalTerminal, rng: currentRng, depth };
 }
 

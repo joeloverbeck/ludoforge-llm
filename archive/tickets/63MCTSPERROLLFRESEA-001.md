@@ -1,6 +1,6 @@
 # 63MCTSPERROLLFRESEA-001: Mutable diagnostics accumulator + per-phase timing + kernel-call counters
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `agents/mcts/diagnostics.ts`, `agents/mcts/search.ts`, `agents/mcts/rollout.ts`
@@ -116,3 +116,15 @@ Replace `Date.now()` usage in `diagnostics.ts` and `search.ts` with `performance
 2. `pnpm turbo build && node --test packages/engine/dist/test/unit/agents/mcts/diagnostics-counters.test.js`
 3. `pnpm turbo build && pnpm -F @ludoforge/engine test`
 4. `pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-14
+- **What changed**:
+  - Created `MutableDiagnosticsAccumulator` type and `createAccumulator()` factory in `diagnostics.ts`
+  - Extended `MctsSearchDiagnostics` with per-phase timings (6 fields), kernel-call counters (5 fields), cache counters (5 fields), compressed-ply counters (2 fields), derived averages, and mode/stop metadata
+  - Migrated `Date.now()` to `performance.now()` in `diagnostics.ts` and `search.ts`
+  - Wired accumulator through `runSearch()` → `runOneIteration()` → `rollout()`, instrumenting all MCTS phases and kernel call sites
+  - Added `diagnostics-timing.test.ts` and `diagnostics-counters.test.ts`
+- **Deviations from original plan**: None
+- **Verification**: All new and existing MCTS tests pass. Typecheck and lint clean.

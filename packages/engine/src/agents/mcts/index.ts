@@ -29,7 +29,7 @@ export { backpropagate, runOneIteration, runSearch, selectRootDecision } from '.
 
 export { canActivateSolver, updateSolverResult, selectSolverAwareChild } from './solver.js';
 
-export { collectDiagnostics } from './diagnostics.js';
-export type { MctsSearchDiagnostics } from './diagnostics.js';
+export { collectDiagnostics, createAccumulator } from './diagnostics.js';
+export type { MctsSearchDiagnostics, MutableDiagnosticsAccumulator } from './diagnostics.js';
 
 export { MctsAgent } from './mcts-agent.js';

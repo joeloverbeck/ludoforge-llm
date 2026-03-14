@@ -14,6 +14,7 @@ import type { MctsNode } from './node.js';
 import type { MctsConfig } from './config.js';
 import type { NodePool } from './node-pool.js';
 import type { MoveKey } from './move-key.js';
+import type { MutableDiagnosticsAccumulator, MctsSearchDiagnostics } from './diagnostics.js';
 import { legalMoves } from '../../kernel/legal-moves.js';
 import { applyMove } from '../../kernel/apply-move.js';
 import { terminalResult } from '../../kernel/terminal.js';
@@ -25,6 +26,7 @@ import { rollout } from './rollout.js';
 import { terminalToRewards, evaluateForAllPlayers } from './evaluate.js';
 import { sampleBeliefState } from './belief.js';
 import { canActivateSolver, updateSolverResult, selectSolverAwareChild } from './solver.js';
+import { createAccumulator, collectDiagnostics } from './diagnostics.js';
 
 // ---------------------------------------------------------------------------
 // Backpropagation
@@ -67,19 +69,27 @@ export function runOneIteration(
   runtime: GameDefRuntime,
   pool: NodePool,
   solverActive: boolean = false,
+  acc?: MutableDiagnosticsAccumulator,
 ): { readonly rng: Rng } {
   let currentNode = root;
   let currentState = sampledState;
   let currentRng = rng;
+  let selectionDepth = 0;
+  let selectionRecorded = false;
 
   // ── Selection ────────────────────────────────────────────────────────
-  // Traverse the tree following ISUCT selection over available children.
+  const selStart = acc !== undefined ? performance.now() : 0;
+
   while (true) {
     // Determine legal moves at this node in the sampled state.
     const movesAtNode: readonly Move[] =
       currentNode === root
         ? rootLegalMoves
         : legalMoves(def, currentState, undefined, runtime);
+
+    if (currentNode !== root && acc !== undefined) {
+      acc.legalMovesCalls += 1;
+    }
 
     if (movesAtNode.length === 0) {
       // Terminal or no-move position — evaluate and backprop.
@@ -96,6 +106,9 @@ export function runOneIteration(
       runtime,
     );
     currentRng = postMaterialize;
+    if (acc !== undefined) {
+      acc.materializeCalls += 1;
+    }
 
     if (candidates.length === 0) {
       break;
@@ -125,6 +138,13 @@ export function runOneIteration(
       const unexpanded = filterAvailableCandidates(currentNode, candidates);
 
       if (unexpanded.length > 0) {
+        if (acc !== undefined) {
+          acc.selectionTimeMs += performance.now() - selStart;
+          selectionRecorded = true;
+        }
+
+        const expStart = acc !== undefined ? performance.now() : 0;
+
         const actingPlayer = currentState.activePlayer as PlayerId;
         const { candidate: chosen, rng: postExpansion } = selectExpansionCandidate(
           unexpanded,
@@ -148,8 +168,17 @@ export function runOneIteration(
 
         // Advance into the expanded child.
         const applied = applyMove(def, currentState, chosen.move, undefined, runtime);
+        if (acc !== undefined) {
+          acc.applyMoveCalls += 1;
+        }
         currentState = applied.state;
         currentNode = childNode;
+        selectionDepth += 1;
+
+        if (acc !== undefined) {
+          acc.expansionTimeMs += performance.now() - expStart;
+        }
+
         break; // Proceed to simulation from the expanded node.
       }
     }
@@ -167,8 +196,12 @@ export function runOneIteration(
       const solverChild = selectSolverAwareChild(currentNode, exploringPlayer);
       if (solverChild !== null) {
         const applied = applyMove(def, currentState, solverChild.move!, undefined, runtime);
+        if (acc !== undefined) {
+          acc.applyMoveCalls += 1;
+        }
         currentState = applied.state;
         currentNode = solverChild;
+        selectionDepth += 1;
         continue;
       }
     }
@@ -182,29 +215,61 @@ export function runOneIteration(
 
     // Apply the selected child's move to advance the state.
     const applied = applyMove(def, currentState, selected.move!, undefined, runtime);
+    if (acc !== undefined) {
+      acc.applyMoveCalls += 1;
+    }
     currentState = applied.state;
     currentNode = selected;
+    selectionDepth += 1;
+  }
+
+  // Finalize selection timing for non-expansion break paths.
+  if (acc !== undefined && !selectionRecorded) {
+    acc.selectionTimeMs += performance.now() - selStart;
+  }
+
+  if (acc !== undefined) {
+    acc.selectionDepths.push(selectionDepth);
   }
 
   // ── Simulation (rollout) ─────────────────────────────────────────────
-  const rolloutResult = rollout(def, currentState, currentRng, config, runtime);
+  const simStart = acc !== undefined ? performance.now() : 0;
+  const rolloutResult = rollout(def, currentState, currentRng, config, runtime, acc);
   currentRng = rolloutResult.rng;
+  if (acc !== undefined) {
+    acc.simulationTimeMs += performance.now() - simStart;
+  }
 
   // ── Evaluation ───────────────────────────────────────────────────────
+  const evalStart = acc !== undefined ? performance.now() : 0;
   let rewards: readonly number[];
   if (rolloutResult.terminal !== null) {
     rewards = terminalToRewards(rolloutResult.terminal, sampledState.playerCount);
   } else {
     // Check terminal on rollout end state.
     const endTerminal = terminalResult(def, rolloutResult.state, runtime);
+    if (acc !== undefined) {
+      acc.terminalCalls += 1;
+    }
     if (endTerminal !== null) {
       rewards = terminalToRewards(endTerminal, sampledState.playerCount);
     } else {
       rewards = evaluateForAllPlayers(def, rolloutResult.state, config.heuristicTemperature, runtime);
+      if (acc !== undefined) {
+        acc.evaluateStateCalls += 1;
+      }
     }
+  }
+  if (acc !== undefined) {
+    acc.evaluationTimeMs += performance.now() - evalStart;
+    // Record leaf reward span.
+    const minR = Math.min(...rewards);
+    const maxR = Math.max(...rewards);
+    acc.leafRewardSpans.push(maxR - minR);
   }
 
   // ── Backpropagation ──────────────────────────────────────────────────
+  const bpStart = acc !== undefined ? performance.now() : 0;
   backpropagate(currentNode, rewards);
 
   // ── Solver proven-result propagation ───────────────────────────────
@@ -214,6 +279,10 @@ export function runOneIteration(
       updateSolverResult(solverNode, def, currentState, runtime);
       solverNode = solverNode.parent;
     }
+  }
+
+  if (acc !== undefined) {
+    acc.backpropTimeMs += performance.now() - bpStart;
   }
 
   return { rng: currentRng };
@@ -228,7 +297,7 @@ export function runOneIteration(
  * wall-clock early exit), calling `sampleBeliefState` + `runOneIteration`
  * per iteration.
  *
- * @returns The consumed search RNG and iteration count.
+ * @returns The consumed search RNG, iteration count, and optional diagnostics.
  */
 export function runSearch(
   root: MctsNode,
@@ -241,9 +310,17 @@ export function runSearch(
   rootLegalMoves: readonly Move[],
   runtime: GameDefRuntime,
   pool: NodePool,
-): { readonly rng: Rng; readonly iterations: number } {
+): {
+  readonly rng: Rng;
+  readonly iterations: number;
+  readonly diagnostics?: MctsSearchDiagnostics;
+} {
   let currentRng = searchRng;
   let iterations = 0;
+
+  // Diagnostics instrumentation.
+  const acc = config.diagnostics === true ? createAccumulator() : undefined;
+  const searchStart = config.diagnostics === true ? performance.now() : undefined;
 
   // Check solver activation once at search start.
   const solverActive = canActivateSolver(def, state, config);
@@ -251,9 +328,13 @@ export function runSearch(
   const deadline =
     config.timeLimitMs !== undefined ? Date.now() + config.timeLimitMs : undefined;
 
+  // Track stop reason for diagnostics.
+  let stopReason: 'iterations' | 'solver' | 'time' | 'confidence' | 'none' = 'iterations';
+
   while (iterations < config.iterations) {
     // If root is proven, break search early.
     if (solverActive && root.provenResult !== null) {
+      stopReason = 'solver';
       break;
     }
 
@@ -263,6 +344,7 @@ export function runSearch(
       iterations >= config.minIterations &&
       Date.now() >= deadline
     ) {
+      stopReason = 'time';
       break;
     }
 
@@ -271,7 +353,11 @@ export function runSearch(
     currentRng = nextSearchRng;
 
     // Sample a belief state consistent with the observer's observation.
+    const beliefStart = acc !== undefined ? performance.now() : 0;
     const belief = sampleBeliefState(def, state, observation, observer, iterationRng);
+    if (acc !== undefined) {
+      acc.beliefSamplingTimeMs += performance.now() - beliefStart;
+    }
 
     // Run one full iteration on the sampled state.
     const result = runOneIteration(
@@ -284,11 +370,22 @@ export function runSearch(
       runtime,
       pool,
       solverActive,
+      acc,
     );
     // Consume the iteration's RNG output (determinism is via fork chain).
     void result;
 
     iterations += 1;
+  }
+
+  // Collect diagnostics if enabled.
+  if (acc !== undefined && searchStart !== undefined) {
+    const diag = collectDiagnostics(root, iterations, searchStart, acc);
+    return {
+      rng: currentRng,
+      iterations,
+      diagnostics: { ...diag, rootStopReason: stopReason },
+    };
   }
 
   return { rng: currentRng, iterations };

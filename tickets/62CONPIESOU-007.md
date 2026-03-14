@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — test files only
-**Deps**: tickets/62CONPIESOU-005.md, specs/62b-incremental-choice-protocol.md
+**Deps**: archive/tickets/62CONPIESOU-005.md, specs/62b-incremental-choice-protocol.md
 
 ## Status Note
 

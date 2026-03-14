@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — data file only
-**Deps**: archive/tickets/KERQUERY/62CONPIESOU-001-prioritized-query-ast-and-recursive-infrastructure.md, archive/tickets/KERQUERY/62CONPIESOU-002-compiler-facing-prioritized-query-support.md, archive/tickets/62CONPIESOU-004.md, tickets/62CONPIESOU-005.md, specs/62b-incremental-choice-protocol.md
+**Deps**: archive/tickets/KERQUERY/62CONPIESOU-001-prioritized-query-ast-and-recursive-infrastructure.md, archive/tickets/KERQUERY/62CONPIESOU-002-compiler-facing-prioritized-query-support.md, archive/tickets/62CONPIESOU-004.md, archive/tickets/62CONPIESOU-005.md, specs/62b-incremental-choice-protocol.md
 
 ## Status Note
 

@@ -4,6 +4,8 @@ import {
 } from './choice-option-policy.js';
 import { completeMoveDecisionSequence } from './move-decision-completion.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
+import type { MoveEnumerationBudgets } from './move-enumeration-budgets.js';
+import { resolveMoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import { nextInt } from './prng.js';
 import type {
   ChoicePendingRequest,
@@ -15,8 +17,6 @@ import type {
   Rng,
   GameDef,
 } from './types.js';
-
-export const MAX_CHOICES = 50;
 
 export type TemplateCompletionResult =
   | { readonly kind: 'completed'; readonly move: Move; readonly rng: Rng }
@@ -59,7 +59,7 @@ const selectFromChooseN = (
  *
  * Returns a discriminated result:
  * - `completed`: all decisions filled, move is ready for `applyMove`
- * - `unsatisfiable`: empty options domain or min > selectable; move is truly unplayable
+ * - `unsatisfiable`: empty options domain, min > selectable, or budget exceeded; move is unplayable
  * - `stochasticUnresolved`: decisions behind a `rollRandom` gate; move has all pre-stochastic decisions filled
  */
 export const completeTemplateMove = (
@@ -68,15 +68,18 @@ export const completeTemplateMove = (
   templateMove: Move,
   rng: Rng,
   runtime?: GameDefRuntime,
+  budgets?: Partial<MoveEnumerationBudgets>,
 ): TemplateCompletionResult => {
+  const resolved = resolveMoveEnumerationBudgets(budgets);
+  const maxDecisions = resolved.maxCompletionDecisions;
   let cursor = rng;
   let iterations = 0;
+  let exceeded = false;
 
   const choose = (request: ChoicePendingRequest): MoveParamValue | undefined => {
-    if (++iterations > MAX_CHOICES) {
-      throw new Error(
-        `Choice loop exceeded ${MAX_CHOICES} iterations for action ${String(templateMove.actionId)}`,
-      );
+    if (++iterations > maxDecisions) {
+      exceeded = true;
+      return undefined;
     }
 
     const options = request.type === 'chooseN'
@@ -104,10 +107,9 @@ export const completeTemplateMove = (
   const chooseStochastic = (
     request: ChoiceStochasticPendingRequest,
   ): Readonly<Record<string, MoveParamScalar>> | undefined => {
-    if (++iterations > MAX_CHOICES) {
-      throw new Error(
-        `Choice loop exceeded ${MAX_CHOICES} iterations for action ${String(templateMove.actionId)}`,
-      );
+    if (++iterations > maxDecisions) {
+      exceeded = true;
+      return undefined;
     }
     if (request.outcomes.length === 0) {
       return undefined;
@@ -122,6 +124,9 @@ export const completeTemplateMove = (
     chooseStochastic,
   }, runtime);
 
+  if (exceeded) {
+    return { kind: 'unsatisfiable' };
+  }
   if (result.complete) {
     return { kind: 'completed', move: result.move, rng: cursor };
   }

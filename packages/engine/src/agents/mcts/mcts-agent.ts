@@ -68,7 +68,7 @@ export function postCompleteSelectedMove(
       cursor = result.rng;
     }
   } catch {
-    // Move is invalid against real state — fall through to siblings.
+    // Move is invalid against real state (e.g. unknown action) — fall through to siblings.
   }
 
   // 3. Try siblings in descending visit-count order.
@@ -97,7 +97,7 @@ export function postCompleteSelectedMove(
         cursor = result.rng;
       }
     } catch {
-      // Sibling also invalid — try next.
+      // Sibling also invalid (e.g. unknown action) — try next.
     }
   }
 

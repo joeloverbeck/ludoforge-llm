@@ -3,6 +3,7 @@ export interface MoveEnumerationBudgets {
   readonly maxParamExpansions: number;
   readonly maxDecisionProbeSteps: number;
   readonly maxDeferredPredicates: number;
+  readonly maxCompletionDecisions: number;
 }
 
 export const DEFAULT_MOVE_ENUMERATION_BUDGETS: MoveEnumerationBudgets = {
@@ -10,6 +11,7 @@ export const DEFAULT_MOVE_ENUMERATION_BUDGETS: MoveEnumerationBudgets = {
   maxParamExpansions: 100_000,
   maxDecisionProbeSteps: 128,
   maxDeferredPredicates: 1_024,
+  maxCompletionDecisions: 256,
 };
 
 const asBudget = (value: unknown, fallback: number): number =>
@@ -22,4 +24,5 @@ export const resolveMoveEnumerationBudgets = (
   maxParamExpansions: asBudget(override?.maxParamExpansions, DEFAULT_MOVE_ENUMERATION_BUDGETS.maxParamExpansions),
   maxDecisionProbeSteps: asBudget(override?.maxDecisionProbeSteps, DEFAULT_MOVE_ENUMERATION_BUDGETS.maxDecisionProbeSteps),
   maxDeferredPredicates: asBudget(override?.maxDeferredPredicates, DEFAULT_MOVE_ENUMERATION_BUDGETS.maxDeferredPredicates),
+  maxCompletionDecisions: asBudget(override?.maxCompletionDecisions, DEFAULT_MOVE_ENUMERATION_BUDGETS.maxCompletionDecisions),
 });

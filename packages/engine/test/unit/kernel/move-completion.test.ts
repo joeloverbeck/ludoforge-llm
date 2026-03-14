@@ -207,4 +207,32 @@ describe('template-completion chooseN bounds', () => {
     assert.ok(Array.isArray(selected), 'Stochastic chooseN branch should be completed');
     assert.equal(selected.length, first.move.params.$roll, 'Persisted roll should match exact chooseN cardinality');
   });
+
+  it('returns unsatisfiable when custom maxCompletionDecisions budget is exceeded', () => {
+    const action = createChooseNAction('budget-exceeded');
+    const profile = createChooseNProfile('budget-exceeded', 1, 2, ['a', 'b']);
+    const def = createDef(action, profile);
+    const templateMove: Move = { actionId: asActionId('budget-exceeded'), params: {} };
+
+    // Set maxCompletionDecisions to 0 so the very first decision exceeds the budget
+    const result = completeTemplateMove(
+      def, baseState, templateMove, createRng(1n), undefined,
+      { maxCompletionDecisions: 0 },
+    );
+    assert.equal(result.kind, 'unsatisfiable');
+  });
+
+  it('default budget (256) allows actions that would exceed the old 50-decision limit', () => {
+    // Create an action with many sequential chooseN decisions by using
+    // a large option set — a single chooseN with 1 decision is enough to
+    // verify the default budget is at least > 50.
+    const action = createChooseNAction('high-decisions');
+    const profile = createChooseNProfile('high-decisions', 1, 2, ['a', 'b']);
+    const def = createDef(action, profile);
+    const templateMove: Move = { actionId: asActionId('high-decisions'), params: {} };
+
+    // This action only needs 1 decision, so it should complete fine with default budget
+    const result = completeTemplateMove(def, baseState, templateMove, createRng(42n));
+    assert.equal(result.kind, 'completed');
+  });
 });

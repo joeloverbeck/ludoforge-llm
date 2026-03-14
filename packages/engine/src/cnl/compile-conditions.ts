@@ -20,6 +20,7 @@ import type {
   OptionsQuery,
   PlayerSel,
   Reference,
+  ScopedVarNameExpr,
   TokenFilterExpr,
   TokenFilterPredicate,
   ValueExpr,
@@ -82,7 +83,7 @@ function lowerBooleanArityTuple<TValue>(
   };
 }
 
-const SUPPORTED_CONDITION_OPS = ['and', 'or', 'not', '==', '!=', '<', '<=', '>', '>=', 'in', 'adjacent', 'connected', 'zonePropIncludes', 'markerStateAllowed'];
+const SUPPORTED_CONDITION_OPS = ['and', 'or', 'not', '==', '!=', '<', '<=', '>', '>=', 'in', 'adjacent', 'connected', 'zonePropIncludes', 'markerStateAllowed', 'markerShiftAllowed'];
 const SUPPORTED_QUERY_KINDS = [
   'concat',
   'tokenZones',
@@ -250,6 +251,23 @@ export function lowerConditionNode(
       }
       return {
         value: { op: 'markerStateAllowed', space: space.value, marker: source.marker, state: state.value },
+        diagnostics,
+      };
+    }
+    case 'markerShiftAllowed': {
+      if (typeof source.marker !== 'string') {
+        return missingCapability(path, 'markerShiftAllowed condition', source, [
+          '{ op: "markerShiftAllowed", space: <ZoneSel>, marker: string, delta: <NumericValueExpr> }',
+        ]);
+      }
+      const space = lowerZoneSelector(source.space, context, `${path}.space`);
+      const delta = lowerNumericValueNode(source.delta, context, `${path}.delta`);
+      const diagnostics = [...space.diagnostics, ...delta.diagnostics];
+      if (space.value === null || delta.value === null) {
+        return { value: null, diagnostics };
+      }
+      return {
+        value: { op: 'markerShiftAllowed', space: space.value, marker: source.marker, delta: delta.value },
         diagnostics,
       };
     }
@@ -795,6 +813,39 @@ function lowerFreeOperationSequenceKeyExpr(
   ]);
 }
 
+export function lowerScopedVarNameExpr(
+  source: unknown,
+  path: string,
+): ConditionLoweringResult<ScopedVarNameExpr> {
+  if (typeof source === 'string') {
+    return { value: source, diagnostics: [] };
+  }
+  if (!isRecord(source) || typeof source.ref !== 'string') {
+    return missingCapability(path, 'scoped variable name', source, [
+      'string',
+      '{ ref: "binding", name: string }',
+      '{ ref: "grantContext", key: string }',
+    ]);
+  }
+  if (source.ref === 'binding' && typeof source.name === 'string') {
+    return {
+      value: { ref: 'binding', name: source.name, ...(typeof source.displayName === 'string' ? { displayName: source.displayName } : {}) },
+      diagnostics: [],
+    };
+  }
+  if (source.ref === 'grantContext' && typeof source.key === 'string') {
+    return {
+      value: { ref: 'grantContext', key: source.key },
+      diagnostics: [],
+    };
+  }
+  return missingCapability(path, 'scoped variable name', source, [
+    'string',
+    '{ ref: "binding", name: string }',
+    '{ ref: "grantContext", key: string }',
+  ]);
+}
+
 function validateCanonicalTokenTraitLiteral(
   context: ConditionLoweringContext,
   prop: string,
@@ -1241,9 +1292,10 @@ export function lowerQueryNode(
       };
     }
     case 'intsInVarRange': {
-      if (typeof source.var !== 'string' || source.var.trim() === '') {
+      const variable = lowerScopedVarNameExpr(source.var, `${path}.var`);
+      if (variable.value === null) {
         return missingCapability(path, 'intsInVarRange query', source, [
-          '{ query: "intsInVarRange", var: string, scope?: "global"|"perPlayer", min?: <NumericValueExpr>, max?: <NumericValueExpr>, step?: <NumericValueExpr>, alwaysInclude?: <NumericValueExpr[]>, maxResults?: <NumericValueExpr> }',
+          '{ query: "intsInVarRange", var: string | { ref: "binding", name: string } | { ref: "grantContext", key: string }, scope?: "global"|"perPlayer", min?: <NumericValueExpr>, max?: <NumericValueExpr>, step?: <NumericValueExpr>, alwaysInclude?: <NumericValueExpr[]>, maxResults?: <NumericValueExpr> }',
         ]);
       }
 
@@ -1273,6 +1325,7 @@ export function lowerQueryNode(
       const alwaysIncludeResults =
         source.alwaysInclude?.map((entry, index) => lowerIntDomainBound(entry, context, `${path}.alwaysInclude[${index}]`)) ?? [];
       const diagnostics = [
+        ...variable.diagnostics,
         ...min.diagnostics,
         ...max.diagnostics,
         ...step.diagnostics,
@@ -1295,7 +1348,7 @@ export function lowerQueryNode(
       return {
         value: {
           query: 'intsInVarRange',
-          var: source.var,
+          var: variable.value,
           ...(source.scope === undefined ? {} : { scope: source.scope }),
           ...(minValue === undefined ? {} : { min: minValue }),
           ...(maxValue === undefined ? {} : { max: maxValue }),
@@ -1750,21 +1803,29 @@ function lowerReference(
 ): ConditionLoweringResult<Reference> {
   switch (source.ref) {
     case 'gvar':
-      if (typeof source.var === 'string') {
-        return { value: { ref: 'gvar', var: source.var }, diagnostics: [] };
+      {
+        const variable = lowerScopedVarNameExpr(source.var, `${path}.var`);
+        if (variable.value !== null) {
+          return { value: { ref: 'gvar', var: variable.value }, diagnostics: variable.diagnostics };
+        }
       }
-      return missingCapability(path, 'gvar reference', source, ['{ ref: "gvar", var: string }']);
+      return missingCapability(path, 'gvar reference', source, [
+        '{ ref: "gvar", var: string | { ref: "binding", name: string } | { ref: "grantContext", key: string } }',
+      ]);
     case 'pvar': {
-      if (typeof source.var !== 'string') {
-        return missingCapability(path, 'pvar reference', source, ['{ ref: "pvar", player: <PlayerSel>, var: string }']);
+      const variable = lowerScopedVarNameExpr(source.var, `${path}.var`);
+      if (variable.value === null) {
+        return missingCapability(path, 'pvar reference', source, [
+          '{ ref: "pvar", player: <PlayerSel>, var: string | { ref: "binding", name: string } | { ref: "grantContext", key: string } }',
+        ]);
       }
       const player = normalizePlayerSelector(source.player, `${path}.player`, context.seatIds);
       if (player.value === null) {
         return { value: null, diagnostics: player.diagnostics };
       }
       return {
-        value: { ref: 'pvar', player: player.value as PlayerSel, var: source.var },
-        diagnostics: player.diagnostics,
+        value: { ref: 'pvar', player: player.value as PlayerSel, var: variable.value },
+        diagnostics: [...variable.diagnostics, ...player.diagnostics],
       };
     }
     case 'zoneCount': {
@@ -1851,16 +1912,19 @@ function lowerReference(
       };
     }
     case 'zoneVar': {
-      if (typeof source.var !== 'string') {
-        return missingCapability(path, 'zoneVar reference', source, ['{ ref: "zoneVar", zone: <ZoneSel>, var: string }']);
+      const variable = lowerScopedVarNameExpr(source.var, `${path}.var`);
+      if (variable.value === null) {
+        return missingCapability(path, 'zoneVar reference', source, [
+          '{ ref: "zoneVar", zone: <ZoneSel>, var: string | { ref: "binding", name: string } | { ref: "grantContext", key: string } }',
+        ]);
       }
       const zoneVarZone = lowerZoneSelector(source.zone, context, `${path}.zone`);
       if (zoneVarZone.value === null) {
         return { value: null, diagnostics: zoneVarZone.diagnostics };
       }
       return {
-        value: { ref: 'zoneVar', zone: zoneVarZone.value, var: source.var },
-        diagnostics: zoneVarZone.diagnostics,
+        value: { ref: 'zoneVar', zone: zoneVarZone.value, var: variable.value },
+        diagnostics: [...variable.diagnostics, ...zoneVarZone.diagnostics],
       };
     }
     case 'activePlayer':

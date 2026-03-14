@@ -1,5 +1,6 @@
 import type { PlayerId } from '../../kernel/branded.js';
 import type { GameDef, GameState, TerminalResult } from '../../kernel/types.js';
+import type { GameDefRuntime } from '../../kernel/gamedef-runtime.js';
 import { evaluateState } from '../evaluate-state.js';
 
 /**
@@ -60,9 +61,10 @@ export const evaluateForAllPlayers = (
   def: GameDef,
   state: GameState,
   temperature: number,
+  runtime?: GameDefRuntime,
 ): readonly number[] => {
   const raw: readonly number[] = Array.from({ length: state.playerCount }, (_, i) =>
-    evaluateState(def, state, i as PlayerId),
+    evaluateState(def, state, i as PlayerId, runtime),
   );
   const mean = raw.reduce((sum, v) => sum + v, 0) / raw.length;
   return raw.map((v) => sigmoid((v - mean) / temperature));

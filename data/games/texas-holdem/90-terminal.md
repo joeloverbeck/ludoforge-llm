@@ -7,5 +7,5 @@ terminal:
       result: { type: score }
   scoring:
     method: highest
-    value: { ref: pvar, player: active, var: chipStack }
+    value: { ref: pvar, player: actor, var: chipStack }
 ```

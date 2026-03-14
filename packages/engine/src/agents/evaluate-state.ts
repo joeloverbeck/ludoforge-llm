@@ -5,6 +5,7 @@ import type { PlayerId } from '../kernel/branded.js';
 import { createEvalContext, createEvalRuntimeResources } from '../kernel/eval-context.js';
 import { buildRuntimeTableIndex } from '../kernel/runtime-table-index.js';
 import type { GameDef, GameState } from '../kernel/types.js';
+import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 
 const TERMINAL_WIN_SCORE = 1_000_000_000;
 const TERMINAL_LOSS_SCORE = -1_000_000_000;
@@ -15,19 +16,19 @@ const SCORING_WEIGHT = 100;
 const playerVarValue = (state: GameState, playerId: PlayerId, varName: string): number =>
   typeof state.perPlayerVars[playerId]?.[varName] === 'number' ? (state.perPlayerVars[playerId]?.[varName] as number) : 0;
 
-const evalScoringValue = (def: GameDef, state: GameState, playerId: PlayerId): number => {
+const evalScoringValue = (def: GameDef, state: GameState, playerId: PlayerId, runtime?: GameDefRuntime): number => {
   if (!def.terminal.scoring) {
     return 0;
   }
 
   const ctx = createEvalContext({
     def,
-    adjacencyGraph: buildAdjacencyGraph(def.zones),
+    adjacencyGraph: runtime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones),
     state,
     activePlayer: state.activePlayer,
     actorPlayer: playerId,
     bindings: {},
-    runtimeTableIndex: buildRuntimeTableIndex(def),
+    runtimeTableIndex: runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def),
     resources: createEvalRuntimeResources(),
   });
   const score = evalValue(def.terminal.scoring.value, ctx);
@@ -65,13 +66,13 @@ const scoreTerminalResult = (def: GameDef, state: GameState, playerId: PlayerId)
   return TERMINAL_LOSS_SCORE;
 };
 
-export const evaluateState = (def: GameDef, state: GameState, playerId: PlayerId): number => {
+export const evaluateState = (def: GameDef, state: GameState, playerId: PlayerId, runtime?: GameDefRuntime): number => {
   const terminalScore = scoreTerminalResult(def, state, playerId);
   if (terminalScore !== null) {
     return terminalScore;
   }
 
-  let score = evalScoringValue(def, state, playerId);
+  let score = evalScoringValue(def, state, playerId, runtime);
 
   for (const variable of def.perPlayerVars) {
     if (variable.type !== 'int') {

@@ -99,6 +99,62 @@ describe('space marker lattice rules', () => {
     assert.equal(evalCondition(illegalCondition, ctx), false);
   });
 
+  it('evaluates markerShiftAllowed with the same transition semantics as shiftMarker', () => {
+    const def = makeDef();
+    const adjacencyGraph = buildAdjacencyGraph(def.zones);
+    const base = initialState(def, 17, 1).state;
+    const shiftableState = {
+      ...base,
+      markers: {
+        ...base.markers,
+        'saigon:none': { supportOpposition: 'activeSupport' },
+        'central-laos:none': { supportOpposition: 'neutral' },
+      },
+    };
+    const evalCtx = makeEvalContext({
+      def,
+      adjacencyGraph,
+      state: shiftableState,
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+      bindings: {},
+    });
+
+    assert.equal(
+      evalCondition({ op: 'markerShiftAllowed', space: 'saigon:none', marker: 'supportOpposition', delta: 1 }, evalCtx),
+      false,
+    );
+    assert.equal(
+      evalCondition({ op: 'markerShiftAllowed', space: 'saigon:none', marker: 'supportOpposition', delta: -1 }, evalCtx),
+      true,
+    );
+    assert.equal(
+      evalCondition({ op: 'markerShiftAllowed', space: 'central-laos:none', marker: 'supportOpposition', delta: 1 }, evalCtx),
+      false,
+    );
+
+    const shiftCtx = createExecutionEffectContext({
+      def,
+      adjacencyGraph,
+      state: shiftableState,
+      rng: { state: shiftableState.rng },
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+      bindings: {},
+      moveParams: {},
+      resources: evalCtx.resources,
+    });
+
+    const result = applyEffects([{
+      shiftMarker: {
+        space: 'saigon:none',
+        marker: 'supportOpposition',
+        delta: -1,
+      },
+    }], shiftCtx);
+    assert.equal(result.state.markers['saigon:none']?.supportOpposition, 'passiveSupport');
+  });
+
   it('rejects illegal setMarker and shiftMarker transitions at runtime', () => {
     const def = makeDef();
     const adjacencyGraph = buildAdjacencyGraph(def.zones);

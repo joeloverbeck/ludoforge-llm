@@ -25,6 +25,7 @@ import type {
   OptionsQuery,
   PlayerSel,
   Reference,
+  ScopedVarNameExpr,
   SetVarPayload,
   TokenSel,
   TransferVarEndpoint,
@@ -118,6 +119,16 @@ const zoneSelToInlineNodes = (zone: ZoneSel): DisplayInlineNode[] => [ref(zone, 
 
 const tokenSelToInlineNodes = (token: TokenSel): DisplayInlineNode[] => [ref(token, 'token')];
 
+const scopedVarNameToInlineNodes = (variable: ScopedVarNameExpr, refKind: DisplayReferenceNode['refKind']): DisplayInlineNode[] => {
+  if (typeof variable === 'string') {
+    return [ref(variable, refKind)];
+  }
+  if (variable.ref === 'binding') {
+    return [ref(variable.name, 'binding')];
+  }
+  return [kw('grantContext'), DOT, ref(variable.key, 'prop')];
+};
+
 // ---------------------------------------------------------------------------
 // ValueExpr rendering
 // ---------------------------------------------------------------------------
@@ -125,11 +136,11 @@ const tokenSelToInlineNodes = (token: TokenSel): DisplayInlineNode[] => [ref(tok
 const referenceToInlineNodes = (r: Reference): DisplayInlineNode[] => {
   switch (r.ref) {
     case 'gvar':
-      return [ref(r.var, 'gvar')];
+      return scopedVarNameToInlineNodes(r.var, 'gvar');
     case 'pvar':
-      return [...playerSelToInlineNodes(r.player), DOT, ref(r.var, 'pvar')];
+      return [...playerSelToInlineNodes(r.player), DOT, ...scopedVarNameToInlineNodes(r.var, 'pvar')];
     case 'zoneVar':
-      return [ref(r.zone, 'zone'), DOT, ref(r.var, 'zvar')];
+      return [ref(r.zone, 'zone'), DOT, ...scopedVarNameToInlineNodes(r.var, 'zvar')];
     case 'zoneCount':
       return [kw('count'), LPAREN, ref(r.zone, 'zone'), RPAREN];
     case 'tokenProp':
@@ -251,7 +262,7 @@ export const optionsQueryToInlineNodes = (query: OptionsQuery): DisplayInlineNod
         ...numericValueExprToInlineNodes(query.max),
       ];
     case 'intsInVarRange':
-      return spaced(kw('range'), kw('of'), ref(query.var, 'gvar'));
+      return spaced(kw('range'), kw('of'), ...scopedVarNameToInlineNodes(query.var, 'gvar'));
     case 'enums':
       return [kw('enum'), LPAREN, ...commaSeparated(query.values.map((v) => [val(JSON.stringify(v), 'string')])), RPAREN];
     case 'globalMarkers':
@@ -346,6 +357,18 @@ const conditionLeafToInlineNodes = (cond: ConditionLeaf): DisplayInlineNode[] =>
         SPACE,
         ...zoneSelToInlineNodes(cond.space),
       ];
+    case 'markerShiftAllowed':
+      return [
+        ref(cond.marker, 'marker'),
+        SPACE,
+        kw('allows shift'),
+        SPACE,
+        ...numericValueExprToInlineNodes(cond.delta),
+        SPACE,
+        kw('in'),
+        SPACE,
+        ...zoneSelToInlineNodes(cond.space),
+      ];
     default: {
       const _exhaustive: never = cond;
       return [kw(String((_exhaustive as { readonly op: string }).op))];
@@ -395,15 +418,15 @@ export const conditionToDisplayNodes = (cond: ConditionAST, indent: number): Dis
 const scopedVarTarget = (
   payload: SetVarPayload | AddVarPayload,
 ): DisplayInlineNode[] => {
-  if (payload.scope === 'global') return [ref(payload.var, 'gvar')];
-  if (payload.scope === 'pvar') return [...playerSelToInlineNodes(payload.player), DOT, ref(payload.var, 'pvar')];
-  return [...zoneRefToInlineNodes(payload.zone), DOT, ref(payload.var, 'zvar')];
+  if (payload.scope === 'global') return scopedVarNameToInlineNodes(payload.var, 'gvar');
+  if (payload.scope === 'pvar') return [...playerSelToInlineNodes(payload.player), DOT, ...scopedVarNameToInlineNodes(payload.var, 'pvar')];
+  return [...zoneRefToInlineNodes(payload.zone), DOT, ...scopedVarNameToInlineNodes(payload.var, 'zvar')];
 };
 
 const transferEndpointToInlineNodes = (ep: TransferVarEndpoint): DisplayInlineNode[] => {
-  if (ep.scope === 'global') return [ref(ep.var, 'gvar')];
-  if (ep.scope === 'pvar') return [...playerSelToInlineNodes(ep.player), DOT, ref(ep.var, 'pvar')];
-  return [...zoneRefToInlineNodes(ep.zone), DOT, ref(ep.var, 'zvar')];
+  if (ep.scope === 'global') return scopedVarNameToInlineNodes(ep.var, 'gvar');
+  if (ep.scope === 'pvar') return [...playerSelToInlineNodes(ep.player), DOT, ...scopedVarNameToInlineNodes(ep.var, 'pvar')];
+  return [...zoneRefToInlineNodes(ep.zone), DOT, ...scopedVarNameToInlineNodes(ep.var, 'zvar')];
 };
 
 // ---------------------------------------------------------------------------

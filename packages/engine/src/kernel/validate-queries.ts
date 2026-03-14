@@ -28,7 +28,8 @@ import {
   walkTokenFilterExprRecovering,
 } from './token-filter-expr-utils.js';
 import { tokenFilterTraversalValidatorMessage, tokenFilterTraversalValidatorSuggestion } from './token-filter-validator-boundary.js';
-import { validateCanonicalBinding } from './validate-behavior-shared.js';
+import { validateCanonicalBinding, validateScopedVarNameExpr } from './validate-behavior-shared.js';
+import { tryStaticScopedVarNameExpr } from './scoped-var-name-resolution.js';
 import { validateValueExpr, validateNumericValueExpr, validateZoneRef } from './validate-values.js';
 import { validateConditionAst } from './validate-conditions.js';
 
@@ -572,23 +573,25 @@ export const validateOptionsQuery = (
       const scope = query.scope ?? 'global';
       const varTypesByName = scope === 'global' ? context.globalVarTypesByName : context.perPlayerVarTypesByName;
       const varCandidates = scope === 'global' ? context.globalVarCandidates : context.perPlayerVarCandidates;
-      const declaredType = varTypesByName.get(query.var);
+      validateScopedVarNameExpr(diagnostics, query.var, `${path}.var`);
+      const staticVariable = tryStaticScopedVarNameExpr(query.var);
+      const declaredType = staticVariable === null ? undefined : varTypesByName.get(staticVariable);
 
-      if (declaredType === undefined) {
+      if (staticVariable !== null && declaredType === undefined) {
         pushMissingReferenceDiagnostic(
           diagnostics,
           'DOMAIN_INTS_VAR_RANGE_SOURCE_MISSING',
           `${path}.var`,
-          `Unknown ${scope === 'global' ? 'global' : 'per-player'} variable "${query.var}" for intsInVarRange source.`,
-          query.var,
+          `Unknown ${scope === 'global' ? 'global' : 'per-player'} variable "${staticVariable}" for intsInVarRange source.`,
+          staticVariable,
           varCandidates,
         );
-      } else if (declaredType !== 'int') {
+      } else if (staticVariable !== null && declaredType !== 'int') {
         diagnostics.push({
           code: 'DOMAIN_INTS_VAR_RANGE_SOURCE_TYPE_INVALID',
           path: `${path}.var`,
           severity: 'error',
-          message: `intsInVarRange source variable "${query.var}" must be an int variable.`,
+          message: `intsInVarRange source variable "${staticVariable}" must be an int variable.`,
           suggestion: 'Use an int variable declaration, or switch to a non-derived domain query.',
         });
       }

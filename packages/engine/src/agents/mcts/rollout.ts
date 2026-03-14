@@ -127,7 +127,7 @@ export function rollout(
           const candidate = sampled[i]!;
           try {
             const applied = applyMove(def, currentState, candidate.move, undefined, runtime);
-            const score = evaluateState(def, applied.state, actingPlayer);
+            const score = evaluateState(def, applied.state, actingPlayer, runtime);
             if (score > bestScore) {
               bestScore = score;
               bestIdx = i;

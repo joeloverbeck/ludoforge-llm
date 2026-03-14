@@ -109,11 +109,16 @@ export function createAnimationController(
   let started = false;
   let destroyed = false;
   let unsubscribeEffectTrace: (() => void) | null = null;
+  let unsubscribeLifecycle: (() => void) | null = null;
 
   const logger = deps.logger;
 
   const processTrace = (trace: readonly EffectTraceEntry[], isSetup = false): void => {
     if (destroyed || trace.length === 0) {
+      return;
+    }
+
+    if (selectorStore.getState().gameLifecycle === 'terminal') {
       return;
     }
 
@@ -267,7 +272,19 @@ export function createAnimationController(
       unsubscribeEffectTrace = selectorStore.subscribe(
         (state) => state.effectTrace,
         (trace) => {
+          if (selectorStore.getState().gameLifecycle === 'terminal') {
+            return;
+          }
           processTrace(trace);
+        },
+      );
+
+      unsubscribeLifecycle = selectorStore.subscribe(
+        (state) => state.gameLifecycle,
+        (lifecycle) => {
+          if (lifecycle === 'terminal') {
+            queue.forceFlush();
+          }
         },
       );
 
@@ -290,6 +307,8 @@ export function createAnimationController(
 
       unsubscribeEffectTrace?.();
       unsubscribeEffectTrace = null;
+      unsubscribeLifecycle?.();
+      unsubscribeLifecycle = null;
       queue.destroy();
     },
 

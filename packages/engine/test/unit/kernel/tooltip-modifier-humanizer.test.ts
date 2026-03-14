@@ -108,6 +108,18 @@ describe('tooltip-modifier-humanizer', () => {
       assert.equal(result, 'not Aid is 0');
     });
 
+    it('humanizes markerShiftAllowed', () => {
+      const cond: ConditionAST = {
+        op: 'markerShiftAllowed',
+        space: 'saigon',
+        marker: 'cap_m48Patton',
+        delta: 1,
+      };
+      const ctx = ctxWithVerbalization(baseVerb);
+      const result = humanizeCondition(cond, ctx);
+      assert.equal(result, 'M48 Patton allows shift 1');
+    });
+
     it('suppresses if any referenced name is internal', () => {
       const cond: ConditionAST = {
         op: 'and',

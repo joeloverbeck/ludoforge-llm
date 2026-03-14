@@ -37,6 +37,8 @@ import {
   tryStaticStringValue,
   validateMarkerStateLiteral,
 } from './validate-behavior-shared.js';
+import { validateScopedVarNameExpr } from './validate-behavior-shared.js';
+import { tryStaticScopedVarNameExpr } from './scoped-var-name-resolution.js';
 import { validateValueExpr, validateNumericValueExpr, validateZoneRef } from './validate-values.js';
 import { validateConditionAst } from './validate-conditions.js';
 import {
@@ -280,24 +282,26 @@ export const validateEffectAst = (
     for (const { key, endpoint } of transferEndpoints) {
       const endpointPath = `${path}.transferVar.${key}`;
       const varPath = `${endpointPath}.var`;
+      validateScopedVarNameExpr(diagnostics, endpoint.var, varPath);
+      const staticVariable = tryStaticScopedVarNameExpr(endpoint.var);
 
       if (endpoint.scope === 'global') {
-        if (!context.globalVarNames.has(endpoint.var)) {
+        if (staticVariable !== null && !context.globalVarNames.has(staticVariable)) {
           pushMissingReferenceDiagnostic(
             diagnostics,
             'REF_GVAR_MISSING',
             varPath,
-            `Unknown global variable "${endpoint.var}".`,
-            endpoint.var,
+            `Unknown global variable "${staticVariable}".`,
+            staticVariable,
             context.globalVarCandidates,
           );
         }
-        if (context.globalVarTypesByName.get(endpoint.var) === 'boolean') {
+        if (staticVariable !== null && context.globalVarTypesByName.get(staticVariable) === 'boolean') {
           diagnostics.push({
             code: 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID',
             path: varPath,
             severity: 'error',
-            message: `transferVar cannot target boolean variable "${endpoint.var}".`,
+            message: `transferVar cannot target boolean variable "${staticVariable}".`,
             suggestion: 'Use integer variables for transferVar source and destination.',
           });
         }
@@ -305,22 +309,22 @@ export const validateEffectAst = (
       }
 
       if (endpoint.scope === 'pvar') {
-        if (!context.perPlayerVarNames.has(endpoint.var)) {
+        if (staticVariable !== null && !context.perPlayerVarNames.has(staticVariable)) {
           pushMissingReferenceDiagnostic(
             diagnostics,
             'REF_PVAR_MISSING',
             varPath,
-            `Unknown per-player variable "${endpoint.var}".`,
-            endpoint.var,
+            `Unknown per-player variable "${staticVariable}".`,
+            staticVariable,
             context.perPlayerVarCandidates,
           );
         }
-        if (context.perPlayerVarTypesByName.get(endpoint.var) === 'boolean') {
+        if (staticVariable !== null && context.perPlayerVarTypesByName.get(staticVariable) === 'boolean') {
           diagnostics.push({
             code: 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID',
             path: varPath,
             severity: 'error',
-            message: `transferVar cannot target boolean variable "${endpoint.var}".`,
+            message: `transferVar cannot target boolean variable "${staticVariable}".`,
             suggestion: 'Use integer variables for transferVar source and destination.',
           });
         }
@@ -328,13 +332,13 @@ export const validateEffectAst = (
         continue;
       }
 
-      if (!context.zoneVarNames.has(endpoint.var)) {
+      if (staticVariable !== null && !context.zoneVarNames.has(staticVariable)) {
         pushMissingReferenceDiagnostic(
           diagnostics,
           'REF_ZONEVAR_MISSING',
           varPath,
-          `Unknown zone variable "${endpoint.var}".`,
-          endpoint.var,
+          `Unknown zone variable "${staticVariable}".`,
+          staticVariable,
           context.zoneVarCandidates,
         );
       }

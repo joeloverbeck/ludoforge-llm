@@ -1,6 +1,7 @@
 import type { GameDef, OptionsQuery, RuntimeTableContract, ValueExpr } from './types.js';
 import { inferLeafOptionsQueryContract, type QueryRuntimeShape } from './query-kind-contract.js';
 import { forEachOptionsQueryLeaf } from './query-walk.js';
+import { tryStaticScopedVarNameExpr } from './scoped-var-name-resolution.js';
 
 export type { QueryRuntimeShape } from './query-kind-contract.js';
 export type ValueRuntimeShape = 'number' | 'string' | 'boolean' | 'unknown';
@@ -55,7 +56,8 @@ export function inferValueRuntimeShapes(
 
   if ('ref' in valueExpr) {
     if (valueExpr.ref === 'gvar') {
-      const globalType = context.globalVarTypesByName.get(valueExpr.var);
+      const variable = tryStaticScopedVarNameExpr(valueExpr.var);
+      const globalType = variable === null ? undefined : context.globalVarTypesByName.get(variable);
       if (globalType === 'int') {
         return ['number'];
       }
@@ -66,7 +68,8 @@ export function inferValueRuntimeShapes(
     }
 
     if (valueExpr.ref === 'pvar') {
-      const perPlayerType = context.perPlayerVarTypesByName.get(valueExpr.var);
+      const variable = tryStaticScopedVarNameExpr(valueExpr.var);
+      const perPlayerType = variable === null ? undefined : context.perPlayerVarTypesByName.get(variable);
       if (perPlayerType === 'int') {
         return ['number'];
       }

@@ -1,7 +1,8 @@
 import type { Diagnostic } from './diagnostics.js';
-import type { Reference, ValueExpr } from './types.js';
+import type { Reference, ScopedVarNameExpr, ValueExpr } from './types.js';
 import type { AstScopedVarScope } from './scoped-var-contract.js';
 import { isCanonicalBindingIdentifier } from '../contracts/index.js';
+import { tryStaticScopedVarNameExpr } from './scoped-var-name-resolution.js';
 import {
   type ValidationContext,
   pushMissingReferenceDiagnostic,
@@ -219,32 +220,56 @@ export const validateReference = (
     }
   }
 
-  if (reference.ref === 'gvar' && !context.globalVarNames.has(reference.var)) {
-    pushMissingReferenceDiagnostic(
-      diagnostics,
-      'REF_GVAR_MISSING',
-      `${path}.var`,
-      `Unknown global variable "${reference.var}".`,
-      reference.var,
-      context.globalVarCandidates,
-    );
-    return;
+  if (reference.ref === 'gvar') {
+    validateScopedVarNameExpr(diagnostics, reference.var, `${path}.var`);
+    const staticVariable = tryStaticScopedVarNameExpr(reference.var);
+    if (staticVariable !== null && !context.globalVarNames.has(staticVariable)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_GVAR_MISSING',
+        `${path}.var`,
+        `Unknown global variable "${staticVariable}".`,
+        staticVariable,
+        context.globalVarCandidates,
+      );
+      return;
+    }
   }
 
-  if (reference.ref === 'pvar' && !context.perPlayerVarNames.has(reference.var)) {
-    pushMissingReferenceDiagnostic(
-      diagnostics,
-      'REF_PVAR_MISSING',
-      `${path}.var`,
-      `Unknown per-player variable "${reference.var}".`,
-      reference.var,
-      context.perPlayerVarCandidates,
-    );
-    return;
+  if (reference.ref === 'pvar') {
+    validateScopedVarNameExpr(diagnostics, reference.var, `${path}.var`);
+    const staticVariable = tryStaticScopedVarNameExpr(reference.var);
+    if (staticVariable !== null && !context.perPlayerVarNames.has(staticVariable)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_PVAR_MISSING',
+        `${path}.var`,
+        `Unknown per-player variable "${staticVariable}".`,
+        staticVariable,
+        context.perPlayerVarCandidates,
+      );
+      return;
+    }
   }
 
   if (reference.ref === 'pvar') {
     validatePlayerSelector(diagnostics, reference.player, `${path}.player`, context);
+  }
+
+  if (reference.ref === 'zoneVar') {
+    validateScopedVarNameExpr(diagnostics, reference.var, `${path}.var`);
+    const staticVariable = tryStaticScopedVarNameExpr(reference.var);
+    if (staticVariable !== null && !context.zoneVarNames.has(staticVariable)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_ZONEVAR_MISSING',
+        `${path}.var`,
+        `Unknown zone variable "${staticVariable}".`,
+        staticVariable,
+        context.zoneVarCandidates,
+      );
+      return;
+    }
   }
 
   if (reference.ref === 'zoneCount') {
@@ -369,21 +394,46 @@ export const validateMarkerStateLiteral = (
 // Scoped variable helpers
 // ---------------------------------------------------------------------------
 
+export const validateScopedVarNameExpr = (
+  diagnostics: Diagnostic[],
+  variable: ScopedVarNameExpr,
+  path: string,
+): void => {
+  if (typeof variable === 'string') {
+    return;
+  }
+  if (variable.ref === 'binding') {
+    validateCanonicalBinding(
+      diagnostics,
+      variable.name,
+      `${path}.name`,
+      'REF_BINDING_INVALID',
+      'scoped variable name',
+    );
+  }
+};
+
 export const validateScopedVarReference = (
   diagnostics: Diagnostic[],
   scope: AstScopedVarScope,
-  variable: string,
+  variable: ScopedVarNameExpr,
   path: string,
   context: ValidationContext,
 ): void => {
+  validateScopedVarNameExpr(diagnostics, variable, path);
+  const staticVariable = tryStaticScopedVarNameExpr(variable);
+  if (staticVariable === null) {
+    return;
+  }
+
   if (scope === 'global') {
-    if (!context.globalVarNames.has(variable)) {
+    if (!context.globalVarNames.has(staticVariable)) {
       pushMissingReferenceDiagnostic(
         diagnostics,
         'REF_GVAR_MISSING',
         path,
-        `Unknown global variable "${variable}".`,
-        variable,
+        `Unknown global variable "${staticVariable}".`,
+        staticVariable,
         context.globalVarCandidates,
       );
     }
@@ -391,26 +441,26 @@ export const validateScopedVarReference = (
   }
 
   if (scope === 'pvar') {
-    if (!context.perPlayerVarNames.has(variable)) {
+    if (!context.perPlayerVarNames.has(staticVariable)) {
       pushMissingReferenceDiagnostic(
         diagnostics,
         'REF_PVAR_MISSING',
         path,
-        `Unknown per-player variable "${variable}".`,
-        variable,
+        `Unknown per-player variable "${staticVariable}".`,
+        staticVariable,
         context.perPlayerVarCandidates,
       );
     }
     return;
   }
 
-  if (!context.zoneVarNames.has(variable)) {
+  if (!context.zoneVarNames.has(staticVariable)) {
     pushMissingReferenceDiagnostic(
       diagnostics,
       'REF_ZONEVAR_MISSING',
       path,
-      `Unknown zone variable "${variable}".`,
-      variable,
+      `Unknown zone variable "${staticVariable}".`,
+      staticVariable,
       context.zoneVarCandidates,
     );
   }
@@ -418,11 +468,15 @@ export const validateScopedVarReference = (
 
 export const getBooleanCapableScopedVarType = (
   scope: Exclude<AstScopedVarScope, 'zoneVar'>,
-  variable: string,
+  variable: ScopedVarNameExpr,
   context: ValidationContext,
 ): 'int' | 'boolean' | undefined => {
-  if (scope === 'global') {
-    return context.globalVarTypesByName.get(variable);
+  const staticVariable = tryStaticScopedVarNameExpr(variable);
+  if (staticVariable === null) {
+    return undefined;
   }
-  return context.perPlayerVarTypesByName.get(variable);
+  if (scope === 'global') {
+    return context.globalVarTypesByName.get(staticVariable);
+  }
+  return context.perPlayerVarTypesByName.get(staticVariable);
 };

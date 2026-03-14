@@ -2766,6 +2766,52 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('skips static missing-var diagnostics for dynamic scoped variable names while still validating structure', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [{ name: '$n', domain: { query: 'intsInVarRange', var: { ref: 'binding', name: '$resourceVar' } } }],
+          effects: [
+            { setVar: { scope: 'global', var: { ref: 'binding', name: '$resourceVar' }, value: 1 } },
+            {
+              transferVar: {
+                from: { scope: 'global', var: { ref: 'grantContext', key: 'fromVar' } },
+                to: { scope: 'pvar', player: 'actor', var: { ref: 'binding', name: '$playerVar' } },
+                amount: 1,
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(diagnostics.some((diag) => diag.code === 'REF_GVAR_MISSING' || diag.code === 'REF_PVAR_MISSING'), false);
+  });
+
+  it('still validates canonical binding names inside dynamic scoped variable expressions', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [{ setVar: { scope: 'global', var: { ref: 'binding', name: 'notCanonical' }, value: 1 } }],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'REF_BINDING_INVALID' && diag.path === 'actions[0].effects[0].setVar.var.name',
+      ),
+    );
+  });
+
   it('does not duplicate structural transferVar endpoint diagnostics handled by schema contracts', () => {
     const base = createValidGameDef();
     const def = {
@@ -3719,6 +3765,25 @@ describe('validateGameDef reference checks', () => {
           diag.path === 'actions[0].params[0].domain.var' &&
           diag.severity === 'error',
       ),
+    );
+  });
+
+  it('does not report static intsInVarRange source-missing diagnostics for dynamic variable-name expressions', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [{ name: '$n', domain: { query: 'intsInVarRange', var: { ref: 'grantContext', key: 'resourceVar' } } }],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code === 'DOMAIN_INTS_VAR_RANGE_SOURCE_MISSING' && diag.path === 'actions[0].params[0].domain.var'),
+      false,
     );
   });
 

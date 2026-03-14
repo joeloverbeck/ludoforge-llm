@@ -8,6 +8,7 @@
  */
 
 import type { EffectAST, ValueExpr, ConditionAST, OptionsQuery, TokenFilterExpr } from './types-ast.js';
+import { tryStaticScopedVarNameExpr } from './scoped-var-name-resolution.js';
 import type { TooltipMessage, SelectMessage } from './tooltip-ir.js';
 import type { NormalizerContext } from './tooltip-normalizer.js';
 import { humanizeCondition, resolveModifierEffect, classifyModifierRole, matchesGlobPattern } from './tooltip-modifier-humanizer.js';
@@ -230,8 +231,8 @@ export const normalizeForEach = (
 const extractLHSName = (left: ValueExpr): string | undefined => {
   if (typeof left === 'string') return left;
   if (typeof left === 'object' && left !== null && 'ref' in left) {
-    if (left.ref === 'gvar') return left.var;
-    if (left.ref === 'pvar') return left.var;
+    if (left.ref === 'gvar') return tryStaticScopedVarNameExpr(left.var) ?? undefined;
+    if (left.ref === 'pvar') return tryStaticScopedVarNameExpr(left.var) ?? undefined;
     if (left.ref === 'binding') return left.name;
   }
   return undefined;
@@ -279,7 +280,7 @@ const extractActionClassConditionValue = (cond: ConditionAST): string | undefine
   if (typeof left === 'object' && left !== null && 'ref' in left) {
     const isActionClass =
       (left.ref === 'binding' && left.name === '__actionClass') ||
-      (left.ref === 'gvar' && left.var === '__actionClass');
+      (left.ref === 'gvar' && tryStaticScopedVarNameExpr(left.var) === '__actionClass');
     if (isActionClass) {
       return typeof c.right === 'string' ? c.right : undefined;
     }

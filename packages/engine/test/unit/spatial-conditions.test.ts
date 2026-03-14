@@ -19,12 +19,12 @@ const makeDef = (): GameDef => ({
   globalVars: [],
   perPlayerVars: [],
   zones: [
-    { id: asZoneId('a:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('c:none') }, { to: asZoneId('b:none') }] },
-    { id: asZoneId('b:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('a:none') }, { to: asZoneId('d:none') }] },
-    { id: asZoneId('c:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('a:none') }, { to: asZoneId('d:none') }] },
-    { id: asZoneId('d:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('b:none') }, { to: asZoneId('c:none') }, { to: asZoneId('e:none') }] },
-    { id: asZoneId('e:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('d:none') }] },
-    { id: asZoneId('f:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+    { id: asZoneId('a:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('c:none') }, { to: asZoneId('b:none') }], attributes: { population: 1 } },
+    { id: asZoneId('b:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('a:none') }, { to: asZoneId('d:none') }], attributes: { population: 1 } },
+    { id: asZoneId('c:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('a:none') }, { to: asZoneId('d:none') }], attributes: { population: 0 } },
+    { id: asZoneId('d:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('b:none') }, { to: asZoneId('c:none') }, { to: asZoneId('e:none') }], attributes: { population: 1 } },
+    { id: asZoneId('e:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('d:none') }], attributes: { population: 1 } },
+    { id: asZoneId('f:none'), owner: 'none', visibility: 'public', ordering: 'set', attributes: { population: 1 } },
   ],
   tokenTypes: [],
   setup: [],
@@ -32,6 +32,19 @@ const makeDef = (): GameDef => ({
   actions: [],
   triggers: [],
   terminal: { conditions: [] },
+  markerLattices: [
+    {
+      id: 'supportOpposition',
+      states: ['activeOpposition', 'passiveOpposition', 'neutral', 'passiveSupport', 'activeSupport'],
+      defaultState: 'neutral',
+      constraints: [
+        {
+          when: { op: '==', left: { ref: 'zoneProp', zone: '$space', prop: 'population' }, right: 0 },
+          allowedStates: ['neutral'],
+        },
+      ],
+    },
+  ],
 });
 
 const makeState = (): GameState => ({
@@ -105,5 +118,40 @@ describe('spatial condition runtime', () => {
 
     assert.equal(evalCondition({ op: 'connected', from: 'a:none', to: 'd:none', maxDepth: 1 }, ctx), false);
     assert.equal(evalCondition({ op: 'connected', from: 'a:none', to: 'd:none', maxDepth: 2 }, ctx), true);
+  });
+
+  it('evaluates markerShiftAllowed for legal shifts, edge no-ops, and constraint failures', () => {
+    const baseState = makeState();
+    const legalCtx = makeCtx({
+      state: {
+        ...baseState,
+        markers: { 'a:none': { supportOpposition: 'passiveSupport' } },
+      },
+    });
+    const noopCtx = makeCtx({
+      state: {
+        ...baseState,
+        markers: { 'a:none': { supportOpposition: 'activeSupport' } },
+      },
+    });
+    const illegalCtx = makeCtx({
+      state: {
+        ...baseState,
+        markers: { 'c:none': { supportOpposition: 'neutral' } },
+      },
+    });
+
+    assert.equal(
+      evalCondition({ op: 'markerShiftAllowed', space: 'a:none', marker: 'supportOpposition', delta: 1 }, legalCtx),
+      true,
+    );
+    assert.equal(
+      evalCondition({ op: 'markerShiftAllowed', space: 'a:none', marker: 'supportOpposition', delta: 1 }, noopCtx),
+      false,
+    );
+    assert.equal(
+      evalCondition({ op: 'markerShiftAllowed', space: 'c:none', marker: 'supportOpposition', delta: 1 }, illegalCtx),
+      false,
+    );
   });
 });

@@ -11,6 +11,7 @@ import type { ModifierRole } from './tooltip-ir.js';
 import type { NormalizerContext } from './tooltip-normalizer.js';
 import type { LabelContext } from './tooltip-label-resolver.js';
 import { buildLabelContext, resolveLabel } from './tooltip-label-resolver.js';
+import { tryStaticScopedVarNameExpr } from './scoped-var-name-resolution.js';
 import { humanizeValueExpr } from './tooltip-value-stringifier.js';
 import { isSuppressed } from './tooltip-suppression.js';
 
@@ -56,8 +57,8 @@ function extractValueNames(expr: ValueExpr): readonly string[] {
   if (typeof expr === 'string') return [expr];
   if (typeof expr === 'number' || typeof expr === 'boolean') return [];
   if ('ref' in expr) {
-    if (expr.ref === 'gvar') return [expr.var];
-    if (expr.ref === 'pvar') return [expr.var];
+    if (expr.ref === 'gvar') return tryStaticScopedVarNameExpr(expr.var) === null ? [] : [tryStaticScopedVarNameExpr(expr.var)!];
+    if (expr.ref === 'pvar') return tryStaticScopedVarNameExpr(expr.var) === null ? [] : [tryStaticScopedVarNameExpr(expr.var)!];
     if (expr.ref === 'binding') return [expr.name];
     if (expr.ref === 'globalMarkerState') return [expr.marker];
     if (expr.ref === 'markerState') return [expr.marker, expr.space];
@@ -67,7 +68,10 @@ function extractValueNames(expr: ValueExpr): readonly string[] {
     if (expr.ref === 'zoneProp') return [expr.zone, expr.prop];
     if (expr.ref === 'activePlayer' || expr.ref === 'activeSeat') return [];
     if (expr.ref === 'tokenZone') return [expr.token];
-    if (expr.ref === 'zoneVar') return [expr.zone, expr.var];
+    if (expr.ref === 'zoneVar') {
+      const variable = tryStaticScopedVarNameExpr(expr.var);
+      return variable === null ? [expr.zone] : [expr.zone, variable];
+    }
   }
   return [];
 }
@@ -100,6 +104,9 @@ function humanizeConditionInner(cond: ConditionAST, ctx: LabelContext, count?: n
   }
   if (c.op === 'markerStateAllowed') {
     return `${resolveLabel(c.marker as string, ctx, count)} allows ${humanizeValueExpr(c.state as ValueExpr, ctx, count)}`;
+  }
+  if (c.op === 'markerShiftAllowed') {
+    return `${resolveLabel(c.marker as string, ctx, count)} allows shift ${humanizeValueExpr(c.delta as ValueExpr, ctx, count)}`;
   }
 
   // Comparison operators

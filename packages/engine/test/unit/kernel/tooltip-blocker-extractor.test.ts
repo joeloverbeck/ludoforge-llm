@@ -119,6 +119,12 @@ describe('extractBlockers', () => {
       const result = extractBlockers(cond, () => false, MOCK_VERB);
       assert.equal(result.blockers[0]!.description, 'Need Saigon.terrain to include City');
     });
+
+    it('formats markerShiftAllowed', () => {
+      const cond: ConditionAST = { op: 'markerShiftAllowed', space: 'saigon', marker: 'supportOpposition', delta: 1 };
+      const result = extractBlockers(cond, () => false, MOCK_VERB);
+      assert.equal(result.blockers[0]!.description, 'Need supportOpposition to allow shift 1 in Saigon');
+    });
   });
 
   // ---------------------------------------------------------------------------

@@ -173,11 +173,12 @@ describe('FITL text-only card behavior backfill', () => {
     assert.equal((card83?.shaded?.effects?.[2] as { addVar?: { delta?: number } } | undefined)?.addVar?.delta, -15);
 
     const card85 = cardById.get('card-85');
-    assert.equal((card85?.unshaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 2);
-    assert.equal(card85?.unshaded?.effects, undefined);
-    assert.equal(card85?.shaded?.effects, undefined);
-    assert.equal((card85?.unshaded?.targets?.[0]?.effects?.[0] as { shiftMarker?: { delta?: number } })?.shiftMarker?.delta, 1);
-    assert.equal((card85?.shaded?.targets?.[0]?.effects?.[0] as { shiftMarker?: { delta?: number } })?.shiftMarker?.delta, -1);
+    assert.equal((card85?.unshaded?.effects?.[0] as { chooseN?: { bind?: string } } | undefined)?.chooseN?.bind, '$usaidCoinControlledSpaces');
+    assert.equal(typeof (card85?.unshaded?.effects?.[1] as { forEach?: unknown } | undefined)?.forEach, 'object');
+    assert.equal((card85?.shaded?.effects?.[0] as { chooseN?: { bind?: string; min?: number; max?: number } } | undefined)?.chooseN?.bind, '$usaidTracks');
+    assert.equal((card85?.shaded?.effects?.[0] as { chooseN?: { min?: number; max?: number } } | undefined)?.chooseN?.min, 1);
+    assert.equal((card85?.shaded?.effects?.[0] as { chooseN?: { min?: number; max?: number } } | undefined)?.chooseN?.max, 3);
+    assert.equal(typeof (card85?.shaded?.effects?.[1] as { forEach?: unknown } | undefined)?.forEach, 'object');
 
     const card87 = cardById.get('card-87');
     assert.equal(card87?.unshaded?.effects, undefined);

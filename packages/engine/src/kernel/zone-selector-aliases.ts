@@ -235,6 +235,10 @@ export const collectZoneSelectorAliasesFromCondition = (
       collectZoneSelAlias(condition.space, aliases);
       collectZoneSelectorAliasesFromValueExpr(condition.state, aliases);
       return aliases;
+    case 'markerShiftAllowed':
+      collectZoneSelAlias(condition.space, aliases);
+      collectZoneSelectorAliasesFromValueExpr(condition.delta, aliases);
+      return aliases;
     default: {
       const exhaustive: never = condition;
       return exhaustive;

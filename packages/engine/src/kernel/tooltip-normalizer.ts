@@ -9,7 +9,14 @@ import type { EffectAST, ZoneRef, NumericValueExpr, PlayerSel } from './types-as
 import type { VerbalizationDef } from './verbalization-types.js';
 import type { TooltipMessage, VarScope } from './tooltip-ir.js';
 import { isSuppressed, isScaffoldingEffect } from './tooltip-suppression.js';
-import { stringifyValueExpr, stringifyNumericExpr, stringifyZoneRef, stripMacroBindingPrefix, humanizeMacroId } from './tooltip-value-stringifier.js';
+import {
+  stringifyValueExpr,
+  stringifyNumericExpr,
+  stringifyScopedVarNameExpr,
+  stringifyZoneRef,
+  stripMacroBindingPrefix,
+  humanizeMacroId,
+} from './tooltip-value-stringifier.js';
 import {
   normalizeChooseN,
   normalizeChooseOne,
@@ -81,7 +88,8 @@ const normalizeAddVar = (
   ctx: NormalizerContext,
   astPath: string,
 ): readonly TooltipMessage[] => {
-  const { var: varName, delta } = payload.addVar;
+  const { delta } = payload.addVar;
+  const varName = stringifyScopedVarNameExpr(payload.addVar.var);
 
   if (isSuppressed(varName, ctx.suppressPatterns)) {
     return [{ kind: 'suppressed', reason: `suppressed var: ${varName}`, astPath }];
@@ -105,7 +113,8 @@ const normalizeSetVar = (
   ctx: NormalizerContext,
   astPath: string,
 ): readonly TooltipMessage[] => {
-  const { var: varName, value } = payload.setVar;
+  const { value } = payload.setVar;
+  const varName = stringifyScopedVarNameExpr(payload.setVar.var);
 
   if (isSuppressed(varName, ctx.suppressPatterns)) {
     return [{ kind: 'suppressed', reason: `suppressed var: ${varName}`, astPath }];
@@ -127,10 +136,10 @@ const normalizeTransferVar = (
   const toScope = extractScopeFields(to);
   return [{
     kind: 'transfer',
-    resource: from.var,
+    resource: stringifyScopedVarNameExpr(from.var),
     amount: numAmount,
-    from: from.var,
-    to: to.var,
+    from: stringifyScopedVarNameExpr(from.var),
+    to: stringifyScopedVarNameExpr(to.var),
     ...(amountExpr !== undefined ? { amountExpr } : {}),
     ...(fromScope.scope !== undefined ? { fromScope: fromScope.scope, fromScopeOwner: fromScope.scopeOwner } : {}),
     ...(toScope.scope !== undefined ? { toScope: toScope.scope, toScopeOwner: toScope.scopeOwner } : {}),

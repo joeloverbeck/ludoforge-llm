@@ -211,6 +211,63 @@ describe('effects complex integration chains', () => {
     assert.equal(result.rng, ctx.rng);
   });
 
+  it('compiles and executes dynamic scoped variable names through DSL authoring', () => {
+    const compiled = compileGameSpecToGameDef({
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'effects-complex-dynamic-scoped-vars', players: { min: 1, max: 1 } },
+      globalVars: [
+        { name: 'aid', type: 'int', init: 0, min: 0, max: 10 },
+        { name: 'patronage', type: 'int', init: 0, min: 0, max: 10 },
+      ],
+      zones: [],
+      turnStructure: { phases: [{ id: 'main' }] },
+      terminal: { conditions: [] },
+      setup: [
+        {
+          chooseN: {
+            bind: '$tracks',
+            options: { query: 'enums', values: ['aid', 'patronage'] },
+            n: 2,
+          },
+        },
+        {
+          forEach: {
+            bind: '$track',
+            over: { query: 'binding', name: '$tracks' },
+            effects: [
+              {
+                addVar: {
+                  scope: 'global',
+                  var: { ref: 'binding', name: '$track' },
+                  delta: 2,
+                },
+              },
+            ],
+          },
+        },
+      ],
+      actions: [],
+    });
+
+    assert.deepEqual(compiled.diagnostics.filter((diag) => diag.severity === 'error'), []);
+    assert.ok(compiled.gameDef !== null);
+
+    const ctx = makeCtx({
+      def: compiled.gameDef!,
+      state: {
+        ...makeState(),
+        globalVars: { aid: 0, patronage: 0 },
+      },
+      moveParams: {
+        'decision:doc.setup.0.chooseN::$tracks': ['aid', 'patronage'],
+      },
+    });
+
+    const result = applyEffects(compiled.gameDef!.setup, ctx);
+    assert.equal(result.state.globalVars.aid, 2);
+    assert.equal(result.state.globalVars.patronage, 2);
+  });
+
   it('drives compiled distributeTokens through legalChoicesDiscover and applyMove with deterministic movement', () => {
     const compiled = compileGameSpecToGameDef({
       ...createEmptyGameSpecDoc(),

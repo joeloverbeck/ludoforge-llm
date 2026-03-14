@@ -27,6 +27,7 @@ import {
 import { filterRowsByPredicates, type ResolvedRowPredicate } from './query-predicate.js';
 import { resolvePredicateValue } from './predicate-value-resolution.js';
 import { resolveFreeOperationSequenceKey } from './free-operation-sequence-key.js';
+import { isDynamicScopedVarNameExpr, resolveScopedVarNameExprValue } from './scoped-var-name-resolution.js';
 import { filterTokensByExpr } from './token-filter.js';
 import { foldTokenFilterExpr } from './token-filter-expr-utils.js';
 import { planAssetRowsLookup } from './runtime-table-lookup-plan.js';
@@ -214,11 +215,68 @@ function resolveDeclaredIntVarBounds(
   ctx: ReadContext,
 ): { readonly min: number; readonly max: number } | null {
   const scope = query.scope ?? 'global';
+  const resolvedVar = resolveScopedVarNameExprValue(query.var, ctx);
+  if (typeof resolvedVar !== 'string') {
+    if (isDynamicScopedVarNameExpr(query.var)) {
+      if (query.var.ref === 'binding') {
+        if (resolvedVar === undefined) {
+          throw missingVarError(`intsInVarRange variable name binding not found: ${query.var.name}`, {
+            query,
+            binding: query.var.name,
+            availableBindings: Object.keys(ctx.bindings).sort(),
+          });
+        }
+        throw typeMismatchError(`intsInVarRange variable name binding must resolve to string: ${query.var.name}`, {
+          query,
+          binding: query.var.name,
+          actualType: typeof resolvedVar,
+          value: resolvedVar,
+        });
+      }
+      if (resolvedVar === undefined) {
+        throw missingVarError(`intsInVarRange variable name grantContext not found: ${query.var.key}`, {
+          query,
+          key: query.var.key,
+          availableGrantContextKeys: Object.keys(ctx.freeOperationOverlay?.grantContext ?? {}).sort(),
+        });
+      }
+      throw typeMismatchError(`intsInVarRange variable name grantContext must resolve to string: ${query.var.key}`, {
+        query,
+        key: query.var.key,
+        actualType: typeof resolvedVar,
+        value: resolvedVar,
+      });
+    }
+    return null;
+  }
+
   const declared =
     scope === 'global'
-      ? ctx.def.globalVars.find((variable) => variable.name === query.var)
-      : ctx.def.perPlayerVars.find((variable) => variable.name === query.var);
-  if (declared === undefined || declared.type !== 'int') {
+      ? ctx.def.globalVars.find((variable) => variable.name === resolvedVar)
+      : ctx.def.perPlayerVars.find((variable) => variable.name === resolvedVar);
+  if (declared === undefined) {
+    if (isDynamicScopedVarNameExpr(query.var)) {
+      throw missingVarError(
+        `Unknown ${scope === 'global' ? 'global' : 'per-player'} variable for intsInVarRange: ${resolvedVar}`,
+        {
+          query,
+          scope,
+          var: resolvedVar,
+          candidates: (scope === 'global' ? ctx.def.globalVars : ctx.def.perPlayerVars).map((variable) => variable.name).sort(),
+        },
+      );
+    }
+    return null;
+  }
+  if (declared.type !== 'int') {
+    if (isDynamicScopedVarNameExpr(query.var)) {
+      throw typeMismatchError(`intsInVarRange source variable must be int: ${resolvedVar}`, {
+        query,
+        scope,
+        var: resolvedVar,
+        actualType: declared.type,
+      });
+    }
     return null;
   }
 

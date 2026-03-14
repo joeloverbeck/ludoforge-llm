@@ -1,4 +1,5 @@
 import { effectRuntimeError } from './effect-error.js';
+import { resolveScopedVarNameExprValue } from './scoped-var-name-resolution.js';
 import {
   resolveSinglePlayerWithNormalization,
   resolveZoneWithNormalization,
@@ -7,7 +8,7 @@ import {
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type { EffectContext } from './effect-context.js';
 import type { RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';
-import type { GameState, IntVariableDef, PlayerSel, VariableDef, VariableValue, ZoneRef } from './types.js';
+import type { GameState, IntVariableDef, PlayerSel, ScopedVarNameExpr, VariableDef, VariableValue, ZoneRef } from './types.js';
 
 type ScopedVarDefinitionScope = 'global' | 'pvar' | 'zoneVar';
 type ScopedVarRuntimeErrorCode =
@@ -23,16 +24,16 @@ type DefinitionScopeEndpoint = Readonly<{
 export type ScopedVarResolvableEndpoint =
   | Readonly<{
       scope: 'global';
-      var: string;
+      var: ScopedVarNameExpr;
     }>
   | Readonly<{
       scope: 'pvar';
-      var: string;
+      var: ScopedVarNameExpr;
       player: PlayerSel;
     }>
   | Readonly<{
       scope: 'zoneVar';
-      var: string;
+      var: ScopedVarNameExpr;
       zone: ZoneRef;
     }>;
 
@@ -154,6 +155,65 @@ export function toScopedVarWrite(endpoint: RuntimeScopedVarEndpoint, value: Vari
 
 const availableZoneVarNames = (ctx: EffectContext): readonly string[] => (ctx.def.zoneVars ?? []).map((variable) => variable.name).sort();
 
+const resolveScopedVarName = (
+  variable: ScopedVarNameExpr,
+  evalCtx: EffectContext,
+  options: Readonly<{
+    code: ScopedVarRuntimeErrorCode;
+    effectType: ScopedVarEffectType;
+    scope: ScopedVarDefinitionScope;
+    context?: Readonly<Record<string, unknown>>;
+  }>,
+): string => {
+  const resolved = resolveScopedVarNameExprValue(variable, evalCtx);
+  if (typeof resolved === 'string') {
+    return resolved;
+  }
+  if (typeof variable === 'string') {
+    return variable;
+  }
+  if (variable.ref === 'binding') {
+    if (resolved === undefined) {
+      throw effectRuntimeError(options.code, `${options.effectType} variable name binding not found: ${variable.name}`, {
+        effectType: options.effectType,
+        scope: options.scope,
+        binding: variable.name,
+        variable,
+        availableBindings: Object.keys(evalCtx.bindings).sort(),
+        ...(options.context ?? {}),
+      });
+    }
+    throw effectRuntimeError(options.code, `${options.effectType} variable name binding must resolve to string: ${variable.name}`, {
+      effectType: options.effectType,
+      scope: options.scope,
+      binding: variable.name,
+      variable,
+      actualType: typeof resolved,
+      value: resolved,
+      ...(options.context ?? {}),
+    });
+  }
+  if (resolved === undefined) {
+    throw effectRuntimeError(options.code, `${options.effectType} variable name grantContext key not found: ${variable.key}`, {
+      effectType: options.effectType,
+      scope: options.scope,
+      key: variable.key,
+      variable,
+      availableGrantContextKeys: Object.keys(evalCtx.freeOperationOverlay?.grantContext ?? {}).sort(),
+      ...(options.context ?? {}),
+    });
+  }
+  throw effectRuntimeError(options.code, `${options.effectType} variable name grantContext value must resolve to string: ${variable.key}`, {
+    effectType: options.effectType,
+    scope: options.scope,
+    key: variable.key,
+    variable,
+    actualType: typeof resolved,
+    value: resolved,
+    ...(options.context ?? {}),
+  });
+};
+
 const resolveRuntimeScopedEndpointImpl = (
   endpoint: ScopedVarMalformedResolvableEndpoint,
   evalCtx: EffectContext,
@@ -173,7 +233,12 @@ const resolveRuntimeScopedEndpointImpl = (
   if (endpoint.scope === 'global') {
     return {
       scope: 'global',
-      var: endpoint.var,
+      var: resolveScopedVarName(endpoint.var, evalCtx, {
+        code: options.code,
+        effectType: options.effectType,
+        scope: 'global',
+        ...(options.context === undefined ? {} : { context: options.context }),
+      }),
     };
   }
 
@@ -206,7 +271,12 @@ const resolveRuntimeScopedEndpointImpl = (
     return {
       scope: 'pvar',
       player,
-      var: endpoint.var,
+      var: resolveScopedVarName(endpoint.var, evalCtx, {
+        code: options.code,
+        effectType: options.effectType,
+        scope: 'pvar',
+        ...(options.context === undefined ? {} : { context: options.context }),
+      }),
     };
   }
 
@@ -237,7 +307,12 @@ const resolveRuntimeScopedEndpointImpl = (
   return {
     scope: 'zone',
     zone,
-    var: endpoint.var,
+    var: resolveScopedVarName(endpoint.var, evalCtx, {
+      code: options.code,
+      effectType: options.effectType,
+      scope: 'zoneVar',
+      ...(options.context === undefined ? {} : { context: options.context }),
+    }),
   };
 };
 

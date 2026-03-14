@@ -1,4 +1,5 @@
 import { resolveMapSpaceId, resolveSinglePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
+import { resolveScopedVarNameExprValue } from './scoped-var-name-resolution.js';
 import type { ReadContext } from './eval-context.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { missingBindingError, missingVarError, typeMismatchError, zonePropNotFoundError } from './eval-error.js';
@@ -67,12 +68,52 @@ function resolveActiveSeatId(ctx: ReadContext): string | null {
   return String(ctx.activePlayer);
 }
 
+function resolveScopedVarNameForReference(ref: Extract<Reference, { ref: 'gvar' | 'pvar' | 'zoneVar' }>, ctx: ReadContext): string {
+  const resolved = resolveScopedVarNameExprValue(ref.var, ctx);
+  if (typeof resolved === 'string') {
+    return resolved;
+  }
+  if (typeof ref.var === 'string') {
+    return ref.var;
+  }
+  if (ref.var.ref === 'binding') {
+    if (resolved === undefined) {
+      throw missingBindingError(`Scoped variable name binding not found: ${ref.var.name}`, {
+        reference: ref,
+        binding: ref.var.name,
+        availableBindings: Object.keys(ctx.bindings).sort(),
+      });
+    }
+    throw typeMismatchError(`Scoped variable name binding must resolve to string: ${ref.var.name}`, {
+      reference: ref,
+      binding: ref.var.name,
+      actualType: typeof resolved,
+      value: resolved,
+    });
+  }
+  if (resolved === undefined) {
+    throw missingVarError(`Scoped variable name grantContext not found: ${ref.var.key}`, {
+      reference: ref,
+      key: ref.var.key,
+      availableGrantContextKeys: Object.keys(ctx.freeOperationOverlay?.grantContext ?? {}).sort(),
+    });
+  }
+  throw typeMismatchError(`Scoped variable name grantContext must resolve to string: ${ref.var.key}`, {
+    reference: ref,
+    key: ref.var.key,
+    actualType: typeof resolved,
+    value: resolved,
+  });
+}
+
 export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean | string | ScalarArrayValue {
   if (ref.ref === 'gvar') {
-    const value = ctx.state.globalVars[ref.var];
+    const variableName = resolveScopedVarNameForReference(ref, ctx);
+    const value = ctx.state.globalVars[variableName];
     if (value === undefined) {
-      throw missingVarError(`Global variable not found: ${ref.var}`, {
+      throw missingVarError(`Global variable not found: ${variableName}`, {
         reference: ref,
+        var: variableName,
         availableGlobalVars: Object.keys(ctx.state.globalVars).sort(),
       });
     }
@@ -81,6 +122,7 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
 
   if (ref.ref === 'pvar') {
     const playerId = resolveSinglePlayerSel(ref.player, ctx);
+    const variableName = resolveScopedVarNameForReference(ref, ctx);
     const playerVars = ctx.state.perPlayerVars[playerId];
     if (playerVars === undefined) {
       throw missingVarError(`Per-player vars missing for player ${playerId}`, {
@@ -90,11 +132,12 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
       });
     }
 
-    const value = playerVars[ref.var];
+    const value = playerVars[variableName];
     if (value === undefined) {
-      throw missingVarError(`Per-player variable not found: ${ref.var}`, {
+      throw missingVarError(`Per-player variable not found: ${variableName}`, {
         reference: ref,
         playerId,
+        var: variableName,
         availablePlayerVars: Object.keys(playerVars).sort(),
       });
     }
@@ -104,6 +147,7 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
 
   if (ref.ref === 'zoneVar') {
     const zoneId = resolveSingleZoneSel(ref.zone, ctx);
+    const variableName = resolveScopedVarNameForReference(ref, ctx);
     const zoneVarMap = ctx.state.zoneVars[String(zoneId)];
     if (zoneVarMap === undefined) {
       throw missingVarError(`Zone variable state not found for zone: ${String(zoneId)}`, {
@@ -113,12 +157,12 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
       });
     }
 
-    const value = zoneVarMap[ref.var];
+    const value = zoneVarMap[variableName];
     if (value === undefined) {
-      throw missingVarError(`Zone variable not found: ${ref.var} in zone ${String(zoneId)}`, {
+      throw missingVarError(`Zone variable not found: ${variableName} in zone ${String(zoneId)}`, {
         reference: ref,
         zoneId: String(zoneId),
-        var: ref.var,
+        var: variableName,
         availableZoneVars: Object.keys(zoneVarMap).sort(),
       });
     }

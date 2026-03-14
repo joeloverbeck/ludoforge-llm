@@ -2,6 +2,7 @@ import type { EffectAST, NumericValueExpr, PlayerSel, ZoneRef } from '../kernel/
 import { setVar, addVar, setActivePlayer, transferVar } from '../kernel/ast-builders.js';
 import {
   lowerNumericValueNode,
+  lowerScopedVarNameExpr,
   lowerValueNode,
 } from './compile-conditions.js';
 import type { EffectLoweringContext, EffectLoweringResult } from './compile-effects-types.js';
@@ -21,13 +22,13 @@ export function lowerSetVarEffect(
   path: string,
 ): EffectLoweringResult<EffectAST> {
   const scopeValue = source.scope;
-  const varName = source.var;
-  if ((scopeValue !== 'global' && scopeValue !== 'pvar' && scopeValue !== 'zoneVar') || typeof varName !== 'string') {
+  const varName = lowerScopedVarNameExpr(source.var, `${path}.var`);
+  if ((scopeValue !== 'global' && scopeValue !== 'pvar' && scopeValue !== 'zoneVar') || varName.value === null) {
     return missingCapability(path, 'setVar effect', source);
   }
 
   const value = lowerValueNode(source.value, makeConditionContext(context, scope), `${path}.value`);
-  const diagnostics = [...value.diagnostics];
+  const diagnostics = [...varName.diagnostics, ...value.diagnostics];
   if (value.value === null) {
     return { value: null, diagnostics };
   }
@@ -36,7 +37,7 @@ export function lowerSetVarEffect(
     return {
       value: setVar({
         scope: 'global',
-        var: varName,
+        var: varName.value,
         value: value.value,
       }),
       diagnostics,
@@ -53,7 +54,7 @@ export function lowerSetVarEffect(
       value: setVar({
         scope: 'zoneVar',
         zone: zone.value,
-        var: varName,
+        var: varName.value,
         value: value.value,
       }),
       diagnostics,
@@ -67,12 +68,12 @@ export function lowerSetVarEffect(
   }
 
   return {
-    value: setVar({
-      scope: 'pvar',
-      player: player.value,
-      var: varName,
-      value: value.value,
-    }),
+      value: setVar({
+        scope: 'pvar',
+        player: player.value,
+        var: varName.value,
+        value: value.value,
+      }),
     diagnostics,
   };
 }
@@ -84,13 +85,13 @@ export function lowerAddVarEffect(
   path: string,
 ): EffectLoweringResult<EffectAST> {
   const scopeValue = source.scope;
-  const varName = source.var;
-  if ((scopeValue !== 'global' && scopeValue !== 'pvar' && scopeValue !== 'zoneVar') || typeof varName !== 'string') {
+  const varName = lowerScopedVarNameExpr(source.var, `${path}.var`);
+  if ((scopeValue !== 'global' && scopeValue !== 'pvar' && scopeValue !== 'zoneVar') || varName.value === null) {
     return missingCapability(path, 'addVar effect', source);
   }
 
   const delta = lowerNumericValueNode(source.delta, makeConditionContext(context, scope), `${path}.delta`);
-  const diagnostics = [...delta.diagnostics];
+  const diagnostics = [...varName.diagnostics, ...delta.diagnostics];
   if (delta.value === null) {
     return { value: null, diagnostics };
   }
@@ -99,7 +100,7 @@ export function lowerAddVarEffect(
     return {
       value: addVar({
         scope: 'global',
-        var: varName,
+        var: varName.value,
         delta: delta.value,
       }),
       diagnostics,
@@ -116,7 +117,7 @@ export function lowerAddVarEffect(
       value: addVar({
         scope: 'zoneVar',
         zone: zone.value,
-        var: varName,
+        var: varName.value,
         delta: delta.value,
       }),
       diagnostics,
@@ -130,11 +131,11 @@ export function lowerAddVarEffect(
   }
 
   return {
-    value: addVar({
-      scope: 'pvar',
-      player: player.value,
-      var: varName,
-      delta: delta.value,
+      value: addVar({
+        scope: 'pvar',
+        player: player.value,
+        var: varName.value,
+        delta: delta.value,
     }),
     diagnostics,
   };
@@ -165,7 +166,7 @@ export function lowerTransferVarEffect(
   scope: BindingScope,
   path: string,
 ): EffectLoweringResult<EffectAST> {
-  if (!isRecord(source.from) || !isRecord(source.to) || typeof source.from.var !== 'string' || typeof source.to.var !== 'string') {
+  if (!isRecord(source.from) || !isRecord(source.to)) {
     return missingCapability(path, 'transferVar effect', source, [
       '{ transferVar: { from: { scope: "global", var } | { scope: "pvar", player, var } | { scope: "zoneVar", zone, var }, to: { scope: "global", var } | { scope: "pvar", player, var } | { scope: "zoneVar", zone, var }, amount, min?, max?, actualBind? } }',
     ]);
@@ -181,8 +182,13 @@ export function lowerTransferVarEffect(
   }
 
   const amount = lowerNumericValueNode(source.amount, makeConditionContext(context, scope), `${path}.amount`);
-  const diagnostics = [...amount.diagnostics];
+  const fromVar = lowerScopedVarNameExpr(source.from.var, `${path}.from.var`);
+  const toVar = lowerScopedVarNameExpr(source.to.var, `${path}.to.var`);
+  const diagnostics = [...fromVar.diagnostics, ...toVar.diagnostics, ...amount.diagnostics];
   if (amount.value === null) {
+    return { value: null, diagnostics };
+  }
+  if (fromVar.value === null || toVar.value === null) {
     return { value: null, diagnostics };
   }
 
@@ -265,17 +271,17 @@ export function lowerTransferVarEffect(
 
   const fromEndpoint: import('../kernel/types.js').TransferVarEndpoint =
     source.from.scope === 'global'
-      ? { scope: 'global', var: source.from.var }
+      ? { scope: 'global', var: fromVar.value }
       : source.from.scope === 'pvar'
-        ? { scope: 'pvar', player: fromPlayer!, var: source.from.var }
-        : { scope: 'zoneVar', zone: fromZone!, var: source.from.var };
+        ? { scope: 'pvar', player: fromPlayer!, var: fromVar.value }
+        : { scope: 'zoneVar', zone: fromZone!, var: fromVar.value };
 
   const toEndpoint: import('../kernel/types.js').TransferVarEndpoint =
     source.to.scope === 'global'
-      ? { scope: 'global', var: source.to.var }
+      ? { scope: 'global', var: toVar.value }
       : source.to.scope === 'pvar'
-        ? { scope: 'pvar', player: toPlayer!, var: source.to.var }
-        : { scope: 'zoneVar', zone: toZone!, var: source.to.var };
+        ? { scope: 'pvar', player: toPlayer!, var: toVar.value }
+        : { scope: 'zoneVar', zone: toZone!, var: toVar.value };
 
   return {
     value: transferVar({

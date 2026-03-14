@@ -89,7 +89,7 @@ export class GreedyAgent implements Agent {
 
     for (const move of candidates.moves) {
       const nextState = applyMove(input.def, input.state, move, undefined, input.runtime).state;
-      const score = evaluateState(input.def, nextState, input.playerId);
+      const score = evaluateState(input.def, nextState, input.playerId, input.runtime);
       if (score > bestScore) {
         bestScore = score;
         bestMove = move;

@@ -175,6 +175,49 @@ Production references:
 - Card 81 (`CIDG`) unshaded source-zone capture before replacement
 - Card 84 (`To Quoc`) shaded capture of spaces where ARVN must remove cubes, then later VC placement into that captured set
 
+## Dynamic Scoped Variable Names
+
+When an earlier choice determines which declared variable to read or mutate later, pass the variable name through a binding or grant context and use that symbol directly in the scoped-var surface.
+
+Canonical pattern:
+
+```yaml
+- chooseN:
+    bind: $tracks
+    options:
+      query: enums
+      values: [aid, patronage, arvnResources]
+    n: 2
+- forEach:
+    bind: $track
+    over:
+      query: binding
+      name: $tracks
+    effects:
+      - addVar:
+          scope: global
+          var:
+            ref: binding
+            name: $track
+          delta: 2
+```
+
+The same `var:` expression shape works across:
+
+- `ref: gvar`, `ref: pvar`, `ref: zoneVar`
+- `setVar`
+- `addVar`
+- `transferVar.from.var`
+- `transferVar.to.var`
+- `intsInVarRange.var`
+
+Keep the expression narrow and symbolic.
+
+- Use a literal string when the variable name is fixed.
+- Use `{ ref: binding, name: $varName }` when an earlier effect selected the variable.
+- Use `{ ref: grantContext, key: someKey }` when a free-operation or grant pipeline passes the variable name in execution context.
+- Do not build variable names with `concat` or other arbitrary `ValueExpr` string construction.
+
 ## Replacement Semantics
 
 Replacement is a sequence, not a primitive.
@@ -302,6 +345,33 @@ Production references:
 - `fitl-space-coin-controlled-city`
 - `fitl-arvn-redeploy-destination-no-bases`
 - `select-laos-cambodia-province`
+
+## Marker Shift Legality
+
+Use `markerStateAllowed` and `markerShiftAllowed` for different jobs.
+
+- `markerStateAllowed` is for absolute target-state legality such as "this space may legally be Active Support".
+- `markerShiftAllowed` is for relative transition legality such as "shifting this marker by 1 would actually produce a legal state change".
+
+For support/opposition events that mean "shift one level toward Support/Opposition", prefer `markerShiftAllowed` instead of pairing `markerStateAllowed` with an extra current-state exclusion.
+
+```yaml
+- chooseN:
+    bind: $spaces
+    options:
+      query: mapSpaces
+      filter:
+        condition:
+          op: and
+          args:
+            - conditionMacro: fitl-space-coin-controlled
+              args:
+                spaceExpr: $zone
+            - op: markerShiftAllowed
+              space: $zone
+              marker: supportOpposition
+              delta: 1
+```
 
 ## Chooser Ownership And Pending Decisions
 

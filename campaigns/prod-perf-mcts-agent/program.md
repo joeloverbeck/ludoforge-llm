@@ -4,12 +4,11 @@
 
 Minimize the combined wall-clock time of the MCTS fast-profile e2e test suite through algorithmic optimization of the MCTS agent code. Target improvements include caching, redundant-work elimination, smarter data structures, and convergence shortcuts — NOT parameter reduction.
 
-The harness runs the fast-profile MCTS e2e test file directly (without `RUN_MCTS_E2E=1`), so only the 3 core smoke tests execute:
-- 2-player fast game (200 turns, seed 201) — main workload
-- Determinism check (10 turns, seed 501) — lightweight
-- Timing bounds (200 turns, seed 701) — secondary workload
+The harness runs a campaign-specific benchmark file (not part of CI lanes) that exercises the real Texas Hold'em production spec with the fast MCTS preset:
+- 2-player game (10 turns, seed 201) — primary workload (~2 minutes baseline)
+- Determinism check (3 turns, seed 501) — lightweight (~1 minute baseline, runs game twice)
 
-The fast preset uses random rollout with no evaluateState in the hot path. It runs 200 iterations per move with 16-ply simulation depth. With ~200 turns per game, the dominant cost is the iteration loop in `search.ts` (selection → expansion → rollout → backprop). Any algorithmic speedup here cascades to all 3 presets.
+The fast preset uses random rollout with no evaluateState in the hot path. It runs 200 iterations per move with 16-ply simulation depth. With ~10 turns per benchmark game, the dominant cost is the iteration loop in `search.ts` (selection → expansion → rollout → backprop). Any algorithmic speedup here cascades to all 3 presets.
 
 ## Primary Metric
 
@@ -41,7 +40,8 @@ The fast preset uses random rollout with no evaluateState in the hot path. It ru
 ## Immutable System (files the agent MUST NOT modify)
 
 - `campaigns/prod-perf-mcts-agent/harness.sh`
-- All test files under `packages/engine/test/`
+- `packages/engine/test/e2e/mcts/texas-holdem-mcts-campaign-bench.test.ts` (campaign benchmark)
+- All other test files under `packages/engine/test/`
 - All test helpers under `packages/engine/test/helpers/`
 - All kernel code under `packages/engine/src/kernel/`
 - All compiler code under `packages/engine/src/cnl/`

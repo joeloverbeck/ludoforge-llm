@@ -1,359 +1,300 @@
-# Spec 62: Conditional Piece Sourcing & Fallback Selection
+# Spec 62: Prioritized Sourcing Query
 
 **Status**: Draft
 **Priority**: P0
 **Complexity**: M
 **Dependencies**: Spec 25, Spec 25b
-**Estimated effort**: 2-4 days
+**Estimated effort**: 2-3 days
 **Source sections**: FITL card implementation gap discovered during card 87 (`Nguyen Chanh Thi`)
 
 ## Overview
 
-Implement a game-agnostic piece-sourcing model that can express ordered fallback rules such as:
+Add a new `prioritized` variant to the `OptionsQuery` union that models ordered-tier sourcing with optional per-qualifier priority. Combined with tier-aware legality in `chooseN`, this lets the kernel enforce rules like FITL Rule 1.4.1 without any game-specific logic in the engine.
 
-- prefer pieces from source A that satisfy qualifier Q
-- if insufficient, source only the remaining needed pieces from source B using the same qualifier Q
-- optionally continue through additional fallback sources in priority order
+The player sees **one unified `chooseN` choice** — not sequential stages. Lower-tier items are dynamically marked illegal while same-qualifier higher-tier items remain available.
 
-This capability is required to encode Fire in the Lake rules such as Rule 1.4.1 exactly, without hardcoding game-specific logic into `GameDef`, simulation, or kernel behavior. The solution must live in the generic GameSpecDoc/CNL/compiler/kernel stack and be reusable by any game that needs prioritized sourcing or replacement.
+After this spec is implemented, card 87 (`Nguyen Chanh Thi`) must be reworked to use the new `prioritized` query.
 
-After this spec is implemented, the current card 87 implementation must be reviewed and reworked to use the new sourcing capability so that its unshaded side matches the rule precisely.
+## Rule 1.4.1 Verbatim (Source of Truth)
+
+> Important: Players while executing an Operation, Special Activity, or Event to place their own forces may take them from elsewhere on the map (including a Tunneled Base, losing the Tunnel marker, 1.4.4) **if and only if the desired force type is not Available**. EXCEPTION: The US player may do so only with US-led Irregulars and any ARVN forces, not with US Troops nor with US Bases.
+
+The key phrase is "if and only if the desired force **type** is not Available" — the qualifier is the piece's `type` property, and the fallback is per-qualifier, not global.
 
 ## Problem Statement
 
 Current declarative sourcing can express:
 
 - selecting from one source
-- selecting from a concatenated pool of sources
+- selecting from a concatenated pool of sources (`concat` query)
 - filtering pieces by faction/type/zone
 
-Current declarative sourcing cannot express:
+Current declarative sourcing **cannot** express:
 
-- "take up to N pieces of the desired type from Available; only if that type is unavailable there, continue sourcing that same type from map spaces"
-- "the fallback source is conditional on insufficiency of prior sources"
-- "the fallback selection count is the remaining unmet count after earlier sources are applied"
-- "the qualifier used to determine fallback eligibility is shared across all source tiers"
+- "take pieces of the desired type from Available; only if that type is unavailable there, source that same type from map spaces"
+- "the fallback source is conditional on insufficiency of prior sources **per qualifier value**"
+- "all of this is one unified player choice, not sequential stages"
 
-As a result, card 87 currently over-allows ARVN pieces already on the map to be selected even when same-type ARVN pieces remain Available.
+As a result, card 87 currently uses a `concat` query that pools Available and map sources freely, allowing the player to select on-map ARVN pieces even when same-type ARVN pieces remain Available. This violates Rule 1.4.1.
 
-This is an architectural gap, not a card-specific bug.
+## Existing Precedents
+
+### `removeByPriority` (effects-control.ts:316-438)
+
+The kernel already has `removeByPriority` — tier-ordered consumption with a budget over groups. Each group has an `over` query; the runtime walks groups in order, consuming from each until the budget is exhausted. The new `prioritized` query is conceptually the **selection-side counterpart** of `removeByPriority`: where `removeByPriority` removes tokens in tier order, `prioritized` + `chooseN` **selects** tokens in tier order.
+
+### `place-from-available-or-map` macro (20-macros.md:1971-2034)
+
+This macro already implements Rule 1.4.1 for **auto-placement** using staged `forEach` + conditional `chooseN`. It works for non-interactive placement (e.g., operations/special activities that auto-place). However, card 87 requires **interactive piece selection** — the player chooses which 3 ARVN pieces to place. The macro's staged `forEach` approach cannot express "one unified multi-select choice with tier-aware legality." That is why a new query-level primitive is needed.
+
+## Proposed Design
+
+### New `OptionsQuery` variant: `prioritized`
+
+```typescript
+| {
+    readonly query: 'prioritized';
+    readonly tiers: readonly [OptionsQuery, ...OptionsQuery[]];
+    readonly qualifierKey?: string; // token property name, e.g. 'type'
+  }
+```
+
+This extends the existing `OptionsQuery` union in `types-ast.ts` (lines 203-265) with one new variant.
+
+### Semantics
+
+#### In `evalQuery` (eval-query.ts)
+
+Evaluate all tiers in order, concatenate results. Tag each result internally with its tier index (runtime metadata, not exposed in authored YAML). The result set is a flat array of all candidates from all tiers.
+
+#### In `chooseN` legality (legal-choices.ts)
+
+When the options of a `chooseN` come from a `prioritized` query, tier-aware legality applies:
+
+**With `qualifierKey`** (e.g., `qualifierKey: 'type'`):
+- Extract the qualifier value Q from each candidate (e.g., `token.props.type`)
+- An item from tier N with qualifier value Q is **illegal** while any unselected item from tiers 1..N-1 with qualifier value Q exists
+- As the player selects items (multi-select), legality is dynamically re-evaluated per remaining candidates
+
+**Without `qualifierKey`** (simpler case):
+- An item from tier N is **illegal** while any unselected item from tiers 1..N-1 exists
+- Equivalent to "exhaust tier 1 before tier 2, exhaust tier 2 before tier 3, etc."
+
+**Example**: 2 ARVN Troops available, 1 ARVN Police available, 5 ARVN Troops on map near Hue. Player must select 3 ARVN pieces with `qualifierKey: 'type'`:
+- All 2 Available Troops and 1 Available Police are legal (tier 1)
+- Map Troops are **illegal** (tier 2, qualifier `troop`, and tier 1 still has Troops)
+- Player selects both Available Troops — now map Troops become **legal** (tier 1 exhausted for qualifier `troop`)
+- Player selects 1 map Troop to reach count 3. Available Police was always legal since no tier-1 Police conflict exists... wait, Police IS in tier 1, so map Police (tier 2) would be illegal while Available Police exists. But Available Troops being exhausted only unlocks map Troops. Each qualifier is independent.
+
+### UX Specification
+
+The player sees **one unified `chooseN` multi-select interface**. All candidates from all tiers appear in the option list. Items that are currently illegal due to tier priority are marked as illegal (grayed out in the UI). As the player makes selections, legality updates dynamically. This is NOT sequential stages — it is one choice with constrained legality.
+
+### Combination Pruning (Performance)
+
+`chooseN` legality probing has `MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS = 1024` (legal-choices.ts:54). Tier-aware legality can be computed as a **pre-filter before combination enumeration**, not during it:
+
+1. Before enumerating combinations, compute which items are currently illegal based on tier priority
+2. Remove illegal items from the candidate set
+3. Enumerate combinations only over the legal subset
+4. This reduces the combination space rather than expanding it
+
+When legality depends on the selection state (dynamic re-evaluation during multi-select), the runtime already handles this via the existing `chooseN` incremental selection model — each selection step re-evaluates legality on the remaining candidates.
+
+## Card 87 Rewrite
+
+With the `prioritized` query, card 87's unshaded `chooseN` becomes:
+
+```yaml
+- chooseN:
+    bind: $nguyenChanhThiArvnPieces
+    options:
+      query: prioritized
+      qualifierKey: type
+      tiers:
+        - query: tokensInZone
+          zone: available-ARVN:none
+          filter:
+            prop: faction
+            op: eq
+            value: ARVN
+        - query: tokensInMapSpaces
+          filter:
+            op: and
+            args:
+              - { prop: faction, op: eq, value: ARVN }
+              - field: { kind: tokenZone }
+                op: in
+                value:
+                  - hue:none
+                  - da-nang:none
+                  - quang-nam:none
+                  - quang-tri-thua-thien:none
+                  - quang-tin-quang-ngai:none
+                  - central-laos:none
+                  - southern-laos:none
+                  - loc-hue-da-nang:none
+                  - loc-hue-khe-sanh:none
+                  - loc-da-nang-dak-to:none
+                  - loc-da-nang-qui-nhon:none
+    min:
+      op: min
+      left: 3
+      right:
+        aggregate:
+          op: count
+          query:
+            query: prioritized
+            qualifierKey: type
+            tiers:
+              - query: tokensInZone
+                zone: available-ARVN:none
+                filter: { prop: faction, op: eq, value: ARVN }
+              - query: tokensInMapSpaces
+                filter:
+                  op: and
+                  args:
+                    - { prop: faction, op: eq, value: ARVN }
+                    - field: { kind: tokenZone }
+                      op: in
+                      value: [hue:none, da-nang:none, quang-nam:none, quang-tri-thua-thien:none, quang-tin-quang-ngai:none, central-laos:none, southern-laos:none, loc-hue-da-nang:none, loc-hue-khe-sanh:none, loc-da-nang-dak-to:none, loc-da-nang-qui-nhon:none]
+    max:
+      op: min
+      left: 3
+      right:
+        aggregate:
+          op: count
+          query:
+            query: prioritized
+            qualifierKey: type
+            tiers:
+              - query: tokensInZone
+                zone: available-ARVN:none
+                filter: { prop: faction, op: eq, value: ARVN }
+              - query: tokensInMapSpaces
+                filter:
+                  op: and
+                  args:
+                    - { prop: faction, op: eq, value: ARVN }
+                    - field: { kind: tokenZone }
+                      op: in
+                      value: [hue:none, da-nang:none, quang-nam:none, quang-tri-thua-thien:none, quang-tin-quang-ngai:none, central-laos:none, southern-laos:none, loc-hue-da-nang:none, loc-hue-khe-sanh:none, loc-da-nang-dak-to:none, loc-da-nang-qui-nhon:none]
+```
+
+The remainder of card 87 (destination selection, movement, support shift) is unchanged.
+
+**Key difference from current implementation**: The current `concat` query pools both sources freely. The new `prioritized` query enforces that map-sourced ARVN pieces of a given type are only selectable when Available pieces of that same type are exhausted.
 
 ## Goals
 
-1. Add a generic sourcing abstraction that models ordered fallback selection.
+1. Add a `prioritized` OptionsQuery variant that models ordered fallback selection.
 2. Keep `GameDef`, simulation, and runtime fully game-agnostic.
 3. Preserve game-specific rules in GameSpecDoc/YAML only.
-4. Make the feature expressive enough for FITL card/event sourcing, operation sourcing, and future non-FITL games.
-5. Avoid special-case runtime logic keyed on FITL factions, piece types, cards, or map regions.
-6. Make the resulting compiled representation inspectable and testable.
-7. Treat this as a forward-only architecture improvement; no backwards compatibility constraints are required.
+4. Implement as a query-level + legality-level concern, not compiler lowering.
+5. One unified player choice, not sequential stages.
 
 ## Non-Goals
 
 - Do not implement FITL-specific hardcoded "desired type" rules in the kernel.
 - Do not add special event-only codepaths.
 - Do not solve visual presentation concerns in this spec.
-- Do not redesign the whole query language if a focused sourcing abstraction is sufficient.
-
-## Proposed Capability
-
-Introduce a declarative **prioritized sourcing** construct that resolves selections across ordered tiers.
-
-Conceptually:
-
-```yaml
-chooseN:
-  bind: $pieces
-  count: 3
-  sourcing:
-    kind: prioritized
-    tiers:
-      - id: available
-        options: ...
-        qualifierKey: ...
-      - id: mapFallback
-        options: ...
-        qualifierKey: ...
-        enabledWhen: priorTiersInsufficient
-```
-
-The exact syntax may differ, but the semantics must support:
-
-1. Ordered source tiers.
-2. A requested total count.
-3. Per-tier option queries.
-4. Shared qualifier semantics across tiers.
-5. Remaining-count propagation from earlier tiers to later tiers.
-6. Deterministic compilation and runtime behavior.
-
-## Required Semantics
-
-### 1. Ordered tier consumption
-
-The sourcing model must treat tiers as an ordered list.
-
-Given requested count `N`:
-
-- tier 1 may satisfy some or all of `N`
-- tier 2 may satisfy only the unmet remainder
-- tier 3 may satisfy only the unmet remainder after tiers 1 and 2
-
-No lower-priority tier may contribute while a higher-priority tier still has eligible items for the same qualified request.
-
-### 2. Shared qualifier semantics
-
-The model must support a shared qualifier that applies across tiers.
-
-Examples:
-
-- same piece type
-- same faction and type
-- same trait bundle
-- same table-derived category
-
-The qualifier must be declarative and generic, not encoded in kernel code as "piece type fallback".
-
-### 3. Partial fulfillment
-
-If all tiers together contain fewer than the requested count, the selection resolves to the maximum legal partial count, subject to the caller's min/max rules.
-
-### 4. Legal choice surfaces
-
-When a move is still awaiting user choice, legal choice generation must expose only the pieces currently legal under tier ordering.
-
-That means:
-
-- fallback-tier pieces are not legal while earlier tiers still contain qualifying pieces for the unmet portion
-- once earlier tiers are exhausted for the qualifier, fallback-tier pieces become legal
-
-### 5. Deterministic binding behavior
-
-Resolved move params and runtime bindings must deterministically preserve the final chosen set and any intermediate tier-specific decisions needed by execution.
-
-### 6. Compiler transparency
-
-Compiled output must make the tier ordering and fallback logic observable enough for test assertions and debugging.
+- Do not implement extensible qualifier extraction (zone properties, bound value expressions, table lookups). Start with optional token property name only; extend later if a real use case emerges (YAGNI).
+- Do not use compiler lowering into sequential `chooseN` stages — this changes UX and adds unnecessary complexity.
 
 ## Design Requirements
 
 ### A. Game-agnostic IR
 
-The implementation must introduce or extend a generic IR surface in compiler/kernel types.
-
-Acceptable directions include:
-
-- a new options query kind for prioritized sourcing
-- a new `chooseN` sourcing block lowered into existing effects plus compiler-generated helper bindings
-- a dedicated lowerable intermediate form for staged selection
-
-Unacceptable direction:
-
-- adding FITL-specific branches anywhere in shared runtime/compiler code
+The `prioritized` query variant is fully generic. It composes existing `OptionsQuery` variants as tiers and adds an optional `qualifierKey` string. No FITL-specific concepts leak into the type system.
 
 ### B. No hidden rule coupling
 
-The runtime must not infer FITL concepts such as:
+The runtime does not infer FITL concepts. `qualifierKey: 'type'` is authored data — the engine just reads a token property name. Any game could use `qualifierKey: 'color'` or `qualifierKey: 'rank'` for their own prioritized sourcing needs.
 
-- ARVN / VC / US / NVA
-- "desired type" as a hardcoded token prop
-- "Available before map" as a card-specific heuristic
+### C. Qualifier scope
 
-All such policy must come from GameSpecDoc-authored data.
+Qualifier is an optional token property name (`qualifierKey?: string`). This covers Rule 1.4.1 ("desired force type") and any analogous rule in other games that qualifies by a single token property. If a future game needs multi-property qualifiers or computed qualifiers, that extension can be added then.
 
-### C. Extensible qualifier definition
+### D. Diagnostics
 
-Qualifier extraction must be generic enough to support future use cases. It must not be limited to `token.props.type`.
+Compilation and validation must reject:
 
-Examples of acceptable qualifier sources:
-
-- token property
-- zone property
-- bound value expression
-- table lookup result
-
-### D. Strong diagnostics
-
-Compilation and validation must reject malformed sourcing definitions with precise diagnostics.
-
-Examples:
-
-- missing qualifier definition when fallback matching depends on it
-- unresolved binding used by qualifier
-- incompatible tier domains
-- illegal circular dependency between generated helper bindings
+- `prioritized` query with empty `tiers` array
+- `qualifierKey` referencing a property not present on any token type in the tier queries (warning, not error — runtime may have dynamic tokens)
 
 ### E. Testability
 
-The design must support:
+The design supports:
 
-- unit tests on compilation/lowering
-- unit tests on legal choice generation
-- unit tests on runtime execution
-- integration tests on real FITL cards
-
-## Candidate Execution Model
-
-The implementation should evaluate one of these generic approaches and choose the smallest coherent model.
-
-### Option 1: Compiler-lowered staged choose sequence
-
-The compiler lowers prioritized sourcing into multiple internal `chooseN` stages:
-
-- stage 1 selects from tier 1
-- compiler computes remainder
-- stage 2 selects from tier 2 constrained by qualifier and remainder
-- repeat for later tiers
-- compiler exports a flattened final binding
-
-Pros:
-
-- reuses existing runtime choice machinery
-- easy to inspect in compiled effects
-- keeps complex logic mostly in compiler lowering
-
-Risks:
-
-- binding lifetime and iteration-path handling must remain robust
-- qualifier propagation may require helper bindings or aggregate expressions
-
-### Option 2: New runtime query primitive for prioritized sources
-
-Add a first-class runtime query/choice domain that understands tier order directly.
-
-Pros:
-
-- compact authored form
-- legal choices may be simpler to compute directly
-
-Risks:
-
-- larger kernel surface increase
-- higher implementation complexity in legal choice generation and apply-move paths
-
-### Option 3: Hybrid sourcing IR
-
-Add a dedicated sourcing IR node that the compiler may partially lower, while the runtime handles final admissibility.
-
-Pros:
-
-- clearer long-term abstraction for sourcing
-
-Risks:
-
-- more moving parts than Option 1
-
-### Recommendation
-
-Prefer **Option 1** unless detailed investigation finds a blocker. It best aligns with existing choice sequencing, keeps the runtime generic, and produces explicit compiled structure that is straightforward to test.
-
-## Detailed Requirements
-
-### Authoring Surface
-
-The authoring model must allow GameSpecDoc data to express:
-
-- a total requested count
-- ordered source tiers
-- qualifier extraction logic
-- fallback matching against earlier unmet qualified demand
-
-It must be concise enough that event authors can use it without writing opaque compiler tricks.
-
-### Compiler
-
-The compiler must:
-
-1. Validate prioritized sourcing definitions.
-2. Lower them deterministically.
-3. Produce stable internal bind names / decision identities.
-4. Preserve enough structure for readable diagnostics.
-5. Avoid emitting ambiguous choice domains.
-
-### Runtime
-
-The runtime must:
-
-1. Surface the correct pending choices in sequence.
-2. Enforce tier order in legality checks.
-3. Preserve normalized move params for resolved decision sequences.
-4. Correctly flatten/export the final chosen result for downstream effects.
-
-### Query/Value System
-
-If implementation requires additional generic query/value support, add it generically.
-
-Examples that may be needed:
-
-- projecting qualifiers from selected items
-- counting unmet qualified demand
-- filtering a later source by a qualifier set derived from earlier unmet demand
-
-These additions must be generic and documented in tests.
+- unit tests on `evalQuery` for the `prioritized` variant (concatenation + tier tagging)
+- unit tests on `chooseN` legality with tier-aware constraints
+- unit tests on dynamic re-evaluation as selections are made
+- integration tests on real FITL cards (card 87)
+- synthetic fixture tests demonstrating prioritized sourcing outside FITL terminology
 
 ## Invariants
 
 1. Prioritized sourcing behavior is deterministic.
 2. Lower-priority tiers never contribute while higher tiers can still satisfy the same qualified remainder.
-3. Qualifier matching is driven entirely by authored data.
+3. Qualifier matching is driven entirely by authored data (`qualifierKey` property name).
 4. No FITL-specific identifiers appear in shared compiler/kernel logic.
 5. Resolved final bindings are stable and consumable by ordinary downstream effects.
 6. Legal choice generation and move application agree on admissibility.
+7. The player sees one unified choice, not sequential stages.
+
+## Implementation Plan
+
+1. **Add `prioritized` variant to `OptionsQuery`** in `types-ast.ts`. Add corresponding Zod schema in the compiler's validation layer.
+2. **Implement `evalQuery` handler** for `prioritized`: evaluate each tier's sub-query, concatenate results, attach internal tier-index metadata to each result.
+3. **Implement tier-aware legality in `chooseN`** in `legal-choices.ts`: when options originate from a `prioritized` query, compute per-item legality based on tier priority and qualifier. Use pre-filtering to avoid combination explosion.
+4. **Add unit tests**: query evaluation, legality computation, dynamic re-evaluation, edge cases (empty tiers, missing qualifier property, partial fulfillment).
+5. **Rework card 87** to use `prioritized` query instead of `concat`.
+6. **Add integration tests**: card 87 exact Rule 1.4.1 behavior, synthetic non-FITL fixture.
 
 ## Required Tests
 
 ### Unit Tests
 
-Compiler/lowering:
+Query evaluation:
+- `prioritized` with 2 tiers returns concatenated results
+- `prioritized` with 3 tiers returns concatenated results in tier order
+- `prioritized` with an empty tier returns only results from non-empty tiers
+- tier index metadata is correctly attached to each result
 
-- valid prioritized sourcing lowers successfully
-- malformed tier definition emits diagnostic
-- malformed qualifier reference emits diagnostic
-- compiled bind structure is stable and inspectable
+Legality (with `qualifierKey`):
+- tier-2 item with qualifier Q is illegal while tier-1 item with qualifier Q is unselected
+- tier-2 item with qualifier Q becomes legal once all tier-1 items with qualifier Q are selected
+- tier-2 item with qualifier R is legal even if tier-1 items with qualifier Q remain (independent qualifiers)
+- partial fulfillment across tiers works correctly
+- dynamic re-evaluation after each selection step
 
-Runtime choice legality:
-
-- tier 2 items are illegal while tier 1 still has qualifying items
-- tier 2 items become legal once tier 1 is exhausted for the qualifier
-- partial fulfillment across tiers works
-- multiple qualifiers in one request work correctly
-
-Runtime execution:
-
-- resolved move params apply correctly
-- final exported binding contains the merged selected set
-- deterministic decision normalization preserves the staged selections
+Legality (without `qualifierKey`):
+- tier-2 items are illegal while any tier-1 item is unselected
+- tier-2 items become legal once all tier-1 items are selected
 
 ### Integration Tests
 
 FITL:
-
-- card 87 unshaded exact Rule 1.4.1 sourcing behavior
-- at least one additional FITL regression test using the same capability once another candidate exists
+- card 87 unshaded: with Available ARVN Troops, player cannot select map ARVN Troops
+- card 87 unshaded: with no Available ARVN Troops, player can select map ARVN Troops
+- card 87 unshaded: qualifier independence — Available Police status does not affect map Troop legality
 
 Non-FITL/generic:
-
-- add at least one small synthetic spec fixture demonstrating prioritized sourcing outside FITL terminology
-
-## Implementation Plan
-
-1. Design and document the new sourcing IR / authored surface.
-2. Implement compiler validation and lowering.
-3. Implement any required generic query/value/runtime support.
-4. Add focused unit coverage.
-5. Rework card 87 to use the new capability.
-6. Replace the current documented card 87 precision gap with exact behavior.
-7. Add regression tests proving the prior over-permissive selection is gone.
+- synthetic spec fixture demonstrating prioritized sourcing with a non-FITL qualifier (e.g., `qualifierKey: 'color'`)
 
 ## Acceptance Criteria
 
 This spec is complete when:
 
-1. GameSpecDoc can express prioritized fallback sourcing generically.
-2. The compiler and kernel enforce the behavior without FITL-specific code.
-3. Card 87 unshaded is re-authored to use the new capability.
-4. Card 87 no longer allows selecting on-map ARVN pieces of a type that is still Available.
-5. Focused unit and integration tests pass.
-6. The full relevant engine test suite passes.
+1. `OptionsQuery` union includes a `prioritized` variant with optional `qualifierKey`.
+2. `evalQuery` correctly evaluates `prioritized` queries by concatenating tier results with internal metadata.
+3. `chooseN` legality correctly enforces tier priority with per-qualifier independence.
+4. Card 87 is re-authored to use `prioritized` query instead of `concat`.
+5. Card 87 no longer allows selecting on-map ARVN pieces of a type that is still Available.
+6. The player experiences one unified multi-select choice, not sequential stages.
+7. All unit and integration tests pass.
+8. The full relevant engine test suite passes.
+9. No FITL-specific identifiers appear in any engine source file touched by this implementation.
 
 ## Follow-up Requirement
 

@@ -214,4 +214,78 @@ describe('selectChild (ISUCT availability-aware selection)', () => {
     const result = selectChild(root, player0, C, [a, b]);
     assert.equal(result, a);
   });
+
+  // ---------------------------------------------------------------------------
+  // Heuristic backup blending (ticket 63MCTSPERROLLFRESEA-008)
+  // ---------------------------------------------------------------------------
+
+  // AC 1: alpha = 0 produces identical results to phase-1 (no behavior change).
+  it('alpha=0 produces identical selection to default (no blending)', () => {
+    const root = createRootNode(2);
+    const a = makeChild(root, 'a', {
+      visits: 10,
+      availability: 20,
+      totalReward: [8, 2],
+    });
+    a.heuristicPrior = [0.1, 0.9]; // should be ignored
+    const b = makeChild(root, 'b', {
+      visits: 10,
+      availability: 20,
+      totalReward: [2, 8],
+    });
+    b.heuristicPrior = [0.9, 0.1]; // should be ignored
+    // With alpha=0, pure MC: a has higher MC mean (0.8 vs 0.2) → a wins.
+    const withAlpha0 = selectChild(root, player0, C, [a, b], 0);
+    const withDefault = selectChild(root, player0, C, [a, b]);
+    assert.equal(withAlpha0, withDefault);
+    assert.equal(withAlpha0, a);
+  });
+
+  // AC 2: alpha > 0 uses blended mean correctly.
+  it('alpha>0 blends heuristic prior into exploitation term', () => {
+    const root = createRootNode(2);
+    // Child A: MC mean = 3/10 = 0.3, heuristic = 0.3 → blended = 0.3
+    const a = makeChild(root, 'a', {
+      visits: 10,
+      availability: 20,
+      totalReward: [3, 7],
+    });
+    a.heuristicPrior = [0.3, 0.7];
+    // Child B: MC mean = 2/10 = 0.2, heuristic = 0.9 → blended(0.5) = 0.5*0.2 + 0.5*0.9 = 0.55
+    const b = makeChild(root, 'b', {
+      visits: 10,
+      availability: 20,
+      totalReward: [2, 8],
+    });
+    b.heuristicPrior = [0.9, 0.1];
+    // With alpha=0.5 and C=0 (pure exploitation), b should win (0.55 > 0.3).
+    const result = selectChild(root, player0, 0, [a, b], 0.5);
+    assert.equal(result, b);
+    // With alpha=0 and C=0, a should win (MC mean 0.3 > 0.2).
+    const resultNoBlend = selectChild(root, player0, 0, [a, b], 0);
+    assert.equal(resultNoBlend, a);
+  });
+
+  // AC 3: heuristicPrior = null falls back to pure MC mean.
+  it('falls back to pure MC mean when heuristicPrior is null', () => {
+    const root = createRootNode(2);
+    // Child A: MC mean = 0.8, no heuristic
+    const a = makeChild(root, 'a', {
+      visits: 10,
+      availability: 20,
+      totalReward: [8, 2],
+    });
+    // heuristicPrior stays null (default)
+    // Child B: MC mean = 0.2, has heuristic but lower blended
+    const b = makeChild(root, 'b', {
+      visits: 10,
+      availability: 20,
+      totalReward: [2, 8],
+    });
+    b.heuristicPrior = [0.5, 0.5];
+    // alpha=0.5: a uses pure MC (0.8), b blended = 0.5*0.2 + 0.5*0.5 = 0.35
+    // With C=0, a wins.
+    const result = selectChild(root, player0, 0, [a, b], 0.5);
+    assert.equal(result, a);
+  });
 });

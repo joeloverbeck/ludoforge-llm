@@ -456,3 +456,53 @@ describe('confidence-based root stopping config', () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// Heuristic backup alpha config
+// ---------------------------------------------------------------------------
+
+describe('heuristic backup alpha config', () => {
+  it('heuristicBackupAlpha defaults to undefined (treated as 0 at runtime)', () => {
+    const cfg = validateMctsConfig({});
+    assert.equal(cfg.heuristicBackupAlpha, undefined);
+  });
+
+  it('heuristicBackupAlpha accepts 0', () => {
+    const cfg = validateMctsConfig({ heuristicBackupAlpha: 0 });
+    assert.equal(cfg.heuristicBackupAlpha, 0);
+  });
+
+  it('heuristicBackupAlpha accepts 1', () => {
+    const cfg = validateMctsConfig({ heuristicBackupAlpha: 1 });
+    assert.equal(cfg.heuristicBackupAlpha, 1);
+  });
+
+  it('heuristicBackupAlpha accepts value in (0, 1)', () => {
+    const cfg = validateMctsConfig({ heuristicBackupAlpha: 0.3 });
+    assert.equal(cfg.heuristicBackupAlpha, 0.3);
+  });
+
+  it('heuristicBackupAlpha rejects negative', () => {
+    assert.throws(
+      () => validateMctsConfig({ heuristicBackupAlpha: -0.1 }),
+      (err: unknown) =>
+        err instanceof RangeError && /heuristicBackupAlpha/.test((err as RangeError).message),
+    );
+  });
+
+  it('heuristicBackupAlpha rejects > 1', () => {
+    assert.throws(
+      () => validateMctsConfig({ heuristicBackupAlpha: 1.5 }),
+      (err: unknown) =>
+        err instanceof RangeError && /heuristicBackupAlpha/.test((err as RangeError).message),
+    );
+  });
+
+  it('no named preset enables heuristicBackupAlpha > 0', () => {
+    for (const name of MCTS_PRESET_NAMES) {
+      const cfg = resolvePreset(name);
+      const alpha = cfg.heuristicBackupAlpha ?? 0;
+      assert.equal(alpha, 0, `preset "${name}" should not enable heuristicBackupAlpha`);
+    }
+  });
+});

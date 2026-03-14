@@ -21,6 +21,7 @@ import type { MctsNode } from './node.js';
  * @param exploringPlayer      - the player whose reward we maximise
  * @param explorationConstant  - C parameter balancing exploitation/exploration
  * @param availableChildren    - children legal in the current sampled state
+ * @param heuristicBackupAlpha - blending weight for heuristic prior (0 = pure MC)
  * @returns the selected child node
  * @throws if `availableChildren` is empty
  */
@@ -29,6 +30,7 @@ export function selectChild(
   exploringPlayer: PlayerId,
   explorationConstant: number,
   availableChildren: readonly MctsNode[],
+  heuristicBackupAlpha: number = 0,
 ): MctsNode {
   if (availableChildren.length === 0) {
     throw new Error(
@@ -46,11 +48,11 @@ export function selectChild(
   // All visited — compute ISUCT scores.
   // Length >= 1 guaranteed by the empty check above.
   let bestChild: MctsNode = availableChildren[0]!;
-  let bestScore = isuctScore(bestChild, exploringPlayer, explorationConstant);
+  let bestScore = isuctScore(bestChild, exploringPlayer, explorationConstant, heuristicBackupAlpha);
 
   for (let i = 1; i < availableChildren.length; i++) {
     const child: MctsNode = availableChildren[i]!;
-    const score = isuctScore(child, exploringPlayer, explorationConstant);
+    const score = isuctScore(child, exploringPlayer, explorationConstant, heuristicBackupAlpha);
     if (score > bestScore) {
       bestScore = score;
       bestChild = child;
@@ -68,9 +70,17 @@ function isuctScore(
   child: MctsNode,
   exploringPlayer: PlayerId,
   C: number,
+  alpha: number,
 ): number {
-  const meanReward = child.totalReward[exploringPlayer]! / child.visits;
+  const mcMean = child.totalReward[exploringPlayer]! / child.visits;
+
+  // Blend MC mean with heuristic prior when alpha > 0 and prior exists.
+  const exploitation =
+    alpha > 0 && child.heuristicPrior !== null
+      ? (1 - alpha) * mcMean + alpha * child.heuristicPrior[exploringPlayer]!
+      : mcMean;
+
   const exploration =
     C * Math.sqrt(Math.log(Math.max(1, child.availability)) / child.visits);
-  return meanReward + exploration;
+  return exploitation + exploration;
 }

@@ -1,6 +1,6 @@
 # 63MCTSPERROLLFRESEA-008: Conditional — implicit heuristic backups
 
-**Status**: PENDING (conditional — implement only if hybrid meets speed target but regresses quality)
+**Status**: DONE
 **Priority**: LOW
 **Effort**: Medium
 **Engine Changes**: Yes — `agents/mcts/node.ts`, `agents/mcts/search.ts`, `agents/mcts/isuct.ts`, `agents/mcts/config.ts`

@@ -311,6 +311,11 @@ export function runOneIteration(
         selectionDepth += 1;
         selectionMoveKeys.push(chosen.moveKey);
 
+        // Capture heuristic prior at expansion time (for optional blended selection).
+        childNode.heuristicPrior = [...evaluateForAllPlayers(
+          def, currentState, config.heuristicTemperature, runtime,
+        )];
+
         if (acc !== undefined) {
           acc.expansionTimeMs += performance.now() - expStart;
         }
@@ -350,6 +355,7 @@ export function runOneIteration(
       exploringPlayer,
       config.explorationConstant,
       availableChildren,
+      config.heuristicBackupAlpha ?? 0,
     );
 
     // Apply the selected child's move to advance the state.

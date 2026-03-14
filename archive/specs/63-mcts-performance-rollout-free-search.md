@@ -1,5 +1,7 @@
 # Spec 63: MCTS Performance — Hybrid Leaf Evaluation + Search Optimizations
 
+**Status**: ✅ COMPLETED
+
 ## Summary
 
 MCTS E2E lanes are timing out because the simulation phase is far too expensive, especially in the `default` and `strong` presets where epsilon-greedy rollouts repeatedly score successor states at every ply.

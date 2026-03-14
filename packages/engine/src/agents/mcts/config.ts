@@ -80,6 +80,9 @@ export interface MctsConfig {
   /** Minimum visits per child before confidence stop is considered. Must be a positive integer. */
   readonly rootStopMinVisits?: number;
 
+  /** Blending weight for heuristic backup in selection.  0 = pure MC (default). */
+  readonly heuristicBackupAlpha?: number;
+
   /** Optional internal diagnostics for tuning/tests. */
   readonly diagnostics?: boolean;
 }
@@ -231,6 +234,11 @@ export function validateMctsConfig(partial: Partial<MctsConfig>): MctsConfig {
   }
   if (merged.rootStopMinVisits !== undefined) {
     assertPositiveInt('rootStopMinVisits', merged.rootStopMinVisits);
+  }
+
+  // Heuristic backup alpha
+  if (merged.heuristicBackupAlpha !== undefined) {
+    assertRange('heuristicBackupAlpha', merged.heuristicBackupAlpha, 0, 1);
   }
 
   return Object.freeze(merged);

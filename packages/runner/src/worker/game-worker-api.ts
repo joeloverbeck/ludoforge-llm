@@ -1,4 +1,5 @@
 import {
+  advanceChooseN,
   applyMove,
   assertValidatedGameDefInput,
   completeTemplateMove,
@@ -13,10 +14,13 @@ import {
 } from '@ludoforge/engine/runtime';
 
 import type {
+  AdvanceChooseNResult,
   AnnotatedActionDescription,
   AnnotationContext,
   ApplyMoveResult,
   ChoiceRequest,
+  ChooseNCommand,
+  DecisionKey,
   EffectTraceEntry,
   ExecutionOptions,
   GameDef,
@@ -25,6 +29,7 @@ import type {
   LegalMoveEnumerationOptions,
   LegalMoveEnumerationResult,
   Move,
+  MoveParamScalar,
   TerminalResult,
 } from '@ludoforge/engine/runtime';
 
@@ -90,6 +95,12 @@ export interface GameWorkerAPI {
   legalMoves(options?: LegalMoveEnumerationOptions): Promise<readonly Move[]>;
   enumerateLegalMoves(options?: LegalMoveEnumerationOptions): Promise<LegalMoveEnumerationResult>;
   legalChoices(partialMove: Move): Promise<ChoiceRequest>;
+  advanceChooseN(
+    partialMove: Move,
+    decisionKey: DecisionKey,
+    currentSelected: readonly MoveParamScalar[],
+    command: ChooseNCommand,
+  ): Promise<AdvanceChooseNResult>;
   applyMove(
     move: Move,
     options: { readonly trace?: boolean } | undefined,
@@ -311,6 +322,26 @@ export function createGameWorker(): GameWorkerAPI {
       return withInternalErrorMapping(() => {
         const current = assertInitialized(def, state);
         return legalChoicesEvaluate(current.def, current.state, partialMove);
+      });
+    },
+
+    async advanceChooseN(
+      partialMove: Move,
+      decisionKey: DecisionKey,
+      currentSelected: readonly MoveParamScalar[],
+      command: ChooseNCommand,
+    ): Promise<AdvanceChooseNResult> {
+      return withInternalErrorMapping(() => {
+        const current = assertInitialized(def, state);
+        return advanceChooseN(
+          current.def,
+          current.state,
+          partialMove,
+          decisionKey,
+          currentSelected,
+          command,
+          runtime ?? undefined,
+        );
       });
     },
 

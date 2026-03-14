@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createGameWorker, type OperationStamp, type WorkerError } from '../../src/worker/game-worker-api';
-import { ALT_TEST_DEF, CHOOSE_MIXED_TEST_DEF, CHOOSE_ONE_TEST_DEF, ILLEGAL_MOVE, LEGAL_TICK_MOVE, RANGE_TEST_DEF, TEST_DEF } from './test-fixtures';
+import { ALT_TEST_DEF, CHOOSE_MIXED_TEST_DEF, CHOOSE_N_TEST_DEF, CHOOSE_ONE_TEST_DEF, ILLEGAL_MOVE, LEGAL_TICK_MOVE, RANGE_TEST_DEF, TEST_DEF } from './test-fixtures';
 import * as runtime from '@ludoforge/engine/runtime';
-import { asActionId, type Move } from '@ludoforge/engine/runtime';
+import { asActionId, type DecisionKey, type Move } from '@ludoforge/engine/runtime';
+
+const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 
 const expectWorkerError = (error: unknown, code: WorkerError['code']): WorkerError => {
   expect(error).toMatchObject({ code });
@@ -207,6 +209,83 @@ describe('createGameWorker', () => {
       throw new Error('Expected pending choice request.');
     }
     expect(request.options.map((entry) => entry.legality)).toEqual(['legal', 'legal', 'legal']);
+  });
+
+  it('delegates advanceChooseN with worker-owned def, state, and runtime', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(CHOOSE_N_TEST_DEF, 122, undefined, nextStamp());
+    const move: Move = {
+      actionId: asActionId('pick-many'),
+      params: {},
+    };
+    const result: runtime.AdvanceChooseNResult = {
+      done: false,
+      pending: {
+        kind: 'pending',
+        complete: false,
+        decisionKey: asDecisionKey('$targets'),
+        name: '$targets',
+        type: 'chooseN',
+        options: [
+          { value: 'a', legality: 'legal', illegalReason: null },
+          { value: 'b', legality: 'legal', illegalReason: null },
+          { value: 'c', legality: 'legal', illegalReason: null },
+        ],
+        targetKinds: [],
+        min: 1,
+        max: 2,
+        selected: ['a'],
+        canConfirm: true,
+      },
+    };
+    const spy = vi.spyOn(runtime, 'advanceChooseN').mockReturnValue(result);
+
+    const advanced = await worker.advanceChooseN(
+      move,
+      asDecisionKey('$targets'),
+      ['a'],
+      { type: 'add', value: 'b' },
+    );
+
+    expect(advanced).toEqual(result);
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith(
+      CHOOSE_N_TEST_DEF,
+      expect.objectContaining({
+        activePlayer: expect.any(Number),
+        playerCount: 2,
+      }),
+      move,
+      asDecisionKey('$targets'),
+      ['a'],
+      { type: 'add', value: 'b' },
+      expect.any(Object),
+    );
+  });
+
+  it('returns finalized advanceChooseN results from the worker surface', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(CHOOSE_N_TEST_DEF, 123, undefined, nextStamp());
+    const move: Move = {
+      actionId: asActionId('pick-many'),
+      params: {},
+    };
+    const result: runtime.AdvanceChooseNResult = {
+      done: true,
+      value: ['a', 'b'],
+    };
+    vi.spyOn(runtime, 'advanceChooseN').mockReturnValue(result);
+
+    await expect(
+      worker.advanceChooseN(
+        move,
+        asDecisionKey('$targets'),
+        ['a', 'b'],
+        { type: 'confirm' },
+      ),
+    ).resolves.toEqual(result);
   });
 
   it('rolls back history when applyMove fails', async () => {

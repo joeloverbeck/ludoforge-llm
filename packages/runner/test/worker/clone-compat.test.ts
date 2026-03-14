@@ -6,8 +6,10 @@ import * as runtime from '@ludoforge/engine/runtime';
 import {
   asActionId,
   asPlayerId,
-  type DecisionKey,
+  type AdvanceChooseNResult,
   type ChoiceRequest,
+  type ChooseNCommand,
+  type DecisionKey,
   type EffectTraceEntry,
   type LegalMoveEnumerationResult,
   type RuntimeWarning,
@@ -16,7 +18,7 @@ import {
 
 import { createGameWorker, type GameMetadata, type OperationStamp, type WorkerError } from '../../src/worker/game-worker-api';
 import { TRIGGER_LOG_ENTRIES_EXHAUSTIVE } from '../helpers/trigger-log-fixtures';
-import { LEGAL_TICK_MOVE, TEST_DEF } from './test-fixtures';
+import { CHOOSE_N_TEST_DEF, LEGAL_TICK_MOVE, TEST_DEF } from './test-fixtures';
 
 const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 
@@ -171,6 +173,23 @@ describe('worker boundary structured clone compatibility', () => {
         targetKinds: [],
       },
       {
+        kind: 'pending',
+        complete: false,
+        decisionKey: asDecisionKey('d2'),
+        name: 'pick-many',
+        type: 'chooseN',
+        options: [
+          { value: 'a', legality: 'legal', illegalReason: null },
+          { value: 'b', legality: 'legal', illegalReason: null },
+          { value: 'c', legality: 'legal', illegalReason: null },
+        ],
+        targetKinds: [],
+        min: 1,
+        max: 2,
+        selected: ['a'],
+        canConfirm: true,
+      },
+      {
         kind: 'complete',
         complete: true,
       },
@@ -253,5 +272,57 @@ describe('worker boundary structured clone compatibility', () => {
       throw new Error('Expected illegal outcome.');
     }
     expect(illegal.error.code).toBe('ILLEGAL_MOVE');
+  });
+
+  it('round-trips advanceChooseN commands and results through structured clone', async () => {
+    const command: ChooseNCommand = { type: 'add', value: 'b' };
+    const pendingResult: AdvanceChooseNResult = {
+      done: false,
+      pending: {
+        kind: 'pending',
+        complete: false,
+        decisionKey: asDecisionKey('$targets'),
+        name: '$targets',
+        type: 'chooseN',
+        options: [
+          { value: 'a', legality: 'legal', illegalReason: null },
+          { value: 'b', legality: 'legal', illegalReason: null },
+          { value: 'c', legality: 'legal', illegalReason: null },
+        ],
+        targetKinds: [],
+        min: 1,
+        max: 2,
+        selected: ['a'],
+        canConfirm: true,
+      },
+    };
+    const finalizedResult: AdvanceChooseNResult = {
+      done: true,
+      value: ['a', 'b'],
+    };
+
+    roundTripClone(command);
+    roundTripClone(pendingResult);
+    roundTripClone(finalizedResult);
+
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(CHOOSE_N_TEST_DEF, 43, undefined, nextStamp());
+    const pendingRequest = await worker.legalChoices({
+      actionId: asActionId('pick-many'),
+      params: {},
+    });
+    expect(pendingRequest.kind).toBe('pending');
+    if (pendingRequest.kind !== 'pending' || pendingRequest.type !== 'chooseN') {
+      throw new Error('Expected pending chooseN request.');
+    }
+    const advanced = await worker.advanceChooseN(
+      { actionId: asActionId('pick-many'), params: {} },
+      pendingRequest.decisionKey,
+      [],
+      { type: 'add', value: 'a' },
+    );
+
+    roundTripClone(advanced);
   });
 });

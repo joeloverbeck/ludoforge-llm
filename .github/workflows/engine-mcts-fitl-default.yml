@@ -1,0 +1,47 @@
+name: Engine MCTS FITL E2E (default)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/engine/src/agents/**'
+      - 'packages/engine/test/e2e/mcts-fitl/**'
+      - 'data/games/fire-in-the-lake/**'
+      - 'data/games/fire-in-the-lake.game-spec.md'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - 'tsconfig.base.json'
+      - '.github/workflows/engine-mcts-fitl-default.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/engine/src/agents/**'
+      - 'packages/engine/test/e2e/mcts-fitl/**'
+      - 'data/games/fire-in-the-lake/**'
+      - 'data/games/fire-in-the-lake.game-spec.md'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - 'tsconfig.base.json'
+      - '.github/workflows/engine-mcts-fitl-default.yml'
+  workflow_dispatch:
+concurrency:
+  group: engine-mcts-fitl-default-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  engine-mcts-fitl-default:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm guard:worktree-pointers
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -F @ludoforge/engine build
+      - run: pnpm -F @ludoforge/engine test:e2e:mcts:fitl:default

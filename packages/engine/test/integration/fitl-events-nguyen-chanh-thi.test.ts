@@ -1,7 +1,13 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { applyMove, completeMoveDecisionSequence, legalChoicesEvaluate } from '../../src/kernel/index.js';
+import {
+  advanceChooseN,
+  applyMove,
+  completeMoveDecisionSequence,
+  legalChoicesEvaluate,
+  resolveMoveDecisionSequence,
+} from '../../src/kernel/index.js';
 import { matchesDecisionRequest } from '../helpers/decision-key-matchers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import {
@@ -28,6 +34,10 @@ const AVAILABLE_VC = 'available-VC:none';
 
 const supportState = (state: ReturnType<typeof setupFitlEventState>, zone: string): string =>
   String(state.markers[zone]?.supportOpposition ?? 'neutral');
+
+const optionLegalityByValue = (
+  options: readonly { readonly value: unknown; readonly legality: string }[],
+): Readonly<Record<string, string>> => Object.fromEntries(options.map((option) => [String(option.value), option.legality]));
 
 describe('FITL card-87 Nguyen Chanh Thi', () => {
   it('compiles the exact rules text and declarative selectors for both sides', () => {
@@ -86,6 +96,158 @@ describe('FITL card-87 Nguyen Chanh Thi', () => {
     assert.equal(legalityByValue.get('thi-available-police'), 'legal');
     assert.equal(legalityByValue.get('thi-map-troop'), 'illegal');
     assert.equal(legalityByValue.get('thi-map-base'), 'legal');
+  });
+
+  it('unshaded recomputes prioritized legality stepwise through advanceChooseN', () => {
+    const def = getFitlEventDef();
+    const state = setupFitlEventState(def, {
+      seed: 87007,
+      cardIdInDiscardZone: CARD_ID,
+      zoneTokens: {
+        [AVAILABLE_ARVN]: [
+          makeFitlToken('thi-available-troop-1', 'troops', 'ARVN'),
+          makeFitlToken('thi-available-troop-2', 'troops', 'ARVN'),
+          makeFitlToken('thi-available-police-1', 'police', 'ARVN'),
+        ],
+        [QUANG_NAM]: [
+          makeFitlToken('thi-map-troop-1', 'troops', 'ARVN'),
+          makeFitlToken('thi-map-police-1', 'police', 'ARVN'),
+        ],
+      },
+    });
+
+    const move = requireEventMove(def, state, CARD_ID, 'unshaded');
+    const initial = legalChoicesEvaluate(def, state, move);
+    assert.equal(initial.kind, 'pending');
+    if (initial.kind !== 'pending' || initial.type !== 'chooseN') {
+      throw new Error('Expected unshaded ARVN-piece chooseN request.');
+    }
+
+    assert.deepEqual(optionLegalityByValue(initial.options), {
+      'thi-available-troop-1': 'legal',
+      'thi-available-troop-2': 'legal',
+      'thi-available-police-1': 'legal',
+      'thi-map-troop-1': 'illegal',
+      'thi-map-police-1': 'illegal',
+    });
+
+    const afterFirstTroop = advanceChooseN(
+      def,
+      state,
+      move,
+      initial.decisionKey,
+      initial.selected,
+      { type: 'add', value: 'thi-available-troop-1' },
+    );
+    assert.equal(afterFirstTroop.done, false);
+    if (afterFirstTroop.done) {
+      throw new Error('Expected pending chooseN state after first troop selection.');
+    }
+    assert.deepEqual(afterFirstTroop.pending.selected, ['thi-available-troop-1']);
+    assert.equal(optionLegalityByValue(afterFirstTroop.pending.options)['thi-map-troop-1'], 'illegal');
+    assert.equal(optionLegalityByValue(afterFirstTroop.pending.options)['thi-map-police-1'], 'illegal');
+
+    const afterSecondTroop = advanceChooseN(
+      def,
+      state,
+      move,
+      initial.decisionKey,
+      afterFirstTroop.pending.selected,
+      { type: 'add', value: 'thi-available-troop-2' },
+    );
+    assert.equal(afterSecondTroop.done, false);
+    if (afterSecondTroop.done) {
+      throw new Error('Expected pending chooseN state after exhausting available troops.');
+    }
+    assert.deepEqual(afterSecondTroop.pending.selected, ['thi-available-troop-1', 'thi-available-troop-2']);
+    assert.equal(optionLegalityByValue(afterSecondTroop.pending.options)['thi-map-troop-1'], 'legal');
+    assert.equal(optionLegalityByValue(afterSecondTroop.pending.options)['thi-map-police-1'], 'illegal');
+
+    const afterRemoveTroop = advanceChooseN(
+      def,
+      state,
+      move,
+      initial.decisionKey,
+      afterSecondTroop.pending.selected,
+      { type: 'remove', value: 'thi-available-troop-2' },
+    );
+    assert.equal(afterRemoveTroop.done, false);
+    if (afterRemoveTroop.done) {
+      throw new Error('Expected pending chooseN state after removing an available troop.');
+    }
+    assert.deepEqual(afterRemoveTroop.pending.selected, ['thi-available-troop-1']);
+    assert.equal(optionLegalityByValue(afterRemoveTroop.pending.options)['thi-map-troop-1'], 'illegal');
+    assert.equal(optionLegalityByValue(afterRemoveTroop.pending.options)['thi-map-police-1'], 'illegal');
+  });
+
+  it('unshaded still accepts full-array AI submission for a legal prioritized selection', () => {
+    const def = getFitlEventDef();
+    const state = setupFitlEventState(def, {
+      seed: 87008,
+      cardIdInDiscardZone: CARD_ID,
+      zoneTokens: {
+        [AVAILABLE_ARVN]: [
+          makeFitlToken('thi-fast-troop-1', 'troops', 'ARVN'),
+          makeFitlToken('thi-fast-police-1', 'police', 'ARVN'),
+        ],
+        [QUANG_NAM]: [
+          makeFitlToken('thi-fast-map-base', 'base', 'ARVN'),
+        ],
+      },
+    });
+
+    const move = requireEventMove(def, state, CARD_ID, 'unshaded');
+    const resolved = resolveMoveDecisionSequence(def, state, move, {
+      choose: (request) => (
+        matchesDecisionRequest({ name: '$nguyenChanhThiArvnPieces', resolvedBind: '$nguyenChanhThiArvnPieces' })(request)
+          ? ['thi-fast-troop-1', 'thi-fast-police-1', 'thi-fast-map-base']
+          : undefined
+      ),
+    });
+
+    assert.equal(resolved.complete, false);
+    assert.equal(resolved.illegal, undefined);
+    assert.equal(resolved.nextDecision?.name, '$nguyenChanhThiDestination');
+    assert.equal(
+      Object.values(resolved.move.params).some((value) =>
+        Array.isArray(value)
+        && value.length === 3
+        && value[0] === 'thi-fast-troop-1'
+        && value[1] === 'thi-fast-police-1'
+        && value[2] === 'thi-fast-map-base'),
+      true,
+    );
+  });
+
+  it('unshaded rejects full-array AI submission that skips an available same-type piece', () => {
+    const def = getFitlEventDef();
+    const state = setupFitlEventState(def, {
+      seed: 87009,
+      cardIdInDiscardZone: CARD_ID,
+      zoneTokens: {
+        [AVAILABLE_ARVN]: [
+          makeFitlToken('thi-fast-illegal-troop', 'troops', 'ARVN'),
+          makeFitlToken('thi-fast-illegal-police', 'police', 'ARVN'),
+        ],
+        [QUANG_NAM]: [
+          makeFitlToken('thi-fast-illegal-map-troop', 'troops', 'ARVN'),
+          makeFitlToken('thi-fast-illegal-map-base', 'base', 'ARVN'),
+        ],
+      },
+    });
+
+    const move = requireEventMove(def, state, CARD_ID, 'unshaded');
+
+    assert.throws(
+      () => resolveMoveDecisionSequence(def, state, move, {
+        choose: (request) => (
+          matchesDecisionRequest({ name: '$nguyenChanhThiArvnPieces', resolvedBind: '$nguyenChanhThiArvnPieces' })(request)
+            ? ['thi-fast-illegal-map-troop', 'thi-fast-illegal-police', 'thi-fast-illegal-map-base']
+            : undefined
+        ),
+      }),
+      /violates prioritized tier ordering/,
+    );
   });
 
   it('unshaded places up to 3 ARVN pieces within 3 spaces of Hue and shifts each receiving space only once', () => {

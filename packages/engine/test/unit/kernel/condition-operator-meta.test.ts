@@ -58,6 +58,7 @@ describe('condition operator metadata', () => {
     }
     assert.equal(isConditionOperator('xor'), false);
     assert.equal(isConditionOperator('eq'), false);
+    assert.equal(isConditionOperator(''), false);
   });
 
   it('has no duplicate operators and complete metadata coverage', () => {

@@ -1,6 +1,6 @@
 # 63MCTSPERROLLFRESEA-004: Per-search state-info cache
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `agents/mcts/state-cache.ts` (new), `agents/mcts/search.ts`, `agents/mcts/rollout.ts`, `agents/mcts/config.ts`

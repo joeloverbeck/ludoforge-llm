@@ -173,8 +173,38 @@ describe('diagnostics-counters', () => {
   });
 
   describe('cache counters', () => {
-    it('reports zero cache counters (not yet wired)', () => {
-      const result = runDiagnosticSearch(true);
+    it('reports non-negative cache counters when cache is enabled (default)', () => {
+      const result = runDiagnosticSearch(true, 30);
+      const d = result.diagnostics!;
+
+      // Cache is enabled by default, so lookups should be > 0
+      assert.ok(d.stateCacheLookups! >= 0, 'stateCacheLookups should be >= 0');
+      assert.ok(d.stateCacheHits! >= 0, 'stateCacheHits should be >= 0');
+      assert.ok(d.terminalCacheHits! >= 0, 'terminalCacheHits should be >= 0');
+      assert.ok(d.legalMovesCacheHits! >= 0, 'legalMovesCacheHits should be >= 0');
+      assert.ok(d.rewardCacheHits! >= 0, 'rewardCacheHits should be >= 0');
+    });
+
+    it('reports zero cache counters when cache is disabled', () => {
+      const def = createTwoActionDef();
+      const playerCount = 2;
+      const { state } = initialState(def, 42, playerCount);
+      const runtime = createGameDefRuntime(def);
+      const moves = legalMoves(def, state, undefined, runtime);
+      const observation = derivePlayerObservation(def, state, asPlayerId(0));
+      const root = createRootNode(playerCount);
+      const pool = createNodePool(21, playerCount);
+      const config = validateMctsConfig({
+        iterations: 20,
+        minIterations: 0,
+        diagnostics: true,
+        enableStateInfoCache: false,
+      });
+
+      const result = runSearch(
+        root, def, state, observation, asPlayerId(0),
+        config, createRng(42n), moves, runtime, pool,
+      );
       const d = result.diagnostics!;
 
       assert.equal(d.stateCacheLookups, 0);

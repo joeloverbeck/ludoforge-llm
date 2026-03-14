@@ -65,6 +65,12 @@ export interface MctsConfig {
   /** MAST warm-up threshold: minimum `totalUpdates` before exploitation. */
   readonly mastWarmUpThreshold: number;
 
+  /** Enable per-search state-info cache for terminalResult/legalMoves/rewards. */
+  readonly enableStateInfoCache?: boolean;
+
+  /** Max entries in the state-info cache. Defaults to min(pool.capacity, iterations * 4). */
+  readonly maxStateInfoCacheEntries?: number;
+
   /** Optional internal diagnostics for tuning/tests. */
   readonly diagnostics?: boolean;
 }
@@ -192,6 +198,11 @@ export function validateMctsConfig(partial: Partial<MctsConfig>): MctsConfig {
   // Optional wall-clock
   if (merged.timeLimitMs !== undefined) {
     assertPositive('timeLimitMs', merged.timeLimitMs);
+  }
+
+  // State-info cache
+  if (merged.maxStateInfoCacheEntries !== undefined) {
+    assertPositiveInt('maxStateInfoCacheEntries', merged.maxStateInfoCacheEntries);
   }
 
   return Object.freeze(merged);

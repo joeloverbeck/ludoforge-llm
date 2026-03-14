@@ -30,6 +30,13 @@ import { canActivateSolver, updateSolverResult, selectSolverAwareChild } from '.
 import { createAccumulator, collectDiagnostics } from './diagnostics.js';
 import type { MastStats } from './mast.js';
 import { createMastStats, updateMastStats } from './mast.js';
+import type { StateInfoCache } from './state-cache.js';
+import {
+  createStateInfoCache,
+  getOrComputeTerminal,
+  getOrComputeLegalMoves,
+  getOrComputeRewards,
+} from './state-cache.js';
 
 // ---------------------------------------------------------------------------
 // Backpropagation
@@ -74,6 +81,8 @@ export function runOneIteration(
   solverActive: boolean = false,
   acc?: MutableDiagnosticsAccumulator,
   mastStats?: MastStats,
+  stateCache?: StateInfoCache,
+  maxCacheEntries?: number,
 ): { readonly rng: Rng } {
   let currentNode = root;
   let currentState = sampledState;
@@ -90,11 +99,12 @@ export function runOneIteration(
     const movesAtNode: readonly Move[] =
       currentNode === root
         ? rootLegalMoves
-        : legalMoves(def, currentState, undefined, runtime);
-
-    if (currentNode !== root && acc !== undefined) {
-      acc.legalMovesCalls += 1;
-    }
+        : stateCache !== undefined && maxCacheEntries !== undefined
+          ? getOrComputeLegalMoves(stateCache, def, currentState, runtime, maxCacheEntries, acc)
+          : (() => {
+              if (acc !== undefined) { acc.legalMovesCalls += 1; }
+              return legalMoves(def, currentState, undefined, runtime);
+            })();
 
     if (movesAtNode.length === 0) {
       // Terminal or no-move position — evaluate and backprop.
@@ -250,23 +260,25 @@ export function runOneIteration(
 
   switch (config.rolloutMode) {
     case 'legacy':
-      simResult = rollout(def, currentState, currentRng, config, runtime, acc);
+      simResult = rollout(def, currentState, currentRng, config, runtime, acc, stateCache, maxCacheEntries);
       break;
     case 'hybrid':
-      simResult = simulateToCutoff(def, currentState, currentRng, config, runtime, acc, mastStats);
+      simResult = simulateToCutoff(def, currentState, currentRng, config, runtime, acc, mastStats, stateCache, maxCacheEntries);
       break;
     case 'direct':
       // No simulation — evaluate the expansion state directly.
       simResult = {
         state: currentState,
-        terminal: terminalResult(def, currentState, runtime),
+        terminal: stateCache !== undefined && maxCacheEntries !== undefined
+          ? getOrComputeTerminal(stateCache, def, currentState, runtime, maxCacheEntries, acc)
+          : (() => {
+              if (acc !== undefined) { acc.terminalCalls += 1; }
+              return terminalResult(def, currentState, runtime);
+            })(),
         rng: currentRng,
         depth: 0,
         traversedMoveKeys: [],
       };
-      if (acc !== undefined) {
-        acc.terminalCalls += 1;
-      }
       break;
   }
 
@@ -282,17 +294,21 @@ export function runOneIteration(
     rewards = terminalToRewards(simResult.terminal, sampledState.playerCount);
   } else {
     // Check terminal on simulation end state.
-    const endTerminal = terminalResult(def, simResult.state, runtime);
-    if (acc !== undefined) {
-      acc.terminalCalls += 1;
-    }
+    const endTerminal = stateCache !== undefined && maxCacheEntries !== undefined
+      ? getOrComputeTerminal(stateCache, def, simResult.state, runtime, maxCacheEntries, acc)
+      : (() => {
+          if (acc !== undefined) { acc.terminalCalls += 1; }
+          return terminalResult(def, simResult.state, runtime);
+        })();
     if (endTerminal !== null) {
       rewards = terminalToRewards(endTerminal, sampledState.playerCount);
     } else {
-      rewards = evaluateForAllPlayers(def, simResult.state, config.heuristicTemperature, runtime);
-      if (acc !== undefined) {
-        acc.evaluateStateCalls += 1;
-      }
+      rewards = stateCache !== undefined && maxCacheEntries !== undefined
+        ? getOrComputeRewards(stateCache, def, simResult.state, config, runtime, maxCacheEntries, acc)
+        : (() => {
+            if (acc !== undefined) { acc.evaluateStateCalls += 1; }
+            return evaluateForAllPlayers(def, simResult.state, config.heuristicTemperature, runtime);
+          })();
     }
   }
   if (acc !== undefined) {
@@ -371,6 +387,13 @@ export function runSearch(
   // Create MAST stats local to this search run.
   const mastStats = config.rolloutPolicy === 'mast' ? createMastStats() : undefined;
 
+  // Create per-search state-info cache when enabled (default: true).
+  const cacheEnabled = config.enableStateInfoCache !== false;
+  const stateCache = cacheEnabled ? createStateInfoCache() : undefined;
+  const maxCacheEntries = cacheEnabled
+    ? (config.maxStateInfoCacheEntries ?? Math.min(pool.capacity, config.iterations * 4))
+    : undefined;
+
   const deadline =
     config.timeLimitMs !== undefined ? Date.now() + config.timeLimitMs : undefined;
 
@@ -418,6 +441,8 @@ export function runSearch(
       solverActive,
       acc,
       mastStats,
+      stateCache,
+      maxCacheEntries,
     );
     // Consume the iteration's RNG output (determinism is via fork chain).
     void result;

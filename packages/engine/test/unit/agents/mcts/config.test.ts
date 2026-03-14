@@ -295,3 +295,58 @@ describe('MAST config support', () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// State-info cache config
+// ---------------------------------------------------------------------------
+
+describe('state-info cache config', () => {
+  it('enableStateInfoCache defaults to undefined (treated as true at runtime)', () => {
+    const cfg = validateMctsConfig({});
+    assert.equal(cfg.enableStateInfoCache, undefined);
+  });
+
+  it('enableStateInfoCache can be set to true', () => {
+    const cfg = validateMctsConfig({ enableStateInfoCache: true });
+    assert.equal(cfg.enableStateInfoCache, true);
+  });
+
+  it('enableStateInfoCache can be set to false', () => {
+    const cfg = validateMctsConfig({ enableStateInfoCache: false });
+    assert.equal(cfg.enableStateInfoCache, false);
+  });
+
+  it('maxStateInfoCacheEntries defaults to undefined', () => {
+    const cfg = validateMctsConfig({});
+    assert.equal(cfg.maxStateInfoCacheEntries, undefined);
+  });
+
+  it('maxStateInfoCacheEntries accepts positive integer', () => {
+    const cfg = validateMctsConfig({ maxStateInfoCacheEntries: 500 });
+    assert.equal(cfg.maxStateInfoCacheEntries, 500);
+  });
+
+  it('maxStateInfoCacheEntries rejects 0', () => {
+    assert.throws(
+      () => validateMctsConfig({ maxStateInfoCacheEntries: 0 }),
+      (err: unknown) =>
+        err instanceof RangeError && /maxStateInfoCacheEntries/.test((err as RangeError).message),
+    );
+  });
+
+  it('maxStateInfoCacheEntries rejects negative', () => {
+    assert.throws(
+      () => validateMctsConfig({ maxStateInfoCacheEntries: -1 }),
+      (err: unknown) =>
+        err instanceof RangeError && /maxStateInfoCacheEntries/.test((err as RangeError).message),
+    );
+  });
+
+  it('maxStateInfoCacheEntries rejects non-integer', () => {
+    assert.throws(
+      () => validateMctsConfig({ maxStateInfoCacheEntries: 1.5 }),
+      (err: unknown) =>
+        err instanceof RangeError && /maxStateInfoCacheEntries/.test((err as RangeError).message),
+    );
+  });
+});

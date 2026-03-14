@@ -32,6 +32,9 @@ export { backpropagate, runOneIteration, runSearch, selectRootDecision } from '.
 
 export { canActivateSolver, updateSolverResult, selectSolverAwareChild } from './solver.js';
 
+export { createStateInfoCache, evictIfNeeded, getOrComputeTerminal, getOrComputeLegalMoves, getOrComputeRewards } from './state-cache.js';
+export type { CachedStateInfo, StateInfoCache } from './state-cache.js';
+
 export { collectDiagnostics, createAccumulator } from './diagnostics.js';
 export type { MctsSearchDiagnostics, MutableDiagnosticsAccumulator } from './diagnostics.js';
 

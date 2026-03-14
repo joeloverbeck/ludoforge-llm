@@ -26,6 +26,8 @@ import { nextInt, fork } from '../../kernel/prng.js';
 import type { PlayerId } from '../../kernel/branded.js';
 import type { MastStats } from './mast.js';
 import { mastSelectMove } from './mast.js';
+import type { StateInfoCache } from './state-cache.js';
+import { getOrComputeTerminal, getOrComputeLegalMoves } from './state-cache.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -71,6 +73,8 @@ export function rollout(
   config: RolloutConfigSlice,
   runtime?: GameDefRuntime,
   acc?: MutableDiagnosticsAccumulator,
+  stateCache?: StateInfoCache,
+  maxCacheEntries?: number,
 ): SimulationResult {
   let currentState = state;
   let currentRng = rng;
@@ -79,19 +83,23 @@ export function rollout(
 
   while (depth < config.maxSimulationDepth) {
     // 1. Check terminal
-    const terminal = terminalResult(def, currentState, runtime);
-    if (acc !== undefined) {
-      acc.terminalCalls += 1;
-    }
+    const terminal = stateCache !== undefined && maxCacheEntries !== undefined
+      ? getOrComputeTerminal(stateCache, def, currentState, runtime, maxCacheEntries, acc)
+      : (() => {
+          if (acc !== undefined) { acc.terminalCalls += 1; }
+          return terminalResult(def, currentState, runtime);
+        })();
     if (terminal !== null) {
       return { state: currentState, terminal, rng: currentRng, depth, traversedMoveKeys };
     }
 
     // 2. Enumerate legal moves
-    const moves = legalMoves(def, currentState, undefined, runtime);
-    if (acc !== undefined) {
-      acc.legalMovesCalls += 1;
-    }
+    const moves = stateCache !== undefined && maxCacheEntries !== undefined
+      ? getOrComputeLegalMoves(stateCache, def, currentState, runtime, maxCacheEntries, acc)
+      : (() => {
+          if (acc !== undefined) { acc.legalMovesCalls += 1; }
+          return legalMoves(def, currentState, undefined, runtime);
+        })();
     if (moves.length === 0) {
       return { state: currentState, terminal: null, rng: currentRng, depth, traversedMoveKeys };
     }
@@ -147,10 +155,12 @@ export function rollout(
   }
 
   // Reached maxSimulationDepth — check terminal one more time
-  const finalTerminal = terminalResult(def, currentState, runtime);
-  if (acc !== undefined) {
-    acc.terminalCalls += 1;
-  }
+  const finalTerminal = stateCache !== undefined && maxCacheEntries !== undefined
+    ? getOrComputeTerminal(stateCache, def, currentState, runtime, maxCacheEntries, acc)
+    : (() => {
+        if (acc !== undefined) { acc.terminalCalls += 1; }
+        return terminalResult(def, currentState, runtime);
+      })();
   return { state: currentState, terminal: finalTerminal, rng: currentRng, depth, traversedMoveKeys };
 }
 
@@ -172,6 +182,8 @@ export function simulateToCutoff(
   runtime?: GameDefRuntime,
   acc?: MutableDiagnosticsAccumulator,
   mastStats?: MastStats,
+  stateCache?: StateInfoCache,
+  maxCacheEntries?: number,
 ): SimulationResult {
   let currentState = state;
   let currentRng = rng;
@@ -180,19 +192,23 @@ export function simulateToCutoff(
 
   while (depth < config.hybridCutoffDepth) {
     // 1. Check terminal
-    const terminal = terminalResult(def, currentState, runtime);
-    if (acc !== undefined) {
-      acc.terminalCalls += 1;
-    }
+    const terminal = stateCache !== undefined && maxCacheEntries !== undefined
+      ? getOrComputeTerminal(stateCache, def, currentState, runtime, maxCacheEntries, acc)
+      : (() => {
+          if (acc !== undefined) { acc.terminalCalls += 1; }
+          return terminalResult(def, currentState, runtime);
+        })();
     if (terminal !== null) {
       return { state: currentState, terminal, rng: currentRng, depth, traversedMoveKeys };
     }
 
     // 2. Enumerate legal moves
-    const moves = legalMoves(def, currentState, undefined, runtime);
-    if (acc !== undefined) {
-      acc.legalMovesCalls += 1;
-    }
+    const moves = stateCache !== undefined && maxCacheEntries !== undefined
+      ? getOrComputeLegalMoves(stateCache, def, currentState, runtime, maxCacheEntries, acc)
+      : (() => {
+          if (acc !== undefined) { acc.legalMovesCalls += 1; }
+          return legalMoves(def, currentState, undefined, runtime);
+        })();
     if (moves.length === 0) {
       return { state: currentState, terminal: null, rng: currentRng, depth, traversedMoveKeys };
     }
@@ -265,10 +281,12 @@ export function simulateToCutoff(
   }
 
   // Reached cutoff — check terminal
-  const finalTerminal = terminalResult(def, currentState, runtime);
-  if (acc !== undefined) {
-    acc.terminalCalls += 1;
-  }
+  const finalTerminal = stateCache !== undefined && maxCacheEntries !== undefined
+    ? getOrComputeTerminal(stateCache, def, currentState, runtime, maxCacheEntries, acc)
+    : (() => {
+        if (acc !== undefined) { acc.terminalCalls += 1; }
+        return terminalResult(def, currentState, runtime);
+      })();
   return { state: currentState, terminal: finalTerminal, rng: currentRng, depth, traversedMoveKeys };
 }
 

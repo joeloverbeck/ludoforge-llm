@@ -1,6 +1,6 @@
 # 63MCTSPERROLLFRESEA-008: Conditional — implicit heuristic backups
 
-**Status**: DONE
+**Status**: ✅ COMPLETED
 **Priority**: LOW
 **Effort**: Medium
 **Engine Changes**: Yes — `agents/mcts/node.ts`, `agents/mcts/search.ts`, `agents/mcts/isuct.ts`, `agents/mcts/config.ts`
@@ -108,3 +108,16 @@ When a new node is expanded, store the heuristic evaluation of the expanded stat
 1. `pnpm turbo build && node --test packages/engine/dist/test/unit/agents/mcts/isuct.test.js`
 2. `pnpm turbo build && pnpm -F @ludoforge/engine test`
 3. `pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- Completed: 2026-03-14
+- What changed:
+  - Added heuristic backup storage to MCTS nodes and expansion flow in the engine MCTS implementation.
+  - Added configuration support and validation for `heuristicBackupAlpha`.
+  - Updated ISUCT selection tests to cover alpha-disabled, blended, and heuristic-fallback behavior.
+- Deviations from original plan:
+  - No deviation identified from the ticket scope based on the landed implementation.
+- Verification results:
+  - Implementation landed in commit `10e2de89` (`Implemented 63MCTSPERROLLFRESEA-008.`).
+  - Matching coverage exists in `packages/engine/test/unit/agents/mcts/isuct.test.ts`.

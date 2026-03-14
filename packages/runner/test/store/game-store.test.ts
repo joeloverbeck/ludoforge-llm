@@ -1078,7 +1078,8 @@ describe('createGameStore', () => {
     const outcome = await store.getState().resolveAiStep();
 
     expect(outcome).toBe('illegal-template');
-    expect(applyTemplateMove).toHaveBeenCalledTimes(1);
+    // 1 initial attempt + 3 retries with fresh legal moves (all return illegal)
+    expect(applyTemplateMove).toHaveBeenCalledTimes(4);
     expect(applyMove).not.toHaveBeenCalled();
     expect(store.getState().gameState).toEqual(aiState);
     expect(store.getState().error).toMatchObject({

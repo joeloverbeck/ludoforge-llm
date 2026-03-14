@@ -704,6 +704,8 @@ export function createGameStore(
         });
       };
 
+      const MAX_AI_ILLEGAL_RETRIES = 3;
+
       const resolveSingleAiStep = async (ctx: OperationContext): Promise<AiStepOutcome> => {
         const state = get();
         if (state.gameLifecycle === 'terminal') {
@@ -716,7 +718,7 @@ export function createGameStore(
           return 'human-turn';
         }
 
-        const legalMoveResult = state.legalMoveResult ?? await bridge.enumerateLegalMoves();
+        let legalMoveResult = state.legalMoveResult ?? await bridge.enumerateLegalMoves();
         const activeSeat = resolveAiSeat(state.playerSeats.get(state.renderModel.activePlayerID));
 
         // MCTS seats delegate move selection to the worker (off-main-thread search).
@@ -745,7 +747,7 @@ export function createGameStore(
           selectedIndex = aiSelection.selectedIndex;
         }
 
-        const templateMoveResult = await bridge.applyTemplateMove(selectedMove, undefined, toOperationStamp(ctx));
+        let templateMoveResult = await bridge.applyTemplateMove(selectedMove, undefined, toOperationStamp(ctx));
         if (templateMoveResult.outcome === 'uncompletable') {
           const nextDiagnosticSequence = state.orchestrationDiagnosticSequence + 1;
           guardSetAndDerive(ctx, {
@@ -762,12 +764,48 @@ export function createGameStore(
           return 'uncompletable-template';
         }
 
+        // Defense-in-depth: retry with fresh legal moves on illegal outcome
+        if (templateMoveResult.outcome === 'illegal' && !isMctsSeat(activeSeat)) {
+          for (let retry = 0; retry < MAX_AI_ILLEGAL_RETRIES; retry += 1) {
+            const freshLegalMoveResult = await bridge.enumerateLegalMoves();
+            const retrySelection = selectAiMove(activeSeat, freshLegalMoveResult.moves);
+            if (retrySelection === null) {
+              guardSetAndDerive(ctx, { legalMoveResult: freshLegalMoveResult, error: null });
+              return 'no-legal-moves';
+            }
+            legalMoveResult = freshLegalMoveResult;
+            selectedMove = retrySelection.move;
+            candidateCount = retrySelection.candidateCount;
+            selectedIndex = retrySelection.selectedIndex;
+            templateMoveResult = await bridge.applyTemplateMove(selectedMove, undefined, toOperationStamp(ctx));
+            if (templateMoveResult.outcome !== 'illegal') {
+              break;
+            }
+          }
+        }
+
         if (templateMoveResult.outcome === 'illegal') {
           guardSetAndDerive(ctx, {
             legalMoveResult,
             error: templateMoveResult.error,
           });
           return 'illegal-template';
+        }
+
+        if (templateMoveResult.outcome === 'uncompletable') {
+          const nextDiagnosticSequence = state.orchestrationDiagnosticSequence + 1;
+          guardSetAndDerive(ctx, {
+            legalMoveResult,
+            orchestrationDiagnosticSequence: nextDiagnosticSequence,
+            orchestrationDiagnostic: buildUncompletableTemplateDiagnostic(
+              nextDiagnosticSequence,
+              selectedMove,
+              state.renderModel?.activePlayerID ?? null,
+              legalMoveResult.moves.length,
+            ),
+            error: null,
+          });
+          return 'uncompletable-template';
         }
 
         const completedMove = templateMoveResult.move;

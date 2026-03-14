@@ -156,21 +156,21 @@ describe('materializeConcreteCandidates', () => {
     assert.equal(result.candidates[0]!.moveKey, canonicalMoveKey(concreteMove));
   });
 
-  it('includes stochasticUnresolved results as candidates', () => {
+  it('excludes stochasticUnresolved results from candidates (RNG still consumed)', () => {
     // stochasticUnresolved moves are those behind a rollRandom gate.
-    // With the simple test def we don't have stochastic actions.
-    // We verify the contract: if completeTemplateMove returns
-    // stochasticUnresolved, the move should appear in candidates.
-    // The test uses the concrete path — stochasticUnresolved moves
-    // are included by design. We verify indirectly: any non-unsatisfiable
-    // completion result appears in candidates.
+    // With the simple test def we don't have stochastic actions, so we
+    // verify the general contract: only fully completed template results
+    // appear as candidates.  stochasticUnresolved results are skipped
+    // because their incomplete decision parameters produce unreliable
+    // search statistics across belief samples.
     const def = createTemplateDef();
     const { state } = initialState(def, 42, 2);
     const rng = createRng(42n);
 
     const templateMove = makeMove('choose');
     const result = materializeConcreteCandidates(def, state, [templateMove], rng, 5);
-    // All candidates from template completion are either completed or stochasticUnresolved
+    // All candidates from template completion should be fully completed
+    // (the simple test def has no stochastic actions, so all complete)
     assert.ok(result.candidates.length >= 1, 'has candidates');
   });
 

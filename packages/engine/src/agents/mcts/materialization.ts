@@ -28,7 +28,10 @@ import type { MctsNode } from './node.js';
  * 1. Non-template (fully concrete) moves are yielded as-is with computed moveKey.
  * 2. Template moves are completed up to `limitPerTemplate` times, collecting
  *    unique `MoveKey`s.
- * 3. `stochasticUnresolved` results are included as candidates.
+ * 3. `stochasticUnresolved` results are skipped (RNG still consumed for
+ *    determinism).  These moves have incomplete decision parameters that
+ *    may resolve differently against the real state vs. belief samples,
+ *    producing unreliable search statistics.
  * 4. `unsatisfiable` results are skipped.
  * 5. All candidates are deduplicated by `MoveKey` (first occurrence wins).
  * 6. The input `legalMoves` array is never mutated.
@@ -92,14 +95,10 @@ export function materializeConcreteCandidates(
           candidates.push({ move: result.move, moveKey: key });
         }
       } else if (result.kind === 'stochasticUnresolved') {
+        // Consume RNG for determinism but do NOT add as candidate.
+        // Stochastic-unresolved moves have incomplete decision parameters
+        // that produce unreliable search statistics across belief samples.
         cursor = result.rng;
-        const key = canonicalMoveKey(result.move);
-        if (!seenKeys.has(key)) {
-          seenKeys.add(key);
-          candidates.push({ move: result.move, moveKey: key });
-        }
-        // Stop after first stochastic result for this template — further
-        // completions won't resolve the stochastic gate differently.
         break;
       } else {
         // unsatisfiable — no further attempts will succeed.

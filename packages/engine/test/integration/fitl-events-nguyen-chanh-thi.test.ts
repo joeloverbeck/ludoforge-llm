@@ -100,6 +100,36 @@ describe('FITL card-87 Nguyen Chanh Thi', () => {
     assert.equal(legalityByValue.get('thi-map-base'), 'legal');
   });
 
+  it('unshaded allows map ARVN Troops immediately when no Available ARVN Troops remain', () => {
+    const def = getFitlEventDef();
+    const state = setupFitlEventState(def, {
+      seed: 87010,
+      cardIdInDiscardZone: CARD_ID,
+      zoneTokens: {
+        [AVAILABLE_ARVN]: [
+          makeFitlToken('thi-available-police-only', 'police', 'ARVN'),
+        ],
+        [QUANG_NAM]: [
+          makeFitlToken('thi-map-troop-no-available', 'troops', 'ARVN'),
+          makeFitlToken('thi-map-police-blocked', 'police', 'ARVN'),
+        ],
+      },
+    });
+
+    const pending = legalChoicesEvaluate(def, state, requireEventMove(def, state, CARD_ID, 'unshaded'));
+    assert.equal(pending.kind, 'pending');
+    if (pending.kind !== 'pending' || pending.type !== 'chooseN') {
+      throw new Error('Expected chooseN unshaded ARVN-piece selector.');
+    }
+
+    const legalityByValue = new Map(
+      pending.options.map((option) => [String(option.value), option.legality]),
+    );
+    assert.equal(legalityByValue.get('thi-available-police-only'), 'legal');
+    assert.equal(legalityByValue.get('thi-map-troop-no-available'), 'legal');
+    assert.equal(legalityByValue.get('thi-map-police-blocked'), 'illegal');
+  });
+
   it('unshaded recomputes prioritized legality stepwise through advanceChooseN', () => {
     const def = getFitlEventDef();
     const state = setupFitlEventState(def, {

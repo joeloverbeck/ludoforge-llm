@@ -1,6 +1,6 @@
 # Spec 62: Prioritized Sourcing Query
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P0
 **Complexity**: M
 **Dependencies**: Spec 25, Spec 25b
@@ -319,3 +319,22 @@ After implementing this spec, the current implementation of card 87 in:
 - [065-096.md](/home/joeloverbeck/projects/ludoforge-llm/data/games/fire-in-the-lake/41-events/065-096.md)
 
 must be reviewed and reworked to use the new sourcing model. The present implementation should be treated as an interim encoding that intentionally over-approximates Rule 1.4.1 and must not be considered final once this capability exists.
+
+## Outcome
+
+- **Completion date**: 2026-03-14
+- **What actually changed**:
+  - Added the generic `prioritized` `OptionsQuery` variant and compiler/runtime support.
+  - Enforced tier-aware `chooseN` legality in the kernel, including qualifier-aware behavior and incremental add/remove/confirm recomputation.
+  - Re-authored FITL card 87 to use `prioritized` in production data.
+  - Added generic synthetic prioritized integration coverage and FITL card 87 integration coverage, then strengthened the FITL suite with an explicit “no Available ARVN Troops” legality case during finalization.
+- **Deviations from original plan**:
+  - The synthetic proof point stayed as an inline test fixture rather than a shared fixture file because there was no demonstrated reuse need.
+  - Final integration coverage lived in existing suites rather than the exact file split sketched in the original spec/ticket.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm -F @ludoforge/engine lint`
+  - `pnpm -F @ludoforge/engine typecheck`
+  - `pnpm turbo test`
+  - `pnpm turbo lint`
+  - `pnpm turbo typecheck`

@@ -1097,6 +1097,39 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('reports malformed boolean ConditionAST nodes without throwing', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$zone',
+              domain: {
+                query: 'connectedZones',
+                zone: 'deck:none',
+                via: { op: 'and' },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    assert.doesNotThrow(() => {
+      const diagnostics = validateGameDef(def);
+      assert.ok(
+        diagnostics.some(
+          (diag) =>
+            diag.code === 'CONDITION_BOOLEAN_ARITY_INVALID'
+            && diag.path === `${appendQueryConditionSurfacePath('actions[0].params[0].domain', CONDITION_SURFACE_SUFFIX.query.via)}.args`,
+        ),
+      );
+    });
+  });
+
   it('uses shared condition boolean-arity message for empty or args', () => {
     const base = createValidGameDef();
     const def = {
@@ -1711,6 +1744,70 @@ describe('validateGameDef reference checks', () => {
     assert.ok(
       diagnostics.some((diag) => diag.code === 'REF_MAP_SPACE_PROP_KIND_INVALID' && diag.path === 'actions[0].pre.prop'),
     );
+  });
+
+  it('validates metadata-declared condition fields across zone, value, numeric, and nested traversal', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zones: [
+        {
+          id: 'market:none',
+          zoneKind: 'board',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          attributes: { population: 2, econ: 1, terrainTags: ['urban'], country: 'southVietnam', coastal: false },
+          adjacentTo: [],
+        },
+        { id: 'deck:none', zoneKind: 'aux', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+      ],
+      actions: [
+        {
+          ...base.actions[0],
+          pre: {
+            op: 'and',
+            args: [
+              { op: 'adjacent', left: 'missing-adjacent:none', right: 'market:none' },
+              {
+                op: 'zonePropIncludes',
+                zone: 'market:none',
+                prop: 'terrainTags',
+                value: { ref: 'zoneProp', zone: 'missing-value:none', prop: 'country' },
+              },
+              {
+                op: 'markerShiftAllowed',
+                space: 'market:none',
+                marker: 'supportOpposition',
+                delta: { ref: 'zoneCount', zone: 'missing-delta:none' },
+              },
+              {
+                op: 'connected',
+                from: 'market:none',
+                to: 'deck:none',
+                via: { op: 'adjacent', left: 'missing-via:none', right: 'market:none' },
+              },
+            ],
+          },
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    const expected = [
+      { code: 'REF_ZONE_MISSING', path: `${conditionSurfacePathForActionPre(0)}.args[0].left` },
+      { code: 'REF_MAP_SPACE_MISSING', path: `${conditionSurfacePathForActionPre(0)}.args[1].value.zone` },
+      { code: 'REF_ZONE_MISSING', path: `${conditionSurfacePathForActionPre(0)}.args[2].delta.zone` },
+      { code: 'REF_ZONE_MISSING', path: `${conditionSurfacePathForActionPre(0)}.args[3].via.left` },
+    ] as const;
+
+    for (const entry of expected) {
+      assert.ok(
+        diagnostics.some((diag) => diag.code === entry.code && diag.path === entry.path),
+        `Expected ${entry.code} at ${entry.path}`,
+      );
+    }
   });
 
   it('reports missing zone references in derived metric filters', () => {

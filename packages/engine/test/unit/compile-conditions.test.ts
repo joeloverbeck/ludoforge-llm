@@ -9,6 +9,7 @@ import {
   type ConditionLoweringContext,
 } from '../../src/cnl/compile-conditions.js';
 import { canonicalizeNamedSets } from '../../src/cnl/named-set-utils.js';
+import { CONDITION_OPERATORS } from '../../src/kernel/condition-operator-meta.js';
 import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
 const context: ConditionLoweringContext = {
@@ -27,6 +28,11 @@ const fitlSeatContext: ConditionLoweringContext = {
 const tokenFilterContext: ConditionLoweringContext = {
   ...context,
   tokenFilterProps: ['faction', 'type'],
+};
+
+const recursiveLoweringContext: ConditionLoweringContext = {
+  ...tokenFilterContext,
+  seatIds: ['US', 'ARVN', 'NVA', 'VC'],
 };
 
 describe('compile-conditions lowering', () => {
@@ -173,6 +179,83 @@ describe('compile-conditions lowering', () => {
     assert.equal(result.value, null);
     assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
     assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.0.setVar.value.aggregate.bind');
+  });
+
+  it('preserves recursive lowering across value, condition, query, and token-filter modules', () => {
+    const result = lowerValueNode(
+      {
+        if: {
+          when: {
+            op: '>',
+            left: {
+              aggregate: {
+                op: 'count',
+                query: {
+                  query: 'tokensInMapSpaces',
+                  spaceFilter: {
+                    owner: 'US',
+                    condition: {
+                      op: '==',
+                      left: { ref: 'zoneProp', zone: 'board', prop: 'region' },
+                      right: 'highlands',
+                    },
+                  },
+                  filter: { prop: 'faction', op: 'in', value: ['us', 'arvn'] },
+                },
+              },
+            },
+            right: 0,
+          },
+          then: {
+            aggregate: {
+              op: 'sum',
+              query: { query: 'intsInRange', min: 1, max: 2 },
+              bind: '$n',
+              valueExpr: { ref: 'binding', name: '$n' },
+            },
+          },
+          else: 0,
+        },
+      },
+      recursiveLoweringContext,
+      'doc.actions.0.effects.0.setVar.value',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      if: {
+        when: {
+          op: '>',
+          left: {
+            aggregate: {
+              op: 'count',
+              query: {
+                query: 'tokensInMapSpaces',
+                spaceFilter: {
+                  owner: { id: 0 },
+                  condition: {
+                    op: '==',
+                    left: { ref: 'zoneProp', zone: 'board:none', prop: 'region' },
+                    right: 'highlands',
+                  },
+                },
+                filter: { prop: 'faction', op: 'in', value: ['us', 'arvn'] },
+              },
+            },
+          },
+          right: 0,
+        },
+        then: {
+          aggregate: {
+            op: 'sum',
+            query: { query: 'intsInRange', min: 1, max: 2 },
+            bind: '$n',
+            valueExpr: { ref: 'binding', name: '$n' },
+          },
+        },
+        else: 0,
+      },
+    });
   });
 
   it('lowers canonical query owner selectors for zones filter', () => {
@@ -686,6 +769,17 @@ describe('compile-conditions lowering', () => {
     assert.equal(result.diagnostics[0]?.severity, 'error');
     assert.ok((result.diagnostics[0]?.message ?? '').length > 0);
     assert.ok((result.diagnostics[0]?.alternatives ?? []).includes('tokensInZone'));
+  });
+
+  it('uses the canonical condition operator registry for unsupported operator diagnostics', () => {
+    const result = lowerConditionNode(
+      { op: 'xor', left: true, right: false },
+      context,
+      'doc.actions.0.pre',
+    );
+
+    assert.equal(result.value, null);
+    assert.deepEqual(result.diagnostics[0]?.alternatives, [...CONDITION_OPERATORS]);
   });
 
   it('lowers query: binding as a pass-through binding reference', () => {

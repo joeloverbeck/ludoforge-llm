@@ -12,7 +12,7 @@ const BOOLEAN_ARITY_SUGGESTION: Readonly<Record<BooleanArityDomain, string>> = {
   tokenFilter: 'Provide one or more token filter expression arguments.',
 };
 
-export const isNonEmptyArray = <T>(value: readonly T[]): value is readonly [T, ...T[]] => value.length > 0;
+export const isNonEmptyArray = <T>(value: readonly T[] | unknown): value is readonly [T, ...T[]] => Array.isArray(value) && value.length > 0;
 
 export const booleanArityMessage = (domain: BooleanArityDomain, op: BooleanArityOperator): string =>
   `${domain === 'condition' ? 'Condition' : 'Token filter'} operator "${op}" requires at least one ${BOOLEAN_ARITY_NOUN[domain]}.`;

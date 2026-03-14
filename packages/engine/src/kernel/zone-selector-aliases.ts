@@ -1,3 +1,9 @@
+import {
+  forEachConditionNestedConditionField,
+  forEachConditionNumericValueField,
+  forEachConditionValueField,
+  forEachConditionZoneSelectorField,
+} from './condition-operator-meta.js';
 import type { ConditionAST, OptionsQuery, TokenFilterExpr, ValueExpr, ZoneRef, ZoneSel } from './types.js';
 import { isTokenFilterPredicateExpr, walkTokenFilterExpr } from './token-filter-expr-utils.js';
 
@@ -195,53 +201,23 @@ export const collectZoneSelectorAliasesFromCondition = (
   if (condition === undefined || typeof condition === 'boolean') {
     return aliases;
   }
-  switch (condition.op) {
-    case 'and':
-    case 'or':
-      for (const arg of condition.args) {
-        collectZoneSelectorAliasesFromCondition(arg, aliases);
+  forEachConditionZoneSelectorField(condition, (_fieldName, value) => {
+    collectZoneSelAlias(value, aliases);
+  });
+  forEachConditionValueField(condition, (_fieldName, value) => {
+    collectZoneSelectorAliasesFromValueExpr(value, aliases);
+  });
+  forEachConditionNumericValueField(condition, (_fieldName, value) => {
+    collectZoneSelectorAliasesFromValueExpr(value, aliases);
+  });
+  forEachConditionNestedConditionField(condition, (_fieldName, nested) => {
+    if (Array.isArray(nested)) {
+      for (const entry of nested) {
+        collectZoneSelectorAliasesFromCondition(entry, aliases);
       }
-      return aliases;
-    case 'not':
-      collectZoneSelectorAliasesFromCondition(condition.arg, aliases);
-      return aliases;
-    case '==':
-    case '!=':
-    case '<':
-    case '<=':
-    case '>':
-    case '>=':
-      collectZoneSelectorAliasesFromValueExpr(condition.left, aliases);
-      collectZoneSelectorAliasesFromValueExpr(condition.right, aliases);
-      return aliases;
-    case 'in':
-      collectZoneSelectorAliasesFromValueExpr(condition.item, aliases);
-      collectZoneSelectorAliasesFromValueExpr(condition.set, aliases);
-      return aliases;
-    case 'adjacent':
-      collectZoneSelAlias(condition.left, aliases);
-      collectZoneSelAlias(condition.right, aliases);
-      return aliases;
-    case 'connected':
-      collectZoneSelAlias(condition.from, aliases);
-      collectZoneSelAlias(condition.to, aliases);
-      collectZoneSelectorAliasesFromCondition(condition.via, aliases);
-      return aliases;
-    case 'zonePropIncludes':
-      collectZoneSelAlias(condition.zone, aliases);
-      collectZoneSelectorAliasesFromValueExpr(condition.value, aliases);
-      return aliases;
-    case 'markerStateAllowed':
-      collectZoneSelAlias(condition.space, aliases);
-      collectZoneSelectorAliasesFromValueExpr(condition.state, aliases);
-      return aliases;
-    case 'markerShiftAllowed':
-      collectZoneSelAlias(condition.space, aliases);
-      collectZoneSelectorAliasesFromValueExpr(condition.delta, aliases);
-      return aliases;
-    default: {
-      const exhaustive: never = condition;
-      return exhaustive;
+    } else if (nested !== undefined) {
+      collectZoneSelectorAliasesFromCondition(nested as ConditionAST, aliases);
     }
-  }
+  });
+  return aliases;
 };

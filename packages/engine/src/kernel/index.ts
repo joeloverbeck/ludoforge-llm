@@ -84,6 +84,7 @@ export * from './zobrist.js';
 export * from './display-node.js';
 export * from './ast-to-display.js';
 export * from './condition-annotator.js';
+export * from './condition-operator-meta.js';
 export * from './tooltip-ir.js';
 export * from './tooltip-rule-card.js';
 export * from './verbalization-types.js';

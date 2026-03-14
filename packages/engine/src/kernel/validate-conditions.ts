@@ -2,6 +2,12 @@ import type { Diagnostic } from './diagnostics.js';
 import type { ConditionAST } from './types.js';
 import { booleanArityMessage, booleanAritySuggestion, isNonEmptyArray } from './boolean-arity-policy.js';
 import {
+  forEachConditionNestedConditionField,
+  forEachConditionNumericValueField,
+  forEachConditionValueField,
+  forEachConditionZoneSelectorField,
+} from './condition-operator-meta.js';
+import {
   type ValidationContext,
   validateZoneSelector,
 } from './validate-gamedef-structure.js';
@@ -16,6 +22,63 @@ import { validateNumericValueExpr, validateValueExpr } from './validate-values.j
 // ---------------------------------------------------------------------------
 // Condition AST validation
 // ---------------------------------------------------------------------------
+
+const validateConditionStructure = (
+  diagnostics: Diagnostic[],
+  condition: Exclude<ConditionAST, boolean>,
+  path: string,
+  context: ValidationContext,
+  options?: {
+    readonly skipZoneSelectorFields?: readonly string[];
+    readonly skipValueFields?: readonly string[];
+    readonly skipNumericValueFields?: readonly string[];
+    readonly skipNestedConditionFields?: readonly string[];
+  },
+): void => {
+  const skipZoneSelectorFields = new Set(options?.skipZoneSelectorFields ?? []);
+  const skipValueFields = new Set(options?.skipValueFields ?? []);
+  const skipNumericValueFields = new Set(options?.skipNumericValueFields ?? []);
+  const skipNestedConditionFields = new Set(options?.skipNestedConditionFields ?? []);
+
+  forEachConditionZoneSelectorField(condition, (fieldName, value) => {
+    if (skipZoneSelectorFields.has(fieldName)) {
+      return;
+    }
+    validateZoneSelector(diagnostics, value, `${path}.${fieldName}`, context);
+  });
+
+  forEachConditionValueField(condition, (fieldName, value) => {
+    if (skipValueFields.has(fieldName)) {
+      return;
+    }
+    validateValueExpr(diagnostics, value, `${path}.${fieldName}`, context);
+  });
+
+  forEachConditionNumericValueField(condition, (fieldName, value) => {
+    if (skipNumericValueFields.has(fieldName)) {
+      return;
+    }
+    validateNumericValueExpr(
+      diagnostics,
+      value,
+      `${path}.${fieldName}`,
+      context,
+    );
+  });
+
+  forEachConditionNestedConditionField(condition, (fieldName, nested) => {
+    if (skipNestedConditionFields.has(fieldName)) {
+      return;
+    }
+    if (Array.isArray(nested)) {
+      nested.forEach((entry, index) => {
+        validateConditionAst(diagnostics, entry, `${path}.${fieldName}[${index}]`, context);
+      });
+    } else if (nested !== undefined) {
+      validateConditionAst(diagnostics, nested as ConditionAST, `${path}.${fieldName}`, context);
+    }
+  });
+};
 
 export const validateConditionAst = (
   diagnostics: Diagnostic[],
@@ -39,41 +102,32 @@ export const validateConditionAst = (
           suggestion: booleanAritySuggestion('condition'),
         });
       }
-      condition.args.forEach((entry, index) => {
-        validateConditionAst(diagnostics, entry, `${path}.args[${index}]`, context);
-      });
+      validateConditionStructure(diagnostics, condition, path, context);
       return;
     }
     case 'not': {
-      validateConditionAst(diagnostics, condition.arg, `${path}.arg`, context);
+      validateConditionStructure(diagnostics, condition, path, context);
       return;
     }
     case 'in': {
-      validateValueExpr(diagnostics, condition.item, `${path}.item`, context);
-      validateValueExpr(diagnostics, condition.set, `${path}.set`, context);
+      validateConditionStructure(diagnostics, condition, path, context);
       return;
     }
     case 'adjacent': {
-      validateZoneSelector(diagnostics, condition.left, `${path}.left`, context);
-      validateZoneSelector(diagnostics, condition.right, `${path}.right`, context);
+      validateConditionStructure(diagnostics, condition, path, context);
       return;
     }
     case 'connected': {
-      validateZoneSelector(diagnostics, condition.from, `${path}.from`, context);
-      validateZoneSelector(diagnostics, condition.to, `${path}.to`, context);
-      if (condition.via) {
-        validateConditionAst(diagnostics, condition.via, `${path}.via`, context);
-      }
+      validateConditionStructure(diagnostics, condition, path, context);
       return;
     }
     case 'zonePropIncludes': {
       validateMapSpacePropertyReference(diagnostics, condition.zone, condition.prop, path, context, 'array');
-      validateValueExpr(diagnostics, condition.value, `${path}.value`, context);
+      validateConditionStructure(diagnostics, condition, path, context, { skipZoneSelectorFields: ['zone'] });
       return;
     }
     case 'markerStateAllowed': {
-      validateZoneSelector(diagnostics, condition.space, `${path}.space`, context);
-      validateValueExpr(diagnostics, condition.state, `${path}.state`, context);
+      validateConditionStructure(diagnostics, condition, path, context);
       validateMarkerStateLiteral(
         diagnostics,
         condition.marker,
@@ -84,13 +138,11 @@ export const validateConditionAst = (
       return;
     }
     case 'markerShiftAllowed': {
-      validateZoneSelector(diagnostics, condition.space, `${path}.space`, context);
-      validateNumericValueExpr(diagnostics, condition.delta, `${path}.delta`, context);
+      validateConditionStructure(diagnostics, condition, path, context);
       return;
     }
     default: {
-      validateValueExpr(diagnostics, condition.left, `${path}.left`, context);
-      validateValueExpr(diagnostics, condition.right, `${path}.right`, context);
+      validateConditionStructure(diagnostics, condition, path, context);
       if ((condition.op === '==' || condition.op === '!=') && typeof condition.left === 'object' && condition.left !== null) {
         if ('ref' in condition.left && condition.left.ref === 'markerState') {
           validateMarkerStateLiteral(

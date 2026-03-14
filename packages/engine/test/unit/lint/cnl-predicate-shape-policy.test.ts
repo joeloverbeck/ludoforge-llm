@@ -7,15 +7,25 @@ import ts from 'typescript';
 import { parseTypeScriptSource } from '../../helpers/kernel-source-ast-guard.js';
 import { findEnginePackageRoot } from '../../helpers/lint-policy-helpers.js';
 
-const COMPILE_CONDITIONS_FILE = ['src', 'cnl', 'compile-conditions.ts'] as const;
+const TOKEN_FILTER_LOWERING_FILE = ['src', 'cnl', 'compile-conditions-token-filters.ts'] as const;
 const FORBIDDEN_ALIAS_KEYS = new Set(['eq', 'neq', 'in', 'notIn']);
 const TARGET_FUNCTIONS = ['lowerTokenFilterEntry', 'lowerAssetRowFilterEntry'] as const;
 
 function findNamedFunction(sourceFile: ts.SourceFile, name: string): ts.FunctionDeclaration {
-  for (const statement of sourceFile.statements) {
-    if (ts.isFunctionDeclaration(statement) && statement.name?.text === name) {
-      return statement;
+  let match: ts.FunctionDeclaration | null = null;
+  const visit = (node: ts.Node): void => {
+    if (match !== null) {
+      return;
     }
+    if (ts.isFunctionDeclaration(node) && node.name?.text === name) {
+      match = node;
+      return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  if (match !== null) {
+    return match;
   }
   throw new Error(`Could not find function ${name} in ${sourceFile.fileName}.`);
 }
@@ -79,9 +89,9 @@ describe('cnl predicate shape policy', () => {
   it('forbids alias key property reads in token-filter and assetRows predicate lowering, with explicit canonical-shape rejection', () => {
     const thisDir = dirname(fileURLToPath(import.meta.url));
     const engineRoot = findEnginePackageRoot(thisDir);
-    const compileConditionsPath = resolve(engineRoot, ...COMPILE_CONDITIONS_FILE);
-    const source = readFileSync(compileConditionsPath, 'utf8');
-    const sourceFile = parseTypeScriptSource(source, compileConditionsPath);
+    const tokenFilterLoweringPath = resolve(engineRoot, ...TOKEN_FILTER_LOWERING_FILE);
+    const source = readFileSync(tokenFilterLoweringPath, 'utf8');
+    const sourceFile = parseTypeScriptSource(source, tokenFilterLoweringPath);
 
     const violations: string[] = [];
     for (const fnName of TARGET_FUNCTIONS) {

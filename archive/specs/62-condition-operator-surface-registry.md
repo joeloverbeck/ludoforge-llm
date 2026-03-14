@@ -1,5 +1,7 @@
 # Spec 62: Condition Operator Metadata
 
+**Status**: ✅ COMPLETED
+
 ## Summary
 
 Condition operators lack a single module declaring what operators exist and what their structural shapes are. Adding a new operator requires updating multiple switches across ~9 files, and while TypeScript exhaustiveness checks prevent missing cases, two specific patterns cause unnecessary duplication:
@@ -181,3 +183,23 @@ Implementation sequence:
    Mitigation: Keep `condition-operator-meta.ts` as a leaf module with no imports from CNL or other kernel modules beyond types.
 3. **Metadata staleness**: Metadata could drift from `ConditionAST` types.
    Mitigation: Tests enforce that metadata entries match `ConditionAST` union members exactly.
+
+## Outcome
+
+- Completion date: 2026-03-14
+- What actually changed:
+  - Added `packages/engine/src/kernel/condition-operator-meta.ts` as the canonical condition-operator metadata module.
+  - Moved CNL unsupported-operator diagnostics to the canonical operator registry in `packages/engine/src/cnl/compile-conditions-conditions.ts`.
+  - Refactored `packages/engine/src/kernel/zone-selector-aliases.ts` and `packages/engine/src/kernel/validate-conditions.ts` to consume metadata-driven structural traversal while preserving local semantic checks.
+  - Strengthened `packages/engine/test/unit/kernel/condition-operator-meta.test.ts` and related condition-surface tests to prove registry completeness and traversal behavior.
+  - Completed the later type-hardening refinement with typed field descriptors and typed traversal helpers, which improved on the original string-path proposal without changing runtime semantics.
+- Deviations from original plan:
+  - The final implementation uses typed field descriptors plus traversal helpers rather than raw string field-path arrays because that yields a stronger compile-time contract and cleaner consumers.
+  - The current CNL entry point is `compile-conditions-conditions.ts`, not the older `compile-conditions.ts` path referenced in parts of this spec.
+  - The spec remained in active `specs/` longer than it should have after implementation; this archival corrects that process lag.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/kernel/condition-operator-meta.test.js packages/engine/dist/test/unit/kernel/zone-selector-aliases.test.js packages/engine/dist/test/unit/compile-conditions.test.js packages/engine/dist/test/unit/validate-gamedef.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm turbo typecheck` passed.
+  - `pnpm turbo lint` passed.

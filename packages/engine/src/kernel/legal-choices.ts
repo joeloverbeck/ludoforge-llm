@@ -269,8 +269,16 @@ const mapChooseNOptions = (
   }
 
   const optionLegalityByKey = new Map<string, { legality: ChoiceOption['legality']; illegalReason: ChoiceOption['illegalReason'] }>();
+  const fixedIllegalOptionKeys = new Set<string>();
   for (const option of uniqueOptions) {
-    optionLegalityByKey.set(optionKey(option), { legality: 'illegal', illegalReason: null });
+    const existing = request.options.find((entry) => optionKey(entry.value) === optionKey(option));
+    const status = existing?.legality === 'illegal'
+      ? { legality: 'illegal' as const, illegalReason: existing.illegalReason }
+      : { legality: 'illegal' as const, illegalReason: null };
+    optionLegalityByKey.set(optionKey(option), status);
+    if (existing?.legality === 'illegal') {
+      fixedIllegalOptionKeys.add(optionKey(option));
+    }
   }
 
   for (let size = min; size <= max; size += 1) {
@@ -280,6 +288,9 @@ const mapChooseNOptions = (
 
     enumerateCombinations(uniqueOptions.length, size, (indices) => {
       const selected = indices.map((index) => uniqueOptions[index]!);
+      if (selected.some((option) => fixedIllegalOptionKeys.has(optionKey(option)))) {
+        return;
+      }
       const selectedChoice = selected as Move['params'][string];
       let probed: ChoiceRequest;
       try {

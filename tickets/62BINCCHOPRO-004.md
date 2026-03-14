@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — new kernel module + comprehensive unit tests
-**Deps**: archive/tickets/62BINCCHOPRO-001.md, archive/tickets/62BINCCHOPRO-002.md, tickets/62BINCCHOPRO-003.md
+**Deps**: archive/tickets/62BINCCHOPRO-001.md, archive/tickets/62BINCCHOPRO-002.md, archive/tickets/62BINCCHOPRO-003.md
 
 ## Problem
 
@@ -15,8 +15,12 @@ The kernel has no mechanism for callers to drive `chooseN` selection incremental
 1. `legalChoicesDiscover` returns `ChoicePendingRequest` which includes `options`, `min`, `max`, `decisionKey`. Confirmed.
 2. `resolveMoveDecisionSequence` is the outer decision loop — it stays unchanged. The `chooseN` sub-loop is the caller's responsibility. Confirmed by spec design principle C.
 3. The `choose` callback in `resolveMoveDecisionSequence` returns full arrays for `chooseN` — this AI fast-path must be preserved. Confirmed.
-4. `ChoicePendingRequest` will have `selected` and `canConfirm` fields after ticket 001. Confirmed.
-5. The shared `computeTierAdmissibility` helper will exist after ticket 002. Confirmed.
+4. `ChoicePendingRequest` already has `selected` and `canConfirm`; this is no longer future work gated on ticket 001. Confirmed.
+5. The shared `computeTierAdmissibility` helper already exists from ticket 002. Confirmed.
+6. Ticket 003 intentionally did not implement incremental `chooseN` progression. It only wired prioritized tier-admissibility into:
+   - initial empty-selection legality, and
+   - final submitted-array validation.
+   Genuine per-step legality recomputation remains the responsibility of this ticket.
 
 ## Architecture Check
 
@@ -25,6 +29,7 @@ The kernel has no mechanism for callers to drive `chooseN` selection incremental
 3. It reconstructs the discovery context for the `chooseN` decision using the same path `legalChoicesDiscover` uses.
 4. It uses the shared tier-admissibility helper for `prioritized` queries, ensuring parity with apply-time validation.
 5. The AI fast-path is preserved — agents continue returning full arrays through the `choose` callback without going through `advanceChooseN`.
+6. This ticket is now the sole owner of true stepwise legality recomputation after each add/remove. That behavior must not be assumed to exist elsewhere in the kernel.
 
 ## What to Change
 
@@ -88,7 +93,7 @@ Test file at `packages/engine/test/unit/kernel/advance-choose-n.test.ts`.
 - `Move` type changes — finalized array still written to `Move.params`
 - Runner bridge/store/UI changes (tickets 62BINCCHOPRO-005, -006, -007)
 - Card 87 re-authoring (ticket 62BINCCHOPRO-008)
-- `effects-choice.ts` or `legal-choices.ts` modifications (ticket 62BINCCHOPRO-003)
+- The initial empty-selection legality and final-array tier validation already added by ticket 003
 
 ## Acceptance Criteria
 

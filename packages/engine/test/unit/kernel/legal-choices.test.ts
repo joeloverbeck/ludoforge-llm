@@ -1593,6 +1593,110 @@ phase: [asPhaseId('main')],
       ]);
     });
 
+    it('marks lower-tier prioritized chooseN options illegal during initial legality evaluation', () => {
+      const action: ActionDef = {
+        id: asActionId('prioritizedChooseNLegalityOp'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [
+          {
+            chooseN: {
+              internalDecisionId: 'decision:$targets',
+              bind: '$targets',
+              options: {
+                query: 'prioritized',
+                tiers: [
+                  { query: 'enums', values: ['available-a'] },
+                  { query: 'enums', values: ['reserve-a'] },
+                ],
+              },
+              n: 1,
+            },
+          } as EffectAST,
+        ],
+        limits: [],
+      };
+
+      const result = legalChoicesEvaluate(
+        makeBaseDef({ actions: [action] }),
+        makeBaseState(),
+        makeMove('prioritizedChooseNLegalityOp'),
+      );
+
+      assert.equal(result.kind, 'pending');
+      assert.equal(result.type, 'chooseN');
+      assert.deepStrictEqual(result.options, [
+        { value: 'available-a', legality: 'legal', illegalReason: null },
+        { value: 'reserve-a', legality: 'illegal', illegalReason: null },
+      ]);
+    });
+
+    it('keeps qualifier-aware prioritized chooseN legality independent per qualifier', () => {
+      const action: ActionDef = {
+        id: asActionId('prioritizedChooseNQualifierLegalityOp'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [
+          {
+            chooseN: {
+              internalDecisionId: 'decision:$targets',
+              bind: '$targets',
+              options: {
+                query: 'prioritized',
+                qualifierKey: 'pieceType',
+                tiers: [
+                  { query: 'tokensInZone', zone: 'available:none' },
+                  { query: 'tokensInZone', zone: 'map:none' },
+                ],
+              },
+              min: 1,
+              max: 2,
+            },
+          } as EffectAST,
+        ],
+        limits: [],
+      };
+
+      const def = makeBaseDef({
+        actions: [action],
+        zones: [
+          { id: asZoneId('available:none'), owner: 'none', visibility: 'public', ordering: 'stack' },
+          { id: asZoneId('map:none'), owner: 'none', visibility: 'public', ordering: 'stack' },
+        ],
+        tokenTypes: [{ id: 'piece', props: { pieceType: 'string' } }],
+      });
+      const state = makeBaseState({
+        zones: {
+          'available:none': [
+            { id: asTokenId('available-troop-1'), type: 'piece', props: { pieceType: 'troop' } },
+            { id: asTokenId('available-police-1'), type: 'piece', props: { pieceType: 'police' } },
+          ],
+          'map:none': [
+            { id: asTokenId('map-troop-1'), type: 'piece', props: { pieceType: 'troop' } },
+            { id: asTokenId('map-base-1'), type: 'piece', props: { pieceType: 'base' } },
+          ],
+        },
+      });
+
+      const result = legalChoicesEvaluate(def, state, makeMove('prioritizedChooseNQualifierLegalityOp'));
+      assert.equal(result.kind, 'pending');
+      assert.equal(result.type, 'chooseN');
+      assert.deepStrictEqual(result.options, [
+        { value: asTokenId('available-troop-1'), legality: 'legal', illegalReason: null },
+        { value: asTokenId('available-police-1'), legality: 'legal', illegalReason: null },
+        { value: asTokenId('map-troop-1'), legality: 'illegal', illegalReason: null },
+        { value: asTokenId('map-base-1'), legality: 'legal', illegalReason: null },
+      ]);
+    });
+
     it('allows later stage predicates to consume transient bindings exported by earlier stage effects', () => {
       const action: ActionDef = {
         id: asActionId('stageTransientBindingOp'),

@@ -11,6 +11,7 @@ import { resolveSinglePlayerSel } from './resolve-selectors.js';
 import { resolveZoneWithNormalization, selectorResolutionFailurePolicyForMode } from './selector-resolution-normalization.js';
 import { findSpaceMarkerConstraintViolation, resolveSpaceMarkerShift } from './space-marker-rules.js';
 import { withTracePath } from './trace-provenance.js';
+import { computeTierAdmissibility, type PrioritizedTierEntry } from './prioritized-tier-legality.js';
 import { normalizeChoiceDomain, toChoiceComparableValue, type MembershipScalar } from './value-membership.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
@@ -20,13 +21,116 @@ import type {
   ChoiceStochasticPendingRequest,
   EffectAST,
   MoveParamScalar,
+  OptionsQuery,
   PlayerSel,
+  Token,
 } from './types.js';
 import type { EffectBudgetState } from './effects-control.js';
 
 type ApplyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContext, budget: EffectBudgetState) => EffectResult;
 
 const choiceOptionKey = (value: unknown): string => JSON.stringify([typeof value, value]);
+
+const isTokenQueryResult = (value: unknown): value is Token =>
+  typeof value === 'object'
+  && value !== null
+  && typeof (value as { id?: unknown }).id === 'string'
+  && typeof (value as { type?: unknown }).type === 'string'
+  && typeof (value as { props?: unknown }).props === 'object'
+  && (value as { props?: unknown }).props !== null;
+
+const resolvePrioritizedTierEntries = (
+  query: OptionsQuery,
+  evalCtx: EffectContext,
+  bind: string,
+  decisionKey: string,
+): readonly (readonly PrioritizedTierEntry[])[] | null => {
+  if (query.query !== 'prioritized') {
+    return null;
+  }
+
+  return query.tiers.map((tierQuery, tierIndex) => {
+    const tierResults = evalQuery(tierQuery, evalCtx);
+    const normalizedTier = normalizeChoiceDomain(tierResults, (issue) => {
+      throw effectRuntimeError(
+        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+        `chooseN prioritized tier item is not move-param encodable: ${bind}`,
+        {
+          effectType: 'chooseN',
+          bind,
+          decisionKey,
+          tierIndex,
+          index: issue.index,
+          actualType: issue.actualType,
+          value: issue.value,
+        },
+      );
+    });
+
+    return normalizedTier.map((value, itemIndex) => {
+      const tierResult = tierResults[itemIndex];
+      if (query.qualifierKey === undefined) {
+        return { value };
+      }
+      if (!isTokenQueryResult(tierResult)) {
+        throw effectRuntimeError(
+          EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+          `chooseN prioritized qualifierKey requires token results: ${bind}`,
+          {
+            effectType: 'chooseN',
+            bind,
+            decisionKey,
+            tierIndex,
+            itemIndex,
+            qualifierKey: query.qualifierKey,
+            value: tierResult,
+          },
+        );
+      }
+      const qualifier = tierResult.props[query.qualifierKey];
+      if (
+        qualifier !== undefined
+        && typeof qualifier !== 'string'
+        && typeof qualifier !== 'number'
+        && typeof qualifier !== 'boolean'
+      ) {
+        throw effectRuntimeError(
+          EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+          `chooseN prioritized qualifier must resolve to a scalar: ${bind}`,
+          {
+            effectType: 'chooseN',
+            bind,
+            decisionKey,
+            tierIndex,
+            itemIndex,
+            qualifierKey: query.qualifierKey,
+            qualifier,
+          },
+        );
+      }
+      return qualifier === undefined ? { value } : { value, qualifier };
+    });
+  });
+};
+
+const buildPrioritizedAdmissibility = (
+  tiers: readonly (readonly PrioritizedTierEntry[])[] | null,
+  qualifierMode: 'none' | 'byQualifier',
+  alreadySelected: readonly MoveParamScalar[],
+): { readonly admissibleKeys: ReadonlySet<string> } | null => {
+  if (tiers === null) {
+    return null;
+  }
+
+  const admissibility = computeTierAdmissibility(
+    tiers,
+    alreadySelected,
+    qualifierMode,
+  );
+  return {
+    admissibleKeys: new Set(admissibility.admissibleValues.map((value) => choiceOptionKey(value))),
+  };
+};
 
 const normalizePendingChoiceRequest = (pendingChoice: ChoicePendingRequest): ChoicePendingRequest => ({
   ...pendingChoice,
@@ -495,6 +599,11 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   });
   const comparableBindingMap = buildComparableDomainBindingMap('chooseN', bind, decisionKey, options, normalizedOptions);
   const clampedMax = Math.min(maxCardinality, normalizedOptions.length);
+  const prioritizedTierEntries = resolvePrioritizedTierEntries(chooseN.options, evalCtx, bind, decisionKey);
+  const prioritizedQualifierMode = chooseN.options.query === 'prioritized' && chooseN.options.qualifierKey !== undefined
+    ? 'byQualifier'
+    : 'none';
+  const prioritizedAdmissibility = buildPrioritizedAdmissibility(prioritizedTierEntries, prioritizedQualifierMode, []);
   const selectedValue = ctx.moveParams[decisionKey];
   if (selectedValue === undefined) {
     if (ctx.mode === 'discovery') {
@@ -513,7 +622,9 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
           type: 'chooseN',
           options: normalizedOptions.map((value) => ({
             value,
-            legality: 'unknown',
+            legality: prioritizedAdmissibility !== null && !prioritizedAdmissibility.admissibleKeys.has(choiceOptionKey(value))
+              ? 'illegal'
+              : 'unknown',
             illegalReason: null,
           })),
           targetKinds,
@@ -593,8 +704,31 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
       }
     }
   }
+  const selectedSequence = normalizedSelected as readonly MoveParamScalar[];
+  if (prioritizedAdmissibility !== null) {
+    const alreadySelected: MoveParamScalar[] = [];
+    for (let index = 0; index < selectedSequence.length; index += 1) {
+      const selected = selectedSequence[index]!;
+      const admissibilityAtStep = buildPrioritizedAdmissibility(prioritizedTierEntries, prioritizedQualifierMode, alreadySelected);
+      if (admissibilityAtStep !== null && !admissibilityAtStep.admissibleKeys.has(choiceOptionKey(selected))) {
+        throw effectRuntimeError(
+          EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+          `chooseN selection violates prioritized tier ordering: ${bind}`,
+          {
+            effectType: 'chooseN',
+            bind,
+            decisionKey,
+            selected,
+            selectedIndex: index,
+            alreadySelected,
+          },
+        );
+      }
+      alreadySelected.push(selected);
+    }
+  }
   const selectedBindings: unknown[] = [];
-  for (const selected of normalizedSelected) {
+  for (const selected of selectedSequence) {
     if (!comparableBindingMap.has(selected)) {
       throw effectRuntimeError(
         EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — data file + test files
-**Deps**: tickets/62BINCCHOPRO-004.md, tickets/62BINCCHOPRO-003.md, archive/tickets/62BINCCHOPRO-002.md
+**Deps**: tickets/62BINCCHOPRO-004.md, archive/tickets/62BINCCHOPRO-003.md, archive/tickets/62BINCCHOPRO-002.md
 
 ## Problem
 
@@ -16,7 +16,8 @@ The incremental `chooseN` protocol and tier-admissibility enforcement need end-t
 2. FITL integration tests use `compileProductionSpec()` from `packages/engine/test/helpers/production-spec-helpers.ts`. Confirmed per CLAUDE.md.
 3. FITL event tests exist for other cards (e.g., `fitl-events-nguyen-chanh-thi.test.ts` or similar). Confirmed.
 4. Synthetic fixtures use inline Game Spec Markdown or fixture files in `packages/engine/test/fixtures/`. Confirmed.
-5. The `advanceChooseN` function (ticket 004) and shared tier helper (ticket 002) will be available. Confirmed.
+5. The shared tier helper from ticket 002 exists. Confirmed.
+6. Ticket 003 did not deliver the incremental `chooseN` protocol; it only covered initial empty-selection legality plus final-array validation. Stepwise legality transitions in this ticket still depend on ticket 004.
 
 ## Architecture Check
 
@@ -24,6 +25,7 @@ The incremental `chooseN` protocol and tier-admissibility enforcement need end-t
 2. The `prioritized` query with `qualifierKey: type` encodes Rule 1.4.1 in authored YAML, keeping the engine game-agnostic.
 3. The generic non-FITL fixture demonstrates `prioritized` with a different `qualifierKey` (e.g., `color`) in a synthetic game, proving no FITL dependency.
 4. Integration tests exercise the full pipeline: Game Spec → compile → kernel `advanceChooseN` → verify stepwise legality transitions.
+5. Any end-to-end test that expects legality to change after each add/remove is blocked on ticket 004, not ticket 003.
 
 ## What to Change
 

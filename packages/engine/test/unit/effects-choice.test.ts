@@ -667,6 +667,67 @@ describe('effects choice assertions', () => {
     });
   });
 
+  it('chooseN rejects prioritized selections that skip an earlier tier', () => {
+    const ctx = makeCtx({ moveParams: { '$picks': ['reserve-a'] } });
+    const effect: EffectAST = {
+      chooseN: {
+        internalDecisionId: 'decision:$picks',
+        bind: '$picks',
+        options: {
+          query: 'prioritized',
+          tiers: [
+            { query: 'enums', values: ['available-a'] },
+            { query: 'enums', values: ['reserve-a'] },
+          ],
+        },
+        n: 1,
+      },
+    };
+
+    assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
+      return isEffectErrorCode(error, 'EFFECT_RUNTIME')
+        && String(error).includes('violates prioritized tier ordering');
+    });
+  });
+
+  it('chooseN accepts prioritized selections that exhaust earlier tiers first', () => {
+    const ctx = makeCtx({ moveParams: { '$picks': ['available-a', 'reserve-a'] } });
+    const effect: EffectAST = {
+      chooseN: {
+        internalDecisionId: 'decision:$picks',
+        bind: '$picks',
+        options: {
+          query: 'prioritized',
+          tiers: [
+            { query: 'enums', values: ['available-a'] },
+            { query: 'enums', values: ['reserve-a'] },
+          ],
+        },
+        n: 2,
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state, ctx.state);
+    assert.equal(result.rng, ctx.rng);
+  });
+
+  it('chooseN leaves non-prioritized selections unchanged', () => {
+    const ctx = makeCtx({ moveParams: { '$picks': ['reserve-a'] } });
+    const effect: EffectAST = {
+      chooseN: {
+        internalDecisionId: 'decision:$picks',
+        bind: '$picks',
+        options: { query: 'enums', values: ['available-a', 'reserve-a'] },
+        n: 1,
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state, ctx.state);
+    assert.equal(result.rng, ctx.rng);
+  });
+
   it('rollRandom discovery surfaces pending nested choices', () => {
     const ctx = makeDiscoveryCtx();
     const effect: EffectAST = {

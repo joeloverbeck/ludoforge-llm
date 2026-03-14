@@ -51,6 +51,7 @@ export interface ConditionLoweringRuntime {
 
 export const SUPPORTED_QUERY_KINDS = [
   'concat',
+  'prioritized',
   'tokenZones',
   'tokensInZone',
   'assetRows',

@@ -833,6 +833,62 @@ describe('compile-conditions lowering', () => {
     assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.params.0.domain');
   });
 
+  it('lowers prioritized query tiers recursively with optional qualifierKey', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'prioritized',
+        qualifierKey: 'type',
+        tiers: [
+          { query: 'tokensInZone', zone: 'deck' },
+          { query: 'tokensInMapSpaces', filter: { prop: 'faction', op: 'eq', value: 'ARVN' } },
+        ],
+      },
+      tokenFilterContext,
+      'doc.actions.0.params.0.domain',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'prioritized',
+      qualifierKey: 'type',
+      tiers: [
+        { query: 'tokensInZone', zone: 'deck:none' },
+        { query: 'tokensInMapSpaces', filter: { prop: 'faction', op: 'eq', value: 'ARVN' } },
+      ],
+    });
+  });
+
+  it('rejects prioritized query payloads with empty tiers', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'prioritized',
+        tiers: [],
+      },
+      context,
+      'doc.actions.0.params.0.domain',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+    assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.params.0.domain');
+  });
+
+  it('rejects prioritized query payloads with non-string qualifierKey', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'prioritized',
+        qualifierKey: 7,
+        tiers: [{ query: 'tokensInZone', zone: 'deck' }],
+      },
+      context,
+      'doc.actions.0.params.0.domain',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+    assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.params.0.domain.qualifierKey');
+  });
+
   it('rejects empty boolean condition args with deterministic diagnostics (no throw)', () => {
     assert.doesNotThrow(() => {
       const result = lowerConditionNode(

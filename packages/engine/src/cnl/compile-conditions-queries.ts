@@ -54,6 +54,40 @@ export function createQueryLowerers(
           diagnostics,
         };
       }
+      case 'prioritized': {
+        if (!Array.isArray(source.tiers) || source.tiers.length === 0) {
+          return missingCapability(path, 'prioritized query', source, [
+            '{ query: "prioritized", tiers: [<OptionsQuery>, ...], qualifierKey?: string }',
+          ]);
+        }
+        if (source.qualifierKey !== undefined && typeof source.qualifierKey !== 'string') {
+          return missingCapability(`${path}.qualifierKey`, 'prioritized qualifierKey', source.qualifierKey, ['string']);
+        }
+
+        const diagnostics: Diagnostic[] = [];
+        const loweredTiers: OptionsQuery[] = [];
+
+        source.tiers.forEach((entry, index) => {
+          const lowered = runtime.lowerQueryNode(entry, context, `${path}.tiers[${index}]`);
+          diagnostics.push(...lowered.diagnostics);
+          if (lowered.value !== null) {
+            loweredTiers.push(lowered.value);
+          }
+        });
+
+        if (loweredTiers.length !== source.tiers.length) {
+          return { value: null, diagnostics };
+        }
+
+        return {
+          value: {
+            query: 'prioritized',
+            tiers: loweredTiers as [OptionsQuery, ...OptionsQuery[]],
+            ...(source.qualifierKey === undefined ? {} : { qualifierKey: source.qualifierKey }),
+          },
+          diagnostics,
+        };
+      }
       case 'tokenZones': {
         const sourceQuery = runtime.lowerQueryNode(source.source, context, `${path}.source`);
         const diagnostics = [...sourceQuery.diagnostics];

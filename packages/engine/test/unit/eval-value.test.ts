@@ -265,6 +265,77 @@ describe('evalValue', () => {
     );
   });
 
+  it('counts prioritized qualifierKey aggregates using the admissible selection pool', () => {
+    const def: GameDef = {
+      metadata: { id: 'eval-value-prioritized-count', players: { min: 1, max: 4 } },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [
+        { id: asZoneId('available:none'), zoneKind: 'aux', owner: 'none', visibility: 'public', ordering: 'stack' },
+        { id: asZoneId('map:none'), zoneKind: 'board', owner: 'none', visibility: 'public', ordering: 'stack' },
+      ],
+      tokenTypes: [{ id: 'piece', props: { pieceType: 'string' } }],
+      setup: [],
+      turnStructure: { phases: [] },
+      actions: [],
+      triggers: [],
+      terminal: { conditions: [] },
+    };
+    const state: GameState = {
+      globalVars: {},
+      perPlayerVars: {},
+      zoneVars: {},
+      playerCount: 2,
+      zones: {
+        'available:none': [
+          { id: asTokenId('available-police-1'), type: 'piece', props: { pieceType: 'police' } },
+        ],
+        'map:none': [
+          { id: asTokenId('map-troop-1'), type: 'piece', props: { pieceType: 'troop' } },
+          { id: asTokenId('map-police-1'), type: 'piece', props: { pieceType: 'police' } },
+        ],
+      },
+      nextTokenOrdinal: 0,
+      currentPhase: asPhaseId('main'),
+      activePlayer: asPlayerId(0),
+      turnCount: 1,
+      rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [1n, 2n] },
+      stateHash: 0n,
+      actionUsage: {},
+      turnOrderState: { type: 'roundRobin' },
+      markers: {},
+    };
+    const ctx = makeEvalContext({
+      def,
+      adjacencyGraph: buildAdjacencyGraph([]),
+      state,
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+      bindings: {},
+    });
+
+    assert.equal(
+      evalValue(
+        {
+          aggregate: {
+            op: 'count',
+            query: {
+              query: 'prioritized',
+              qualifierKey: 'pieceType',
+              tiers: [
+                { query: 'tokensInZone', zone: 'available:none' },
+                { query: 'tokensInZone', zone: 'map:none' },
+              ],
+            },
+          },
+        },
+        ctx,
+      ),
+      2,
+    );
+  });
+
   it('throws TYPE_MISMATCH when aggregate valueExpr is missing or non-numeric', () => {
     const ctx = makeCtx();
 

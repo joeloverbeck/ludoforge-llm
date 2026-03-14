@@ -2,8 +2,9 @@ import type { ReadContext } from './eval-context.js';
 import { evalCondition } from './eval-condition.js';
 import { divisionByZeroError, typeMismatchError } from './eval-error.js';
 import { evalQuery } from './eval-query.js';
+import { computeTierAdmissibility } from './prioritized-tier-legality.js';
 import { resolveRef } from './resolve-ref.js';
-import type { ScalarArrayValue, ScalarValue, ValueExpr } from './types.js';
+import type { ScalarArrayValue, ScalarValue, Token, ValueExpr } from './types.js';
 
 function isSafeIntegerNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && Number.isSafeInteger(value);
@@ -15,6 +16,65 @@ function expectSafeInteger(value: unknown, message: string, context: Readonly<Re
   }
 
   return value;
+}
+
+function isTokenQueryResult(value: unknown): value is Token {
+  return typeof value === 'object'
+    && value !== null
+    && typeof (value as { id?: unknown }).id === 'string'
+    && typeof (value as { props?: unknown }).props === 'object'
+    && (value as { props?: unknown }).props !== null;
+}
+
+function countAggregateItems(
+  aggregate: Extract<ValueExpr, { readonly aggregate: unknown }>['aggregate'],
+  ctx: ReadContext,
+): number {
+  const query = aggregate.query;
+  if (query.query !== 'prioritized') {
+    return evalQuery(query, ctx).length;
+  }
+
+  if (query.qualifierKey === undefined) {
+    return evalQuery(query, ctx).length;
+  }
+  const qualifierKey: string = query.qualifierKey;
+
+  const prioritizedEntries = query.tiers.map((tier, tierIndex) =>
+    evalQuery(tier, ctx).map((item, itemIndex) => {
+      if (!isTokenQueryResult(item)) {
+        throw typeMismatchError('Aggregate count on prioritized qualifierKey requires token results', {
+          aggregate,
+          tierIndex,
+          itemIndex,
+          item,
+          qualifierKey,
+        });
+      }
+
+      const qualifier = item.props[qualifierKey];
+      if (
+        qualifier !== undefined
+        && typeof qualifier !== 'string'
+        && typeof qualifier !== 'number'
+        && typeof qualifier !== 'boolean'
+      ) {
+        throw typeMismatchError('Aggregate count prioritized qualifier must resolve to a scalar', {
+          aggregate,
+          tierIndex,
+          itemIndex,
+          qualifierKey,
+          qualifier,
+        });
+      }
+
+      return qualifier === undefined
+        ? { value: item.id }
+        : { value: item.id, qualifier };
+    }),
+  );
+
+  return computeTierAdmissibility(prioritizedEntries, [], 'byQualifier').admissibleValues.length;
 }
 
 export function evalNumericValue(expr: ValueExpr, ctx: ReadContext, label?: string): number {
@@ -98,11 +158,12 @@ export function evalValue(expr: ValueExpr, ctx: ReadContext): ScalarValue | Scal
 
   if ('aggregate' in expr) {
     const { aggregate } = expr;
-    const items = evalQuery(aggregate.query, ctx);
 
     if (aggregate.op === 'count') {
-      return items.length;
+      return countAggregateItems(aggregate, ctx);
     }
+
+    const items = evalQuery(aggregate.query, ctx);
 
     if (items.length === 0) {
       return 0;

@@ -4,6 +4,7 @@ import { buildChoiceOptionsRuntimeShapeDiagnostic, CHOICE_OPTIONS_RUNTIME_SHAPE_
 import { hasErrorDiagnosticAtPathSince } from './diagnostic-path-policy.js';
 import {
   appendQueryConditionSurfacePath,
+  buildMissingReferenceSuggestion,
   CONDITION_SURFACE_SUFFIX,
   isAllowedTokenFilterProp,
   tokenFilterPropAlternatives,
@@ -185,6 +186,32 @@ export const eventTargetChoiceEffectName = (target: EventTargetDef): 'chooseOne'
 
 const uniqueKeyTupleToLabel = (tuple: readonly string[]): string => `[${tuple.join(', ')}]`;
 
+const validatePrioritizedQualifierKey = (
+  diagnostics: Diagnostic[],
+  qualifierKey: string | undefined,
+  path: string,
+  context: ValidationContext,
+): void => {
+  if (qualifierKey === undefined || isAllowedTokenFilterProp(qualifierKey, context.tokenFilterPropCandidates)) {
+    return;
+  }
+
+  const { suggestion, alternatives } = buildMissingReferenceSuggestion(
+    qualifierKey,
+    tokenFilterPropAlternatives(context.tokenFilterPropCandidates),
+    'Use one of the declared token props, or remove qualifierKey to prioritize whole tiers.',
+  );
+
+  diagnostics.push({
+    code: 'REF_PRIORITIZED_QUALIFIER_KEY_MISSING',
+    path,
+    severity: 'warning',
+    message: `prioritized qualifierKey "${qualifierKey}" is not declared on any token type.`,
+    suggestion,
+    ...(alternatives === undefined ? {} : { alternatives }),
+  });
+};
+
 const validatesUniqueKeyConstraint = (
   wherePredicates: Extract<OptionsQuery, { readonly query: 'assetRows' }>['where'],
   uniqueBy: readonly (readonly string[])[],
@@ -300,6 +327,7 @@ export const validateOptionsQuery = (
     }
     case 'prioritized': {
       validateHomogeneousRecursiveQuery(query, query.tiers, 'tiers');
+      validatePrioritizedQualifierKey(diagnostics, query.qualifierKey, `${path}.qualifierKey`, context);
       return;
     }
     case 'tokenZones': {

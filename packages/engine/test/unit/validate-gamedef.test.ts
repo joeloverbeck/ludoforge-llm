@@ -2758,6 +2758,79 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('warns when prioritized qualifierKey is not declared on any token type', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      tokenTypes: [{ id: 'troops', props: { faction: 'string' } }],
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$choice',
+              domain: {
+                query: 'prioritized',
+                qualifierKey: 'type',
+                tiers: [
+                  { query: 'tokensInZone', zone: 'deck:none' },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_PRIORITIZED_QUALIFIER_KEY_MISSING'
+          && diag.path === 'actions[0].params[0].domain.qualifierKey'
+          && diag.severity === 'warning',
+      ),
+    );
+  });
+
+  it('accepts prioritized qualifierKey when declared on a token type', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      tokenTypes: [
+        { id: 'troops', props: { faction: 'string' } },
+        { id: 'police', props: { type: 'string' } },
+      ],
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$choice',
+              domain: {
+                query: 'prioritized',
+                qualifierKey: 'type',
+                tiers: [
+                  { query: 'tokensInZone', zone: 'deck:none' },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_PRIORITIZED_QUALIFIER_KEY_MISSING'
+          && diag.path === 'actions[0].params[0].domain.qualifierKey',
+      ),
+      false,
+    );
+  });
+
   it('accepts tokensInZone domains with dynamic zoneExpr selectors', () => {
     const base = createValidGameDef();
     const def = {

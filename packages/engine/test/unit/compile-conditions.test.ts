@@ -30,6 +30,11 @@ const tokenFilterContext: ConditionLoweringContext = {
   tokenFilterProps: ['faction', 'type'],
 };
 
+const recursiveLoweringContext: ConditionLoweringContext = {
+  ...tokenFilterContext,
+  seatIds: ['US', 'ARVN', 'NVA', 'VC'],
+};
+
 describe('compile-conditions lowering', () => {
   it('lowers comparator condition with aggregate query and canonicalized zone selectors', () => {
     const result = lowerConditionNode(
@@ -174,6 +179,83 @@ describe('compile-conditions lowering', () => {
     assert.equal(result.value, null);
     assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
     assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.0.setVar.value.aggregate.bind');
+  });
+
+  it('preserves recursive lowering across value, condition, query, and token-filter modules', () => {
+    const result = lowerValueNode(
+      {
+        if: {
+          when: {
+            op: '>',
+            left: {
+              aggregate: {
+                op: 'count',
+                query: {
+                  query: 'tokensInMapSpaces',
+                  spaceFilter: {
+                    owner: 'US',
+                    condition: {
+                      op: '==',
+                      left: { ref: 'zoneProp', zone: 'board', prop: 'region' },
+                      right: 'highlands',
+                    },
+                  },
+                  filter: { prop: 'faction', op: 'in', value: ['us', 'arvn'] },
+                },
+              },
+            },
+            right: 0,
+          },
+          then: {
+            aggregate: {
+              op: 'sum',
+              query: { query: 'intsInRange', min: 1, max: 2 },
+              bind: '$n',
+              valueExpr: { ref: 'binding', name: '$n' },
+            },
+          },
+          else: 0,
+        },
+      },
+      recursiveLoweringContext,
+      'doc.actions.0.effects.0.setVar.value',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      if: {
+        when: {
+          op: '>',
+          left: {
+            aggregate: {
+              op: 'count',
+              query: {
+                query: 'tokensInMapSpaces',
+                spaceFilter: {
+                  owner: { id: 0 },
+                  condition: {
+                    op: '==',
+                    left: { ref: 'zoneProp', zone: 'board:none', prop: 'region' },
+                    right: 'highlands',
+                  },
+                },
+                filter: { prop: 'faction', op: 'in', value: ['us', 'arvn'] },
+              },
+            },
+          },
+          right: 0,
+        },
+        then: {
+          aggregate: {
+            op: 'sum',
+            query: { query: 'intsInRange', min: 1, max: 2 },
+            bind: '$n',
+            valueExpr: { ref: 'binding', name: '$n' },
+          },
+        },
+        else: 0,
+      },
+    });
   });
 
   it('lowers canonical query owner selectors for zones filter', () => {

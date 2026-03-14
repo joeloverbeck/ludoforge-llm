@@ -187,6 +187,40 @@ describe('effects choice assertions', () => {
     ]);
   });
 
+  it('chooseN discovery can materialize a transient in-progress selection without finalizing the move param', () => {
+    const ctx = makeDiscoveryCtx({
+      transientDecisionSelections: { '$choice': ['alpha'] },
+    });
+    const effect: EffectAST = {
+      chooseN: {
+        internalDecisionId: 'decision:$choice',
+        bind: '$choice',
+        options: {
+          query: 'prioritized',
+          tiers: [
+            { query: 'enums', values: ['alpha'] },
+            { query: 'enums', values: ['beta'] },
+          ],
+        },
+        min: 1,
+        max: 2,
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.pendingChoice?.kind, 'pending');
+    if (result.pendingChoice?.kind !== 'pending') {
+      throw new Error('expected pending choice');
+    }
+    assert.equal(result.pendingChoice.type, 'chooseN');
+    assert.deepEqual(result.pendingChoice.selected, ['alpha']);
+    assert.equal(result.pendingChoice.canConfirm, true);
+    assert.deepEqual(result.pendingChoice.options, [
+      { value: 'alpha', legality: 'illegal', illegalReason: null },
+      { value: 'beta', legality: 'unknown', illegalReason: null },
+    ]);
+  });
+
   it('chooseOne appends iterationPath to static decision IDs in discovery mode', () => {
     const ctx = makeDiscoveryCtx({ iterationPath: '[2]' });
     const effect: EffectAST = {

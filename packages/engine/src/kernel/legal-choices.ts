@@ -48,6 +48,7 @@ import type {
   GameDef,
   GameState,
   Move,
+  MoveParamScalar,
 } from './types.js';
 
 const COMPLETE: ChoiceRequest = { kind: 'complete', complete: true };
@@ -56,6 +57,10 @@ const MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS = 1024;
 export interface LegalChoicesRuntimeOptions {
   readonly onDeferredPredicatesEvaluated?: (count: number) => void;
   readonly onProbeContextPrepared?: () => void;
+}
+
+interface LegalChoicesInternalOptions extends LegalChoicesRuntimeOptions {
+  readonly transientChooseNSelections?: Readonly<Record<string, readonly MoveParamScalar[]>>;
 }
 
 const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undefined =>
@@ -79,6 +84,7 @@ interface DiscoveryEffectExecutionResult {
 const buildDiscoveryEffectContextBase = (
   evalCtx: ReadContext,
   move: Move,
+  options?: LegalChoicesInternalOptions,
 ): Parameters<typeof createDiscoveryStrictEffectContext>[0] => ({
   def: evalCtx.def,
   adjacencyGraph: evalCtx.adjacencyGraph,
@@ -94,14 +100,18 @@ const buildDiscoveryEffectContextBase = (
   ...(evalCtx.runtimeTableIndex === undefined ? {} : { runtimeTableIndex: evalCtx.runtimeTableIndex }),
   ...(evalCtx.freeOperationOverlay === undefined ? {} : { freeOperationOverlay: evalCtx.freeOperationOverlay }),
   ...(evalCtx.maxQueryResults === undefined ? {} : { maxQueryResults: evalCtx.maxQueryResults }),
+  ...(options?.transientChooseNSelections === undefined
+    ? {}
+    : { transientDecisionSelections: options.transientChooseNSelections }),
 });
 
 const executeDiscoveryEffectsStrict = (
   effects: readonly EffectAST[],
   evalCtx: ReadContext,
   move: Move,
+  options?: LegalChoicesInternalOptions,
 ): DiscoveryEffectExecutionResult => {
-  const baseContext = buildDiscoveryEffectContextBase(evalCtx, move);
+  const baseContext = buildDiscoveryEffectContextBase(evalCtx, move, options);
   try {
     const result = applyEffects(effects, createDiscoveryStrictEffectContext(baseContext));
     return {
@@ -125,8 +135,9 @@ const executeDiscoveryEffectsProbe = (
   effects: readonly EffectAST[],
   evalCtx: ReadContext,
   move: Move,
+  options?: LegalChoicesInternalOptions,
 ): DiscoveryEffectExecutionResult => {
-  const baseContext = buildDiscoveryEffectContextBase(evalCtx, move);
+  const baseContext = buildDiscoveryEffectContextBase(evalCtx, move, options);
   try {
     const result = applyEffects(effects, createDiscoveryProbeEffectContext(baseContext));
     return {
@@ -231,20 +242,24 @@ const mapChooseNOptions = (
   if (request.type !== 'chooseN') {
     throw new Error('mapChooseNOptions requires a chooseN request');
   }
+  const selectedKeys = new Set(request.selected.map((value) => optionKey(value)));
   const uniqueOptions: Move['params'][string][] = [];
   const uniqueByKey = new Map<string, Move['params'][string]>();
   for (const option of request.options) {
     const key = optionKey(option.value);
-    if (uniqueByKey.has(key)) {
+    if (selectedKeys.has(key) || uniqueByKey.has(key)) {
       continue;
     }
     uniqueByKey.set(key, option.value);
     uniqueOptions.push(option.value);
   }
 
-  const min = request.min ?? 0;
-  const max = Math.min(request.max ?? uniqueOptions.length, uniqueOptions.length);
-  if (min > max) {
+  const minAdditionalSelections = Math.max(0, (request.min ?? 0) - request.selected.length);
+  const maxAdditionalSelections = Math.min(
+    Math.max(0, (request.max ?? uniqueOptions.length) - request.selected.length),
+    uniqueOptions.length,
+  );
+  if (minAdditionalSelections > maxAdditionalSelections) {
     return request.options.map((option) => ({
       value: option.value,
       legality: 'illegal',
@@ -253,7 +268,7 @@ const mapChooseNOptions = (
   }
 
   let totalCombinations = 0;
-  for (let size = min; size <= max; size += 1) {
+  for (let size = minAdditionalSelections; size <= maxAdditionalSelections; size += 1) {
     totalCombinations += countCombinationsCapped(
       uniqueOptions.length,
       size,
@@ -270,28 +285,28 @@ const mapChooseNOptions = (
 
   const optionLegalityByKey = new Map<string, { legality: ChoiceOption['legality']; illegalReason: ChoiceOption['illegalReason'] }>();
   const fixedIllegalOptionKeys = new Set<string>();
-  for (const option of uniqueOptions) {
-    const existing = request.options.find((entry) => optionKey(entry.value) === optionKey(option));
-    const status = existing?.legality === 'illegal'
-      ? { legality: 'illegal' as const, illegalReason: existing.illegalReason }
+  for (const option of request.options) {
+    const key = optionKey(option.value);
+    const status = option.legality === 'illegal'
+      ? { legality: 'illegal' as const, illegalReason: option.illegalReason }
       : { legality: 'illegal' as const, illegalReason: null };
-    optionLegalityByKey.set(optionKey(option), status);
-    if (existing?.legality === 'illegal') {
-      fixedIllegalOptionKeys.add(optionKey(option));
+    optionLegalityByKey.set(key, status);
+    if (option.legality === 'illegal') {
+      fixedIllegalOptionKeys.add(key);
     }
   }
 
-  for (let size = min; size <= max; size += 1) {
+  for (let size = minAdditionalSelections; size <= maxAdditionalSelections; size += 1) {
     if (size === 0) {
       continue;
     }
 
     enumerateCombinations(uniqueOptions.length, size, (indices) => {
-      const selected = indices.map((index) => uniqueOptions[index]!);
-      if (selected.some((option) => fixedIllegalOptionKeys.has(optionKey(option)))) {
+      const additionalSelected = indices.map((index) => uniqueOptions[index]!);
+      if (additionalSelected.some((option) => fixedIllegalOptionKeys.has(optionKey(option)))) {
         return;
       }
-      const selectedChoice = selected as Move['params'][string];
+      const selectedChoice = [...request.selected, ...additionalSelected] as Move['params'][string];
       let probed: ChoiceRequest;
       try {
         probed = evaluateProbeMove(
@@ -307,7 +322,7 @@ const mapChooseNOptions = (
         if (!isChoiceDecisionOwnerMismatchDuringProbe(error)) {
           throw error;
         }
-        for (const option of selected) {
+        for (const option of additionalSelected) {
           const key = optionKey(option);
           const status = optionLegalityByKey.get(key);
           if (status !== undefined && status.legality === 'illegal') {
@@ -338,7 +353,7 @@ const mapChooseNOptions = (
         }
       }
 
-      for (const option of selected) {
+      for (const option of additionalSelected) {
         const key = optionKey(option);
         const status = optionLegalityByKey.get(key);
         if (status === undefined || status.legality === 'legal') {
@@ -511,6 +526,7 @@ type ExecuteDiscoveryEffects = (
   effects: readonly EffectAST[],
   evalCtx: ReadContext,
   move: Move,
+  options?: LegalChoicesInternalOptions,
 ) => DiscoveryEffectExecutionResult;
 
 type ProbeLegalityEvaluator = (move: Move, options?: LegalChoicesRuntimeOptions) => ChoiceRequest;
@@ -550,7 +566,7 @@ const legalChoicesWithPreparedContextInternal = (
   shouldEvaluateOptionLegality: boolean,
   executeDiscoveryEffects: ExecuteDiscoveryEffects,
   evaluateProbeLegality: ProbeLegalityEvaluator,
-  options?: LegalChoicesRuntimeOptions,
+  options?: LegalChoicesInternalOptions,
   allowAmbiguousFreeOperationOverlapDiscovery = false,
 ): ChoiceRequest => {
   const { def, state, action, adjacencyGraph, runtimeTableIndex, seatResolution } = context;
@@ -677,7 +693,7 @@ const legalChoicesWithPreparedContextInternal = (
       if (stageStatus.atomicity === 'partial' && stageStatus.costValidation === 'failed') {
         continue;
       }
-      const stageResult = executeDiscoveryEffects(stage.effects, stageEvalCtx, partialMove);
+      const stageResult = executeDiscoveryEffects(stage.effects, stageEvalCtx, partialMove, options);
       stageState = stageResult.state;
       stageBindings = stageResult.bindings;
       if (!shouldEvaluateOptionLegality || stageResult.request.kind !== 'pending') {
@@ -711,6 +727,7 @@ const legalChoicesWithPreparedContextInternal = (
     [...action.effects, ...eventEffects],
     evalCtx,
     partialMove,
+    options,
   ).request;
   if (!shouldEvaluateOptionLegality || request.kind !== 'pending') {
     return finalizeRequest(request);
@@ -726,7 +743,7 @@ const legalChoicesWithPreparedContextProbeInternal = (
   context: LegalChoicesPreparedContext,
   partialMove: Move,
   shouldEvaluateOptionLegality: boolean,
-  options?: LegalChoicesRuntimeOptions,
+  options?: LegalChoicesInternalOptions,
   allowAmbiguousFreeOperationOverlapDiscovery = false,
 ): ChoiceRequest =>
   legalChoicesWithPreparedContextInternal(
@@ -749,7 +766,7 @@ const legalChoicesWithPreparedContextProbe = (
   context: LegalChoicesPreparedContext,
   partialMove: Move,
   shouldEvaluateOptionLegality: boolean,
-  options?: LegalChoicesRuntimeOptions,
+  options?: LegalChoicesInternalOptions,
 ): ChoiceRequest =>
   legalChoicesWithPreparedContextProbeInternal(
     context,
@@ -761,7 +778,7 @@ const legalChoicesWithPreparedContextProbe = (
 const canResolveAmbiguousFreeOperationOverlapViaLaterDecisions = (
   context: LegalChoicesPreparedContext,
   partialMove: Move,
-  options?: LegalChoicesRuntimeOptions,
+  options?: LegalChoicesInternalOptions,
 ): boolean =>
   canResolveAmbiguousFreeOperationOverlapInCurrentState(
     context.def,
@@ -816,7 +833,7 @@ const legalChoicesWithPreparedContextStrict = (
   context: LegalChoicesPreparedContext,
   partialMove: Move,
   shouldEvaluateOptionLegality: boolean,
-  options?: LegalChoicesRuntimeOptions,
+  options?: LegalChoicesInternalOptions,
 ): ChoiceRequest => {
   const strictRequest = legalChoicesWithPreparedContextInternal(
     context,
@@ -848,6 +865,31 @@ const legalChoicesWithPreparedContextStrict = (
   return provisionalRequest;
 };
 
+const prepareLegalChoicesContext = (
+  def: GameDef,
+  state: GameState,
+  partialMove: Move,
+  runtime?: GameDefRuntime,
+): LegalChoicesPreparedContext => {
+  const action = findAction(def, partialMove.actionId);
+  if (action === undefined) {
+    throw kernelRuntimeError(
+      'LEGAL_CHOICES_UNKNOWN_ACTION',
+      `legalChoices: unknown action id: ${String(partialMove.actionId)}`,
+      { actionId: partialMove.actionId },
+    );
+  }
+
+  return {
+    def,
+    state,
+    action,
+    adjacencyGraph: runtime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones),
+    runtimeTableIndex: runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def),
+    seatResolution: createSeatResolutionContext(def, state.playerCount),
+  };
+};
+
 export function legalChoicesDiscover(
   def: GameDef,
   state: GameState,
@@ -856,23 +898,7 @@ export function legalChoicesDiscover(
   runtime?: GameDefRuntime,
 ): ChoiceRequest {
   validateTurnFlowRuntimeStateInvariants(state);
-  const action = findAction(def, partialMove.actionId);
-  if (action === undefined) {
-    throw kernelRuntimeError(
-      'LEGAL_CHOICES_UNKNOWN_ACTION',
-      `legalChoicesDiscover: unknown action id: ${String(partialMove.actionId)}`,
-      { actionId: partialMove.actionId },
-    );
-  }
-
-  const context: LegalChoicesPreparedContext = {
-    def,
-    state,
-    action,
-    adjacencyGraph: runtime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones),
-    runtimeTableIndex: runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def),
-    seatResolution: createSeatResolutionContext(def, state.playerCount),
-  };
+  const context = prepareLegalChoicesContext(def, state, partialMove, runtime);
   options?.onProbeContextPrepared?.();
   return legalChoicesWithPreparedContextStrict(context, partialMove, false, options);
 }
@@ -885,23 +911,29 @@ export function legalChoicesEvaluate(
   runtime?: GameDefRuntime,
 ): ChoiceRequest {
   validateTurnFlowRuntimeStateInvariants(state);
-  const action = findAction(def, partialMove.actionId);
-  if (action === undefined) {
-    throw kernelRuntimeError(
-      'LEGAL_CHOICES_UNKNOWN_ACTION',
-      `legalChoicesEvaluate: unknown action id: ${String(partialMove.actionId)}`,
-      { actionId: partialMove.actionId },
-    );
-  }
-
-  const context: LegalChoicesPreparedContext = {
-    def,
-    state,
-    action,
-    adjacencyGraph: runtime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones),
-    runtimeTableIndex: runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def),
-    seatResolution: createSeatResolutionContext(def, state.playerCount),
-  };
+  const context = prepareLegalChoicesContext(def, state, partialMove, runtime);
   options?.onProbeContextPrepared?.();
   return legalChoicesWithPreparedContextStrict(context, partialMove, true, options);
+}
+
+export function legalChoicesEvaluateWithTransientChooseNSelections(
+  def: GameDef,
+  state: GameState,
+  partialMove: Move,
+  transientChooseNSelections: Readonly<Record<string, readonly MoveParamScalar[]>>,
+  options?: LegalChoicesRuntimeOptions,
+  runtime?: GameDefRuntime,
+): ChoiceRequest {
+  validateTurnFlowRuntimeStateInvariants(state);
+  const context = prepareLegalChoicesContext(def, state, partialMove, runtime);
+  options?.onProbeContextPrepared?.();
+  return legalChoicesWithPreparedContextStrict(
+    context,
+    partialMove,
+    true,
+    {
+      ...options,
+      transientChooseNSelections,
+    },
+  );
 }

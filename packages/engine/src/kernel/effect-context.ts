@@ -13,6 +13,7 @@ import type {
   ChoiceStochasticPendingRequest,
   EffectTraceEventContext,
   GameState,
+  MoveParamScalar,
   MoveParamValue,
   Rng,
   TriggerEvent,
@@ -47,6 +48,7 @@ interface EffectContextBase extends WriteContext {
   readonly maxEffectOps?: number;
   readonly freeOperation?: boolean;
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
+  readonly transientDecisionSelections?: Readonly<Record<string, readonly MoveParamScalar[]>>;
   readonly decisionScope: DecisionScope;
   /** Runtime scope carrying previously executed grant definitions for sequence viability probes. */
   readonly freeOperationProbeScope?: FreeOperationProbeScope;

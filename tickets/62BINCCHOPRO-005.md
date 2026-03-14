@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: tickets/62BINCCHOPRO-004.md
+**Deps**: archive/tickets/62BINCCHOPRO-004.md
 
 ## Problem
 

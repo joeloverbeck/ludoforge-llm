@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel type contract cleanup plus compile-surface updates
-**Deps**: archive/tickets/62BINCCHOPRO-001.md, tickets/62BINCCHOPRO-004.md, tickets/62BINCCHOPRO-007.md
+**Deps**: archive/tickets/62BINCCHOPRO-001.md, archive/tickets/62BINCCHOPRO-004.md, tickets/62BINCCHOPRO-007.md
 
 ## Problem
 

@@ -18,6 +18,7 @@ import type {
   ExecutionCollector,
   GameDef,
   GameState,
+  MoveParamScalar,
   MoveParamValue,
   Rng,
 } from '../../src/kernel/types.js';
@@ -42,6 +43,7 @@ interface EffectContextTestOptions {
   readonly freeOperation?: boolean;
   readonly freeOperationOverlay?: FreeOperationExecutionOverlay;
   readonly maxQueryResults?: number;
+  readonly transientDecisionSelections?: Readonly<Record<string, readonly MoveParamScalar[]>>;
   readonly collector?: ExecutionCollector;
   readonly resources?: RuntimeEffectContextOptions['resources'];
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
@@ -73,6 +75,7 @@ const makeRuntimeEffectContextOptions = ({
   freeOperation,
   freeOperationOverlay,
   maxQueryResults,
+  transientDecisionSelections,
   phaseTransitionBudget,
   decisionScope,
   iterationPath,
@@ -93,6 +96,7 @@ const makeRuntimeEffectContextOptions = ({
   ...(freeOperation === undefined ? {} : { freeOperation }),
   ...(freeOperationOverlay === undefined ? {} : { freeOperationOverlay }),
   ...(maxQueryResults === undefined ? {} : { maxQueryResults }),
+  ...(transientDecisionSelections === undefined ? {} : { transientDecisionSelections }),
   resources: resources ?? makeEvalRuntimeResources({ collector }),
   ...(phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget }),
   decisionScope: decisionScope ?? (() => {

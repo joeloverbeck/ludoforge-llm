@@ -645,9 +645,9 @@ verbalization:
         effect: "Transport: move Rangers only"
     cap_mandateOfHeaven:
       - condition: "Mandate of Heaven is Unshaded"
-        effect: "Govern: shift 2 levels toward Active Support per Pacify step"
+        effect: "Govern: 1 Patronage transfer space may avoid the support shift"
       - condition: "Mandate of Heaven is Shaded"
-        effect: "Govern: costs +3 ARVN Resources per space"
+        effect: "Govern and ARVN Support Phase Pacify: maximum 1 space"
     cap_boobyTraps:
       - condition: "Booby Traps is Unshaded"
         effect: "Sweep/Assault: VC remove 1 sweeping/assaulting Troop per space (roll 1-3)"

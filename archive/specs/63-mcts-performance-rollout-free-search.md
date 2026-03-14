@@ -104,6 +104,8 @@ export interface MctsConfig {
   readonly maxStateInfoCacheEntries?: number; // default: min(pool.capacity, iterations * 4)
 
   readonly compressForcedSequences?: boolean; // default: true
+
+  readonly mastWarmUpThreshold?: number; // default: 32
 }
 ```
 
@@ -172,6 +174,21 @@ The cutoff simulation:
 3. stops after `hybridCutoffDepth` plies,
 4. uses a cheap playout policy (`mast` by default),
 5. does **not** repeatedly `applyMove()` and `evaluateState()` on every candidate during the playout.
+
+### `SimulationResult` type
+
+All three modes produce a uniform result type:
+
+```ts
+interface SimulationResult {
+  readonly state: GameState;
+  readonly rng: Rng;
+  readonly terminal: TerminalResult | null;
+  readonly traversedMoveKeys: readonly string[];
+}
+```
+
+> **Migration note**: The existing `RolloutResult` type in `rollout.ts` (`{ state, terminal, rng, depth }`) should be unified with this type. Extend `RolloutResult` with `traversedMoveKeys`, rename it to `SimulationResult`, and use it across all three modes. The `depth` field can be retained as an optional diagnostic but is no longer structurally required.
 
 ### New `runOneIteration()` shape
 
@@ -270,14 +287,14 @@ MAST keeps cheap per-move statistics collected during the search. Action choice 
 
 ### MAST keying
 
-Reuse `move-key.ts` and key statistics by player + canonical move key:
+Reuse `move-key.ts` and key statistics by canonical move key only (not per-player). The same action may benefit one player and hurt another, so the entry stores a per-player reward array:
 
 ```ts
-type MastKey = `${number}:${string}`;
+type MastKey = string; // canonical move key from move-key.ts
 
 interface MastEntry {
   readonly visits: number;
-  readonly rewardSums: readonly number[];
+  readonly rewardSums: readonly number[]; // per-player array, indexed by player ordinal
 }
 ```
 
@@ -285,6 +302,22 @@ Selection score for current player `p`:
 
 ```ts
 mean = rewardSums[p] / visits
+```
+
+> **Design note**: Standard MAST keys by action only. Including the player ID in the key would partition statistics unnecessarily — a move that helps player 0 and hurts player 1 should be discoverable from a single entry. The per-player `rewardSums` array handles multi-player reward attribution.
+
+### MAST warm-up threshold
+
+Early MAST statistics are biased toward the first (likely poor) iterations. Before sufficient data is collected, MAST-guided selection may over-exploit noisy data. Use a warm-up threshold:
+
+- Track `mastStats.totalUpdates` (total backpropagation updates across all keys).
+- When `totalUpdates < mastWarmUpThreshold` (default: 32), fall back to random move selection.
+- After warm-up, use the epsilon-greedy MAST policy.
+
+This prevents early over-exploitation without adding complexity. The threshold is a config field:
+
+```ts
+readonly mastWarmUpThreshold?: number; // default: 32
 ```
 
 ### Determinism and scope
@@ -301,6 +334,10 @@ The important speed property is simple:
 - `mast` playout selection should **not** call `applyMove()` or `evaluateState()` for every candidate.
 
 That removes the worst default/strong rollout multiplier while still retaining a forward-simulation signal.
+
+### RNG handling note
+
+Current `sampleCandidates()` in `rollout.ts` consumes RNG internally but doesn't return the advanced RNG — the caller compensates with a `fork()`. The new `simulateToCutoff` must handle RNG correctly. MAST-based playout selection has simpler RNG needs than epsilon-greedy candidate scoring: just one `nextInt` for the epsilon check plus one for move selection per ply — no per-candidate RNG consumption. Ensure `simulateToCutoff` threads the RNG through and returns it in `SimulationResult.rng`.
 
 ## 4. Add a capped per-search state-info cache
 
@@ -350,7 +387,7 @@ The cache is capped:
 maxStateInfoCacheEntries = min(pool.capacity, config.iterations * 4)
 ```
 
-Use simple LRU or insertion-order eviction.
+Use insertion-order eviction via JavaScript `Map` (which preserves insertion order). When capacity is reached, delete the first key (`map.keys().next().value`). This is simpler than true LRU (no access-timestamp bookkeeping), equally deterministic, and likely equally effective since MCTS cache access patterns are unpredictable. True LRU is not worth the complexity here.
 
 ### Hidden-information constraint
 
@@ -383,15 +420,34 @@ Rules:
 - still respect solver logic,
 - still count compressed plies in diagnostics.
 
+### Forced-sequence compression during simulation
+
+Forced-sequence compression should also apply during the cutoff simulation in hybrid mode, not only during tree traversal (selection phase). If a simulation ply has exactly one candidate, skip it without counting against the cutoff depth. This gets more useful simulation depth for the same budget:
+
+```ts
+// Inside simulateToCutoff:
+if (candidates.length === 1) {
+  // Forced move: advance without decrementing remaining cutoff plies
+  traversedMoveKeys.push(moveKeyFor(candidates[0].move));
+  currentState = applyMove(def, currentState, candidates[0].move, runtime);
+  accum.forcedMovePlies++;
+  continue; // do NOT decrement cutoffRemaining
+}
+cutoffRemaining--;
+```
+
 ### Concrete-move fast path
 
-When `legalMoves()` already returns only concrete moves, skip `materializeConcreteCandidates()` and wrap them directly as candidates.
+When all legal moves at a node are concrete (no template parameters), skip `materializeConcreteCandidates()` and wrap them directly as candidates.
+
+**Detection strategy**: Checking concreteness per move at runtime IS the materialization cost (it requires `legalChoicesEvaluate()` per move). Instead, detect concreteness at the **action definition** level: if an action has no template parameters, all moves from it are concrete by definition. This is a cheap `GameDef` metadata check that can be cached in `GameDefRuntime`.
 
 Pseudo-code:
 
 ```ts
 function materializeOrFastPath(...) {
-  if (allMovesConcrete(movesAtNode)) {
+  // Fast path: check action-level metadata, not per-move concreteness
+  if (allActionsFullyConcrete(def, runtime, movesAtNode)) {
     return {
       candidates: movesAtNode.map(asConcreteCandidate),
       rng,
@@ -399,9 +455,18 @@ function materializeOrFastPath(...) {
   }
   return materializeConcreteCandidates(...);
 }
+
+// Cached in GameDefRuntime during initialization
+function allActionsFullyConcrete(
+  def: GameDef,
+  runtime: GameDefRuntime,
+  moves: readonly Move[],
+): boolean {
+  return moves.every(m => runtime.actionIsFullyConcrete(m.actionId));
+}
 ```
 
-This saves materialization overhead in games that do not rely heavily on template completion.
+This saves materialization overhead in games that do not rely heavily on template completion. The `actionIsFullyConcrete` flag is computed once per action during `GameDefRuntime` initialization by checking whether the action definition has any template choice parameters.
 
 ## 6. Replace visit-ratio stopping with confidence-based root stopping
 
@@ -494,12 +559,56 @@ export interface MctsSearchDiagnostics {
 }
 ```
 
+### Architecture: mutable accumulator for hot-loop counters
+
+Current diagnostics (`collectDiagnostics()`) run AFTER search — they walk the tree post-hoc. The new counters (kernel-call counts, cache hits, per-phase timings) must be collected DURING the hot search loop. This requires a mutable accumulator passed through the search loop:
+
+```ts
+interface MutableDiagnosticsAccumulator {
+  selectionTimeMs: number;
+  expansionTimeMs: number;
+  simulationTimeMs: number;
+  evaluationTimeMs: number;
+  backpropTimeMs: number;
+  beliefSamplingTimeMs: number;
+
+  legalMovesCalls: number;
+  materializeCalls: number;
+  applyMoveCalls: number;
+  terminalCalls: number;
+  evaluateStateCalls: number;
+
+  stateCacheLookups: number;
+  stateCacheHits: number;
+  terminalCacheHits: number;
+  legalMovesCacheHits: number;
+  rewardCacheHits: number;
+
+  forcedMovePlies: number;
+  hybridRolloutPlies: number;
+
+  leafRewardSpans: number[]; // for computing avgLeafRewardSpan
+  selectionDepths: number[]; // for computing avgSelectionDepth
+}
+```
+
+The final `collectDiagnostics()` merges post-hoc tree statistics (existing: `nodesAllocated`, `maxTreeDepth`, `rootChildVisits`) with the accumulated hot-loop counters to produce the immutable `MctsSearchDiagnostics` result.
+
 ### Instrumentation rules
 
 - enabled only when `config.diagnostics === true`
-- use `performance.now()` for phase timings
+- use `performance.now()` for phase timings (see timing source migration note below)
 - use integer counters for kernel-call and cache metrics
 - collect leaf reward span as `max(rewards) - min(rewards)` for each evaluated leaf
+- the accumulator is created once at the start of `runSearch()` and passed to `runOneIteration()`
+
+### Timing source migration: `Date.now()` → `performance.now()`
+
+The current `diagnostics.ts:72` uses `Date.now()` (millisecond integer). This spec requires `performance.now()` (sub-millisecond float). This is a semantic change:
+
+- `performance.now()` is available globally in Node.js >=16 (no import needed) and in all modern browsers.
+- Existing timing fields that consumers compare against will shift from integer to float — ensure test assertions use approximate comparison (e.g., `>= 0` rather than exact equality).
+- The `totalTimeMs` field in the existing `MctsSearchDiagnostics` already uses `Date.now()` — migrate it to `performance.now()` simultaneously.
 
 ### Why the counters matter
 
@@ -583,7 +692,7 @@ The important change is that the default and strong presets stop paying the “m
 **Acceptance criteria**
 - `rolloutPolicy` supports `'mast'`
 - hybrid presets use `'mast'`
-- MAST keys are based on `playerId + canonicalMoveKey`
+- MAST keys are canonical move keys only (not per-player); entries store per-player reward arrays
 - unseen moves fall back to random behavior
 - MAST action selection does not call `applyMove()` or `evaluateState()` per candidate
 - MAST updates are deterministic
@@ -702,6 +811,26 @@ This ticket is conditional. It should be implemented only if:
 - selection can blend the two with a config-gated alpha
 - `alpha = 0` preserves phase-1 behavior exactly
 - quality bench shows improvement before any named preset enables it
+
+## Ticket dependency graph
+
+```
+MCTSPERF-001 (diagnostics baseline)
+  └─► MCTSPERF-002 (rollout modes) ─── uses diagnostic counters
+        ├─► MCTSPERF-003 (MAST) ─────── rollout policy for hybrid mode
+        ├─► MCTSPERF-005 (forced seq) ── selection/simulation compression
+        └─► MCTSPERF-006 (root stop) ── confidence stop emits diagnostics
+  └─► MCTSPERF-004 (state cache) ────── independent of mode refactor
+        └─► MCTSPERF-002 uses cache in `direct` mode (non-blocking:
+             `direct` can use raw `terminalResult()` initially and
+             gain caching when 004 lands)
+  └─► MCTSPERF-007 (validation) ─────── depends on all of 001-006
+  └─► MCTSPERF-008 (heuristic backups) ── conditional, after 007
+```
+
+**Recommended implementation order**: 001 → 004 → 002 → 003 → 005 → 006 → 007 → (008 if needed)
+
+> **Note on 002 → 004 dependency**: The `direct` mode pseudocode in section 2 uses `getTerminalCached()`, which is part of the state-info cache (ticket 004). For standalone implementation of 002, use raw `terminalResult()` in `direct` mode and upgrade to cached lookup when 004 lands.
 
 ## Determinism guarantee
 

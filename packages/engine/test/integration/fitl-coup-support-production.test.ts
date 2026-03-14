@@ -30,6 +30,49 @@ const card = (id: string, isCoup: boolean): Token => ({
   props: { isCoup },
 });
 
+const usPacifyPieces = (prefix: string): Token[] => [
+  piece(`${prefix}-us-t`, 'US', 'troops'),
+  piece(`${prefix}-arvn-p`, 'ARVN', 'police'),
+];
+
+const arvnPacifyPieces = (prefix: string): Token[] => [
+  piece(`${prefix}-arvn-t`, 'ARVN', 'troops'),
+  piece(`${prefix}-arvn-p`, 'ARVN', 'police'),
+];
+
+const withNeutralSupportSpace = (
+  state: GameState,
+  space: string,
+  pieces: Token[],
+  options?: {
+    readonly markers?: Record<string, unknown>;
+    readonly terrorCount?: number;
+  },
+): GameState => ({
+  ...state,
+  zones: {
+    ...state.zones,
+    [space]: pieces,
+  },
+  markers: {
+    ...state.markers,
+    [space]: {
+      ...(state.markers[space] ?? {}),
+      supportOpposition: 'neutral',
+      ...(options?.markers ?? {}),
+    },
+  },
+  zoneVars: options?.terrorCount === undefined
+    ? state.zoneVars
+    : {
+        ...state.zoneVars,
+        [space]: {
+          ...(state.zoneVars[space] ?? {}),
+          terrorCount: options.terrorCount,
+        },
+      },
+});
+
 const withCoupSupportPhase = (
   base: GameState,
   overrides?: {
@@ -93,38 +136,18 @@ describe('FITL coup support phase production actions', () => {
     const base = withClearedZones(initialState(def, 8701, 4).state);
     const target = 'quang-nam:none';
 
-    const state = withCoupSupportPhase(base, {
+    const state = withNeutralSupportSpace(withCoupSupportPhase(base, {
       activePlayer: 0 as GameState['activePlayer'],
       globalVars: {
         ...base.globalVars,
         arvnResources: 18,
         totalEcon: 15,
       },
-      zones: {
-        [target]: [
-          piece('us-t', 'US', 'troops'),
-          piece('arvn-p', 'ARVN', 'police'),
-        ],
-      },
-      markers: {
-        ...base.markers,
-        [target]: {
-          ...(base.markers[target] ?? {}),
-          supportOpposition: 'neutral',
-        },
-      },
-      zoneVars: {
-        ...base.zoneVars,
-        [target]: {
-          ...(base.zoneVars[target] ?? {}),
-          terrorCount: 1,
-        },
-      },
       globalMarkers: {
         ...(base.globalMarkers ?? {}),
         activeLeader: 'minh',
       },
-    });
+    }), target, usPacifyPieces('floor-boundary'), { terrorCount: 1 });
 
     const result = applyMove(def, state, {
       actionId: asActionId('coupPacifyUS'),
@@ -141,7 +164,7 @@ describe('FITL coup support phase production actions', () => {
     const base = withClearedZones(initialState(def, 8711, 4).state);
     const target = 'quang-nam:none';
 
-    const state = withCoupSupportPhase(base, {
+    const state = withNeutralSupportSpace(withCoupSupportPhase(base, {
       activePlayer: 0 as GameState['activePlayer'],
       globalVars: {
         ...base.globalVars,
@@ -149,28 +172,11 @@ describe('FITL coup support phase production actions', () => {
         totalEcon: 15,
         mom_blowtorchKomer: true,
       },
-      zones: {
-        [target]: [piece('us-t-bk', 'US', 'troops'), piece('arvn-p-bk', 'ARVN', 'police')],
-      },
-      markers: {
-        ...base.markers,
-        [target]: {
-          ...(base.markers[target] ?? {}),
-          supportOpposition: 'neutral',
-        },
-      },
-      zoneVars: {
-        ...base.zoneVars,
-        [target]: {
-          ...(base.zoneVars[target] ?? {}),
-          terrorCount: 1,
-        },
-      },
       globalMarkers: {
         ...(base.globalMarkers ?? {}),
         activeLeader: 'ky',
       },
-    });
+    }), target, usPacifyPieces('bk'), { terrorCount: 1 });
 
     const result = applyMove(def, state, {
       actionId: asActionId('coupPacifyUS'),
@@ -186,31 +192,18 @@ describe('FITL coup support phase production actions', () => {
     const base = withClearedZones(initialState(def, 8702, 4).state);
     const target = 'quang-nam:none';
 
-    const state = withCoupSupportPhase(base, {
+    const state = withNeutralSupportSpace(withCoupSupportPhase(base, {
       activePlayer: 0 as GameState['activePlayer'],
       globalVars: {
         ...base.globalVars,
         arvnResources: 17,
         totalEcon: 15,
       },
-      zones: {
-        [target]: [
-          piece('us-t', 'US', 'troops'),
-          piece('arvn-p', 'ARVN', 'police'),
-        ],
-      },
-      markers: {
-        ...base.markers,
-        [target]: {
-          ...(base.markers[target] ?? {}),
-          supportOpposition: 'neutral',
-        },
-      },
       globalMarkers: {
         ...(base.globalMarkers ?? {}),
         activeLeader: 'minh',
       },
-    });
+    }), target, usPacifyPieces('below-floor'));
 
     assert.throws(() => applyMove(def, state, {
       actionId: asActionId('coupPacifyUS'),
@@ -223,35 +216,18 @@ describe('FITL coup support phase production actions', () => {
     const base = withClearedZones(initialState(def, 8705, 4).state);
     const target = 'quang-nam:none';
 
-    const terrorPresent = withCoupSupportPhase(base, {
+    const terrorPresent = withNeutralSupportSpace(withCoupSupportPhase(base, {
       activePlayer: 0 as GameState['activePlayer'],
       globalVars: {
         ...base.globalVars,
         arvnResources: 25,
         totalEcon: 15,
       },
-      zones: {
-        [target]: [piece('us-t-2', 'US', 'troops'), piece('arvn-p-2', 'ARVN', 'police')],
-      },
-      markers: {
-        ...base.markers,
-        [target]: {
-          ...(base.markers[target] ?? {}),
-          supportOpposition: 'neutral',
-        },
-      },
-      zoneVars: {
-        ...base.zoneVars,
-        [target]: {
-          ...(base.zoneVars[target] ?? {}),
-          terrorCount: 1,
-        },
-      },
       globalMarkers: {
         ...(base.globalMarkers ?? {}),
         activeLeader: 'minh',
       },
-    });
+    }), target, usPacifyPieces('terror-present'), { terrorCount: 1 });
 
     assert.throws(() => applyMove(def, terrorPresent, {
       actionId: asActionId('coupPacifyUS'),
@@ -265,28 +241,18 @@ describe('FITL coup support phase production actions', () => {
 
     assert.equal(terrorRemoved.zoneVars[target]?.terrorCount ?? 0, 0);
 
-    const noTerror = withCoupSupportPhase(base, {
+    const noTerror = withNeutralSupportSpace(withCoupSupportPhase(base, {
       activePlayer: 0 as GameState['activePlayer'],
       globalVars: {
         ...base.globalVars,
         arvnResources: 25,
         totalEcon: 15,
       },
-      zones: {
-        [target]: [piece('us-t-3', 'US', 'troops'), piece('arvn-p-3', 'ARVN', 'police')],
-      },
-      markers: {
-        ...base.markers,
-        [target]: {
-          ...(base.markers[target] ?? {}),
-          supportOpposition: 'neutral',
-        },
-      },
       globalMarkers: {
         ...(base.globalMarkers ?? {}),
         activeLeader: 'minh',
       },
-    });
+    }), target, usPacifyPieces('no-terror'));
 
     const shifted = applyMove(def, noTerror, {
       actionId: asActionId('coupPacifyUS'),
@@ -368,34 +334,17 @@ describe('FITL coup support phase production actions', () => {
     const base = withClearedZones(initialState(def, 8706, 4).state);
     const target = 'quang-nam:none';
 
-    const terrorPresent = withCoupSupportPhase(base, {
+    const terrorPresent = withNeutralSupportSpace(withCoupSupportPhase(base, {
       activePlayer: 1 as GameState['activePlayer'],
       globalVars: {
         ...base.globalVars,
         arvnResources: 30,
       },
-      zones: {
-        [target]: [piece('arvn-t-3', 'ARVN', 'troops'), piece('arvn-p-3', 'ARVN', 'police')],
-      },
-      markers: {
-        ...base.markers,
-        [target]: {
-          ...(base.markers[target] ?? {}),
-          supportOpposition: 'neutral',
-        },
-      },
-      zoneVars: {
-        ...base.zoneVars,
-        [target]: {
-          ...(base.zoneVars[target] ?? {}),
-          terrorCount: 1,
-        },
-      },
       globalMarkers: {
         ...(base.globalMarkers ?? {}),
         activeLeader: 'minh',
       },
-    });
+    }), target, arvnPacifyPieces('arvn-terror-present'), { terrorCount: 1 });
 
     assert.throws(() => applyMove(def, terrorPresent, {
       actionId: asActionId('coupPacifyARVN'),
@@ -409,27 +358,17 @@ describe('FITL coup support phase production actions', () => {
 
     assert.equal(terrorRemoved.zoneVars[target]?.terrorCount ?? 0, 0);
 
-    const noTerror = withCoupSupportPhase(base, {
+    const noTerror = withNeutralSupportSpace(withCoupSupportPhase(base, {
       activePlayer: 1 as GameState['activePlayer'],
       globalVars: {
         ...base.globalVars,
         arvnResources: 30,
       },
-      zones: {
-        [target]: [piece('arvn-t-4', 'ARVN', 'troops'), piece('arvn-p-4', 'ARVN', 'police')],
-      },
-      markers: {
-        ...base.markers,
-        [target]: {
-          ...(base.markers[target] ?? {}),
-          supportOpposition: 'neutral',
-        },
-      },
       globalMarkers: {
         ...(base.globalMarkers ?? {}),
         activeLeader: 'minh',
       },
-    });
+    }), target, arvnPacifyPieces('arvn-no-terror'));
 
     const shifted = applyMove(def, noTerror, {
       actionId: asActionId('coupPacifyARVN'),
@@ -444,28 +383,18 @@ describe('FITL coup support phase production actions', () => {
     const base = withClearedZones(initialState(def, 8712, 4).state);
     const target = 'quang-nam:none';
 
-    const state = withCoupSupportPhase(base, {
+    const state = withNeutralSupportSpace(withCoupSupportPhase(base, {
       activePlayer: 1 as GameState['activePlayer'],
       globalVars: {
         ...base.globalVars,
         arvnResources: 1,
         mom_blowtorchKomer: true,
       },
-      zones: {
-        [target]: [piece('arvn-t-bk', 'ARVN', 'troops'), piece('arvn-p-bk', 'ARVN', 'police')],
-      },
-      markers: {
-        ...base.markers,
-        [target]: {
-          ...(base.markers[target] ?? {}),
-          supportOpposition: 'neutral',
-        },
-      },
       globalMarkers: {
         ...(base.globalMarkers ?? {}),
         activeLeader: 'ky',
       },
-    });
+    }), target, arvnPacifyPieces('arvn-bk'));
 
     const result = applyMove(def, state, {
       actionId: asActionId('coupPacifyARVN'),
@@ -474,6 +403,88 @@ describe('FITL coup support phase production actions', () => {
 
     assert.equal(result.state.globalVars.arvnResources, 0);
     assert.equal(result.state.markers[target]?.supportOpposition, 'passiveSupport');
+  });
+
+  it('applies cap_mandateOfHeaven shaded as an ARVN-only one-space pacify limit while still allowing repeat steps in that space', () => {
+    const def = DEF;
+    const base = withClearedZones(initialState(def, 8713, 4).state);
+    const firstSpace = 'quang-nam:none';
+    const secondSpace = 'can-tho:none';
+
+    const state = withNeutralSupportSpace(
+      withNeutralSupportSpace(withCoupSupportPhase(base, {
+      activePlayer: 1 as GameState['activePlayer'],
+      globalVars: {
+        ...base.globalVars,
+        arvnResources: 30,
+      },
+      globalMarkers: {
+        ...(base.globalMarkers ?? {}),
+        activeLeader: 'minh',
+        cap_mandateOfHeaven: 'shaded',
+      },
+    }), firstSpace, arvnPacifyPieces('moh-first'), { terrorCount: 1 }),
+      secondSpace,
+      arvnPacifyPieces('moh-second'),
+    );
+
+    const firstResult = applyMove(def, state, {
+      actionId: asActionId('coupPacifyARVN'),
+      params: { targetSpace: firstSpace, action: 'removeTerror' },
+    }).state;
+
+    assert.equal(firstResult.markers[firstSpace]?.coupPacifyArvnSpaceUsage, 'used');
+    assert.equal(firstResult.zoneVars[firstSpace]?.terrorCount ?? 0, 0);
+
+    const secondResult = applyMove(def, firstResult, {
+      actionId: asActionId('coupPacifyARVN'),
+      params: { targetSpace: firstSpace, action: 'shiftSupport' },
+    }).state;
+
+    assert.equal(secondResult.markers[firstSpace]?.supportOpposition, 'passiveSupport');
+    assert.equal(secondResult.markers[firstSpace]?.coupSupportShiftCount, 'one');
+
+    assert.throws(() => applyMove(def, secondResult, {
+      actionId: asActionId('coupPacifyARVN'),
+      params: { targetSpace: secondSpace, action: 'shiftSupport' },
+    }));
+  });
+
+  it('does not let Mandate of Heaven shaded block ARVN from reusing a US-pacified space, but blocks opening a second ARVN space', () => {
+    const def = DEF;
+    const base = withClearedZones(initialState(def, 8714, 4).state);
+    const sharedSpace = 'quang-nam:none';
+    const secondSpace = 'can-tho:none';
+
+    const state = withNeutralSupportSpace(
+      withNeutralSupportSpace(withCoupSupportPhase(base, {
+      activePlayer: 1 as GameState['activePlayer'],
+      globalVars: {
+        ...base.globalVars,
+        arvnResources: 30,
+      },
+      globalMarkers: {
+        ...(base.globalMarkers ?? {}),
+        activeLeader: 'minh',
+        cap_mandateOfHeaven: 'shaded',
+      },
+    }), sharedSpace, arvnPacifyPieces('moh-shared'), { markers: { coupPacifySpaceUsage: 'used' } }),
+      secondSpace,
+      arvnPacifyPieces('moh-open'),
+    );
+
+    const sharedResult = applyMove(def, state, {
+      actionId: asActionId('coupPacifyARVN'),
+      params: { targetSpace: sharedSpace, action: 'shiftSupport' },
+    }).state;
+
+    assert.equal(sharedResult.markers[sharedSpace]?.coupPacifyArvnSpaceUsage, 'used');
+    assert.equal(sharedResult.markers[sharedSpace]?.coupPacifySpaceUsage, 'used');
+
+    assert.throws(() => applyMove(def, sharedResult, {
+      actionId: asActionId('coupPacifyARVN'),
+      params: { targetSpace: secondSpace, action: 'shiftSupport' },
+    }));
   });
 
   it('requires terror removal before VC can shift opposition in a space', () => {

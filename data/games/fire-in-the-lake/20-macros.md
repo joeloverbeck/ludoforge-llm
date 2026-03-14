@@ -3378,6 +3378,7 @@ effectMacros:
           over: { query: mapSpaces }
           effects:
             - setMarker: { space: $space, marker: coupPacifySpaceUsage, state: open }
+            - setMarker: { space: $space, marker: coupPacifyArvnSpaceUsage, state: open }
             - setMarker: { space: $space, marker: coupAgitateSpaceUsage, state: open }
             - setMarker: { space: $space, marker: coupSupportShiftCount, state: zero }
 

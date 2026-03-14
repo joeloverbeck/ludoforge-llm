@@ -103,6 +103,8 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
     assert.notEqual(card, undefined);
     assert.equal(card?.tags?.includes('capability'), true);
     assert.equal(card?.tags?.includes('ARVN'), true);
+    assert.equal(card?.unshaded?.text, '1 Govern space may transfer Aid to Patronage without shifting Support. ARVN CAPABILITY.');
+    assert.equal(card?.shaded?.text, 'ARVN Govern and Pacify maximum 1 space.');
     assert.deepEqual(card?.unshaded?.effects, [{ setGlobalMarker: { marker: 'cap_mandateOfHeaven', state: 'unshaded' } }]);
     assert.deepEqual(card?.shaded?.effects, [{ setGlobalMarker: { marker: 'cap_mandateOfHeaven', state: 'shaded' } }]);
   });

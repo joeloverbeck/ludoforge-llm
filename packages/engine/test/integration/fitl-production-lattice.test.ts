@@ -43,7 +43,7 @@ const readMapLattices = (): {
 describe('FITL production support/opposition marker lattice', () => {
   it('encodes the canonical supportOpposition lattice with declarative neutral-only legality constraints', () => {
     const { markerLattices, spaceMarkers } = readMapLattices();
-    assert.equal(markerLattices.length, 5);
+    assert.equal(markerLattices.length, 6);
 
     const supportOpposition = markerLattices.find((lattice) => lattice.id === 'supportOpposition');
     assert.ok(supportOpposition, 'Expected supportOpposition lattice');
@@ -93,6 +93,11 @@ describe('FITL production support/opposition marker lattice', () => {
     assert.ok(coupPacifyUsage, 'Expected coupPacifySpaceUsage lattice');
     assert.deepEqual(coupPacifyUsage.states, ['open', 'used']);
     assert.equal(coupPacifyUsage.defaultState, 'open');
+
+    const coupPacifyArvnUsage = markerLattices.find((lattice) => lattice.id === 'coupPacifyArvnSpaceUsage');
+    assert.ok(coupPacifyArvnUsage, 'Expected coupPacifyArvnSpaceUsage lattice');
+    assert.deepEqual(coupPacifyArvnUsage.states, ['open', 'used']);
+    assert.equal(coupPacifyArvnUsage.defaultState, 'open');
 
     const coupAgitateUsage = markerLattices.find((lattice) => lattice.id === 'coupAgitateSpaceUsage');
     assert.ok(coupAgitateUsage, 'Expected coupAgitateSpaceUsage lattice');

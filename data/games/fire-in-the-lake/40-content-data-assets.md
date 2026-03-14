@@ -842,6 +842,11 @@ dataAssets:
             - open
             - used
           defaultState: open
+        - id: coupPacifyArvnSpaceUsage
+          states:
+            - open
+            - used
+          defaultState: open
         - id: coupAgitateSpaceUsage
           states:
             - open

@@ -357,6 +357,27 @@ actions:
                 spaceIdExpr: { ref: binding, name: targetSpace }
                 markerId: coupPacifySpaceUsage
                 markerStateExpr: used
+        - op: or
+          args:
+            - { op: '!=', left: { ref: globalMarkerState, marker: cap_mandateOfHeaven }, right: shaded }
+            - op: or
+              args:
+                - op: '<'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: mapSpaces
+                        filter:
+                          op: '=='
+                          left: { ref: markerState, space: $zone, marker: coupPacifyArvnSpaceUsage }
+                          right: used
+                  right: 1
+                - conditionMacro: fitl-space-marker-state-is
+                  args:
+                    spaceIdExpr: { ref: binding, name: targetSpace }
+                    markerId: coupPacifyArvnSpaceUsage
+                    markerStateExpr: used
         - op: '>'
           left:
             aggregate:
@@ -440,6 +461,7 @@ actions:
             - shiftMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: supportOpposition, delta: 1 }
             - shiftMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupSupportShiftCount, delta: 1 }
       - setMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupPacifySpaceUsage, state: used }
+      - setMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupPacifyArvnSpaceUsage, state: used }
     limits: []
   - id: coupAgitateVC
     actor: active

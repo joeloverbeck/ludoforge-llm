@@ -19,6 +19,7 @@ Keep FITL behavior in FITL YAML and FITL-local macros.
 - If no macro exists yet, follow an existing production card pattern rather than inventing a new shape.
 - Treat this document as the durable reference for event authoring; Spec 29 is not the long-term home for cookbook guidance.
 - Archived Spec 29 may still be used as a historical fidelity cross-check when a live card block looks incomplete or placeholder-like, but rules reports, playbook notes, and production cookbook guidance are authoritative.
+- For FITL behavior, treat production action/macro data plus rules reports as authoritative. Verbalization, tooltip, and modifier-summary text must stay synchronized, but should not be used as the behavioral source of truth.
 
 ## Testing Selector-Driven Cards
 

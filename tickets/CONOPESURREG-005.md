@@ -1,99 +1,71 @@
-# CONOPESURREG-005: Refactor validate-conditions.ts structural field walking to use metadata
+# CONOPESURREG-005: Reassess condition validation metadata refactor scope
 
 **Status**: PENDING
 **Priority**: MEDIUM
-**Effort**: Medium
-**Engine Changes**: Yes — kernel refactor
+**Effort**: Small
+**Engine Changes**: Maybe — verification/doc-only unless a real defect is found
 **Deps**: CONOPESURREG-001, CONOPESURREG-002
 
 ## Problem
 
-`validate-conditions.ts` (lines ~20–137) contains a switch statement that independently encodes which fields of each condition operator contain nested `ConditionAST`, `ValueExpr`, `NumericValueExpr`, and `ZoneSel` nodes. The structural field-walking portion of this switch duplicates knowledge now captured in `CONDITION_OPERATOR_META`. The generic traversal should use metadata, while operator-specific validation logic (marker lattice checks, connected literal-only constraints, etc.) remains in targeted branches.
+This ticket originally assumed `packages/engine/src/kernel/validate-conditions.ts` still duplicated condition structural field walking in a per-operator switch. That assumption is now stale. The file already uses metadata-driven traversal via `getConditionOperatorMeta(condition.op)` and `validateConditionStructure(...)`.
+
+The remaining need is to keep the ticket set accurate: this ticket no longer owns a missing traversal refactor, and it should not be mistaken for ownership of the separate typed-metadata follow-up.
 
 ## Assumption Reassessment (2026-03-14)
 
-1. The switch in `validate-conditions.ts` handles two concerns interleaved:
-   - **Structural traversal**: recursing into child nodes (ValueExpr, ZoneSel, ConditionAST) for generic validation (e.g., variable reference checks).
-   - **Operator-specific validation**: marker lattice state validation for `markerStateAllowed` (lines 74–84), comparison operators' marker state literal handling (lines 91–135), `'and'`/`'or'` non-empty args check (lines 31–45), `'connected'` via-field optionality.
-2. The spec explicitly says: "use metadata for structural field walking, keeping only operator-specific validation logic (e.g., `markerStateAllowed` lattice checks, `connected` literal-only constraints) in targeted branches."
-3. The refactored code must separate generic traversal (metadata-driven) from operator-specific checks (kept as explicit branches/conditions).
+1. `packages/engine/src/kernel/validate-conditions.ts` already performs metadata-driven structural traversal for condition validation.
+2. The remaining explicit branches in that file are already the intended operator-specific checks: boolean arity, marker lattice validation, map-space property validation, and comparison-operator marker-state literal handling.
+3. There is no remaining duplicate structural traversal refactor to land here unless a defect is discovered.
+4. The still-open architectural weakness in this area is typing precision: metadata field names are plain strings and consumers cast through `Record<string, unknown>`.
+5. That typing issue is separate in scope and should be tracked by a dedicated ticket rather than silently folded into this stale one.
 
 ## Architecture Check
 
-1. This is the most nuanced refactoring ticket. The key design decision is how to split generic traversal from operator-specific checks without making the code harder to follow.
-2. Recommended approach: extract a generic `validateConditionFields(condition, meta, ...)` function that walks all declared fields, then call operator-specific validation after the generic walk for operators that need it.
-3. Operator-specific branches that remain:
-   - `'and'`/`'or'`: non-empty `args` check
-   - `'markerStateAllowed'`: marker lattice state validation
-   - `'markerShiftAllowed'`: numeric delta validation specifics (if any beyond generic)
-   - Comparison operators (`'=='` etc.): marker state literal handling on `left`/`right`
-   - `'connected'`: `via` optionality and literal-only constraints
+1. Correcting stale ticket ownership is cleaner than leaving misleading refactor instructions in the active queue.
+2. The current production architecture already matches the Spec 62 direction: metadata owns structural shape, while consumer files keep their semantic checks local.
+3. A typed-metadata follow-up should stay game-agnostic and contract-focused, not introduce aliases, shims, or game-specific branching.
 
 ## What to Change
 
-### 1. Import metadata
+### 1. Keep this ticket informational unless a real defect is found
 
-Add import of `CONDITION_OPERATOR_META`, `getConditionOperatorMeta` from `condition-operator-meta.ts`.
+Do not re-refactor `validate-conditions.ts` just to satisfy the original wording. Only touch kernel code if a verified bug or architectural mismatch is found during future work.
 
-### 2. Extract generic field validation
+### 2. Point typed-metadata work to the dedicated follow-up
 
-Create a helper function (local or exported) that, given a `ConditionAST` node and its metadata:
-- Iterates `valueFields` and validates each `ValueExpr` child.
-- Iterates `numericValueFields` and validates each `NumericValueExpr` child.
-- Iterates `zoneSelectorFields` and validates each `ZoneSel` child.
-- Iterates `nestedConditionFields` and recursively validates each `ConditionAST` child (handling arrays like `args`).
-
-### 3. Keep operator-specific validation as targeted branches
-
-After generic traversal, apply operator-specific checks where needed:
-- `'and'`/`'or'`: validate `args.length > 0`.
-- `'markerStateAllowed'`: validate marker lattice state references.
-- Comparison ops: validate marker state literal patterns on `left`/`right`.
-- `'connected'`: validate `via` optionality and literal constraints.
-
-### 4. Remove the per-operator switch for structural walking
-
-The existing exhaustive switch for field-path traversal is replaced by metadata iteration. Operator-specific checks can be a smaller switch, `if` chain, or map lookup — whichever is most readable.
+Use `CONOPESURREG-006` for the stronger typing improvement around condition metadata field access.
 
 ## Files to Touch
 
-- `packages/engine/src/kernel/validate-conditions.ts` (modify)
+- `tickets/CONOPESURREG-005.md` (modify)
 
 ## Out of Scope
 
-- Modifying `zone-selector-aliases.ts` (that is CONOPESURREG-004)
-- Modifying `condition-operator-meta.ts` (if metadata changes are needed, go back to CONOPESURREG-001)
+- Re-implementing metadata-driven validation traversal that already exists
+- Folding typed metadata work into this ticket; see `CONOPESURREG-006`
 - Modifying `types-ast.ts`
-- Modifying any other switch-based dispatch files (`eval-condition.ts`, `ast-to-display.ts`, etc.)
-- Changing the operator-specific validation rules themselves — only how structural traversal is performed changes
+- Refactoring unrelated condition evaluation, display, or lowering logic
 
 ## Acceptance Criteria
 
 ### Tests That Must Pass
 
-1. All existing `validate-conditions` tests pass unchanged — validation behavior is identical.
-2. Invalid conditions still produce the same error messages/diagnostics.
-3. Marker lattice validation still catches invalid marker state references.
-4. Comparison operator marker state literal handling still works correctly.
-5. Existing suite: `pnpm -F @ludoforge/engine test` — no regressions.
-6. `pnpm turbo typecheck` passes.
-7. `pnpm turbo lint` passes.
+1. No code changes are required unless a real defect is found.
+2. If future code changes are made under this ticket, they must preserve validation behavior and pass `pnpm -F @ludoforge/engine test`.
+3. Any follow-up typing work is handled under `CONOPESURREG-006`, not hidden here.
 
 ### Invariants
 
-1. Validation behavior is unchanged — same valid inputs pass, same invalid inputs fail with the same errors.
-2. Operator-specific validation logic (lattice checks, literal constraints) is preserved — not lost in the generic traversal.
-3. `ConditionAST` union unchanged.
-4. No game-specific logic introduced.
-5. All other files remain untouched.
+1. Active tickets must match the current codebase rather than stale pre-refactor assumptions.
+2. Condition structural metadata remains centralized in `condition-operator-meta.ts`.
 
 ## Test Plan
 
 ### New/Modified Tests
 
-1. No new test file needed. Existing validation tests cover the behavior. If coverage is thin for specific operator validation edge cases (e.g., `markerStateAllowed` lattice checks), add targeted test cases in the existing test file.
+1. No tests required for this ticket as corrected; it is a scope/ownership correction.
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine test`
-2. `pnpm turbo typecheck && pnpm turbo lint`
+1. `pnpm run check:ticket-deps`

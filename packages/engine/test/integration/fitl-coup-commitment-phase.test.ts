@@ -123,17 +123,25 @@ describe('FITL coup commitment phase production wiring', () => {
       overrides: [
         {
           when: (request) => /commitTroopsFromAvailable/.test(request.name),
-          value: (request) =>
-            request.options
+          value: (request) => {
+            if (request.type !== 'chooseN') {
+              return undefined;
+            }
+            return request.options
               .slice(0, request.max ?? request.options.length)
-              .map((option) => option.value as string),
+              .map((option) => option.value as string);
+          },
         },
         {
           when: (request) => /commitBasesFromAvailable/.test(request.name),
-          value: (request) =>
-            request.options
+          value: (request) => {
+            if (request.type !== 'chooseN') {
+              return undefined;
+            }
+            return request.options
               .slice(0, request.max ?? request.options.length)
-              .map((option) => option.value as string),
+              .map((option) => option.value as string);
+          },
         },
         {
           when: (request) => /commitTroopDestFromAvailable|commitBaseDestFromAvailable/.test(request.name),

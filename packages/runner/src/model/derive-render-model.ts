@@ -1199,8 +1199,8 @@ function deriveChoiceContext(
     visualConfigProvider.getChoicePrompt(selectedAction, choicePending.name) ??
     formatIdAsDisplayName(choicePending.name);
 
-  const min = choicePending.min;
-  const max = choicePending.max;
+  const min = choicePending.type === 'chooseN' ? choicePending.min : undefined;
+  const max = choicePending.type === 'chooseN' ? choicePending.max : undefined;
   let boundsText: string | null = null;
   if (min !== undefined || max !== undefined) {
     const effectiveMin = min ?? 0;

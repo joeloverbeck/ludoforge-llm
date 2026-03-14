@@ -86,6 +86,9 @@ const resolveResourcesWithDefaultChoice = (def: GameDef, state: GameState): Game
   if (pending.kind !== 'pending') {
     return applyMove(def, state, move).state;
   }
+  if (pending.type !== 'chooseN') {
+    throw new Error('Expected chooseN pending selector for Oriskany coup resources resolution.');
+  }
   const selected = pending.options.slice(0, pending.max ?? 0).map((option) => String(option.value));
   return applyMove(def, state, { actionId: asActionId('coupResourcesResolve'), params: { [pending.decisionKey]: selected } }).state;
 };

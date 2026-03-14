@@ -864,8 +864,8 @@ describe('effects choice assertions', () => {
     assert.deepEqual(
       result.pendingChoice.alternatives.map((alternative) => ({
         decisionKey: alternative.decisionKey,
-        min: alternative.min,
-        max: alternative.max,
+        min: alternative.type === 'chooseN' ? alternative.min : undefined,
+        max: alternative.type === 'chooseN' ? alternative.max : undefined,
         selected: alternative.type === 'chooseN' ? alternative.selected : null,
         canConfirm: alternative.type === 'chooseN' ? alternative.canConfirm : null,
         options: alternative.options.map((option) => option.value),

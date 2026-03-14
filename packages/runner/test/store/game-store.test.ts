@@ -449,12 +449,12 @@ describe('createGameStore', () => {
     await store.getState().selectAction(asActionId('pick-many'));
 
     const pending = store.getState().choicePending;
-    expect(pending?.type).toBe('chooseN');
-    expect(pending?.min).toBe(1);
-    expect(pending?.max).toBe(2);
     if (pending === null || pending.type !== 'chooseN') {
       throw new Error('Expected chooseN request.');
     }
+    expect(pending.type).toBe('chooseN');
+    expect(pending.min).toBe(1);
+    expect(pending.max).toBe(2);
 
     const selectedValues = pending.options
       .slice(0, 2)

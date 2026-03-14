@@ -626,8 +626,6 @@ interface ChoicePendingRequestBase {
   readonly name: string;
   readonly options: readonly ChoiceOption[];
   readonly targetKinds: readonly ChoiceTargetKind[];
-  readonly min?: number;
-  readonly max?: number;
   readonly reason?: ChoiceIllegalReason;
 }
 
@@ -637,6 +635,8 @@ export interface ChoicePendingChooseOneRequest extends ChoicePendingRequestBase 
 
 export interface ChoicePendingChooseNRequest extends ChoicePendingRequestBase {
   readonly type: 'chooseN';
+  readonly min?: number;
+  readonly max?: number;
   readonly selected: readonly MoveParamScalar[];
   readonly canConfirm: boolean;
 }

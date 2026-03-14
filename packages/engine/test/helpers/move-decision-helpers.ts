@@ -28,7 +28,7 @@ export const completeMoveDecisionSequenceOrThrow = (
   }
 
   const nextDecision = result.nextDecision;
-  const min = nextDecision?.min ?? 0;
+  const min = nextDecision?.type === 'chooseN' ? (nextDecision.min ?? 0) : 0;
   const optionsCount = nextDecision?.options.length ?? 0;
   const detail =
     nextDecision === undefined

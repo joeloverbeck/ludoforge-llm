@@ -97,6 +97,9 @@ const resolveResourcesWithDefaultChoice = (def: GameDef, state: GameState): Game
   if (pending.kind !== 'pending') {
     return resolveResources(def, state);
   }
+  if (pending.type !== 'chooseN') {
+    throw new Error('Expected chooseN pending coup resource selector.');
+  }
   const selected = pending.options.slice(0, pending.max ?? 0).map((option) => String(option.value));
   return resolveResources(def, state, pickPendingChoice(pending.decisionKey, selected));
 };
@@ -130,7 +133,9 @@ describe('FITL coup resources phase (production data)', () => {
     const move: Move = { actionId: asActionId('coupResourcesResolve'), params: {} };
     const pending = legalChoicesDiscover(def, atResources, move);
     assert.equal(pending.kind, 'pending');
-    assert.equal(pending.type, 'chooseN');
+    if (pending.kind !== 'pending' || pending.type !== 'chooseN') {
+      throw new Error('Expected chooseN pending selector in coup resources phase.');
+    }
     assert.equal(pending.min, 1);
     assert.equal(pending.max, 1);
 

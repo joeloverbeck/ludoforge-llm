@@ -104,6 +104,8 @@ describe('FITL coup victory phase gating', () => {
     const pending = legalChoicesDiscover(def, applied.state, resourcesMove);
     const afterResources = pending.kind !== 'pending'
       ? applyMove(def, applied.state, resourcesMove)
+      : pending.type !== 'chooseN'
+        ? (() => { throw new Error('Expected chooseN pending selector before coup victory gating resolution.'); })()
       : applyMove(def, applied.state, {
           ...resourcesMove,
           params: {

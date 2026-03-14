@@ -198,7 +198,9 @@ describe('FITL card-55 Trucks', () => {
     if (firstPending.kind !== 'pending') {
       throw new Error('Expected pending Laos removal choice for Trucks unshaded.');
     }
-    assert.equal(firstPending.type, 'chooseN');
+    if (firstPending.type !== 'chooseN') {
+      throw new Error('Expected chooseN pending Laos removal choice for Trucks unshaded.');
+    }
     assert.equal(firstPending.min, 4);
     assert.equal(firstPending.max, 4);
 
@@ -263,6 +265,9 @@ describe('FITL card-55 Trucks', () => {
     if (firstPending.kind !== 'pending') {
       throw new Error('Expected pending Laos removal choice for Trucks unshaded.');
     }
+    if (firstPending.type !== 'chooseN') {
+      throw new Error('Expected chooseN pending Laos removal choice for Trucks unshaded.');
+    }
     assert.equal(firstPending.min, 2);
     assert.equal(firstPending.max, 2);
 
@@ -276,6 +281,9 @@ describe('FITL card-55 Trucks', () => {
     assert.equal(secondPending.kind, 'pending');
     if (secondPending.kind !== 'pending') {
       throw new Error('Expected pending Cambodia removal choice for Trucks unshaded.');
+    }
+    if (secondPending.type !== 'chooseN') {
+      throw new Error('Expected chooseN pending Cambodia removal choice for Trucks unshaded.');
     }
     assert.equal(secondPending.min, 3);
     assert.equal(secondPending.max, 3);

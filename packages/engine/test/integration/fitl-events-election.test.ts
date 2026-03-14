@@ -154,6 +154,9 @@ describe('FITL card-83 Election', () => {
     if (pending.kind !== 'pending') {
       throw new Error('Expected pending passive-support selector for Election unshaded.');
     }
+    if (pending.type !== 'chooseN') {
+      throw new Error('Expected chooseN passive-support selector for Election unshaded.');
+    }
 
     assert.equal(pending.min, 3);
     assert.equal(pending.max, 3);
@@ -196,6 +199,9 @@ describe('FITL card-83 Election', () => {
     if (pending.kind !== 'pending') {
       throw new Error('Expected pending reduced passive-support selector for Election unshaded.');
     }
+    if (pending.type !== 'chooseN') {
+      throw new Error('Expected chooseN reduced passive-support selector for Election unshaded.');
+    }
 
     assert.equal(pending.min, 2);
     assert.equal(pending.max, 2);
@@ -234,6 +240,9 @@ describe('FITL card-83 Election', () => {
     assert.equal(pending.kind, 'pending');
     if (pending.kind !== 'pending') {
       throw new Error('Expected zero-cardinality selector for Election unshaded.');
+    }
+    if (pending.type !== 'chooseN') {
+      throw new Error('Expected chooseN zero-cardinality selector for Election unshaded.');
     }
 
     assert.equal(pending.min, 0);
@@ -274,6 +283,9 @@ describe('FITL card-83 Election', () => {
     assert.equal(pending.kind, 'pending');
     if (pending.kind !== 'pending') {
       throw new Error('Expected pending city selector for Election shaded.');
+    }
+    if (pending.type !== 'chooseN') {
+      throw new Error('Expected chooseN city selector for Election shaded.');
     }
 
     assert.equal(pending.min, 2);
@@ -327,6 +339,9 @@ describe('FITL card-83 Election', () => {
     if (pending.kind !== 'pending') {
       throw new Error('Expected pending reduced city selector for Election shaded.');
     }
+    if (pending.type !== 'chooseN') {
+      throw new Error('Expected chooseN reduced city selector for Election shaded.');
+    }
 
     assert.equal(pending.min, 1);
     assert.equal(pending.max, 1);
@@ -371,6 +386,9 @@ describe('FITL card-83 Election', () => {
     assert.equal(pending.kind, 'pending');
     if (pending.kind !== 'pending') {
       throw new Error('Expected zero-cardinality city selector for Election shaded.');
+    }
+    if (pending.type !== 'chooseN') {
+      throw new Error('Expected chooseN zero-cardinality city selector for Election shaded.');
     }
 
     assert.equal(pending.min, 0);

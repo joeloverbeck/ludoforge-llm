@@ -4,13 +4,13 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — test files only
-**Deps**: archive/tickets/62CONPIESOU-005.md, specs/62b-incremental-choice-protocol.md
+**Deps**: archive/tickets/62CONPIESOU-005.md, archive/specs/62b-incremental-choice-protocol.md
 
 ## Status Note
 
 This ticket's original scope assumed the pre-62b array-based `chooseN` architecture.
 
-After [Spec 62b](/home/joeloverbeck/projects/ludoforge-llm/specs/62b-incremental-choice-protocol.md), the highest-value unit coverage is no longer just "final array admissibility" plus simulated dynamic re-evaluation. The real target is the new engine-owned incremental selection protocol and its transition semantics.
+After [Spec 62b](/home/joeloverbeck/projects/ludoforge-llm/archive/specs/62b-incremental-choice-protocol.md), the highest-value unit coverage is no longer just "final array admissibility" plus simulated dynamic re-evaluation. The real target is the new engine-owned incremental selection protocol and its transition semantics.
 
 Keep this ticket only as a reminder of the behavior that needs coverage. The eventual test ticket should be rewritten against Spec 62b's command-based `chooseN` flow.
 

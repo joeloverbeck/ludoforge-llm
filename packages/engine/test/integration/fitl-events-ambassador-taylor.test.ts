@@ -185,6 +185,9 @@ describe('FITL card-66 Ambassador Taylor', () => {
     if (firstPending.kind !== 'pending') {
       throw new Error('Expected pending out-of-play piece selector for Ambassador Taylor.');
     }
+    if (firstPending.type !== 'chooseN') {
+      throw new Error('Expected chooseN out-of-play piece selector for Ambassador Taylor.');
+    }
     assert.equal(firstPending.min, 0);
     assert.equal(firstPending.max, 2);
 
@@ -302,6 +305,9 @@ describe('FITL card-66 Ambassador Taylor', () => {
     if (pending.kind !== 'pending') {
       throw new Error('Expected pending support-space selector for Ambassador Taylor shaded.');
     }
+    if (pending.type !== 'chooseN') {
+      throw new Error('Expected chooseN support-space selector for Ambassador Taylor shaded.');
+    }
 
     assert.equal(pending.min, 3);
     assert.equal(pending.max, 3);
@@ -345,6 +351,9 @@ describe('FITL card-66 Ambassador Taylor', () => {
     if (pending.kind !== 'pending') {
       throw new Error('Expected pending support-space selector for reduced-count Ambassador Taylor shaded.');
     }
+    if (pending.type !== 'chooseN') {
+      throw new Error('Expected chooseN reduced-count support-space selector for Ambassador Taylor shaded.');
+    }
 
     assert.equal(pending.min, 2);
     assert.equal(pending.max, 2);
@@ -378,6 +387,9 @@ describe('FITL card-66 Ambassador Taylor', () => {
     assert.equal(pending.kind, 'pending');
     if (pending.kind !== 'pending') {
       throw new Error('Expected zero-cardinality support selector for Ambassador Taylor shaded.');
+    }
+    if (pending.type !== 'chooseN') {
+      throw new Error('Expected chooseN zero-cardinality support selector for Ambassador Taylor shaded.');
     }
 
     assert.equal(pending.min, 0);

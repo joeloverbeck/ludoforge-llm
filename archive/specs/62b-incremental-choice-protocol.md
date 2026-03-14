@@ -1,6 +1,6 @@
 # Spec 62b: Incremental Choice Protocol For Multi-Selection
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P0
 **Complexity**: M
 **Dependencies**: Spec 25b, Spec 62
@@ -302,3 +302,20 @@ That gives the rules-correct behavior without FITL-specific code.
 ## Notes
 
 The outer decision-sequence model (`resolveMoveDecisionSequence`, `Move.params` accumulation) is not changed by this spec. The only new concept is the `chooseN` sub-loop driven by `advanceChooseN`, which slots into the existing architecture as a caller-side loop between the point where a `chooseN` pending request is received and the point where the finalized array is written into `Move.params`.
+
+## Outcome
+
+- Completion date: 2026-03-14
+- What actually changed:
+  - Delivered the incremental `chooseN` protocol across archived tickets `62BINCCHOPRO-001` through `62BINCCHOPRO-009`, including engine-owned pending selection state, shared prioritized tier admissibility, the pure `advanceChooseN` kernel API, runner/store/ChoicePanel incremental commands, and the final pending-choice cardinality narrowing.
+  - Preserved the intended architecture from this spec: the outer decision sequence stayed intact, `chooseOne` remained atomic, AI full-array submission stayed supported, and runner UI remained downstream of engine-owned legality state.
+  - Re-authored and verified the downstream FITL behavior on top of the generic protocol rather than adding game-specific engine logic.
+- Deviations from original plan:
+  - The implementation landed incrementally across multiple small tickets rather than one monolithic change.
+  - The final cleanup ticket confirmed there was no separate pending-choice runtime schema artifact to narrow; the remaining work was type-contract and consumer/test cleanup only.
+- Verification results:
+  - `pnpm turbo build`
+  - `pnpm turbo typecheck`
+  - `pnpm turbo lint`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm -F @ludoforge/runner test`

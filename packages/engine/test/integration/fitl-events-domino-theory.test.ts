@@ -153,6 +153,9 @@ describe('FITL card-82 Domino Theory', () => {
     if (pending.kind !== 'pending') {
       throw new Error('Expected pending US out-of-play selector for Domino Theory.');
     }
+    if (pending.type !== 'chooseN') {
+      throw new Error('Expected chooseN US out-of-play selector for Domino Theory.');
+    }
 
     assert.equal(pending.min, 0);
     assert.equal(pending.max, 3);
@@ -205,6 +208,9 @@ describe('FITL card-82 Domino Theory', () => {
     assert.equal(pending.kind, 'pending');
     if (pending.kind !== 'pending') {
       throw new Error('Expected pending ARVN out-of-play selector for Domino Theory.');
+    }
+    if (pending.type !== 'chooseN') {
+      throw new Error('Expected chooseN ARVN out-of-play selector for Domino Theory.');
     }
 
     assert.equal(pending.min, 0);
@@ -275,6 +281,9 @@ describe('FITL card-82 Domino Theory', () => {
     assert.equal(pending.kind, 'pending');
     if (pending.kind !== 'pending') {
       throw new Error('Expected pending available US troop selector for Domino Theory shaded.');
+    }
+    if (pending.type !== 'chooseN') {
+      throw new Error('Expected chooseN available US troop selector for Domino Theory shaded.');
     }
 
     assert.equal(pending.min, 0);
@@ -350,6 +359,9 @@ describe('FITL card-82 Domino Theory', () => {
     assert.equal(noPending.kind, 'pending');
     if (noPending.kind !== 'pending') {
       throw new Error('Expected zero-cardinality shaded selector for Domino Theory.');
+    }
+    if (noPending.type !== 'chooseN') {
+      throw new Error('Expected chooseN zero-cardinality shaded selector for Domino Theory.');
     }
 
     assert.equal(noPending.min, 0);

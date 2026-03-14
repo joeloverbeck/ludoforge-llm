@@ -333,8 +333,8 @@ phase: [asPhaseId('main')],
     assert.deepEqual(
       result.nextDecisionSet?.map((request) => ({
         decisionKey: request.decisionKey,
-        min: request.min,
-        max: request.max,
+        min: request.type === 'chooseN' ? request.min : undefined,
+        max: request.type === 'chooseN' ? request.max : undefined,
       })),
       [
         { decisionKey: '$targets', min: 1, max: 1 },

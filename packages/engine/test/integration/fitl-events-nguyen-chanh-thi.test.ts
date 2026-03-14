@@ -87,7 +87,9 @@ describe('FITL card-87 Nguyen Chanh Thi', () => {
 
     const pending = legalChoicesEvaluate(def, state, requireEventMove(def, state, CARD_ID, 'unshaded'));
     assert.equal(pending.kind, 'pending');
-    if (pending.kind !== 'pending') throw new Error('Expected unshaded ARVN-piece selector.');
+    if (pending.kind !== 'pending' || pending.type !== 'chooseN') {
+      throw new Error('Expected chooseN unshaded ARVN-piece selector.');
+    }
 
     const legalityByValue = new Map(
       pending.options.map((option) => [String(option.value), option.legality]),
@@ -277,7 +279,9 @@ describe('FITL card-87 Nguyen Chanh Thi', () => {
     const move = requireEventMove(def, state, CARD_ID, 'unshaded');
     const pending = legalChoicesEvaluate(def, state, move);
     assert.equal(pending.kind, 'pending');
-    if (pending.kind !== 'pending') throw new Error('Expected unshaded ARVN-piece selector.');
+    if (pending.kind !== 'pending' || pending.type !== 'chooseN') {
+      throw new Error('Expected chooseN unshaded ARVN-piece selector.');
+    }
     assert.deepEqual(
       pending.options.map((option) => String(option.value)).sort(),
       ['thi-arvn-police', 'thi-arvn-ranger', 'thi-map-base'],

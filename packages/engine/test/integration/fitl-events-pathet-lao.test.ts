@@ -186,7 +186,9 @@ describe('FITL card-58 Pathet Lao', () => {
     if (firstPending.kind !== 'pending') {
       throw new Error('Expected pending combined removal choice for Pathet Lao unshaded.');
     }
-    assert.equal(firstPending.type, 'chooseN');
+    if (firstPending.type !== 'chooseN') {
+      throw new Error('Expected chooseN combined removal choice for Pathet Lao unshaded.');
+    }
     assert.equal(firstPending.min, 6);
     assert.equal(firstPending.max, 6);
 
@@ -228,6 +230,9 @@ describe('FITL card-58 Pathet Lao', () => {
     assert.equal(firstPending.kind, 'pending');
     if (firstPending.kind !== 'pending') {
       throw new Error('Expected pending combined removal choice for Pathet Lao unshaded.');
+    }
+    if (firstPending.type !== 'chooseN') {
+      throw new Error('Expected chooseN combined removal choice for Pathet Lao unshaded.');
     }
     assert.equal(firstPending.min, 4);
     assert.equal(firstPending.max, 4);

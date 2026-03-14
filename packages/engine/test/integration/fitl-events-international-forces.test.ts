@@ -333,6 +333,9 @@ describe('FITL card-65 International Forces', () => {
     if (noPending.kind !== 'pending') {
       throw new Error('Expected a zero-cardinality chooseN request for zero-piece International Forces unshaded.');
     }
+    if (noPending.type !== 'chooseN') {
+      throw new Error('Expected chooseN zero-cardinality request for zero-piece International Forces unshaded.');
+    }
     assert.equal(noPending.min, 0);
     assert.equal(noPending.max, 0);
     assert.deepEqual(noPending.options, []);
@@ -359,11 +362,13 @@ describe('FITL card-65 International Forces', () => {
 
     assert.equal(probe.complete, false);
     assert.notEqual(probe.nextDecisionSet, undefined, 'Expected shaded to expose chooser-owned stochastic alternatives');
-    const chooserRequests = probe.nextDecisionSet?.filter((request) => request.name === '$internationalForcesUsMapPieces') ?? [];
+    const chooserRequests = probe.nextDecisionSet?.filter(
+      (request): request is Extract<typeof request, { type: 'chooseN' }> =>
+        request.type === 'chooseN' && request.name === '$internationalForcesUsMapPieces',
+    ) ?? [];
     assert.equal(chooserRequests.length, 3, 'Expected one exact chooser-owned alternative per reachable removal count');
     for (const request of chooserRequests) {
       assert.equal(request.decisionPlayer, asPlayerId(0));
-      assert.equal(request.type, 'chooseN');
       assert.equal(request.min, request.max, 'Each stochastic branch should require an exact number of US pieces');
     }
     assert.deepEqual(
@@ -397,7 +402,10 @@ describe('FITL card-65 International Forces', () => {
     });
     assert.equal(fullProbe.stochasticDecision?.kind, 'pendingStochastic');
     assert.deepEqual(
-      fullProbe.nextDecisionSet?.map((request) => request.min).sort((left, right) => (left ?? 0) - (right ?? 0)),
+      fullProbe.nextDecisionSet
+        ?.filter((request) => request.type === 'chooseN')
+        .map((request) => request.min)
+        .sort((left, right) => (left ?? 0) - (right ?? 0)),
       [1, 2, 3, 4, 5, 6],
       'With 6 available US map pieces, each reachable die result should remain an exact stochastic alternative',
     );
@@ -414,7 +422,10 @@ describe('FITL card-65 International Forces', () => {
     });
     assert.equal(limitedProbe.stochasticDecision?.kind, 'pendingStochastic');
     assert.deepEqual(
-      limitedProbe.nextDecisionSet?.map((request) => request.min).sort((left, right) => (left ?? 0) - (right ?? 0)),
+      limitedProbe.nextDecisionSet
+        ?.filter((request) => request.type === 'chooseN')
+        .map((request) => request.min)
+        .sort((left, right) => (left ?? 0) - (right ?? 0)),
       [1, 2],
       'When the die roll can exceed availability, stochastic alternatives should cap at reachable exact counts',
     );
@@ -436,9 +447,14 @@ describe('FITL card-65 International Forces', () => {
     const overrides: readonly DecisionOverrideRule[] = [
       {
         when: (request) => request.name === '$internationalForcesUsMapPieces',
-        value: (request) => request.options
-          .slice(0, request.min ?? 0)
-          .map((option) => option.value as string | number | boolean),
+        value: (request) => {
+          if (request.type !== 'chooseN') {
+            return undefined;
+          }
+          return request.options
+            .slice(0, request.min ?? 0)
+            .map((option) => option.value as string | number | boolean);
+        },
       },
     ];
 

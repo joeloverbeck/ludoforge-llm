@@ -298,6 +298,9 @@ describe('FITL commitment phase production wiring', () => {
     assert.equal(pending.nextDecision?.name, '$greatSocietyUsPieces');
     assert.equal(pending.nextDecision?.decisionPlayer, asPlayerId(0), 'US should choose the removed Available pieces');
     assert.equal(pending.nextDecision?.type, 'chooseN');
+    if (pending.nextDecision?.type !== 'chooseN') {
+      throw new Error('Expected chooseN pending decision for Great Society unshaded.');
+    }
     assert.equal(pending.nextDecision?.min, 3);
     assert.equal(pending.nextDecision?.max, 3);
     assert.equal(
@@ -353,6 +356,9 @@ describe('FITL commitment phase production wiring', () => {
     assert.equal(pending.nextDecision?.name, '$greatSocietyUsPieces');
     assert.equal(pending.nextDecision?.decisionPlayer, asPlayerId(0), 'US should still own the shaded choice');
     assert.equal(pending.nextDecision?.type, 'chooseN');
+    if (pending.nextDecision?.type !== 'chooseN') {
+      throw new Error('Expected chooseN pending decision for Great Society shaded.');
+    }
     assert.equal(pending.nextDecision?.min, 3);
     assert.equal(pending.nextDecision?.max, 3);
   });
@@ -388,6 +394,9 @@ describe('FITL commitment phase production wiring', () => {
     assert.equal(pending.kind, 'pending');
     assert.equal(pending.name, '$greatSocietyUsPieces');
     assert.equal(pending.decisionPlayer, asPlayerId(0), 'US should own the Great Society shaded choice even when another faction executes it');
+    if (pending.type !== 'chooseN') {
+      throw new Error('Expected chooseN pending decision for Great Society shaded execution.');
+    }
     assert.equal(pending.min, 2);
     assert.equal(pending.max, 2);
     assert.deepEqual(

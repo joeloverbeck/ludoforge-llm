@@ -65,7 +65,8 @@ const resolveDecisionValue = (
 const formatResolutionFailure = (move: Move, result: ReturnType<typeof completeMoveDecisionSequence>): string => {
   if (result.nextDecision !== undefined) {
     const decision = result.nextDecision;
-    return `unresolved decisionKey=${decision.decisionKey} name=${decision.name} type=${decision.type} options=${decision.options.length} min=${decision.min ?? 0}`;
+    const min = decision.type === 'chooseN' ? (decision.min ?? 0) : 0;
+    return `unresolved decisionKey=${decision.decisionKey} name=${decision.name} type=${decision.type} options=${decision.options.length} min=${min}`;
   }
   if (result.illegal !== undefined) {
     return `illegal=${result.illegal.reason}`;

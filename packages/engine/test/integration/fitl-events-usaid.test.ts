@@ -105,6 +105,9 @@ describe('FITL card-85 USAID', () => {
     if (pending.kind !== 'pending') {
       throw new Error('Expected pending USAID unshaded support-space selector.');
     }
+    if (pending.type !== 'chooseN') {
+      throw new Error('Expected chooseN USAID unshaded support-space selector.');
+    }
 
     assert.equal(pending.min, 3);
     assert.equal(pending.max, 3);
@@ -152,6 +155,9 @@ describe('FITL card-85 USAID', () => {
     if (twoEligiblePending.kind !== 'pending') {
       throw new Error('Expected reduced-cardinality USAID selector.');
     }
+    if (twoEligiblePending.type !== 'chooseN') {
+      throw new Error('Expected chooseN reduced-cardinality USAID selector.');
+    }
     assert.equal(twoEligiblePending.min, 2);
     assert.equal(twoEligiblePending.max, 2);
     assert.deepEqual(twoEligiblePending.options.map((option) => String(option.value)).sort(), [HUE, QUANG_NAM]);
@@ -195,6 +201,9 @@ describe('FITL card-85 USAID', () => {
     if (noneEligiblePending.kind !== 'pending') {
       throw new Error('Expected zero-cardinality USAID selector.');
     }
+    if (noneEligiblePending.type !== 'chooseN') {
+      throw new Error('Expected chooseN zero-cardinality USAID selector.');
+    }
     assert.equal(noneEligiblePending.min, 0);
     assert.equal(noneEligiblePending.max, 0);
     assert.deepEqual(noneEligiblePending.options, []);
@@ -224,6 +233,9 @@ describe('FITL card-85 USAID', () => {
     assert.equal(pending.kind, 'pending');
     if (pending.kind !== 'pending') {
       throw new Error('Expected pending shaded USAID track selector.');
+    }
+    if (pending.type !== 'chooseN') {
+      throw new Error('Expected chooseN shaded USAID track selector.');
     }
 
     assert.equal(pending.min, 1);

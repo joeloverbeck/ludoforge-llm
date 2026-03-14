@@ -995,8 +995,6 @@ describe('deriveRenderModel state metadata', () => {
       decisionKey: asDecisionKey('target'),
       name: 'target',
       type: 'chooseOne',
-      min: 1,
-      max: 5,
       options: [],
       targetKinds: [],
     };

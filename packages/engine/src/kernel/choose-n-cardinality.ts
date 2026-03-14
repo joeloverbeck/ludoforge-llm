@@ -41,6 +41,10 @@ export interface ChooseNCardinality {
   readonly maxCardinality: number;
 }
 
+export function canConfirmChooseNSelection(selectedCount: number, minCardinality: number, maxCardinality: number): boolean {
+  return selectedCount >= minCardinality && selectedCount <= maxCardinality;
+}
+
 export function resolveChooseNCardinality(
   chooseN: ChooseNDef,
   evalCtx: ReadContext,

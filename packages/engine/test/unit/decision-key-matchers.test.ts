@@ -14,6 +14,8 @@ const makeRequest = (overrides?: Partial<ChoicePendingRequest>): ChoicePendingRe
   targetKinds: [],
   min: 0,
   max: 2,
+  selected: [],
+  canConfirm: true,
   ...overrides,
 });
 

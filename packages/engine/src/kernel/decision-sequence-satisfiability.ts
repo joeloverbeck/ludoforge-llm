@@ -43,6 +43,9 @@ const enumerateChooseNSelections = (
   selectableValues: readonly MoveParamValue[],
   visit: (selection: MoveParamValue) => boolean,
 ): boolean => {
+  if (request.type !== 'chooseN') {
+    throw new Error('enumerateChooseNSelections requires a chooseN request');
+  }
   const min = request.min ?? 0;
   const max = Math.min(request.max ?? selectableValues.length, selectableValues.length);
   if (min > max) {

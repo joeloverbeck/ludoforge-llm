@@ -687,6 +687,8 @@ phase: [asPhaseId('main')],
     assert.equal(result.type, 'chooseN');
     assert.equal(result.min, 1);
     assert.equal(result.max, 2);
+    assert.deepEqual(result.selected, []);
+    assert.equal(result.canConfirm, false);
   });
 
   it('3c. chooseN throws when expression-valued max is non-integer or negative', () => {

@@ -758,6 +758,8 @@ describe('deriveRenderModel state metadata', () => {
       type: 'chooseN',
       min: 1,
       max: 2,
+      selected: [],
+      canConfirm: false,
       options: [
         { value: 'table:none', legality: 'legal', illegalReason: null },
         { value: 'token-a', legality: 'legal', illegalReason: null },
@@ -1023,6 +1025,8 @@ describe('deriveRenderModel state metadata', () => {
       type: 'chooseN',
       min: 3,
       max: 1,
+      selected: [],
+      canConfirm: false,
       options: [{ value: 'table:none', legality: 'legal', illegalReason: null }],
       targetKinds: ['zone'],
     };
@@ -1741,6 +1745,8 @@ describe('deriveRenderModel choiceContext', () => {
         targetKinds: [],
         min: 1,
         max: 6,
+        selected: [],
+        canConfirm: false,
       },
     });
     const model = deriveRenderModel(state, def, ctx);
@@ -1761,6 +1767,8 @@ describe('deriveRenderModel choiceContext', () => {
         targetKinds: [],
         min: 3,
         max: 3,
+        selected: [],
+        canConfirm: false,
       },
     });
     const model = deriveRenderModel(state, def, ctx);

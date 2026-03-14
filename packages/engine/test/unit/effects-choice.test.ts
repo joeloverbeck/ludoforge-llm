@@ -161,6 +161,32 @@ describe('effects choice assertions', () => {
     ]);
   });
 
+  it('chooseN returns initial engine-owned selection state in discovery mode when move param binding is missing', () => {
+    const ctx = makeDiscoveryCtx();
+    const effect: EffectAST = {
+      chooseN: {
+        internalDecisionId: 'decision:$choice',
+        bind: '$choice',
+        options: { query: 'enums', values: ['alpha', 'beta'] },
+        max: 2,
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.pendingChoice?.kind, 'pending');
+    if (result.pendingChoice?.kind !== 'pending') {
+      throw new Error('expected pending choice');
+    }
+    assert.equal(result.pendingChoice.type, 'chooseN');
+    assert.equal(result.pendingChoice.decisionKey, '$choice');
+    assert.deepEqual(result.pendingChoice.selected, []);
+    assert.equal(result.pendingChoice.canConfirm, true);
+    assert.deepEqual(result.pendingChoice.options, [
+      { value: 'alpha', legality: 'unknown', illegalReason: null },
+      { value: 'beta', legality: 'unknown', illegalReason: null },
+    ]);
+  });
+
   it('chooseOne appends iterationPath to static decision IDs in discovery mode', () => {
     const ctx = makeDiscoveryCtx({ iterationPath: '[2]' });
     const effect: EffectAST = {
@@ -699,11 +725,13 @@ describe('effects choice assertions', () => {
         decisionKey: alternative.decisionKey,
         min: alternative.min,
         max: alternative.max,
+        selected: alternative.type === 'chooseN' ? alternative.selected : null,
+        canConfirm: alternative.type === 'chooseN' ? alternative.canConfirm : null,
         options: alternative.options.map((option) => option.value),
       })),
       [
-        { decisionKey: '$inside', min: 1, max: 1, options: ['a', 'b', 'c'] },
-        { decisionKey: '$inside', min: 1, max: 2, options: ['a', 'b', 'c'] },
+        { decisionKey: '$inside', min: 1, max: 1, selected: [], canConfirm: false, options: ['a', 'b', 'c'] },
+        { decisionKey: '$inside', min: 1, max: 2, selected: [], canConfirm: false, options: ['a', 'b', 'c'] },
       ],
     );
   });

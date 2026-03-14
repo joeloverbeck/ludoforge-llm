@@ -123,6 +123,8 @@ describe('decision sequence satisfiability', () => {
           type: 'chooseN',
           min: 50,
           max: 50,
+          selected: [],
+          canConfirm: false,
           targetKinds: [],
           options: Array.from({ length: 100 }, (_, index) => ({
             value: `option-${index}`,

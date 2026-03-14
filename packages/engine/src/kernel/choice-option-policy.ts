@@ -75,14 +75,13 @@ export const pickDeterministicChoiceValue = (
   request: ChoicePendingRequest,
   policy?: ChoiceOptionPolicy,
 ): MoveParamValue | undefined => {
-  const values = request.type === 'chooseOne'
-    ? selectChoiceOptionValuesByLegalityPrecedence(request, policy)
-    : selectUniqueChoiceOptionValuesByLegalityPrecedence(request, policy);
   if (request.type === 'chooseOne') {
+    const values = selectChoiceOptionValuesByLegalityPrecedence(request, policy);
     const selected = values[0];
     return selected === undefined ? undefined : (selected as MoveParamScalar);
   }
 
+  const values = selectUniqueChoiceOptionValuesByLegalityPrecedence(request, policy);
   const min = request.min ?? 0;
   if (values.length < min) {
     return undefined;

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel runtime (effects-choice.ts, legal-choices.ts)
-**Deps**: tickets/62BINCCHOPRO-002.md (shared helper must exist)
+**Deps**: tickets/62BINCCHOPRO-002.md
 
 ## Problem
 

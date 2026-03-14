@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — new kernel module + comprehensive unit tests
-**Deps**: tickets/62BINCCHOPRO-001.md (type extensions), tickets/62BINCCHOPRO-002.md (tier helper), tickets/62BINCCHOPRO-003.md (wired validation)
+**Deps**: archive/tickets/62BINCCHOPRO-001.md, tickets/62BINCCHOPRO-002.md, tickets/62BINCCHOPRO-003.md
 
 ## Problem
 

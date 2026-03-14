@@ -277,6 +277,9 @@ const visitSelectableDecisionValues = (
 
   const selectableValues = [...selectUniqueChoiceOptionValuesByLegalityPrecedence(request)]
     .sort((left, right) => probeValue(right) - probeValue(left));
+  if (request.type !== 'chooseN') {
+    throw new Error('chooseN viability enumeration requires a chooseN request');
+  }
   const min = request.min ?? 0;
   const max = Math.min(request.max ?? selectableValues.length, selectableValues.length);
   const sizeOrder = Array.from({ length: max - min + 1 }, (_, index) => min + index);

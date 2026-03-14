@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: tickets/62BINCCHOPRO-005.md (worker bridge method must exist), tickets/62BINCCHOPRO-001.md (type extensions)
+**Deps**: tickets/62BINCCHOPRO-005.md, archive/tickets/62BINCCHOPRO-001.md
 
 ## Problem
 

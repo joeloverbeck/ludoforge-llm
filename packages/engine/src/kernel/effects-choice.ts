@@ -3,7 +3,7 @@ import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
 import { advanceScope } from './decision-scope.js';
 import { deriveChoiceTargetKinds } from './choice-target-kinds.js';
-import { resolveChooseNCardinality } from './choose-n-cardinality.js';
+import { canConfirmChooseNSelection, resolveChooseNCardinality } from './choose-n-cardinality.js';
 import { effectRuntimeError } from './effect-error.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { nextInt } from './prng.js';
@@ -36,6 +36,11 @@ const normalizePendingChoiceRequest = (pendingChoice: ChoicePendingRequest): Cho
     illegalReason: null,
   })),
   targetKinds: [...pendingChoice.targetKinds],
+  ...(pendingChoice.type === 'chooseN'
+    ? {
+        selected: [...pendingChoice.selected],
+      }
+    : {}),
 });
 
 const pendingChoiceStructuralKey = (pendingChoice: ChoicePendingRequest): string => {
@@ -49,6 +54,8 @@ const pendingChoiceStructuralKey = (pendingChoice: ChoicePendingRequest): string
     targetKinds: normalized.targetKinds,
     min: normalized.type === 'chooseN' ? normalized.min ?? 0 : null,
     max: normalized.type === 'chooseN' ? normalized.max ?? normalized.options.length : null,
+    selected: normalized.type === 'chooseN' ? normalized.selected.map((value) => choiceOptionKey(value)) : null,
+    canConfirm: normalized.type === 'chooseN' ? normalized.canConfirm : null,
   });
 };
 
@@ -512,6 +519,8 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
           targetKinds,
           min: minCardinality,
           max: clampedMax,
+          selected: [],
+          canConfirm: canConfirmChooseNSelection(0, minCardinality, clampedMax),
         },
       };
     }

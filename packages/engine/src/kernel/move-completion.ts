@@ -86,20 +86,27 @@ export const completeTemplateMove = (
       ? selectUniqueChoiceOptionValuesByLegalityPrecedence(request)
       : selectChoiceOptionValuesByLegalityPrecedence(request);
     const optionCount = options.length;
-    const min = request.min ?? 0;
-    if (optionCount === 0) {
-      return request.type === 'chooseN' && min === 0 ? [] : undefined;
+    if (request.type === 'chooseOne') {
+      if (optionCount === 0) {
+        return undefined;
+      }
+      const selection = selectFromChooseOne(options, cursor);
+      cursor = selection.rng;
+      return selection.selected;
     }
 
-    const declaredMax = request.type === 'chooseN' ? (request.max ?? optionCount) : optionCount;
+    const min = request.min ?? 0;
+    if (optionCount === 0) {
+      return min === 0 ? [] : undefined;
+    }
+
+    const declaredMax = request.max ?? optionCount;
     const max = Math.min(declaredMax, optionCount);
-    if (request.type === 'chooseN' && (optionCount < min || max < min)) {
+    if (optionCount < min || max < min) {
       return undefined;
     }
 
-    const selection = request.type === 'chooseN'
-      ? selectFromChooseN(options, min, max, cursor)
-      : selectFromChooseOne(options, cursor);
+    const selection = selectFromChooseN(options, min, max, cursor);
     cursor = selection.rng;
     return selection.selected;
   };

@@ -34,6 +34,8 @@ const makeChooseNRequest = (
     type: 'chooseN',
     options,
     targetKinds: [],
+    selected: [],
+    canConfirm: false,
   };
   return {
     ...base,

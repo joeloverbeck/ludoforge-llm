@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: tickets/62BINCCHOPRO-004.md (kernel function must exist)
+**Deps**: tickets/62BINCCHOPRO-004.md
 
 ## Problem
 

@@ -618,19 +618,32 @@ export interface ChoiceOption {
   readonly illegalReason: ChoiceIllegalReason | null;
 }
 
-export interface ChoicePendingRequest {
+interface ChoicePendingRequestBase {
   readonly kind: 'pending';
   readonly complete: false;
   readonly decisionPlayer?: PlayerId;
   readonly decisionKey: DecisionKey;
   readonly name: string;
-  readonly type: 'chooseOne' | 'chooseN';
   readonly options: readonly ChoiceOption[];
   readonly targetKinds: readonly ChoiceTargetKind[];
   readonly min?: number;
   readonly max?: number;
   readonly reason?: ChoiceIllegalReason;
 }
+
+export interface ChoicePendingChooseOneRequest extends ChoicePendingRequestBase {
+  readonly type: 'chooseOne';
+}
+
+export interface ChoicePendingChooseNRequest extends ChoicePendingRequestBase {
+  readonly type: 'chooseN';
+  readonly selected: readonly MoveParamScalar[];
+  readonly canConfirm: boolean;
+}
+
+export type ChoicePendingRequest =
+  | ChoicePendingChooseOneRequest
+  | ChoicePendingChooseNRequest;
 
 export interface ChoiceStochasticOutcome {
   readonly bindings: Readonly<Record<string, MoveParamScalar>>;

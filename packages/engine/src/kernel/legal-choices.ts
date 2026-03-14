@@ -228,6 +228,9 @@ const mapChooseNOptions = (
   partialMove: Move,
   request: ChoicePendingRequest,
 ): readonly ChoiceOption[] => {
+  if (request.type !== 'chooseN') {
+    throw new Error('mapChooseNOptions requires a chooseN request');
+  }
   const uniqueOptions: Move['params'][string][] = [];
   const uniqueByKey = new Map<string, Move['params'][string]>();
   for (const option of request.options) {

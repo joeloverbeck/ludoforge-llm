@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: tickets/62BINCCHOPRO-006.md (store actions must exist), tickets/62BINCCHOPRO-001.md (type extensions)
+**Deps**: tickets/62BINCCHOPRO-006.md, archive/tickets/62BINCCHOPRO-001.md
 
 ## Problem
 

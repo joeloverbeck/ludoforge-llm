@@ -1,9 +1,13 @@
 import { spawnSync } from 'node:child_process';
 import { basename } from 'node:path';
-import { listIntegrationTestsForLane, toDistTestPath } from './test-lane-manifest.mjs';
+import { listE2eTestsForLane, listIntegrationTestsForLane, toDistTestPath } from './test-lane-manifest.mjs';
 
 const lanePatterns = {
   default: ['dist/test/unit/**/*.test.js', ...listIntegrationTestsForLane('integration:core').map(toDistTestPath)],
+  e2e: listE2eTestsForLane('e2e').map(toDistTestPath),
+  'e2e:slow': listE2eTestsForLane('e2e:slow').map(toDistTestPath),
+  'e2e:mcts': listE2eTestsForLane('e2e:mcts').map(toDistTestPath),
+  'e2e:all': listE2eTestsForLane('e2e:all').map(toDistTestPath),
   integration: listIntegrationTestsForLane('integration').map(toDistTestPath),
   'integration:core': listIntegrationTestsForLane('integration:core').map(toDistTestPath),
   'integration:game-packages': listIntegrationTestsForLane('integration:game-packages').map(toDistTestPath),

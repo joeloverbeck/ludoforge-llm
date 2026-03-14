@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const ENGINE_ROOT = resolve(SCRIPT_DIR, '..');
 const INTEGRATION_TEST_ROOT = resolve(ENGINE_ROOT, 'test', 'integration');
+const E2E_TEST_ROOT = resolve(ENGINE_ROOT, 'test', 'e2e');
 
 export const GAME_PACKAGE_TEST_PREFIXES = ['fitl-', 'texas-'];
 
@@ -21,6 +22,11 @@ export const GAME_PACKAGE_SMOKE_TESTS = [
   'parse-validate-full-spec.test.ts',
   'production-spec-strict-binding-regression.test.ts',
   'texas-holdem-spec-structure.test.ts',
+];
+
+export const E2E_SLOW_EXACT_TESTS = [
+  'texas-holdem-card-lifecycle.test.ts',
+  'texas-holdem-tournament.test.ts',
 ];
 
 function collectTestFiles(dir) {
@@ -42,6 +48,7 @@ function collectTestFiles(dir) {
 }
 
 export const ALL_INTEGRATION_TESTS = collectTestFiles(INTEGRATION_TEST_ROOT);
+export const ALL_E2E_TESTS = collectTestFiles(E2E_TEST_ROOT);
 
 const gamePackageSmokeTests = new Set(GAME_PACKAGE_SMOKE_TESTS.map((testPath) => `test/integration/${testPath}`));
 
@@ -70,6 +77,31 @@ export function listIntegrationTestsForLane(lane) {
       );
     default:
       throw new Error(`Unknown integration test lane: ${lane}`);
+  }
+}
+
+export function isMctsE2eTest(sourcePath) {
+  return sourcePath.replaceAll('\\', '/').startsWith('test/e2e/mcts/');
+}
+
+export function isSlowE2eTest(sourcePath) {
+  const normalized = sourcePath.replaceAll('\\', '/');
+  const baseName = normalized.split('/').at(-1) ?? normalized;
+  return E2E_SLOW_EXACT_TESTS.includes(baseName);
+}
+
+export function listE2eTestsForLane(lane) {
+  switch (lane) {
+    case 'e2e':
+      return ALL_E2E_TESTS.filter((sourcePath) => !isMctsE2eTest(sourcePath));
+    case 'e2e:slow':
+      return ALL_E2E_TESTS.filter((sourcePath) => isSlowE2eTest(sourcePath));
+    case 'e2e:mcts':
+      return ALL_E2E_TESTS.filter((sourcePath) => isMctsE2eTest(sourcePath));
+    case 'e2e:all':
+      return [...ALL_E2E_TESTS];
+    default:
+      throw new Error(`Unknown e2e test lane: ${lane}`);
   }
 }
 

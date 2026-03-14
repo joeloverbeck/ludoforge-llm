@@ -4,7 +4,7 @@
 **Priority**: LOW
 **Effort**: Medium
 **Engine Changes**: Yes — `agents/mcts/node.ts`, `agents/mcts/search.ts`, `agents/mcts/isuct.ts`, `agents/mcts/config.ts`
-**Deps**: 63MCTSPERROLLFRESEA-007 (must first prove hybrid hits speed target but quality regresses)
+**Deps**: `archive/tickets/63MCTSPERROLLFRESEA-007.md`
 
 ## Problem
 

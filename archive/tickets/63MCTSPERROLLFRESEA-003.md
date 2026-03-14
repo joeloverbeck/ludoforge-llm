@@ -1,6 +1,6 @@
 # 63MCTSPERROLLFRESEA-003: MAST rollout policy
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `agents/mcts/mast.ts` (new), `agents/mcts/config.ts`, `agents/mcts/rollout.ts`, `agents/mcts/search.ts`
@@ -128,3 +128,17 @@ Export `MastStats`, `MastEntry`, `createMastStats`, `updateMastStats` from the m
 1. `pnpm turbo build && node --test packages/engine/dist/test/unit/agents/mcts/mast.test.js`
 2. `pnpm turbo build && pnpm -F @ludoforge/engine test`
 3. `pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-14
+- **What changed**:
+  - Created `packages/engine/src/agents/mcts/mast.ts` with `MastEntry`, `MastStats`, `createMastStats()`, `updateMastStats()`, `mastSelectMove()` — zero kernel dependencies, pure map lookups + RNG.
+  - Extended `config.ts`: added `'mast'` to `ROLLOUT_POLICIES`, `mastWarmUpThreshold: 32` to `MctsConfig`, all three presets (`fast`, `default`, `strong`) now use `rolloutPolicy: 'mast'`.
+  - Wired MAST into `rollout.ts`: `simulateToCutoff()` accepts optional `MastStats`, uses `mastSelectMove()` when policy is `'mast'`; legacy `pickMove()` treats `'mast'` as random fallback.
+  - Wired MAST lifecycle in `search.ts`: creates `MastStats` in `runSearch()`, collects selection-phase move keys, calls `updateMastStats()` after backpropagation, passes stats to `simulateToCutoff()`.
+  - Updated `index.ts` re-exports for all new public symbols.
+  - Created `mast.test.ts` (9 tests) and extended `config.test.ts` (4 new tests).
+  - Fixed `rollout.test.ts` fixture to include `mastWarmUpThreshold`.
+- **Deviations from plan**: None. Default `rolloutPolicy` in `DEFAULT_MCTS_CONFIG` changed from `'epsilonGreedy'` to `'mast'` to match the preset intent (all presets use mast).
+- **Verification**: 4526 tests pass, 0 fail. Typecheck clean. Lint clean.

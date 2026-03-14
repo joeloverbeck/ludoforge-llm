@@ -28,6 +28,8 @@ import { terminalToRewards, evaluateForAllPlayers } from './evaluate.js';
 import { sampleBeliefState } from './belief.js';
 import { canActivateSolver, updateSolverResult, selectSolverAwareChild } from './solver.js';
 import { createAccumulator, collectDiagnostics } from './diagnostics.js';
+import type { MastStats } from './mast.js';
+import { createMastStats, updateMastStats } from './mast.js';
 
 // ---------------------------------------------------------------------------
 // Backpropagation
@@ -71,12 +73,14 @@ export function runOneIteration(
   pool: NodePool,
   solverActive: boolean = false,
   acc?: MutableDiagnosticsAccumulator,
+  mastStats?: MastStats,
 ): { readonly rng: Rng } {
   let currentNode = root;
   let currentState = sampledState;
   let currentRng = rng;
   let selectionDepth = 0;
   let selectionRecorded = false;
+  const selectionMoveKeys: string[] = [];
 
   // ── Selection ────────────────────────────────────────────────────────
   const selStart = acc !== undefined ? performance.now() : 0;
@@ -175,6 +179,7 @@ export function runOneIteration(
         currentState = applied.state;
         currentNode = childNode;
         selectionDepth += 1;
+        selectionMoveKeys.push(chosen.moveKey);
 
         if (acc !== undefined) {
           acc.expansionTimeMs += performance.now() - expStart;
@@ -203,6 +208,9 @@ export function runOneIteration(
         currentState = applied.state;
         currentNode = solverChild;
         selectionDepth += 1;
+        if (solverChild.moveKey !== null) {
+          selectionMoveKeys.push(solverChild.moveKey);
+        }
         continue;
       }
     }
@@ -222,6 +230,9 @@ export function runOneIteration(
     currentState = applied.state;
     currentNode = selected;
     selectionDepth += 1;
+    if (selected.moveKey !== null) {
+      selectionMoveKeys.push(selected.moveKey);
+    }
   }
 
   // Finalize selection timing for non-expansion break paths.
@@ -242,7 +253,7 @@ export function runOneIteration(
       simResult = rollout(def, currentState, currentRng, config, runtime, acc);
       break;
     case 'hybrid':
-      simResult = simulateToCutoff(def, currentState, currentRng, config, runtime, acc);
+      simResult = simulateToCutoff(def, currentState, currentRng, config, runtime, acc, mastStats);
       break;
     case 'direct':
       // No simulation — evaluate the expansion state directly.
@@ -295,6 +306,14 @@ export function runOneIteration(
   // ── Backpropagation ──────────────────────────────────────────────────
   const bpStart = acc !== undefined ? performance.now() : 0;
   backpropagate(currentNode, rewards);
+
+  // ── MAST update ────────────────────────────────────────────────────
+  if (mastStats !== undefined) {
+    const allMoveKeys = [...selectionMoveKeys, ...simResult.traversedMoveKeys];
+    if (allMoveKeys.length > 0) {
+      updateMastStats(mastStats, allMoveKeys, rewards);
+    }
+  }
 
   // ── Solver proven-result propagation ───────────────────────────────
   if (solverActive) {
@@ -349,6 +368,9 @@ export function runSearch(
   // Check solver activation once at search start.
   const solverActive = canActivateSolver(def, state, config);
 
+  // Create MAST stats local to this search run.
+  const mastStats = config.rolloutPolicy === 'mast' ? createMastStats() : undefined;
+
   const deadline =
     config.timeLimitMs !== undefined ? Date.now() + config.timeLimitMs : undefined;
 
@@ -395,6 +417,7 @@ export function runSearch(
       pool,
       solverActive,
       acc,
+      mastStats,
     );
     // Consume the iteration's RNG output (determinism is via fork chain).
     void result;

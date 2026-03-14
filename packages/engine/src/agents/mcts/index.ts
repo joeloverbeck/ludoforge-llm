@@ -25,6 +25,9 @@ export type { SimulationResult } from './rollout.js';
 
 export { terminalToRewards, sigmoid, evaluateForAllPlayers } from './evaluate.js';
 
+export { createMastStats, updateMastStats, mastSelectMove } from './mast.js';
+export type { MastStats, MastEntry } from './mast.js';
+
 export { backpropagate, runOneIteration, runSearch, selectRootDecision } from './search.js';
 
 export { canActivateSolver, updateSolverResult, selectSolverAwareChild } from './solver.js';

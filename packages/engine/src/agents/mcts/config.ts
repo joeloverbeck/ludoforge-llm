@@ -5,7 +5,7 @@
  */
 
 /** Allowed rollout policies. */
-const ROLLOUT_POLICIES = ['random', 'epsilonGreedy'] as const;
+const ROLLOUT_POLICIES = ['random', 'epsilonGreedy', 'mast'] as const;
 type RolloutPolicy = (typeof ROLLOUT_POLICIES)[number];
 
 /** Allowed solver modes. */
@@ -62,6 +62,9 @@ export interface MctsConfig {
   /** Maximum plies for hybrid cutoff simulation. */
   readonly hybridCutoffDepth: number;
 
+  /** MAST warm-up threshold: minimum `totalUpdates` before exploitation. */
+  readonly mastWarmUpThreshold: number;
+
   /** Optional internal diagnostics for tuning/tests. */
   readonly diagnostics?: boolean;
 }
@@ -74,13 +77,14 @@ export const DEFAULT_MCTS_CONFIG: MctsConfig = Object.freeze({
   progressiveWideningK: 2.0,
   progressiveWideningAlpha: 0.5,
   templateCompletionsPerVisit: 2,
-  rolloutPolicy: 'epsilonGreedy' as const,
+  rolloutPolicy: 'mast' as const,
   rolloutEpsilon: 0.15,
   rolloutCandidateSample: 6,
   heuristicTemperature: 10_000,
   solverMode: 'off' as const,
   rolloutMode: 'hybrid' as const,
   hybridCutoffDepth: 6,
+  mastWarmUpThreshold: 32,
 });
 
 // ---------------------------------------------------------------------------
@@ -137,9 +141,9 @@ export type MctsPreset = 'fast' | 'default' | 'strong';
  * `default` is an empty partial — it resolves to `DEFAULT_MCTS_CONFIG`.
  */
 export const MCTS_PRESETS: Readonly<Record<MctsPreset, Partial<MctsConfig>>> = Object.freeze({
-  fast: Object.freeze({ iterations: 200, maxSimulationDepth: 16, rolloutPolicy: 'random' as const, timeLimitMs: 2_000, rolloutMode: 'hybrid' as const, hybridCutoffDepth: 4 }),
-  default: Object.freeze({ timeLimitMs: 10_000, rolloutMode: 'hybrid' as const, hybridCutoffDepth: 6 }),
-  strong: Object.freeze({ iterations: 5000, maxSimulationDepth: 64, templateCompletionsPerVisit: 4, timeLimitMs: 30_000, rolloutMode: 'hybrid' as const, hybridCutoffDepth: 8 }),
+  fast: Object.freeze({ iterations: 200, maxSimulationDepth: 16, rolloutPolicy: 'mast' as const, timeLimitMs: 2_000, rolloutMode: 'hybrid' as const, hybridCutoffDepth: 4 }),
+  default: Object.freeze({ rolloutPolicy: 'mast' as const, timeLimitMs: 10_000, rolloutMode: 'hybrid' as const, hybridCutoffDepth: 6 }),
+  strong: Object.freeze({ iterations: 5000, maxSimulationDepth: 64, rolloutPolicy: 'mast' as const, templateCompletionsPerVisit: 4, timeLimitMs: 30_000, rolloutMode: 'hybrid' as const, hybridCutoffDepth: 8 }),
 });
 
 /** All recognised preset names (for validation). */
@@ -181,6 +185,9 @@ export function validateMctsConfig(partial: Partial<MctsConfig>): MctsConfig {
 
   // Hybrid cutoff depth
   assertPositiveInt('hybridCutoffDepth', merged.hybridCutoffDepth);
+
+  // MAST warm-up threshold
+  assertNonNegativeInt('mastWarmUpThreshold', merged.mastWarmUpThreshold);
 
   // Optional wall-clock
   if (merged.timeLimitMs !== undefined) {

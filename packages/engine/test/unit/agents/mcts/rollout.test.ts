@@ -335,6 +335,7 @@ describe('simulateToCutoff', () => {
     rolloutCandidateSample: 6,
     hybridCutoffDepth: 3,
     templateCompletionsPerVisit: 2,
+    mastWarmUpThreshold: 32,
   };
 
   it('caps simulation at hybridCutoffDepth plies', () => {

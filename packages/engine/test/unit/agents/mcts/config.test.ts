@@ -21,13 +21,14 @@ describe('MctsConfig defaults', () => {
       progressiveWideningK: 2.0,
       progressiveWideningAlpha: 0.5,
       templateCompletionsPerVisit: 2,
-      rolloutPolicy: 'epsilonGreedy',
+      rolloutPolicy: 'mast',
       rolloutEpsilon: 0.15,
       rolloutCandidateSample: 6,
       heuristicTemperature: 10_000,
       solverMode: 'off',
       rolloutMode: 'hybrid',
       hybridCutoffDepth: 6,
+      mastWarmUpThreshold: 32,
     };
     assert.deepEqual(DEFAULT_MCTS_CONFIG, expected);
   });
@@ -212,7 +213,7 @@ describe('resolvePreset', () => {
     const cfg = resolvePreset('fast');
     assert.equal(cfg.iterations, 200);
     assert.equal(cfg.maxSimulationDepth, 16);
-    assert.equal(cfg.rolloutPolicy, 'random');
+    assert.equal(cfg.rolloutPolicy, 'mast');
     assert.equal(cfg.timeLimitMs, 2_000);
     assert.equal(cfg.rolloutMode, 'hybrid');
     assert.equal(cfg.hybridCutoffDepth, 4);
@@ -223,7 +224,7 @@ describe('resolvePreset', () => {
     assert.equal(cfg.timeLimitMs, 10_000);
     assert.equal(cfg.iterations, DEFAULT_MCTS_CONFIG.iterations);
     assert.equal(cfg.explorationConstant, DEFAULT_MCTS_CONFIG.explorationConstant);
-    assert.equal(cfg.rolloutPolicy, DEFAULT_MCTS_CONFIG.rolloutPolicy);
+    assert.equal(cfg.rolloutPolicy, 'mast');
     assert.equal(cfg.rolloutMode, 'hybrid');
     assert.equal(cfg.hybridCutoffDepth, 6);
   });
@@ -255,5 +256,42 @@ describe('resolvePreset', () => {
     const a = resolvePreset('fast');
     const b = resolvePreset('fast');
     assert.deepEqual(a, b);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// MAST policy and config
+// ---------------------------------------------------------------------------
+
+describe('MAST config support', () => {
+  it('"mast" is a valid rolloutPolicy value', () => {
+    assert.doesNotThrow(() => validateMctsConfig({ rolloutPolicy: 'mast' }));
+  });
+
+  it('named presets use rolloutPolicy: "mast"', () => {
+    for (const name of MCTS_PRESET_NAMES) {
+      const cfg = resolvePreset(name);
+      assert.equal(cfg.rolloutPolicy, 'mast', `preset "${name}" should use rolloutPolicy "mast"`);
+    }
+  });
+
+  it('mastWarmUpThreshold defaults to 32', () => {
+    const cfg = validateMctsConfig({});
+    assert.equal(cfg.mastWarmUpThreshold, 32);
+  });
+
+  it('mastWarmUpThreshold is validated as non-negative integer', () => {
+    assert.doesNotThrow(() => validateMctsConfig({ mastWarmUpThreshold: 0 }));
+    assert.doesNotThrow(() => validateMctsConfig({ mastWarmUpThreshold: 100 }));
+    assert.throws(
+      () => validateMctsConfig({ mastWarmUpThreshold: -1 }),
+      (err: unknown) =>
+        err instanceof RangeError && /mastWarmUpThreshold/.test((err as RangeError).message),
+    );
+    assert.throws(
+      () => validateMctsConfig({ mastWarmUpThreshold: 1.5 }),
+      (err: unknown) =>
+        err instanceof RangeError && /mastWarmUpThreshold/.test((err as RangeError).message),
+    );
   });
 });

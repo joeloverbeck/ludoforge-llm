@@ -36,17 +36,16 @@ fi
 
 echo "Regression gate passed." >&2
 
-# --- Step 3: Run MCTS fast-profile core tests for metric measurement ---
-# Runs only the fast-profile MCTS e2e test file WITHOUT RUN_MCTS_E2E=1.
-# This executes only the 3 core smoke tests:
-#   - 2-player fast game (200 turns, seed 201)
-#   - determinism check (10 turns, seed 501)
-#   - timing bounds (200 turns, seed 701)
-# Extended tests (3p, 6p, mixed) are skipped automatically.
-echo "Running MCTS fast-profile core tests for metric..." >&2
+# --- Step 3: Run campaign benchmark for metric measurement ---
+# Uses the campaign-specific benchmark file (not part of CI lanes).
+# Exercises real Texas Hold'em production spec with fast MCTS preset:
+#   - 2-player game, 10 turns, seed 201 (primary workload)
+#   - determinism check, 3 turns, seed 501 (lightweight)
+# Target total runtime: ~2-3 minutes at baseline.
+echo "Running MCTS campaign benchmark for metric..." >&2
 cd "$PROJECT_ROOT/packages/engine"
 set +e
-node --test dist/test/e2e/mcts/texas-holdem-mcts-fast.test.js > "$LOG_FILE" 2>&1
+node --test dist/test/e2e/mcts/texas-holdem-mcts-campaign-bench.test.js > "$LOG_FILE" 2>&1
 TEST_EXIT=$?
 set -e
 

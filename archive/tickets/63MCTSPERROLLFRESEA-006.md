@@ -1,6 +1,6 @@
 # 63MCTSPERROLLFRESEA-006: Confidence-based root stopping
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `agents/mcts/config.ts`, `agents/mcts/search.ts`, `agents/mcts/diagnostics.ts`
@@ -122,3 +122,17 @@ The field was declared in ticket 001's extension of `MctsSearchDiagnostics`. Thi
 1. `pnpm turbo build && node --test packages/engine/dist/test/unit/agents/mcts/root-confidence-stop.test.js`
 2. `pnpm turbo build && pnpm -F @ludoforge/engine test`
 3. `pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-14
+- **What changed**:
+  - `config.ts`: Added `rootStopConfidenceDelta` (default `1e-3`) and `rootStopMinVisits` (default `16`) with validation.
+  - `search.ts`: Added `shouldStopByConfidence()` pure function (Hoeffding bound + visit-ratio guard). Wired into `runSearch()` after time check, before iteration budget.
+  - `diagnostics.ts`: No changes needed — `rootStopReason` field and `stopReason` variable already existed from prior tickets.
+  - `root-confidence-stop.test.ts` (new): 12 tests (8 unit for `shouldStopByConfidence`, 4 integration for `runSearch` stop reasons).
+  - `config.test.ts`: 11 new tests for confidence stop config defaults and validation.
+- **Deviations from plan**:
+  - Ticket assumption 4 stated `root.children` is `Map<string, MctsNode>` but it is actually `MctsNode[]`. No impact on implementation since the algorithm iterates children regardless of collection type.
+  - `diagnostics.ts` did not require modification — `rootStopReason` was already declared and populated by prior work.
+- **Verification**: Build pass, 4588/4588 engine tests pass, typecheck pass, lint pass.

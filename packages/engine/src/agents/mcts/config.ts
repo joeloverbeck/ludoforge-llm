@@ -74,6 +74,12 @@ export interface MctsConfig {
   /** Max entries in the state-info cache. Defaults to min(pool.capacity, iterations * 4). */
   readonly maxStateInfoCacheEntries?: number;
 
+  /** Hoeffding-bound delta for confidence-based root stopping. Must be in (0, 1). */
+  readonly rootStopConfidenceDelta?: number;
+
+  /** Minimum visits per child before confidence stop is considered. Must be a positive integer. */
+  readonly rootStopMinVisits?: number;
+
   /** Optional internal diagnostics for tuning/tests. */
   readonly diagnostics?: boolean;
 }
@@ -95,6 +101,8 @@ export const DEFAULT_MCTS_CONFIG: MctsConfig = Object.freeze({
   hybridCutoffDepth: 6,
   mastWarmUpThreshold: 32,
   compressForcedSequences: true,
+  rootStopConfidenceDelta: 1e-3,
+  rootStopMinVisits: 16,
 });
 
 // ---------------------------------------------------------------------------
@@ -207,6 +215,22 @@ export function validateMctsConfig(partial: Partial<MctsConfig>): MctsConfig {
   // State-info cache
   if (merged.maxStateInfoCacheEntries !== undefined) {
     assertPositiveInt('maxStateInfoCacheEntries', merged.maxStateInfoCacheEntries);
+  }
+
+  // Confidence-based root stopping
+  if (merged.rootStopConfidenceDelta !== undefined) {
+    if (
+      !Number.isFinite(merged.rootStopConfidenceDelta) ||
+      merged.rootStopConfidenceDelta <= 0 ||
+      merged.rootStopConfidenceDelta >= 1
+    ) {
+      throw new RangeError(
+        `MctsConfig.rootStopConfidenceDelta must be in (0, 1), got ${merged.rootStopConfidenceDelta}`,
+      );
+    }
+  }
+  if (merged.rootStopMinVisits !== undefined) {
+    assertPositiveInt('rootStopMinVisits', merged.rootStopMinVisits);
   }
 
   return Object.freeze(merged);

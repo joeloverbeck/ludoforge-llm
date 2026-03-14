@@ -39,6 +39,76 @@ import {
 } from './state-cache.js';
 
 // ---------------------------------------------------------------------------
+// Confidence-based root stopping (Hoeffding bound)
+// ---------------------------------------------------------------------------
+
+/**
+ * Determine whether the best root action is statistically separated from
+ * the runner-up using Hoeffding's inequality.
+ *
+ * Two guards prevent premature stops:
+ * 1. Both best and runner-up must have >= `minVisits`.
+ * 2. Best must have > 2× the runner-up's visits (visit-ratio guard).
+ *
+ * Rewards are assumed to be in [0, 1] (consistent with sigmoid normalisation
+ * in evaluate.ts), so the Hoeffding bound range parameter is 1.
+ *
+ * @returns `true` when the search can safely stop early.
+ */
+export function shouldStopByConfidence(
+  root: MctsNode,
+  rootPlayerOrdinal: number,
+  delta: number,
+  minVisits: number,
+): boolean {
+  if (root.children.length < 2) {
+    return false;
+  }
+
+  // Find best and runner-up children by mean reward for rootPlayer.
+  let best: MctsNode | null = null;
+  let bestMean = -Infinity;
+  let runnerUp: MctsNode | null = null;
+  let runnerUpMean = -Infinity;
+
+  for (const child of root.children) {
+    if (child.visits === 0) continue;
+    const mean = child.totalReward[rootPlayerOrdinal]! / child.visits;
+    if (mean > bestMean) {
+      runnerUp = best;
+      runnerUpMean = bestMean;
+      best = child;
+      bestMean = mean;
+    } else if (mean > runnerUpMean) {
+      runnerUp = child;
+      runnerUpMean = mean;
+    }
+  }
+
+  if (best === null || runnerUp === null) {
+    return false;
+  }
+
+  // Guard: both must have sufficient visits.
+  if (best.visits < minVisits || runnerUp.visits < minVisits) {
+    return false;
+  }
+
+  // Guard: visit-ratio — best must dominate.
+  if (best.visits <= 2 * runnerUp.visits) {
+    return false;
+  }
+
+  // Hoeffding radius: sqrt(ln(1/delta) / (2 * n)), with range = 1.
+  const lnInvDelta = Math.log(1 / delta);
+  const bestRadius = Math.sqrt(lnInvDelta / (2 * best.visits));
+  const runnerUpRadius = Math.sqrt(lnInvDelta / (2 * runnerUp.visits));
+
+  // Confidence intervals don't overlap ⇒ lower bound of best > upper bound of runner-up.
+  return (bestMean - bestRadius) > (runnerUpMean + runnerUpRadius);
+}
+
+// ---------------------------------------------------------------------------
 // Backpropagation
 // ---------------------------------------------------------------------------
 
@@ -464,6 +534,20 @@ export function runSearch(
       Date.now() >= deadline
     ) {
       stopReason = 'time';
+      break;
+    }
+
+    // Confidence-based early exit (only after minIterations).
+    if (
+      iterations >= config.minIterations &&
+      shouldStopByConfidence(
+        root,
+        observer as number,
+        config.rootStopConfidenceDelta ?? 1e-3,
+        config.rootStopMinVisits ?? 16,
+      )
+    ) {
+      stopReason = 'confidence';
       break;
     }
 

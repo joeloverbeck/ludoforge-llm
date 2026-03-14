@@ -30,6 +30,8 @@ describe('MctsConfig defaults', () => {
       hybridCutoffDepth: 6,
       mastWarmUpThreshold: 32,
       compressForcedSequences: true,
+      rootStopConfidenceDelta: 1e-3,
+      rootStopMinVisits: 16,
     };
     assert.deepEqual(DEFAULT_MCTS_CONFIG, expected);
   });
@@ -370,5 +372,87 @@ describe('forced-sequence compression config', () => {
   it('compressForcedSequences can be set to true explicitly', () => {
     const cfg = validateMctsConfig({ compressForcedSequences: true });
     assert.equal(cfg.compressForcedSequences, true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Confidence-based root stopping config
+// ---------------------------------------------------------------------------
+
+describe('confidence-based root stopping config', () => {
+  it('rootStopConfidenceDelta defaults to 1e-3', () => {
+    const cfg = validateMctsConfig({});
+    assert.equal(cfg.rootStopConfidenceDelta, 1e-3);
+  });
+
+  it('rootStopMinVisits defaults to 16', () => {
+    const cfg = validateMctsConfig({});
+    assert.equal(cfg.rootStopMinVisits, 16);
+  });
+
+  it('rootStopConfidenceDelta accepts valid value in (0, 1)', () => {
+    const cfg = validateMctsConfig({ rootStopConfidenceDelta: 0.05 });
+    assert.equal(cfg.rootStopConfidenceDelta, 0.05);
+  });
+
+  it('rootStopConfidenceDelta rejects 0', () => {
+    assert.throws(
+      () => validateMctsConfig({ rootStopConfidenceDelta: 0 }),
+      (err: unknown) =>
+        err instanceof RangeError && /rootStopConfidenceDelta/.test((err as RangeError).message),
+    );
+  });
+
+  it('rootStopConfidenceDelta rejects 1', () => {
+    assert.throws(
+      () => validateMctsConfig({ rootStopConfidenceDelta: 1 }),
+      (err: unknown) =>
+        err instanceof RangeError && /rootStopConfidenceDelta/.test((err as RangeError).message),
+    );
+  });
+
+  it('rootStopConfidenceDelta rejects negative', () => {
+    assert.throws(
+      () => validateMctsConfig({ rootStopConfidenceDelta: -0.1 }),
+      (err: unknown) =>
+        err instanceof RangeError && /rootStopConfidenceDelta/.test((err as RangeError).message),
+    );
+  });
+
+  it('rootStopConfidenceDelta rejects > 1', () => {
+    assert.throws(
+      () => validateMctsConfig({ rootStopConfidenceDelta: 1.5 }),
+      (err: unknown) =>
+        err instanceof RangeError && /rootStopConfidenceDelta/.test((err as RangeError).message),
+    );
+  });
+
+  it('rootStopMinVisits accepts positive integer', () => {
+    const cfg = validateMctsConfig({ rootStopMinVisits: 32 });
+    assert.equal(cfg.rootStopMinVisits, 32);
+  });
+
+  it('rootStopMinVisits rejects 0', () => {
+    assert.throws(
+      () => validateMctsConfig({ rootStopMinVisits: 0 }),
+      (err: unknown) =>
+        err instanceof RangeError && /rootStopMinVisits/.test((err as RangeError).message),
+    );
+  });
+
+  it('rootStopMinVisits rejects negative', () => {
+    assert.throws(
+      () => validateMctsConfig({ rootStopMinVisits: -1 }),
+      (err: unknown) =>
+        err instanceof RangeError && /rootStopMinVisits/.test((err as RangeError).message),
+    );
+  });
+
+  it('rootStopMinVisits rejects non-integer', () => {
+    assert.throws(
+      () => validateMctsConfig({ rootStopMinVisits: 1.5 }),
+      (err: unknown) =>
+        err instanceof RangeError && /rootStopMinVisits/.test((err as RangeError).message),
+    );
   });
 });

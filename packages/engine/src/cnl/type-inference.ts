@@ -37,7 +37,10 @@ export function inferValueExprType(expr: ValueExpr, ctx: TypeInferenceContext): 
   }
 
   if ('concat' in expr) {
-    return 'string';
+    const childTypes = expr.concat.map((child) => inferValueExprType(child, ctx));
+    return childTypes.every((childType) => childType === 'string' || childType === 'number' || childType === 'boolean')
+      ? 'string'
+      : 'unknown';
   }
 
   if ('if' in expr) {

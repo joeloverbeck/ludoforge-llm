@@ -77,7 +77,18 @@ export function evalValue(expr: ValueExpr, ctx: ReadContext): ScalarValue | Scal
   }
 
   if (!Array.isArray(expr) && 'concat' in expr) {
-    return expr.concat.map((child) => String(evalValue(child, ctx))).join('');
+    const parts = expr.concat.map((child) => evalValue(child, ctx));
+    const arrayParts = parts.filter(Array.isArray);
+    if (arrayParts.length === 0) {
+      return parts.map((part) => String(part)).join('');
+    }
+    if (arrayParts.length !== parts.length) {
+      throw typeMismatchError('concat expressions must not mix scalar and scalar-array parts', {
+        expr,
+        parts,
+      });
+    }
+    return parts.flatMap((part) => part);
   }
 
   if ('if' in expr) {

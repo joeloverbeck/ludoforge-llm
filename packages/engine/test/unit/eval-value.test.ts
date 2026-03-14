@@ -510,6 +510,36 @@ describe('evalValue', () => {
     assert.equal(evalValue({ concat: [] }, ctx), '');
   });
 
+  it('evaluates concat with scalar-array parts by flattening them left-to-right', () => {
+    const ctx = makeCtx({
+      bindings: {
+        $enemySeats: ['NVA', 'VC'],
+      },
+    });
+
+    assert.deepEqual(
+      evalValue(
+        {
+          concat: [
+            { scalarArray: ['US'] },
+            { ref: 'binding', name: '$enemySeats' },
+            { scalarArray: ['ARVN'] },
+          ],
+        },
+        ctx,
+      ),
+      ['US', 'NVA', 'VC', 'ARVN'],
+    );
+  });
+
+  it('rejects concat expressions that mix scalar and scalar-array parts', () => {
+    const ctx = makeCtx();
+    assert.throws(
+      () => evalValue({ concat: [{ scalarArray: ['US'] }, 'VC'] }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
   it('evaluates conditional if/then/else — true branch', () => {
     const ctx = makeCtx();
     const expr: ValueExpr = {

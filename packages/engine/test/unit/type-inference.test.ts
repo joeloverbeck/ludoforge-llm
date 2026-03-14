@@ -276,6 +276,13 @@ describe('inferValueExprType', () => {
       );
     });
 
+    it('falls back to unknown for concat expressions containing scalar arrays', () => {
+      assert.equal(
+        inferValueExprType({ concat: [{ scalarArray: ['US'] }, { scalarArray: ['ARVN'] }] }, emptyCtx),
+        'unknown',
+      );
+    });
+
     it('infers matching type for if with same then/else types', () => {
       assert.equal(
         inferValueExprType(

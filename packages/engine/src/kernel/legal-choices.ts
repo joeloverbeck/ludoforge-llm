@@ -86,7 +86,7 @@ interface LegalChoicesInternalOptions extends LegalChoicesRuntimeOptions {
 const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undefined =>
   def.actions.find((action) => action.id === actionId);
 
-interface LegalChoicesPreparedContext {
+export interface LegalChoicesPreparedContext {
   readonly def: GameDef;
   readonly state: GameState;
   readonly action: ActionDef;

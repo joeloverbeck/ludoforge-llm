@@ -1,6 +1,6 @@
 # 63CHOOPEROPT-007: Extract ChooseNTemplate from effects-choice.ts
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — effects-choice.ts, new choose-n-session.ts
@@ -30,7 +30,7 @@ The worker-local session (Phase B) needs a `ChooseNTemplate` — the selection-i
 interface ChooseNTemplate {
   readonly decisionKey: DecisionKey;
   readonly name: string;
-  readonly normalizedDomain: readonly MoveParamValue[];
+  readonly normalizedDomain: readonly MoveParamScalar[];
   readonly domainIndex: ReadonlyMap<string, number>;  // stable option ordering
   readonly cardinalityBounds: { min: number; max: number };
   readonly targetKinds: readonly string[] | null;
@@ -64,6 +64,7 @@ A chooseN is session-eligible when:
 
 - `packages/engine/src/kernel/choose-n-session.ts` (new)
 - `packages/engine/src/kernel/effects-choice.ts` (modify — extract template creation)
+- `packages/engine/src/kernel/legal-choices.ts` (modify — export `LegalChoicesPreparedContext`)
 
 ## Out of Scope
 
@@ -95,9 +96,23 @@ A chooseN is session-eligible when:
 ### New/Modified Tests
 
 1. `packages/engine/test/unit/kernel/choose-n-session.test.ts` — template creation, rebuild parity, eligibility checks
-2. Modify `packages/engine/test/unit/kernel/effects-choice.test.ts` — verify extraction doesn't change existing behavior
+2. ~~`effects-choice.test.ts`~~ — no existing unit test file; extraction is a pure refactor verified by the full engine test suite
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-15
+- **What changed**:
+  - Exported `LegalChoicesPreparedContext` from `legal-choices.ts` (was private)
+  - Created `packages/engine/src/kernel/choose-n-session.ts` with `ChooseNTemplate`, `createChooseNTemplate()`, `rebuildPendingFromTemplate()`, `isChooseNSessionEligible()`
+  - Created `packages/engine/test/unit/kernel/choose-n-session.test.ts` (19 tests, 4 suites)
+- **Deviations from original plan**:
+  - `normalizedDomain` type corrected from `MoveParamValue` to `MoveParamScalar` (ticket assumption mismatch)
+  - `LegalChoicesPreparedContext` required export (was private; added to files-to-touch)
+  - `effects-choice.test.ts` does not exist; test plan item removed
+  - Added `choiceDecisionPlayer` and `chooser` fields to `ChooseNTemplate` (needed to rebuild the `decisionPlayer` conditional in the pending request)
+- **Verification**: Build passed, typecheck passed (3/3 packages), full engine test suite 4729/4729 pass

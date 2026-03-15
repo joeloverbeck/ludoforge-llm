@@ -4,6 +4,7 @@ import {
   type SingletonProbeBudget,
   type WitnessSearchBudget,
 } from './choose-n-option-resolution.js';
+import type { ChooseNTemplate } from './choose-n-session.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { applyEffects } from './effects.js';
 import { isEffectErrorCode, isEffectRuntimeReason } from './effect-error.js';
@@ -77,6 +78,8 @@ export {
 export interface LegalChoicesRuntimeOptions {
   readonly onDeferredPredicatesEvaluated?: (count: number) => void;
   readonly onProbeContextPrepared?: () => void;
+  /** Callback invoked when a chooseN pending choice is discovered, delivering the full-fidelity template for session-based optimization. */
+  readonly onChooseNTemplateCreated?: (template: ChooseNTemplate) => void;
 }
 
 interface LegalChoicesInternalOptions extends LegalChoicesRuntimeOptions {
@@ -123,6 +126,9 @@ const buildDiscoveryEffectContextBase = (
   ...(options?.transientChooseNSelections === undefined
     ? {}
     : { transientDecisionSelections: options.transientChooseNSelections }),
+  ...(options?.onChooseNTemplateCreated === undefined
+    ? {}
+    : { chooseNTemplateCallback: options.onChooseNTemplateCreated }),
 });
 
 const executeDiscoveryEffectsStrict = (

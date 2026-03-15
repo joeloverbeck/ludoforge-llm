@@ -2,10 +2,12 @@ import { evalQuery } from './eval-query.js';
 import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
 import { advanceScope, type DecisionKey } from './decision-scope.js';
+import { createChooseNTemplate } from './choose-n-session.js';
 import { deriveChoiceTargetKinds } from './choice-target-kinds.js';
 import { canConfirmChooseNSelection, resolveChooseNCardinality } from './choose-n-cardinality.js';
 import { effectRuntimeError } from './effect-error.js';
 import { resolveBindingTemplate } from './binding-template.js';
+import { createSeatResolutionContext } from './identity.js';
 import { nextInt } from './prng.js';
 import { resolveSinglePlayerSel } from './resolve-selectors.js';
 import { resolveZoneWithNormalization, selectorResolutionFailurePolicyForMode } from './selector-resolution-normalization.js';
@@ -15,6 +17,7 @@ import { computeTierAdmissibility, type PrioritizedTierEntry } from './prioritiz
 import { validateChooseNSelectedSequence } from './choose-n-selected-validation.js';
 import { normalizeChoiceDomain, toChoiceComparableValue, type MembershipScalar } from './value-membership.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
+import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type {
   ChoicePendingRequest,
@@ -783,24 +786,56 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
         bind,
         decisionKey,
       );
+      const targetKinds = deriveChoiceTargetKinds(chooseN.options);
+      const pendingChoice = buildChooseNPendingChoice({
+        choiceDecisionPlayer,
+        chooser: chooseN.chooser,
+        decisionKey,
+        name: bind,
+        normalizedOptions,
+        targetKinds,
+        minCardinality,
+        maxCardinality: clampedMax,
+        selectedSequence,
+        prioritizedTierEntries,
+        prioritizedQualifierMode,
+      });
+
+      if (ctx.chooseNTemplateCallback !== undefined) {
+        const action = ctx.def.actions.find((a) => String(a.id) === ctx.traceContext?.actionId);
+        const template = createChooseNTemplate({
+          decisionKey,
+          name: bind,
+          normalizedOptions,
+          targetKinds,
+          minCardinality,
+          maxCardinality: clampedMax,
+          prioritizedTierEntries,
+          qualifierMode: prioritizedQualifierMode,
+          preparedContext: {
+            def: ctx.def,
+            state: ctx.state,
+            action: action!,
+            adjacencyGraph: ctx.adjacencyGraph,
+            runtimeTableIndex: ctx.runtimeTableIndex ?? buildRuntimeTableIndex(ctx.def),
+            seatResolution: createSeatResolutionContext(ctx.def, ctx.state.playerCount),
+          },
+          partialMoveIdentity: {
+            actionId: ctx.traceContext?.actionId ?? '',
+            params: ctx.moveParams as Readonly<Record<string, unknown>>,
+          },
+          choiceDecisionPlayer,
+          chooser: chooseN.chooser,
+        });
+        ctx.chooseNTemplateCallback(template);
+      }
+
       return {
         state: ctx.state,
         rng: ctx.rng,
         bindings: ctx.bindings,
         decisionScope: scopeAdvance.scope,
-        pendingChoice: buildChooseNPendingChoice({
-          choiceDecisionPlayer,
-          chooser: chooseN.chooser,
-          decisionKey,
-          name: bind,
-          normalizedOptions,
-          targetKinds: deriveChoiceTargetKinds(chooseN.options),
-          minCardinality,
-          maxCardinality: clampedMax,
-          selectedSequence,
-          prioritizedTierEntries,
-          prioritizedQualifierMode,
-        }),
+        pendingChoice,
       };
     }
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseN missing move param binding: ${bind} (${decisionKey})`, {

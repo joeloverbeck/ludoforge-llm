@@ -1,13 +1,17 @@
 import {
   advanceChooseN,
+  advanceChooseNWithSession,
   applyMove,
   assertValidatedGameDefInput,
   completeTemplateMove,
+  createChooseNSession,
   createGameDefRuntime,
   describeAction as engineDescribeAction,
   enumerateLegalMoves,
   fork,
   initialState,
+  isChooseNSessionEligible,
+  isSessionValid,
   legalChoicesEvaluate,
   legalMoves,
   terminalResult,
@@ -19,7 +23,10 @@ import type {
   AnnotationContext,
   ApplyMoveResult,
   ChoiceRequest,
+  ChoicePendingChooseNRequest,
   ChooseNCommand,
+  ChooseNSession,
+  ChooseNTemplate,
   DecisionKey,
   EffectTraceEntry,
   ExecutionOptions,
@@ -249,6 +256,16 @@ export function createGameWorker(): GameWorkerAPI {
   let enableTrace = true;
   let latestMutationStamp: OperationStamp | null = null;
 
+  // ── ChooseN session state ───────────────────────────────────────────
+  let chooseNSession: ChooseNSession | null = null;
+  let revision = 0;
+
+  /** Increment revision and invalidate any active session. Called on every state mutation. */
+  const invalidateSession = (): void => {
+    revision += 1;
+    chooseNSession = null;
+  };
+
   const compareOperationStamp = (left: OperationStamp, right: OperationStamp): number => {
     if (left.epoch !== right.epoch) {
       return left.epoch - right.epoch;
@@ -273,6 +290,7 @@ export function createGameWorker(): GameWorkerAPI {
     state = nextInit.state;
     history = [];
     enableTrace = traceEnabled;
+    invalidateSession();
     return { state: nextInit.state, setupTrace: nextInit.setupTrace };
   };
 
@@ -289,6 +307,7 @@ export function createGameWorker(): GameWorkerAPI {
       };
       const result = applyMove(currentDef, currentState, move, executionOptions, runtime ?? undefined);
       state = result.state;
+      invalidateSession();
       return result;
     } catch (error) {
       history.pop();
@@ -321,7 +340,37 @@ export function createGameWorker(): GameWorkerAPI {
     async legalChoices(partialMove: Move): Promise<ChoiceRequest> {
       return withInternalErrorMapping(() => {
         const current = assertInitialized(def, state);
-        return legalChoicesEvaluate(current.def, current.state, partialMove);
+        let capturedTemplate: ChooseNTemplate | null = null;
+        const request = legalChoicesEvaluate(
+          current.def,
+          current.state,
+          partialMove,
+          {
+            onChooseNTemplateCreated: (template) => {
+              capturedTemplate = template;
+            },
+          },
+          runtime ?? undefined,
+        );
+
+        // Attempt to create a session if a chooseN template was captured.
+        chooseNSession = null;
+        if (
+          capturedTemplate !== null
+          && request.kind === 'pending'
+          && 'type' in request
+          && request.type === 'chooseN'
+          && isChooseNSessionEligible(capturedTemplate)
+        ) {
+          chooseNSession = createChooseNSession(
+            capturedTemplate,
+            (request as ChoicePendingChooseNRequest).selected,
+            request as ChoicePendingChooseNRequest,
+            revision,
+          );
+        }
+
+        return request;
       });
     },
 
@@ -333,6 +382,22 @@ export function createGameWorker(): GameWorkerAPI {
     ): Promise<AdvanceChooseNResult> {
       return withInternalErrorMapping(() => {
         const current = assertInitialized(def, state);
+
+        // Session fast path: use session if valid and matches the decision key.
+        if (
+          chooseNSession !== null
+          && isSessionValid(chooseNSession, revision)
+          && chooseNSession.decisionKey === decisionKey
+        ) {
+          try {
+            return advanceChooseNWithSession(chooseNSession, command);
+          } catch {
+            // Conservative fallback: discard session and use stateless path.
+            chooseNSession = null;
+          }
+        }
+
+        // Stateless fallback.
         return advanceChooseN(
           current.def,
           current.state,
@@ -475,6 +540,7 @@ export function createGameWorker(): GameWorkerAPI {
 
     async undo(stamp: OperationStamp): Promise<GameState | null> {
       ensureFreshMutation(stamp);
+      invalidateSession();
       if (history.length === 0) {
         return null;
       }

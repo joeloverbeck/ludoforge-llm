@@ -1,6 +1,6 @@
 # 63CHOOPEROPT-002: Refactor mapChooseNOptions into strategy dispatcher
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — legal-choices.ts

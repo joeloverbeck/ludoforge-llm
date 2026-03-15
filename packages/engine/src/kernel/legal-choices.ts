@@ -42,6 +42,7 @@ import type {
   ActionDef,
   ChoiceIllegalRequest,
   ChoiceOption,
+  ChoicePendingChooseNRequest,
   ChoicePendingRequest,
   ChoiceRequest,
   EffectAST,
@@ -52,7 +53,20 @@ import type {
 } from './types.js';
 
 const COMPLETE: ChoiceRequest = { kind: 'complete', complete: true };
-const MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS = 1024;
+const MAX_CHOOSE_N_EXACT_ENUMERATION_COMBINATIONS = 1024;
+
+/** Count-based budget for singleton probe passes (consumed in 63CHOOPEROPT-003). */
+const MAX_CHOOSE_N_TOTAL_PROBE_BUDGET = 4096;
+
+/** Count-based budget for witness search nodes (consumed in 63CHOOPEROPT-004). */
+const MAX_CHOOSE_N_TOTAL_WITNESS_NODES = 2048;
+
+// Re-export budget constants for test oracle access.
+export {
+  MAX_CHOOSE_N_EXACT_ENUMERATION_COMBINATIONS,
+  MAX_CHOOSE_N_TOTAL_PROBE_BUDGET,
+  MAX_CHOOSE_N_TOTAL_WITNESS_NODES,
+};
 
 export interface LegalChoicesRuntimeOptions {
   readonly onDeferredPredicatesEvaluated?: (count: number) => void;
@@ -233,58 +247,19 @@ const classifyProbeOutcomeLegality = (
   };
 };
 
-const mapChooseNOptions = (
+/**
+ * Exhaustive combination enumerator — exact path for small search spaces.
+ * Also serves as the test oracle for the hybrid resolver.
+ */
+const resolveChooseNOptionsExhaustive = (
   evaluateProbeMove: (move: Move) => ChoiceRequest,
   classifyProbeMoveSatisfiability: (move: Move) => DecisionSequenceSatisfiability,
   partialMove: Move,
-  request: ChoicePendingRequest,
+  request: ChoicePendingChooseNRequest,
+  uniqueOptions: readonly Move['params'][string][],
+  minAdditionalSelections: number,
+  maxAdditionalSelections: number,
 ): readonly ChoiceOption[] => {
-  if (request.type !== 'chooseN') {
-    throw new Error('mapChooseNOptions requires a chooseN request');
-  }
-  const selectedKeys = new Set(request.selected.map((value) => optionKey(value)));
-  const uniqueOptions: Move['params'][string][] = [];
-  const uniqueByKey = new Map<string, Move['params'][string]>();
-  for (const option of request.options) {
-    const key = optionKey(option.value);
-    if (selectedKeys.has(key) || uniqueByKey.has(key)) {
-      continue;
-    }
-    uniqueByKey.set(key, option.value);
-    uniqueOptions.push(option.value);
-  }
-
-  const minAdditionalSelections = Math.max(0, (request.min ?? 0) - request.selected.length);
-  const maxAdditionalSelections = Math.min(
-    Math.max(0, (request.max ?? uniqueOptions.length) - request.selected.length),
-    uniqueOptions.length,
-  );
-  if (minAdditionalSelections > maxAdditionalSelections) {
-    return request.options.map((option) => ({
-      value: option.value,
-      legality: 'illegal',
-      illegalReason: null,
-      resolution: 'exact' as const,
-    }));
-  }
-
-  let totalCombinations = 0;
-  for (let size = minAdditionalSelections; size <= maxAdditionalSelections; size += 1) {
-    totalCombinations += countCombinationsCapped(
-      uniqueOptions.length,
-      size,
-      MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS - totalCombinations + 1,
-    );
-    if (totalCombinations > MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS) {
-      return request.options.map((option) => ({
-        value: option.value,
-        legality: 'unknown',
-        illegalReason: null,
-        resolution: 'provisional' as const,
-      }));
-    }
-  }
-
   const optionLegalityByKey = new Map<string, { legality: ChoiceOption['legality']; illegalReason: ChoiceOption['illegalReason'] }>();
   const fixedIllegalOptionKeys = new Set<string>();
   for (const option of request.options) {
@@ -400,6 +375,87 @@ const mapChooseNOptions = (
       resolution: 'exact' as const,
     };
   });
+};
+
+/**
+ * Strategy dispatcher for chooseN option resolution.
+ *
+ * Routes to the exact exhaustive enumerator for small domains,
+ * or produces a mixed surface (static-exact + provisional) for large domains.
+ */
+const mapChooseNOptions = (
+  evaluateProbeMove: (move: Move) => ChoiceRequest,
+  classifyProbeMoveSatisfiability: (move: Move) => DecisionSequenceSatisfiability,
+  partialMove: Move,
+  request: ChoicePendingRequest,
+): readonly ChoiceOption[] => {
+  if (request.type !== 'chooseN') {
+    throw new Error('mapChooseNOptions requires a chooseN request');
+  }
+  const selectedKeys = new Set(request.selected.map((value) => optionKey(value)));
+  const uniqueOptions: Move['params'][string][] = [];
+  const uniqueByKey = new Map<string, Move['params'][string]>();
+  for (const option of request.options) {
+    const key = optionKey(option.value);
+    if (selectedKeys.has(key) || uniqueByKey.has(key)) {
+      continue;
+    }
+    uniqueByKey.set(key, option.value);
+    uniqueOptions.push(option.value);
+  }
+
+  const minAdditionalSelections = Math.max(0, (request.min ?? 0) - request.selected.length);
+  const maxAdditionalSelections = Math.min(
+    Math.max(0, (request.max ?? uniqueOptions.length) - request.selected.length),
+    uniqueOptions.length,
+  );
+  if (minAdditionalSelections > maxAdditionalSelections) {
+    return request.options.map((option) => ({
+      value: option.value,
+      legality: 'illegal',
+      illegalReason: null,
+      resolution: 'exact' as const,
+    }));
+  }
+
+  let totalCombinations = 0;
+  for (let size = minAdditionalSelections; size <= maxAdditionalSelections; size += 1) {
+    totalCombinations += countCombinationsCapped(
+      uniqueOptions.length,
+      size,
+      MAX_CHOOSE_N_EXACT_ENUMERATION_COMBINATIONS - totalCombinations + 1,
+    );
+    if (totalCombinations > MAX_CHOOSE_N_EXACT_ENUMERATION_COMBINATIONS) {
+      // Large domain: preserve statically-resolved options, mark unresolved provisional.
+      return request.options.map((option) => {
+        const key = optionKey(option.value);
+        if (selectedKeys.has(key) || option.legality === 'illegal') {
+          return {
+            value: option.value,
+            legality: 'illegal' as const,
+            illegalReason: option.legality === 'illegal' ? option.illegalReason : null,
+            resolution: 'exact' as const,
+          };
+        }
+        return {
+          value: option.value,
+          legality: 'unknown' as const,
+          illegalReason: null,
+          resolution: 'provisional' as const,
+        };
+      });
+    }
+  }
+
+  return resolveChooseNOptionsExhaustive(
+    evaluateProbeMove,
+    classifyProbeMoveSatisfiability,
+    partialMove,
+    request,
+    uniqueOptions,
+    minAdditionalSelections,
+    maxAdditionalSelections,
+  );
 };
 
 const mapOptionsForPendingChoice = (

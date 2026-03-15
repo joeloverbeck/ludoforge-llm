@@ -2120,7 +2120,20 @@ actionPipelines:
                                     - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                                 - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'northVietnam' }
                           min: 1
-                          max: 99
+                          max:
+                            if:
+                              when:
+                                op: and
+                                args:
+                                  - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                                  - op: '>'
+                                    left:
+                                      aggregate:
+                                        op: count
+                                        query: { query: grantContext, key: maxSpaces }
+                                    right: 0
+                              then: { ref: grantContext, key: maxSpaces }
+                              else: 99
 
       - stage: move-troops
         effects:
@@ -2162,10 +2175,24 @@ actionPipelines:
                           token: $troop
                           from: { zoneExpr: { ref: tokenZone, token: $troop } }
                           to: $space
-                - macro: sweep-loc-hop
-                  args:
-                    space: $space
-                    troopFaction: 'US'
+                - if:
+                    when:
+                      op: or
+                      args:
+                        - { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
+                        - op: '=='
+                          left:
+                            aggregate:
+                              op: count
+                              query: { query: grantContext, key: allowTroopMovement }
+                          right: 0
+                        - { op: '!=', left: { ref: grantContext, key: allowTroopMovement }, right: false }
+                    then:
+                      - macro: sweep-loc-hop
+                        args:
+                          space: $space
+                          troopFaction: 'US'
+                    else: []
 
       - stage: activate-guerrillas
         effects:
@@ -2270,7 +2297,17 @@ actionPipelines:
                           max:
                             if:
                               when: { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
-                              then: 99
+                              then:
+                                if:
+                                  when:
+                                    op: '>'
+                                    left:
+                                      aggregate:
+                                        op: count
+                                        query: { query: grantContext, key: maxSpaces }
+                                    right: 0
+                                  then: { ref: grantContext, key: maxSpaces }
+                                  else: 99
                               else:
                                 op: floorDiv
                                 left: { ref: gvar, var: arvnResources }
@@ -2320,10 +2357,24 @@ actionPipelines:
                           token: $troop
                           from: { zoneExpr: { ref: tokenZone, token: $troop } }
                           to: $space
-                - macro: sweep-loc-hop
-                  args:
-                    space: $space
-                    troopFaction: 'ARVN'
+                - if:
+                    when:
+                      op: or
+                      args:
+                        - { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
+                        - op: '=='
+                          left:
+                            aggregate:
+                              op: count
+                              query: { query: grantContext, key: allowTroopMovement }
+                          right: 0
+                        - { op: '!=', left: { ref: grantContext, key: allowTroopMovement }, right: false }
+                    then:
+                      - macro: sweep-loc-hop
+                        args:
+                          space: $space
+                          troopFaction: 'ARVN'
+                    else: []
                 - macro: sweep-activation
                   args:
                     space: $space
@@ -2407,7 +2458,20 @@ actionPipelines:
                                   left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
                                   right: 0
                           min: 1
-                          max: 99
+                          max:
+                            if:
+                              when:
+                                op: and
+                                args:
+                                  - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                                  - op: '>'
+                                    left:
+                                      aggregate:
+                                        op: count
+                                        query: { query: grantContext, key: maxSpaces }
+                                    right: 0
+                              then: { ref: grantContext, key: maxSpaces }
+                              else: 99
       - stage: abrams-select-space
         effects:
           - chooseN:

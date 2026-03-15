@@ -1,6 +1,6 @@
 # 63CHOOPEROPT-003: Singleton probe pass for large-domain chooseN
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — legal-choices.ts, new choose-n-option-resolution.ts
@@ -98,3 +98,15 @@ Create a focused probe function that:
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-15
+- **What changed**:
+  - `packages/engine/src/kernel/choose-n-option-resolution.ts`: New module with `runSingletonProbePass()`, `SingletonProbeOutcome` type, `SingletonProbeBudget` interface, and `classifySingletonProbe()` helper. Handles cardinality mismatch errors as unresolved, owner mismatch as ambiguous.
+  - `packages/engine/src/kernel/legal-choices.ts`: Exported `optionKey` and `isChoiceDecisionOwnerMismatchDuringProbe`. Replaced large-domain provisional fallback in `mapChooseNOptions` with `runSingletonProbePass()` using `MAX_CHOOSE_N_TOTAL_PROBE_BUDGET`.
+  - `packages/engine/src/kernel/index.ts`: Added export for `choose-n-option-resolution.ts`.
+  - `packages/engine/test/unit/kernel/choose-n-option-resolution.test.ts`: Updated existing large-domain test (now expects legal+exact from singleton probe for min=1 enums), added 4 new tests: high-min unresolved/provisional, probe count tracking, oracle parity, immediately confirmable.
+  - `packages/engine/test/unit/kernel/choose-n-strategy-dispatch.test.ts`: Updated 3 tests for singleton probe behavior (large-domain routing, mixed surface, selected options).
+- **Deviations**: Added catch for `CHOICE_RUNTIME_VALIDATION_FAILED` errors (cardinality mismatch when probe selection is below min). This was not explicitly in the ticket but is required for correct behavior — without it, probing options with min > 1 would throw unhandled errors.
+- **Verification**: 4667 tests pass, 0 failures. Typecheck clean (3/3 packages).

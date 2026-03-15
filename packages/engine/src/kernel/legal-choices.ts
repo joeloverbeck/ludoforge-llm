@@ -1,3 +1,4 @@
+import { runSingletonProbePass, type SingletonProbeBudget } from './choose-n-option-resolution.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { applyEffects } from './effects.js';
 import { isEffectErrorCode, isEffectRuntimeReason } from './effect-error.js';
@@ -171,9 +172,9 @@ const executeDiscoveryEffectsProbe = (
   }
 };
 
-const optionKey = (value: unknown): string => JSON.stringify([typeof value, value]);
+export const optionKey = (value: unknown): string => JSON.stringify([typeof value, value]);
 
-const isChoiceDecisionOwnerMismatchDuringProbe = (error: unknown): boolean => {
+export const isChoiceDecisionOwnerMismatchDuringProbe = (error: unknown): boolean => {
   return isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH);
 };
 
@@ -426,24 +427,17 @@ const mapChooseNOptions = (
       MAX_CHOOSE_N_EXACT_ENUMERATION_COMBINATIONS - totalCombinations + 1,
     );
     if (totalCombinations > MAX_CHOOSE_N_EXACT_ENUMERATION_COMBINATIONS) {
-      // Large domain: preserve statically-resolved options, mark unresolved provisional.
-      return request.options.map((option) => {
-        const key = optionKey(option.value);
-        if (selectedKeys.has(key) || option.legality === 'illegal') {
-          return {
-            value: option.value,
-            legality: 'illegal' as const,
-            illegalReason: option.legality === 'illegal' ? option.illegalReason : null,
-            resolution: 'exact' as const,
-          };
-        }
-        return {
-          value: option.value,
-          legality: 'unknown' as const,
-          illegalReason: null,
-          resolution: 'provisional' as const,
-        };
-      });
+      // Large domain: run singleton probe pass for O(n) fast filtering.
+      const budget: SingletonProbeBudget = { remaining: MAX_CHOOSE_N_TOTAL_PROBE_BUDGET };
+      return runSingletonProbePass(
+        evaluateProbeMove,
+        classifyProbeMoveSatisfiability,
+        partialMove,
+        request,
+        uniqueOptions,
+        selectedKeys,
+        budget,
+      );
     }
   }
 

@@ -101,8 +101,9 @@ describe('chooseN strategy dispatch', () => {
       }
     });
 
-    it('routes large domains to provisional fallback', () => {
+    it('routes large domains to singleton probe pass', () => {
       // 20 options, min=1, max=10 → combinations far exceed threshold
+      // With simple enums and min=1, singleton probe confirms each option → legal+exact
       const largeValues = Array.from({ length: 20 }, (_, i) => `opt${String(i)}`);
       const action = makeSmallChooseNAction('pickLarge', largeValues, 1, 10);
       const def = makeBaseDef({ actions: [action] });
@@ -113,8 +114,8 @@ describe('chooseN strategy dispatch', () => {
       assert.equal(result.type, 'chooseN');
 
       for (const option of result.options) {
-        assert.equal(option.resolution, 'provisional', `option ${String(option.value)} should have provisional resolution`);
-        assert.equal(option.legality, 'unknown');
+        assert.equal(option.resolution, 'exact', `option ${String(option.value)} should have exact resolution`);
+        assert.equal(option.legality, 'legal', `option ${String(option.value)} should be legal`);
       }
     });
 
@@ -185,11 +186,12 @@ describe('chooseN strategy dispatch', () => {
       assert.equal(optOpt0.legality, 'illegal', 'already-selected option should be illegal');
       assert.equal(optOpt0.resolution, 'exact', 'already-selected option should have exact resolution');
 
-      // Non-selected options should be provisional
+      // Non-selected options are resolved by singleton probe.
+      // With min=1 and 1 already selected, probing [opt0, option] gives selected.length=2 ≥ min=1 → confirmable
       const nonSelected = result.options.filter((o) => o.value !== 'opt0');
       for (const option of nonSelected) {
-        assert.equal(option.resolution, 'provisional', `non-selected ${String(option.value)} should be provisional`);
-        assert.equal(option.legality, 'unknown', `non-selected ${String(option.value)} should be unknown`);
+        assert.equal(option.resolution, 'exact', `non-selected ${String(option.value)} should be exact`);
+        assert.equal(option.legality, 'legal', `non-selected ${String(option.value)} should be legal`);
       }
     });
 
@@ -219,9 +221,10 @@ describe('chooseN strategy dispatch', () => {
       }
     });
 
-    it('no blanket all-unknown: mixed surface preserves per-option resolution', () => {
-      // Verify that the large-domain path does NOT return identical resolution
-      // for statically-resolved vs unresolved options
+    it('no blanket all-unknown: mixed surface distinguishes static-illegal from probe-resolved', () => {
+      // Verify that the large-domain path produces a mixed surface:
+      // - statically-resolved options (already-selected) → illegal+exact
+      // - probe-resolved options → legal+exact (for simple enums with min met)
       const largeValues = Array.from({ length: 25 }, (_, i) => `item${String(i)}`);
       const action = makeSmallChooseNAction('pickMixed', largeValues, 2, 12);
       const def = makeBaseDef({ actions: [action] });
@@ -239,17 +242,18 @@ describe('chooseN strategy dispatch', () => {
       assert.equal(result.kind, 'pending');
       assert.equal(result.type, 'chooseN');
 
+      // All options should be exact (singleton probe resolves them)
       const exactOptions = result.options.filter((o) => o.resolution === 'exact');
-      const provisionalOptions = result.options.filter((o) => o.resolution === 'provisional');
-
-      // Must have at least one exact (the selected option) and multiple provisional
-      assert.ok(exactOptions.length >= 1, 'should have at least one exact option');
-      assert.ok(provisionalOptions.length > 0, 'should have provisional options');
+      assert.equal(exactOptions.length, result.options.length, 'all options should be exact');
 
       // Selected option must be exact+illegal
       const selectedOpt = exactOptions.find((o) => o.value === 'item0');
       assert.ok(selectedOpt, 'selected option should be in exact set');
       assert.equal(selectedOpt.legality, 'illegal');
+
+      // Non-selected options probed as [item0, option] with min=2 → confirmable → legal
+      const legalOptions = result.options.filter((o) => o.legality === 'legal');
+      assert.ok(legalOptions.length > 0, 'should have probe-resolved legal options');
     });
   });
 });

@@ -1,316 +1,553 @@
-# Spec 63 — chooseN Performance Optimization
+# Spec 63 — chooseN Resolution and Interaction Performance
 
-**Prerequisite for**: Spec 62 Phase 2 (MCTS decision expansion)
+**Status**: Revised  
+**Relationship to Spec 62**: Complementary, not a hard prerequisite
 
-## 0. Problem Statement
+## 0. Executive Decision
 
-### 0.1 C(n,k) Legality Probing Explosion
+This spec replaces the original "independent probing marks options legal" proposal.
 
-`mapChooseNOptions()` in `legal-choices.ts` enumerates all C(n,k) combinations to tag per-option legality, subject to `MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS = 1024`. When total combinations exceed this cap, every option falls back to `'unknown'` legality.
+The engine MUST NOT mark a chooseN option as `legal` unless it has an exact completion witness. Singleton probing is retained, but only as a fast filter and search seed.
 
-FITL routinely exceeds the cap. A chooseN with 20 options and cardinality range 1–3:
+The revised design has four parts:
 
-```
-C(20,1) + C(20,2) + C(20,3) = 20 + 190 + 1140 = 1350 > 1024
-```
+1. Keep the current exhaustive combination enumerator as the exact path for small search spaces and as a test oracle.
+2. Replace the current all-or-nothing 1024-combination fallback with a hybrid resolver:
+   - static filtering
+   - singleton probes using the discover-only path
+   - budgeted witness search with memoization
+   - per-option provisional results when the exact budget is exhausted
+3. Add a worker-local chooseN session/resolver so add/remove recomputes the next pending state once instead of rerunning the full pipeline twice per toggle.
+4. Add explicit resolution metadata so the UI can distinguish exact results from provisional ones.
 
-With wider ranges (cardinality 1–8), the count reaches ~185K combinations. The result: the UI cannot distinguish legal from illegal options, forcing the player to guess-and-confirm. This defeats the purpose of per-option legality hints.
+## 1. Problem Statement
 
-### 0.2 advanceChooseN Redundant Pipeline Walks
+### 1.1 Current large-domain failure mode
 
-Each `add` or `remove` command in `advanceChooseN()` re-runs the full discovery pipeline:
+`mapChooseNOptions()` currently enumerates every relevant completion combination until a hard cap is exceeded, then returns all options as `unknown`. This is acceptable for tiny domains and catastrophic for FITL-sized domains.
 
-1. `prepareLegalChoicesContext()` — rebuilds adjacency graph, runtime table index, seat resolution
-2. `legalChoicesDiscover()` — re-evaluates preflight conditions, action applicability, stage effects, query evaluation
-3. `mapChooseNOptions()` — re-enumerates the option domain and probes legality
-4. `computeTierAdmissibility()` — re-filters tiers against current selection
+### 1.2 Current interactive failure mode
 
-Steps 1–2 are **invariant** across add/remove operations — the game state, partial move, and decision context haven't changed. Only the transient selection set changes, which affects steps 3–4 (tier admissibility and per-option legality). Re-running the full pipeline on every interaction wastes 3–5x the necessary work.
+`advanceChooseN()` validates the current selection by rerunning the full chooseN discovery path, then reruns it again for the updated selection.
 
-### 0.3 Impact
+Because the worker already passes `GameDefRuntime`, adjacency-graph and runtime-table caching are mostly already handled. The real waste is duplicate discovery/effect execution and duplicate option probing on every toggle.
 
-- **UI responsiveness**: FITL event card choices with 15–25 options stutter on each selection toggle
-- **MCTS integration**: `completeDecisionIncrementally()` (Spec 62) calls `advanceChooseN` in tight rollout loops — redundant work multiplies across thousands of iterations
-- **Scalability**: Games with larger option domains (evolution-generated specs) will hit the cap even harder
+### 1.3 Correctness constraint
 
-## 1. Architecture Overview
+Current chooseN option legality is closer to:
 
-Two complementary optimizations address the two distinct problems:
+- "does there exist at least one confirmable completion containing this option?"
 
-```
-Current pipeline (per add/remove):
-  prepareLegalChoicesContext()     ← INVARIANT, wasted
-  → legalChoicesDiscover()        ← INVARIANT, wasted
-    → mapChooseNOptions()         ← C(n,k) explosion
-      → enumerateCombinations()   ← O(C(n,k)) probes
-    → computeTierAdmissibility()  ← must recompute (selection-dependent)
+than to:
 
-Optimized pipeline:
-  createChooseNSession()          ← once per chooseN decision
-    → prepareLegalChoicesContext()
-    → legalChoicesDiscover()
-    → snapshot invariant state
-  advanceChooseNWithSession()     ← per add/remove, uses snapshot
-    → independentProbe()          ← O(n) probes (replaces C(n,k))
-    → computeTierAdmissibility()  ← recomputed (selection-dependent)
-```
+- "does the singleton add immediately avoid a hard error?"
 
-**Optimization 1 — Independent probing** replaces the C(n,k) enumeration in `mapChooseNOptions()` with O(n) single-option probes. Each unselected option is tested independently against the current selection. This eliminates the combinatorial cap entirely.
+Those are not the same thing. Any optimization that collapses them into the same surface is a semantics change and must be explicit.
 
-**Optimization 2 — Session snapshot** captures the invariant parts of the discovery pipeline once and reuses them across add/remove interactions. Only selection-dependent computations (tier admissibility, per-option probing) run on each interaction.
+### 1.4 MCTS relationship
 
-Both optimizations are independent and compose naturally. Independent probing can ship first with immediate benefit; the session snapshot amplifies gains for interactive and MCTS use cases.
+This spec does not claim a direct speedup for current Spec 62 rollout. Current MCTS uses the discover-only path and does not execute chooseN UI hint mapping. This spec mainly improves interactive chooseN and introduces hooks MCTS may reuse later.
 
-## 2. Independent Probing (replaces C(n,k) enumeration)
+## 2. Design Principles
 
-### 2.1 Algorithm
+1. Preserve exact results when cheap.
+2. Never surface optimistic singleton feasibility as exact `legal`.
+3. Remove the blanket all-unknown fallback.
+4. Keep the engine deterministic: count-based budgets only, stable traversal order, no wall-clock cutoffs.
+5. Keep the kernel stateless; interactive session state lives in the worker.
+6. Fall back conservatively when a chooseN cannot be sessionized safely.
 
-Replace the exhaustive enumeration in `mapChooseNOptions()` with per-option independent probes:
+## 3. Semantics
 
-```
-for each unselected option O in domain:
-  probe selection = [...currentSelected, O]
-  result = evaluateProbeMove(probe selection)
-  if result is illegal:
-    mark O as 'illegal' with reason
-  else if currentSelected.length === maxCardinality - 1:
-    mark O as 'legal' (definitive — this is the final pick)
-  else:
-    mark O as 'legal' (optimistic — interactions with future picks not tested)
-```
+### 3.1 Revised option surface
 
-### 2.2 Correctness Argument
+Extend chooseN option metadata with a resolution field:
 
-**Optimistic marking is safe** because:
+    type ChooseNOptionResolution = 'exact' | 'provisional' | 'stochastic' | 'ambiguous';
 
-1. The `confirm` command in `advanceChooseN()` always validates the complete selection before accepting it. If an optimistically-marked option participates in an illegal combination, confirm rejects the selection with a diagnostic message.
-2. Independent probing catches the most common illegality patterns: options that are individually invalid (wrong zone, wrong faction, insufficient resources) regardless of what else is selected.
-3. Interaction effects (option A is only legal if option B is also selected) are rare in practice and typically constrained to tier-based prioritization, which is handled by `computeTierAdmissibility()` separately.
+Rules:
 
-### 2.3 Complexity
+- `legality: 'legal'` means the engine found an exact witness: at least one confirmable completion exists containing this option.
+- `legality: 'illegal'` means the engine proved the option cannot participate in any confirmable completion, or the option is statically blocked.
+- `legality: 'unknown'` means the engine did not complete an exact proof for that option. Unknown options remain selectable.
+- `resolution` explains why:
+  - `exact`: exact proof completed
+  - `provisional`: budget exhausted before proof completed
+  - `stochastic`: probe passed through stochastic authority
+  - `ambiguous`: probe passed through ambiguous authority / overlap surface
 
-- **Before**: O(C(n, k)) probes where k ranges over [min, max] cardinality — exponential in the worst case
-- **After**: O(n) probes — one per unselected option
-- **No cap needed**: The 1024 combination limit (`MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS`) becomes unnecessary and can be removed
+For backward compatibility, this spec does not replace the existing three-valued `legality` field. It adds `resolution` instead of inventing a new legality enum.
 
-### 2.4 Files
+### 3.2 Rejected behavior
 
-| File | Changes |
-|------|---------|
-| `packages/engine/src/kernel/legal-choices.ts` | Replace enumeration loop in `mapChooseNOptions()` with independent probe loop. Remove `enumerateCombinations()` and `countCombinationsCapped()` if no other callers. Remove or deprecate `MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS`. |
+The engine MUST NOT mark an option `legal` solely because `[...currentSelected, option]` did not immediately fail. That is only local forward checking, not exact completion feasibility.
 
-## 3. Session Snapshot (eliminates redundant pipeline walks)
+### 3.3 Confirm remains authoritative
 
-### 3.1 ChooseNSession Type
+`confirm` behavior does not change. The final submitted selection is still revalidated authoritatively before it is accepted.
 
-A new type capturing the invariant state of a chooseN decision:
+### 3.4 UI interaction rule
 
-```typescript
-interface ChooseNSession {
-  /** Adjacency graph, runtime table index, seat resolution */
-  readonly preparedContext: LegalChoicesPreparedContext;
+The runner MUST continue to allow selecting chooseN options whose legality is `unknown`. Only `illegal` options are blocked.
 
-  /** Full option domain before tier filtering */
-  readonly baseDomain: readonly MoveParamScalar[];
+This preserves playability on unresolved large domains while avoiding dishonest `legal` labels.
 
-  /** Resolved cardinality bounds */
-  readonly cardinality: ChooseNCardinality;
+## 4. Hybrid chooseN resolution algorithm
 
-  /** The discovery result (action context, preflight, stage effects) */
-  readonly discoverySnapshot: LegalChoicesDiscoveryResult;
+`mapChooseNOptions()` becomes a strategy dispatcher instead of a single exhaustive enumerator.
 
-  /** State hash at session creation — for staleness detection */
-  readonly stateHash: bigint;
+### 4.1 Strategy order
 
-  /** The decision key this session was created for */
-  readonly decisionKey: DecisionKey;
-}
-```
+1. Static filtering
+2. Small-case exact enumeration
+3. Singleton probe pass
+4. Budgeted witness search for unresolved candidates
+5. Per-option fallback to `unknown` instead of blanket all-unknown
 
-### 3.2 What Is NOT Cached
+### 4.2 Static filtering
 
-The following depend on `currentSelected` and must be recomputed on each add/remove:
+Preserve the current fast rules from `buildChooseNPendingChoice()`:
 
-- **Tier admissibility** — which tiers are active depends on what has already been selected (see Section 4)
-- **Per-option legality** — the independent probe result changes as the selection set grows/shrinks
-- **Qualifier filtering** — qualifier-based grouping narrows based on selections within the active tier
+- already selected -> `illegal`, `resolution: exact`
+- at add capacity -> `illegal`, `resolution: exact`
+- tier-blocked / qualifier-blocked -> `illegal`, `resolution: exact`
 
-### 3.3 API
+This remains the first pass and should run before any probe search.
 
-```typescript
-/** Create a session snapshot — call once when a chooseN decision point is reached */
-function createChooseNSession(
-  def: GameDef,
-  state: GameState,
-  partialMove: ReadonlyPartialMove,
-  decisionKey: DecisionKey
-): ChooseNSession;
+### 4.3 Small-case exact enumeration
 
-/** Advance a chooseN using a pre-built session — avoids redundant pipeline walks */
-function advanceChooseNWithSession(
-  session: ChooseNSession,
-  currentSelected: readonly MoveParamScalar[],
-  command: ChooseNCommand
-): AdvanceChooseNResult;
-```
+Do not delete the current combination enumerator immediately.
 
-The existing `advanceChooseN()` function remains unchanged for backward compatibility. Callers that don't need session optimization continue to work as before.
+Rename the current cap concept and narrow its purpose:
 
-### 3.4 Session Lifecycle
+    MAX_CHOOSE_N_EXACT_ENUMERATION_COMBINATIONS
 
-```
-User selects an action with chooseN parameter
-  → createChooseNSession()         // snapshot invariant state
-  → advanceChooseNWithSession()    // first interaction (or initial options display)
+Rules:
 
-User toggles option (add/remove)
-  → advanceChooseNWithSession()    // reuses session, O(n) probes only
+- If the exact completion count is at or below this threshold, use the current exhaustive algorithm unchanged.
+- This path stays exact and doubles as the reference implementation for tests.
+- This threshold is not a blanket fallback trigger. It only decides whether exhaustive exact enumeration is cheap enough to use.
 
-User confirms
-  → advanceChooseNWithSession()    // validates full selection via session
+This preserves simple exact behavior for tiny domains and removes risk from the rewrite.
 
-Game state changes (applyMove, undo, reset)
-  → session invalidated            // must create new session
-```
+### 4.4 Singleton probe pass
 
-### 3.5 Staleness Detection
+For options that survive static filtering and are not handled by small-case exact enumeration, run a single probe per candidate using the discover-only path:
 
-The session stores a `stateHash` (Zobrist hash from `GameState`). On each `advanceChooseNWithSession()` call, the current state hash is compared. If they differ, the session is stale and the function throws a descriptive error rather than silently producing wrong results.
+    probeSelection(currentSelected + option, shouldEvaluateOptionLegality = false)
 
-### 3.6 Files
+Probe classification:
 
-| File | Changes |
-|------|---------|
-| `packages/engine/src/kernel/advance-choose-n.ts` | `ChooseNSession` type, `createChooseNSession()`, `advanceChooseNWithSession()` |
-| `packages/engine/src/kernel/legal-choices.ts` | Extract session-creation logic from `mapChooseNOptions()` internals |
-| `packages/runner/src/worker/game-worker-api.ts` | Session lifecycle: create session on chooseN entry, invalidate on state change, pass to `advanceChooseNWithSession()` |
+- illegal -> option becomes `illegal`, `resolution: exact`
+- satisfiable and already confirmable at this size -> option becomes `legal`, `resolution: exact`
+- satisfiable but needs further picks -> option becomes unresolved root for witness search
+- stochastic/ambiguous -> option becomes `unknown` with the corresponding resolution
 
-## 4. Tier Admissibility Dynamics
+Important:
 
-### 4.1 Why Tiers Cannot Be Cached
+- This probe path MUST NOT compute option hints recursively.
+- The probe is a satisfiability check for a concrete selected set, not a request to map nested option legality.
 
-FITL piece sourcing uses prioritized tiers: "Available first, then map." After selecting all Available pieces, the map tier unlocks. This means:
+### 4.5 Exact witness search
 
-```
-Initial state (0 selected):
-  Tier 0 (Available): [piece_1, piece_2, piece_3]  ← active
-  Tier 1 (Map):       [piece_4, piece_5]            ← locked
+For unresolved roots from the singleton pass, search for one confirmable completion witness.
 
-After selecting piece_1, piece_2, piece_3:
-  Tier 0 (Available): []                             ← exhausted
-  Tier 1 (Map):       [piece_4, piece_5]            ← NOW active
-```
+Definition:
 
-`computeTierAdmissibility()` handles this correctly by iterating tiers and returning the first non-exhausted tier's remaining values. Since the active tier depends on what has been selected, it must run fresh on every add/remove.
+A witness is any selection `S` such that:
 
-### 4.2 Session Boundary
+- `currentSelected ⊆ S`
+- the root option is in `S`
+- `|S|` is within `[min, max]`
+- probing `S` yields a legal completion surface: complete, next decision, or same chooseN pending with `canConfirm = true`
 
-The session caches everything **up to** the tier computation:
-- Prepared context (adjacency, runtime, seats) — invariant
-- Base option domain (full list before tier filtering) — invariant
-- Cardinality bounds — invariant
-- Discovery snapshot (action context, preflight) — invariant
+Rules:
 
-Tier admissibility and independent probing run fresh each time, using the cached invariants as input.
+- The search explores only as far as needed to find one witness.
+- As soon as one witness is found for an option, that option is `legal`, `resolution: exact`.
+- If the entire reachable subtree for that root is exhausted with no witness, that option is `illegal`, `resolution: exact`.
+- If the deterministic search budget is exhausted first, that option remains `unknown`, `resolution: provisional`.
 
-## 5. Implementation Phases
+This search preserves the existing existential semantics without requiring full `C(n, k)` enumeration in every large case.
 
-### Phase 1: Independent Probing
+### 4.6 Search order and pruning
 
-**Scope**: Contained change to `mapChooseNOptions()` in `legal-choices.ts`.
+Search order MUST be deterministic.
 
-**Deliverables**:
-1. Replace the combination enumeration loop with an independent probe loop
-2. Remove or gate `MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS` (keep as dead code guard if preferred)
-3. Update `legal-choices.test.ts` with:
-   - Test that 20+ option domains complete without falling back to `'unknown'`
-   - Test that individually-illegal options are correctly marked
-   - Test that optimistic marking applies when `selected.length < max - 1`
-4. Verify all existing `advance-choose-n.test.ts` tests pass unchanged
-5. Verify FITL E2E tests pass
+Default ordering:
 
-**Benefit**: Immediate — all FITL chooseN decisions get accurate per-option legality hints.
+1. active tier order
+2. smaller continuation domain first
+3. normalized domain order as the final tie-breaker
 
-### Phase 2: Session Snapshot
+At each search node:
 
-**Scope**: New types and functions in `advance-choose-n.ts`, extraction in `legal-choices.ts`, worker integration.
+- recompute remaining admissible options from the template
+- drop statically illegal options immediately
+- reuse cached probe summaries for previously seen selected sets
+- stop descending when the selection is already confirmable and satisfiable
 
-**Deliverables**:
-1. `ChooseNSession` type and `createChooseNSession()` in `advance-choose-n.ts`
-2. `advanceChooseNWithSession()` using the session for fast re-evaluation
-3. Session lifecycle in `game-worker-api.ts` (create on chooseN entry, invalidate on state mutation)
-4. Staleness detection via state hash comparison
-5. Benchmark test: `advanceChooseNWithSession` is 3–5x faster than `advanceChooseN` for a 15-option domain with 5 add/remove cycles
-6. All existing tests pass unchanged
+### 4.7 Removal invalidation and selected-sequence validation
 
-**Benefit**: Faster interactive chooseN and faster MCTS rollout via `completeDecisionIncrementally()`.
+Session recomputation and search MUST validate the current selected sequence itself, not only the remaining unselected options.
 
-### Phase 3 (Optional): Lazy Per-Option Probing in UI
+This is required for cases where removing an early-tier selection makes a later-tier selected item retroactively invalid.
 
-**Scope**: Runner-side optimization — probe on hover/focus rather than eagerly for all options.
+Implementation requirement:
 
-**Deliverables**:
-1. Initial display shows all options as `'unknown'`
-2. On hover or keyboard focus, probe the specific option and update legality
-3. Batch probing for visible options on scroll
+- Extract a pure validator for current chooseN selected sets from the chooseN effect path.
+- This validator must run before recomputing remaining admissible options.
+- `computeTierAdmissibility()` alone is not sufficient for this case.
 
-**Benefit**: Sub-millisecond initial render for very large domains (50+ options). Deferred — only needed if Phase 1 + 2 are insufficient.
+### 4.8 Stochastic and ambiguous probes
 
-## 6. Spec 62 Compatibility
+If a probe crosses a stochastic decision boundary or an ambiguous authority surface:
 
-### 6.1 MCTS Skips mapChooseNOptions
+- do not mark the option `legal`
+- do not mark the option `illegal` unless illegality is independently proven
+- return `unknown` with `resolution: 'stochastic'` or `'ambiguous'`
 
-MCTS uses `legalChoicesDiscover()` directly and never calls `mapChooseNOptions()`. The independent probing change (Phase 1) has zero impact on MCTS code paths.
+## 5. Probe budgets and determinism
 
-### 6.2 MCTS Treats chooseN as Atomic Sampling
+The old all-or-nothing combination cap is removed.
 
-In MCTS rollout, `completeDecisionIncrementally()` samples chooseN selections via Fisher-Yates shuffle from the legal domain. It does not iterate add/remove commands — it constructs the complete selection in one step.
+Replace it with deterministic budget controls:
 
-### 6.3 Session Snapshot Is Caller-Managed
+    MAX_CHOOSE_N_EXACT_ENUMERATION_COMBINATIONS
+    MAX_CHOOSE_N_TOTAL_PROBE_BUDGET
+    MAX_CHOOSE_N_TOTAL_WITNESS_NODES
 
-The `ChooseNSession` is created and held by the caller (worker API or MCTS). No kernel API changes are needed. The kernel remains stateless.
+Rules:
 
-### 6.4 MCTS Benefits
+- budgets are counts, not milliseconds
+- budgets are applied per pending-request evaluation
+- if exact search exhausts budget, unresolved options stay `unknown`
+- resolved options keep their exact result; the request never degrades wholesale to all-unknown because one threshold was exceeded
 
-- **Phase 1**: If MCTS ever needs per-option legality for smarter sampling (e.g., UCB-weighted option selection), independent probing provides O(n) legality without the cap
-- **Phase 2**: MCTS rollout can create one session per chooseN decision point and reuse it across simulation iterations exploring different selections
+## 6. Worker-local chooseN session
 
-## 7. Files to Modify
+### 6.1 Session ownership
 
-| File | Phase | Changes |
-|------|-------|---------|
-| `packages/engine/src/kernel/legal-choices.ts` | 1, 2 | Replace enumeration in `mapChooseNOptions()` with independent probes (Phase 1). Extract session-creation helper (Phase 2). |
-| `packages/engine/src/kernel/advance-choose-n.ts` | 2 | `ChooseNSession` type, `createChooseNSession()`, `advanceChooseNWithSession()` |
-| `packages/runner/src/worker/game-worker-api.ts` | 2 | Session lifecycle: create on chooseN entry, invalidate on state change |
-| `packages/engine/test/unit/kernel/legal-choices.test.ts` | 1 | Independent probing tests: large domains, illegal detection, optimistic marking |
-| `packages/engine/test/unit/kernel/advance-choose-n.test.ts` | 2 | Session-based API tests: creation, reuse, staleness detection, benchmark |
+The interactive chooseN session is worker-local and opaque to the store/UI. Do not serialize session objects across Comlink.
 
-## 8. Existing Infrastructure to Reuse
+The bridge continues to return normal `ChoicePendingRequest` values. The worker stores the resolver/session internally.
 
-| What | Where | Used For |
-|------|-------|----------|
-| `prepareLegalChoicesContext()` | `legal-choices.ts` | Builds adjacency graph, runtime table index, seat resolution — becomes session input |
-| `computeTierAdmissibility()` | `prioritized-tier-legality.ts` | Tier unlocking logic — runs fresh per interaction, not cached in session |
-| `evaluateProbeMove()` | `legal-choices.ts` | Single-option legality probe — reused as-is for independent probing |
-| `resolveChooseNCardinality()` | `choose-n-cardinality.ts` | Min/max resolution — computed once and stored in session |
-| `normalizeChoiceDomain()` | `effects-choice.ts` | Option normalization — computed once during session creation |
-| `legalChoicesDiscover()` | `legal-choices.ts` | Full discovery pipeline — executed once for session snapshot |
+### 6.2 Session contents
 
-## 9. Success Criteria
+Introduce an internal resolver object:
 
-1. `mapChooseNOptions()` completes in O(n) probes for all FITL chooseN decisions — no options fall back to `'unknown'` due to the combination cap
-2. `MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS` cap is no longer the limiting factor for legality resolution
-3. `advanceChooseNWithSession()` is 3–5x faster than `advanceChooseN()` for a 15-option domain with 5 add/remove cycles (measured via test benchmark)
-4. All existing `advance-choose-n.test.ts` and `legal-choices.test.ts` tests pass unchanged
-5. FITL compilation and E2E tests pass
-6. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck && pnpm turbo test` — all green
+    interface ChooseNSession {
+      readonly revision: number;
+      readonly decisionKey: DecisionKey;
+      readonly template: ChooseNTemplate;
+      readonly probeCache: Map<SelectionKey, ProbeSummary>;
+      readonly legalityCache: Map<SelectionKey, readonly ChoiceOption[]>;
+      currentSelected: readonly MoveParamScalar[];
+      currentPending: ChoicePendingChooseNRequest;
+    }
 
-## 10. Risks
+`ChooseNTemplate` is the extracted, selection-invariant data required to recompute a chooseN pending state:
 
-| Risk | Likelihood | Mitigation |
-|------|------------|------------|
-| Optimistic legality confuses UI (option looks legal but confirm rejects) | Low | Confirm always validates the full selection. UI shows a clear error message with the specific illegality reason. Players learn quickly that optimistic hints are not guarantees. |
-| Session becomes stale if state changes unexpectedly | Low | Session stores `stateHash`; every `advanceChooseNWithSession()` call compares hashes and throws on mismatch. Worker invalidates session on `applyMove`, undo, and reset. |
-| Independent probing misses interaction effects between options | Medium | Only affects the legality hint, never game correctness. Confirm is the authoritative check. In practice, interaction effects are rare and mostly captured by tier admissibility. |
-| Performance regression for small domains (< 10 options) | Very Low | Independent probing is O(n) which equals or beats C(n,k) for all n ≥ 1. For n=5, k=2: C(5,2)=10 probes vs 5 independent probes. Strictly better. |
-| `evaluateProbeMove()` cost dominates even with O(n) probes | Low | Each probe is already optimized (no state cloning, early exit on first illegal condition). For 20 options, 20 probes is well within interactive latency budgets (< 50ms). |
+- prepared context
+- partial move / action identity
+- normalized base domain
+- domain index / stable option order
+- cardinality bounds
+- name / targetKinds
+- prioritized tier metadata
+- qualifier mode
+- any other selection-invariant chooseN metadata needed to rebuild the pending request
+
+### 6.3 Template eligibility
+
+Create a session only when the pending chooseN can be reduced to a stable template.
+
+A chooseN is session-eligible when:
+
+- its base domain and metadata are selection-invariant
+- only the following are selection-dependent:
+  - selected membership
+  - tier / qualifier admissibility
+  - confirmability
+  - exact/provisional legality resolution
+
+If a chooseN depends on transient self-selection in any other way, or the extraction logic cannot prove eligibility, do not sessionize it. Fall back to the existing non-session path.
+
+### 6.4 Revision-based staleness
+
+Do not introduce a `GameState` hash requirement for this spec.
+
+Use a simple worker-local revision counter:
+
+- increment on any state mutation, action change, undo, reset, or move application
+- store the current revision in the session
+- discard the session when the revision mismatches
+
+This is cheaper, easier, and sufficient for the interactive worker path.
+
+### 6.5 Per-toggle flow
+
+When a session exists:
+
+1. validate the command against `session.currentPending`
+2. compute `nextSelected`
+3. recompute the next pending request once from the session template
+4. update `session.currentSelected` and `session.currentPending`
+
+This eliminates the current double full-path reevaluation on add/remove.
+
+### 6.6 No direct public session API requirement
+
+The existing public `advanceChooseN()` can remain as a stateless fallback.
+
+The session-aware fast path is an internal runner/worker optimization:
+
+- interactive path -> worker session
+- non-interactive callers -> existing stateless API
+- future MCTS work may add a separate in-process resolver if needed
+
+## 7. Internal data structures
+
+### 7.1 Canonical selection keys
+
+Use a canonical set key for probe and witness caches.
+
+Recommended implementation:
+
+- derive a stable index for each normalized domain option
+- use `bigint` bitsets for domains up to 63 or 64 options
+- use `Uint32Array` or a stable string key above that
+
+The canonical key is internal only. Public `selected` order is unchanged by this spec.
+
+### 7.2 Cache layers
+
+Use two caches:
+
+1. `probeCache`: selected-set -> probe summary
+2. `legalityCache`: selected-set -> resolved option surface for that set
+
+The caches are session-local and cleared with the session.
+
+### 7.3 Keep the exhaustive enumerator
+
+Keep `countCombinationsCapped()` and `enumerateCombinations()` in one of two places:
+
+- the tiny-domain exact path
+- a test-only oracle helper
+
+Do not lose the exact reference implementation until the new resolver has parity coverage.
+
+## 8. Type and API changes
+
+### 8.1 Choice option surface
+
+Add an optional chooseN resolution field:
+
+    interface ChoiceOption {
+      value: MoveParamScalar;
+      legality: 'legal' | 'illegal' | 'unknown';
+      illegalReason: string | null;
+      resolution?: 'exact' | 'provisional' | 'stochastic' | 'ambiguous';
+    }
+
+Rules:
+
+- `resolution` is required on chooseN options
+- `resolution` may default to `exact` for chooseOne or existing exact surfaces
+
+### 8.2 No bridge session object
+
+Do not add `ChooseNSession` to the public bridge/store API. The worker owns it.
+
+### 8.3 Optional debug diagnostics
+
+Add a debug-only diagnostics payload, gated behind a dev flag, for instrumentation:
+
+    interface ChooseNDiagnostics {
+      mode: 'exactEnumeration' | 'hybridSearch' | 'legacyFallback';
+      exactOptionCount: number;
+      provisionalOptionCount: number;
+      singletonProbeCount: number;
+      witnessNodeCount: number;
+      probeCacheHits: number;
+      sessionUsed: boolean;
+    }
+
+This is not required in production responses.
+
+## 9. File plan
+
+| File | Change |
+| --- | --- |
+| `packages/engine/src/kernel/legal-choices.ts` | Replace monolithic chooseN mapping with a strategy dispatcher. Add a discover-only probe helper that never computes nested option legality. |
+| `packages/engine/src/kernel/advance-choose-n.ts` | Keep the existing stateless API as fallback. Add a thin session-aware recompute entry point if needed. |
+| `packages/engine/src/kernel/effects-choice.ts` | Extract chooseN template creation and selected-sequence validation from the current chooseN effect path. |
+| `packages/engine/src/kernel/prioritized-tier-legality.ts` | Reuse existing admissibility logic and add any helper needed for selected-sequence validation. |
+| `packages/engine/src/kernel/choose-n-option-resolution.ts` | New file. Hybrid resolution, witness search, budgets, cache-aware probe orchestration. |
+| `packages/engine/src/kernel/choose-n-session.ts` | New file or equivalent internal module. Session template, selection keys, caches. |
+| `packages/runner/src/worker/game-worker-api.ts` | Create, hold, reuse, and invalidate worker-local chooseN sessions. |
+| `packages/runner/src/store/game-store.ts` and chooseN UI components | Optional UI polish: surface `resolution` distinctly so provisional options are visibly different from exact legal ones. |
+
+If you want to avoid new files, the same logic can live in `advance-choose-n.ts` and `legal-choices.ts`, but that will make both files worse. A dedicated resolver module is the cleaner option.
+
+## 10. Implementation phases
+
+### Phase A — Correctness-first hybrid resolver
+
+Deliverables:
+
+- add `resolution` surface
+- keep tiny-domain exhaustive path
+- add singleton probe pass
+- add budgeted witness search
+- remove blanket all-unknown fallback
+- keep the stateless interactive path unchanged for now
+
+Exit condition:
+
+- exact labels match the old exhaustive oracle on small cases
+- formerly capped large cases now return a mixed exact/provisional surface instead of blanket unknown
+
+### Phase B — Worker-local session
+
+Deliverables:
+
+- extract `ChooseNTemplate`
+- add worker-local `ChooseNSession`
+- recompute next pending once per toggle
+- add probe and legality caches
+- revision-based invalidation
+
+Exit condition:
+
+- add/remove interactive path no longer reruns the current selection through the full pipeline twice
+
+### Phase C — Diagnostics and UI
+
+Deliverables:
+
+- dev-only chooseN diagnostics
+- UI distinction between exact and provisional options
+- optional perf harness output for FITL scenarios
+- if any lazy refinement is added, it must be input-modality-agnostic and batch-oriented, not hover-only
+
+Exit condition:
+
+- developers can see exact/provisional counts, probe counts, and cache hits on real scenarios
+
+### Phase D — Optional future work
+
+Not part of this spec, but enabled by it:
+
+- MCTS hierarchical chooseN expansion instead of full-subset sampling
+- progressive widening over chooseN add-actions
+- declarative chooseN constraint hints in YAML for stronger exact propagators
+
+## 11. Test plan
+
+### 11.1 Exact oracle parity
+
+For small domains where exhaustive enumeration is below the exact threshold:
+
+- compare the new resolver against the exhaustive oracle
+- assert:
+  - every `legal` result from the new resolver is `legal` in the oracle
+  - every `illegal` result from the new resolver is `illegal` in the oracle
+  - with generous budgets, the full option surface matches exactly
+
+This is the core correctness test.
+
+### 11.2 Large-domain regression tests
+
+Add fixtures that previously exceeded the old cap:
+
+- 20 options, cardinality 1–3
+- 20 options, cardinality 1–8
+- 30 options, cardinality 1–5
+
+Assert:
+
+- no blanket all-unknown fallback
+- some exact results are still returned
+- unresolved options are marked `unknown` with `resolution: provisional`, not `legal`
+
+### 11.3 Interaction-effect tests
+
+Add explicit tests for non-tier interactions, because this is where the original spec was weakest:
+
+- pairwise conflict: A and B cannot both be chosen
+- quota / category constraint: exact counts by qualifier
+- dependency: A requires one of `{B, C}`
+- removal invalidation: remove early-tier selection and later-tier selected item becomes invalid
+- `byQualifier` tier unlocking and relocking
+
+### 11.4 Stochastic and ambiguous tests
+
+Add chooseN probe fixtures that return:
+
+- `pendingStochastic`
+- ambiguous overlap / authority mismatch
+
+Assert these resolve to `unknown` with the right `resolution` value.
+
+### 11.5 Session equivalence tests
+
+For any session-eligible chooseN:
+
+- compare session recomputation against stateless recomputation for the same selected sets
+- assert identical pending requests and identical exact/provisional option surfaces
+
+### 11.6 Performance tests
+
+Do not make wall-clock speedups a brittle CI assertion.
+
+CI should assert:
+
+- max probe counts
+- max witness-node counts
+- number of full pipeline reevaluations per toggle
+- cache hit behavior on repeated add/remove cycles
+
+Wall-clock benchmarking belongs in a dedicated perf harness, not a pass/fail unit test.
+
+## 12. Success criteria
+
+1. The engine no longer converts an entire large chooseN request to all-unknown solely because a combination threshold was exceeded.
+2. Any option surfaced as `legal` or `illegal` is exact.
+3. Large domains return a mixed exact/provisional surface instead of a blanket fallback.
+4. The worker interactive path performs one recompute per add/remove when a session exists.
+5. Small-domain exact parity is preserved against the exhaustive oracle.
+6. FITL and synthetic stress fixtures show lower probe counts and fewer full-path reevaluations than the current implementation.
+7. Existing chooseN gameplay behavior remains correct; `confirm` remains authoritative and unchanged.
+
+## 13. Risks and mitigations
+
+| Risk | Mitigation |
+| --- | --- |
+| Provisional options may confuse users | Surface `resolution` explicitly in the UI; never lie with optimistic `legal`. |
+| Some chooseN definitions may not be safely sessionizable | Use conservative eligibility checks and fall back to the stateless path. |
+| Witness search can still blow up on adversarial generic constraints | Use deterministic budgets and degrade per-option to provisional, not blanket unknown. |
+| Internal canonical set keys assume chooseN is a set-selection decision | Treat this as part of the chooseN contract; if order-sensitive selection is ever needed, it should be a different decision type. |
+| Perf assertions can be flaky in CI | Assert counts and modes in CI; keep wall-clock measurements in a separate bench harness. |
+
+## 14. Explicit corrections to the original spec
+
+The following parts of the original spec are intentionally not carried forward:
+
+- "mark singleton-probed options as `legal`" -> rejected
+- "remove all caps entirely" -> rejected; replace with deterministic probe/node budgets
+- "`stateHash` / Zobrist requirement" -> rejected for this spec; use worker revision
+- "3–5x faster wall-clock benchmark in unit tests" -> rejected as a CI success criterion
+- "direct MCTS rollout speedup today" -> rejected; this is mainly an interactive-path optimization right now
+
+## 15. Follow-on spec worth writing next
+
+A separate future spec should add optional declarative chooseN constraint hints in YAML, for example:
+
+- independence
+- mutual exclusion groups
+- quotas by qualifier
+- requires / forbids relationships
+
+Those hints would let the engine install stronger exact propagators, reduce provisional results further, and give MCTS better priors. That is valuable, but it is a separate feature and should not be smuggled into this performance fix.

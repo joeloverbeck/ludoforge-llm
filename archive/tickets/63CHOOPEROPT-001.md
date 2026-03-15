@@ -1,6 +1,6 @@
 # 63CHOOPEROPT-001: Add `resolution` field to ChoiceOption type
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — types-core.ts, legal-choices.ts, effects-choice.ts
@@ -91,3 +91,15 @@ Grep all `{ value: ..., legality: ..., illegalReason: ... }` object literals in 
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-15
+- **What changed**:
+  - `packages/engine/src/kernel/types-core.ts`: Added `ChooseNOptionResolution` type (`'exact' | 'provisional' | 'stochastic' | 'ambiguous'`) and optional `resolution` field to `ChoiceOption`
+  - `packages/engine/src/kernel/effects-choice.ts`: `buildChooseNPendingChoice` tags statically-illegal options (already-selected, at-capacity, tier-blocked) with `resolution: 'exact'`
+  - `packages/engine/src/kernel/legal-choices.ts`: `mapChooseNOptions` exhaustive path tags all results `resolution: 'exact'`; cap-exceeded fallback tags all results `resolution: 'provisional'`; `mapOptionsForPendingChoice` chooseOne path tags all results `resolution: 'exact'`
+  - `packages/engine/test/unit/kernel/choose-n-option-resolution.test.ts`: New test file covering resolution propagation through discover, evaluate, and advanceChooseN paths
+  - Updated 9 existing `deepStrictEqual`/`deepEqual` assertions across `legal-choices.test.ts`, `advance-choose-n.test.ts`, `effects-choice.test.ts`, and `decision-sequence.test.ts` to include the `resolution` field
+- **Deviations**: None. All deliverables implemented as specified.
+- **Verification**: 4655 tests pass, 0 failures. Typecheck clean (3/3 packages).

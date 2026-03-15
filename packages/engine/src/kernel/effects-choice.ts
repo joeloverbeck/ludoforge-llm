@@ -268,10 +268,12 @@ const buildChooseNPendingChoice = ({
       const isSelected = selectedKeys.has(choiceOptionKey(value));
       const isPrioritizedIllegal = prioritizedAdmissibility !== null
         && !prioritizedAdmissibility.admissibleKeys.has(choiceOptionKey(value));
+      const isStaticallyIllegal = isSelected || !hasAddCapacity || isPrioritizedIllegal;
       return {
         value,
-        legality: isSelected || !hasAddCapacity || isPrioritizedIllegal ? 'illegal' : 'unknown',
+        legality: isStaticallyIllegal ? 'illegal' : 'unknown',
         illegalReason: null,
+        ...(isStaticallyIllegal ? { resolution: 'exact' as const } : {}),
       };
     }),
     targetKinds,

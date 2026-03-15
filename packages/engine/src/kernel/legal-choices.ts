@@ -264,6 +264,7 @@ const mapChooseNOptions = (
       value: option.value,
       legality: 'illegal',
       illegalReason: null,
+      resolution: 'exact' as const,
     }));
   }
 
@@ -279,6 +280,7 @@ const mapChooseNOptions = (
         value: option.value,
         legality: 'unknown',
         illegalReason: null,
+        resolution: 'provisional' as const,
       }));
     }
   }
@@ -387,6 +389,7 @@ const mapChooseNOptions = (
         value: option.value,
         legality: 'unknown',
         illegalReason: null,
+        resolution: 'exact' as const,
       };
     }
 
@@ -394,6 +397,7 @@ const mapChooseNOptions = (
       value: option.value,
       legality: status.legality,
       illegalReason: status.legality === 'legal' ? null : status.illegalReason,
+      resolution: 'exact' as const,
     };
   });
 };
@@ -428,6 +432,7 @@ const mapOptionsForPendingChoice = (
         value: option.value,
         legality: 'unknown',
         illegalReason: null,
+        resolution: 'exact' as const,
       };
     }
 
@@ -455,6 +460,7 @@ const mapOptionsForPendingChoice = (
       value: option.value,
       legality: legality.legality,
       illegalReason: legality.illegalReason,
+      resolution: 'exact' as const,
     };
   });
 };

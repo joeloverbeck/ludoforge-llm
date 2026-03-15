@@ -277,9 +277,13 @@ describe('FITL COIN operations integration', () => {
       assert.ok(limOpIf.length >= 1, 'Expected LimOp branch for __actionClass == limitedOperation');
 
       const limOpChooseN = findDeep(limOpIf[0].if.then, (node: any) => node?.chooseN?.max === 1);
-      const normalChooseN = findDeep(limOpIf[0].if.else, (node: any) => node?.chooseN?.max === 99);
+      const normalChooseN = findDeep(limOpIf[0].if.else, (node: any) =>
+        node?.chooseN?.max?.if?.else === 99 &&
+        node?.chooseN?.max?.if?.then?.ref === 'grantContext' &&
+        node?.chooseN?.max?.if?.then?.key === 'maxSpaces',
+      );
       assert.ok(limOpChooseN.length >= 1, 'Expected chooseN max:1 for LimOp');
-      assert.ok(normalChooseN.length >= 1, 'Expected chooseN max:99 for full operation');
+      assert.ok(normalChooseN.length >= 1, 'Expected chooseN max with grantContext maxSpaces and fallback 99 for full operation');
 
       const categoryGuards = findDeep(selectSpaces.effects, (node: any) =>
         node?.op === '==' &&
@@ -396,7 +400,9 @@ describe('FITL COIN operations integration', () => {
         node?.chooseN?.max?.if?.when?.left?.ref === 'binding' &&
         node?.chooseN?.max?.if?.when?.left?.name === '__freeOperation' &&
         node?.chooseN?.max?.if?.when?.right === true &&
-        node?.chooseN?.max?.if?.then === 99 &&
+        node?.chooseN?.max?.if?.then?.if?.else === 99 &&
+        node?.chooseN?.max?.if?.then?.if?.then?.ref === 'grantContext' &&
+        node?.chooseN?.max?.if?.then?.if?.then?.key === 'maxSpaces' &&
         node?.chooseN?.max?.if?.else?.op === 'floorDiv' &&
         node?.chooseN?.max?.if?.else?.left?.ref === 'gvar' &&
         node?.chooseN?.max?.if?.else?.left?.var === 'arvnResources' &&

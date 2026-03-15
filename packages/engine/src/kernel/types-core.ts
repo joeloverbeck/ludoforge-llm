@@ -118,11 +118,22 @@ export interface TokenTypeTransition {
   readonly to: string;
 }
 
+export interface TokenTypeZoneEntryMatch {
+  readonly zoneKind?: 'board' | 'aux';
+  readonly category?: string;
+}
+
+export interface TokenTypeZoneEntryRule {
+  readonly match: TokenTypeZoneEntryMatch;
+  readonly setProps: Readonly<Record<string, number | string | boolean>>;
+}
+
 export interface TokenTypeDef {
   readonly id: string;
   readonly seat?: string;
   readonly props: Readonly<Record<string, 'int' | 'string' | 'boolean'>>;
   readonly transitions?: readonly TokenTypeTransition[];
+  readonly onZoneEntry?: readonly TokenTypeZoneEntryRule[];
 }
 
 export interface Token {
@@ -304,12 +315,18 @@ export interface PieceStatusTransition {
   readonly to: PieceStatusValue;
 }
 
+export interface PieceTypeZoneEntryRule {
+  readonly match: TokenTypeZoneEntryMatch;
+  readonly set: Readonly<Record<string, string | number | boolean>>;
+}
+
 export interface PieceTypeCatalogEntry {
   readonly id: string;
   readonly seat: string;
   readonly statusDimensions: readonly PieceStatusDimension[];
   readonly transitions: readonly PieceStatusTransition[];
   readonly runtimeProps?: Readonly<Record<string, string | number | boolean>>;
+  readonly onZoneEntry?: readonly PieceTypeZoneEntryRule[];
 }
 
 export interface PieceInventoryEntry {

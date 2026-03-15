@@ -1009,6 +1009,9 @@ dataAssets:
             faction: NVA
             type: base
             tunnel: untunneled
+          onZoneEntry:
+            - match: { zoneKind: aux }
+              set: { tunnel: untunneled }
         - id: vc-guerrillas
           seat: vc
           statusDimensions:
@@ -1039,6 +1042,9 @@ dataAssets:
             faction: VC
             type: base
             tunnel: untunneled
+          onZoneEntry:
+            - match: { zoneKind: aux }
+              set: { tunnel: untunneled }
       inventory:
         - pieceTypeId: us-troops
           seat: us

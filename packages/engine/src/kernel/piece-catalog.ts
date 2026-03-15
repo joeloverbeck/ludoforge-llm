@@ -62,6 +62,39 @@ export function validatePieceCatalogPayload(
 
     const declaredDimensions = new Set(pieceType.statusDimensions);
 
+    if (pieceType.onZoneEntry !== undefined) {
+      pieceType.onZoneEntry.forEach((rule, ruleIndex) => {
+        for (const [key, value] of Object.entries(rule.set)) {
+          if (!declaredDimensions.has(key as PieceStatusDimension)) {
+            diagnostics.push(withContext(
+              {
+                code: 'PIECE_ZONE_ENTRY_DIMENSION_UNDECLARED',
+                path: `asset.payload.pieceTypes[${index}].onZoneEntry[${ruleIndex}].set.${key}`,
+                severity: 'error',
+                message: `onZoneEntry set key "${key}" is not a declared statusDimension for piece type "${pieceType.id}".`,
+              },
+              context,
+            ));
+            continue;
+          }
+
+          const allowedValues = DIMENSION_VALUES[key as PieceStatusDimension];
+          if (allowedValues !== undefined && !allowedValues.includes(String(value))) {
+            diagnostics.push(withContext(
+              {
+                code: 'PIECE_ZONE_ENTRY_VALUE_INVALID',
+                path: `asset.payload.pieceTypes[${index}].onZoneEntry[${ruleIndex}].set.${key}`,
+                severity: 'error',
+                message: `Invalid value "${String(value)}" for dimension "${key}" in onZoneEntry for piece type "${pieceType.id}".`,
+                alternatives: [...allowedValues],
+              },
+              context,
+            ));
+          }
+        }
+      });
+    }
+
     pieceType.transitions.forEach((transition, transitionIndex) => {
       if (!declaredDimensions.has(transition.dimension)) {
         diagnostics.push(withContext(

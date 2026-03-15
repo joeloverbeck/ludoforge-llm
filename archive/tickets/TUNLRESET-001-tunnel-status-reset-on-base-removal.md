@@ -1,6 +1,6 @@
 # TUNLRESET-001: Reset tunnel status when bases are removed from map
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — YAML event/macro definitions, possibly kernel effect helpers
@@ -99,3 +99,52 @@ Grep for all `moveToken` effects that target `available-` zones and verify no tu
 1. `node --test packages/engine/dist/test/integration/fitl-events-tunnel-rats.test.js`
 2. `node --test packages/engine/dist/test/integration/fitl-events-tunnel-reset.test.js`
 3. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck && pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+**Completion date**: 2026-03-15
+
+### What actually changed
+
+Implemented **Option C** (engine-level declarative mechanism) instead of Option A (per-card fixes). The user requested an architecturally comprehensive, game-agnostic solution.
+
+**New kernel feature: `onZoneEntry` on `TokenTypeDef`** — declarative rules that auto-reset token properties when tokens enter zones matching criteria.
+
+#### Files modified
+
+| File | Change |
+|------|--------|
+| `packages/engine/src/kernel/types-core.ts` | Added `TokenTypeZoneEntryMatch`, `TokenTypeZoneEntryRule`, `PieceTypeZoneEntryRule`; extended `TokenTypeDef` and `PieceTypeCatalogEntry` with `onZoneEntry` |
+| `packages/engine/src/kernel/schemas-core.ts` | Added `TokenTypeZoneEntryMatchSchema`, `TokenTypeZoneEntryRuleSchema`; extended `TokenTypeDefSchema` |
+| `packages/engine/src/kernel/schemas-gamespec.ts` | Added `PieceTypeZoneEntryMatchSchema`, `PieceTypeZoneEntryRuleSchema`; extended `PieceTypeCatalogEntrySchema` |
+| `packages/engine/src/kernel/piece-catalog.ts` | Validates `onZoneEntry` set keys against declared dimensions and values |
+| `packages/engine/src/kernel/effects-token.ts` | Added `applyZoneEntryResets()` helper; integrated into `applyMoveToken`, `applyMoveAll`, `applyDraw` |
+| `packages/engine/src/cnl/game-spec-doc.ts` | Added `GameSpecTokenTypeZoneEntryRule`; extended `GameSpecTokenTypeDef` |
+| `packages/engine/src/cnl/compile-lowering.ts` | `lowerTokenTypes` compiles `onZoneEntry` with validation |
+| `packages/engine/src/cnl/compile-data-assets.ts` | Passes through `onZoneEntry` from piece catalog |
+| `data/games/fire-in-the-lake/10-vocabulary.md` | Added `zoneKind: aux` to 10 off-board zones |
+| `data/games/fire-in-the-lake/40-content-data-assets.md` | Added `onZoneEntry` rules to `nva-bases` and `vc-bases` |
+| `packages/engine/schemas/GameDef.schema.json` | Regenerated (includes `onZoneEntry` in tokenTypes) |
+
+#### New test files
+
+| File | Tests |
+|------|-------|
+| `packages/engine/test/unit/effects-token-zone-entry-resets.test.ts` | 17 tests (unit + integration for `applyZoneEntryResets` and `moveToken` integration) |
+| `packages/engine/test/unit/compile-lowering-on-zone-entry.test.ts` | 4 tests (compilation and validation) |
+| `packages/engine/test/integration/fitl-tunnel-zone-entry-reset.test.ts` | 5 tests (FITL production spec compilation and runtime reset) |
+
+### Deviations from original plan
+
+- **Option C implemented instead of Option A**: The original ticket recommended per-card `setTokenProp` fixes (Option A). The user directed implementation of the generic `onZoneEntry` mechanism instead, making per-card fixes unnecessary.
+- **No per-card YAML changes**: Cards 2, 36, 94, and assault macros were NOT modified — the engine-level `onZoneEntry` mechanism handles all cases generically.
+- **`applyMoveAll` and `applyDraw` also reset**: The plan only mentioned `applyMoveToken`, but zone-entry resets were also added to `applyMoveAll` and `applyDraw` for completeness.
+
+### Verification results
+
+- `pnpm -F @ludoforge/engine build`: ✅ clean
+- `pnpm -F @ludoforge/engine test`: ✅ 4674 tests pass, 0 failures
+- `pnpm -F @ludoforge/engine test:e2e`: ✅ 55 pass, 1 skipped, 0 failures
+- `pnpm -F @ludoforge/engine lint`: ✅ clean
+- `pnpm -F @ludoforge/engine typecheck`: ✅ clean
+- `pnpm -F @ludoforge/engine schema:artifacts`: ✅ regenerated

@@ -99,10 +99,16 @@ export interface GameSpecZoneTemplateDef {
   };
 }
 
+export interface GameSpecTokenTypeZoneEntryRule {
+  readonly match: { readonly zoneKind?: 'board' | 'aux'; readonly category?: string };
+  readonly set: Readonly<Record<string, string | number | boolean>>;
+}
+
 export interface GameSpecTokenTypeDef {
   readonly id: string;
   readonly props: Readonly<Record<string, string>>;
   readonly seat?: string;
+  readonly onZoneEntry?: readonly GameSpecTokenTypeZoneEntryRule[];
 }
 
 export interface GameSpecTurnStructure {

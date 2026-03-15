@@ -228,10 +228,48 @@ export function lowerTokenTypes(tokenTypes: GameSpecDoc['tokenTypes'], diagnosti
     if (!validProps) {
       continue;
     }
+    let onZoneEntry: TokenTypeDef['onZoneEntry'] | undefined;
+    if (tokenType.onZoneEntry !== undefined && tokenType.onZoneEntry.length > 0) {
+      const rules: NonNullable<TokenTypeDef['onZoneEntry']>[number][] = [];
+      let rulesValid = true;
+      for (const [ruleIndex, rule] of tokenType.onZoneEntry.entries()) {
+        const rulePath = `${path}.onZoneEntry[${ruleIndex}]`;
+        if (!isRecord(rule) || !isRecord(rule.match) || !isRecord(rule.set)) {
+          diagnostics.push(missingCapabilityDiagnostic(rulePath, 'onZoneEntry rule', rule));
+          rulesValid = false;
+          continue;
+        }
+        for (const key of Object.keys(rule.set)) {
+          if (!(key in props)) {
+            diagnostics.push(missingCapabilityDiagnostic(
+              `${rulePath}.set.${key}`,
+              'onZoneEntry set key',
+              key,
+              Object.keys(props),
+            ));
+            rulesValid = false;
+          }
+        }
+        if (rulesValid) {
+          rules.push({
+            match: {
+              ...(rule.match.zoneKind === undefined ? {} : { zoneKind: rule.match.zoneKind as 'board' | 'aux' }),
+              ...(rule.match.category === undefined ? {} : { category: rule.match.category as string }),
+            },
+            setProps: rule.set as Readonly<Record<string, string | number | boolean>>,
+          });
+        }
+      }
+      if (rulesValid && rules.length > 0) {
+        onZoneEntry = rules;
+      }
+    }
+
     lowered.push({
       id: tokenType.id,
       props,
       ...(tokenType.seat === undefined ? {} : { seat: tokenType.seat }),
+      ...(onZoneEntry === undefined ? {} : { onZoneEntry }),
     });
   }
   return lowered;

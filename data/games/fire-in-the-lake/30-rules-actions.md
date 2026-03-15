@@ -2139,7 +2139,21 @@ actionPipelines:
                           - { prop: faction, op: eq, value: 'US' }
                           - { prop: type, op: eq, value: troops }
                     min: 0
-                    max: 99
+                    max:
+                      if:
+                        when:
+                          op: and
+                          args:
+                            - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query: { query: grantContext, key: allowTroopMovement }
+                              right: 0
+                            - { op: '==', left: { ref: grantContext, key: allowTroopMovement }, right: false }
+                        then: 0
+                        else: 99
                 - forEach:
                     bind: $troop
                     over: { query: binding, name: $movingAdjacentTroops }
@@ -2283,7 +2297,21 @@ actionPipelines:
                           - { prop: faction, op: eq, value: 'ARVN' }
                           - { prop: type, op: eq, value: troops }
                     min: 0
-                    max: 99
+                    max:
+                      if:
+                        when:
+                          op: and
+                          args:
+                            - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query: { query: grantContext, key: allowTroopMovement }
+                              right: 0
+                            - { op: '==', left: { ref: grantContext, key: allowTroopMovement }, right: false }
+                        then: 0
+                        else: 99
                 - forEach:
                     bind: $troop
                     over: { query: binding, name: '$movingTroops@{$space}' }
@@ -2470,65 +2498,80 @@ actionPipelines:
               when:
                 op: or
                 args:
-                  - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
-                  - { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
-                  - conditionMacro: us-joint-op-arvn-spend-eligible
-                    args:
-                      resourceExpr: { ref: gvar, var: arvnResources }
-                      costExpr: 3
+                  - { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
+                  - op: '=='
+                    left:
+                      aggregate:
+                        op: count
+                        query: { query: grantContext, key: allowArvnFollowup }
+                    right: 0
+                  - { op: '!=', left: { ref: grantContext, key: allowArvnFollowup }, right: false }
               then:
-                - chooseN:
-                    bind: $arvnFollowupSpaces
-                    options: { query: binding, name: $targetSpaces }
-                    min: 0
-                    max: 1
-                - forEach:
-                    bind: $arvnSpace
-                    over: { query: binding, name: $arvnFollowupSpaces }
-                    effects:
-                      - if:
-                          when: { op: '!=', left: { ref: gvar, var: mom_bodyCount }, right: true }
-                          then:
+                - if:
+                    when:
+                      op: or
+                      args:
+                        - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                        - { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
+                        - conditionMacro: us-joint-op-arvn-spend-eligible
+                          args:
+                            resourceExpr: { ref: gvar, var: arvnResources }
+                            costExpr: 3
+                    then:
+                      - chooseN:
+                          bind: $arvnFollowupSpaces
+                          options: { query: binding, name: $targetSpaces }
+                          min: 0
+                          max: 1
+                      - forEach:
+                          bind: $arvnSpace
+                          over: { query: binding, name: $arvnFollowupSpaces }
+                          effects:
                             - if:
-                                when: { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
+                                when: { op: '!=', left: { ref: gvar, var: mom_bodyCount }, right: true }
                                 then:
-                                  - addVar: { scope: global, var: arvnResources, delta: -3 }
-                      - let:
-                          bind: $insurgentBefore
-                          value: { aggregate: { op: count, query: { query: tokensInZone, zone: $arvnSpace, filter: { op: and, args: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
-                          in:
+                                  - if:
+                                      when: { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
+                                      then:
+                                        - addVar: { scope: global, var: arvnResources, delta: -3 }
                             - let:
-                                bind: $arvnCubes
-                                value: { aggregate: { op: count, query: { query: tokensInZone, zone: $arvnSpace, filter: { op: and, args: [{ prop: faction, op: eq, value: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
+                                bind: $insurgentBefore
+                                value: { aggregate: { op: count, query: { query: tokensInZone, zone: $arvnSpace, filter: { op: and, args: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
                                 in:
                                   - let:
-                                      bind: $arvnDamage
-                                      value:
-                                        if:
-                                          when: { op: zonePropIncludes, zone: $arvnSpace, prop: terrainTags, value: 'highland' }
-                                          then: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 3 }
-                                          else: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 2 }
+                                      bind: $arvnCubes
+                                      value: { aggregate: { op: count, query: { query: tokensInZone, zone: $arvnSpace, filter: { op: and, args: [{ prop: faction, op: eq, value: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
                                       in:
-                                        - macro: coin-assault-removal-order
-                                          args:
-                                            space: $arvnSpace
-                                            damageExpr: { ref: binding, name: $arvnDamage }
-                                            bodyCountEligible: true
-                                            forceUntunneledBaseFirst: false
-                                            treatTunneledBasesAsUntunneled: false
-                                            targetFactions: [NVA, VC]
                                         - let:
-                                            bind: $insurgentAfter
-                                            value: { aggregate: { op: count, query: { query: tokensInZone, zone: $arvnSpace, filter: { op: and, args: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
+                                            bind: $arvnDamage
+                                            value:
+                                              if:
+                                                when: { op: zonePropIncludes, zone: $arvnSpace, prop: terrainTags, value: 'highland' }
+                                                then: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 3 }
+                                                else: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 2 }
                                             in:
-                                              - macro: cap-assault-search-and-destroy
+                                              - macro: coin-assault-removal-order
                                                 args:
                                                   space: $arvnSpace
-                                                  actorFaction: ARVN
-                                                  assaultRemovedCount:
-                                                    op: '-'
-                                                    left: { ref: binding, name: $insurgentBefore }
-                                                    right: { ref: binding, name: $insurgentAfter }
+                                                  damageExpr: { ref: binding, name: $arvnDamage }
+                                                  bodyCountEligible: true
+                                                  forceUntunneledBaseFirst: false
+                                                  treatTunneledBasesAsUntunneled: false
+                                                  targetFactions: [NVA, VC]
+                                              - let:
+                                                  bind: $insurgentAfter
+                                                  value: { aggregate: { op: count, query: { query: tokensInZone, zone: $arvnSpace, filter: { op: and, args: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
+                                                  in:
+                                                    - macro: cap-assault-search-and-destroy
+                                                      args:
+                                                        space: $arvnSpace
+                                                        actorFaction: ARVN
+                                                        assaultRemovedCount:
+                                                          op: '-'
+                                                          left: { ref: binding, name: $insurgentBefore }
+                                                          right: { ref: binding, name: $insurgentAfter }
+                    else: []
+              else: []
     atomicity: atomic
   - id: assault-arvn-profile
     actionId: assault

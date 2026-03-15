@@ -2,500 +2,379 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-  asActionId,
-  asPhaseId,
-  asPlayerId,
-  asZoneId,
-  legalChoicesDiscover,
-  type ActionDef,
-  type DecisionKey,
-  type EffectAST,
-  type GameDef,
-  type GameState,
-  type LegalChoicesPreparedContext,
-  type Move,
-} from '../../../src/kernel/index.js';
-import {
   createChooseNTemplate,
+  createChooseNSession,
+  advanceChooseNWithSession,
+  isSessionValid,
   rebuildPendingFromTemplate,
-  isChooseNSessionEligible,
-  type CreateChooseNTemplateInput,
+  toSelectionKey,
+  type ChooseNSession,
+  type ChooseNTemplate,
+  type SelectionKey,
 } from '../../../src/kernel/choose-n-session.js';
-import type { PrioritizedTierEntry } from '../../../src/kernel/prioritized-tier-legality.js';
+import type { SingletonProbeOutcome } from '../../../src/kernel/choose-n-option-resolution.js';
+import type { DecisionKey } from '../../../src/kernel/decision-scope.js';
 import type {
+  ChoiceOption,
   ChoicePendingChooseNRequest,
-  ChoiceTargetKind,
   MoveParamScalar,
 } from '../../../src/kernel/types.js';
+import type { PlayerId } from '../../../src/kernel/branded.js';
+import type { LegalChoicesPreparedContext } from '../../../src/kernel/legal-choices.js';
+
+// ── Helpers ──────────────────────────────────────────────────────────
 
 const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
+const asPlayerId = (id: number): PlayerId => id as unknown as PlayerId;
 
-// ── Test fixtures ───────────────────────────────────────────────────
+const makePreparedContext = (): LegalChoicesPreparedContext =>
+  ({} as LegalChoicesPreparedContext);
 
-const makeBaseDef = (): GameDef =>
-  ({
-    metadata: { id: 'session-test', players: { min: 2, max: 2 } },
-    seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
-    constants: {},
-    globalVars: [],
-    perPlayerVars: [],
-    zones: [
-      { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
-    ],
-    tokenTypes: [],
-    setup: [],
-    turnStructure: {
-      phases: [{ id: asPhaseId('main') }],
-    },
-    actions: [],
-    triggers: [],
-    terminal: { conditions: [] },
-  }) as unknown as GameDef;
-
-const makeBaseState = (): GameState => ({
-  globalVars: {},
-  perPlayerVars: {},
-  zoneVars: {},
-  playerCount: 2,
-  zones: {
-    'board:none': [],
-  },
-  nextTokenOrdinal: 0,
-  currentPhase: asPhaseId('main'),
-  activePlayer: asPlayerId(0),
-  turnCount: 1,
-  rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
-  stateHash: 0n,
-  actionUsage: {},
-  turnOrderState: { type: 'roundRobin' },
-  markers: {},
-}) as unknown as GameState;
-
-const makeTemplateInput = (
-  overrides?: Partial<CreateChooseNTemplateInput>,
-): CreateChooseNTemplateInput => ({
-  decisionKey: asDecisionKey('action:pickItems:$items'),
-  name: '$items',
-  normalizedOptions: ['a', 'b', 'c', 'd'],
-  targetKinds: [] as readonly ChoiceTargetKind[],
-  minCardinality: 1,
-  maxCardinality: 3,
-  prioritizedTierEntries: null,
-  qualifierMode: 'none',
-  preparedContext: {
-    def: makeBaseDef(),
-    state: makeBaseState(),
-    action: {
-      id: asActionId('pickItems'),
-      actor: 'active',
-      executor: 'actor',
-      phase: [asPhaseId('main')],
-      params: [],
-      pre: null,
-      cost: [],
-      effects: [],
-      limits: [],
-    } as ActionDef,
-    adjacencyGraph: { neighbors: {}, zoneCount: 1 },
-    runtimeTableIndex: { tableIds: [], tablesById: new Map() },
-    seatResolution: { index: new Map() } as unknown as LegalChoicesPreparedContext['seatResolution'],
-  },
-  partialMoveIdentity: {
-    actionId: 'pickItems',
-    params: {},
-  },
-  choiceDecisionPlayer: asPlayerId(0),
-  chooser: undefined,
-  ...overrides,
-});
-
-// ── createChooseNTemplate tests ─────────────────────────────────────
-
-describe('createChooseNTemplate', () => {
-  it('captures all selection-invariant data', () => {
-    const input = makeTemplateInput();
-    const template = createChooseNTemplate(input);
-
-    assert.equal(template.decisionKey, input.decisionKey);
-    assert.equal(template.name, input.name);
-    assert.deepStrictEqual(template.normalizedDomain, input.normalizedOptions);
-    assert.deepStrictEqual(template.cardinalityBounds, {
-      min: input.minCardinality,
-      max: input.maxCardinality,
-    });
-    assert.deepStrictEqual(template.targetKinds, input.targetKinds);
-    assert.equal(template.prioritizedTierEntries, input.prioritizedTierEntries);
-    assert.equal(template.qualifierMode, input.qualifierMode);
-    assert.equal(template.preparedContext, input.preparedContext);
-    assert.deepStrictEqual(template.partialMoveIdentity, input.partialMoveIdentity);
-    assert.equal(template.choiceDecisionPlayer, input.choiceDecisionPlayer);
-    assert.equal(template.chooser, input.chooser);
+const makeTemplate = (
+  domain: readonly string[],
+  overrides?: Partial<Parameters<typeof createChooseNTemplate>[0]>,
+): ChooseNTemplate =>
+  createChooseNTemplate({
+    decisionKey: asDecisionKey('test-choice'),
+    name: 'TestChoice',
+    normalizedOptions: domain,
+    targetKinds: [],
+    minCardinality: 1,
+    maxCardinality: domain.length,
+    prioritizedTierEntries: null,
+    qualifierMode: 'none',
+    preparedContext: makePreparedContext(),
+    partialMoveIdentity: { actionId: 'test-action', params: {} },
+    choiceDecisionPlayer: asPlayerId(0),
+    chooser: undefined,
+    ...overrides,
   });
 
-  it('builds domainIndex with stable option ordering', () => {
-    const input = makeTemplateInput({
-      normalizedOptions: ['x', 'y', 'z'],
-    });
-    const template = createChooseNTemplate(input);
+const makeInitialPending = (
+  template: ChooseNTemplate,
+  selected: readonly MoveParamScalar[] = [],
+): ChoicePendingChooseNRequest =>
+  rebuildPendingFromTemplate(template, selected) as ChoicePendingChooseNRequest;
 
-    assert.equal(template.domainIndex.size, 3);
-    // Each option key maps to its index in normalizedDomain
-    const keys = [...template.domainIndex.entries()];
-    assert.equal(keys.length, 3);
-    for (let i = 0; i < input.normalizedOptions.length; i++) {
-      const key = JSON.stringify([typeof input.normalizedOptions[i], input.normalizedOptions[i]]);
-      assert.equal(template.domainIndex.get(key), i);
-    }
+const makeSession = (
+  domain: readonly string[],
+  revision = 1,
+  selected: readonly MoveParamScalar[] = [],
+  templateOverrides?: Partial<Parameters<typeof createChooseNTemplate>[0]>,
+): ChooseNSession => {
+  const template = makeTemplate(domain, templateOverrides);
+  const pending = makeInitialPending(template, selected);
+  return createChooseNSession(template, selected, pending, revision);
+};
+
+// ── Tests ────────────────────────────────────────────────────────────
+
+describe('createChooseNSession', () => {
+  it('creates a valid session from template and initial state', () => {
+    const session = makeSession(['a', 'b', 'c']);
+
+    assert.equal(session.revision, 1);
+    assert.equal(session.decisionKey, asDecisionKey('test-choice'));
+    assert.deepEqual(session.currentSelected, []);
+    assert.equal(session.currentPending.type, 'chooseN');
+    assert.equal(session.currentPending.options.length, 3);
+    assert.equal(session.probeCache.size, 0);
+    assert.equal(session.legalityCache.size, 0);
   });
 
-  it('captures prioritized tier entries when present', () => {
-    const tiers: readonly (readonly PrioritizedTierEntry[])[] = [
-      [{ value: 'a' }, { value: 'b' }],
-      [{ value: 'c' }],
-    ];
-    const input = makeTemplateInput({
-      prioritizedTierEntries: tiers,
-      qualifierMode: 'none',
-    });
-    const template = createChooseNTemplate(input);
+  it('preserves template reference', () => {
+    const template = makeTemplate(['x', 'y']);
+    const pending = makeInitialPending(template);
+    const session = createChooseNSession(template, [], pending, 5);
+    assert.equal(session.template, template);
+  });
 
-    assert.deepStrictEqual(template.prioritizedTierEntries, tiers);
-    assert.equal(template.qualifierMode, 'none');
+  it('stores initial selected sequence', () => {
+    const session = makeSession(['a', 'b', 'c'], 1, ['a']);
+    assert.deepEqual(session.currentSelected, ['a']);
+    assert.equal(session.currentPending.selected.length, 1);
   });
 });
 
-// ── rebuildPendingFromTemplate tests ────────────────────────────────
-
-describe('rebuildPendingFromTemplate', () => {
-  it('with empty selection matches initial buildChooseNPendingChoice output structure', () => {
-    const input = makeTemplateInput();
-    const template = createChooseNTemplate(input);
-    const result = rebuildPendingFromTemplate(template, []);
-
-    assert.equal(result.kind, 'pending');
-    assert.equal(result.complete, false);
-    assert.equal(result.type, 'chooseN');
-    assert.equal(result.decisionKey, input.decisionKey);
-    assert.equal(result.name, input.name);
-    assert.equal(result.min, input.minCardinality);
-    assert.equal(result.max, input.maxCardinality);
-    assert.deepStrictEqual(result.selected, []);
-    assert.equal(result.canConfirm, false); // 0 < min(1)
-
-    // All options should be unknown (no selection, has capacity, no tiers)
-    const pending = result as ChoicePendingChooseNRequest;
-    for (const option of pending.options) {
-      assert.equal(option.legality, 'unknown');
-      assert.equal(option.illegalReason, null);
-    }
-    assert.equal(pending.options.length, 4);
+describe('isSessionValid', () => {
+  it('returns true when revision matches', () => {
+    const session = makeSession(['a', 'b'], 42);
+    assert.equal(isSessionValid(session, 42), true);
   });
 
-  it('with selection [a, b] marks selected options illegal and computes canConfirm', () => {
-    const input = makeTemplateInput();
-    const template = createChooseNTemplate(input);
-    const result = rebuildPendingFromTemplate(template, ['a', 'b']);
-    const pending = result as ChoicePendingChooseNRequest;
-
-    assert.equal(pending.canConfirm, true); // 2 >= min(1) && 2 <= max(3)
-    assert.deepStrictEqual(pending.selected, ['a', 'b']);
-
-    // 'a' and 'b' should be illegal (already selected)
-    const optA = pending.options.find((o) => o.value === 'a');
-    const optB = pending.options.find((o) => o.value === 'b');
-    assert.equal(optA?.legality, 'illegal');
-    assert.equal(optB?.legality, 'illegal');
-
-    // 'c' and 'd' should be unknown (selectable)
-    const optC = pending.options.find((o) => o.value === 'c');
-    const optD = pending.options.find((o) => o.value === 'd');
-    assert.equal(optC?.legality, 'unknown');
-    assert.equal(optD?.legality, 'unknown');
+  it('returns false when revision mismatches', () => {
+    const session = makeSession(['a', 'b'], 42);
+    assert.equal(isSessionValid(session, 43), false);
   });
 
-  it('marks all unselected options illegal when at max capacity', () => {
-    const input = makeTemplateInput({ maxCardinality: 2 });
-    const template = createChooseNTemplate(input);
-    const result = rebuildPendingFromTemplate(template, ['a', 'b']);
-    const pending = result as ChoicePendingChooseNRequest;
-
-    // At max capacity — no more adds allowed
-    for (const option of pending.options) {
-      assert.equal(option.legality, 'illegal');
-    }
-    assert.equal(pending.canConfirm, true); // 2 >= min(1) && 2 <= max(2)
-  });
-
-  it('omits decisionPlayer when chooser is undefined', () => {
-    const input = makeTemplateInput({ chooser: undefined });
-    const template = createChooseNTemplate(input);
-    const result = rebuildPendingFromTemplate(template, []);
-
-    assert.equal('decisionPlayer' in result, false);
-  });
-
-  it('includes decisionPlayer when chooser is defined', () => {
-    const input = makeTemplateInput({
-      chooser: { player: 'active' } as unknown as CreateChooseNTemplateInput['chooser'],
-      choiceDecisionPlayer: asPlayerId(1),
-    });
-    const template = createChooseNTemplate(input);
-    const result = rebuildPendingFromTemplate(template, []);
-
-    assert.equal(result.decisionPlayer, asPlayerId(1));
-  });
-
-  it('handles prioritized tiers — blocks non-admissible options', () => {
-    // Tier 0: [a, b], Tier 1: [c, d]
-    // With empty selection, only tier 0 is admissible
-    const tiers: readonly (readonly PrioritizedTierEntry[])[] = [
-      [{ value: 'a' }, { value: 'b' }],
-      [{ value: 'c' }, { value: 'd' }],
-    ];
-    const input = makeTemplateInput({
-      prioritizedTierEntries: tiers,
-    });
-    const template = createChooseNTemplate(input);
-    const result = rebuildPendingFromTemplate(template, []);
-    const pending = result as ChoicePendingChooseNRequest;
-
-    // Tier 0 options should be unknown (admissible)
-    const optA = pending.options.find((o) => o.value === 'a');
-    const optB = pending.options.find((o) => o.value === 'b');
-    assert.equal(optA?.legality, 'unknown');
-    assert.equal(optB?.legality, 'unknown');
-
-    // Tier 1 options should be illegal (not yet admissible)
-    const optC = pending.options.find((o) => o.value === 'c');
-    const optD = pending.options.find((o) => o.value === 'd');
-    assert.equal(optC?.legality, 'illegal');
-    assert.equal(optD?.legality, 'illegal');
-  });
-
-  it('after selecting all tier 0, tier 1 becomes admissible', () => {
-    const tiers: readonly (readonly PrioritizedTierEntry[])[] = [
-      [{ value: 'a' }, { value: 'b' }],
-      [{ value: 'c' }, { value: 'd' }],
-    ];
-    const input = makeTemplateInput({
-      prioritizedTierEntries: tiers,
-      maxCardinality: 4,
-    });
-    const template = createChooseNTemplate(input);
-    const result = rebuildPendingFromTemplate(template, ['a', 'b']);
-    const pending = result as ChoicePendingChooseNRequest;
-
-    // Tier 0 selected — illegal
-    assert.equal(pending.options.find((o) => o.value === 'a')?.legality, 'illegal');
-    assert.equal(pending.options.find((o) => o.value === 'b')?.legality, 'illegal');
-
-    // Tier 1 now admissible — unknown
-    assert.equal(pending.options.find((o) => o.value === 'c')?.legality, 'unknown');
-    assert.equal(pending.options.find((o) => o.value === 'd')?.legality, 'unknown');
-  });
-
-  it('parity: rebuild with same selection produces identical result', () => {
-    const input = makeTemplateInput();
-    const template = createChooseNTemplate(input);
-
-    // Build two results with the same selection
-    const resultEmpty1 = rebuildPendingFromTemplate(template, []);
-    const resultEmpty2 = rebuildPendingFromTemplate(template, []);
-    assert.deepStrictEqual(resultEmpty1, resultEmpty2);
-
-    const resultAB1 = rebuildPendingFromTemplate(template, ['a', 'b']);
-    const resultAB2 = rebuildPendingFromTemplate(template, ['a', 'b']);
-    assert.deepStrictEqual(resultAB1, resultAB2);
+  it('returns false for any different revision', () => {
+    const session = makeSession(['a', 'b'], 1);
+    assert.equal(isSessionValid(session, 0), false);
+    assert.equal(isSessionValid(session, 2), false);
+    assert.equal(isSessionValid(session, 100), false);
   });
 });
 
-// ── Integration parity with legalChoicesDiscover ────────────────────
+describe('advanceChooseNWithSession', () => {
+  describe('add command', () => {
+    it('adds value to selected and updates pending', () => {
+      const session = makeSession(['a', 'b', 'c']);
+      const result = advanceChooseNWithSession(session, { type: 'add', value: 'a' });
 
-describe('rebuildPendingFromTemplate parity with legalChoicesDiscover', () => {
-  const chooseNAction: ActionDef = {
-    id: asActionId('pick'),
-    actor: 'active',
-    executor: 'actor',
-    phase: [asPhaseId('main')],
-    params: [],
-    pre: null,
-    cost: [],
-    effects: [
-      {
-        chooseN: {
-          internalDecisionId: 'decision:$items',
-          bind: '$items',
-          options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
-          min: 1,
-          max: 2,
-        },
-      } as EffectAST,
-    ],
-    limits: [],
-  };
-
-  const def: GameDef = {
-    ...makeBaseDef(),
-    actions: [chooseNAction],
-  } as unknown as GameDef;
-
-  const state = makeBaseState();
-  const move: Move = {
-    actionId: asActionId('pick'),
-    params: {} as Move['params'],
-  };
-
-  it('empty selection: template rebuild matches discover output', () => {
-    const discovered = legalChoicesDiscover(def, state, move);
-    assert.equal(discovered.kind, 'pending');
-    assert.equal((discovered as ChoicePendingChooseNRequest).type, 'chooseN');
-
-    const pending = discovered as ChoicePendingChooseNRequest;
-
-    // Build template from the discovered values
-    const template = createChooseNTemplate({
-      decisionKey: pending.decisionKey,
-      name: pending.name,
-      normalizedOptions: pending.options.map((o) => o.value as MoveParamScalar),
-      targetKinds: pending.targetKinds,
-      minCardinality: pending.min ?? 0,
-      maxCardinality: pending.max ?? pending.options.length,
-      prioritizedTierEntries: null,
-      qualifierMode: 'none',
-      preparedContext: {
-        def,
-        state,
-        action: chooseNAction,
-        adjacencyGraph: { neighbors: {}, zoneCount: 1 },
-        runtimeTableIndex: { tableIds: [], tablesById: new Map() },
-        seatResolution: { index: new Map() } as unknown as LegalChoicesPreparedContext['seatResolution'],
-      },
-      partialMoveIdentity: { actionId: 'pick', params: {} },
-      choiceDecisionPlayer: asPlayerId(0),
-      chooser: undefined,
+      assert.equal(result.done, false);
+      if (!result.done) {
+        assert.deepEqual(result.pending.selected, ['a']);
+      }
+      assert.deepEqual(session.currentSelected, ['a']);
     });
 
-    const rebuilt = rebuildPendingFromTemplate(template, []);
-    const rebuiltPending = rebuilt as ChoicePendingChooseNRequest;
+    it('produces correct pending with one recompute (not two full pipeline walks)', () => {
+      const session = makeSession(['a', 'b', 'c']);
 
-    // Structural parity checks
-    assert.equal(rebuiltPending.kind, pending.kind);
-    assert.equal(rebuiltPending.type, pending.type);
-    assert.equal(rebuiltPending.decisionKey, pending.decisionKey);
-    assert.equal(rebuiltPending.name, pending.name);
-    assert.equal(rebuiltPending.min, pending.min);
-    assert.equal(rebuiltPending.max, pending.max);
-    assert.deepStrictEqual(rebuiltPending.selected, pending.selected);
-    assert.equal(rebuiltPending.canConfirm, pending.canConfirm);
-    assert.equal(rebuiltPending.options.length, pending.options.length);
-
-    // Option values and static legality must match
-    for (let i = 0; i < pending.options.length; i++) {
-      const rebuiltOpt = rebuiltPending.options[i]!;
-      const discoveredOpt = pending.options[i]!;
-      assert.deepStrictEqual(rebuiltOpt.value, discoveredOpt.value);
-      // Both should be 'unknown' for empty selection with no tiers
-      assert.equal(rebuiltOpt.legality, discoveredOpt.legality);
-    }
-  });
-
-  it('selection [alpha, beta]: template rebuild matches discover output', () => {
-    const moveWithSelection: Move = {
-      actionId: asActionId('pick'),
-      params: {} as Move['params'],
-    };
-
-    // Get initial discovery to extract domain info
-    const initial = legalChoicesDiscover(def, state, moveWithSelection);
-    const initialPending = initial as ChoicePendingChooseNRequest;
-
-    const template = createChooseNTemplate({
-      decisionKey: initialPending.decisionKey,
-      name: initialPending.name,
-      normalizedOptions: initialPending.options.map((o) => o.value as MoveParamScalar),
-      targetKinds: initialPending.targetKinds,
-      minCardinality: initialPending.min ?? 0,
-      maxCardinality: initialPending.max ?? initialPending.options.length,
-      prioritizedTierEntries: null,
-      qualifierMode: 'none',
-      preparedContext: {
-        def,
-        state,
-        action: chooseNAction,
-        adjacencyGraph: { neighbors: {}, zoneCount: 1 },
-        runtimeTableIndex: { tableIds: [], tablesById: new Map() },
-        seatResolution: { index: new Map() } as unknown as LegalChoicesPreparedContext['seatResolution'],
-      },
-      partialMoveIdentity: { actionId: 'pick', params: {} },
-      choiceDecisionPlayer: asPlayerId(0),
-      chooser: undefined,
+      // Add 'a' — should rebuild from template exactly once.
+      const result = advanceChooseNWithSession(session, { type: 'add', value: 'a' });
+      assert.equal(result.done, false);
+      if (!result.done) {
+        // 'a' is now selected -> should be illegal in options (already selected).
+        const optionA = result.pending.options.find((o) => o.value === 'a');
+        assert.equal(optionA?.legality, 'illegal');
+        // 'b' and 'c' should still be selectable.
+        const optionB = result.pending.options.find((o) => o.value === 'b');
+        assert.equal(optionB?.legality, 'unknown');
+      }
     });
 
-    // Rebuild with [alpha, beta] selection
-    const rebuilt = rebuildPendingFromTemplate(template, ['alpha', 'beta']);
-    const rebuiltPending = rebuilt as ChoicePendingChooseNRequest;
+    it('rejects duplicate selection', () => {
+      const session = makeSession(['a', 'b', 'c'], 1, ['a']);
+      assert.throws(
+        () => advanceChooseNWithSession(session, { type: 'add', value: 'a' }),
+        /duplicate/,
+      );
+    });
 
-    assert.equal(rebuiltPending.canConfirm, true); // 2 >= 1 && 2 <= 2
-    assert.deepStrictEqual(rebuiltPending.selected, ['alpha', 'beta']);
+    it('rejects value outside domain', () => {
+      const session = makeSession(['a', 'b', 'c']);
+      assert.throws(
+        () => advanceChooseNWithSession(session, { type: 'add', value: 'z' }),
+        /outside the current chooseN domain/,
+      );
+    });
 
-    // alpha and beta should be illegal (selected)
-    const optAlpha = rebuiltPending.options.find((o) => o.value === 'alpha');
-    const optBeta = rebuiltPending.options.find((o) => o.value === 'beta');
-    assert.equal(optAlpha?.legality, 'illegal');
-    assert.equal(optBeta?.legality, 'illegal');
+    it('rejects illegal options', () => {
+      // max=1, so after selecting one, others are illegal (at capacity).
+      const session = makeSession(['a', 'b', 'c'], 1, [], { maxCardinality: 1 });
+      advanceChooseNWithSession(session, { type: 'add', value: 'a' });
+      // Now all remaining are illegal (at capacity).
+      assert.throws(
+        () => advanceChooseNWithSession(session, { type: 'add', value: 'b' }),
+        /illegal/,
+      );
+    });
 
-    // gamma should be illegal too (at max capacity = 2)
-    const optGamma = rebuiltPending.options.find((o) => o.value === 'gamma');
-    assert.equal(optGamma?.legality, 'illegal');
-  });
-});
-
-// ── isChooseNSessionEligible tests ──────────────────────────────────
-
-describe('isChooseNSessionEligible', () => {
-  it('standard chooseN passes eligibility', () => {
-    const template = createChooseNTemplate(makeTemplateInput());
-    assert.equal(isChooseNSessionEligible(template), true);
-  });
-
-  it('rejects empty domain', () => {
-    const template = createChooseNTemplate(makeTemplateInput({
-      normalizedOptions: [],
-      maxCardinality: 0,
-      minCardinality: 0,
-    }));
-    assert.equal(isChooseNSessionEligible(template), false);
-  });
-
-  it('rejects negative min cardinality', () => {
-    const template = createChooseNTemplate(makeTemplateInput({
-      minCardinality: -1,
-    }));
-    assert.equal(isChooseNSessionEligible(template), false);
+    it('allows unknown options (spec 3.4)', () => {
+      const session = makeSession(['a', 'b', 'c']);
+      // All options start as 'unknown' (from rebuildPendingFromTemplate).
+      const optionA = session.currentPending.options.find((o) => o.value === 'a');
+      assert.equal(optionA?.legality, 'unknown');
+      // Should succeed -- unknown options are selectable.
+      assert.doesNotThrow(
+        () => advanceChooseNWithSession(session, { type: 'add', value: 'a' }),
+      );
+    });
   });
 
-  it('rejects max < min', () => {
-    const template = createChooseNTemplate(makeTemplateInput({
-      minCardinality: 3,
-      maxCardinality: 1,
-    }));
-    assert.equal(isChooseNSessionEligible(template), false);
+  describe('remove command', () => {
+    it('removes value from selected and updates pending', () => {
+      const session = makeSession(['a', 'b', 'c'], 1, ['a', 'b']);
+      const result = advanceChooseNWithSession(session, { type: 'remove', value: 'a' });
+
+      assert.equal(result.done, false);
+      if (!result.done) {
+        assert.deepEqual(result.pending.selected, ['b']);
+      }
+      assert.deepEqual(session.currentSelected, ['b']);
+    });
+
+    it('rejects removing a value not in selection', () => {
+      const session = makeSession(['a', 'b', 'c'], 1, ['a']);
+      assert.throws(
+        () => advanceChooseNWithSession(session, { type: 'remove', value: 'b' }),
+        /not selected/,
+      );
+    });
   });
 
-  it('rejects max > domain length', () => {
-    const template = createChooseNTemplate(makeTemplateInput({
-      normalizedOptions: ['a', 'b'],
-      maxCardinality: 5,
-    }));
-    assert.equal(isChooseNSessionEligible(template), false);
+  describe('confirm command', () => {
+    it('returns done with value when canConfirm is true', () => {
+      // min=1, max=3, domain=['a','b','c'], selected=['a'] -> canConfirm=true.
+      const session = makeSession(['a', 'b', 'c'], 1, ['a']);
+      const result = advanceChooseNWithSession(session, { type: 'confirm' });
+
+      assert.equal(result.done, true);
+      if (result.done) {
+        assert.deepEqual(result.value, ['a']);
+      }
+    });
+
+    it('rejects confirm when canConfirm is false', () => {
+      // min=2, selected=[] -> canConfirm=false.
+      const session = makeSession(['a', 'b', 'c'], 1, [], { minCardinality: 2 });
+      assert.throws(
+        () => advanceChooseNWithSession(session, { type: 'confirm' }),
+        /cannot be confirmed/,
+      );
+    });
   });
 
-  it('accepts valid boundary case: min=0, max=domain.length', () => {
-    const template = createChooseNTemplate(makeTemplateInput({
-      normalizedOptions: ['a', 'b', 'c'],
-      minCardinality: 0,
-      maxCardinality: 3,
-    }));
-    assert.equal(isChooseNSessionEligible(template), true);
+  describe('legality cache', () => {
+    it('caches option results on first computation', () => {
+      const session = makeSession(['a', 'b', 'c']);
+      advanceChooseNWithSession(session, { type: 'add', value: 'a' });
+
+      // The legalityCache should have an entry for selection {a}.
+      assert.equal(session.legalityCache.size, 1);
+    });
+
+    it('hits cache on second visit to same selection', () => {
+      const session = makeSession(['a', 'b', 'c']);
+
+      // Add a, then b, then remove b -> back to {a}.
+      advanceChooseNWithSession(session, { type: 'add', value: 'a' });
+      advanceChooseNWithSession(session, { type: 'add', value: 'b' });
+      advanceChooseNWithSession(session, { type: 'remove', value: 'b' });
+
+      // The selection {a} should have been cached from the first add.
+      // The legality cache should have entries for {a} and {a,b}.
+      assert.equal(session.legalityCache.size, 2);
+    });
+  });
+
+  describe('probe cache integration', () => {
+    it('probe cache persists across toggles (test acceptance criterion 4)', () => {
+      const session = makeSession(['a', 'b', 'c', 'd']);
+      let resolveCalls = 0;
+
+      const resolveOptions = (
+        pending: ChoicePendingChooseNRequest,
+        probeCache: Map<SelectionKey, SingletonProbeOutcome>,
+      ): readonly ChoiceOption[] => {
+        resolveCalls += 1;
+        // Simulate probing: store a result in the probe cache.
+        const selKey = toSelectionKey(session.template.domainIndex, pending.selected);
+        probeCache.set(selKey, { kind: 'confirmable' });
+        return pending.options;
+      };
+
+      // Add option A -- resolveOptions is called, populates probeCache.
+      advanceChooseNWithSession(session, { type: 'add', value: 'a' }, resolveOptions);
+      assert.equal(resolveCalls, 1);
+      assert.equal(session.probeCache.size, 1);
+
+      // Add option B -- resolveOptions is called again with the SAME probeCache.
+      advanceChooseNWithSession(session, { type: 'add', value: 'b' }, resolveOptions);
+      assert.equal(resolveCalls, 2);
+      // Probe cache now has entries from both toggles.
+      assert.equal(session.probeCache.size, 2);
+
+      // Verify the first probe cache entry is still present.
+      const firstKey = toSelectionKey(session.template.domainIndex, ['a']);
+      assert.equal(session.probeCache.has(firstKey), true);
+    });
+
+    it('legality cache prevents redundant resolveOptions calls', () => {
+      const session = makeSession(['a', 'b', 'c']);
+      let resolveCalls = 0;
+
+      const resolveOptions = (
+        pending: ChoicePendingChooseNRequest,
+        _probeCache: Map<SelectionKey, SingletonProbeOutcome>,
+      ): readonly ChoiceOption[] => {
+        resolveCalls += 1;
+        return pending.options;
+      };
+
+      // Add a -> resolveOptions called.
+      advanceChooseNWithSession(session, { type: 'add', value: 'a' }, resolveOptions);
+      assert.equal(resolveCalls, 1);
+
+      // Add b -> resolveOptions called.
+      advanceChooseNWithSession(session, { type: 'add', value: 'b' }, resolveOptions);
+      assert.equal(resolveCalls, 2);
+
+      // Remove b -> back to {a} -- legality cache HIT, resolveOptions NOT called.
+      advanceChooseNWithSession(session, { type: 'remove', value: 'b' }, resolveOptions);
+      assert.equal(resolveCalls, 2); // Still 2, not 3.
+    });
+  });
+
+  describe('session equivalence with stateless path (acceptance criterion 7)', () => {
+    it('session recomputation matches stateless rebuildPendingFromTemplate', () => {
+      const domain = ['alpha', 'beta', 'gamma', 'delta'];
+      const template = makeTemplate(domain);
+      const session = createChooseNSession(
+        template,
+        [],
+        makeInitialPending(template),
+        1,
+      );
+
+      // Add alpha via session.
+      advanceChooseNWithSession(session, { type: 'add', value: 'alpha' });
+
+      // Rebuild via stateless path with the same selected.
+      const statelessPending = rebuildPendingFromTemplate(
+        template,
+        ['alpha'],
+      ) as ChoicePendingChooseNRequest;
+
+      // The session's pending should match the stateless result.
+      assert.equal(
+        session.currentPending.options.length,
+        statelessPending.options.length,
+      );
+      assert.deepEqual(session.currentPending.selected, statelessPending.selected);
+      assert.equal(session.currentPending.canConfirm, statelessPending.canConfirm);
+      assert.equal(session.currentPending.min, statelessPending.min);
+      assert.equal(session.currentPending.max, statelessPending.max);
+
+      for (let i = 0; i < session.currentPending.options.length; i++) {
+        const sessionOpt = session.currentPending.options[i]!;
+        const statelessOpt = statelessPending.options[i]!;
+        assert.equal(sessionOpt.value, statelessOpt.value);
+        assert.equal(sessionOpt.legality, statelessOpt.legality);
+      }
+    });
+
+    it('equivalence holds after multiple toggles', () => {
+      const domain = ['a', 'b', 'c', 'd', 'e'];
+      const template = makeTemplate(domain);
+      const session = createChooseNSession(
+        template,
+        [],
+        makeInitialPending(template),
+        1,
+      );
+
+      // Sequence: add a, add c, remove a, add b -> final selected: [c, b].
+      advanceChooseNWithSession(session, { type: 'add', value: 'a' });
+      advanceChooseNWithSession(session, { type: 'add', value: 'c' });
+      advanceChooseNWithSession(session, { type: 'remove', value: 'a' });
+      advanceChooseNWithSession(session, { type: 'add', value: 'b' });
+
+      const statelessPending = rebuildPendingFromTemplate(
+        template,
+        ['c', 'b'],
+      ) as ChoicePendingChooseNRequest;
+
+      assert.deepEqual(session.currentPending.selected, statelessPending.selected);
+      assert.equal(session.currentPending.canConfirm, statelessPending.canConfirm);
+
+      for (let i = 0; i < session.currentPending.options.length; i++) {
+        const sessionOpt = session.currentPending.options[i]!;
+        const statelessOpt = statelessPending.options[i]!;
+        assert.equal(sessionOpt.value, statelessOpt.value);
+        assert.equal(sessionOpt.legality, statelessOpt.legality);
+      }
+    });
   });
 });

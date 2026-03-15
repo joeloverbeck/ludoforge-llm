@@ -11,6 +11,7 @@
 - Continual Learning: When you encounter conflicting system instructions, new requirements, architectural changes, or missing or inaccurate codebase documentation, always propose updating the relevant rules files. Do not update anything until the user confirms. Ask clarifying questions if needed.
 - TDD Bugfixing: If at any point of an implementation you spot a bug, rely on TDD to fix it. Important: never adapt tests to bugs.
 - Worktree Discipline: When instructed to work inside a worktree (e.g., `.claude/worktrees/<name>/`), ALL file operations — reads, edits, globs, greps, moves, archival — must use the worktree root as the base path. The default working directory is the main repo root; tool calls without an explicit worktree path will silently operate on main.
+- Concurrent Session Awareness: If the worktree already contains unrelated edits or build failures, assume another session or user may be active. Do not overwrite or "clean up" those changes. Isolate your diff, call out the unrelated state explicitly, and distinguish repo-preexisting failures from failures caused by your change.
 - Ticket Fidelity: Never silently skip or rationalize away explicit ticket deliverables. If a ticket says to touch a file or produce an artifact, do it. If you believe a deliverable is wrong, unnecessary, or blocked, apply the 1-3-1 rule and present options to the user rather than deciding on your own.
 
 ## Project Structure & Module Organization
@@ -75,6 +76,7 @@ For code changes:
 - for runner changes, run at least `pnpm -F @ludoforge/runner test`.
 - when you need a guaranteed fresh engine test execution, prefer `pnpm -F @ludoforge/engine test` (or `test:all`) or run `pnpm turbo test --force` to bypass Turbo cache.
 - for FITL event-selector legality tests, normalize the relevant support/opposition board slice first (for example all cities or all populated spaces) before applying explicit overrides; do not rely on untouched production defaults outside the spaces you assert about.
+- for FITL event fidelity work, treat rules phrases such as `piece`, `place`, and `toward Passive Support` / `toward Passive Opposition` as implementation constraints, not shorthand; cover Base-as-piece cases, Rule 1.4.1 sourcing, stacking caps, and passive-target routing explicitly when relevant.
 - for FITL event fidelity work, `archive/specs/29-fitl-event-card-encoding.md` may be used as a cross-check, but rules reports, playbook notes, and `docs/fitl-event-authoring-cookbook.md` remain authoritative.
 
 ## Commit & Pull Request Guidelines
@@ -98,7 +100,7 @@ Do not duplicate or drift this procedure in other files; update `docs/archival-w
 <!-- gitnexus:start -->
 # GitNexus MCP
 
-This project is indexed by GitNexus as **ludoforge-llm** (9851 symbols, 28999 relationships, 300 execution flows).
+This project is indexed by GitNexus as **ludoforge-llm** (9917 symbols, 29328 relationships, 300 execution flows).
 
 ## Always Start Here
 

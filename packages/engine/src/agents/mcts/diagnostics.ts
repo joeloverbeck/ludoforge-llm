@@ -49,6 +49,16 @@ export interface MutableDiagnosticsAccumulator {
   forcedMovePlies: number;
   hybridRolloutPlies: number;
 
+  // Defensive failure counters
+  expansionApplyMoveFailures: number;
+
+  // Decision node counters
+  decisionNodesCreated: number;
+  decisionDepthMax: number;
+  decisionCompletionsInTree: number;
+  decisionCompletionsInRollout: number;
+  decisionIllegalPruned: number;
+
   // Aggregation arrays (for computing averages)
   leafRewardSpans: number[];
   selectionDepths: number[];
@@ -80,6 +90,14 @@ export function createAccumulator(): MutableDiagnosticsAccumulator {
 
     forcedMovePlies: 0,
     hybridRolloutPlies: 0,
+
+    expansionApplyMoveFailures: 0,
+
+    decisionNodesCreated: 0,
+    decisionDepthMax: 0,
+    decisionCompletionsInTree: 0,
+    decisionCompletionsInRollout: 0,
+    decisionIllegalPruned: 0,
 
     leafRewardSpans: [],
     selectionDepths: [],
@@ -122,6 +140,16 @@ export interface MctsSearchDiagnostics {
   // Compressed-ply counters
   readonly forcedMovePlies?: number;
   readonly hybridRolloutPlies?: number;
+
+  // Defensive failure counters
+  readonly expansionApplyMoveFailures?: number;
+
+  // Decision node counters
+  readonly decisionNodesCreated?: number;
+  readonly decisionDepthMax?: number;
+  readonly decisionCompletionsInTree?: number;
+  readonly decisionCompletionsInRollout?: number;
+  readonly decisionIllegalPruned?: number;
 
   // Derived averages
   readonly avgSelectionDepth?: number;
@@ -228,6 +256,14 @@ export function collectDiagnostics(
 
     forcedMovePlies: accumulator.forcedMovePlies,
     hybridRolloutPlies: accumulator.hybridRolloutPlies,
+
+    expansionApplyMoveFailures: accumulator.expansionApplyMoveFailures,
+
+    decisionNodesCreated: accumulator.decisionNodesCreated,
+    decisionDepthMax: accumulator.decisionDepthMax,
+    decisionCompletionsInTree: accumulator.decisionCompletionsInTree,
+    decisionCompletionsInRollout: accumulator.decisionCompletionsInRollout,
+    decisionIllegalPruned: accumulator.decisionIllegalPruned,
 
     ...(avgSelectionDepth !== undefined ? { avgSelectionDepth } : {}),
     ...(avgLeafRewardSpan !== undefined ? { avgLeafRewardSpan } : {}),

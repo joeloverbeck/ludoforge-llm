@@ -122,9 +122,13 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     );
     assert.ok(usShadedChecks.length >= 1);
     const usHasMaxTwo = findDeep(usShadedChecks[0], (node: any) => node?.chooseN?.max === 2);
-    const usHasMaxNinetyNine = findDeep(usShadedChecks[0], (node: any) => node?.chooseN?.max === 99);
+    const usHasGrantContextMax = findDeep(usShadedChecks[0], (node: any) =>
+      node?.chooseN?.max?.if?.else === 99 &&
+      node?.chooseN?.max?.if?.then?.ref === 'grantContext' &&
+      node?.chooseN?.max?.if?.then?.key === 'maxSpaces',
+    );
     assert.ok(usHasMaxTwo.length >= 1, 'Expected US cap_caps shaded branch to set max 2');
-    assert.ok(usHasMaxNinetyNine.length >= 1, 'Expected US cap_caps else branch to preserve max 99');
+    assert.ok(usHasGrantContextMax.length >= 1, 'Expected US cap_caps else branch to use grantContext maxSpaces with fallback 99');
 
     const arvnShadedChecks = findDeep(arvn.stages, (node: any) =>
       node?.if?.when?.left?.ref === 'globalMarkerState' &&
@@ -150,14 +154,16 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
       node?.chooseN?.max?.if?.when?.left?.ref === 'binding' &&
       node?.chooseN?.max?.if?.when?.left?.name === '__freeOperation' &&
       node?.chooseN?.max?.if?.when?.right === true &&
-      node?.chooseN?.max?.if?.then === 99 &&
+      node?.chooseN?.max?.if?.then?.if?.else === 99 &&
+      node?.chooseN?.max?.if?.then?.if?.then?.ref === 'grantContext' &&
+      node?.chooseN?.max?.if?.then?.if?.then?.key === 'maxSpaces' &&
       node?.chooseN?.max?.if?.else?.op === 'floorDiv' &&
       node?.chooseN?.max?.if?.else?.left?.ref === 'gvar' &&
       node?.chooseN?.max?.if?.else?.left?.var === 'arvnResources' &&
       node?.chooseN?.max?.if?.else?.right === 3,
     );
     assert.ok(arvnHasFreeOperationCap.length >= 1, 'Expected ARVN cap_caps shaded branch to preserve the free-operation max 2 override over affordability');
-    assert.ok(arvnHasAffordabilityElse.length >= 1, 'Expected ARVN non-cap_caps branch to preserve the free-operation max 99 override over affordability');
+    assert.ok(arvnHasAffordabilityElse.length >= 1, 'Expected ARVN non-cap_caps branch to use grantContext maxSpaces with affordability fallback');
   });
 
   it('caps Assault space selection for cap_abrams shaded branch in US profile only', () => {
@@ -171,9 +177,13 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     );
     assert.ok(usShadedChecks.length >= 1);
     const usHasMaxTwo = findDeep(usShadedChecks[0], (node: any) => node?.chooseN?.max === 2);
-    const usHasMaxNinetyNine = findDeep(usShadedChecks[0], (node: any) => node?.chooseN?.max === 99);
+    const usHasGrantContextMax = findDeep(usShadedChecks[0], (node: any) =>
+      node?.chooseN?.max?.if?.else === 99 &&
+      node?.chooseN?.max?.if?.then?.ref === 'grantContext' &&
+      node?.chooseN?.max?.if?.then?.key === 'maxSpaces',
+    );
     assert.ok(usHasMaxTwo.length >= 1, 'Expected US cap_abrams shaded branch to set max 2');
-    assert.ok(usHasMaxNinetyNine.length >= 1, 'Expected US cap_abrams else branch to preserve max 99');
+    assert.ok(usHasGrantContextMax.length >= 1, 'Expected US cap_abrams else branch to use grantContext maxSpaces with fallback 99');
 
     const arvnAbramsChecks = findDeep(arvn.stages, (node: any) =>
       node?.if?.when?.left?.ref === 'globalMarkerState' &&

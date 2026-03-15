@@ -10,42 +10,52 @@ zones:
       type: deck
       drawFrom: top
   - id: available-US
+    zoneKind: aux
     owner: none
     visibility: public
     ordering: set
   - id: out-of-play-US
+    zoneKind: aux
     owner: none
     visibility: public
     ordering: set
   - id: available-ARVN
+    zoneKind: aux
     owner: none
     visibility: public
     ordering: set
   - id: out-of-play-ARVN
+    zoneKind: aux
     owner: none
     visibility: public
     ordering: set
   - id: available-NVA
+    zoneKind: aux
     owner: none
     visibility: public
     ordering: set
   - id: out-of-play-NVA
+    zoneKind: aux
     owner: none
     visibility: public
     ordering: set
   - id: trucks-base-staging
+    zoneKind: aux
     owner: none
     visibility: hidden
     ordering: set
   - id: available-VC
+    zoneKind: aux
     owner: none
     visibility: public
     ordering: set
   - id: out-of-play-VC
+    zoneKind: aux
     owner: none
     visibility: public
     ordering: set
   - id: casualties-US
+    zoneKind: aux
     owner: none
     visibility: public
     ordering: set

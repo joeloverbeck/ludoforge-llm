@@ -319,16 +319,21 @@ function resolveCapturedSequenceZonesQuery(
 
 function applyTokenFilter(tokens: readonly Token[], filter: TokenFilterExpr, ctx: ReadContext): readonly Token[] {
   const tokenStateIndex = getTokenStateIndex(ctx.state);
+  const zoneDefById = new Map(ctx.def.zones.map((zone) => [zone.id, zone] as const));
   return filterTokensByExpr(
     tokens,
     filter,
     (value) => resolvePredicateValue(value, ctx),
     ctx.freeOperationOverlay,
     (token, predicate) => {
-      if (predicate.field?.kind !== 'tokenZone') {
-        return undefined;
+      const zoneId = tokenStateIndex.get(token.id)?.zoneId;
+      if (predicate.field?.kind === 'tokenZone') {
+        return zoneId;
       }
-      return tokenStateIndex.get(token.id)?.zoneId;
+      if (predicate.field?.kind === 'zoneProp') {
+        return zoneId === undefined ? undefined : Reflect.get(zoneDefById.get(zoneId as ZoneId) ?? {}, predicate.field.prop);
+      }
+      return undefined;
     },
   );
 }

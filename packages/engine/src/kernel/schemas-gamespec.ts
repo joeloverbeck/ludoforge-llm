@@ -15,6 +15,20 @@ export const PieceStatusTransitionSchema = z
   })
   .strict();
 
+export const PieceTypeZoneEntryMatchSchema = z
+  .object({
+    zoneKind: z.union([z.literal('board'), z.literal('aux')]).optional(),
+    category: StringSchema.min(1).optional(),
+  })
+  .strict();
+
+export const PieceTypeZoneEntryRuleSchema = z
+  .object({
+    match: PieceTypeZoneEntryMatchSchema,
+    set: z.record(StringSchema, z.union([StringSchema, NumberSchema, BooleanSchema])),
+  })
+  .strict();
+
 export const PieceTypeCatalogEntrySchema = z
   .object({
     id: StringSchema.min(1),
@@ -22,6 +36,7 @@ export const PieceTypeCatalogEntrySchema = z
     statusDimensions: z.array(PieceStatusDimensionSchema),
     transitions: z.array(PieceStatusTransitionSchema),
     runtimeProps: z.record(StringSchema, z.union([StringSchema, NumberSchema, BooleanSchema])).optional(),
+    onZoneEntry: z.array(PieceTypeZoneEntryRuleSchema).optional(),
   })
   .strict();
 

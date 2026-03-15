@@ -8,6 +8,7 @@ import {
 import { asActionId, asPhaseId, asPlayerId } from '../../../src/kernel/branded.js';
 import { formatDecisionKey } from '../../../src/kernel/decision-scope.js';
 import type { GameDef, GameState, Move, TurnFlowPendingFreeOperationGrant } from '../../../src/kernel/types.js';
+import { requireCardDrivenRuntime, withIsolatedFreeOperationGrant, withPendingFreeOperationGrant } from '../../helpers/turn-order-helpers.js';
 
 const createExecutionContextBindingDef = (): GameDef =>
   ({
@@ -170,5 +171,72 @@ describe('free-operation grant bindings', () => {
     const withContext = resolveGrantAwareMoveRuntimeBindings(def, state, move, grant);
     assert.equal(withContext['$grantZone'], 'boardCambodia:none');
     assert.deepEqual(collectGrantAwareMoveZoneCandidates(def, state, move, grant), ['boardCambodia:none']);
+  });
+});
+
+describe('free-operation grant test helpers', () => {
+  it('withPendingFreeOperationGrant preserves all grant metadata fields', () => {
+    const state = createExecutionContextBindingState();
+    const result = withPendingFreeOperationGrant(state, {
+      grantId: 'test-full-grant',
+      seat: 'NVA',
+      operationClass: 'limitedOperation',
+      actionIds: ['operation'],
+      zoneFilter: { op: '==', left: { ref: 'zoneProp', zone: '$zone', prop: 'id' }, right: 'boardCambodia:none' },
+      moveZoneBindings: ['$targetSpaces'],
+      allowDuringMonsoon: true,
+      executionContext: { zoneProfile: 'cambodia-only' },
+      viabilityPolicy: 'requireUsableAtIssue',
+      completionPolicy: 'required',
+      outcomePolicy: 'mustChangeGameplayState',
+      postResolutionTurnFlow: 'resumeCardFlow',
+      remainingUses: 2,
+      sequenceBatchId: 'batch-0',
+      sequenceIndex: 0,
+    });
+    const grants = requireCardDrivenRuntime(result).pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 1);
+    const grant = grants[0]!;
+    assert.equal(grant.grantId, 'test-full-grant');
+    assert.equal(grant.seat, 'NVA');
+    assert.equal(grant.operationClass, 'limitedOperation');
+    assert.deepEqual(grant.actionIds, ['operation']);
+    assert.deepEqual(grant.moveZoneBindings, ['$targetSpaces']);
+    assert.equal(grant.allowDuringMonsoon, true);
+    assert.deepEqual(grant.executionContext, { zoneProfile: 'cambodia-only' });
+    assert.equal(grant.viabilityPolicy, 'requireUsableAtIssue');
+    assert.equal(grant.completionPolicy, 'required');
+    assert.equal(grant.outcomePolicy, 'mustChangeGameplayState');
+    assert.equal(grant.postResolutionTurnFlow, 'resumeCardFlow');
+    assert.equal(grant.remainingUses, 2);
+    assert.equal(grant.sequenceBatchId, 'batch-0');
+    assert.equal(grant.sequenceIndex, 0);
+  });
+
+  it('withPendingFreeOperationGrant appends to existing grants', () => {
+    const state = createExecutionContextBindingState();
+    const with1 = withPendingFreeOperationGrant(state, { grantId: 'first' });
+    const with2 = withPendingFreeOperationGrant(with1, { grantId: 'second' });
+    const grants = requireCardDrivenRuntime(with2).pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 2);
+    assert.equal(grants[0]!.grantId, 'first');
+    assert.equal(grants[1]!.grantId, 'second');
+  });
+
+  it('withIsolatedFreeOperationGrant replaces grants and sets activePlayer', () => {
+    const state = createExecutionContextBindingState();
+    const with1 = withPendingFreeOperationGrant(state, { grantId: 'existing' });
+    const isolated = withIsolatedFreeOperationGrant(with1, asPlayerId(1), {
+      grantId: 'isolated-grant',
+      seat: 'NVA',
+      operationClass: 'limitedOperation',
+      executionContext: { allowTroopMovement: false },
+    });
+    assert.equal(Number(isolated.activePlayer), 1);
+    const grants = requireCardDrivenRuntime(isolated).pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 1);
+    assert.equal(grants[0]!.grantId, 'isolated-grant');
+    assert.equal(grants[0]!.seat, 'NVA');
+    assert.deepEqual(grants[0]!.executionContext, { allowTroopMovement: false });
   });
 });

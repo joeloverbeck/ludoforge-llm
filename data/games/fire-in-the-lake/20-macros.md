@@ -157,6 +157,33 @@ effectMacros:
           marker: supportOpposition
           delta: { param: deltaExpr }
 
+  # ── shift-support-opposition-toward-neutral ──────────────────────────────
+  # Shared helper for shifting a support/opposition marker exactly 1 level
+  # toward Neutral from either side of the lattice.
+  - id: shift-support-opposition-toward-neutral
+    params:
+      - { name: space, type: zoneSelector }
+    exports: []
+    effects:
+      - if:
+          when:
+            op: or
+            args:
+              - { op: '==', left: { ref: markerState, space: { param: space }, marker: supportOpposition }, right: activeSupport }
+              - { op: '==', left: { ref: markerState, space: { param: space }, marker: supportOpposition }, right: passiveSupport }
+          then:
+            - shiftMarker: { space: { param: space }, marker: supportOpposition, delta: -1 }
+          else:
+            - if:
+                when:
+                  op: or
+                  args:
+                    - { op: '==', left: { ref: markerState, space: { param: space }, marker: supportOpposition }, right: activeOpposition }
+                    - { op: '==', left: { ref: markerState, space: { param: space }, marker: supportOpposition }, right: passiveOpposition }
+                then:
+                  - shiftMarker: { space: { param: space }, marker: supportOpposition, delta: 1 }
+                else: []
+
   # ── select-laos-cambodia-province ─────────────────────────────────────────
   # Shared selector for one province in Laos/Cambodia.
   - id: select-laos-cambodia-province
@@ -3682,6 +3709,32 @@ conditionMacros:
       args:
         - { op: '==', left: { ref: zoneProp, zone: { param: spaceExpr }, prop: category }, right: province }
         - { conditionMacro: fitl-space-in-laos-cambodia, args: { spaceExpr: { param: spaceExpr } } }
+
+  # Shared card-92 source predicate: any Cambodia space or Tay Ninh.
+  - id: fitl-space-sealords-source
+    params:
+      - { name: spaceExpr, type: value }
+    condition:
+      op: or
+      args:
+        - { conditionMacro: fitl-space-in-laos-cambodia, args: { spaceExpr: { param: spaceExpr } } }
+        - { op: '==', left: { ref: zoneProp, zone: { param: spaceExpr }, prop: id }, right: 'tay-ninh:none' }
+
+  # Shared card-92 target predicate: the 4 lowlands and 3 Mekong LoCs around Can Tho.
+  # Deliberately excludes loc-saigon-can-tho:none per playbook/rules clarification.
+  - id: fitl-space-sealords-target
+    params:
+      - { name: spaceExpr, type: value }
+    condition:
+      op: or
+      args:
+        - { op: '==', left: { ref: zoneProp, zone: { param: spaceExpr }, prop: id }, right: 'kien-phong:none' }
+        - { op: '==', left: { ref: zoneProp, zone: { param: spaceExpr }, prop: id }, right: 'kien-hoa-vinh-binh:none' }
+        - { op: '==', left: { ref: zoneProp, zone: { param: spaceExpr }, prop: id }, right: 'ba-xuyen:none' }
+        - { op: '==', left: { ref: zoneProp, zone: { param: spaceExpr }, prop: id }, right: 'kien-giang-an-xuyen:none' }
+        - { op: '==', left: { ref: zoneProp, zone: { param: spaceExpr }, prop: id }, right: 'loc-can-tho-chau-doc:none' }
+        - { op: '==', left: { ref: zoneProp, zone: { param: spaceExpr }, prop: id }, right: 'loc-can-tho-bac-lieu:none' }
+        - { op: '==', left: { ref: zoneProp, zone: { param: spaceExpr }, prop: id }, right: 'loc-can-tho-long-phu:none' }
 
   # Shared control predicate: map space without NVA Control.
   # Rule semantics: NVA piece count is less than or equal to COIN+VC piece count.

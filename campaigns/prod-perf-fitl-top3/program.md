@@ -66,6 +66,29 @@ IF combined_duration_ms worsened by >1%:
 7. **Deep object creation in immutable patterns**: Spread operators on large GameDef/GameState objects in tight loops (effect application, move enumeration).
 8. **Zobrist hashing per move**: `zobrist.ts` hash computation — profile whether it's significant.
 
+## Experiment Categories
+
+- caching: Memoization, lazy initialization, precomputation, result caching
+- algorithmic: Better algorithms, reduced complexity, faster paths
+- data-structure: More efficient data structures, indexing, lookup optimization
+- compiler-pass: Reducing redundant compilation passes, merging traversals
+- immutable-pattern: Reducing spread/clone overhead, structural sharing
+- spatial: Spatial query optimization, adjacency caching, graph traversal
+- evaluation: Condition evaluation shortcuts, short-circuit optimization
+- other: Anything not fitting above
+
+## Early Abort
+
+ABORT_THRESHOLD = 0.05  # abort if 5% worse than best after any checkpoint
+
+## Plateau Detection
+
+PLATEAU_THRESHOLD = 5  # consecutive rejects before strategy shift
+
+## Noise Reduction
+
+HARNESS_RUNS = 1  # number of harness executions per experiment (median taken)
+
 ## Autonomy Directive
 
 Once the loop begins, run indefinitely. Do NOT ask for permission to continue. Do NOT stop when easy ideas run out — re-read files, combine near-misses, try radical alternatives. The loop runs until externally interrupted.

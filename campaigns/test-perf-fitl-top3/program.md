@@ -68,6 +68,26 @@ IF combined_duration_ms worsened by >1%:
 4. **Decision loop iterations**: `advanceToPhase`/`advanceToRound` helpers that loop through many game decisions to reach a target state.
 5. **Sequential test execution**: Tests within a suite that could share setup but don't.
 
+## Experiment Categories
+
+- caching: Memoization, lazy initialization, precomputation, result caching
+- test-structure: Shared setup, hoisted compilation, before/after hooks
+- data-structure: More efficient data structures, state cloning strategies
+- helper-optimization: Reducing overhead in test helper functions
+- other: Anything not fitting above
+
+## Early Abort
+
+ABORT_THRESHOLD = 0.05  # abort if 5% worse than best after any checkpoint
+
+## Plateau Detection
+
+PLATEAU_THRESHOLD = 5  # consecutive rejects before strategy shift
+
+## Noise Reduction
+
+HARNESS_RUNS = 1  # number of harness executions per experiment (median taken)
+
 ## Autonomy Directive
 
 Once the loop begins, run indefinitely. Do NOT ask for permission to continue. Do NOT stop when easy ideas run out — re-read files, combine near-misses, try radical alternatives. The loop runs until externally interrupted.

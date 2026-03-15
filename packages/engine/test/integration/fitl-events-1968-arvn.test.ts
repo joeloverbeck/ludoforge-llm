@@ -148,4 +148,39 @@ describe('FITL 1968 ARVN-first event-card production spec', () => {
       },
     ]);
   });
+
+  it('encodes card 88 (Phan Quang Dan) with exact text, patronage deltas, Saigon support routing, and shaded ARVN ineligibility', () => {
+    const { parsed, compiled } = compileProductionSpec();
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-88');
+    assert.notEqual(card, undefined);
+    assert.equal(card?.title, 'Phan Quang Dan');
+    assert.equal(card?.metadata?.flavorText, 'Dissident becomes RVN minister.');
+    assert.equal(card?.unshaded?.text, 'Shift Saigon 1 level toward Active Support. Patronage +5.');
+    assert.equal(
+      card?.shaded?.text,
+      'Oppositionist Assemblyman: Shift Saigon 1 level toward Neutral. Patronage -5. ARVN Ineligible through next card.',
+    );
+    assert.deepEqual(card?.shaded?.eligibilityOverrides, [
+      { target: { kind: 'seat', seat: 'arvn' }, eligible: false, windowId: 'make-ineligible' },
+    ]);
+
+    const unshadedEffects = card?.unshaded?.effects ?? [];
+    assert.deepEqual(unshadedEffects, [
+      { shiftMarker: { space: 'saigon:none', marker: 'supportOpposition', delta: 1 } },
+      { addVar: { scope: 'global', var: 'patronage', delta: 5 } },
+    ]);
+
+    const shadedJson = JSON.stringify(card?.shaded?.effects ?? []);
+    assert.match(shadedJson, /"space":"saigon:none"/);
+    assert.match(shadedJson, /"marker":"supportOpposition"/);
+    assert.match(shadedJson, /"activeSupport"/);
+    assert.match(shadedJson, /"passiveSupport"/);
+    assert.match(shadedJson, /"activeOpposition"/);
+    assert.match(shadedJson, /"passiveOpposition"/);
+    assert.match(shadedJson, /"delta":-5/);
+  });
 });

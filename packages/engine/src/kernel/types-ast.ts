@@ -177,7 +177,8 @@ export type ConditionAST =
 export type TokenFilterFieldSelector =
   | { readonly kind: 'prop'; readonly prop: string }
   | { readonly kind: 'tokenId' }
-  | { readonly kind: 'tokenZone' };
+  | { readonly kind: 'tokenZone' }
+  | { readonly kind: 'zoneProp'; readonly prop: string };
 
 export interface TokenFilterPredicate {
   readonly prop?: string;

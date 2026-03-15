@@ -11,8 +11,10 @@
  *
  * This module keeps the growing resolver logic out of legal-choices.ts.
  */
+import { validateChooseNSelectedSequence } from './choose-n-selected-validation.js';
 import { isEffectRuntimeReason } from './effect-error.js';
 import { optionKey, isChoiceDecisionOwnerMismatchDuringProbe } from './legal-choices.js';
+import type { PrioritizedTierEntry } from './prioritized-tier-legality.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type { DecisionSequenceSatisfiability } from './decision-sequence-satisfiability.js';
 import type {
@@ -21,7 +23,22 @@ import type {
   ChoiceRequest,
   ChooseNOptionResolution,
   Move,
+  MoveParamScalar,
 } from './types.js';
+
+// ── Tier context for validation-based pruning ─────────────────────────
+
+/**
+ * Optional tier context for witness search pruning.
+ * When provided, the witness search validates intermediate selections
+ * against tier ordering before probing, avoiding expensive probe calls
+ * for selections that would fail tier validation.
+ */
+export interface WitnessSearchTierContext {
+  readonly tiers: readonly (readonly PrioritizedTierEntry[])[];
+  readonly qualifierMode: 'none' | 'byQualifier';
+  readonly normalizedDomain: readonly MoveParamScalar[];
+}
 
 // ── Singleton probe outcome types ──────────────────────────────────────
 
@@ -386,6 +403,7 @@ const witnessSearchForOption = (
   budget: WitnessSearchBudget,
   probeCache: Map<string, SingletonProbeOutcome>,
   stats: WitnessSearchStats | undefined,
+  tierContext: WitnessSearchTierContext | undefined,
 ): WitnessOutcome => {
   const minExtensions = Math.max(0, min - baseSelection.length);
   const maxExtensions = Math.min(
@@ -403,6 +421,20 @@ const witnessSearchForOption = (
     // Probe if selection size is within [min, max].
     if (extensions.length >= minExtensions) {
       const selection = [...baseSelection, ...extensions] as Move['params'][string];
+
+      // Tier-based pruning: validate the full selection sequence before
+      // spending budget on an expensive probe call.
+      if (tierContext !== undefined) {
+        const failures = validateChooseNSelectedSequence({
+          normalizedDomain: tierContext.normalizedDomain,
+          tiers: tierContext.tiers,
+          qualifierMode: tierContext.qualifierMode,
+          selectedSequence: selection as readonly MoveParamScalar[],
+        });
+        if (failures.length > 0) {
+          return 'exhausted';
+        }
+      }
       const result = probeAndClassifySelection(
         evaluateProbeMove,
         classifyProbeMoveSatisfiability,
@@ -467,6 +499,7 @@ export const runWitnessSearch = (
   selectedKeys: ReadonlySet<string>,
   budget: WitnessSearchBudget,
   stats?: WitnessSearchStats,
+  tierContext?: WitnessSearchTierContext,
 ): readonly ChoiceOption[] => {
   // Collect unresolved option keys from singleton pass.
   const unresolvedKeys = new Set<string>();
@@ -538,6 +571,7 @@ export const runWitnessSearch = (
       budget,
       probeCache,
       stats,
+      tierContext,
     );
 
     if (outcome === 'witness') {

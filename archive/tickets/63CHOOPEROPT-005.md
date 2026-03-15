@@ -1,6 +1,6 @@
 # 63CHOOPEROPT-005: Selected-sequence validation and removal invalidation
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — effects-choice.ts, choose-n-option-resolution.ts
@@ -88,3 +88,26 @@ The witness search (004) should use this validator to prune invalid intermediate
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+**Completion date**: 2026-03-15
+
+### What changed
+
+- **New file**: `packages/engine/src/kernel/choose-n-selected-validation.ts` — pure `validateChooseNSelectedSequence()` returning invalid items with reasons (`out-of-domain`, `duplicate`, `tier-blocked`) instead of throwing.
+- **Modified**: `packages/engine/src/kernel/effects-choice.ts` — refactored `validateChooseNSelectionSequence()` to delegate to the new pure validator internally (throwing wrapper preserved for backward compat).
+- **Modified**: `packages/engine/src/kernel/choose-n-option-resolution.ts` — added `WitnessSearchTierContext` interface; `runWitnessSearch` and `witnessSearchForOption` accept optional `tierContext`; DFS `walk` validates selections against tier ordering before probing.
+- **New test**: `packages/engine/test/unit/kernel/choose-n-selected-validation.test.ts` — 16 tests covering all 6 acceptance criteria.
+- **Modified test**: `packages/engine/test/unit/kernel/choose-n-option-resolution.test.ts` — 2 new tests for tier-context pruning; fixed 2 pre-existing lint errors (unused variables).
+
+### Deviations from original plan
+
+- Validator placed in its own file (`choose-n-selected-validation.ts`) rather than kept inside `effects-choice.ts`, following project convention of many small files and avoiding circular import issues.
+- Tier context threaded as optional parameter to `runWitnessSearch` rather than embedded in `ChoicePendingChooseNRequest` type — avoids polluting the public serialization type. Current `legal-choices.ts` call site passes `undefined`; the tier context is available for future Phase B session integration (ticket 009).
+
+### Verification
+
+- `pnpm -F @ludoforge/engine test`: 4699 tests pass, 0 fail
+- `npx tsc --noEmit`: clean
+- `pnpm -F @ludoforge/engine lint`: clean

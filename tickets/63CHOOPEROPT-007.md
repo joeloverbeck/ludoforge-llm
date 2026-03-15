@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — effects-choice.ts, new choose-n-session.ts
-**Deps**: 63CHOOPEROPT-001, 63CHOOPEROPT-005
+**Deps**: 63CHOOPEROPT-001
 
 ## Problem
 

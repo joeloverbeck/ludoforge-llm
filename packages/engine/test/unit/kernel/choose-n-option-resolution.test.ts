@@ -16,6 +16,14 @@ import {
   type GameState,
   type Move,
 } from '../../../src/kernel/index.js';
+import {
+  runWitnessSearch,
+  type WitnessSearchBudget,
+  type WitnessSearchStats,
+  type WitnessSearchTierContext,
+} from '../../../src/kernel/choose-n-option-resolution.js';
+import type { ChoicePendingChooseNRequest, ChoiceRequest, MoveParamScalar } from '../../../src/kernel/types.js';
+import type { DecisionSequenceSatisfiability } from '../../../src/kernel/decision-sequence-satisfiability.js';
 
 const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 
@@ -257,12 +265,9 @@ describe('chooseN option resolution field', () => {
 
       const def = makeBaseDef({ actions: [action] });
       const state = makeBaseState();
-      let probeContextPreparedCount = 0;
-      let deferredPredicateCount = 0;
-
       const result = legalChoicesEvaluate(def, state, makeMove('probeCount'), {
-        onProbeContextPrepared: () => { probeContextPreparedCount += 1; },
-        onDeferredPredicatesEvaluated: (count: number) => { deferredPredicateCount += count; },
+        onProbeContextPrepared: () => { /* tracked for debugging */ },
+        onDeferredPredicatesEvaluated: () => { /* tracked for debugging */ },
       });
 
       assert.equal(result.kind, 'pending');
@@ -387,5 +392,189 @@ describe('chooseN option resolution field', () => {
         assert.equal(option.resolution, 'exact', `chooseOne option ${String(option.value)} should be exact`);
       }
     });
+  });
+});
+
+// ── Witness search tier-context pruning tests ─────────────────────────
+
+describe('runWitnessSearch with tierContext pruning', () => {
+  /**
+   * Build a minimal ChoicePendingChooseNRequest for witness search testing.
+   * All options start as 'unknown' / 'provisional' (unresolved by singleton pass).
+   */
+  const makeChooseNRequest = (opts: {
+    decisionKey: string;
+    domain: readonly MoveParamScalar[];
+    selected: readonly MoveParamScalar[];
+    min: number;
+    max: number;
+  }): ChoicePendingChooseNRequest => ({
+    kind: 'pending',
+    complete: false,
+    decisionKey: opts.decisionKey as DecisionKey,
+    name: 'test',
+    type: 'chooseN',
+    options: opts.domain.map((v) => ({
+      value: v,
+      legality: 'unknown' as const,
+      illegalReason: null,
+      resolution: 'provisional' as const,
+    })),
+    targetKinds: [],
+    min: opts.min,
+    max: opts.max,
+    selected: [...opts.selected],
+    canConfirm: false,
+  });
+
+  /**
+   * Build a probe callback that always returns 'complete' (confirmable).
+   * Increments a counter to track how many probes were called.
+   */
+  const makeConfirmableProbe = (counter: { count: number }) =>
+    (_move: Move): ChoiceRequest => {
+      counter.count += 1;
+      return { kind: 'complete' } as ChoiceRequest;
+    };
+
+  const alwaysSatisfiable = (_move: Move): DecisionSequenceSatisfiability => 'satisfiable';
+
+  const dummyMove: Move = {
+    actionId: asActionId('test'),
+    params: {} as Move['params'],
+  };
+
+  it('prunes tier-blocked selections and reduces probe count', () => {
+    // Tier 0: [A, B], Tier 1: [C]
+    // Domain: [A, B, C], min: 2, max: 3, selected: []
+    // Singleton pass left all options as 'unknown'/'provisional'.
+    //
+    // For target A:
+    //   Extension candidates: [B, C]
+    //   Without tier context: probes [A,B], [A,C], [A,B,C]
+    //   With tier context: prunes [A,C] (C is tier-blocked), probes [A,B], [A,B,C]
+    const domain: MoveParamScalar[] = ['A', 'B', 'C'];
+    const request = makeChooseNRequest({
+      decisionKey: '$pick',
+      domain,
+      selected: [],
+      min: 2,
+      max: 3,
+    });
+
+    const singletonResults = domain.map((v) => ({
+      value: v,
+      legality: 'unknown' as const,
+      illegalReason: null,
+      resolution: 'provisional' as const,
+    }));
+
+    const uniqueOptions = [...domain] as Move['params'][string][];
+    const selectedKeys = new Set<string>();
+
+    const tierContext: WitnessSearchTierContext = {
+      tiers: [
+        [{ value: 'A' }, { value: 'B' }],
+        [{ value: 'C' }],
+      ],
+      qualifierMode: 'none',
+      normalizedDomain: domain,
+    };
+
+    // Run WITH tier context.
+    const withTierProbes = { count: 0 };
+    const withTierBudget: WitnessSearchBudget = { remaining: 100 };
+    const withTierStats: WitnessSearchStats = { cacheHits: 0, nodesVisited: 0 };
+    runWitnessSearch(
+      makeConfirmableProbe(withTierProbes),
+      alwaysSatisfiable,
+      dummyMove,
+      request,
+      singletonResults,
+      uniqueOptions,
+      selectedKeys,
+      withTierBudget,
+      withTierStats,
+      tierContext,
+    );
+
+    // Run WITHOUT tier context.
+    const withoutTierProbes = { count: 0 };
+    const withoutTierBudget: WitnessSearchBudget = { remaining: 100 };
+    const withoutTierStats: WitnessSearchStats = { cacheHits: 0, nodesVisited: 0 };
+    runWitnessSearch(
+      makeConfirmableProbe(withoutTierProbes),
+      alwaysSatisfiable,
+      dummyMove,
+      request,
+      singletonResults,
+      uniqueOptions,
+      selectedKeys,
+      withoutTierBudget,
+      withoutTierStats,
+    );
+
+    // With tier context should probe fewer times.
+    assert.ok(
+      withTierProbes.count < withoutTierProbes.count,
+      `Expected fewer probes with tier context (${withTierProbes.count}) than without (${withoutTierProbes.count})`,
+    );
+  });
+
+  it('produces correct legality results with tier-context pruning', () => {
+    // Tier 0: [A], Tier 1: [B]
+    // Domain: [A, B], min: 1, max: 2, selected: []
+    //
+    // Target A: [A] is valid (tier0 admissible), confirmable → legal
+    // Target B: [B] is tier-blocked → exhausted → illegal (tier0 not exhausted)
+    const domain: MoveParamScalar[] = ['A', 'B'];
+    const request = makeChooseNRequest({
+      decisionKey: '$pick',
+      domain,
+      selected: [],
+      min: 1,
+      max: 2,
+    });
+
+    const singletonResults = domain.map((v) => ({
+      value: v,
+      legality: 'unknown' as const,
+      illegalReason: null,
+      resolution: 'provisional' as const,
+    }));
+
+    const tierContext: WitnessSearchTierContext = {
+      tiers: [
+        [{ value: 'A' }],
+        [{ value: 'B' }],
+      ],
+      qualifierMode: 'none',
+      normalizedDomain: domain,
+    };
+
+    const budget: WitnessSearchBudget = { remaining: 100 };
+    const result = runWitnessSearch(
+      makeConfirmableProbe({ count: 0 }),
+      alwaysSatisfiable,
+      dummyMove,
+      request,
+      singletonResults,
+      [...domain] as Move['params'][string][],
+      new Set<string>(),
+      budget,
+      undefined,
+      tierContext,
+    );
+
+    const optionA = result.find((o) => o.value === 'A');
+    const optionB = result.find((o) => o.value === 'B');
+
+    assert.ok(optionA);
+    assert.equal(optionA.legality, 'legal', 'A should be legal (tier0 admissible)');
+    assert.equal(optionA.resolution, 'exact');
+
+    assert.ok(optionB);
+    assert.equal(optionB.legality, 'illegal', 'B should be illegal (tier-blocked)');
+    assert.equal(optionB.resolution, 'exact');
   });
 });

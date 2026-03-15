@@ -12,6 +12,7 @@ import { resolveZoneWithNormalization, selectorResolutionFailurePolicyForMode } 
 import { findSpaceMarkerConstraintViolation, resolveSpaceMarkerShift } from './space-marker-rules.js';
 import { withTracePath } from './trace-provenance.js';
 import { computeTierAdmissibility, type PrioritizedTierEntry } from './prioritized-tier-legality.js';
+import { validateChooseNSelectedSequence } from './choose-n-selected-validation.js';
 import { normalizeChoiceDomain, toChoiceComparableValue, type MembershipScalar } from './value-membership.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
@@ -172,39 +173,44 @@ const normalizeChooseNSelectionValues = (
 const validateChooseNSelectionSequence = (
   selectedSequence: readonly MoveParamScalar[],
   comparableBindingMap: ReadonlyMap<MembershipScalar, unknown>,
+  normalizedOptions: readonly MoveParamScalar[],
   prioritizedTierEntries: readonly (readonly PrioritizedTierEntry[])[] | null,
   prioritizedQualifierMode: 'none' | 'byQualifier',
   bind: string,
   decisionKey: string,
 ): void => {
-  for (const selected of selectedSequence) {
-    if (!comparableBindingMap.has(selected)) {
+  const failures = validateChooseNSelectedSequence({
+    normalizedDomain: normalizedOptions,
+    tiers: prioritizedTierEntries,
+    qualifierMode: prioritizedQualifierMode,
+    selectedSequence,
+  });
+
+  for (const failure of failures) {
+    if (failure.reason === 'out-of-domain') {
       throw effectRuntimeError(
         EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
         `invalid selection for chooseN "${bind}" (${decisionKey}): outside options domain`,
         {
           effectType: 'chooseN',
           bind,
-          selected,
+          selected: failure.value,
           optionsCount: comparableBindingMap.size,
         },
       );
     }
-  }
-
-  if (prioritizedTierEntries === null) {
-    return;
-  }
-
-  const alreadySelected: MoveParamScalar[] = [];
-  for (let index = 0; index < selectedSequence.length; index += 1) {
-    const selected = selectedSequence[index]!;
-    const admissibilityAtStep = buildPrioritizedAdmissibility(
-      prioritizedTierEntries,
-      prioritizedQualifierMode,
-      alreadySelected,
-    );
-    if (admissibilityAtStep !== null && !admissibilityAtStep.admissibleKeys.has(choiceOptionKey(selected))) {
+    if (failure.reason === 'duplicate') {
+      throw effectRuntimeError(
+        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+        `chooseN selections must be unique: ${bind}`,
+        {
+          effectType: 'chooseN',
+          bind,
+          duplicateValue: failure.value,
+        },
+      );
+    }
+    if (failure.reason === 'tier-blocked') {
       throw effectRuntimeError(
         EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
         `chooseN selection violates prioritized tier ordering: ${bind}`,
@@ -212,13 +218,11 @@ const validateChooseNSelectionSequence = (
           effectType: 'chooseN',
           bind,
           decisionKey,
-          selected,
-          selectedIndex: index,
-          alreadySelected,
+          selected: failure.value,
+          selectedIndex: failure.index,
         },
       );
     }
-    alreadySelected.push(selected);
   }
 };
 
@@ -773,6 +777,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
       validateChooseNSelectionSequence(
         selectedSequence,
         comparableBindingMap,
+        normalizedOptions,
         prioritizedTierEntries,
         prioritizedQualifierMode,
         bind,
@@ -845,6 +850,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   validateChooseNSelectionSequence(
     selectedSequence,
     comparableBindingMap,
+    normalizedOptions,
     prioritizedTierEntries,
     prioritizedQualifierMode,
     bind,

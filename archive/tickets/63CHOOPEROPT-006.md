@@ -1,6 +1,6 @@
 # 63CHOOPEROPT-006: Stochastic and ambiguous probe classification
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — choose-n-option-resolution.ts, legal-choices.ts
@@ -86,3 +86,10 @@ Per spec 11.4, create chooseN probe fixtures that return `pendingStochastic` and
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-15
+- **What changed**: Implementation (deliverables 1-3) was already present in `choose-n-option-resolution.ts` from prior tickets (003/004). Created `packages/engine/test/unit/kernel/choose-n-stochastic-ambiguous.test.ts` with 11 tests covering all 4 acceptance criteria: stochastic probe classification, ambiguous probe classification, witness search exclusion of non-provisional options, and mixed stochastic/deterministic branch resolution.
+- **Deviations**: No code changes needed — only tests were missing. No modifications to `legal-choices.ts` were required (ticket listed it as a potential touch point).
+- **Verification**: Build clean, 11/11 new tests pass, 11/11 existing choose-n-option-resolution tests pass, typecheck clean.

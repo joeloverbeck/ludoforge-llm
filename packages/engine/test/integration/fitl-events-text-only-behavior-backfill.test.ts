@@ -189,8 +189,12 @@ describe('FITL text-only card behavior backfill', () => {
     assert.equal((card87?.shaded?.effects?.[4] as { chooseOne?: { bind?: string } } | undefined)?.chooseOne?.bind, '$nguyenChanhThiPatronageDirection');
 
     const card89 = cardById.get('card-89');
-    assert.equal((card89?.unshaded?.effects?.[1] as { addVar?: { delta?: number } })?.addVar?.delta, 3);
-    assert.equal((card89?.shaded?.effects?.[1] as { addVar?: { delta?: number } })?.addVar?.delta, -3);
+    assert.equal(typeof (card89?.unshaded?.effects?.[0] as { if?: unknown } | undefined)?.if, 'object');
+    assert.equal((card89?.unshaded?.effects?.[1] as { addVar?: { delta?: number } })?.addVar?.delta, 6);
+    assert.equal(typeof (card89?.shaded?.effects?.[0] as { let?: unknown } | undefined)?.let, 'object');
+    assert.equal(typeof (card89?.shaded?.effects?.[1] as { forEach?: unknown } | undefined)?.forEach, 'object');
+    assert.equal(typeof (card89?.shaded?.effects?.[2] as { if?: unknown } | undefined)?.if, 'object');
+    assert.equal((card89?.shaded?.effects?.[3] as { addVar?: { delta?: number } })?.addVar?.delta, -6);
 
     const card90 = cardById.get('card-90');
     assert.equal((card90?.unshaded?.effects?.[0] as { chooseN?: { bind?: string } })?.chooseN?.bind, '$rostowArvnPieces');

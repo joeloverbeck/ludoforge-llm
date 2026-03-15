@@ -157,6 +157,7 @@ export const isTokenFilterPredicateExpr = (expr: unknown): expr is TokenFilterPr
       && (
         expr.field.kind === 'tokenId'
         || expr.field.kind === 'tokenZone'
+        || (expr.field.kind === 'zoneProp' && typeof expr.field.prop === 'string')
         || (expr.field.kind === 'prop' && typeof expr.field.prop === 'string')
       )
     )

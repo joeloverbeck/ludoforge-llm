@@ -29,6 +29,47 @@ Selector-heavy FITL event tests should control the whole relevant legality surfa
 - Do not assume untouched production defaults outside the spaces named in the assertion. Hidden legal spaces can turn a correct implementation into a false-negative test.
 - Prefer shared FITL test helpers for support/opposition normalization over ad hoc per-test copies.
 
+## Rules Phrases That Change Implementation Shape
+
+Some recurring FITL phrases carry more implementation weight than they first appear to.
+
+- Treat `piece` literally. If the rules or playbook say `piece`, include Bases unless the source text narrows the set further.
+- Treat `place` literally. For FITL faction force placement, Rule 1.4.1 may require type-based sourcing from the map when the desired force type is unavailable in `Available`.
+- Treat `toward Passive Support` and `toward Passive Opposition` literally. These are not interchangeable with a raw one-step support lattice shift. Author the exact target behavior from every reachable starting state.
+- Treat playbook fidelity notes as behavioral constraints when they clarify a rules term or edge case rather than mere prose commentary.
+
+Canonical example:
+
+- Card 89 (`Tam Chau`) requires all four of the above: Base-as-piece handling, Rule 1.4.1 type fallback, Saigon base-cap respect, and exact passive-target support routing.
+
+## Query Authoring Limits
+
+Prefer supported selector/query shapes over overly compressed filters.
+
+- Use `let` plus outer `if` branching when legality depends on aggregate state such as base caps, available counts, or other board-wide conditions.
+- Use `prioritized` queries when the rule is "source from Available first, then from the map" or when the rule is type-sensitive.
+- Do not try to encode aggregate legality tests directly inside token-query filters unless a production example already shows that shape working.
+- When a query starts accumulating availability checks, aggregate counts, per-type fallback, and zone exclusions all at once, stop and refactor into staged bindings.
+
+Production references:
+
+- `place-from-available-or-map` macro for Rule 1.4.1 sourcing shape
+- Card 87 (`Nguyen Chanh Thi`) for `prioritized` source selection
+- Card 89 (`Tam Chau`) for state-gated `prioritized` piece selection
+
+## FITL Event Test Checklist
+
+For nontrivial FITL events, cover the rule text as a checklist rather than with one happy-path assertion.
+
+- Exact card text, metadata, and executable payload shape
+- Boundary support/opposition states, especially for `toward Passive X`, `toward Neutral`, and max-state no-overshoot behavior
+- Track clamps such as Patronage, Aid, Resources, and Trail
+- `piece` semantics when Bases are legally included
+- Stacking caps and location-specific placement restrictions
+- Available-versus-map sourcing behavior when Rule 1.4.1 applies
+- Post-placement posture/property changes such as Underground Guerrillas or tunnel loss on sourced Bases
+- Legal no-op or reduced-effect outcomes when depletion or restrictions prevent the full printed effect
+
 ## Canonical Binder Contract
 
 Declared binders use canonical `$name` identifiers.

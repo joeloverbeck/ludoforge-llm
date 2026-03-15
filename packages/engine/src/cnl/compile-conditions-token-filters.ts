@@ -35,7 +35,7 @@ export function createTokenFilterLowerers(
     if (!isRecord(source)) {
       return missingCapability(path, 'token filter entry', source, [
         '{ prop: string, op: "eq"|"neq"|"in"|"notIn", value: <value> }',
-        '{ field: { kind: "prop", prop: string }|{ kind: "tokenId" }|{ kind: "tokenZone" }, op: "eq"|"neq"|"in"|"notIn", value: <value> }',
+        '{ field: { kind: "prop", prop: string }|{ kind: "tokenId" }|{ kind: "tokenZone" }|{ kind: "zoneProp", prop: string }, op: "eq"|"neq"|"in"|"notIn", value: <value> }',
       ]);
     }
     const aliasRejection = rejectPredicateAliasKeysWhenCanonicalShapePresent(
@@ -52,7 +52,7 @@ export function createTokenFilterLowerers(
     if (selector === null) {
       return missingCapability(path, 'token filter entry', source, [
         '{ prop: string, op: "eq"|"neq"|"in"|"notIn", value: <value> }',
-        '{ field: { kind: "prop", prop: string }|{ kind: "tokenId" }|{ kind: "tokenZone" }, op: "eq"|"neq"|"in"|"notIn", value: <value> }',
+        '{ field: { kind: "prop", prop: string }|{ kind: "tokenId" }|{ kind: "tokenZone" }|{ kind: "zoneProp", prop: string }, op: "eq"|"neq"|"in"|"notIn", value: <value> }',
       ]);
     }
 
@@ -383,6 +383,9 @@ function lowerTokenFilterSelector(source: Record<string, unknown>): LoweredToken
   }
   if (source.field.kind === 'tokenZone') {
     return { field: { kind: 'tokenZone' } };
+  }
+  if (source.field.kind === 'zoneProp' && typeof source.field.prop === 'string') {
+    return { field: { kind: 'zoneProp', prop: source.field.prop } };
   }
   if (source.field.kind === 'prop' && typeof source.field.prop === 'string') {
     return { field: { kind: 'prop', prop: source.field.prop } };

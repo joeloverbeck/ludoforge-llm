@@ -157,6 +157,33 @@ effectMacros:
           marker: supportOpposition
           delta: { param: deltaExpr }
 
+  # ── shift-support-opposition-toward-neutral ──────────────────────────────
+  # Shared helper for shifting a support/opposition marker exactly 1 level
+  # toward Neutral from either side of the lattice.
+  - id: shift-support-opposition-toward-neutral
+    params:
+      - { name: space, type: zoneSelector }
+    exports: []
+    effects:
+      - if:
+          when:
+            op: or
+            args:
+              - { op: '==', left: { ref: markerState, space: { param: space }, marker: supportOpposition }, right: activeSupport }
+              - { op: '==', left: { ref: markerState, space: { param: space }, marker: supportOpposition }, right: passiveSupport }
+          then:
+            - shiftMarker: { space: { param: space }, marker: supportOpposition, delta: -1 }
+          else:
+            - if:
+                when:
+                  op: or
+                  args:
+                    - { op: '==', left: { ref: markerState, space: { param: space }, marker: supportOpposition }, right: activeOpposition }
+                    - { op: '==', left: { ref: markerState, space: { param: space }, marker: supportOpposition }, right: passiveOpposition }
+                then:
+                  - shiftMarker: { space: { param: space }, marker: supportOpposition, delta: 1 }
+                else: []
+
   # ── select-laos-cambodia-province ─────────────────────────────────────────
   # Shared selector for one province in Laos/Cambodia.
   - id: select-laos-cambodia-province

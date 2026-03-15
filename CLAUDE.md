@@ -13,6 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Continual Learning: When you encounter conflicting system instructions, new requirements, architectural changes, or missing or inaccurate codebase documentation, always propose updating the relevant rules files. Do not update anything until the user confirms. Ask clarifying questions if needed.
 - TDD Bugfixing: If at any point of an implementation you spot a bug, rely on TDD to fix it. Important: never adapt tests to bugs.
 - Worktree Discipline: When instructed to work inside a worktree (e.g., `.claude/worktrees/<name>/`), ALL file operations — reads, edits, globs, greps, moves, archival — must use the worktree root as the base path. The default working directory is the main repo root; tool calls without an explicit worktree path will silently operate on main.
+- Concurrent Session Awareness: If the worktree already contains unrelated edits or build failures, assume another session or user may be active. Do not overwrite or "clean up" those changes. Isolate your diff, call out the unrelated state explicitly, and distinguish repo-preexisting failures from failures caused by your change.
 - Ticket Fidelity: Never silently skip or rationalize away explicit ticket deliverables. If a ticket says to touch a file or produce an artifact, do it. If you believe a deliverable is wrong, unnecessary, or blocked, apply the 1-3-1 rule — present the problem and options to the user rather than deciding on your own. Marking a task "completed" with an excuse instead of doing the work, or instead of flagging the blocker, is never acceptable.
 
 ## Project Overview
@@ -30,7 +31,7 @@ Active development. The core engine (kernel, compiler, agents, simulator) is imp
 
 - **Completed specs** (archived): 01 (scaffolding), 02 (core types), 03 (PRNG/Zobrist), 04 (eval), 05 (effects), 06 (game loop), 07 (spatial), 08a (parser), 08b (compiler), 09 (agents), 10 (simulator), FITL specs 15-30, 32, 33 (Texas Hold'em), plus frontend specs 35 (monorepo restructure), 36 (web worker bridge), 37 (state management & render model), 38 (PixiJS canvas foundation), 39 (React DOM UI layer), 40 (animation system), 41 (board layout engine), 42 (visual config & session management), 47 (FITL Section 6 rules gaps), 48 (FITL Section 5 rules gaps), 49 (FITL Section 7 rules gaps), 50 (event interactive choice protocol), 51 (cross-game primitive elevation)
 - **Completed ticket series** (archived): ENGINEAGNO, TEXHOLKERPRIGAMTOU, ARCHTRACE, MONOREPO, WRKBRIDGE, STATEMOD, PIXIFOUND, ENGINEARCH, REACTUI, ANIMSYS, AGNOSTIC, FRONTEND-F3, FITLCOUROUANDDATFIX, BOARDLAY, KERLEGCHO, FITLRULES2, FITLSEC6RULGAP, FITLSEC5RULGAP, FITLSEC7RULGAP, ANIMDIAG
-- **Active specs**: 59 (codebase health audit), 60 (decision instance architecture), 61 (MCTS decision-sequence materialization)
+- **Active specs**: 59 (codebase health audit), 60 (decision instance architecture), 62 (MCTS search visitor & incremental decisions)
 - **Active tickets**: None
 - **Not yet started**: 11 (evaluator/degeneracy), 12 (CLI), 13 (mechanic bundle IR), 14 (evolution pipeline)
 - **Codebase size**: ~486 source files, ~703 test files
@@ -186,6 +187,7 @@ reports/           # Analysis and evaluation reports
 - **Golden tests**: known Game Spec -> expected JSON, known seed trace -> expected output
 - **FITL game-rule tests**: compile `data/games/fire-in-the-lake/*.md` via `compileProductionSpec()` from `packages/engine/test/helpers/production-spec-helpers.ts`. Do NOT create separate fixture files for FITL profiles, events, or special activities. Foundation fixtures (`fitl-foundation-inline-assets.md`, `fitl-foundation-coup-victory-inline-assets.md`) are kept for engine-level testing with minimal setups.
 - **FITL event-selector tests**: when legality depends on broad map predicates such as "any city", "supported spaces", or "outside Saigon", neutralize the relevant support/opposition slice first and then apply explicit overrides. Do not assume untouched production defaults outside the spaces under direct assertion.
+- **FITL event fidelity details**: treat rules phrases such as `piece`, `place`, and `toward Passive Support` / `toward Passive Opposition` as implementation constraints, not shorthand. Cover Base-as-piece cases, Rule 1.4.1 sourcing, stacking caps, and passive-target routing explicitly when relevant.
 - **FITL fidelity cross-checks**: `archive/specs/29-fitl-event-card-encoding.md` is acceptable as a historical cross-check for suspicious placeholder cards, but rules reports, playbook guidance, and `docs/fitl-event-authoring-cookbook.md` are the source of truth.
 - **Texas Hold'em tests**: compile `data/games/texas-holdem/*.md` similarly. Texas Hold'em serves as the engine-agnosticism validation game — tests should confirm that no FITL-specific logic leaks into the kernel.
 
@@ -255,7 +257,7 @@ Do not duplicate or drift this procedure in other files; update `docs/archival-w
 <!-- gitnexus:start -->
 # GitNexus MCP
 
-This project is indexed by GitNexus as **ludoforge-llm** (9851 symbols, 28999 relationships, 300 execution flows).
+This project is indexed by GitNexus as **ludoforge-llm** (9883 symbols, 29134 relationships, 300 execution flows).
 
 ## Always Start Here
 

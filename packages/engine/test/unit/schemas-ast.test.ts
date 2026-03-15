@@ -939,6 +939,27 @@ describe('AST and selector schemas', () => {
     assert.deepEqual(parsed.chooseOne?.options?.filter, filter);
   });
 
+  it('parses token filter predicates that target zone properties via field selectors', () => {
+    const filter = {
+      field: { kind: 'zoneProp', prop: 'category' },
+      op: 'eq',
+      value: 'province',
+    } as const;
+    const parsed = EffectASTSchema.parse({
+      chooseN: {
+        internalDecisionId: 'token-zone-prop-filter-test',
+        bind: '$piece',
+        options: {
+          query: 'tokensInMapSpaces',
+          filter,
+        },
+        min: 0,
+        max: 3,
+      },
+    }) as { chooseN?: { options?: { filter?: unknown } } };
+    assert.deepEqual(parsed.chooseN?.options?.filter, filter);
+  });
+
   it('parses concat query with non-empty nested sources', () => {
     const query: OptionsQuery = {
       query: 'concat',

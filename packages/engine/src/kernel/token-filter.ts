@@ -30,7 +30,11 @@ export function resolveLiteralTokenFilterValue(value: TokenFilterPredicate['valu
 
 const resolveTokenFilterFieldName = (predicate: TokenFilterPredicate): string =>
   predicate.prop
-  ?? (predicate.field?.kind === 'prop' ? predicate.field.prop : predicate.field?.kind ?? 'unknown');
+  ?? (
+    predicate.field?.kind === 'prop' || predicate.field?.kind === 'zoneProp'
+      ? predicate.field.prop
+      : predicate.field?.kind ?? 'unknown'
+  );
 
 const resolveTokenFilterFieldValue = (
   token: Token,
@@ -42,6 +46,9 @@ const resolveTokenFilterFieldValue = (
     return token.id;
   }
   if (predicate.field?.kind === 'tokenZone') {
+    return resolveField?.(token, predicate, overlay);
+  }
+  if (predicate.field?.kind === 'zoneProp') {
     return resolveField?.(token, predicate, overlay);
   }
   return resolveTokenViewFieldValue(

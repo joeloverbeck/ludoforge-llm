@@ -1,4 +1,10 @@
+**Status**: SUPERSEDED
+
 # Spec 61 — MCTS Decision-Sequence Materialization
+
+**Superseded by**: Spec 62 (MCTS Search Visitor & Incremental Decision Expansion)
+
+**Reason**: The retry-based approach (Section 2.1) is mathematically insufficient for deep decision trees. Spec 62 replaces it with incremental decision expansion and adds a visitor architecture for observability. Phase 1 defensive changes (Sections 2.3-2.4) were implemented and carried forward. Test infrastructure (Section 5) was implemented and carried forward.
 
 ## 0. Problem Statement
 

@@ -273,6 +273,41 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
     assert.equal(typeof (card?.shaded?.effects?.[3] as { forEach?: unknown } | undefined)?.forEach, 'object');
   });
 
+  it('encodes card 89 (Tam Chau) with exact text, passive-target support routing, and selectable VC piece placement into Saigon', () => {
+    const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-89');
+    const parsedCard = parsed.doc.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-89');
+    assert.notEqual(card, undefined);
+    assert.notEqual(parsedCard, undefined);
+
+    assert.equal(card?.title, 'Tam Chau');
+    assert.equal(card?.metadata?.flavorText, 'Buddhist political leverage expands in Saigon.');
+    assert.equal(card?.unshaded?.text, 'Shift Saigon 1 level toward Passive Support. Patronage +6.');
+    assert.equal(card?.shaded?.text, 'Place a VC piece in Saigon and shift Saigon 1 level toward Passive Opposition. Patronage -6.');
+
+    const unshadedJson = JSON.stringify(card?.unshaded?.effects ?? []);
+    assert.match(unshadedJson, /"activeSupport"/);
+    assert.match(unshadedJson, /"passiveOpposition"/);
+    assert.match(unshadedJson, /"activeOpposition"/);
+    assert.match(unshadedJson, /"delta":6/);
+
+    const shadedJson = JSON.stringify(card?.shaded?.effects ?? []);
+    assert.match(shadedJson, /available-VC:none/);
+    assert.match(shadedJson, /tokensInMapSpaces/);
+    assert.match(shadedJson, /"saigon:none"/);
+    assert.match(shadedJson, /"passiveSupport"/);
+    assert.match(shadedJson, /"activeOpposition"/);
+    assert.match(shadedJson, /"untunneled"/);
+    assert.match(shadedJson, /"delta":-6/);
+
+    assert.equal(typeof (card?.shaded?.effects?.[0] as { let?: unknown } | undefined)?.let, 'object');
+    assert.match(shadedJson, /\$tamChauVcPiece/);
+  });
+
   it('encodes card 67 (Amphib Landing) as dual US/ARVN coastal troop relocation branches plus shaded VC relocation and next-card ineligibility', () => {
     const { parsed, compiled } = FITL_PRODUCTION_FIXTURE;
 

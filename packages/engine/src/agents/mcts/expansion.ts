@@ -102,14 +102,19 @@ export function selectExpansionCandidate(
 
   for (let i = 0; i < candidates.length; i += 1) {
     const candidate = candidates[i]!;
-    const result = applyMove(def, state, candidate.move, undefined, runtime);
-    const terminal = terminalResult(def, result.state, runtime);
+    try {
+      const result = applyMove(def, state, candidate.move, undefined, runtime);
+      const terminal = terminalResult(def, result.state, runtime);
 
-    if (terminal !== null && isWinForPlayer(terminal, actingPlayer)) {
-      scored.push({ index: i, score: Infinity, isTerminalWin: true });
-    } else {
-      const heuristic = evaluateState(def, result.state, actingPlayer, runtime);
-      scored.push({ index: i, score: heuristic, isTerminalWin: false });
+      if (terminal !== null && isWinForPlayer(terminal, actingPlayer)) {
+        scored.push({ index: i, score: Infinity, isTerminalWin: true });
+      } else {
+        const heuristic = evaluateState(def, result.state, actingPlayer, runtime);
+        scored.push({ index: i, score: heuristic, isTerminalWin: false });
+      }
+    } catch {
+      // applyMove failed — score as worst possible candidate.
+      scored.push({ index: i, score: -Infinity, isTerminalWin: false });
     }
   }
 

@@ -144,6 +144,7 @@ export const TokenFilterPredicateSchema = z
       z.object({ kind: z.literal('prop'), prop: StringSchema }).strict(),
       z.object({ kind: z.literal('tokenId') }).strict(),
       z.object({ kind: z.literal('tokenZone') }).strict(),
+      z.object({ kind: z.literal('zoneProp'), prop: StringSchema }).strict(),
     ]).optional(),
     op: PredicateOperatorSchema,
     value: z.union([ValueExprSchema, ScalarValueArraySchema]),

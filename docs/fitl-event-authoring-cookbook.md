@@ -495,6 +495,38 @@ Patterns still open-coded today:
 
 For those, use the current production card pattern, especially Card 81, until the dedicated macro tickets land.
 
+## Geography-Sensitive Event Targeting
+
+When playbook or rules text narrows a nominal adjacency concept to a specific set of spaces, encode the target space set explicitly rather than relying on the engine's raw adjacency queries.
+
+- If the rules say "adjacent to Can Tho" but the playbook clarifies that only certain adjacent spaces qualify, author one `zoneFilter` per qualifying space. Do not use an unfiltered adjacency query and hope the engine matches the intended subset.
+- Test both inclusion and exclusion for disputed or easy-to-misread spaces. A space that is geographically adjacent on the map but excluded by the rules must be tested as absent from the target set.
+- When a card grants per-space free operations (e.g., one Sweep or Assault in each target space), author one grant per space with an explicit zone filter rather than a single grant with a multi-zone query. This makes test isolation straightforward and prevents ambiguity about which spaces are in scope.
+
+Production reference:
+
+- Card 92 (`SEALORDS`) encodes 7 ARVN and 7 US per-space grants, each with an explicit `zoneFilter` matching exactly one target space. `loc-saigon-can-tho:none` is geographically adjacent but excluded, and integration tests assert both its absence from grants and its untouched state after event execution.
+
+## Ordered Free-Op Event Testing
+
+For events that issue ordered free-operation grants (e.g., "ARVN then US"), test runtime grant surfacing and resolved board state rather than making assumptions about which grants appear immediately.
+
+Preferred testing patterns:
+
+- Assert on `pendingFreeOperationGrants` for readiness and sequence windows. After an ordered event fires, only the current step's grants should be active.
+- Use `withIsolatedFreeOperationGrant` from `test/helpers/turn-order-helpers` to install a single grant in isolation, setting the active player and providing all metadata (zoneFilter, executionContext, viabilityPolicy, etc.) without inline hand-rolling.
+- Assert on resolved board state (token positions, zone contents) for effect correctness rather than on intermediate move params.
+- Use `normalizeDecisionParamsForMove` or `applyMoveWithResolvedDecisionIds` from `test/helpers/decision-param-helpers` to drive the move through the decision sequence.
+
+Patterns to avoid:
+
+- Asserting on unresolved `legalMoves(...).params` for ordered free-op windows unless the move shape itself is the subject under test. Grant ordering means some grants may not yet be surfaced.
+- Using large multi-grant event windows when a single isolated grant fixture would test the behavior more directly. Isolate the grant under test rather than replaying the full event card.
+
+Production reference:
+
+- Card 92 (`SEALORDS`) integration tests demonstrate both patterns: the full-event test verifies ordered grant surfacing and single-grant activation, while isolated-grant tests verify in-place Sweep restrictions and US no-followup behavior independently.
+
 ## Practical Checklist
 
 Before considering a new FITL event complete, verify:
@@ -508,3 +540,5 @@ Before considering a new FITL event complete, verify:
 7. Decision ownership matches the rules text.
 8. Depletion and zero-target cases resolve to the intended fallback or no-op behavior.
 9. An integration test covers any nontrivial chooser, replacement, routing, or fallback behavior.
+10. Geography-sensitive cards encode explicit target sets and test both inclusion and exclusion.
+11. Ordered free-op events test grant surfacing sequence and use isolated grant helpers for per-grant behavior.

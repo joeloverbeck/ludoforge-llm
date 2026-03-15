@@ -1,6 +1,6 @@
 # FITLTEST-001: Sealords Follow-Up Testing Helpers and FITL Cookbook Guidance
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — test helpers only in `packages/engine/test/helpers`

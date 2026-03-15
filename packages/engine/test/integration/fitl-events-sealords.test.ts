@@ -12,13 +12,12 @@ import {
   type GameState,
   type Move,
   type Token,
-  type TurnFlowPendingFreeOperationGrant,
 } from '../../src/kernel/index.js';
 import { applyMoveWithResolvedDecisionIds, normalizeDecisionParamsForMove, type DecisionOverrideRule } from '../helpers/decision-param-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
-import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
+import { requireCardDrivenRuntime, withIsolatedFreeOperationGrant } from '../helpers/turn-order-helpers.js';
 
 const CARD_ID = 'card-92';
 const CAN_THO = 'can-tho:none';
@@ -166,25 +165,6 @@ const resolveMatchingLimitedFreeMove = (
 const countTokens = (state: GameState, zone: string, predicate: (token: Token) => boolean): number =>
   (state.zones[zone] ?? []).filter((token) => predicate(token as Token)).length;
 
-const withPendingGrant = (
-  state: GameState,
-  activePlayer: number,
-  grant: TurnFlowPendingFreeOperationGrant,
-): GameState => {
-  const runtime = requireCardDrivenRuntime(state);
-  return {
-    ...state,
-    activePlayer: asPlayerId(activePlayer),
-    turnOrderState: {
-      type: 'cardDriven',
-      runtime: {
-        ...runtime,
-        pendingFreeOperationGrants: [grant],
-      },
-    },
-  };
-};
-
 describe('FITL card-92 SEALORDS', () => {
   it('encodes exact text, exact target set, Monsoon-legal per-space grants, in-place Sweep flags, and US no-followup flags', () => {
     const def = compileDef();
@@ -297,7 +277,7 @@ describe('FITL card-92 SEALORDS', () => {
     const eventMove = findCardMove(def, setup, 'unshaded');
     assert.notEqual(eventMove, undefined, 'Expected Sealords unshaded event move');
     const afterEvent = applyMove(def, setup, eventMove!).state;
-    const arvnSweepState = withPendingGrant(afterEvent, 1, {
+    const arvnSweepState = withIsolatedFreeOperationGrant(afterEvent, asPlayerId(1), {
       grantId: 'sealords-test-arvn-sweep',
       seat: 'arvn',
       operationClass: 'limitedOperation',
@@ -310,7 +290,6 @@ describe('FITL card-92 SEALORDS', () => {
       completionPolicy: 'required',
       outcomePolicy: 'mustChangeGameplayState',
       postResolutionTurnFlow: 'resumeCardFlow',
-      remainingUses: 1,
     });
     const afterArvn = applyMoveWithResolvedDecisionIds(def, arvnSweepState, {
       actionId: asActionId('sweep'),
@@ -328,7 +307,7 @@ describe('FITL card-92 SEALORDS', () => {
       'Sealords Sweep must remain in place and leave adjacent ARVN troops unmoved',
     );
 
-    const usAssaultState = withPendingGrant(afterArvn, 0, {
+    const usAssaultState = withIsolatedFreeOperationGrant(afterArvn, asPlayerId(0), {
       grantId: 'sealords-test-us-assault',
       seat: 'us',
       operationClass: 'limitedOperation',
@@ -341,7 +320,6 @@ describe('FITL card-92 SEALORDS', () => {
       completionPolicy: 'required',
       outcomePolicy: 'mustChangeGameplayState',
       postResolutionTurnFlow: 'resumeCardFlow',
-      remainingUses: 1,
     });
     const final = applyMoveWithResolvedDecisionIds(def, usAssaultState, {
       actionId: asActionId('assault'),

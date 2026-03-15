@@ -25,7 +25,7 @@ Each `add` or `remove` command in `advanceChooseN()` re-runs the full discovery 
 3. `mapChooseNOptions()` — re-enumerates the option domain and probes legality
 4. `computeTierAdmissibility()` — re-filters tiers against current selection
 
-Steps 1–2 are **invariant** across add/remove operations — the game state, partial move, and decision context haven't changed. Only the transient selection set changes, which affects steps 3–4 (tier admissibility and per-option legality). Re-running the full pipeline on every interaction wastes 3–5x the necessary work.
+`GameDefRuntime` already caches the adjacency graph, runtime table index, zobrist table, and rule card memos — those structural caches are not rebuilt per toggle. The redundancy is in re-executing the **effect pipeline** (preflight → stage evaluation → query evaluation → `buildChooseNPendingChoice()`) twice per toggle. Steps 1–2 are **invariant** across add/remove operations — the game state, partial move, and decision context haven't changed. Only the transient selection set changes, which affects steps 3–4 (tier admissibility and per-option legality). Re-running the effect pipeline on every interaction wastes 3–5x the necessary work.
 
 ### 0.3 Impact
 
@@ -83,17 +83,31 @@ for each unselected option O in domain:
 
 **Optimistic marking is safe** because:
 
-1. The `confirm` command in `advanceChooseN()` always validates the complete selection before accepting it. If an optimistically-marked option participates in an illegal combination, confirm rejects the selection with a diagnostic message.
+1. Confirm checks that `canConfirm` is true (cardinality bounds satisfied) and returns the completed selection. Legality of the current selection was already validated by the most recent `findPendingChooseN()` call during the preceding add/remove command. No additional full-selection re-probe occurs at confirm time. If an optimistically-marked option participates in an illegal combination, the preceding add/remove step catches it via the probe.
 2. Independent probing catches the most common illegality patterns: options that are individually invalid (wrong zone, wrong faction, insufficient resources) regardless of what else is selected.
 3. Interaction effects (option A is only legal if option B is also selected) are rare in practice and typically constrained to tier-based prioritization, which is handled by `computeTierAdmissibility()` separately.
 
-### 2.3 Complexity
+### 2.3 Probe Classification Cases
+
+Each independent probe classifies the option into one of the following:
+
+1. **illegal** → exact illegal — the option cannot participate in any legal selection
+2. **satisfiable + confirmable** → exact legal — the option is definitively legal
+3. **satisfiable + needs-more** → unresolved — the option may be legal pending further selections
+4. **stochastic/ambiguous** → unknown — the probe cannot determine legality
+5. **authority mismatch** → option becomes `unknown` with `resolution: 'ambiguous'` — this occurs when the probe reaches a decision owned by a different player (see `CHOICE_PROBE_AUTHORITY_MISMATCH` in `legal-choices.ts:321-334`), preventing the engine from determining satisfiability without that player's input
+
+### 2.4 Witness Search Cost Model
+
+Each witness search node performs the same satisfiability classification as the current exhaustive enumerator (`classifyProbeMoveSatisfiability`). The improvement is twofold: (a) the search needs only one confirmable completion per option, not exhaustive coverage, and (b) deterministic budgets bound the total work. For options with easy witnesses (common case), resolution is fast. For adversarial constraint patterns, the budget caps cost and the option degrades to `provisional`.
+
+### 2.5 Complexity
 
 - **Before**: O(C(n, k)) probes where k ranges over [min, max] cardinality — exponential in the worst case
 - **After**: O(n) probes — one per unselected option
 - **No cap needed**: The 1024 combination limit (`MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS`) becomes unnecessary and can be removed
 
-### 2.4 Files
+### 2.6 Files
 
 | File | Changes |
 |------|---------|
@@ -110,7 +124,11 @@ interface ChooseNSession {
   /** Adjacency graph, runtime table index, seat resolution */
   readonly preparedContext: LegalChoicesPreparedContext;
 
-  /** Full option domain before tier filtering */
+  /** Full option domain from evalQuery() before tier filtering.
+   *  Tier admissibility is selection-dependent and must be recomputed
+   *  from computeTierAdmissibility() on each toggle — it is NOT part
+   *  of the cached template. The session caches the domain and invariant
+   *  metadata; it recomputes tier filtering and per-option legality. */
   readonly baseDomain: readonly MoveParamScalar[];
 
   /** Resolved cardinality bounds */
@@ -211,6 +229,8 @@ The session caches everything **up to** the tier computation:
 - Cardinality bounds — invariant
 - Discovery snapshot (action context, preflight) — invariant
 
+The current implementation already tracks statically illegal options (`fixedIllegalOptionKeys`) and excludes them from combination enumeration, reducing the effective domain. The hybrid resolver preserves and extends this optimization.
+
 Tier admissibility and independent probing run fresh each time, using the cached invariants as input.
 
 ## 5. Implementation Phases
@@ -270,16 +290,15 @@ In MCTS rollout, `completeDecisionIncrementally()` samples chooseN selections vi
 
 The `ChooseNSession` is created and held by the caller (worker API or MCTS). No kernel API changes are needed. The kernel remains stateless.
 
-### 6.4 MCTS Benefits
+### 6.4 No Direct MCTS Impact
 
-- **Phase 1**: If MCTS ever needs per-option legality for smarter sampling (e.g., UCB-weighted option selection), independent probing provides O(n) legality without the cap
-- **Phase 2**: MCTS rollout can create one session per chooseN decision point and reuse it across simulation iterations exploring different selections
+This spec does not affect Spec 62's MCTS implementation. MCTS uses `legalChoicesDiscover()` with atomic chooseN sampling (Spec 62 Section 3.3) and never calls `mapChooseNOptions()` or `advanceChooseN()`. This spec improves the interactive UI path exclusively. If a future spec adds iterative chooseN expansion to MCTS, the probe cache and witness search infrastructure could be reused, but that is not planned.
 
 ## 7. Files to Modify
 
 | File | Phase | Changes |
 |------|-------|---------|
-| `packages/engine/src/kernel/legal-choices.ts` | 1, 2 | Replace enumeration in `mapChooseNOptions()` with independent probes (Phase 1). Extract session-creation helper (Phase 2). |
+| `packages/engine/src/kernel/legal-choices.ts` | 1, 2 | Replace enumeration in `mapChooseNOptions()` with independent probes (Phase 1). Extract session-creation helper (Phase 2). Note: `computeTierAdmissibility()` is called from `buildChooseNPendingChoice()` in `effects-choice.ts`, not from `mapChooseNOptions()`. The hybrid resolver in `legal-choices.ts` receives options with tier filtering already applied. |
 | `packages/engine/src/kernel/advance-choose-n.ts` | 2 | `ChooseNSession` type, `createChooseNSession()`, `advanceChooseNWithSession()` |
 | `packages/runner/src/worker/game-worker-api.ts` | 2 | Session lifecycle: create on chooseN entry, invalidate on state change |
 | `packages/engine/test/unit/kernel/legal-choices.test.ts` | 1 | Independent probing tests: large domains, illegal detection, optimistic marking |
@@ -293,7 +312,7 @@ The `ChooseNSession` is created and held by the caller (worker API or MCTS). No 
 | `computeTierAdmissibility()` | `prioritized-tier-legality.ts` | Tier unlocking logic — runs fresh per interaction, not cached in session |
 | `evaluateProbeMove()` | `legal-choices.ts` | Single-option legality probe — reused as-is for independent probing |
 | `resolveChooseNCardinality()` | `choose-n-cardinality.ts` | Min/max resolution — computed once and stored in session |
-| `normalizeChoiceDomain()` | `effects-choice.ts` | Option normalization — computed once during session creation |
+| `normalizeChoiceDomain()` | `effects-choice.ts` | Option normalization — computed once during session creation. Extract the selection-invariant portion of `buildChooseNPendingChoice()` (option domain from `evalQuery()`, cardinality bounds, prioritized tier entries) into a reusable template structure. The selection-dependent portion (tier admissibility via `computeTierAdmissibility()`, per-option legality) remains as a lightweight recompute path. |
 | `legalChoicesDiscover()` | `legal-choices.ts` | Full discovery pipeline — executed once for session snapshot |
 
 ## 9. Success Criteria
@@ -309,7 +328,7 @@ The `ChooseNSession` is created and held by the caller (worker API or MCTS). No 
 
 | Risk | Likelihood | Mitigation |
 |------|------------|------------|
-| Optimistic legality confuses UI (option looks legal but confirm rejects) | Low | Confirm always validates the full selection. UI shows a clear error message with the specific illegality reason. Players learn quickly that optimistic hints are not guarantees. |
+| Optimistic legality confuses UI (option looks legal but confirm rejects) | Low | Confirm checks `canConfirm` (cardinality bounds). The preceding add/remove already validated legality via `findPendingChooseN()`. UI shows a clear error message with the specific illegality reason. Players learn quickly that optimistic hints are not guarantees. |
 | Session becomes stale if state changes unexpectedly | Low | Session stores `stateHash`; every `advanceChooseNWithSession()` call compares hashes and throws on mismatch. Worker invalidates session on `applyMove`, undo, and reset. |
 | Independent probing misses interaction effects between options | Medium | Only affects the legality hint, never game correctness. Confirm is the authoritative check. In practice, interaction effects are rare and mostly captured by tier admissibility. |
 | Performance regression for small domains (< 10 options) | Very Low | Independent probing is O(n) which equals or beats C(n,k) for all n ≥ 1. For n=5, k=2: C(5,2)=10 probes vs 5 independent probes. Strictly better. |

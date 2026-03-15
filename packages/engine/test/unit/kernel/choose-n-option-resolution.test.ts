@@ -187,9 +187,9 @@ describe('chooseN option resolution field', () => {
       }
     });
 
-    it('large-domain with high min produces unresolved/provisional options', () => {
-      // 20 options, min=5, max=10 → probing [option] gives selected.length=1 < min=5
-      // → probe returns same chooseN pending with canConfirm=false → unresolved
+    it('large-domain with high min: witness search resolves unresolved options', () => {
+      // 20 options, min=5, max=10 → singleton probe [option] gives size=1 < min=5
+      // → unresolved. Witness search then finds a 5-element completion for each.
       const largeValues = Array.from({ length: 20 }, (_, i) => `opt${String(i)}`);
       const action: ActionDef = {
         id: asActionId('pickHighMin'),
@@ -220,10 +220,11 @@ describe('chooseN option resolution field', () => {
       assert.equal(result.kind, 'pending');
       assert.equal(result.type, 'chooseN');
 
-      // Singleton probe [option] with min=5 → not confirmable → unresolved → provisional
+      // With witness search, each option now has a witness (5-element set).
+      // All options should be legal+exact.
       for (const option of result.options) {
-        assert.equal(option.legality, 'unknown', `option ${String(option.value)} should be unknown`);
-        assert.equal(option.resolution, 'provisional', `option ${String(option.value)} should be provisional`);
+        assert.equal(option.legality, 'legal', `option ${String(option.value)} should be legal`);
+        assert.equal(option.resolution, 'exact', `option ${String(option.value)} should be exact`);
       }
     });
   });

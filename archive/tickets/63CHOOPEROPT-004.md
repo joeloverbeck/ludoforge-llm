@@ -1,6 +1,6 @@
 # 63CHOOPEROPT-004: Budgeted witness search for unresolved chooseN options
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — choose-n-option-resolution.ts
@@ -110,3 +110,15 @@ Update the large-domain branch:
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-15
+- **What changed**:
+  - `packages/engine/src/kernel/choose-n-option-resolution.ts` — added `runWitnessSearch()`, `WitnessSearchBudget`, `WitnessSearchStats`, `probeAndClassifySelection()`, `witnessSearchForOption()`, `selectionCacheKey()`. Bounded DFS over subset space with probe cache and count-based budget.
+  - `packages/engine/src/kernel/legal-choices.ts` — wired witness search after singleton probe pass in `mapChooseNOptions` large-domain branch.
+  - `packages/engine/test/unit/kernel/choose-n-witness-search.test.ts` — new test file (14 tests): witness correctness, budget exhaustion, cache behavior, deterministic ordering, subtree exhaustion, spec 11.2 large-domain fixtures, invariants.
+  - `packages/engine/test/unit/kernel/choose-n-option-resolution.test.ts` — updated high-min test to expect `legal`+`exact` (witness resolves what singleton left unresolved).
+  - `packages/engine/test/unit/kernel/legal-choices.test.ts` — updated overflow cap test to expect `legal`+`exact` (no blanket all-unknown).
+- **Deviations**: None. All deliverables implemented as specified.
+- **Verification**: 1607/1607 engine tests pass, 0 failures. Typecheck clean.

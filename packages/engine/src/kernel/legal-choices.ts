@@ -1,4 +1,9 @@
-import { runSingletonProbePass, type SingletonProbeBudget } from './choose-n-option-resolution.js';
+import {
+  runSingletonProbePass,
+  runWitnessSearch,
+  type SingletonProbeBudget,
+  type WitnessSearchBudget,
+} from './choose-n-option-resolution.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { applyEffects } from './effects.js';
 import { isEffectErrorCode, isEffectRuntimeReason } from './effect-error.js';
@@ -427,16 +432,30 @@ const mapChooseNOptions = (
       MAX_CHOOSE_N_EXACT_ENUMERATION_COMBINATIONS - totalCombinations + 1,
     );
     if (totalCombinations > MAX_CHOOSE_N_EXACT_ENUMERATION_COMBINATIONS) {
-      // Large domain: run singleton probe pass for O(n) fast filtering.
-      const budget: SingletonProbeBudget = { remaining: MAX_CHOOSE_N_TOTAL_PROBE_BUDGET };
-      return runSingletonProbePass(
+      // Large domain: singleton probe pass for O(n) fast filtering,
+      // then witness search for unresolved candidates.
+      const singletonBudget: SingletonProbeBudget = { remaining: MAX_CHOOSE_N_TOTAL_PROBE_BUDGET };
+      const singletonResults = runSingletonProbePass(
         evaluateProbeMove,
         classifyProbeMoveSatisfiability,
         partialMove,
         request,
         uniqueOptions,
         selectedKeys,
-        budget,
+        singletonBudget,
+      );
+
+      // Witness search for options left unresolved by singleton pass.
+      const witnessBudget: WitnessSearchBudget = { remaining: MAX_CHOOSE_N_TOTAL_WITNESS_NODES };
+      return runWitnessSearch(
+        evaluateProbeMove,
+        classifyProbeMoveSatisfiability,
+        partialMove,
+        request,
+        singletonResults,
+        uniqueOptions,
+        selectedKeys,
+        witnessBudget,
       );
     }
   }

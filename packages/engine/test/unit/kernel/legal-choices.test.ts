@@ -1984,7 +1984,10 @@ phase: [asPhaseId('main')],
       );
     });
 
-    it('marks chooseN option legality as unknown when probe combinations exceed cap', () => {
+    it('witness search resolves chooseN options when probe combinations exceed cap', () => {
+      // 13 options with n=5 → C(13,5) = 1287 > 1024 cap → large domain path.
+      // Singleton probe leaves all unresolved (size=1 < min=5).
+      // Witness search finds a 5-element completion for each → all legal+exact.
       const action: ActionDef = {
         id: asActionId('chooseNOverflowOp'),
         actor: 'active',
@@ -2018,7 +2021,9 @@ phase: [asPhaseId('main')],
       assert.equal(result.kind, 'pending');
       assert.equal(result.type, 'chooseN');
       assert.equal(result.options.length, 13);
-      assert.ok(result.options.every((entry) => entry.legality === 'unknown'));
+      // With witness search, every option has a valid 5-element completion.
+      assert.ok(result.options.every((entry) => entry.legality === 'legal'));
+      assert.ok(result.options.every((entry) => entry.resolution === 'exact'));
       assert.ok(result.options.every((entry) => entry.illegalReason === null));
     });
 

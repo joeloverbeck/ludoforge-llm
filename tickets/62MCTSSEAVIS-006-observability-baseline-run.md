@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — test execution and analysis only
-**Deps**: 62MCTSSEAVIS-003, 62MCTSSEAVIS-004, 62MCTSSEAVIS-005
+**Deps**: 62MCTSSEAVIS-003, 62MCTSSEAVIS-004, archive/tickets/62MCTSSEAVIS-005-ci-diagnostics-and-console-visitor.md
 
 ## Problem
 

@@ -1,6 +1,6 @@
 # 62MCTSSEAVIS-005: CiDiagnosticsReporter & ConsoleVisitor Test Helpers
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — test helpers only
@@ -35,7 +35,7 @@ Update `fitl-mcts-test-helpers.ts` (or equivalent) to accept an optional visitor
 
 - `packages/engine/test/helpers/ci-diagnostics-reporter.ts` (new)
 - `packages/engine/test/helpers/mcts-console-visitor.ts` (new)
-- `packages/engine/test/helpers/fitl-mcts-test-helpers.ts` (modify — accept visitor param)
+- `packages/engine/test/e2e/mcts-fitl/fitl-mcts-test-helpers.ts` (modify — accept visitor param in `runFitlMctsSearch`)
 
 ## Out of Scope
 
@@ -70,5 +70,19 @@ Update `fitl-mcts-test-helpers.ts` (or equivalent) to accept an optional visitor
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine test -- --test-path-pattern diagnostics-reporter`
+1. `pnpm -F @ludoforge/engine test` (engine uses `node --test`, not Jest)
 2. `pnpm turbo build && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-16
+- **What changed**:
+  - Created `packages/engine/test/helpers/ci-diagnostics-reporter.ts` — `createCiDiagnosticsReporter()` writes JSONL to `MCTS_DIAGNOSTICS_DIR` when set, logs key events (`searchStart`, `iterationBatch`, `searchComplete`, `poolExhausted`, `templateDropped`) to console always
+  - Created `packages/engine/test/helpers/mcts-console-visitor.ts` — `createConsoleVisitor()` logs all 11 event types with formatted output for local debugging
+  - Modified `packages/engine/test/e2e/mcts-fitl/fitl-mcts-test-helpers.ts` — `runFitlMctsSearch` now accepts optional `visitor?: MctsSearchVisitor` param, passes through to config
+  - Created `packages/engine/test/unit/helpers/ci-diagnostics-reporter.test.ts` (7 tests)
+  - Created `packages/engine/test/unit/helpers/mcts-console-visitor.test.ts` (7 tests)
+- **Deviations from original plan**:
+  - `fitl-mcts-test-helpers.ts` path corrected from `test/helpers/` to `test/e2e/mcts-fitl/` (actual location)
+  - Test command corrected from `--test-path-pattern` (Jest) to standard `node --test` glob
+- **Verification**: `pnpm turbo build` ✅, `pnpm turbo typecheck` ✅, `pnpm turbo lint` ✅, `pnpm -F @ludoforge/engine test` ✅ (4836 pass, 0 fail)

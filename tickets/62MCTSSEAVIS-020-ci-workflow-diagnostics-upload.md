@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — CI config only
-**Deps**: 62MCTSSEAVIS-005
+**Deps**: archive/tickets/62MCTSSEAVIS-005-ci-diagnostics-and-console-visitor.md
 
 ## Problem
 

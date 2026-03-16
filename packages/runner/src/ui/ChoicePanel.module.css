@@ -156,6 +156,24 @@
   font-size: var(--font-size-sm);
 }
 
+.optionProvisional {
+  border-style: dashed;
+  border-color: var(--text-muted);
+  opacity: 0.8;
+}
+
+.optionStochastic {
+  border-style: dotted;
+  border-color: var(--text-muted);
+  opacity: 0.8;
+}
+
+.resolutionIndicator {
+  margin-left: var(--space-xs);
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
 .optionButton:disabled,
 .optionButton[aria-disabled='true'] {
   color: var(--text-muted);

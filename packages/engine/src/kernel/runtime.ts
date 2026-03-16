@@ -4,6 +4,7 @@ export * from './gamedef-runtime.js';
 export * from './move-completion.js';
 export * from './choose-n-cardinality.js';
 export * from './advance-choose-n.js';
+export * from './choose-n-session.js';
 export * from './initial-state.js';
 export * from './legal-choices.js';
 export * from './legality-reasons.js';

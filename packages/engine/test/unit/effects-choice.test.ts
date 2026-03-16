@@ -216,7 +216,7 @@ describe('effects choice assertions', () => {
     assert.deepEqual(result.pendingChoice.selected, ['alpha']);
     assert.equal(result.pendingChoice.canConfirm, true);
     assert.deepEqual(result.pendingChoice.options, [
-      { value: 'alpha', legality: 'illegal', illegalReason: null },
+      { value: 'alpha', legality: 'illegal', illegalReason: null, resolution: 'exact' },
       { value: 'beta', legality: 'unknown', illegalReason: null },
     ]);
   });

@@ -1,3 +1,14 @@
+import {
+  runSingletonProbePass,
+  runWitnessSearch,
+  createDiagnosticsAccumulator,
+  finalizeDiagnostics,
+  type ChooseNDiagnostics,
+  type ChooseNDiagnosticsAccumulator,
+  type SingletonProbeBudget,
+  type WitnessSearchBudget,
+} from './choose-n-option-resolution.js';
+import type { ChooseNTemplate } from './choose-n-session.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { applyEffects } from './effects.js';
 import { isEffectErrorCode, isEffectRuntimeReason } from './effect-error.js';
@@ -42,6 +53,7 @@ import type {
   ActionDef,
   ChoiceIllegalRequest,
   ChoiceOption,
+  ChoicePendingChooseNRequest,
   ChoicePendingRequest,
   ChoiceRequest,
   EffectAST,
@@ -52,21 +64,42 @@ import type {
 } from './types.js';
 
 const COMPLETE: ChoiceRequest = { kind: 'complete', complete: true };
-const MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS = 1024;
+const MAX_CHOOSE_N_EXACT_ENUMERATION_COMBINATIONS = 1024;
+
+/** Count-based budget for singleton probe passes (consumed in 63CHOOPEROPT-003). */
+const MAX_CHOOSE_N_TOTAL_PROBE_BUDGET = 4096;
+
+/** Count-based budget for witness search nodes (consumed in 63CHOOPEROPT-004). */
+const MAX_CHOOSE_N_TOTAL_WITNESS_NODES = 2048;
+
+// Re-export budget constants for test oracle access.
+export {
+  MAX_CHOOSE_N_EXACT_ENUMERATION_COMBINATIONS,
+  MAX_CHOOSE_N_TOTAL_PROBE_BUDGET,
+  MAX_CHOOSE_N_TOTAL_WITNESS_NODES,
+};
 
 export interface LegalChoicesRuntimeOptions {
   readonly onDeferredPredicatesEvaluated?: (count: number) => void;
   readonly onProbeContextPrepared?: () => void;
+  /** Callback invoked when a chooseN pending choice is discovered, delivering the full-fidelity template for session-based optimization. */
+  readonly onChooseNTemplateCreated?: (template: ChooseNTemplate) => void;
+  /** When true, collects chooseN resolution diagnostics and delivers them via onChooseNDiagnostics. Dev-only — zero overhead when false/undefined. */
+  readonly collectDiagnostics?: boolean;
+  /** Callback invoked with diagnostics after a chooseN resolution completes. Only called when collectDiagnostics is true. */
+  readonly onChooseNDiagnostics?: (diagnostics: ChooseNDiagnostics) => void;
 }
 
 interface LegalChoicesInternalOptions extends LegalChoicesRuntimeOptions {
   readonly transientChooseNSelections?: Readonly<Record<string, readonly MoveParamScalar[]>>;
+  /** Mutable accumulator for diagnostics collection. Internal only — created by public API when collectDiagnostics is true. */
+  readonly _diagnosticsAccumulator?: ChooseNDiagnosticsAccumulator;
 }
 
 const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undefined =>
   def.actions.find((action) => action.id === actionId);
 
-interface LegalChoicesPreparedContext {
+export interface LegalChoicesPreparedContext {
   readonly def: GameDef;
   readonly state: GameState;
   readonly action: ActionDef;
@@ -103,6 +136,9 @@ const buildDiscoveryEffectContextBase = (
   ...(options?.transientChooseNSelections === undefined
     ? {}
     : { transientDecisionSelections: options.transientChooseNSelections }),
+  ...(options?.onChooseNTemplateCreated === undefined
+    ? {}
+    : { chooseNTemplateCallback: options.onChooseNTemplateCreated }),
 });
 
 const executeDiscoveryEffectsStrict = (
@@ -157,9 +193,9 @@ const executeDiscoveryEffectsProbe = (
   }
 };
 
-const optionKey = (value: unknown): string => JSON.stringify([typeof value, value]);
+export const optionKey = (value: unknown): string => JSON.stringify([typeof value, value]);
 
-const isChoiceDecisionOwnerMismatchDuringProbe = (error: unknown): boolean => {
+export const isChoiceDecisionOwnerMismatchDuringProbe = (error: unknown): boolean => {
   return isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH);
 };
 
@@ -233,56 +269,19 @@ const classifyProbeOutcomeLegality = (
   };
 };
 
-const mapChooseNOptions = (
+/**
+ * Exhaustive combination enumerator — exact path for small search spaces.
+ * Also serves as the test oracle for the hybrid resolver.
+ */
+const resolveChooseNOptionsExhaustive = (
   evaluateProbeMove: (move: Move) => ChoiceRequest,
   classifyProbeMoveSatisfiability: (move: Move) => DecisionSequenceSatisfiability,
   partialMove: Move,
-  request: ChoicePendingRequest,
+  request: ChoicePendingChooseNRequest,
+  uniqueOptions: readonly Move['params'][string][],
+  minAdditionalSelections: number,
+  maxAdditionalSelections: number,
 ): readonly ChoiceOption[] => {
-  if (request.type !== 'chooseN') {
-    throw new Error('mapChooseNOptions requires a chooseN request');
-  }
-  const selectedKeys = new Set(request.selected.map((value) => optionKey(value)));
-  const uniqueOptions: Move['params'][string][] = [];
-  const uniqueByKey = new Map<string, Move['params'][string]>();
-  for (const option of request.options) {
-    const key = optionKey(option.value);
-    if (selectedKeys.has(key) || uniqueByKey.has(key)) {
-      continue;
-    }
-    uniqueByKey.set(key, option.value);
-    uniqueOptions.push(option.value);
-  }
-
-  const minAdditionalSelections = Math.max(0, (request.min ?? 0) - request.selected.length);
-  const maxAdditionalSelections = Math.min(
-    Math.max(0, (request.max ?? uniqueOptions.length) - request.selected.length),
-    uniqueOptions.length,
-  );
-  if (minAdditionalSelections > maxAdditionalSelections) {
-    return request.options.map((option) => ({
-      value: option.value,
-      legality: 'illegal',
-      illegalReason: null,
-    }));
-  }
-
-  let totalCombinations = 0;
-  for (let size = minAdditionalSelections; size <= maxAdditionalSelections; size += 1) {
-    totalCombinations += countCombinationsCapped(
-      uniqueOptions.length,
-      size,
-      MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS - totalCombinations + 1,
-    );
-    if (totalCombinations > MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS) {
-      return request.options.map((option) => ({
-        value: option.value,
-        legality: 'unknown',
-        illegalReason: null,
-      }));
-    }
-  }
-
   const optionLegalityByKey = new Map<string, { legality: ChoiceOption['legality']; illegalReason: ChoiceOption['illegalReason'] }>();
   const fixedIllegalOptionKeys = new Set<string>();
   for (const option of request.options) {
@@ -387,6 +386,7 @@ const mapChooseNOptions = (
         value: option.value,
         legality: 'unknown',
         illegalReason: null,
+        resolution: 'exact' as const,
       };
     }
 
@@ -394,8 +394,106 @@ const mapChooseNOptions = (
       value: option.value,
       legality: status.legality,
       illegalReason: status.legality === 'legal' ? null : status.illegalReason,
+      resolution: 'exact' as const,
     };
   });
+};
+
+/**
+ * Strategy dispatcher for chooseN option resolution.
+ *
+ * Routes to the exact exhaustive enumerator for small domains,
+ * or produces a mixed surface (static-exact + provisional) for large domains.
+ */
+const mapChooseNOptions = (
+  evaluateProbeMove: (move: Move) => ChoiceRequest,
+  classifyProbeMoveSatisfiability: (move: Move) => DecisionSequenceSatisfiability,
+  partialMove: Move,
+  request: ChoicePendingRequest,
+  diagnostics?: ChooseNDiagnosticsAccumulator,
+): readonly ChoiceOption[] => {
+  if (request.type !== 'chooseN') {
+    throw new Error('mapChooseNOptions requires a chooseN request');
+  }
+  const selectedKeys = new Set(request.selected.map((value) => optionKey(value)));
+  const uniqueOptions: Move['params'][string][] = [];
+  const uniqueByKey = new Map<string, Move['params'][string]>();
+  for (const option of request.options) {
+    const key = optionKey(option.value);
+    if (selectedKeys.has(key) || uniqueByKey.has(key)) {
+      continue;
+    }
+    uniqueByKey.set(key, option.value);
+    uniqueOptions.push(option.value);
+  }
+
+  const minAdditionalSelections = Math.max(0, (request.min ?? 0) - request.selected.length);
+  const maxAdditionalSelections = Math.min(
+    Math.max(0, (request.max ?? uniqueOptions.length) - request.selected.length),
+    uniqueOptions.length,
+  );
+  if (minAdditionalSelections > maxAdditionalSelections) {
+    return request.options.map((option) => ({
+      value: option.value,
+      legality: 'illegal',
+      illegalReason: null,
+      resolution: 'exact' as const,
+    }));
+  }
+
+  let totalCombinations = 0;
+  for (let size = minAdditionalSelections; size <= maxAdditionalSelections; size += 1) {
+    totalCombinations += countCombinationsCapped(
+      uniqueOptions.length,
+      size,
+      MAX_CHOOSE_N_EXACT_ENUMERATION_COMBINATIONS - totalCombinations + 1,
+    );
+    if (totalCombinations > MAX_CHOOSE_N_EXACT_ENUMERATION_COMBINATIONS) {
+      if (diagnostics !== undefined) {
+        diagnostics.mode = 'hybridSearch';
+      }
+      // Large domain: singleton probe pass for O(n) fast filtering,
+      // then witness search for unresolved candidates.
+      const singletonBudget: SingletonProbeBudget = { remaining: MAX_CHOOSE_N_TOTAL_PROBE_BUDGET };
+      const singletonResults = runSingletonProbePass(
+        evaluateProbeMove,
+        classifyProbeMoveSatisfiability,
+        partialMove,
+        request,
+        uniqueOptions,
+        selectedKeys,
+        singletonBudget,
+        diagnostics,
+      );
+
+      // Witness search for options left unresolved by singleton pass.
+      const witnessBudget: WitnessSearchBudget = { remaining: MAX_CHOOSE_N_TOTAL_WITNESS_NODES };
+      const witnessStats = diagnostics !== undefined ? { cacheHits: 0, nodesVisited: 0 } : undefined;
+      return runWitnessSearch(
+        evaluateProbeMove,
+        classifyProbeMoveSatisfiability,
+        partialMove,
+        request,
+        singletonResults,
+        uniqueOptions,
+        selectedKeys,
+        witnessBudget,
+        witnessStats,
+        undefined,
+        diagnostics,
+      );
+    }
+  }
+
+  return resolveChooseNOptionsExhaustive(
+    evaluateProbeMove,
+    classifyProbeMoveSatisfiability,
+    partialMove,
+    request,
+    uniqueOptions,
+    minAdditionalSelections,
+    maxAdditionalSelections,
+  );
 };
 
 const mapOptionsForPendingChoice = (
@@ -403,9 +501,10 @@ const mapOptionsForPendingChoice = (
   classifyProbeMoveSatisfiability: (move: Move) => DecisionSequenceSatisfiability,
   partialMove: Move,
   request: ChoicePendingRequest,
+  diagnostics?: ChooseNDiagnosticsAccumulator,
 ): readonly ChoiceOption[] => {
   if (request.type === 'chooseN') {
-    return mapChooseNOptions(evaluateProbeMove, classifyProbeMoveSatisfiability, partialMove, request);
+    return mapChooseNOptions(evaluateProbeMove, classifyProbeMoveSatisfiability, partialMove, request, diagnostics);
   }
 
   return request.options.map((option) => {
@@ -428,6 +527,7 @@ const mapOptionsForPendingChoice = (
         value: option.value,
         legality: 'unknown',
         illegalReason: null,
+        resolution: 'exact' as const,
       };
     }
 
@@ -455,6 +555,7 @@ const mapOptionsForPendingChoice = (
       value: option.value,
       legality: legality.legality,
       illegalReason: legality.illegalReason,
+      resolution: 'exact' as const,
     };
   });
 };
@@ -552,12 +653,14 @@ const mapPendingChoiceOptions = (
   request: ChoicePendingRequest,
   options: LegalChoicesRuntimeOptions | undefined,
   evaluateProbeLegality: ProbeLegalityEvaluator,
+  diagnostics?: ChooseNDiagnosticsAccumulator,
 ): readonly ChoiceOption[] =>
   mapOptionsForPendingChoice(
     (probeMove) => evaluateProbeLegality(probeMove, options),
     (probeMove) => classifyProbeMoveSatisfiability(probeMove, options, evaluateProbeLegality),
     partialMove,
     request,
+    diagnostics,
   );
 
 const legalChoicesWithPreparedContextInternal = (
@@ -637,7 +740,7 @@ const legalChoicesWithPreparedContextInternal = (
       ? actionParamRequest
       : {
       ...actionParamRequest,
-      options: mapPendingChoiceOptions(partialMove, actionParamRequest, options, evaluateProbeLegality),
+      options: mapPendingChoiceOptions(partialMove, actionParamRequest, options, evaluateProbeLegality, options?._diagnosticsAccumulator),
     };
     return finalizeRequest(request);
   }
@@ -703,7 +806,7 @@ const legalChoicesWithPreparedContextInternal = (
       } else {
         return finalizeRequest({
           ...stageResult.request,
-          options: mapPendingChoiceOptions(partialMove, stageResult.request, options, evaluateProbeLegality),
+          options: mapPendingChoiceOptions(partialMove, stageResult.request, options, evaluateProbeLegality, options?._diagnosticsAccumulator),
         });
       }
     }
@@ -719,7 +822,7 @@ const legalChoicesWithPreparedContextInternal = (
 
     return finalizeRequest({
       ...request,
-      options: mapPendingChoiceOptions(partialMove, request, options, evaluateProbeLegality),
+      options: mapPendingChoiceOptions(partialMove, request, options, evaluateProbeLegality, options?._diagnosticsAccumulator),
     });
   }
 
@@ -735,7 +838,7 @@ const legalChoicesWithPreparedContextInternal = (
 
   return finalizeRequest({
     ...request,
-    options: mapPendingChoiceOptions(partialMove, request, options, evaluateProbeLegality),
+    options: mapPendingChoiceOptions(partialMove, request, options, evaluateProbeLegality, options?._diagnosticsAccumulator),
   });
 };
 
@@ -913,7 +1016,17 @@ export function legalChoicesEvaluate(
   validateTurnFlowRuntimeStateInvariants(state);
   const context = prepareLegalChoicesContext(def, state, partialMove, runtime);
   options?.onProbeContextPrepared?.();
-  return legalChoicesWithPreparedContextStrict(context, partialMove, true, options);
+  const accumulator = options?.collectDiagnostics === true
+    ? createDiagnosticsAccumulator('exactEnumeration')
+    : undefined;
+  const internalOptions: LegalChoicesInternalOptions | undefined = accumulator !== undefined
+    ? { ...options, _diagnosticsAccumulator: accumulator }
+    : options;
+  const result = legalChoicesWithPreparedContextStrict(context, partialMove, true, internalOptions);
+  if (accumulator !== undefined && options?.onChooseNDiagnostics !== undefined && result.kind === 'pending' && result.type === 'chooseN') {
+    options.onChooseNDiagnostics(finalizeDiagnostics(accumulator, result.options));
+  }
+  return result;
 }
 
 export function legalChoicesEvaluateWithTransientChooseNSelections(
@@ -927,13 +1040,21 @@ export function legalChoicesEvaluateWithTransientChooseNSelections(
   validateTurnFlowRuntimeStateInvariants(state);
   const context = prepareLegalChoicesContext(def, state, partialMove, runtime);
   options?.onProbeContextPrepared?.();
-  return legalChoicesWithPreparedContextStrict(
+  const accumulator = options?.collectDiagnostics === true
+    ? createDiagnosticsAccumulator('exactEnumeration')
+    : undefined;
+  const result = legalChoicesWithPreparedContextStrict(
     context,
     partialMove,
     true,
     {
       ...options,
       transientChooseNSelections,
+      ...(accumulator !== undefined ? { _diagnosticsAccumulator: accumulator } : {}),
     },
   );
+  if (accumulator !== undefined && options?.onChooseNDiagnostics !== undefined && result.kind === 'pending' && result.type === 'chooseN') {
+    options.onChooseNDiagnostics(finalizeDiagnostics(accumulator, result.options));
+  }
+  return result;
 }

@@ -98,8 +98,8 @@ describe('advanceChooseN', () => {
     assert.equal(initial.kind, 'pending');
     assert.equal(initial.type, 'chooseN');
     assert.deepEqual(initial.options, [
-      { value: 'available-a', legality: 'legal', illegalReason: null },
-      { value: 'reserve-a', legality: 'illegal', illegalReason: null },
+      { value: 'available-a', legality: 'legal', illegalReason: null, resolution: 'exact' },
+      { value: 'reserve-a', legality: 'illegal', illegalReason: null, resolution: 'exact' },
     ]);
 
     const added = advanceChooseN(
@@ -118,8 +118,8 @@ describe('advanceChooseN', () => {
     assert.deepEqual(added.pending.selected, ['available-a']);
     assert.equal(added.pending.canConfirm, true);
     assert.deepEqual(added.pending.options, [
-      { value: 'available-a', legality: 'illegal', illegalReason: null },
-      { value: 'reserve-a', legality: 'legal', illegalReason: null },
+      { value: 'available-a', legality: 'illegal', illegalReason: null, resolution: 'exact' },
+      { value: 'reserve-a', legality: 'legal', illegalReason: null, resolution: 'exact' },
     ]);
 
     assert.throws(
@@ -147,8 +147,8 @@ describe('advanceChooseN', () => {
     assert.deepEqual(removed.pending.selected, []);
     assert.equal(removed.pending.canConfirm, false);
     assert.deepEqual(removed.pending.options, [
-      { value: 'available-a', legality: 'legal', illegalReason: null },
-      { value: 'reserve-a', legality: 'illegal', illegalReason: null },
+      { value: 'available-a', legality: 'legal', illegalReason: null, resolution: 'exact' },
+      { value: 'reserve-a', legality: 'illegal', illegalReason: null, resolution: 'exact' },
     ]);
   });
 
@@ -220,10 +220,10 @@ describe('advanceChooseN', () => {
     assert.deepEqual(added.pending.selected, [asTokenId('available-troop-1')]);
     assert.equal(added.pending.canConfirm, true);
     assert.deepEqual(added.pending.options, [
-      { value: asTokenId('available-troop-1'), legality: 'illegal', illegalReason: null },
-      { value: asTokenId('available-police-1'), legality: 'legal', illegalReason: null },
-      { value: asTokenId('map-troop-1'), legality: 'legal', illegalReason: null },
-      { value: asTokenId('map-base-1'), legality: 'legal', illegalReason: null },
+      { value: asTokenId('available-troop-1'), legality: 'illegal', illegalReason: null, resolution: 'exact' },
+      { value: asTokenId('available-police-1'), legality: 'legal', illegalReason: null, resolution: 'exact' },
+      { value: asTokenId('map-troop-1'), legality: 'legal', illegalReason: null, resolution: 'exact' },
+      { value: asTokenId('map-base-1'), legality: 'legal', illegalReason: null, resolution: 'exact' },
     ]);
   });
 
@@ -276,9 +276,9 @@ describe('advanceChooseN', () => {
     assert.deepEqual(afterFirstAdd.pending.selected, ['available-a']);
     assert.equal(afterFirstAdd.pending.canConfirm, true);
     assert.deepEqual(afterFirstAdd.pending.options, [
-      { value: 'available-a', legality: 'illegal', illegalReason: null },
-      { value: 'available-b', legality: 'legal', illegalReason: null },
-      { value: 'reserve-a', legality: 'illegal', illegalReason: null },
+      { value: 'available-a', legality: 'illegal', illegalReason: null, resolution: 'exact' },
+      { value: 'available-b', legality: 'legal', illegalReason: null, resolution: 'exact' },
+      { value: 'reserve-a', legality: 'illegal', illegalReason: null, resolution: 'exact' },
     ]);
 
     const confirmed = advanceChooseN(
@@ -341,9 +341,9 @@ describe('advanceChooseN', () => {
       throw new Error('expected pending chooseN state');
     }
     assert.deepEqual(afterAvailable.pending.options, [
-      { value: 'available-a', legality: 'illegal', illegalReason: null },
-      { value: 'map-a', legality: 'legal', illegalReason: null },
-      { value: 'reserve-a', legality: 'illegal', illegalReason: null },
+      { value: 'available-a', legality: 'illegal', illegalReason: null, resolution: 'exact' },
+      { value: 'map-a', legality: 'legal', illegalReason: null, resolution: 'exact' },
+      { value: 'reserve-a', legality: 'illegal', illegalReason: null, resolution: 'exact' },
     ]);
 
     const afterMap = advanceChooseN(
@@ -360,9 +360,9 @@ describe('advanceChooseN', () => {
       throw new Error('expected pending chooseN state');
     }
     assert.deepEqual(afterMap.pending.options, [
-      { value: 'available-a', legality: 'illegal', illegalReason: null },
-      { value: 'map-a', legality: 'illegal', illegalReason: null },
-      { value: 'reserve-a', legality: 'legal', illegalReason: null },
+      { value: 'available-a', legality: 'illegal', illegalReason: null, resolution: 'exact' },
+      { value: 'map-a', legality: 'illegal', illegalReason: null, resolution: 'exact' },
+      { value: 'reserve-a', legality: 'legal', illegalReason: null, resolution: 'exact' },
     ]);
   });
 
@@ -407,9 +407,9 @@ describe('advanceChooseN', () => {
       throw new Error('expected pending chooseN state');
     }
     assert.deepEqual(afterFirstAdd.pending.options, [
-      { value: 'a', legality: 'legal', illegalReason: null },
-      { value: 'b', legality: 'illegal', illegalReason: null },
-      { value: 'c', legality: 'legal', illegalReason: null },
+      { value: 'a', legality: 'legal', illegalReason: null, resolution: 'exact' },
+      { value: 'b', legality: 'illegal', illegalReason: null, resolution: 'exact' },
+      { value: 'c', legality: 'legal', illegalReason: null, resolution: 'exact' },
     ]);
 
     const afterSecondAdd = advanceChooseN(
@@ -427,9 +427,9 @@ describe('advanceChooseN', () => {
     }
     assert.equal(afterSecondAdd.pending.canConfirm, true);
     assert.deepEqual(afterSecondAdd.pending.options, [
-      { value: 'a', legality: 'illegal', illegalReason: null },
-      { value: 'b', legality: 'illegal', illegalReason: null },
-      { value: 'c', legality: 'illegal', illegalReason: null },
+      { value: 'a', legality: 'illegal', illegalReason: null, resolution: 'exact' },
+      { value: 'b', legality: 'illegal', illegalReason: null, resolution: 'exact' },
+      { value: 'c', legality: 'illegal', illegalReason: null, resolution: 'exact' },
     ]);
     assert.throws(
       () => advanceChooseN(def, state, move, asDecisionKey('$targets'), ['b', 'a'], { type: 'add', value: 'c' }),

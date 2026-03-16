@@ -2,18 +2,22 @@ import { evalQuery } from './eval-query.js';
 import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
 import { advanceScope, type DecisionKey } from './decision-scope.js';
+import { createChooseNTemplate } from './choose-n-session.js';
 import { deriveChoiceTargetKinds } from './choice-target-kinds.js';
 import { canConfirmChooseNSelection, resolveChooseNCardinality } from './choose-n-cardinality.js';
 import { effectRuntimeError } from './effect-error.js';
 import { resolveBindingTemplate } from './binding-template.js';
+import { createSeatResolutionContext } from './identity.js';
 import { nextInt } from './prng.js';
 import { resolveSinglePlayerSel } from './resolve-selectors.js';
 import { resolveZoneWithNormalization, selectorResolutionFailurePolicyForMode } from './selector-resolution-normalization.js';
 import { findSpaceMarkerConstraintViolation, resolveSpaceMarkerShift } from './space-marker-rules.js';
 import { withTracePath } from './trace-provenance.js';
 import { computeTierAdmissibility, type PrioritizedTierEntry } from './prioritized-tier-legality.js';
+import { validateChooseNSelectedSequence } from './choose-n-selected-validation.js';
 import { normalizeChoiceDomain, toChoiceComparableValue, type MembershipScalar } from './value-membership.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
+import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type {
   ChoicePendingRequest,
@@ -172,39 +176,44 @@ const normalizeChooseNSelectionValues = (
 const validateChooseNSelectionSequence = (
   selectedSequence: readonly MoveParamScalar[],
   comparableBindingMap: ReadonlyMap<MembershipScalar, unknown>,
+  normalizedOptions: readonly MoveParamScalar[],
   prioritizedTierEntries: readonly (readonly PrioritizedTierEntry[])[] | null,
   prioritizedQualifierMode: 'none' | 'byQualifier',
   bind: string,
   decisionKey: string,
 ): void => {
-  for (const selected of selectedSequence) {
-    if (!comparableBindingMap.has(selected)) {
+  const failures = validateChooseNSelectedSequence({
+    normalizedDomain: normalizedOptions,
+    tiers: prioritizedTierEntries,
+    qualifierMode: prioritizedQualifierMode,
+    selectedSequence,
+  });
+
+  for (const failure of failures) {
+    if (failure.reason === 'out-of-domain') {
       throw effectRuntimeError(
         EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
         `invalid selection for chooseN "${bind}" (${decisionKey}): outside options domain`,
         {
           effectType: 'chooseN',
           bind,
-          selected,
+          selected: failure.value,
           optionsCount: comparableBindingMap.size,
         },
       );
     }
-  }
-
-  if (prioritizedTierEntries === null) {
-    return;
-  }
-
-  const alreadySelected: MoveParamScalar[] = [];
-  for (let index = 0; index < selectedSequence.length; index += 1) {
-    const selected = selectedSequence[index]!;
-    const admissibilityAtStep = buildPrioritizedAdmissibility(
-      prioritizedTierEntries,
-      prioritizedQualifierMode,
-      alreadySelected,
-    );
-    if (admissibilityAtStep !== null && !admissibilityAtStep.admissibleKeys.has(choiceOptionKey(selected))) {
+    if (failure.reason === 'duplicate') {
+      throw effectRuntimeError(
+        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+        `chooseN selections must be unique: ${bind}`,
+        {
+          effectType: 'chooseN',
+          bind,
+          duplicateValue: failure.value,
+        },
+      );
+    }
+    if (failure.reason === 'tier-blocked') {
       throw effectRuntimeError(
         EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
         `chooseN selection violates prioritized tier ordering: ${bind}`,
@@ -212,13 +221,11 @@ const validateChooseNSelectionSequence = (
           effectType: 'chooseN',
           bind,
           decisionKey,
-          selected,
-          selectedIndex: index,
-          alreadySelected,
+          selected: failure.value,
+          selectedIndex: failure.index,
         },
       );
     }
-    alreadySelected.push(selected);
   }
 };
 
@@ -268,10 +275,12 @@ const buildChooseNPendingChoice = ({
       const isSelected = selectedKeys.has(choiceOptionKey(value));
       const isPrioritizedIllegal = prioritizedAdmissibility !== null
         && !prioritizedAdmissibility.admissibleKeys.has(choiceOptionKey(value));
+      const isStaticallyIllegal = isSelected || !hasAddCapacity || isPrioritizedIllegal;
       return {
         value,
-        legality: isSelected || !hasAddCapacity || isPrioritizedIllegal ? 'illegal' : 'unknown',
+        legality: isStaticallyIllegal ? 'illegal' : 'unknown',
         illegalReason: null,
+        ...(isStaticallyIllegal ? { resolution: 'exact' as const } : {}),
       };
     }),
     targetKinds,
@@ -771,29 +780,62 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
       validateChooseNSelectionSequence(
         selectedSequence,
         comparableBindingMap,
+        normalizedOptions,
         prioritizedTierEntries,
         prioritizedQualifierMode,
         bind,
         decisionKey,
       );
+      const targetKinds = deriveChoiceTargetKinds(chooseN.options);
+      const pendingChoice = buildChooseNPendingChoice({
+        choiceDecisionPlayer,
+        chooser: chooseN.chooser,
+        decisionKey,
+        name: bind,
+        normalizedOptions,
+        targetKinds,
+        minCardinality,
+        maxCardinality: clampedMax,
+        selectedSequence,
+        prioritizedTierEntries,
+        prioritizedQualifierMode,
+      });
+
+      if (ctx.chooseNTemplateCallback !== undefined) {
+        const action = ctx.def.actions.find((a) => String(a.id) === ctx.traceContext?.actionId);
+        const template = createChooseNTemplate({
+          decisionKey,
+          name: bind,
+          normalizedOptions,
+          targetKinds,
+          minCardinality,
+          maxCardinality: clampedMax,
+          prioritizedTierEntries,
+          qualifierMode: prioritizedQualifierMode,
+          preparedContext: {
+            def: ctx.def,
+            state: ctx.state,
+            action: action!,
+            adjacencyGraph: ctx.adjacencyGraph,
+            runtimeTableIndex: ctx.runtimeTableIndex ?? buildRuntimeTableIndex(ctx.def),
+            seatResolution: createSeatResolutionContext(ctx.def, ctx.state.playerCount),
+          },
+          partialMoveIdentity: {
+            actionId: ctx.traceContext?.actionId ?? '',
+            params: ctx.moveParams as Readonly<Record<string, unknown>>,
+          },
+          choiceDecisionPlayer,
+          chooser: chooseN.chooser,
+        });
+        ctx.chooseNTemplateCallback(template);
+      }
+
       return {
         state: ctx.state,
         rng: ctx.rng,
         bindings: ctx.bindings,
         decisionScope: scopeAdvance.scope,
-        pendingChoice: buildChooseNPendingChoice({
-          choiceDecisionPlayer,
-          chooser: chooseN.chooser,
-          decisionKey,
-          name: bind,
-          normalizedOptions,
-          targetKinds: deriveChoiceTargetKinds(chooseN.options),
-          minCardinality,
-          maxCardinality: clampedMax,
-          selectedSequence,
-          prioritizedTierEntries,
-          prioritizedQualifierMode,
-        }),
+        pendingChoice,
       };
     }
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseN missing move param binding: ${bind} (${decisionKey})`, {
@@ -843,6 +885,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   validateChooseNSelectionSequence(
     selectedSequence,
     comparableBindingMap,
+    normalizedOptions,
     prioritizedTierEntries,
     prioritizedQualifierMode,
     bind,

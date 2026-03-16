@@ -269,8 +269,8 @@ describe('decision sequence integration', () => {
       throw new Error('Expected pending evaluated choices.');
     }
     assert.deepEqual(evaluated.options, [
-      { value: 'trap', legality: 'illegal', illegalReason: null },
-      { value: 'safe', legality: 'legal', illegalReason: null },
+      { value: 'trap', legality: 'illegal', illegalReason: null, resolution: 'exact' },
+      { value: 'safe', legality: 'legal', illegalReason: null, resolution: 'exact' },
     ]);
   });
 
@@ -346,9 +346,9 @@ describe('decision sequence integration', () => {
       throw new Error('Expected pending evaluated choices.');
     }
     assert.deepEqual(evaluated.options, [
-      { value: 'a', legality: 'legal', illegalReason: null },
-      { value: 'b', legality: 'illegal', illegalReason: 'pipelineAtomicCostValidationFailed' },
-      { value: 'c', legality: 'legal', illegalReason: null },
+      { value: 'a', legality: 'legal', illegalReason: null, resolution: 'exact' },
+      { value: 'b', legality: 'illegal', illegalReason: 'pipelineAtomicCostValidationFailed', resolution: 'exact' },
+      { value: 'c', legality: 'legal', illegalReason: null, resolution: 'exact' },
     ]);
 
     assert.throws(

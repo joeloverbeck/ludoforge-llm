@@ -1,4 +1,5 @@
 import type { PlayerId } from './branded.js';
+import type { ChooseNTemplate } from './choose-n-session.js';
 import { emptyScope, type DecisionScope } from './decision-scope.js';
 import type {
   DecisionAuthorityProbeContext,
@@ -52,6 +53,8 @@ interface EffectContextBase extends WriteContext {
   readonly decisionScope: DecisionScope;
   /** Runtime scope carrying previously executed grant definitions for sequence viability probes. */
   readonly freeOperationProbeScope?: FreeOperationProbeScope;
+  /** Callback invoked during discovery when a chooseN pending choice is created, delivering the full-fidelity template. */
+  readonly chooseNTemplateCallback?: (template: ChooseNTemplate) => void;
 }
 
 export interface ExecutionEffectContext extends EffectContextBase {

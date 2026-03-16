@@ -1,5 +1,6 @@
 import type {
   AttributeValue,
+  ChooseNOptionResolution,
   DecisionKey,
   MoveParamValue,
   PlayerId,
@@ -205,6 +206,7 @@ export interface RenderChoiceOption {
   readonly target: RenderChoiceTarget;
   readonly legality: 'legal' | 'illegal' | 'unknown';
   readonly illegalReason: string | null;
+  readonly resolution?: ChooseNOptionResolution;
 }
 
 export interface RenderChoiceTarget {

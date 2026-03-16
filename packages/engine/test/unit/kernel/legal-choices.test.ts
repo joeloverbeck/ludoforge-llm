@@ -1334,8 +1334,8 @@ phase: [asPhaseId('main')],
       assert.equal(evaluateResult.type, 'chooseOne');
       assert.equal(evaluateResult.decisionKey, 'decision:probe::$target');
       assert.deepStrictEqual(evaluateResult.options, [
-        { value: 'a', legality: 'legal', illegalReason: null },
-        { value: 'b', legality: 'illegal', illegalReason: 'pipelineAtomicCostValidationFailed' },
+        { value: 'a', legality: 'legal', illegalReason: null, resolution: 'exact' },
+        { value: 'b', legality: 'illegal', illegalReason: 'pipelineAtomicCostValidationFailed', resolution: 'exact' },
       ]);
     });
 
@@ -1393,9 +1393,9 @@ phase: [asPhaseId('main')],
       assert.equal(result.type, 'chooseN');
       assert.equal(result.decisionKey, 'decision:probe::$targets');
       assert.deepStrictEqual(result.options, [
-        { value: 'a', legality: 'legal', illegalReason: null },
-        { value: 'b', legality: 'illegal', illegalReason: 'pipelineAtomicCostValidationFailed' },
-        { value: 'c', legality: 'legal', illegalReason: null },
+        { value: 'a', legality: 'legal', illegalReason: null, resolution: 'exact' },
+        { value: 'b', legality: 'illegal', illegalReason: 'pipelineAtomicCostValidationFailed', resolution: 'exact' },
+        { value: 'c', legality: 'legal', illegalReason: null, resolution: 'exact' },
       ]);
       assert.deepStrictEqual(
         result.options.map((entry) => entry.legality),
@@ -1523,9 +1523,9 @@ phase: [asPhaseId('main')],
 
       assert.equal(result.type, 'chooseN');
       assert.deepStrictEqual(result.options, [
-        { value: asTokenId('base-0'), legality: 'illegal', illegalReason: null },
-        { value: asTokenId('troop-1'), legality: 'legal', illegalReason: null },
-        { value: asTokenId('troop-2'), legality: 'legal', illegalReason: null },
+        { value: asTokenId('base-0'), legality: 'illegal', illegalReason: null, resolution: 'exact' },
+        { value: asTokenId('troop-1'), legality: 'legal', illegalReason: null, resolution: 'exact' },
+        { value: asTokenId('troop-2'), legality: 'legal', illegalReason: null, resolution: 'exact' },
       ]);
     });
 
@@ -1587,9 +1587,9 @@ phase: [asPhaseId('main')],
       assert.equal(result.type, 'chooseN');
       assert.equal(result.decisionKey, 'decision:probe::$targets');
       assert.deepStrictEqual(result.options, [
-        { value: 'a', legality: 'legal', illegalReason: null },
-        { value: 'b', legality: 'illegal', illegalReason: 'pipelineAtomicCostValidationFailed' },
-        { value: 'c', legality: 'legal', illegalReason: null },
+        { value: 'a', legality: 'legal', illegalReason: null, resolution: 'exact' },
+        { value: 'b', legality: 'illegal', illegalReason: 'pipelineAtomicCostValidationFailed', resolution: 'exact' },
+        { value: 'c', legality: 'legal', illegalReason: null, resolution: 'exact' },
       ]);
     });
 
@@ -1630,8 +1630,8 @@ phase: [asPhaseId('main')],
       assert.equal(result.kind, 'pending');
       assert.equal(result.type, 'chooseN');
       assert.deepStrictEqual(result.options, [
-        { value: 'available-a', legality: 'legal', illegalReason: null },
-        { value: 'reserve-a', legality: 'illegal', illegalReason: null },
+        { value: 'available-a', legality: 'legal', illegalReason: null, resolution: 'exact' },
+        { value: 'reserve-a', legality: 'illegal', illegalReason: null, resolution: 'exact' },
       ]);
     });
 
@@ -1690,10 +1690,10 @@ phase: [asPhaseId('main')],
       assert.equal(result.kind, 'pending');
       assert.equal(result.type, 'chooseN');
       assert.deepStrictEqual(result.options, [
-        { value: asTokenId('available-troop-1'), legality: 'legal', illegalReason: null },
-        { value: asTokenId('available-police-1'), legality: 'legal', illegalReason: null },
-        { value: asTokenId('map-troop-1'), legality: 'illegal', illegalReason: null },
-        { value: asTokenId('map-base-1'), legality: 'legal', illegalReason: null },
+        { value: asTokenId('available-troop-1'), legality: 'legal', illegalReason: null, resolution: 'exact' },
+        { value: asTokenId('available-police-1'), legality: 'legal', illegalReason: null, resolution: 'exact' },
+        { value: asTokenId('map-troop-1'), legality: 'illegal', illegalReason: null, resolution: 'exact' },
+        { value: asTokenId('map-base-1'), legality: 'legal', illegalReason: null, resolution: 'exact' },
       ]);
     });
 
@@ -1808,8 +1808,8 @@ phase: [asPhaseId('main')],
       assert.equal(result.kind, 'pending');
       assert.equal(result.decisionKey, '$mode');
       assert.deepStrictEqual(result.options, [
-        { value: 'trap', legality: 'illegal', illegalReason: null },
-        { value: 'safe', legality: 'legal', illegalReason: null },
+        { value: 'trap', legality: 'illegal', illegalReason: null, resolution: 'exact' },
+        { value: 'safe', legality: 'legal', illegalReason: null, resolution: 'exact' },
       ]);
     });
 
@@ -1868,8 +1868,8 @@ phase: [asPhaseId('main')],
       assert.equal(result.type, 'chooseOne');
       assert.equal(result.decisionKey, '$mode');
       assert.deepStrictEqual(result.options, [
-        { value: 'stochastic', legality: 'unknown', illegalReason: null },
-        { value: 'safe', legality: 'legal', illegalReason: null },
+        { value: 'stochastic', legality: 'unknown', illegalReason: null, resolution: 'exact' },
+        { value: 'safe', legality: 'legal', illegalReason: null, resolution: 'exact' },
       ]);
     });
 
@@ -1934,9 +1934,9 @@ phase: [asPhaseId('main')],
       assert.equal(result.type, 'chooseN');
       assert.equal(result.decisionKey, '$targets');
       assert.deepStrictEqual(result.options, [
-        { value: 'a', legality: 'legal', illegalReason: null },
-        { value: 'b', legality: 'unknown', illegalReason: null },
-        { value: 'c', legality: 'legal', illegalReason: null },
+        { value: 'a', legality: 'legal', illegalReason: null, resolution: 'exact' },
+        { value: 'b', legality: 'unknown', illegalReason: null, resolution: 'exact' },
+        { value: 'c', legality: 'legal', illegalReason: null, resolution: 'exact' },
       ]);
     });
 
@@ -1984,7 +1984,10 @@ phase: [asPhaseId('main')],
       );
     });
 
-    it('marks chooseN option legality as unknown when probe combinations exceed cap', () => {
+    it('witness search resolves chooseN options when probe combinations exceed cap', () => {
+      // 13 options with n=5 → C(13,5) = 1287 > 1024 cap → large domain path.
+      // Singleton probe leaves all unresolved (size=1 < min=5).
+      // Witness search finds a 5-element completion for each → all legal+exact.
       const action: ActionDef = {
         id: asActionId('chooseNOverflowOp'),
         actor: 'active',
@@ -2018,7 +2021,9 @@ phase: [asPhaseId('main')],
       assert.equal(result.kind, 'pending');
       assert.equal(result.type, 'chooseN');
       assert.equal(result.options.length, 13);
-      assert.ok(result.options.every((entry) => entry.legality === 'unknown'));
+      // With witness search, every option has a valid 5-element completion.
+      assert.ok(result.options.every((entry) => entry.legality === 'legal'));
+      assert.ok(result.options.every((entry) => entry.resolution === 'exact'));
       assert.ok(result.options.every((entry) => entry.illegalReason === null));
     });
 

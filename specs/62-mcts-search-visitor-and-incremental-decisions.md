@@ -12,6 +12,8 @@ MCTS cannot play Fire in the Lake (FITL). 9 of 10 competence scenarios fail: 7 c
 
 For 15-step decisions with ~50% per-step validity, `P(all valid) ~ 0.003%`. The retry approach proposed in Spec 61 is mathematically insufficient. The correct solution is **incremental decision expansion** — treating each decision step as a separate MCTS tree node using the existing `legalChoicesDiscover()` API.
 
+> **Note (post-63MCTSPERROLLFRESEA)**: The 63MCTSPERROLLFRESEA ticket series addressed MCTS *performance* — hybrid rollout modes, MAST policy, state info caching, forced-sequence compression, confidence-based stopping, extended diagnostics, and heuristic backup alpha. These optimizations make the search faster but do **not** address the core problem: `completeTemplateMove()` random completion still has exponentially low success for 15-step decisions. The competence failures (9/10 FITL scenarios) remain unresolved.
+
 ### 0.2 Zero Observability Into MCTS Behavior
 
 The MCTS search is a black box. When tests hang, crash, or produce wrong results, there is no way to determine what happened inside the search. The existing `diagnostics` flag provides post-hoc aggregate counters but no real-time visibility into:
@@ -54,6 +56,8 @@ This spec introduces three interconnected components:
 
 3. **Runner integration** — The worker bridge translates visitor events into `postMessage` calls that the Zustand store surfaces to the `AITurnOverlay` component as a real-time dashboard with progress, iteration stats, and top action candidates.
 
+**Dual-track observability design**: The visitor provides **real-time streaming** events for consumers (test loggers, runner dashboard). The `MutableDiagnosticsAccumulator` (from 63MCTSPERROLLFRESEA-001) provides **post-hoc summary** counters for aggregate analysis and tuning. They are complementary — the visitor is for live observation, diagnostics for post-search statistics.
+
 ## 2. MctsSearchVisitor Interface
 
 ### 2.1 Design Principles
@@ -82,7 +86,6 @@ export type MctsSearchEvent =
   | MctsTemplateDroppedEvent
   | MctsApplyMoveFailureEvent
   | MctsPoolExhaustedEvent
-  | MctsRolloutCompleteEvent
   | MctsSearchCompleteEvent
   | MctsRootCandidatesEvent;
 
@@ -167,16 +170,10 @@ export interface MctsPoolExhaustedEvent {
   readonly iteration: number;
 }
 
-export interface MctsRolloutCompleteEvent {
-  readonly type: 'rolloutComplete';
-  readonly depth: number;
-  readonly reachedTerminal: boolean;
-}
-
 export interface MctsSearchCompleteEvent {
   readonly type: 'searchComplete';
   readonly iterations: number;
-  readonly stopReason: string;
+  readonly stopReason: 'confidence' | 'solver' | 'time' | 'iterations';
   readonly elapsedMs: number;
   readonly bestActionId: string;
   readonly bestVisits: number;
@@ -200,6 +197,10 @@ export interface MctsSearchVisitor {
 }
 ```
 
+**Removed from original spec**: `rolloutComplete` event — the `MutableDiagnosticsAccumulator` already tracks `hybridRolloutPlies` and rollout-related counters from 63MCTSPERROLLFRESEA. Duplicating this as a streaming event adds hot-loop overhead with no unique value.
+
+**Updated**: `searchComplete.stopReason` uses the same vocabulary as `MctsSearchDiagnostics.rootStopReason` from 63MCTSPERROLLFRESEA: `'confidence'`, `'solver'`, `'time'`, `'iterations'`.
+
 ### 2.3 Why a Single `onEvent` Method
 
 A single `onEvent(event)` method with a discriminated union is preferred over per-event callbacks (`onIterationStart`, `onExpansion`, etc.) because:
@@ -211,10 +212,21 @@ A single `onEvent(event)` method with a discriminated union is preferred over pe
 
 ### 2.4 Config Integration
 
+The following fields already exist on `MctsConfig` (from 63MCTSPERROLLFRESEA):
+
+- `rolloutMode`, `hybridCutoffDepth` — hybrid rollout configuration
+- `rolloutPolicy`, `mastWarmUpThreshold` — MAST rollout policy
+- `enableStateInfoCache`, `maxStateInfoCacheEntries` — per-search state info cache
+- `compressForcedSequences` — forced-sequence compression
+- `rootStopConfidenceDelta`, `rootStopMinVisits` — Hoeffding-bound confidence stopping
+- `heuristicBackupAlpha` — heuristic backup blending weight
+
+This spec adds only:
+
 ```typescript
-// Addition to MctsConfig
+// Additions to MctsConfig
 export interface MctsConfig {
-  // ... existing fields ...
+  // ... all existing fields unchanged ...
 
   /** Optional visitor for real-time search observation. */
   readonly visitor?: MctsSearchVisitor;
@@ -277,6 +289,8 @@ The explicit `nodeKind` discriminator is preferred over checking `partialMove ==
 2. It enables exhaustive `switch` in selection/expansion code
 3. It avoids ambiguity if `partialMove` is ever used for other purposes
 
+**Invariant**: `heuristicPrior` is always `null` for decision nodes. Decision nodes do not represent game states and therefore have no heuristic evaluation. The `heuristicPrior` field (added in 63MCTSPERROLLFRESEA-008) is only meaningful for state nodes.
+
 #### 3.2.1 Decision Node Selection Protocol
 
 Decision nodes require different selection behavior than state nodes:
@@ -289,7 +303,7 @@ Key invariants for decision node traversal:
 1. **Decision nodes do NOT compute or store game state.** The game state is unchanged throughout a decision subtree — it lives on the nearest ancestor state node.
 2. **`applyMove` is called exactly once** when a decision sequence completes (i.e., `legalChoicesDiscover()` returns `kind: 'complete'`). The completed move is applied to the ancestor state node's game state to produce the child state node.
 3. **Selection through a decision subtree = pure tree traversal.** No kernel calls, no state computation — just walk down the tree using UCT scores on the decision options.
-4. **Rollout from a decision node**: Complete remaining decisions randomly using `completeDecisionIncrementally()`, then apply the completed move once, then continue rollout normally from the resulting state.
+4. **Rollout from a decision node**: Complete remaining decisions randomly using `completeTemplateMove(partialMove)`, apply the completed move once, then continue rollout normally from the resulting state (see Section 3.7).
 5. **Exploring player**: Read from `ChoicePendingRequest.decisionPlayer` (the player whose decision is pending), not from the game state's current player.
 
 ### 3.3 Decision Expansion Module
@@ -302,25 +316,34 @@ Create `decision-expansion.ts` that wraps `legalChoicesDiscover()`:
 - Handle `illegal` → prune this path (backpropagate loss)
 - Handle `pendingStochastic` → chance node with weighted outcomes
 
-#### chooseN Handling (Atomic Sampling)
+#### chooseN Handling (Iterative Expansion via Hybrid Resolver)
 
-`chooseN` decisions (e.g., "choose 2-3 provinces") are handled as **atomic sampling**, NOT iterative selection:
+`chooseN` decisions (e.g., "choose 2-3 provinces") are handled via **iterative expansion** — each individual pick in a chooseN sequence is a separate decision node, using the existing `legalChoicesDiscover()` API and the three-tier hybrid resolver infrastructure from 63CHOOPEROPT.
 
-- The entire `chooseN` = a single decision node
-- Children = complete selections sampled via Fisher-Yates shuffle
-- `sampleChooseNCompletion(options: string[], min: number, max: number, rng: Rng): string[]` generates one complete selection
-- The decision key **sorts** the selection for deduplication (so `[A,B]` and `[B,A]` map to the same child)
-- Progressive widening applies normally to the sampling — each expansion samples a new complete selection
+**How it works**:
 
-This avoids combinatorial explosion. For `choose 3 from 10`, iterative selection would create `10 * 9 * 8 = 720` leaf paths. Atomic sampling creates one child per sampled combination, bounded by progressive widening.
+1. When MCTS expands a decision node for a chooseN step, it calls `legalChoicesDiscover(def, state, partialMove)`.
+2. The response is `pending` with a `ChoicePendingChooseNRequest` containing options with **resolution metadata** (`resolution: 'exact' | 'provisional' | 'stochastic' | 'ambiguous'`) from the three-tier hybrid resolver (exact enumeration → singleton probes → witness search).
+3. Only options with `legality === 'legal'` are expanded as children.
+4. Options with `legality === 'unknown'` are expansion candidates via progressive widening (treated as "maybe legal, explore when budget allows").
+5. Options with `legality === 'illegal'` are pruned (never expanded).
+6. Resolution metadata informs expansion priority: `exact` options are preferred over `provisional` ones.
+7. Progressive widening applies per step over the remaining unselected options, NOT over the full combinatorial space.
+8. After picking one option, the next `legalChoicesDiscover()` call returns the next pending choice with the remaining pool (the kernel tracks selected items via the partialMove).
+
+**Benefits over the original atomic sampling design**:
+- Reuses existing infrastructure (no new sampling code needed)
+- MCTS learns which early picks are good (not just which complete selections)
+- Option-level legality is resolver-validated (not random)
+- No `sampleChooseNCompletion()` function needed
+- No Fisher-Yates shuffle needed
+- No sorted dedup keys for combinations needed
 
 #### Progressive Widening Bypass
 
 For decision nodes where `optionCount <= decisionWideningCap` (default 12), bypass progressive widening entirely — expand all options immediately. This ensures that small decision spaces (e.g., "choose faction" with 4 options) are fully explored without the overhead of progressive widening.
 
-Progressive widening only activates for:
-- Decision nodes with `optionCount > decisionWideningCap`
-- chooseN atomic sampling (where the effective option space is combinatorial)
+Progressive widening only activates for decision nodes with `optionCount > decisionWideningCap`.
 
 ### 3.4 Decision Key Module
 
@@ -336,7 +359,13 @@ Modify `search.ts` selection loop:
 1. **State nodes with template moves**: Partition `legalMoves()` into concrete (state node children) and templates (decision root children). Templates get `legalChoicesDiscover()` for first decision.
 2. **Decision nodes**: Use `expandDecisionNode()` instead of `legalMoves()` + materialization. Progressive widening applies identically (subject to the bypass rule in Section 3.3).
 3. **Decision completion**: When `legalChoicesDiscover()` returns `complete`, apply the move → create state node child → proceed to simulation.
-4. **Decision node at simulation boundary**: If selection ends on a decision node, complete remaining decisions randomly via `completeDecisionIncrementally()` before rollout.
+4. **Decision node at simulation boundary**: If selection ends on a decision node (partially completed move), complete remaining decisions via `completeTemplateMove(partialMove)` — fast random completion. Apply the completed move to get a real game state, then continue to simulation phase.
+
+**Integration with existing 63MCTSPERROLLFRESEA infrastructure**:
+
+- **Forced-sequence compression**: If a decision step has only 1 legal option, compress — don't allocate a node, advance the partialMove directly. This mirrors how forced-sequence compression works for single-candidate game moves.
+- **State info cache**: Only state nodes use the cache (decision nodes don't have game states).
+- **Confidence-based stopping** (`shouldStopByConfidence()`): Operates on root children, which may be decision root nodes for templates. Visit counts on decision root nodes reflect the total simulations through that action category.
 
 ### 3.6 Pool Sizing
 
@@ -357,12 +386,22 @@ Where `decisionDepthMultiplier` defaults to 4 (configurable via `MctsConfig.deci
 
 This ensures that pool sizing errors degrade gracefully rather than crashing.
 
-### 3.7 Rollout Integration
+### 3.7 Rollout Integration (Boundary-Respecting Simulation)
 
-Modify `rollout.ts`:
+The decision architecture and rollout system are **orthogonal** — decision nodes control tree structure; `rolloutMode` (from 63MCTSPERROLLFRESEA) controls simulation strategy. They do not interfere.
 
-- When `materializeConcreteCandidates()` returns 0 candidates (template completion failed), fall back to `completeDecisionIncrementally()` which uses step-by-step `legalChoicesDiscover()`.
-- This replaces `completeTemplateMove()` as the primary completion strategy for template moves in rollout.
+**Architecture** (consistent with TAG framework / O-MCTS literature):
+
+1. **Tree phase**: Full incremental decision expansion via decision nodes + `legalChoicesDiscover()`. Each decision step is a tree node with UCT-guided selection.
+
+2. **Simulation boundary mid-decision**: When selection exits the tree at a decision node (partially completed move):
+   a. Complete remaining decisions via `completeTemplateMove(partialMove)` — fast random completion using the existing function.
+   b. Apply the completed move to get a real game state.
+   c. Compound action completion does NOT count toward the simulation cutoff budget. The cutoff counts complete game plies, not mid-decision steps. This respects action boundaries — never evaluate mid-compound-action.
+
+3. **Simulation phase**: Uses existing `simulateToCutoff()` / `rollout()` / direct eval per `rolloutMode` config (from 63MCTSPERROLLFRESEA). Template moves encountered *during simulation* are completed via `materializeConcreteCandidates()` → `completeTemplateMove()` (existing behavior, unchanged).
+
+4. **No `completeDecisionIncrementally()` function needed** — the tree handles incrementality; simulation uses fast random completion via the existing `completeTemplateMove()`.
 
 ### 3.8 Visitor Integration in Decision Expansion
 
@@ -374,7 +413,9 @@ Every decision step emits visitor events:
 - `templateDropped` when a template move is dropped before entering the tree
 - `applyMoveFailure` when a completed move fails at `applyMove()`
 
-This gives full visibility into the decision expansion process, enabling test assertions like "MCTS explored at least 3 rally subtrees" or "no decision paths were illegally pruned."
+Decision-related counters (`decisionNodesCreated`, `decisionCompletionsInTree`, `decisionCompletionsInRollout`, `decisionIllegalPruned`, `decisionDepthMax`) are already present in `MutableDiagnosticsAccumulator` and `MctsSearchDiagnostics` from 63MCTSPERROLLFRESEA. Visitor events supplement these with streaming notifications for real-time observation.
+
+The `CiDiagnosticsReporter` forwards both visitor events (streaming) and the diagnostics summary (post-search).
 
 ### 3.9 Post-Completion for Decision Nodes
 
@@ -382,7 +423,7 @@ When `selectRootDecision()` returns a decision node child (template move was the
 
 1. Follow the highest-visit path through the decision subtree
 2. Find the deepest explored partial move
-3. Complete remaining decisions via `completeDecisionIncrementally()`
+3. Complete remaining decisions via `completeTemplateMove()` — fast random completion for any steps not explored in-tree
 4. Fall back to `completeTemplateMove()` on original legal moves if needed
 
 ## 4. Runner Integration
@@ -556,7 +597,7 @@ export class CiDiagnosticsReporter implements MctsSearchVisitor {
         console.log(`[MCTS] ${this.scenarioName}: iterations ${event.fromIteration}-${event.toIteration}, ${event.rootChildCount} children, ${event.nodesAllocated} nodes, ${event.elapsedMs.toFixed(0)}ms`);
         break;
       case 'searchComplete':
-        console.log(`[MCTS] ${this.scenarioName}: complete in ${event.elapsedMs.toFixed(0)}ms, ${event.iterations} iterations, best=${event.bestActionId} (${event.bestVisits} visits)`);
+        console.log(`[MCTS] ${this.scenarioName}: complete in ${event.elapsedMs.toFixed(0)}ms, ${event.iterations} iterations, best=${event.bestActionId} (${event.bestVisits} visits), stop=${event.stopReason}`);
         break;
       case 'poolExhausted':
         console.warn(`[MCTS] ${this.scenarioName}: POOL EXHAUSTED at iteration ${event.iteration}, capacity=${event.capacity}`);
@@ -612,10 +653,10 @@ The `CiDiagnosticsReporter` reads `MCTS_DIAGNOSTICS_DIR` from the environment. I
 
 | Ticket | Deliverable | Files |
 |--------|-------------|-------|
-| MCTSINCDEC-001 | Create `MctsSearchVisitor` interface and `MctsSearchEvent` discriminated union. Includes `searchStart`, `iterationBatch`, `templateDropped` event types (replaces per-iteration events). | `visitor.ts` (new) |
-| MCTSINCDEC-002 | Add `visitor?: MctsSearchVisitor`, `decisionWideningCap?: number`, and `decisionDepthMultiplier?: number` to `MctsConfig`. Update `validateMctsConfig()`: pass visitor through without validation, validate numeric fields with defaults. | `config.ts` |
-| MCTSINCDEC-003 | Wire visitor into `runSearch()` and `runOneIteration()`: emit `searchStart` once at beginning, accumulate iteration data, emit `iterationBatch` every 50 iterations, emit `searchComplete`. | `search.ts` |
-| MCTSINCDEC-004 | Wire visitor into `selectExpansionCandidate()` defensive catch: emit `applyMoveFailure`. Wire into materialization: emit `templateDropped`. Wire into existing search.ts defensive catches from Phase 1. | `expansion.ts`, `search.ts`, `materialization.ts` |
+| MCTSINCDEC-001 | Create `MctsSearchVisitor` interface and `MctsSearchEvent` discriminated union. Includes `searchStart`, `iterationBatch`, `templateDropped` event types (replaces per-iteration events). Note: `MutableDiagnosticsAccumulator` already exists with per-phase timings and kernel-call counters — visitor events are the streaming complement. | `visitor.ts` (new) |
+| MCTSINCDEC-002 | Add `visitor?: MctsSearchVisitor`, `decisionWideningCap?: number`, and `decisionDepthMultiplier?: number` to `MctsConfig`. Update `validateMctsConfig()`: pass visitor through without validation, validate numeric fields with defaults. Note: all other MctsConfig fields from 63MCTSPERROLLFRESEA already exist. | `config.ts` |
+| MCTSINCDEC-003 | Wire visitor into `runSearch()` and `runOneIteration()`: emit `searchStart` once at beginning, accumulate iteration data, emit `iterationBatch` every 50 iterations, emit `searchComplete` with `stopReason` matching `rootStopReason` vocabulary (`'confidence' | 'solver' | 'time' | 'iterations'`). | `search.ts` |
+| MCTSINCDEC-004 | Wire visitor into `selectExpansionCandidate()` defensive catch: emit `applyMoveFailure`. Wire into materialization: emit `templateDropped`. Wire into existing search.ts defensive catches. | `expansion.ts`, `search.ts`, `materialization.ts` |
 | MCTSINCDEC-005 | Create `CiDiagnosticsReporter` test helper (JSONL + console progress). Also create `ConsoleVisitor` for local development. Use both in FITL MCTS test helpers. | `test/helpers/ci-diagnostics-reporter.ts` (new), `test/helpers/mcts-console-visitor.ts` (new), `fitl-mcts-test-helpers.ts` |
 | MCTSINCDEC-006 | Run FITL MCTS fast tests with `ConsoleVisitor`. Record output. Diagnose why scenarios crash or fail. This establishes the observability baseline. | test run + analysis |
 
@@ -623,12 +664,12 @@ The `CiDiagnosticsReporter` reads `MCTS_DIAGNOSTICS_DIR` from the environment. I
 
 | Ticket | Deliverable | Files |
 |--------|-------------|-------|
-| MCTSINCDEC-007 | Extend `MctsNode` with `nodeKind: 'state' \| 'decision'`, `decisionPlayer: PlayerId \| null`, `partialMove`, and `decisionBinding` fields. Update `createRootNode()`, `createChildNode()`, pool reset. Add `createDecisionChildNode()` factory. Default `nodeKind` to `'state'` for all existing node creation. | `node.ts`, `node-pool.ts` |
-| MCTSINCDEC-008 | Create `decision-expansion.ts`: `expandDecisionNode()` using `legalChoicesDiscover()`. Handle `pending`, `complete`, `illegal`, `pendingStochastic`. Implement atomic chooseN via `sampleChooseNCompletion()` with sorted dedup keys. Implement progressive widening bypass for small option sets (`<= decisionWideningCap`). Include `completeDecisionIncrementally()` for rollout. | `decision-expansion.ts` (new) |
+| MCTSINCDEC-007 | Extend `MctsNode` with `nodeKind: 'state' \| 'decision'`, `decisionPlayer: PlayerId \| null`, `partialMove`, and `decisionBinding` fields. Update `createRootNode()`, `createChildNode()`, pool reset. Add `createDecisionChildNode()` factory. Default `nodeKind` to `'state'` for all existing node creation. Invariant: `heuristicPrior` is always `null` for decision nodes. | `node.ts`, `node-pool.ts` |
+| MCTSINCDEC-008 | Create `decision-expansion.ts`: `expandDecisionNode()` using `legalChoicesDiscover()`. Handle `pending`, `complete`, `illegal`, `pendingStochastic`. Implement **iterative chooseN expansion**: each chooseN pick is a separate decision node. Use `ChoicePendingChooseNRequest` options with resolution metadata (`resolution: 'exact' \| 'provisional' \| 'stochastic' \| 'ambiguous'`) from the three-tier hybrid resolver to classify children — `legality === 'legal'` options are expanded, `legality === 'unknown'` options are progressive widening candidates, `legality === 'illegal'` options are pruned. Implement progressive widening bypass for small option sets (`<= decisionWideningCap`). | `decision-expansion.ts` (new) |
 | MCTSINCDEC-009 | Create `decision-key.ts`: `decisionNodeKey()` and `templateDecisionRootKey()` for MoveKey generation. | `decision-key.ts` (new) |
-| MCTSINCDEC-010 | Modify `search.ts` selection loop: detect `nodeKind`, use standard UCT (not ISUCT) at decision nodes (`parent.visits` denominator, no availability), implement no-`applyMove` traversal through decision subtrees, call `applyMove` exactly once on decision completion. Emit visitor events (`decisionNodeCreated`, `decisionCompleted`, `decisionIllegal`). Read exploring player from `ChoicePendingRequest.decisionPlayer`. | `search.ts`, `isuct.ts` |
-| MCTSINCDEC-011 | Modify `rollout.ts`: fall back to `completeDecisionIncrementally()` when materialization returns 0 candidates. Emit `decisionCompletionsInRollout` diagnostic. | `rollout.ts` |
-| MCTSINCDEC-012 | Update `mcts-agent.ts`: implement pool capacity formula `max(iterations * decisionDepthMultiplier + 1, legalMoves.length * 4)`. Implement graceful degradation on pool exhaustion (skip expansion, backpropagate, emit event, continue). Update `postCompleteSelectedMove()` to handle decision node children at root. | `mcts-agent.ts` |
+| MCTSINCDEC-010 | Modify `search.ts` selection loop: detect `nodeKind`, use standard UCT (not ISUCT) at decision nodes (`parent.visits` denominator, no availability), implement no-`applyMove` traversal through decision subtrees, call `applyMove` exactly once on decision completion. Emit visitor events (`decisionNodeCreated`, `decisionCompleted`, `decisionIllegal`). Read exploring player from `ChoicePendingRequest.decisionPlayer`. Integrate with forced-sequence compression: single-option decision steps skip node allocation. | `search.ts`, `isuct.ts` |
+| MCTSINCDEC-011 | Modify `rollout.ts`: when selection exits the tree at a decision node, complete remaining decisions via `completeTemplateMove(partialMove)` — fast random completion. Apply the completed move to get a real game state, then continue to simulation. Compound action completion does NOT count toward cutoff budget (respects action boundaries). Template moves during simulation use existing `materializeConcreteCandidates()` → `completeTemplateMove()` path (unchanged). | `rollout.ts` |
+| MCTSINCDEC-012 | Update `mcts-agent.ts`: implement pool capacity formula `max(iterations * decisionDepthMultiplier + 1, legalMoves.length * 4)`. Implement graceful degradation on pool exhaustion (skip expansion, backpropagate, emit event, continue). Update `postCompleteSelectedMove()` to handle decision node children at root — follow highest-visit path, complete remaining via `completeTemplateMove()`. | `mcts-agent.ts` |
 | MCTSINCDEC-013 | Wire `rootCandidates` visitor event at the start of each search (concrete vs template partitioning). | `search.ts` |
 
 ### Phase 3: Compound Move & Kernel Verification
@@ -663,18 +704,18 @@ The `CiDiagnosticsReporter` reads `MCTS_DIAGNOSTICS_DIR` from the environment. I
 | File | Changes |
 |------|---------|
 | `packages/engine/src/agents/mcts/visitor.ts` | **NEW**: `MctsSearchVisitor`, `MctsSearchEvent` types |
-| `packages/engine/src/agents/mcts/config.ts` | Add `visitor`, `decisionWideningCap`, `decisionDepthMultiplier` fields |
+| `packages/engine/src/agents/mcts/config.ts` | Add `visitor`, `decisionWideningCap`, `decisionDepthMultiplier` fields (all 63MCTSPERROLLFRESEA fields already exist) |
 | `packages/engine/src/agents/mcts/node.ts` | Add `nodeKind`, `decisionPlayer`, `partialMove`, `decisionBinding` fields |
 | `packages/engine/src/agents/mcts/node-pool.ts` | Reset new fields |
-| `packages/engine/src/agents/mcts/decision-expansion.ts` | **NEW**: Decision expansion via `legalChoicesDiscover()`, atomic chooseN, widening bypass |
+| `packages/engine/src/agents/mcts/decision-expansion.ts` | **NEW**: Decision expansion via `legalChoicesDiscover()`, iterative chooseN with hybrid resolver metadata, widening bypass |
 | `packages/engine/src/agents/mcts/decision-key.ts` | **NEW**: MoveKey for decision nodes |
-| `packages/engine/src/agents/mcts/search.ts` | Selection loop: decision nodes, visitor events, UCT variant dispatch |
+| `packages/engine/src/agents/mcts/search.ts` | Selection loop: decision nodes, visitor events, UCT variant dispatch, forced-sequence integration (already has `shouldStopByConfidence()`, `materializeOrFastPath()`) |
 | `packages/engine/src/agents/mcts/isuct.ts` | UCT variant for decision nodes (standard UCT, no availability) |
-| `packages/engine/src/agents/mcts/expansion.ts` | Visitor events for expansion failures |
-| `packages/engine/src/agents/mcts/materialization.ts` | `templateDropped` visitor events |
-| `packages/engine/src/agents/mcts/rollout.ts` | Incremental decision fallback |
+| `packages/engine/src/agents/mcts/expansion.ts` | Visitor events for expansion failures (already has `expansionApplyMoveFailures` counter) |
+| `packages/engine/src/agents/mcts/materialization.ts` | `templateDropped` visitor events (already has `concreteActionIds`, `materializeOrFastPath()`) |
+| `packages/engine/src/agents/mcts/rollout.ts` | Boundary-respecting simulation: `completeTemplateMove(partialMove)` at decision boundary, action-boundary cutoff (already has `materializeOrFastPath()`) |
 | `packages/engine/src/agents/mcts/mcts-agent.ts` | Pool sizing formula, graceful degradation, decision node post-completion |
-| `packages/engine/src/agents/mcts/diagnostics.ts` | Decision node counters |
+| `packages/engine/src/agents/mcts/diagnostics.ts` | Decision node counters already present in `MutableDiagnosticsAccumulator` and `MctsSearchDiagnostics` (from 63MCTSPERROLLFRESEA) — only wire visitor events |
 | `packages/engine/src/agents/mcts/index.ts` | Re-export new modules |
 | `packages/engine/test/helpers/ci-diagnostics-reporter.ts` | **NEW**: JSONL + console progress reporter for CI |
 | `packages/engine/test/helpers/mcts-console-visitor.ts` | **NEW**: Console visitor for local dev |
@@ -688,14 +729,39 @@ The `CiDiagnosticsReporter` reads `MCTS_DIAGNOSTICS_DIR` from the environment. I
 
 ## 7. Existing Infrastructure to Reuse
 
+### Kernel Infrastructure
+
 | What | Where | How |
 |------|-------|-----|
-| `legalChoicesDiscover()` | `kernel/legal-choices.ts:893` | Primary API for decision expansion |
-| `ChoiceRequest` types | `kernel/types-core.ts:675` | `complete`, `pending`, `pendingStochastic`, `illegal` |
-| Progressive widening | `agents/mcts/expansion.ts` | Reuse `shouldExpand()` / `maxChildren()` for decision nodes (with bypass for small sets) |
+| `legalChoicesDiscover()` | `kernel/legal-choices.ts` | Primary API for decision expansion — returns `ChoiceRequest` with `pending`/`complete`/`illegal`/`pendingStochastic` |
+| `ChoiceRequest` types | `kernel/types-core.ts` | `ChoiceCompleteRequest`, `ChoicePendingRequest` (with `ChoicePendingChooseOneRequest`, `ChoicePendingChooseNRequest`), `ChoiceStochasticPendingRequest`, `ChoiceIllegalRequest` |
+| `ChoiceOption.resolution` | `kernel/types-core.ts` | `ChooseNOptionResolution = 'exact' | 'provisional' | 'stochastic' | 'ambiguous'` — resolution metadata from hybrid resolver |
+| `choose-n-option-resolution.ts` | `kernel/choose-n-option-resolution.ts` | Three-tier hybrid resolver: singleton probes + budgeted witness search for large-domain chooseN legality |
+| `choose-n-session.ts` | `kernel/choose-n-session.ts` | `ChooseNTemplate` (selection-invariant data) and `ChooseNSession` (caches + current state for efficient recomputation) |
+| `choose-n-selected-validation.ts` | `kernel/choose-n-selected-validation.ts` | Pure selection sequence validator for chooseN |
+| `completeTemplateMove()` | `kernel/move-completion.ts` | Random completion of partial moves — used at simulation boundary and post-completion |
+
+### MCTS Infrastructure (from 63MCTSPERROLLFRESEA)
+
+| What | Where | How |
+|------|-------|-----|
+| `mast.ts` | `agents/mcts/mast.ts` | MAST rollout policy (pure module, no kernel deps) |
+| `state-cache.ts` | `agents/mcts/state-cache.ts` | Per-search state info cache for terminalResult/legalMoves/rewards |
+| `MutableDiagnosticsAccumulator` | `agents/mcts/diagnostics.ts` | Hot-loop metric collection — already has decision node counters (`decisionNodesCreated`, `decisionDepthMax`, `decisionCompletionsInTree`, `decisionCompletionsInRollout`, `decisionIllegalPruned`) |
+| `MctsSearchDiagnostics` | `agents/mcts/diagnostics.ts` | Post-hoc summary — has `rootStopReason` (`'none' | 'solver' | 'time' | 'confidence' | 'iterations'`), per-phase timings, kernel-call counters, cache stats, decision counters |
+| `concreteActionIds` on `GameDefRuntime` | `agents/mcts/materialization.ts` | Fast-path detection for non-template actions |
+| `materializeOrFastPath()` | `agents/mcts/materialization.ts` | Concrete action fast path for materialization |
+| `shouldStopByConfidence()` | `agents/mcts/search.ts` | Hoeffding-bound confidence-based root stopping |
+| `heuristicPrior` on `MctsNode` | `agents/mcts/node.ts` | Optional heuristic prior at expansion (state nodes only — `null` for decision nodes) |
+| Progressive widening | `agents/mcts/expansion.ts` | `shouldExpand()` / `maxChildren()` — reuse for decision nodes with bypass for small sets |
 | ISUCT selection | `agents/mcts/isuct.ts` | Used for state nodes; decision nodes use standard UCT variant |
 | Node pool | `agents/mcts/node-pool.ts` | Extend for decision node fields |
-| Phase 1 defensive catches | `agents/mcts/expansion.ts`, `diagnostics.ts` | Try/catch + counters already in place |
+| Phase 1 defensive catches | `agents/mcts/expansion.ts` | Try/catch + `expansionApplyMoveFailures` counter already in place |
+
+### Test & Runner Infrastructure
+
+| What | Where | How |
+|------|-------|-----|
 | FITL test infrastructure | `test/e2e/mcts-fitl/` | 10 scenarios, replay, assertions |
 | Comlink worker bridge | `runner/src/worker/` | Existing postMessage channel for worker communication |
 | AITurnOverlay | `runner/src/ui/AITurnOverlay.tsx` | Existing component to enhance |
@@ -703,9 +769,9 @@ The `CiDiagnosticsReporter` reads `MCTS_DIAGNOSTICS_DIR` from the environment. I
 
 ## 8. What Spec 61 Got Right (Carried Forward)
 
-- **Section 2.3 (Defensive Expansion)**: Implemented in this session as Phase 1. Try/catch in `selectExpansionCandidate()` with `applyMoveFailure` scoring.
-- **Section 2.4 (Defensive Rollout)**: Already present in rollout.ts (lines 142-152, 292-301).
-- **Section 2.5 (Diagnostics)**: Diagnostic counters added to `diagnostics.ts` in this session.
+- **Section 2.3 (Defensive Expansion)**: Implemented as Phase 1 pre-work. Try/catch in `selectExpansionCandidate()` with `applyMoveFailure` scoring. Counter `expansionApplyMoveFailures` is in the diagnostics accumulator.
+- **Section 2.4 (Defensive Rollout)**: Already present in rollout.ts.
+- **Section 2.5 (Diagnostics)**: Diagnostic counters added to `diagnostics.ts`. The `MutableDiagnosticsAccumulator` and `MctsSearchDiagnostics` are fully implemented with per-phase timings, kernel-call counters, cache stats, decision node counters, and derived averages.
 - **Section 5 (Test Infrastructure)**: FITL MCTS test helpers, scenarios, and CI workflows created in prior session.
 
 ## 9. What Spec 61 Got Wrong (Superseded)
@@ -719,11 +785,10 @@ The `CiDiagnosticsReporter` reads `MCTS_DIAGNOSTICS_DIR` from the environment. I
 
 | Risk | Mitigation |
 |------|------------|
-| Tree depth explodes (5-15 decision nodes per game move) | Progressive widening bounds width. Visitor events + `decisionDepthMax` diagnostic expose depth. Tune `maxSimulationDepth` to account for decision depth. |
+| Tree depth explodes (5-15 decision nodes per game move, more for iterative chooseN where N picks = N decision nodes) | Progressive widening bounds width. Forced-sequence compression (from 63MCTSPERROLLFRESEA) skips nodes when only 1 option is legal. Visitor events + `decisionDepthMax` diagnostic expose depth. Tune `maxSimulationDepth` to account for decision depth. |
 | Node pool exhaustion from many decision nodes | Concrete formula: `max(iterations * decisionDepthMultiplier + 1, legalMoves.length * 4)`. Graceful degradation: skip expansion, backpropagate, emit `poolExhausted` event, continue remaining iterations. Decision nodes are lightweight (no state computation). |
-| chooseN combinatorial explosion | Atomic sampling via Fisher-Yates avoids iterative `n * (n-1) * ... ` branching. Progressive widening bounds the number of sampled combinations. Sorted keys deduplicate equivalent selections. |
+| chooseN iterative expansion cost via hybrid resolver | The three-tier hybrid resolver (singleton probes + witness search) is more expensive per decision step than random sampling. Mitigation: progressive widening limits how many decision nodes are expanded per step; resolver results are cached within the `ChooseNSession`; forced-sequence compression skips nodes when only 1 option passes. The resolver is already proven fast enough for interactive play by 63CHOOPEROPT. |
 | `legalChoicesDiscover()` doesn't handle compound SAs | MCTSINCDEC-014 investigates and fixes at the kernel level. |
-| `legalChoicesDiscover()` performance | Already used by agents in interactive play. Profile. If hot, cache prepared context. |
 | Texas Hold'em regression | Simple 1-decision moves create 1-deep decision subtrees. Functionally equivalent to current behavior. MCTSINCDEC-018 validates. |
 | Worker postMessage flooding | Time-based throttling at 4 Hz (250ms interval). Snapshot-based, not per-event. |
 | Visitor callbacks slow down search | Synchronous, no allocation. Single `if (visitor)` guard. Benchmark with/without visitor. |

@@ -22,7 +22,7 @@ import { applyMove } from '../../kernel/apply-move.js';
 import { terminalResult } from '../../kernel/terminal.js';
 import { evaluateState } from '../evaluate-state.js';
 import { completeTemplateMove } from '../../kernel/move-completion.js';
-import { materializeConcreteCandidates, materializeOrFastPath } from './materialization.js';
+import { materializeMovesForRollout } from './materialization.js';
 import { nextInt, fork } from '../../kernel/prng.js';
 import type { PlayerId } from '../../kernel/branded.js';
 import type { MastStats } from './mast.js';
@@ -166,7 +166,7 @@ export function rollout(
     }
 
     // 3. Sample up to rolloutCandidateSample candidates
-    const { candidates, rng: postMaterializeRng } = materializeConcreteCandidates(
+    const { candidates, rng: postMaterializeRng } = materializeMovesForRollout(
       def,
       currentState,
       moves,
@@ -279,12 +279,12 @@ export function simulateToCutoff(
     }
 
     // 3. Materialize candidates
-    const matResult = runtime !== undefined
-      ? materializeOrFastPath(def, currentState, moves, currentRng, config.templateCompletionsPerVisit, runtime)
-      : { ...materializeConcreteCandidates(def, currentState, moves, currentRng, config.templateCompletionsPerVisit, runtime), fastPath: false };
+    const matResult = materializeMovesForRollout(
+      def, currentState, moves, currentRng, config.templateCompletionsPerVisit, runtime,
+    );
     const { candidates } = matResult;
     currentRng = matResult.rng;
-    if (acc !== undefined && !matResult.fastPath) {
+    if (acc !== undefined) {
       acc.materializeCalls += 1;
     }
 

@@ -1,17 +1,12 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { materializeOrFastPath, materializeConcreteCandidates } from '../../../../src/agents/mcts/materialization.js';
 import {
   asActionId,
   asPhaseId,
-  initialState,
   type GameDef,
 } from '../../../../src/kernel/index.js';
-import { createRng } from '../../../../src/kernel/prng.js';
 import { createGameDefRuntime } from '../../../../src/kernel/gamedef-runtime.js';
-import { legalMoves } from '../../../../src/kernel/legal-moves.js';
-import type { Move } from '../../../../src/kernel/types-core.js';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -137,56 +132,5 @@ describe('GameDefRuntime without concreteActionIds', () => {
       false,
       'concreteActionIds should not exist on runtime',
     );
-  });
-});
-
-// ---------------------------------------------------------------------------
-// materializeOrFastPath
-// ---------------------------------------------------------------------------
-
-describe('materializeOrFastPath', () => {
-  it('always uses full materialization (no fast path)', () => {
-    const def = createAllConcreteDef();
-    const playerCount = 2;
-    const { state } = initialState(def, 42, playerCount);
-    const runtime = createGameDefRuntime(def);
-    const moves = legalMoves(def, state, undefined, runtime);
-    const rng = createRng(42n);
-
-    const result = materializeOrFastPath(def, state, moves, rng, 2, runtime);
-
-    assert.equal(result.fastPath, false, 'fast path should never be used');
-    assert.ok(result.candidates.length > 0, 'should produce candidates');
-  });
-
-  it('produces same candidates as materializeConcreteCandidates', () => {
-    const def = createAllConcreteDef();
-    const playerCount = 2;
-    const { state } = initialState(def, 42, playerCount);
-    const runtime = createGameDefRuntime(def);
-    const moves = legalMoves(def, state, undefined, runtime);
-    const rng = createRng(42n);
-
-    const wrapperResult = materializeOrFastPath(def, state, moves, rng, 2, runtime);
-    const directResult = materializeConcreteCandidates(def, state, moves, rng, 2, runtime);
-
-    const wrapperKeys = new Set(wrapperResult.candidates.map(c => c.moveKey));
-    const directKeys = new Set(directResult.candidates.map(c => c.moveKey));
-    assert.deepEqual(wrapperKeys, directKeys, 'wrapper and direct should produce same candidates');
-  });
-
-  it('deduplicates candidates', () => {
-    const def = createAllConcreteDef();
-    const playerCount = 2;
-    const { state } = initialState(def, 42, playerCount);
-    const runtime = createGameDefRuntime(def);
-    const move: Move = { actionId: asActionId('noop'), params: {} };
-    const duplicateMoves: readonly Move[] = [move, move, move];
-    const rng = createRng(42n);
-
-    const result = materializeOrFastPath(def, state, duplicateMoves, rng, 2, runtime);
-
-    assert.equal(result.fastPath, false);
-    assert.equal(result.candidates.length, 1, 'duplicates should be removed');
   });
 });

@@ -161,7 +161,7 @@ describe('materializeMovesForRollout', () => {
     // so we test the classification-error path (exception → unsatisfiable)
     // which exercises the same drop-and-emit logic.
     // The stochastic path is tested implicitly via the existing
-    // materializeConcreteCandidates tests and the completeTemplateMove integration.
+    // materializeMovesForRollout tests and the completeTemplateMove integration.
     const def = createTestDef();
     const { state } = initialState(def, 42, 2);
     const rng = createRng(99n);

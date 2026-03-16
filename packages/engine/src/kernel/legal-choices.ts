@@ -65,6 +65,25 @@ import type {
 
 const COMPLETE: ChoiceRequest = { kind: 'complete', complete: true };
 
+/**
+ * Convert a `pending` choice with an empty options domain into `illegal`.
+ * A chooseN decision with `canConfirm === true` (min = 0) is still satisfiable
+ * with an empty selection, so it passes through unchanged.
+ */
+const coerceEmptyDomainToIllegal = (request: ChoiceRequest): ChoiceRequest => {
+  if (request.kind !== 'pending' || request.options.length > 0) {
+    return request;
+  }
+  if (request.type === 'chooseN' && request.canConfirm) {
+    return request;
+  }
+  return {
+    kind: 'illegal',
+    complete: false,
+    reason: 'emptyDomain',
+  };
+};
+
 // ---------------------------------------------------------------------------
 // Compound SA decision chaining
 // ---------------------------------------------------------------------------
@@ -1082,7 +1101,9 @@ export function legalChoicesDiscover(
   const context = prepareLegalChoicesContext(def, state, partialMove, runtime);
   options?.onProbeContextPrepared?.();
   const result = legalChoicesWithPreparedContextStrict(context, partialMove, false, options);
-  return maybeChainCompoundSA(result, def, state, partialMove, false, options, runtime);
+  return coerceEmptyDomainToIllegal(
+    maybeChainCompoundSA(result, def, state, partialMove, false, options, runtime),
+  );
 }
 
 export function legalChoicesEvaluate(
@@ -1105,7 +1126,9 @@ export function legalChoicesEvaluate(
   if (accumulator !== undefined && options?.onChooseNDiagnostics !== undefined && result.kind === 'pending' && result.type === 'chooseN') {
     options.onChooseNDiagnostics(finalizeDiagnostics(accumulator, result.options));
   }
-  return maybeChainCompoundSA(result, def, state, partialMove, true, internalOptions, runtime);
+  return coerceEmptyDomainToIllegal(
+    maybeChainCompoundSA(result, def, state, partialMove, true, internalOptions, runtime),
+  );
 }
 
 export function legalChoicesEvaluateWithTransientChooseNSelections(
@@ -1140,5 +1163,7 @@ export function legalChoicesEvaluateWithTransientChooseNSelections(
     transientChooseNSelections,
     ...(accumulator !== undefined ? { _diagnosticsAccumulator: accumulator } : {}),
   };
-  return maybeChainCompoundSA(result, def, state, partialMove, true, internalOptions, runtime);
+  return coerceEmptyDomainToIllegal(
+    maybeChainCompoundSA(result, def, state, partialMove, true, internalOptions, runtime),
+  );
 }

@@ -384,10 +384,7 @@ phase: [asPhaseId('main')],
     const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
     const result = resolveMoveDecisionSequence(def, makeBaseState(), makeMove('unsat-op'));
     assert.equal(result.complete, false);
-    assert.equal(result.nextDecision?.name, '$targets');
-    assert.equal(result.nextDecision?.type, 'chooseN');
-    assert.equal(result.nextDecision?.options.length ?? 0, 0);
-    assert.equal(result.nextDecision?.min, 1);
+    assert.equal(result.illegal?.reason, 'emptyDomain');
     assert.equal(classifyMoveDecisionSequenceSatisfiability(def, makeBaseState(), makeMove('unsat-op')).classification, 'unsatisfiable');
     assert.equal(isMoveDecisionSequenceSatisfiable(def, makeBaseState(), makeMove('unsat-op')), false);
   });

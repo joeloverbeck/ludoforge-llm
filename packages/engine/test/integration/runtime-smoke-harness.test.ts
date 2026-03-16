@@ -234,7 +234,7 @@ describe('runtime smoke harness integration', () => {
           maxSteps: 2,
           policy: firstLegalPolicy(),
         }),
-      /Could not complete move decisions for action unresolved: decision=\$target name=\$target/,
+      /Could not complete move decisions for action unresolved: illegal=emptyDomain/,
     );
   });
 });

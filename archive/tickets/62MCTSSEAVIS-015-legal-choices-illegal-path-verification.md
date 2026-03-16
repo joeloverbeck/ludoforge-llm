@@ -1,6 +1,6 @@
 # 62MCTSSEAVIS-015: Verify legalChoicesDiscover() Illegal Path Handling
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Possibly — kernel/legal-choices.ts
@@ -61,3 +61,14 @@ If any edge case returns `pending` with empty options instead of `illegal`, fix 
 
 1. `pnpm -F @ludoforge/engine test -- --test-path-pattern legal-choices`
 2. `pnpm turbo build && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-16
+- **What changed**:
+  - Added `'emptyDomain'` as a new `DiscoveryIllegalReason` in `legality-reasons.ts`, extending the `ChoiceIllegalReason` union.
+  - Added `coerceEmptyDomainToIllegal()` guard in `legal-choices.ts` — converts `pending` with empty options to `illegal` with reason `'emptyDomain'` at all 3 public API boundaries. A `chooseN` with `canConfirm === true` (min=0) correctly passes through unchanged.
+  - Created `legal-choices-illegal.test.ts` with 6 tests (empty enum param, empty zone chooseOne, empty chooseN min>0, reason string, chooseN min=0 remains pending, legalChoicesEvaluate coverage).
+  - Updated 5 existing test files whose expectations changed from `pending` with `[]` options to `illegal` with `emptyDomain`.
+- **Deviations**: Stacking cap and resource edge cases were already handled by existing `STACKING_VIOLATION` / pipeline cost validation paths — no new code needed for those. The `emptyDomain` reason was added as a new `DiscoveryIllegalReason` (not a `KernelLegalityOutcome`) to avoid requiring `LEGALITY_OUTCOME_PROJECTIONS` entries.
+- **Verification**: `pnpm turbo build` passes, `pnpm turbo typecheck` passes, `pnpm -F @ludoforge/engine test` — 4943 tests pass, 0 failures.

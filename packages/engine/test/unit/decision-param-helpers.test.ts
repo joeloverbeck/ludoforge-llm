@@ -474,7 +474,7 @@ describe('decision param helper', () => {
     assert.equal(Object.prototype.hasOwnProperty.call(resolved.params, '$alpha'), false);
   });
 
-  it('fails with diagnostics when canonical selection cannot resolve a pending decision', () => {
+  it('returns original move unchanged when empty domain makes action illegal', () => {
     const unresolvedDef = makeBaseDef({
       actions: [
         {
@@ -499,10 +499,9 @@ describe('decision param helper', () => {
       ],
     });
 
-    assert.throws(
-      () => normalizeDecisionParamsForMove(unresolvedDef, makeBaseState(), makeMove()),
-      /Could not normalize decision params for actionId=nested-choice-op: unresolved decisionKey=\$target name=\$target type=chooseOne options=0 min=0/,
-    );
+    const originalMove = makeMove();
+    const result = normalizeDecisionParamsForMove(unresolvedDef, makeBaseState(), originalMove);
+    assert.equal(result, originalMove);
   });
 
   it('preserves compound legality diagnostics even when SA decision normalization is unresolved', () => {

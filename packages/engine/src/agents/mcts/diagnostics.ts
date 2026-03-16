@@ -58,6 +58,7 @@ export interface MutableDiagnosticsAccumulator {
   decisionCompletionsInTree: number;
   decisionCompletionsInRollout: number;
   decisionIllegalPruned: number;
+  decisionBoundaryFailures: number;
 
   // Aggregation arrays (for computing averages)
   leafRewardSpans: number[];
@@ -98,6 +99,7 @@ export function createAccumulator(): MutableDiagnosticsAccumulator {
     decisionCompletionsInTree: 0,
     decisionCompletionsInRollout: 0,
     decisionIllegalPruned: 0,
+    decisionBoundaryFailures: 0,
 
     leafRewardSpans: [],
     selectionDepths: [],
@@ -150,6 +152,7 @@ export interface MctsSearchDiagnostics {
   readonly decisionCompletionsInTree?: number;
   readonly decisionCompletionsInRollout?: number;
   readonly decisionIllegalPruned?: number;
+  readonly decisionBoundaryFailures?: number;
 
   // Derived averages
   readonly avgSelectionDepth?: number;
@@ -264,6 +267,7 @@ export function collectDiagnostics(
     decisionCompletionsInTree: accumulator.decisionCompletionsInTree,
     decisionCompletionsInRollout: accumulator.decisionCompletionsInRollout,
     decisionIllegalPruned: accumulator.decisionIllegalPruned,
+    decisionBoundaryFailures: accumulator.decisionBoundaryFailures,
 
     ...(avgSelectionDepth !== undefined ? { avgSelectionDepth } : {}),
     ...(avgLeafRewardSpan !== undefined ? { avgLeafRewardSpan } : {}),

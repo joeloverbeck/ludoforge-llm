@@ -19,10 +19,14 @@ import { legalMoves } from '../../kernel/legal-moves.js';
 import { applyMove } from '../../kernel/apply-move.js';
 import { terminalResult } from '../../kernel/terminal.js';
 import { fork } from '../../kernel/prng.js';
-import { selectChild } from './isuct.js';
+import { selectChild, selectDecisionChild } from './isuct.js';
 import { shouldExpand, selectExpansionCandidate } from './expansion.js';
 import { materializeOrFastPath, filterAvailableCandidates } from './materialization.js';
-import { rollout, simulateToCutoff } from './rollout.js';
+import { expandDecisionNode } from './decision-expansion.js';
+import type { DecisionExpansionContext } from './decision-expansion.js';
+import { templateDecisionRootKey } from './decision-key.js';
+import { canonicalMoveKey } from './move-key.js';
+import { rollout, simulateToCutoff, resolveDecisionBoundary } from './rollout.js';
 import type { SimulationResult } from './rollout.js';
 import { terminalToRewards, evaluateForAllPlayers } from './evaluate.js';
 import { sampleBeliefState } from './belief.js';
@@ -169,6 +173,119 @@ export function runOneIteration(
   const selStart = acc !== undefined ? performance.now() : 0;
 
   while (true) {
+    // ── DECISION NODE PATH ─────────────────────────────────────────────
+    // Decision nodes share game state from their nearest ancestor state
+    // node.  Traversal is a pure tree walk — no kernel calls.
+    if (currentNode.nodeKind === 'decision') {
+      const decisionPlayer = currentNode.decisionPlayer!;
+
+      if (currentNode.children.length === 0) {
+        // Need to expand this decision node via legalChoicesDiscover.
+        const ctx: DecisionExpansionContext = {
+          def,
+          state: currentState,
+          playerCount: sampledState.playerCount,
+          decisionWideningCap: config.decisionWideningCap ?? 12,
+          ...(config.visitor !== undefined ? { visitor: config.visitor } : {}),
+          ...(acc !== undefined ? { accumulator: acc } : {}),
+          ...(runtime !== undefined ? { runtime } : {}),
+        };
+
+        const expansionResult = expandDecisionNode(currentNode, pool, ctx);
+
+        switch (expansionResult.kind) {
+          case 'complete': {
+            // Decision sequence resolved — applyMove exactly once.
+            try {
+              const applied = applyMove(
+                def, currentState, expansionResult.move, undefined, runtime,
+              );
+              if (acc !== undefined) { acc.applyMoveCalls += 1; }
+              currentState = applied.state;
+
+              // Create a state child node for the completed move.
+              const stateChild = pool.allocate();
+              const completedMoveKey = canonicalMoveKey(expansionResult.move);
+              (stateChild as { move: Move | null }).move = expansionResult.move;
+              (stateChild as { moveKey: MoveKey | null }).moveKey = completedMoveKey;
+              (stateChild as { parent: MctsNode | null }).parent = currentNode;
+              stateChild.availability = 1;
+              currentNode.children.push(stateChild);
+
+              currentNode = stateChild;
+              selectionDepth += 1;
+              selectionMoveKeys.push(completedMoveKey);
+
+              // Capture heuristic prior at the new state node.
+              stateChild.heuristicPrior = [...evaluateForAllPlayers(
+                def, currentState, config.heuristicTemperature, runtime,
+              )];
+            } catch (e: unknown) {
+              // applyMove failed on completed decision — emit failure, backprop from here.
+              if (config.visitor?.onEvent) {
+                config.visitor.onEvent({
+                  type: 'applyMoveFailure',
+                  actionId: expansionResult.move.actionId,
+                  phase: 'expansion',
+                  error: String(e),
+                });
+              }
+              if (acc !== undefined) { acc.expansionApplyMoveFailures += 1; }
+            }
+            break; // Proceed to simulation.
+          }
+
+          case 'expanded': {
+            // Select among new children using standard UCT.
+            const selected = selectDecisionChild(
+              currentNode, decisionPlayer, config.explorationConstant,
+              expansionResult.children,
+            );
+            currentNode = selected;
+            selectionDepth += 1;
+            if (selected.moveKey !== null) {
+              selectionMoveKeys.push(selected.moveKey);
+            }
+            continue; // Continue selection in decision subtree.
+          }
+
+          case 'illegal': {
+            // Path is pruned — break to backprop from here.
+            break;
+          }
+
+          case 'stochastic': {
+            // Stochastic decision — not supported in tree, break.
+            break;
+          }
+
+          case 'poolExhausted': {
+            // Pool exhausted — break to backprop from here.
+            break;
+          }
+        }
+        break; // All non-continue cases break out of while loop.
+      }
+
+      // Node already has children — select among them using standard UCT.
+      if (currentNode.children.length > 0) {
+        const selected = selectDecisionChild(
+          currentNode, decisionPlayer, config.explorationConstant,
+          currentNode.children,
+        );
+        currentNode = selected;
+        selectionDepth += 1;
+        if (selected.moveKey !== null) {
+          selectionMoveKeys.push(selected.moveKey);
+        }
+        continue; // Continue traversal through decision subtree.
+      }
+
+      // No children and not expandable — treat as leaf.
+      break;
+    }
+
+    // ── STATE NODE PATH ────────────────────────────────────────────────
     // Determine legal moves at this node in the sampled state.
     const movesAtNode: readonly Move[] =
       currentNode === root
@@ -185,33 +302,85 @@ export function runOneIteration(
       break;
     }
 
-    // Materialize concrete candidates from possibly-template moves.
-    const matResult = materializeOrFastPath(
-      def,
-      currentState,
-      movesAtNode,
-      currentRng,
-      config.templateCompletionsPerVisit,
-      runtime,
-      config.visitor,
-    );
+    // Partition moves into concrete and template.
+    let hasTemplates = false;
+    const concreteMoves: Move[] = [];
+    const templateMoves: Move[] = [];
+    for (let i = 0; i < movesAtNode.length; i += 1) {
+      const m = movesAtNode[i]!;
+      if (runtime.concreteActionIds.has(m.actionId)) {
+        concreteMoves.push(m);
+      } else {
+        templateMoves.push(m);
+        hasTemplates = true;
+      }
+    }
+
+    // Materialize only concrete candidates (templates become decision roots).
+    const matResult = hasTemplates
+      ? materializeOrFastPath(
+          def, currentState, concreteMoves, currentRng,
+          config.templateCompletionsPerVisit, runtime, config.visitor,
+        )
+      : materializeOrFastPath(
+          def, currentState, movesAtNode, currentRng,
+          config.templateCompletionsPerVisit, runtime, config.visitor,
+        );
     const { candidates } = matResult;
     currentRng = matResult.rng;
     if (acc !== undefined && !matResult.fastPath) {
       acc.materializeCalls += 1;
     }
 
-    if (candidates.length === 0) {
+    // ── Create decision root children for template moves ──────────────
+    // Each template action gets at most one decision root child,
+    // keyed by `D:<actionId>`.  This is separate from concrete expansion.
+    if (hasTemplates) {
+      for (const tmpl of templateMoves) {
+        const rootKey = templateDecisionRootKey(tmpl.actionId);
+        // Check if a decision root child already exists.
+        let exists = false;
+        for (const child of currentNode.children) {
+          if (child.moveKey === rootKey) {
+            exists = true;
+            break;
+          }
+        }
+        if (!exists) {
+          try {
+            const dRoot = pool.allocate();
+            (dRoot as { move: Move | null }).move = tmpl;
+            (dRoot as { moveKey: MoveKey | null }).moveKey = rootKey;
+            (dRoot as { parent: MctsNode | null }).parent = currentNode;
+            dRoot.nodeKind = 'decision';
+            dRoot.decisionPlayer = currentState.activePlayer as PlayerId;
+            dRoot.partialMove = tmpl;
+            dRoot.decisionBinding = null;
+            dRoot.heuristicPrior = null;
+            dRoot.availability = 0;
+            currentNode.children.push(dRoot);
+          } catch {
+            // Pool exhausted — skip remaining template roots.
+            break;
+          }
+        }
+      }
+    }
+
+    // Total available candidates: concrete + template decision roots.
+    const totalCandidateCount = candidates.length + templateMoves.length;
+
+    if (totalCandidateCount === 0) {
       break;
     }
 
     // ── Forced-sequence compression ────────────────────────────────
-    // When there is exactly one concrete candidate, skip node allocation
-    // and advance the state directly.  This compresses forced sequences
-    // into a single tree edge.
+    // Only applies when there is exactly one concrete candidate and no
+    // template alternatives.
     if (
       config.compressForcedSequences !== false &&
-      candidates.length === 1
+      candidates.length === 1 &&
+      templateMoves.length === 0
     ) {
       // Safety cap: break if forced plies exceed the limit.
       if (forcedPlies >= maxForcedPlies) {
@@ -251,9 +420,13 @@ export function runOneIteration(
     }
 
     // Build a lookup of candidate moveKeys for availability matching.
+    // Includes both concrete candidate keys and decision root keys.
     const candidateKeySet = new Set<string>();
     for (const c of candidates) {
       candidateKeySet.add(c.moveKey);
+    }
+    for (const tmpl of templateMoves) {
+      candidateKeySet.add(templateDecisionRootKey(tmpl.actionId));
     }
 
     // Determine which existing children are available (legal in this world).
@@ -268,7 +441,7 @@ export function runOneIteration(
     // ── Expansion check ──────────────────────────────────────────────
     if (
       shouldExpand(currentNode, config.progressiveWideningK, config.progressiveWideningAlpha) &&
-      availableChildren.length < candidates.length
+      availableChildren.length < totalCandidateCount
     ) {
       // There are unexpanded candidates — try to expand one.
       const unexpanded = filterAvailableCandidates(currentNode, candidates);
@@ -338,6 +511,15 @@ export function runOneIteration(
     if (solverActive) {
       const solverChild = selectSolverAwareChild(currentNode, exploringPlayer);
       if (solverChild !== null) {
+        if (solverChild.nodeKind === 'decision') {
+          // Selected a decision root via solver — enter decision path.
+          currentNode = solverChild;
+          selectionDepth += 1;
+          if (solverChild.moveKey !== null) {
+            selectionMoveKeys.push(solverChild.moveKey);
+          }
+          continue;
+        }
         const applied = applyMove(def, currentState, solverChild.move!, undefined, runtime);
         if (acc !== undefined) {
           acc.applyMoveCalls += 1;
@@ -359,6 +541,16 @@ export function runOneIteration(
       availableChildren,
       config.heuristicBackupAlpha ?? 0,
     );
+
+    if (selected.nodeKind === 'decision') {
+      // Selected a decision root — enter decision path (no applyMove).
+      currentNode = selected;
+      selectionDepth += 1;
+      if (selected.moveKey !== null) {
+        selectionMoveKeys.push(selected.moveKey);
+      }
+      continue;
+    }
 
     // Apply the selected child's move to advance the state.
     const applied = applyMove(def, currentState, selected.move!, undefined, runtime);
@@ -382,11 +574,41 @@ export function runOneIteration(
     acc.selectionDepths.push(selectionDepth);
   }
 
+  // ── Decision boundary resolution ────────────────────────────────────
+  // When selection exits at a decision node (partially completed move),
+  // complete remaining decisions via random completion before simulation.
+  // Decision completion does NOT count toward the simulation cutoff.
+  let boundaryFailed = false;
+
+  if (currentNode.nodeKind === 'decision' && currentNode.partialMove !== null) {
+    const boundary = resolveDecisionBoundary(
+      def, currentState, currentNode.partialMove, currentRng, runtime, acc,
+    );
+    if (boundary !== null) {
+      currentState = boundary.state;
+      currentRng = boundary.rng;
+      // Visitor: emit applyMoveFailure phase='rollout' is NOT needed here
+      // because resolveDecisionBoundary handled it internally.
+    } else {
+      // Failed completion — flag for zero-reward backpropagation below.
+      boundaryFailed = true;
+    }
+  }
+
   // ── Simulation (rollout mode dispatch) ──────────────────────────────
   const simStart = acc !== undefined ? performance.now() : 0;
   let simResult: SimulationResult;
 
-  switch (config.rolloutMode) {
+  if (boundaryFailed) {
+    // Decision boundary failed — skip simulation entirely.
+    simResult = {
+      state: currentState,
+      terminal: null,
+      rng: currentRng,
+      depth: 0,
+      traversedMoveKeys: [],
+    };
+  } else switch (config.rolloutMode) {
     case 'legacy':
       simResult = rollout(def, currentState, currentRng, config, runtime, acc, stateCache, maxCacheEntries);
       break;
@@ -418,7 +640,10 @@ export function runOneIteration(
   // ── Evaluation ───────────────────────────────────────────────────────
   const evalStart = acc !== undefined ? performance.now() : 0;
   let rewards: readonly number[];
-  if (simResult.terminal !== null) {
+  if (boundaryFailed) {
+    // Failed decision boundary — zero rewards (loss penalty).
+    rewards = new Array<number>(sampledState.playerCount).fill(0);
+  } else if (simResult.terminal !== null) {
     rewards = terminalToRewards(simResult.terminal, sampledState.playerCount);
   } else {
     // Check terminal on simulation end state.

@@ -1,6 +1,6 @@
 # 62MCTSSEAVIS-010: Search Loop Decision Node Integration
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — agents/mcts/search.ts, isuct.ts
@@ -94,3 +94,16 @@ Single-option decision steps skip node allocation — advance partial move direc
 1. `pnpm -F @ludoforge/engine test -- --test-path-pattern search`
 2. `pnpm -F @ludoforge/engine test -- --test-path-pattern mcts-decision`
 3. `pnpm turbo build && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-16
+- **What changed**:
+  - `isuct.ts`: Added `selectDecisionChild()` — standard UCT with `parent.visits` denominator for decision nodes
+  - `search.ts`: Restructured selection loop with decision node path at top; creates `D:<actionId>` decision root children for template moves; uses `expandDecisionNode()` for expansion and `selectDecisionChild()` for selection; `applyMove` called only on decision completion
+  - `mcts-agent.ts`: Updated pool capacity formula to `iterations * decisionDepthMultiplier + 1` (spec Section 3.6) to accommodate decision subtrees
+  - New test: `test/unit/agents/mcts/search-decision.test.ts` (10 tests)
+  - New test: `test/integration/mcts-decision-integration.test.ts` (2 tests)
+  - Extended: `test/unit/agents/mcts/isuct.test.ts` (4 new `selectDecisionChild` tests)
+- **Deviations**: Pool capacity formula update in `mcts-agent.ts` was not explicitly listed in "Files to Touch" but was required to prevent pool exhaustion from decision root allocation (spec Section 3.6 prescribes this formula)
+- **Verification**: build exit 0, typecheck exit 0, 4894 tests pass / 0 fail

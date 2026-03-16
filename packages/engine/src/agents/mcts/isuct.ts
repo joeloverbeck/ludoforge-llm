@@ -63,6 +63,79 @@ export function selectChild(
 }
 
 // ---------------------------------------------------------------------------
+// Standard UCT for decision nodes
+// ---------------------------------------------------------------------------
+
+/**
+ * Select the best child from a decision node using standard UCT.
+ *
+ * Decision nodes use `parent.visits` in the exploration denominator (not
+ * `child.availability`) because decision options are always fully visible
+ * to the deciding player — there is no hidden information at the decision
+ * level.
+ *
+ * Heuristic backup is not applied: decision nodes always have
+ * `heuristicPrior === null`.
+ *
+ * @param parent              - the decision node whose children we select from
+ * @param exploringPlayer     - the player whose reward we maximise
+ * @param explorationConstant - C parameter balancing exploitation/exploration
+ * @param children            - children to select from
+ * @returns the selected child node
+ * @throws if `children` is empty
+ */
+export function selectDecisionChild(
+  parent: MctsNode,
+  exploringPlayer: PlayerId,
+  explorationConstant: number,
+  children: readonly MctsNode[],
+): MctsNode {
+  if (children.length === 0) {
+    throw new Error(
+      'selectDecisionChild: no children — cannot select from empty list',
+    );
+  }
+
+  // Prefer unvisited children for expansion.
+  for (const child of children) {
+    if (child.visits === 0) {
+      return child;
+    }
+  }
+
+  // All visited — compute standard UCT scores.
+  let bestChild: MctsNode = children[0]!;
+  let bestScore = standardUctScore(
+    bestChild, parent.visits, exploringPlayer, explorationConstant,
+  );
+
+  for (let i = 1; i < children.length; i++) {
+    const child: MctsNode = children[i]!;
+    const score = standardUctScore(
+      child, parent.visits, exploringPlayer, explorationConstant,
+    );
+    if (score > bestScore) {
+      bestScore = score;
+      bestChild = child;
+    }
+  }
+
+  return bestChild;
+}
+
+function standardUctScore(
+  child: MctsNode,
+  parentVisits: number,
+  exploringPlayer: PlayerId,
+  C: number,
+): number {
+  const exploitation = child.totalReward[exploringPlayer]! / child.visits;
+  const exploration =
+    C * Math.sqrt(Math.log(Math.max(1, parentVisits)) / child.visits);
+  return exploitation + exploration;
+}
+
+// ---------------------------------------------------------------------------
 // Internal
 // ---------------------------------------------------------------------------
 

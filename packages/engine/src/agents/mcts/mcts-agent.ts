@@ -159,7 +159,11 @@ export class MctsAgent implements Agent {
 
     // Allocate root node and node pool.
     const root = createRootNode(state.playerCount);
-    const poolCapacity = Math.max(this.config.iterations + 1, legalMoves.length * 4);
+    const depthMultiplier = this.config.decisionDepthMultiplier ?? 4;
+    const poolCapacity = Math.max(
+      this.config.iterations * depthMultiplier + 1,
+      legalMoves.length * 4,
+    );
     const pool = createNodePool(poolCapacity, state.playerCount);
 
     // Run MCTS search.

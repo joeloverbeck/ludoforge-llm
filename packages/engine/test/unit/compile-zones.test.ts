@@ -217,3 +217,112 @@ describe('canonicalizeZoneSelector', () => {
     assertNoDiagnostics(result);
   });
 });
+
+describe('canonicalizeZoneSelector zone ID existence', () => {
+  const ownershipByBase = {
+    deck: 'none',
+    hand: 'player',
+  } as const;
+  const path = 'doc.effects.0.moveToken.to';
+
+  it('accepts a valid literal zone ID when zoneIdSet is provided', () => {
+    const result = canonicalizeZoneSelector(
+      'deck:none',
+      ownershipByBase,
+      path,
+      undefined,
+      new Set(['deck:none']),
+    );
+    assert.equal(result.value, 'deck:none');
+    assertNoDiagnostics(result);
+  });
+
+  it('rejects an invalid literal zone ID when zoneIdSet is provided', () => {
+    const result = canonicalizeZoneSelector(
+      'deck:none',
+      ownershipByBase,
+      path,
+      undefined,
+      new Set(['hand:none']),
+    );
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics.length, 1);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_ZONE_ID_UNKNOWN');
+    assert.deepEqual(result.diagnostics[0]?.alternatives, []);
+  });
+
+  it('rejects an invalid zone ID and provides alternatives for the same base', () => {
+    // Use a numeric qualifier without seatIds so normalizeZoneOwnerQualifier
+    // accepts it as a player index, then the existence check fires.
+    const result = canonicalizeZoneSelector(
+      'hand:5',
+      ownershipByBase,
+      path,
+      undefined,
+      new Set(['hand:0', 'hand:1', 'hand:2']),
+    );
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_ZONE_ID_UNKNOWN');
+    assert.deepEqual(result.diagnostics[0]?.alternatives, ['hand:0', 'hand:1', 'hand:2']);
+  });
+
+  it('skips existence validation for $-prefixed binding references', () => {
+    const result = canonicalizeZoneSelector(
+      '$space',
+      ownershipByBase,
+      path,
+      undefined,
+      new Set(['deck:none']),
+    );
+    assert.equal(result.value, '$space');
+    assertNoDiagnostics(result);
+  });
+
+  it('skips existence check when zoneIdSet is undefined', () => {
+    const result = canonicalizeZoneSelector(
+      'nonexistent:none',
+      { ...ownershipByBase, nonexistent: 'none' } as const,
+      path,
+      undefined,
+      undefined,
+    );
+    assert.equal(result.value, 'nonexistent:none');
+    assertNoDiagnostics(result);
+  });
+
+  it('validates auto-qualified owner:none zone against zoneIdSet', () => {
+    const result = canonicalizeZoneSelector(
+      'deck',
+      ownershipByBase,
+      path,
+      undefined,
+      new Set(['deck:none']),
+    );
+    assert.equal(result.value, 'deck:none');
+    assertNoDiagnostics(result);
+  });
+
+  it('rejects auto-qualified zone when the resulting ID is not in zoneIdSet', () => {
+    const result = canonicalizeZoneSelector(
+      'deck',
+      ownershipByBase,
+      path,
+      undefined,
+      new Set(['hand:none']),
+    );
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_ZONE_ID_UNKNOWN');
+  });
+
+  it('skips existence validation for dynamic qualifier bindings', () => {
+    const result = canonicalizeZoneSelector(
+      'hand:$actor',
+      ownershipByBase,
+      path,
+      undefined,
+      new Set(['hand:0', 'hand:1']),
+    );
+    assert.equal(result.value, 'hand:$actor');
+    assertNoDiagnostics(result);
+  });
+});

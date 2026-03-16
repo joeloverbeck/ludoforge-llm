@@ -1,3 +1,5 @@
+**Status**: ✅ COMPLETED
+
 # 63COMZONIDCROREFVAL-007 — Unit Tests for `canonicalizeZoneSelector` Zone ID Existence
 
 ## Summary
@@ -30,9 +32,9 @@ All tests should be in a new `describe` block (e.g., `'canonicalizeZoneSelector 
    - Expected: value `null`, diagnostic with code `CNL_COMPILER_ZONE_ID_UNKNOWN`, `alternatives` is `[]` (no IDs with `deck:` prefix)
 
 3. **Invalid zone ID with alternatives**
-   - Input: `'hand:0'`, ownershipByBase `{ hand: 'player' }`, zoneIdSet `new Set(['hand:0', 'hand:1', 'hand:2'])`... wait, `hand:0` IS in the set. Use `hand:5` instead.
-   - Input: `'hand:5'`, ownershipByBase `{ hand: 'player' }`, seatIds `['0','1','2','3','4','5']`, zoneIdSet `new Set(['hand:0', 'hand:1', 'hand:2'])`
+   - Input: `'hand:5'`, ownershipByBase `{ hand: 'player' }`, seatIds `undefined`, zoneIdSet `new Set(['hand:0', 'hand:1', 'hand:2'])`
    - Expected: value `null`, diagnostic code `CNL_COMPILER_ZONE_ID_UNKNOWN`, `alternatives` includes `['hand:0', 'hand:1', 'hand:2']`
+   - Note: seatIds must be `undefined` so the numeric qualifier `5` passes `normalizeZoneOwnerQualifier` as a player index (when seatIds are provided, numeric qualifiers are rejected in favor of seat names).
 
 4. **Binding reference (`$space`) with `zoneIdSet` provided**
    - Input: `'$space'`, ownershipByBase `{ deck: 'none' }`, zoneIdSet `new Set(['deck:none'])`
@@ -71,3 +73,10 @@ All tests should be in a new `describe` block (e.g., `'canonicalizeZoneSelector 
 - Tests follow the existing patterns in `compile-zones.test.ts`.
 - Each test verifies both the `value` and `diagnostics` fields of the result.
 - Tests cover both the `zoneIdSet` present and absent cases.
+
+## Outcome
+
+- **Completion date**: 2026-03-16
+- **What changed**: Added 8 unit tests in `packages/engine/test/unit/compile-zones.test.ts` under a new `describe('canonicalizeZoneSelector zone ID existence')` block.
+- **Deviations**: Test case 3 (invalid zone ID with alternatives) was corrected — the ticket specified `seatIds: ['0'..'5']` with qualifier `5`, but `normalizeZoneOwnerQualifier` rejects numeric qualifiers when seatIds are present. Fixed by omitting seatIds so the numeric qualifier passes normalization and reaches the existence check.
+- **Verification**: All 4783 engine tests pass, 0 failures.

@@ -1,6 +1,6 @@
 # 62MCTSSEAVIS-011: Rollout Integration — Decision Boundary
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agents/mcts/rollout.ts
@@ -69,3 +69,10 @@ Template moves encountered during simulation continue to use existing `materiali
 
 1. `pnpm -F @ludoforge/engine test -- --test-path-pattern rollout`
 2. `pnpm turbo build && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-16
+- **What changed**: `resolveDecisionBoundary()` added to `rollout.ts` — completes partial moves via `completeTemplateMove`, applies once via `applyMove`, does not increment simulation cutoff counters. Search integration in `search.ts` calls it at the simulation boundary when `nodeKind === 'decision'`, with zero-reward backprop on failure. Diagnostics fields `decisionCompletionsInRollout` and `decisionBoundaryFailures` track outcomes.
+- **Deviations**: None. Implementation matches spec Section 3.7 exactly.
+- **Verification**: 26/26 rollout tests pass. `pnpm turbo build` and `pnpm turbo typecheck` clean.

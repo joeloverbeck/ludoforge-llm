@@ -1389,6 +1389,7 @@ function deriveChoiceUi(
         target: resolved.target,
         legality: option.legality,
         illegalReason: option.illegalReason,
+        ...(option.resolution !== undefined ? { resolution: option.resolution } : {}),
       };
     });
     if (pending.type === 'chooseN') {

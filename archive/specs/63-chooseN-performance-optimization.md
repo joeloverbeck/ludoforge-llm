@@ -1,6 +1,6 @@
 # Spec 63 — chooseN Resolution and Interaction Performance
 
-**Status**: Revised  
+**Status**: ✅ COMPLETED
 **Relationship to Spec 62**: Complementary, not a hard prerequisite
 
 ## 0. Executive Decision
@@ -551,3 +551,15 @@ A separate future spec should add optional declarative chooseN constraint hints 
 - requires / forbids relationships
 
 Those hints would let the engine install stronger exact propagators, reduce provisional results further, and give MCTS better priors. That is valuable, but it is a separate feature and should not be smuggled into this performance fix.
+
+## Outcome
+
+- **Completion date**: 2026-03-16
+- **What was implemented**: All four phases (A–C core, D deferred as designed) across the 63CHOOPEROPT ticket series (001–011):
+  - Phase A: `ChooseNOptionResolution` type, hybrid resolver with static filtering, singleton probe pass, budgeted witness search, and per-option provisional fallback replacing blanket all-unknown
+  - Phase B: Worker-local `ChooseNSession` with template extraction, probe/legality caches, and revision-based invalidation
+  - Phase C: Dev-only diagnostics payload, UI distinction between exact/provisional/stochastic/ambiguous options (dashed/dotted borders, ARIA labels, visual indicators)
+- **Key files added**: `choose-n-option-resolution.ts`, `choose-n-session.ts`, `choice-option-policy.ts`, `choice-options-runtime-shape-contract.ts`, `choice-options-runtime-shape-diagnostic.ts`, `choice-options-runtime-shape-diagnostic-rendering.ts`, `decision-sequence-satisfiability.ts`
+- **Key files modified**: `legal-choices.ts`, `advance-choose-n.ts`, `types-core.ts`, `game-worker-api.ts`, `derive-render-model.ts`, `render-model.ts`, `ChoicePanel.tsx`, `ChoicePanel.module.css`
+- **Deviations**: Section 3.3 tooltip detail not implemented (choice panel lacks tooltip infrastructure; resolution info conveyed via ARIA labels and visual indicators instead). Phase D (MCTS integration, declarative constraint hints) explicitly deferred as designed.
+- **Verification**: All engine and runner tests pass. Typecheck clean.

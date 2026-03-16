@@ -1,6 +1,6 @@
 # 63CHOOPEROPT-011: UI distinction for exact vs provisional chooseN options
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -14,7 +14,7 @@ The runner UI currently treats all `unknown` options identically. With the new `
 
 1. The choice panel in `packages/runner/src/ui/` renders `ChoicePendingChooseNRequest` options.
 2. Options with `legality: 'unknown'` are currently selectable (spec 3.4 — this MUST remain true).
-3. `resolution` field is optional on `ChoiceOption` (added in 001). The UI reads it when present.
+3. `resolution` field is optional on `ChoiceOption` (added in 001). The `resolution` field must be added to `RenderChoiceOption` and forwarded from `derive-render-model.ts` before the UI can read it.
 
 ## Architecture Check
 
@@ -48,7 +48,10 @@ If the choice panel supports tooltips, show resolution details on hover:
 
 ## Files to Touch
 
-- `packages/runner/src/ui/` — choice panel component(s) that render chooseN options (modify)
+- `packages/runner/src/model/render-model.ts` — add `resolution` field to `RenderChoiceOption` (modify)
+- `packages/runner/src/model/derive-render-model.ts` — forward `resolution` from engine `ChoiceOption` to `RenderChoiceOption` (modify)
+- `packages/runner/src/ui/ChoicePanel.tsx` — choice panel component that renders chooseN options (modify)
+- `packages/runner/src/ui/ChoicePanel.module.css` — add provisional/stochastic visual styles (modify)
 
 ## Out of Scope
 
@@ -85,3 +88,15 @@ If the choice panel supports tooltips, show resolution details on hover:
 
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-16
+- **What changed**:
+  - `packages/runner/src/model/render-model.ts` — added `resolution?: ChooseNOptionResolution` to `RenderChoiceOption`
+  - `packages/runner/src/model/derive-render-model.ts` — forwards `resolution` from engine `ChoiceOption` to render model
+  - `packages/runner/src/ui/ChoicePanel.tsx` — both `discreteOne` and `MultiSelectMode` renderers now apply resolution-aware CSS classes, ARIA labels (`(unverified)`/`(uncertain)`), and visual indicators (`?`/`~`)
+  - `packages/runner/src/ui/ChoicePanel.module.css` — added `.optionProvisional` (dashed border), `.optionStochastic` (dotted border), `.resolutionIndicator`
+  - `packages/runner/test/ui/choose-n-resolution-display.test.ts` — 8 new tests
+- **Deviations**: Tooltip (section 3) was not implemented — the choice panel does not currently have tooltip infrastructure, and adding it was out of scope for a LOW-priority polish ticket. Resolution info is conveyed via visual indicators and ARIA labels instead.
+- **Verification**: 1571 runner tests pass, typecheck clean.

@@ -1,4 +1,4 @@
-import type { MoveParamValue } from '@ludoforge/engine/runtime';
+import type { ChooseNOptionResolution, MoveParamValue } from '@ludoforge/engine/runtime';
 import { useEffect, useMemo, useState, type ChangeEvent, type ReactElement } from 'react';
 import type { StoreApi } from 'zustand';
 import { useStore } from 'zustand';
@@ -20,6 +20,44 @@ function isChoiceScalar(value: MoveParamValue): value is ChoiceScalar {
 
 type ChoiceScalar = Exclude<MoveParamValue, readonly unknown[]>;
 type NumericDomain = { readonly min: number; readonly max: number; readonly step: number };
+
+function resolutionCssClass(resolution: ChooseNOptionResolution | undefined): string {
+  switch (resolution) {
+    case 'provisional':
+      return styles.optionProvisional ?? '';
+    case 'stochastic':
+    case 'ambiguous':
+      return styles.optionStochastic ?? '';
+    default:
+      return '';
+  }
+}
+
+function resolutionIndicatorText(resolution: ChooseNOptionResolution | undefined): string | null {
+  switch (resolution) {
+    case 'provisional':
+      return '?';
+    case 'stochastic':
+      return '~';
+    case 'ambiguous':
+      return '~';
+    default:
+      return null;
+  }
+}
+
+function resolutionAriaLabel(displayName: string, resolution: ChooseNOptionResolution | undefined): string {
+  switch (resolution) {
+    case 'provisional':
+      return `${displayName} (unverified)`;
+    case 'stochastic':
+      return `${displayName} (uncertain)`;
+    case 'ambiguous':
+      return `${displayName} (uncertain)`;
+    default:
+      return displayName;
+  }
+}
 
 export function countChoicesToCancel(totalSteps: number, clickedIndex: number): number {
   return Math.max(0, totalSteps - clickedIndex - 1);
@@ -123,14 +161,20 @@ function MultiSelectMode({ choiceUi, addChooseNItem, removeChooseNItem, confirmC
           const isLegalScalar = option.legality !== 'illegal' && isChoiceScalar(option.value);
           const isDisabled = !isLegalScalar;
 
+          const resCss = resolutionCssClass(option.resolution);
+          const baseClass = isSelected ? `${styles.optionButton} ${styles.optionSelected}` : styles.optionButton;
+          const buttonClass = resCss !== '' ? `${baseClass} ${resCss}` : baseClass;
+          const indicator = resolutionIndicatorText(option.resolution);
+
           return (
             <div key={option.choiceValueId} className={styles.optionRow}>
               <button
                 type="button"
-                className={isSelected ? `${styles.optionButton} ${styles.optionSelected}` : styles.optionButton}
+                className={buttonClass}
                 disabled={isDisabled}
                 aria-disabled={isDisabled ? 'true' : undefined}
                 aria-pressed={isSelected}
+                aria-label={resolutionAriaLabel(option.displayName, option.resolution)}
                 data-testid={`choice-multi-option-${option.choiceValueId}`}
                 onClick={() => {
                   if (!isLegalScalar) {
@@ -147,6 +191,9 @@ function MultiSelectMode({ choiceUi, addChooseNItem, removeChooseNItem, confirmC
                   {isSelected ? 'x' : ''}
                 </span>
                 <span>{option.displayName}</span>
+                {indicator !== null ? (
+                  <span className={styles.resolutionIndicator} aria-hidden="true">{indicator}</span>
+                ) : null}
               </button>
               {!isLegalScalar ? <IllegalityFeedback illegalReason={option.illegalReason} /> : null}
             </div>
@@ -395,13 +442,19 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
           <div className={styles.options} data-testid="choice-mode-discrete">
             {choiceUi.options.map((option) => {
               const isLegal = option.legality !== 'illegal';
+              const resCss = resolutionCssClass(option.resolution);
+              const buttonClass = resCss !== ''
+                ? `${styles.optionButton} ${resCss}`
+                : styles.optionButton;
+              const indicator = resolutionIndicatorText(option.resolution);
               return (
                 <div key={option.choiceValueId} className={styles.optionRow}>
                   <button
                     type="button"
-                    className={styles.optionButton}
+                    className={buttonClass}
                     disabled={!isLegal}
                     aria-disabled={isLegal ? undefined : 'true'}
+                    aria-label={resolutionAriaLabel(option.displayName, option.resolution)}
                     data-testid={`choice-option-${option.choiceValueId}`}
                     onClick={() => {
                       if (!isLegal || !isChoiceScalar(option.value)) {
@@ -410,7 +463,10 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
                       void store.getState().chooseOne(option.value);
                     }}
                   >
-                    {option.displayName}
+                    <span>{option.displayName}</span>
+                    {indicator !== null ? (
+                      <span className={styles.resolutionIndicator} aria-hidden="true">{indicator}</span>
+                    ) : null}
                   </button>
                   {!isLegal ? <IllegalityFeedback illegalReason={option.illegalReason} /> : null}
                 </div>

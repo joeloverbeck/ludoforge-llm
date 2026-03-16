@@ -1177,13 +1177,17 @@ effectMacros:
       - { name: faction, type: { kind: enum, values: [NVA, VC] } }
       - { name: resourceVar, type: string }
       - { name: shiftFromSupportOnly, type: value }
+      - { name: free, type: value }
     exports: []
     effects:
-      - macro: per-province-city-cost
-        args:
-          space: { param: space }
-          resource: { param: resourceVar }
-          amount: -1
+      - if:
+          when:
+            op: and
+            args:
+              - { op: '!=', left: { param: free }, right: true }
+              - { op: '!=', left: { ref: zoneProp, zone: { param: space }, prop: category }, right: 'loc' }
+          then:
+            - addVar: { scope: global, var: { param: resourceVar }, delta: -1 }
       - if:
           when:
             op: or
@@ -1222,22 +1226,22 @@ effectMacros:
                 then:
                   - addVar: { scope: zoneVar, zone: { param: space }, var: terrorCount, delta: 1 }
                   - addVar: { scope: global, var: terrorSabotageMarkersPlaced, delta: 1 }
-            - if:
-                when: { op: '==', left: { param: shiftFromSupportOnly }, right: true }
-                then:
                   - if:
-                      when:
-                        op: or
-                        args:
-                          - { op: '==', left: { ref: markerState, space: { param: space }, marker: supportOpposition }, right: 'passiveSupport' }
-                          - { op: '==', left: { ref: markerState, space: { param: space }, marker: supportOpposition }, right: 'activeSupport' }
+                      when: { op: '==', left: { param: shiftFromSupportOnly }, right: true }
                       then:
-                        - shiftMarker: { space: { param: space }, marker: supportOpposition, delta: -1 }
-                else:
-                  - if:
-                      when: { op: '!=', left: { ref: markerState, space: { param: space }, marker: supportOpposition }, right: 'activeOpposition' }
-                      then:
-                        - shiftMarker: { space: { param: space }, marker: supportOpposition, delta: -1 }
+                        - if:
+                            when:
+                              op: or
+                              args:
+                                - { op: '==', left: { ref: markerState, space: { param: space }, marker: supportOpposition }, right: 'passiveSupport' }
+                                - { op: '==', left: { ref: markerState, space: { param: space }, marker: supportOpposition }, right: 'activeSupport' }
+                            then:
+                              - shiftMarker: { space: { param: space }, marker: supportOpposition, delta: -1 }
+                      else:
+                        - if:
+                            when: { op: '!=', left: { ref: markerState, space: { param: space }, marker: supportOpposition }, right: 'activeOpposition' }
+                            then:
+                              - shiftMarker: { space: { param: space }, marker: supportOpposition, delta: -1 }
 
   # ── place-terror-marker ───────────────────────────────────────────────────
   # Shared terror placement for Province/City events.
@@ -3634,6 +3638,158 @@ effectMacros:
                 prop: activity
                 value: underground
           else: []
+
+  # ── tet-combined-attack-resolve-space ──────────────────────────────────────
+  # Card-124 "Tet Offensive" Step 3: combined VC+NVA free Attack in a single
+  # space. Activates ALL VC and NVA guerrillas, rolls die vs combined count,
+  # removes up to 2 COIN pieces (standard priority), then VC-first attrition
+  # per US piece removed.
+  - id: tet-combined-attack-resolve-space
+    params:
+      - { name: space, type: string }
+    exports: []
+    effects:
+      # Activate ALL VC guerrillas
+      - forEach:
+          bind: $vcg
+          over:
+            query: tokensInZone
+            zone: { param: space }
+            filter:
+              op: and
+              args:
+                - { prop: faction, op: eq, value: VC }
+                - { prop: type, op: eq, value: guerrilla }
+                - { prop: activity, op: eq, value: underground }
+          effects:
+            - setTokenProp: { token: $vcg, prop: activity, value: active }
+      # Activate ALL NVA guerrillas
+      - forEach:
+          bind: $nvag
+          over:
+            query: tokensInZone
+            zone: { param: space }
+            filter:
+              op: and
+              args:
+                - { prop: faction, op: eq, value: NVA }
+                - { prop: type, op: eq, value: guerrilla }
+                - { prop: activity, op: eq, value: underground }
+          effects:
+            - setTokenProp: { token: $nvag, prop: activity, value: active }
+      # Count combined guerrillas, roll die, resolve attack
+      - let:
+          bind: $combinedGuerrillas
+          value:
+            op: '+'
+            left:
+              aggregate:
+                op: count
+                query:
+                  query: tokensInZone
+                  zone: { param: space }
+                  filter:
+                    op: and
+                    args:
+                      - { prop: faction, op: eq, value: VC }
+                      - { prop: type, op: eq, value: guerrilla }
+            right:
+              aggregate:
+                op: count
+                query:
+                  query: tokensInZone
+                  zone: { param: space }
+                  filter:
+                    op: and
+                    args:
+                      - { prop: faction, op: eq, value: NVA }
+                      - { prop: type, op: eq, value: guerrilla }
+          in:
+            - rollRandom:
+                bind: $dieRoll
+                min: 1
+                max: 6
+                in:
+                  - if:
+                      when:
+                        op: '<='
+                        left: { ref: binding, name: $dieRoll }
+                        right: { ref: binding, name: $combinedGuerrillas }
+                      then:
+                        # Count US pieces before removal for attrition
+                        - let:
+                            bind: $usPiecesBefore
+                            value:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: { param: space }
+                                  filter: { prop: faction, op: eq, value: US }
+                            in:
+                              # Remove up to 2 COIN pieces (standard priority)
+                              - removeByPriority:
+                                  budget: 2
+                                  groups:
+                                    - bind: $target
+                                      over:
+                                        query: tokensInZone
+                                        zone: { param: space }
+                                        filter: { op: and, args: [{ prop: faction, op: eq, value: US }, { prop: type, op: neq, value: base }] }
+                                      to: { zoneExpr: 'casualties-US:none' }
+                                    - bind: $target
+                                      over:
+                                        query: tokensInZone
+                                        zone: { param: space }
+                                        filter: { op: and, args: [{ prop: faction, op: eq, value: ARVN }, { prop: type, op: neq, value: base }] }
+                                      to: { zoneExpr: 'available-ARVN:none' }
+                                    - bind: $target
+                                      over:
+                                        query: tokensInZone
+                                        zone: { param: space }
+                                        filter: { op: and, args: [{ prop: faction, op: eq, value: US }, { prop: type, op: eq, value: base }] }
+                                      to: { zoneExpr: 'casualties-US:none' }
+                                    - bind: $target
+                                      over:
+                                        query: tokensInZone
+                                        zone: { param: space }
+                                        filter: { op: and, args: [{ prop: faction, op: eq, value: ARVN }, { prop: type, op: eq, value: base }] }
+                                      to: { zoneExpr: 'available-ARVN:none' }
+                              # VC-first attrition: 1 attacker removed per US piece removed
+                              - let:
+                                  bind: $usPiecesAfter
+                                  value:
+                                    aggregate:
+                                      op: count
+                                      query:
+                                        query: tokensInZone
+                                        zone: { param: space }
+                                        filter: { prop: faction, op: eq, value: US }
+                                  in:
+                                    - let:
+                                        bind: $usRemoved
+                                        value: { op: '-', left: { ref: binding, name: $usPiecesBefore }, right: { ref: binding, name: $usPiecesAfter } }
+                                        in:
+                                          - if:
+                                              when: { op: '>', left: { ref: binding, name: $usRemoved }, right: 0 }
+                                              then:
+                                                - removeByPriority:
+                                                    budget: { ref: binding, name: $usRemoved }
+                                                    groups:
+                                                      # VC pieces removed FIRST
+                                                      - bind: $attritionPiece
+                                                        over:
+                                                          query: tokensInZone
+                                                          zone: { param: space }
+                                                          filter: { prop: faction, op: eq, value: VC }
+                                                        to: { zoneExpr: 'available-VC:none' }
+                                                      # NVA pieces removed SECOND
+                                                      - bind: $attritionPiece
+                                                        over:
+                                                          query: tokensInZone
+                                                          zone: { param: space }
+                                                          filter: { prop: faction, op: eq, value: NVA }
+                                                        to: { zoneExpr: 'available-NVA:none' }
 
 conditionMacros:
   # Shared geography predicate: Laos or Cambodia map space.

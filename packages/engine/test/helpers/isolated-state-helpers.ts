@@ -8,6 +8,13 @@ import {
 
 export type IsolatedStateTurnOrderMode = 'preserve' | 'roundRobin';
 
+/**
+ * Clears all token zones to empty arrays. Does NOT reset markers, zoneVars,
+ * or scenario-defined marker states (e.g., supportOpposition defaults).
+ * Production spaces retain their compiled marker defaults even after clearing.
+ * When testing effects that shift markers, explicitly set marker states for
+ * affected spaces.
+ */
 export const clearAllZones = (state: GameState): GameState => ({
   ...state,
   zones: Object.fromEntries(Object.keys(state.zones).map((zoneId) => [zoneId, []])) as GameState['zones'],

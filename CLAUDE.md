@@ -95,6 +95,8 @@ GameDef JSON → validateGameDef → initialState(def, seed) → kernel loop (le
 
 The kernel operates on ASTs for conditions, effects, and references. Core types: `ConditionAST`, `EffectAST`, `ValueExpr`, `PlayerSel`, `ZoneSel`, `TokenSel`. Effects use bounded iteration (`forEach` over finite collections) — no general recursion. Includes spatial support via board-as-graph (zone adjacency). See the brainstorming spec sections 3.1-3.6 for exact AST shapes.
 
+**Operation-context-only bindings**: `__freeOperation` and `__actionClass` are built-in bindings injected only during operation pipeline execution. They are NOT available in event card effects. Macros that reference them (directly or via sub-macros like `per-province-city-cost`) cannot be called from event cards without inlining the relevant logic. The compiler validates all branches statically — even unreachable ones will fail.
+
 ## Build & Test Commands
 
 ```bash

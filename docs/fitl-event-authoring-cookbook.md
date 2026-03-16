@@ -527,6 +527,31 @@ Production reference:
 
 - Card 92 (`SEALORDS`) integration tests demonstrate both patterns: the full-event test verifies ordered grant surfacing and single-grant activation, while isolated-grant tests verify in-place Sweep restrictions and US no-followup behavior independently.
 
+## Operation-Context-Only Bindings
+
+The built-in bindings `__freeOperation` and `__actionClass` are injected by the kernel only during **operation pipeline** execution. They are **not available** inside event card effects.
+
+This matters when an event card reuses a macro that was originally written for an operation profile. If that macro (or any sub-macro it calls) references `__freeOperation` or `__actionClass`, the compiler will emit `CNL_COMPILER_BINDING_UNBOUND` — even if the reference is inside a conditional branch that would never execute at runtime. The compiler validates all branches statically.
+
+**Fix**: When adding a "free" or "skip cost" variant to an operation macro for use in events, inline the cost logic instead of delegating to sub-macros that reference operation-context bindings.
+
+Production reference: `insurgent-terror-resolve-space` uses a `free` parameter with inlined cost logic rather than delegating to `per-province-city-cost` (which references `__freeOperation`).
+
+## Testing Pivotal Events With Play Conditions
+
+Pivotal Event cards have play conditions that require specific board state (e.g., Card 124 requires `leaderBoxCardCount >= 2` AND `>20 VC guerrillas in SV`). When testing with `clearAllZones`, the board is empty and these conditions must be satisfied explicitly.
+
+**Filler guerrilla activity state matters.** When placing filler guerrillas to meet a count-based play condition:
+
+- Use **active** guerrillas for filler pieces. Active guerrillas count for presence/count checks but do not trigger underground-specific filters (e.g., the Tet Offensive terror `chooseN` only matches underground VC).
+- Using **underground** filler guerrillas makes them eligible for effects like terror, which adds them to mandatory `chooseN` selections and forces execution in spaces whose production marker defaults may cause `shiftMarker` runtime errors.
+
+**`clearAllZones` does not clear markers.** Production spaces retain their scenario-defined `supportOpposition` states even after `clearAllZones`. The kernel resolves marker states from the compiled GameDef, not from `state.markers`. When an event effect applies `shiftMarker` to a space that was never explicitly configured in the test, the production default may be incompatible with the shift direction. Always set `supportOpposition: 'neutral'` explicitly for any space the event may shift.
+
+**Mandatory `chooseN` cardinality.** When a `chooseN` computes `min` = `max` = eligible count, the test override must supply ALL eligible spaces. You cannot select a subset. Control eligibility through token placement (activity state, faction), not through the override value.
+
+Production reference: Card 124 (`Tet Offensive`) test infrastructure uses active filler guerrillas and explicit marker setup.
+
 ## Practical Checklist
 
 Before considering a new FITL event complete, verify:

@@ -3550,6 +3550,7 @@ actionPipelines:
                     faction: 'NVA'
                     resourceVar: nvaResources
                     shiftFromSupportOnly: true
+                    free: false
     atomicity: atomic
   - id: terror-vc-profile
     actionId: terror
@@ -3578,6 +3579,7 @@ actionPipelines:
                     faction: 'VC'
                     resourceVar: vcResources
                     shiftFromSupportOnly: false
+                    free: false
     atomicity: atomic
   # ── US/ARVN special-activity profiles ──
   - id: advise-profile

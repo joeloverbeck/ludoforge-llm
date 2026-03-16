@@ -7,7 +7,7 @@ export type { MctsConfig, MctsPreset, MctsRolloutMode } from './config.js';
 export { canonicalMoveKey } from './move-key.js';
 export type { MoveKey } from './move-key.js';
 
-export { createRootNode, createChildNode } from './node.js';
+export { createRootNode, createChildNode, createDecisionChildNode } from './node.js';
 export type { MctsNode, ProvenResult } from './node.js';
 
 export { selectChild } from './isuct.js';
@@ -53,5 +53,17 @@ export type {
   MctsRootCandidatesEvent,
   MctsSearchVisitor,
 } from './visitor.js';
+
+export { expandDecisionNode } from './decision-expansion.js';
+export type {
+  DecisionExpansionContext,
+  DecisionExpansionResult,
+  DecisionExpandedResult,
+  DecisionCompleteResult,
+  DecisionIllegalResult,
+  DecisionStochasticResult,
+  DecisionPoolExhaustedResult,
+  DiscoverChoicesFn,
+} from './decision-expansion.js';
 
 export { MctsAgent } from './mcts-agent.js';

@@ -1,6 +1,6 @@
 # 62MCTSSEAVIS-008: Decision Expansion Module
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — agents/mcts (new file)
@@ -81,3 +81,16 @@ If a decision step has exactly 1 legal option, skip node allocation — advance 
 
 1. `pnpm -F @ludoforge/engine test -- --test-path-pattern decision-expansion`
 2. `pnpm turbo build && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-16
+- **What changed**:
+  - Created `packages/engine/src/agents/mcts/decision-expansion.ts` with `expandDecisionNode()` — handles all `ChoiceRequest` response kinds (pending chooseOne/chooseN, complete, illegal, pendingStochastic), forced-sequence compression, progressive widening bypass, pool exhaustion graceful degradation.
+  - `DiscoverChoicesFn` injected via `DecisionExpansionContext` for testability (defaults to kernel `legalChoicesDiscover`).
+  - `DecisionExpansionResult` is a 5-variant discriminated union: `expanded`, `complete`, `illegal`, `stochastic`, `poolExhausted`.
+  - Pool node wiring uses mutable casts (same pattern as `search.ts`).
+  - Added re-exports in `index.ts` for `expandDecisionNode`, all result types, `DiscoverChoicesFn`, and `createDecisionChildNode`.
+  - Created `packages/engine/test/unit/agents/mcts/decision-expansion.test.ts` — 15 tests across 8 suites covering all 9 acceptance criteria plus diagnostics accumulator integration.
+- **Deviations**: Signature is `expandDecisionNode(node, pool, ctx)` with a `DecisionExpansionContext` object instead of positional args — cleaner API for the many required context fields (def, state, playerCount, decisionWideningCap, visitor, accumulator, runtime, discoverChoices).
+- **Verification**: `pnpm turbo build` passes, `pnpm turbo typecheck` passes (all 3 packages), 15/15 new tests pass, full engine suite 4866/4866 pass.

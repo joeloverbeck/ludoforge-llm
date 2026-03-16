@@ -1,6 +1,6 @@
 # 62MCTSSEAVIS-012: Pool Sizing, Graceful Degradation & Post-Completion
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agents/mcts/mcts-agent.ts
@@ -86,3 +86,14 @@ Update `postCompleteSelectedMove()` in `mcts-agent.ts`:
 
 1. `pnpm -F @ludoforge/engine test -- --test-path-pattern mcts-agent`
 2. `pnpm turbo build && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-16
+- **What changed**:
+  - `search.ts`: Added `iterationIndex` parameter to `runOneIteration`; added pool exhaustion try/catch with `poolExhausted` visitor event emission at 3 allocation sites (decision-complete state child, decision root creation, state-node expansion); search continues remaining iterations after exhaustion.
+  - `mcts-agent.ts`: `postCompleteSelectedMove` now handles `bestChild.nodeKind === 'decision'` — follows highest-visit path through decision subtree, completes remaining decisions via `completeTemplateMove()`, falls back to original template/siblings/legal moves.
+  - New test file `mcts-agent-pool.test.ts` (5 tests): pool formula default/custom multiplier, floor, exhaustion non-abort, valid results after exhaustion.
+  - New test file `mcts-agent-post-completion.test.ts` (4 tests): concrete child unchanged, decision subtree path, completion, fully-resolved invariant.
+- **Deviations**: Pool capacity formula (deliverable #1) was already implemented from a prior ticket; only tests were added for it.
+- **Verification**: Build pass, typecheck pass, 17/17 new tests pass, 4914/4914 full engine suite pass (0 regressions).

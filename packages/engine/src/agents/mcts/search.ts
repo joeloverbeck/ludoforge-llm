@@ -157,6 +157,7 @@ export function runOneIteration(
   mastStats?: MastStats,
   stateCache?: StateInfoCache,
   maxCacheEntries?: number,
+  iterationIndex: number = 0,
 ): { readonly rng: Rng } {
   let currentNode = root;
   let currentState = sampledState;
@@ -204,7 +205,20 @@ export function runOneIteration(
               currentState = applied.state;
 
               // Create a state child node for the completed move.
-              const stateChild = pool.allocate();
+              let stateChild: MctsNode;
+              try {
+                stateChild = pool.allocate();
+              } catch {
+                // Pool exhausted after decision completion — emit event, backprop from current.
+                if (config.visitor?.onEvent) {
+                  config.visitor.onEvent({
+                    type: 'poolExhausted',
+                    capacity: pool.capacity,
+                    iteration: iterationIndex,
+                  });
+                }
+                break;
+              }
               const completedMoveKey = canonicalMoveKey(expansionResult.move);
               (stateChild as { move: Move | null }).move = expansionResult.move;
               (stateChild as { moveKey: MoveKey | null }).moveKey = completedMoveKey;
@@ -360,7 +374,14 @@ export function runOneIteration(
             dRoot.availability = 0;
             currentNode.children.push(dRoot);
           } catch {
-            // Pool exhausted — skip remaining template roots.
+            // Pool exhausted — emit event, skip remaining template roots.
+            if (config.visitor?.onEvent) {
+              config.visitor.onEvent({
+                type: 'poolExhausted',
+                capacity: pool.capacity,
+                iteration: iterationIndex,
+              });
+            }
             break;
           }
         }
@@ -467,7 +488,20 @@ export function runOneIteration(
         currentRng = postExpansion;
 
         // Allocate a child node from the pool.
-        const childNode = pool.allocate();
+        let childNode: MctsNode;
+        try {
+          childNode = pool.allocate();
+        } catch {
+          // Pool exhausted — emit event, skip expansion, backprop from current.
+          if (config.visitor?.onEvent) {
+            config.visitor.onEvent({
+              type: 'poolExhausted',
+              capacity: pool.capacity,
+              iteration: iterationIndex,
+            });
+          }
+          break;
+        }
         // Wire the child into the tree — we must set its fields manually
         // because pool.allocate() returns a reset root-style node.
         (childNode as { move: Move | null }).move = chosen.move;
@@ -872,6 +906,7 @@ export function runSearch(
       mastStats,
       stateCache,
       maxCacheEntries,
+      iterations,
     );
     // Consume the iteration's RNG output (determinism is via fork chain).
     void result;

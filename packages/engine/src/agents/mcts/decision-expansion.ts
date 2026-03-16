@@ -12,7 +12,7 @@
  * moves are returned to the caller for state-node creation.
  */
 
-import type { Move, ChoiceRequest, ChoicePendingRequest, ChoiceStochasticPendingRequest } from '../../kernel/types-core.js';
+import type { Move, ChoiceRequest, ChoicePendingRequest, ChoiceStochasticPendingRequest, CompoundDecisionPath, CompoundMovePayload } from '../../kernel/types-core.js';
 import type { MoveParamValue } from '../../kernel/types-ast.js';
 import type { GameDef, GameState } from '../../kernel/types.js';
 import type { GameDefRuntime } from '../../kernel/gamedef-runtime.js';
@@ -107,8 +107,8 @@ function computeDecisionDepth(node: MctsNode): number {
   return depth;
 }
 
-/** Build a child partial move by setting the decision key value. */
-function advancePartialMove(
+/** Build a child partial move by setting the decision key value on the main action params. */
+function advanceMainParams(
   partialMove: Move,
   decisionKey: string,
   value: MoveParamValue,
@@ -120,6 +120,46 @@ function advancePartialMove(
       [decisionKey]: value,
     },
   };
+}
+
+/** Build a child partial move by setting the decision key value on the compound SA params. */
+function advanceCompoundSAParams(
+  partialMove: Move,
+  decisionKey: string,
+  value: MoveParamValue,
+): Move {
+  const compound = partialMove.compound;
+  if (compound === undefined) {
+    throw new Error('advanceCompoundSAParams: move has no compound payload');
+  }
+  const updatedSA: Move = {
+    ...compound.specialActivity,
+    params: {
+      ...compound.specialActivity.params,
+      [decisionKey]: value,
+    },
+  };
+  const updatedCompound: CompoundMovePayload = {
+    ...compound,
+    specialActivity: updatedSA,
+  };
+  return {
+    ...partialMove,
+    compound: updatedCompound,
+  };
+}
+
+/** Route decision value to the correct location based on `decisionPath`. */
+function advancePartialMove(
+  partialMove: Move,
+  decisionKey: string,
+  value: MoveParamValue,
+  decisionPath?: CompoundDecisionPath,
+): Move {
+  if (decisionPath === 'compound.specialActivity') {
+    return advanceCompoundSAParams(partialMove, decisionKey, value);
+  }
+  return advanceMainParams(partialMove, decisionKey, value);
 }
 
 function emitDecisionNodeCreated(
@@ -350,7 +390,7 @@ function expandPendingDecision(
   // If exactly 1 legal option, skip node allocation and recurse.
   if (optionsToExpand.length === 1) {
     const singleOption = optionsToExpand[0]!;
-    const advancedMove = advancePartialMove(partialMove, decisionKey, singleOption.value);
+    const advancedMove = advancePartialMove(partialMove, decisionKey, singleOption.value, request.decisionPath);
 
     const discover = ctx.discoverChoices ?? legalChoicesDiscover;
     const nextResponse = discover(def, state, advancedMove, undefined, ctx.runtime);
@@ -375,7 +415,7 @@ function expandPendingDecision(
   const children: MctsNode[] = [];
 
   for (const option of optionsToExpand) {
-    const childMove = advancePartialMove(partialMove, decisionKey, option.value);
+    const childMove = advancePartialMove(partialMove, decisionKey, option.value, request.decisionPath);
     const moveKey = canonicalMoveKey(childMove);
 
     let child: MctsNode;

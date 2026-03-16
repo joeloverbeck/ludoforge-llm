@@ -560,3 +560,180 @@ describe('expandDecisionNode — diagnostics accumulator', () => {
     assert.equal(accumulator.decisionIllegalPruned, 1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// 8. Compound SA — decisionPath routing
+// ---------------------------------------------------------------------------
+
+describe('expandDecisionNode — compound SA decisionPath', () => {
+  const SA_ACTION_ID = 'governSA';
+
+  function stubCompoundMove(
+    mainParams: Record<string, unknown> = {},
+    saParams: Record<string, unknown> = {},
+  ): Move {
+    return {
+      actionId: ACTION_ID,
+      params: mainParams as Move['params'],
+      compound: {
+        specialActivity: {
+          actionId: SA_ACTION_ID,
+          params: saParams as Move['params'],
+        },
+        timing: 'after' as const,
+      },
+    } as Move;
+  }
+
+  it('routes SA decisions to compound.specialActivity.params', () => {
+    // First call: main action pending for province
+    // Second call (after province filled): SA pending for city with decisionPath
+    let callCount = 0;
+    const discover: DiscoverChoicesFn = (_def, _state, _move) => {
+      callCount += 1;
+      if (callCount === 1) {
+        // First call — main action choice
+        return {
+          kind: 'pending',
+          complete: false,
+          decisionPlayer: PLAYER_0,
+          decisionKey: dk('province'),
+          name: 'chooseProvince',
+          type: 'chooseOne',
+          options: [
+            { value: 'A', legality: 'unknown', illegalReason: null },
+          ],
+          targetKinds: [],
+        } as ChoiceRequest;
+      }
+      // Second call — SA choice with decisionPath
+      return {
+        kind: 'pending',
+        complete: false,
+        decisionPlayer: PLAYER_0,
+        decisionKey: dk('city'),
+        name: 'chooseCity',
+        type: 'chooseOne',
+        decisionPath: 'compound.specialActivity',
+        options: [
+          { value: 'X', legality: 'unknown', illegalReason: null },
+          { value: 'Y', legality: 'unknown', illegalReason: null },
+        ],
+        targetKinds: [],
+      } as ChoiceRequest;
+    };
+
+    const pool = createNodePool(20, PLAYER_COUNT);
+    pool.allocate();
+
+    const node = makeDecisionNode(stubCompoundMove());
+    // First expansion: main action choice with 1 option → forced-sequence compression
+    // → recurses into second call which returns SA pending with 2 options
+    const result = expandDecisionNode(node, pool, makeCtx(discover));
+
+    assert.equal(result.kind, 'expanded');
+    if (result.kind !== 'expanded') return;
+
+    // The forced-sequence compression for the single main option should have
+    // advanced the main params, then expanded the SA choice (2 options).
+    assert.equal(result.children.length, 2);
+
+    // Verify SA params were routed to compound.specialActivity.params, not main params
+    for (const child of result.children) {
+      const childMove = child.partialMove!;
+      // Main params should have province filled (from forced-sequence compression)
+      assert.equal(childMove.params.province, 'A');
+      // SA params should have the city value
+      assert.ok(childMove.compound !== undefined, 'compound payload should exist');
+      const saCity = childMove.compound!.specialActivity.params.city;
+      assert.ok(saCity === 'X' || saCity === 'Y', `SA city should be X or Y, got ${String(saCity)}`);
+    }
+  });
+
+  it('non-compound moves are unaffected — params go to top-level', () => {
+    const pending: ChoiceRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionPlayer: PLAYER_0,
+      decisionKey: dk('province'),
+      name: 'chooseProvince',
+      type: 'chooseOne',
+      options: [
+        { value: 'A', legality: 'unknown', illegalReason: null },
+        { value: 'B', legality: 'unknown', illegalReason: null },
+      ],
+      targetKinds: [],
+      // no decisionPath — defaults to main
+    };
+
+    const discover: DiscoverChoicesFn = () => pending;
+    const pool = createNodePool(20, PLAYER_COUNT);
+    pool.allocate();
+
+    const node = makeDecisionNode(stubPartialMove());
+    const result = expandDecisionNode(node, pool, makeCtx(discover));
+
+    assert.equal(result.kind, 'expanded');
+    if (result.kind !== 'expanded') return;
+    assert.equal(result.children.length, 2);
+
+    // Params go to top-level move.params
+    for (const child of result.children) {
+      assert.ok(child.partialMove!.params.province !== undefined);
+      assert.equal(child.partialMove!.compound, undefined);
+    }
+  });
+
+  it('complete result includes full compound move with SA params filled', () => {
+    // SA is complete after forced-sequence compression fills both main and SA
+    const discover: DiscoverChoicesFn = (_def, _state, probeMove) => {
+      // If SA params are filled, return complete
+      if (probeMove.compound?.specialActivity.params.city !== undefined) {
+        return { kind: 'complete', complete: true };
+      }
+      // If main params are filled, return SA choice
+      if (probeMove.params.province !== undefined) {
+        return {
+          kind: 'pending',
+          complete: false,
+          decisionPlayer: PLAYER_0,
+          decisionKey: dk('city'),
+          name: 'chooseCity',
+          type: 'chooseOne',
+          decisionPath: 'compound.specialActivity',
+          options: [
+            { value: 'X', legality: 'unknown', illegalReason: null },
+          ],
+          targetKinds: [],
+        } as ChoiceRequest;
+      }
+      // Main not yet filled
+      return {
+        kind: 'pending',
+        complete: false,
+        decisionPlayer: PLAYER_0,
+        decisionKey: dk('province'),
+        name: 'chooseProvince',
+        type: 'chooseOne',
+        options: [
+          { value: 'A', legality: 'unknown', illegalReason: null },
+        ],
+        targetKinds: [],
+      } as ChoiceRequest;
+    };
+
+    const pool = createNodePool(20, PLAYER_COUNT);
+    pool.allocate();
+
+    const node = makeDecisionNode(stubCompoundMove());
+    // Both main and SA have single option → forced-sequence to complete
+    const result = expandDecisionNode(node, pool, makeCtx(discover));
+
+    assert.equal(result.kind, 'complete');
+    if (result.kind !== 'complete') return;
+
+    // The completed move should have both main and SA params
+    assert.equal(result.move.params.province, 'A');
+    assert.equal(result.move.compound?.specialActivity.params.city, 'X');
+  });
+});

@@ -474,6 +474,30 @@ export function runOneIteration(
 }
 
 // ---------------------------------------------------------------------------
+// Visitor helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Collect the top root children sorted by visits descending (capped at 10).
+ * Used for `iterationBatch` visitor events.
+ */
+function getTopChildren(
+  root: MctsNode,
+): readonly { readonly actionId: string; readonly visits: number }[] {
+  const visited: { readonly actionId: string; readonly visits: number }[] = [];
+  for (const child of root.children) {
+    if (child.visits > 0 && child.move !== null) {
+      visited.push({ actionId: child.move.actionId, visits: child.visits });
+    }
+  }
+  visited.sort((a, b) => b.visits - a.visits);
+  if (visited.length > 10) {
+    visited.length = 10;
+  }
+  return visited;
+}
+
+// ---------------------------------------------------------------------------
 // Main search loop
 // ---------------------------------------------------------------------------
 
@@ -506,6 +530,44 @@ export function runSearch(
   // Diagnostics instrumentation.
   const acc = config.diagnostics === true ? createAccumulator() : undefined;
   const searchStart = config.diagnostics === true ? performance.now() : undefined;
+
+  // ── Visitor: emit searchStart ──────────────────────────────────────────
+  const onEvent = config.visitor?.onEvent;
+  const visitorStart = onEvent !== undefined ? performance.now() : 0;
+
+  if (onEvent !== undefined) {
+    let concreteCount = 0;
+    let templateCount = 0;
+    for (const move of rootLegalMoves) {
+      if (runtime.concreteActionIds.has(move.actionId)) {
+        concreteCount += 1;
+      } else {
+        templateCount += 1;
+      }
+    }
+    onEvent({
+      type: 'searchStart',
+      totalIterations: config.iterations,
+      legalMoveCount: rootLegalMoves.length,
+      concreteCount,
+      templateCount,
+      poolCapacity: pool.capacity,
+    });
+  }
+
+  // ── Visitor: allocation tracking via pool wrapper ──────────────────────
+  let nodesAllocated = 0;
+  const effectivePool: NodePool = onEvent !== undefined
+    ? {
+        get capacity() { return pool.capacity; },
+        allocate() { nodesAllocated += 1; return pool.allocate(); },
+        reset() { pool.reset(); },
+      }
+    : pool;
+
+  // ── Visitor: batch tracking ────────────────────────────────────────────
+  const VISITOR_BATCH_SIZE = 50;
+  let batchFromIteration = 0;
 
   // Check solver activation once at search start.
   const solverActive = canActivateSolver(def, state, config);
@@ -577,7 +639,7 @@ export function runSearch(
       config,
       rootLegalMoves,
       runtime,
-      pool,
+      effectivePool,
       solverActive,
       acc,
       mastStats,
@@ -588,6 +650,56 @@ export function runSearch(
     void result;
 
     iterations += 1;
+
+    // ── Visitor: emit iterationBatch every VISITOR_BATCH_SIZE iterations ──
+    if (
+      onEvent !== undefined &&
+      iterations - batchFromIteration >= VISITOR_BATCH_SIZE
+    ) {
+      onEvent({
+        type: 'iterationBatch',
+        fromIteration: batchFromIteration,
+        toIteration: iterations,
+        rootChildCount: root.children.length,
+        elapsedMs: performance.now() - visitorStart,
+        nodesAllocated,
+        topChildren: getTopChildren(root),
+      });
+      batchFromIteration = iterations;
+    }
+  }
+
+  // ── Visitor: emit final partial batch (if iterations remain since last batch) ──
+  if (onEvent !== undefined && iterations > batchFromIteration) {
+    onEvent({
+      type: 'iterationBatch',
+      fromIteration: batchFromIteration,
+      toIteration: iterations,
+      rootChildCount: root.children.length,
+      elapsedMs: performance.now() - visitorStart,
+      nodesAllocated,
+      topChildren: getTopChildren(root),
+    });
+  }
+
+  // ── Visitor: emit searchComplete ───────────────────────────────────────
+  if (onEvent !== undefined) {
+    let bestActionId = '';
+    let bestVisits = 0;
+    for (const child of root.children) {
+      if (child.visits > bestVisits && child.move !== null) {
+        bestActionId = child.move.actionId;
+        bestVisits = child.visits;
+      }
+    }
+    onEvent({
+      type: 'searchComplete',
+      iterations,
+      stopReason: stopReason as 'confidence' | 'solver' | 'time' | 'iterations',
+      elapsedMs: performance.now() - visitorStart,
+      bestActionId,
+      bestVisits,
+    });
   }
 
   // Collect diagnostics if enabled.

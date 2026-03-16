@@ -1,6 +1,6 @@
 # 62MCTSSEAVIS-003: Wire Visitor into Search Loop
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agents/mcts/search.ts
@@ -80,3 +80,12 @@ Single conditional check — zero overhead when no visitor.
 
 1. `pnpm -F @ludoforge/engine test -- --test-path-pattern search`
 2. `pnpm turbo build && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-16
+- **What changed**:
+  - `packages/engine/src/agents/mcts/search.ts` — added `searchStart`, `iterationBatch` (every 50 iterations), and `searchComplete` visitor emissions to `runSearch()`, guarded by `if (onEvent !== undefined)`. Added `getTopChildren()` helper. Pool wrapper tracks `nodesAllocated` without modifying `NodePool` interface.
+  - `packages/engine/test/unit/agents/mcts/search-visitor.test.ts` — 16 tests across 5 suites covering all acceptance criteria.
+- **Deviations from original plan**: None. Only `search.ts` was modified as specified. Pool allocation tracking done via an inline wrapper object rather than modifying `node-pool.ts`.
+- **Verification results**: All 16 new tests pass. All 12 existing search tests pass (no regressions). `pnpm turbo build && pnpm turbo typecheck` clean.

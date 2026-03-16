@@ -1,6 +1,6 @@
 # 63MCTSRUNMOVCLA-002: Implement `classifyMovesForSearch`
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — MCTS `materialization.ts`

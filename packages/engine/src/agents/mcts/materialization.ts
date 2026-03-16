@@ -18,6 +18,112 @@ import type { MctsSearchVisitor } from './visitor.js';
 import type { MctsNode } from './node.js';
 
 // ---------------------------------------------------------------------------
+// MoveClassification
+// ---------------------------------------------------------------------------
+
+/**
+ * Result of classifying legal moves by runtime readiness.
+ *
+ * - `ready`: moves with `legalChoicesEvaluate() → 'complete'` — can be applied directly.
+ * - `pending`: moves with `legalChoicesEvaluate() → 'pending'` — need decision root nodes.
+ */
+export interface MoveClassification {
+  readonly ready: readonly ConcreteMoveCandidate[];
+  readonly pending: readonly Move[];
+}
+
+// ---------------------------------------------------------------------------
+// classifyMovesForSearch
+// ---------------------------------------------------------------------------
+
+/**
+ * Classify legal moves by runtime readiness using `legalChoicesEvaluate`.
+ *
+ * This is the sole move classification entry point for MCTS in-tree search.
+ * All moves are evaluated against the current game state — no compile-time
+ * shortcuts.
+ *
+ * Ready moves are deduplicated by `MoveKey`.  Pending moves are deduplicated
+ * by `actionId` — unless they carry distinct initial params, in which case
+ * they are deduplicated by `canonicalMoveKey`.
+ *
+ * Illegal and pendingStochastic moves are silently dropped.  Moves that throw
+ * during classification are dropped with an optional visitor event.
+ *
+ * This function is **pure** — no RNG state consumed, no side effects beyond
+ * visitor events.
+ */
+export function classifyMovesForSearch(
+  def: GameDef,
+  state: GameState,
+  moves: readonly Move[],
+  runtime?: GameDefRuntime,
+  visitor?: MctsSearchVisitor,
+): MoveClassification {
+  const ready: ConcreteMoveCandidate[] = [];
+  const pending: Move[] = [];
+  const seenReadyKeys = new Set<string>();
+  const seenPendingKeys = new Set<string>();
+
+  for (let i = 0; i < moves.length; i += 1) {
+    const move = moves[i]!;
+
+    let kind: string;
+    try {
+      kind = legalChoicesEvaluate(def, state, move, undefined, runtime).kind;
+    } catch {
+      if (visitor?.onEvent) {
+        visitor.onEvent({
+          type: 'templateDropped',
+          actionId: move.actionId,
+          reason: 'unsatisfiable',
+        });
+      }
+      continue;
+    }
+
+    switch (kind) {
+      case 'complete': {
+        const key = canonicalMoveKey(move);
+        if (!seenReadyKeys.has(key)) {
+          seenReadyKeys.add(key);
+          ready.push({ move, moveKey: key });
+        }
+        break;
+      }
+      case 'pending': {
+        // Deduplicate by actionId when params are empty, by canonicalMoveKey
+        // when the move carries distinct initial params.
+        const hasParams = Object.keys(move.params).length > 0;
+        const dedupKey = hasParams ? canonicalMoveKey(move) : move.actionId;
+        if (!seenPendingKeys.has(dedupKey)) {
+          seenPendingKeys.add(dedupKey);
+          pending.push(move);
+        }
+        break;
+      }
+      case 'illegal':
+        // Silently skip.
+        break;
+      case 'pendingStochastic':
+        if (visitor?.onEvent) {
+          visitor.onEvent({
+            type: 'templateDropped',
+            actionId: move.actionId,
+            reason: 'stochasticUnresolved',
+          });
+        }
+        break;
+      default:
+        // Unknown kind — skip.
+        break;
+    }
+  }
+
+  return { ready, pending };
+}
+
+// ---------------------------------------------------------------------------
 // materializeConcreteCandidates
 // ---------------------------------------------------------------------------
 

@@ -40,6 +40,88 @@ export interface WitnessSearchTierContext {
   readonly normalizedDomain: readonly MoveParamScalar[];
 }
 
+// ── Diagnostics ────────────────────────────────────────────────────────
+
+/**
+ * Dev-only diagnostics payload for chooseN resolution instrumentation.
+ * Gated behind the `collectDiagnostics` flag — zero overhead when off.
+ *
+ * Per spec 8.3. Extended with stochastic/ambiguous breakdowns beyond
+ * the spec minimum for full observability.
+ */
+export interface ChooseNDiagnostics {
+  readonly mode: 'exactEnumeration' | 'hybridSearch';
+  readonly exactOptionCount: number;
+  readonly provisionalOptionCount: number;
+  readonly stochasticOptionCount: number;
+  readonly ambiguousOptionCount: number;
+  readonly singletonProbeCount: number;
+  readonly witnessNodeCount: number;
+  readonly probeCacheHits: number;
+  readonly sessionUsed: boolean;
+}
+
+/** Mutable accumulator threaded through resolution passes. */
+export interface ChooseNDiagnosticsAccumulator {
+  mode: ChooseNDiagnostics['mode'];
+  singletonProbeCount: number;
+  witnessNodeCount: number;
+  probeCacheHits: number;
+  sessionUsed: boolean;
+}
+
+/** Create a fresh zero-initialized diagnostics accumulator. */
+export const createDiagnosticsAccumulator = (
+  mode: ChooseNDiagnostics['mode'],
+): ChooseNDiagnosticsAccumulator => ({
+  mode,
+  singletonProbeCount: 0,
+  witnessNodeCount: 0,
+  probeCacheHits: 0,
+  sessionUsed: false,
+});
+
+/** Finalize an accumulator into an immutable diagnostics snapshot. */
+export const finalizeDiagnostics = (
+  accumulator: ChooseNDiagnosticsAccumulator,
+  resolvedOptions: readonly ChoiceOption[],
+): ChooseNDiagnostics => {
+  let exactOptionCount = 0;
+  let provisionalOptionCount = 0;
+  let stochasticOptionCount = 0;
+  let ambiguousOptionCount = 0;
+
+  for (const opt of resolvedOptions) {
+    switch (opt.resolution) {
+      case 'exact':
+      case undefined:
+        exactOptionCount += 1;
+        break;
+      case 'provisional':
+        provisionalOptionCount += 1;
+        break;
+      case 'stochastic':
+        stochasticOptionCount += 1;
+        break;
+      case 'ambiguous':
+        ambiguousOptionCount += 1;
+        break;
+    }
+  }
+
+  return {
+    mode: accumulator.mode,
+    exactOptionCount,
+    provisionalOptionCount,
+    stochasticOptionCount,
+    ambiguousOptionCount,
+    singletonProbeCount: accumulator.singletonProbeCount,
+    witnessNodeCount: accumulator.witnessNodeCount,
+    probeCacheHits: accumulator.probeCacheHits,
+    sessionUsed: accumulator.sessionUsed,
+  };
+};
+
 // ── Singleton probe outcome types ──────────────────────────────────────
 
 export type SingletonProbeOutcome =
@@ -141,6 +223,7 @@ export const runSingletonProbePass = (
   uniqueOptions: readonly Move['params'][string][],
   selectedKeys: ReadonlySet<string>,
   budget: SingletonProbeBudget,
+  diagnostics?: ChooseNDiagnosticsAccumulator,
 ): readonly ChoiceOption[] => {
   // Build per-option result map. Start with static results from effects-choice.
   const resultByKey = new Map<
@@ -178,6 +261,9 @@ export const runSingletonProbePass = (
     }
 
     budget.remaining -= 1;
+    if (diagnostics !== undefined) {
+      diagnostics.singletonProbeCount += 1;
+    }
 
     const probeSelection = [...request.selected, optionValue] as Move['params'][string];
     const probeMove: Move = {
@@ -500,6 +586,7 @@ export const runWitnessSearch = (
   budget: WitnessSearchBudget,
   stats?: WitnessSearchStats,
   tierContext?: WitnessSearchTierContext,
+  diagnostics?: ChooseNDiagnosticsAccumulator,
 ): readonly ChoiceOption[] => {
   // Collect unresolved option keys from singleton pass.
   const unresolvedKeys = new Set<string>();
@@ -580,6 +667,12 @@ export const runWitnessSearch = (
       resultByKey.set(targetKey, { legality: 'illegal', illegalReason: null, resolution: 'exact' });
     }
     // 'budget' → stays provisional.
+  }
+
+  // Sync witness search stats into diagnostics accumulator.
+  if (diagnostics !== undefined && stats !== undefined) {
+    diagnostics.witnessNodeCount += stats.nodesVisited;
+    diagnostics.probeCacheHits += stats.cacheHits;
   }
 
   // Build final option array preserving original order.

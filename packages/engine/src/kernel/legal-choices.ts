@@ -1,6 +1,10 @@
 import {
   runSingletonProbePass,
   runWitnessSearch,
+  createDiagnosticsAccumulator,
+  finalizeDiagnostics,
+  type ChooseNDiagnostics,
+  type ChooseNDiagnosticsAccumulator,
   type SingletonProbeBudget,
   type WitnessSearchBudget,
 } from './choose-n-option-resolution.js';
@@ -80,10 +84,16 @@ export interface LegalChoicesRuntimeOptions {
   readonly onProbeContextPrepared?: () => void;
   /** Callback invoked when a chooseN pending choice is discovered, delivering the full-fidelity template for session-based optimization. */
   readonly onChooseNTemplateCreated?: (template: ChooseNTemplate) => void;
+  /** When true, collects chooseN resolution diagnostics and delivers them via onChooseNDiagnostics. Dev-only — zero overhead when false/undefined. */
+  readonly collectDiagnostics?: boolean;
+  /** Callback invoked with diagnostics after a chooseN resolution completes. Only called when collectDiagnostics is true. */
+  readonly onChooseNDiagnostics?: (diagnostics: ChooseNDiagnostics) => void;
 }
 
 interface LegalChoicesInternalOptions extends LegalChoicesRuntimeOptions {
   readonly transientChooseNSelections?: Readonly<Record<string, readonly MoveParamScalar[]>>;
+  /** Mutable accumulator for diagnostics collection. Internal only — created by public API when collectDiagnostics is true. */
+  readonly _diagnosticsAccumulator?: ChooseNDiagnosticsAccumulator;
 }
 
 const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undefined =>
@@ -400,6 +410,7 @@ const mapChooseNOptions = (
   classifyProbeMoveSatisfiability: (move: Move) => DecisionSequenceSatisfiability,
   partialMove: Move,
   request: ChoicePendingRequest,
+  diagnostics?: ChooseNDiagnosticsAccumulator,
 ): readonly ChoiceOption[] => {
   if (request.type !== 'chooseN') {
     throw new Error('mapChooseNOptions requires a chooseN request');
@@ -438,6 +449,9 @@ const mapChooseNOptions = (
       MAX_CHOOSE_N_EXACT_ENUMERATION_COMBINATIONS - totalCombinations + 1,
     );
     if (totalCombinations > MAX_CHOOSE_N_EXACT_ENUMERATION_COMBINATIONS) {
+      if (diagnostics !== undefined) {
+        diagnostics.mode = 'hybridSearch';
+      }
       // Large domain: singleton probe pass for O(n) fast filtering,
       // then witness search for unresolved candidates.
       const singletonBudget: SingletonProbeBudget = { remaining: MAX_CHOOSE_N_TOTAL_PROBE_BUDGET };
@@ -449,10 +463,12 @@ const mapChooseNOptions = (
         uniqueOptions,
         selectedKeys,
         singletonBudget,
+        diagnostics,
       );
 
       // Witness search for options left unresolved by singleton pass.
       const witnessBudget: WitnessSearchBudget = { remaining: MAX_CHOOSE_N_TOTAL_WITNESS_NODES };
+      const witnessStats = diagnostics !== undefined ? { cacheHits: 0, nodesVisited: 0 } : undefined;
       return runWitnessSearch(
         evaluateProbeMove,
         classifyProbeMoveSatisfiability,
@@ -462,6 +478,9 @@ const mapChooseNOptions = (
         uniqueOptions,
         selectedKeys,
         witnessBudget,
+        witnessStats,
+        undefined,
+        diagnostics,
       );
     }
   }
@@ -482,9 +501,10 @@ const mapOptionsForPendingChoice = (
   classifyProbeMoveSatisfiability: (move: Move) => DecisionSequenceSatisfiability,
   partialMove: Move,
   request: ChoicePendingRequest,
+  diagnostics?: ChooseNDiagnosticsAccumulator,
 ): readonly ChoiceOption[] => {
   if (request.type === 'chooseN') {
-    return mapChooseNOptions(evaluateProbeMove, classifyProbeMoveSatisfiability, partialMove, request);
+    return mapChooseNOptions(evaluateProbeMove, classifyProbeMoveSatisfiability, partialMove, request, diagnostics);
   }
 
   return request.options.map((option) => {
@@ -633,12 +653,14 @@ const mapPendingChoiceOptions = (
   request: ChoicePendingRequest,
   options: LegalChoicesRuntimeOptions | undefined,
   evaluateProbeLegality: ProbeLegalityEvaluator,
+  diagnostics?: ChooseNDiagnosticsAccumulator,
 ): readonly ChoiceOption[] =>
   mapOptionsForPendingChoice(
     (probeMove) => evaluateProbeLegality(probeMove, options),
     (probeMove) => classifyProbeMoveSatisfiability(probeMove, options, evaluateProbeLegality),
     partialMove,
     request,
+    diagnostics,
   );
 
 const legalChoicesWithPreparedContextInternal = (
@@ -718,7 +740,7 @@ const legalChoicesWithPreparedContextInternal = (
       ? actionParamRequest
       : {
       ...actionParamRequest,
-      options: mapPendingChoiceOptions(partialMove, actionParamRequest, options, evaluateProbeLegality),
+      options: mapPendingChoiceOptions(partialMove, actionParamRequest, options, evaluateProbeLegality, options?._diagnosticsAccumulator),
     };
     return finalizeRequest(request);
   }
@@ -784,7 +806,7 @@ const legalChoicesWithPreparedContextInternal = (
       } else {
         return finalizeRequest({
           ...stageResult.request,
-          options: mapPendingChoiceOptions(partialMove, stageResult.request, options, evaluateProbeLegality),
+          options: mapPendingChoiceOptions(partialMove, stageResult.request, options, evaluateProbeLegality, options?._diagnosticsAccumulator),
         });
       }
     }
@@ -800,7 +822,7 @@ const legalChoicesWithPreparedContextInternal = (
 
     return finalizeRequest({
       ...request,
-      options: mapPendingChoiceOptions(partialMove, request, options, evaluateProbeLegality),
+      options: mapPendingChoiceOptions(partialMove, request, options, evaluateProbeLegality, options?._diagnosticsAccumulator),
     });
   }
 
@@ -816,7 +838,7 @@ const legalChoicesWithPreparedContextInternal = (
 
   return finalizeRequest({
     ...request,
-    options: mapPendingChoiceOptions(partialMove, request, options, evaluateProbeLegality),
+    options: mapPendingChoiceOptions(partialMove, request, options, evaluateProbeLegality, options?._diagnosticsAccumulator),
   });
 };
 
@@ -994,7 +1016,17 @@ export function legalChoicesEvaluate(
   validateTurnFlowRuntimeStateInvariants(state);
   const context = prepareLegalChoicesContext(def, state, partialMove, runtime);
   options?.onProbeContextPrepared?.();
-  return legalChoicesWithPreparedContextStrict(context, partialMove, true, options);
+  const accumulator = options?.collectDiagnostics === true
+    ? createDiagnosticsAccumulator('exactEnumeration')
+    : undefined;
+  const internalOptions: LegalChoicesInternalOptions | undefined = accumulator !== undefined
+    ? { ...options, _diagnosticsAccumulator: accumulator }
+    : options;
+  const result = legalChoicesWithPreparedContextStrict(context, partialMove, true, internalOptions);
+  if (accumulator !== undefined && options?.onChooseNDiagnostics !== undefined && result.kind === 'pending' && result.type === 'chooseN') {
+    options.onChooseNDiagnostics(finalizeDiagnostics(accumulator, result.options));
+  }
+  return result;
 }
 
 export function legalChoicesEvaluateWithTransientChooseNSelections(
@@ -1008,13 +1040,21 @@ export function legalChoicesEvaluateWithTransientChooseNSelections(
   validateTurnFlowRuntimeStateInvariants(state);
   const context = prepareLegalChoicesContext(def, state, partialMove, runtime);
   options?.onProbeContextPrepared?.();
-  return legalChoicesWithPreparedContextStrict(
+  const accumulator = options?.collectDiagnostics === true
+    ? createDiagnosticsAccumulator('exactEnumeration')
+    : undefined;
+  const result = legalChoicesWithPreparedContextStrict(
     context,
     partialMove,
     true,
     {
       ...options,
       transientChooseNSelections,
+      ...(accumulator !== undefined ? { _diagnosticsAccumulator: accumulator } : {}),
     },
   );
+  if (accumulator !== undefined && options?.onChooseNDiagnostics !== undefined && result.kind === 'pending' && result.type === 'chooseN') {
+    options.onChooseNDiagnostics(finalizeDiagnostics(accumulator, result.options));
+  }
+  return result;
 }

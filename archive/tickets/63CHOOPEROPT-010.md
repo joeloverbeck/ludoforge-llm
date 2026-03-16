@@ -1,6 +1,6 @@
 # 63CHOOPEROPT-010: Dev-only ChooseNDiagnostics payload
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — choose-n-option-resolution.ts, legal-choices.ts
@@ -102,3 +102,20 @@ Per spec 11.6, CI tests should assert:
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+**Completion date**: 2026-03-16
+
+**What changed**:
+- `packages/engine/src/kernel/choose-n-option-resolution.ts`: Added `ChooseNDiagnostics` interface, `ChooseNDiagnosticsAccumulator`, `createDiagnosticsAccumulator()`, `finalizeDiagnostics()`. Instrumented `runSingletonProbePass` (singletonProbeCount) and `runWitnessSearch` (witnessNodeCount, probeCacheHits) with optional accumulator parameter.
+- `packages/engine/src/kernel/legal-choices.ts`: Added `collectDiagnostics` flag and `onChooseNDiagnostics` callback to `LegalChoicesRuntimeOptions`. Threaded `_diagnosticsAccumulator` through all 5 `mapPendingChoiceOptions` call sites. Accumulator created and finalized in `legalChoicesEvaluate` and `legalChoicesEvaluateWithTransientChooseNSelections`.
+- `packages/engine/test/unit/kernel/choose-n-diagnostics.test.ts`: 9 new tests covering mode detection, counter accuracy, budget assertions, cache hit tracking, and dev flag gating.
+
+**Deviations from plan**:
+- Added `stochasticOptionCount` and `ambiguousOptionCount` beyond spec 8.3 minimum (ticket already specified these).
+- Removed `legacyFallback` mode from the `ChooseNDiagnostics.mode` union — the worktree codebase has no legacy fallback path (the blanket all-unknown fallback was already replaced by 63CHOOPEROPT-003).
+- Worker surfacing (ticket item 4) was marked "optional" and skipped — out of scope per ticket.
+- Performance assertion test file (`choose-n-performance.test.ts`) not created separately — budget assertions are in the main diagnostics test file.
+
+**Verification**: 4751 engine tests pass, 0 failures. Clean typecheck.

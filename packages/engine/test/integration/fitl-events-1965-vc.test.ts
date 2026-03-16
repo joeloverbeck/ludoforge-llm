@@ -85,6 +85,12 @@ describe('FITL VC-first event-card production spec batch', () => {
         sequence: { batch: 'westmoreland-us', step: 1 },
         operationClass: 'operation',
         actionIds: ['sweep', 'assault'],
+        allowDuringMonsoon: true,
+        executionContext: {
+          allowTroopMovement: false,
+          allowArvnFollowup: false,
+          maxSpaces: 2,
+        },
       },
       {
         seat: 'us',

@@ -521,6 +521,59 @@
               ],
               "additionalProperties": false
             }
+          },
+          "onZoneEntry": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "match": {
+                  "type": "object",
+                  "properties": {
+                    "zoneKind": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "board"
+                        },
+                        {
+                          "type": "string",
+                          "const": "aux"
+                        }
+                      ]
+                    },
+                    "category": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "setProps": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "boolean"
+                      }
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "match",
+                "setProps"
+              ],
+              "additionalProperties": false
+            }
           }
         },
         "required": [

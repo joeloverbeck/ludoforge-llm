@@ -240,9 +240,149 @@ FUNCTION handle_crash(experiment_result, attempt_count):
         RETURN CONTINUE_TO_NEXT_IDEA
 ```
 
+### 4.5 Early Abort on Losing Experiments
+
+When the evaluation harness supports intermediate metric checkpoints (e.g., one output line per target file), the agent can abort an experiment early if the running total already exceeds the best known metric by more than `ABORT_THRESHOLD`. This avoids wasting the full time budget on clearly losing experiments.
+
+```
+CONSTANT ABORT_THRESHOLD = 0.05  // abort if 5% worse after any checkpoint
+
+FUNCTION check_early_abort(running_metric, best_metric):
+    IF running_metric > best_metric * (1 + ABORT_THRESHOLD):
+        log_experiment(status=EARLY_ABORT)
+        rollback()
+        RETURN ABORT  // skip remaining checkpoints, move to next experiment
+    RETURN CONTINUE
+```
+
+For multi-file harnesses: after each target file completes, parse its output and update the running total. If the running total already exceeds the abort threshold, kill the harness process immediately and classify the experiment as `EARLY_ABORT` (a subtype of REJECT).
+
+### 4.6 Noise Reduction via Repeated Measurement
+
+Single-run measurements can be noisy. To improve signal quality, the harness can be executed `HARNESS_RUNS` times per experiment. The median result is used for the accept/reject decision, as median is robust to outliers.
+
+```
+CONSTANT HARNESS_RUNS = 1  // default: single run (configurable per campaign)
+
+FUNCTION measure_with_averaging(mutable_system, harness, runs):
+    results = []
+    FOR i IN 1..runs:
+        result = run_experiment(mutable_system, harness)
+        // Early abort still applies per-run
+        IF check_early_abort(result.metric, best_metric) == ABORT:
+            RETURN ABORT
+        results.append(result.metric)
+
+    metric = median(results)
+    spread = max(results) - min(results)
+
+    // If spread is large relative to noise tolerance, add a tiebreaker run
+    IF spread > 2 * NOISE_TOLERANCE AND runs < MAX_RUNS:
+        extra = run_experiment(mutable_system, harness)
+        results.append(extra.metric)
+        metric = median(results)
+
+    RETURN { metric, spread }
+```
+
+Report the spread alongside the metric in the experiment log as a confidence indicator. Apply median-based measurement to the baseline as well.
+
 ---
 
-## 5. The Autonomy Model
+## 5. Adaptive Strategy
+
+### 5.1 Experiment Categories and Success Rate Tracking
+
+Each experiment is tagged with a category from a predefined taxonomy (defined in the campaign's `program.md`). The agent tracks `attempts` and `accepts` per category across the experiment log.
+
+```
+FUNCTION compute_category_success_rates(experiment_log):
+    categories = {}
+    FOR each entry IN experiment_log:
+        cat = entry.category
+        categories[cat].attempts += 1
+        IF entry.status == ACCEPT:
+            categories[cat].accepts += 1
+    FOR each cat IN categories:
+        cat.success_rate = cat.accepts / cat.attempts
+    RETURN categories
+
+// Before hypothesizing, prefer high-yield categories
+// but don't completely ignore low-rate ones (exploration matters)
+```
+
+### 5.2 Near-Miss Detection
+
+A near-miss is an experiment where the metric is within noise tolerance of the best (no worse than ~1%) but not an improvement, AND the change did not simplify the code (lines_delta >= 0). Near-misses represent changes that were "almost good enough" — individually insufficient but potentially powerful in combination.
+
+```
+FUNCTION classify_near_miss(new_metric, best_metric, lines_delta):
+    pct_diff = abs(new_metric - best_metric) / best_metric * 100
+    IF pct_diff <= NOISE_TOLERANCE AND lines_delta >= 0:
+        RETURN NEAR_MISS
+    RETURN REJECT
+```
+
+Near-misses are stored with their diffs (e.g., via `git stash push -m "near-miss-exp-NNN"`) so they can be replayed later.
+
+### 5.3 Plateau Detection and Strategy Shift
+
+A plateau occurs when the agent accumulates `PLATEAU_THRESHOLD` consecutive rejects without any accepts. This signals that the current approach has been exhausted and a strategy shift is needed.
+
+```
+CONSTANT PLATEAU_THRESHOLD = 5  // consecutive rejects before strategy shift
+
+STRATEGY_PROGRESSION:
+    normal   → combine   → ablation   → radical
+    (default)  (replay     (remove       (large structural
+               2-3 near-   complexity    changes, rethink
+               misses      from recent   approach entirely)
+               together)   accepts)
+
+// After any ACCEPT, reset strategy to "normal" and reset reject counter
+```
+
+**Combine strategy:** When near-misses exist, select 2-3 near-miss stashes, apply them together, and test as a single experiment. The hypothesis is that individually-insufficient changes may compound into a real improvement.
+
+**Ablation strategy:** Review recent accepted changes and try removing complexity from them — sometimes an earlier accept introduced unnecessary overhead that can now be stripped.
+
+**Radical strategy:** Abandon incremental optimization and try fundamentally different approaches (different algorithms, restructured data flow, etc.).
+
+### 5.4 Structured Reflection (Musings)
+
+Before implementing an experiment, the agent writes a brief hypothesis about WHY this change should improve the metric. After measuring, the agent records what was learned — whether the hypothesis was confirmed or refuted, and any surprising observations.
+
+```
+// Before implementing (after HYPOTHESIZE):
+APPEND TO musings.md:
+    ## exp-NNN: <description>
+    **Hypothesis**: <why this should work>
+
+// After measuring (after LOG):
+APPEND TO musings.md:
+    **Result**: <ACCEPT|REJECT|NEAR_MISS|CRASH> (<old_ms> → <new_ms> ms)
+    **Learning**: <what was learned, what to try differently>
+```
+
+Musings are stored in `musings.md` in the campaign folder, keyed by experiment ID. This creates a searchable record of the agent's reasoning that improves future hypothesis quality.
+
+### 5.5 Human Steering via Proposal Override
+
+The agent checks for a `next-idea.md` file in the campaign folder at the start of each loop iteration. If the file exists, its contents are used as the hypothesis (skipping normal hypothesis generation). After using the proposal, the file is renamed so it's not reused.
+
+```
+// At the start of HYPOTHESIZE step:
+IF exists(campaign_folder / "next-idea.md"):
+    hypothesis = read("next-idea.md")
+    rename("next-idea.md" → "next-idea.used-exp-NNN.md")
+    RETURN hypothesis
+ELSE:
+    // proceed with normal hypothesis generation
+```
+
+This allows a human to steer the loop without interrupting it — they simply drop a file to inject their next idea.
+
+## 6. The Autonomy Model
 
 The pattern is designed for **fully autonomous operation**. Once the loop begins, the agent requires no human input, approval, or guidance. This is a deliberate design choice, not an accident.
 
@@ -272,11 +412,11 @@ DIRECTIVE never_stop:
 
 ---
 
-## 6. Pseudocode: Complete System
+## 7. Pseudocode: Complete System
 
 ```
 // ============================================================
-// ITERATIVE IMPROVEMENT SYSTEM — COMPLETE PSEUDOCODE
+// ITERATIVE IMPROVEMENT SYSTEM — COMPLETE PSEUDOCODE (v2)
 // ============================================================
 
 // --- CONSTANTS (set once, never changed) ---
@@ -284,27 +424,35 @@ TIME_BUDGET        = <fixed experiment duration>
 HARD_TIMEOUT       = TIME_BUDGET * 2
 FAILURE_THRESHOLD  = <domain-specific catastrophic value>
 MAX_FIX_ATTEMPTS   = 3
+ABORT_THRESHOLD    = 0.05   // early abort if 5% worse at any checkpoint
+PLATEAU_THRESHOLD  = 5      // consecutive rejects before strategy shift
+HARNESS_RUNS       = 1      // runs per experiment (median taken)
+NOISE_TOLERANCE    = 0.01   // 1% metric difference = equal
 
 // --- IMMUTABLE COMPONENTS ---
 evaluation_harness = load_evaluation_harness()  // fixed, read-only
 instruction_spec   = load_instruction_spec()    // goals, constraints, scope
+categories         = load_categories(instruction_spec)  // experiment taxonomy
 
 // --- MUTABLE STATE ---
 mutable_system     = load_current_system()
 experiment_log     = load_or_create_log()
-best_metric        = NULL  // set after baseline
+musings            = load_or_create("musings.md")
+best_metric        = NULL    // set after baseline
+strategy           = "normal"
+consecutive_rejects = 0
 
 // ============================================================
 // PHASE 1: INITIALIZATION
 // ============================================================
 
-// Establish baseline
+// Establish baseline (with multi-run averaging if configured)
 checkpoint(mutable_system)
-baseline_result = run_experiment(mutable_system, TIME_BUDGET)
-best_metric = extract_metric(baseline_result)
+baseline_metric = measure_with_averaging(mutable_system, evaluation_harness, HARNESS_RUNS)
+best_metric = baseline_metric.metric
 log(experiment_log, id=current_id(), metric=best_metric,
     resources=extract_resources(baseline_result),
-    status=ACCEPT, description="baseline")
+    category="baseline", status=ACCEPT, description="baseline measurement")
 
 // ============================================================
 // PHASE 2: IMPROVEMENT LOOP
@@ -316,47 +464,84 @@ LOOP FOREVER:
     current_state = inspect(mutable_system)
     past_experiments = read(experiment_log)
 
+    // --- STEP 1b: CHECK STRATEGY ---
+    consecutive_rejects = count_consecutive_rejects(past_experiments)
+    IF consecutive_rejects >= PLATEAU_THRESHOLD:
+        near_misses = find_near_miss_stashes()
+        IF strategy == "normal" AND near_misses.length > 0:
+            strategy = "combine"
+        ELSE IF strategy IN ("normal", "combine"):
+            strategy = "ablation"
+        ELSE:
+            strategy = "radical"
+
+    // --- STEP 1c: COMPUTE CATEGORY SUCCESS RATES ---
+    category_rates = compute_category_success_rates(past_experiments)
+
     // --- STEP 2: HYPOTHESIZE ---
-    change = generate_hypothesis(
-        current_state,
-        past_experiments,
-        instruction_spec
-    )
-    // If stuck: re-read spec, combine near-misses,
-    // try radical alternatives, read reference material
+    // Check for human steering first
+    IF exists(campaign_folder / "next-idea.md"):
+        change = read("next-idea.md")
+        rename("next-idea.md" → "next-idea.used-exp-NNN.md")
+    ELSE IF strategy == "combine":
+        change = combine_near_misses(select(near_misses, 2..3))
+    ELSE IF strategy == "ablation":
+        change = propose_ablation(recent_accepts)
+    ELSE IF strategy == "radical":
+        change = propose_radical_change(current_state, instruction_spec)
+    ELSE:
+        change = generate_hypothesis(
+            current_state, past_experiments,
+            instruction_spec, category_rates  // prefer high-yield categories
+        )
+
+    // --- STEP 2.5: RECORD HYPOTHESIS ---
+    append(musings, "## exp-NNN: " + change.description)
+    append(musings, "**Hypothesis**: " + change.reasoning)
 
     // --- STEP 3: IMPLEMENT ---
     apply(change, mutable_system)
     checkpoint(mutable_system)
 
-    // --- STEP 4: EXECUTE ---
+    // --- STEP 4: EXECUTE (with multi-run + early abort) ---
     attempt = 0
     RETRY_LOOP:
-        result = run_experiment(mutable_system, TIME_BUDGET)
+        measurement = measure_with_averaging(
+            mutable_system, evaluation_harness, HARNESS_RUNS
+        )
 
-        // --- STEP 4a: FAST-FAIL CHECK ---
-        IF result.status == CATASTROPHIC_FAILURE:
-            IF is_trivial_fix(result.error) AND attempt < MAX_FIX_ATTEMPTS:
-                apply_fix(result.error, mutable_system)
+        // --- STEP 4a: EARLY ABORT CHECK ---
+        IF measurement == ABORT:
+            log(experiment_log, status=EARLY_ABORT,
+                category=change.category, description=change.description)
+            rollback(mutable_system)
+            CONTINUE
+
+        // --- STEP 4b: FAST-FAIL CHECK ---
+        IF measurement.status == CATASTROPHIC_FAILURE:
+            IF is_trivial_fix(measurement.error) AND attempt < MAX_FIX_ATTEMPTS:
+                apply_fix(measurement.error, mutable_system)
                 checkpoint(mutable_system)
                 attempt += 1
                 GOTO RETRY_LOOP
             ELSE:
                 log(experiment_log, status=CRASH,
-                    description=change.description)
+                    category=change.category, description=change.description)
                 rollback(mutable_system)
-                CONTINUE  // next iteration of LOOP FOREVER
+                CONTINUE
 
-        // --- STEP 4b: TIMEOUT CHECK ---
-        IF result.wall_time > HARD_TIMEOUT:
+        // --- STEP 4c: TIMEOUT CHECK ---
+        IF measurement.wall_time > HARD_TIMEOUT:
             log(experiment_log, status=CRASH,
+                category=change.category,
                 description=change.description + " (timeout)")
             rollback(mutable_system)
             CONTINUE
 
     // --- STEP 5: MEASURE ---
-    new_metric = extract_metric(result)
-    resource_usage = extract_resources(result)
+    new_metric = measurement.metric
+    spread = measurement.spread
+    resource_usage = extract_resources(measurement)
 
     // --- STEP 6: DECIDE ---
     decision = accept_or_reject(
@@ -365,17 +550,34 @@ LOOP FOREVER:
         complexity_delta = measure_complexity_change(change)
     )
 
+    // Check for near-miss before finalizing REJECT
+    IF decision == REJECT:
+        IF classify_near_miss(new_metric, best_metric, change.lines_delta) == NEAR_MISS:
+            decision = NEAR_MISS
+
     IF decision == ACCEPT:
         best_metric = new_metric
-        advance(mutable_system)  // keep the change
-        log(experiment_log, metric=new_metric,
-            resources=resource_usage,
-            status=ACCEPT, description=change.description)
+        advance(mutable_system)
+        log(experiment_log, metric=new_metric, resources=resource_usage,
+            category=change.category, status=ACCEPT,
+            description=change.description)
+        strategy = "normal"       // reset on any accept
+        consecutive_rejects = 0
+    ELSE IF decision == NEAR_MISS:
+        stash(mutable_system, "near-miss-exp-NNN: " + change.description)
+        rollback(mutable_system)
+        log(experiment_log, metric=new_metric, resources=resource_usage,
+            category=change.category, status=NEAR_MISS,
+            description=change.description)
     ELSE:
-        rollback(mutable_system)  // discard the change
-        log(experiment_log, metric=new_metric,
-            resources=resource_usage,
-            status=REJECT, description=change.description)
+        rollback(mutable_system)
+        log(experiment_log, metric=new_metric, resources=resource_usage,
+            category=change.category, status=REJECT,
+            description=change.description)
+
+    // --- STEP 7.5: RECORD LEARNING ---
+    append(musings, "**Result**: " + decision + " (" + best_metric + " → " + new_metric + " ms)")
+    append(musings, "**Learning**: " + reflect_on_result(change, decision, measurement))
 
 // ============================================================
 // TERMINATION: External interruption only (human kills process)
@@ -384,11 +586,11 @@ LOOP FOREVER:
 
 ---
 
-## 7. Appendix: Karpathy's Concrete Implementation
+## 8. Appendix: Karpathy's Concrete Implementation
 
 This section maps every abstract concept above to the specific implementation in the autoresearch codebase.
 
-### 7.1 File Overview
+### 8.1 File Overview
 
 | File | Role | Modifiable? |
 |------|------|-------------|
@@ -398,7 +600,7 @@ This section maps every abstract concept above to the specific implementation in
 | `results.tsv` | Experiment log (untracked by git) | Yes |
 | `run.log` | Experiment output (overwritten each run) | Yes |
 
-### 7.2 Concept-to-Code Mapping
+### 8.2 Concept-to-Code Mapping
 
 | Abstract Concept | Karpathy Implementation | Location |
 |-----------------|------------------------|----------|

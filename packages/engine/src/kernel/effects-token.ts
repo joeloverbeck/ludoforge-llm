@@ -11,7 +11,7 @@ import { resolveRuntimeTokenBindingValue } from './token-binding.js';
 import { getTokenStateIndexEntry } from './token-state-index.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
-import type { EffectAST, Rng, Token } from './types.js';
+import type { EffectAST, Rng, Token, TokenTypeDef, ZoneDef } from './types.js';
 
 const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => ({
   ...ctx.moveParams,
@@ -243,6 +243,52 @@ const resolveMoveTokenAdjacentDestination = (
   return boundDestination;
 };
 
+export const applyZoneEntryResets = (
+  token: Token,
+  tokenTypeDef: TokenTypeDef | undefined,
+  destinationZoneDef: ZoneDef | undefined,
+): Token => {
+  if (
+    tokenTypeDef?.onZoneEntry === undefined ||
+    tokenTypeDef.onZoneEntry.length === 0 ||
+    destinationZoneDef === undefined
+  ) {
+    return token;
+  }
+
+  let updatedProps = token.props;
+  let changed = false;
+
+  for (const rule of tokenTypeDef.onZoneEntry) {
+    const match = rule.match;
+    if (match.zoneKind !== undefined && destinationZoneDef.zoneKind !== match.zoneKind) {
+      continue;
+    }
+    if (match.category !== undefined && destinationZoneDef.category !== match.category) {
+      continue;
+    }
+
+    for (const [propName, propValue] of Object.entries(rule.setProps)) {
+      if (!(propName in tokenTypeDef.props)) {
+        continue;
+      }
+      if (updatedProps[propName] !== propValue) {
+        if (!changed) {
+          updatedProps = { ...updatedProps };
+          changed = true;
+        }
+        (updatedProps as Record<string, number | string | boolean>)[propName] = propValue;
+      }
+    }
+  }
+
+  if (!changed) {
+    return token;
+  }
+
+  return { ...token, props: updatedProps };
+};
+
 export const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: unknown }>, ctx: EffectContext): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
@@ -311,9 +357,13 @@ export const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: 
     }
   }
 
+  const tokenTypeDef = ctx.def.tokenTypes.find((tt) => tt.id === occurrence.token.type);
+  const destinationZoneDef = ctx.def.zones.find((z) => z.id === toZoneId);
+  const resetToken = applyZoneEntryResets(occurrence.token, tokenTypeDef, destinationZoneDef);
+
   const destinationAfter = [
     ...destinationBase.slice(0, insertionIndex),
-    occurrence.token,
+    resetToken,
     ...destinationBase.slice(insertionIndex),
   ];
 
@@ -326,6 +376,21 @@ export const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: 
     to: toZoneId,
     provenance: resolveTraceProvenance(ctx),
   });
+
+  if (resetToken !== occurrence.token) {
+    for (const [prop, newValue] of Object.entries(resetToken.props)) {
+      if (occurrence.token.props[prop] !== newValue) {
+        emitTrace(ctx.collector, {
+          kind: 'setTokenProp',
+          tokenId: String(tokenId),
+          prop,
+          oldValue: occurrence.token.props[prop],
+          newValue,
+          provenance: resolveTraceProvenance(ctx),
+        });
+      }
+    }
+  }
 
   if (fromZoneId === toZoneId) {
     return {
@@ -719,16 +784,37 @@ export const applyDraw = (effect: Extract<EffectAST, { readonly draw: unknown }>
   }
 
   const destinationTokens = currentState.zones[toZoneId]!;
-  const destinationAfter = [...movedTokens, ...destinationTokens];
+  const drawDestZoneDef = ctx.def.zones.find((z) => z.id === toZoneId);
+  const resetDrawnTokens = movedTokens.map((token) => {
+    const ttd = ctx.def.tokenTypes.find((tt) => tt.id === token.type);
+    return applyZoneEntryResets(token, ttd, drawDestZoneDef);
+  });
+  const destinationAfter = [...resetDrawnTokens, ...destinationTokens];
 
-  for (const movedToken of movedTokens) {
+  for (let i = 0; i < movedTokens.length; i++) {
+    const original = movedTokens[i]!;
+    const reset = resetDrawnTokens[i]!;
     emitTrace(ctx.collector, {
       kind: 'moveToken',
-      tokenId: String(movedToken.id),
+      tokenId: String(original.id),
       from: fromZoneId,
       to: toZoneId,
       provenance: resolveTraceProvenance(ctx),
     });
+    if (reset !== original) {
+      for (const [prop, newValue] of Object.entries(reset.props)) {
+        if (original.props[prop] !== newValue) {
+          emitTrace(ctx.collector, {
+            kind: 'setTokenProp',
+            tokenId: String(original.id),
+            prop,
+            oldValue: original.props[prop],
+            newValue,
+            provenance: resolveTraceProvenance(ctx),
+          });
+        }
+      }
+    }
   }
 
   return {
@@ -807,17 +893,39 @@ export const applyMoveAll = (effect: Extract<EffectAST, { readonly moveAll: unkn
     sourceAfter = [];
   }
 
-  const destinationAfter = [...movedTokens, ...destinationTokens];
+  const moveAllDestZoneDef = ctx.def.zones.find((z) => z.id === toZoneId);
+  const resetMovedTokens = movedTokens.map((token) => {
+    const ttd = ctx.def.tokenTypes.find((tt) => tt.id === token.type);
+    return applyZoneEntryResets(token, ttd, moveAllDestZoneDef);
+  });
+
+  const destinationAfter = [...resetMovedTokens, ...destinationTokens];
   enforceStacking(ctx, toZoneId, destinationAfter, 'moveAll');
 
-  for (const movedToken of movedTokens) {
+  for (let i = 0; i < movedTokens.length; i++) {
+    const original = movedTokens[i]!;
+    const reset = resetMovedTokens[i]!;
     emitTrace(ctx.collector, {
       kind: 'moveToken',
-      tokenId: String(movedToken.id),
+      tokenId: String(original.id),
       from: fromZoneId,
       to: toZoneId,
       provenance: resolveTraceProvenance(ctx),
     });
+    if (reset !== original) {
+      for (const [prop, newValue] of Object.entries(reset.props)) {
+        if (original.props[prop] !== newValue) {
+          emitTrace(ctx.collector, {
+            kind: 'setTokenProp',
+            tokenId: String(original.id),
+            prop,
+            oldValue: original.props[prop],
+            newValue,
+            provenance: resolveTraceProvenance(ctx),
+          });
+        }
+      }
+    }
   }
 
   return {

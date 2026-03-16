@@ -452,6 +452,12 @@ export function deriveSectionsFromDataAssets(
               ),
             }),
           ),
+          ...(pieceType.onZoneEntry === undefined ? {} : {
+            onZoneEntry: pieceType.onZoneEntry.map((rule) => ({
+              match: rule.match,
+              set: rule.set,
+            })),
+          }),
         }));
 
   const scenarioSetupEffects = buildScenarioSetupEffects({

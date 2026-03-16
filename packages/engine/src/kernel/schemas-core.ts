@@ -107,12 +107,27 @@ export const TokenTypeTransitionSchema = z
   })
   .strict();
 
+export const TokenTypeZoneEntryMatchSchema = z
+  .object({
+    zoneKind: z.union([z.literal('board'), z.literal('aux')]).optional(),
+    category: StringSchema.optional(),
+  })
+  .strict();
+
+export const TokenTypeZoneEntryRuleSchema = z
+  .object({
+    match: TokenTypeZoneEntryMatchSchema,
+    setProps: z.record(StringSchema, z.union([NumberSchema, StringSchema, BooleanSchema])),
+  })
+  .strict();
+
 export const TokenTypeDefSchema = z
   .object({
     id: StringSchema,
     seat: StringSchema.optional(),
     props: z.record(StringSchema, z.union([z.literal('int'), z.literal('string'), z.literal('boolean')])),
     transitions: z.array(TokenTypeTransitionSchema).optional(),
+    onZoneEntry: z.array(TokenTypeZoneEntryRuleSchema).optional(),
   })
   .strict();
 

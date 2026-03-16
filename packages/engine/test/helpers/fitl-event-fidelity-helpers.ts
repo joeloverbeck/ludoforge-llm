@@ -174,6 +174,37 @@ export const findTokenInZone = (
 ): Token | undefined =>
   (state.zones[zoneId] ?? []).find((token) => String((token as Token).id) === asTokenId(tokenId)) as Token | undefined;
 
+/**
+ * Set a single marker to the same value on every zone matching a category filter.
+ * Useful for neutralizing default marker eligibility in shaded event tests —
+ * e.g., set all provinces to `activeOpposition` so `markerShiftAllowed(delta: -2)` returns false,
+ * then selectively override the provinces you want eligible.
+ */
+export const withCategoryMarker = (
+  def: GameDef,
+  state: GameState,
+  category: string,
+  marker: string,
+  value: string,
+): GameState => {
+  const overrides: Record<string, Record<string, string>> = {};
+  for (const zone of def.zones) {
+    if (zone.category === category) {
+      overrides[zone.id] = {
+        ...(state.markers?.[zone.id] ?? {}),
+        [marker]: value,
+      };
+    }
+  }
+  return {
+    ...state,
+    markers: {
+      ...state.markers,
+      ...overrides,
+    },
+  };
+};
+
 export const assertNoOpEvent = (
   def: GameDef,
   state: GameState,

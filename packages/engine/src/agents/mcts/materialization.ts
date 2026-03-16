@@ -124,6 +124,122 @@ export function classifyMovesForSearch(
 }
 
 // ---------------------------------------------------------------------------
+// materializeMovesForRollout
+// ---------------------------------------------------------------------------
+
+/**
+ * Materialize moves for rollout simulation.
+ *
+ * Ready moves (`legalChoicesEvaluate → 'complete'`) pass through as-is.
+ * Pending moves (`legalChoicesEvaluate → 'pending'`) are completed via
+ * `completeTemplateMove()` (random parameter filling) up to
+ * `limitPerTemplate` attempts per move.  This is the correct behavior
+ * for the simulation phase where we don't build decision tree nodes.
+ *
+ * Illegal and pendingStochastic moves are dropped.  Moves that throw
+ * during classification are dropped with an optional visitor event.
+ *
+ * All candidates are deduplicated by `MoveKey`.
+ */
+export function materializeMovesForRollout(
+  def: GameDef,
+  state: GameState,
+  moves: readonly Move[],
+  rng: Rng,
+  limitPerTemplate: number,
+  runtime?: GameDefRuntime,
+  visitor?: MctsSearchVisitor,
+): { readonly candidates: readonly ConcreteMoveCandidate[]; readonly rng: Rng } {
+  const candidates: ConcreteMoveCandidate[] = [];
+  const seenKeys = new Set<string>();
+  let cursor: Rng = rng;
+
+  for (let i = 0; i < moves.length; i += 1) {
+    const move = moves[i]!;
+
+    // Classify every move via legalChoicesEvaluate — no compile-time shortcuts.
+    let kind: string;
+    try {
+      kind = legalChoicesEvaluate(def, state, move, undefined, runtime).kind;
+    } catch {
+      if (visitor?.onEvent) {
+        visitor.onEvent({
+          type: 'templateDropped',
+          actionId: move.actionId,
+          reason: 'unsatisfiable',
+        });
+      }
+      continue;
+    }
+
+    switch (kind) {
+      case 'complete': {
+        const key = canonicalMoveKey(move);
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          candidates.push({ move, moveKey: key });
+        }
+        break;
+      }
+      case 'pending': {
+        // Complete via random parameter filling, up to limitPerTemplate attempts.
+        for (let attempt = 0; attempt < limitPerTemplate; attempt += 1) {
+          const result = completeTemplateMove(def, state, move, cursor, runtime);
+
+          if (result.kind === 'completed') {
+            cursor = result.rng;
+            const key = canonicalMoveKey(result.move);
+            if (!seenKeys.has(key)) {
+              seenKeys.add(key);
+              candidates.push({ move: result.move, moveKey: key });
+            }
+          } else if (result.kind === 'stochasticUnresolved') {
+            // Consume RNG for determinism but do NOT add as candidate.
+            cursor = result.rng;
+            if (visitor?.onEvent) {
+              visitor.onEvent({
+                type: 'templateDropped',
+                actionId: move.actionId,
+                reason: 'stochasticUnresolved',
+              });
+            }
+            break;
+          } else {
+            // unsatisfiable — no further attempts will succeed.
+            if (visitor?.onEvent) {
+              visitor.onEvent({
+                type: 'templateDropped',
+                actionId: move.actionId,
+                reason: 'unsatisfiable',
+              });
+            }
+            break;
+          }
+        }
+        break;
+      }
+      case 'illegal':
+        // Silently skip.
+        break;
+      case 'pendingStochastic':
+        if (visitor?.onEvent) {
+          visitor.onEvent({
+            type: 'templateDropped',
+            actionId: move.actionId,
+            reason: 'stochasticUnresolved',
+          });
+        }
+        break;
+      default:
+        // Unknown kind — skip.
+        break;
+    }
+  }
+
+  return { candidates, rng: cursor };
+}
+
+// ---------------------------------------------------------------------------
 // materializeConcreteCandidates
 // ---------------------------------------------------------------------------
 

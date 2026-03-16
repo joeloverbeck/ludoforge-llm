@@ -969,10 +969,12 @@ export function lowerEndConditions(
   namedSets?: CanonicalNamedSets,
   typeInference?: TypeInferenceContext,
   seatIds?: readonly string[],
+  zoneIdSet?: ReadonlySet<string>,
 ): readonly EndCondition[] {
   const lowered: EndCondition[] = [];
   const sharedConditionContext: ConditionLoweringSharedContext = {
     ownershipByBase,
+    ...(zoneIdSet !== undefined ? { zoneIdSet } : {}),
     ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }),
     ...(tokenFilterProps === undefined ? {} : { tokenFilterProps }),
     ...(namedSets === undefined ? {} : { namedSets }),

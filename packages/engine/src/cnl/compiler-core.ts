@@ -397,6 +397,9 @@ function compileExpandedDoc(
     sections.zones = zoneCompilation.failed ? null : zoneCompilation.value;
   }
 
+  const zoneIdSet: ReadonlySet<string> | undefined =
+    zones !== null && zones.length > 0 ? new Set(zones.map(z => z.id)) : undefined;
+
   let tokenTypes: {
     readonly value: GameDef['tokenTypes'];
     readonly failed: boolean;
@@ -468,6 +471,7 @@ function compileExpandedDoc(
   const seatIds = seatIdentityContract.contract.selectorSeatIds;
   const loweringContext: EffectLoweringSharedContext = {
     ownershipByBase,
+    ...(zoneIdSet !== undefined ? { zoneIdSet } : {}),
     ...(derivedFromAssets.tokenTraitVocabulary == null
       ? {}
       : { tokenTraitVocabulary: derivedFromAssets.tokenTraitVocabulary }),
@@ -564,11 +568,13 @@ function compileExpandedDoc(
         namedSets,
         typeInference,
         seatIds,
+        zoneIdSet,
       ),
     );
     const victorySection = compileSection(diagnostics, () =>
       lowerVictory(rawTerminal, diagnostics, {
         ownershipByBase,
+        ...(zoneIdSet !== undefined ? { zoneIdSet } : {}),
         ...(derivedFromAssets.tokenTraitVocabulary == null ? {} : { tokenTraitVocabulary: derivedFromAssets.tokenTraitVocabulary }),
         ...(tokenFilterProps.length === 0 ? {} : { tokenFilterProps }),
         ...(namedSets === undefined ? {} : { namedSets }),

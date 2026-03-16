@@ -1,6 +1,6 @@
 # 62MCTSSEAVIS-009: Decision Key Module
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — agents/mcts (new file)

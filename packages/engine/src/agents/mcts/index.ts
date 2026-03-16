@@ -54,6 +54,8 @@ export type {
   MctsSearchVisitor,
 } from './visitor.js';
 
+export { decisionNodeKey, templateDecisionRootKey } from './decision-key.js';
+
 export { expandDecisionNode } from './decision-expansion.js';
 export type {
   DecisionExpansionContext,

@@ -50,6 +50,12 @@ describe('materializeZoneDefs', () => {
           ordering: 'set',
           adjacentTo: [{ to: 'b:none' }],
         },
+        {
+          id: 'b',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+        },
       ],
       2,
     );

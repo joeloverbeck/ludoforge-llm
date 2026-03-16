@@ -1,5 +1,7 @@
 # 63COMZONIDCROREFVAL-004 — Zone Definition Cross-Reference Validation Pass
 
+**Status**: ✅ COMPLETED
+
 ## Summary
 
 Add a post-materialization pass in `materializeZoneDefs` that validates zone-internal cross-references: `adjacentTo[].to` targets and `behavior.reshuffleFrom` sources must exist in the materialized zone set.
@@ -93,3 +95,15 @@ for (const zone of outputZones) {
 - Does not modify the `outputZones` array — read-only validation pass.
 - The `zoneIdSet` is local to `materializeZoneDefs` (not returned or stored on the result).
 - Existing `normalizeAdjacentTo` shape validation is unchanged.
+
+## Outcome
+
+- **Completion date**: 2026-03-16
+- **What changed**:
+  - `packages/engine/src/cnl/compile-zones.ts`: Added post-materialization cross-reference validation pass in `materializeZoneDefs` — validates `adjacentTo[].to` targets and `behavior.reshuffleFrom` sources exist in the materialized zone set.
+  - `packages/engine/test/unit/compile-zones.test.ts`: Added missing zone "b" to adjacency direction test fixture so it satisfies the new cross-reference validation.
+  - `packages/engine/test/unit/compile-zones-behavior.test.ts`: Added missing zone "discard" to reshuffleFrom test fixture so it satisfies the new cross-reference validation.
+- **Deviations from plan**:
+  - Reshuffle validation handles both fully-qualified IDs (`discard:none`) and bare bases (`discard`) — the ticket noted this possibility and the implementation checks both forms.
+  - Two existing test fixtures needed minimal additions (missing target zones) to pass the new validation. The ticket listed tests as out-of-scope (ticket 008), but acceptance criteria required existing tests to pass.
+- **Verification**: typecheck ✅, build ✅, 4775/4775 tests pass ✅, lint ✅

@@ -1,6 +1,6 @@
 # 62MCTSSEAVIS-006: Observability Baseline Run
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — test execution and analysis only
@@ -62,3 +62,20 @@ Create a brief analysis doc (or comments in test file) capturing the baseline st
 
 1. `RUN_MCTS_FITL_E2E=1 pnpm -F @ludoforge/engine test:e2e` (with visitor enabled)
 2. `pnpm -F @ludoforge/engine test` (regression check)
+
+## Outcome
+
+**Completion date**: 2026-03-16
+
+**What changed**:
+- `packages/engine/test/e2e/mcts-fitl/fitl-mcts-fast.test.ts` — imported `createConsoleVisitor`, wired `[MCTS-FAST]` visitor into all 10 `runFitlMctsSearch` calls, added baseline analysis as block comment.
+
+**Deviations from plan**:
+- Ticket listed `packages/engine/test/integration/fitl-mcts-*.test.ts` — actual file is `packages/engine/test/e2e/mcts-fitl/fitl-mcts-fast.test.ts`.
+- Analysis written as block comment in test file rather than separate doc (ticket allowed either).
+
+**Verification**:
+- `RUN_MCTS_FITL_E2E=1 pnpm -F @ludoforge/engine exec node scripts/run-tests.mjs --lane e2e:mcts:fitl:fast` — 10 scenarios ran, 9 expected failures + 1 pass (S10 victory-trend). All visitor events captured.
+- `pnpm -F @ludoforge/engine test` — 4836/4836 pass, 0 fail.
+- `pnpm turbo build` — passes.
+- Baseline data propagated to tickets -010, -012, -016, -019.

@@ -10,6 +10,20 @@
 
 After implementing decision nodes, all 10 FITL MCTS fast scenarios should complete without crashes. The 9 previously-failing scenarios (7 `moveHasIncompleteParams`, 1 `SELECTOR_CARDINALITY`, 1 `pass`-only) should now produce meaningful results via incremental decision expansion.
 
+## Baseline Data (from 62MCTSSEAVIS-006)
+
+408 `applyMoveFailure` events across 10 scenarios, all `moveHasIncompleteParams` in `expansion` phase. Blocked decision breakdown by name:
+- `$targetSpaces`: 248 (train, assault, sweep, raid, govern)
+- `$targetLoCs`: 56 (patrol)
+- `$transportOrigin`: 36 (transport)
+- `$targetCity`: 22 (advise)
+- `$arcLightNoCoinProvinces`: 14 (airStrike)
+- `$trucksBaseDestination`: 13 (event — Trucks card)
+- `$spaces`: 13 (airLift)
+- `$nvaLaosPieces`: 13 (event — Burning Bonze card)
+
+S8 has a distinct failure mode: `SELECTOR_CARDINALITY` (zone selector resolves to 0 or >1 zones during effect execution). S9 completes but picks `pass` over expected [attack, march, rally]. These may need separate investigation during validation.
+
 ## What to Change
 
 ### 1. Run FITL MCTS fast tests with visitor and decision nodes

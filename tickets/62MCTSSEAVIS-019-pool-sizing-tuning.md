@@ -10,6 +10,15 @@
 
 The default `decisionDepthMultiplier` (4) and pool sizing formula may need tuning based on actual FITL and Texas Hold'em decision tree profiles. Decision nodes increase depth but may reduce width — the net pool pressure needs measurement.
 
+## Baseline Data (from 62MCTSSEAVIS-006)
+
+Pre-decision-node pool utilization at 200 iterations with pool=201:
+- S9 (NVA, 16 moves: 10 concrete + 6 templates): 193/201 nodes (96%)
+- S10 (US coup, 5 moves: 1 concrete + 4 templates): 200/201 nodes (99.5%)
+- S1-S8: crash before completing — partial data only (S1: 50 nodes at crash, S6: 49 nodes at crash)
+
+With the new formula `max(200 * 4 + 1, moves * 4)` = 801, there is ~4x headroom. Actual decision-node depth will determine whether this is sufficient or excessive.
+
 ## What to Change
 
 ### 1. Profile pool utilization

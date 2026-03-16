@@ -10,6 +10,10 @@
 
 Decision nodes increase tree depth and node count. The pool must be sized to accommodate decision subtrees. Pool exhaustion must degrade gracefully. When the best root action is a template (decision root), post-completion must follow the decision subtree.
 
+## Baseline Data (from 62MCTSSEAVIS-006)
+
+Current pool capacity is 201 for all scenarios (formula: `max(iterations + 1, moves * 4)`). The two scenarios that complete their 200 iterations use 193 nodes (96%) and 200 nodes (99.5%) respectively — near saturation with zero decision nodes. The new formula `max(iterations * decisionDepthMultiplier + 1, moves * 4)` with default multiplier 4 would give 801, providing substantial headroom. Zero `poolExhausted` events in baseline.
+
 ## What to Change
 
 ### 1. Pool capacity formula

@@ -10,6 +10,10 @@
 
 The search loop selection must detect `nodeKind` and handle decision nodes differently from state nodes: use standard UCT (not ISUCT), traverse without `applyMove`, and complete decisions when `legalChoicesDiscover()` returns `complete`.
 
+## Baseline Data (from 62MCTSSEAVIS-006)
+
+All 408 `applyMoveFailure` events in the baseline occur in the `expansion` phase — the search currently calls `applyMove` on template moves with `params={}` and crashes with `moveHasIncompleteParams`. The integration must intercept template moves *before* `applyMove` and route them through decision expansion instead. No failures occur in `selection`, `rollout`, or `forcedSequence` phases.
+
 ## What to Change
 
 ### 1. Selection loop: detect nodeKind

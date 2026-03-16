@@ -1,3 +1,5 @@
+**Status**: ✅ COMPLETED
+
 # 63COMZONIDCROREFVAL-006 — Thread `zoneIdSet` Through All `canonicalizeZoneSelector` Call Sites
 
 ## Summary
@@ -74,3 +76,13 @@ All downstream callers (`compile-conditions-conditions.ts`, `compile-conditions-
 - When `context.zoneIdSet` is populated and a static literal zone ID doesn't exist, compilation fails with `CNL_COMPILER_ZONE_ID_UNKNOWN`.
 - Binding references (`$space`, `hand:$actor`) are never validated against the set.
 - This is the ticket that activates the end-to-end validation for effects and conditions.
+
+## Outcome
+
+- **Completion date**: 2026-03-16
+- **What changed**:
+  - `compile-conditions-shared.ts:130` — passed `context.zoneIdSet` to `canonicalizeZoneSelector` in condition-side `lowerZoneSelector`
+  - `compile-effects-utils.ts:85` — passed `context.zoneIdSet` to `canonicalizeZoneSelector` in effect-side `lowerZoneSelector`
+  - `compile-effects-utils.ts:makeConditionContext` — propagated `zoneIdSet` from `EffectLoweringContext` to `ConditionLoweringContext`
+- **Deviations from plan**: The ticket did not mention `makeConditionContext`. Without propagation there, condition sub-expressions nested inside effects (e.g., `tokensInZone.zone` in a condition within a `forEach`) would silently skip zone ID validation because the bridged `ConditionLoweringContext` dropped `zoneIdSet`. Fixed as part of this ticket since it is in the same file and completes the end-to-end threading.
+- **Verification**: `pnpm turbo typecheck` clean, `pnpm turbo build` clean, `pnpm turbo test` — 4775 tests pass, 0 failures.

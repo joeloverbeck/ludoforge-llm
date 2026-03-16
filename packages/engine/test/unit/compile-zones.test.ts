@@ -326,3 +326,161 @@ describe('canonicalizeZoneSelector zone ID existence', () => {
     assertNoDiagnostics(result);
   });
 });
+
+describe('materializeZoneDefs cross-reference validation', () => {
+  it('emits no diagnostics for valid adjacency targets', () => {
+    const result = materializeZoneDefs(
+      [
+        {
+          id: 'field',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          adjacentTo: [{ to: 'forest:none' }],
+        },
+        { id: 'forest', owner: 'none', visibility: 'public', ordering: 'set' },
+      ],
+      2,
+    );
+
+    const adjDiags = result.diagnostics.filter(
+      (d) => d.code === 'CNL_COMPILER_ZONE_ADJACENCY_TARGET_UNKNOWN',
+    );
+    assert.equal(adjDiags.length, 0);
+  });
+
+  it('emits diagnostic for invalid adjacency target', () => {
+    const result = materializeZoneDefs(
+      [
+        {
+          id: 'field',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          adjacentTo: [{ to: 'non-existent:none' }],
+        },
+      ],
+      2,
+    );
+
+    const adjDiags = result.diagnostics.filter(
+      (d) => d.code === 'CNL_COMPILER_ZONE_ADJACENCY_TARGET_UNKNOWN',
+    );
+    assert.equal(adjDiags.length, 1);
+    assert.ok(adjDiags[0]?.message.includes('non-existent:none'));
+    assert.ok(adjDiags[0]?.message.includes('field:none'));
+  });
+
+  it('includes alternatives in invalid adjacency target diagnostic', () => {
+    const result = materializeZoneDefs(
+      [
+        {
+          id: 'field',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          adjacentTo: [{ to: 'non-existent:none' }],
+        },
+        { id: 'forest', owner: 'none', visibility: 'public', ordering: 'set' },
+      ],
+      2,
+    );
+
+    const adjDiags = result.diagnostics.filter(
+      (d) => d.code === 'CNL_COMPILER_ZONE_ADJACENCY_TARGET_UNKNOWN',
+    );
+    assert.equal(adjDiags.length, 1);
+    assert.ok(Array.isArray(adjDiags[0]?.alternatives));
+    assert.ok(adjDiags[0]!.alternatives!.includes('field:none'));
+    assert.ok(adjDiags[0]!.alternatives!.includes('forest:none'));
+  });
+
+  it('emits no diagnostics for valid reshuffle source', () => {
+    const result = materializeZoneDefs(
+      [
+        {
+          id: 'draw-deck',
+          owner: 'none',
+          visibility: 'hidden',
+          ordering: 'stack',
+          behavior: { type: 'deck', reshuffleFrom: 'discard' },
+        },
+        { id: 'discard', owner: 'none', visibility: 'public', ordering: 'stack' },
+      ],
+      2,
+    );
+
+    const reshuffleDiags = result.diagnostics.filter(
+      (d) => d.code === 'CNL_COMPILER_ZONE_BEHAVIOR_RESHUFFLE_TARGET_UNKNOWN',
+    );
+    assert.equal(reshuffleDiags.length, 0);
+  });
+
+  it('emits diagnostic for invalid reshuffle source', () => {
+    const result = materializeZoneDefs(
+      [
+        {
+          id: 'draw-deck',
+          owner: 'none',
+          visibility: 'hidden',
+          ordering: 'stack',
+          behavior: { type: 'deck', reshuffleFrom: 'nonexistent' },
+        },
+      ],
+      2,
+    );
+
+    const reshuffleDiags = result.diagnostics.filter(
+      (d) => d.code === 'CNL_COMPILER_ZONE_BEHAVIOR_RESHUFFLE_TARGET_UNKNOWN',
+    );
+    assert.equal(reshuffleDiags.length, 1);
+    assert.ok(reshuffleDiags[0]?.message.includes('nonexistent'));
+    assert.ok(reshuffleDiags[0]?.message.includes('draw-deck:none'));
+  });
+
+  it('emits multiple diagnostics for multiple invalid cross-references', () => {
+    const result = materializeZoneDefs(
+      [
+        {
+          id: 'draw-deck',
+          owner: 'none',
+          visibility: 'hidden',
+          ordering: 'stack',
+          adjacentTo: [{ to: 'ghost-zone:none' }],
+          behavior: { type: 'deck', reshuffleFrom: 'nonexistent' },
+        },
+      ],
+      2,
+    );
+
+    const adjDiags = result.diagnostics.filter(
+      (d) => d.code === 'CNL_COMPILER_ZONE_ADJACENCY_TARGET_UNKNOWN',
+    );
+    const reshuffleDiags = result.diagnostics.filter(
+      (d) => d.code === 'CNL_COMPILER_ZONE_BEHAVIOR_RESHUFFLE_TARGET_UNKNOWN',
+    );
+    assert.equal(adjDiags.length, 1);
+    assert.equal(reshuffleDiags.length, 1);
+  });
+
+  it('validates player-owned zone adjacency target correctly', () => {
+    const result = materializeZoneDefs(
+      [
+        {
+          id: 'field',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          adjacentTo: [{ to: 'hand:0' }],
+        },
+        { id: 'hand', owner: 'player', visibility: 'owner', ordering: 'stack' },
+      ],
+      2,
+    );
+
+    const adjDiags = result.diagnostics.filter(
+      (d) => d.code === 'CNL_COMPILER_ZONE_ADJACENCY_TARGET_UNKNOWN',
+    );
+    assert.equal(adjDiags.length, 0);
+  });
+});

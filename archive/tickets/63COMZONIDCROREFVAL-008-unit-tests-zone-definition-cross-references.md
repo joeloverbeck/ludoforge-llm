@@ -1,3 +1,5 @@
+**Status**: ✅ COMPLETED
+
 # 63COMZONIDCROREFVAL-008 — Unit Tests for Zone Definition Cross-References
 
 ## Summary
@@ -65,3 +67,11 @@ All tests should be in a new `describe` block (e.g., `'materializeZoneDefs cross
 - Tests call `materializeZoneDefs` directly with crafted `GameSpecZoneDef[]` inputs.
 - Each test verifies the diagnostics array for the expected diagnostic codes.
 - Tests follow existing patterns in `compile-zones.test.ts`.
+
+## Outcome
+
+- **Completion date**: 2026-03-16
+- **What changed**: Added 7 test cases in a new `'materializeZoneDefs cross-reference validation'` describe block in `packages/engine/test/unit/compile-zones.test.ts`.
+- **Tests added**: (1) valid adjacency targets — no diagnostics, (2) invalid adjacency target — emits diagnostic with zone names, (3) invalid adjacency target includes alternatives, (4) valid reshuffle source — no diagnostics, (5) invalid reshuffle source — emits diagnostic, (6) multiple invalid cross-references — emits both diagnostic codes, (7) player-owned zone adjacency target `hand:0` validated correctly.
+- **Deviations**: None. All 7 ticket-specified test cases implemented as described.
+- **Verification**: All 4790 engine tests pass (31 in compile-zones.test.ts, including 7 new).

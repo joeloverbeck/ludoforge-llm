@@ -1114,6 +1114,7 @@ export function buildConditionLoweringContext(
   readonly namedSets?: CanonicalNamedSets;
   readonly typeInference?: TypeInferenceContext;
   readonly seatIds?: readonly string[];
+  readonly zoneIdSet?: ReadonlySet<string>;
 } {
   return {
     ownershipByBase: context.ownershipByBase,
@@ -1123,6 +1124,7 @@ export function buildConditionLoweringContext(
     ...(context.namedSets === undefined ? {} : { namedSets: context.namedSets }),
     ...(context.typeInference === undefined ? {} : { typeInference: context.typeInference }),
     ...(context.seatIds === undefined ? {} : { seatIds: context.seatIds }),
+    ...(context.zoneIdSet === undefined ? {} : { zoneIdSet: context.zoneIdSet }),
   };
 }
 
@@ -1160,6 +1162,7 @@ export function buildEffectLoweringContext(
     ...(context.namedSets === undefined ? {} : { namedSets: context.namedSets }),
     ...(context.typeInference === undefined ? {} : { typeInference: context.typeInference }),
     ...(context.seatIds === undefined ? {} : { seatIds: context.seatIds }),
+    ...(context.zoneIdSet === undefined ? {} : { zoneIdSet: context.zoneIdSet }),
   };
 }
 

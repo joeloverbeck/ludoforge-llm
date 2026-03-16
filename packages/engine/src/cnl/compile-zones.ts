@@ -178,6 +178,16 @@ export function materializeZoneDefs(
   };
 }
 
+/**
+ * A zone qualifier is static (compile-time resolvable) if it is `none` or a
+ * numeric seat index like `0`, `1`.  All other qualifiers — `active`, `actor`,
+ * `allOther`, `all`, relative selectors, `$`-prefixed bindings — resolve at
+ * runtime and must not be checked against the materialized zone ID set.
+ */
+function isStaticZoneQualifier(qualifier: string): boolean {
+  return qualifier === 'none' || /^\d+$/.test(qualifier);
+}
+
 export function canonicalizeZoneSelector(
   selector: unknown,
   ownershipByBase: Readonly<Record<string, ZoneOwnershipKind>>,
@@ -290,7 +300,7 @@ export function canonicalizeZoneSelector(
   }
 
   const canonicalId = `${zoneBase}:${normalizedQualifier.value}`;
-  if (zoneIdSet !== undefined && !canonicalId.includes('$') && !zoneIdSet.has(canonicalId)) {
+  if (zoneIdSet !== undefined && isStaticZoneQualifier(normalizedQualifier.value) && !zoneIdSet.has(canonicalId)) {
     return {
       value: null,
       diagnostics: [{

@@ -7,6 +7,7 @@ export type ZoneOwnershipKind = 'none' | 'player' | 'mixed';
 
 export interface EffectLoweringContext {
   readonly ownershipByBase: Readonly<Record<string, ZoneOwnershipKind>>;
+  readonly zoneIdSet?: ReadonlySet<string>;
   readonly bindingScope?: readonly string[];
   readonly freeOperationActionIds?: readonly string[];
   readonly tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>;

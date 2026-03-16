@@ -32,7 +32,7 @@ import { buildCanonicalLimitId } from '../kernel/limit-identity.js';
 export type EffectLoweringSharedContext = Omit<EffectLoweringContext, 'bindingScope'>;
 export type ConditionLoweringSharedContext = Pick<
   EffectLoweringSharedContext,
-  'ownershipByBase' | 'tokenTraitVocabulary' | 'tokenFilterProps' | 'namedSets' | 'typeInference' | 'seatIds'
+  'ownershipByBase' | 'zoneIdSet' | 'tokenTraitVocabulary' | 'tokenFilterProps' | 'namedSets' | 'typeInference' | 'seatIds'
 >;
 
 export function lowerConstants(

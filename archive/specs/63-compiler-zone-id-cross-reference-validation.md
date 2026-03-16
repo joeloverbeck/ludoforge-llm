@@ -1,3 +1,5 @@
+**Status**: COMPLETED
+
 # Spec 63 — Compiler Zone ID Cross-Reference Validation
 
 ## 0. Problem Statement
@@ -225,3 +227,21 @@ The production specs already compile and pass all tests. Adding this validation 
 8. Write unit tests for zone definition cross-references
 9. Write integration tests against production specs
 10. Verify `pnpm turbo build && pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+Completed: 2026-03-16
+
+What actually changed:
+- Added the zone ID diagnostics `CNL_COMPILER_ZONE_ID_UNKNOWN`, `CNL_COMPILER_ZONE_ADJACENCY_TARGET_UNKNOWN`, and `CNL_COMPILER_ZONE_BEHAVIOR_RESHUFFLE_TARGET_UNKNOWN`.
+- Threaded `zoneIdSet` through compiler lowering contexts so static literal zone selectors are validated against materialized zone IDs during compilation.
+- Added post-materialization validation for zone adjacency targets and reshuffle sources in zone definitions.
+- Added unit coverage in `packages/engine/test/unit/compile-zones.test.ts` and integration coverage in `packages/engine/test/integration/zone-id-cross-reference-validation.test.ts`, including production FITL and Texas Hold'em regression checks.
+
+Deviations from original plan:
+- The implementation also threads `zoneIdSet` through `compile-lowering.ts` paths that participate in shared lowering helpers, beyond the narrower file list called out in the design.
+- Existing validation layers in `validate-extensions.ts` and `validate-spec-core.ts` now overlap with this compiler-side protection for some paths; this spec's implementation keeps the compile-time validation rather than relying on those later checks alone.
+
+Verification results:
+- `pnpm -F @ludoforge/engine build`
+- `node --test dist/test/unit/compile-zones.test.js dist/test/integration/zone-id-cross-reference-validation.test.js`

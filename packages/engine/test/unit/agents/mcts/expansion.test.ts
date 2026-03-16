@@ -35,6 +35,10 @@ function stubNode(visits: number, childrenCount: number): MctsNode {
     heuristicPrior: null,
     children: new Array(childrenCount).fill(null) as MctsNode[],
     provenResult: null,
+    nodeKind: 'state',
+    decisionPlayer: null,
+    partialMove: null,
+    decisionBinding: null,
   };
 }
 

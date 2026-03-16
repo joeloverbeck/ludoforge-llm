@@ -43,6 +43,10 @@ function resetNode(node: MctsNode, playerCount: number): void {
   node.heuristicPrior = null;
   node.children.length = 0;
   node.provenResult = null;
+  node.nodeKind = 'state';
+  node.decisionPlayer = null;
+  node.partialMove = null;
+  node.decisionBinding = null;
 }
 
 /**

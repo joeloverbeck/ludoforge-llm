@@ -40,6 +40,15 @@ describe('NodePool.allocate', () => {
     assert.equal(node.provenResult, null);
   });
 
+  it('returns nodes with state-node decision defaults', () => {
+    const pool = createNodePool(3, 2);
+    const node = pool.allocate();
+    assert.equal(node.nodeKind, 'state');
+    assert.equal(node.decisionPlayer, null);
+    assert.equal(node.partialMove, null);
+    assert.equal(node.decisionBinding, null);
+  });
+
   it('throws RangeError when capacity exceeded', () => {
     const pool = createNodePool(3, 2);
     pool.allocate();
@@ -87,6 +96,26 @@ describe('NodePool.reset', () => {
     assert.equal(reused.heuristicPrior, null);
     assert.deepEqual(reused.children, []);
     assert.equal(reused.provenResult, null);
+  });
+
+  it('resets decision fields back to state-node defaults', () => {
+    const pool = createNodePool(2, 2);
+    const node = pool.allocate();
+
+    // Simulate decision-node mutation
+    node.nodeKind = 'decision';
+    node.decisionPlayer = 0 as never;
+    node.partialMove = { actionId: 'x' as never, params: {} };
+    node.decisionBinding = 'someBinding';
+
+    pool.reset();
+
+    const reused = pool.allocate();
+    assert.equal(reused, node);
+    assert.equal(reused.nodeKind, 'state');
+    assert.equal(reused.decisionPlayer, null);
+    assert.equal(reused.partialMove, null);
+    assert.equal(reused.decisionBinding, null);
   });
 
   it('can be called multiple times', () => {

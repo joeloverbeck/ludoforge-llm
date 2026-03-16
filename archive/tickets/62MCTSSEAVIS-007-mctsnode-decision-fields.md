@@ -1,6 +1,6 @@
 # 62MCTSSEAVIS-007: Extend MctsNode with Decision Node Fields
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agents/mcts/node.ts, node-pool.ts

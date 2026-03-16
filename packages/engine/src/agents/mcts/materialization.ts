@@ -14,6 +14,7 @@ import { legalChoicesEvaluate } from '../../kernel/legal-choices.js';
 import { completeTemplateMove } from '../../kernel/move-completion.js';
 import { canonicalMoveKey } from './move-key.js';
 import type { ConcreteMoveCandidate } from './expansion.js';
+import type { MctsSearchVisitor } from './visitor.js';
 import type { MctsNode } from './node.js';
 
 // ---------------------------------------------------------------------------
@@ -50,6 +51,7 @@ export function materializeConcreteCandidates(
   rng: Rng,
   limitPerTemplate: number,
   runtime?: GameDefRuntime,
+  visitor?: MctsSearchVisitor,
 ): { readonly candidates: readonly ConcreteMoveCandidate[]; readonly rng: Rng } {
   const candidates: ConcreteMoveCandidate[] = [];
   const seenKeys = new Set<string>();
@@ -65,6 +67,13 @@ export function materializeConcreteCandidates(
     } catch {
       // If legalChoicesEvaluate throws (e.g. unknown action), treat as
       // unsatisfiable and skip.
+      if (visitor?.onEvent) {
+        visitor.onEvent({
+          type: 'templateDropped',
+          actionId: move.actionId,
+          reason: 'unsatisfiable',
+        });
+      }
       continue;
     }
 
@@ -99,9 +108,23 @@ export function materializeConcreteCandidates(
         // Stochastic-unresolved moves have incomplete decision parameters
         // that produce unreliable search statistics across belief samples.
         cursor = result.rng;
+        if (visitor?.onEvent) {
+          visitor.onEvent({
+            type: 'templateDropped',
+            actionId: move.actionId,
+            reason: 'stochasticUnresolved',
+          });
+        }
         break;
       } else {
         // unsatisfiable — no further attempts will succeed.
+        if (visitor?.onEvent) {
+          visitor.onEvent({
+            type: 'templateDropped',
+            actionId: move.actionId,
+            reason: 'unsatisfiable',
+          });
+        }
         break;
       }
     }
@@ -129,6 +152,7 @@ export function materializeOrFastPath(
   rng: Rng,
   limitPerTemplate: number,
   runtime: GameDefRuntime,
+  visitor?: MctsSearchVisitor,
 ): { readonly candidates: readonly ConcreteMoveCandidate[]; readonly rng: Rng; readonly fastPath: boolean } {
   // Check if all moves come from fully-concrete actions.
   const concreteIds = runtime.concreteActionIds;
@@ -155,7 +179,7 @@ export function materializeOrFastPath(
   }
 
   // Slow path: full materialization.
-  const result = materializeConcreteCandidates(def, state, moves, rng, limitPerTemplate, runtime);
+  const result = materializeConcreteCandidates(def, state, moves, rng, limitPerTemplate, runtime, visitor);
   return { ...result, fastPath: false };
 }
 

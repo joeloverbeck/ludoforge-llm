@@ -193,6 +193,7 @@ export function runOneIteration(
       currentRng,
       config.templateCompletionsPerVisit,
       runtime,
+      config.visitor,
     );
     const { candidates } = matResult;
     currentRng = matResult.rng;
@@ -288,6 +289,7 @@ export function runOneIteration(
           actingPlayer,
           currentRng,
           runtime,
+          config.visitor,
         );
         currentRng = postExpansion;
 

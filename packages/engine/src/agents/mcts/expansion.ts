@@ -13,6 +13,7 @@ import type { GameDefRuntime } from '../../kernel/gamedef-runtime.js';
 import type { PlayerId } from '../../kernel/branded.js';
 import type { Rng } from '../../kernel/types-core.js';
 import type { MoveKey } from './move-key.js';
+import type { MctsSearchVisitor } from './visitor.js';
 import { applyMove } from '../../kernel/apply-move.js';
 import { terminalResult } from '../../kernel/terminal.js';
 import { evaluateState } from '../evaluate-state.js';
@@ -88,6 +89,7 @@ export function selectExpansionCandidate(
   actingPlayer: PlayerId,
   rng: Rng,
   runtime?: GameDefRuntime,
+  visitor?: MctsSearchVisitor,
 ): { readonly candidate: ConcreteMoveCandidate; readonly rng: Rng } {
   if (candidates.length === 0) {
     throw new Error('selectExpansionCandidate called with empty candidates');
@@ -112,9 +114,17 @@ export function selectExpansionCandidate(
         const heuristic = evaluateState(def, result.state, actingPlayer, runtime);
         scored.push({ index: i, score: heuristic, isTerminalWin: false });
       }
-    } catch {
+    } catch (e: unknown) {
       // applyMove failed — score as worst possible candidate.
       scored.push({ index: i, score: -Infinity, isTerminalWin: false });
+      if (visitor?.onEvent) {
+        visitor.onEvent({
+          type: 'applyMoveFailure',
+          actionId: candidate.move.actionId,
+          phase: 'expansion',
+          error: String(e),
+        });
+      }
     }
   }
 

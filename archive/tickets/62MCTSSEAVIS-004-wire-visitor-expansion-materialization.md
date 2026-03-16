@@ -1,6 +1,6 @@
 # 62MCTSSEAVIS-004: Wire Visitor into Expansion & Materialization
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — agents/mcts/expansion.ts, materialization.ts, search.ts
@@ -72,3 +72,15 @@ Thread `visitor` from config through to call sites. Use optional parameter to pr
 1. `pnpm -F @ludoforge/engine test -- --test-path-pattern expansion`
 2. `pnpm -F @ludoforge/engine test -- --test-path-pattern materialization`
 3. `pnpm turbo build && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-16
+- **What changed**:
+  - `expansion.ts`: Added optional `visitor?: MctsSearchVisitor` param to `selectExpansionCandidate()`. Catch block now emits `applyMoveFailure` with `phase: 'expansion'` and stringified error.
+  - `materialization.ts`: Added optional `visitor?: MctsSearchVisitor` param to `materializeConcreteCandidates()` and `materializeOrFastPath()`. Three emission sites: `legalChoicesEvaluate` catch (reason `'unsatisfiable'`), `stochasticUnresolved` branch, and `unsatisfiable` branch.
+  - `search.ts`: Passes `config.visitor` to `materializeOrFastPath()` and `selectExpansionCandidate()` call sites.
+  - New test: `expansion-visitor.test.ts` (4 tests)
+  - New test: `materialization-visitor.test.ts` (4 tests)
+- **Deviations**: Ticket stated "already increments `expansionApplyMoveFailures`" but that counter was defined in diagnostics yet never incremented. No diagnostics counter increment was added (out of scope — only observer emissions).
+- **Verification**: 8/8 new tests pass, 35/35 existing expansion/materialization tests pass, full build and typecheck green.

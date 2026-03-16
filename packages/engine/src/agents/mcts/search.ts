@@ -21,7 +21,9 @@ import { terminalResult } from '../../kernel/terminal.js';
 import { fork } from '../../kernel/prng.js';
 import { selectChild, selectDecisionChild } from './isuct.js';
 import { shouldExpand, selectExpansionCandidate } from './expansion.js';
-import { materializeOrFastPath, filterAvailableCandidates } from './materialization.js';
+import { classifyMovesForSearch, filterAvailableCandidates } from './materialization.js';
+import type { MoveClassification } from './materialization.js';
+import { templateDecisionRootKey } from './decision-key.js';
 import { expandDecisionNode } from './decision-expansion.js';
 import type { DecisionExpansionContext } from './decision-expansion.js';
 import { canonicalMoveKey } from './move-key.js';
@@ -315,31 +317,78 @@ export function runOneIteration(
       break;
     }
 
-    // Materialize all moves through full classification (no compile-time
-    // concrete/template partition).  Ticket 004 replaces this with
-    // classifyMovesForSearch which uses legalChoicesEvaluate per move.
-    const matResult = materializeOrFastPath(
-      def, currentState, movesAtNode, currentRng,
-      config.templateCompletionsPerVisit, runtime, config.visitor,
+    // Classify all legal moves at this state node via runtime readiness
+    // (legalChoicesEvaluate per move — no compile-time shortcuts).
+    const classification: MoveClassification = classifyMovesForSearch(
+      def, currentState, movesAtNode, runtime, config.visitor,
     );
-    const { candidates } = matResult;
-    currentRng = matResult.rng;
+    const candidates = classification.ready;
     if (acc !== undefined) {
       acc.materializeCalls += 1;
     }
 
-    // Total available candidates (no separate template decision roots for now).
-    const totalCandidateCount = candidates.length;
+    // ── Decision root creation for pending moves ────────────────────
+    // Each unique pending actionId gets a decision root child node.
+    // When selection picks a decision root, it enters the decision
+    // subtree and expands via expandDecisionNode.
+    const actingPlayerForDecision = currentState.activePlayer as PlayerId;
+    for (const pendingMove of classification.pending) {
+      const rootKey = templateDecisionRootKey(pendingMove.actionId);
+
+      // Check if a decision root for this action already exists.
+      let alreadyExists = false;
+      for (const child of currentNode.children) {
+        if (child.moveKey === rootKey) {
+          alreadyExists = true;
+          break;
+        }
+      }
+      if (alreadyExists) {
+        continue;
+      }
+
+      // Allocate a decision root node from the pool.
+      let decisionRoot: MctsNode;
+      try {
+        decisionRoot = pool.allocate();
+      } catch {
+        // Pool exhausted — emit event, stop creating decision roots.
+        if (config.visitor?.onEvent) {
+          config.visitor.onEvent({
+            type: 'poolExhausted',
+            capacity: pool.capacity,
+            iteration: iterationIndex,
+          });
+        }
+        break;
+      }
+
+      // Wire as a decision root child of the current state node.
+      (decisionRoot as { move: Move | null }).move = pendingMove;
+      (decisionRoot as { moveKey: MoveKey | null }).moveKey = rootKey;
+      (decisionRoot as { parent: MctsNode | null }).parent = currentNode;
+      decisionRoot.nodeKind = 'decision';
+      decisionRoot.decisionPlayer = actingPlayerForDecision;
+      decisionRoot.partialMove = pendingMove;
+      decisionRoot.decisionBinding = null;
+      decisionRoot.availability = 1;
+      currentNode.children.push(decisionRoot);
+    }
+
+    // Total available candidates includes both ready and pending moves.
+    const totalCandidateCount = candidates.length + classification.pending.length;
 
     if (totalCandidateCount === 0) {
       break;
     }
 
     // ── Forced-sequence compression ────────────────────────────────
-    // Only applies when there is exactly one candidate.
+    // Only applies when there is exactly one ready candidate and no
+    // pending moves needing decision roots.
     if (
       config.compressForcedSequences !== false &&
-      candidates.length === 1
+      candidates.length === 1 &&
+      classification.pending.length === 0
     ) {
       // Safety cap: break if forced plies exceed the limit.
       if (forcedPlies >= maxForcedPlies) {

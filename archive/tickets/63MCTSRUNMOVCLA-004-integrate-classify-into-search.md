@@ -1,6 +1,6 @@
 # 63MCTSRUNMOVCLA-004: Integrate `classifyMovesForSearch` into `search.ts`
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — MCTS `search.ts`, `materialization.ts` (remove old functions)
@@ -10,12 +10,12 @@
 
 `search.ts` partitions root legal moves using `concreteActionIds` (compile-time) and then materializes "concrete" moves via `materializeOrFastPath`. This causes crashes for actions without template params but with inline decisions. The new `classifyMovesForSearch` (from ticket 002) must replace this partition + materialize block.
 
-## Assumption Reassessment (2026-03-16)
+## Assumption Reassessment (2026-03-16, corrected)
 
-1. The partition block is at `search.ts` lines ~319-331 — **confirmed**. Splits into `concreteMoves[]` and `templateMoves[]`.
-2. Materialization block at lines ~333-347 calls `materializeOrFastPath` on concrete moves only — **confirmed**.
-3. Decision root creation at lines ~349-389 iterates `templateMoves` — **confirmed**.
-4. Forced-sequence compression at lines ~401-441 checks `candidates.length === 1 && templateMoves.length === 0` — **confirmed**.
+1. The partition block splitting into `concreteMoves[]` and `templateMoves[]` — **GONE**. Previous tickets (001-003) already removed the `concreteActionIds`-based partition. Lines 318-329 now call `materializeOrFastPath` on ALL moves (no split).
+2. Materialization block at lines ~321-329 calls `materializeOrFastPath` on ALL moves — **confirmed** (but not "concrete moves only" as originally stated).
+3. Decision root creation loop for `templateMoves` — **DOES NOT EXIST**. There is no decision root creation in `runOneIteration`. This is NEW functionality to ADD.
+4. Forced-sequence compression at lines ~340-379 checks `candidates.length === 1` only — **confirmed** (no `templateMoves.length === 0` check exists).
 
 ## Architecture Check
 
@@ -117,3 +117,15 @@ Remove `materializeConcreteCandidates` export if no longer used (check rollout.t
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-16
+- **What changed**:
+  - `packages/engine/src/agents/mcts/search.ts`: Replaced `materializeOrFastPath` call in `runOneIteration` with `classifyMovesForSearch`. Added decision root creation loop for `classification.pending` moves (each unique pending `actionId` gets a `nodeKind: 'decision'` child via `templateDecisionRootKey`). Updated forced-sequence compression guard to require `classification.pending.length === 0`. Updated `totalCandidateCount` to include both ready and pending moves.
+- **Deviations from original plan**:
+  - Ticket assumed a partition block (`concreteMoves[]`/`templateMoves[]`) and decision root creation loop already existed — they did not. Previous tickets (001-003) had already removed the partition; decision root creation was new code, not a replacement.
+  - `materializeOrFastPath` and `materializeConcreteCandidates` kept in `materialization.ts` and `index.ts` exports because `rollout.ts` still uses them (ticket 005 handles rollout).
+  - `materialization-fastpath.test.ts` kept (not deleted) for the same reason.
+  - Ticket assumption reassessment section corrected in-place.
+- **Verification**: `pnpm -F @ludoforge/engine build` clean, `pnpm turbo typecheck` 3/3 pass, `pnpm -F @ludoforge/engine test` 4962 tests / 0 failures.

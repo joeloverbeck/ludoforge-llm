@@ -3,7 +3,6 @@ import { describe, it } from 'node:test';
 
 import {
   toSelectionKey,
-  type SelectionKey,
 } from '../../../src/kernel/choose-n-session.js';
 import { optionKey } from '../../../src/kernel/legal-choices.js';
 

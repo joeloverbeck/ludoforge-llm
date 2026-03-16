@@ -10,6 +10,7 @@ import {
   type MctsConfig,
   type MctsRolloutMode,
 } from '../../../../src/agents/mcts/config.js';
+import type { MctsSearchVisitor } from '../../../../src/agents/mcts/visitor.js';
 
 describe('MctsConfig defaults', () => {
   it('DEFAULT_MCTS_CONFIG has all required fields with spec-defined values', () => {
@@ -32,6 +33,8 @@ describe('MctsConfig defaults', () => {
       compressForcedSequences: true,
       rootStopConfidenceDelta: 1e-3,
       rootStopMinVisits: 16,
+      decisionWideningCap: 12,
+      decisionDepthMultiplier: 4,
     };
     assert.deepEqual(DEFAULT_MCTS_CONFIG, expected);
   });
@@ -503,6 +506,137 @@ describe('heuristic backup alpha config', () => {
       const cfg = resolvePreset(name);
       const alpha = cfg.heuristicBackupAlpha ?? 0;
       assert.equal(alpha, 0, `preset "${name}" should not enable heuristicBackupAlpha`);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Decision config fields (62MCTSSEAVIS-002)
+// ---------------------------------------------------------------------------
+
+describe('decisionWideningCap config', () => {
+  it('defaults to 12 when not provided', () => {
+    const cfg = validateMctsConfig({});
+    assert.equal(cfg.decisionWideningCap, 12);
+  });
+
+  it('accepts a valid positive integer', () => {
+    const cfg = validateMctsConfig({ decisionWideningCap: 20 });
+    assert.equal(cfg.decisionWideningCap, 20);
+  });
+
+  it('rejects 0', () => {
+    assert.throws(
+      () => validateMctsConfig({ decisionWideningCap: 0 }),
+      (err: unknown) =>
+        err instanceof RangeError && /decisionWideningCap/.test((err as RangeError).message),
+    );
+  });
+
+  it('rejects negative values', () => {
+    assert.throws(
+      () => validateMctsConfig({ decisionWideningCap: -1 }),
+      (err: unknown) =>
+        err instanceof RangeError && /decisionWideningCap/.test((err as RangeError).message),
+    );
+  });
+
+  it('rejects non-integer', () => {
+    assert.throws(
+      () => validateMctsConfig({ decisionWideningCap: 5.5 }),
+      (err: unknown) =>
+        err instanceof RangeError && /decisionWideningCap/.test((err as RangeError).message),
+    );
+  });
+});
+
+describe('decisionDepthMultiplier config', () => {
+  it('defaults to 4 when not provided', () => {
+    const cfg = validateMctsConfig({});
+    assert.equal(cfg.decisionDepthMultiplier, 4);
+  });
+
+  it('accepts a valid positive integer', () => {
+    const cfg = validateMctsConfig({ decisionDepthMultiplier: 8 });
+    assert.equal(cfg.decisionDepthMultiplier, 8);
+  });
+
+  it('accepts 1 (minimum)', () => {
+    const cfg = validateMctsConfig({ decisionDepthMultiplier: 1 });
+    assert.equal(cfg.decisionDepthMultiplier, 1);
+  });
+
+  it('rejects 0', () => {
+    assert.throws(
+      () => validateMctsConfig({ decisionDepthMultiplier: 0 }),
+      (err: unknown) =>
+        err instanceof RangeError && /decisionDepthMultiplier/.test((err as RangeError).message),
+    );
+  });
+
+  it('rejects negative values', () => {
+    assert.throws(
+      () => validateMctsConfig({ decisionDepthMultiplier: -1 }),
+      (err: unknown) =>
+        err instanceof RangeError && /decisionDepthMultiplier/.test((err as RangeError).message),
+    );
+  });
+
+  it('rejects non-integer', () => {
+    assert.throws(
+      () => validateMctsConfig({ decisionDepthMultiplier: 2.5 }),
+      (err: unknown) =>
+        err instanceof RangeError && /decisionDepthMultiplier/.test((err as RangeError).message),
+    );
+  });
+});
+
+describe('visitor config', () => {
+  it('defaults to undefined when not provided', () => {
+    const cfg = validateMctsConfig({});
+    assert.equal(cfg.visitor, undefined);
+  });
+
+  it('accepts a visitor with onEvent callback', () => {
+    const visitor: MctsSearchVisitor = { onEvent: () => {} };
+    const cfg = validateMctsConfig({ visitor });
+    assert.equal(cfg.visitor, visitor);
+  });
+
+  it('accepts a visitor with no onEvent (empty object)', () => {
+    const visitor: MctsSearchVisitor = {};
+    const cfg = validateMctsConfig({ visitor });
+    assert.equal(cfg.visitor, visitor);
+  });
+
+  it('frozen config still allows visitor callback reference', () => {
+    const calls: string[] = [];
+    const visitor: MctsSearchVisitor = { onEvent: () => { calls.push('called'); } };
+    const cfg = validateMctsConfig({ visitor });
+    assert.ok(Object.isFrozen(cfg));
+    // The visitor reference is accessible and the callback is callable
+    cfg.visitor!.onEvent!({ type: 'poolExhausted', capacity: 100, iteration: 50 });
+    assert.deepEqual(calls, ['called']);
+  });
+});
+
+describe('decision fields in presets', () => {
+  it('all presets include decisionWideningCap and decisionDepthMultiplier after resolve', () => {
+    for (const name of MCTS_PRESET_NAMES) {
+      const cfg = resolvePreset(name);
+      assert.equal(typeof cfg.decisionWideningCap, 'number', `preset "${name}" should have decisionWideningCap`);
+      assert.equal(typeof cfg.decisionDepthMultiplier, 'number', `preset "${name}" should have decisionDepthMultiplier`);
+    }
+  });
+
+  it('visitor is NOT included in presets', () => {
+    for (const name of MCTS_PRESET_NAMES) {
+      const preset = MCTS_PRESETS[name];
+      assert.equal(
+        (preset as Record<string, unknown>)['visitor'],
+        undefined,
+        `preset "${name}" should not include visitor`,
+      );
     }
   });
 });

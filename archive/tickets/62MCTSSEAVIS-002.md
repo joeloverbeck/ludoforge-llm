@@ -1,6 +1,6 @@
 # 62MCTSSEAVIS-002: Add visitor & Decision Config Fields to MctsConfig
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — agents/mcts/config.ts

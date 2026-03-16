@@ -38,4 +38,20 @@ export type { CachedStateInfo, StateInfoCache } from './state-cache.js';
 export { collectDiagnostics, createAccumulator } from './diagnostics.js';
 export type { MctsSearchDiagnostics, MutableDiagnosticsAccumulator } from './diagnostics.js';
 
+export type {
+  MctsSearchEvent,
+  MctsSearchStartEvent,
+  MctsIterationBatchEvent,
+  MctsExpansionEvent,
+  MctsDecisionNodeCreatedEvent,
+  MctsDecisionCompletedEvent,
+  MctsDecisionIllegalEvent,
+  MctsTemplateDroppedEvent,
+  MctsApplyMoveFailureEvent,
+  MctsPoolExhaustedEvent,
+  MctsSearchCompleteEvent,
+  MctsRootCandidatesEvent,
+  MctsSearchVisitor,
+} from './visitor.js';
+
 export { MctsAgent } from './mcts-agent.js';

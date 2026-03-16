@@ -1,6 +1,6 @@
 # 62MCTSSEAVIS-001: MctsSearchVisitor Interface & Event Types
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — agents/mcts

@@ -1,6 +1,6 @@
 # 62MCTSSEAVIS-016: FITL MCTS Fast Tests — Decision Node Validation
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test tuning only
@@ -73,3 +73,10 @@ If scenarios still crash, diagnose via visitor output and fix. Crashes at this p
 
 1. `RUN_MCTS_FITL_E2E=1 pnpm -F @ludoforge/engine test:e2e`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+- **Completion date**: 2026-03-16
+- **What changed**: Absorbed by 63MCTSRUNMOVCLA-007 which performs the same validation after the runtime classification fix (Spec 63) replaced the compile-time partition that caused the original crashes.
+- **Deviations**: No standalone implementation — the Spec 63 ticket series (001–006) fixed the root cause, and 007 validates the fix end-to-end.
+- **Verification**: Validated via 63MCTSRUNMOVCLA-007 E2E test runs.

@@ -80,7 +80,7 @@ function collectTicketIndex(rootDir, dir) {
 }
 
 /** Test whether a dep string looks like a bare ticket ID (e.g. "CROGAMPRIELE-002"). */
-const BARE_ID_RE = /^[A-Z][\w-]+-\d{3,}$/;
+const BARE_ID_RE = /^[A-Za-z0-9][\w-]+-\d{3,}$/;
 
 function resolveDep(rootDir, dep, ticketIndex) {
   // Already a valid file path

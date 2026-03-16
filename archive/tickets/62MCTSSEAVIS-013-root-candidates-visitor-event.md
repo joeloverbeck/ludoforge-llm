@@ -1,6 +1,6 @@
 # 62MCTSSEAVIS-013: Wire rootCandidates Visitor Event
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — agents/mcts/search.ts
@@ -60,3 +60,12 @@ if (config.visitor?.onEvent) {
 
 1. `pnpm -F @ludoforge/engine test -- --test-path-pattern search`
 2. `pnpm turbo build && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-16
+- **What changed**:
+  - `packages/engine/src/agents/mcts/search.ts` — added `rootCandidates` emission in `runSearch()` immediately after `searchStart`, iterating `rootLegalMoves` to build concrete (`actionId` + `moveKey` via `canonicalMoveKey`) and template (`actionId`) arrays.
+  - `packages/engine/test/unit/agents/mcts/search-visitor.test.ts` — added 5 new tests (emits once, after searchStart, correct concrete fields, correct template fields, before iterationBatch) and updated event ordering test to include `rootCandidates`.
+- **Deviations**: Ticket pseudocode used `m.key` but `Move` has no `key` property; used `canonicalMoveKey(m)` instead (already imported in search.ts).
+- **Verification**: Build passes (exit 0), all 21 search-visitor tests pass (0 failures).

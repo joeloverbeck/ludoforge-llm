@@ -146,6 +146,58 @@ describe('search visitor: searchStart', () => {
 });
 
 // ---------------------------------------------------------------------------
+// rootCandidates
+// ---------------------------------------------------------------------------
+
+describe('search visitor: rootCandidates', () => {
+  it('emits exactly 1 rootCandidates event', () => {
+    const { events } = runWithVisitor(10);
+    const rc = events.filter(e => e.type === 'rootCandidates');
+    assert.equal(rc.length, 1);
+  });
+
+  it('rootCandidates is emitted immediately after searchStart', () => {
+    const { events } = runWithVisitor(10);
+    assert.equal(events[0]!.type, 'searchStart');
+    assert.equal(events[1]!.type, 'rootCandidates');
+  });
+
+  it('rootCandidates.concrete includes actionId and moveKey for each concrete move', () => {
+    const { events } = runWithVisitor(10);
+    const rc = events.find(e => e.type === 'rootCandidates')!;
+    assert.equal(rc.type, 'rootCandidates');
+    if (rc.type !== 'rootCandidates') return;
+    // Terminal def has 2 concrete actions: win, noop
+    assert.equal(rc.concrete.length, 2);
+    for (const entry of rc.concrete) {
+      assert.ok(typeof entry.actionId === 'string', 'actionId should be a string');
+      assert.ok(typeof entry.moveKey === 'string', 'moveKey should be a string');
+      assert.ok(entry.moveKey.length > 0, 'moveKey should be non-empty');
+    }
+    const actionIds = rc.concrete.map(e => e.actionId).sort();
+    assert.deepEqual(actionIds, ['noop', 'win']);
+  });
+
+  it('rootCandidates.templates includes actionId for each template move', () => {
+    const { events } = runWithVisitor(10);
+    const rc = events.find(e => e.type === 'rootCandidates')!;
+    assert.equal(rc.type, 'rootCandidates');
+    if (rc.type !== 'rootCandidates') return;
+    // Terminal def has no template actions
+    assert.equal(rc.templates.length, 0);
+  });
+
+  it('rootCandidates is emitted before iterationBatch processing begins', () => {
+    const { events } = runWithVisitor(100);
+    const rcIdx = events.findIndex(e => e.type === 'rootCandidates');
+    const firstBatchIdx = events.findIndex(e => e.type === 'iterationBatch');
+    assert.ok(rcIdx >= 0, 'rootCandidates should be present');
+    assert.ok(firstBatchIdx >= 0, 'iterationBatch should be present');
+    assert.ok(rcIdx < firstBatchIdx, 'rootCandidates should come before first iterationBatch');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // iterationBatch
 // ---------------------------------------------------------------------------
 
@@ -318,15 +370,16 @@ describe('search visitor: no visitor', () => {
 // ---------------------------------------------------------------------------
 
 describe('search visitor: event ordering', () => {
-  it('events follow order: searchStart, iterationBatch*, searchComplete', () => {
+  it('events follow order: searchStart, rootCandidates, iterationBatch*, searchComplete', () => {
     const { events } = runWithVisitor(100);
 
-    assert.ok(events.length >= 3, 'expected at least 3 events');
+    assert.ok(events.length >= 4, 'expected at least 4 events');
     assert.equal(events[0]!.type, 'searchStart');
+    assert.equal(events[1]!.type, 'rootCandidates');
     assert.equal(events[events.length - 1]!.type, 'searchComplete');
 
-    // All middle events should be iterationBatch.
-    for (let i = 1; i < events.length - 1; i++) {
+    // All middle events (after rootCandidates) should be iterationBatch.
+    for (let i = 2; i < events.length - 1; i++) {
       assert.equal(events[i]!.type, 'iterationBatch');
     }
   });

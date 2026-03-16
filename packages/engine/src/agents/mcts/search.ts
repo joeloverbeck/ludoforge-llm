@@ -814,6 +814,22 @@ export function runSearch(
       templateCount,
       poolCapacity: pool.capacity,
     });
+
+    // ── Visitor: emit rootCandidates ────────────────────────────────────────
+    const concreteEntries: { readonly actionId: string; readonly moveKey: MoveKey }[] = [];
+    const templateEntries: { readonly actionId: string }[] = [];
+    for (const move of rootLegalMoves) {
+      if (runtime.concreteActionIds.has(move.actionId)) {
+        concreteEntries.push({ actionId: move.actionId, moveKey: canonicalMoveKey(move) });
+      } else {
+        templateEntries.push({ actionId: move.actionId });
+      }
+    }
+    onEvent({
+      type: 'rootCandidates',
+      concrete: concreteEntries,
+      templates: templateEntries,
+    });
   }
 
   // ── Visitor: allocation tracking via pool wrapper ──────────────────────

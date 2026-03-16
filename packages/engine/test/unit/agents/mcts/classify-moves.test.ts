@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { classifyMovesForSearch } from '../../../../src/agents/mcts/materialization.js';
 import type { MoveClassification } from '../../../../src/agents/mcts/materialization.js';
-import type { MctsSearchVisitor, MctsSearchEvent, MctsTemplateDroppedEvent } from '../../../../src/agents/mcts/visitor.js';
+import type { MctsSearchVisitor, MctsSearchEvent, MctsMoveDroppedEvent } from '../../../../src/agents/mcts/visitor.js';
 import { asActionId, initialState, type GameDef } from '../../../../src/kernel/index.js';
 import type { Move } from '../../../../src/kernel/types-core.js';
 
@@ -129,7 +129,7 @@ describe('classifyMovesForSearch', () => {
     assert.equal(result.pending.length, 1, 'choose should be pending');
     assert.equal(result.pending[0]!.actionId, asActionId('choose'));
 
-    const dropped = events.filter((e) => e.type === 'templateDropped') as MctsTemplateDroppedEvent[];
+    const dropped = events.filter((e) => e.type === 'moveDropped') as MctsMoveDroppedEvent[];
     assert.equal(dropped.length, 1, 'nonexistent should be dropped');
     assert.equal(dropped[0]!.actionId, asActionId('nonexistent'));
     assert.equal(dropped[0]!.reason, 'unsatisfiable');
@@ -176,7 +176,7 @@ describe('classifyMovesForSearch', () => {
     assert.equal(result.ready.length, 0);
     assert.equal(result.pending.length, 0);
 
-    const dropped = events.filter((e) => e.type === 'templateDropped') as MctsTemplateDroppedEvent[];
+    const dropped = events.filter((e) => e.type === 'moveDropped') as MctsMoveDroppedEvent[];
     assert.equal(dropped.length, 1);
     assert.equal(dropped[0]!.actionId, asActionId('nonexistent'));
     assert.equal(dropped[0]!.reason, 'unsatisfiable');

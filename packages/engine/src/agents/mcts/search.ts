@@ -780,26 +780,34 @@ export function runSearch(
   const visitorStart = onEvent !== undefined ? performance.now() : 0;
 
   if (onEvent !== undefined) {
-    // Placeholder counts — ticket 006 replaces these with runtime
-    // classification (readyCount / pendingCount).
+    // Classify root moves once for the visitor start/candidates events.
+    // This is cheap (one legalChoicesEvaluate per move) and only runs once.
+    const visitorClassification = classifyMovesForSearch(
+      def, state, rootLegalMoves, runtime, config.visitor,
+    );
+
     onEvent({
       type: 'searchStart',
       totalIterations: config.iterations,
       legalMoveCount: rootLegalMoves.length,
-      concreteCount: 0,
-      templateCount: 0,
+      readyCount: visitorClassification.ready.length,
+      pendingCount: visitorClassification.pending.length,
       poolCapacity: pool.capacity,
     });
 
-    // Placeholder rootCandidates — ticket 006 replaces with ready/pending.
-    const allEntries: { readonly actionId: string; readonly moveKey: MoveKey }[] = [];
-    for (const move of rootLegalMoves) {
-      allEntries.push({ actionId: move.actionId, moveKey: canonicalMoveKey(move) });
+    // Emit rootCandidates with ready/pending breakdown.
+    const readyEntries: { readonly actionId: string; readonly moveKey: MoveKey }[] = [];
+    for (const candidate of visitorClassification.ready) {
+      readyEntries.push({ actionId: candidate.move.actionId, moveKey: candidate.moveKey });
+    }
+    const pendingEntries: { readonly actionId: string }[] = [];
+    for (const move of visitorClassification.pending) {
+      pendingEntries.push({ actionId: move.actionId });
     }
     onEvent({
       type: 'rootCandidates',
-      concrete: allEntries,
-      templates: [],
+      ready: readyEntries,
+      pending: pendingEntries,
     });
   }
 

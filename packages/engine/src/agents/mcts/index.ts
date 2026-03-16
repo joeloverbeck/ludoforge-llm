@@ -47,7 +47,7 @@ export type {
   MctsDecisionNodeCreatedEvent,
   MctsDecisionCompletedEvent,
   MctsDecisionIllegalEvent,
-  MctsTemplateDroppedEvent,
+  MctsMoveDroppedEvent,
   MctsApplyMoveFailureEvent,
   MctsPoolExhaustedEvent,
   MctsSearchCompleteEvent,

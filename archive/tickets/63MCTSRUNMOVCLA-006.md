@@ -1,6 +1,6 @@
 # 63MCTSRUNMOVCLA-006: Update visitor event types and console visitor
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — MCTS `visitor.ts`, `search.ts`, test helpers

@@ -18,8 +18,8 @@ const ALL_EVENTS: readonly MctsSearchEvent[] = [
     type: 'searchStart',
     totalIterations: 200,
     legalMoveCount: 10,
-    concreteCount: 3,
-    templateCount: 7,
+    readyCount: 3,
+    pendingCount: 7,
     poolCapacity: 1024,
   },
   {
@@ -58,7 +58,7 @@ const ALL_EVENTS: readonly MctsSearchEvent[] = [
     reason: 'no valid targets',
   },
   {
-    type: 'templateDropped',
+    type: 'moveDropped',
     actionId: 'march',
     reason: 'unsatisfiable',
   },
@@ -83,8 +83,8 @@ const ALL_EVENTS: readonly MctsSearchEvent[] = [
   },
   {
     type: 'rootCandidates',
-    concrete: [{ actionId: 'pass', moveKey: 'pass:0' as never }],
-    templates: [{ actionId: 'march' }],
+    ready: [{ actionId: 'pass', moveKey: 'pass:0' as never }],
+    pending: [{ actionId: 'march' }],
   },
 ];
 
@@ -124,24 +124,24 @@ describe('ConsoleVisitor', () => {
     assert.doesNotThrow(() => visitor.onEvent!(event));
   });
 
-  it('handles empty concrete/templates in rootCandidates', () => {
+  it('handles empty ready/pending in rootCandidates', () => {
     const visitor = createConsoleVisitor();
     const event: MctsSearchEvent = {
       type: 'rootCandidates',
-      concrete: [],
-      templates: [],
+      ready: [],
+      pending: [],
     };
 
     assert.doesNotThrow(() => visitor.onEvent!(event));
   });
 
-  it('handles all templateDropped reasons', () => {
+  it('handles all moveDropped reasons', () => {
     const visitor = createConsoleVisitor();
-    const reasons = ['unsatisfiable', 'stochasticUnresolved', 'applyMoveFailed'] as const;
+    const reasons = ['unsatisfiable', 'stochasticUnresolved', 'illegal', 'classificationError'] as const;
 
     for (const reason of reasons) {
       const event: MctsSearchEvent = {
-        type: 'templateDropped',
+        type: 'moveDropped',
         actionId: 'test',
         reason,
       };

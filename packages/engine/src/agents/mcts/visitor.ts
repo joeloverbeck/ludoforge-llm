@@ -8,7 +8,7 @@ export type MctsSearchEvent =
   | MctsDecisionNodeCreatedEvent
   | MctsDecisionCompletedEvent
   | MctsDecisionIllegalEvent
-  | MctsTemplateDroppedEvent
+  | MctsMoveDroppedEvent
   | MctsApplyMoveFailureEvent
   | MctsPoolExhaustedEvent
   | MctsSearchCompleteEvent
@@ -22,8 +22,8 @@ export interface MctsSearchStartEvent {
   readonly type: 'searchStart';
   readonly totalIterations: number;
   readonly legalMoveCount: number;
-  readonly concreteCount: number;
-  readonly templateCount: number;
+  readonly readyCount: number;
+  readonly pendingCount: number;
   readonly poolCapacity: number;
 }
 
@@ -73,13 +73,13 @@ export interface MctsDecisionIllegalEvent {
 }
 
 /**
- * Emitted when a template move is dropped during materialization
+ * Emitted when a move is dropped during classification
  * before it can enter the search tree.
  */
-export interface MctsTemplateDroppedEvent {
-  readonly type: 'templateDropped';
+export interface MctsMoveDroppedEvent {
+  readonly type: 'moveDropped';
   readonly actionId: string;
-  readonly reason: 'unsatisfiable' | 'stochasticUnresolved' | 'applyMoveFailed';
+  readonly reason: 'unsatisfiable' | 'stochasticUnresolved' | 'illegal' | 'classificationError';
 }
 
 export interface MctsApplyMoveFailureEvent {
@@ -106,8 +106,8 @@ export interface MctsSearchCompleteEvent {
 
 export interface MctsRootCandidatesEvent {
   readonly type: 'rootCandidates';
-  readonly concrete: readonly { readonly actionId: string; readonly moveKey: MoveKey }[];
-  readonly templates: readonly { readonly actionId: string }[];
+  readonly ready: readonly { readonly actionId: string; readonly moveKey: MoveKey }[];
+  readonly pending: readonly { readonly actionId: string }[];
 }
 
 /**

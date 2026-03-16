@@ -21,8 +21,8 @@ const SEARCH_START: MctsSearchEvent = {
   type: 'searchStart',
   totalIterations: 200,
   legalMoveCount: 10,
-  concreteCount: 3,
-  templateCount: 7,
+  readyCount: 3,
+  pendingCount: 7,
   poolCapacity: 1024,
 };
 
@@ -51,8 +51,8 @@ const POOL_EXHAUSTED: MctsSearchEvent = {
   iteration: 150,
 };
 
-const TEMPLATE_DROPPED: MctsSearchEvent = {
-  type: 'templateDropped',
+const MOVE_DROPPED: MctsSearchEvent = {
+  type: 'moveDropped',
   actionId: 'march',
   reason: 'unsatisfiable',
 };
@@ -96,13 +96,13 @@ const APPLY_MOVE_FAILURE: MctsSearchEvent = {
 
 const ROOT_CANDIDATES: MctsSearchEvent = {
   type: 'rootCandidates',
-  concrete: [{ actionId: 'pass', moveKey: 'pass:0' }],
-  templates: [{ actionId: 'march' }],
+  ready: [{ actionId: 'pass', moveKey: 'pass:0' }],
+  pending: [{ actionId: 'march' }],
 };
 
 const ALL_EVENTS: readonly MctsSearchEvent[] = [
   SEARCH_START, ITERATION_BATCH, EXPANSION, DECISION_NODE_CREATED,
-  DECISION_COMPLETED, DECISION_ILLEGAL, TEMPLATE_DROPPED,
+  DECISION_COMPLETED, DECISION_ILLEGAL, MOVE_DROPPED,
   APPLY_MOVE_FAILURE, POOL_EXHAUSTED, SEARCH_COMPLETE, ROOT_CANDIDATES,
 ];
 

@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { materializeMovesForRollout } from '../../../../src/agents/mcts/materialization.js';
-import type { MctsSearchVisitor, MctsSearchEvent, MctsTemplateDroppedEvent } from '../../../../src/agents/mcts/visitor.js';
+import type { MctsSearchVisitor, MctsSearchEvent, MctsMoveDroppedEvent } from '../../../../src/agents/mcts/visitor.js';
 import { asActionId, initialState, type GameDef } from '../../../../src/kernel/index.js';
 import type { Move } from '../../../../src/kernel/types-core.js';
 import { createRng } from '../../../../src/kernel/prng.js';
@@ -150,7 +150,7 @@ describe('materializeMovesForRollout', () => {
     );
 
     assert.equal(result.candidates.length, 0, 'no candidates from unsatisfiable move');
-    const dropped = events.filter((e) => e.type === 'templateDropped') as MctsTemplateDroppedEvent[];
+    const dropped = events.filter((e) => e.type === 'moveDropped') as MctsMoveDroppedEvent[];
     assert.equal(dropped.length, 1, 'should emit one dropped event');
     assert.equal(dropped[0]!.actionId, asActionId('nonexistent'));
     assert.equal(dropped[0]!.reason, 'unsatisfiable');
@@ -241,7 +241,7 @@ describe('materializeMovesForRollout', () => {
     // noop → complete passthrough, choose → pending completion, nonexistent → dropped
     assert.ok(result.candidates.length >= 2, 'should have candidates from noop and choose');
 
-    const dropped = events.filter((e) => e.type === 'templateDropped') as MctsTemplateDroppedEvent[];
+    const dropped = events.filter((e) => e.type === 'moveDropped') as MctsMoveDroppedEvent[];
     assert.equal(dropped.length, 1, 'nonexistent should be dropped');
     assert.equal(dropped[0]!.actionId, asActionId('nonexistent'));
     assert.equal(dropped[0]!.reason, 'unsatisfiable');

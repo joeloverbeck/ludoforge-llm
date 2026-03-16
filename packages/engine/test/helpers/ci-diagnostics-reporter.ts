@@ -49,7 +49,7 @@ export function createCiDiagnosticsReporter(
       case 'searchStart':
         console.log(
           `[MCTS] ${scenario} — search start: ${event.totalIterations} iterations, ` +
-          `${event.legalMoveCount} moves (${event.concreteCount} concrete, ${event.templateCount} templates), ` +
+          `${event.legalMoveCount} moves (${event.readyCount} ready, ${event.pendingCount} pending), ` +
           `pool=${event.poolCapacity}`,
         );
         break;
@@ -71,9 +71,9 @@ export function createCiDiagnosticsReporter(
           `[MCTS] ${scenario} — pool exhausted at iteration ${event.iteration} (capacity=${event.capacity})`,
         );
         break;
-      case 'templateDropped':
+      case 'moveDropped':
         console.log(
-          `[MCTS] ${scenario} — template dropped: ${event.actionId} (${event.reason})`,
+          `[MCTS] ${scenario} — move dropped: ${event.actionId} (${event.reason})`,
         );
         break;
       default:

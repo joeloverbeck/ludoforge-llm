@@ -18,8 +18,8 @@ export function createConsoleVisitor(prefix = '[MCTS]'): MctsSearchVisitor {
         case 'searchStart':
           console.log(
             `${prefix} SEARCH START — iterations=${event.totalIterations}, ` +
-            `moves=${event.legalMoveCount} (concrete=${event.concreteCount}, ` +
-            `templates=${event.templateCount}), pool=${event.poolCapacity}`,
+            `moves=${event.legalMoveCount} (ready=${event.readyCount}, ` +
+            `pending=${event.pendingCount}), pool=${event.poolCapacity}`,
           );
           break;
         case 'iterationBatch':
@@ -57,9 +57,9 @@ export function createConsoleVisitor(prefix = '[MCTS]'): MctsSearchVisitor {
             `${prefix} DECISION ILLEGAL ${event.actionId}.${event.decisionName}: ${event.reason}`,
           );
           break;
-        case 'templateDropped':
+        case 'moveDropped':
           console.log(
-            `${prefix} TEMPLATE DROPPED ${event.actionId}: ${event.reason}`,
+            `${prefix} MOVE DROPPED ${event.actionId}: ${event.reason}`,
           );
           break;
         case 'applyMoveFailure':
@@ -82,8 +82,8 @@ export function createConsoleVisitor(prefix = '[MCTS]'): MctsSearchVisitor {
         case 'rootCandidates':
           console.log(
             `${prefix} ROOT CANDIDATES — ` +
-            `concrete=[${event.concrete.map((c) => c.actionId).join(', ')}], ` +
-            `templates=[${event.templates.map((t) => t.actionId).join(', ')}]`,
+            `ready=[${event.ready.map((c) => c.actionId).join(', ')}], ` +
+            `pending=[${event.pending.map((t) => t.actionId).join(', ')}]`,
           );
           break;
       }

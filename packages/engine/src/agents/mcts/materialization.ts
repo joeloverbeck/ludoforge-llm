@@ -74,7 +74,7 @@ export function classifyMovesForSearch(
     } catch {
       if (visitor?.onEvent) {
         visitor.onEvent({
-          type: 'templateDropped',
+          type: 'moveDropped',
           actionId: move.actionId,
           reason: 'unsatisfiable',
         });
@@ -108,7 +108,7 @@ export function classifyMovesForSearch(
       case 'pendingStochastic':
         if (visitor?.onEvent) {
           visitor.onEvent({
-            type: 'templateDropped',
+            type: 'moveDropped',
             actionId: move.actionId,
             reason: 'stochasticUnresolved',
           });
@@ -164,7 +164,7 @@ export function materializeMovesForRollout(
     } catch {
       if (visitor?.onEvent) {
         visitor.onEvent({
-          type: 'templateDropped',
+          type: 'moveDropped',
           actionId: move.actionId,
           reason: 'unsatisfiable',
         });
@@ -198,7 +198,7 @@ export function materializeMovesForRollout(
             cursor = result.rng;
             if (visitor?.onEvent) {
               visitor.onEvent({
-                type: 'templateDropped',
+                type: 'moveDropped',
                 actionId: move.actionId,
                 reason: 'stochasticUnresolved',
               });
@@ -208,7 +208,7 @@ export function materializeMovesForRollout(
             // unsatisfiable — no further attempts will succeed.
             if (visitor?.onEvent) {
               visitor.onEvent({
-                type: 'templateDropped',
+                type: 'moveDropped',
                 actionId: move.actionId,
                 reason: 'unsatisfiable',
               });
@@ -224,7 +224,7 @@ export function materializeMovesForRollout(
       case 'pendingStochastic':
         if (visitor?.onEvent) {
           visitor.onEvent({
-            type: 'templateDropped',
+            type: 'moveDropped',
             actionId: move.actionId,
             reason: 'stochasticUnresolved',
           });

@@ -131,10 +131,10 @@ describe('search visitor: searchStart', () => {
     assert.equal(start.totalIterations, 100);
     // The terminal def has 2 actions (win, noop).
     assert.equal(start.legalMoveCount, 2);
-    // concreteCount/templateCount are placeholder 0 values until ticket 006
-    // replaces them with readyCount/pendingCount via runtime classification.
-    assert.equal(start.concreteCount, 0);
-    assert.equal(start.templateCount, 0);
+    // readyCount/pendingCount reflect runtime classification.
+    // The terminal def has 2 complete actions (win, noop) and 0 pending.
+    assert.equal(start.readyCount, 2);
+    assert.equal(start.pendingCount, 0);
   });
 
   it('searchStart.poolCapacity matches the pool', () => {
@@ -164,29 +164,29 @@ describe('search visitor: rootCandidates', () => {
     assert.equal(events[1]!.type, 'rootCandidates');
   });
 
-  it('rootCandidates.concrete includes actionId and moveKey for each concrete move', () => {
+  it('rootCandidates.ready includes actionId and moveKey for each ready move', () => {
     const { events } = runWithVisitor(10);
     const rc = events.find(e => e.type === 'rootCandidates')!;
     assert.equal(rc.type, 'rootCandidates');
     if (rc.type !== 'rootCandidates') return;
-    // Terminal def has 2 concrete actions: win, noop
-    assert.equal(rc.concrete.length, 2);
-    for (const entry of rc.concrete) {
+    // Terminal def has 2 ready actions: win, noop
+    assert.equal(rc.ready.length, 2);
+    for (const entry of rc.ready) {
       assert.ok(typeof entry.actionId === 'string', 'actionId should be a string');
       assert.ok(typeof entry.moveKey === 'string', 'moveKey should be a string');
       assert.ok(entry.moveKey.length > 0, 'moveKey should be non-empty');
     }
-    const actionIds = rc.concrete.map(e => e.actionId).sort();
+    const actionIds = rc.ready.map(e => e.actionId).sort();
     assert.deepEqual(actionIds, ['noop', 'win']);
   });
 
-  it('rootCandidates.templates includes actionId for each template move', () => {
+  it('rootCandidates.pending includes actionId for each pending move', () => {
     const { events } = runWithVisitor(10);
     const rc = events.find(e => e.type === 'rootCandidates')!;
     assert.equal(rc.type, 'rootCandidates');
     if (rc.type !== 'rootCandidates') return;
-    // Terminal def has no template actions
-    assert.equal(rc.templates.length, 0);
+    // Terminal def has no pending actions
+    assert.equal(rc.pending.length, 0);
   });
 
   it('rootCandidates is emitted before iterationBatch processing begins', () => {

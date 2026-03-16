@@ -42,8 +42,8 @@
  * | airStrike    |    13 | $arcLightNoCoinProvinces|
  * | airLift      |    13 | $spaces                 |
  *
- * ### Template Drop / Pool Exhaustion
- * - `templateDropped` events: 0
+ * ### Move Drop / Pool Exhaustion
+ * - `moveDropped` events: 0
  * - `poolExhausted` events: 0
  *
  * ### Search Completion
@@ -62,7 +62,7 @@
  * 1. Template moves are the dominant failure mode — every FITL operation
  *    with `chooseN`/`chooseOne` decisions crashes without decision nodes.
  * 2. `$targetSpaces` is the most common blocked decision (248 of 408).
- * 3. No `templateDropped` events means the search doesn't pre-filter
+ * 3. No `moveDropped` events means the search doesn't pre-filter
  *    these — it tries to expand them and crashes. Decision nodes must
  *    intercept *before* `applyMove`.
  * 4. Pool is adequate at 201 for 200 iterations.

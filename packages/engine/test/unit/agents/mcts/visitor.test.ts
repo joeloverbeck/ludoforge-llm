@@ -9,7 +9,7 @@ import type {
   MctsDecisionNodeCreatedEvent,
   MctsDecisionCompletedEvent,
   MctsDecisionIllegalEvent,
-  MctsTemplateDroppedEvent,
+  MctsMoveDroppedEvent,
   MctsApplyMoveFailureEvent,
   MctsPoolExhaustedEvent,
   MctsSearchCompleteEvent,
@@ -29,8 +29,8 @@ describe('MctsSearchVisitor types', () => {
         type: 'searchStart',
         totalIterations: 1000,
         legalMoveCount: 10,
-        concreteCount: 5,
-        templateCount: 5,
+        readyCount: 5,
+        pendingCount: 5,
         poolCapacity: 50_000,
       } satisfies MctsSearchStartEvent,
       {
@@ -69,10 +69,10 @@ describe('MctsSearchVisitor types', () => {
         reason: 'no eligible cities',
       } satisfies MctsDecisionIllegalEvent,
       {
-        type: 'templateDropped',
+        type: 'moveDropped',
         actionId: 'ambush',
         reason: 'unsatisfiable',
-      } satisfies MctsTemplateDroppedEvent,
+      } satisfies MctsMoveDroppedEvent,
       {
         type: 'applyMoveFailure',
         actionId: 'train',
@@ -94,8 +94,8 @@ describe('MctsSearchVisitor types', () => {
       } satisfies MctsSearchCompleteEvent,
       {
         type: 'rootCandidates',
-        concrete: [{ actionId: 'pass', moveKey: 'pass' }],
-        templates: [{ actionId: 'sweep' }],
+        ready: [{ actionId: 'pass', moveKey: 'pass' }],
+        pending: [{ actionId: 'sweep' }],
       } satisfies MctsRootCandidatesEvent,
     ];
 
@@ -113,7 +113,7 @@ describe('MctsSearchVisitor types', () => {
         'decisionNodeCreated',
         'decisionCompleted',
         'decisionIllegal',
-        'templateDropped',
+        'moveDropped',
         'applyMoveFailure',
         'poolExhausted',
         'searchComplete',
@@ -138,7 +138,7 @@ describe('MctsSearchVisitor types', () => {
           return `decDone:${event.stepsUsed}`;
         case 'decisionIllegal':
           return `decIllegal:${event.reason}`;
-        case 'templateDropped':
+        case 'moveDropped':
           return `dropped:${event.reason}`;
         case 'applyMoveFailure':
           return `fail:${event.phase}`;
@@ -147,7 +147,7 @@ describe('MctsSearchVisitor types', () => {
         case 'searchComplete':
           return `complete:${event.stopReason}`;
         case 'rootCandidates':
-          return `candidates:${event.concrete.length}`;
+          return `candidates:${event.ready.length}`;
       }
       // Exhaustiveness check — if a case is missing, TypeScript flags this.
       const _exhaustive: never = event;
@@ -175,8 +175,8 @@ describe('MctsSearchVisitor types', () => {
       type: 'searchStart',
       totalIterations: 100,
       legalMoveCount: 5,
-      concreteCount: 3,
-      templateCount: 2,
+      readyCount: 3,
+      pendingCount: 2,
       poolCapacity: 10_000,
     });
   });
@@ -201,15 +201,16 @@ describe('MctsSearchVisitor types', () => {
     }
   });
 
-  it('templateDropped reason accepts all valid vocabulary', () => {
-    const reasons: Array<MctsTemplateDroppedEvent['reason']> = [
+  it('moveDropped reason accepts all valid vocabulary', () => {
+    const reasons: Array<MctsMoveDroppedEvent['reason']> = [
       'unsatisfiable',
       'stochasticUnresolved',
-      'applyMoveFailed',
+      'illegal',
+      'classificationError',
     ];
     for (const reason of reasons) {
-      const event: MctsTemplateDroppedEvent = {
-        type: 'templateDropped',
+      const event: MctsMoveDroppedEvent = {
+        type: 'moveDropped',
         actionId: 'test',
         reason,
       };

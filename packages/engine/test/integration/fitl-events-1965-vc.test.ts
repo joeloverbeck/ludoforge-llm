@@ -19,6 +19,40 @@ const expectedCards = [
   { id: 'card-116', order: 116, title: 'Cadres', sideMode: 'dual', period: '1964', seatOrder: ['VC', 'ARVN', 'NVA', 'US'] },
 ] as const;
 
+const MASHER_TOKEN_INTERPRETATIONS = [
+  {
+    when: {
+      op: 'and',
+      args: [
+        { prop: 'faction', op: 'eq', value: 'ARVN' },
+        { prop: 'type', op: 'in', value: ['troops', 'police'] },
+      ],
+    },
+    assign: {
+      faction: 'US',
+      type: 'troops',
+    },
+  },
+] as const;
+
+type Grant = Record<string, any>;
+
+const compileMasher = () => {
+  const { parsed, compiled } = compileProductionSpec();
+  assertNoErrors(parsed);
+  assert.notEqual(compiled.gameDef, null);
+  const masher = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-99');
+  assert.notEqual(masher, undefined, 'Expected card-99 to exist');
+  return { parsed, compiled, masher: masher! };
+};
+
+const requireGrants = (grants: unknown, expectedCount: number): readonly Grant[] => {
+  assert.notEqual(grants, undefined, 'Expected grants to exist');
+  const arr = grants as readonly Grant[];
+  assert.equal(arr.length, expectedCount, `Expected ${expectedCount} grants`);
+  return arr;
+};
+
 describe('FITL VC-first event-card production spec batch', () => {
   it('compiles all 12 cards with correct metadata and side-shape invariants', () => {
     const { parsed, compiled } = compileProductionSpec();
@@ -65,7 +99,7 @@ describe('FITL VC-first event-card production spec batch', () => {
     }
   });
 
-  it('encodes free-operation sequencing for cards 95 and 99 without kernel-specific handlers', () => {
+  it('encodes free-operation sequencing for card 95 (Westmoreland) without kernel-specific handlers', () => {
     const { parsed, compiled } = compileProductionSpec();
 
     assertNoErrors(parsed);
@@ -99,36 +133,164 @@ describe('FITL VC-first event-card production spec batch', () => {
         actionIds: ['airStrike'],
       },
     ]);
+  });
+});
 
-    const masher = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-99');
-    assert.notEqual(masher, undefined);
-    assert.deepEqual(masher?.unshaded?.freeOperationGrants, [
-      {
-        seat: 'us',
-        sequence: { batch: 'masher-white-wing-us', step: 0 },
-        operationClass: 'operation',
-        actionIds: ['sweep'],
-      },
-      {
-        seat: 'us',
-        sequence: { batch: 'masher-white-wing-us', step: 1 },
-        operationClass: 'operation',
-        actionIds: ['assault'],
-      },
-      {
-        seat: 'arvn',
-        executeAsSeat: 'us',
-        sequence: { batch: 'masher-white-wing-arvn-as-us', step: 0 },
-        operationClass: 'operation',
-        actionIds: ['sweep'],
-      },
-      {
-        seat: 'arvn',
-        executeAsSeat: 'us',
-        sequence: { batch: 'masher-white-wing-arvn-as-us', step: 1 },
-        operationClass: 'operation',
-        actionIds: ['assault'],
-      },
-    ]);
+describe('FITL card-99 Masher/White Wing — unshaded structural', () => {
+  it('has exactly 4 unshaded freeOperationGrants with correct batch/step/actionIds', () => {
+    const { masher } = compileMasher();
+    const grants = requireGrants(masher.unshaded?.freeOperationGrants , 4);
+
+    assert.equal(grants[0]!.seat, 'us');
+    assert.deepEqual(grants[0]!.sequence, { batch: 'masher-white-wing-us', step: 0 });
+    assert.deepEqual(grants[0]!.actionIds, ['sweep']);
+    assert.equal(grants[0]!.operationClass, 'operation');
+
+    assert.equal(grants[1]!.seat, 'us');
+    assert.deepEqual(grants[1]!.sequence, { batch: 'masher-white-wing-us', step: 1 });
+    assert.deepEqual(grants[1]!.actionIds, ['assault']);
+    assert.equal(grants[1]!.operationClass, 'operation');
+
+    assert.equal(grants[2]!.seat, 'arvn');
+    assert.equal(grants[2]!.executeAsSeat, 'us');
+    assert.deepEqual(grants[2]!.sequence, { batch: 'masher-white-wing-arvn-as-us', step: 0 });
+    assert.deepEqual(grants[2]!.actionIds, ['sweep']);
+    assert.equal(grants[2]!.operationClass, 'operation');
+
+    assert.equal(grants[3]!.seat, 'arvn');
+    assert.equal(grants[3]!.executeAsSeat, 'us');
+    assert.deepEqual(grants[3]!.sequence, { batch: 'masher-white-wing-arvn-as-us', step: 1 });
+    assert.deepEqual(grants[3]!.actionIds, ['assault']);
+    assert.equal(grants[3]!.operationClass, 'operation');
+  });
+
+  it('all 4 unshaded grants carry tokenInterpretations remapping ARVN→US', () => {
+    const { masher } = compileMasher();
+    const grants = requireGrants(masher.unshaded?.freeOperationGrants , 4);
+    for (let i = 0; i < 4; i++) {
+      assert.deepEqual(
+        grants[i]!.tokenInterpretations,
+        MASHER_TOKEN_INTERPRETATIONS,
+        `Grant ${i} must remap ARVN troops/police to US troops`,
+      );
+    }
+  });
+
+  it('all 4 unshaded grants have allowDuringMonsoon: true', () => {
+    const { masher } = compileMasher();
+    const grants = requireGrants(masher.unshaded?.freeOperationGrants , 4);
+    for (let i = 0; i < 4; i++) {
+      assert.equal(grants[i]!.allowDuringMonsoon, true, `Grant ${i} must allow monsoon play`);
+    }
+  });
+
+  it('sweep grants (steps 0) have executionContext maxSpaces: 1', () => {
+    const { masher } = compileMasher();
+    const grants = requireGrants(masher.unshaded?.freeOperationGrants , 4);
+    for (const idx of [0, 2]) {
+      const grant = grants[idx]!;
+      assert.equal(
+        grant.executionContext?.maxSpaces,
+        1,
+        `Sweep grant for ${grant.seat} must limit to 1 space`,
+      );
+    }
+  });
+
+  it('sweep grants have zoneFilter requiring non-Jungle terrain plus US and ARVN troops', () => {
+    const { masher } = compileMasher();
+    const grants = requireGrants(masher.unshaded?.freeOperationGrants , 4);
+    for (const idx of [0, 2]) {
+      const grant = grants[idx]!;
+      assert.notEqual(grant.zoneFilter, undefined, `Sweep grant for ${grant.seat} must have a zoneFilter`);
+      const filter = grant.zoneFilter as Record<string, unknown>;
+      assert.equal(filter.op, 'and', 'zoneFilter root must be an AND');
+      assert.equal(Array.isArray(filter.args), true, 'zoneFilter args must be an array');
+      assert.equal((filter.args as unknown[]).length, 3, 'zoneFilter must have 3 clauses (non-jungle + US troops + ARVN troops)');
+    }
+  });
+
+  it('assault grants (steps 1) have no zoneFilter', () => {
+    const { masher } = compileMasher();
+    const grants = requireGrants(masher.unshaded?.freeOperationGrants , 4);
+    for (const idx of [1, 3]) {
+      const grant = grants[idx]!;
+      assert.equal(grant.zoneFilter, undefined, `Assault grant for ${grant.seat} must not have a zoneFilter`);
+    }
+  });
+
+  it('ARVN grants have executeAsSeat: us', () => {
+    const { masher } = compileMasher();
+    const grants = requireGrants(masher.unshaded?.freeOperationGrants , 4);
+    assert.equal(grants[2]!.executeAsSeat, 'us');
+    assert.equal(grants[3]!.executeAsSeat, 'us');
+    assert.equal(grants[0]!.executeAsSeat, undefined);
+    assert.equal(grants[1]!.executeAsSeat, undefined);
+  });
+});
+
+describe('FITL card-99 Masher/White Wing — shaded structural', () => {
+  it('has exactly 4 shaded freeOperationGrants (VC march/ambush + NVA march/ambush)', () => {
+    const { masher } = compileMasher();
+    const grants = requireGrants(masher.shaded?.freeOperationGrants , 4);
+
+    assert.equal(grants[0]!.seat, 'vc');
+    assert.deepEqual(grants[0]!.sequence, { batch: 'masher-shaded-vc', step: 0 });
+    assert.deepEqual(grants[0]!.actionIds, ['march']);
+    assert.equal(grants[0]!.operationClass, 'operation');
+
+    assert.equal(grants[1]!.seat, 'vc');
+    assert.deepEqual(grants[1]!.sequence, { batch: 'masher-shaded-vc', step: 1 });
+    assert.deepEqual(grants[1]!.actionIds, ['ambushVc']);
+    assert.equal(grants[1]!.operationClass, 'specialActivity');
+
+    assert.equal(grants[2]!.seat, 'nva');
+    assert.deepEqual(grants[2]!.sequence, { batch: 'masher-shaded-nva', step: 0 });
+    assert.deepEqual(grants[2]!.actionIds, ['march']);
+    assert.equal(grants[2]!.operationClass, 'operation');
+
+    assert.equal(grants[3]!.seat, 'nva');
+    assert.deepEqual(grants[3]!.sequence, { batch: 'masher-shaded-nva', step: 1 });
+    assert.deepEqual(grants[3]!.actionIds, ['ambushNva']);
+    assert.equal(grants[3]!.operationClass, 'specialActivity');
+  });
+
+  it('all 4 shaded grants have allowDuringMonsoon: true', () => {
+    const { masher } = compileMasher();
+    const grants = requireGrants(masher.shaded?.freeOperationGrants , 4);
+    for (let i = 0; i < 4; i++) {
+      assert.equal(grants[i]!.allowDuringMonsoon, true, `Shaded grant ${i} must allow monsoon play`);
+    }
+  });
+
+  it('march grants have executionContext maxSpaces: 3 and moveZoneBindings', () => {
+    const { masher } = compileMasher();
+    const grants = requireGrants(masher.shaded?.freeOperationGrants , 4);
+    for (const idx of [0, 2]) {
+      const grant = grants[idx]!;
+      assert.equal(
+        grant.executionContext?.maxSpaces,
+        3,
+        `March grant for ${grant.seat} must allow up to 3 spaces`,
+      );
+      assert.deepEqual(
+        grant.moveZoneBindings,
+        ['$targetSpaces'],
+        `March grant for ${grant.seat} must capture move zone bindings`,
+      );
+    }
+  });
+
+  it('ambush grants have executionContext skipUndergroundRequirement: true', () => {
+    const { masher } = compileMasher();
+    const grants = requireGrants(masher.shaded?.freeOperationGrants , 4);
+    for (const idx of [1, 3]) {
+      const grant = grants[idx]!;
+      assert.equal(
+        grant.executionContext?.skipUndergroundRequirement,
+        true,
+        `Ambush grant for ${grant.seat} must skip underground requirement (even if Active)`,
+      );
+    }
   });
 });

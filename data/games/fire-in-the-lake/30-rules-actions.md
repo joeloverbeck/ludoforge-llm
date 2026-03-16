@@ -5753,25 +5753,42 @@ actionPipelines:
       - stage: select-spaces
         effects:
           - if:
-              when: { op: '==', left: { ref: globalMarkerState, marker: cap_boobyTraps }, right: unshaded }
+              when:
+                op: and
+                args:
+                  - op: '>'
+                    left:
+                      aggregate:
+                        op: count
+                        query: { query: grantContext, key: skipUndergroundRequirement }
+                    right: 0
+                  - { op: '==', left: { ref: grantContext, key: skipUndergroundRequirement }, right: true }
               then:
-                - macro: insurgent-ambush-select-spaces-base
+                - macro: insurgent-ambush-select-spaces-any-activity
                   args:
                     faction: NVA
-                    maxSpaces: 1
+                    maxSpaces: 2
               else:
                 - if:
-                    when: { op: '==', left: { ref: gvar, var: mom_typhoonKate }, right: true }
+                    when: { op: '==', left: { ref: globalMarkerState, marker: cap_boobyTraps }, right: unshaded }
                     then:
                       - macro: insurgent-ambush-select-spaces-base
                         args:
                           faction: NVA
                           maxSpaces: 1
                     else:
-                      - macro: insurgent-ambush-select-spaces-base
-                        args:
-                          faction: NVA
-                          maxSpaces: 2
+                      - if:
+                          when: { op: '==', left: { ref: gvar, var: mom_typhoonKate }, right: true }
+                          then:
+                            - macro: insurgent-ambush-select-spaces-base
+                              args:
+                                faction: NVA
+                                maxSpaces: 1
+                          else:
+                            - macro: insurgent-ambush-select-spaces-base
+                              args:
+                                faction: NVA
+                                maxSpaces: 2
       - stage: resolve-per-space
         effects:
           - macro: insurgent-ambush-resolve-spaces
@@ -6140,25 +6157,42 @@ actionPipelines:
       - stage: select-spaces
         effects:
           - if:
-              when: { op: '==', left: { ref: globalMarkerState, marker: cap_boobyTraps }, right: unshaded }
+              when:
+                op: and
+                args:
+                  - op: '>'
+                    left:
+                      aggregate:
+                        op: count
+                        query: { query: grantContext, key: skipUndergroundRequirement }
+                    right: 0
+                  - { op: '==', left: { ref: grantContext, key: skipUndergroundRequirement }, right: true }
               then:
-                - macro: insurgent-ambush-select-spaces-base
+                - macro: insurgent-ambush-select-spaces-any-activity
                   args:
                     faction: VC
-                    maxSpaces: 1
+                    maxSpaces: 2
               else:
                 - if:
-                    when: { op: '==', left: { ref: gvar, var: mom_typhoonKate }, right: true }
+                    when: { op: '==', left: { ref: globalMarkerState, marker: cap_boobyTraps }, right: unshaded }
                     then:
                       - macro: insurgent-ambush-select-spaces-base
                         args:
                           faction: VC
                           maxSpaces: 1
                     else:
-                      - macro: insurgent-ambush-select-spaces-base
-                        args:
-                          faction: VC
-                          maxSpaces: 2
+                      - if:
+                          when: { op: '==', left: { ref: gvar, var: mom_typhoonKate }, right: true }
+                          then:
+                            - macro: insurgent-ambush-select-spaces-base
+                              args:
+                                faction: VC
+                                maxSpaces: 1
+                          else:
+                            - macro: insurgent-ambush-select-spaces-base
+                              args:
+                                faction: VC
+                                maxSpaces: 2
       - stage: resolve-per-space
         effects:
           - macro: insurgent-ambush-resolve-spaces

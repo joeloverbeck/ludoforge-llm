@@ -679,6 +679,68 @@ effectMacros:
           min: 1
           max: { param: maxSpaces }
 
+  # ── insurgent-ambush-select-spaces-any-activity ─────────────────────────
+  # Variant of insurgent-ambush-select-spaces-base that allows ANY guerrilla
+  # (active or underground) — used by Card 99 shaded "even if Active".
+  - id: insurgent-ambush-select-spaces-any-activity
+    params:
+      - { name: faction, type: { kind: enum, values: [NVA, VC] } }
+      - { name: maxSpaces, type: number }
+    exports: [$targetSpaces]
+    effects:
+      - chooseN:
+          bind: $targetSpaces
+          options:
+            query: mapSpaces
+            filter:
+              op: and
+              args:
+                - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: $zone
+                        filter:
+                          op: and
+                          args:
+                            - { prop: faction, op: eq, value:  { param: faction } }
+                            - { prop: type, op: eq, value: guerrilla }
+                  right: 0
+                - op: or
+                  args:
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              op: and
+                              args:
+                                - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
+                      right: 0
+                    - op: and
+                      args:
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                        - op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInAdjacentZones
+                                zone: $zone
+                                filter:
+                                  op: and
+                                  args:
+                                    - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
+                          right: 0
+          min: 1
+          max: { param: maxSpaces }
+
   # ── insurgent-ambush-resolve-spaces ──────────────────────────────────────
   # Shared ambush resolver (NVA/VC):
   # - activate exactly 1 underground attacker guerrilla per selected space

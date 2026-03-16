@@ -82,7 +82,7 @@ export function lowerZoneSelector(
   path: string,
 ): EffectLoweringResult<ZoneRef> {
   if (typeof source === 'string') {
-    const zone = canonicalizeZoneSelector(source, context.ownershipByBase, path, context.seatIds);
+    const zone = canonicalizeZoneSelector(source, context.ownershipByBase, path, context.seatIds, context.zoneIdSet);
     if (zone.value === null) {
       return { value: null, diagnostics: zone.diagnostics };
     }
@@ -190,6 +190,7 @@ export function makeConditionContext(context: EffectLoweringContext, scope: Bind
   return {
     ownershipByBase: context.ownershipByBase,
     bindingScope: scope.visibleBindings(),
+    ...(context.zoneIdSet === undefined ? {} : { zoneIdSet: context.zoneIdSet }),
     ...(context.tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary: context.tokenTraitVocabulary }),
     ...(context.tokenFilterProps === undefined ? {} : { tokenFilterProps: context.tokenFilterProps }),
     ...(context.namedSets === undefined ? {} : { namedSets: context.namedSets }),

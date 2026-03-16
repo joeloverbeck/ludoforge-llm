@@ -205,7 +205,8 @@ describe('FITL text-only card behavior backfill', () => {
     const card98 = cardById.get('card-98');
     assert.equal(card98?.unshaded?.branches?.length, 2);
     assert.equal(card98?.shaded?.effects, undefined);
-    assert.equal((card98?.shaded?.targets?.[0]?.effects?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 2);
+    assert.equal((card98?.shaded?.targets?.[0]?.effects?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 1);
+    assert.equal((card98?.shaded?.targets?.[0]?.effects?.[1] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 1);
 
     const card100 = cardById.get('card-100');
     assert.equal(card100?.unshaded?.branches?.length, 2);

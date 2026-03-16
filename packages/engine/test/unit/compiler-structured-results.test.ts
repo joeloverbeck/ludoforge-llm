@@ -1471,6 +1471,10 @@ describe('compiler structured section results', () => {
     const base = createMinimalCompilableDoc();
     const doc = {
       ...base,
+      zones: [
+        ...base.zones,
+        { id: 'board', owner: 'none' as const, visibility: 'public' as const, ordering: 'set' as const },
+      ],
       eventDecks: [
         {
           id: 'foundation',

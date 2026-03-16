@@ -128,6 +128,47 @@ export function materializeZoneDefs(
     }
   }
 
+  // Post-materialization cross-reference validation pass.
+  const zoneIdSet = new Set(outputZones.map(z => z.id));
+
+  for (const zone of outputZones) {
+    if (zone.adjacentTo === undefined) continue;
+    for (const adj of zone.adjacentTo) {
+      if (!zoneIdSet.has(adj.to)) {
+        diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_ADJACENCY_TARGET_UNKNOWN,
+          path: `${pathPrefix}.[${zone.id}].adjacentTo`,
+          severity: 'error',
+          message: `Adjacency target "${adj.to}" on zone "${zone.id}" does not exist.`,
+          suggestion: 'Check zone definitions for the correct zone ID.',
+          alternatives: [...zoneIdSet].sort(),
+        });
+      }
+    }
+  }
+
+  for (const zone of outputZones) {
+    if (zone.behavior?.reshuffleFrom === undefined) continue;
+    const reshuffleTarget = zone.behavior.reshuffleFrom;
+    const reshuffleStr = String(reshuffleTarget);
+    // reshuffleFrom can be a fully-qualified ID ("discard:none") or a bare base ("discard").
+    const isQualified = reshuffleStr.includes(':');
+    const reshuffleZoneExists = isQualified
+      ? zoneIdSet.has(asZoneId(reshuffleStr))
+      : (zoneIdSet.has(asZoneId(`${reshuffleStr}:none`)) ||
+        [...zoneIdSet].some(id => String(id).startsWith(`${reshuffleStr}:`)));
+    if (!reshuffleZoneExists) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_BEHAVIOR_RESHUFFLE_TARGET_UNKNOWN,
+        path: `${pathPrefix}.[${zone.id}].behavior.reshuffleFrom`,
+        severity: 'error',
+        message: `Reshuffle source "${reshuffleTarget}" on zone "${zone.id}" does not match any zone.`,
+        suggestion: 'Use a zone base declared in doc.zones.',
+        alternatives: [...new Set([...zoneIdSet].map(id => String(id).split(':')[0] ?? ''))].sort(),
+      });
+    }
+  }
+
   return {
     value: {
       zones: outputZones,
@@ -137,11 +178,22 @@ export function materializeZoneDefs(
   };
 }
 
+/**
+ * A zone qualifier is static (compile-time resolvable) if it is `none` or a
+ * numeric seat index like `0`, `1`.  All other qualifiers — `active`, `actor`,
+ * `allOther`, `all`, relative selectors, `$`-prefixed bindings — resolve at
+ * runtime and must not be checked against the materialized zone ID set.
+ */
+function isStaticZoneQualifier(qualifier: string): boolean {
+  return qualifier === 'none' || /^\d+$/.test(qualifier);
+}
+
 export function canonicalizeZoneSelector(
   selector: unknown,
   ownershipByBase: Readonly<Record<string, ZoneOwnershipKind>>,
   path: string,
   seatIds?: readonly string[],
+  zoneIdSet?: ReadonlySet<string>,
 ): ZoneCompileResult<string | null> {
   let normalizedSelector = selector;
   // Static concat resolution: { concat: ['available:', 'US'] } → "available:US"
@@ -177,7 +229,21 @@ export function canonicalizeZoneSelector(
   if (splitIndex < 0) {
     const ownership = ownershipByBase[normalizedSelector];
     if (ownership === 'none') {
-      return { value: `${normalizedSelector}:none`, diagnostics: [] };
+      const autoId = `${normalizedSelector}:none`;
+      if (zoneIdSet !== undefined && !zoneIdSet.has(autoId)) {
+        return {
+          value: null,
+          diagnostics: [{
+            code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_ID_UNKNOWN,
+            path,
+            severity: 'error',
+            message: `Zone "${autoId}" does not exist.`,
+            suggestion: 'Check zone definitions for the correct zone ID.',
+            alternatives: [...zoneIdSet].filter(id => id.startsWith(normalizedSelector + ':')).sort(),
+          }],
+        };
+      }
+      return { value: autoId, diagnostics: [] };
     }
     if (ownership === 'player' || ownership === 'mixed') {
       return {
@@ -233,8 +299,22 @@ export function canonicalizeZoneSelector(
     };
   }
 
+  const canonicalId = `${zoneBase}:${normalizedQualifier.value}`;
+  if (zoneIdSet !== undefined && isStaticZoneQualifier(normalizedQualifier.value) && !zoneIdSet.has(canonicalId)) {
+    return {
+      value: null,
+      diagnostics: [{
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_ID_UNKNOWN,
+        path,
+        severity: 'error',
+        message: `Zone "${canonicalId}" does not exist.`,
+        suggestion: 'Check zone definitions for the correct zone ID.',
+        alternatives: [...zoneIdSet].filter(id => id.startsWith(zoneBase + ':')).sort(),
+      }],
+    };
+  }
   return {
-    value: `${zoneBase}:${normalizedQualifier.value}`,
+    value: canonicalId,
     diagnostics: [],
   };
 }

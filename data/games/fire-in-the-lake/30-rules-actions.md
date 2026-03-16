@@ -13,6 +13,7 @@ turnStructure:
   interrupts:
     - id: commitment
     - id: honoluluPacify
+    - id: apcPacify
 
 
 turnOrder:
@@ -85,6 +86,10 @@ turnOrder:
         coupNvaRedeployTroops: operation
         coupCommitmentResolve: operation
         resolveHonoluluPacify: pass
+        apcPacifyUS: operation
+        apcPacifyARVN: operation
+        resolveApcPacify: pass
+        apcPacifyPass: pass
         coupPacifyPass: pass
         coupAgitatePass: pass
         coupRedeployPass: pass
@@ -1219,6 +1224,276 @@ actions:
     actor: active
     executor: 'actor'
     phase: [honoluluPacify]
+    params: []
+    pre:
+      op: or
+      args:
+        - { op: '==', left: { ref: activePlayer }, right: 0 }
+        - { op: '==', left: { ref: activePlayer }, right: 1 }
+    cost: []
+    effects:
+      - popInterruptPhase: {}
+    limits: []
+  # ── APC Pacification (card-96 unshaded) ──────────────────────────────────────
+  # "US and ARVN immediately Pacify as if Support Phase, but cost is 0.
+  #  Shift at most 1 level per space."
+  # Modeled on coupPacifyUS / coupPacifyARVN but with:
+  #   - phase: apcPacify (interrupt pushed by unshaded event)
+  #   - no resource cost checks or cost effects
+  #   - fitl-apc-shift-action-allowed (cap 1) instead of fitl-coup-support-shift-action-allowed (cap 2)
+  - id: apcPacifyUS
+    actor: active
+    executor: 'actor'
+    phase: [apcPacify]
+    params:
+      - name: targetSpace
+        domain:
+          query: mapSpaces
+          filter:
+            op: or
+            args:
+              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+      - name: action
+        domain: { query: enums, values: [removeTerror, shiftSupport] }
+    pre:
+      op: and
+      args:
+        - { op: '==', left: { ref: activePlayer }, right: 0 }
+        - op: or
+          args:
+            - op: '<'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: mapSpaces
+                    filter:
+                      op: '=='
+                      left: { ref: markerState, space: $zone, marker: coupPacifySpaceUsage }
+                      right: used
+              right: 4
+            - conditionMacro: fitl-space-marker-state-is
+              args:
+                spaceIdExpr: { ref: binding, name: targetSpace }
+                markerId: coupPacifySpaceUsage
+                markerStateExpr: used
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                filter:
+                  op: and
+                  args:
+                    - { prop: faction, op: in, value: ['US', 'ARVN'] }
+          right:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                filter:
+                  op: and
+                  args:
+                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                filter:
+                  op: and
+                  args:
+                    - { prop: faction, op: eq, value: ARVN }
+                    - { prop: type, op: eq, value: police }
+          right: 0
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                filter:
+                  op: and
+                  args:
+                    - { prop: faction, op: eq, value: US }
+                    - { prop: type, op: eq, value: troops }
+          right: 0
+        - op: or
+          args:
+            - conditionMacro: fitl-coup-support-remove-terror-action-allowed
+              args:
+                actionExpr: { ref: binding, name: action }
+                targetSpaceExpr: { ref: binding, name: targetSpace }
+            - conditionMacro: fitl-apc-shift-action-allowed
+              args:
+                actionExpr: { ref: binding, name: action }
+                requiredActionExpr: shiftSupport
+                targetSpaceExpr: { ref: binding, name: targetSpace }
+                blockedSupportStateExpr: activeSupport
+    cost: []
+    effects:
+      - if:
+          when: { op: '==', left: { ref: binding, name: action }, right: removeTerror }
+          then:
+            - setVar: { scope: zoneVar, zone: { zoneExpr: { ref: binding, name: targetSpace } }, var: terrorCount, value: 0 }
+          else:
+            - shiftMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: supportOpposition, delta: 1 }
+            - shiftMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupSupportShiftCount, delta: 1 }
+      - setMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupPacifySpaceUsage, state: used }
+    limits: []
+  - id: apcPacifyARVN
+    actor: active
+    executor: 'actor'
+    phase: [apcPacify]
+    params:
+      - name: targetSpace
+        domain:
+          query: mapSpaces
+          filter:
+            op: or
+            args:
+              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+      - name: action
+        domain: { query: enums, values: [removeTerror, shiftSupport] }
+    pre:
+      op: and
+      args:
+        - { op: '==', left: { ref: activePlayer }, right: 1 }
+        - op: or
+          args:
+            - op: '<'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: mapSpaces
+                    filter:
+                      op: '=='
+                      left: { ref: markerState, space: $zone, marker: coupPacifySpaceUsage }
+                      right: used
+              right: 4
+            - conditionMacro: fitl-space-marker-state-is
+              args:
+                spaceIdExpr: { ref: binding, name: targetSpace }
+                markerId: coupPacifySpaceUsage
+                markerStateExpr: used
+        - op: or
+          args:
+            - { op: '!=', left: { ref: globalMarkerState, marker: cap_mandateOfHeaven }, right: shaded }
+            - op: or
+              args:
+                - op: '<'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: mapSpaces
+                        filter:
+                          op: '=='
+                          left: { ref: markerState, space: $zone, marker: coupPacifyArvnSpaceUsage }
+                          right: used
+                  right: 1
+                - conditionMacro: fitl-space-marker-state-is
+                  args:
+                    spaceIdExpr: { ref: binding, name: targetSpace }
+                    markerId: coupPacifyArvnSpaceUsage
+                    markerStateExpr: used
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                filter:
+                  op: and
+                  args:
+                    - { prop: faction, op: in, value: ['US', 'ARVN'] }
+          right:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                filter:
+                  op: and
+                  args:
+                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                filter:
+                  op: and
+                  args:
+                    - { prop: faction, op: eq, value: ARVN }
+                    - { prop: type, op: eq, value: police }
+          right: 0
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                filter:
+                  op: and
+                  args:
+                    - { prop: faction, op: eq, value: ARVN }
+                    - { prop: type, op: eq, value: troops }
+          right: 0
+        - op: or
+          args:
+            - conditionMacro: fitl-coup-support-remove-terror-action-allowed
+              args:
+                actionExpr: { ref: binding, name: action }
+                targetSpaceExpr: { ref: binding, name: targetSpace }
+            - conditionMacro: fitl-apc-shift-action-allowed
+              args:
+                actionExpr: { ref: binding, name: action }
+                requiredActionExpr: shiftSupport
+                targetSpaceExpr: { ref: binding, name: targetSpace }
+                blockedSupportStateExpr: activeSupport
+    cost: []
+    effects:
+      - if:
+          when: { op: '==', left: { ref: binding, name: action }, right: removeTerror }
+          then:
+            - setVar: { scope: zoneVar, zone: { zoneExpr: { ref: binding, name: targetSpace } }, var: terrorCount, value: 0 }
+          else:
+            - shiftMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: supportOpposition, delta: 1 }
+            - shiftMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupSupportShiftCount, delta: 1 }
+      - setMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupPacifySpaceUsage, state: used }
+      - setMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupPacifyArvnSpaceUsage, state: used }
+    limits: []
+  - id: apcPacifyPass
+    actor: active
+    executor: 'actor'
+    phase: [apcPacify]
+    params: []
+    pre:
+      op: or
+      args:
+        - { op: '==', left: { ref: activePlayer }, right: 0 }
+        - { op: '==', left: { ref: activePlayer }, right: 1 }
+    cost: []
+    effects: []
+    limits: []
+  - id: resolveApcPacify
+    actor: active
+    executor: 'actor'
+    phase: [apcPacify]
     params: []
     pre:
       op: or
@@ -5478,25 +5753,42 @@ actionPipelines:
       - stage: select-spaces
         effects:
           - if:
-              when: { op: '==', left: { ref: globalMarkerState, marker: cap_boobyTraps }, right: unshaded }
+              when:
+                op: and
+                args:
+                  - op: '>'
+                    left:
+                      aggregate:
+                        op: count
+                        query: { query: grantContext, key: skipUndergroundRequirement }
+                    right: 0
+                  - { op: '==', left: { ref: grantContext, key: skipUndergroundRequirement }, right: true }
               then:
-                - macro: insurgent-ambush-select-spaces-base
+                - macro: insurgent-ambush-select-spaces-any-activity
                   args:
                     faction: NVA
-                    maxSpaces: 1
+                    maxSpaces: 2
               else:
                 - if:
-                    when: { op: '==', left: { ref: gvar, var: mom_typhoonKate }, right: true }
+                    when: { op: '==', left: { ref: globalMarkerState, marker: cap_boobyTraps }, right: unshaded }
                     then:
                       - macro: insurgent-ambush-select-spaces-base
                         args:
                           faction: NVA
                           maxSpaces: 1
                     else:
-                      - macro: insurgent-ambush-select-spaces-base
-                        args:
-                          faction: NVA
-                          maxSpaces: 2
+                      - if:
+                          when: { op: '==', left: { ref: gvar, var: mom_typhoonKate }, right: true }
+                          then:
+                            - macro: insurgent-ambush-select-spaces-base
+                              args:
+                                faction: NVA
+                                maxSpaces: 1
+                          else:
+                            - macro: insurgent-ambush-select-spaces-base
+                              args:
+                                faction: NVA
+                                maxSpaces: 2
       - stage: resolve-per-space
         effects:
           - macro: insurgent-ambush-resolve-spaces
@@ -5865,25 +6157,42 @@ actionPipelines:
       - stage: select-spaces
         effects:
           - if:
-              when: { op: '==', left: { ref: globalMarkerState, marker: cap_boobyTraps }, right: unshaded }
+              when:
+                op: and
+                args:
+                  - op: '>'
+                    left:
+                      aggregate:
+                        op: count
+                        query: { query: grantContext, key: skipUndergroundRequirement }
+                    right: 0
+                  - { op: '==', left: { ref: grantContext, key: skipUndergroundRequirement }, right: true }
               then:
-                - macro: insurgent-ambush-select-spaces-base
+                - macro: insurgent-ambush-select-spaces-any-activity
                   args:
                     faction: VC
-                    maxSpaces: 1
+                    maxSpaces: 2
               else:
                 - if:
-                    when: { op: '==', left: { ref: gvar, var: mom_typhoonKate }, right: true }
+                    when: { op: '==', left: { ref: globalMarkerState, marker: cap_boobyTraps }, right: unshaded }
                     then:
                       - macro: insurgent-ambush-select-spaces-base
                         args:
                           faction: VC
                           maxSpaces: 1
                     else:
-                      - macro: insurgent-ambush-select-spaces-base
-                        args:
-                          faction: VC
-                          maxSpaces: 2
+                      - if:
+                          when: { op: '==', left: { ref: gvar, var: mom_typhoonKate }, right: true }
+                          then:
+                            - macro: insurgent-ambush-select-spaces-base
+                              args:
+                                faction: VC
+                                maxSpaces: 1
+                          else:
+                            - macro: insurgent-ambush-select-spaces-base
+                              args:
+                                faction: VC
+                                maxSpaces: 2
       - stage: resolve-per-space
         effects:
           - macro: insurgent-ambush-resolve-spaces
@@ -5918,6 +6227,12 @@ triggers:
     event:
       type: phaseEnter
       phase: honoluluPacify
+    effects:
+      - macro: coup-support-reset-trackers
+  - id: on-apc-pacify-enter
+    event:
+      type: phaseEnter
+      phase: apcPacify
     effects:
       - macro: coup-support-reset-trackers
   - id: on-coup-redeploy-enter

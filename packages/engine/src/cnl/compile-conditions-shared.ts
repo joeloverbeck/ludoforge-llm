@@ -20,6 +20,7 @@ export type ZoneOwnershipKind = 'none' | 'player' | 'mixed';
 
 export interface ConditionLoweringContext {
   readonly ownershipByBase: Readonly<Record<string, ZoneOwnershipKind>>;
+  readonly zoneIdSet?: ReadonlySet<string>;
   readonly bindingScope?: readonly string[];
   readonly tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>;
   readonly tokenFilterProps?: readonly string[];
@@ -126,7 +127,7 @@ export function lowerZoneSelector(
   context: ConditionLoweringContext,
   path: string,
 ): ConditionLoweringResult<string> {
-  const zone = canonicalizeZoneSelector(source, context.ownershipByBase, path, context.seatIds);
+  const zone = canonicalizeZoneSelector(source, context.ownershipByBase, path, context.seatIds, context.zoneIdSet);
   if (zone.value === null) {
     return { value: null, diagnostics: zone.diagnostics };
   }

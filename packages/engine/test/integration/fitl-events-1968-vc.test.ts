@@ -90,19 +90,12 @@ describe('FITL 1968 VC-first event-card production spec', () => {
     assert.equal(tetMove?.forEach?.effects?.[0]?.moveToken?.token, '$tetCard');
     assert.equal(tetMove?.forEach?.effects?.[0]?.moveToken?.from, 'played:none');
     assert.equal(tetMove?.forEach?.effects?.[0]?.moveToken?.to?.zoneExpr, 'leader:none');
-    assert.equal(
-      (conditional?.else?.[0] as { grantFreeOperation?: { seat?: string; operationClass?: string; actionIds?: string[] } })?.grantFreeOperation
-        ?.seat,
-      'vc',
-    );
-    assert.equal(
-      (conditional?.else?.[0] as { grantFreeOperation?: { operationClass?: string } })?.grantFreeOperation?.operationClass,
-      'operation',
-    );
-    assert.deepEqual(
-      (conditional?.else?.[0] as { grantFreeOperation?: { actionIds?: string[] } })?.grantFreeOperation?.actionIds,
-      ['operation'],
-    );
+    // else branch: tet-general-uprising macro expands into chooseN + forEach + distributeTokens + forEach
+    assert.equal(Array.isArray(conditional?.else), true, 'else branch should be an array of effects');
+    assert.ok((conditional?.else?.length ?? 0) > 0, 'else branch should contain expanded macro effects');
+    // The first effect is chooseN (Step 1: Free Terror)
+    const firstElseEffect = conditional?.else?.[0] as { chooseN?: { bind?: string } } | undefined;
+    assert.equal(firstElseEffect?.chooseN?.bind, '$tetTerrorSpaces', 'else branch should expand tet-general-uprising macro (Step 1: chooseN)');
   });
 
   it('encodes card 117 with adjacent-space placement, per-space free sweeps, shaded die-roll removal, and ARVN ineligibility', () => {

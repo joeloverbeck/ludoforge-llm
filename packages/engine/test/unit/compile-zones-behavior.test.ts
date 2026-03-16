@@ -36,6 +36,12 @@ describe('materializeZoneDefs — zone behavior', () => {
           ordering: 'stack',
           behavior: { type: 'deck', drawFrom: 'top', reshuffleFrom: 'discard:none' },
         },
+        {
+          id: 'discard',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'stack',
+        },
       ],
       2,
     );

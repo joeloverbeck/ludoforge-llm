@@ -142,6 +142,7 @@ export function canonicalizeZoneSelector(
   ownershipByBase: Readonly<Record<string, ZoneOwnershipKind>>,
   path: string,
   seatIds?: readonly string[],
+  zoneIdSet?: ReadonlySet<string>,
 ): ZoneCompileResult<string | null> {
   let normalizedSelector = selector;
   // Static concat resolution: { concat: ['available:', 'US'] } → "available:US"
@@ -177,7 +178,21 @@ export function canonicalizeZoneSelector(
   if (splitIndex < 0) {
     const ownership = ownershipByBase[normalizedSelector];
     if (ownership === 'none') {
-      return { value: `${normalizedSelector}:none`, diagnostics: [] };
+      const autoId = `${normalizedSelector}:none`;
+      if (zoneIdSet !== undefined && !zoneIdSet.has(autoId)) {
+        return {
+          value: null,
+          diagnostics: [{
+            code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_ID_UNKNOWN,
+            path,
+            severity: 'error',
+            message: `Zone "${autoId}" does not exist.`,
+            suggestion: 'Check zone definitions for the correct zone ID.',
+            alternatives: [...zoneIdSet].filter(id => id.startsWith(normalizedSelector + ':')).sort(),
+          }],
+        };
+      }
+      return { value: autoId, diagnostics: [] };
     }
     if (ownership === 'player' || ownership === 'mixed') {
       return {
@@ -233,8 +248,22 @@ export function canonicalizeZoneSelector(
     };
   }
 
+  const canonicalId = `${zoneBase}:${normalizedQualifier.value}`;
+  if (zoneIdSet !== undefined && !canonicalId.includes('$') && !zoneIdSet.has(canonicalId)) {
+    return {
+      value: null,
+      diagnostics: [{
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_ID_UNKNOWN,
+        path,
+        severity: 'error',
+        message: `Zone "${canonicalId}" does not exist.`,
+        suggestion: 'Check zone definitions for the correct zone ID.',
+        alternatives: [...zoneIdSet].filter(id => id.startsWith(zoneBase + ':')).sort(),
+      }],
+    };
+  }
   return {
-    value: `${zoneBase}:${normalizedQualifier.value}`,
+    value: canonicalId,
     diagnostics: [],
   };
 }

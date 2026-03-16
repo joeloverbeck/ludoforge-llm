@@ -1,6 +1,6 @@
 # 63MCTSRUNMOVCLA-001: Remove `concreteActionIds` from `GameDefRuntime`
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel `gamedef-runtime.ts`, MCTS agent modules
@@ -89,3 +89,23 @@ Remove any assertion on `concreteActionIds` existing on the runtime object. Add 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo typecheck`
+
+## Outcome
+
+**Completion date**: 2026-03-16
+
+**What changed**:
+- `gamedef-runtime.ts`: Removed `concreteActionIds` field from `GameDefRuntime` interface and its computation from `createGameDefRuntime()`.
+- `materialization.ts`: `materializeOrFastPath()` always calls `materializeConcreteCandidates` (fast-path bypass removed).
+- `search.ts`: Removed concrete/template partition loop and decision root creation block. All moves go through `materializeOrFastPath`. Visitor `concreteCount`/`templateCount` emit placeholder `0`. Removed unused `templateDecisionRootKey` import.
+- `materialization-fastpath.test.ts`: Replaced `concreteActionIds` tests with assertions the property doesn't exist; updated `materializeOrFastPath` tests (fast path no longer exists).
+- `search-visitor.test.ts`: Updated `concreteCount`/`templateCount` expectations to `0`.
+- `mcts-decision-integration.test.ts`: Removed `concreteActionIds` assertions and decision root expectations; removed unused `templateDecisionRootKey` import.
+- `condition-annotator.test.ts`: Removed `concreteActionIds` from mock runtime construction.
+
+**Deviations from plan**:
+- Ticket referenced `gamedef-runtime.test.ts` which doesn't exist; those tests live in `materialization-fastpath.test.ts` (already listed).
+- Two additional test consumers not listed in the ticket were found and updated: `condition-annotator.test.ts` and `mcts-decision-integration.test.ts`.
+- Removing the partition loop also removed the decision root creation block from `search.ts` (the block was only reachable when `hasTemplates` was true, which depended on the removed partition). This is a temporary bridge — ticket 004 reintroduces decision roots via `classifyMovesForSearch`.
+
+**Verification**: `pnpm -F @ludoforge/engine build` clean, `pnpm -F @ludoforge/engine test` 4942/4942 pass, `pnpm turbo typecheck` all 3 tasks pass.

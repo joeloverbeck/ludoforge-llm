@@ -24,7 +24,6 @@ import { shouldExpand, selectExpansionCandidate } from './expansion.js';
 import { materializeOrFastPath, filterAvailableCandidates } from './materialization.js';
 import { expandDecisionNode } from './decision-expansion.js';
 import type { DecisionExpansionContext } from './decision-expansion.js';
-import { templateDecisionRootKey } from './decision-key.js';
 import { canonicalMoveKey } from './move-key.js';
 import { rollout, simulateToCutoff, resolveDecisionBoundary } from './rollout.js';
 import type { SimulationResult } from './rollout.js';
@@ -316,92 +315,31 @@ export function runOneIteration(
       break;
     }
 
-    // Partition moves into concrete and template.
-    let hasTemplates = false;
-    const concreteMoves: Move[] = [];
-    const templateMoves: Move[] = [];
-    for (let i = 0; i < movesAtNode.length; i += 1) {
-      const m = movesAtNode[i]!;
-      if (runtime.concreteActionIds.has(m.actionId)) {
-        concreteMoves.push(m);
-      } else {
-        templateMoves.push(m);
-        hasTemplates = true;
-      }
-    }
-
-    // Materialize only concrete candidates (templates become decision roots).
-    const matResult = hasTemplates
-      ? materializeOrFastPath(
-          def, currentState, concreteMoves, currentRng,
-          config.templateCompletionsPerVisit, runtime, config.visitor,
-        )
-      : materializeOrFastPath(
-          def, currentState, movesAtNode, currentRng,
-          config.templateCompletionsPerVisit, runtime, config.visitor,
-        );
+    // Materialize all moves through full classification (no compile-time
+    // concrete/template partition).  Ticket 004 replaces this with
+    // classifyMovesForSearch which uses legalChoicesEvaluate per move.
+    const matResult = materializeOrFastPath(
+      def, currentState, movesAtNode, currentRng,
+      config.templateCompletionsPerVisit, runtime, config.visitor,
+    );
     const { candidates } = matResult;
     currentRng = matResult.rng;
-    if (acc !== undefined && !matResult.fastPath) {
+    if (acc !== undefined) {
       acc.materializeCalls += 1;
     }
 
-    // ── Create decision root children for template moves ──────────────
-    // Each template action gets at most one decision root child,
-    // keyed by `D:<actionId>`.  This is separate from concrete expansion.
-    if (hasTemplates) {
-      for (const tmpl of templateMoves) {
-        const rootKey = templateDecisionRootKey(tmpl.actionId);
-        // Check if a decision root child already exists.
-        let exists = false;
-        for (const child of currentNode.children) {
-          if (child.moveKey === rootKey) {
-            exists = true;
-            break;
-          }
-        }
-        if (!exists) {
-          try {
-            const dRoot = pool.allocate();
-            (dRoot as { move: Move | null }).move = tmpl;
-            (dRoot as { moveKey: MoveKey | null }).moveKey = rootKey;
-            (dRoot as { parent: MctsNode | null }).parent = currentNode;
-            dRoot.nodeKind = 'decision';
-            dRoot.decisionPlayer = currentState.activePlayer as PlayerId;
-            dRoot.partialMove = tmpl;
-            dRoot.decisionBinding = null;
-            dRoot.heuristicPrior = null;
-            dRoot.availability = 0;
-            currentNode.children.push(dRoot);
-          } catch {
-            // Pool exhausted — emit event, skip remaining template roots.
-            if (config.visitor?.onEvent) {
-              config.visitor.onEvent({
-                type: 'poolExhausted',
-                capacity: pool.capacity,
-                iteration: iterationIndex,
-              });
-            }
-            break;
-          }
-        }
-      }
-    }
-
-    // Total available candidates: concrete + template decision roots.
-    const totalCandidateCount = candidates.length + templateMoves.length;
+    // Total available candidates (no separate template decision roots for now).
+    const totalCandidateCount = candidates.length;
 
     if (totalCandidateCount === 0) {
       break;
     }
 
     // ── Forced-sequence compression ────────────────────────────────
-    // Only applies when there is exactly one concrete candidate and no
-    // template alternatives.
+    // Only applies when there is exactly one candidate.
     if (
       config.compressForcedSequences !== false &&
-      candidates.length === 1 &&
-      templateMoves.length === 0
+      candidates.length === 1
     ) {
       // Safety cap: break if forced plies exceed the limit.
       if (forcedPlies >= maxForcedPlies) {
@@ -441,13 +379,9 @@ export function runOneIteration(
     }
 
     // Build a lookup of candidate moveKeys for availability matching.
-    // Includes both concrete candidate keys and decision root keys.
     const candidateKeySet = new Set<string>();
     for (const c of candidates) {
       candidateKeySet.add(c.moveKey);
-    }
-    for (const tmpl of templateMoves) {
-      candidateKeySet.add(templateDecisionRootKey(tmpl.actionId));
     }
 
     // Determine which existing children are available (legal in this world).
@@ -797,38 +731,26 @@ export function runSearch(
   const visitorStart = onEvent !== undefined ? performance.now() : 0;
 
   if (onEvent !== undefined) {
-    let concreteCount = 0;
-    let templateCount = 0;
-    for (const move of rootLegalMoves) {
-      if (runtime.concreteActionIds.has(move.actionId)) {
-        concreteCount += 1;
-      } else {
-        templateCount += 1;
-      }
-    }
+    // Placeholder counts — ticket 006 replaces these with runtime
+    // classification (readyCount / pendingCount).
     onEvent({
       type: 'searchStart',
       totalIterations: config.iterations,
       legalMoveCount: rootLegalMoves.length,
-      concreteCount,
-      templateCount,
+      concreteCount: 0,
+      templateCount: 0,
       poolCapacity: pool.capacity,
     });
 
-    // ── Visitor: emit rootCandidates ────────────────────────────────────────
-    const concreteEntries: { readonly actionId: string; readonly moveKey: MoveKey }[] = [];
-    const templateEntries: { readonly actionId: string }[] = [];
+    // Placeholder rootCandidates — ticket 006 replaces with ready/pending.
+    const allEntries: { readonly actionId: string; readonly moveKey: MoveKey }[] = [];
     for (const move of rootLegalMoves) {
-      if (runtime.concreteActionIds.has(move.actionId)) {
-        concreteEntries.push({ actionId: move.actionId, moveKey: canonicalMoveKey(move) });
-      } else {
-        templateEntries.push({ actionId: move.actionId });
-      }
+      allEntries.push({ actionId: move.actionId, moveKey: canonicalMoveKey(move) });
     }
     onEvent({
       type: 'rootCandidates',
-      concrete: concreteEntries,
-      templates: templateEntries,
+      concrete: allEntries,
+      templates: [],
     });
   }
 

@@ -154,31 +154,10 @@ export function materializeOrFastPath(
   runtime: GameDefRuntime,
   visitor?: MctsSearchVisitor,
 ): { readonly candidates: readonly ConcreteMoveCandidate[]; readonly rng: Rng; readonly fastPath: boolean } {
-  // Check if all moves come from fully-concrete actions.
-  const concreteIds = runtime.concreteActionIds;
-  let allConcrete = true;
-  for (let i = 0; i < moves.length; i += 1) {
-    if (!concreteIds.has(moves[i]!.actionId)) {
-      allConcrete = false;
-      break;
-    }
-  }
-
-  if (allConcrete) {
-    // Fast path: convert moves directly to candidates without materialization.
-    const candidates: ConcreteMoveCandidate[] = [];
-    const seenKeys = new Set<string>();
-    for (let i = 0; i < moves.length; i += 1) {
-      const key = canonicalMoveKey(moves[i]!);
-      if (!seenKeys.has(key)) {
-        seenKeys.add(key);
-        candidates.push({ move: moves[i]!, moveKey: key });
-      }
-    }
-    return { candidates, rng, fastPath: true };
-  }
-
-  // Slow path: full materialization.
+  // Always use full materialization — the compile-time fast path based on
+  // concreteActionIds was semantically wrong (actions without template params
+  // can still have inline decisions).  Ticket 003 replaces this function
+  // entirely with classifyMovesForSearch / materializeMovesForRollout.
   const result = materializeConcreteCandidates(def, state, moves, rng, limitPerTemplate, runtime, visitor);
   return { ...result, fastPath: false };
 }

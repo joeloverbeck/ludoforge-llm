@@ -129,9 +129,11 @@ describe('search visitor: searchStart', () => {
     assert.equal(start.type, 'searchStart');
     if (start.type !== 'searchStart') return;
     assert.equal(start.totalIterations, 100);
-    // The terminal def has 2 concrete actions (win, noop).
+    // The terminal def has 2 actions (win, noop).
     assert.equal(start.legalMoveCount, 2);
-    assert.equal(start.concreteCount, 2);
+    // concreteCount/templateCount are placeholder 0 values until ticket 006
+    // replaces them with readyCount/pendingCount via runtime classification.
+    assert.equal(start.concreteCount, 0);
     assert.equal(start.templateCount, 0);
   });
 

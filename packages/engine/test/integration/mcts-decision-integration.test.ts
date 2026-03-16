@@ -27,7 +27,6 @@ import { createNodePool } from '../../src/agents/mcts/node-pool.js';
 import { runSearch } from '../../src/agents/mcts/search.js';
 import { validateMctsConfig } from '../../src/agents/mcts/config.js';
 import type { MctsSearchEvent } from '../../src/agents/mcts/visitor.js';
-import { templateDecisionRootKey } from '../../src/agents/mcts/decision-key.js';
 
 const PLAYER_COUNT = 2;
 const SEED = 42;
@@ -243,11 +242,6 @@ describe('MCTS decision integration — game with template moves', () => {
     const observation = derivePlayerObservation(def, state, observer);
     const rootLegal = legalMoves(def, state, undefined, runtime);
 
-    // Verify that "boost" is a template action.
-    assert.ok(!runtime.concreteActionIds.has('boost'), 'boost should be a template action');
-    assert.ok(runtime.concreteActionIds.has('advance'), 'advance should be concrete');
-    assert.ok(runtime.concreteActionIds.has('idle'), 'idle should be concrete');
-
     // Verify boost is in the legal moves.
     const boostMoves = rootLegal.filter((m) => m.actionId === 'boost');
     assert.ok(boostMoves.length > 0, 'boost should be in legal moves');
@@ -275,40 +269,18 @@ describe('MCTS decision integration — game with template moves', () => {
     // Search should complete without crash.
     assert.ok(result.iterations > 0, 'should complete at least 1 iteration');
 
-    // The root should have both state children (advance, idle) and
-    // decision root children (D:boost).
+    // After removing concreteActionIds partition, all moves (including
+    // template moves like boost) go through full materialization.
+    // Template moves are randomly completed into concrete candidates.
+    // Decision root children are no longer created at this stage — ticket 004
+    // will reintroduce them via classifyMovesForSearch.
     const stateChildren = root.children.filter((c) => c.nodeKind === 'state');
-    const decisionChildren = root.children.filter((c) => c.nodeKind === 'decision');
-
-    assert.ok(stateChildren.length > 0, 'should have concrete state children');
-    assert.ok(decisionChildren.length > 0, 'should have decision root children');
-
-    // Decision root children should be keyed with D:<actionId>.
-    for (const dc of decisionChildren) {
-      assert.ok(
-        dc.moveKey !== null && dc.moveKey.startsWith('D:'),
-        `decision child moveKey should start with D:, got ${dc.moveKey}`,
-      );
-      assert.equal(dc.decisionPlayer, observer);
-      assert.notEqual(dc.partialMove, null);
-    }
-
-    // Specifically check for boost decision root.
-    const boostRoot = decisionChildren.find(
-      (c) => c.moveKey === templateDecisionRootKey('boost'),
-    );
-    assert.ok(boostRoot !== undefined, 'should have a D:boost decision root');
+    assert.ok(stateChildren.length > 0, 'should have state children');
 
     // Visitor should have received searchStart and searchComplete.
     const searchStartEvents = events.filter((e) => e.type === 'searchStart');
     const searchCompleteEvents = events.filter((e) => e.type === 'searchComplete');
     assert.equal(searchStartEvents.length, 1);
     assert.equal(searchCompleteEvents.length, 1);
-
-    // searchStart should report template count > 0.
-    const startEvent = searchStartEvents[0]!;
-    if (startEvent.type === 'searchStart') {
-      assert.ok(startEvent.templateCount > 0, 'should report template moves');
-    }
   });
 });

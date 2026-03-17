@@ -34,9 +34,9 @@ describe('texas hold\'em MCTS default preset e2e', () => {
     assertValidStopReason(trace);
   });
 
-  it('default preset uses hybrid mode and mast policy', () => {
+  it('default preset uses direct mode and mast policy', () => {
     const config = resolvePreset('default');
-    assert.equal(config.rolloutMode, 'hybrid', 'default preset should use hybrid mode');
+    assert.equal(config.rolloutMode, 'direct', 'default preset should use direct mode');
     assert.equal(config.rolloutPolicy, 'mast', 'default preset should use mast policy');
   });
 

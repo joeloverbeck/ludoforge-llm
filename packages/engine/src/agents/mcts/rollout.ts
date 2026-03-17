@@ -88,10 +88,15 @@ export function resolveDecisionBoundary(
       return null;
     }
 
+    const amStart = acc !== undefined ? performance.now() : 0;
     const applied = applyMove(def, state, result.move, undefined, runtime);
     if (acc !== undefined) {
       acc.applyMoveCalls += 1;
+      acc.applyMoveTimeMs += performance.now() - amStart;
       acc.decisionCompletionsInRollout += 1;
+      const tc = applied.triggerFirings.length;
+      acc.totalTriggerFirings += tc;
+      if (tc > acc.maxTriggerFiringsPerMove) acc.maxTriggerFiringsPerMove = tc;
     }
     return { state: applied.state, rng: result.rng, move: result.move };
   } catch {
@@ -147,8 +152,13 @@ export function rollout(
     const terminal = stateCache !== undefined && maxCacheEntries !== undefined
       ? getOrComputeTerminal(stateCache, def, currentState, runtime, maxCacheEntries, acc)
       : (() => {
-          if (acc !== undefined) { acc.terminalCalls += 1; }
-          return terminalResult(def, currentState, runtime);
+          const tStart = acc !== undefined ? performance.now() : 0;
+          const result = terminalResult(def, currentState, runtime);
+          if (acc !== undefined) {
+            acc.terminalCalls += 1;
+            acc.terminalTimeMs += performance.now() - tStart;
+          }
+          return result;
         })();
     if (terminal !== null) {
       return { state: currentState, terminal, rng: currentRng, depth, traversedMoveKeys };
@@ -158,11 +168,21 @@ export function rollout(
     const moves = stateCache !== undefined && maxCacheEntries !== undefined
       ? getOrComputeLegalMoves(stateCache, def, currentState, runtime, maxCacheEntries, acc)
       : (() => {
-          if (acc !== undefined) { acc.legalMovesCalls += 1; }
-          return legalMoves(def, currentState, undefined, runtime);
+          const tStart = acc !== undefined ? performance.now() : 0;
+          const result = legalMoves(def, currentState, undefined, runtime);
+          if (acc !== undefined) {
+            acc.legalMovesCalls += 1;
+            acc.legalMovesTimeMs += performance.now() - tStart;
+          }
+          return result;
         })();
     if (moves.length === 0) {
       return { state: currentState, terminal: null, rng: currentRng, depth, traversedMoveKeys };
+    }
+
+    // Gap 6: Record branching factor at this rollout depth.
+    if (acc !== undefined) {
+      acc.branchingFactorSamples.push({ depth, count: moves.length });
     }
 
     // 3. Sample up to rolloutCandidateSample candidates
@@ -173,6 +193,8 @@ export function rollout(
       currentRng,
       config.templateCompletionsPerVisit,
       runtime,
+      undefined,
+      acc,
     );
     currentRng = postMaterializeRng;
     if (acc !== undefined) {
@@ -201,9 +223,14 @@ export function rollout(
     // 5. Apply chosen move
     const chosen = sampled[chosenIndex]!;
     try {
+      const amStart = acc !== undefined ? performance.now() : 0;
       const applied = applyMove(def, currentState, chosen.move, undefined, runtime);
       if (acc !== undefined) {
         acc.applyMoveCalls += 1;
+        acc.applyMoveTimeMs += performance.now() - amStart;
+        const tc = applied.triggerFirings.length;
+        acc.totalTriggerFirings += tc;
+        if (tc > acc.maxTriggerFiringsPerMove) acc.maxTriggerFiringsPerMove = tc;
       }
       currentState = applied.state;
       traversedMoveKeys.push(chosen.moveKey);
@@ -219,8 +246,13 @@ export function rollout(
   const finalTerminal = stateCache !== undefined && maxCacheEntries !== undefined
     ? getOrComputeTerminal(stateCache, def, currentState, runtime, maxCacheEntries, acc)
     : (() => {
-        if (acc !== undefined) { acc.terminalCalls += 1; }
-        return terminalResult(def, currentState, runtime);
+        const tStart = acc !== undefined ? performance.now() : 0;
+        const result = terminalResult(def, currentState, runtime);
+        if (acc !== undefined) {
+          acc.terminalCalls += 1;
+          acc.terminalTimeMs += performance.now() - tStart;
+        }
+        return result;
       })();
   return { state: currentState, terminal: finalTerminal, rng: currentRng, depth, traversedMoveKeys };
 }
@@ -260,8 +292,13 @@ export function simulateToCutoff(
     const terminal = stateCache !== undefined && maxCacheEntries !== undefined
       ? getOrComputeTerminal(stateCache, def, currentState, runtime, maxCacheEntries, acc)
       : (() => {
-          if (acc !== undefined) { acc.terminalCalls += 1; }
-          return terminalResult(def, currentState, runtime);
+          const tStart = acc !== undefined ? performance.now() : 0;
+          const result = terminalResult(def, currentState, runtime);
+          if (acc !== undefined) {
+            acc.terminalCalls += 1;
+            acc.terminalTimeMs += performance.now() - tStart;
+          }
+          return result;
         })();
     if (terminal !== null) {
       return { state: currentState, terminal, rng: currentRng, depth, traversedMoveKeys };
@@ -271,16 +308,27 @@ export function simulateToCutoff(
     const moves = stateCache !== undefined && maxCacheEntries !== undefined
       ? getOrComputeLegalMoves(stateCache, def, currentState, runtime, maxCacheEntries, acc)
       : (() => {
-          if (acc !== undefined) { acc.legalMovesCalls += 1; }
-          return legalMoves(def, currentState, undefined, runtime);
+          const tStart = acc !== undefined ? performance.now() : 0;
+          const result = legalMoves(def, currentState, undefined, runtime);
+          if (acc !== undefined) {
+            acc.legalMovesCalls += 1;
+            acc.legalMovesTimeMs += performance.now() - tStart;
+          }
+          return result;
         })();
     if (moves.length === 0) {
       return { state: currentState, terminal: null, rng: currentRng, depth, traversedMoveKeys };
     }
 
+    // Gap 6: Record branching factor at this cutoff depth.
+    if (acc !== undefined) {
+      acc.branchingFactorSamples.push({ depth, count: moves.length });
+    }
+
     // 3. Materialize candidates
     const matResult = materializeMovesForRollout(
       def, currentState, moves, currentRng, config.templateCompletionsPerVisit, runtime,
+      undefined, acc,
     );
     const { candidates } = matResult;
     currentRng = matResult.rng;
@@ -301,10 +349,15 @@ export function simulateToCutoff(
     ) {
       const forced = candidates[0]!;
       try {
+        const amStart = acc !== undefined ? performance.now() : 0;
         const applied = applyMove(def, currentState, forced.move, undefined, runtime);
         if (acc !== undefined) {
           acc.applyMoveCalls += 1;
+          acc.applyMoveTimeMs += performance.now() - amStart;
           acc.forcedMovePlies += 1;
+          const tc = applied.triggerFirings.length;
+          acc.totalTriggerFirings += tc;
+          if (tc > acc.maxTriggerFiringsPerMove) acc.maxTriggerFiringsPerMove = tc;
         }
         currentState = applied.state;
         traversedMoveKeys.push(forced.moveKey);
@@ -351,10 +404,15 @@ export function simulateToCutoff(
 
     // 5. Apply
     try {
+      const amStart = acc !== undefined ? performance.now() : 0;
       const applied = applyMove(def, currentState, chosenCandidate.move, undefined, runtime);
       if (acc !== undefined) {
         acc.applyMoveCalls += 1;
+        acc.applyMoveTimeMs += performance.now() - amStart;
         acc.hybridRolloutPlies += 1;
+        const tc = applied.triggerFirings.length;
+        acc.totalTriggerFirings += tc;
+        if (tc > acc.maxTriggerFiringsPerMove) acc.maxTriggerFiringsPerMove = tc;
       }
       currentState = applied.state;
       traversedMoveKeys.push(chosenCandidate.moveKey);
@@ -370,8 +428,13 @@ export function simulateToCutoff(
   const finalTerminal = stateCache !== undefined && maxCacheEntries !== undefined
     ? getOrComputeTerminal(stateCache, def, currentState, runtime, maxCacheEntries, acc)
     : (() => {
-        if (acc !== undefined) { acc.terminalCalls += 1; }
-        return terminalResult(def, currentState, runtime);
+        const tStart = acc !== undefined ? performance.now() : 0;
+        const result = terminalResult(def, currentState, runtime);
+        if (acc !== undefined) {
+          acc.terminalCalls += 1;
+          acc.terminalTimeMs += performance.now() - tStart;
+        }
+        return result;
       })();
   return { state: currentState, terminal: finalTerminal, rng: currentRng, depth, traversedMoveKeys };
 }
@@ -419,9 +482,14 @@ function pickMove(
   for (let i = 0; i < sampled.length; i += 1) {
     const candidate = sampled[i]!;
     try {
+      const amStart = acc !== undefined ? performance.now() : 0;
       const applied = applyMove(def, currentState, candidate.move, undefined, runtime);
       if (acc !== undefined) {
         acc.applyMoveCalls += 1;
+        acc.applyMoveTimeMs += performance.now() - amStart;
+        const tc = applied.triggerFirings.length;
+        acc.totalTriggerFirings += tc;
+        if (tc > acc.maxTriggerFiringsPerMove) acc.maxTriggerFiringsPerMove = tc;
       }
       const score = evaluateState(def, applied.state, actingPlayer, runtime);
       if (score > bestScore) {

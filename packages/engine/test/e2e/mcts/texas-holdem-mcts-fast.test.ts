@@ -34,9 +34,9 @@ describe('texas hold\'em MCTS fast preset e2e', () => {
     assertValidStopReason(trace);
   });
 
-  it('fast preset uses hybrid mode and mast policy', () => {
+  it('fast preset uses direct mode and mast policy', () => {
     const config = resolvePreset('fast');
-    assert.equal(config.rolloutMode, 'hybrid', 'fast preset should use hybrid mode');
+    assert.equal(config.rolloutMode, 'direct', 'fast preset should use direct mode');
     assert.equal(config.rolloutPolicy, 'mast', 'fast preset should use mast policy');
   });
 

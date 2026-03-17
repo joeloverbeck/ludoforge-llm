@@ -192,10 +192,10 @@ describe('validateMctsConfig', () => {
 // ---------------------------------------------------------------------------
 
 describe('MCTS_PRESETS', () => {
-  it('contains exactly fast, default, and strong', () => {
+  it('contains exactly fast, default, strong, and background', () => {
     assert.deepEqual(
       [...MCTS_PRESET_NAMES].sort(),
-      ['default', 'fast', 'strong'],
+      ['background', 'default', 'fast', 'strong'],
     );
   });
 
@@ -215,34 +215,48 @@ describe('MCTS_PRESETS', () => {
 // ---------------------------------------------------------------------------
 
 describe('resolvePreset', () => {
-  it('resolvePreset("fast") returns config with iterations: 200, timeLimitMs: 2000, rolloutMode: hybrid, hybridCutoffDepth: 4', () => {
+  it('resolvePreset("fast") returns config with iterations: 200, timeLimitMs: 2000, rolloutMode: direct', () => {
     const cfg = resolvePreset('fast');
     assert.equal(cfg.iterations, 200);
     assert.equal(cfg.maxSimulationDepth, 16);
     assert.equal(cfg.rolloutPolicy, 'mast');
     assert.equal(cfg.timeLimitMs, 2_000);
-    assert.equal(cfg.rolloutMode, 'hybrid');
+    assert.equal(cfg.rolloutMode, 'direct');
     assert.equal(cfg.hybridCutoffDepth, 4);
   });
 
-  it('resolvePreset("default") returns rolloutMode: hybrid, hybridCutoffDepth: 6', () => {
+  it('resolvePreset("default") returns rolloutMode: direct', () => {
     const cfg = resolvePreset('default');
     assert.equal(cfg.timeLimitMs, 10_000);
     assert.equal(cfg.iterations, DEFAULT_MCTS_CONFIG.iterations);
     assert.equal(cfg.explorationConstant, DEFAULT_MCTS_CONFIG.explorationConstant);
     assert.equal(cfg.rolloutPolicy, 'mast');
-    assert.equal(cfg.rolloutMode, 'hybrid');
+    assert.equal(cfg.rolloutMode, 'direct');
     assert.equal(cfg.hybridCutoffDepth, 6);
   });
 
-  it('resolvePreset("strong") returns rolloutMode: hybrid, hybridCutoffDepth: 8', () => {
+  it('resolvePreset("strong") returns rolloutMode: direct', () => {
     const cfg = resolvePreset('strong');
     assert.equal(cfg.iterations, 5000);
     assert.equal(cfg.maxSimulationDepth, 64);
     assert.equal(cfg.templateCompletionsPerVisit, 4);
     assert.equal(cfg.timeLimitMs, 30_000);
-    assert.equal(cfg.rolloutMode, 'hybrid');
+    assert.equal(cfg.rolloutMode, 'direct');
     assert.equal(cfg.hybridCutoffDepth, 8);
+  });
+
+  it('resolvePreset("background") returns background worker config', () => {
+    const cfg = resolvePreset('background');
+    assert.equal(cfg.iterations, 200);
+    assert.equal(cfg.minIterations, 10);
+    assert.equal(cfg.rolloutMode, 'direct');
+    assert.equal(cfg.timeLimitMs, 30_000);
+    assert.equal(cfg.heuristicBackupAlpha, 0.4);
+    assert.equal(cfg.progressiveWideningK, 1.5);
+    assert.equal(cfg.progressiveWideningAlpha, 0.5);
+    assert.equal(cfg.decisionWideningCap, 8);
+    assert.equal(cfg.decisionDepthMultiplier, 2);
+    assert.equal(cfg.rootStopMinVisits, 5);
   });
 
   it('all presets pass validateMctsConfig (no invalid values)', () => {
@@ -501,11 +515,15 @@ describe('heuristic backup alpha config', () => {
     );
   });
 
-  it('no named preset enables heuristicBackupAlpha > 0', () => {
+  it('only "background" preset enables heuristicBackupAlpha > 0', () => {
     for (const name of MCTS_PRESET_NAMES) {
       const cfg = resolvePreset(name);
       const alpha = cfg.heuristicBackupAlpha ?? 0;
-      assert.equal(alpha, 0, `preset "${name}" should not enable heuristicBackupAlpha`);
+      if (name === 'background') {
+        assert.equal(alpha, 0.4, 'background preset should have heuristicBackupAlpha 0.4');
+      } else {
+        assert.equal(alpha, 0, `preset "${name}" should not enable heuristicBackupAlpha`);
+      }
     }
   });
 });

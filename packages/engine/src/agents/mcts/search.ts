@@ -41,6 +41,7 @@ import {
   getOrComputeTerminal,
   getOrComputeLegalMoves,
   getOrComputeRewards,
+  getOrComputeClassification,
 } from './state-cache.js';
 
 // ---------------------------------------------------------------------------
@@ -199,10 +200,17 @@ export function runOneIteration(
           case 'complete': {
             // Decision sequence resolved — applyMove exactly once.
             try {
+              const amStart5 = acc !== undefined ? performance.now() : 0;
               const applied = applyMove(
                 def, currentState, expansionResult.move, undefined, runtime,
               );
-              if (acc !== undefined) { acc.applyMoveCalls += 1; }
+              if (acc !== undefined) {
+                acc.applyMoveCalls += 1;
+                acc.applyMoveTimeMs += performance.now() - amStart5;
+                const tc = applied.triggerFirings.length;
+                acc.totalTriggerFirings += tc;
+                if (tc > acc.maxTriggerFiringsPerMove) acc.maxTriggerFiringsPerMove = tc;
+              }
               currentState = applied.state;
 
               // Create a state child node for the completed move.
@@ -308,8 +316,13 @@ export function runOneIteration(
         : stateCache !== undefined && maxCacheEntries !== undefined
           ? getOrComputeLegalMoves(stateCache, def, currentState, runtime, maxCacheEntries, acc)
           : (() => {
-              if (acc !== undefined) { acc.legalMovesCalls += 1; }
-              return legalMoves(def, currentState, undefined, runtime);
+              const tStart = acc !== undefined ? performance.now() : 0;
+              const result = legalMoves(def, currentState, undefined, runtime);
+              if (acc !== undefined) {
+                acc.legalMovesCalls += 1;
+                acc.legalMovesTimeMs += performance.now() - tStart;
+              }
+              return result;
             })();
 
     if (movesAtNode.length === 0) {
@@ -317,11 +330,24 @@ export function runOneIteration(
       break;
     }
 
+    // Gap 6: Record branching factor at this selection depth.
+    if (acc !== undefined && currentNode !== root) {
+      acc.branchingFactorSamples.push({ depth: selectionDepth, count: movesAtNode.length });
+    }
+
     // Classify all legal moves at this state node via runtime readiness
     // (legalChoicesEvaluate per move — no compile-time shortcuts).
-    const classification: MoveClassification = classifyMovesForSearch(
-      def, currentState, movesAtNode, runtime, config.visitor,
-    );
+    // Uses the state-info cache when enabled to avoid redundant classification
+    // of the same state across iterations (critical for root node reuse).
+    const classification: MoveClassification =
+      stateCache !== undefined && maxCacheEntries !== undefined
+        ? getOrComputeClassification(
+            stateCache, def, currentState, movesAtNode, runtime,
+            maxCacheEntries, config.visitor, acc,
+          )
+        : classifyMovesForSearch(
+            def, currentState, movesAtNode, runtime, config.visitor, acc,
+          );
     const candidates = classification.ready;
     if (acc !== undefined) {
       acc.materializeCalls += 1;
@@ -397,10 +423,15 @@ export function runOneIteration(
       const forced = candidates[0]!;
       selectionMoveKeys.push(forced.moveKey);
 
+      const amStart = acc !== undefined ? performance.now() : 0;
       const applied = applyMove(def, currentState, forced.move, undefined, runtime);
       if (acc !== undefined) {
         acc.applyMoveCalls += 1;
+        acc.applyMoveTimeMs += performance.now() - amStart;
         acc.forcedMovePlies += 1;
+        const tc = applied.triggerFirings.length;
+        acc.totalTriggerFirings += tc;
+        if (tc > acc.maxTriggerFiringsPerMove) acc.maxTriggerFiringsPerMove = tc;
       }
       currentState = applied.state;
       selectionDepth += 1;
@@ -410,8 +441,13 @@ export function runOneIteration(
       const terminal = stateCache !== undefined && maxCacheEntries !== undefined
         ? getOrComputeTerminal(stateCache, def, currentState, runtime, maxCacheEntries, acc)
         : (() => {
-            if (acc !== undefined) { acc.terminalCalls += 1; }
-            return terminalResult(def, currentState, runtime);
+            const tStart = acc !== undefined ? performance.now() : 0;
+            const result = terminalResult(def, currentState, runtime);
+            if (acc !== undefined) {
+              acc.terminalCalls += 1;
+              acc.terminalTimeMs += performance.now() - tStart;
+            }
+            return result;
           })();
       if (terminal !== null) {
         break;
@@ -494,9 +530,14 @@ export function runOneIteration(
         currentNode.children.push(childNode);
 
         // Advance into the expanded child.
+        const amStart2 = acc !== undefined ? performance.now() : 0;
         const applied = applyMove(def, currentState, chosen.move, undefined, runtime);
         if (acc !== undefined) {
           acc.applyMoveCalls += 1;
+          acc.applyMoveTimeMs += performance.now() - amStart2;
+          const tc = applied.triggerFirings.length;
+          acc.totalTriggerFirings += tc;
+          if (tc > acc.maxTriggerFiringsPerMove) acc.maxTriggerFiringsPerMove = tc;
         }
         currentState = applied.state;
         currentNode = childNode;
@@ -537,9 +578,14 @@ export function runOneIteration(
           }
           continue;
         }
+        const amStart3 = acc !== undefined ? performance.now() : 0;
         const applied = applyMove(def, currentState, solverChild.move!, undefined, runtime);
         if (acc !== undefined) {
           acc.applyMoveCalls += 1;
+          acc.applyMoveTimeMs += performance.now() - amStart3;
+          const tc = applied.triggerFirings.length;
+          acc.totalTriggerFirings += tc;
+          if (tc > acc.maxTriggerFiringsPerMove) acc.maxTriggerFiringsPerMove = tc;
         }
         currentState = applied.state;
         currentNode = solverChild;
@@ -570,9 +616,14 @@ export function runOneIteration(
     }
 
     // Apply the selected child's move to advance the state.
+    const amStart4 = acc !== undefined ? performance.now() : 0;
     const applied = applyMove(def, currentState, selected.move!, undefined, runtime);
     if (acc !== undefined) {
       acc.applyMoveCalls += 1;
+      acc.applyMoveTimeMs += performance.now() - amStart4;
+      const tc = applied.triggerFirings.length;
+      acc.totalTriggerFirings += tc;
+      if (tc > acc.maxTriggerFiringsPerMove) acc.maxTriggerFiringsPerMove = tc;
     }
     currentState = applied.state;
     currentNode = selected;
@@ -639,8 +690,13 @@ export function runOneIteration(
         terminal: stateCache !== undefined && maxCacheEntries !== undefined
           ? getOrComputeTerminal(stateCache, def, currentState, runtime, maxCacheEntries, acc)
           : (() => {
-              if (acc !== undefined) { acc.terminalCalls += 1; }
-              return terminalResult(def, currentState, runtime);
+              const tStart = acc !== undefined ? performance.now() : 0;
+              const result = terminalResult(def, currentState, runtime);
+              if (acc !== undefined) {
+                acc.terminalCalls += 1;
+                acc.terminalTimeMs += performance.now() - tStart;
+              }
+              return result;
             })(),
         rng: currentRng,
         depth: 0,
@@ -667,8 +723,13 @@ export function runOneIteration(
     const endTerminal = stateCache !== undefined && maxCacheEntries !== undefined
       ? getOrComputeTerminal(stateCache, def, simResult.state, runtime, maxCacheEntries, acc)
       : (() => {
-          if (acc !== undefined) { acc.terminalCalls += 1; }
-          return terminalResult(def, simResult.state, runtime);
+          const tStart = acc !== undefined ? performance.now() : 0;
+          const result = terminalResult(def, simResult.state, runtime);
+          if (acc !== undefined) {
+            acc.terminalCalls += 1;
+            acc.terminalTimeMs += performance.now() - tStart;
+          }
+          return result;
         })();
     if (endTerminal !== null) {
       rewards = terminalToRewards(endTerminal, sampledState.playerCount);
@@ -676,8 +737,13 @@ export function runOneIteration(
       rewards = stateCache !== undefined && maxCacheEntries !== undefined
         ? getOrComputeRewards(stateCache, def, simResult.state, config, runtime, maxCacheEntries, acc)
         : (() => {
-            if (acc !== undefined) { acc.evaluateStateCalls += 1; }
-            return evaluateForAllPlayers(def, simResult.state, config.heuristicTemperature, runtime);
+            const tStart = acc !== undefined ? performance.now() : 0;
+            const result = evaluateForAllPlayers(def, simResult.state, config.heuristicTemperature, runtime);
+            if (acc !== undefined) {
+              acc.evaluateStateCalls += 1;
+              acc.evaluateTimeMs += performance.now() - tStart;
+            }
+            return result;
           })();
     }
   }
@@ -838,6 +904,11 @@ export function runSearch(
     ? (config.maxStateInfoCacheEntries ?? Math.min(pool.capacity, config.iterations * 4))
     : undefined;
 
+  // Gap 5: Capture heap at search start (Node.js only).
+  if (acc !== undefined && typeof process !== 'undefined' && typeof process.memoryUsage === 'function') {
+    acc.heapUsedAtStartBytes = process.memoryUsage().heapUsed;
+  }
+
   const deadline =
     config.timeLimitMs !== undefined ? Date.now() + config.timeLimitMs : undefined;
 
@@ -875,6 +946,9 @@ export function runSearch(
       break;
     }
 
+    // Gap 7: Per-iteration timing.
+    const iterStart = acc !== undefined ? performance.now() : 0;
+
     // Fork an iteration-local RNG.
     const [iterationRng, nextSearchRng] = fork(currentRng);
     currentRng = nextSearchRng;
@@ -884,6 +958,14 @@ export function runSearch(
     const belief = sampleBeliefState(def, state, observation, observer, iterationRng);
     if (acc !== undefined) {
       acc.beliefSamplingTimeMs += performance.now() - beliefStart;
+    }
+
+    // Gap 2: State size sampling (every 10th iteration).
+    // Uses a BigInt-safe replacer since GameState contains bigint stateHash.
+    if (acc !== undefined && iterations % 10 === 0) {
+      acc.stateSizeSamples.push(
+        JSON.stringify(belief.state, (_k, v) => typeof v === 'bigint' ? v.toString() : v as unknown).length,
+      );
     }
 
     // Run one full iteration on the sampled state.
@@ -907,6 +989,11 @@ export function runSearch(
     void result;
 
     iterations += 1;
+
+    // Gap 7: Record iteration timing.
+    if (acc !== undefined) {
+      acc.iterationTimeSamples.push(performance.now() - iterStart);
+    }
 
     // ── Visitor: emit iterationBatch every VISITOR_BATCH_SIZE iterations ──
     if (
@@ -957,6 +1044,11 @@ export function runSearch(
       bestActionId,
       bestVisits,
     });
+  }
+
+  // Gap 5: Capture heap at search end (Node.js only).
+  if (acc !== undefined && typeof process !== 'undefined' && typeof process.memoryUsage === 'function') {
+    acc.heapUsedAtEndBytes = process.memoryUsage().heapUsed;
   }
 
   // Collect diagnostics if enabled.

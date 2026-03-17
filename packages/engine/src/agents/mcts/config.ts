@@ -168,16 +168,31 @@ function assertOneOf<T>(name: string, value: T, allowed: readonly T[]): void {
 // ---------------------------------------------------------------------------
 
 /** Named search-strength presets. */
-export type MctsPreset = 'fast' | 'default' | 'strong';
+export type MctsPreset = 'fast' | 'default' | 'strong' | 'background';
 
 /**
  * Named config partials keyed by preset name.
  * `default` is an empty partial — it resolves to `DEFAULT_MCTS_CONFIG`.
+ *
+ * All presets use `rolloutMode: 'direct'` — rollout-phase materialization
+ * was the dominant cost (~93.8% of total time) and direct mode eliminates it.
  */
 export const MCTS_PRESETS: Readonly<Record<MctsPreset, Partial<MctsConfig>>> = Object.freeze({
-  fast: Object.freeze({ iterations: 200, maxSimulationDepth: 16, rolloutPolicy: 'mast' as const, timeLimitMs: 2_000, rolloutMode: 'hybrid' as const, hybridCutoffDepth: 4, decisionWideningCap: 8, decisionDepthMultiplier: 2 }),
-  default: Object.freeze({ rolloutPolicy: 'mast' as const, timeLimitMs: 10_000, rolloutMode: 'hybrid' as const, hybridCutoffDepth: 6, decisionWideningCap: 12, decisionDepthMultiplier: 4 }),
-  strong: Object.freeze({ iterations: 5000, maxSimulationDepth: 64, rolloutPolicy: 'mast' as const, templateCompletionsPerVisit: 4, timeLimitMs: 30_000, rolloutMode: 'hybrid' as const, hybridCutoffDepth: 8, decisionWideningCap: 20, decisionDepthMultiplier: 6 }),
+  fast: Object.freeze({ iterations: 200, maxSimulationDepth: 16, rolloutPolicy: 'mast' as const, timeLimitMs: 2_000, rolloutMode: 'direct' as const, hybridCutoffDepth: 4, decisionWideningCap: 8, decisionDepthMultiplier: 2 }),
+  default: Object.freeze({ rolloutPolicy: 'mast' as const, timeLimitMs: 10_000, rolloutMode: 'direct' as const, hybridCutoffDepth: 6, decisionWideningCap: 12, decisionDepthMultiplier: 4 }),
+  strong: Object.freeze({ iterations: 5000, maxSimulationDepth: 64, rolloutPolicy: 'mast' as const, templateCompletionsPerVisit: 4, timeLimitMs: 30_000, rolloutMode: 'direct' as const, hybridCutoffDepth: 8, decisionWideningCap: 20, decisionDepthMultiplier: 6 }),
+  background: Object.freeze({
+    iterations: 200,
+    minIterations: 10,
+    rolloutMode: 'direct' as const,
+    timeLimitMs: 30_000,
+    heuristicBackupAlpha: 0.4,
+    progressiveWideningK: 1.5,
+    progressiveWideningAlpha: 0.5,
+    decisionWideningCap: 8,
+    decisionDepthMultiplier: 2,
+    rootStopMinVisits: 5,
+  }),
 });
 
 /** All recognised preset names (for validation). */

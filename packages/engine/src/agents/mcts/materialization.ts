@@ -16,6 +16,7 @@ import { canonicalMoveKey } from './move-key.js';
 import type { ConcreteMoveCandidate } from './expansion.js';
 import type { MctsSearchVisitor } from './visitor.js';
 import type { MctsNode } from './node.js';
+import type { MutableDiagnosticsAccumulator } from './diagnostics.js';
 
 // ---------------------------------------------------------------------------
 // MoveClassification
@@ -59,6 +60,7 @@ export function classifyMovesForSearch(
   moves: readonly Move[],
   runtime?: GameDefRuntime,
   visitor?: MctsSearchVisitor,
+  acc?: MutableDiagnosticsAccumulator,
 ): MoveClassification {
   const ready: ConcreteMoveCandidate[] = [];
   const pending: Move[] = [];
@@ -70,7 +72,11 @@ export function classifyMovesForSearch(
 
     let kind: string;
     try {
+      const tStart = acc !== undefined ? performance.now() : 0;
       kind = legalChoicesEvaluate(def, state, move, undefined, runtime).kind;
+      if (acc !== undefined) {
+        acc.materializeTimeMs += performance.now() - tStart;
+      }
     } catch {
       if (visitor?.onEvent) {
         visitor.onEvent({
@@ -149,6 +155,7 @@ export function materializeMovesForRollout(
   limitPerTemplate: number,
   runtime?: GameDefRuntime,
   visitor?: MctsSearchVisitor,
+  acc?: MutableDiagnosticsAccumulator,
 ): { readonly candidates: readonly ConcreteMoveCandidate[]; readonly rng: Rng } {
   const candidates: ConcreteMoveCandidate[] = [];
   const seenKeys = new Set<string>();
@@ -160,7 +167,11 @@ export function materializeMovesForRollout(
     // Classify every move via legalChoicesEvaluate — no compile-time shortcuts.
     let kind: string;
     try {
+      const tStart = acc !== undefined ? performance.now() : 0;
       kind = legalChoicesEvaluate(def, state, move, undefined, runtime).kind;
+      if (acc !== undefined) {
+        acc.materializeTimeMs += performance.now() - tStart;
+      }
     } catch {
       if (visitor?.onEvent) {
         visitor.onEvent({
@@ -184,9 +195,11 @@ export function materializeMovesForRollout(
       case 'pending': {
         // Complete via random parameter filling, up to limitPerTemplate attempts.
         for (let attempt = 0; attempt < limitPerTemplate; attempt += 1) {
+          if (acc !== undefined) acc.templateCompletionAttempts += 1;
           const result = completeTemplateMove(def, state, move, cursor, runtime);
 
           if (result.kind === 'completed') {
+            if (acc !== undefined) acc.templateCompletionSuccesses += 1;
             cursor = result.rng;
             const key = canonicalMoveKey(result.move);
             if (!seenKeys.has(key)) {
@@ -194,6 +207,7 @@ export function materializeMovesForRollout(
               candidates.push({ move: result.move, moveKey: key });
             }
           } else if (result.kind === 'stochasticUnresolved') {
+            if (acc !== undefined) acc.templateCompletionFailures += 1;
             // Consume RNG for determinism but do NOT add as candidate.
             cursor = result.rng;
             if (visitor?.onEvent) {
@@ -205,6 +219,7 @@ export function materializeMovesForRollout(
             }
             break;
           } else {
+            if (acc !== undefined) acc.templateCompletionFailures += 1;
             // unsatisfiable — no further attempts will succeed.
             if (visitor?.onEvent) {
               visitor.onEvent({

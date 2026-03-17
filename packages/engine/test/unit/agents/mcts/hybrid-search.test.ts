@@ -252,15 +252,16 @@ describe('cross-mode determinism', () => {
   }
 });
 
-describe('no preset uses direct mode', () => {
-  // Invariant 4: no named preset uses direct mode
-  it('all named presets resolve to hybrid mode', () => {
+describe('all presets use direct mode', () => {
+  // All named presets use direct mode — rollout-phase materialization was
+  // the dominant cost (~93.8% of total time) and direct mode eliminates it.
+  it('all named presets resolve to direct mode', () => {
     for (const preset of MCTS_PRESET_NAMES) {
       const config = validateMctsConfig(MCTS_PRESETS[preset]);
       assert.equal(
         config.rolloutMode,
-        'hybrid',
-        `preset "${preset}" should use hybrid mode, got "${config.rolloutMode}"`,
+        'direct',
+        `preset "${preset}" should use direct mode, got "${config.rolloutMode}"`,
       );
     }
   });

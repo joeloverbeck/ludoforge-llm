@@ -37,9 +37,9 @@ const createDeterministicStrongWithMode = (count: number, mode: MctsRolloutMode)
   );
 
 describe('texas hold\'em MCTS strong preset e2e', () => {
-  it('strong preset uses hybrid mode and mast policy', () => {
+  it('strong preset uses direct mode and mast policy', () => {
     const config = resolvePreset('strong');
-    assert.equal(config.rolloutMode, 'hybrid', 'strong preset should use hybrid mode');
+    assert.equal(config.rolloutMode, 'direct', 'strong preset should use direct mode');
     assert.equal(config.rolloutPolicy, 'mast', 'strong preset should use mast policy');
   });
 

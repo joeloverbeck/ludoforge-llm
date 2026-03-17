@@ -15,20 +15,55 @@ import type { MctsConfig } from './config.js';
 import type { MutableDiagnosticsAccumulator } from './diagnostics.js';
 import type { MoveClassification } from './materialization.js';
 import type { MctsSearchVisitor } from './visitor.js';
+import type { MoveKey } from './move-key.js';
 import { terminalResult } from '../../kernel/terminal.js';
 import { legalMoves } from '../../kernel/legal-moves.js';
 import { evaluateForAllPlayers } from './evaluate.js';
-import { classifyMovesForSearch } from './materialization.js';
+import { classifyMovesForSearch, classifySingleMove } from './materialization.js';
+import type { SingleMoveClassificationKind } from './materialization.js';
+import { canonicalMoveKey } from './move-key.js';
+import type { ConcreteMoveCandidate } from './expansion.js';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
+/** Per-move classification status for incremental caching. */
+export type ClassificationStatus =
+  | 'unknown'
+  | 'ready'
+  | 'pending'
+  | 'illegal'
+  | 'pendingStochastic';
+
+/** Cached information for a single legal move, including its classification. */
+export interface CachedLegalMoveInfo {
+  readonly move: Move;
+  readonly moveKey: MoveKey;
+  status: ClassificationStatus;
+  oneStepHeuristic?: readonly number[] | null;
+}
+
+/**
+ * Incremental classification cache for a state's legal moves.
+ *
+ * Supports partial population — moves start as `unknown` and are classified
+ * one at a time across revisits. `nextUnclassifiedCursor` tracks progress
+ * through the `infos` array.
+ */
+export interface CachedClassificationEntry {
+  readonly infos: CachedLegalMoveInfo[];
+  nextUnclassifiedCursor: number;
+  exhaustiveScanComplete: boolean;
+}
+
 export interface CachedStateInfo {
   readonly terminal?: TerminalResult | null;
   readonly legalMoves?: readonly Move[];
   readonly rewards?: readonly number[];
+  /** @deprecated Use `classification` for incremental per-move caching. */
   readonly moveClassification?: MoveClassification;
+  readonly classification?: CachedClassificationEntry;
 }
 
 export type StateInfoCache = Map<bigint, CachedStateInfo>;
@@ -57,6 +92,189 @@ export function evictIfNeeded(cache: StateInfoCache, maxEntries: number): void {
       cache.delete(firstKey);
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Incremental classification helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Map `legalChoicesEvaluate` result kind to `ClassificationStatus`.
+ */
+function kindToStatus(kind: SingleMoveClassificationKind): ClassificationStatus {
+  switch (kind) {
+    case 'complete': return 'ready';
+    case 'pending': return 'pending';
+    case 'illegal': return 'illegal';
+    case 'pendingStochastic': return 'pendingStochastic';
+    case 'error': return 'illegal'; // treat errors as illegal
+    default: return 'illegal';
+  }
+}
+
+/**
+ * Create a `CachedClassificationEntry` from a set of legal moves.
+ *
+ * All moves start with `status: 'unknown'`. Moves are deduplicated by
+ * `moveKey` at creation time — multiple raw moves mapping to the same
+ * `moveKey` produce a single entry (first raw move wins).
+ */
+export function initClassificationEntry(
+  moves: readonly Move[],
+): CachedClassificationEntry {
+  const infos: CachedLegalMoveInfo[] = [];
+  const seenKeys = new Set<MoveKey>();
+
+  for (let i = 0; i < moves.length; i += 1) {
+    const move = moves[i]!;
+    const key = canonicalMoveKey(move);
+    if (!seenKeys.has(key)) {
+      seenKeys.add(key);
+      infos.push({ move, moveKey: key, status: 'unknown' });
+    }
+  }
+
+  return {
+    infos,
+    nextUnclassifiedCursor: 0,
+    exhaustiveScanComplete: false,
+  };
+}
+
+/**
+ * Classify the move at `nextUnclassifiedCursor`, update its status,
+ * advance the cursor, and return the classified info.
+ *
+ * Returns `null` if the cursor has already reached the end (all moves
+ * classified). Sets `exhaustiveScanComplete` when the last move is
+ * classified.
+ */
+export function classifyNextCandidate(
+  entry: CachedClassificationEntry,
+  def: GameDef,
+  state: GameState,
+  runtime?: GameDefRuntime,
+  visitor?: MctsSearchVisitor,
+  acc?: MutableDiagnosticsAccumulator,
+): CachedLegalMoveInfo | null {
+  if (entry.nextUnclassifiedCursor >= entry.infos.length) {
+    entry.exhaustiveScanComplete = true;
+    return null;
+  }
+
+  const info = entry.infos[entry.nextUnclassifiedCursor]!;
+  const kind = classifySingleMove(def, state, info.move, runtime, visitor, acc);
+  info.status = kindToStatus(kind);
+  entry.nextUnclassifiedCursor += 1;
+
+  if (entry.nextUnclassifiedCursor >= entry.infos.length) {
+    entry.exhaustiveScanComplete = true;
+  }
+
+  return info;
+}
+
+/**
+ * Classify a specific move by index without advancing the cursor.
+ *
+ * Useful for on-demand classification of an existing child's move.
+ * Returns the updated info, or `null` if the index is out of bounds.
+ * If the move is already classified (not `unknown`), returns the
+ * existing info without re-classifying.
+ */
+export function classifySpecificMove(
+  entry: CachedClassificationEntry,
+  index: number,
+  def: GameDef,
+  state: GameState,
+  runtime?: GameDefRuntime,
+  visitor?: MctsSearchVisitor,
+  acc?: MutableDiagnosticsAccumulator,
+): CachedLegalMoveInfo | null {
+  if (index < 0 || index >= entry.infos.length) {
+    return null;
+  }
+
+  const info = entry.infos[index]!;
+  if (info.status !== 'unknown') {
+    return info;
+  }
+
+  const kind = classifySingleMove(def, state, info.move, runtime, visitor, acc);
+  info.status = kindToStatus(kind);
+  return info;
+}
+
+/**
+ * Return all cached move infos matching the given status.
+ *
+ * For backward compatibility, callers that need the old `MoveClassification`
+ * shape can use `getClassifiedMovesByStatus(entry, 'ready')` and
+ * `getClassifiedMovesByStatus(entry, 'pending')`.
+ */
+export function getClassifiedMovesByStatus(
+  entry: CachedClassificationEntry,
+  status: ClassificationStatus,
+): readonly CachedLegalMoveInfo[] {
+  const result: CachedLegalMoveInfo[] = [];
+  for (let i = 0; i < entry.infos.length; i += 1) {
+    if (entry.infos[i]!.status === status) {
+      result.push(entry.infos[i]!);
+    }
+  }
+  return result;
+}
+
+/**
+ * Exhaust the classification cursor and return the old `MoveClassification`
+ * shape for backward compatibility.
+ *
+ * After this call, `exhaustiveScanComplete` is `true`. This is equivalent
+ * to the old `classifyMovesForSearch()` behavior but uses the incremental
+ * cache structure.
+ */
+export function exhaustClassificationToLegacy(
+  entry: CachedClassificationEntry,
+  def: GameDef,
+  state: GameState,
+  runtime?: GameDefRuntime,
+  visitor?: MctsSearchVisitor,
+  acc?: MutableDiagnosticsAccumulator,
+): MoveClassification {
+  // Classify all remaining unknown moves.
+  while (entry.nextUnclassifiedCursor < entry.infos.length) {
+    classifyNextCandidate(entry, def, state, runtime, visitor, acc);
+  }
+
+  // Build the legacy shape.
+  const ready: ConcreteMoveCandidate[] = [];
+  const pending: Move[] = [];
+  const seenPendingKeys = new Set<string>();
+
+  for (let i = 0; i < entry.infos.length; i += 1) {
+    const info = entry.infos[i]!;
+    switch (info.status) {
+      case 'ready':
+        ready.push({ move: info.move, moveKey: info.moveKey });
+        break;
+      case 'pending': {
+        // Preserve the original dedup logic: by actionId when no params,
+        // by moveKey when params exist.
+        const hasParams = Object.keys(info.move.params).length > 0;
+        const dedupKey = hasParams ? info.moveKey : info.move.actionId;
+        if (!seenPendingKeys.has(dedupKey)) {
+          seenPendingKeys.add(dedupKey);
+          pending.push(info.move);
+        }
+        break;
+      }
+      default:
+        // illegal, pendingStochastic, unknown — skip
+        break;
+    }
+  }
+
+  return { ready, pending };
 }
 
 // ---------------------------------------------------------------------------
@@ -212,6 +430,10 @@ export function getOrComputeRewards(
  * Return the cached move classification for the given state, or compute it,
  * cache it, and return it. Skips cache when `stateHash === 0n`.
  *
+ * This is the backward-compatible entry point. It uses the incremental
+ * `CachedClassificationEntry` internally but returns the legacy
+ * `MoveClassification` shape by exhausting the cursor on first call.
+ *
  * This prevents redundant `legalChoicesEvaluate` calls across iterations
  * when the same state (e.g. root) is visited repeatedly.
  */
@@ -233,7 +455,18 @@ export function getOrComputeClassification(
     }
 
     const cached = cache.get(hash);
-    if (cached !== undefined && cached.moveClassification !== undefined) {
+
+    // Fast path: already have a fully exhausted incremental entry.
+    if (cached?.classification !== undefined && cached.classification.exhaustiveScanComplete) {
+      if (acc !== undefined) {
+        acc.stateCacheHits += 1;
+        acc.classificationCacheHits += 1;
+      }
+      return exhaustClassificationToLegacy(cached.classification, def, state, runtime, visitor, acc);
+    }
+
+    // Fast path: legacy cache hit (from older callers or prior runs).
+    if (cached?.moveClassification !== undefined) {
       if (acc !== undefined) {
         acc.stateCacheHits += 1;
         acc.classificationCacheHits += 1;
@@ -242,15 +475,23 @@ export function getOrComputeClassification(
     }
   }
 
-  // Compute
-  const result = classifyMovesForSearch(def, state, moves, runtime, visitor, acc);
-
-  // Cache (only when hash is meaningful)
+  // Build incremental entry if not yet present.
   if (hash !== 0n) {
     evictIfNeeded(cache, maxEntries);
     const existing = cache.get(hash);
-    cache.set(hash, { ...existing, moveClassification: result });
+    if (existing?.classification === undefined) {
+      const entry = initClassificationEntry(moves);
+      cache.set(hash, { ...existing, classification: entry });
+    }
+    const updated = cache.get(hash)!;
+    const result = exhaustClassificationToLegacy(
+      updated.classification!, def, state, runtime, visitor, acc,
+    );
+    // Also cache the legacy shape for callers that check moveClassification directly.
+    cache.set(hash, { ...updated, moveClassification: result });
+    return result;
   }
 
-  return result;
+  // Not cacheable (stateHash === 0n) — fall back to full classification.
+  return classifyMovesForSearch(def, state, moves, runtime, visitor, acc);
 }

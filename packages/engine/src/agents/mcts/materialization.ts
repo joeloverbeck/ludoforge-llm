@@ -130,6 +130,62 @@ export function classifyMovesForSearch(
 }
 
 // ---------------------------------------------------------------------------
+// classifySingleMove
+// ---------------------------------------------------------------------------
+
+/**
+ * Classification result for a single move.
+ *
+ * - `complete`  → move is ready (fully parameterized, all preconditions met)
+ * - `pending`   → move needs further decisions before it can be applied
+ * - `illegal`   → move is not legal in the current state
+ * - `pendingStochastic` → move requires stochastic resolution
+ * - `error`     → classification threw an exception
+ */
+export type SingleMoveClassificationKind =
+  | 'complete'
+  | 'pending'
+  | 'illegal'
+  | 'pendingStochastic'
+  | 'error';
+
+/**
+ * Classify a single move via `legalChoicesEvaluate`.
+ *
+ * Returns the classification kind. This is the atomic building block for
+ * incremental per-move classification — callers classify one move at a time
+ * instead of sweeping the entire move list.
+ *
+ * Pure function — no RNG consumed, no side effects beyond visitor events.
+ */
+export function classifySingleMove(
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  runtime?: GameDefRuntime,
+  visitor?: MctsSearchVisitor,
+  acc?: MutableDiagnosticsAccumulator,
+): SingleMoveClassificationKind {
+  try {
+    const tStart = acc !== undefined ? performance.now() : 0;
+    const kind = legalChoicesEvaluate(def, state, move, undefined, runtime).kind;
+    if (acc !== undefined) {
+      acc.materializeTimeMs += performance.now() - tStart;
+    }
+    return kind as SingleMoveClassificationKind;
+  } catch {
+    if (visitor?.onEvent) {
+      visitor.onEvent({
+        type: 'moveDropped',
+        actionId: move.actionId,
+        reason: 'unsatisfiable',
+      });
+    }
+    return 'error';
+  }
+}
+
+// ---------------------------------------------------------------------------
 // materializeMovesForRollout
 // ---------------------------------------------------------------------------
 

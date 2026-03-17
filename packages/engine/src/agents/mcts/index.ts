@@ -15,8 +15,8 @@ export { selectChild } from './isuct.js';
 export { maxChildren, shouldExpand, selectExpansionCandidate } from './expansion.js';
 export type { ConcreteMoveCandidate } from './expansion.js';
 
-export { classifyMovesForSearch, materializeMovesForRollout, filterAvailableCandidates } from './materialization.js';
-export type { MoveClassification } from './materialization.js';
+export { classifyMovesForSearch, materializeMovesForRollout, filterAvailableCandidates, classifySingleMove } from './materialization.js';
+export type { MoveClassification, SingleMoveClassificationKind } from './materialization.js';
 
 export { createNodePool } from './node-pool.js';
 export type { NodePool } from './node-pool.js';
@@ -33,8 +33,16 @@ export { backpropagate, runOneIteration, runSearch, selectRootDecision } from '.
 
 export { canActivateSolver, updateSolverResult, selectSolverAwareChild } from './solver.js';
 
-export { createStateInfoCache, evictIfNeeded, getOrComputeTerminal, getOrComputeLegalMoves, getOrComputeRewards } from './state-cache.js';
-export type { CachedStateInfo, StateInfoCache } from './state-cache.js';
+export {
+  createStateInfoCache, evictIfNeeded,
+  getOrComputeTerminal, getOrComputeLegalMoves, getOrComputeRewards, getOrComputeClassification,
+  initClassificationEntry, classifyNextCandidate, classifySpecificMove,
+  getClassifiedMovesByStatus, exhaustClassificationToLegacy,
+} from './state-cache.js';
+export type {
+  CachedStateInfo, StateInfoCache,
+  ClassificationStatus, CachedLegalMoveInfo, CachedClassificationEntry,
+} from './state-cache.js';
 
 export { collectDiagnostics, createAccumulator } from './diagnostics.js';
 export type { MctsSearchDiagnostics, MutableDiagnosticsAccumulator } from './diagnostics.js';

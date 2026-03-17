@@ -1,6 +1,6 @@
 # 64MCTSPEROPT-002: Incremental Per-Move Classification Cache
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — state-cache, materialization, new types
@@ -120,3 +120,14 @@ Multiple raw moves mapping to the same `moveKey` must result in one `CachedLegal
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-17
+- **What changed**:
+  - `materialization.ts`: added `classifySingleMove()` helper and `SingleMoveClassificationKind` type
+  - `state-cache.ts`: added 3 types (`ClassificationStatus`, `CachedLegalMoveInfo`, `CachedClassificationEntry`), 5 functions (`initClassificationEntry`, `classifyNextCandidate`, `classifySpecificMove`, `getClassifiedMovesByStatus`, `exhaustClassificationToLegacy`), updated `getOrComputeClassification()` to use incremental structure internally while preserving backward compat, added `classification` field to `CachedStateInfo`
+  - `index.ts`: exported all new types and functions
+  - New test file `state-cache-incremental.test.ts` with 20 tests
+- **Deviations**: none — implemented as specified
+- **Verification**: build pass, 5007/5007 tests pass, typecheck pass, lint pass (0 errors, 0 warnings)

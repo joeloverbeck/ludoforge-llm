@@ -8,7 +8,7 @@ import {
   validateMctsConfig,
   resolvePreset,
   type MctsConfig,
-  type MctsRolloutMode,
+  type LeafEvaluator,
 } from '../../../../src/agents/mcts/config.js';
 import type { MctsSearchVisitor } from '../../../../src/agents/mcts/visitor.js';
 
@@ -21,15 +21,9 @@ describe('MctsConfig defaults', () => {
       maxSimulationDepth: 48,
       progressiveWideningK: 2.0,
       progressiveWideningAlpha: 0.5,
-      templateCompletionsPerVisit: 2,
-      rolloutPolicy: 'mast',
-      rolloutEpsilon: 0.15,
-      rolloutCandidateSample: 6,
       heuristicTemperature: 10_000,
       solverMode: 'off',
-      rolloutMode: 'hybrid',
-      hybridCutoffDepth: 6,
-      mastWarmUpThreshold: 32,
+      leafEvaluator: { type: 'heuristic' },
       compressForcedSequences: true,
       rootStopConfidenceDelta: 1e-3,
       rootStopMinVisits: 16,
@@ -54,7 +48,6 @@ describe('validateMctsConfig', () => {
     const result = validateMctsConfig({ iterations: 500 });
     assert.equal(result.iterations, 500);
     assert.equal(result.explorationConstant, DEFAULT_MCTS_CONFIG.explorationConstant);
-    assert.equal(result.rolloutPolicy, DEFAULT_MCTS_CONFIG.rolloutPolicy);
   });
 
   it('throws RangeError when iterations is 0', () => {
@@ -79,41 +72,10 @@ describe('validateMctsConfig', () => {
     );
   });
 
-  it('throws TypeError when rolloutPolicy is invalid', () => {
-    assert.throws(
-      () => validateMctsConfig({ rolloutPolicy: 'invalid' as 'random' }),
-      (err: unknown) =>
-        err instanceof TypeError && /rolloutPolicy/.test((err as TypeError).message),
-    );
-  });
-
   it('throws TypeError when solverMode is invalid', () => {
     assert.throws(
       () => validateMctsConfig({ solverMode: 'invalid' as 'off' }),
       (err: unknown) => err instanceof TypeError && /solverMode/.test((err as TypeError).message),
-    );
-  });
-
-  it('throws TypeError when rolloutMode is invalid', () => {
-    assert.throws(
-      () => validateMctsConfig({ rolloutMode: 'invalid' as MctsRolloutMode }),
-      (err: unknown) => err instanceof TypeError && /rolloutMode/.test((err as TypeError).message),
-    );
-  });
-
-  it('throws RangeError when hybridCutoffDepth is 0', () => {
-    assert.throws(
-      () => validateMctsConfig({ hybridCutoffDepth: 0 }),
-      (err: unknown) =>
-        err instanceof RangeError && /hybridCutoffDepth/.test((err as RangeError).message),
-    );
-  });
-
-  it('throws RangeError when hybridCutoffDepth is negative', () => {
-    assert.throws(
-      () => validateMctsConfig({ hybridCutoffDepth: -1 }),
-      (err: unknown) =>
-        err instanceof RangeError && /hybridCutoffDepth/.test((err as RangeError).message),
     );
   });
 
@@ -130,39 +92,6 @@ describe('validateMctsConfig', () => {
     );
   });
 
-  it('throws RangeError for non-positive templateCompletionsPerVisit', () => {
-    assert.throws(
-      () => validateMctsConfig({ templateCompletionsPerVisit: 0 }),
-      (err: unknown) =>
-        err instanceof RangeError
-        && /templateCompletionsPerVisit/.test((err as RangeError).message),
-    );
-  });
-
-  it('throws RangeError for negative rolloutEpsilon', () => {
-    assert.throws(
-      () => validateMctsConfig({ rolloutEpsilon: -0.1 }),
-      (err: unknown) =>
-        err instanceof RangeError && /rolloutEpsilon/.test((err as RangeError).message),
-    );
-  });
-
-  it('throws RangeError for rolloutEpsilon greater than 1', () => {
-    assert.throws(
-      () => validateMctsConfig({ rolloutEpsilon: 1.5 }),
-      (err: unknown) =>
-        err instanceof RangeError && /rolloutEpsilon/.test((err as RangeError).message),
-    );
-  });
-
-  it('throws RangeError for non-positive rolloutCandidateSample', () => {
-    assert.throws(
-      () => validateMctsConfig({ rolloutCandidateSample: 0 }),
-      (err: unknown) =>
-        err instanceof RangeError && /rolloutCandidateSample/.test((err as RangeError).message),
-    );
-  });
-
   it('throws RangeError for non-positive heuristicTemperature', () => {
     assert.throws(
       () => validateMctsConfig({ heuristicTemperature: 0 }),
@@ -176,14 +105,127 @@ describe('validateMctsConfig', () => {
       iterations: 1,
       minIterations: 0,
       explorationConstant: 0.001,
-      rolloutEpsilon: 0,
-      rolloutCandidateSample: 1,
     });
     assert.equal(result.iterations, 1);
     assert.equal(result.minIterations, 0);
     assert.equal(result.explorationConstant, 0.001);
-    assert.equal(result.rolloutEpsilon, 0);
-    assert.equal(result.rolloutCandidateSample, 1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// LeafEvaluator validation
+// ---------------------------------------------------------------------------
+
+describe('LeafEvaluator validation', () => {
+  it('defaults to heuristic when leafEvaluator is undefined', () => {
+    const cfg = validateMctsConfig({});
+    assert.deepEqual(cfg.leafEvaluator, { type: 'heuristic' });
+  });
+
+  it('accepts leafEvaluator: { type: "heuristic" }', () => {
+    const cfg = validateMctsConfig({ leafEvaluator: { type: 'heuristic' } });
+    assert.deepEqual(cfg.leafEvaluator, { type: 'heuristic' });
+  });
+
+  it('accepts leafEvaluator: { type: "auto" }', () => {
+    const cfg = validateMctsConfig({ leafEvaluator: { type: 'auto' } });
+    assert.deepEqual(cfg.leafEvaluator, { type: 'auto' });
+  });
+
+  it('accepts rollout evaluator with required fields', () => {
+    const evaluator: LeafEvaluator = {
+      type: 'rollout',
+      maxSimulationDepth: 48,
+      policy: 'mast',
+    };
+    const cfg = validateMctsConfig({ leafEvaluator: evaluator });
+    assert.equal(cfg.leafEvaluator!.type, 'rollout');
+  });
+
+  it('accepts rollout evaluator with all optional fields', () => {
+    const evaluator: LeafEvaluator = {
+      type: 'rollout',
+      maxSimulationDepth: 48,
+      policy: 'epsilonGreedy',
+      epsilon: 0.15,
+      candidateSample: 6,
+      mastWarmUpThreshold: 32,
+      templateCompletionsPerVisit: 2,
+      mode: 'hybrid',
+      hybridCutoffDepth: 6,
+    };
+    const cfg = validateMctsConfig({ leafEvaluator: evaluator });
+    assert.equal(cfg.leafEvaluator!.type, 'rollout');
+  });
+
+  it('throws TypeError for invalid leafEvaluator type', () => {
+    assert.throws(
+      () => validateMctsConfig({ leafEvaluator: { type: 'invalid' } as unknown as LeafEvaluator }),
+      (err: unknown) =>
+        err instanceof TypeError && /leafEvaluator\.type/.test((err as TypeError).message),
+    );
+  });
+
+  it('throws TypeError for invalid rollout policy', () => {
+    assert.throws(
+      () => validateMctsConfig({
+        leafEvaluator: {
+          type: 'rollout',
+          maxSimulationDepth: 48,
+          policy: 'invalid' as 'random',
+        },
+      }),
+      (err: unknown) =>
+        err instanceof TypeError && /leafEvaluator\.policy/.test((err as TypeError).message),
+    );
+  });
+
+  it('throws RangeError for rollout epsilon out of range', () => {
+    assert.throws(
+      () => validateMctsConfig({
+        leafEvaluator: {
+          type: 'rollout',
+          maxSimulationDepth: 48,
+          policy: 'epsilonGreedy',
+          epsilon: 1.5,
+        },
+      }),
+      (err: unknown) =>
+        err instanceof RangeError && /leafEvaluator\.epsilon/.test((err as RangeError).message),
+    );
+  });
+
+  it('throws RangeError for non-positive rollout maxSimulationDepth', () => {
+    assert.throws(
+      () => validateMctsConfig({
+        leafEvaluator: {
+          type: 'rollout',
+          maxSimulationDepth: 0,
+          policy: 'random',
+        },
+      }),
+      (err: unknown) =>
+        err instanceof RangeError && /leafEvaluator\.maxSimulationDepth/.test((err as RangeError).message),
+    );
+  });
+
+  it('rollout-specific validation only fires when type === rollout', () => {
+    // These should not throw — rollout fields are ignored for heuristic/auto
+    assert.doesNotThrow(() => validateMctsConfig({ leafEvaluator: { type: 'heuristic' } }));
+    assert.doesNotThrow(() => validateMctsConfig({ leafEvaluator: { type: 'auto' } }));
+  });
+
+  it('validates mastWarmUpThreshold as non-negative integer', () => {
+    assert.doesNotThrow(() => validateMctsConfig({
+      leafEvaluator: { type: 'rollout', maxSimulationDepth: 48, policy: 'mast', mastWarmUpThreshold: 0 },
+    }));
+    assert.throws(
+      () => validateMctsConfig({
+        leafEvaluator: { type: 'rollout', maxSimulationDepth: 48, policy: 'mast', mastWarmUpThreshold: -1 },
+      }),
+      (err: unknown) =>
+        err instanceof RangeError && /leafEvaluator\.mastWarmUpThreshold/.test((err as RangeError).message),
+    );
   });
 });
 
@@ -215,41 +257,35 @@ describe('MCTS_PRESETS', () => {
 // ---------------------------------------------------------------------------
 
 describe('resolvePreset', () => {
-  it('resolvePreset("fast") returns config with iterations: 200, timeLimitMs: 2000, rolloutMode: direct', () => {
+  it('resolvePreset("fast") returns config with iterations: 200, timeLimitMs: 2000, heuristic evaluator', () => {
     const cfg = resolvePreset('fast');
     assert.equal(cfg.iterations, 200);
     assert.equal(cfg.maxSimulationDepth, 16);
-    assert.equal(cfg.rolloutPolicy, 'mast');
     assert.equal(cfg.timeLimitMs, 2_000);
-    assert.equal(cfg.rolloutMode, 'direct');
-    assert.equal(cfg.hybridCutoffDepth, 4);
+    assert.deepEqual(cfg.leafEvaluator, { type: 'heuristic' });
   });
 
-  it('resolvePreset("default") returns rolloutMode: direct', () => {
+  it('resolvePreset("default") returns heuristic evaluator', () => {
     const cfg = resolvePreset('default');
     assert.equal(cfg.timeLimitMs, 10_000);
     assert.equal(cfg.iterations, DEFAULT_MCTS_CONFIG.iterations);
     assert.equal(cfg.explorationConstant, DEFAULT_MCTS_CONFIG.explorationConstant);
-    assert.equal(cfg.rolloutPolicy, 'mast');
-    assert.equal(cfg.rolloutMode, 'direct');
-    assert.equal(cfg.hybridCutoffDepth, 6);
+    assert.deepEqual(cfg.leafEvaluator, { type: 'heuristic' });
   });
 
-  it('resolvePreset("strong") returns rolloutMode: direct', () => {
+  it('resolvePreset("strong") returns heuristic evaluator', () => {
     const cfg = resolvePreset('strong');
     assert.equal(cfg.iterations, 5000);
     assert.equal(cfg.maxSimulationDepth, 64);
-    assert.equal(cfg.templateCompletionsPerVisit, 4);
     assert.equal(cfg.timeLimitMs, 30_000);
-    assert.equal(cfg.rolloutMode, 'direct');
-    assert.equal(cfg.hybridCutoffDepth, 8);
+    assert.deepEqual(cfg.leafEvaluator, { type: 'heuristic' });
   });
 
   it('resolvePreset("background") returns background worker config', () => {
     const cfg = resolvePreset('background');
     assert.equal(cfg.iterations, 200);
     assert.equal(cfg.minIterations, 10);
-    assert.equal(cfg.rolloutMode, 'direct');
+    assert.deepEqual(cfg.leafEvaluator, { type: 'heuristic' });
     assert.equal(cfg.timeLimitMs, 30_000);
     assert.equal(cfg.heuristicBackupAlpha, 0.4);
     assert.equal(cfg.progressiveWideningK, 1.5);
@@ -280,39 +316,19 @@ describe('resolvePreset', () => {
 });
 
 // ---------------------------------------------------------------------------
-// MAST policy and config
+// All presets use heuristic evaluator
 // ---------------------------------------------------------------------------
 
-describe('MAST config support', () => {
-  it('"mast" is a valid rolloutPolicy value', () => {
-    assert.doesNotThrow(() => validateMctsConfig({ rolloutPolicy: 'mast' }));
-  });
-
-  it('named presets use rolloutPolicy: "mast"', () => {
-    for (const name of MCTS_PRESET_NAMES) {
-      const cfg = resolvePreset(name);
-      assert.equal(cfg.rolloutPolicy, 'mast', `preset "${name}" should use rolloutPolicy "mast"`);
+describe('all presets use heuristic evaluator', () => {
+  it('all named presets resolve to leafEvaluator type heuristic', () => {
+    for (const preset of MCTS_PRESET_NAMES) {
+      const config = resolvePreset(preset);
+      assert.equal(
+        config.leafEvaluator?.type ?? 'heuristic',
+        'heuristic',
+        `preset "${preset}" should use heuristic evaluator`,
+      );
     }
-  });
-
-  it('mastWarmUpThreshold defaults to 32', () => {
-    const cfg = validateMctsConfig({});
-    assert.equal(cfg.mastWarmUpThreshold, 32);
-  });
-
-  it('mastWarmUpThreshold is validated as non-negative integer', () => {
-    assert.doesNotThrow(() => validateMctsConfig({ mastWarmUpThreshold: 0 }));
-    assert.doesNotThrow(() => validateMctsConfig({ mastWarmUpThreshold: 100 }));
-    assert.throws(
-      () => validateMctsConfig({ mastWarmUpThreshold: -1 }),
-      (err: unknown) =>
-        err instanceof RangeError && /mastWarmUpThreshold/.test((err as RangeError).message),
-    );
-    assert.throws(
-      () => validateMctsConfig({ mastWarmUpThreshold: 1.5 }),
-      (err: unknown) =>
-        err instanceof RangeError && /mastWarmUpThreshold/.test((err as RangeError).message),
-    );
   });
 });
 

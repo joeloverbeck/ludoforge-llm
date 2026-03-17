@@ -14,9 +14,33 @@ type RolloutPolicy = (typeof ROLLOUT_POLICIES)[number];
 const SOLVER_MODES = ['off', 'perfectInfoDeterministic2P'] as const;
 type SolverMode = (typeof SOLVER_MODES)[number];
 
-/** Allowed rollout modes. */
-const ROLLOUT_MODES = ['legacy', 'hybrid', 'direct'] as const;
-export type MctsRolloutMode = (typeof ROLLOUT_MODES)[number];
+/** Allowed leaf evaluator types. */
+const LEAF_EVALUATOR_TYPES = ['heuristic', 'rollout', 'auto'] as const;
+
+/**
+ * Leaf evaluation strategy — discriminated union replacing the old
+ * `rolloutMode` top-level switch.
+ *
+ * - `heuristic`: direct state evaluation, no simulation (formerly `direct`).
+ * - `rollout`: run a rollout simulation with the specified policy.
+ * - `auto`: choose heuristic or rollout based on measured transition cost.
+ */
+export type LeafEvaluator =
+  | { readonly type: 'heuristic' }
+  | {
+      readonly type: 'rollout';
+      readonly maxSimulationDepth: number;
+      readonly policy: RolloutPolicy;
+      readonly epsilon?: number;
+      readonly candidateSample?: number;
+      readonly mastWarmUpThreshold?: number;
+      readonly templateCompletionsPerVisit?: number;
+      /** Rollout sub-mode: 'full' (legacy) or 'hybrid' (cutoff). */
+      readonly mode?: 'full' | 'hybrid';
+      /** Maximum plies for hybrid cutoff simulation. */
+      readonly hybridCutoffDepth?: number;
+    }
+  | { readonly type: 'auto' };
 
 export interface MctsConfig {
   /** Hard iteration cap. Deterministic mode uses this as the primary budget. */
@@ -40,32 +64,18 @@ export interface MctsConfig {
   /** Progressive widening exponent. */
   readonly progressiveWideningAlpha: number;
 
-  /** Max concrete completions sampled from a single template move per visit. */
-  readonly templateCompletionsPerVisit: number;
-
-  /** Rollout policy. */
-  readonly rolloutPolicy: RolloutPolicy;
-
-  /** Exploration rate for epsilon-greedy rollouts. */
-  readonly rolloutEpsilon: number;
-
-  /** Max candidate moves sampled per rollout step before heuristic choice. */
-  readonly rolloutCandidateSample: number;
-
   /** Temperature for transforming evaluateState() outputs into [0,1] utilities. */
   readonly heuristicTemperature: number;
 
   /** Restricted solver support only. */
   readonly solverMode: SolverMode;
 
-  /** Rollout mode: legacy (full rollout), hybrid (cutoff), direct (no simulation). */
-  readonly rolloutMode: MctsRolloutMode;
-
-  /** Maximum plies for hybrid cutoff simulation. */
-  readonly hybridCutoffDepth: number;
-
-  /** MAST warm-up threshold: minimum `totalUpdates` before exploitation. */
-  readonly mastWarmUpThreshold: number;
+  /**
+   * Leaf evaluation strategy. Defaults to `{ type: 'heuristic' }`.
+   * Rollout-specific knobs (policy, epsilon, candidateSample, etc.) live
+   * under the `{ type: 'rollout' }` variant.
+   */
+  readonly leafEvaluator?: LeafEvaluator;
 
   /** Compress forced sequences (exactly one legal candidate) during selection and simulation. */
   readonly compressForcedSequences?: boolean;
@@ -105,15 +115,9 @@ export const DEFAULT_MCTS_CONFIG: MctsConfig = Object.freeze({
   maxSimulationDepth: 48,
   progressiveWideningK: 2.0,
   progressiveWideningAlpha: 0.5,
-  templateCompletionsPerVisit: 2,
-  rolloutPolicy: 'mast' as const,
-  rolloutEpsilon: 0.15,
-  rolloutCandidateSample: 6,
   heuristicTemperature: 10_000,
   solverMode: 'off' as const,
-  rolloutMode: 'hybrid' as const,
-  hybridCutoffDepth: 6,
-  mastWarmUpThreshold: 32,
+  leafEvaluator: Object.freeze({ type: 'heuristic' as const }),
   compressForcedSequences: true,
   rootStopConfidenceDelta: 1e-3,
   rootStopMinVisits: 16,
@@ -174,17 +178,18 @@ export type MctsPreset = 'fast' | 'default' | 'strong' | 'background';
  * Named config partials keyed by preset name.
  * `default` is an empty partial — it resolves to `DEFAULT_MCTS_CONFIG`.
  *
- * All presets use `rolloutMode: 'direct'` — rollout-phase materialization
- * was the dominant cost (~93.8% of total time) and direct mode eliminates it.
+ * All presets use `leafEvaluator: { type: 'heuristic' }` — rollout-phase
+ * materialization was the dominant cost (~93.8% of total time) and
+ * heuristic (direct) evaluation eliminates it.
  */
 export const MCTS_PRESETS: Readonly<Record<MctsPreset, Partial<MctsConfig>>> = Object.freeze({
-  fast: Object.freeze({ iterations: 200, maxSimulationDepth: 16, rolloutPolicy: 'mast' as const, timeLimitMs: 2_000, rolloutMode: 'direct' as const, hybridCutoffDepth: 4, decisionWideningCap: 8, decisionDepthMultiplier: 2 }),
-  default: Object.freeze({ rolloutPolicy: 'mast' as const, timeLimitMs: 10_000, rolloutMode: 'direct' as const, hybridCutoffDepth: 6, decisionWideningCap: 12, decisionDepthMultiplier: 4 }),
-  strong: Object.freeze({ iterations: 5000, maxSimulationDepth: 64, rolloutPolicy: 'mast' as const, templateCompletionsPerVisit: 4, timeLimitMs: 30_000, rolloutMode: 'direct' as const, hybridCutoffDepth: 8, decisionWideningCap: 20, decisionDepthMultiplier: 6 }),
+  fast: Object.freeze({ iterations: 200, maxSimulationDepth: 16, timeLimitMs: 2_000, leafEvaluator: Object.freeze({ type: 'heuristic' as const }), decisionWideningCap: 8, decisionDepthMultiplier: 2 }),
+  default: Object.freeze({ timeLimitMs: 10_000, leafEvaluator: Object.freeze({ type: 'heuristic' as const }), decisionWideningCap: 12, decisionDepthMultiplier: 4 }),
+  strong: Object.freeze({ iterations: 5000, maxSimulationDepth: 64, timeLimitMs: 30_000, leafEvaluator: Object.freeze({ type: 'heuristic' as const }), decisionWideningCap: 20, decisionDepthMultiplier: 6 }),
   background: Object.freeze({
     iterations: 200,
     minIterations: 10,
-    rolloutMode: 'direct' as const,
+    leafEvaluator: Object.freeze({ type: 'heuristic' as const }),
     timeLimitMs: 30_000,
     heuristicBackupAlpha: 0.4,
     progressiveWideningK: 1.5,
@@ -215,8 +220,6 @@ export function validateMctsConfig(partial: Partial<MctsConfig>): MctsConfig {
   assertPositiveInt('iterations', merged.iterations);
   assertNonNegativeInt('minIterations', merged.minIterations);
   assertPositiveInt('maxSimulationDepth', merged.maxSimulationDepth);
-  assertPositiveInt('templateCompletionsPerVisit', merged.templateCompletionsPerVisit);
-  assertPositiveInt('rolloutCandidateSample', merged.rolloutCandidateSample);
 
   // Positive reals
   assertPositive('explorationConstant', merged.explorationConstant);
@@ -225,18 +228,36 @@ export function validateMctsConfig(partial: Partial<MctsConfig>): MctsConfig {
 
   // Bounded reals
   assertRange('progressiveWideningAlpha', merged.progressiveWideningAlpha, 0, 1);
-  assertRange('rolloutEpsilon', merged.rolloutEpsilon, 0, 1);
 
   // Enums
-  assertOneOf('rolloutPolicy', merged.rolloutPolicy, ROLLOUT_POLICIES);
   assertOneOf('solverMode', merged.solverMode, SOLVER_MODES);
-  assertOneOf('rolloutMode', merged.rolloutMode, ROLLOUT_MODES);
 
-  // Hybrid cutoff depth
-  assertPositiveInt('hybridCutoffDepth', merged.hybridCutoffDepth);
+  // LeafEvaluator validation
+  const evaluator = merged.leafEvaluator ?? { type: 'heuristic' as const };
+  assertOneOf('leafEvaluator.type', evaluator.type, LEAF_EVALUATOR_TYPES);
 
-  // MAST warm-up threshold
-  assertNonNegativeInt('mastWarmUpThreshold', merged.mastWarmUpThreshold);
+  if (evaluator.type === 'rollout') {
+    assertPositiveInt('leafEvaluator.maxSimulationDepth', evaluator.maxSimulationDepth);
+    assertOneOf('leafEvaluator.policy', evaluator.policy, ROLLOUT_POLICIES);
+    if (evaluator.epsilon !== undefined) {
+      assertRange('leafEvaluator.epsilon', evaluator.epsilon, 0, 1);
+    }
+    if (evaluator.candidateSample !== undefined) {
+      assertPositiveInt('leafEvaluator.candidateSample', evaluator.candidateSample);
+    }
+    if (evaluator.mastWarmUpThreshold !== undefined) {
+      assertNonNegativeInt('leafEvaluator.mastWarmUpThreshold', evaluator.mastWarmUpThreshold);
+    }
+    if (evaluator.templateCompletionsPerVisit !== undefined) {
+      assertPositiveInt('leafEvaluator.templateCompletionsPerVisit', evaluator.templateCompletionsPerVisit);
+    }
+    if (evaluator.hybridCutoffDepth !== undefined) {
+      assertPositiveInt('leafEvaluator.hybridCutoffDepth', evaluator.hybridCutoffDepth);
+    }
+    if (evaluator.mode !== undefined) {
+      assertOneOf('leafEvaluator.mode', evaluator.mode, ['full', 'hybrid'] as const);
+    }
+  }
 
   // Optional wall-clock
   if (merged.timeLimitMs !== undefined) {

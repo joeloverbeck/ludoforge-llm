@@ -528,7 +528,7 @@ describe('MCTS fairness and property tests', () => {
       const configs: readonly Partial<import('../../../../src/agents/mcts/config.js').MctsConfig>[] = [
         {}, // All defaults.
         { iterations: 10, minIterations: 0, explorationConstant: 2.0 },
-        { iterations: 30, minIterations: 0, rolloutPolicy: 'random' },
+        { iterations: 30, minIterations: 0, leafEvaluator: { type: 'rollout', maxSimulationDepth: 48, policy: 'random' } },
       ];
 
       for (const cfg of configs) {

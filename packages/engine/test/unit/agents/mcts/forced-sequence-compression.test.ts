@@ -168,7 +168,7 @@ describe('forced-sequence compression (selection phase)', () => {
       iterations: 1,
       minIterations: 0,
       compressForcedSequences: true,
-      rolloutMode: 'direct',
+      leafEvaluator: { type: 'heuristic' },
       diagnostics: true,
     });
     const acc = createAccumulator();
@@ -194,7 +194,7 @@ describe('forced-sequence compression (selection phase)', () => {
       iterations: 5,
       minIterations: 0,
       compressForcedSequences: true,
-      rolloutMode: 'direct',
+      leafEvaluator: { type: 'heuristic' },
       diagnostics: true,
     });
     const observation = derivePlayerObservation(def, state, asPlayerId(0));
@@ -223,7 +223,7 @@ describe('forced-sequence compression (selection phase)', () => {
       iterations: 1,
       minIterations: 0,
       compressForcedSequences: true,
-      rolloutMode: 'direct',
+      leafEvaluator: { type: 'heuristic' },
       diagnostics: true,
     });
     const acc = createAccumulator();
@@ -251,7 +251,7 @@ describe('forced-sequence compression (selection phase)', () => {
       iterations: 1,
       minIterations: 0,
       compressForcedSequences: false,
-      rolloutMode: 'direct',
+      leafEvaluator: { type: 'heuristic' },
       diagnostics: true,
     });
     const acc = createAccumulator();
@@ -277,7 +277,7 @@ describe('forced-sequence compression (selection phase)', () => {
       iterations: 1,
       minIterations: 0,
       compressForcedSequences: true,
-      rolloutMode: 'direct',
+      leafEvaluator: { type: 'heuristic' },
       diagnostics: true,
     });
     const acc = createAccumulator();

@@ -10,7 +10,7 @@ import {
   createNodePool,
   selectRootDecision,
 } from '../../../src/agents/index.js';
-import type { MctsPreset, MctsRolloutMode, MctsSearchDiagnostics } from '../../../src/agents/index.js';
+import type { MctsPreset, LeafEvaluator, MctsSearchDiagnostics } from '../../../src/agents/index.js';
 import {
   assertValidatedGameDef,
   createGameDefRuntime,
@@ -31,7 +31,7 @@ import { assertNoDiagnostics, assertNoErrors } from '../../helpers/diagnostic-he
 import { compileTexasProductionSpec } from '../../helpers/production-spec-helpers.js';
 
 export { GreedyAgent, MctsAgent, RandomAgent, resolvePreset, runGame, serializeTrace };
-export type { Agent, GameTrace, MctsPreset, MctsRolloutMode, MctsSearchDiagnostics, ValidatedGameDef };
+export type { Agent, GameTrace, LeafEvaluator, MctsPreset, MctsSearchDiagnostics, ValidatedGameDef };
 
 export const FAST_MAX_TURNS = 200;
 export const DEFAULT_MAX_TURNS = 20;
@@ -102,14 +102,14 @@ export const assertValidStopReason = (trace: GameTrace): void => {
 // Mode-comparison helpers
 // ---------------------------------------------------------------------------
 
-/** Create MCTS agents with a specific rollout mode override. */
-export const createMctsAgentsWithMode = (
+/** Create MCTS agents with a specific leaf evaluator override. */
+export const createMctsAgentsWithEvaluator = (
   count: number,
   preset: MctsPreset,
-  rolloutMode: MctsRolloutMode,
+  leafEvaluator: LeafEvaluator,
 ): readonly Agent[] =>
   Array.from({ length: count }, () =>
-    new MctsAgent({ ...resolvePreset(preset), rolloutMode }),
+    new MctsAgent({ ...resolvePreset(preset), leafEvaluator }),
   );
 
 /** Result of a timed game run. */
@@ -150,9 +150,9 @@ export const runPositionSearch = (
   seed: number,
   playerCount: number,
   preset: MctsPreset,
-  rolloutMode: MctsRolloutMode,
+  leafEvaluator: LeafEvaluator,
 ): PositionSearchResult => {
-  const config = { ...resolvePreset(preset), rolloutMode, diagnostics: true };
+  const config = { ...resolvePreset(preset), leafEvaluator, diagnostics: true };
   const runtime = createGameDefRuntime(def);
   const initResult = initialState(def, seed, playerCount);
   const state = initResult.state;
@@ -198,7 +198,7 @@ export const formatSearchDiagnostics = (d: MctsSearchDiagnostics): string =>
     iterations: d.iterations,
     nodesAllocated: d.nodesAllocated,
     totalTimeMs: d.totalTimeMs !== undefined ? Math.round(d.totalTimeMs) : undefined,
-    rolloutMode: d.rolloutMode,
+    leafEvaluatorType: d.leafEvaluatorType,
     rootStopReason: d.rootStopReason,
     legalMovesCalls: d.legalMovesCalls,
     applyMoveCalls: d.applyMoveCalls,

@@ -15,7 +15,6 @@
 
 import type { GameDef, GameState, Move, Rng, TerminalResult } from '../../kernel/types.js';
 import type { GameDefRuntime } from '../../kernel/gamedef-runtime.js';
-import type { MctsConfig } from './config.js';
 import type { MutableDiagnosticsAccumulator } from './diagnostics.js';
 import { legalMoves } from '../../kernel/legal-moves.js';
 import { applyMove } from '../../kernel/apply-move.js';
@@ -108,19 +107,28 @@ export function resolveDecisionBoundary(
 }
 
 // ---------------------------------------------------------------------------
-// Rollout config subset
+// Rollout config subsets — standalone interfaces matching LeafEvaluator rollout fields
 // ---------------------------------------------------------------------------
 
-type RolloutConfigSlice = Pick<
-  MctsConfig,
-  'rolloutPolicy' | 'rolloutEpsilon' | 'rolloutCandidateSample' | 'maxSimulationDepth' | 'templateCompletionsPerVisit'
->;
+/** Config subset consumed by the full rollout simulation. */
+export interface RolloutConfigSlice {
+  readonly rolloutPolicy: 'random' | 'epsilonGreedy' | 'mast';
+  readonly rolloutEpsilon: number;
+  readonly rolloutCandidateSample: number;
+  readonly maxSimulationDepth: number;
+  readonly templateCompletionsPerVisit: number;
+}
 
-/** Config subset for the hybrid cutoff simulation. */
-type CutoffConfigSlice = Pick<
-  MctsConfig,
-  'rolloutPolicy' | 'rolloutEpsilon' | 'rolloutCandidateSample' | 'hybridCutoffDepth' | 'templateCompletionsPerVisit' | 'mastWarmUpThreshold' | 'compressForcedSequences'
->;
+/** Config subset consumed by the hybrid cutoff simulation. */
+export interface CutoffConfigSlice {
+  readonly rolloutPolicy: 'random' | 'epsilonGreedy' | 'mast';
+  readonly rolloutEpsilon: number;
+  readonly rolloutCandidateSample: number;
+  readonly hybridCutoffDepth: number;
+  readonly templateCompletionsPerVisit: number;
+  readonly mastWarmUpThreshold: number;
+  readonly compressForcedSequences?: boolean;
+}
 
 // ---------------------------------------------------------------------------
 // rollout (legacy full simulation)
@@ -444,7 +452,10 @@ export function simulateToCutoff(
 // ---------------------------------------------------------------------------
 
 /** Policy config subset shared by pickMove. */
-type PolicyConfigSlice = Pick<MctsConfig, 'rolloutPolicy' | 'rolloutEpsilon'>;
+interface PolicyConfigSlice {
+  readonly rolloutPolicy: 'random' | 'epsilonGreedy' | 'mast';
+  readonly rolloutEpsilon: number;
+}
 
 /**
  * Pick a move index according to the rollout policy (random or epsilon-greedy).

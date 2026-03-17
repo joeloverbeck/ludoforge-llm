@@ -1,12 +1,9 @@
 /**
- * Tests for the three rollout modes (legacy, hybrid, direct) in MCTS search.
+ * Tests for the leaf evaluator strategies (heuristic, rollout full, rollout hybrid)
+ * in MCTS search.
  *
- * Acceptance criteria from 63MCTSPERROLLFRESEA-002:
- * 1. hybrid caps at hybridCutoffDepth
- * 2. hybrid stops at terminal before cutoff
- * 3. legacy produces identical results to pre-refactor code
- * 4. direct runs zero simulation plies
- * 5. Determinism: same seed + mode + config = same move selection
+ * Migrated from the old rolloutMode tests (63MCTSPERROLLFRESEA-002)
+ * to the new LeafEvaluator discriminated union (64MCTSPEROPT-001).
  */
 
 import * as assert from 'node:assert/strict';
@@ -16,7 +13,7 @@ import { runSearch, selectRootDecision } from '../../../../src/agents/mcts/searc
 import { createRootNode } from '../../../../src/agents/mcts/node.js';
 import { createNodePool } from '../../../../src/agents/mcts/node-pool.js';
 import { validateMctsConfig, MCTS_PRESETS, MCTS_PRESET_NAMES } from '../../../../src/agents/mcts/config.js';
-import type { MctsRolloutMode } from '../../../../src/agents/mcts/config.js';
+import type { LeafEvaluator } from '../../../../src/agents/mcts/config.js';
 import {
   asActionId,
   asPhaseId,
@@ -122,9 +119,9 @@ function createTerminalDef(): GameDef {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function runSearchWithMode(
+function runSearchWithEvaluator(
   def: GameDef,
-  mode: MctsRolloutMode,
+  leafEvaluator: LeafEvaluator,
   seed: bigint,
   overrides: Record<string, unknown> = {},
 ) {
@@ -138,8 +135,7 @@ function runSearchWithMode(
   const config = validateMctsConfig({
     iterations: 20,
     minIterations: 0,
-    rolloutMode: mode,
-    hybridCutoffDepth: 4,
+    leafEvaluator,
     diagnostics: true,
     ...overrides,
   });
@@ -157,90 +153,115 @@ function runSearchWithMode(
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('hybrid rollout mode', () => {
-  // AC 1: hybrid mode caps simulation at hybridCutoffDepth plies
-  it('hybrid mode completes search and produces a valid root decision', () => {
+describe('rollout hybrid leaf evaluator', () => {
+  const hybridEvaluator: LeafEvaluator = {
+    type: 'rollout',
+    maxSimulationDepth: 48,
+    policy: 'mast',
+    epsilon: 0.15,
+    candidateSample: 6,
+    mastWarmUpThreshold: 32,
+    templateCompletionsPerVisit: 2,
+    mode: 'hybrid',
+    hybridCutoffDepth: 4,
+  };
+
+  it('hybrid rollout completes search and produces a valid root decision', () => {
     const def = createHeuristicDef();
-    const { root, result, observer } = runSearchWithMode(def, 'hybrid', 42n);
+    const { root, result, observer } = runSearchWithEvaluator(def, hybridEvaluator, 42n);
 
     assert.equal(result.iterations, 20);
     assert.ok(root.children.length >= 1);
     assert.doesNotThrow(() => selectRootDecision(root, observer));
   });
 
-  // AC 2: hybrid mode stops at terminal states before cutoff
-  it('hybrid mode handles terminal-triggering games correctly', () => {
+  it('hybrid rollout handles terminal-triggering games correctly', () => {
     const def = createTerminalDef();
-    const { root, result, observer } = runSearchWithMode(def, 'hybrid', 42n);
+    const { root, result, observer } = runSearchWithEvaluator(def, hybridEvaluator, 42n);
 
     assert.equal(result.iterations, 20);
     assert.ok(root.children.length >= 1);
     assert.doesNotThrow(() => selectRootDecision(root, observer));
   });
 
-  // AC 1 (diagnostics): hybridRolloutPlies is tracked
   it('diagnostics tracks hybridRolloutPlies > 0', () => {
     const def = createHeuristicDef();
-    const { result } = runSearchWithMode(def, 'hybrid', 42n);
+    const { result } = runSearchWithEvaluator(def, hybridEvaluator, 42n);
 
     assert.ok(result.diagnostics !== undefined, 'diagnostics should be present');
     assert.ok(
       (result.diagnostics!.hybridRolloutPlies ?? 0) > 0,
-      'hybridRolloutPlies should be positive for hybrid mode',
+      'hybridRolloutPlies should be positive for hybrid rollout',
     );
-    assert.equal(result.diagnostics!.rolloutMode, 'hybrid');
+    assert.equal(result.diagnostics!.leafEvaluatorType, 'rollout');
   });
 });
 
-describe('legacy rollout mode', () => {
-  // AC 3: legacy mode produces valid search results
-  it('legacy mode completes search and produces a valid root decision', () => {
+describe('rollout full leaf evaluator', () => {
+  const fullEvaluator: LeafEvaluator = {
+    type: 'rollout',
+    maxSimulationDepth: 48,
+    policy: 'mast',
+    epsilon: 0.15,
+    candidateSample: 6,
+    mastWarmUpThreshold: 32,
+    templateCompletionsPerVisit: 2,
+    mode: 'full',
+  };
+
+  it('full rollout completes search and produces a valid root decision', () => {
     const def = createHeuristicDef();
-    const { root, result, observer } = runSearchWithMode(def, 'legacy', 42n);
+    const { root, result, observer } = runSearchWithEvaluator(def, fullEvaluator, 42n);
 
     assert.equal(result.iterations, 20);
     assert.ok(root.children.length >= 1);
     assert.doesNotThrow(() => selectRootDecision(root, observer));
   });
 
-  it('diagnostics reports rolloutMode: legacy', () => {
+  it('diagnostics reports leafEvaluatorType: rollout', () => {
     const def = createHeuristicDef();
-    const { result } = runSearchWithMode(def, 'legacy', 42n);
+    const { result } = runSearchWithEvaluator(def, fullEvaluator, 42n);
 
     assert.ok(result.diagnostics !== undefined);
-    assert.equal(result.diagnostics!.rolloutMode, 'legacy');
+    assert.equal(result.diagnostics!.leafEvaluatorType, 'rollout');
   });
 });
 
-describe('direct rollout mode', () => {
-  // AC 4: direct mode runs zero simulation plies
-  it('direct mode completes search with zero simulation plies', () => {
+describe('heuristic leaf evaluator (direct)', () => {
+  const heuristicEvaluator: LeafEvaluator = { type: 'heuristic' };
+
+  it('heuristic mode completes search with zero simulation plies', () => {
     const def = createHeuristicDef();
-    const { root, result, observer } = runSearchWithMode(def, 'direct', 42n);
+    const { root, result, observer } = runSearchWithEvaluator(def, heuristicEvaluator, 42n);
 
     assert.equal(result.iterations, 20);
     assert.ok(root.children.length >= 1);
     assert.doesNotThrow(() => selectRootDecision(root, observer));
   });
 
-  it('diagnostics reports rolloutMode: direct with zero hybridRolloutPlies', () => {
+  it('diagnostics reports leafEvaluatorType: heuristic with zero hybridRolloutPlies', () => {
     const def = createHeuristicDef();
-    const { result } = runSearchWithMode(def, 'direct', 42n);
+    const { result } = runSearchWithEvaluator(def, heuristicEvaluator, 42n);
 
     assert.ok(result.diagnostics !== undefined);
-    assert.equal(result.diagnostics!.rolloutMode, 'direct');
+    assert.equal(result.diagnostics!.leafEvaluatorType, 'heuristic');
     assert.equal(result.diagnostics!.hybridRolloutPlies ?? 0, 0);
   });
 });
 
-describe('cross-mode determinism', () => {
-  // AC 5: same seed + same mode + same config = same move selection
-  for (const mode of ['legacy', 'hybrid', 'direct'] as const) {
-    it(`${mode} mode is deterministic: same seed produces same root decision`, () => {
+describe('cross-evaluator determinism', () => {
+  const evaluators: readonly { readonly name: string; readonly evaluator: LeafEvaluator }[] = [
+    { name: 'full rollout', evaluator: { type: 'rollout', maxSimulationDepth: 48, policy: 'mast', epsilon: 0.15, candidateSample: 6, mastWarmUpThreshold: 32, templateCompletionsPerVisit: 2, mode: 'full' } },
+    { name: 'hybrid rollout', evaluator: { type: 'rollout', maxSimulationDepth: 48, policy: 'mast', epsilon: 0.15, candidateSample: 6, mastWarmUpThreshold: 32, templateCompletionsPerVisit: 2, mode: 'hybrid', hybridCutoffDepth: 4 } },
+    { name: 'heuristic', evaluator: { type: 'heuristic' } },
+  ];
+
+  for (const { name, evaluator } of evaluators) {
+    it(`${name} is deterministic: same seed produces same root decision`, () => {
       const def = createHeuristicDef();
 
-      const run1 = runSearchWithMode(def, mode, 123n);
-      const run2 = runSearchWithMode(def, mode, 123n);
+      const run1 = runSearchWithEvaluator(def, evaluator, 123n);
+      const run2 = runSearchWithEvaluator(def, evaluator, 123n);
 
       const decision1 = selectRootDecision(run1.root, run1.observer);
       const decision2 = selectRootDecision(run2.root, run2.observer);
@@ -252,16 +273,15 @@ describe('cross-mode determinism', () => {
   }
 });
 
-describe('all presets use direct mode', () => {
-  // All named presets use direct mode — rollout-phase materialization was
-  // the dominant cost (~93.8% of total time) and direct mode eliminates it.
-  it('all named presets resolve to direct mode', () => {
+describe('all presets use heuristic evaluator', () => {
+  it('all named presets resolve to heuristic evaluator', () => {
     for (const preset of MCTS_PRESET_NAMES) {
       const config = validateMctsConfig(MCTS_PRESETS[preset]);
+      const evaluatorType = (config.leafEvaluator ?? { type: 'heuristic' }).type;
       assert.equal(
-        config.rolloutMode,
-        'direct',
-        `preset "${preset}" should use direct mode, got "${config.rolloutMode}"`,
+        evaluatorType,
+        'heuristic',
+        `preset "${preset}" should use heuristic evaluator, got "${evaluatorType}"`,
       );
     }
   });

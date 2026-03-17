@@ -13,18 +13,13 @@ import {
 import { createRng } from '../../../../src/kernel/prng.js';
 import { terminalResult } from '../../../../src/kernel/terminal.js';
 import { applyMove } from '../../../../src/kernel/apply-move.js';
-import type { MctsConfig } from '../../../../src/agents/mcts/config.js';
+import type { RolloutConfigSlice, CutoffConfigSlice } from '../../../../src/agents/mcts/rollout.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-type RolloutConfig = Pick<
-  MctsConfig,
-  'rolloutPolicy' | 'rolloutEpsilon' | 'rolloutCandidateSample' | 'maxSimulationDepth' | 'templateCompletionsPerVisit'
->;
-
-const DEFAULT_ROLLOUT_CONFIG: RolloutConfig = {
+const DEFAULT_ROLLOUT_CONFIG: RolloutConfigSlice = {
   rolloutPolicy: 'epsilonGreedy',
   rolloutEpsilon: 0.15,
   rolloutCandidateSample: 6,
@@ -329,8 +324,8 @@ describe('rollout', () => {
 // ---------------------------------------------------------------------------
 
 describe('simulateToCutoff', () => {
-  const DEFAULT_CUTOFF_CONFIG = {
-    rolloutPolicy: 'random' as const,
+  const DEFAULT_CUTOFF_CONFIG: CutoffConfigSlice = {
+    rolloutPolicy: 'random',
     rolloutEpsilon: 0.15,
     rolloutCandidateSample: 6,
     hybridCutoffDepth: 3,

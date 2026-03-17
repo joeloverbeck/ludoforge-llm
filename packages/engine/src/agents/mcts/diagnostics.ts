@@ -251,7 +251,7 @@ export interface MctsSearchDiagnostics {
   readonly avgLeafRewardSpan?: number;
 
   // Mode / stop metadata
-  readonly rolloutMode?: 'legacy' | 'hybrid' | 'direct';
+  readonly leafEvaluatorType?: 'heuristic' | 'rollout' | 'auto';
   readonly rootStopReason?: 'none' | 'solver' | 'time' | 'confidence' | 'iterations';
 }
 

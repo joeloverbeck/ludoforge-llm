@@ -2,7 +2,7 @@ export { sampleBeliefState } from './belief.js';
 export type { BeliefSample } from './belief.js';
 
 export { DEFAULT_MCTS_CONFIG, MCTS_PRESETS, MCTS_PRESET_NAMES, validateMctsConfig, resolvePreset } from './config.js';
-export type { MctsConfig, MctsPreset, MctsRolloutMode } from './config.js';
+export type { MctsConfig, MctsPreset, LeafEvaluator } from './config.js';
 
 export { canonicalMoveKey } from './move-key.js';
 export type { MoveKey } from './move-key.js';

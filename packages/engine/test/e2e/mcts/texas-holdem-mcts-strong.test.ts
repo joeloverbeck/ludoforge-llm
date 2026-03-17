@@ -10,7 +10,7 @@ import {
   loadTrace,
   resolvePreset,
   runGame,
-  type MctsRolloutMode,
+  type LeafEvaluator,
 } from './mcts-test-helpers.js';
 
 /**
@@ -28,34 +28,41 @@ const createTimeBudgetedStrongAgents = (count: number): readonly MctsAgent[] =>
   );
 
 /**
- * Create deterministic strong-preset agents with a specific rollout mode.
+ * Create deterministic strong-preset agents with a specific leaf evaluator.
  * Uses a fixed iteration count WITHOUT a time limit for determinism.
  */
-const createDeterministicStrongWithMode = (count: number, mode: MctsRolloutMode): readonly MctsAgent[] =>
+const createDeterministicStrongWithEvaluator = (count: number, evaluator: LeafEvaluator): readonly MctsAgent[] =>
   Array.from({ length: count }, () =>
-    new MctsAgent({ ...resolvePreset('strong'), rolloutMode: mode, iterations: 50, minIterations: 50 }),
+    new MctsAgent({ ...resolvePreset('strong'), leafEvaluator: evaluator, iterations: 50, minIterations: 50 }),
   );
 
 describe('texas hold\'em MCTS strong preset e2e', () => {
-  it('strong preset uses direct mode and mast policy', () => {
+  it('strong preset uses heuristic leaf evaluator', () => {
     const config = resolvePreset('strong');
-    assert.equal(config.rolloutMode, 'direct', 'strong preset should use direct mode');
-    assert.equal(config.rolloutPolicy, 'mast', 'strong preset should use mast policy');
+    assert.equal(
+      (config.leafEvaluator?.type ?? 'heuristic'),
+      'heuristic',
+      'strong preset should use heuristic leaf evaluator',
+    );
   });
 
   // ── Mode-parameterized determinism ─────────────────────────────────────
 
-  describe('determinism by rollout mode', () => {
-    const modes: readonly MctsRolloutMode[] = ['legacy', 'hybrid', 'direct'];
-    for (const mode of modes) {
-      it(`deterministic within ${mode} mode`, () => {
+  describe('determinism by leaf evaluator', () => {
+    const evaluators: readonly { name: string; evaluator: LeafEvaluator }[] = [
+      { name: 'rollout-full', evaluator: { type: 'rollout', maxSimulationDepth: 48, policy: 'random', mode: 'full' } },
+      { name: 'rollout-hybrid', evaluator: { type: 'rollout', maxSimulationDepth: 48, policy: 'random', mode: 'hybrid' } },
+      { name: 'heuristic', evaluator: { type: 'heuristic' } },
+    ];
+    for (const { name, evaluator } of evaluators) {
+      it(`deterministic within ${name} evaluator`, () => {
         const def = compileTexasDef();
         const seed = 703;
         const playerCount = 2;
         const maxTurns = 3;
 
-        const agentsA = createDeterministicStrongWithMode(playerCount, mode);
-        const agentsB = createDeterministicStrongWithMode(playerCount, mode);
+        const agentsA = createDeterministicStrongWithEvaluator(playerCount, evaluator);
+        const agentsB = createDeterministicStrongWithEvaluator(playerCount, evaluator);
 
         const traceA = runGame(def, seed, agentsA, maxTurns, playerCount);
         const traceB = runGame(def, seed, agentsB, maxTurns, playerCount);
@@ -63,12 +70,12 @@ describe('texas hold\'em MCTS strong preset e2e', () => {
         assert.deepEqual(
           traceA.moves.map((entry) => entry.move),
           traceB.moves.map((entry) => entry.move),
-          `${mode}: same seed should produce same moves`,
+          `${name}: same seed should produce same moves`,
         );
         assert.equal(
           traceA.finalState.stateHash,
           traceB.finalState.stateHash,
-          `${mode}: same seed should produce same final state`,
+          `${name}: same seed should produce same final state`,
         );
       });
     }

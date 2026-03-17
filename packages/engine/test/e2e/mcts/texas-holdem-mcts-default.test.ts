@@ -11,7 +11,7 @@ import {
   loadTrace,
   resolvePreset,
   runGame,
-  type MctsRolloutMode,
+  type LeafEvaluator,
 } from './mcts-test-helpers.js';
 
 /**
@@ -34,35 +34,42 @@ describe('texas hold\'em MCTS default preset e2e', () => {
     assertValidStopReason(trace);
   });
 
-  it('default preset uses direct mode and mast policy', () => {
+  it('default preset uses heuristic leaf evaluator', () => {
     const config = resolvePreset('default');
-    assert.equal(config.rolloutMode, 'direct', 'default preset should use direct mode');
-    assert.equal(config.rolloutPolicy, 'mast', 'default preset should use mast policy');
+    assert.equal(
+      (config.leafEvaluator?.type ?? 'heuristic'),
+      'heuristic',
+      'default preset should use heuristic leaf evaluator',
+    );
   });
 
   // ── Mode-parameterized determinism ─────────────────────────────────────
 
-  describe('determinism by rollout mode', () => {
+  describe('determinism by leaf evaluator', () => {
     /**
-     * Create deterministic default-preset agents with a specific rollout mode.
+     * Create deterministic default-preset agents with a specific leaf evaluator.
      * Uses a small fixed iteration count WITHOUT a time limit — wall-clock
      * limits cause non-deterministic iteration counts across runs.
      */
-    const createDeterministicWithMode = (count: number, mode: MctsRolloutMode): readonly MctsAgent[] =>
+    const createDeterministicWithEvaluator = (count: number, evaluator: LeafEvaluator): readonly MctsAgent[] =>
       Array.from({ length: count }, () =>
-        new MctsAgent({ ...resolvePreset('default'), rolloutMode: mode, iterations: 50, minIterations: 50 }),
+        new MctsAgent({ ...resolvePreset('default'), leafEvaluator: evaluator, iterations: 50, minIterations: 50 }),
       );
 
-    const modes: readonly MctsRolloutMode[] = ['legacy', 'hybrid', 'direct'];
-    for (const mode of modes) {
-      it(`deterministic within ${mode} mode`, () => {
+    const evaluators: readonly { name: string; evaluator: LeafEvaluator }[] = [
+      { name: 'rollout-full', evaluator: { type: 'rollout', maxSimulationDepth: 48, policy: 'random', mode: 'full' } },
+      { name: 'rollout-hybrid', evaluator: { type: 'rollout', maxSimulationDepth: 48, policy: 'random', mode: 'hybrid' } },
+      { name: 'heuristic', evaluator: { type: 'heuristic' } },
+    ];
+    for (const { name, evaluator } of evaluators) {
+      it(`deterministic within ${name} evaluator`, () => {
         const def = compileTexasDef();
         const seed = 702;
         const playerCount = 2;
         const maxTurns = 3;
 
-        const agentsA = createDeterministicWithMode(playerCount, mode);
-        const agentsB = createDeterministicWithMode(playerCount, mode);
+        const agentsA = createDeterministicWithEvaluator(playerCount, evaluator);
+        const agentsB = createDeterministicWithEvaluator(playerCount, evaluator);
 
         const traceA = runGame(def, seed, agentsA, maxTurns, playerCount);
         const traceB = runGame(def, seed, agentsB, maxTurns, playerCount);
@@ -70,12 +77,12 @@ describe('texas hold\'em MCTS default preset e2e', () => {
         assert.deepEqual(
           traceA.moves.map((entry) => entry.move),
           traceB.moves.map((entry) => entry.move),
-          `${mode}: same seed should produce same moves`,
+          `${name}: same seed should produce same moves`,
         );
         assert.equal(
           traceA.finalState.stateHash,
           traceB.finalState.stateHash,
-          `${mode}: same seed should produce same final state`,
+          `${name}: same seed should produce same final state`,
         );
       });
     }

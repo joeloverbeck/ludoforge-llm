@@ -15,13 +15,13 @@ import {
   runGame,
   serializeTrace,
   type Agent,
-  type MctsRolloutMode,
+  type LeafEvaluator,
 } from './mcts-test-helpers.js';
 
 /**
  * MCTS fast preset tests — uses hybrid rollout mode with MAST playout policy.
  *
- * The fast preset defaults to `rolloutMode: 'hybrid'` and `rolloutPolicy: 'mast'`.
+ * The fast preset defaults to `leafEvaluator: { type: 'heuristic' }`.
  * Core tests always run. Extended tests are gated behind RUN_MCTS_E2E.
  */
 
@@ -34,10 +34,13 @@ describe('texas hold\'em MCTS fast preset e2e', () => {
     assertValidStopReason(trace);
   });
 
-  it('fast preset uses direct mode and mast policy', () => {
+  it('fast preset uses heuristic leaf evaluator', () => {
     const config = resolvePreset('fast');
-    assert.equal(config.rolloutMode, 'direct', 'fast preset should use direct mode');
-    assert.equal(config.rolloutPolicy, 'mast', 'fast preset should use mast policy');
+    assert.equal(
+      (config.leafEvaluator?.type ?? 'heuristic'),
+      'heuristic',
+      'fast preset should use heuristic leaf evaluator',
+    );
   });
 
   it('same seed + same MCTS config produces identical trace', () => {
@@ -62,27 +65,31 @@ describe('texas hold\'em MCTS fast preset e2e', () => {
 
   // ── Mode-parameterized determinism ─────────────────────────────────────
 
-  describe('determinism by rollout mode', () => {
+  describe('determinism by leaf evaluator', () => {
     /**
-     * Create deterministic fast-preset agents with a specific rollout mode.
+     * Create deterministic fast-preset agents with a specific leaf evaluator.
      * Uses a fixed iteration count WITHOUT a time limit — wall-clock limits
      * cause non-deterministic iteration counts across runs.
      */
-    const createDeterministicFastWithMode = (count: number, mode: MctsRolloutMode): readonly Agent[] =>
+    const createDeterministicFastWithEvaluator = (count: number, evaluator: LeafEvaluator): readonly Agent[] =>
       Array.from({ length: count }, () =>
-        new MctsAgent({ ...resolvePreset('fast'), rolloutMode: mode, iterations: 50, minIterations: 50 }),
+        new MctsAgent({ ...resolvePreset('fast'), leafEvaluator: evaluator, iterations: 50, minIterations: 50 }),
       );
 
-    const modes: readonly MctsRolloutMode[] = ['legacy', 'hybrid', 'direct'];
-    for (const mode of modes) {
-      it(`deterministic within ${mode} mode`, () => {
+    const evaluators: readonly { name: string; evaluator: LeafEvaluator }[] = [
+      { name: 'rollout-full', evaluator: { type: 'rollout', maxSimulationDepth: 48, policy: 'random', mode: 'full' } },
+      { name: 'rollout-hybrid', evaluator: { type: 'rollout', maxSimulationDepth: 48, policy: 'random', mode: 'hybrid' } },
+      { name: 'heuristic', evaluator: { type: 'heuristic' } },
+    ];
+    for (const { name, evaluator } of evaluators) {
+      it(`deterministic within ${name} evaluator`, () => {
         const def = compileTexasDef();
         const seed = 701;
         const playerCount = 2;
         const maxTurns = 3;
 
-        const agentsA = createDeterministicFastWithMode(playerCount, mode);
-        const agentsB = createDeterministicFastWithMode(playerCount, mode);
+        const agentsA = createDeterministicFastWithEvaluator(playerCount, evaluator);
+        const agentsB = createDeterministicFastWithEvaluator(playerCount, evaluator);
 
         const traceA = runGame(def, seed, agentsA, maxTurns, playerCount);
         const traceB = runGame(def, seed, agentsB, maxTurns, playerCount);
@@ -90,12 +97,12 @@ describe('texas hold\'em MCTS fast preset e2e', () => {
         assert.deepEqual(
           traceA.moves.map((entry) => entry.move),
           traceB.moves.map((entry) => entry.move),
-          `${mode}: same seed should produce same moves`,
+          `${name}: same seed should produce same moves`,
         );
         assert.equal(
           traceA.finalState.stateHash,
           traceB.finalState.stateHash,
-          `${mode}: same seed should produce same final state`,
+          `${name}: same seed should produce same final state`,
         );
       });
     }

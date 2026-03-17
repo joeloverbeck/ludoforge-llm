@@ -1,6 +1,6 @@
 # 64MCTSPEROPT-001: LeafEvaluator Strategy Type and Config Migration
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — MCTS config types, validation, preset migration

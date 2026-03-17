@@ -276,7 +276,7 @@ describe('rollout-decision: rolloutMode respected after boundary', () => {
     const config = validateMctsConfig({
       iterations: 1,
       minIterations: 0,
-      rolloutMode: 'direct',
+      leafEvaluator: { type: 'heuristic' },
       diagnostics: true,
     });
     const acc = createAccumulator();
@@ -378,7 +378,7 @@ describe('rollout-decision: failed completion backpropagates loss', () => {
     const config = validateMctsConfig({
       iterations: 1,
       minIterations: 0,
-      rolloutMode: 'direct',
+      leafEvaluator: { type: 'heuristic' },
       diagnostics: true,
     });
     const acc = createAccumulator();

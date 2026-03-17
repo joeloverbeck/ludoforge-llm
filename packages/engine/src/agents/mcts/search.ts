@@ -23,6 +23,7 @@ import { selectChild, selectDecisionChild } from './isuct.js';
 import { shouldExpand, selectExpansionCandidate } from './expansion.js';
 import { classifyMovesForSearch, filterAvailableCandidates } from './materialization.js';
 import type { MoveClassification } from './materialization.js';
+import type { LeafEvaluator } from './config.js';
 import { templateDecisionRootKey } from './decision-key.js';
 import { expandDecisionNode } from './decision-expansion.js';
 import type { DecisionExpansionContext } from './decision-expansion.js';
@@ -676,15 +677,33 @@ export function runOneIteration(
       depth: 0,
       traversedMoveKeys: [],
     };
-  } else switch (config.rolloutMode) {
-    case 'legacy':
-      simResult = rollout(def, currentState, currentRng, config, runtime, acc, stateCache, maxCacheEntries);
-      break;
-    case 'hybrid':
-      simResult = simulateToCutoff(def, currentState, currentRng, config, runtime, acc, mastStats, stateCache, maxCacheEntries);
-      break;
-    case 'direct':
-      // No simulation — evaluate the expansion state directly.
+  } else {
+    const evaluator: LeafEvaluator = config.leafEvaluator ?? { type: 'heuristic' };
+
+    if (evaluator.type === 'rollout') {
+      // Build rollout config slice from the LeafEvaluator fields.
+      const rolloutSlice = {
+        rolloutPolicy: evaluator.policy,
+        rolloutEpsilon: evaluator.epsilon ?? 0.15,
+        rolloutCandidateSample: evaluator.candidateSample ?? 6,
+        maxSimulationDepth: evaluator.maxSimulationDepth,
+        templateCompletionsPerVisit: evaluator.templateCompletionsPerVisit ?? 2,
+      };
+
+      if (evaluator.mode === 'hybrid') {
+        const cutoffSlice = {
+          ...rolloutSlice,
+          hybridCutoffDepth: evaluator.hybridCutoffDepth ?? 6,
+          mastWarmUpThreshold: evaluator.mastWarmUpThreshold ?? 32,
+          compressForcedSequences: config.compressForcedSequences ?? true,
+        };
+        simResult = simulateToCutoff(def, currentState, currentRng, cutoffSlice, runtime, acc, mastStats, stateCache, maxCacheEntries);
+      } else {
+        // 'full' or default — legacy full rollout.
+        simResult = rollout(def, currentState, currentRng, rolloutSlice, runtime, acc, stateCache, maxCacheEntries);
+      }
+    } else {
+      // 'heuristic' or 'auto' — no simulation, evaluate expansion state directly.
       simResult = {
         state: currentState,
         terminal: stateCache !== undefined && maxCacheEntries !== undefined
@@ -702,7 +721,7 @@ export function runOneIteration(
         depth: 0,
         traversedMoveKeys: [],
       };
-      break;
+    }
   }
 
   currentRng = simResult.rng;
@@ -895,7 +914,11 @@ export function runSearch(
   const solverActive = canActivateSolver(def, state, config);
 
   // Create MAST stats local to this search run.
-  const mastStats = config.rolloutPolicy === 'mast' ? createMastStats() : undefined;
+  // MAST is only used during rollout evaluation with the 'mast' policy.
+  const evaluatorForMast = config.leafEvaluator ?? { type: 'heuristic' as const };
+  const mastStats = (evaluatorForMast.type === 'rollout' && evaluatorForMast.policy === 'mast')
+    ? createMastStats()
+    : undefined;
 
   // Create per-search state-info cache when enabled (default: true).
   const cacheEnabled = config.enableStateInfoCache !== false;
@@ -1057,7 +1080,7 @@ export function runSearch(
     return {
       rng: currentRng,
       iterations,
-      diagnostics: { ...diag, rolloutMode: config.rolloutMode, rootStopReason: stopReason },
+      diagnostics: { ...diag, leafEvaluatorType: (config.leafEvaluator ?? { type: 'heuristic' as const }).type, rootStopReason: stopReason },
     };
   }
 

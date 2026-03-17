@@ -53,7 +53,7 @@ importers:
         version: link:../engine
       '@pixi/react':
         specifier: ^8.0.0
-        version: 8.0.5(@types/react@19.2.14)(pixi.js@8.16.0)(react@19.2.4)
+        version: 8.0.5(@types/react@19.2.14)(pixi.js@8.17.1)(react@19.2.4)
       comlink:
         specifier: ^4.4.2
         version: 4.4.2
@@ -71,10 +71,10 @@ importers:
         version: 3.14.2
       pixi-viewport:
         specifier: ^6.0.1
-        version: 6.0.3(pixi.js@8.16.0)
+        version: 6.0.3(pixi.js@8.17.1)
       pixi.js:
-        specifier: ^8.2.0
-        version: 8.16.0
+        specifier: ^8.17.1
+        version: 8.17.1
       react:
         specifier: ^19.1.0
         version: 19.2.4
@@ -85,8 +85,8 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
       zustand:
-        specifier: ^5.0.11
-        version: 5.0.11(@types/react@19.2.14)(react@19.2.4)
+        specifier: ^5.0.12
+        version: 5.0.12(@types/react@19.2.14)(react@19.2.4)
     devDependencies:
       '@modyfi/vite-plugin-yaml':
         specifier: ^1.1.1
@@ -1289,8 +1289,8 @@ packages:
     peerDependencies:
       pixi.js: '>=8'
 
-  pixi.js@8.16.0:
-    resolution: {integrity: sha512-gu2xw3sZGAn3cWBtk0HqTQT+v19YAfiaYXwUGgWoJl5NKz4cEZJUgWrwkmdfDszGyYBAGqOvJNbd2M9+vzLLMg==}
+  pixi.js@8.17.1:
+    resolution: {integrity: sha512-OB4TpZHrP5RYy+7FqmFrAc0IHRhfOoNIfF4sVeinvK3aG1r2pYrSMneJAKi9+WvGKC70Dj7GEpZ2OZGB6o/xdg==}
 
   postcss@8.5.6:
     resolution: {integrity: sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg==}
@@ -1618,8 +1618,8 @@ packages:
   zod@4.3.6:
     resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
 
-  zustand@5.0.11:
-    resolution: {integrity: sha512-fdZY+dk7zn/vbWNCYmzZULHRrss0jx5pPFiOuMZ/5HJN6Yv3u+1Wswy/4MpZEkEGhtNH+pwxZB8OKgUBPzYAGg==}
+  zustand@5.0.12:
+    resolution: {integrity: sha512-i77ae3aZq4dhMlRhJVCYgMLKuSiZAaUPAct2AksxQ+gOtimhGMdXljRT21P5BNpeT4kXlLIckvkPM029OljD7g==}
     engines: {node: '>=12.20.0'}
     peerDependencies:
       '@types/react': '>=18.0.0'
@@ -1970,10 +1970,10 @@ snapshots:
 
   '@pixi/colord@2.9.6': {}
 
-  '@pixi/react@8.0.5(@types/react@19.2.14)(pixi.js@8.16.0)(react@19.2.4)':
+  '@pixi/react@8.0.5(@types/react@19.2.14)(pixi.js@8.17.1)(react@19.2.4)':
     dependencies:
       its-fine: 2.0.0(@types/react@19.2.14)(react@19.2.4)
-      pixi.js: 8.16.0
+      pixi.js: 8.17.1
       react: 19.2.4
       react-reconciler: 0.31.0(react@19.2.4)
     transitivePeerDependencies:
@@ -2714,11 +2714,11 @@ snapshots:
 
   picomatch@4.0.3: {}
 
-  pixi-viewport@6.0.3(pixi.js@8.16.0):
+  pixi-viewport@6.0.3(pixi.js@8.17.1):
     dependencies:
-      pixi.js: 8.16.0
+      pixi.js: 8.17.1
 
-  pixi.js@8.16.0:
+  pixi.js@8.17.1:
     dependencies:
       '@pixi/colord': 2.9.6
       '@types/earcut': 3.0.0
@@ -3005,7 +3005,7 @@ snapshots:
 
   zod@4.3.6: {}
 
-  zustand@5.0.11(@types/react@19.2.14)(react@19.2.4):
+  zustand@5.0.12(@types/react@19.2.14)(react@19.2.4):
     optionalDependencies:
       '@types/react': 19.2.14
       react: 19.2.4

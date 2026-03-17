@@ -82,6 +82,7 @@ export const EventCardLastingEffectSchema = z
     duration: TurnFlowDurationSchema,
     setupEffects: z.array(EffectASTSchema).min(1),
     teardownEffects: z.array(EffectASTSchema).min(1).optional(),
+    actionRestrictions: z.array(z.lazy((): z.ZodTypeAny => ActionRestrictionDefSchema)).min(1).optional(),
   })
   .strict();
 
@@ -253,6 +254,44 @@ export const EventDeckSchema = z
   .strict();
 
 export const TurnFlowActionClassSchema = z.enum(TURN_FLOW_ACTION_CLASS_VALUES);
+
+export const ActionRestrictionDefSchema = z
+  .object({
+    actionId: StringSchema.min(1).optional(),
+    actionClass: TurnFlowActionClassSchema.optional(),
+    blocked: z.boolean().optional(),
+    maxParam: z
+      .object({
+        name: StringSchema.min(1),
+        max: NumberSchema,
+      })
+      .strict()
+      .optional(),
+    maxParamsTotal: z
+      .object({
+        names: z.array(StringSchema.min(1)).min(1),
+        max: NumberSchema,
+      })
+      .strict()
+      .optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.actionId === undefined && value.actionClass === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'ActionRestrictionDef must specify at least one of actionId or actionClass.',
+        path: [],
+      });
+    }
+    if (value.blocked === undefined && value.maxParam === undefined && value.maxParamsTotal === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'ActionRestrictionDef must specify at least one of blocked, maxParam, or maxParamsTotal.',
+        path: [],
+      });
+    }
+  });
 
 export const TurnFlowCardLifecycleSchema = z
   .object({

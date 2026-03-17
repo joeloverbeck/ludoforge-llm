@@ -1,5 +1,6 @@
 import type { ConditionAST, EffectAST, OptionsQuery } from './types-ast.js';
 import type {
+  ActionRestrictionDef,
   TurnFlowDuration,
   TurnFlowFreeOperationGrantContract,
 } from './types-turn-flow.js';
@@ -30,6 +31,7 @@ export interface EventLastingEffectDef {
   readonly duration: TurnFlowDuration;
   readonly setupEffects: readonly EffectAST[];
   readonly teardownEffects?: readonly EffectAST[];
+  readonly actionRestrictions?: readonly ActionRestrictionDef[];
 }
 
 export interface EventFreeOperationGrantDef extends TurnFlowFreeOperationGrantContract {
@@ -116,6 +118,7 @@ export interface ActiveLastingEffect {
   readonly duration: TurnFlowDuration;
   readonly setupEffects: readonly EffectAST[];
   readonly teardownEffects?: readonly EffectAST[];
+  readonly actionRestrictions?: readonly ActionRestrictionDef[];
   readonly remainingTurnBoundaries?: number;
   readonly remainingRoundBoundaries?: number;
   readonly remainingCycleBoundaries?: number;

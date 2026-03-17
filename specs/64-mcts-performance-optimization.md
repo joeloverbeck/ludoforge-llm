@@ -1,273 +1,574 @@
-# Spec 64 — MCTS Performance Optimization
+# Spec 64 (Revised) — Cost-Aware MCTS for Expensive-Transition Games
+
+**Source basis**: original Spec 64, `mcts-fitl-performance-analysis.md`, and `mcts-optimization-technical-context-for-external-research.md`.
 
 **Depends on**: Spec 63 (runtime move classification)
 
+**Tickets**: Decomposed into 64MCTSPEROPT-001 through 64MCTSPEROPT-016 (see `tickets/` folder)
+
 ## 0. Problem Statement
 
-### 0.1 MCTS on FITL Is ~4,600× Too Slow
+### 0.1 FITL Exposes the Real Bottleneck
 
-A single MCTS decision with the `fast` preset (200 iterations, hybrid rollout) takes ~46 minutes on FITL. The target for a background worker is 10–30 seconds. This makes MCTS unusable for any practical purpose on complex games.
+FITL is slow because `legalChoicesEvaluate()` dominates search cost. The measured bottleneck is move classification/materialization, not UCT bookkeeping and not `applyMove()`. Hybrid rollouts are catastrophically bad on this workload because they multiply the number of classification calls. Pending operations also starve: after 50 iterations, core FITL actions such as rally, march, and attack still receive zero visits.
 
-### 0.2 Root Cause: Materialization Dominates
+### 0.2 Goal
 
-Profiling reveals that `legalChoicesEvaluate` calls (move classification / materialization) at ~1,049 ms/call account for **76% of kernel time**. This function is called for every legal move (15–39 moves) at every tree node during selection, even when progressive widening means only 1–2 children will actually be expanded. This is the dominant waste.
+Make MCTS viable for complex games under realistic turn budgets, with FITL as the stress test:
 
-Secondary costs are moderate, not bottleneck-level:
-- `applyMove`: ~73 ms/call (4.3% of kernel time)
-- `legalMoves`: ~39 ms/call (2.2% of kernel time)
+- Background / turn-time play: roughly 10–30 seconds per decision
+- Human-facing bounded-latency play: always return within budget, even if that requires falling back to a shallower search policy than full MCTS
 
-### 0.3 Rollout-Phase Materialization Is the Largest Single Cost
+### 0.3 Non-Goals
 
-In hybrid rollout mode, materialization occurs at every rollout ply in addition to every tree node. This accounts for **93.8% of total search time**. Switching to direct rollout mode (heuristic evaluation at expansion, no simulation plies) eliminates this entire cost category.
+- Do not promise pure MCTS at ~600 ms on FITL.
+- Do not delete rollout support for all games just because FITL cannot afford it.
+- Do not ship a “faster” search that weakens legality or availability checks.
+- Do not overfit the engine to FITL-specific rules or heuristics.
 
-### 0.4 Root Classification Is Redundantly Recomputed
+## 1. Corrections to the Previous Draft
 
-The root state is revisited on every iteration. Without caching, `classifyMovesForSearch` is called ~200 times for the same root state with 30+ moves, producing ~6,000 redundant `legalChoicesEvaluate` calls.
+### 1.1 Removing Rollout Modes Entirely Is the Wrong Abstraction Boundary
 
-### 0.5 Pending Moves Receive Zero Visits
+The prior draft overfits FITL. `legacy` and `hybrid` are bad defaults for expensive-transition games, but they remain valid tools for games with cheap state transitions and weak heuristics. (Note: `DEFAULT_MCTS_CONFIG` currently uses `rolloutMode: 'hybrid'` as its default, while all four presets override to `'direct'` — this inconsistency is worth resolving.) The right change is to modularize rollout-based leaf evaluation and make direct/heuristic evaluation the default for expensive games, not to delete rollout support from the engine.
 
-Critical finding: pending moves (rally, march, attack — the core FITL operations) receive **0 visits** even after 50 iterations. The search budget is entirely consumed by materialization overhead on ready moves, leaving no budget for the decision-tree paths that handle the most strategically important actions.
+### 1.2 Replacing Broken Presets with “One Default Config” Is Also Wrong
 
-### 0.6 Too Many Configurations That Don't Work
+The old preset names (`fast`, `default`, `strong`, `background`) are misleading, but the concept of named operating profiles is still useful. Product surfaces and CI need stable, budget-oriented profiles. Replace the old preset system with a small set of budget profiles (`interactive`, `turn`, `background`, `analysis`) backed by ordinary `MctsConfig`, rather than forcing every caller to hand-tune raw parameters.
 
-The current codebase has:
-- **4 presets**: `fast`, `default`, `strong`, `background` — but none except `background` (added in Phase 1 work) are tuned for actual FITL performance. The others take minutes to hours.
-- **3 rollout modes**: `legacy`, `hybrid`, `direct` — but `legacy` and `hybrid` are unusable on complex games due to per-ply materialization costs.
-- Config fields (`hybridCutoffDepth`, `maxSimulationDepth`) that only apply to dead rollout modes.
+### 1.3 Raw `legalMoves()` Membership Is Not a Sound Availability Test
 
-Having non-functional configurations creates confusion and maintenance burden. If a mode is purely non-workable from a runtime perspective, it should not exist as a user-facing option.
+The previous draft assumes that an existing child is available if its `moveKey` appears in the raw `legalMoves()` output. That shortcut is unsafe. `legalChoicesEvaluate()` can still classify a raw move as `illegal`, `pending`, or `pendingStochastic`, so move-key presence alone is not a proof that an already-expanded child is legal in the current sampled world.
 
-## 1. Architecture
+Lazy selection must remain sound:
+- known-compatible classification status can prove availability
+- raw move-key presence can only prove “possibly available”
+- unknown statuses must be classified on demand before a child is selected or expanded
 
-### 1.1 Design Principle: Eliminate What Doesn't Work
+### 1.4 Incremental Classification Without Ordering Still Starves Pending Moves
 
-Rather than maintaining backward compatibility with configurations that produce unusable performance, this spec removes them:
+The prior draft says “classify one candidate at a time and stop at the first ready/pending move.” That is not enough. FITL’s root includes many near-duplicate ready variants, so a naive ordered scan can still spend the entire budget on `event` / resource-transfer variants while never touching pending operations. The fix is not just lazy classification. The fix is lazy classification plus action-family widening and explicit pending/family coverage rules.
 
-1. **Remove `legacy` and `hybrid` rollout modes.** Direct mode is the only viable option for complex games. The `MctsRolloutMode` type, the `rolloutMode` config field, and all rollout simulation code (`rollout()`, `simulateToCutoff()`, `materializeMovesForRollout()`) are removed.
+### 1.5 Exact Best-Candidate Expansion Is Incompatible with Lazy Classification
 
-2. **Collapse presets to a single tunable configuration.** The distinction between `fast`/`default`/`strong`/`background` is meaningless when all must use direct mode to be functional. Replace with a single `MctsConfig` default that works, plus documentation on which knobs to turn for speed vs. quality.
+The current expansion priority prefers the highest one-step heuristic candidate. If implemented exactly, that requires classifying and often applying too many unexpanded moves. That defeats the purpose of going lazy. The corrected design therefore changes expansion semantics:
 
-3. **Remove dead config fields.** `hybridCutoffDepth`, `maxSimulationDepth`, `rolloutPolicy`, `rolloutEpsilon`, `rolloutCandidateSample`, `mastWarmUpThreshold` all become dead code once rollout modes are removed. Remove them along with the MAST statistics infrastructure.
+- use a cheap ordering policy to build a frontier
+- classify candidates on demand
+- only run one-step `applyMove() + evaluate()` on a small shortlist
+- treat exact global argmax expansion as an optional exhaustive policy for cheap games only
 
-### 1.2 Design Principle: Cache Expensive Computations
+### 1.6 Root Parallelization Must Preserve Determinism
 
-Classification results are deterministic for a given (state, moves) pair. Cache them in the existing `StateInfoCache` to avoid redundant `legalChoicesEvaluate` calls across iterations.
+Parallel workers may not race against wall-clock budgets if determinism is required. Parallel search must split a fixed iteration budget up front, fork the RNG deterministically, and merge results in stable key order. “Run for 30 seconds on 4 workers and merge whatever finished” is not deterministic enough for the engine’s guarantees.
 
-### 1.3 Design Principle: Defer Materialization
+### 1.7 The Old Performance Targets Are Too Confident
 
-During selection through already-expanded nodes, zero `legalChoicesEvaluate` calls are needed. Availability of existing children can be checked by matching `legalMoves()` output (already cached) against children's `moveKey`s — a string comparison, not AST evaluation. Full classification is only needed at expansion time, and even then only for the single candidate being expanded, not all remaining moves.
+`~150 ms/iteration` is a stretch target, not a contract. The acceptance criteria must focus first on soundness and call-count reduction, then on measured runtime improvements. FITL can still surface a different bottleneck once selection stops reclassifying everything.
 
-## 2. Phases
+## 2. Design Principles
 
-### Phase 1: Classification Caching + Rollout/Preset Cleanup (DONE — already implemented on branch)
+1. Reduce the number of expensive kernel calls before micro-optimizing them.
+2. Preserve correctness under sampled worlds and hidden information.
+3. Widen over action families before concrete variants when branching explodes.
+4. Use wall-clock budget as the primary product-facing control; use iteration count as a secondary cap and a deterministic testing aid.
+5. Keep rollout and direct evaluation as pluggable strategies, not hard-coded modes scattered across the search core.
+6. Measure every phase before deleting code or claiming victory.
 
-The following changes are already implemented on the `mcts-fixes-3` branch and pass all 4,799 unit tests:
+## 3. Revised Architecture
 
-**1a. Classification cache in `StateInfoCache`** (`state-cache.ts`)
-- Added `moveClassification?: MoveClassification` to `CachedStateInfo`
-- Added `getOrComputeClassification()` following the existing cache-or-compute pattern
-- Root state classified once, reused across all iterations
+### 3.1 Make Leaf Evaluation a Strategy, Not a Global Rollout Switch
 
-**1b. All presets switched to `rolloutMode: 'direct'`** (`config.ts`)
-- `fast`, `default`, `strong` all changed from `hybrid` to `direct`
-- Eliminates all rollout-phase materialization
+Replace the current top-level rollout switch with a leaf-evaluation strategy:
 
-**1c. `background` preset added** (`config.ts`)
-- 200 iterations, 30s time limit, direct mode, `heuristicBackupAlpha: 0.4`
-- Wider progressive widening (`K=1.5, alpha=0.5`)
-- Lower root stop threshold (`rootStopMinVisits: 5`)
+    type LeafEvaluator =
+      | { type: 'heuristic' }
+      | {
+          type: 'rollout'
+          maxSimulationDepth: number
+          policy: 'random' | 'epsilonGreedy' | 'mast'
+          epsilon?: number
+          candidateSample?: number
+          mastWarmUpThreshold?: number
+          templateCompletionsPerVisit?: number
+        }
+      | { type: 'auto' }
 
-**1d. `classificationCacheHits` diagnostic** (`diagnostics.ts`)
-- New counter in accumulator and immutable diagnostics
+`auto` chooses the cheaper direct/heuristic path when the measured transition/classification cost is high, and may still choose rollout evaluation for small or cheap games. FITL profiles will default to `heuristic`.
 
-**1e. Search uses cached classification** (`search.ts`)
-- Selection loop calls `getOrComputeClassification()` when state cache is enabled
+This keeps the engine game-agnostic, cleans up config, and avoids deleting functionality that may still be correct and useful elsewhere.
 
-**Expected impact**: ~1.1 s/iteration (1× materialization + 1× applyMove + 1× eval). 25 iterations in ~28 s.
+### 3.2 Keep Profiles, but Make Them Budget-Oriented
 
-### Phase 2: Remove Dead Rollout Modes and Consolidate Presets
+Replace `fast` / `default` / `strong` / `background` with a small profile layer:
 
-**Rationale**: All presets now use `direct`. The `legacy` and `hybrid` code paths are dead weight — they cannot run at acceptable speeds on complex games and their continued existence suggests to users that they are viable options.
+- `interactive`: very small budget, direct evaluation only, aggressive fallback
+- `turn`: a few seconds, direct evaluation, lazy classification, family widening
+- `background`: 10–30 seconds, direct evaluation by default, optional deterministic parallelism
+- `analysis`: larger budgets, may opt into rollout evaluation on cheap games
 
-**2a. Remove `legacy` and `hybrid` rollout modes**
+Profiles are thin wrappers over `MctsConfig`. Raw config remains supported for internal experiments and tests.
 
-Remove:
-- `rollout()` function from `rollout.ts`
-- `simulateToCutoff()` function from `rollout.ts`
-- `materializeMovesForRollout()` function from `materialization.ts`
-- `sampleCandidates()` helper from `rollout.ts`
-- `pickMove()` helper from `rollout.ts`
-- `MctsRolloutMode` type (collapse to always-direct)
-- `ROLLOUT_MODES` array from `config.ts`
-- `rolloutMode` field from `MctsConfig` (always direct)
-- `hybridCutoffDepth` field from `MctsConfig`
-- `maxSimulationDepth` field from `MctsConfig`
-- `rolloutPolicy` field, `RolloutPolicy` type, `ROLLOUT_POLICIES` array
-- `rolloutEpsilon` field
-- `rolloutCandidateSample` field
-- `mastWarmUpThreshold` field
-- MAST stats infrastructure: `mast.ts` (`MastStats`, `createMastStats`, `updateMastStats`, `mastSelectMove`)
-- `hybridRolloutPlies` diagnostic counter
-- All related tests: `rollout.test.ts`, `materialize-rollout.test.ts`, `hybrid-search.test.ts`, `mast.test.ts`, rollout-related tests in `search.test.ts`, mode-comparison e2e tests
+**Codebase note**: The existing preset system uses `MctsPreset` type (`'fast' | 'default' | 'strong' | 'background'`) and `MCTS_PRESETS` map (not `PRESET_CONFIGS`) in `config.ts`. The new budget profiles replace these types and the map.
 
-The `resolveDecisionBoundary()` function in `rollout.ts` is still needed (called during selection when exiting at a decision node). It must be relocated to a surviving module (e.g., `decision-boundary.ts` or `search.ts`).
+### 3.3 Replace Whole-State Move Classification with Incremental Per-Move Classification
 
-Files:
-- `packages/engine/src/agents/mcts/config.ts` — remove rollout-related fields and validation
-- `packages/engine/src/agents/mcts/rollout.ts` — remove `rollout()`, `simulateToCutoff()`, `sampleCandidates()`, `pickMove()`, keep `resolveDecisionBoundary()` (relocate)
-- `packages/engine/src/agents/mcts/materialization.ts` — remove `materializeMovesForRollout()`
-- `packages/engine/src/agents/mcts/mast.ts` — delete entirely
-- `packages/engine/src/agents/mcts/search.ts` — remove rollout mode switch, simplify to always-direct
-- `packages/engine/src/agents/mcts/diagnostics.ts` — remove `hybridRolloutPlies`, `rolloutMode` from diagnostics
-- `packages/engine/src/agents/mcts/index.ts` — update exports
+The current cache entry:
 
-**2b. Consolidate presets**
+    interface CachedStateInfo {
+      terminal?: TerminalResult | null
+      legalMoves?: readonly Move[]
+      rewards?: readonly number[]
+      moveClassification?: MoveClassification
+    }
 
-Replace the 4-preset system (`fast`/`default`/`strong`/`background`) with a single default config. The meaningful tuning axes in direct mode are:
-- `iterations` — search budget
-- `timeLimitMs` — wall-clock budget
-- `explorationConstant` — exploration vs exploitation
-- `progressiveWideningK` / `progressiveWideningAlpha` — expansion rate
-- `heuristicBackupAlpha` — blending weight
-- `rootStopMinVisits` / `rootStopConfidenceDelta` — early stopping
-- `decisionWideningCap` / `decisionDepthMultiplier` — decision tree sizing
+is too coarse for lazy search. Replace it with an incremental structure that supports partial population:
 
-Remove `MctsPreset` type, `MCTS_PRESETS`, `MCTS_PRESET_NAMES`, `resolvePreset()`. Users configure `MctsConfig` directly, with a single `DEFAULT_MCTS_CONFIG` that works on complex games out of the box.
+    type ClassificationStatus =
+      | 'unknown'
+      | 'ready'
+      | 'pending'
+      | 'illegal'
+      | 'pendingStochastic'
 
-Files:
-- `packages/engine/src/agents/mcts/config.ts` — remove presets
-- `packages/engine/src/agents/mcts/index.ts` — update exports
-- `packages/engine/src/agents/mcts/agent.ts` — update to use config directly
-- All test files referencing presets
+    interface CachedLegalMoveInfo {
+      move: Move
+      moveKey: MoveKey
+      familyKey?: string          // optional in Phase 2; populated once familyKey() lands in Phase 3
+      status: ClassificationStatus
+      oneStepHeuristic?: readonly number[] | null
+    }
 
-**2c. Remove dead config validation**
+    interface CachedClassificationEntry {
+      infos: readonly CachedLegalMoveInfo[]
+      nextUnclassifiedCursor: number
+      exhaustiveScanComplete: boolean
+    }
 
-With rollout fields removed, simplify `validateMctsConfig()` to only validate the surviving fields.
+Implementation detail: use compact arrays / enums instead of object-heavy maps if necessary, but the semantics above must hold.
 
-### Phase 3: Lazy/Deferred Materialization
+Key requirements:
 
-The key insight: during selection through already-expanded nodes, you need ZERO `legalChoicesEvaluate` calls. You only need to check which existing children are "available" (legal in the current sampled world). That check can use `legalMoves` output (already cached) matched against existing children's `moveKey`s — a string comparison, not AST evaluation.
+- `legalMoves()` is still cached once per state
+- `moveKey` and `familyKey` are computed once per cached move, not rebuilt every visit
+- classification status is stored per move, not all-or-nothing
+- classification can advance incrementally across revisits
+- cache size remains bounded by the existing entry cap or an LRU
+- **deduplication must be preserved**: the current `classifyMovesForSearch()` in `materialization.ts` deduplicates ready moves by `moveKey` and pending moves by `actionId` (or `canonicalMoveKey` when params differ). The incremental cache must maintain this invariant — multiple raw moves may map to the same `moveKey`, and only one entry per `moveKey` should appear in the cached infos
 
-**3a. Availability checking without full classification**
+### 3.4 Add `familyKey()` / `abstractMoveKey()` for Search Control
 
-Replace the current pattern in `search.ts` (classify all → build candidateKeySet → match children) with:
+Introduce a coarse family key used only for widening and diversity control. The default family key should be based on `actionId` and, if needed, a light parameter-shape signature. It is intentionally coarser than `moveKey`.
 
-```
-1. Get legalMoves (cached via StateInfoCache)
-2. Build moveKeySet from legalMoves via canonicalMoveKey (cheap string ops)
-3. For each existing child: child is available if moveKeySet.has(child.moveKey)
-4. Skip classification entirely for this node
-```
+Examples of intended behavior:
+- `vcTransferResources{amount:1}` and `vcTransferResources{amount:5}` should usually share a family
+- a pending `rally` root should have its own family
+- the family key is a search-control key, not a semantic equivalence proof
 
-This requires computing `canonicalMoveKey` for raw `Move` objects from `legalMoves()`. This is already a pure string function — no kernel calls.
+This is what prevents high-cardinality ready variants from crowding out strategically distinct action families.
 
-Files:
-- `packages/engine/src/agents/mcts/search.ts` — refactor selection loop
-- `packages/engine/src/agents/mcts/materialization.ts` — add `classifyMovesIncremental()` for expansion-only classification
+**Codebase note**: The kernel already has `resolveTurnFlowActionClass()` in `packages/engine/src/kernel/turn-flow-action-class.ts` (Spec 63), which classifies moves into `operation | limitedOperation | specialActivity | operationPlusSpecialActivity | event | pass`. This `TurnFlowActionClass` is a natural ingredient for `familyKey()` — it already captures the operation/event/pass distinction and should be considered as a coarse grouping signal when available.
 
-**3b. Incremental classification at expansion**
+### 3.5 Sound Availability Checking
 
-When `shouldExpand()` returns true, don't classify ALL remaining moves. Instead:
+Selection must distinguish three cases for each existing child:
 
-```
-1. Get list of unclassified moves (moves not matching any existing child's moveKey)
-2. Classify them one at a time via legalChoicesEvaluate
-3. Stop when one ready or pending candidate is found
-4. Cache the partial classification for next time
-```
+1. **Known available**
+   - The current state’s cached classification already marks the child’s `moveKey` as compatible (`ready` for state children, `pending` for decision roots, or another explicitly supported status). Note: `pending` status in the cache corresponds to `legalChoicesEvaluate()` returning `{ kind: ‘pending’ }`.
 
-Files:
-- `packages/engine/src/agents/mcts/materialization.ts` — add `classifyNextCandidate()`
-- `packages/engine/src/agents/mcts/search.ts` — use incremental classification in expansion
+2. **Unknown**
+   - The child’s `moveKey` appears in raw `legalMoves()` but has not yet been classified in this state.
 
-**3c. Pending move creation deferral**
+3. **Known unavailable**
+   - The current state’s cached classification marks the child incompatible, or the move is absent from raw `legalMoves()`.
 
-Currently, ALL pending moves get decision root nodes created at every visit. Defer this: only create decision roots when expansion budget allows, and create one at a time.
+Rules:
+- Only “known available” children may be scored by UCT/ISUCT.
+- “Unknown” children must be classified on demand before they can be selected.
+- Raw move-key presence alone never upgrades a child from unknown to available.
+- `pendingStochastic` must not be silently treated as ordinary `pending`.
 
-Files:
-- `packages/engine/src/agents/mcts/search.ts` — refactor decision root creation
+This preserves correctness while still avoiding whole-state full classification.
 
-**Expected result after Phase 3**: ~150 ms/iteration. 200 iterations in ~30 s. Pending moves now get visited because materialization no longer dominates the budget.
+### 3.6 Replace Exhaustive Expansion with Ordered Lazy Expansion
 
-### Phase 4: Root Parallelization (optional)
+At a widened node, expansion becomes:
 
-Fork RNG per worker, run independent `runSearch()` calls, merge root child visit counts.
+    1. Get cached legal-move infos for the state.
+    2. Compute which families and children are already represented.
+    3. Build an ordered frontier of unexpanded candidates.
+    4. Classify frontier candidates on demand until:
+       - one compatible candidate is found, or
+       - the shortlist budget is exhausted, or
+       - the frontier is exhausted.
+    5. For ready candidates, run one-step apply+evaluate only on a small shortlist.
+    6. Expand the best shortlisted candidate.
 
-Files:
-- `packages/engine/src/agents/mcts/parallel.ts` — new file: `runParallelSearch()`
-- `packages/engine/src/agents/mcts/agent.ts` — integrate parallel option
-- `packages/engine/src/agents/mcts/config.ts` — add `parallelWorkers?: number`
+Important consequences:
+- no full classify-all sweep on revisits
+- no full one-step-evaluate-all sweep on high-branching nodes
+- exact global best-candidate expansion becomes a policy used only when branching is small or cost is low
 
-**Expected result**: 200 effective iterations in ~8–10 s with 4 workers.
+### 3.7 Action-Family Widening and Pending Coverage
 
-## 3. Verification
+This is the missing piece that the previous draft did not solve.
 
-### 3.1 Primary Acceptance Criterion: FITL MCTS CI Workflows
+At the root and optionally at shallow depths:
+- widen over families first, then over concrete move variants
+- cap concrete siblings per family until all families have had a chance to appear
+- reserve at least one early expansion slot for a pending family if any pending families exist
+- do not allow one high-cardinality ready family to consume the whole early widening budget
 
-The three GitHub Actions workflows are the canonical proof that MCTS works on FITL at reasonable speeds:
+Suggested policy:
+- family-first widening at depth 0 and depth 1
+- plain move-level widening below that unless profiling says otherwise
+- if family cardinality is small, fall back to ordinary move-level behavior
 
-- `engine-mcts-fitl-fast.yml` (20-minute timeout)
-- `engine-mcts-fitl-default.yml` (30-minute timeout)
-- `engine-mcts-fitl-strong.yml` (45-minute timeout)
+The goal is simple: FITL’s core operations must stop getting zero visits.
 
-These workflows run `test:e2e:mcts:fitl:{fast,default,strong}` and are gated by `RUN_MCTS_FITL_E2E=1`. The test suite covers:
-- **9 category-competence scenarios** (S1–S9): MCTS picks a move from an acceptable action category at playbook decision points across 7 turns.
-- **1 victory-trend scenario** (S10): MCTS picks a coup pacification move that doesn't degrade US victory score beyond tolerance.
+### 3.8 Add Cheap Ordering Priors Before Expensive Evaluation
 
-After Phase 2 consolidates presets, these workflows must be updated:
-- Collapse to a single workflow (or parameterize by iteration count)
-- Update test helpers to use `MctsConfig` directly instead of `resolvePreset()`
-- Adjust timeouts based on measured post-optimization performance
+Ordered lazy expansion needs a cheap frontier order. The ordering policy must be game-agnostic and cheap. Candidate ordering can combine:
 
-**Success criteria**:
-- All 10 FITL MCTS scenarios pass (no crashes, correct move categories)
-- Fast-equivalent config completes within the CI timeout
-- Per-iteration cost measurably lower than pre-optimization baseline (~11.7 s → target <1 s after Phase 2, <200 ms after Phase 3)
+- family coverage gap
+- previous root-best / transposition hint
+- family-level win-rate or heuristic prior from prior visits
+- terminal/proven-result information if already known
+- stable PRNG tie-break
 
-### 3.2 Unit Test Verification
+Only the top few candidates from that cheap frontier should pay for one-step `applyMove() + evaluate()`. Otherwise `applyMove()` simply becomes the next bottleneck after materialization is removed.
+
+### 3.9 Instrument and Cache Decision-Node Discovery
+
+Once pending moves finally receive visits, `legalChoicesDiscover()` is likely to become much more important. The old spec ignored that.
+
+Add diagnostics now:
+- `decisionDiscoverCallCount`
+- `decisionDiscoverTimeMs`
+- `decisionDiscoverCacheHits`
+- per-depth option counts for decision nodes
+
+Add caching where sound:
+- key by `DecisionKey` from Spec 62 (`packages/engine/src/kernel/decision-scope.ts`) as the appropriate cache key component — it uniquely identifies decision instances within a move tree via iteration path + counters, replacing the vague `(stateHash, partialMoveKey, decisionBinding)` tuple
+- do not cross-cache hidden-info states without a valid determinized hash
+- keep the cache bounded like the other state-info entries
+
+**Codebase note**: `LegalChoicesRuntimeOptions` now supports `chainCompoundSA: boolean` (Spec 62/63 work) for chaining compound special-activity decisions incrementally. Lazy classification should leverage this option when handling compound special activities, since it controls whether the kernel chains SA decisions or returns `pending` at the first decision point.
+
+This is a required part of the new plan, not an afterthought.
+
+### 3.10 Add a Kernel-Side Classification Optimization Track
+
+Search-side laziness reduces how often classification runs. It does not reduce the `~1 s` cost of each classification call. The plan therefore needs a parallel kernel-side track aimed at `legalChoicesEvaluate()` and `legalChoicesDiscover()` themselves.
+
+Add subphase diagnostics inside classification/discovery:
+- runtime binding construction
+- choice-target enumeration
+- AST predicate evaluation
+- pipeline validation / cost checking
+- template completion if applicable
+
+Likely game-agnostic optimizations:
+- compile decision plans / AST predicates once at game-load
+- memoize repeated predicate results within the same state
+- build per-state query indexes that both `legalMoves()` and classification can reuse
+- avoid repeated action-definition lookup and repeated canonicalization work
+
+This work is lower priority than eliminating redundant calls, but it is too important to leave out of the spec.
+
+### 3.11 Budget-Driven Search with Explicit Fallbacks
+
+The engine needs to return a move inside human-facing budgets even when full MCTS is not feasible.
+
+Add a budget/fallback layer:
+- `timeLimitMs` is the primary public control
+- `iterations` remains as a hard cap and a deterministic-test control
+- if the measured per-iteration cost makes the requested budget unrealistic, the agent degrades gracefully
+
+Fallback policies should be explicit:
+- `none`
+- `policyOnly`
+- `sampledOnePly`
+- `flatMonteCarlo` over a small shortlist
+
+The fallback must reuse the same family-ordering logic as MCTS so behavior stays coherent across budgets.
+
+### 3.12 Tune Direct-Mode Evaluation Signal
+
+Once direct/heuristic evaluation becomes the default for expensive games, `heuristicTemperature`, `heuristicBackupAlpha`, `minIterations`, and root stop thresholds become more important.
+
+The previous draft ignored this. It should not.
+
+Required work:
+- add diagnostics for raw-score spread and post-sigmoid reward spread
+- retune `heuristicTemperature` for direct mode so rewards are not crushed toward 0.5
+- lower `minIterations` and root-stop thresholds for low-budget profiles
+- keep these settings profile-specific rather than one-size-fits-all
+
+### 3.13 Deterministic Root Parallelization
+
+Parallelization remains optional and comes late.
+
+Requirements:
+- split a fixed total iteration budget across workers before the search starts
+- fork RNGs deterministically
+- merge root results by stable `moveKey` order
+- merge visits, availability, and reward totals; do not pretend the merged result is a reusable full tree
+- if a caller demands strict determinism, do not use time-budget racing across workers
+
+Parallel search is an accelerator, not a substitute for fixing the core algorithm.
+
+## 4. Phases
+
+### Phase 1 — Already Landed
+
+Keep the existing shipped work:
+- root/state classification caching
+- direct evaluation as the FITL-safe default
+- diagnostics for classification cache hits
+
+Before any new phase starts, record fresh S1 and S3 baselines with the Phase 1 branch as the comparison point.
+
+### Phase 2 — Sound Lazy Classification and Shortlisted Expansion
+
+This is the real next step. It should happen before large cleanup work.
+
+Work items:
+- replace whole-state `MoveClassification` caching with incremental per-move caching
+- cache `moveKey` and `familyKey` alongside `legalMoves()`
+- implement sound availability checking
+- implement ordered lazy expansion
+- limit one-step candidate evaluation to a shortlist
+- add differential tests: exhaustive path versus lazy path on the same state corpus
+- add memory accounting / cache bounds for the richer state-info entries
+
+Expected outcome:
+- whole-state classify-all sweeps disappear on revisits
+- materialization call count drops sharply
+- no legality regressions
+
+### Phase 3 — Family Widening, Pending Coverage, and Budget Profiles
+
+Work items:
+- add `familyKey()` and family-first widening at root / shallow depths
+- add pending-family coverage rules
+- replace old presets with budget profiles, not with “one config”
+- add explicit fallback policies for very small budgets
+- retune direct-mode evaluation signal and root-stop thresholds
+- add tests that pending families receive visits in the FITL stress scenarios
+
+Expected outcome:
+- pending FITL operations stop starving
+- human-facing profiles always return inside budget
+- search behavior becomes robust under limited iterations
+
+### Phase 4 — Decision Discovery and Classification Hotspot Optimization
+
+Work items:
+- add `legalChoicesDiscover()` diagnostics and caching
+- add subphase diagnostics inside `legalChoicesEvaluate()` / discovery
+- implement compiled decision-plan / predicate caches
+- add per-state query indexes if diagnostics justify them
+- benchmark whether classifier cost drops enough to matter after Phase 2 and 3
+
+Expected outcome:
+- reduced cost per classification/discovery call
+- better visibility into the next real bottleneck after lazy search lands
+
+### Phase 5 — Modular Cleanup
+
+Cleanup is now safe, because the architecture is clearer.
+
+Work items:
+- extract leaf evaluators into separate modules
+- move rollout-specific config under rollout-only types
+- move `resolveDecisionBoundary()` to a non-rollout module
+- deprecate old preset names
+- remove only code that is truly unreachable after modularization
+
+Important:
+- do not delete rollout or MAST just because FITL defaults away from them
+- do remove dead top-level config fields once they are moved under strategy-specific config objects
+
+### Phase 6 — Optional Deterministic Parallel Search
+
+Only start this after Phase 2–4 metrics show that single-threaded search is sound and measurably better.
+
+Work items:
+- implement fixed-iteration root parallelism
+- add determinism tests for repeated runs with the same seed and worker count
+- add broad wall-clock benchmarks for background profile only
+
+Expected outcome:
+- faster background decisions
+- no change to deterministic single-thread behavior
+
+## 5. Configuration Changes
+
+The top-level config should become cleaner by moving strategy-specific knobs under strategy objects, not by deleting capabilities.
+
+Target shape:
+
+    interface MctsConfig {
+      iterations: number
+      minIterations?: number
+      timeLimitMs?: number
+      explorationConstant: number
+      maxSimulationDepth: number
+      progressiveWideningK: number
+      progressiveWideningAlpha: number
+      solverMode: 'off' | 'perfectInfoDeterministic2P'
+      compressForcedSequences?: boolean
+      classificationPolicy?: 'auto' | 'exhaustive' | 'lazy'
+      leafEvaluator?: LeafEvaluator
+      wideningMode?: 'move' | 'familyThenMove'
+      pendingFamilyQuotaRoot?: number
+      maxVariantsPerFamilyBeforeCoverage?: number
+      heuristicTemperature?: number
+      heuristicBackupAlpha?: number
+      decisionWideningCap?: number
+      decisionDepthMultiplier?: number
+      enableStateInfoCache?: boolean
+      maxStateInfoCacheEntries?: number
+      rootStopConfidenceDelta?: number
+      rootStopMinVisits?: number
+      fallbackPolicy?: 'none' | 'policyOnly' | 'sampledOnePly' | 'flatMonteCarlo'
+      parallelWorkers?: number
+      diagnostics?: boolean
+      visitor?: MctsSearchVisitor
+    }
+
+Notes:
+- `classificationPolicy: auto` should use exhaustive behavior only when branching is small and measured classification cost is cheap.
+- `wideningMode: familyThenMove` should be the default for expensive/high-branching games.
+- rollout-specific fields move under `leafEvaluator: { type: 'rollout', ... }`.
+- if `templateCompletionsPerVisit` is rollout-only in the codebase, move it under rollout config too. If not, audit its surviving callers before removal.
+- `maxSimulationDepth` remains top-level as a general depth cap (used by both rollout and decision tree exploration bounds). The `rollout` variant of `LeafEvaluator` includes its own `maxSimulationDepth` which, when specified, overrides the top-level value during rollout evaluation only.
+- `progressiveWideningK` (default 2.0) and `progressiveWideningAlpha` (default 0.5) are existing required fields — they must not be dropped.
+- `solverMode` (`'off' | 'perfectInfoDeterministic2P'`) is an existing field controlling solver integration — must not be dropped.
+- `compressForcedSequences` controls 1-move sequence compression during selection/simulation — must not be dropped.
+
+## 6. Verification
+
+### 6.1 Correctness Gates
+
+1. Differential corpus:
+   - On existing FITL stress scenarios (S1 — T1 VC Burning Bonze, S3 — T2 NVA Trucks) from `reports/mcts-fitl-performance-analysis.md`, plus any additional scenarios added during development, exhaustive classification and lazy classification must produce the same per-move statuses. A cheap/simple game scenario for MCTS does not yet exist and should be created as part of Phase 2 testing.
+
+2. Availability soundness:
+   - No child may be selected unless it is “known available” in the current state.
+   - Add tests covering `illegal`, `pending`, and `pendingStochastic` classifications.
+
+3. Hidden-info safety:
+   - No cross-world classification reuse without a valid state/determinization hash.
+
+4. Parallel determinism:
+   - Fixed-iteration parallel search must be repeatable for a fixed seed and worker count.
+
+### 6.2 Performance Gates
+
+CI should not rely on 20–45 minute workflows as the canonical proof of health. Replace them with:
+
+- a deterministic profiler workflow using fixed iterations and diagnostics assertions
+- a competence workflow using budget profiles
+- optional longer-running nightly analysis jobs
+
+Required metrics:
+- `materializeCallCount / iteration` drops materially versus the Phase 1 baseline
+- selection no longer performs full-state classify-all sweeps on revisits under lazy mode
+- `decisionDiscoverTimeMs` is exposed before pending coverage is relied on
+- at least one pending family receives visits in the FITL stress scenarios
+- wall-clock runtime improves, but CI gates should prefer relative call-count reductions and broad upper bounds over brittle tight timing thresholds
+
+### 6.3 Standard Validation
 
 After each phase:
-```bash
-pnpm turbo build
-pnpm turbo test
-pnpm turbo lint
-pnpm turbo typecheck
-```
 
-### 3.3 Performance Regression Tracking
+    pnpm turbo build
+    pnpm turbo test
+    pnpm turbo lint
+    pnpm turbo typecheck
 
-The profiler test (`fitl-mcts-profiler.test.ts`) emits per-iteration timing, materialization call counts, and cache hit rates. After each phase, verify:
-- `classificationCacheHits > 0` after first iteration (Phase 1)
-- `materializeCalls` count drops dramatically (Phase 3)
-- `iterationTimeP50Ms` decreases across phases
-- Pending moves receive >0 visits within 50 iterations (Phase 3)
+## 7. Key Files
 
-## 4. Critical Files
+| File | Change |
+|---|---|
+| `config.ts` | Replace old preset semantics with budget profiles; move rollout options under strategy config; add classification/fallback/family-widening config |
+| `state-cache.ts` | Incremental per-move classification cache; cached move infos; memory bounds |
+| `move-key.ts` | `familyKey()` / `abstractMoveKey()` support |
+| `search.ts` | Sound lazy selection, ordered lazy expansion, family widening, fallback entry points |
+| `materialization.ts` | On-demand classification helpers; shortlist support |
+| `decision-boundary.ts` | **NEW FILE** — New home for `resolveDecisionBoundary()` |
+| `diagnostics.ts` | Decision discovery metrics, classification subphase metrics, family-coverage metrics |
+| `rollout.ts` | Keep as optional leaf evaluator module, not a hard-coded default |
+| `mast.ts` | Keep only behind rollout evaluator; do not load for direct profiles |
+| `mcts-agent.ts` | Budget profile resolution, fallback policy, optional parallel wiring |
+| `parallel.ts` | **NEW FILE** — Fixed-iteration deterministic root parallelism |
+| `.github/workflows/engine-mcts-fitl-fast.yml` | Update preset name when profiles change |
+| `.github/workflows/engine-mcts-fitl-default.yml` | Update preset name when profiles change |
+| `.github/workflows/engine-mcts-fitl-strong.yml` | Update preset name when profiles change |
+| `.github/workflows/engine-mcts-e2e-fast.yml` | Update preset name when profiles change |
+| `.github/workflows/engine-mcts-e2e-default.yml` | Update preset name when profiles change |
+| `.github/workflows/engine-mcts-e2e-strong.yml` | Update preset name when profiles change |
 
-| File | Role | Phase |
-|------|------|-------|
-| `state-cache.ts` | Classification caching | 1 (done) |
-| `config.ts` | Preset consolidation, dead field removal | 1 (done), 2 |
-| `diagnostics.ts` | Cache hit counter, dead counter removal | 1 (done), 2 |
-| `search.ts` | Cached classification, rollout removal, lazy materialization | 1 (done), 2, 3 |
-| `materialization.ts` | Rollout materialization removal, incremental classification | 2, 3 |
-| `rollout.ts` | Rollout function removal, boundary relocation | 2 |
-| `mast.ts` | Delete entirely | 2 |
-| `agent.ts` | Preset removal, parallel integration | 2, 4 |
-| `index.ts` | Export cleanup | 2 |
-| `parallel.ts` | New: root parallelization | 4 |
+## 8. Risks and Mitigations
 
-## 5. Existing Functions to Reuse
+### 8.1 Family Widening Can Hide Important Variants
 
-- `getOrComputeTerminal/LegalMoves/Rewards` in `state-cache.ts` — exact pattern for classification cache (Phase 1, done)
-- `canonicalMoveKey()` in `move-key.ts` — for availability checking via string match (Phase 3)
-- `filterAvailableCandidates()` in `materialization.ts` — already does child-key filtering (Phase 3)
-- `shouldExpand()` in `expansion.ts` — progressive widening gate (Phase 3)
-- `fork()` in `kernel/prng.ts` — deterministic RNG forking for parallelization (Phase 4)
-- `resolveDecisionBoundary()` in `rollout.ts` — must survive rollout removal (Phase 2)
+Risk:
+- Grouping by family can underexplore cases where parameter values matter a lot.
 
-## 6. Risks
+Mitigation:
+- use family-first widening only at shallow depths or high-cardinality nodes
+- allow automatic fallback to ordinary move-level widening when family counts are small
+- benchmark at least one cheap/simple game alongside FITL
 
-- **Move quality regression**: Direct mode relies entirely on heuristic evaluation rather than rollout simulation. If the heuristic is weak, move quality may degrade. Mitigated by the FITL competence scenarios which assert correct action categories.
-- **Test churn**: Removing rollout modes and presets will require updating many test files. This is necessary housekeeping — keeping dead code tested creates false confidence.
-- **Phase 3 correctness**: Lazy materialization changes when classification happens, which could introduce bugs where moves are never classified. Mitigated by comparing `classificationCacheHits` + `materializeCalls` totals against pre-optimization baselines.
+### 8.2 Lazy Expansion Changes Search Semantics
+
+Risk:
+- The search will no longer compute an exact best unexpanded candidate by full exhaustive ranking.
+
+Mitigation:
+- keep an exhaustive policy for cheap games
+- differential-test lazy vs exhaustive on recorded state corpora
+- use shortlist evaluation rather than purely random frontier order
+
+### 8.3 Decision Discovery May Become the New Bottleneck
+
+Risk:
+- Once pending moves finally get visits, `legalChoicesDiscover()` may absorb the time savings.
+
+Mitigation:
+- instrument and cache it as part of the main plan, not later
+
+### 8.4 Direct Mode Quality Can Regress
+
+Risk:
+- Faster search is useless if the direct heuristic signal is too flat or too weak.
+
+Mitigation:
+- retune temperature / backup parameters
+- keep rollout evaluation available for cheap games
+- preserve competence tests, not just runtime tests
+
+## 9. Optional Follow-Ons
+
+These are explicitly outside the critical path, but they fit the same direction and may become high value after the core work lands:
+
+- Subtree reuse between consecutive decisions in the same match
+- Exact-state transposition reuse beyond the current state-info cache
+- Observation-hash / information-set caching for hidden-information games
+- Optional search metadata in compiled game definitions to help family grouping without hard-coding game-specific logic
+
+## 10. Summary
+
+The original draft correctly identifies redundant classification as the central waste, but it overreaches in three places: it deletes rollout support too aggressively, it uses an unsafe availability shortcut, and it still does not truly solve pending-move starvation. The corrected plan keeps the good part — lazy, cached, on-demand classification — and adds the missing pieces:
+
+- sound availability semantics
+- family-first widening and pending coverage
+- shortlist-based expansion instead of exact exhaustive ranking
+- budget profiles plus explicit fallbacks
+- classifier/discovery hotspot instrumentation
+- deterministic parallelism only after the single-threaded core is fixed
+
+That is the path that is both faster and still faithful to the engine’s constraints.

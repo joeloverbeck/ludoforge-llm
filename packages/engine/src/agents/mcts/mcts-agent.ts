@@ -45,8 +45,68 @@ export function postCompleteSelectedMove(
   rng: Rng,
   runtime: GameDefRuntime,
 ): { readonly move: Move; readonly rng: Rng } {
-  const bestMove = bestChild.move as Move;
   let cursor: Rng = rng;
+
+  // 0. Decision root: follow highest-visit path through decision subtree.
+  if (bestChild.nodeKind === 'decision') {
+    // Walk down the subtree following highest-visit children.
+    let current: MctsNode = bestChild;
+    while (current.children.length > 0) {
+      let bestVisitChild = current.children[0]!;
+      for (let i = 1; i < current.children.length; i += 1) {
+        if (current.children[i]!.visits > bestVisitChild.visits) {
+          bestVisitChild = current.children[i]!;
+        }
+      }
+      current = bestVisitChild;
+    }
+
+    // Use the deepest node's move (partial or complete).
+    const deepestMove = current.partialMove ?? current.move;
+
+    if (deepestMove !== null) {
+      // If we landed on a state node, the move is fully resolved.
+      if (current.nodeKind === 'state') {
+        try {
+          const choiceResult = legalChoicesEvaluate(def, state, deepestMove, undefined, runtime);
+          if (choiceResult.kind !== 'pending' && choiceResult.kind !== 'illegal') {
+            return { move: deepestMove, rng: cursor };
+          }
+        } catch {
+          // Fall through to completion attempt.
+        }
+      }
+
+      // Complete remaining decisions via fast random completion.
+      try {
+        const result = completeTemplateMove(def, state, deepestMove, cursor, runtime);
+        if (result.kind === 'completed') {
+          return { move: result.move, rng: result.rng };
+        }
+        if (result.kind === 'stochasticUnresolved') {
+          cursor = result.rng;
+        }
+      } catch {
+        // Fall through to original template move completion.
+      }
+    }
+
+    // Fall back: try completing the original template move (bestChild.move).
+    const templateMove = bestChild.move as Move;
+    try {
+      const result = completeTemplateMove(def, state, templateMove, cursor, runtime);
+      if (result.kind === 'completed') {
+        return { move: result.move, rng: result.rng };
+      }
+      if (result.kind === 'stochasticUnresolved') {
+        cursor = result.rng;
+      }
+    } catch {
+      // Fall through to sibling/legal-move fallback below.
+    }
+  }
+
+  const bestMove = bestChild.move as Move;
 
   // 1. Fast-path: check if the move is already complete.
   try {
@@ -159,7 +219,11 @@ export class MctsAgent implements Agent {
 
     // Allocate root node and node pool.
     const root = createRootNode(state.playerCount);
-    const poolCapacity = Math.max(this.config.iterations + 1, legalMoves.length * 4);
+    const depthMultiplier = this.config.decisionDepthMultiplier ?? 4;
+    const poolCapacity = Math.max(
+      this.config.iterations * depthMultiplier + 1,
+      legalMoves.length * 4,
+    );
     const pool = createNodePool(poolCapacity, state.playerCount);
 
     // Run MCTS search.

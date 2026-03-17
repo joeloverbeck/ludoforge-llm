@@ -7,7 +7,7 @@ export type { MctsConfig, MctsPreset, MctsRolloutMode } from './config.js';
 export { canonicalMoveKey } from './move-key.js';
 export type { MoveKey } from './move-key.js';
 
-export { createRootNode, createChildNode } from './node.js';
+export { createRootNode, createChildNode, createDecisionChildNode } from './node.js';
 export type { MctsNode, ProvenResult } from './node.js';
 
 export { selectChild } from './isuct.js';
@@ -15,7 +15,8 @@ export { selectChild } from './isuct.js';
 export { maxChildren, shouldExpand, selectExpansionCandidate } from './expansion.js';
 export type { ConcreteMoveCandidate } from './expansion.js';
 
-export { materializeConcreteCandidates, filterAvailableCandidates } from './materialization.js';
+export { classifyMovesForSearch, materializeMovesForRollout, filterAvailableCandidates } from './materialization.js';
+export type { MoveClassification } from './materialization.js';
 
 export { createNodePool } from './node-pool.js';
 export type { NodePool } from './node-pool.js';
@@ -37,5 +38,35 @@ export type { CachedStateInfo, StateInfoCache } from './state-cache.js';
 
 export { collectDiagnostics, createAccumulator } from './diagnostics.js';
 export type { MctsSearchDiagnostics, MutableDiagnosticsAccumulator } from './diagnostics.js';
+
+export type {
+  MctsSearchEvent,
+  MctsSearchStartEvent,
+  MctsIterationBatchEvent,
+  MctsExpansionEvent,
+  MctsDecisionNodeCreatedEvent,
+  MctsDecisionCompletedEvent,
+  MctsDecisionIllegalEvent,
+  MctsMoveDroppedEvent,
+  MctsApplyMoveFailureEvent,
+  MctsPoolExhaustedEvent,
+  MctsSearchCompleteEvent,
+  MctsRootCandidatesEvent,
+  MctsSearchVisitor,
+} from './visitor.js';
+
+export { decisionNodeKey, templateDecisionRootKey } from './decision-key.js';
+
+export { expandDecisionNode } from './decision-expansion.js';
+export type {
+  DecisionExpansionContext,
+  DecisionExpansionResult,
+  DecisionExpandedResult,
+  DecisionCompleteResult,
+  DecisionIllegalResult,
+  DecisionStochasticResult,
+  DecisionPoolExhaustedResult,
+  DiscoverChoicesFn,
+} from './decision-expansion.js';
 
 export { MctsAgent } from './mcts-agent.js';

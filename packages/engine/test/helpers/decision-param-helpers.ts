@@ -168,6 +168,14 @@ const normalizeDecisionParamsForMoveInternal = (
     // Keep canonical illegal-move behavior for callers that assert applyMove failures.
     return move;
   }
+  // When compound SA chaining produces an unresolvable SA decision, preserve the
+  // move as-is so applyMove can still validate compound constraints (e.g. accompanyingOps).
+  if (
+    result.nextDecision?.decisionPath === 'compound.specialActivity'
+    || result.stochasticDecision !== undefined && result.nextDecisionSet?.some((d) => d.decisionPath === 'compound.specialActivity')
+  ) {
+    return result.move;
+  }
   if (preserveIncomplete) {
     return move;
   }

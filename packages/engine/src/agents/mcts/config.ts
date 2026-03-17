@@ -4,6 +4,8 @@
  * All fields are readonly — the config is immutable once validated.
  */
 
+import type { MctsSearchVisitor } from './visitor.js';
+
 /** Allowed rollout policies. */
 const ROLLOUT_POLICIES = ['random', 'epsilonGreedy', 'mast'] as const;
 type RolloutPolicy = (typeof ROLLOUT_POLICIES)[number];
@@ -83,6 +85,15 @@ export interface MctsConfig {
   /** Blending weight for heuristic backup in selection.  0 = pure MC (default). */
   readonly heuristicBackupAlpha?: number;
 
+  /** Threshold for bypassing progressive widening at decision nodes. Default 12. */
+  readonly decisionWideningCap?: number;
+
+  /** Pool sizing multiplier for decision subtrees. Default 4. Must be >= 1. */
+  readonly decisionDepthMultiplier?: number;
+
+  /** Optional search observer for real-time event callbacks. Not validated or frozen. */
+  readonly visitor?: MctsSearchVisitor;
+
   /** Optional internal diagnostics for tuning/tests. */
   readonly diagnostics?: boolean;
 }
@@ -106,6 +117,8 @@ export const DEFAULT_MCTS_CONFIG: MctsConfig = Object.freeze({
   compressForcedSequences: true,
   rootStopConfidenceDelta: 1e-3,
   rootStopMinVisits: 16,
+  decisionWideningCap: 12,
+  decisionDepthMultiplier: 4,
 });
 
 // ---------------------------------------------------------------------------
@@ -162,9 +175,9 @@ export type MctsPreset = 'fast' | 'default' | 'strong';
  * `default` is an empty partial — it resolves to `DEFAULT_MCTS_CONFIG`.
  */
 export const MCTS_PRESETS: Readonly<Record<MctsPreset, Partial<MctsConfig>>> = Object.freeze({
-  fast: Object.freeze({ iterations: 200, maxSimulationDepth: 16, rolloutPolicy: 'mast' as const, timeLimitMs: 2_000, rolloutMode: 'hybrid' as const, hybridCutoffDepth: 4 }),
-  default: Object.freeze({ rolloutPolicy: 'mast' as const, timeLimitMs: 10_000, rolloutMode: 'hybrid' as const, hybridCutoffDepth: 6 }),
-  strong: Object.freeze({ iterations: 5000, maxSimulationDepth: 64, rolloutPolicy: 'mast' as const, templateCompletionsPerVisit: 4, timeLimitMs: 30_000, rolloutMode: 'hybrid' as const, hybridCutoffDepth: 8 }),
+  fast: Object.freeze({ iterations: 200, maxSimulationDepth: 16, rolloutPolicy: 'mast' as const, timeLimitMs: 2_000, rolloutMode: 'hybrid' as const, hybridCutoffDepth: 4, decisionWideningCap: 8, decisionDepthMultiplier: 2 }),
+  default: Object.freeze({ rolloutPolicy: 'mast' as const, timeLimitMs: 10_000, rolloutMode: 'hybrid' as const, hybridCutoffDepth: 6, decisionWideningCap: 12, decisionDepthMultiplier: 4 }),
+  strong: Object.freeze({ iterations: 5000, maxSimulationDepth: 64, rolloutPolicy: 'mast' as const, templateCompletionsPerVisit: 4, timeLimitMs: 30_000, rolloutMode: 'hybrid' as const, hybridCutoffDepth: 8, decisionWideningCap: 20, decisionDepthMultiplier: 6 }),
 });
 
 /** All recognised preset names (for validation). */
@@ -240,6 +253,18 @@ export function validateMctsConfig(partial: Partial<MctsConfig>): MctsConfig {
   if (merged.heuristicBackupAlpha !== undefined) {
     assertRange('heuristicBackupAlpha', merged.heuristicBackupAlpha, 0, 1);
   }
+
+  // Decision widening cap
+  if (merged.decisionWideningCap !== undefined) {
+    assertPositiveInt('decisionWideningCap', merged.decisionWideningCap);
+  }
+
+  // Decision depth multiplier
+  if (merged.decisionDepthMultiplier !== undefined) {
+    assertPositiveInt('decisionDepthMultiplier', merged.decisionDepthMultiplier);
+  }
+
+  // visitor: pass through without validation (callback, not tuneable).
 
   return Object.freeze(merged);
 }

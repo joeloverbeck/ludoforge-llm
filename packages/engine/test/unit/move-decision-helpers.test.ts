@@ -95,7 +95,7 @@ describe('move decision helpers', () => {
           makeState(),
           (request) => pickDeterministicDecisionValue(request),
         ),
-      /Scripted move could not be completed for actionId=op: choice="\$target" options=0 min=0/,
+      /Scripted move could not be completed for actionId=op: illegal=emptyDomain/,
     );
   });
 

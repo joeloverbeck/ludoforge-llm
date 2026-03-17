@@ -19,10 +19,15 @@ import { legalMoves } from '../../kernel/legal-moves.js';
 import { applyMove } from '../../kernel/apply-move.js';
 import { terminalResult } from '../../kernel/terminal.js';
 import { fork } from '../../kernel/prng.js';
-import { selectChild } from './isuct.js';
+import { selectChild, selectDecisionChild } from './isuct.js';
 import { shouldExpand, selectExpansionCandidate } from './expansion.js';
-import { materializeOrFastPath, filterAvailableCandidates } from './materialization.js';
-import { rollout, simulateToCutoff } from './rollout.js';
+import { classifyMovesForSearch, filterAvailableCandidates } from './materialization.js';
+import type { MoveClassification } from './materialization.js';
+import { templateDecisionRootKey } from './decision-key.js';
+import { expandDecisionNode } from './decision-expansion.js';
+import type { DecisionExpansionContext } from './decision-expansion.js';
+import { canonicalMoveKey } from './move-key.js';
+import { rollout, simulateToCutoff, resolveDecisionBoundary } from './rollout.js';
 import type { SimulationResult } from './rollout.js';
 import { terminalToRewards, evaluateForAllPlayers } from './evaluate.js';
 import { sampleBeliefState } from './belief.js';
@@ -153,6 +158,7 @@ export function runOneIteration(
   mastStats?: MastStats,
   stateCache?: StateInfoCache,
   maxCacheEntries?: number,
+  iterationIndex: number = 0,
 ): { readonly rng: Rng } {
   let currentNode = root;
   let currentState = sampledState;
@@ -169,6 +175,132 @@ export function runOneIteration(
   const selStart = acc !== undefined ? performance.now() : 0;
 
   while (true) {
+    // ── DECISION NODE PATH ─────────────────────────────────────────────
+    // Decision nodes share game state from their nearest ancestor state
+    // node.  Traversal is a pure tree walk — no kernel calls.
+    if (currentNode.nodeKind === 'decision') {
+      const decisionPlayer = currentNode.decisionPlayer!;
+
+      if (currentNode.children.length === 0) {
+        // Need to expand this decision node via legalChoicesDiscover.
+        const ctx: DecisionExpansionContext = {
+          def,
+          state: currentState,
+          playerCount: sampledState.playerCount,
+          decisionWideningCap: config.decisionWideningCap ?? 12,
+          ...(config.visitor !== undefined ? { visitor: config.visitor } : {}),
+          ...(acc !== undefined ? { accumulator: acc } : {}),
+          ...(runtime !== undefined ? { runtime } : {}),
+        };
+
+        const expansionResult = expandDecisionNode(currentNode, pool, ctx);
+
+        switch (expansionResult.kind) {
+          case 'complete': {
+            // Decision sequence resolved — applyMove exactly once.
+            try {
+              const applied = applyMove(
+                def, currentState, expansionResult.move, undefined, runtime,
+              );
+              if (acc !== undefined) { acc.applyMoveCalls += 1; }
+              currentState = applied.state;
+
+              // Create a state child node for the completed move.
+              let stateChild: MctsNode;
+              try {
+                stateChild = pool.allocate();
+              } catch {
+                // Pool exhausted after decision completion — emit event, backprop from current.
+                if (config.visitor?.onEvent) {
+                  config.visitor.onEvent({
+                    type: 'poolExhausted',
+                    capacity: pool.capacity,
+                    iteration: iterationIndex,
+                  });
+                }
+                break;
+              }
+              const completedMoveKey = canonicalMoveKey(expansionResult.move);
+              (stateChild as { move: Move | null }).move = expansionResult.move;
+              (stateChild as { moveKey: MoveKey | null }).moveKey = completedMoveKey;
+              (stateChild as { parent: MctsNode | null }).parent = currentNode;
+              stateChild.availability = 1;
+              currentNode.children.push(stateChild);
+
+              currentNode = stateChild;
+              selectionDepth += 1;
+              selectionMoveKeys.push(completedMoveKey);
+
+              // Capture heuristic prior at the new state node.
+              stateChild.heuristicPrior = [...evaluateForAllPlayers(
+                def, currentState, config.heuristicTemperature, runtime,
+              )];
+            } catch (e: unknown) {
+              // applyMove failed on completed decision — emit failure, backprop from here.
+              if (config.visitor?.onEvent) {
+                config.visitor.onEvent({
+                  type: 'applyMoveFailure',
+                  actionId: expansionResult.move.actionId,
+                  phase: 'expansion',
+                  error: String(e),
+                });
+              }
+              if (acc !== undefined) { acc.expansionApplyMoveFailures += 1; }
+            }
+            break; // Proceed to simulation.
+          }
+
+          case 'expanded': {
+            // Select among new children using standard UCT.
+            const selected = selectDecisionChild(
+              currentNode, decisionPlayer, config.explorationConstant,
+              expansionResult.children,
+            );
+            currentNode = selected;
+            selectionDepth += 1;
+            if (selected.moveKey !== null) {
+              selectionMoveKeys.push(selected.moveKey);
+            }
+            continue; // Continue selection in decision subtree.
+          }
+
+          case 'illegal': {
+            // Path is pruned — break to backprop from here.
+            break;
+          }
+
+          case 'stochastic': {
+            // Stochastic decision — not supported in tree, break.
+            break;
+          }
+
+          case 'poolExhausted': {
+            // Pool exhausted — break to backprop from here.
+            break;
+          }
+        }
+        break; // All non-continue cases break out of while loop.
+      }
+
+      // Node already has children — select among them using standard UCT.
+      if (currentNode.children.length > 0) {
+        const selected = selectDecisionChild(
+          currentNode, decisionPlayer, config.explorationConstant,
+          currentNode.children,
+        );
+        currentNode = selected;
+        selectionDepth += 1;
+        if (selected.moveKey !== null) {
+          selectionMoveKeys.push(selected.moveKey);
+        }
+        continue; // Continue traversal through decision subtree.
+      }
+
+      // No children and not expandable — treat as leaf.
+      break;
+    }
+
+    // ── STATE NODE PATH ────────────────────────────────────────────────
     // Determine legal moves at this node in the sampled state.
     const movesAtNode: readonly Move[] =
       currentNode === root
@@ -185,32 +317,78 @@ export function runOneIteration(
       break;
     }
 
-    // Materialize concrete candidates from possibly-template moves.
-    const matResult = materializeOrFastPath(
-      def,
-      currentState,
-      movesAtNode,
-      currentRng,
-      config.templateCompletionsPerVisit,
-      runtime,
+    // Classify all legal moves at this state node via runtime readiness
+    // (legalChoicesEvaluate per move — no compile-time shortcuts).
+    const classification: MoveClassification = classifyMovesForSearch(
+      def, currentState, movesAtNode, runtime, config.visitor,
     );
-    const { candidates } = matResult;
-    currentRng = matResult.rng;
-    if (acc !== undefined && !matResult.fastPath) {
+    const candidates = classification.ready;
+    if (acc !== undefined) {
       acc.materializeCalls += 1;
     }
 
-    if (candidates.length === 0) {
+    // ── Decision root creation for pending moves ────────────────────
+    // Each unique pending actionId gets a decision root child node.
+    // When selection picks a decision root, it enters the decision
+    // subtree and expands via expandDecisionNode.
+    const actingPlayerForDecision = currentState.activePlayer as PlayerId;
+    for (const pendingMove of classification.pending) {
+      const rootKey = templateDecisionRootKey(pendingMove.actionId);
+
+      // Check if a decision root for this action already exists.
+      let alreadyExists = false;
+      for (const child of currentNode.children) {
+        if (child.moveKey === rootKey) {
+          alreadyExists = true;
+          break;
+        }
+      }
+      if (alreadyExists) {
+        continue;
+      }
+
+      // Allocate a decision root node from the pool.
+      let decisionRoot: MctsNode;
+      try {
+        decisionRoot = pool.allocate();
+      } catch {
+        // Pool exhausted — emit event, stop creating decision roots.
+        if (config.visitor?.onEvent) {
+          config.visitor.onEvent({
+            type: 'poolExhausted',
+            capacity: pool.capacity,
+            iteration: iterationIndex,
+          });
+        }
+        break;
+      }
+
+      // Wire as a decision root child of the current state node.
+      (decisionRoot as { move: Move | null }).move = pendingMove;
+      (decisionRoot as { moveKey: MoveKey | null }).moveKey = rootKey;
+      (decisionRoot as { parent: MctsNode | null }).parent = currentNode;
+      decisionRoot.nodeKind = 'decision';
+      decisionRoot.decisionPlayer = actingPlayerForDecision;
+      decisionRoot.partialMove = pendingMove;
+      decisionRoot.decisionBinding = null;
+      decisionRoot.availability = 1;
+      currentNode.children.push(decisionRoot);
+    }
+
+    // Total available candidates includes both ready and pending moves.
+    const totalCandidateCount = candidates.length + classification.pending.length;
+
+    if (totalCandidateCount === 0) {
       break;
     }
 
     // ── Forced-sequence compression ────────────────────────────────
-    // When there is exactly one concrete candidate, skip node allocation
-    // and advance the state directly.  This compresses forced sequences
-    // into a single tree edge.
+    // Only applies when there is exactly one ready candidate and no
+    // pending moves needing decision roots.
     if (
       config.compressForcedSequences !== false &&
-      candidates.length === 1
+      candidates.length === 1 &&
+      classification.pending.length === 0
     ) {
       // Safety cap: break if forced plies exceed the limit.
       if (forcedPlies >= maxForcedPlies) {
@@ -267,7 +445,7 @@ export function runOneIteration(
     // ── Expansion check ──────────────────────────────────────────────
     if (
       shouldExpand(currentNode, config.progressiveWideningK, config.progressiveWideningAlpha) &&
-      availableChildren.length < candidates.length
+      availableChildren.length < totalCandidateCount
     ) {
       // There are unexpanded candidates — try to expand one.
       const unexpanded = filterAvailableCandidates(currentNode, candidates);
@@ -288,11 +466,25 @@ export function runOneIteration(
           actingPlayer,
           currentRng,
           runtime,
+          config.visitor,
         );
         currentRng = postExpansion;
 
         // Allocate a child node from the pool.
-        const childNode = pool.allocate();
+        let childNode: MctsNode;
+        try {
+          childNode = pool.allocate();
+        } catch {
+          // Pool exhausted — emit event, skip expansion, backprop from current.
+          if (config.visitor?.onEvent) {
+            config.visitor.onEvent({
+              type: 'poolExhausted',
+              capacity: pool.capacity,
+              iteration: iterationIndex,
+            });
+          }
+          break;
+        }
         // Wire the child into the tree — we must set its fields manually
         // because pool.allocate() returns a reset root-style node.
         (childNode as { move: Move | null }).move = chosen.move;
@@ -336,6 +528,15 @@ export function runOneIteration(
     if (solverActive) {
       const solverChild = selectSolverAwareChild(currentNode, exploringPlayer);
       if (solverChild !== null) {
+        if (solverChild.nodeKind === 'decision') {
+          // Selected a decision root via solver — enter decision path.
+          currentNode = solverChild;
+          selectionDepth += 1;
+          if (solverChild.moveKey !== null) {
+            selectionMoveKeys.push(solverChild.moveKey);
+          }
+          continue;
+        }
         const applied = applyMove(def, currentState, solverChild.move!, undefined, runtime);
         if (acc !== undefined) {
           acc.applyMoveCalls += 1;
@@ -357,6 +558,16 @@ export function runOneIteration(
       availableChildren,
       config.heuristicBackupAlpha ?? 0,
     );
+
+    if (selected.nodeKind === 'decision') {
+      // Selected a decision root — enter decision path (no applyMove).
+      currentNode = selected;
+      selectionDepth += 1;
+      if (selected.moveKey !== null) {
+        selectionMoveKeys.push(selected.moveKey);
+      }
+      continue;
+    }
 
     // Apply the selected child's move to advance the state.
     const applied = applyMove(def, currentState, selected.move!, undefined, runtime);
@@ -380,11 +591,41 @@ export function runOneIteration(
     acc.selectionDepths.push(selectionDepth);
   }
 
+  // ── Decision boundary resolution ────────────────────────────────────
+  // When selection exits at a decision node (partially completed move),
+  // complete remaining decisions via random completion before simulation.
+  // Decision completion does NOT count toward the simulation cutoff.
+  let boundaryFailed = false;
+
+  if (currentNode.nodeKind === 'decision' && currentNode.partialMove !== null) {
+    const boundary = resolveDecisionBoundary(
+      def, currentState, currentNode.partialMove, currentRng, runtime, acc,
+    );
+    if (boundary !== null) {
+      currentState = boundary.state;
+      currentRng = boundary.rng;
+      // Visitor: emit applyMoveFailure phase='rollout' is NOT needed here
+      // because resolveDecisionBoundary handled it internally.
+    } else {
+      // Failed completion — flag for zero-reward backpropagation below.
+      boundaryFailed = true;
+    }
+  }
+
   // ── Simulation (rollout mode dispatch) ──────────────────────────────
   const simStart = acc !== undefined ? performance.now() : 0;
   let simResult: SimulationResult;
 
-  switch (config.rolloutMode) {
+  if (boundaryFailed) {
+    // Decision boundary failed — skip simulation entirely.
+    simResult = {
+      state: currentState,
+      terminal: null,
+      rng: currentRng,
+      depth: 0,
+      traversedMoveKeys: [],
+    };
+  } else switch (config.rolloutMode) {
     case 'legacy':
       simResult = rollout(def, currentState, currentRng, config, runtime, acc, stateCache, maxCacheEntries);
       break;
@@ -416,7 +657,10 @@ export function runOneIteration(
   // ── Evaluation ───────────────────────────────────────────────────────
   const evalStart = acc !== undefined ? performance.now() : 0;
   let rewards: readonly number[];
-  if (simResult.terminal !== null) {
+  if (boundaryFailed) {
+    // Failed decision boundary — zero rewards (loss penalty).
+    rewards = new Array<number>(sampledState.playerCount).fill(0);
+  } else if (simResult.terminal !== null) {
     rewards = terminalToRewards(simResult.terminal, sampledState.playerCount);
   } else {
     // Check terminal on simulation end state.
@@ -474,6 +718,30 @@ export function runOneIteration(
 }
 
 // ---------------------------------------------------------------------------
+// Visitor helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Collect the top root children sorted by visits descending (capped at 10).
+ * Used for `iterationBatch` visitor events.
+ */
+function getTopChildren(
+  root: MctsNode,
+): readonly { readonly actionId: string; readonly visits: number }[] {
+  const visited: { readonly actionId: string; readonly visits: number }[] = [];
+  for (const child of root.children) {
+    if (child.visits > 0 && child.move !== null) {
+      visited.push({ actionId: child.move.actionId, visits: child.visits });
+    }
+  }
+  visited.sort((a, b) => b.visits - a.visits);
+  if (visited.length > 10) {
+    visited.length = 10;
+  }
+  return visited;
+}
+
+// ---------------------------------------------------------------------------
 // Main search loop
 // ---------------------------------------------------------------------------
 
@@ -506,6 +774,56 @@ export function runSearch(
   // Diagnostics instrumentation.
   const acc = config.diagnostics === true ? createAccumulator() : undefined;
   const searchStart = config.diagnostics === true ? performance.now() : undefined;
+
+  // ── Visitor: emit searchStart ──────────────────────────────────────────
+  const onEvent = config.visitor?.onEvent;
+  const visitorStart = onEvent !== undefined ? performance.now() : 0;
+
+  if (onEvent !== undefined) {
+    // Classify root moves once for the visitor start/candidates events.
+    // This is cheap (one legalChoicesEvaluate per move) and only runs once.
+    const visitorClassification = classifyMovesForSearch(
+      def, state, rootLegalMoves, runtime, config.visitor,
+    );
+
+    onEvent({
+      type: 'searchStart',
+      totalIterations: config.iterations,
+      legalMoveCount: rootLegalMoves.length,
+      readyCount: visitorClassification.ready.length,
+      pendingCount: visitorClassification.pending.length,
+      poolCapacity: pool.capacity,
+    });
+
+    // Emit rootCandidates with ready/pending breakdown.
+    const readyEntries: { readonly actionId: string; readonly moveKey: MoveKey }[] = [];
+    for (const candidate of visitorClassification.ready) {
+      readyEntries.push({ actionId: candidate.move.actionId, moveKey: candidate.moveKey });
+    }
+    const pendingEntries: { readonly actionId: string }[] = [];
+    for (const move of visitorClassification.pending) {
+      pendingEntries.push({ actionId: move.actionId });
+    }
+    onEvent({
+      type: 'rootCandidates',
+      ready: readyEntries,
+      pending: pendingEntries,
+    });
+  }
+
+  // ── Visitor: allocation tracking via pool wrapper ──────────────────────
+  let nodesAllocated = 0;
+  const effectivePool: NodePool = onEvent !== undefined
+    ? {
+        get capacity() { return pool.capacity; },
+        allocate() { nodesAllocated += 1; return pool.allocate(); },
+        reset() { pool.reset(); },
+      }
+    : pool;
+
+  // ── Visitor: batch tracking ────────────────────────────────────────────
+  const VISITOR_BATCH_SIZE = 50;
+  let batchFromIteration = 0;
 
   // Check solver activation once at search start.
   const solverActive = canActivateSolver(def, state, config);
@@ -577,17 +895,68 @@ export function runSearch(
       config,
       rootLegalMoves,
       runtime,
-      pool,
+      effectivePool,
       solverActive,
       acc,
       mastStats,
       stateCache,
       maxCacheEntries,
+      iterations,
     );
     // Consume the iteration's RNG output (determinism is via fork chain).
     void result;
 
     iterations += 1;
+
+    // ── Visitor: emit iterationBatch every VISITOR_BATCH_SIZE iterations ──
+    if (
+      onEvent !== undefined &&
+      iterations - batchFromIteration >= VISITOR_BATCH_SIZE
+    ) {
+      onEvent({
+        type: 'iterationBatch',
+        fromIteration: batchFromIteration,
+        toIteration: iterations,
+        rootChildCount: root.children.length,
+        elapsedMs: performance.now() - visitorStart,
+        nodesAllocated,
+        topChildren: getTopChildren(root),
+      });
+      batchFromIteration = iterations;
+    }
+  }
+
+  // ── Visitor: emit final partial batch (if iterations remain since last batch) ──
+  if (onEvent !== undefined && iterations > batchFromIteration) {
+    onEvent({
+      type: 'iterationBatch',
+      fromIteration: batchFromIteration,
+      toIteration: iterations,
+      rootChildCount: root.children.length,
+      elapsedMs: performance.now() - visitorStart,
+      nodesAllocated,
+      topChildren: getTopChildren(root),
+    });
+  }
+
+  // ── Visitor: emit searchComplete ───────────────────────────────────────
+  if (onEvent !== undefined) {
+    let bestActionId = '';
+    let bestVisits = 0;
+    for (const child of root.children) {
+      if (child.visits > bestVisits && child.move !== null) {
+        bestActionId = child.move.actionId;
+        bestVisits = child.visits;
+      }
+    }
+    onEvent({
+      type: 'searchComplete',
+      iterations,
+      stopReason: stopReason as 'confidence' | 'solver' | 'time' | 'iterations',
+      elapsedMs: performance.now() - visitorStart,
+      bestActionId,
+      bestVisits,
+    });
   }
 
   // Collect diagnostics if enabled.

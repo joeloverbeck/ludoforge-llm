@@ -915,7 +915,7 @@ phase: [asPhaseId('main')],
     assert.deepStrictEqual(r2.options.map((option) => option.value), ['gold', 'silver']);
   });
 
-  it('7. chooseN with min >= 1 and empty domain returns ChoiceRequest with options: []', () => {
+  it('7. chooseN with min >= 1 and empty domain returns illegal with emptyDomain reason', () => {
     const action: ActionDef = {
       id: asActionId('emptyDomain'),
 actor: 'active',
@@ -942,16 +942,7 @@ phase: [asPhaseId('main')],
     const state = makeBaseState({ zones: { 'board:none': [], 'hand:0': [] } });
 
     const result = legalChoicesDiscover(def, state, makeMove('emptyDomain'));
-    assert.equal(result.complete, false);
-    assert.equal(result.kind, 'pending');
-    if (result.kind !== 'pending') {
-      throw new Error('expected pending choice');
-    }
-    assert.equal(result.name, '$targets');
-    assert.equal(result.type, 'chooseN');
-    assert.deepStrictEqual(result.options.map((option) => option.value), []);
-    assert.equal(result.min, 1);
-    assert.equal(result.max, 0); // clamped to domain size 0
+    assert.deepStrictEqual(result, { kind: 'illegal', complete: false, reason: 'emptyDomain' });
   });
 
   it('8. legalChoices evaluates let bindings so subsequent options queries reference them correctly', () => {

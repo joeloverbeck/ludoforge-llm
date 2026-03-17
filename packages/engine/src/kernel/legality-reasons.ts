@@ -27,4 +27,10 @@ export const FREE_OPERATION_CHOICE_ILLEGAL_REASONS = [
 ] as const;
 
 export type FreeOperationChoiceIllegalReason = (typeof FREE_OPERATION_CHOICE_ILLEGAL_REASONS)[number];
-export type ChoiceIllegalReason = KernelLegalityOutcome | FreeOperationChoiceIllegalReason;
+
+export const DISCOVERY_ILLEGAL_REASONS = [
+  'emptyDomain',
+] as const;
+
+export type DiscoveryIllegalReason = (typeof DISCOVERY_ILLEGAL_REASONS)[number];
+export type ChoiceIllegalReason = KernelLegalityOutcome | FreeOperationChoiceIllegalReason | DiscoveryIllegalReason;

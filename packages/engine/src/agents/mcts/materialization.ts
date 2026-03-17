@@ -14,149 +14,229 @@ import { legalChoicesEvaluate } from '../../kernel/legal-choices.js';
 import { completeTemplateMove } from '../../kernel/move-completion.js';
 import { canonicalMoveKey } from './move-key.js';
 import type { ConcreteMoveCandidate } from './expansion.js';
+import type { MctsSearchVisitor } from './visitor.js';
 import type { MctsNode } from './node.js';
 
 // ---------------------------------------------------------------------------
-// materializeConcreteCandidates
+// MoveClassification
 // ---------------------------------------------------------------------------
 
 /**
- * Materialize concrete move candidates from a list of (possibly template)
- * legal moves.
+ * Result of classifying legal moves by runtime readiness.
  *
- * Rules:
- * 1. Non-template (fully concrete) moves are yielded as-is with computed moveKey.
- * 2. Template moves are completed up to `limitPerTemplate` times, collecting
- *    unique `MoveKey`s.
- * 3. `stochasticUnresolved` results are skipped (RNG still consumed for
- *    determinism).  These moves have incomplete decision parameters that
- *    may resolve differently against the real state vs. belief samples,
- *    producing unreliable search statistics.
- * 4. `unsatisfiable` results are skipped.
- * 5. All candidates are deduplicated by `MoveKey` (first occurrence wins).
- * 6. The input `legalMoves` array is never mutated.
- *
- * @param def              - game definition
- * @param state            - current game state
- * @param legalMoves       - legal moves (may include templates)
- * @param rng              - search RNG (consumed for template completion randomness)
- * @param limitPerTemplate - max completions to sample per template move
- * @param runtime          - optional pre-built runtime for performance
+ * - `ready`: moves with `legalChoicesEvaluate() → 'complete'` — can be applied directly.
+ * - `pending`: moves with `legalChoicesEvaluate() → 'pending'` — need decision root nodes.
  */
-export function materializeConcreteCandidates(
-  def: GameDef,
-  state: GameState,
-  legalMoves: readonly Move[],
-  rng: Rng,
-  limitPerTemplate: number,
-  runtime?: GameDefRuntime,
-): { readonly candidates: readonly ConcreteMoveCandidate[]; readonly rng: Rng } {
-  const candidates: ConcreteMoveCandidate[] = [];
-  const seenKeys = new Set<string>();
-  let cursor: Rng = rng;
-
-  for (let i = 0; i < legalMoves.length; i += 1) {
-    const move = legalMoves[i]!;
-
-    // Determine if the move is a template by checking for pending decisions.
-    let choiceKind: string;
-    try {
-      choiceKind = legalChoicesEvaluate(def, state, move, undefined, runtime).kind;
-    } catch {
-      // If legalChoicesEvaluate throws (e.g. unknown action), treat as
-      // unsatisfiable and skip.
-      continue;
-    }
-
-    // If the move is illegal according to legalChoicesEvaluate, skip it.
-    if (choiceKind === 'illegal') {
-      continue;
-    }
-
-    if (choiceKind !== 'pending') {
-      // Concrete move — yield as-is (deduplicated).
-      const key = canonicalMoveKey(move);
-      if (!seenKeys.has(key)) {
-        seenKeys.add(key);
-        candidates.push({ move, moveKey: key });
-      }
-      continue;
-    }
-
-    // Template move — complete up to limitPerTemplate times.
-    for (let attempt = 0; attempt < limitPerTemplate; attempt += 1) {
-      const result = completeTemplateMove(def, state, move, cursor, runtime);
-
-      if (result.kind === 'completed') {
-        cursor = result.rng;
-        const key = canonicalMoveKey(result.move);
-        if (!seenKeys.has(key)) {
-          seenKeys.add(key);
-          candidates.push({ move: result.move, moveKey: key });
-        }
-      } else if (result.kind === 'stochasticUnresolved') {
-        // Consume RNG for determinism but do NOT add as candidate.
-        // Stochastic-unresolved moves have incomplete decision parameters
-        // that produce unreliable search statistics across belief samples.
-        cursor = result.rng;
-        break;
-      } else {
-        // unsatisfiable — no further attempts will succeed.
-        break;
-      }
-    }
-  }
-
-  return { candidates, rng: cursor };
+export interface MoveClassification {
+  readonly ready: readonly ConcreteMoveCandidate[];
+  readonly pending: readonly Move[];
 }
 
 // ---------------------------------------------------------------------------
-// materializeOrFastPath
+// classifyMovesForSearch
 // ---------------------------------------------------------------------------
 
 /**
- * Check whether all legal moves come from fully-concrete actions (no template
- * parameters).  If so, skip the expensive `materializeConcreteCandidates()`
- * path and return them directly as `ConcreteMoveCandidate`s.
+ * Classify legal moves by runtime readiness using `legalChoicesEvaluate`.
  *
- * Falls back to `materializeConcreteCandidates()` when any move comes from
- * a template action.
+ * This is the sole move classification entry point for MCTS in-tree search.
+ * All moves are evaluated against the current game state — no compile-time
+ * shortcuts.
+ *
+ * Ready moves are deduplicated by `MoveKey`.  Pending moves are deduplicated
+ * by `actionId` — unless they carry distinct initial params, in which case
+ * they are deduplicated by `canonicalMoveKey`.
+ *
+ * Illegal and pendingStochastic moves are silently dropped.  Moves that throw
+ * during classification are dropped with an optional visitor event.
+ *
+ * This function is **pure** — no RNG state consumed, no side effects beyond
+ * visitor events.
  */
-export function materializeOrFastPath(
+export function classifyMovesForSearch(
+  def: GameDef,
+  state: GameState,
+  moves: readonly Move[],
+  runtime?: GameDefRuntime,
+  visitor?: MctsSearchVisitor,
+): MoveClassification {
+  const ready: ConcreteMoveCandidate[] = [];
+  const pending: Move[] = [];
+  const seenReadyKeys = new Set<string>();
+  const seenPendingKeys = new Set<string>();
+
+  for (let i = 0; i < moves.length; i += 1) {
+    const move = moves[i]!;
+
+    let kind: string;
+    try {
+      kind = legalChoicesEvaluate(def, state, move, undefined, runtime).kind;
+    } catch {
+      if (visitor?.onEvent) {
+        visitor.onEvent({
+          type: 'moveDropped',
+          actionId: move.actionId,
+          reason: 'unsatisfiable',
+        });
+      }
+      continue;
+    }
+
+    switch (kind) {
+      case 'complete': {
+        const key = canonicalMoveKey(move);
+        if (!seenReadyKeys.has(key)) {
+          seenReadyKeys.add(key);
+          ready.push({ move, moveKey: key });
+        }
+        break;
+      }
+      case 'pending': {
+        // Deduplicate by actionId when params are empty, by canonicalMoveKey
+        // when the move carries distinct initial params.
+        const hasParams = Object.keys(move.params).length > 0;
+        const dedupKey = hasParams ? canonicalMoveKey(move) : move.actionId;
+        if (!seenPendingKeys.has(dedupKey)) {
+          seenPendingKeys.add(dedupKey);
+          pending.push(move);
+        }
+        break;
+      }
+      case 'illegal':
+        // Silently skip.
+        break;
+      case 'pendingStochastic':
+        if (visitor?.onEvent) {
+          visitor.onEvent({
+            type: 'moveDropped',
+            actionId: move.actionId,
+            reason: 'stochasticUnresolved',
+          });
+        }
+        break;
+      default:
+        // Unknown kind — skip.
+        break;
+    }
+  }
+
+  return { ready, pending };
+}
+
+// ---------------------------------------------------------------------------
+// materializeMovesForRollout
+// ---------------------------------------------------------------------------
+
+/**
+ * Materialize moves for rollout simulation.
+ *
+ * Ready moves (`legalChoicesEvaluate → 'complete'`) pass through as-is.
+ * Pending moves (`legalChoicesEvaluate → 'pending'`) are completed via
+ * `completeTemplateMove()` (random parameter filling) up to
+ * `limitPerTemplate` attempts per move.  This is the correct behavior
+ * for the simulation phase where we don't build decision tree nodes.
+ *
+ * Illegal and pendingStochastic moves are dropped.  Moves that throw
+ * during classification are dropped with an optional visitor event.
+ *
+ * All candidates are deduplicated by `MoveKey`.
+ */
+export function materializeMovesForRollout(
   def: GameDef,
   state: GameState,
   moves: readonly Move[],
   rng: Rng,
   limitPerTemplate: number,
-  runtime: GameDefRuntime,
-): { readonly candidates: readonly ConcreteMoveCandidate[]; readonly rng: Rng; readonly fastPath: boolean } {
-  // Check if all moves come from fully-concrete actions.
-  const concreteIds = runtime.concreteActionIds;
-  let allConcrete = true;
+  runtime?: GameDefRuntime,
+  visitor?: MctsSearchVisitor,
+): { readonly candidates: readonly ConcreteMoveCandidate[]; readonly rng: Rng } {
+  const candidates: ConcreteMoveCandidate[] = [];
+  const seenKeys = new Set<string>();
+  let cursor: Rng = rng;
+
   for (let i = 0; i < moves.length; i += 1) {
-    if (!concreteIds.has(moves[i]!.actionId)) {
-      allConcrete = false;
-      break;
-    }
-  }
+    const move = moves[i]!;
 
-  if (allConcrete) {
-    // Fast path: convert moves directly to candidates without materialization.
-    const candidates: ConcreteMoveCandidate[] = [];
-    const seenKeys = new Set<string>();
-    for (let i = 0; i < moves.length; i += 1) {
-      const key = canonicalMoveKey(moves[i]!);
-      if (!seenKeys.has(key)) {
-        seenKeys.add(key);
-        candidates.push({ move: moves[i]!, moveKey: key });
+    // Classify every move via legalChoicesEvaluate — no compile-time shortcuts.
+    let kind: string;
+    try {
+      kind = legalChoicesEvaluate(def, state, move, undefined, runtime).kind;
+    } catch {
+      if (visitor?.onEvent) {
+        visitor.onEvent({
+          type: 'moveDropped',
+          actionId: move.actionId,
+          reason: 'unsatisfiable',
+        });
       }
+      continue;
     }
-    return { candidates, rng, fastPath: true };
+
+    switch (kind) {
+      case 'complete': {
+        const key = canonicalMoveKey(move);
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          candidates.push({ move, moveKey: key });
+        }
+        break;
+      }
+      case 'pending': {
+        // Complete via random parameter filling, up to limitPerTemplate attempts.
+        for (let attempt = 0; attempt < limitPerTemplate; attempt += 1) {
+          const result = completeTemplateMove(def, state, move, cursor, runtime);
+
+          if (result.kind === 'completed') {
+            cursor = result.rng;
+            const key = canonicalMoveKey(result.move);
+            if (!seenKeys.has(key)) {
+              seenKeys.add(key);
+              candidates.push({ move: result.move, moveKey: key });
+            }
+          } else if (result.kind === 'stochasticUnresolved') {
+            // Consume RNG for determinism but do NOT add as candidate.
+            cursor = result.rng;
+            if (visitor?.onEvent) {
+              visitor.onEvent({
+                type: 'moveDropped',
+                actionId: move.actionId,
+                reason: 'stochasticUnresolved',
+              });
+            }
+            break;
+          } else {
+            // unsatisfiable — no further attempts will succeed.
+            if (visitor?.onEvent) {
+              visitor.onEvent({
+                type: 'moveDropped',
+                actionId: move.actionId,
+                reason: 'unsatisfiable',
+              });
+            }
+            break;
+          }
+        }
+        break;
+      }
+      case 'illegal':
+        // Silently skip.
+        break;
+      case 'pendingStochastic':
+        if (visitor?.onEvent) {
+          visitor.onEvent({
+            type: 'moveDropped',
+            actionId: move.actionId,
+            reason: 'stochasticUnresolved',
+          });
+        }
+        break;
+      default:
+        // Unknown kind — skip.
+        break;
+    }
   }
 
-  // Slow path: full materialization.
-  const result = materializeConcreteCandidates(def, state, moves, rng, limitPerTemplate, runtime);
-  return { ...result, fastPath: false };
+  return { candidates, rng: cursor };
 }
 
 // ---------------------------------------------------------------------------

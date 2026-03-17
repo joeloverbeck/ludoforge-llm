@@ -311,7 +311,7 @@ export function expandDecisionNode(
     throw new Error('expandDecisionNode: node.decisionPlayer must not be null');
   }
 
-  const response = discover(def, state, partialMove, undefined, runtime);
+  const response = discover(def, state, partialMove, { chainCompoundSA: true }, runtime);
 
   return handleChoiceResponse(
     response, node, pool, partialMove, decisionPlayer, ctx,
@@ -393,7 +393,7 @@ function expandPendingDecision(
     const advancedMove = advancePartialMove(partialMove, decisionKey, singleOption.value, request.decisionPath);
 
     const discover = ctx.discoverChoices ?? legalChoicesDiscover;
-    const nextResponse = discover(def, state, advancedMove, undefined, ctx.runtime);
+    const nextResponse = discover(def, state, advancedMove, { chainCompoundSA: true }, ctx.runtime);
 
     // Update the parent node's partialMove in place (mutable -- MCTS exception).
     parentNode.partialMove = advancedMove;

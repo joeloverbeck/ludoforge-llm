@@ -133,6 +133,14 @@ export interface LegalChoicesRuntimeOptions {
   readonly collectDiagnostics?: boolean;
   /** Callback invoked with diagnostics after a chooseN resolution completes. Only called when collectDiagnostics is true. */
   readonly onChooseNDiagnostics?: (diagnostics: ChooseNDiagnostics) => void;
+  /**
+   * When true, `legalChoicesDiscover` chains into compound special-activity
+   * decisions after the main action returns `complete`.  Default `false`.
+   *
+   * Enable for MCTS incremental decision expansion.  Leave off for
+   * normalization/replay callers that handle SA normalization separately.
+   */
+  readonly chainCompoundSA?: boolean;
 }
 
 interface LegalChoicesInternalOptions extends LegalChoicesRuntimeOptions {
@@ -1051,7 +1059,7 @@ const discoverCompoundSAChoices = (
   def: GameDef,
   state: GameState,
   partialMove: Move,
-  shouldEvaluateOptionLegality: boolean,
+  _shouldEvaluateOptionLegality: boolean,
   options?: LegalChoicesInternalOptions,
   runtime?: GameDefRuntime,
 ): ChoiceRequest => {
@@ -1065,8 +1073,12 @@ const discoverCompoundSAChoices = (
     );
   }
 
+  // Always disable option legality validation for SA discovery.  The SA is
+  // evaluated against the pre-main-op state, which may differ from the
+  // post-main-op state the SA was authored against.  applyMove will catch
+  // truly illegal selections when the compound move is executed.
   const saContext = prepareLegalChoicesContext(def, state, sa, runtime);
-  const saResult = legalChoicesWithPreparedContextStrict(saContext, sa, shouldEvaluateOptionLegality, options);
+  const saResult = legalChoicesWithPreparedContextStrict(saContext, sa, false, options);
   return tagSADecisionPath(saResult);
 };
 
@@ -1087,6 +1099,31 @@ const maybeChainCompoundSA = (
   if (result.kind !== 'complete' || partialMove.compound?.specialActivity === undefined) {
     return result;
   }
+
+  // SA completeness check: probe the SA without option legality validation.
+  // If the SA's params already satisfy all required decisions, the compound
+  // move is fully resolved — return `complete` without re-discovery.
+  // This prevents resolveMoveDecisionSequence from re-routing already-filled
+  // SA params through the decision-key system against the pre-main-op state.
+  //
+  // The probe checks moveParams by decision key.  Externally-specified moves
+  // (e.g. from test harnesses or playbook replay) may use named bind keys
+  // like `$targetSpaces` instead of decision keys.  When the probe reports
+  // `pending` but the pending decision's bind name is already present in
+  // `sa.params`, the SA is complete under named keys — skip chaining.
+  const sa = partialMove.compound.specialActivity;
+  const saAction = findAction(def, sa.actionId);
+  if (saAction !== undefined) {
+    const saContext = prepareLegalChoicesContext(def, state, sa, runtime);
+    const saProbe = legalChoicesWithPreparedContextStrict(saContext, sa, false, options);
+    if (saProbe.kind === 'complete') {
+      return result; // SA already fully resolved via decision keys
+    }
+    if (saProbe.kind === 'pending' && sa.params[saProbe.name] !== undefined) {
+      return result; // SA has named param for pending decision — externally specified
+    }
+  }
+
   return discoverCompoundSAChoices(def, state, partialMove, shouldEvaluateOptionLegality, options, runtime);
 };
 
@@ -1101,6 +1138,9 @@ export function legalChoicesDiscover(
   const context = prepareLegalChoicesContext(def, state, partialMove, runtime);
   options?.onProbeContextPrepared?.();
   const result = legalChoicesWithPreparedContextStrict(context, partialMove, false, options);
+  if (options?.chainCompoundSA !== true) {
+    return coerceEmptyDomainToIllegal(result);
+  }
   return coerceEmptyDomainToIllegal(
     maybeChainCompoundSA(result, def, state, partialMove, false, options, runtime),
   );

@@ -1,6 +1,6 @@
 # 63COMPDSACHAIN-001: Fix Compound SA Chaining Regression in legalChoicesEvaluate
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel/legal-choices.ts, possibly move-decision-sequence.ts
@@ -125,3 +125,13 @@ The FITL playbook golden test must return to 9/9 pass after the fix.
 1. `node --test dist/test/e2e/fitl-playbook-golden.test.js` (regression recovery)
 2. `node --test dist/test/unit/kernel/legal-choices-compound.test.js` (targeted)
 3. `pnpm -F @ludoforge/engine test` (full suite)
+
+## Outcome
+
+- **Completion date**: 2026-03-17
+- **What changed**:
+  - `packages/engine/src/kernel/legal-choices.ts`: Added `chainCompoundSA` opt-in flag to `LegalChoicesRuntimeOptions`. SA chaining in `legalChoicesDiscover` only activates when `chainCompoundSA: true`. Added SA completeness check in `maybeChainCompoundSA` (decision-key probe + named-param fallback). `discoverCompoundSAChoices` always uses `shouldEvaluateOptionLegality: false`.
+  - `packages/engine/src/agents/mcts/decision-expansion.ts`: Both `expandDecisionNode` call sites pass `{ chainCompoundSA: true }`.
+  - `packages/engine/test/unit/kernel/legal-choices-compound.test.ts`: 3 new regression tests for fully-resolved compound moves. Existing SA chaining tests updated to pass `{ chainCompoundSA: true }`.
+- **Deviations from original plan**: Ticket recommended Approach D (completeness check + disable option legality). Implementation followed this but added `chainCompoundSA` opt-in because the root cause was broader than anticipated: SA chaining affected all `legalChoicesDiscover` callers (including `resolveMoveDecisionSequence` used by normalization/replay), not just MCTS. The opt-in flag isolates SA chaining to MCTS while preserving main-branch behavior for other callers. Also added named-param fallback in the completeness check because kernel's effect walker looks up params by decision key, not bind name.
+- **Verification**: Compound tests 18/18, golden test 9/9, full suite 4938/4949 (11 pre-existing failures, 0 new).

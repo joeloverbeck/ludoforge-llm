@@ -132,7 +132,7 @@ describe('legalChoicesDiscover() compound SA chaining', () => {
       timing: 'after',
     });
 
-    const result = legalChoicesDiscover(def, state, move);
+    const result = legalChoicesDiscover(def, state, move, { chainCompoundSA: true });
     assert.equal(result.kind, 'pending');
     const pending = result as ChoicePendingRequest;
     // SA decision is presented with decisionPath
@@ -153,7 +153,7 @@ describe('legalChoicesDiscover() compound SA chaining', () => {
       timing: 'after',
     });
 
-    const result = legalChoicesDiscover(def, state, move);
+    const result = legalChoicesDiscover(def, state, move, { chainCompoundSA: true });
     assert.equal(result.kind, 'complete');
   });
 
@@ -193,7 +193,7 @@ describe('legalChoicesDiscover() compound SA chaining', () => {
       timing: 'after',
     });
 
-    const result = legalChoicesDiscover(def, state, move);
+    const result = legalChoicesDiscover(def, state, move, { chainCompoundSA: true });
     assert.equal(result.kind, 'complete');
   });
 
@@ -214,7 +214,7 @@ describe('legalChoicesDiscover() compound SA chaining', () => {
       specialActivity: { actionId: asActionId('govern'), params: {} },
       timing: 'after',
     });
-    const r1 = legalChoicesDiscover(def, state, move1);
+    const r1 = legalChoicesDiscover(def, state, move1, { chainCompoundSA: true });
     assert.equal(r1.kind, 'pending');
     assert.equal((r1 as ChoicePendingRequest).name, '$city');
     assert.equal((r1 as ChoicePendingRequest).decisionPath, 'compound.specialActivity');
@@ -224,7 +224,7 @@ describe('legalChoicesDiscover() compound SA chaining', () => {
       specialActivity: { actionId: asActionId('govern'), params: { '$city': 'X' } },
       timing: 'after',
     });
-    const r2 = legalChoicesDiscover(def, state, move2);
+    const r2 = legalChoicesDiscover(def, state, move2, { chainCompoundSA: true });
     assert.equal(r2.kind, 'pending');
     assert.equal((r2 as ChoicePendingRequest).name, '$level');
     assert.equal((r2 as ChoicePendingRequest).decisionPath, 'compound.specialActivity');
@@ -237,7 +237,7 @@ describe('legalChoicesDiscover() compound SA chaining', () => {
       },
       timing: 'after',
     });
-    const r3 = legalChoicesDiscover(def, state, move3);
+    const r3 = legalChoicesDiscover(def, state, move3, { chainCompoundSA: true });
     assert.equal(r3.kind, 'complete');
   });
 
@@ -253,7 +253,7 @@ describe('legalChoicesDiscover() compound SA chaining', () => {
       specialActivity: { actionId: asActionId('govern'), params: {} },
       timing: 'before',
     });
-    const result = legalChoicesDiscover(def, state, move);
+    const result = legalChoicesDiscover(def, state, move, { chainCompoundSA: true });
     assert.equal(result.kind, 'pending');
     assert.equal((result as ChoicePendingRequest).decisionPath, 'compound.specialActivity');
   });
@@ -269,7 +269,7 @@ describe('legalChoicesDiscover() compound SA chaining', () => {
       timing: 'during',
       insertAfterStage: 0,
     });
-    const result = legalChoicesDiscover(def, state, move);
+    const result = legalChoicesDiscover(def, state, move, { chainCompoundSA: true });
     assert.equal(result.kind, 'pending');
     assert.equal((result as ChoicePendingRequest).decisionPath, 'compound.specialActivity');
   });
@@ -286,7 +286,7 @@ describe('legalChoicesDiscover() compound SA chaining', () => {
       timing: 'after',
     });
     assert.throws(
-      () => legalChoicesDiscover(def, state, move),
+      () => legalChoicesDiscover(def, state, move, { chainCompoundSA: true }),
       (error: unknown) => {
         return error instanceof Error && error.message.includes('nonExistentSA');
       },
@@ -316,7 +316,7 @@ describe('legalChoicesDiscover() compound SA chaining', () => {
       specialActivity: { actionId: asActionId('govern'), params: {} },
       timing: 'after',
     });
-    const result = legalChoicesDiscover(def, state, move);
+    const result = legalChoicesDiscover(def, state, move, { chainCompoundSA: true });
     // SA is illegal due to phase mismatch — tagSADecisionPath passes 'illegal' through unchanged
     assert.equal(result.kind, 'illegal');
   });
@@ -363,7 +363,7 @@ describe('legalChoicesDiscover() compound SA chaining', () => {
       specialActivity: { actionId: asActionId('govern'), params: {} },
       timing: 'after',
     });
-    const r1 = legalChoicesDiscover(def, state, move1);
+    const r1 = legalChoicesDiscover(def, state, move1, { chainCompoundSA: true });
     assert.equal(r1.kind, 'pending');
     assert.equal((r1 as ChoicePendingRequest).name, '$unit');
     assert.equal((r1 as ChoicePendingRequest).decisionPath, undefined);
@@ -373,10 +373,64 @@ describe('legalChoicesDiscover() compound SA chaining', () => {
       specialActivity: { actionId: asActionId('govern'), params: {} },
       timing: 'after',
     });
-    const r2 = legalChoicesDiscover(def, state, move2);
+    const r2 = legalChoicesDiscover(def, state, move2, { chainCompoundSA: true });
     assert.equal(r2.kind, 'pending');
     assert.equal((r2 as ChoicePendingRequest).name, '$city');
     assert.equal((r2 as ChoicePendingRequest).decisionPath, 'compound.specialActivity');
+  });
+
+  // ---- Fully-resolved compound moves (regression for 63COMPDSACHAIN-001) ----
+
+  it('legalChoicesEvaluate with fully-resolved compound move returns complete', () => {
+    const mainAction = makeAction('train', [chooseOneEffect('$province', ['A', 'B'])]);
+    const saAction = makeAction('govern', [chooseOneEffect('$city', ['X', 'Y'])]);
+    const def = makeBaseDef({ actions: [mainAction, saAction] });
+    const state = makeBaseState();
+
+    const move = makeMove('train', { '$province': 'A' }, {
+      specialActivity: { actionId: asActionId('govern'), params: { '$city': 'X' } },
+      timing: 'after',
+    });
+
+    const result = legalChoicesEvaluate(def, state, move);
+    assert.equal(result.kind, 'complete');
+  });
+
+  it('legalChoicesDiscover with fully-resolved compound move returns complete', () => {
+    const mainAction = makeAction('train', [chooseOneEffect('$province', ['A', 'B'])]);
+    const saAction = makeAction('govern', [chooseOneEffect('$city', ['X', 'Y'])]);
+    const def = makeBaseDef({ actions: [mainAction, saAction] });
+    const state = makeBaseState();
+
+    const move = makeMove('train', { '$province': 'A' }, {
+      specialActivity: { actionId: asActionId('govern'), params: { '$city': 'X' } },
+      timing: 'after',
+    });
+
+    const result = legalChoicesDiscover(def, state, move);
+    assert.equal(result.kind, 'complete');
+  });
+
+  it('legalChoicesEvaluate with partially-resolved compound SA returns pending with SA decision', () => {
+    const mainAction = makeAction('train', [chooseOneEffect('$province', ['A', 'B'])]);
+    const saAction = makeAction('govern', [
+      chooseOneEffect('$city', ['X', 'Y']),
+      chooseOneEffect('$level', ['low', 'high']),
+    ]);
+    const def = makeBaseDef({ actions: [mainAction, saAction] });
+    const state = makeBaseState();
+
+    // Main resolved, SA has first decision filled but second pending
+    const move = makeMove('train', { '$province': 'A' }, {
+      specialActivity: { actionId: asActionId('govern'), params: { '$city': 'X' } },
+      timing: 'after',
+    });
+
+    const result = legalChoicesEvaluate(def, state, move);
+    assert.equal(result.kind, 'pending');
+    const pending = result as ChoicePendingRequest;
+    assert.equal(pending.name, '$level');
+    assert.equal(pending.decisionPath, 'compound.specialActivity');
   });
 
   // ---- Action param main op + SA ----
@@ -404,7 +458,7 @@ describe('legalChoicesDiscover() compound SA chaining', () => {
       specialActivity: { actionId: asActionId('govern'), params: {} },
       timing: 'after',
     });
-    const r1 = legalChoicesDiscover(def, state, move1);
+    const r1 = legalChoicesDiscover(def, state, move1, { chainCompoundSA: true });
     assert.equal(r1.kind, 'pending');
     assert.equal((r1 as ChoicePendingRequest).name, 'targetZone');
     assert.equal((r1 as ChoicePendingRequest).decisionPath, undefined);
@@ -414,7 +468,7 @@ describe('legalChoicesDiscover() compound SA chaining', () => {
       specialActivity: { actionId: asActionId('govern'), params: {} },
       timing: 'after',
     });
-    const r2 = legalChoicesDiscover(def, state, move2);
+    const r2 = legalChoicesDiscover(def, state, move2, { chainCompoundSA: true });
     assert.equal(r2.kind, 'pending');
     assert.equal((r2 as ChoicePendingRequest).name, '$city');
     assert.equal((r2 as ChoicePendingRequest).decisionPath, 'compound.specialActivity');
@@ -444,7 +498,7 @@ describe('legalChoicesDiscover() compound SA chaining', () => {
       specialActivity: { actionId: asActionId('govern'), params: {} },
       timing: 'after',
     });
-    const result = legalChoicesDiscover(def, state, move);
+    const result = legalChoicesDiscover(def, state, move, { chainCompoundSA: true });
     assert.equal(result.kind, 'pending');
     const pending = result as ChoicePendingRequest;
     assert.equal(pending.name, 'targetCity');

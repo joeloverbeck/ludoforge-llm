@@ -679,6 +679,68 @@ effectMacros:
           min: 1
           max: { param: maxSpaces }
 
+  # ── insurgent-ambush-select-spaces-any-activity ─────────────────────────
+  # Variant of insurgent-ambush-select-spaces-base that allows ANY guerrilla
+  # (active or underground) — used by Card 99 shaded "even if Active".
+  - id: insurgent-ambush-select-spaces-any-activity
+    params:
+      - { name: faction, type: { kind: enum, values: [NVA, VC] } }
+      - { name: maxSpaces, type: number }
+    exports: [$targetSpaces]
+    effects:
+      - chooseN:
+          bind: $targetSpaces
+          options:
+            query: mapSpaces
+            filter:
+              op: and
+              args:
+                - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: $zone
+                        filter:
+                          op: and
+                          args:
+                            - { prop: faction, op: eq, value:  { param: faction } }
+                            - { prop: type, op: eq, value: guerrilla }
+                  right: 0
+                - op: or
+                  args:
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              op: and
+                              args:
+                                - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
+                      right: 0
+                    - op: and
+                      args:
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                        - op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInAdjacentZones
+                                zone: $zone
+                                filter:
+                                  op: and
+                                  args:
+                                    - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
+                          right: 0
+          min: 1
+          max: { param: maxSpaces }
+
   # ── insurgent-ambush-resolve-spaces ──────────────────────────────────────
   # Shared ambush resolver (NVA/VC):
   # - activate exactly 1 underground attacker guerrilla per selected space
@@ -3791,6 +3853,166 @@ effectMacros:
                                                           filter: { prop: faction, op: eq, value: NVA }
                                                         to: { zoneExpr: 'available-NVA:none' }
 
+  # ── tet-general-uprising ─────────────────────────────────────────────────────
+  # Card-124 "Tet Offensive" General Uprising effects extracted as a reusable
+  # macro so that card-96 shaded (APC) can invoke the same sequence.
+  # Three steps: (1) free Terror in SV spaces with underground VC guerrillas,
+  # (2) place 6 VC pieces in any cities, (3) combined VC+NVA free Attack.
+  - id: tet-general-uprising
+    params: []
+    exports:
+      - $tetTerrorSpaces
+      - $tetTerrorSpace
+      - $tetAttackSpace
+    effects:
+      # ── STEP 1: Free Terror ──
+      # Mandatory in all South Vietnam spaces with underground VC guerrillas.
+      # VC player orders the spaces (matters when terror markers are scarce).
+      - chooseN:
+          bind: $tetTerrorSpaces
+          chooser: VC
+          options:
+            query: mapSpaces
+            filter:
+              op: and
+              args:
+                - op: '=='
+                  left: { ref: zoneProp, zone: $zone, prop: country }
+                  right: southVietnam
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: $zone
+                        filter:
+                          op: and
+                          args:
+                            - { prop: faction, op: eq, value: VC }
+                            - { prop: type, op: eq, value: guerrilla }
+                            - { prop: activity, op: eq, value: underground }
+                  right: 0
+          min:
+            aggregate:
+              op: count
+              query:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - op: '=='
+                      left: { ref: zoneProp, zone: $zone, prop: country }
+                      right: southVietnam
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              op: and
+                              args:
+                                - { prop: faction, op: eq, value: VC }
+                                - { prop: type, op: eq, value: guerrilla }
+                                - { prop: activity, op: eq, value: underground }
+                      right: 0
+          max:
+            aggregate:
+              op: count
+              query:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - op: '=='
+                      left: { ref: zoneProp, zone: $zone, prop: country }
+                      right: southVietnam
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              op: and
+                              args:
+                                - { prop: faction, op: eq, value: VC }
+                                - { prop: type, op: eq, value: guerrilla }
+                                - { prop: activity, op: eq, value: underground }
+                      right: 0
+      - forEach:
+          bind: $tetTerrorSpace
+          over: { query: binding, name: $tetTerrorSpaces }
+          effects:
+            - macro: insurgent-terror-resolve-space
+              args:
+                space: $tetTerrorSpace
+                faction: VC
+                resourceVar: vcResources
+                shiftFromSupportOnly: false
+                free: true
+
+      # ── STEP 2: Place 6 VC pieces in any Cities ──
+      - distributeTokens:
+          tokens:
+            query: tokensInZone
+            zone: available-VC:none
+            filter:
+              op: and
+              args:
+                - { prop: faction, op: eq, value: VC }
+                - prop: type
+                  op: in
+                  value: [guerrilla, base]
+          destinations:
+            query: mapSpaces
+            filter:
+              op: '=='
+              left: { ref: zoneProp, zone: $zone, prop: category }
+              right: city
+          max: 6
+
+      # ── STEP 3: Combined VC+NVA free Attack ──
+      # Mandatory in every space where VC or NVA guerrillas
+      # coexist with any COIN pieces.
+      - forEach:
+          bind: $tetAttackSpace
+          over:
+            query: mapSpaces
+            filter:
+              op: and
+              args:
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: $zone
+                        filter:
+                          op: and
+                          args:
+                            - { prop: faction, op: in, value: [VC, NVA] }
+                            - { prop: type, op: eq, value: guerrilla }
+                  right: 0
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: $zone
+                        filter:
+                          { prop: faction, op: in, value: [US, ARVN] }
+                  right: 0
+          effects:
+            - macro: tet-combined-attack-resolve-space
+              args:
+                space: $tetAttackSpace
+
 conditionMacros:
   # Shared geography predicate: Laos or Cambodia map space.
   - id: fitl-space-in-laos-cambodia
@@ -4138,5 +4360,42 @@ conditionMacros:
             spaceIdExpr: { param: targetSpaceExpr }
             markerId: coupSupportShiftCount
             markerStateExpr: two
+
+  # ── fitl-apc-shift-action-allowed ────────────────────────────────────────────
+  # APC event variant of fitl-coup-support-shift-action-allowed:
+  # identical logic except per-space support-shift cap is one (not two),
+  # enforcing the "shift at most 1 level per space" APC rule.
+  - id: fitl-apc-shift-action-allowed
+    params:
+      - { name: actionExpr, type: value }
+      - { name: requiredActionExpr, type: value }
+      - { name: targetSpaceExpr, type: value }
+      - { name: blockedSupportStateExpr, type: value }
+    condition:
+      op: and
+      args:
+        - { op: '==', left: { param: actionExpr }, right: { param: requiredActionExpr } }
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { param: targetSpaceExpr } }
+                    - { op: '==', left: { ref: zoneVar, zone: $zone, var: terrorCount }, right: 0 }
+          right: 0
+        - conditionMacro: fitl-space-marker-state-is-not
+          args:
+            spaceIdExpr: { param: targetSpaceExpr }
+            markerId: supportOpposition
+            markerStateExpr: { param: blockedSupportStateExpr }
+        - conditionMacro: fitl-space-marker-state-is-not
+          args:
+            spaceIdExpr: { param: targetSpaceExpr }
+            markerId: coupSupportShiftCount
+            markerStateExpr: one
 
 ```

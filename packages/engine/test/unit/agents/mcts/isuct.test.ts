@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { selectChild } from '../../../../src/agents/mcts/isuct.js';
+import { selectChild, selectDecisionChild } from '../../../../src/agents/mcts/isuct.js';
 import { createRootNode, createChildNode } from '../../../../src/agents/mcts/node.js';
 import type { MctsNode } from '../../../../src/agents/mcts/node.js';
 import type { Move } from '../../../../src/kernel/types-core.js';
@@ -287,5 +287,127 @@ describe('selectChild (ISUCT availability-aware selection)', () => {
     // With C=0, a wins.
     const result = selectChild(root, player0, 0, [a, b], 0.5);
     assert.equal(result, a);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// selectDecisionChild (standard UCT for decision nodes)
+// ---------------------------------------------------------------------------
+
+describe('selectDecisionChild (standard UCT for decision nodes)', () => {
+  const player0 = pid(0);
+  const C = 1.4;
+
+  function makeDecisionChild(
+    parent: MctsNode,
+    label: string,
+    overrides: {
+      visits?: number;
+      totalReward?: number[];
+    } = {},
+  ): MctsNode {
+    const child = createChildNode(
+      parent,
+      makeMove(label),
+      `D:${label}{}` as MoveKey,
+      parent.totalReward.length,
+    );
+    child.nodeKind = 'decision';
+    child.decisionPlayer = player0;
+    child.heuristicPrior = null;
+    if (overrides.visits !== undefined) child.visits = overrides.visits;
+    if (overrides.totalReward !== undefined)
+      child.totalReward = overrides.totalReward;
+    return child;
+  }
+
+  // AC 2: Decision nodes use parent.visits denominator (not child.availability).
+  it('uses parent.visits in exploration term, not child.availability', () => {
+    const root = createRootNode(2);
+    root.visits = 100;
+    // Child A: high reward, well-explored
+    const a = makeDecisionChild(root, 'a', {
+      visits: 50,
+      totalReward: [35, 15],
+    });
+    a.availability = 1; // low availability should be ignored
+    // Child B: lower reward, barely explored → UCT exploration should help
+    const b = makeDecisionChild(root, 'b', {
+      visits: 2,
+      totalReward: [0.5, 1.5],
+    });
+    b.availability = 1; // low availability should be ignored
+
+    // Standard UCT: exploration = C * sqrt(ln(parentVisits) / childVisits)
+    // With parent.visits = 100:
+    //   B exploration = C * sqrt(ln(100) / 2) ≈ 1.4 * sqrt(2.303) ≈ 2.12
+    //   A exploration = C * sqrt(ln(100) / 50) ≈ 1.4 * sqrt(0.046) ≈ 0.30
+    //   A total ≈ 0.7 + 0.30 = 1.0, B total ≈ 0.25 + 2.12 = 2.37
+    // B should win (exploration dominates).
+    const result = selectDecisionChild(root, player0, C, [a, b]);
+    assert.equal(result, b);
+  });
+
+  // AC 3: State nodes use child.availability (verify ISUCT is different).
+  it('produces different results from ISUCT when availability differs from parent visits', () => {
+    const root = createRootNode(2);
+    root.visits = 100;
+    // Child A: high mean, high availability → ISUCT exploration uses availability
+    const a = makeDecisionChild(root, 'a', {
+      visits: 10,
+      totalReward: [7, 3],
+    });
+    a.availability = 100; // high availability
+    // Child B: low mean, low availability → ISUCT underexplores it
+    const b = makeDecisionChild(root, 'b', {
+      visits: 10,
+      totalReward: [3, 7],
+    });
+    b.availability = 5; // low availability
+
+    // ISUCT uses child.availability in denominator → different exploration terms.
+    const isuctResult = selectChild(root, player0, C, [a, b]);
+    // Standard UCT uses parent.visits → same exploration for both.
+    const stdResult = selectDecisionChild(root, player0, C, [a, b]);
+
+    // They should select differently because the exploration terms differ.
+    // ISUCT: a has sqrt(ln(100)/10) ≈ exploration, b has sqrt(ln(5)/10) ≈ less exploration
+    // StdUCT: both have sqrt(ln(100)/10) → same exploration, a wins by reward
+    assert.equal(isuctResult, a); // ISUCT picks a (higher exploration from availability)
+    assert.equal(stdResult, a); // StdUCT also picks a (higher mean)
+
+    // Now modify so they differ:
+    a.totalReward = [3, 7]; // a: mean=0.3
+    b.totalReward = [7, 3]; // b: mean=0.7
+    b.availability = 2;     // b: very low ISUCT availability
+
+    const isuctResult2 = selectChild(root, player0, C, [a, b]);
+    const stdResult2 = selectDecisionChild(root, player0, C, [a, b]);
+    // StdUCT: same exploration (parent.visits=100), b has higher mean → b
+    assert.equal(stdResult2, b);
+    // ISUCT: a has sqrt(ln(100)/10), b has sqrt(ln(2)/10) → a gets much more exploration
+    // a: 0.3 + 1.4*sqrt(4.605/10) ≈ 0.3 + 0.95 = 1.25
+    // b: 0.7 + 1.4*sqrt(0.693/10) ≈ 0.7 + 0.37 = 1.07
+    assert.equal(isuctResult2, a);
+  });
+
+  it('returns the first unvisited child', () => {
+    const root = createRootNode(2);
+    root.visits = 50;
+    const visited = makeDecisionChild(root, 'a', {
+      visits: 10,
+      totalReward: [5, 5],
+    });
+    const unvisited = makeDecisionChild(root, 'b');
+    const result = selectDecisionChild(root, player0, C, [visited, unvisited]);
+    assert.equal(result, unvisited);
+  });
+
+  it('throws when children is empty', () => {
+    const root = createRootNode(2);
+    assert.throws(
+      () => selectDecisionChild(root, player0, C, []),
+      (err: unknown) => err instanceof Error && /children/i.test(err.message),
+    );
   });
 });

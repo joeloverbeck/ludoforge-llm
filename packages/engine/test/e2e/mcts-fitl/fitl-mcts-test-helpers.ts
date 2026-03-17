@@ -42,7 +42,7 @@ import {
   createNodePool,
   selectRootDecision,
 } from '../../../src/agents/index.js';
-import type { MctsPreset, MctsSearchDiagnostics } from '../../../src/agents/index.js';
+import type { MctsPreset, MctsSearchDiagnostics, MctsSearchVisitor } from '../../../src/agents/index.js';
 
 import { assertNoErrors } from '../../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../../helpers/production-spec-helpers.js';
@@ -913,12 +913,13 @@ export const runFitlMctsSearch = (
   state: GameState,
   playerId: PlayerId,
   preset: MctsPreset,
+  visitor?: MctsSearchVisitor,
 ): FitlSearchResult => {
   const baseConfig = resolvePreset(preset);
   // Remove timeLimitMs to ensure deterministic iteration count
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { timeLimitMs: _, ...configWithoutTime } = baseConfig;
-  const config = { ...configWithoutTime, diagnostics: true };
+  const config = { ...configWithoutTime, diagnostics: true, ...(visitor !== undefined ? { visitor } : {}) };
 
   const runtime = createGameDefRuntime(def);
   const rng = createRng(BigInt(42 + 9999));

@@ -1,9 +1,9 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRootNode, createChildNode } from '../../../../src/agents/mcts/node.js';
+import { createRootNode, createChildNode, createDecisionChildNode } from '../../../../src/agents/mcts/node.js';
 import type { Move } from '../../../../src/kernel/types-core.js';
 import type { MoveKey } from '../../../../src/agents/mcts/move-key.js';
-import { asActionId } from '../../../../src/kernel/branded.js';
+import { asActionId, asPlayerId } from '../../../../src/kernel/branded.js';
 
 const aid = asActionId;
 
@@ -56,6 +56,26 @@ describe('createRootNode', () => {
   it('handles single-player games', () => {
     const root = createRootNode(1);
     assert.deepEqual(root.totalReward, [0]);
+  });
+
+  it('returns nodeKind: state', () => {
+    const root = createRootNode(2);
+    assert.equal(root.nodeKind, 'state');
+  });
+
+  it('returns decisionPlayer: null', () => {
+    const root = createRootNode(2);
+    assert.equal(root.decisionPlayer, null);
+  });
+
+  it('returns partialMove: null', () => {
+    const root = createRootNode(2);
+    assert.equal(root.partialMove, null);
+  });
+
+  it('returns decisionBinding: null', () => {
+    const root = createRootNode(2);
+    assert.equal(root.decisionBinding, null);
   });
 });
 
@@ -116,5 +136,71 @@ describe('createChildNode', () => {
     assert.equal(root.children.length, 2);
     assert.equal(root.children[0], child1);
     assert.equal(root.children[1], child2);
+  });
+
+  it('returns nodeKind: state', () => {
+    const root = createRootNode(2);
+    const child = createChildNode(root, move, moveKey, 2);
+    assert.equal(child.nodeKind, 'state');
+  });
+
+  it('returns decision fields as null', () => {
+    const root = createRootNode(2);
+    const child = createChildNode(root, move, moveKey, 2);
+    assert.equal(child.decisionPlayer, null);
+    assert.equal(child.partialMove, null);
+    assert.equal(child.decisionBinding, null);
+  });
+});
+
+describe('createDecisionChildNode', () => {
+  const move: Move = { actionId: aid('attack'), params: { target: 'zone1' } };
+  const moveKey: MoveKey = 'attack{target:zone1}';
+  const pid = asPlayerId(0);
+
+  it('sets nodeKind to decision', () => {
+    const root = createRootNode(2);
+    const child = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2);
+    assert.equal(child.nodeKind, 'decision');
+  });
+
+  it('populates decisionPlayer', () => {
+    const root = createRootNode(2);
+    const child = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2);
+    assert.equal(child.decisionPlayer, pid);
+  });
+
+  it('populates partialMove', () => {
+    const root = createRootNode(2);
+    const child = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2);
+    assert.equal(child.partialMove, move);
+  });
+
+  it('populates decisionBinding', () => {
+    const root = createRootNode(2);
+    const child = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2);
+    assert.equal(child.decisionBinding, 'targetZone');
+  });
+
+  it('sets heuristicPrior to null (invariant)', () => {
+    const root = createRootNode(2);
+    const child = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2);
+    assert.equal(child.heuristicPrior, null);
+  });
+
+  it('links parent and adds to parent children', () => {
+    const root = createRootNode(2);
+    const child = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2);
+    assert.equal(child.parent, root);
+    assert.equal(root.children.length, 1);
+    assert.equal(root.children[0], child);
+  });
+
+  it('initializes stats to zero', () => {
+    const root = createRootNode(2);
+    const child = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2);
+    assert.equal(child.visits, 0);
+    assert.equal(child.availability, 0);
+    assert.deepEqual(child.totalReward, [0, 0]);
   });
 });

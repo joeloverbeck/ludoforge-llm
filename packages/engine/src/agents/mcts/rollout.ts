@@ -13,7 +13,7 @@
  * the `hybrid` rollout mode (ticket 63MCTSPERROLLFRESEA-002).
  */
 
-import type { GameDef, GameState, Rng, TerminalResult } from '../../kernel/types.js';
+import type { GameDef, GameState, Move, Rng, TerminalResult } from '../../kernel/types.js';
 import type { GameDefRuntime } from '../../kernel/gamedef-runtime.js';
 import type { MctsConfig } from './config.js';
 import type { MutableDiagnosticsAccumulator } from './diagnostics.js';
@@ -21,7 +21,8 @@ import { legalMoves } from '../../kernel/legal-moves.js';
 import { applyMove } from '../../kernel/apply-move.js';
 import { terminalResult } from '../../kernel/terminal.js';
 import { evaluateState } from '../evaluate-state.js';
-import { materializeConcreteCandidates, materializeOrFastPath } from './materialization.js';
+import { completeTemplateMove } from '../../kernel/move-completion.js';
+import { materializeMovesForRollout } from './materialization.js';
 import { nextInt, fork } from '../../kernel/prng.js';
 import type { PlayerId } from '../../kernel/branded.js';
 import type { MastStats } from './mast.js';
@@ -39,6 +40,66 @@ export interface SimulationResult {
   readonly rng: Rng;
   readonly depth: number;
   readonly traversedMoveKeys: readonly string[];
+}
+
+// ---------------------------------------------------------------------------
+// Decision boundary result
+// ---------------------------------------------------------------------------
+
+export interface DecisionBoundaryResult {
+  readonly state: GameState;
+  readonly rng: Rng;
+  readonly move: Move;
+}
+
+// ---------------------------------------------------------------------------
+// Decision boundary resolution
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve a decision boundary by completing a partial move via random
+ * decision completion, then applying the completed move.
+ *
+ * Called when selection exits the tree at a decision node — the partial
+ * move has some decisions filled by tree traversal, and the rest need
+ * random completion before simulation can begin.
+ *
+ * Decision completion does NOT count toward the simulation cutoff budget.
+ * The cutoff counts complete game plies, not mid-decision steps.
+ *
+ * @returns The post-decision state and consumed RNG on success, or
+ *          `null` when completion fails (backpropagate loss).
+ */
+export function resolveDecisionBoundary(
+  def: GameDef,
+  state: GameState,
+  partialMove: Move,
+  rng: Rng,
+  runtime?: GameDefRuntime,
+  acc?: MutableDiagnosticsAccumulator,
+): DecisionBoundaryResult | null {
+  try {
+    const result = completeTemplateMove(def, state, partialMove, rng, runtime);
+
+    if (result.kind !== 'completed') {
+      if (acc !== undefined) {
+        acc.decisionBoundaryFailures += 1;
+      }
+      return null;
+    }
+
+    const applied = applyMove(def, state, result.move, undefined, runtime);
+    if (acc !== undefined) {
+      acc.applyMoveCalls += 1;
+      acc.decisionCompletionsInRollout += 1;
+    }
+    return { state: applied.state, rng: result.rng, move: result.move };
+  } catch {
+    if (acc !== undefined) {
+      acc.decisionBoundaryFailures += 1;
+    }
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -105,7 +166,7 @@ export function rollout(
     }
 
     // 3. Sample up to rolloutCandidateSample candidates
-    const { candidates, rng: postMaterializeRng } = materializeConcreteCandidates(
+    const { candidates, rng: postMaterializeRng } = materializeMovesForRollout(
       def,
       currentState,
       moves,
@@ -218,12 +279,12 @@ export function simulateToCutoff(
     }
 
     // 3. Materialize candidates
-    const matResult = runtime !== undefined
-      ? materializeOrFastPath(def, currentState, moves, currentRng, config.templateCompletionsPerVisit, runtime)
-      : { ...materializeConcreteCandidates(def, currentState, moves, currentRng, config.templateCompletionsPerVisit, runtime), fastPath: false };
+    const matResult = materializeMovesForRollout(
+      def, currentState, moves, currentRng, config.templateCompletionsPerVisit, runtime,
+    );
     const { candidates } = matResult;
     currentRng = matResult.rng;
-    if (acc !== undefined && !matResult.fastPath) {
+    if (acc !== undefined) {
       acc.materializeCalls += 1;
     }
 

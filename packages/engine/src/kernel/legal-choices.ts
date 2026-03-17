@@ -64,6 +64,51 @@ import type {
 } from './types.js';
 
 const COMPLETE: ChoiceRequest = { kind: 'complete', complete: true };
+
+/**
+ * Convert a `pending` choice with an empty options domain into `illegal`.
+ * A chooseN decision with `canConfirm === true` (min = 0) is still satisfiable
+ * with an empty selection, so it passes through unchanged.
+ */
+const coerceEmptyDomainToIllegal = (request: ChoiceRequest): ChoiceRequest => {
+  if (request.kind !== 'pending' || request.options.length > 0) {
+    return request;
+  }
+  if (request.type === 'chooseN' && request.canConfirm) {
+    return request;
+  }
+  return {
+    kind: 'illegal',
+    complete: false,
+    reason: 'emptyDomain',
+  };
+};
+
+// ---------------------------------------------------------------------------
+// Compound SA decision chaining
+// ---------------------------------------------------------------------------
+
+/**
+ * Tag a choice request originating from compound SA discovery with `decisionPath`.
+ * Pending requests get `'compound.specialActivity'` so callers know to route
+ * the decision value into `move.compound.specialActivity.params[decisionKey]`.
+ */
+const tagSADecisionPath = (request: ChoiceRequest): ChoiceRequest => {
+  if (request.kind === 'pending') {
+    return { ...request, decisionPath: 'compound.specialActivity' as const };
+  }
+  if (request.kind === 'pendingStochastic') {
+    return {
+      ...request,
+      alternatives: request.alternatives.map((alt) => ({
+        ...alt,
+        decisionPath: 'compound.specialActivity' as const,
+      })),
+    };
+  }
+  // 'complete' and 'illegal' pass through unmodified
+  return request;
+};
 const MAX_CHOOSE_N_EXACT_ENUMERATION_COMBINATIONS = 1024;
 
 /** Count-based budget for singleton probe passes (consumed in 63CHOOPEROPT-003). */
@@ -88,6 +133,14 @@ export interface LegalChoicesRuntimeOptions {
   readonly collectDiagnostics?: boolean;
   /** Callback invoked with diagnostics after a chooseN resolution completes. Only called when collectDiagnostics is true. */
   readonly onChooseNDiagnostics?: (diagnostics: ChooseNDiagnostics) => void;
+  /**
+   * When true, `legalChoicesDiscover` chains into compound special-activity
+   * decisions after the main action returns `complete`.  Default `false`.
+   *
+   * Enable for MCTS incremental decision expansion.  Leave off for
+   * normalization/replay callers that handle SA normalization separately.
+   */
+  readonly chainCompoundSA?: boolean;
 }
 
 interface LegalChoicesInternalOptions extends LegalChoicesRuntimeOptions {
@@ -993,6 +1046,87 @@ const prepareLegalChoicesContext = (
   };
 };
 
+/**
+ * Discover decisions for the compound special activity after the main action
+ * has been fully resolved.  Uses the original game state (pre-main-op) for SA
+ * discovery — this is sufficient for decision enumeration; `applyMove()` will
+ * validate the final compound move against the real accumulated state.
+ *
+ * Returns the SA's choice request tagged with `decisionPath: 'compound.specialActivity'`
+ * so callers know to route the value into `move.compound.specialActivity.params`.
+ */
+const discoverCompoundSAChoices = (
+  def: GameDef,
+  state: GameState,
+  partialMove: Move,
+  _shouldEvaluateOptionLegality: boolean,
+  options?: LegalChoicesInternalOptions,
+  runtime?: GameDefRuntime,
+): ChoiceRequest => {
+  const sa = partialMove.compound!.specialActivity;
+  const saAction = findAction(def, sa.actionId);
+  if (saAction === undefined) {
+    throw kernelRuntimeError(
+      'LEGAL_CHOICES_UNKNOWN_ACTION',
+      `legalChoices: unknown compound SA action id: ${String(sa.actionId)}`,
+      { actionId: sa.actionId },
+    );
+  }
+
+  // Always disable option legality validation for SA discovery.  The SA is
+  // evaluated against the pre-main-op state, which may differ from the
+  // post-main-op state the SA was authored against.  applyMove will catch
+  // truly illegal selections when the compound move is executed.
+  const saContext = prepareLegalChoicesContext(def, state, sa, runtime);
+  const saResult = legalChoicesWithPreparedContextStrict(saContext, sa, false, options);
+  return tagSADecisionPath(saResult);
+};
+
+/**
+ * Check for compound SA decisions after the main action returns `complete`.
+ * If the move has a compound special activity, chain into SA discovery.
+ * Otherwise, return the original result unchanged.
+ */
+const maybeChainCompoundSA = (
+  result: ChoiceRequest,
+  def: GameDef,
+  state: GameState,
+  partialMove: Move,
+  shouldEvaluateOptionLegality: boolean,
+  options?: LegalChoicesInternalOptions,
+  runtime?: GameDefRuntime,
+): ChoiceRequest => {
+  if (result.kind !== 'complete' || partialMove.compound?.specialActivity === undefined) {
+    return result;
+  }
+
+  // SA completeness check: probe the SA without option legality validation.
+  // If the SA's params already satisfy all required decisions, the compound
+  // move is fully resolved — return `complete` without re-discovery.
+  // This prevents resolveMoveDecisionSequence from re-routing already-filled
+  // SA params through the decision-key system against the pre-main-op state.
+  //
+  // The probe checks moveParams by decision key.  Externally-specified moves
+  // (e.g. from test harnesses or playbook replay) may use named bind keys
+  // like `$targetSpaces` instead of decision keys.  When the probe reports
+  // `pending` but the pending decision's bind name is already present in
+  // `sa.params`, the SA is complete under named keys — skip chaining.
+  const sa = partialMove.compound.specialActivity;
+  const saAction = findAction(def, sa.actionId);
+  if (saAction !== undefined) {
+    const saContext = prepareLegalChoicesContext(def, state, sa, runtime);
+    const saProbe = legalChoicesWithPreparedContextStrict(saContext, sa, false, options);
+    if (saProbe.kind === 'complete') {
+      return result; // SA already fully resolved via decision keys
+    }
+    if (saProbe.kind === 'pending' && sa.params[saProbe.name] !== undefined) {
+      return result; // SA has named param for pending decision — externally specified
+    }
+  }
+
+  return discoverCompoundSAChoices(def, state, partialMove, shouldEvaluateOptionLegality, options, runtime);
+};
+
 export function legalChoicesDiscover(
   def: GameDef,
   state: GameState,
@@ -1003,7 +1137,13 @@ export function legalChoicesDiscover(
   validateTurnFlowRuntimeStateInvariants(state);
   const context = prepareLegalChoicesContext(def, state, partialMove, runtime);
   options?.onProbeContextPrepared?.();
-  return legalChoicesWithPreparedContextStrict(context, partialMove, false, options);
+  const result = legalChoicesWithPreparedContextStrict(context, partialMove, false, options);
+  if (options?.chainCompoundSA !== true) {
+    return coerceEmptyDomainToIllegal(result);
+  }
+  return coerceEmptyDomainToIllegal(
+    maybeChainCompoundSA(result, def, state, partialMove, false, options, runtime),
+  );
 }
 
 export function legalChoicesEvaluate(
@@ -1026,7 +1166,9 @@ export function legalChoicesEvaluate(
   if (accumulator !== undefined && options?.onChooseNDiagnostics !== undefined && result.kind === 'pending' && result.type === 'chooseN') {
     options.onChooseNDiagnostics(finalizeDiagnostics(accumulator, result.options));
   }
-  return result;
+  return coerceEmptyDomainToIllegal(
+    maybeChainCompoundSA(result, def, state, partialMove, true, internalOptions, runtime),
+  );
 }
 
 export function legalChoicesEvaluateWithTransientChooseNSelections(
@@ -1056,5 +1198,12 @@ export function legalChoicesEvaluateWithTransientChooseNSelections(
   if (accumulator !== undefined && options?.onChooseNDiagnostics !== undefined && result.kind === 'pending' && result.type === 'chooseN') {
     options.onChooseNDiagnostics(finalizeDiagnostics(accumulator, result.options));
   }
-  return result;
+  const internalOptions: LegalChoicesInternalOptions = {
+    ...options,
+    transientChooseNSelections,
+    ...(accumulator !== undefined ? { _diagnosticsAccumulator: accumulator } : {}),
+  };
+  return coerceEmptyDomainToIllegal(
+    maybeChainCompoundSA(result, def, state, partialMove, true, internalOptions, runtime),
+  );
 }

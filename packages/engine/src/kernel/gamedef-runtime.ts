@@ -22,23 +22,13 @@ export interface GameDefRuntime {
   readonly runtimeTableIndex: RuntimeTableIndex;
   readonly zobristTable: ZobristTable;
   readonly ruleCardCache: Map<string, RuleCard>;
-  /** Action IDs whose definitions have no template choice parameters (empty `params`). */
-  readonly concreteActionIds: ReadonlySet<string>;
 }
 
 export function createGameDefRuntime(def: GameDef): GameDefRuntime {
-  const concreteActionIds = new Set<string>();
-  for (const action of def.actions) {
-    if (action.params.length === 0) {
-      concreteActionIds.add(action.id);
-    }
-  }
-
   return {
     adjacencyGraph: buildAdjacencyGraph(def.zones),
     runtimeTableIndex: buildRuntimeTableIndex(def),
     zobristTable: createZobristTable(def),
     ruleCardCache: new Map(),
-    concreteActionIds,
   };
 }

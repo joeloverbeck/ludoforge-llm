@@ -2311,17 +2311,13 @@ actor: 'active',
 
     assertNoErrors(parsed);
     assert.equal(compiled.gameDef, null);
+    // "discrad:none" is caught during effect lowering (zone ID existence check)
+    // rather than the later cross-validation pass, because zoneIdSet is now
+    // threaded through the lowering contexts.
     assert.equal(
       compiled.diagnostics.some(
         (diagnostic) =>
-          diagnostic.code === 'CNL_XREF_EVENT_DECK_ZONE_MISSING' && diagnostic.path === 'doc.eventDecks.0.drawZone',
-      ),
-      true,
-    );
-    assert.equal(
-      compiled.diagnostics.some(
-        (diagnostic) =>
-          diagnostic.code === 'CNL_XREF_EVENT_DECK_EFFECT_ZONE_MISSING' &&
+          diagnostic.code === 'CNL_COMPILER_ZONE_ID_UNKNOWN' &&
           diagnostic.path === 'doc.eventDecks.0.cards.0.unshaded.effects.0.draw.to',
       ),
       true,

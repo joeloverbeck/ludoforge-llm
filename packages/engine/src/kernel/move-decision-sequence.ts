@@ -97,13 +97,33 @@ export const resolveMoveDecisionSequence = (
       return { complete: false, move, nextDecision: request, warnings };
     }
 
-    move = {
-      ...move,
-      params: {
-        ...move.params,
-        [request.decisionKey]: selected,
-      },
-    };
+    if (request.decisionPath === 'compound.specialActivity') {
+      const compound = move.compound;
+      if (compound === undefined) {
+        throw new Error('resolveMoveDecisionSequence: decisionPath is compound.specialActivity but move has no compound payload');
+      }
+      move = {
+        ...move,
+        compound: {
+          ...compound,
+          specialActivity: {
+            ...compound.specialActivity,
+            params: {
+              ...compound.specialActivity.params,
+              [request.decisionKey]: selected,
+            },
+          },
+        },
+      };
+    } else {
+      move = {
+        ...move,
+        params: {
+          ...move.params,
+          [request.decisionKey]: selected,
+        },
+      };
+    }
   }
 
   emitWarning({

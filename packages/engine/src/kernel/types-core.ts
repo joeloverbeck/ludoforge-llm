@@ -629,6 +629,13 @@ export interface ChoiceCompleteRequest {
 
 export type ChoiceTargetKind = 'zone' | 'token';
 
+/**
+ * Indicates where a decision value should be placed in the move structure.
+ * - `'main'` → `move.params[decisionKey]` (default, for the top-level action)
+ * - `'compound.specialActivity'` → `move.compound.specialActivity.params[decisionKey]`
+ */
+export type CompoundDecisionPath = 'main' | 'compound.specialActivity';
+
 export type ChooseNOptionResolution = 'exact' | 'provisional' | 'stochastic' | 'ambiguous';
 
 export interface ChoiceOption {
@@ -647,6 +654,8 @@ interface ChoicePendingRequestBase {
   readonly options: readonly ChoiceOption[];
   readonly targetKinds: readonly ChoiceTargetKind[];
   readonly reason?: ChoiceIllegalReason;
+  /** Where the decision value should be placed in the move structure. Absent or `'main'` → `move.params[decisionKey]`. */
+  readonly decisionPath?: CompoundDecisionPath;
 }
 
 export interface ChoicePendingChooseOneRequest extends ChoicePendingRequestBase {

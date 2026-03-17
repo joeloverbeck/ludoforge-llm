@@ -342,7 +342,11 @@ describe('FITL insurgent operations integration', () => {
 
     assert.equal(capFinal.zoneVars[ATTACK_SPACE]?.terrorCount ?? 0, 0, 'NVA Terror should not increment terrorCount when marker supply is exhausted');
     assert.equal(capFinal.globalVars.terrorSabotageMarkersPlaced, 15, 'Marker supply counter should remain capped at 15');
-    assert.equal(capFinal.markers[ATTACK_SPACE]?.supportOpposition, 'neutral', 'NVA Terror should still shift Support toward Neutral');
+    assert.equal(
+      capFinal.markers[ATTACK_SPACE]?.supportOpposition,
+      'passiveSupport',
+      'NVA Terror should leave Support unchanged when marker supply is exhausted',
+    );
 
     const idempotentSetup = addTokenToZone(
       {
@@ -374,6 +378,11 @@ describe('FITL insurgent operations integration', () => {
     }).state;
 
     assert.equal(idempotentFinal.globalVars.terrorSabotageMarkersPlaced, 1, 'NVA Terror should not consume marker supply on pre-marked spaces');
+    assert.equal(
+      idempotentFinal.markers[ATTACK_SPACE]?.supportOpposition,
+      idempotentSetup.markers[ATTACK_SPACE]?.supportOpposition,
+      'NVA Terror should leave Support/Opposition unchanged on pre-marked spaces',
+    );
   });
 
   it('enforces NVA Terror LimOp max=1 target space', () => {
@@ -565,7 +574,11 @@ describe('FITL insurgent operations integration', () => {
 
     assert.equal(capFinal.zoneVars[ATTACK_SPACE]?.terrorCount ?? 0, 0, 'VC Terror should not increment terrorCount when marker supply is exhausted');
     assert.equal(capFinal.globalVars.terrorSabotageMarkersPlaced, 15, 'Marker supply counter should remain capped at 15');
-    assert.equal(capFinal.markers[ATTACK_SPACE]?.supportOpposition, 'passiveOpposition', 'VC Terror should still shift toward Opposition even if marker supply is exhausted');
+    assert.equal(
+      capFinal.markers[ATTACK_SPACE]?.supportOpposition,
+      'neutral',
+      'VC Terror should leave Support/Opposition unchanged when marker supply is exhausted',
+    );
 
     const idempotentSetup = addTokenToZone(
       {
@@ -596,6 +609,11 @@ describe('FITL insurgent operations integration', () => {
       params: { $targetSpaces: [ATTACK_SPACE] },
     }).state;
     assert.equal(idempotentFinal.globalVars.terrorSabotageMarkersPlaced, 1, 'VC Terror should not consume marker supply on pre-marked spaces');
+    assert.equal(
+      idempotentFinal.markers[ATTACK_SPACE]?.supportOpposition,
+      idempotentSetup.markers[ATTACK_SPACE]?.supportOpposition,
+      'VC Terror should leave Support/Opposition unchanged on pre-marked spaces',
+    );
 
     const nvaSetup = addTokenToZone(
       withSupportState(

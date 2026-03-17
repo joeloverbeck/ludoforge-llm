@@ -1,4 +1,4 @@
-name: Engine Game Packages
+name: Engine FITL Rules
 on:
   push:
     branches: [main]
@@ -12,7 +12,7 @@ on:
       - 'turbo.json'
       - 'tsconfig.base.json'
       - 'eslint.config.js'
-      - '.github/workflows/engine-game-packages.yml'
+      - '.github/workflows/engine-fitl-rules.yml'
   pull_request:
     branches: [main]
     paths:
@@ -25,13 +25,13 @@ on:
       - 'turbo.json'
       - 'tsconfig.base.json'
       - 'eslint.config.js'
-      - '.github/workflows/engine-game-packages.yml'
+      - '.github/workflows/engine-fitl-rules.yml'
   workflow_dispatch:
 concurrency:
-  group: engine-game-packages-${{ github.ref }}
+  group: engine-fitl-rules-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  engine-game-packages:
+  engine-fitl-rules:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -43,4 +43,4 @@ jobs:
       - run: pnpm guard:worktree-pointers
       - run: pnpm install --frozen-lockfile
       - run: pnpm -F @ludoforge/engine build
-      - run: pnpm -F @ludoforge/engine test:integration:game-packages
+      - run: pnpm -F @ludoforge/engine test:integration:fitl-rules

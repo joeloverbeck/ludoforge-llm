@@ -31,7 +31,7 @@ Active development. The core engine (kernel, compiler, agents, simulator) is imp
 
 - **Completed specs** (archived): 01 (scaffolding), 02 (core types), 03 (PRNG/Zobrist), 04 (eval), 05 (effects), 06 (game loop), 07 (spatial), 08a (parser), 08b (compiler), 09 (agents), 10 (simulator), FITL specs 15-30, 32, 33 (Texas Hold'em), plus frontend specs 35 (monorepo restructure), 36 (web worker bridge), 37 (state management & render model), 38 (PixiJS canvas foundation), 39 (React DOM UI layer), 40 (animation system), 41 (board layout engine), 42 (visual config & session management), 47 (FITL Section 6 rules gaps), 48 (FITL Section 5 rules gaps), 49 (FITL Section 7 rules gaps), 50 (event interactive choice protocol), 51 (cross-game primitive elevation)
 - **Completed ticket series** (archived): ENGINEAGNO, TEXHOLKERPRIGAMTOU, ARCHTRACE, MONOREPO, WRKBRIDGE, STATEMOD, PIXIFOUND, ENGINEARCH, REACTUI, ANIMSYS, AGNOSTIC, FRONTEND-F3, FITLCOUROUANDDATFIX, BOARDLAY, KERLEGCHO, FITLRULES2, FITLSEC6RULGAP, FITLSEC5RULGAP, FITLSEC7RULGAP, ANIMDIAG
-- **Active specs**: 59 (codebase health audit), 60 (decision instance architecture), 62 (MCTS search visitor & incremental decisions)
+- **Active specs**: 59 (codebase health audit), 60 (decision instance architecture), 62 (MCTS search visitor & incremental decisions), 63 (MCTS runtime move classification)
 - **Active tickets**: None
 - **Not yet started**: 11 (evaluator/degeneracy), 12 (CLI), 13 (mechanic bundle IR), 14 (evolution pipeline)
 - **Codebase size**: ~486 source files, ~703 test files
@@ -259,7 +259,7 @@ Do not duplicate or drift this procedure in other files; update `docs/archival-w
 <!-- gitnexus:start -->
 # GitNexus MCP
 
-This project is indexed by GitNexus as **ludoforge-llm** (9917 symbols, 29328 relationships, 300 execution flows).
+This project is indexed by GitNexus as **ludoforge-llm** (10086 symbols, 29984 relationships, 300 execution flows).
 
 ## Always Start Here
 

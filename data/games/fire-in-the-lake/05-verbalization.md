@@ -138,6 +138,7 @@ verbalization:
     coupRedeploy: "Coup: Redeploy"
     coupCommitment: "Coup: Commitment"
     coupReset: "Coup: Reset"
+    apcPacify: "APC Pacification"
 
     # ── Action IDs (operations) ───────────────────────────────────────────
     pass: "Pass"
@@ -178,6 +179,10 @@ verbalization:
     coupNvaRedeployTroops: "NVA Troop Redeploy"
     coupCommitmentResolve: "Resolve Commitment"
     resolveHonoluluPacify: "End Honolulu Pacification"
+    apcPacifyUS: "US Pacification (APC)"
+    apcPacifyARVN: "ARVN Pacification (APC)"
+    resolveApcPacify: "End APC Pacification"
+    apcPacifyPass: "Pass (APC Pacify)"
     coupPacifyPass: "Pass (Pacify)"
     coupAgitatePass: "Pass (Agitate)"
     coupRedeployPass: "Pass (Redeploy)"

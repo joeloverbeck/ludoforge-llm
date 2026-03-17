@@ -1382,7 +1382,7 @@ describe('legality surface parity', () => {
     );
   });
 
-  it('fails fast when canonical chooser cannot resolve a pending decision', () => {
+  it('reports illegal when empty domain makes action unplayable', () => {
     const def = makeDef({
       action: makeAction({
         effects: [
@@ -1399,9 +1399,13 @@ describe('legality surface parity', () => {
     const state = makeState();
     const move = { actionId: asActionId('op'), params: {} };
 
-    assert.throws(
-      () => assertLegalitySurfaceParityForMove(def, state, move),
-      /surface=legalChoices step=0 actionId=op: no value selected for pending decision \$target/,
-    );
+    // emptyDomain is an effect-level illegality: legalMoves still lists the
+    // action (preflight passes) but legalChoicesDiscover returns illegal.
+    // This is a known parity divergence, so test legalChoicesDiscover directly.
+    const result = legalChoicesDiscover(def, state, move);
+    assert.equal(result.kind, 'illegal');
+    if (result.kind === 'illegal') {
+      assert.equal(result.reason, 'emptyDomain');
+    }
   });
 });

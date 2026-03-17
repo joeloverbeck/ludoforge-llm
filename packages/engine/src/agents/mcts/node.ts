@@ -57,6 +57,18 @@ export interface MctsNode {
 
   /** Optional proven result; only used in restricted solver mode. */
   provenResult: ProvenResult | null;
+
+  /** Whether this is a full-state node or a mid-decision node. */
+  nodeKind: 'state' | 'decision';
+
+  /** Player making the decision.  Null for state nodes. */
+  decisionPlayer: PlayerId | null;
+
+  /** Partial move being built.  Null for state nodes. */
+  partialMove: Move | null;
+
+  /** Binding name for the current decision step.  Null for state nodes. */
+  decisionBinding: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -79,6 +91,10 @@ export function createRootNode(playerCount: number): MctsNode {
     heuristicPrior: null,
     children: [],
     provenResult: null,
+    nodeKind: 'state',
+    decisionPlayer: null,
+    partialMove: null,
+    decisionBinding: null,
   };
 }
 
@@ -106,6 +122,50 @@ export function createChildNode(
     heuristicPrior: null,
     children: [],
     provenResult: null,
+    nodeKind: 'state',
+    decisionPlayer: null,
+    partialMove: null,
+    decisionBinding: null,
+  };
+  parent.children.push(child);
+  return child;
+}
+
+/**
+ * Create a decision child node linked to its parent.
+ *
+ * Decision nodes represent mid-decision states where a partial move is being
+ * built incrementally.  They always have `heuristicPrior: null`.
+ *
+ * @param parent          - the parent node
+ * @param move            - concrete move leading to this child
+ * @param moveKey         - canonical key for the move
+ * @param decisionPlayer  - player making the decision
+ * @param decisionBinding - binding name for the current decision step
+ * @param playerCount     - number of players
+ */
+export function createDecisionChildNode(
+  parent: MctsNode,
+  move: Move,
+  moveKey: MoveKey,
+  decisionPlayer: PlayerId,
+  decisionBinding: string,
+  playerCount: number,
+): MctsNode {
+  const child: MctsNode = {
+    move,
+    moveKey,
+    parent,
+    visits: 0,
+    availability: 0,
+    totalReward: new Array<number>(playerCount).fill(0),
+    heuristicPrior: null,
+    children: [],
+    provenResult: null,
+    nodeKind: 'decision',
+    decisionPlayer,
+    partialMove: move,
+    decisionBinding,
   };
   parent.children.push(child);
   return child;

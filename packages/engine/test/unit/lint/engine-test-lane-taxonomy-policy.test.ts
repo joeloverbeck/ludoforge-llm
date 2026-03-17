@@ -26,6 +26,18 @@ describe('engine test lane taxonomy policy', () => {
       packageJson.scripts?.['test:integration:game-packages'],
       'node scripts/run-tests.mjs --lane integration:game-packages',
     );
+    assert.equal(
+      packageJson.scripts?.['test:integration:fitl-events'],
+      'node scripts/run-tests.mjs --lane integration:fitl-events',
+    );
+    assert.equal(
+      packageJson.scripts?.['test:integration:fitl-rules'],
+      'node scripts/run-tests.mjs --lane integration:fitl-rules',
+    );
+    assert.equal(
+      packageJson.scripts?.['test:integration:texas-cross-game'],
+      'node scripts/run-tests.mjs --lane integration:texas-cross-game',
+    );
   });
 
   it('classifies game-package integration tests explicitly and keeps smoke/core coverage disjoint from the dedicated lane', async () => {
@@ -79,6 +91,30 @@ describe('engine test lane taxonomy policy', () => {
 
     assert.deepEqual(new Set(classifiedGamePackageTests), expectedUnion);
     assert.equal(existsSync(integrationRoot), true);
+  });
+
+  it('sub-lanes fitl-events + fitl-rules + texas-cross-game partition the game-packages lane', async () => {
+    const thisDir = dirname(fileURLToPath(import.meta.url));
+    const repoRoot = dirname(findRepoRootFile(thisDir, 'pnpm-workspace.yaml'));
+    const manifestPath = resolve(repoRoot, 'packages/engine/scripts/test-lane-manifest.mjs');
+    const manifest = (await import(pathToFileURL(manifestPath).href)) as {
+      readonly listIntegrationTestsForLane: (lane: string) => readonly string[];
+    };
+
+    const gamePackagesLane = manifest.listIntegrationTestsForLane('integration:game-packages');
+    const fitlEventsLane = manifest.listIntegrationTestsForLane('integration:fitl-events');
+    const fitlRulesLane = manifest.listIntegrationTestsForLane('integration:fitl-rules');
+    const texasCrossGameLane = manifest.listIntegrationTestsForLane('integration:texas-cross-game');
+
+    assert.equal(fitlEventsLane.length > 0, true, 'fitl-events lane must not be empty');
+    assert.equal(fitlRulesLane.length > 0, true, 'fitl-rules lane must not be empty');
+    assert.equal(texasCrossGameLane.length > 0, true, 'texas-cross-game lane must not be empty');
+
+    const union = new Set([...fitlEventsLane, ...fitlRulesLane, ...texasCrossGameLane]);
+    assert.deepEqual(union, new Set(gamePackagesLane), 'sub-lanes must be an exact partition of game-packages');
+
+    const totalCount = fitlEventsLane.length + fitlRulesLane.length + texasCrossGameLane.length;
+    assert.equal(totalCount, gamePackagesLane.length, 'sub-lanes must not overlap');
   });
 
   it('classifies e2e lanes explicitly and keeps non-MCTS, slow, and MCTS coverage aligned', async () => {

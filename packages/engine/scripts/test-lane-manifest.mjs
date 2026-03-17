@@ -63,6 +63,12 @@ export function isGamePackageIntegrationTest(sourcePath) {
   );
 }
 
+export function isFitlEventCardTest(sourcePath) {
+  const normalized = sourcePath.replaceAll('\\', '/');
+  const baseName = normalized.split('/').at(-1) ?? normalized;
+  return baseName.startsWith('fitl-events-');
+}
+
 export function listIntegrationTestsForLane(lane) {
   switch (lane) {
     case 'integration':
@@ -75,6 +81,21 @@ export function listIntegrationTestsForLane(lane) {
       return ALL_INTEGRATION_TESTS.filter(
         (sourcePath) => isGamePackageIntegrationTest(sourcePath) && !gamePackageSmokeTests.has(sourcePath),
       );
+    case 'integration:fitl-events':
+      return ALL_INTEGRATION_TESTS.filter(
+        (sourcePath) => isGamePackageIntegrationTest(sourcePath) && !gamePackageSmokeTests.has(sourcePath) && isFitlEventCardTest(sourcePath),
+      );
+    case 'integration:fitl-rules':
+      return ALL_INTEGRATION_TESTS.filter(
+        (sourcePath) => isGamePackageIntegrationTest(sourcePath) && !gamePackageSmokeTests.has(sourcePath) && sourcePath.split('/').at(-1)?.startsWith('fitl-') && !isFitlEventCardTest(sourcePath),
+      );
+    case 'integration:texas-cross-game':
+      return ALL_INTEGRATION_TESTS.filter((sourcePath) => {
+        if (gamePackageSmokeTests.has(sourcePath)) return false;
+        if (!isGamePackageIntegrationTest(sourcePath)) return false;
+        const baseName = sourcePath.split('/').at(-1) ?? sourcePath;
+        return baseName.startsWith('texas-') || GAME_PACKAGE_EXACT_TESTS.includes(baseName);
+      });
     default:
       throw new Error(`Unknown integration test lane: ${lane}`);
   }

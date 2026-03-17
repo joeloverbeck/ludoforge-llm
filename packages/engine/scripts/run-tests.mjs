@@ -18,6 +18,9 @@ const lanePatterns = {
   integration: listIntegrationTestsForLane('integration').map(toDistTestPath),
   'integration:core': listIntegrationTestsForLane('integration:core').map(toDistTestPath),
   'integration:game-packages': listIntegrationTestsForLane('integration:game-packages').map(toDistTestPath),
+  'integration:fitl-events': listIntegrationTestsForLane('integration:fitl-events').map(toDistTestPath),
+  'integration:fitl-rules': listIntegrationTestsForLane('integration:fitl-rules').map(toDistTestPath),
+  'integration:texas-cross-game': listIntegrationTestsForLane('integration:texas-cross-game').map(toDistTestPath),
 };
 
 const normalizeRequestedPattern = (pattern) => {

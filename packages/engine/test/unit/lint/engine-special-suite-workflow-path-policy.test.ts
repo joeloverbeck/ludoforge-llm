@@ -6,11 +6,16 @@ import { describe, it } from 'node:test';
 import { parse } from 'yaml';
 import { findRepoRootFile } from '../../helpers/lint-policy-helpers.js';
 
+// Workflows with the full shared path filter set (packages/engine/**, data/games/**, scripts/**, etc.).
+// MCTS workflows intentionally use narrower filters (packages/engine/src/agents/**)
+// to avoid expensive test runs on unrelated engine changes — they are excluded here.
 const WORKFLOW_FILES = [
   '.github/workflows/engine-e2e-all.yml',
-  '.github/workflows/engine-game-packages.yml',
+  '.github/workflows/engine-fitl-events.yml',
+  '.github/workflows/engine-fitl-rules.yml',
   '.github/workflows/engine-memory.yml',
   '.github/workflows/engine-performance.yml',
+  '.github/workflows/engine-texas-cross-game.yml',
 ] as const;
 
 const REQUIRED_SHARED_PATH_FILTERS = [

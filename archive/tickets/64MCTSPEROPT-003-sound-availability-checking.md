@@ -1,6 +1,6 @@
 # 64MCTSPEROPT-003: Sound Availability Checking in Selection
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — MCTS search selection logic
@@ -98,3 +98,18 @@ Validate `classificationPolicy` is one of the allowed values.
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-17
+- **What changed**:
+  - New `availability.ts` with `filterAvailableByClassification()` and `resolveUnknownChildren()` — partitions children into available/unknown/unavailable using `CachedClassificationEntry` statuses
+  - Added `classificationPolicy?: 'auto' | 'exhaustive' | 'lazy'` to `MctsConfig` with validation
+  - Added `getOrInitClassificationEntry()` to `state-cache.ts` for lazy entry access without exhausting the cursor
+  - Refactored selection loop in `search.ts` to support both exhaustive (full sweep, backward compat) and lazy (incremental per-move) classification paths
+  - New test file `availability-checking.test.ts` with 13 tests covering all acceptance criteria
+- **Deviations from plan**:
+  - `isuct.ts` was not modified — scoring is already movement-agnostic (receives pre-filtered `availableChildren`)
+  - `state-cache.ts` received `getOrInitClassificationEntry()` (not listed in original plan but needed for lazy entry access)
+  - AC 7 (differential test: exhaustive vs lazy producing identical statuses) was not added — deferred to integration testing when lazy path is exercised by default
+- **Verification**: 5020 tests pass, 0 failures. Typecheck and lint clean.

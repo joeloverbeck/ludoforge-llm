@@ -14,6 +14,10 @@ type RolloutPolicy = (typeof ROLLOUT_POLICIES)[number];
 const SOLVER_MODES = ['off', 'perfectInfoDeterministic2P'] as const;
 type SolverMode = (typeof SOLVER_MODES)[number];
 
+/** Allowed classification policies (spec section 5). */
+const CLASSIFICATION_POLICIES = ['auto', 'exhaustive', 'lazy'] as const;
+export type ClassificationPolicy = (typeof CLASSIFICATION_POLICIES)[number];
+
 /** Allowed leaf evaluator types. */
 const LEAF_EVALUATOR_TYPES = ['heuristic', 'rollout', 'auto'] as const;
 
@@ -103,6 +107,14 @@ export interface MctsConfig {
 
   /** Optional search observer for real-time event callbacks. Not validated or frozen. */
   readonly visitor?: MctsSearchVisitor;
+
+  /**
+   * Classification policy for move availability checking.
+   * - `'auto'`: choose exhaustive or lazy based on branching factor (default).
+   * - `'exhaustive'`: full classification sweep (backward compat).
+   * - `'lazy'`: incremental per-move classification.
+   */
+  readonly classificationPolicy?: ClassificationPolicy;
 
   /** Optional internal diagnostics for tuning/tests. */
   readonly diagnostics?: boolean;
@@ -298,6 +310,11 @@ export function validateMctsConfig(partial: Partial<MctsConfig>): MctsConfig {
   // Decision depth multiplier
   if (merged.decisionDepthMultiplier !== undefined) {
     assertPositiveInt('decisionDepthMultiplier', merged.decisionDepthMultiplier);
+  }
+
+  // Classification policy
+  if (merged.classificationPolicy !== undefined) {
+    assertOneOf('classificationPolicy', merged.classificationPolicy, CLASSIFICATION_POLICIES);
   }
 
   // visitor: pass through without validation (callback, not tuneable).

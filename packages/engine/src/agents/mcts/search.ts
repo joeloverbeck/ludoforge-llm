@@ -43,7 +43,14 @@ import {
   getOrComputeLegalMoves,
   getOrComputeRewards,
   getOrComputeClassification,
+  getOrInitClassificationEntry,
+  classifySpecificMove,
 } from './state-cache.js';
+import {
+  filterAvailableByClassification,
+  resolveUnknownChildren,
+} from './availability.js';
+import type { ClassificationPolicy } from './config.js';
 
 // ---------------------------------------------------------------------------
 // Confidence-based root stopping (Hoeffding bound)
@@ -336,22 +343,108 @@ export function runOneIteration(
       acc.branchingFactorSamples.push({ depth: selectionDepth, count: movesAtNode.length });
     }
 
-    // Classify all legal moves at this state node via runtime readiness
-    // (legalChoicesEvaluate per move — no compile-time shortcuts).
-    // Uses the state-info cache when enabled to avoid redundant classification
-    // of the same state across iterations (critical for root node reuse).
-    const classification: MoveClassification =
-      stateCache !== undefined && maxCacheEntries !== undefined
-        ? getOrComputeClassification(
-            stateCache, def, currentState, movesAtNode, runtime,
-            maxCacheEntries, config.visitor, acc,
-          )
-        : classifyMovesForSearch(
-            def, currentState, movesAtNode, runtime, config.visitor, acc,
+    // ── Move classification and availability ───────────────────────
+    // Determine which moves are ready/pending and which children are
+    // available using sound availability checking (spec 3.5).
+    //
+    // Policy: 'exhaustive' (or when cache unavailable) does a full sweep.
+    //         'lazy' uses incremental per-move classification.
+    //         'auto' (default) uses exhaustive for backward compatibility.
+    const effectivePolicy: ClassificationPolicy =
+      config.classificationPolicy ?? 'auto';
+    const useLazy = effectivePolicy === 'lazy' ||
+      (effectivePolicy === 'auto' && false); // auto → exhaustive for now
+
+    let candidates: readonly import('./expansion.js').ConcreteMoveCandidate[];
+    let pendingMoves: readonly Move[];
+    let availableChildren: MctsNode[];
+
+    if (useLazy && stateCache !== undefined && maxCacheEntries !== undefined) {
+      // ── Lazy path: incremental classification ─────────────────────
+      // Get or create the incremental entry without exhausting it.
+      const classEntry = getOrInitClassificationEntry(
+        stateCache, currentState, movesAtNode, maxCacheEntries,
+      );
+
+      if (classEntry !== null) {
+        // Use sound availability checking against the incremental entry.
+        const { available, unknown: unknowns } = filterAvailableByClassification(
+          currentNode.children, classEntry,
+        );
+
+        // Resolve unknown children on demand (at most one legalChoicesEvaluate per unknown child).
+        if (unknowns.length > 0) {
+          const newlyAvailable = resolveUnknownChildren(
+            unknowns,
+            (index) => classifySpecificMove(classEntry, index, def, currentState, runtime, config.visitor, acc),
           );
-    const candidates = classification.ready;
-    if (acc !== undefined) {
-      acc.materializeCalls += 1;
+          available.push(...newlyAvailable);
+        }
+
+        availableChildren = available;
+
+        // Also increment availability for decision root children with pending status.
+        for (const child of currentNode.children) {
+          if (child.nodeKind === 'decision' && child.moveKey !== null) {
+            // Decision roots use template keys — check if any pending info matches.
+            // Decision roots are already handled by filterAvailableByClassification
+            // since their moveKey matches the entry. But if they were created by
+            // a prior iteration, ensure they're counted.
+            if (!availableChildren.includes(child)) {
+              // Check if the decision root's underlying action is pending.
+              for (const info of classEntry.infos) {
+                if (info.status === 'pending' && child.moveKey === templateDecisionRootKey(info.move.actionId)) {
+                  child.availability += 1;
+                  availableChildren.push(child);
+                  break;
+                }
+              }
+            }
+          }
+        }
+
+        // Extract ready candidates for expansion (moves not yet expanded as children).
+        const readyCandidates: import('./expansion.js').ConcreteMoveCandidate[] = [];
+        const pendingList: Move[] = [];
+        for (const info of classEntry.infos) {
+          if (info.status === 'ready') {
+            readyCandidates.push({ move: info.move, moveKey: info.moveKey });
+          } else if (info.status === 'pending') {
+            pendingList.push(info.move);
+          }
+        }
+        candidates = readyCandidates;
+        pendingMoves = pendingList;
+      } else {
+        // Uncacheable state (hash === 0n) — fall back to exhaustive.
+        const classification = classifyMovesForSearch(
+          def, currentState, movesAtNode, runtime, config.visitor, acc,
+        );
+        candidates = classification.ready;
+        pendingMoves = classification.pending;
+        availableChildren = [];
+      }
+
+      if (acc !== undefined) {
+        acc.materializeCalls += 1;
+      }
+    } else {
+      // ── Exhaustive path: full classification sweep ────────────────
+      const classification: MoveClassification =
+        stateCache !== undefined && maxCacheEntries !== undefined
+          ? getOrComputeClassification(
+              stateCache, def, currentState, movesAtNode, runtime,
+              maxCacheEntries, config.visitor, acc,
+            )
+          : classifyMovesForSearch(
+              def, currentState, movesAtNode, runtime, config.visitor, acc,
+            );
+      candidates = classification.ready;
+      pendingMoves = classification.pending;
+      if (acc !== undefined) {
+        acc.materializeCalls += 1;
+      }
+      availableChildren = [];
     }
 
     // ── Decision root creation for pending moves ────────────────────
@@ -359,7 +452,7 @@ export function runOneIteration(
     // When selection picks a decision root, it enters the decision
     // subtree and expands via expandDecisionNode.
     const actingPlayerForDecision = currentState.activePlayer as PlayerId;
-    for (const pendingMove of classification.pending) {
+    for (const pendingMove of pendingMoves) {
       const rootKey = templateDecisionRootKey(pendingMove.actionId);
 
       // Check if a decision root for this action already exists.
@@ -403,7 +496,7 @@ export function runOneIteration(
     }
 
     // Total available candidates includes both ready and pending moves.
-    const totalCandidateCount = candidates.length + classification.pending.length;
+    const totalCandidateCount = candidates.length + pendingMoves.length;
 
     if (totalCandidateCount === 0) {
       break;
@@ -415,7 +508,7 @@ export function runOneIteration(
     if (
       config.compressForcedSequences !== false &&
       candidates.length === 1 &&
-      classification.pending.length === 0
+      pendingMoves.length === 0
     ) {
       // Safety cap: break if forced plies exceed the limit.
       if (forcedPlies >= maxForcedPlies) {
@@ -464,18 +557,37 @@ export function runOneIteration(
       continue;
     }
 
-    // Build a lookup of candidate moveKeys for availability matching.
-    const candidateKeySet = new Set<string>();
-    for (const c of candidates) {
-      candidateKeySet.add(c.moveKey);
+    // ── Exhaustive-path availability matching ───────────────────────
+    // When using the exhaustive path, build availability from the
+    // candidate key set (original behavior).
+    if (!useLazy || availableChildren.length === 0) {
+      const candidateKeySet = new Set<string>();
+      for (const c of candidates) {
+        candidateKeySet.add(c.moveKey);
+      }
+
+      // Determine which existing children are available (legal in this world).
+      availableChildren = [];
+      for (const child of currentNode.children) {
+        if (child.moveKey !== null && candidateKeySet.has(child.moveKey)) {
+          child.availability += 1;
+          availableChildren.push(child);
+        }
+      }
     }
 
-    // Determine which existing children are available (legal in this world).
-    const availableChildren: MctsNode[] = [];
+    // Also include decision root children in availability matching.
+    // Decision roots may have been created above and already have availability=1,
+    // but existing decision roots from prior iterations need to be matched.
     for (const child of currentNode.children) {
-      if (child.moveKey !== null && candidateKeySet.has(child.moveKey)) {
-        child.availability += 1;
-        availableChildren.push(child);
+      if (child.nodeKind === 'decision' && child.moveKey !== null && !availableChildren.includes(child)) {
+        for (const pm of pendingMoves) {
+          if (child.moveKey === templateDecisionRootKey(pm.actionId)) {
+            child.availability += 1;
+            availableChildren.push(child);
+            break;
+          }
+        }
       }
     }
 

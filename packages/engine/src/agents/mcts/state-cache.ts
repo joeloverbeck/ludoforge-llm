@@ -278,6 +278,40 @@ export function exhaustClassificationToLegacy(
 }
 
 // ---------------------------------------------------------------------------
+// Incremental classification entry access
+// ---------------------------------------------------------------------------
+
+/**
+ * Return the incremental classification entry for the given state, creating
+ * one (with all `unknown` statuses) if not yet present. Returns `null` when
+ * the state hash is 0n (uncacheable hidden-info state).
+ *
+ * Unlike `getOrComputeClassification`, this does NOT exhaust the cursor —
+ * it returns the entry for incremental/lazy use.
+ */
+export function getOrInitClassificationEntry(
+  cache: StateInfoCache,
+  state: GameState,
+  moves: readonly Move[],
+  maxEntries: number,
+): CachedClassificationEntry | null {
+  const hash = state.stateHash;
+  if (hash === 0n) return null;
+
+  const cached = cache.get(hash);
+  if (cached?.classification !== undefined) {
+    return cached.classification;
+  }
+
+  // Create a new entry with all unknown statuses.
+  evictIfNeeded(cache, maxEntries);
+  const entry = initClassificationEntry(moves);
+  const existing = cache.get(hash);
+  cache.set(hash, { ...existing, classification: entry });
+  return entry;
+}
+
+// ---------------------------------------------------------------------------
 // Cache-or-compute helpers
 // ---------------------------------------------------------------------------
 

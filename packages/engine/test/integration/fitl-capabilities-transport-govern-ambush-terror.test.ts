@@ -13,6 +13,7 @@ import {
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
+import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
 
 const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
@@ -558,48 +559,129 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
     assert.equal((shaded.zones['casualties-US:none'] ?? []).length, 2, 'cap_mainForceBns shaded should remove 2 COIN pieces in VC Ambush');
   });
 
-  it('applies cap_cadres unshaded VC Terror guerrilla-cost reduction by suppressing activation', () => {
+  it('cap_cadres unshaded VC Terror activates guerrilla AND removes 2 to Available', () => {
     const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
     const space = 'quang-nam:none';
 
-    const run = (marker: MarkerState, seed: number): GameState => {
-      const start = withMarker(
-        {
-          ...operationInitialState(def, seed, 4),
-          activePlayer: asPlayerId(3),
-        },
-        'cap_cadres',
-        marker,
-      );
-      const setup = {
-        ...addTokenToZone(start, space, makeToken(`terror-${marker}-vc-g`, 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' })),
-        globalVars: {
-          ...start.globalVars,
-          vcResources: 5,
-        },
-      };
-
-      return applyMoveWithResolvedDecisionIds(def, setup, {
-        actionId: asActionId('terror'),
-        params: {
-          $targetSpaces: [space],
-        },
-      }).state;
+    const base = clearAllZones(initialState(def, 7402, 4).state);
+    const setup: GameState = {
+      ...base,
+      activePlayer: asPlayerId(3),
+      turnOrderState: { type: 'roundRobin' },
+      globalMarkers: {
+        ...base.globalMarkers,
+        cap_cadres: 'unshaded',
+      },
+      globalVars: {
+        ...base.globalVars,
+        vcResources: 5,
+      },
+      zones: {
+        ...base.zones,
+        // 2 active first (deterministic default picks these for removal), then 1 underground (activated, stays)
+        [space]: [
+          makeToken('cadres-vc-g1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('cadres-vc-g2', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('cadres-vc-g3', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+        ],
+      },
     };
 
-    const inactive = run('inactive', 7401);
-    const unshaded = run('unshaded', 7402);
-    const shaded = run('shaded', 7403);
+    const final = applyMoveWithResolvedDecisionIds(def, setup, {
+      actionId: asActionId('terror'),
+      params: {
+        $targetSpaces: [space],
+      },
+    }).state;
 
-    const inactiveToken = (inactive.zones[space] ?? []).find((token) => token.id === asTokenId('terror-inactive-vc-g'));
-    const unshadedToken = (unshaded.zones[space] ?? []).find((token) => token.id === asTokenId('terror-unshaded-vc-g'));
-    const shadedToken = (shaded.zones[space] ?? []).find((token) => token.id === asTokenId('terror-shaded-vc-g'));
+    // g3 was underground → activated to active; g1 and g2 removed by Cadres
+    const activatedToken = (final.zones[space] ?? []).find((token) => token.id === asTokenId('cadres-vc-g3'));
+    assert.equal(activatedToken?.props.activity, 'active', 'cap_cadres unshaded should still activate an underground guerrilla');
 
-    assert.equal(inactiveToken?.props.activity, 'active');
-    assert.equal(shadedToken?.props.activity, 'active');
-    assert.equal(unshadedToken?.props.activity, 'underground', 'cap_cadres unshaded should reduce VC Terror guerrilla activation cost to 0 in current model');
+    // 2 guerrillas removed to Available (g1 and g2 via deterministic default)
+    const availableVcGuerrillas = (final.zones['available-VC:none'] ?? []).filter(
+      (token) => token.id === asTokenId('cadres-vc-g1') || token.id === asTokenId('cadres-vc-g2'),
+    );
+    assert.equal(availableVcGuerrillas.length, 2, 'cap_cadres unshaded should remove 2 VC guerrillas to Available');
+  });
+
+  it('cap_cadres unshaded blocks VC Terror in spaces with <2 VC guerrillas', () => {
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const space = 'quang-nam:none';
+
+    const start = withMarker(
+      {
+        ...operationInitialState(def, 7404, 4),
+        activePlayer: asPlayerId(3),
+      },
+      'cap_cadres',
+      'unshaded',
+    );
+    // Only 1 VC guerrilla — not enough for Cadres removal cost
+    const setup = {
+      ...addTokenToZone(start, space, makeToken('cadres-solo-g', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' })),
+      globalVars: {
+        ...start.globalVars,
+        vcResources: 5,
+      },
+    };
+
+    assert.throws(
+      () =>
+        applyMoveWithResolvedDecisionIds(def, setup, {
+          actionId: asActionId('terror'),
+          params: {
+            $targetSpaces: [space],
+          },
+        }),
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain|Could not normalize)/,
+      'cap_cadres unshaded should block VC Terror when space has <2 VC guerrillas',
+    );
+  });
+
+  it('cap_cadres unshaded does not affect NVA Terror', () => {
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const space = 'quang-nam:none';
+
+    const start = withMarker(
+      {
+        ...operationInitialState(def, 7405, 4),
+        activePlayer: asPlayerId(2),
+      },
+      'cap_cadres',
+      'unshaded',
+    );
+    // Only 1 NVA guerrilla — NVA should still Terror normally
+    const setup = {
+      ...addTokenToZone(start, space, makeToken('nva-terror-g', 'guerrilla', 'NVA', { type: 'guerrilla', activity: 'underground' })),
+      globalVars: {
+        ...start.globalVars,
+        nvaResources: 5,
+      },
+    };
+
+    const final = applyMoveWithResolvedDecisionIds(def, setup, {
+      actionId: asActionId('terror'),
+      params: {
+        $targetSpaces: [space],
+      },
+    }).state;
+
+    const activatedToken = (final.zones[space] ?? []).find((token) => token.id === asTokenId('nva-terror-g'));
+    assert.equal(activatedToken?.props.activity, 'active', 'NVA Terror should activate guerrilla normally regardless of cap_cadres');
+    // No guerrillas removed to Available
+    const availableNva = (final.zones['available-NVA:none'] ?? []).filter(
+      (token) => token.id === asTokenId('nva-terror-g'),
+    );
+    assert.equal(availableNva.length, 0, 'NVA guerrilla should not be removed to Available by cap_cadres');
   });
 });

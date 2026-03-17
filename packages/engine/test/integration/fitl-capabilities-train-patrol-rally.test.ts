@@ -14,7 +14,7 @@ import {
 } from '../../src/kernel/index.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
+import { applyMoveWithResolvedDecisionIds, type DecisionOverrideRule } from '../helpers/decision-param-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
 
@@ -590,16 +590,263 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
     );
     assert.ok(sa2sBoost.length >= 1, 'Expected cap_sa2s shaded to encode a +2 Trail improvement with max-4 clamp');
 
-    const cadresShadedBranch = findDeep(rallyVc.stages, (node: any) =>
-      node?.if?.when?.left?.ref === 'globalMarkerState' &&
-      node?.if?.when?.left?.marker === 'cap_cadres' &&
-      node?.if?.when?.right === 'shaded',
-    );
+    const cadresShadedBranch = findDeep(rallyVc.stages, (node: any) => {
+      if (!node?.if?.when) return false;
+      const text = JSON.stringify(node.if.when);
+      return text.includes('"ref":"globalMarkerState"') && text.includes('"marker":"cap_cadres"') && text.includes('"shaded"');
+    });
     assert.ok(cadresShadedBranch.length >= 1, 'Expected cap_cadres shaded branch in rally-vc');
 
     const cadresAgitateCap = findDeep(cadresShadedBranch[0], (node: any) => node?.chooseN?.bind === '$cadresAgitateSpaces' && node?.chooseN?.max === 1);
     const cadresShift = findDeep(cadresShadedBranch[0], (node: any) => node?.shiftMarker?.marker === 'supportOpposition' && node?.shiftMarker?.delta === -1);
     assert.ok(cadresAgitateCap.length >= 1, 'Expected cap_cadres shaded to limit Rally agitate bonus to 1 space');
     assert.ok(cadresShift.length >= 1, 'Expected cap_cadres shaded to add Rally agitate shift effect');
+  });
+
+  it('cap_cadres shaded Rally agitate deducts 1 VC Resource and shifts toward Opposition', () => {
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    // Use a province that Rally allows (not in support)
+    const space = 'quang-nam:none';
+    const base = clearAllZones(initialState(def, 40001, 4).state);
+    const start: GameState = {
+      ...base,
+      activePlayer: asPlayerId(3),
+      globalVars: {
+        ...base.globalVars,
+        vcResources: 10,
+      },
+      globalMarkers: {
+        ...base.globalMarkers,
+        cap_cadres: 'shaded',
+      },
+      zones: {
+        ...base.zones,
+        [space]: [
+          makeToken('cadres-rally-base', 'base', 'VC', { type: 'base', tunnel: 'untunneled' }),
+          makeToken('cadres-rally-g1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+        ],
+      },
+      markers: {
+        ...base.markers,
+        [space]: {
+          ...(base.markers?.[space] ?? {}),
+          supportOpposition: 'neutral',
+        },
+      },
+    };
+
+    const overrides: DecisionOverrideRule[] = [
+      { when: (r) => r.name === '$cadresAgitateSpaces', value: [space] },
+      { when: (r) => r.name === '$cadresAgitateAction', value: 'shiftOpposition' },
+    ];
+
+    const after = applyMoveWithResolvedDecisionIds(def, start, {
+      actionId: asActionId('rally'),
+      params: {
+        $targetSpaces: [space],
+      },
+    }, { overrides }).state;
+
+    // Rally is free (VC base present), Cadres agitate costs 1
+    assert.ok(
+      (after.globalVars.vcResources as number) < (start.globalVars.vcResources as number),
+      'cap_cadres shaded Rally agitate should deduct VC Resources',
+    );
+
+    // Support should have shifted toward Opposition (from neutral to passiveOpposition)
+    assert.notEqual(
+      after.markers?.[space]?.supportOpposition,
+      'neutral',
+      'cap_cadres shaded should shift support toward Opposition',
+    );
+  });
+
+  it('cap_cadres shaded Rally agitate can remove Terror', () => {
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const space = 'quang-nam:none';
+    const base = clearAllZones(initialState(def, 40002, 4).state);
+    const start: GameState = {
+      ...base,
+      activePlayer: asPlayerId(3),
+      globalVars: {
+        ...base.globalVars,
+        vcResources: 10,
+      },
+      globalMarkers: {
+        ...base.globalMarkers,
+        cap_cadres: 'shaded',
+      },
+      zones: {
+        ...base.zones,
+        [space]: [
+          makeToken('cadres-terror-base', 'base', 'VC', { type: 'base', tunnel: 'untunneled' }),
+          makeToken('cadres-terror-g1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+        ],
+      },
+      markers: {
+        ...base.markers,
+        [space]: {
+          ...(base.markers?.[space] ?? {}),
+          supportOpposition: 'neutral',
+        },
+      },
+      zoneVars: {
+        ...base.zoneVars,
+        [space]: {
+          ...(base.zoneVars?.[space] ?? {}),
+          terrorCount: 1,
+        },
+      },
+    };
+
+    const overrides: DecisionOverrideRule[] = [
+      { when: (r) => r.name === '$cadresAgitateSpaces', value: [space] },
+      { when: (r) => r.name === '$cadresAgitateAction', value: 'removeTerror' },
+    ];
+
+    const after = applyMoveWithResolvedDecisionIds(def, start, {
+      actionId: asActionId('rally'),
+      params: {
+        $targetSpaces: [space],
+      },
+    }, { overrides }).state;
+
+    assert.equal(
+      after.zoneVars?.[space]?.terrorCount ?? 0,
+      0,
+      'cap_cadres shaded Rally agitate removeTerror should clear terrorCount',
+    );
+  });
+
+  it('cap_cadres shaded Rally agitate works under COIN Control', () => {
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const space = 'quang-nam:none';
+    const base = clearAllZones(initialState(def, 40003, 4).state);
+    const start: GameState = {
+      ...base,
+      activePlayer: asPlayerId(3),
+      globalVars: {
+        ...base.globalVars,
+        vcResources: 10,
+      },
+      globalMarkers: {
+        ...base.globalMarkers,
+        cap_cadres: 'shaded',
+      },
+      zones: {
+        ...base.zones,
+        [space]: [
+          makeToken('cadres-coin-base', 'base', 'VC', { type: 'base', tunnel: 'untunneled' }),
+          makeToken('cadres-coin-g1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+          // COIN pieces for COIN control
+          makeToken('cadres-coin-t1', 'troops', 'US', { type: 'troops' }),
+          makeToken('cadres-coin-t2', 'troops', 'US', { type: 'troops' }),
+          makeToken('cadres-coin-t3', 'troops', 'US', { type: 'troops' }),
+        ],
+      },
+      markers: {
+        ...base.markers,
+        [space]: {
+          ...(base.markers?.[space] ?? {}),
+          supportOpposition: 'neutral',
+        },
+      },
+    };
+
+    const overrides: DecisionOverrideRule[] = [
+      { when: (r) => r.name === '$cadresAgitateSpaces', value: [space] },
+      { when: (r) => r.name === '$cadresAgitateAction', value: 'shiftOpposition' },
+    ];
+
+    const after = applyMoveWithResolvedDecisionIds(def, start, {
+      actionId: asActionId('rally'),
+      params: {
+        $targetSpaces: [space],
+      },
+    }, { overrides }).state;
+
+    // Should still agitate even under COIN control
+    assert.notEqual(
+      after.markers?.[space]?.supportOpposition,
+      'neutral',
+      'cap_cadres shaded agitate should work even under COIN Control',
+    );
+  });
+
+  it('cap_cadres shaded Rally agitate resource gate is encoded in profile', () => {
+    // Verify the structural presence of the vcResources >= 1 gate on the Cadres agitate branch.
+    // Behavioral testing with vcResources=0 is not feasible because VC Rally space-selection
+    // also uses vcResources for max, blocking space selection entirely at 0.
+    const rallyVc = getParsedProfile('rally-vc-profile');
+    const cadresStage = findDeep(rallyVc.stages, (node: any) => {
+      if (!node?.if?.when) return false;
+      const text = JSON.stringify(node.if.when);
+      return text.includes('"cap_cadres"') && text.includes('"shaded"') && text.includes('"vcResources"');
+    });
+    assert.ok(cadresStage.length >= 1, 'Expected cap_cadres shaded stage to gate on vcResources >= 1');
+  });
+
+  it('cap_cadres shaded Rally agitate silently skips non-base spaces', () => {
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const space = 'quang-nam:none';
+    const base = clearAllZones(initialState(def, 40005, 4).state);
+    const start: GameState = {
+      ...base,
+      activePlayer: asPlayerId(3),
+      globalVars: {
+        ...base.globalVars,
+        vcResources: 5,
+      },
+      globalMarkers: {
+        ...base.globalMarkers,
+        cap_cadres: 'shaded',
+      },
+      zones: {
+        ...base.zones,
+        // No VC base in this space — only guerrillas
+        [space]: [
+          makeToken('cadres-nobase-g1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+        ],
+      },
+      markers: {
+        ...base.markers,
+        [space]: {
+          ...(base.markers?.[space] ?? {}),
+          supportOpposition: 'neutral',
+        },
+      },
+    };
+
+    const overrides: DecisionOverrideRule[] = [
+      { when: (r) => r.name === '$cadresAgitateSpaces', value: [space] },
+    ];
+
+    const after = applyMoveWithResolvedDecisionIds(def, start, {
+      actionId: asActionId('rally'),
+      params: {
+        $targetSpaces: [space],
+      },
+    }, { overrides }).state;
+
+    // No agitate effect — space lacks VC base (only Rally cost of 1 is charged)
+    assert.equal(
+      after.markers?.[space]?.supportOpposition,
+      'neutral',
+      'cap_cadres shaded should not agitate in spaces without VC base',
+    );
+    // vcResources drops by 1 from Rally cost (no base = paid), but Cadres agitate does NOT fire
+    assert.equal(after.globalVars.vcResources, 4, 'Only Rally cost charged, no Cadres agitate cost');
   });
 });

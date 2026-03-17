@@ -541,6 +541,19 @@ actions:
         - op: '>='
           left: { ref: gvar, var: vcResources }
           right: 1
+        # Cap Cadres unshaded: VC Agitate needs >=2 VC guerrillas
+        - op: or
+          args:
+            - { op: '!=', left: { ref: globalMarkerState, marker: cap_cadres }, right: unshaded }
+            - op: '>='
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: tokensInZone
+                    zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                    filter: { op: and, args: [{ prop: faction, op: eq, value: VC }, { prop: type, op: eq, value: guerrilla }] }
+              right: 2
         - op: or
           args:
             - conditionMacro: fitl-coup-support-remove-terror-action-allowed
@@ -564,6 +577,23 @@ actions:
             - shiftMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: supportOpposition, delta: -1 }
             - shiftMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupSupportShiftCount, delta: 1 }
       - setMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupAgitateSpaceUsage, state: used }
+      # Cap Cadres unshaded: VC Agitate must also remove 2 VC guerrillas
+      - if:
+          when: { op: '==', left: { ref: globalMarkerState, marker: cap_cadres }, right: unshaded }
+          then:
+            - chooseN:
+                bind: $cadresAgitateRemoveGuerrillas
+                options:
+                  query: tokensInZone
+                  zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                  filter: { op: and, args: [{ prop: faction, op: eq, value: VC }, { prop: type, op: eq, value: guerrilla }] }
+                min: 2
+                max: 2
+            - forEach:
+                bind: $cadresAgG
+                over: { query: binding, name: $cadresAgitateRemoveGuerrillas }
+                effects:
+                  - moveToken: { token: $cadresAgG, from: { zoneExpr: { ref: binding, name: targetSpace } }, to: { zoneExpr: 'available-VC:none' } }
     limits: []
   - id: coupArvnRedeployMandatory
     actor: active
@@ -3316,7 +3346,11 @@ actionPipelines:
       - stage: cap-cadres-rally-agitate
         effects:
           - if:
-              when: { op: '==', left: { ref: globalMarkerState, marker: cap_cadres }, right: shaded }
+              when:
+                op: and
+                args:
+                  - { op: '==', left: { ref: globalMarkerState, marker: cap_cadres }, right: shaded }
+                  - { op: '>=', left: { ref: gvar, var: vcResources }, right: 1 }
               then:
                 - chooseN:
                     bind: $cadresAgitateSpaces
@@ -3345,12 +3379,29 @@ actionPipelines:
                                   - { op: '==', left: { ref: zoneProp, zone: $cadresSpace, prop: category }, right: city }
                                   - { op: '==', left: { ref: zoneProp, zone: $cadresSpace, prop: category }, right: province }
                               - { op: '>', left: { ref: zoneProp, zone: $cadresSpace, prop: population }, right: 0 }
-                              - { op: '!=', left: { ref: markerState, space: $cadresSpace, marker: supportOpposition }, right: activeOpposition }
                           then:
-                            - shiftMarker:
-                                space: $cadresSpace
-                                marker: supportOpposition
-                                delta: -1
+                            # Pay 1 VC Resource (costs even if the Rally was free)
+                            - addVar: { scope: global, var: vcResources, delta: -1 }
+                            # Choose: remove Terror or shift toward Opposition
+                            - chooseOne:
+                                bind: $cadresAgitateAction
+                                options: { query: enums, values: ['removeTerror', 'shiftOpposition'] }
+                            - if:
+                                when:
+                                  op: and
+                                  args:
+                                    - { op: '==', left: { ref: binding, name: $cadresAgitateAction }, right: removeTerror }
+                                    - { op: '>', left: { ref: zoneVar, zone: $cadresSpace, var: terrorCount }, right: 0 }
+                                then:
+                                  - setVar: { scope: zoneVar, zone: { zoneExpr: $cadresSpace }, var: terrorCount, value: 0 }
+                            - if:
+                                when:
+                                  op: and
+                                  args:
+                                    - { op: '==', left: { ref: binding, name: $cadresAgitateAction }, right: shiftOpposition }
+                                    - { op: '!=', left: { ref: markerState, space: $cadresSpace, marker: supportOpposition }, right: activeOpposition }
+                                then:
+                                  - shiftMarker: { space: $cadresSpace, marker: supportOpposition, delta: -1 }
     atomicity: atomic
   - id: march-nva-profile
     actionId: march

@@ -1116,6 +1116,20 @@ effectMacros:
                                 args:
                                   - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
                                   - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                      # Cap Cadres unshaded: VC needs >=2 guerrillas for Terror
+                      - op: or
+                        args:
+                          - { op: '!=', left: { param: faction }, right: VC }
+                          - { op: '!=', left: { ref: globalMarkerState, marker: cap_cadres }, right: unshaded }
+                          - op: '>='
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter: { op: and, args: [{ prop: faction, op: eq, value: VC }, { prop: type, op: eq, value: guerrilla }] }
+                            right: 2
                 min: 1
                 max: 1
           else:
@@ -1156,6 +1170,20 @@ effectMacros:
                                 args:
                                   - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
                                   - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                      # Cap Cadres unshaded: VC needs >=2 guerrillas for Terror
+                      - op: or
+                        args:
+                          - { op: '!=', left: { param: faction }, right: VC }
+                          - { op: '!=', left: { ref: globalMarkerState, marker: cap_cadres }, right: unshaded }
+                          - op: '>='
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter: { op: and, args: [{ prop: faction, op: eq, value: VC }, { prop: type, op: eq, value: guerrilla }] }
+                            right: 2
                 min: 1
                 max:
                   if:
@@ -1250,22 +1278,37 @@ effectMacros:
               - { op: '!=', left: { ref: zoneProp, zone: { param: space }, prop: category }, right: 'loc' }
           then:
             - addVar: { scope: global, var: { param: resourceVar }, delta: -1 }
+      # Always activate one underground guerrilla
+      - forEach:
+          bind: $g
+          over:
+            query: tokensInZone
+            zone: { param: space }
+            filter: { op: and, args: [{ prop: faction, op: eq, value: { param: faction } }, { prop: type, op: eq, value: guerrilla }, { prop: activity, op: eq, value: underground }] }
+          limit: 1
+          effects:
+            - setTokenProp: { token: $g, prop: activity, value: active }
+      # Cap Cadres unshaded: VC must also remove 2 VC guerrillas to Available
       - if:
           when:
-            op: or
+            op: and
             args:
-              - { op: '!=', left: { param: faction }, right: VC }
-              - { op: '!=', left: { ref: globalMarkerState, marker: cap_cadres }, right: unshaded }
+              - { op: '==', left: { param: faction }, right: VC }
+              - { op: '==', left: { ref: globalMarkerState, marker: cap_cadres }, right: unshaded }
           then:
-            - forEach:
-                bind: $g
-                over:
+            - chooseN:
+                bind: $cadresRemoveGuerrillas
+                options:
                   query: tokensInZone
                   zone: { param: space }
-                  filter: { op: and, args: [{ prop: faction, op: eq, value:  { param: faction } }, { prop: type, op: eq, value: guerrilla }, { prop: activity, op: eq, value: underground }] }
-                limit: 1
+                  filter: { op: and, args: [{ prop: faction, op: eq, value: VC }, { prop: type, op: eq, value: guerrilla }] }
+                min: 2
+                max: 2
+            - forEach:
+                bind: $cadresG
+                over: { query: binding, name: $cadresRemoveGuerrillas }
                 effects:
-                  - setTokenProp: { token: $g, prop: activity, value: active }
+                  - moveToken: { token: $cadresG, from: { param: space }, to: { zoneExpr: 'available-VC:none' } }
       - if:
           when: { op: '==', left: { ref: zoneProp, zone: { param: space }, prop: category }, right: 'loc' }
           then:

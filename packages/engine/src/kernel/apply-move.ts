@@ -485,7 +485,7 @@ const validateTurnFlowWindowAccess = (
   }
 };
 
-const validateSpecialActivityCompoundConstraints = (
+const validateSpecialActivityCompoundParamConstraints = (
   def: GameDef,
   state: GameState,
   move: Move,
@@ -499,13 +499,6 @@ const validateSpecialActivityCompoundConstraints = (
   }
   const saMove = move.compound.specialActivity;
   const saPipeline = resolveMatchedPipelineForMove(def, state, saMove, seatResolution, evalRuntimeResources, cachedRuntime);
-  if (saPipeline !== undefined && !operationAllowsSpecialActivity(move.actionId, saPipeline.accompanyingOps)) {
-    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED, {
-      operationActionId: action.id,
-      specialActivityActionId: saMove.actionId,
-      profileId: saPipeline.id,
-    });
-  }
   if (saPipeline !== undefined) {
     const violated = violatesCompoundParamConstraints(move, saMove, saPipeline);
     if (violated !== null) {
@@ -664,7 +657,7 @@ const resolveMovePreflightContext = (
     ? undefined
     : toExecutionPipeline(action, actionPipeline);
   validateCompoundTimingConfiguration(move, executionProfile, actionPipeline);
-  validateSpecialActivityCompoundConstraints(def, state, move, action, seatResolution, evalRuntimeResources, cachedRuntime);
+  validateSpecialActivityCompoundParamConstraints(def, state, move, action, seatResolution, evalRuntimeResources, cachedRuntime);
 
   const isFreeOperationPipeline = move.freeOperation === true && executionProfile !== undefined;
   const costValidationPassed = resolvePipelineCostValidationStatus(
@@ -718,6 +711,17 @@ const validateMove = (
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
       detail: 'active seat has unresolved required free-operation grants',
     });
+  }
+  if (move.compound !== undefined) {
+    const saMove = move.compound.specialActivity;
+    const saPipeline = resolveMatchedPipelineForMove(def, state, saMove, seatResolution, evalRuntimeResources, cachedRuntime);
+    if (saPipeline !== undefined && !operationAllowsSpecialActivity(move.actionId, saPipeline.accompanyingOps)) {
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED, {
+        operationActionId: move.actionId,
+        specialActivityActionId: saMove.actionId,
+        profileId: saPipeline.id,
+      });
+    }
   }
   const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);

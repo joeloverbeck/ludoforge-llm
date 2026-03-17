@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-  materializeConcreteCandidates,
+  materializeMovesForRollout,
 } from '../../../../src/agents/mcts/materialization.js';
 import type { MctsSearchVisitor } from '../../../../src/agents/mcts/visitor.js';
 import type { MctsSearchEvent } from '../../../../src/agents/mcts/visitor.js';
@@ -93,8 +93,8 @@ function createCollector(): { visitor: MctsSearchVisitor; events: MctsSearchEven
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('materializeConcreteCandidates visitor emissions', () => {
-  it('emits templateDropped with reason "unsatisfiable" for unknown actions', () => {
+describe('materializeMovesForRollout visitor emissions', () => {
+  it('emits moveDropped with reason "unsatisfiable" for unknown actions', () => {
     const def = createTemplateDef();
     const { state } = initialState(def, 42, 2);
     const rng = createRng(1n);
@@ -104,7 +104,7 @@ describe('materializeConcreteCandidates visitor emissions', () => {
     // A move for a nonexistent action — legalChoicesEvaluate will throw
     const unknownMove = makeMove('nonexistent');
     const concreteMove = makeMove('noop');
-    const result = materializeConcreteCandidates(
+    const result = materializeMovesForRollout(
       def, state, [unknownMove, concreteMove], rng, 3, undefined, visitor,
     );
 
@@ -112,10 +112,10 @@ describe('materializeConcreteCandidates visitor emissions', () => {
     assert.equal(result.candidates.length, 1);
     assert.equal(result.candidates[0]!.moveKey, canonicalMoveKey(concreteMove));
 
-    // Visitor should have received a templateDropped event
-    const dropped = events.filter((e) => e.type === 'templateDropped');
-    assert.equal(dropped.length, 1, 'exactly one templateDropped emitted');
-    if (dropped[0]!.type === 'templateDropped') {
+    // Visitor should have received a moveDropped event
+    const dropped = events.filter((e) => e.type === 'moveDropped');
+    assert.equal(dropped.length, 1, 'exactly one moveDropped emitted');
+    if (dropped[0]!.type === 'moveDropped') {
       assert.equal(dropped[0]!.actionId, 'nonexistent');
       assert.equal(dropped[0]!.reason, 'unsatisfiable');
     }
@@ -129,7 +129,7 @@ describe('materializeConcreteCandidates visitor emissions', () => {
     // No visitor — should not throw
     const unknownMove = makeMove('nonexistent');
     const concreteMove = makeMove('noop');
-    const result = materializeConcreteCandidates(
+    const result = materializeMovesForRollout(
       def, state, [unknownMove, concreteMove], rng, 3,
     );
 
@@ -138,7 +138,7 @@ describe('materializeConcreteCandidates visitor emissions', () => {
     assert.equal(result.candidates[0]!.moveKey, canonicalMoveKey(concreteMove));
   });
 
-  it('does not emit templateDropped for successful concrete moves', () => {
+  it('does not emit moveDropped for successful concrete moves', () => {
     const def = createTemplateDef();
     const { state } = initialState(def, 42, 2);
     const rng = createRng(1n);
@@ -146,14 +146,14 @@ describe('materializeConcreteCandidates visitor emissions', () => {
     const { events, visitor } = createCollector();
 
     const concreteMove = makeMove('noop');
-    materializeConcreteCandidates(
+    materializeMovesForRollout(
       def, state, [concreteMove], rng, 3, undefined, visitor,
     );
 
     assert.equal(events.length, 0, 'no events emitted for successful concrete moves');
   });
 
-  it('does not emit templateDropped for successfully completed templates', () => {
+  it('does not emit moveDropped for successfully completed templates', () => {
     const def = createTemplateDef();
     const { state } = initialState(def, 42, 2);
     const rng = createRng(1n);
@@ -162,11 +162,11 @@ describe('materializeConcreteCandidates visitor emissions', () => {
 
     // "choose" has param target with domain [0,1,2] — should complete successfully
     const templateMove = makeMove('choose');
-    const result = materializeConcreteCandidates(
+    const result = materializeMovesForRollout(
       def, state, [templateMove], rng, 10, undefined, visitor,
     );
 
     assert.ok(result.candidates.length >= 1, 'at least one completion');
-    assert.equal(events.length, 0, 'no templateDropped for successful completions');
+    assert.equal(events.length, 0, 'no moveDropped for successful completions');
   });
 });

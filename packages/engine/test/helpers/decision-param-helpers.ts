@@ -1,6 +1,7 @@
 import {
   applyMove,
   completeMoveDecisionSequence,
+  IllegalMoveError,
   nextInt,
   pickDeterministicChoiceValue,
   resolveMoveDecisionSequence,
@@ -210,9 +211,21 @@ export const applyMoveWithResolvedDecisionIds = (
       // Preserve the original activePlayer for SA resolution. The standalone operation
       // applyMove may advance the turn and change activePlayer, but compound moves are
       // a single turn action — the SA must resolve with the same player context.
-      const saResolutionState = compound.replaceRemainingStages === true
-        ? state
-        : { ...applyMove(def, state, operationMove).state, activePlayer: state.activePlayer };
+      let saResolutionState: GameState;
+      try {
+        saResolutionState = compound.replaceRemainingStages === true
+          ? state
+          : { ...applyMove(def, state, operationMove).state, activePlayer: state.activePlayer };
+      } catch (err: unknown) {
+        // If the standalone operation is not legal (e.g. the compound move pairs an SA with a
+        // disallowed operation), skip SA decision resolution and let applyMove validate the full
+        // compound move — the kernel produces the precise structural error (e.g.
+        // specialActivityAccompanyingOpDisallowed) rather than a generic operation legality failure.
+        if (err instanceof IllegalMoveError) {
+          return normalized;
+        }
+        throw err;
+      }
       return {
         ...normalized,
         compound: {

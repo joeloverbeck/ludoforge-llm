@@ -90,6 +90,12 @@ export interface MutableDiagnosticsAccumulator {
   // Gap 7: Per-iteration timing
   iterationTimeSamples: number[];
 
+  // Lazy expansion counters
+  lazyExpansionCandidatesClassified: number;
+  lazyExpansionShortlistSize: number;
+  lazyExpansionFrontierExhausted: number;
+  lazyExpansionFallbackToExhaustive: number;
+
   // Aggregation arrays (for computing averages)
   leafRewardSpans: number[];
   selectionDepths: number[];
@@ -153,6 +159,11 @@ export function createAccumulator(): MutableDiagnosticsAccumulator {
     branchingFactorSamples: [],
 
     iterationTimeSamples: [],
+
+    lazyExpansionCandidatesClassified: 0,
+    lazyExpansionShortlistSize: 0,
+    lazyExpansionFrontierExhausted: 0,
+    lazyExpansionFallbackToExhaustive: 0,
 
     leafRewardSpans: [],
     selectionDepths: [],
@@ -245,6 +256,12 @@ export interface MctsSearchDiagnostics {
   readonly iterationTimeP95Ms?: number;
   readonly iterationTimeMaxMs?: number;
   readonly iterationTimeStddevMs?: number;
+
+  // Lazy expansion counters
+  readonly lazyExpansionCandidatesClassified?: number;
+  readonly lazyExpansionShortlistSize?: number;
+  readonly lazyExpansionFrontierExhausted?: number;
+  readonly lazyExpansionFallbackToExhaustive?: number;
 
   // Derived averages
   readonly avgSelectionDepth?: number;
@@ -474,6 +491,12 @@ export function collectDiagnostics(
 
     // Gap 7: Per-iteration timing
     ...iterationMetrics,
+
+    // Lazy expansion counters
+    lazyExpansionCandidatesClassified: accumulator.lazyExpansionCandidatesClassified,
+    lazyExpansionShortlistSize: accumulator.lazyExpansionShortlistSize,
+    lazyExpansionFrontierExhausted: accumulator.lazyExpansionFrontierExhausted,
+    lazyExpansionFallbackToExhaustive: accumulator.lazyExpansionFallbackToExhaustive,
 
     ...(avgSelectionDepth !== undefined ? { avgSelectionDepth } : {}),
     ...(avgLeafRewardSpan !== undefined ? { avgLeafRewardSpan } : {}),

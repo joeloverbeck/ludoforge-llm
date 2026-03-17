@@ -20,7 +20,8 @@ import { applyMove } from '../../kernel/apply-move.js';
 import { terminalResult } from '../../kernel/terminal.js';
 import { fork } from '../../kernel/prng.js';
 import { selectChild, selectDecisionChild } from './isuct.js';
-import { shouldExpand, selectExpansionCandidate } from './expansion.js';
+import { shouldExpand, selectExpansionCandidate, selectExpansionCandidateLazy } from './expansion.js';
+import type { LazyExpansionResult } from './expansion.js';
 import { classifyMovesForSearch, filterAvailableCandidates } from './materialization.js';
 import type { MoveClassification } from './materialization.js';
 import type { LeafEvaluator } from './config.js';
@@ -596,28 +597,78 @@ export function runOneIteration(
       shouldExpand(currentNode, config.progressiveWideningK, config.progressiveWideningAlpha) &&
       availableChildren.length < totalCandidateCount
     ) {
-      // There are unexpanded candidates — try to expand one.
-      const unexpanded = filterAvailableCandidates(currentNode, candidates);
+      // Build the set of existing child keys for dedup.
+      const existingChildKeys = new Set<string>();
+      for (const child of currentNode.children) {
+        if (child.moveKey !== null) existingChildKeys.add(child.moveKey);
+      }
 
-      if (unexpanded.length > 0) {
-        if (acc !== undefined) {
-          acc.selectionTimeMs += performance.now() - selStart;
-          selectionRecorded = true;
+      // Determine root-best hint for frontier ordering.
+      let rootBestKey: string | null = null;
+      if (currentNode === root && root.children.length > 0) {
+        let bestVisits = -1;
+        for (const child of root.children) {
+          if (child.visits > bestVisits) {
+            bestVisits = child.visits;
+            rootBestKey = child.moveKey;
+          }
         }
+      }
 
-        const expStart = acc !== undefined ? performance.now() : 0;
+      // Try lazy expansion when the lazy classification path is active
+      // and we have an incremental classification entry.
+      const classEntryForExpansion = useLazy && stateCache !== undefined && maxCacheEntries !== undefined
+        ? getOrInitClassificationEntry(stateCache, currentState, movesAtNode, maxCacheEntries)
+        : null;
 
+      let expansionResult: { readonly candidate: import('./expansion.js').ConcreteMoveCandidate; readonly rng: Rng } | null = null;
+
+      if (classEntryForExpansion !== null) {
+        // ── Lazy expansion path ──────────────────────────────────────
+        const shortlistSize = config.expansionShortlistSize ?? 4;
+        const exhaustiveThreshold = config.expansionExhaustiveThreshold ?? 10;
         const actingPlayer = currentState.activePlayer as PlayerId;
-        const { candidate: chosen, rng: postExpansion } = selectExpansionCandidate(
-          unexpanded,
+
+        const lazyResult: LazyExpansionResult | null = selectExpansionCandidateLazy(
+          classEntryForExpansion,
+          existingChildKeys,
+          rootBestKey,
+          shortlistSize,
+          exhaustiveThreshold,
           def,
           currentState,
           actingPlayer,
           currentRng,
           runtime,
           config.visitor,
+          acc,
         );
-        currentRng = postExpansion;
+
+        if (lazyResult !== null) {
+          expansionResult = lazyResult;
+        }
+      } else {
+        // ── Exhaustive expansion path (original) ─────────────────────
+        const unexpanded = filterAvailableCandidates(currentNode, candidates);
+        if (unexpanded.length > 0) {
+          const actingPlayer = currentState.activePlayer as PlayerId;
+          const result = selectExpansionCandidate(
+            unexpanded, def, currentState, actingPlayer, currentRng, runtime, config.visitor,
+          );
+          expansionResult = result;
+        }
+      }
+
+      if (expansionResult !== null) {
+        const chosen = expansionResult.candidate;
+        currentRng = expansionResult.rng;
+
+        if (acc !== undefined) {
+          acc.selectionTimeMs += performance.now() - selStart;
+          selectionRecorded = true;
+        }
+
+        const expStart = acc !== undefined ? performance.now() : 0;
 
         // Allocate a child node from the pool.
         let childNode: MctsNode;

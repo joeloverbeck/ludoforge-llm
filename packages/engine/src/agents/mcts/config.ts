@@ -116,6 +116,19 @@ export interface MctsConfig {
    */
   readonly classificationPolicy?: ClassificationPolicy;
 
+  /**
+   * Maximum candidates evaluated with one-step applyMove+evaluate during
+   * lazy expansion. When branching is high, only this many frontier
+   * candidates pay for the expensive one-step evaluation. Default 4.
+   */
+  readonly expansionShortlistSize?: number;
+
+  /**
+   * Candidate count threshold below which expansion falls back to the
+   * exhaustive path (classify all, evaluate all, pick best). Default 10.
+   */
+  readonly expansionExhaustiveThreshold?: number;
+
   /** Optional internal diagnostics for tuning/tests. */
   readonly diagnostics?: boolean;
 }
@@ -315,6 +328,16 @@ export function validateMctsConfig(partial: Partial<MctsConfig>): MctsConfig {
   // Classification policy
   if (merged.classificationPolicy !== undefined) {
     assertOneOf('classificationPolicy', merged.classificationPolicy, CLASSIFICATION_POLICIES);
+  }
+
+  // Expansion shortlist size
+  if (merged.expansionShortlistSize !== undefined) {
+    assertPositiveInt('expansionShortlistSize', merged.expansionShortlistSize);
+  }
+
+  // Expansion exhaustive threshold
+  if (merged.expansionExhaustiveThreshold !== undefined) {
+    assertPositiveInt('expansionExhaustiveThreshold', merged.expansionExhaustiveThreshold);
   }
 
   // visitor: pass through without validation (callback, not tuneable).

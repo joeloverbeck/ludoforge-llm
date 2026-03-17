@@ -1,6 +1,6 @@
 # 64MCTSPEROPT-004: Ordered Lazy Expansion with Shortlist
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — MCTS expansion logic
@@ -103,3 +103,18 @@ Track: `lazyExpansionCandidatesClassified`, `lazyExpansionShortlistSize`, `lazyE
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-17
+- **What changed**:
+  - `expansion.ts`: Added `buildOrderedFrontier()` (cheap ordering with root-best hint, status priority, PRNG tie-break), `selectExpansionCandidateLazy()` (ordered frontier walk + on-demand classification + shortlist-only one-step evaluation + exhaustive fallback for small branching), and `classifyNextCandidateAt()` helper.
+  - `config.ts`: Added `expansionShortlistSize` (default 4) and `expansionExhaustiveThreshold` (default 10) config params with validation.
+  - `diagnostics.ts`: Added 4 lazy expansion counters: `lazyExpansionCandidatesClassified`, `lazyExpansionShortlistSize`, `lazyExpansionFrontierExhausted`, `lazyExpansionFallbackToExhaustive`.
+  - `search.ts`: Modified expansion call site to use `selectExpansionCandidateLazy` when `classificationPolicy: 'lazy'`, falling back to exhaustive `selectExpansionCandidate` otherwise. Computes root-best hint and existing child key set for the frontier.
+  - `lazy-expansion.test.ts` (new): 11 unit tests covering all acceptance criteria.
+- **Deviations from plan**:
+  - Added `expansionExhaustiveThreshold` config param (not explicitly in ticket, but implied by the "when branching < 10 use exhaustive" requirement).
+  - Added `lazyExpansionFallbackToExhaustive` counter (extra diagnostic beyond the 3 specified, for observability into fallback frequency).
+  - `state-cache.ts` was not modified (existing helpers were sufficient).
+- **Verification results**: 5031 engine tests pass, typecheck clean, lint clean, 0 regressions.

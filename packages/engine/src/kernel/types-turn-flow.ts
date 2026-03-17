@@ -68,6 +68,20 @@ export interface TurnFlowPassRewardDef {
   readonly amount: number;
 }
 
+export interface ActionRestrictionDef {
+  readonly actionId?: string;
+  readonly actionClass?: TurnFlowActionClass;
+  readonly blocked?: boolean;
+  readonly maxParam?: {
+    readonly name: string;
+    readonly max: number;
+  };
+  readonly maxParamsTotal?: {
+    readonly names: readonly string[];
+    readonly max: number;
+  };
+}
+
 export interface TurnFlowMonsoonRestrictionDef {
   readonly actionId: string;
   readonly maxParam?: {

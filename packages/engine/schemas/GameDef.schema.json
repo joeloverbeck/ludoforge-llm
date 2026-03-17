@@ -3474,6 +3474,72 @@
                                   "items": {
                                     "$ref": "#/definitions/anon_692057ac"
                                   }
+                                },
+                                "actionRestrictions": {
+                                  "minItems": 1,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "actionId": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "actionClass": {
+                                        "type": "string",
+                                        "enum": [
+                                          "pass",
+                                          "event",
+                                          "operation",
+                                          "limitedOperation",
+                                          "operationPlusSpecialActivity",
+                                          "specialActivity"
+                                        ]
+                                      },
+                                      "blocked": {
+                                        "type": "boolean"
+                                      },
+                                      "maxParam": {
+                                        "type": "object",
+                                        "properties": {
+                                          "name": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          },
+                                          "max": {
+                                            "type": "number"
+                                          }
+                                        },
+                                        "required": [
+                                          "name",
+                                          "max"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      "maxParamsTotal": {
+                                        "type": "object",
+                                        "properties": {
+                                          "names": {
+                                            "minItems": 1,
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            }
+                                          },
+                                          "max": {
+                                            "type": "number"
+                                          }
+                                        },
+                                        "required": [
+                                          "names",
+                                          "max"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  }
                                 }
                               },
                               "required": [
@@ -3664,6 +3730,72 @@
                             "type": "array",
                             "items": {
                               "$ref": "#/definitions/anon_692057ac"
+                            }
+                          },
+                          "actionRestrictions": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "actionId": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "actionClass": {
+                                  "type": "string",
+                                  "enum": [
+                                    "pass",
+                                    "event",
+                                    "operation",
+                                    "limitedOperation",
+                                    "operationPlusSpecialActivity",
+                                    "specialActivity"
+                                  ]
+                                },
+                                "blocked": {
+                                  "type": "boolean"
+                                },
+                                "maxParam": {
+                                  "type": "object",
+                                  "properties": {
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "max": {
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "name",
+                                    "max"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "maxParamsTotal": {
+                                  "type": "object",
+                                  "properties": {
+                                    "names": {
+                                      "minItems": 1,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      }
+                                    },
+                                    "max": {
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "names",
+                                    "max"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "additionalProperties": false
                             }
                           }
                         },
@@ -4775,6 +4907,72 @@
                                   "items": {
                                     "$ref": "#/definitions/anon_692057ac"
                                   }
+                                },
+                                "actionRestrictions": {
+                                  "minItems": 1,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "actionId": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "actionClass": {
+                                        "type": "string",
+                                        "enum": [
+                                          "pass",
+                                          "event",
+                                          "operation",
+                                          "limitedOperation",
+                                          "operationPlusSpecialActivity",
+                                          "specialActivity"
+                                        ]
+                                      },
+                                      "blocked": {
+                                        "type": "boolean"
+                                      },
+                                      "maxParam": {
+                                        "type": "object",
+                                        "properties": {
+                                          "name": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          },
+                                          "max": {
+                                            "type": "number"
+                                          }
+                                        },
+                                        "required": [
+                                          "name",
+                                          "max"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      "maxParamsTotal": {
+                                        "type": "object",
+                                        "properties": {
+                                          "names": {
+                                            "minItems": 1,
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            }
+                                          },
+                                          "max": {
+                                            "type": "number"
+                                          }
+                                        },
+                                        "required": [
+                                          "names",
+                                          "max"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  }
                                 }
                               },
                               "required": [
@@ -4965,6 +5163,72 @@
                             "type": "array",
                             "items": {
                               "$ref": "#/definitions/anon_692057ac"
+                            }
+                          },
+                          "actionRestrictions": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "actionId": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "actionClass": {
+                                  "type": "string",
+                                  "enum": [
+                                    "pass",
+                                    "event",
+                                    "operation",
+                                    "limitedOperation",
+                                    "operationPlusSpecialActivity",
+                                    "specialActivity"
+                                  ]
+                                },
+                                "blocked": {
+                                  "type": "boolean"
+                                },
+                                "maxParam": {
+                                  "type": "object",
+                                  "properties": {
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "max": {
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "name",
+                                    "max"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "maxParamsTotal": {
+                                  "type": "object",
+                                  "properties": {
+                                    "names": {
+                                      "minItems": 1,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      }
+                                    },
+                                    "max": {
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "names",
+                                    "max"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "additionalProperties": false
                             }
                           }
                         },

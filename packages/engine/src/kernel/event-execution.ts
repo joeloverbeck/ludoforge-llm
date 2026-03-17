@@ -534,6 +534,7 @@ export const executeEventMove = (
       duration: lastingEffect.duration,
       setupEffects: lastingEffect.setupEffects,
       ...(lastingEffect.teardownEffects === undefined ? {} : { teardownEffects: lastingEffect.teardownEffects }),
+      ...(lastingEffect.actionRestrictions === undefined ? {} : { actionRestrictions: lastingEffect.actionRestrictions }),
       ...durationCounters(lastingEffect.duration),
     });
   }

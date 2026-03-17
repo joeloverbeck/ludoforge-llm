@@ -6,7 +6,7 @@ import {
   isEventMovePlayableUnderGrantViabilityPolicy,
 } from './turn-flow-eligibility.js';
 import type { GameDef, GameState, Move, MoveParamValue } from './types.js';
-import type { TurnFlowActionClass, TurnFlowInterruptMoveSelectorDef } from './types-turn-flow.js';
+import type { ActionRestrictionDef, TurnFlowActionClass, TurnFlowInterruptMoveSelectorDef } from './types-turn-flow.js';
 import { createSeatResolutionContext, type SeatResolutionContext } from './identity.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
@@ -232,6 +232,73 @@ function moveMatchesSelector(def: GameDef, move: Move, selector: TurnFlowInterru
   return true;
 }
 
+function matchesActionRestriction(
+  restriction: ActionRestrictionDef,
+  actionId: string,
+  actionClassByActionId: Readonly<Record<string, TurnFlowActionClass>>,
+): boolean {
+  if (restriction.actionId !== undefined && restriction.actionId === actionId) {
+    return true;
+  }
+  if (restriction.actionClass !== undefined && actionClassByActionId[actionId] === restriction.actionClass) {
+    return true;
+  }
+  return false;
+}
+
+function isMoveAllowedByLastingEffectRestrictions(
+  _def: GameDef,
+  state: GameState,
+  move: Move,
+  turnFlow: NonNullable<ReturnType<typeof cardDrivenConfig>>['turnFlow'],
+): boolean {
+  const activeEffects = state.activeLastingEffects;
+  if (activeEffects === undefined || activeEffects.length === 0) {
+    return true;
+  }
+
+  if (move.freeOperation === true) {
+    return true;
+  }
+
+  const actionId = String(move.actionId);
+  let effectiveMaxParam: Map<string, number> | null = null;
+
+  for (const effect of activeEffects) {
+    const restrictions = effect.actionRestrictions;
+    if (restrictions === undefined) {
+      continue;
+    }
+    for (const restriction of restrictions) {
+      if (!matchesActionRestriction(restriction, actionId, turnFlow.actionClassByActionId)) {
+        continue;
+      }
+      if (restriction.blocked === true) {
+        return false;
+      }
+      if (restriction.maxParam !== undefined) {
+        if (effectiveMaxParam === null) {
+          effectiveMaxParam = new Map();
+        }
+        const existing = effectiveMaxParam.get(restriction.maxParam.name);
+        const limit = existing === undefined ? restriction.maxParam.max : Math.min(existing, restriction.maxParam.max);
+        effectiveMaxParam.set(restriction.maxParam.name, limit);
+      }
+    }
+  }
+
+  if (effectiveMaxParam !== null) {
+    for (const [name, max] of effectiveMaxParam) {
+      const constrained = toConstrainedNumericValue(move.params[name]);
+      if (constrained !== null && constrained > max) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
 export function applyTurnFlowWindowFilters(
   def: GameDef,
   state: GameState,
@@ -281,46 +348,46 @@ export function applyTurnFlowWindowFilters(
       }
     }
 
-    if (!monsoonActive) {
-      return true;
+    if (monsoonActive) {
+      const restriction = turnFlow.monsoon?.restrictedActions.find((candidate) => candidate.actionId === actionId);
+      if (restriction !== undefined) {
+        if (
+          !isFreeOperationAllowedDuringMonsoonForMove(def, state, move, seatResolution, {
+            zoneFilterErrorSurface: 'legalChoices',
+          })
+          && !hasOverrideToken(move, restriction.overrideToken)
+        ) {
+          const hasQuantitativeRule = restriction.maxParam !== undefined || restriction.maxParamsTotal !== undefined;
+          if (!hasQuantitativeRule) {
+            return false;
+          }
+          if (restriction.maxParam !== undefined) {
+            const constrained = toConstrainedNumericValue(move.params[restriction.maxParam.name]);
+            if (constrained === null || constrained > restriction.maxParam.max) {
+              return false;
+            }
+          }
+          if (restriction.maxParamsTotal !== undefined) {
+            let total = 0;
+            for (const name of restriction.maxParamsTotal.names) {
+              const constrained = toConstrainedNumericValueOrZero(move.params[name]);
+              if (constrained === null) {
+                return false;
+              }
+              total += constrained;
+            }
+            if (total > restriction.maxParamsTotal.max) {
+              return false;
+            }
+          }
+        }
+      }
     }
-    const restriction = turnFlow.monsoon?.restrictedActions.find((candidate) => candidate.actionId === actionId);
-    if (restriction === undefined) {
-      return true;
-    }
-    if (
-      isFreeOperationAllowedDuringMonsoonForMove(def, state, move, seatResolution, {
-        zoneFilterErrorSurface: 'legalChoices',
-      })
-    ) {
-      return true;
-    }
-    if (hasOverrideToken(move, restriction.overrideToken)) {
-      return true;
-    }
-    const hasQuantitativeRule = restriction.maxParam !== undefined || restriction.maxParamsTotal !== undefined;
-    if (!hasQuantitativeRule) {
+
+    if (!isMoveAllowedByLastingEffectRestrictions(def, state, move, turnFlow)) {
       return false;
     }
-    if (restriction.maxParam !== undefined) {
-      const constrained = toConstrainedNumericValue(move.params[restriction.maxParam.name]);
-      if (constrained === null || constrained > restriction.maxParam.max) {
-        return false;
-      }
-    }
-    if (restriction.maxParamsTotal !== undefined) {
-      let total = 0;
-      for (const name of restriction.maxParamsTotal.names) {
-        const constrained = toConstrainedNumericValueOrZero(move.params[name]);
-        if (constrained === null) {
-          return false;
-        }
-        total += constrained;
-      }
-      if (total > restriction.maxParamsTotal.max) {
-        return false;
-      }
-    }
+
     return true;
   });
 

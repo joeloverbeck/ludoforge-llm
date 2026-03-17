@@ -32,6 +32,7 @@ import {
   VictoryTerminalMetadataSchema,
   EventDeckSchema,
   ActionPipelineSchema,
+  ActionRestrictionDefSchema,
   TurnOrderSchema
 } from './schemas-extensions.js';
 import {
@@ -512,6 +513,7 @@ export const ActiveLastingEffectSchema = z
     duration: TurnFlowDurationSchema,
     setupEffects: z.array(EffectASTSchema),
     teardownEffects: z.array(EffectASTSchema).optional(),
+    actionRestrictions: z.array(ActionRestrictionDefSchema).optional(),
     remainingTurnBoundaries: IntegerSchema.min(0).optional(),
     remainingRoundBoundaries: IntegerSchema.min(0).optional(),
     remainingCycleBoundaries: IntegerSchema.min(0).optional(),

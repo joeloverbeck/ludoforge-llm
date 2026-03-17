@@ -4328,6 +4328,10 @@ actionPipelines:
                             - { conditionMacro: fitl-space-in-laos-cambodia, args: { spaceExpr: $zone } }
                     - op: and
                       args:
+                        - { op: '==', left: { ref: gvar, var: fitl_airStrikeWindowMode }, right: 3 }
+                        - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: jungle }
+                    - op: and
+                      args:
                         - { op: '==', left: { ref: gvar, var: fitl_airStrikeWindowMode }, right: 0 }
                         - op: '!='
                           left: { ref: zoneProp, zone: $zone, prop: country }
@@ -4355,16 +4359,20 @@ actionPipelines:
                       else: 0
               max:
                 if:
-                  when: { op: '==', left: { ref: gvar, var: fitl_airStrikeWindowMode }, right: 2 }
-                  then: 3
+                  when: { op: '==', left: { ref: gvar, var: fitl_airStrikeWindowMode }, right: 3 }
+                  then: 2
                   else:
                     if:
-                      when: { op: '==', left: { ref: gvar, var: fitl_airStrikeWindowMode }, right: 1 }
-                      then: 1
+                      when: { op: '==', left: { ref: gvar, var: fitl_airStrikeWindowMode }, right: 2 }
+                      then: 3
                       else:
-                        op: '-'
-                        left: 6
-                        right: { aggregate: { op: count, query: { query: binding, name: $arcLightNoCoinProvinces } } }
+                        if:
+                          when: { op: '==', left: { ref: gvar, var: fitl_airStrikeWindowMode }, right: 1 }
+                          then: 1
+                          else:
+                            op: '-'
+                            left: 6
+                            right: { aggregate: { op: count, query: { query: binding, name: $arcLightNoCoinProvinces } } }
       - stage: remove-active-enemy-pieces
         effects:
           - setVar:

@@ -527,6 +527,40 @@ Production reference:
 
 - Card 92 (`SEALORDS`) integration tests demonstrate both patterns: the full-event test verifies ordered grant surfacing and single-grant activation, while isolated-grant tests verify in-place Sweep restrictions and US no-followup behavior independently.
 
+## Global Variable Window Lifecycle
+
+When a card sets a global variable "window" (e.g., `fitl_airStrikeWindowMode`) and grants a free operation that depends on it, follow this lifecycle pattern:
+
+1. **Set the window variable** in `lastingEffects.setupEffects` — runs during event application, before grants resolve.
+2. **Use `effectTiming: afterGrants`** so the card's main `effects` run after the free operation resolves.
+3. **Reset the window variable** in the card's main `effects` — immediate cleanup after the grant completes.
+4. **Also reset** in `lastingEffects.teardownEffects` — safety net for end-of-turn cleanup.
+
+If the card also has pre-grant effects (e.g., Agent Orange guerrilla activation), place those in `setupEffects` alongside the window variable setup. The `setupEffects` array always runs during event application regardless of `effectTiming`.
+
+```yaml
+unshaded:
+  effectTiming: afterGrants
+  freeOperationGrants:
+    - seat: us
+      operationClass: operation
+      actionIds: [airStrike]
+  lastingEffects:
+    - id: evt-window
+      duration: turn
+      setupEffects:
+        - setVar: { scope: global, var: fitl_airStrikeWindowMode, value: N }
+        # Optional: pre-grant effects (e.g., guerrilla activation) go here
+      teardownEffects:
+        - setVar: { scope: global, var: fitl_airStrikeWindowMode, value: 0 }
+  effects:
+    - setVar: { scope: global, var: fitl_airStrikeWindowMode, value: 0 }
+```
+
+**Why the explicit reset matters**: `duration: turn` teardown fires at end of turn, not after grant resolution. Without the afterGrants reset, the window variable persists for the rest of the turn, potentially corrupting subsequent Air Strike legality checks.
+
+Production references: Card 6 (Aces, mode 1), Card 30 (USS New Jersey, mode 2), Card 111 (Agent Orange, mode 3).
+
 ## Operation-Context-Only Bindings
 
 The built-in bindings `__freeOperation` and `__actionClass` are injected by the kernel only during **operation pipeline** execution. They are **not available** inside event card effects.

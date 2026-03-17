@@ -181,7 +181,7 @@ globalVars:
     type: int
     init: 0
     min: 0
-    max: 2
+    max: 3
   - name: fitl_operationAttleboroTunnelOverride
     type: boolean
     init: false

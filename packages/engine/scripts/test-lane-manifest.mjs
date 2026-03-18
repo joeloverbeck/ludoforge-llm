@@ -101,27 +101,6 @@ export function listIntegrationTestsForLane(lane) {
   }
 }
 
-export function isMctsE2eTest(sourcePath) {
-  const normalized = sourcePath.replaceAll('\\', '/');
-  return normalized.startsWith('test/e2e/mcts/') || normalized.startsWith('test/e2e/mcts-fitl/');
-}
-
-export function isMctsBudgetProfileTest(sourcePath, profile) {
-  const normalized = sourcePath.replaceAll('\\', '/');
-  const baseName = normalized.split('/').at(-1) ?? normalized;
-  return baseName === `texas-holdem-mcts-${profile}.test.ts`;
-}
-
-export function isMctsFitlE2eTest(sourcePath) {
-  return sourcePath.replaceAll('\\', '/').startsWith('test/e2e/mcts-fitl/');
-}
-
-export function isMctsFitlBudgetProfileTest(sourcePath, profile) {
-  const normalized = sourcePath.replaceAll('\\', '/');
-  const baseName = normalized.split('/').at(-1) ?? normalized;
-  return baseName === `fitl-mcts-${profile}.test.ts`;
-}
-
 export function isSlowE2eTest(sourcePath) {
   const normalized = sourcePath.replaceAll('\\', '/');
   const baseName = normalized.split('/').at(-1) ?? normalized;
@@ -131,25 +110,9 @@ export function isSlowE2eTest(sourcePath) {
 export function listE2eTestsForLane(lane) {
   switch (lane) {
     case 'e2e':
-      return ALL_E2E_TESTS.filter((sourcePath) => !isMctsE2eTest(sourcePath));
+      return ALL_E2E_TESTS.filter((sourcePath) => !isSlowE2eTest(sourcePath));
     case 'e2e:slow':
       return ALL_E2E_TESTS.filter((sourcePath) => isSlowE2eTest(sourcePath));
-    case 'e2e:mcts':
-      return ALL_E2E_TESTS.filter((sourcePath) => isMctsE2eTest(sourcePath));
-    case 'e2e:mcts:interactive':
-      return ALL_E2E_TESTS.filter((sourcePath) => isMctsBudgetProfileTest(sourcePath, 'interactive'));
-    case 'e2e:mcts:turn':
-      return ALL_E2E_TESTS.filter((sourcePath) => isMctsBudgetProfileTest(sourcePath, 'turn'));
-    case 'e2e:mcts:background':
-      return ALL_E2E_TESTS.filter((sourcePath) => isMctsBudgetProfileTest(sourcePath, 'background'));
-    case 'e2e:mcts:fitl':
-      return ALL_E2E_TESTS.filter((sourcePath) => isMctsFitlE2eTest(sourcePath));
-    case 'e2e:mcts:fitl:interactive':
-      return ALL_E2E_TESTS.filter((sourcePath) => isMctsFitlBudgetProfileTest(sourcePath, 'interactive'));
-    case 'e2e:mcts:fitl:turn':
-      return ALL_E2E_TESTS.filter((sourcePath) => isMctsFitlBudgetProfileTest(sourcePath, 'turn'));
-    case 'e2e:mcts:fitl:background':
-      return ALL_E2E_TESTS.filter((sourcePath) => isMctsFitlBudgetProfileTest(sourcePath, 'background'));
     case 'e2e:all':
       return [...ALL_E2E_TESTS];
     default:

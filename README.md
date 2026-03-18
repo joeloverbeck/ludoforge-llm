@@ -8,9 +8,8 @@ Evolving board games relying on LLMs for design/judgement, and executable protot
 - Full engine integration aggregate: `pnpm -F @ludoforge/engine test:integration`
 - Fast local e2e default: `pnpm -F @ludoforge/engine test:e2e`
 - Slow long-run tournament regression lane: `pnpm -F @ludoforge/engine test:e2e:slow`
-- Full non-MCTS e2e lane (includes slow coverage): `pnpm -F @ludoforge/engine test:e2e:all`
-- Dedicated MCTS e2e lane: `pnpm -F @ludoforge/engine test:e2e:mcts`
-- Automation contract: protected branch/release CI must run `test:e2e:all` plus `test:e2e:mcts`, or an equivalent split that always includes `test:e2e:slow` and `test:e2e:mcts`.
+- Full e2e aggregate (includes slow coverage): `pnpm -F @ludoforge/engine test:e2e:all`
+- Automation contract: protected branch/release CI must run `test:e2e:all`, or an equivalent split that always includes `test:e2e` and `test:e2e:slow`.
 
 ## Runner Dev Bootstrap
 - Generate all runner bootstrap fixtures: `pnpm -F @ludoforge/runner bootstrap:fixtures`

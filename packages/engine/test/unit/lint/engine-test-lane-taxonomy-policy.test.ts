@@ -18,8 +18,7 @@ describe('engine test lane taxonomy policy', () => {
     assert.equal(packageJson.scripts?.test, 'pnpm run schema:artifacts:check && node scripts/run-tests.mjs --lane default');
     assert.equal(packageJson.scripts?.['test:e2e'], 'node scripts/run-tests.mjs --lane e2e');
     assert.equal(packageJson.scripts?.['test:e2e:slow'], 'RUN_SLOW_E2E=1 node scripts/run-tests.mjs --lane e2e:slow');
-    assert.equal(packageJson.scripts?.['test:e2e:mcts'], 'RUN_MCTS_E2E=1 node scripts/run-tests.mjs --lane e2e:mcts');
-    assert.equal(packageJson.scripts?.['test:e2e:all'], 'RUN_SLOW_E2E=1 node scripts/run-tests.mjs --lane e2e');
+    assert.equal(packageJson.scripts?.['test:e2e:all'], 'RUN_SLOW_E2E=1 node scripts/run-tests.mjs --lane e2e:all');
     assert.equal(packageJson.scripts?.['test:integration'], 'node scripts/run-tests.mjs --lane integration');
     assert.equal(packageJson.scripts?.['test:integration:core'], 'node scripts/run-tests.mjs --lane integration:core');
     assert.equal(
@@ -117,28 +116,25 @@ describe('engine test lane taxonomy policy', () => {
     assert.equal(totalCount, gamePackagesLane.length, 'sub-lanes must not overlap');
   });
 
-  it('classifies e2e lanes explicitly and keeps non-MCTS, slow, and MCTS coverage aligned', async () => {
+  it('classifies e2e lanes explicitly and keeps fast, slow, and aggregate coverage aligned', async () => {
     const thisDir = dirname(fileURLToPath(import.meta.url));
     const repoRoot = dirname(findRepoRootFile(thisDir, 'pnpm-workspace.yaml'));
     const manifestPath = resolve(repoRoot, 'packages/engine/scripts/test-lane-manifest.mjs');
     const manifest = (await import(pathToFileURL(manifestPath).href)) as {
       readonly ALL_E2E_TESTS: readonly string[];
       readonly E2E_SLOW_EXACT_TESTS: readonly string[];
-      readonly isMctsE2eTest: (sourcePath: string) => boolean;
       readonly isSlowE2eTest: (sourcePath: string) => boolean;
       readonly listE2eTestsForLane: (lane: string) => readonly string[];
     };
 
     const e2eRoot = resolve(repoRoot, 'packages/engine/test/e2e');
-    const nonMctsLane = manifest.listE2eTestsForLane('e2e');
+    const fastLane = manifest.listE2eTestsForLane('e2e');
     const slowLane = manifest.listE2eTestsForLane('e2e:slow');
-    const mctsLane = manifest.listE2eTestsForLane('e2e:mcts');
     const allLane = manifest.listE2eTestsForLane('e2e:all');
     const expectedSlowTests = manifest.E2E_SLOW_EXACT_TESTS.map((name) => `test/e2e/${name}`);
 
     assert.equal(manifest.ALL_E2E_TESTS.length > 0, true);
     assert.equal(slowLane.length > 0, true);
-    assert.equal(mctsLane.length > 0, true);
     assert.deepEqual(new Set(allLane), new Set(manifest.ALL_E2E_TESTS));
 
     for (const sourcePath of allLane) {
@@ -147,19 +143,18 @@ describe('engine test lane taxonomy policy', () => {
 
     for (const sourcePath of expectedSlowTests) {
       assert.equal(manifest.isSlowE2eTest(sourcePath), true, `${sourcePath} must classify as slow e2e`);
-      assert.equal(nonMctsLane.includes(sourcePath), true, `${sourcePath} must stay in the non-MCTS e2e lane`);
-      assert.equal(mctsLane.includes(sourcePath), false, `${sourcePath} must not leak into the MCTS lane`);
+      assert.equal(fastLane.includes(sourcePath), false, `${sourcePath} must not leak into the fast e2e lane`);
+      assert.equal(allLane.includes(sourcePath), true, `${sourcePath} must stay in the aggregate e2e lane`);
     }
 
-    for (const sourcePath of mctsLane) {
-      assert.equal(manifest.isMctsE2eTest(sourcePath), true, `${sourcePath} must classify as MCTS-scoped`);
-      assert.equal(nonMctsLane.includes(sourcePath), false, `${sourcePath} must not leak into the non-MCTS lane`);
-      assert.equal(slowLane.includes(sourcePath), false, `${sourcePath} must not leak into the slow non-MCTS lane`);
+    for (const sourcePath of fastLane) {
+      assert.equal(manifest.isSlowE2eTest(sourcePath), false, `${sourcePath} must not classify as slow e2e`);
+      assert.equal(slowLane.includes(sourcePath), false, `${sourcePath} must not leak into the slow lane`);
     }
 
     assert.deepEqual(new Set(slowLane), new Set(expectedSlowTests));
 
-    const expectedUnion = new Set([...nonMctsLane, ...mctsLane]);
+    const expectedUnion = new Set([...fastLane, ...slowLane]);
     assert.deepEqual(new Set(allLane), expectedUnion);
     assert.equal(existsSync(e2eRoot), true);
   });

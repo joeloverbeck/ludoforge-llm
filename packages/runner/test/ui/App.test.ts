@@ -13,17 +13,17 @@ interface SessionStoreState {
       readonly screen: 'activeGame';
       readonly gameId: string;
       readonly seed: number;
-      readonly playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' | 'ai-mcts-fast' | 'ai-mcts-default' | 'ai-mcts-strong' }>;
+      readonly playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }>;
       readonly initialMoveHistory: readonly unknown[];
     }
-    | { readonly screen: 'replay'; readonly gameId: string; readonly seed: number; readonly moveHistory: readonly unknown[]; readonly playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' | 'ai-mcts-fast' | 'ai-mcts-default' | 'ai-mcts-strong' }> };
+    | { readonly screen: 'replay'; readonly gameId: string; readonly seed: number; readonly moveHistory: readonly unknown[]; readonly playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }> };
   readonly unsavedChanges: boolean;
   readonly moveAccumulator: readonly unknown[];
   selectGame(gameId: string): void;
-  startGame(seed: number, playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' | 'ai-mcts-fast' | 'ai-mcts-default' | 'ai-mcts-strong' }>): void;
-  resumeGame(gameId: string, seed: number, playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' | 'ai-mcts-fast' | 'ai-mcts-default' | 'ai-mcts-strong' }>, moveHistory: readonly unknown[]): void;
+  startGame(seed: number, playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }>): void;
+  resumeGame(gameId: string, seed: number, playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }>, moveHistory: readonly unknown[]): void;
   returnToMenu(): void;
-  startReplay(gameId: string, seed: number, moveHistory: readonly unknown[], playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' | 'ai-mcts-fast' | 'ai-mcts-default' | 'ai-mcts-strong' }>): void;
+  startReplay(gameId: string, seed: number, moveHistory: readonly unknown[], playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }>): void;
   newGame(): void;
   recordMove(move: unknown): void;
   markSaved(): void;
@@ -285,7 +285,7 @@ vi.mock('../../src/ui/LoadGameDialog.js', () => ({
       gameId: string;
       seed: number;
       moveHistory: readonly unknown[];
-      playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' | 'ai-mcts-fast' | 'ai-mcts-default' | 'ai-mcts-strong' }>;
+      playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }>;
       isTerminal: boolean;
     }) => void;
     readonly onReplay: (record: { gameId: string; seed: number; moveHistory: readonly unknown[] }) => void;

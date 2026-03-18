@@ -10,7 +10,7 @@ import type {
 } from '@ludoforge/engine/runtime';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 
-export type PlayerSeat = 'human' | 'ai-random' | 'ai-greedy' | 'ai-mcts-fast' | 'ai-mcts-default' | 'ai-mcts-strong';
+export type PlayerSeat = 'human' | 'ai-random' | 'ai-greedy';
 
 /** One step in the progressive choice breadcrumb. */
 export interface PartialChoice {

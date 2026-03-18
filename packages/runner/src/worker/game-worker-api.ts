@@ -8,7 +8,6 @@ import {
   createGameDefRuntime,
   describeAction as engineDescribeAction,
   enumerateLegalMoves,
-  fork,
   initialState,
   isChooseNSessionEligible,
   isSessionValid,
@@ -40,9 +39,6 @@ import type {
   PlayerId,
   TerminalResult,
 } from '@ludoforge/engine/runtime';
-
-import { MctsAgent, resolvePreset } from '@ludoforge/engine/agents';
-import type { MctsPreset } from '@ludoforge/engine/agents';
 
 export interface WorkerError {
   readonly code: 'ILLEGAL_MOVE' | 'VALIDATION_FAILED' | 'NOT_INITIALIZED' | 'INTERNAL_ERROR' | 'STALE_OPERATION';
@@ -93,11 +89,6 @@ export type ApplyTemplateMoveResult =
   | ApplyTemplateMoveUncompletable
   | ApplyTemplateMoveIllegal;
 
-export interface AgentMoveResult {
-  readonly move: Move;
-  readonly candidateCount: number;
-}
-
 export interface GameWorkerAPI {
   init(nextDef: GameDef, seed: number, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<InitResult>;
   legalMoves(options?: LegalMoveEnumerationOptions): Promise<readonly Move[]>;
@@ -133,7 +124,6 @@ export interface GameWorkerAPI {
   undo(stamp: OperationStamp): Promise<GameState | null>;
   reset(nextDef: GameDef | undefined, seed: number | undefined, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<InitResult>;
   loadFromUrl(url: string, seed: number, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<InitResult>;
-  requestAgentMove(seatType: string): Promise<AgentMoveResult>;
 }
 
 const isWorkerErrorCode = (value: unknown): value is WorkerError['code'] => {
@@ -234,20 +224,6 @@ const withValidationFailureMapping = async <T>(run: () => Promise<T>): Promise<T
     throw toWorkerError('VALIDATION_FAILED', error, 'GameDef validation failed.');
   }
 };
-
-const SEAT_TO_PRESET: Readonly<Record<string, MctsPreset>> = {
-  'ai-mcts-fast': 'fast',
-  'ai-mcts-default': 'default',
-  'ai-mcts-strong': 'strong',
-};
-
-function seatTypeToMctsPreset(seatType: string): MctsPreset {
-  const preset = SEAT_TO_PRESET[seatType];
-  if (preset === undefined) {
-    throw new Error(`Unknown MCTS seat type: "${seatType}". Expected ai-mcts-fast, ai-mcts-default, or ai-mcts-strong.`);
-  }
-  return preset;
-}
 
 export function createGameWorker(): GameWorkerAPI {
   let def: GameDef | null = null;
@@ -566,34 +542,6 @@ export function createGameWorker(): GameWorkerAPI {
         }
         const resolvedSeed = seed ?? 0;
         return initState(resolvedDef, resolvedSeed, options);
-      });
-    },
-
-    async requestAgentMove(seatType: string): Promise<AgentMoveResult> {
-      return withInternalErrorMapping(() => {
-        const current = assertInitialized(def, state);
-        const allMoves = legalMoves(current.def, current.state);
-        if (allMoves.length === 0) {
-          throw new Error('requestAgentMove called with no legal moves.');
-        }
-
-        const preset = seatTypeToMctsPreset(seatType);
-        const agent = new MctsAgent(resolvePreset(preset));
-        const currentRuntime = runtime ?? createGameDefRuntime(current.def);
-        const [searchRng] = fork({ state: current.state.rng });
-        const result = agent.chooseMove({
-          def: current.def,
-          state: current.state,
-          playerId: current.state.activePlayer,
-          legalMoves: allMoves,
-          rng: searchRng,
-          runtime: currentRuntime,
-        });
-
-        return {
-          move: result.move,
-          candidateCount: allMoves.length,
-        };
       });
     },
 

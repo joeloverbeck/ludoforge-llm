@@ -247,6 +247,374 @@ describe('FITL RVN leader lingering effects', () => {
     );
   });
 
+  it('applies Young Turks +2 Patronage even when Govern uses aid mode', () => {
+    const def = compileDef();
+    const space = 'can-tho:none';
+
+    const baseState = clearAllZones(initialState(def, 9010, 4).state);
+    const setup: GameState = {
+      ...baseState,
+      activePlayer: asPlayerId(1),
+      globalVars: {
+        ...baseState.globalVars,
+        aid: 30,
+        patronage: 10,
+      },
+      zones: {
+        ...baseState.zones,
+        [space]: [
+          makeToken('gov-aid-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('gov-aid-arvn-p', 'police', 'ARVN', { type: 'police' }),
+          makeToken('gov-aid-us-t', 'troops', 'US', { type: 'troops' }),
+        ],
+      },
+      markers: {
+        ...baseState.markers,
+        [space]: {
+          ...(baseState.markers[space] ?? {}),
+          supportOpposition: 'activeSupport',
+        },
+      },
+    };
+
+    const runGovern = (leader: LeaderState): GameState =>
+      applyMoveWithResolvedDecisionIds(def, withActiveLeader(setup, leader), {
+        actionId: asActionId('govern'),
+        params: {
+          $targetSpaces: [space],
+          [`$governMode@${space}`]: 'aid',
+        },
+      }).state;
+
+    const yt = runGovern('youngTurks');
+    const baseline = runGovern('thieu');
+
+    assert.equal(
+      globalVarNumber(yt, 'patronage') - globalVarNumber(baseline, 'patronage'),
+      2,
+      'Young Turks +2 Patronage should apply even in aid mode',
+    );
+  });
+
+  it('applies Young Turks +2 Patronage as flat bonus (not per space) with multi-space Govern', () => {
+    const def = compileDef();
+    const spaceA = 'can-tho:none';
+    const spaceB = 'qui-nhon:none';
+
+    const baseState = clearAllZones(initialState(def, 9011, 4).state);
+    const setup: GameState = {
+      ...baseState,
+      activePlayer: asPlayerId(1),
+      globalVars: {
+        ...baseState.globalVars,
+        aid: 40,
+        patronage: 10,
+      },
+      zones: {
+        ...baseState.zones,
+        [spaceA]: [
+          makeToken('gov-multi-a-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('gov-multi-a-arvn-p', 'police', 'ARVN', { type: 'police' }),
+          makeToken('gov-multi-a-us-t', 'troops', 'US', { type: 'troops' }),
+        ],
+        [spaceB]: [
+          makeToken('gov-multi-b-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('gov-multi-b-arvn-p', 'police', 'ARVN', { type: 'police' }),
+          makeToken('gov-multi-b-us-t', 'troops', 'US', { type: 'troops' }),
+        ],
+      },
+      markers: {
+        ...baseState.markers,
+        [spaceA]: {
+          ...(baseState.markers[spaceA] ?? {}),
+          supportOpposition: 'activeSupport',
+        },
+        [spaceB]: {
+          ...(baseState.markers[spaceB] ?? {}),
+          supportOpposition: 'activeSupport',
+        },
+      },
+    };
+
+    const runGovern = (leader: LeaderState): GameState =>
+      applyMoveWithResolvedDecisionIds(def, withActiveLeader(setup, leader), {
+        actionId: asActionId('govern'),
+        params: {
+          $targetSpaces: [spaceA, spaceB],
+          [`$governMode@${spaceA}`]: 'patronage',
+          [`$governMode@${spaceB}`]: 'patronage',
+        },
+      }).state;
+
+    const yt = runGovern('youngTurks');
+    const baseline = runGovern('thieu');
+
+    assert.equal(
+      globalVarNumber(yt, 'patronage') - globalVarNumber(baseline, 'patronage'),
+      2,
+      'Young Turks bonus should be flat +2 per Govern action, not +2 per space',
+    );
+  });
+
+  it('does not apply Young Turks +2 Patronage on Transport', () => {
+    const def = compileDef();
+    const origin = 'da-nang:none';
+    const destination = 'qui-nhon:none';
+
+    const baseState = clearAllZones(initialState(def, 9012, 4).state);
+    const setup: GameState = {
+      ...baseState,
+      activePlayer: asPlayerId(1),
+      globalVars: {
+        ...baseState.globalVars,
+        patronage: 10,
+      },
+      zones: {
+        ...baseState.zones,
+        [origin]: [
+          makeToken('transport-yt-t', 'troops', 'ARVN', { type: 'troops' }),
+        ],
+      },
+    };
+
+    const result = applyMoveWithResolvedDecisionIds(
+      def,
+      withActiveLeader(setup, 'youngTurks'),
+      {
+        actionId: asActionId('transport'),
+        params: {
+          $transportOrigin: origin,
+          $transportDestination: destination,
+        },
+      },
+    ).state;
+
+    assert.equal(
+      globalVarNumber(result, 'patronage'),
+      10,
+      'Transport should not trigger Young Turks Patronage bonus',
+    );
+  });
+
+  it('does not apply +2 Patronage bonus for any non-Young-Turks leader', () => {
+    const def = compileDef();
+    const space = 'can-tho:none';
+
+    const baseState = clearAllZones(initialState(def, 9013, 4).state);
+    const setup: GameState = {
+      ...baseState,
+      activePlayer: asPlayerId(1),
+      globalVars: {
+        ...baseState.globalVars,
+        aid: 30,
+        patronage: 10,
+      },
+      zones: {
+        ...baseState.zones,
+        [space]: [
+          makeToken('gov-leaders-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('gov-leaders-arvn-p', 'police', 'ARVN', { type: 'police' }),
+          makeToken('gov-leaders-us-t', 'troops', 'US', { type: 'troops' }),
+        ],
+      },
+      markers: {
+        ...baseState.markers,
+        [space]: {
+          ...(baseState.markers[space] ?? {}),
+          supportOpposition: 'activeSupport',
+        },
+      },
+    };
+
+    const runGovern = (leader: LeaderState): number =>
+      globalVarNumber(
+        applyMoveWithResolvedDecisionIds(def, withActiveLeader(setup, leader), {
+          actionId: asActionId('govern'),
+          params: {
+            $targetSpaces: [space],
+            [`$governMode@${space}`]: 'patronage',
+          },
+        }).state,
+        'patronage',
+      );
+
+    const minh = runGovern('minh');
+    const khanh = runGovern('khanh');
+    const ky = runGovern('ky');
+    const thieu = runGovern('thieu');
+
+    assert.equal(minh, khanh, 'Minh and Khanh should produce identical Govern patronage');
+    assert.equal(khanh, ky, 'Khanh and Ky should produce identical Govern patronage');
+    assert.equal(ky, thieu, 'Ky and Thieu should produce identical Govern patronage');
+  });
+
+  it('clamps Young Turks Patronage bonus at the 75 cap', () => {
+    const def = compileDef();
+    const space = 'can-tho:none';
+
+    const baseState = clearAllZones(initialState(def, 9014, 4).state);
+    const setup: GameState = {
+      ...baseState,
+      activePlayer: asPlayerId(1),
+      globalVars: {
+        ...baseState.globalVars,
+        aid: 30,
+        patronage: 74,
+      },
+      zones: {
+        ...baseState.zones,
+        [space]: [
+          makeToken('gov-cap-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('gov-cap-arvn-p', 'police', 'ARVN', { type: 'police' }),
+          makeToken('gov-cap-us-t', 'troops', 'US', { type: 'troops' }),
+        ],
+      },
+      markers: {
+        ...baseState.markers,
+        [space]: {
+          ...(baseState.markers[space] ?? {}),
+          supportOpposition: 'activeSupport',
+        },
+      },
+    };
+
+    const result = applyMoveWithResolvedDecisionIds(
+      def,
+      withActiveLeader(setup, 'youngTurks'),
+      {
+        actionId: asActionId('govern'),
+        params: {
+          $targetSpaces: [space],
+          [`$governMode@${space}`]: 'patronage',
+        },
+      },
+    ).state;
+
+    assert.ok(
+      globalVarNumber(result, 'patronage') <= 75,
+      `Patronage should clamp at 75, got ${globalVarNumber(result, 'patronage')}`,
+    );
+  });
+
+  it('applies Young Turks +2 Patronage even with cap_mandateOfHeaven shaded (1-space limit)', () => {
+    const def = compileDef();
+    const space = 'can-tho:none';
+
+    const baseState = clearAllZones(initialState(def, 9015, 4).state);
+    const setup: GameState = {
+      ...baseState,
+      activePlayer: asPlayerId(1),
+      globalVars: {
+        ...baseState.globalVars,
+        aid: 30,
+        patronage: 10,
+      },
+      globalMarkers: {
+        ...baseState.globalMarkers,
+        cap_mandateOfHeaven: 'shaded',
+      },
+      zones: {
+        ...baseState.zones,
+        [space]: [
+          makeToken('gov-mandate-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('gov-mandate-arvn-p', 'police', 'ARVN', { type: 'police' }),
+          makeToken('gov-mandate-us-t', 'troops', 'US', { type: 'troops' }),
+        ],
+      },
+      markers: {
+        ...baseState.markers,
+        [space]: {
+          ...(baseState.markers[space] ?? {}),
+          supportOpposition: 'activeSupport',
+        },
+      },
+    };
+
+    const runGovern = (leader: LeaderState): GameState =>
+      applyMoveWithResolvedDecisionIds(def, withActiveLeader(setup, leader), {
+        actionId: asActionId('govern'),
+        params: {
+          $targetSpaces: [space],
+          [`$governMode@${space}`]: 'patronage',
+        },
+      }).state;
+
+    const yt = runGovern('youngTurks');
+    const baseline = runGovern('thieu');
+
+    assert.equal(
+      globalVarNumber(yt, 'patronage') - globalVarNumber(baseline, 'patronage'),
+      2,
+      'Young Turks +2 should apply even when Mandate of Heaven shaded restricts Govern to 1 space',
+    );
+  });
+
+  it('stops Young Turks bonus after leader transition', () => {
+    const def = compileDef();
+    const space = 'can-tho:none';
+
+    const baseState = clearAllZones(initialState(def, 9016, 4).state);
+    const setup: GameState = {
+      ...baseState,
+      activePlayer: asPlayerId(1),
+      globalVars: {
+        ...baseState.globalVars,
+        aid: 30,
+        patronage: 10,
+      },
+      zones: {
+        ...baseState.zones,
+        [space]: [
+          makeToken('gov-trans-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('gov-trans-arvn-p', 'police', 'ARVN', { type: 'police' }),
+          makeToken('gov-trans-us-t', 'troops', 'US', { type: 'troops' }),
+        ],
+      },
+      markers: {
+        ...baseState.markers,
+        [space]: {
+          ...(baseState.markers[space] ?? {}),
+          supportOpposition: 'activeSupport',
+        },
+      },
+    };
+
+    const ytResult = applyMoveWithResolvedDecisionIds(
+      def,
+      withActiveLeader(setup, 'youngTurks'),
+      {
+        actionId: asActionId('govern'),
+        params: {
+          $targetSpaces: [space],
+          [`$governMode@${space}`]: 'patronage',
+        },
+      },
+    ).state;
+
+    const ytPatronage = globalVarNumber(ytResult, 'patronage');
+
+    // Simulate leader transition: change leader to thieu on the same base setup
+    const afterTransition = applyMoveWithResolvedDecisionIds(
+      def,
+      withActiveLeader(setup, 'thieu'),
+      {
+        actionId: asActionId('govern'),
+        params: {
+          $targetSpaces: [space],
+          [`$governMode@${space}`]: 'patronage',
+        },
+      },
+    ).state;
+
+    const thieuPatronage = globalVarNumber(afterTransition, 'patronage');
+
+    assert.equal(
+      ytPatronage - thieuPatronage,
+      2,
+      'After leader transition from Young Turks, Govern should no longer receive +2 bonus',
+    );
+  });
+
   it('applies Ky pacification cost as 4 per level (and 4 per Terror)', () => {
     const def = compileDef();
     const space = 'qui-nhon:none';

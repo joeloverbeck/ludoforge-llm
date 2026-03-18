@@ -85,7 +85,7 @@ The NVA faction needs 6 strategic evaluators encoding principles from FITL Rules
 ## Files to Touch
 
 - `packages/engine/test/e2e/mcts-fitl/fitl-competence-evaluators.ts` (modify — add 6 evaluators)
-- `packages/engine/test/unit/e2e-helpers/fitl-competence-evaluators.test.ts` (modify — add 13 tests)
+- `packages/engine/test/e2e/mcts-fitl/fitl-competence-evaluators.test.ts` (modify — add 13 tests)
 
 ## Out of Scope
 
@@ -115,10 +115,10 @@ The NVA faction needs 6 strategic evaluators encoding principles from FITL Rules
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/e2e-helpers/fitl-competence-evaluators.test.ts` — 13 new test cases
+1. `packages/engine/test/e2e/mcts-fitl/fitl-competence-evaluators.test.ts` — 13 new test cases
 
 ### Commands
 
-1. `pnpm turbo build && node --test dist/test/unit/e2e-helpers/fitl-competence-evaluators.test.js`
+1. `pnpm turbo build && node --test packages/engine/dist/test/e2e/mcts-fitl/fitl-competence-evaluators.test.js`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`

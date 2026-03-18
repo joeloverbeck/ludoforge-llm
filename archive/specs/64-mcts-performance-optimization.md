@@ -1,10 +1,12 @@
 # Spec 64 (Revised) — Cost-Aware MCTS for Expensive-Transition Games
 
+**Status**: ✅ COMPLETED
+
 **Source basis**: original Spec 64, `mcts-fitl-performance-analysis.md`, and `mcts-optimization-technical-context-for-external-research.md`.
 
 **Depends on**: Spec 63 (runtime move classification)
 
-**Tickets**: Decomposed into 64MCTSPEROPT-001 through 64MCTSPEROPT-016 (see `tickets/` folder)
+**Tickets**: Decomposed into 64MCTSPEROPT-001 through 64MCTSPEROPT-016 (all completed and archived)
 
 ## 0. Problem Statement
 
@@ -572,3 +574,10 @@ The original draft correctly identifies redundant classification as the central 
 - deterministic parallelism only after the single-threaded core is fixed
 
 That is the path that is both faster and still faithful to the engine’s constraints.
+
+## Outcome
+
+- **Completion date**: 2026-03-18
+- **All 16 tickets** (64MCTSPEROPT-001 through 64MCTSPEROPT-016) implemented and archived.
+- **Key deliverables**: Leaf evaluation strategy, budget profiles, incremental per-move classification cache, family key / abstract move key, sound availability checking, ordered lazy expansion, action-family widening, pending family coverage, cheap ordering priors, decision discovery cache, classification subphase diagnostics, budget-driven fallback policies, evaluation signal tuning diagnostics, kernel-side classification optimization track, modular cleanup (decision-boundary extraction), deterministic root parallelization.
+- **Verification**: Full engine test suite (5182 tests), typecheck, and lint all pass.

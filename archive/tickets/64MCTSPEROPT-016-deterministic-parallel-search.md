@@ -1,6 +1,6 @@
 # 64MCTSPEROPT-016: Deterministic Root Parallelization
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: LOW
 **Effort**: Large
 **Engine Changes**: Yes — new parallel search module
@@ -98,3 +98,15 @@ Optional longer-running test comparing single-worker vs multi-worker background 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-18
+- **What changed**:
+  - Created `packages/engine/src/agents/mcts/parallel.ts` with `splitSearchBudget`, `forkWorkerRngs`, `extractRootChildInfos`, `mergeRootResults`, `selectBestMergedChild`.
+  - Added `parallelWorkers?: number` to `MctsConfig` with validation.
+  - Modified `MctsAgent.chooseMove()` in `mcts-agent.ts` to dispatch parallel search when `parallelWorkers > 1`.
+  - Exported parallel module from `index.ts`.
+  - Created `packages/engine/test/unit/agents/mcts/parallel.test.ts` with 25 tests.
+- **Deviations**: Added `extractRootChildInfos` and `selectBestMergedChild` helpers (not in original ticket but needed for integration). No other deviations.
+- **Verification**: 5182/5182 engine tests pass, typecheck passes, lint passes.

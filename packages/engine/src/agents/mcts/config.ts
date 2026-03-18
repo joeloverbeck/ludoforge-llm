@@ -170,6 +170,17 @@ export interface MctsConfig {
    */
   readonly expansionExhaustiveThreshold?: number;
 
+  /**
+   * Number of parallel search workers for deterministic root parallelization
+   * (spec section 3.13).  The iteration budget is split evenly across workers,
+   * RNGs are forked deterministically, and root results are merged by stable
+   * moveKey order.
+   *
+   * - `undefined` or `1`: single-threaded search (default).
+   * - `>1`: deterministic parallel search (initially sequential in same thread).
+   */
+  readonly parallelWorkers?: number;
+
   /** Optional internal diagnostics for tuning/tests. */
   readonly diagnostics?: boolean;
 }
@@ -479,6 +490,11 @@ export function validateMctsConfig(partial: Partial<MctsConfig>): MctsConfig {
   // Fallback policy
   if (merged.fallbackPolicy !== undefined) {
     assertOneOf('fallbackPolicy', merged.fallbackPolicy, FALLBACK_POLICIES);
+  }
+
+  // Parallel workers
+  if (merged.parallelWorkers !== undefined) {
+    assertPositiveInt('parallelWorkers', merged.parallelWorkers);
   }
 
   // visitor: pass through without validation (callback, not tuneable).

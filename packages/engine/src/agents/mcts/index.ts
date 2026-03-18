@@ -82,4 +82,12 @@ export type {
   DiscoverChoicesFn,
 } from './decision-expansion.js';
 
+export {
+  splitSearchBudget, forkWorkerRngs, extractRootChildInfos,
+  mergeRootResults, selectBestMergedChild,
+} from './parallel.js';
+export type {
+  WorkerRootChildInfo, MergedRootResult, MergedRootChild,
+} from './parallel.js';
+
 export { MctsAgent } from './mcts-agent.js';

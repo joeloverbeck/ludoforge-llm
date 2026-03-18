@@ -22,6 +22,11 @@ import { selectStochasticFallback } from '../agent-move-selection.js';
 import { evaluateForAllPlayers } from './evaluate.js';
 import { familyKey } from './move-key.js';
 import { applyMove } from '../../kernel/apply-move.js';
+import {
+  splitSearchBudget, forkWorkerRngs, extractRootChildInfos,
+  mergeRootResults, selectBestMergedChild,
+  type WorkerRootChildInfo,
+} from './parallel.js';
 
 // ---------------------------------------------------------------------------
 // Post-completion: ensure the selected move is fully resolved
@@ -383,9 +388,81 @@ export class MctsAgent implements Agent {
     // Derive observation for belief sampling.
     const observation = derivePlayerObservation(def, state, playerId as PlayerId);
 
-    // Allocate root node and node pool.
-    const root = createRootNode(state.playerCount);
+    const workerCount = this.config.parallelWorkers ?? 1;
     const depthMultiplier = this.config.decisionDepthMultiplier ?? 4;
+
+    // ── Parallel search path (parallelWorkers > 1) ───────────────────────
+    if (workerCount > 1) {
+      const budgets = splitSearchBudget(this.config.iterations, workerCount);
+      const workerRngs = forkWorkerRngs(searchRng, workerCount);
+      const workerRoots: MctsNode[] = [];
+      const workerChildInfos: (readonly WorkerRootChildInfo[])[] = [];
+
+      for (let w = 0; w < workerCount; w += 1) {
+        const workerRoot = createRootNode(state.playerCount);
+        const workerConfig = { ...this.config, iterations: budgets[w]! };
+        const poolCapacity = Math.max(
+          workerConfig.iterations * depthMultiplier + 1,
+          legalMoves.length * 4,
+        );
+        const pool = createNodePool(poolCapacity, state.playerCount);
+
+        runSearch(
+          workerRoot, def, state, observation, playerId as PlayerId,
+          validateMctsConfig(workerConfig),
+          workerRngs[w]!, legalMoves, runtime, pool,
+        );
+
+        workerRoots.push(workerRoot);
+        workerChildInfos.push(extractRootChildInfos(workerRoot));
+      }
+
+      const merged = mergeRootResults(workerChildInfos, state.playerCount);
+
+      // Fallback check on merged visits.
+      const fallbackPolicy = this.config.fallbackPolicy;
+      if (fallbackPolicy && fallbackPolicy !== 'none' && merged.totalVisits <= 1) {
+        const fallbackResult = dispatchFallback(
+          fallbackPolicy, def, state, playerId as PlayerId,
+          legalMoves, nextAgentRng, runtime, this.config.heuristicTemperature,
+        );
+        if (fallbackResult !== null) {
+          return fallbackResult;
+        }
+      }
+
+      // Select best moveKey from merged results.
+      const bestMerged = selectBestMergedChild(merged, playerId as PlayerId);
+
+      // Find the corresponding child node from any worker root for
+      // post-completion (we need a real MctsNode with move data).
+      let bestChild: MctsNode | null = null;
+      let bestChildRoot: MctsNode = workerRoots[0]!;
+      for (const workerRoot of workerRoots) {
+        for (const child of workerRoot.children) {
+          if (child.moveKey === bestMerged.moveKey) {
+            if (bestChild === null || child.visits > bestChild.visits) {
+              bestChild = child;
+              bestChildRoot = workerRoot;
+            }
+          }
+        }
+      }
+
+      if (bestChild === null) {
+        // Should not happen if merge was correct, but be safe.
+        bestChildRoot = workerRoots[0]!;
+        bestChild = selectRootDecision(bestChildRoot, playerId as PlayerId);
+      }
+
+      return postCompleteSelectedMove(
+        def, state, bestChildRoot, bestChild,
+        legalMoves, nextAgentRng, runtime,
+      );
+    }
+
+    // ── Single-threaded search path ──────────────────────────────────────
+    const root = createRootNode(state.playerCount);
     const poolCapacity = Math.max(
       this.config.iterations * depthMultiplier + 1,
       legalMoves.length * 4,

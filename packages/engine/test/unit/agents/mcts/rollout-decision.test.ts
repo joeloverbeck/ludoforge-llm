@@ -11,7 +11,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { Move } from '../../../../src/kernel/types-core.js';
-import { resolveDecisionBoundary } from '../../../../src/agents/mcts/rollout.js';
+import { resolveDecisionBoundary } from '../../../../src/agents/mcts/decision-boundary.js';
 import { createAccumulator } from '../../../../src/agents/mcts/diagnostics.js';
 import { runOneIteration } from '../../../../src/agents/mcts/search.js';
 import { createRootNode } from '../../../../src/agents/mcts/node.js';

@@ -21,6 +21,9 @@ export type { MoveClassification, SingleMoveClassificationKind } from './materia
 export { createNodePool } from './node-pool.js';
 export type { NodePool } from './node-pool.js';
 
+export { resolveDecisionBoundary } from './decision-boundary.js';
+export type { DecisionBoundaryResult } from './decision-boundary.js';
+
 export { rollout, simulateToCutoff } from './rollout.js';
 export type { SimulationResult } from './rollout.js';
 

@@ -1,6 +1,6 @@
 # 64MCTSPEROPT-013: Modular Leaf Evaluator Extraction and Cleanup
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: LOW
 **Effort**: Medium
 **Engine Changes**: Yes — MCTS module restructuring
@@ -100,3 +100,29 @@ If `resolvePreset()` still exists, mark it deprecated in favor of `resolveBudget
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
+
+## Outcome
+
+**Completion date**: 2026-03-18
+
+### What changed
+
+1. **Created `packages/engine/src/agents/mcts/decision-boundary.ts`** — New module containing `resolveDecisionBoundary()` and `DecisionBoundaryResult` type, extracted from `rollout.ts`.
+2. **Modified `rollout.ts`** — Removed the function/type, replaced with re-exports from `decision-boundary.js`. Removed now-unused imports (`Move`, `completeTemplateMove`).
+3. **Modified `search.ts`** — Updated import to source `resolveDecisionBoundary` from `decision-boundary.js`.
+4. **Modified `index.ts`** — Added exports for `resolveDecisionBoundary` and `DecisionBoundaryResult` from the new module.
+5. **Created `packages/engine/test/unit/agents/mcts/decision-boundary.test.ts`** — New test file covering success path, failure path, and diagnostics accumulation.
+6. **Modified `rollout-decision.test.ts`** — Updated import to source from `decision-boundary.js`.
+
+### Deviations from plan
+
+- **Deliverable #4 (MAST conditional loading)**: Already satisfied at runtime — `search.ts` only creates `MastStats` when `leafEvaluator.type === 'rollout' && policy === 'mast'`. No code change needed.
+- **Deliverable #5 (dead config fields)**: None found — rollout fields were already nested under `LeafEvaluator.rollout` by prior tickets.
+- **Deliverable #6 (deprecate `resolvePreset`)**: Already deprecated with `@deprecated` JSDoc tags by prior tickets.
+
+### Verification
+
+- `pnpm turbo build` — pass
+- `pnpm turbo typecheck` — pass
+- `pnpm turbo lint` — pass
+- `pnpm -F @ludoforge/engine test` — 5157 tests pass, 0 failures

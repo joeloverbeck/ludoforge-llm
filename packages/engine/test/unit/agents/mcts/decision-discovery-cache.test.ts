@@ -80,6 +80,7 @@ function makeDecisionNode(partialMove: Move): MctsNode {
     decisionPlayer: PLAYER_0,
     partialMove,
     decisionBinding: 'prevBinding',
+    decisionType: 'chooseOne',
   } as MctsNode;
 }
 

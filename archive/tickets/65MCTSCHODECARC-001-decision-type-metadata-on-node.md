@@ -1,6 +1,6 @@
 # 65MCTSCHODECARC-001: Add `decisionType` Metadata to MctsNode
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/mcts/node.ts`
@@ -45,9 +45,9 @@ export function createDecisionChildNode(
 ): MctsNode
 ```
 
-### 5. Update all call sites of `createDecisionChildNode`
+### 5. Update all call sites that wire decision child nodes
 
-In `decision-expansion.ts`, pass `request.type` (or equivalent) when calling `createDecisionChildNode`. All existing calls currently create `chooseOne` nodes (since `chooseN` expansion doesn't work yet), so they should pass the actual `request.type`.
+In `decision-expansion.ts`, pass `request.type` to `wireDecisionChild()` (the pool-based node wiring helper — `createDecisionChildNode` is not used here). Update `wireDecisionChild` to accept and store a `decisionType` parameter on the allocated node. All existing calls currently create `chooseOne` nodes (since `chooseN` expansion doesn't work yet), so they should pass the actual `request.type`.
 
 ## Files to Touch
 
@@ -89,3 +89,19 @@ In `decision-expansion.ts`, pass `request.type` (or equivalent) when calling `cr
 
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern="decision-expansion"` (targeted)
 2. `pnpm turbo build && pnpm turbo typecheck && pnpm turbo lint && pnpm turbo test`
+
+## Outcome
+
+- **Completion date**: 2026-03-18
+- **What changed**:
+  - Added `decisionType: 'chooseOne' | 'chooseN' | null` to `MctsNode` interface
+  - Updated `createRootNode`, `createChildNode` (set `null`), `createDecisionChildNode` (new param)
+  - Updated `wireDecisionChild` in `decision-expansion.ts` to accept and store `decisionType` from `request.type`
+  - Updated `resetNode` in `node-pool.ts` to reset `decisionType` to `null`
+  - Updated decision root wiring in `search.ts` to set `decisionType: null`
+  - Added test assertions for `decisionType` in `node.test.ts` and `decision-expansion.test.ts`
+  - Updated all test call sites across 5 test files
+- **Deviations from original plan**:
+  - Ticket section 5 corrected: `decision-expansion.ts` uses `wireDecisionChild` (pool-based), not `createDecisionChildNode`. Ticket updated before implementation.
+  - Also updated `node-pool.ts` (resetNode) and `search.ts` (decision root wiring) — not listed in original "Files to Touch" but required for correctness.
+- **Verification**: build ✅, typecheck ✅, lint ✅, 5190 tests pass (0 fail)

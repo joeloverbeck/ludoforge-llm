@@ -505,6 +505,7 @@ export function runOneIteration(
       decisionRoot.decisionPlayer = actingPlayerForDecision;
       decisionRoot.partialMove = pendingMove;
       decisionRoot.decisionBinding = null;
+      decisionRoot.decisionType = null;
       decisionRoot.availability = 1;
       currentNode.children.push(decisionRoot);
     }

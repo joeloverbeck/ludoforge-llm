@@ -268,6 +268,7 @@ function wireDecisionChild(
   moveKey: MoveKey,
   decisionPlayer: PlayerId,
   decisionKey: string,
+  decisionType: 'chooseOne' | 'chooseN',
 ): void {
   (child as { move: Move | null }).move = childMove;
   (child as { moveKey: MoveKey | null }).moveKey = moveKey;
@@ -276,6 +277,7 @@ function wireDecisionChild(
   child.decisionPlayer = decisionPlayer;
   child.partialMove = childMove;
   child.decisionBinding = decisionKey;
+  child.decisionType = decisionType;
   child.heuristicPrior = null;
 }
 
@@ -499,7 +501,7 @@ function expandPendingDecision(
       return { kind: 'poolExhausted' };
     }
 
-    wireDecisionChild(child, parentNode, childMove, moveKey, decisionPlayer, decisionKey);
+    wireDecisionChild(child, parentNode, childMove, moveKey, decisionPlayer, decisionKey, request.type);
     parentNode.children.push(child);
     children.push(child);
 

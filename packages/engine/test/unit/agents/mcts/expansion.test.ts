@@ -39,6 +39,7 @@ function stubNode(visits: number, childrenCount: number): MctsNode {
     decisionPlayer: null,
     partialMove: null,
     decisionBinding: null,
+    decisionType: null,
   };
 }
 

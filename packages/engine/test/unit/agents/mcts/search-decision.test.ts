@@ -54,6 +54,7 @@ describe('search-decision: applyMove on decision completion', () => {
       decisionPlayer: PLAYER_0,
       partialMove: templateMove,
       decisionBinding: null,
+      decisionType: 'chooseOne',
     };
     root.children.push(dRoot);
 
@@ -76,14 +77,14 @@ describe('search-decision: zero kernel calls in decision traversal', () => {
 
     // Create a chain of decision nodes.
     const d1 = createDecisionChildNode(
-      root, templateMove, 'D:rally', PLAYER_0, 'province', PLAYER_COUNT,
+      root, templateMove, 'D:rally', PLAYER_0, 'province', PLAYER_COUNT, 'chooseOne',
     );
     const advancedMove: Move = {
       actionId: aid('rally'),
       params: { province: 'quangTri' },
     };
     const d2 = createDecisionChildNode(
-      d1, advancedMove, 'D:rally:province=quangTri', PLAYER_0, 'unitType', PLAYER_COUNT,
+      d1, advancedMove, 'D:rally:province=quangTri', PLAYER_0, 'unitType', PLAYER_COUNT, 'chooseOne',
     );
 
     // Verify decision nodes share the game state from ancestor state node.
@@ -113,7 +114,7 @@ describe('search-decision: forced-sequence compression at decision level', () =>
     const root = createRootNode(PLAYER_COUNT);
     const templateMove: Move = { actionId: aid('rally'), params: {} };
     const dRoot = createDecisionChildNode(
-      root, templateMove, 'D:rally', PLAYER_0, '', PLAYER_COUNT,
+      root, templateMove, 'D:rally', PLAYER_0, '', PLAYER_COUNT, 'chooseOne',
     );
 
     // When expandDecisionNode handles a single option, it recurses
@@ -173,7 +174,7 @@ describe('search-decision: exploring player from decisionPlayer', () => {
 
     // Create decision node where decisionPlayer differs from activePlayer.
     const dRoot = createDecisionChildNode(
-      root, templateMove, 'D:rally', PLAYER_1, 'province', PLAYER_COUNT,
+      root, templateMove, 'D:rally', PLAYER_1, 'province', PLAYER_COUNT, 'chooseOne',
     );
 
     // The decisionPlayer is PLAYER_1, regardless of game state.
@@ -231,7 +232,7 @@ describe('search-decision: backpropagation through decision nodes', () => {
 
     const templateMove: Move = { actionId: aid('rally'), params: {} };
     const d1 = createDecisionChildNode(
-      root, templateMove, 'D:rally', PLAYER_0, 'province', PLAYER_COUNT,
+      root, templateMove, 'D:rally', PLAYER_0, 'province', PLAYER_COUNT, 'chooseOne',
     );
 
     const advancedMove: Move = {
@@ -239,7 +240,7 @@ describe('search-decision: backpropagation through decision nodes', () => {
       params: { province: 'quangTri' },
     };
     const d2 = createDecisionChildNode(
-      d1, advancedMove, 'D:rally:province=quangTri', PLAYER_0, 'unitType', PLAYER_COUNT,
+      d1, advancedMove, 'D:rally:province=quangTri', PLAYER_0, 'unitType', PLAYER_COUNT, 'chooseOne',
     );
 
     // Backpropagate from d2 with rewards [0.8, 0.2].
@@ -268,7 +269,7 @@ describe('search-decision: invariant 3 — no cross-contamination', () => {
 
     const templateMove: Move = { actionId: aid('rally'), params: {} };
     const dChild = createDecisionChildNode(
-      root, templateMove, 'D:rally', PLAYER_0, 'province', PLAYER_COUNT,
+      root, templateMove, 'D:rally', PLAYER_0, 'province', PLAYER_COUNT, 'chooseOne',
     );
     assert.equal(dChild.nodeKind, 'decision');
 

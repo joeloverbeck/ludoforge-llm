@@ -69,6 +69,7 @@ function makeDecisionNode(partialMove: Move, parent?: MctsNode): MctsNode {
     decisionPlayer: PLAYER_0,
     partialMove,
     decisionBinding: 'prevBinding',
+    decisionType: 'chooseOne',
   };
   return node;
 }
@@ -126,12 +127,13 @@ describe('expandDecisionNode — chooseOne', () => {
     const childParams = result.children.map((c: MctsNode) => c.partialMove?.params?.province);
     assert.deepEqual(childParams, ['quangTri', 'binhDinh', 'phuBon']);
 
-    // All children should be decision nodes.
+    // All children should be decision nodes with correct decisionType.
     for (const child of result.children) {
       assert.equal(child.nodeKind, 'decision');
       assert.equal(child.decisionPlayer, PLAYER_0);
       assert.equal(child.decisionBinding, 'province');
       assert.equal(child.heuristicPrior, null);
+      assert.equal(child.decisionType, 'chooseOne');
     }
   });
 });
@@ -173,6 +175,11 @@ describe('expandDecisionNode — chooseN', () => {
     if (result.kind !== 'expanded') return;
     // 2 legal + 1 unknown = 3 children.  1 illegal pruned.
     assert.equal(result.children.length, 3);
+
+    // All chooseN children should have decisionType 'chooseN'.
+    for (const child of result.children) {
+      assert.equal(child.decisionType, 'chooseN');
+    }
   });
 
   // ---------------------------------------------------------------------------

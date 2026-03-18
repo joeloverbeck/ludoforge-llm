@@ -112,6 +112,7 @@ describe('postCompleteSelectedMove', () => {
         asPlayerId(0) as PlayerId,
         'target',
         playerCount,
+        'chooseOne',
       );
       decisionRoot.visits = 20;
       root.visits = 20;
@@ -125,6 +126,7 @@ describe('postCompleteSelectedMove', () => {
         asPlayerId(0) as PlayerId,
         'option',
         playerCount,
+        'chooseOne',
       );
       childA.visits = 5;
 
@@ -136,6 +138,7 @@ describe('postCompleteSelectedMove', () => {
         asPlayerId(0) as PlayerId,
         'option',
         playerCount,
+        'chooseOne',
       );
       childB.visits = 15;
 
@@ -165,6 +168,7 @@ describe('postCompleteSelectedMove', () => {
         asPlayerId(0) as PlayerId,
         'target',
         playerCount,
+        'chooseOne',
       );
       decisionRoot.visits = 10;
       root.visits = 10;
@@ -202,6 +206,7 @@ describe('postCompleteSelectedMove', () => {
         asPlayerId(0) as PlayerId,
         'target',
         playerCount,
+        'chooseOne',
       );
       decisionRoot.visits = 10;
       root.visits = 10;

@@ -241,6 +241,26 @@ zones:
     "out-of-play-NVA:none": forcePool
     "out-of-play-VC:none": forcePool
 
+  tokenLayouts:
+    presets:
+      fitl-map-space:
+        mode: lanes
+        laneGap: 24
+        laneOrder: [regular, base]
+        lanes:
+          regular:
+            anchor: center
+            pack: centeredRow
+            spacingX: 32
+          base:
+            anchor: belowPreviousLane
+            pack: centeredRow
+            spacingX: 42
+    assignments:
+      byCategory:
+        city: fitl-map-space
+        province: fitl-map-space
+
 edges:
   default:
     color: "#6b7280"
@@ -251,16 +271,36 @@ edges:
       color: "#8b7355"
       width: 2
 
+tokens:
+  stackBadge:
+    fontSize: 13
+    fill: "#f8fafc"
+    stroke: "#000000"
+    strokeWidth: 3
+    anchorX: 1
+    anchorY: 0
+    offsetX: 4
+    offsetY: -4
+
 tokenTypes:
   us-troops:
     shape: square
     color: olive
+    presentation:
+      lane: regular
+      scale: 1
   us-bases:
     shape: round-disk
     color: olive
+    presentation:
+      lane: base
+      scale: 1.5
   us-irregulars:
     shape: beveled-cylinder
     color: olive
+    presentation:
+      lane: regular
+      scale: 1
     symbolRules:
       - when:
           - prop: activity
@@ -269,12 +309,21 @@ tokenTypes:
   arvn-troops:
     shape: square
     color: yellow
+    presentation:
+      lane: regular
+      scale: 1
   arvn-police:
     shape: square
     color: orange
+    presentation:
+      lane: regular
+      scale: 1
   arvn-rangers:
     shape: beveled-cylinder
     color: yellow
+    presentation:
+      lane: regular
+      scale: 1
     symbolRules:
       - when:
           - prop: activity
@@ -283,12 +332,21 @@ tokenTypes:
   arvn-bases:
     shape: round-disk
     color: yellow
+    presentation:
+      lane: base
+      scale: 1.5
   nva-troops:
     shape: square
     color: red
+    presentation:
+      lane: regular
+      scale: 1
   nva-guerrillas:
     shape: beveled-cylinder
     color: red
+    presentation:
+      lane: regular
+      scale: 1
     symbolRules:
       - when:
           - prop: activity
@@ -297,9 +355,15 @@ tokenTypes:
   nva-bases:
     shape: round-disk
     color: red
+    presentation:
+      lane: base
+      scale: 1.5
   vc-guerrillas:
     shape: beveled-cylinder
     color: bright-blue
+    presentation:
+      lane: regular
+      scale: 1
     symbolRules:
       - when:
           - prop: activity
@@ -308,6 +372,9 @@ tokenTypes:
   vc-bases:
     shape: round-disk
     color: bright-blue
+    presentation:
+      lane: base
+      scale: 1.5
 
 actions:
   # Core operations -- single-word IDs auto-format fine, but choice prompts add value

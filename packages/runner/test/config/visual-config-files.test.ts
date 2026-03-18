@@ -81,6 +81,35 @@ describe('visual-config.yaml files', () => {
       expect(['card', 'forcePool', 'hand', 'other']).toContain(role);
     }
 
+    expect(parsed.zones?.tokenLayouts).toEqual({
+      presets: {
+        'fitl-map-space': {
+          mode: 'lanes',
+          laneGap: 24,
+          laneOrder: ['regular', 'base'],
+          lanes: {
+            regular: {
+              anchor: 'center',
+              pack: 'centeredRow',
+              spacingX: 32,
+            },
+            base: {
+              anchor: 'belowPreviousLane',
+              pack: 'centeredRow',
+              spacingX: 42,
+            },
+          },
+        },
+      },
+      assignments: {
+        byCategory: {
+          city: 'fitl-map-space',
+          province: 'fitl-map-space',
+        },
+      },
+    });
+    expect(parsed.zones?.tokenLayouts?.assignments?.byCategory?.loc).toBeUndefined();
+
     expect(parsed.edges?.default).toEqual({
       color: '#6b7280',
       width: 1.5,
@@ -95,6 +124,16 @@ describe('visual-config.yaml files', () => {
       arvn: { color: '#ffff00', displayName: 'ARVN' },
       nva: { color: '#ff0000', displayName: 'NVA' },
       vc: { color: '#00bfff', displayName: 'Viet Cong' },
+    });
+    expect(parsed.tokens?.stackBadge).toEqual({
+      fontSize: 13,
+      fill: '#f8fafc',
+      stroke: '#000000',
+      strokeWidth: 3,
+      anchorX: 1,
+      anchorY: 0,
+      offsetX: 4,
+      offsetY: -4,
     });
 
     const attributeRules = parsed.zones?.attributeRules ?? [];
@@ -137,6 +176,55 @@ describe('visual-config.yaml files', () => {
         symbol: 'star',
       },
     ]);
+
+    expect(parsed.tokenTypes?.['us-troops']?.presentation).toEqual({
+      lane: 'regular',
+      scale: 1,
+    });
+    expect(parsed.tokenTypes?.['us-bases']?.presentation).toEqual({
+      lane: 'base',
+      scale: 1.5,
+    });
+    expect(parsed.tokenTypes?.['us-irregulars']?.presentation).toEqual({
+      lane: 'regular',
+      scale: 1,
+    });
+    expect(parsed.tokenTypes?.['arvn-troops']?.presentation).toEqual({
+      lane: 'regular',
+      scale: 1,
+    });
+    expect(parsed.tokenTypes?.['arvn-police']?.presentation).toEqual({
+      lane: 'regular',
+      scale: 1,
+    });
+    expect(parsed.tokenTypes?.['arvn-rangers']?.presentation).toEqual({
+      lane: 'regular',
+      scale: 1,
+    });
+    expect(parsed.tokenTypes?.['arvn-bases']?.presentation).toEqual({
+      lane: 'base',
+      scale: 1.5,
+    });
+    expect(parsed.tokenTypes?.['nva-troops']?.presentation).toEqual({
+      lane: 'regular',
+      scale: 1,
+    });
+    expect(parsed.tokenTypes?.['nva-guerrillas']?.presentation).toEqual({
+      lane: 'regular',
+      scale: 1,
+    });
+    expect(parsed.tokenTypes?.['nva-bases']?.presentation).toEqual({
+      lane: 'base',
+      scale: 1.5,
+    });
+    expect(parsed.tokenTypes?.['vc-guerrillas']?.presentation).toEqual({
+      lane: 'regular',
+      scale: 1,
+    });
+    expect(parsed.tokenTypes?.['vc-bases']?.presentation).toEqual({
+      lane: 'base',
+      scale: 1.5,
+    });
     },
   );
 

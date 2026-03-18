@@ -1,8 +1,22 @@
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
+import { parse } from 'yaml';
 
 import { DEFAULT_FACTION_PALETTE } from '../../src/config/visual-config-defaults';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider';
 import type { VisualConfig } from '../../src/config/visual-config-types';
+
+function repoRootPath(): string {
+  const testDir = dirname(fileURLToPath(import.meta.url));
+  return resolve(testDir, '../../../..');
+}
+
+function loadVisualConfig(pathFromRepoRoot: string): VisualConfig {
+  return parse(readFileSync(resolve(repoRootPath(), pathFromRepoRoot), 'utf8')) as VisualConfig;
+}
 
 describe('VisualConfigProvider', () => {
   it('null config resolves zone visuals to defaults', () => {
@@ -378,6 +392,84 @@ describe('VisualConfigProvider', () => {
       anchorY: 0,
       offsetX: -2,
       offsetY: 2,
+    });
+  });
+
+  it('resolves lane layouts, token presentation, and stack badge styling from the real FITL config', () => {
+    const provider = new VisualConfigProvider(loadVisualConfig('data/games/fire-in-the-lake/visual-config.yaml'));
+
+    expect(provider.resolveZoneTokenLayout('saigon:none', 'city')).toEqual({
+      mode: 'lanes',
+      laneGap: 24,
+      laneOrder: ['regular', 'base'],
+      lanes: {
+        regular: {
+          anchor: 'center',
+          pack: 'centeredRow',
+          spacingX: 32,
+          spacingY: 36,
+        },
+        base: {
+          anchor: 'belowPreviousLane',
+          pack: 'centeredRow',
+          spacingX: 42,
+          spacingY: 36,
+        },
+      },
+    });
+    expect(provider.resolveZoneTokenLayout('pleiku-darlac:none', 'province')).toEqual({
+      mode: 'lanes',
+      laneGap: 24,
+      laneOrder: ['regular', 'base'],
+      lanes: {
+        regular: {
+          anchor: 'center',
+          pack: 'centeredRow',
+          spacingX: 32,
+          spacingY: 36,
+        },
+        base: {
+          anchor: 'belowPreviousLane',
+          pack: 'centeredRow',
+          spacingX: 42,
+          spacingY: 36,
+        },
+      },
+    });
+    expect(provider.resolveZoneTokenLayout('loc-saigon-can-tho:none', 'loc')).toEqual({
+      mode: 'grid',
+      columns: 6,
+      spacingX: 36,
+      spacingY: 36,
+    });
+
+    expect(provider.getTokenTypePresentation('us-bases')).toEqual({
+      lane: 'base',
+      scale: 1.5,
+    });
+    expect(provider.getTokenTypePresentation('vc-bases')).toEqual({
+      lane: 'base',
+      scale: 1.5,
+    });
+    expect(provider.getTokenTypePresentation('us-troops')).toEqual({
+      lane: 'regular',
+      scale: 1,
+    });
+    expect(provider.getTokenTypePresentation('nva-guerrillas')).toEqual({
+      lane: 'regular',
+      scale: 1,
+    });
+
+    expect(provider.getStackBadgeStyle()).toEqual({
+      fontFamily: 'monospace',
+      fontSize: 13,
+      fill: '#f8fafc',
+      stroke: '#000000',
+      strokeWidth: 3,
+      anchorX: 1,
+      anchorY: 0,
+      offsetX: 4,
+      offsetY: -4,
     });
   });
 

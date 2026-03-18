@@ -6,8 +6,14 @@ import { loadGameSpecBundleFromEntrypoint, runGameSpecStagesFromBundle } from '@
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
+import { assertBootstrapTargetDefinitions } from '../../src/bootstrap/bootstrap-registry';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider';
 import { VisualConfigSchema } from '../../src/config/visual-config-types';
+import {
+  buildRefValidationContext,
+  parseVisualConfigStrict,
+  validateVisualConfigRefs,
+} from '../../src/config/validate-visual-config-refs';
 
 function repoRootPath(): string {
   const testDir = dirname(fileURLToPath(import.meta.url));
@@ -20,6 +26,10 @@ function readText(pathFromRepoRoot: string): string {
 
 function readYaml(pathFromRepoRoot: string): unknown {
   return parse(readText(pathFromRepoRoot));
+}
+
+function readJson(pathFromRepoRoot: string): unknown {
+  return JSON.parse(readText(pathFromRepoRoot));
 }
 
 function compileProductionGameDef(pathFromRepoRoot: string) {
@@ -41,6 +51,20 @@ function compileProductionGameDef(pathFromRepoRoot: string) {
 }
 
 describe('visual-config.yaml files', () => {
+  it.each(
+    assertBootstrapTargetDefinitions(readJson('packages/runner/src/bootstrap/bootstrap-targets.json')),
+  )(
+    'production visual config for $id passes strict schema + reference validation against its compiled GameDef',
+    { timeout: 15_000 },
+    (target) => {
+      const parsed = parseVisualConfigStrict(readYaml(`${target.generatedFromSpecPath}/visual-config.yaml`));
+      const gameDef = compileProductionGameDef(target.specEntrypoint);
+      const errors = parsed === null ? [] : validateVisualConfigRefs(parsed, buildRefValidationContext(gameDef));
+
+      expect(errors).toEqual([]);
+    },
+  );
+
   it('FITL visual-config parses and validates against VisualConfigSchema', () => {
     const raw = readText('data/games/fire-in-the-lake/visual-config.yaml');
     expect(raw.trimStart().startsWith('version: 1')).toBe(true);

@@ -24,18 +24,12 @@ describe('visual-config-loader', () => {
     });
   });
 
-  it('returns null and warns for invalid version', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-    expect(loadVisualConfig({ version: 2 })).toBeNull();
-    expect(warnSpy).toHaveBeenCalledOnce();
+  it('throws for invalid version', () => {
+    expect(() => loadVisualConfig({ version: 2 })).toThrow(/Invalid visual config schema/u);
   });
 
-  it('returns null and warns for invalid type', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-    expect(loadVisualConfig('not an object')).toBeNull();
-    expect(warnSpy).toHaveBeenCalledOnce();
+  it('throws for invalid type', () => {
+    expect(() => loadVisualConfig('not an object')).toThrow(/Invalid visual config schema/u);
   });
 
   it('createVisualConfigProvider falls back to defaults for null input', () => {
@@ -60,4 +54,7 @@ describe('visual-config-loader', () => {
     expect(provider.getFactionColor('us')).toBe('#ff0000');
   });
 
+  it('createVisualConfigProvider throws for malformed non-null config', () => {
+    expect(() => createVisualConfigProvider({ version: 2 })).toThrow(/Invalid visual config schema/u);
+  });
 });

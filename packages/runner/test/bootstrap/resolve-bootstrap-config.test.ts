@@ -143,6 +143,28 @@ describe('resolveBootstrapConfig with mocked bootstrap inputs', () => {
     );
   });
 
+  it('fails immediately when visual config schema is malformed', async () => {
+    vi.doMock('../../src/bootstrap/bootstrap-registry', async () => {
+      const texasFixture = (await import('../../src/bootstrap/texas-game-def.json')).default;
+      return {
+        resolveBootstrapDescriptor: () => ({
+          id: 'texas',
+          queryValue: 'texas',
+          defaultSeed: 42,
+          defaultPlayerId: 0,
+          sourceLabel: 'Texas Hold\'em bootstrap fixture',
+          resolveGameDefInput: async () => texasFixture,
+          resolveVisualConfigYaml: () => ({
+            version: 2,
+          }),
+        }),
+      };
+    });
+
+    const { resolveBootstrapConfig } = await importFreshResolver();
+    expect(() => resolveBootstrapConfig('')).toThrowError(/Invalid visual config schema/u);
+  });
+
   it('fails fast when visual config contains invalid cross-reference ids', async () => {
     vi.doMock('../../src/bootstrap/bootstrap-registry', async () => {
       const texasFixture = (await import('../../src/bootstrap/texas-game-def.json')).default;

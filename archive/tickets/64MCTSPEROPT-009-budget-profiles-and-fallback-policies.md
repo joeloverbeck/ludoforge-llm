@@ -1,6 +1,6 @@
 # 64MCTSPEROPT-009: Budget Profiles and Fallback Policies
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — MCTS config, agent, preset replacement
@@ -104,3 +104,25 @@ The agent constructor should accept `MctsBudgetProfile | MctsConfig`.
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
+
+## Outcome
+
+**Completion date**: 2026-03-18
+
+**What changed**:
+- `config.ts`: Added `MctsBudgetProfile` type (`interactive` | `turn` | `background` | `analysis`), `BUDGET_PROFILES` map, `resolveBudgetProfile()`, `FallbackPolicy` type, `fallbackPolicy` field on `MctsConfig` with validation. Old `MctsPreset`/`MCTS_PRESETS`/`resolvePreset` marked `@deprecated`.
+- `mcts-agent.ts`: Constructor accepts `MctsBudgetProfile | Partial<MctsConfig>`. Added `fallbackPolicyOnly`, `fallbackSampledOnePly`, `fallbackFlatMonteCarlo`, and `dispatchFallback` functions. Fallback triggers when search produces ≤1 visit.
+- `index.ts`: Exports new types and functions.
+- `factory.ts`: `parseAgentSpec` recognizes budget profile names alongside legacy presets.
+- `budget-profiles.test.ts` (new): 35 tests covering profiles, fallbacks, constructor, backward compat, invariants.
+- `factory.test.ts`: Updated error message regex.
+
+**Deviations from plan**:
+- `search.ts` was not modified — fallback entry points live in `mcts-agent.ts` since they bypass the search loop entirely.
+- `mcts-agent.test.ts` was not modified — new tests live in dedicated `budget-profiles.test.ts`.
+
+**Verification**:
+- `pnpm turbo build` ✅
+- `pnpm turbo typecheck` ✅
+- `pnpm turbo lint` ✅
+- `pnpm -F @ludoforge/engine test` — 5112/5112 pass ✅

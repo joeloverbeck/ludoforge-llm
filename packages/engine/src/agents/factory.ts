@@ -1,6 +1,6 @@
 import type { Agent } from '../kernel/types.js';
-import { MCTS_PRESET_NAMES, resolvePreset } from './mcts/config.js';
-import type { MctsConfig, MctsPreset } from './mcts/config.js';
+import { MCTS_PRESET_NAMES, resolvePreset, BUDGET_PROFILE_NAMES, resolveBudgetProfile } from './mcts/config.js';
+import type { MctsConfig, MctsPreset, MctsBudgetProfile } from './mcts/config.js';
 import { GreedyAgent } from './greedy-agent.js';
 import { RandomAgent } from './random-agent.js';
 import { MctsAgent } from './mcts/mcts-agent.js';
@@ -51,12 +51,17 @@ export const parseAgentSpec = (spec: string, playerCount: number): readonly Agen
       return createAgent('mcts');
     }
 
-    // Handle mcts:<suffix> — preset name, numeric iterations, or error
+    // Handle mcts:<suffix> — budget profile, legacy preset, numeric iterations, or error
     const mctsColonMatch = part.match(/^mcts:(.+)$/);
     if (mctsColonMatch) {
       const suffix = mctsColonMatch[1]!;
 
-      // Named preset?
+      // Budget profile? (preferred)
+      if ((BUDGET_PROFILE_NAMES as readonly string[]).includes(suffix)) {
+        return new MctsAgent(resolveBudgetProfile(suffix as MctsBudgetProfile));
+      }
+
+      // Legacy preset? (deprecated but functional)
       if ((MCTS_PRESET_NAMES as readonly string[]).includes(suffix)) {
         return new MctsAgent(resolvePreset(suffix as MctsPreset));
       }
@@ -67,8 +72,9 @@ export const parseAgentSpec = (spec: string, playerCount: number): readonly Agen
       }
 
       throw new Error(
-        `Unknown MCTS preset or iteration count: "${suffix}". `
-        + `Allowed presets: ${MCTS_PRESET_NAMES.join(', ')}; or a positive integer for iterations`,
+        `Unknown MCTS profile or iteration count: "${suffix}". `
+        + `Allowed profiles: ${BUDGET_PROFILE_NAMES.join(', ')}; `
+        + `legacy presets: ${MCTS_PRESET_NAMES.join(', ')}; or a positive integer for iterations`,
       );
     }
 

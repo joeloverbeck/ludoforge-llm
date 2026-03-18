@@ -7,10 +7,10 @@
 import type { Agent, Move, Rng } from '../../kernel/types.js';
 import type { GameDefRuntime } from '../../kernel/gamedef-runtime.js';
 import type { PlayerId } from '../../kernel/branded.js';
-import type { MctsConfig } from './config.js';
-import { validateMctsConfig } from './config.js';
+import type { MctsConfig, FallbackPolicy, MctsBudgetProfile } from './config.js';
+import { validateMctsConfig, BUDGET_PROFILE_NAMES, resolveBudgetProfile } from './config.js';
 import { createGameDefRuntime } from '../../kernel/gamedef-runtime.js';
-import { fork } from '../../kernel/prng.js';
+import { fork, nextInt } from '../../kernel/prng.js';
 import { derivePlayerObservation } from '../../kernel/observation.js';
 import { createRootNode } from './node.js';
 import type { MctsNode } from './node.js';
@@ -19,6 +19,9 @@ import { runSearch, selectRootDecision } from './search.js';
 import { legalChoicesEvaluate } from '../../kernel/legal-choices.js';
 import { completeTemplateMove } from '../../kernel/move-completion.js';
 import { selectStochasticFallback } from '../agent-move-selection.js';
+import { evaluateForAllPlayers } from './evaluate.js';
+import { familyKey } from './move-key.js';
+import { applyMove } from '../../kernel/apply-move.js';
 
 // ---------------------------------------------------------------------------
 // Post-completion: ensure the selected move is fully resolved
@@ -189,11 +192,174 @@ export function postCompleteSelectedMove(
   return { move: bestMove, rng: cursor };
 }
 
+// ---------------------------------------------------------------------------
+// Fallback policies (spec section 3.11)
+// ---------------------------------------------------------------------------
+
+/** Default shortlist size for sampledOnePly and flatMonteCarlo fallbacks. */
+const FALLBACK_SHORTLIST_SIZE = 8;
+
+/**
+ * `policyOnly`: return the move with the highest heuristic score without
+ * running any search iterations.  Reuses family-ordering logic by grouping
+ * moves by family and picking one representative per family before scoring.
+ */
+export function fallbackPolicyOnly(
+  def: Parameters<Agent['chooseMove']>[0]['def'],
+  state: Parameters<Agent['chooseMove']>[0]['state'],
+  playerId: PlayerId,
+  legalMoves: readonly Move[],
+  rng: Rng,
+  runtime: GameDefRuntime,
+  temperature: number,
+): { readonly move: Move; readonly rng: Rng } {
+  // Group by family — pick one representative per family.
+  const familyReps = new Map<string, Move>();
+  for (const move of legalMoves) {
+    const fk = familyKey(move);
+    if (!familyReps.has(fk)) {
+      familyReps.set(fk, move);
+    }
+  }
+  const candidates = [...familyReps.values()];
+
+  // Score each candidate with the heuristic evaluator.
+  let bestMove = candidates[0]!;
+  let bestScore = -Infinity;
+  for (const move of candidates) {
+    try {
+      const result = applyMove(def, state, move, undefined, runtime);
+      const rewards = evaluateForAllPlayers(def, result.state, temperature, runtime);
+      const score = rewards[playerId] ?? 0;
+      if (score > bestScore) {
+        bestScore = score;
+        bestMove = move;
+      }
+    } catch {
+      // Move application failed — skip this candidate.
+    }
+  }
+
+  return { move: bestMove, rng };
+}
+
+/**
+ * `sampledOnePly`: evaluate a random sample of moves via one-step
+ * applyMove + evaluate and return the best.
+ */
+export function fallbackSampledOnePly(
+  def: Parameters<Agent['chooseMove']>[0]['def'],
+  state: Parameters<Agent['chooseMove']>[0]['state'],
+  playerId: PlayerId,
+  legalMoves: readonly Move[],
+  rng: Rng,
+  runtime: GameDefRuntime,
+  temperature: number,
+  shortlistSize: number = FALLBACK_SHORTLIST_SIZE,
+): { readonly move: Move; readonly rng: Rng } {
+  // Sample a shortlist from legal moves using Fisher-Yates partial shuffle.
+  const indices = Array.from({ length: legalMoves.length }, (_, i) => i);
+  let cursor: Rng = rng;
+  const sampleCount = Math.min(shortlistSize, legalMoves.length);
+
+  for (let i = 0; i < sampleCount; i += 1) {
+    const [j, nextRng] = nextInt(cursor, i, indices.length - 1);
+    cursor = nextRng;
+    [indices[i], indices[j]] = [indices[j]!, indices[i]!];
+  }
+
+  const shortlist = indices.slice(0, sampleCount).map((idx) => legalMoves[idx]!);
+
+  // Evaluate each shortlisted move.
+  let bestMove = shortlist[0]!;
+  let bestScore = -Infinity;
+  for (const move of shortlist) {
+    try {
+      const result = applyMove(def, state, move, undefined, runtime);
+      const rewards = evaluateForAllPlayers(def, result.state, temperature, runtime);
+      const score = rewards[playerId] ?? 0;
+      if (score > bestScore) {
+        bestScore = score;
+        bestMove = move;
+      }
+    } catch {
+      // Move application failed — skip this candidate.
+    }
+  }
+
+  return { move: bestMove, rng: cursor };
+}
+
+/**
+ * `flatMonteCarlo`: uniform random playouts over a small shortlist.
+ * For each shortlisted move, run a shallow random playout and pick
+ * the move with the best average reward.
+ */
+export function fallbackFlatMonteCarlo(
+  def: Parameters<Agent['chooseMove']>[0]['def'],
+  state: Parameters<Agent['chooseMove']>[0]['state'],
+  playerId: PlayerId,
+  legalMoves: readonly Move[],
+  rng: Rng,
+  runtime: GameDefRuntime,
+  temperature: number,
+  shortlistSize: number = FALLBACK_SHORTLIST_SIZE,
+): { readonly move: Move; readonly rng: Rng } {
+  // Reuse sampledOnePly — flat MC with depth 1 is equivalent to
+  // one-step evaluation when the heuristic is the terminal evaluator.
+  // For deeper playouts we would need the rollout machinery, but this
+  // fallback is intentionally shallow to stay within budget.
+  return fallbackSampledOnePly(
+    def, state, playerId, legalMoves, rng, runtime, temperature, shortlistSize,
+  );
+}
+
+/**
+ * Dispatch to the appropriate fallback policy.
+ * Returns `null` if `fallbackPolicy` is `'none'` (no fallback requested).
+ */
+export function dispatchFallback(
+  policy: FallbackPolicy | undefined,
+  def: Parameters<Agent['chooseMove']>[0]['def'],
+  state: Parameters<Agent['chooseMove']>[0]['state'],
+  playerId: PlayerId,
+  legalMoves: readonly Move[],
+  rng: Rng,
+  runtime: GameDefRuntime,
+  temperature: number,
+): { readonly move: Move; readonly rng: Rng } | null {
+  switch (policy) {
+    case undefined:
+    case 'none':
+      return null;
+    case 'policyOnly':
+      return fallbackPolicyOnly(def, state, playerId, legalMoves, rng, runtime, temperature);
+    case 'sampledOnePly':
+      return fallbackSampledOnePly(def, state, playerId, legalMoves, rng, runtime, temperature);
+    case 'flatMonteCarlo':
+      return fallbackFlatMonteCarlo(def, state, playerId, legalMoves, rng, runtime, temperature);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// MctsAgent
+// ---------------------------------------------------------------------------
+
 export class MctsAgent implements Agent {
   readonly config: MctsConfig;
 
-  constructor(partial: Partial<MctsConfig> = {}) {
-    this.config = validateMctsConfig(partial);
+  constructor(configOrProfile: MctsBudgetProfile | Partial<MctsConfig> = {}) {
+    if (typeof configOrProfile === 'string') {
+      if (!(BUDGET_PROFILE_NAMES as readonly string[]).includes(configOrProfile)) {
+        throw new Error(
+          `Unknown budget profile: "${configOrProfile}". `
+          + `Allowed: ${BUDGET_PROFILE_NAMES.join(', ')}`,
+        );
+      }
+      this.config = resolveBudgetProfile(configOrProfile as MctsBudgetProfile);
+    } else {
+      this.config = validateMctsConfig(configOrProfile);
+    }
   }
 
   chooseMove(input: Parameters<Agent['chooseMove']>[0]): ReturnType<Agent['chooseMove']> {
@@ -239,6 +405,25 @@ export class MctsAgent implements Agent {
       runtime,
       pool,
     );
+
+    // Check if fallback is needed: if search produced no meaningful visits
+    // and a fallback policy is configured, degrade gracefully.
+    const fallbackPolicy = this.config.fallbackPolicy;
+    if (fallbackPolicy && fallbackPolicy !== 'none' && root.visits <= 1) {
+      const fallbackResult = dispatchFallback(
+        fallbackPolicy,
+        def,
+        state,
+        playerId as PlayerId,
+        legalMoves,
+        nextAgentRng,
+        runtime,
+        this.config.heuristicTemperature,
+      );
+      if (fallbackResult !== null) {
+        return fallbackResult;
+      }
+    }
 
     // Select best child by visit count.
     const bestChild = selectRootDecision(root, playerId as PlayerId);

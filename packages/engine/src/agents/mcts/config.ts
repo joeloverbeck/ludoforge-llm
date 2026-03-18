@@ -14,6 +14,10 @@ type RolloutPolicy = (typeof ROLLOUT_POLICIES)[number];
 const SOLVER_MODES = ['off', 'perfectInfoDeterministic2P'] as const;
 type SolverMode = (typeof SOLVER_MODES)[number];
 
+/** Allowed fallback policies (spec section 3.11). */
+const FALLBACK_POLICIES = ['none', 'policyOnly', 'sampledOnePly', 'flatMonteCarlo'] as const;
+export type FallbackPolicy = (typeof FALLBACK_POLICIES)[number];
+
 /** Allowed classification policies (spec section 5). */
 const CLASSIFICATION_POLICIES = ['auto', 'exhaustive', 'lazy'] as const;
 export type ClassificationPolicy = (typeof CLASSIFICATION_POLICIES)[number];
@@ -152,6 +156,15 @@ export interface MctsConfig {
   readonly expansionShortlistSize?: number;
 
   /**
+   * Fallback policy when per-iteration cost makes the budget unrealistic.
+   * - `'none'`: no degradation — search runs to budget or iteration cap (default).
+   * - `'policyOnly'`: return the move with the highest prior/heuristic score without search.
+   * - `'sampledOnePly'`: evaluate a small random sample of moves via one-step apply+evaluate.
+   * - `'flatMonteCarlo'`: uniform random playouts over a small shortlist.
+   */
+  readonly fallbackPolicy?: FallbackPolicy;
+
+  /**
    * Candidate count threshold below which expansion falls back to the
    * exhaustive path (classify all, evaluate all, pick best). Default 10.
    */
@@ -221,10 +234,13 @@ function assertOneOf<T>(name: string, value: T, allowed: readonly T[]): void {
 }
 
 // ---------------------------------------------------------------------------
-// Presets
+// Presets (DEPRECATED — use budget profiles below)
 // ---------------------------------------------------------------------------
 
-/** Named search-strength presets. */
+/**
+ * Named search-strength presets.
+ * @deprecated Use `MctsBudgetProfile` and `resolveBudgetProfile()` instead.
+ */
 export type MctsPreset = 'fast' | 'default' | 'strong' | 'background';
 
 /**
@@ -234,6 +250,8 @@ export type MctsPreset = 'fast' | 'default' | 'strong' | 'background';
  * All presets use `leafEvaluator: { type: 'heuristic' }` — rollout-phase
  * materialization was the dominant cost (~93.8% of total time) and
  * heuristic (direct) evaluation eliminates it.
+ *
+ * @deprecated Use `BUDGET_PROFILES` and `resolveBudgetProfile()` instead.
  */
 export const MCTS_PRESETS: Readonly<Record<MctsPreset, Partial<MctsConfig>>> = Object.freeze({
   fast: Object.freeze({ iterations: 200, maxSimulationDepth: 16, timeLimitMs: 2_000, leafEvaluator: Object.freeze({ type: 'heuristic' as const }), decisionWideningCap: 8, decisionDepthMultiplier: 2 }),
@@ -253,9 +271,80 @@ export const MCTS_PRESETS: Readonly<Record<MctsPreset, Partial<MctsConfig>>> = O
   }),
 });
 
-/** All recognised preset names (for validation). */
+/**
+ * All recognised preset names (for validation).
+ * @deprecated Use `BUDGET_PROFILE_NAMES` instead.
+ */
 export const MCTS_PRESET_NAMES: readonly MctsPreset[] = Object.freeze(
   Object.keys(MCTS_PRESETS) as MctsPreset[],
+);
+
+// ---------------------------------------------------------------------------
+// Budget profiles (spec section 3.2 / 3.11)
+// ---------------------------------------------------------------------------
+
+/** Budget-oriented operating profiles replacing the old search-strength presets. */
+export type MctsBudgetProfile = 'interactive' | 'turn' | 'background' | 'analysis';
+
+/**
+ * Budget profile config partials. Each profile is a thin wrapper over
+ * `MctsConfig` tuned for a specific time-budget tier.
+ *
+ * - `interactive`: ~200 iterations, 2 s, heuristic eval, aggressive fallback.
+ * - `turn`: ~1 500 iterations, 10 s, heuristic eval, family widening.
+ * - `background`: ~5 000 iterations, 30 s, heuristic eval.
+ * - `analysis`: large budget, no time limit, may use rollout on cheap games.
+ */
+export const BUDGET_PROFILES: Readonly<Record<MctsBudgetProfile, Partial<MctsConfig>>> = Object.freeze({
+  interactive: Object.freeze({
+    iterations: 200,
+    minIterations: 16,
+    timeLimitMs: 2_000,
+    maxSimulationDepth: 16,
+    leafEvaluator: Object.freeze({ type: 'heuristic' as const }),
+    classificationPolicy: 'lazy' as const,
+    fallbackPolicy: 'policyOnly' as const,
+    decisionWideningCap: 8,
+    decisionDepthMultiplier: 2,
+    rootStopMinVisits: 4,
+  }),
+  turn: Object.freeze({
+    iterations: 1500,
+    minIterations: 64,
+    timeLimitMs: 10_000,
+    leafEvaluator: Object.freeze({ type: 'heuristic' as const }),
+    classificationPolicy: 'lazy' as const,
+    wideningMode: 'familyThenMove' as const,
+    fallbackPolicy: 'sampledOnePly' as const,
+    decisionWideningCap: 12,
+    decisionDepthMultiplier: 4,
+  }),
+  background: Object.freeze({
+    iterations: 5000,
+    minIterations: 128,
+    timeLimitMs: 30_000,
+    leafEvaluator: Object.freeze({ type: 'heuristic' as const }),
+    classificationPolicy: 'lazy' as const,
+    fallbackPolicy: 'sampledOnePly' as const,
+    heuristicBackupAlpha: 0.4,
+    decisionWideningCap: 16,
+    decisionDepthMultiplier: 6,
+  }),
+  analysis: Object.freeze({
+    iterations: 20_000,
+    minIterations: 512,
+    maxSimulationDepth: 64,
+    leafEvaluator: Object.freeze({ type: 'auto' as const }),
+    classificationPolicy: 'auto' as const,
+    fallbackPolicy: 'none' as const,
+    decisionWideningCap: 20,
+    decisionDepthMultiplier: 8,
+  }),
+});
+
+/** All recognised budget profile names (for validation). */
+export const BUDGET_PROFILE_NAMES: readonly MctsBudgetProfile[] = Object.freeze(
+  Object.keys(BUDGET_PROFILES) as MctsBudgetProfile[],
 );
 
 // ---------------------------------------------------------------------------
@@ -383,6 +472,11 @@ export function validateMctsConfig(partial: Partial<MctsConfig>): MctsConfig {
     assertPositiveInt('expansionExhaustiveThreshold', merged.expansionExhaustiveThreshold);
   }
 
+  // Fallback policy
+  if (merged.fallbackPolicy !== undefined) {
+    assertOneOf('fallbackPolicy', merged.fallbackPolicy, FALLBACK_POLICIES);
+  }
+
   // visitor: pass through without validation (callback, not tuneable).
 
   return Object.freeze(merged);
@@ -390,7 +484,15 @@ export function validateMctsConfig(partial: Partial<MctsConfig>): MctsConfig {
 
 /**
  * Resolve a named preset into a fully validated, immutable `MctsConfig`.
+ * @deprecated Use `resolveBudgetProfile()` instead.
  */
 export function resolvePreset(preset: MctsPreset): MctsConfig {
   return validateMctsConfig(MCTS_PRESETS[preset]);
+}
+
+/**
+ * Resolve a budget profile name into a fully validated, immutable `MctsConfig`.
+ */
+export function resolveBudgetProfile(profile: MctsBudgetProfile): MctsConfig {
+  return validateMctsConfig(BUDGET_PROFILES[profile]);
 }

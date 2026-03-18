@@ -68,7 +68,7 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
     deps.regionBoundaryRenderer?.update(snapshot.zones, latestPositionSnapshot.positions);
     deps.zoneRenderer.update(snapshot.zones, latestPositionSnapshot.positions, highlightedZoneIDs);
     deps.adjacencyRenderer.update(snapshot.adjacencies, latestPositionSnapshot.positions);
-    deps.tokenRenderer.update(snapshot.tokens, deps.zoneRenderer.getContainerMap(), highlightedTokenIDs);
+    deps.tokenRenderer.update(snapshot.tokens, snapshot.zones, deps.zoneRenderer.getContainerMap(), highlightedTokenIDs);
     deps.tableOverlayRenderer?.update(latestOverlayRenderModel, latestPositionSnapshot.positions);
   };
 

@@ -5,8 +5,8 @@ import type { Container } from 'pixi.js';
 
 import type {
   AdjacencyRenderer,
-  FactionColorProvider,
   TokenRenderer,
+  TokenRenderStyleProvider,
   ZoneRenderer,
 } from '../../../src/canvas/renderers/renderer-types';
 import type { Position } from '../../../src/canvas/geometry';
@@ -43,7 +43,11 @@ describe('renderer-types', () => {
     const containerMap = new Map<string, Container>();
 
     const renderer: TokenRenderer = {
-      update: (_tokens: readonly RenderToken[], _zoneContainers: ReadonlyMap<string, Container>) => {},
+      update: (
+        _tokens: readonly RenderToken[],
+        _zones: readonly RenderZone[],
+        _zoneContainers: ReadonlyMap<string, Container>,
+      ) => {},
       getContainerMap: () => containerMap,
       destroy: () => {},
     };
@@ -60,8 +64,8 @@ describe('renderer-types', () => {
     expect(renderer.destroy).toBeTypeOf('function');
   });
 
-  it('accepts a mock FactionColorProvider contract', () => {
-    const provider: FactionColorProvider = {
+  it('accepts a mock TokenRenderStyleProvider contract', () => {
+    const provider: TokenRenderStyleProvider = {
       getTokenTypeVisual: (_tokenTypeId: string) => ({
         shape: 'circle',
         color: null,
@@ -69,6 +73,29 @@ describe('renderer-types', () => {
         symbol: null,
         backSymbol: null,
       }),
+      getTokenTypePresentation: (_tokenTypeId: string) => ({
+        lane: null,
+        scale: 1,
+      }),
+      resolveZoneTokenLayout: (_zoneId: string, _category: string | null) => ({
+        mode: 'grid',
+        columns: 6,
+        spacingX: 36,
+        spacingY: 36,
+      }),
+      getStackBadgeStyle: () => ({
+        fontFamily: 'monospace',
+        fontSize: 10,
+        fill: '#f8fafc',
+        stroke: '#000000',
+        strokeWidth: 0,
+        anchorX: 1,
+        anchorY: 0,
+        offsetX: -2,
+        offsetY: 2,
+      }),
+      getZoneLayoutRole: (_zoneId: string) => null,
+      isSharedZone: (_zoneId: string) => false,
       resolveTokenSymbols: (_tokenTypeId, _tokenProperties) => ({
         symbol: null,
         backSymbol: null,
@@ -77,8 +104,8 @@ describe('renderer-types', () => {
       getColor: (_factionId: string | null, _playerId: PlayerId) => '#ffffff',
     };
 
-    expectTypeOf<FactionColorProvider['getTokenTypeVisual']>().parameters.toEqualTypeOf<[string]>();
-    expectTypeOf<FactionColorProvider['getColor']>().parameters.toEqualTypeOf<[string | null, PlayerId]>();
+    expectTypeOf<TokenRenderStyleProvider['getTokenTypeVisual']>().parameters.toEqualTypeOf<[string]>();
+    expectTypeOf<TokenRenderStyleProvider['getColor']>().parameters.toEqualTypeOf<[string | null, PlayerId]>();
     expect(provider.getTokenTypeVisual('token:a')).toEqual({
       shape: 'circle',
       color: null,

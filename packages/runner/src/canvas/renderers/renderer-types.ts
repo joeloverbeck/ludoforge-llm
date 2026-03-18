@@ -2,7 +2,13 @@ import type { PlayerId } from '@ludoforge/engine/runtime';
 import type { Container } from 'pixi.js';
 
 import type { Position } from '../geometry';
-import type { ResolvedTokenVisual } from '../../config/visual-config-provider.js';
+import type {
+  ResolvedStackBadgeStyle,
+  ResolvedTokenPresentation,
+  ResolvedTokenVisual,
+  ResolvedZoneTokenLayout,
+} from '../../config/visual-config-provider.js';
+import type { LayoutRole } from '../../config/visual-config-types.js';
 import type { CardTemplate } from '../../config/visual-config-types.js';
 import type {
   RenderAdjacency,
@@ -24,6 +30,7 @@ export interface ZoneRenderer {
 export interface TokenRenderer {
   update(
     tokens: readonly RenderToken[],
+    zones: readonly RenderZone[],
     zoneContainers: ReadonlyMap<string, Container>,
     highlightedTokenIDs?: ReadonlySet<string>,
   ): void;
@@ -61,8 +68,13 @@ export interface RegionBoundaryRenderer {
   destroy(): void;
 }
 
-export interface FactionColorProvider {
+export interface TokenRenderStyleProvider {
   getTokenTypeVisual(tokenTypeId: string): ResolvedTokenVisual;
+  getTokenTypePresentation(tokenTypeId: string): ResolvedTokenPresentation;
+  resolveZoneTokenLayout(zoneId: string, category: string | null): ResolvedZoneTokenLayout;
+  getStackBadgeStyle(): ResolvedStackBadgeStyle;
+  getZoneLayoutRole(zoneId: string): LayoutRole | null;
+  isSharedZone(zoneId: string): boolean;
   resolveTokenSymbols(
     tokenTypeId: string,
     tokenProperties: Readonly<Record<string, string | number | boolean>>,

@@ -201,6 +201,7 @@ describe('createCanvasUpdater', () => {
     expect(renderers.adjacencyRenderer.update).toHaveBeenCalledWith(model.adjacencies, snapshot.positions);
     expect(renderers.tokenRenderer.update).toHaveBeenCalledWith(
       model.tokens,
+      model.zones,
       renderers.zoneRenderer.getContainerMap(),
       new Set(),
     );
@@ -523,6 +524,7 @@ describe('createCanvasUpdater', () => {
     );
     expect(renderers.tokenRenderer.update).toHaveBeenCalledWith(
       model.tokens,
+      model.zones,
       renderers.zoneRenderer.getContainerMap(),
       new Set(['token:1']),
     );

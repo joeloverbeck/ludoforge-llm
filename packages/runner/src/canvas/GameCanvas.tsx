@@ -22,11 +22,11 @@ import { createPositionStore, type PositionStore } from './position-store';
 import { createAdjacencyRenderer } from './renderers/adjacency-renderer';
 import { ContainerPool } from './renderers/container-pool';
 import { createDisposalQueue, type DisposalQueue } from './renderers/disposal-queue';
-import { VisualConfigFactionColorProvider } from './renderers/faction-colors';
+import { VisualConfigTokenRenderStyleProvider } from './renderers/token-render-style-provider';
 import type { AdjacencyRenderer, TableOverlayRenderer, TokenRenderer, ZoneRenderer } from './renderers/renderer-types';
 import { createRegionBoundaryRenderer } from './renderers/region-boundary-renderer.js';
 import { createTableOverlayRenderer } from './renderers/table-overlay-renderer.js';
-import { createTokenRenderer, type TokenLayoutConfig } from './renderers/token-renderer';
+import { createTokenRenderer } from './renderers/token-renderer';
 import { drawTableBackground } from './renderers/table-background-renderer.js';
 import { createZoneRenderer } from './renderers/zone-renderer';
 import {
@@ -272,9 +272,8 @@ export async function createGameCanvasRuntime(
     { visualConfigProvider: options.visualConfigProvider },
   );
 
-  const factionColorProvider = new VisualConfigFactionColorProvider(options.visualConfigProvider);
-  const tokenLayoutConfig = buildTokenLayoutConfig(options.visualConfigProvider);
-  const tokenRenderer = deps.createTokenRenderer(gameCanvas.layers.tokenGroup, factionColorProvider, {
+  const tokenRenderStyleProvider = new VisualConfigTokenRenderStyleProvider(options.visualConfigProvider);
+  const tokenRenderer = deps.createTokenRenderer(gameCanvas.layers.tokenGroup, tokenRenderStyleProvider, {
     bindSelection: (tokenContainer, tokenId, isSelectable) =>
       deps.attachTokenSelectHandlers(
         tokenContainer,
@@ -293,7 +292,6 @@ export async function createGameCanvasRuntime(
         },
       ),
     disposalQueue,
-    ...(tokenLayoutConfig !== undefined ? { layoutConfig: tokenLayoutConfig } : {}),
   });
   const tableOverlayRenderer = deps.createTableOverlayRenderer(
     gameCanvas.layers.tableOverlayLayer,
@@ -726,29 +724,4 @@ function stringArraysEqual(prev: readonly string[], next: readonly string[]): bo
   }
 
   return true;
-}
-
-function buildTokenLayoutConfig(provider: VisualConfigProvider): TokenLayoutConfig | undefined {
-  const cardAnimation = provider.getCardAnimation();
-  const layoutRolesRaw = provider.getLayoutRoles();
-  const zoneLayoutRoles = new Map<string, string>();
-  const sharedZoneIds = new Set<string>();
-
-  if (layoutRolesRaw !== null) {
-    for (const [zoneId, role] of Object.entries(layoutRolesRaw)) {
-      zoneLayoutRoles.set(zoneId, role);
-    }
-  }
-
-  if (cardAnimation?.zoneRoles?.shared !== undefined) {
-    for (const zoneId of cardAnimation.zoneRoles.shared) {
-      sharedZoneIds.add(zoneId);
-    }
-  }
-
-  if (zoneLayoutRoles.size === 0 && sharedZoneIds.size === 0) {
-    return undefined;
-  }
-
-  return { zoneLayoutRoles, sharedZoneIds };
 }

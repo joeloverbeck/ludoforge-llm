@@ -1,12 +1,16 @@
 import { Circle, Container, Graphics, Polygon, Rectangle, Text } from 'pixi.js';
 import { asPlayerId } from '@ludoforge/engine/runtime';
 
-import type { RenderToken } from '../../model/render-model';
+import type { RenderToken, RenderZone } from '../../model/render-model';
 import type { TokenShape } from '../../config/visual-config-defaults.js';
-import type { ResolvedTokenVisual } from '../../config/visual-config-provider.js';
+import type {
+  ResolvedStackBadgeStyle,
+  ResolvedTokenPresentation,
+  ResolvedTokenVisual,
+} from '../../config/visual-config-provider.js';
 import type { CardTemplate } from '../../config/visual-config-types.js';
 import type { DisposalQueue } from './disposal-queue.js';
-import type { FactionColorProvider, TokenFaceController, TokenRenderer } from './renderer-types';
+import type { TokenFaceController, TokenRenderer, TokenRenderStyleProvider } from './renderer-types';
 import { buildRegularPolygonPoints, parseHexColor } from './shape-utils';
 import { drawTokenShape } from './token-shape-drawer.js';
 import { drawTokenSymbol } from './token-symbol-drawer.js';
@@ -17,8 +21,6 @@ import { computeFanOffset } from '../../layout/fan-offset.js';
 const TOKEN_RADIUS = 14;
 const CARD_WIDTH = 24;
 const CARD_HEIGHT = 34;
-const TOKENS_PER_ROW = 6;
-const TOKEN_SPACING = 36;
 const NEUTRAL_TOKEN_COLOR = 0x6b7280;
 const CARD_BACK_COLOR = 0x1f2937;
 
@@ -49,11 +51,6 @@ interface TokenVisualElements {
   frontContent: Container | null;
 }
 
-export interface TokenLayoutConfig {
-  readonly zoneLayoutRoles: ReadonlyMap<string, string>;
-  readonly sharedZoneIds: ReadonlySet<string>;
-}
-
 interface TokenRendererOptions {
   readonly disposalQueue: DisposalQueue;
   readonly bindSelection?: (
@@ -61,12 +58,22 @@ interface TokenRendererOptions {
     tokenId: string,
     isSelectable: () => boolean,
   ) => () => void;
-  readonly layoutConfig?: TokenLayoutConfig;
+}
+
+interface ResolvedTokenRenderStyle {
+  readonly tokenVisual: ResolvedTokenVisual;
+  readonly presentation: ResolvedTokenPresentation;
+  readonly shape: TokenShape;
+  readonly cardTemplate: CardTemplate | null;
+  readonly dimensions: {
+    readonly width: number;
+    readonly height: number;
+  };
 }
 
 export function createTokenRenderer(
   parentContainer: Container,
-  colorProvider: FactionColorProvider,
+  tokenRenderStyleProvider: TokenRenderStyleProvider,
   options: TokenRendererOptions,
 ): TokenRenderer {
   const tokenContainers = new Map<string, Container>();
@@ -80,10 +87,13 @@ export function createTokenRenderer(
   return {
     update(
       tokens: readonly RenderToken[],
+      zones: readonly RenderZone[],
       zoneContainers: ReadonlyMap<string, Container>,
       highlightedTokenIDs: ReadonlySet<string> = new Set<string>(),
     ): void {
       const renderEntries = buildRenderEntries(tokens);
+      const zoneOffsetsByRenderId = buildZoneOffsetsByRenderId(renderEntries, zones, tokenRenderStyleProvider);
+      const badgeStyle = tokenRenderStyleProvider.getStackBadgeStyle();
       const nextTokenIds = new Set(renderEntries.map((entry) => entry.renderId));
       tokenContainerByTokenId.clear();
       tokenFaceControllerByTokenId.clear();
@@ -107,16 +117,11 @@ export function createTokenRenderer(
         visualsByContainer.delete(tokenContainer);
       }
 
-      const zoneTokenCounts = new Map<string, number>();
-      const zoneTotalCounts = new Map<string, number>();
-      for (const entry of renderEntries) {
-        const zoneId = entry.representative.zoneID;
-        zoneTotalCounts.set(zoneId, (zoneTotalCounts.get(zoneId) ?? 0) + 1);
-      }
       selectableByTokenId.clear();
 
       for (const entry of renderEntries) {
         const token = entry.representative;
+        const renderStyle = resolveTokenRenderStyle(token, tokenRenderStyleProvider);
         let tokenContainer = tokenContainers.get(entry.renderId);
         if (tokenContainer === undefined) {
           tokenContainer = new Container();
@@ -167,15 +172,14 @@ export function createTokenRenderer(
           tokenFaceControllerByTokenId.set(tokenId, createFaceController(visuals));
         }
 
-        const tokenIndexInZone = zoneTokenCounts.get(token.zoneID) ?? 0;
-        zoneTokenCounts.set(token.zoneID, tokenIndexInZone + 1);
-
         updateTokenVisuals(
           tokenContainer,
           visuals,
           token,
           entry.tokenIds.length,
-          colorProvider,
+          renderStyle,
+          badgeStyle,
+          tokenRenderStyleProvider,
           highlightedTokenIDs.has(token.id),
         );
 
@@ -186,17 +190,7 @@ export function createTokenRenderer(
           continue;
         }
 
-        const totalInZone = zoneTotalCounts.get(token.zoneID) ?? 1;
-        const cardTemplate = colorProvider.getCardTemplateForTokenType(token.type);
-        const tokenVisual = colorProvider.getTokenTypeVisual(token.type);
-        const offset = resolveZoneAwareOffset(
-          token.zoneID,
-          tokenIndexInZone,
-          totalInZone,
-          tokenVisual.shape ?? 'circle',
-          cardTemplate,
-          options.layoutConfig,
-        );
+        const offset = zoneOffsetsByRenderId.get(entry.renderId) ?? { x: 0, y: 0 };
         tokenContainer.visible = true;
         tokenContainer.alpha = 1;
         tokenContainer.position.set(
@@ -281,35 +275,65 @@ function updateTokenVisuals(
   visuals: TokenVisualElements,
   token: RenderToken,
   tokenCount: number,
-  colorProvider: FactionColorProvider,
+  renderStyle: ResolvedTokenRenderStyle,
+  badgeStyle: ResolvedStackBadgeStyle,
+  tokenRenderStyleProvider: TokenRenderStyleProvider,
   isInteractionHighlighted: boolean,
 ): void {
-  const tokenVisual = colorProvider.getTokenTypeVisual(token.type);
-  const tokenSymbols = colorProvider.resolveTokenSymbols(token.type, token.properties);
-  const shape = resolveTokenShape(tokenVisual.shape);
-  const cardTemplate = resolveCardTemplate(shape, token.type, colorProvider);
-  const dimensions = resolveTokenDimensions(shape, tokenVisual.size, cardTemplate);
-  const fillColor = resolveTokenColor(token, tokenVisual, colorProvider);
+  const tokenSymbols = tokenRenderStyleProvider.resolveTokenSymbols(token.type, token.properties);
+  const fillColor = resolveTokenColor(token, renderStyle.tokenVisual, tokenRenderStyleProvider);
   const stroke = resolveStroke(token, isInteractionHighlighted);
   const isFaceUp = token.faceUp;
 
-  drawTokenShape(visuals.frontBase, shape, dimensions, fillColor, stroke);
-  drawTokenShape(visuals.backBase, shape, dimensions, CARD_BACK_COLOR, stroke);
-  drawTokenSymbol(visuals.frontSymbol, tokenSymbols.symbol, resolveSymbolSize(shape, dimensions));
-  drawTokenSymbol(visuals.backSymbol, tokenSymbols.backSymbol, resolveSymbolSize(shape, dimensions));
-  tokenContainer.hitArea = resolveTokenHitArea(shape, dimensions);
-  syncCardContent(tokenContainer, visuals, token, cardTemplate, isFaceUp);
+  drawTokenShape(visuals.frontBase, renderStyle.shape, renderStyle.dimensions, fillColor, stroke);
+  drawTokenShape(visuals.backBase, renderStyle.shape, renderStyle.dimensions, CARD_BACK_COLOR, stroke);
+  drawTokenSymbol(visuals.frontSymbol, tokenSymbols.symbol, resolveSymbolSize(renderStyle.shape, renderStyle.dimensions));
+  drawTokenSymbol(visuals.backSymbol, tokenSymbols.backSymbol, resolveSymbolSize(renderStyle.shape, renderStyle.dimensions));
+  tokenContainer.hitArea = resolveTokenHitArea(renderStyle.shape, renderStyle.dimensions);
+  syncCardContent(tokenContainer, visuals, token, renderStyle.cardTemplate, isFaceUp);
   setTokenFaceVisibility(visuals, isFaceUp);
   visuals.countBadge.text = tokenCount > 1 ? String(tokenCount) : '';
   visuals.countBadge.visible = tokenCount > 1;
-  visuals.countBadge.position.set(dimensions.width / 2 - 2, -dimensions.height / 2 + 2);
+  visuals.countBadge.style = {
+    fill: badgeStyle.fill,
+    fontFamily: badgeStyle.fontFamily,
+    fontSize: badgeStyle.fontSize,
+    stroke: {
+      color: badgeStyle.stroke,
+      width: badgeStyle.strokeWidth,
+    },
+  };
+  visuals.countBadge.anchor.set(badgeStyle.anchorX, badgeStyle.anchorY);
+  visuals.countBadge.position.set(
+    renderStyle.dimensions.width / 2 + badgeStyle.offsetX,
+    -renderStyle.dimensions.height / 2 + badgeStyle.offsetY,
+  );
   tokenContainer.scale.set(token.isSelected ? 1.08 : 1, token.isSelected ? 1.08 : 1);
+}
+
+function resolveTokenRenderStyle(
+  token: RenderToken,
+  tokenRenderStyleProvider: TokenRenderStyleProvider,
+): ResolvedTokenRenderStyle {
+  const tokenVisual = tokenRenderStyleProvider.getTokenTypeVisual(token.type);
+  const presentation = tokenRenderStyleProvider.getTokenTypePresentation(token.type);
+  const shape = resolveTokenShape(tokenVisual.shape);
+  const cardTemplate = resolveCardTemplate(shape, token.type, tokenRenderStyleProvider);
+  const dimensions = resolveTokenDimensions(shape, tokenVisual.size, cardTemplate, presentation.scale);
+
+  return {
+    tokenVisual,
+    presentation,
+    shape,
+    cardTemplate,
+    dimensions,
+  };
 }
 
 function resolveTokenColor(
   token: RenderToken,
   tokenVisual: ResolvedTokenVisual,
-  colorProvider: FactionColorProvider,
+  tokenRenderStyleProvider: TokenRenderStyleProvider,
 ): number {
   const resolvedTokenTypeColor = parseHexColor(tokenVisual.color ?? undefined, {
     allowShortHex: true,
@@ -321,14 +345,14 @@ function resolveTokenColor(
 
   if (token.factionId !== null) {
     const fallbackPlayer = token.ownerID ?? asPlayerId(0);
-    return parseHexColor(colorProvider.getColor(token.factionId, fallbackPlayer), {
+    return parseHexColor(tokenRenderStyleProvider.getColor(token.factionId, fallbackPlayer), {
       allowShortHex: true,
       allowNamedColors: true,
     })
       ?? NEUTRAL_TOKEN_COLOR;
   }
   if (token.ownerID !== null) {
-    return parseHexColor(colorProvider.getColor(null, token.ownerID), {
+    return parseHexColor(tokenRenderStyleProvider.getColor(null, token.ownerID), {
       allowShortHex: true,
       allowNamedColors: true,
     })
@@ -365,22 +389,24 @@ function resolveTokenDimensions(
   shape: TokenShape,
   size: number | undefined,
   cardTemplate: CardTemplate | null = null,
+  scale = 1,
 ): { readonly width: number; readonly height: number } {
   const normalizedSize = typeof size === 'number' && Number.isFinite(size) && size > 0 ? size : TOKEN_RADIUS * 2;
+  const normalizedScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
   if (shape === 'card') {
     if (cardTemplate !== null) {
       return {
-        width: Math.max(1, Math.round(cardTemplate.width)),
-        height: Math.max(1, Math.round(cardTemplate.height)),
+        width: Math.max(1, Math.round(cardTemplate.width * normalizedScale)),
+        height: Math.max(1, Math.round(cardTemplate.height * normalizedScale)),
       };
     }
     return {
-      width: Math.max(CARD_WIDTH, Math.round(normalizedSize * 0.9)),
-      height: Math.max(CARD_HEIGHT, Math.round(normalizedSize * 1.25)),
+      width: Math.max(CARD_WIDTH, Math.round(normalizedSize * 0.9 * normalizedScale)),
+      height: Math.max(CARD_HEIGHT, Math.round(normalizedSize * 1.25 * normalizedScale)),
     };
   }
   if (shape === 'square' || shape === 'cube') {
-    const side = Math.max(16, Math.round(normalizedSize));
+    const side = Math.max(16, Math.round(normalizedSize * normalizedScale));
     return {
       width: side,
       height: side,
@@ -388,37 +414,37 @@ function resolveTokenDimensions(
   }
   if (shape === 'triangle') {
     return {
-      width: Math.max(16, Math.round(normalizedSize * 1.06)),
-      height: Math.max(16, Math.round(normalizedSize)),
+      width: Math.max(16, Math.round(normalizedSize * 1.06 * normalizedScale)),
+      height: Math.max(16, Math.round(normalizedSize * normalizedScale)),
     };
   }
   if (shape === 'meeple') {
     return {
-      width: Math.max(16, Math.round(normalizedSize * 0.92)),
-      height: Math.max(16, Math.round(normalizedSize * 1.12)),
+      width: Math.max(16, Math.round(normalizedSize * 0.92 * normalizedScale)),
+      height: Math.max(16, Math.round(normalizedSize * 1.12 * normalizedScale)),
     };
   }
   if (shape === 'diamond' || shape === 'hexagon' || shape === 'beveled-cylinder' || shape === 'round-disk') {
     return {
-      width: Math.max(16, Math.round(normalizedSize)),
-      height: Math.max(16, Math.round(normalizedSize)),
+      width: Math.max(16, Math.round(normalizedSize * normalizedScale)),
+      height: Math.max(16, Math.round(normalizedSize * normalizedScale)),
     };
   }
   return {
-    width: normalizedSize,
-    height: normalizedSize,
+    width: normalizedSize * normalizedScale,
+    height: normalizedSize * normalizedScale,
   };
 }
 
 function resolveCardTemplate(
   shape: TokenShape,
   tokenTypeId: string,
-  colorProvider: FactionColorProvider,
+  tokenRenderStyleProvider: TokenRenderStyleProvider,
 ): CardTemplate | null {
   if (shape !== 'card') {
     return null;
   }
-  return colorProvider.getCardTemplateForTokenType(tokenTypeId);
+  return tokenRenderStyleProvider.getCardTemplateForTokenType(tokenTypeId);
 }
 
 function ensureFrontContentContainer(
@@ -524,38 +550,68 @@ function resolveTokenHitArea(
 const STACK_OFFSET_X = 2;
 const STACK_OFFSET_Y = 1;
 
-function resolveZoneAwareOffset(
-  zoneId: string,
-  index: number,
-  totalInZone: number,
-  shape: TokenShape | undefined,
-  cardTemplate: CardTemplate | null,
-  layoutConfig: TokenLayoutConfig | undefined,
-): { x: number; y: number } {
-  const layoutRole = resolveZoneLayoutRole(zoneId, layoutConfig);
+function buildZoneOffsetsByRenderId(
+  entries: readonly TokenRenderEntry[],
+  zones: readonly RenderZone[],
+  tokenRenderStyleProvider: TokenRenderStyleProvider,
+): ReadonlyMap<string, { x: number; y: number }> {
+  const offsetsByRenderId = new Map<string, { x: number; y: number }>();
+  const zoneById = new Map(zones.map((zone) => [zone.id, zone] as const));
+  const entriesByZoneId = new Map<string, Array<{ entry: TokenRenderEntry; style: ResolvedTokenRenderStyle }>>();
 
-  if (layoutRole === 'fan') {
-    return fanOffset(index, totalInZone, shape, cardTemplate);
+  for (const entry of entries) {
+    const zoneEntries = entriesByZoneId.get(entry.representative.zoneID);
+    const resolvedEntry = {
+      entry,
+      style: resolveTokenRenderStyle(entry.representative, tokenRenderStyleProvider),
+    };
+    if (zoneEntries === undefined) {
+      entriesByZoneId.set(entry.representative.zoneID, [resolvedEntry]);
+    } else {
+      zoneEntries.push(resolvedEntry);
+    }
   }
-  if (layoutRole === 'stack') {
-    return stackOffset(index);
+
+  for (const [zoneId, zoneEntries] of entriesByZoneId.entries()) {
+    const zone = zoneById.get(zoneId);
+    const layoutRole = resolveZoneLayoutRole(zoneId, tokenRenderStyleProvider);
+    if (layoutRole === 'fan') {
+      for (const [index, zoneEntry] of zoneEntries.entries()) {
+        offsetsByRenderId.set(
+          zoneEntry.entry.renderId,
+          fanOffset(index, zoneEntries.length, zoneEntry.style),
+        );
+      }
+      continue;
+    }
+    if (layoutRole === 'stack') {
+      for (const [index, zoneEntry] of zoneEntries.entries()) {
+        offsetsByRenderId.set(zoneEntry.entry.renderId, stackOffset(index));
+      }
+      continue;
+    }
+
+    const layout = tokenRenderStyleProvider.resolveZoneTokenLayout(zoneId, zone?.category ?? null);
+    const zoneOffsets = layout.mode === 'lanes'
+      ? laneOffsets(zoneEntries, layout)
+      : gridOffsets(zoneEntries, layout.columns, layout.spacingX, layout.spacingY);
+    for (const [renderId, offset] of zoneOffsets) {
+      offsetsByRenderId.set(renderId, offset);
+    }
   }
-  return gridOffset(index);
+
+  return offsetsByRenderId;
 }
 
 function resolveZoneLayoutRole(
   zoneId: string,
-  layoutConfig: TokenLayoutConfig | undefined,
+  tokenRenderStyleProvider: TokenRenderStyleProvider,
 ): 'fan' | 'stack' | 'grid' {
-  if (layoutConfig === undefined) {
-    return 'grid';
-  }
-
-  if (layoutConfig.sharedZoneIds.has(zoneId)) {
+  if (tokenRenderStyleProvider.isSharedZone(zoneId)) {
     return 'fan';
   }
 
-  const role = layoutConfig.zoneLayoutRoles.get(zoneId);
+  const role = tokenRenderStyleProvider.getZoneLayoutRole(zoneId);
   if (role === 'hand') {
     return 'fan';
   }
@@ -568,24 +624,19 @@ function resolveZoneLayoutRole(
 function fanOffset(
   index: number,
   total: number,
-  shape: TokenShape | undefined,
-  cardTemplate: CardTemplate | null,
+  renderStyle: ResolvedTokenRenderStyle,
 ): { x: number; y: number } {
-  const itemWidth = resolveItemWidth(shape, cardTemplate);
-  return computeFanOffset(index, total, itemWidth);
+  return computeFanOffset(index, total, resolveItemWidth(renderStyle));
 }
 
-function resolveItemWidth(
-  shape: TokenShape | undefined,
-  cardTemplate: CardTemplate | null,
-): number {
-  if (cardTemplate !== null) {
-    return cardTemplate.width;
+function resolveItemWidth(renderStyle: ResolvedTokenRenderStyle): number {
+  if (renderStyle.cardTemplate !== null) {
+    return renderStyle.dimensions.width;
   }
-  if (shape === 'card') {
-    return CARD_WIDTH;
+  if (renderStyle.shape === 'card') {
+    return Math.max(CARD_WIDTH, renderStyle.dimensions.width);
   }
-  return TOKEN_RADIUS * 2;
+  return renderStyle.dimensions.width;
 }
 
 function stackOffset(index: number): { x: number; y: number } {
@@ -595,14 +646,104 @@ function stackOffset(index: number): { x: number; y: number } {
   };
 }
 
-function gridOffset(index: number): { x: number; y: number } {
-  const column = index % TOKENS_PER_ROW;
-  const row = Math.floor(index / TOKENS_PER_ROW);
+function gridOffsets(
+  zoneEntries: ReadonlyArray<{ entry: TokenRenderEntry; style: ResolvedTokenRenderStyle }>,
+  columns: number,
+  spacingX: number,
+  spacingY: number,
+): ReadonlyMap<string, { x: number; y: number }> {
+  const offsets = new Map<string, { x: number; y: number }>();
 
-  return {
-    x: (column - (TOKENS_PER_ROW - 1) / 2) * TOKEN_SPACING,
-    y: row * TOKEN_SPACING - TOKEN_SPACING / 2,
-  };
+  for (const [index, zoneEntry] of zoneEntries.entries()) {
+    const column = index % columns;
+    const row = Math.floor(index / columns);
+    offsets.set(zoneEntry.entry.renderId, {
+      x: (column - (columns - 1) / 2) * spacingX,
+      y: row * spacingY - spacingY / 2,
+    });
+  }
+
+  return offsets;
+}
+
+function laneOffsets(
+  zoneEntries: ReadonlyArray<{ entry: TokenRenderEntry; style: ResolvedTokenRenderStyle }>,
+  layout: Extract<ReturnType<TokenRenderStyleProvider['resolveZoneTokenLayout']>, { mode: 'lanes' }>,
+): ReadonlyMap<string, { x: number; y: number }> {
+  const offsets = new Map<string, { x: number; y: number }>();
+  const entriesByLane = new Map<string, Array<{ entry: TokenRenderEntry; style: ResolvedTokenRenderStyle }>>();
+
+  for (const zoneEntry of zoneEntries) {
+    const laneId = resolvePresentationLane(zoneEntry.style.presentation, layout.laneOrder);
+    const laneEntries = entriesByLane.get(laneId);
+    if (laneEntries === undefined) {
+      entriesByLane.set(laneId, [zoneEntry]);
+    } else {
+      laneEntries.push(zoneEntry);
+    }
+  }
+
+  let previousLaneCenterY: number | null = null;
+  let previousLaneHeight = 0;
+  for (const laneId of layout.laneOrder) {
+    const laneEntries = entriesByLane.get(laneId) ?? [];
+    if (laneEntries.length === 0) {
+      continue;
+    }
+
+    const laneLayout = layout.lanes[laneId];
+    if (laneLayout === undefined) {
+      continue;
+    }
+    const laneHeight = Math.max(...laneEntries.map(({ style }) => style.dimensions.height));
+    const laneCenterY: number = laneLayout.anchor === 'belowPreviousLane' && previousLaneCenterY !== null
+      ? previousLaneCenterY + previousLaneHeight / 2 + layout.laneGap + laneHeight / 2
+      : 0;
+    const laneXOffsets = computeCenteredRowOffsets(laneEntries, laneLayout.spacingX);
+
+    for (const [index, laneEntry] of laneEntries.entries()) {
+      offsets.set(laneEntry.entry.renderId, {
+        x: laneXOffsets[index] ?? 0,
+        y: laneCenterY,
+      });
+    }
+
+    previousLaneCenterY = laneCenterY;
+    previousLaneHeight = laneHeight;
+  }
+
+  return offsets;
+}
+
+function computeCenteredRowOffsets(
+  laneEntries: ReadonlyArray<{ entry: TokenRenderEntry; style: ResolvedTokenRenderStyle }>,
+  spacingX: number,
+): ReadonlyArray<number> {
+  if (laneEntries.length === 0) {
+    return [];
+  }
+
+  const widths = laneEntries.map(({ style }) => style.dimensions.width);
+  const totalWidth = widths.reduce((sum, width) => sum + width, 0) + spacingX * Math.max(0, laneEntries.length - 1);
+  const offsets: number[] = [];
+  let cursor = -totalWidth / 2;
+
+  for (const width of widths) {
+    offsets.push(cursor + width / 2);
+    cursor += width + spacingX;
+  }
+
+  return offsets;
+}
+
+function resolvePresentationLane(
+  presentation: ResolvedTokenPresentation,
+  laneOrder: readonly string[],
+): string {
+  if (presentation.lane !== null && laneOrder.includes(presentation.lane)) {
+    return presentation.lane;
+  }
+  return laneOrder[0] ?? 'default';
 }
 
 function resolveSymbolSize(

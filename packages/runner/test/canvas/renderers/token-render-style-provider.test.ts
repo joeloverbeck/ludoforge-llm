@@ -4,13 +4,13 @@ import { describe, expect, it } from 'vitest';
 import { VisualConfigProvider } from '../../../src/config/visual-config-provider.js';
 import {
   DEFAULT_FACTION_PALETTE,
-  DefaultFactionColorProvider,
-  VisualConfigFactionColorProvider,
-} from '../../../src/canvas/renderers/faction-colors';
+  DefaultTokenRenderStyleProvider,
+  VisualConfigTokenRenderStyleProvider,
+} from '../../../src/canvas/renderers/token-render-style-provider';
 
-describe('DefaultFactionColorProvider', () => {
+describe('DefaultTokenRenderStyleProvider', () => {
   it('returns resolved token defaults for unknown token types', () => {
-    const provider = new DefaultFactionColorProvider();
+    const provider = new DefaultTokenRenderStyleProvider();
     expect(provider.getTokenTypeVisual('vc-guerrillas')).toEqual({
       shape: 'circle',
       color: null,
@@ -26,18 +26,18 @@ describe('DefaultFactionColorProvider', () => {
   });
 
   it('returns deterministic color for the same faction id', () => {
-    const provider = new DefaultFactionColorProvider();
+    const provider = new DefaultTokenRenderStyleProvider();
     expect(provider.getColor('faction-a', asPlayerId(4))).toBe(provider.getColor('faction-a', asPlayerId(99)));
   });
 
   it('uses a player-derived fallback key when faction id is null', () => {
-    const provider = new DefaultFactionColorProvider();
+    const provider = new DefaultTokenRenderStyleProvider();
     expect(provider.getColor(null, asPlayerId(8))).toBe(provider.getColor(null, asPlayerId(8)));
     expect(provider.getColor(null, asPlayerId(8))).not.toBe(provider.getColor(null, asPlayerId(9)));
   });
 
   it('always returns a valid palette hex color', () => {
-    const provider = new DefaultFactionColorProvider();
+    const provider = new DefaultTokenRenderStyleProvider();
 
     const outputs = [
       provider.getColor('faction-a', asPlayerId(0)),
@@ -55,9 +55,9 @@ describe('DefaultFactionColorProvider', () => {
   });
 });
 
-describe('VisualConfigFactionColorProvider', () => {
+describe('VisualConfigTokenRenderStyleProvider', () => {
   it('returns configured visual-config color for known factions', () => {
-    const provider = new VisualConfigFactionColorProvider(
+    const provider = new VisualConfigTokenRenderStyleProvider(
       new VisualConfigProvider({
         version: 1,
         factions: {
@@ -76,7 +76,7 @@ describe('VisualConfigFactionColorProvider', () => {
       version: 1,
       factions: { us: { color: '#e63946' } },
     });
-    const provider = new VisualConfigFactionColorProvider(backingProvider);
+    const provider = new VisualConfigTokenRenderStyleProvider(backingProvider);
 
     expect(provider.getColor('unknown-faction', asPlayerId(7))).toBe(
       backingProvider.getFactionColor('unknown-faction'),
@@ -85,7 +85,7 @@ describe('VisualConfigFactionColorProvider', () => {
 
   it('uses player fallback key for null faction IDs', () => {
     const backingProvider = new VisualConfigProvider({ version: 1 });
-    const provider = new VisualConfigFactionColorProvider(backingProvider);
+    const provider = new VisualConfigTokenRenderStyleProvider(backingProvider);
 
     expect(provider.getColor(null, asPlayerId(7))).toBe(backingProvider.getFactionColor('player-7'));
   });
@@ -102,7 +102,7 @@ describe('VisualConfigFactionColorProvider', () => {
         },
       },
     });
-    const provider = new VisualConfigFactionColorProvider(backingProvider);
+    const provider = new VisualConfigTokenRenderStyleProvider(backingProvider);
 
     expect(provider.getTokenTypeVisual('vc-guerrillas')).toEqual({
       color: 'bright-blue',
@@ -143,7 +143,7 @@ describe('VisualConfigFactionColorProvider', () => {
         },
       },
     });
-    const provider = new VisualConfigFactionColorProvider(backingProvider);
+    const provider = new VisualConfigTokenRenderStyleProvider(backingProvider);
 
     expect(provider.getCardTemplateForTokenType('card-AS')).toEqual({
       width: 48,

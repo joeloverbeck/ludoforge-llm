@@ -118,11 +118,124 @@ const MarkerBadgeConfigSchema = z.object({
   height: z.number().optional(),
 });
 
+const PositiveNumberSchema = z.number().positive();
+const PositiveIntegerSchema = z.number().int().positive();
+
+const TokenPresentationSchema = z.object({
+  lane: z.string(),
+  scale: PositiveNumberSchema,
+});
+
+const StackBadgeStyleSchema = z.object({
+  fontFamily: z.string().optional(),
+  fontSize: PositiveNumberSchema,
+  fill: z.string(),
+  stroke: z.string(),
+  strokeWidth: PositiveNumberSchema,
+  anchorX: z.number(),
+  anchorY: z.number(),
+  offsetX: z.number(),
+  offsetY: z.number(),
+});
+
+const TokenGridLayoutSchema = z.object({
+  mode: z.literal('grid'),
+  columns: PositiveIntegerSchema.optional(),
+  spacingX: PositiveNumberSchema,
+  spacingY: PositiveNumberSchema,
+});
+
+const LaneAnchorSchema = z.enum(['center', 'belowPreviousLane']);
+const LanePackSchema = z.enum(['centeredRow']);
+
+const TokenLaneLayoutDefinitionSchema = z.object({
+  anchor: LaneAnchorSchema,
+  pack: LanePackSchema,
+  spacingX: PositiveNumberSchema,
+  spacingY: PositiveNumberSchema.optional(),
+});
+
+const TokenLaneLayoutPresetSchema = z.object({
+  mode: z.literal('lanes'),
+  laneGap: PositiveNumberSchema,
+  laneOrder: z.array(z.string()).min(1),
+  lanes: z.record(z.string(), TokenLaneLayoutDefinitionSchema),
+}).superRefine((value, context) => {
+  const laneDefinitionIds = new Set(Object.keys(value.lanes));
+  for (const laneId of value.laneOrder) {
+    if (!laneDefinitionIds.has(laneId)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['lanes', laneId],
+        message: `laneOrder references undefined lane "${laneId}".`,
+      });
+    }
+  }
+
+  const laneOrderIds = new Set(value.laneOrder);
+  for (const laneId of laneDefinitionIds) {
+    if (!laneOrderIds.has(laneId)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['laneOrder'],
+        message: `lane "${laneId}" must appear in laneOrder.`,
+      });
+    }
+  }
+});
+
+const ZoneTokenLayoutSchema = z.discriminatedUnion('mode', [
+  TokenGridLayoutSchema,
+  TokenLaneLayoutPresetSchema,
+]);
+
+const ZoneTokenLayoutDefaultsSchema = z.object({
+  card: ZoneTokenLayoutSchema.optional(),
+  forcePool: ZoneTokenLayoutSchema.optional(),
+  hand: ZoneTokenLayoutSchema.optional(),
+  other: ZoneTokenLayoutSchema.optional(),
+});
+
+const ZoneTokenLayoutAssignmentsSchema = z.object({
+  byCategory: z.record(z.string(), z.string()).optional(),
+}).superRefine((value, context) => {
+  if (value.byCategory === undefined || Object.keys(value.byCategory).length === 0) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['byCategory'],
+      message: 'tokenLayouts.assignments.byCategory must include at least one category assignment when assignments are present.',
+    });
+  }
+});
+
+const ZoneTokenLayoutsSchema = z.object({
+  defaults: ZoneTokenLayoutDefaultsSchema.optional(),
+  presets: z.record(z.string(), ZoneTokenLayoutSchema).optional(),
+  assignments: ZoneTokenLayoutAssignmentsSchema.optional(),
+}).superRefine((value, context) => {
+  const presetIds = new Set(Object.keys(value.presets ?? {}));
+  const byCategory = value.assignments?.byCategory;
+  if (byCategory === undefined) {
+    return;
+  }
+
+  for (const [category, presetId] of Object.entries(byCategory)) {
+    if (!presetIds.has(presetId)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['assignments', 'byCategory', category],
+        message: `tokenLayouts assignment references unknown preset "${presetId}".`,
+      });
+    }
+  }
+});
+
 const ZonesConfigSchema = z.object({
   categoryStyles: z.record(z.string(), ZoneVisualStyleSchema).optional(),
   attributeRules: z.array(AttributeRuleSchema).optional(),
   overrides: z.record(z.string(), ZoneVisualOverrideSchema).optional(),
   layoutRoles: z.record(z.string(), LayoutRoleSchema).optional(),
+  tokenLayouts: ZoneTokenLayoutsSchema.optional(),
   hiddenZones: z.array(z.string()).optional(),
   markerBadge: MarkerBadgeConfigSchema.optional(),
 });
@@ -161,6 +274,7 @@ const TokenTypeVisualStyleSchema = z.object({
   backSymbol: z.string().optional(),
   symbolRules: z.array(TokenSymbolRuleSchema).optional(),
   displayName: z.string().optional(),
+  presentation: TokenPresentationSchema.optional(),
 });
 
 const TokenTypeSelectorsSchema = z.object({
@@ -262,6 +376,10 @@ const CardsConfigSchema = z.object({
   assignments: z.array(CardTemplateAssignmentSchema).optional(),
 });
 
+const TokensConfigSchema = z.object({
+  stackBadge: StackBadgeStyleSchema.optional(),
+});
+
 const VariablePanelSchema = z.object({
   name: z.string(),
   vars: z.array(z.string()),
@@ -358,6 +476,7 @@ export const VisualConfigSchema = z.object({
   factions: z.record(z.string(), FactionVisualConfigSchema).optional(),
   zones: ZonesConfigSchema.optional(),
   edges: EdgesConfigSchema.optional(),
+  tokens: TokensConfigSchema.optional(),
   tokenTypes: z.record(z.string(), TokenTypeVisualStyleSchema).optional(),
   actions: z.record(z.string(), ActionVisualSchema).optional(),
   tokenTypeDefaults: z.array(TokenTypeDefaultSchema).optional(),
@@ -388,6 +507,15 @@ export type AttributeRuleMatch = z.infer<typeof AttributeRuleMatchSchema>;
 export type AttributeRule = z.infer<typeof AttributeRuleSchema>;
 export type MarkerBadgeColorEntry = z.infer<typeof MarkerBadgeColorEntrySchema>;
 export type MarkerBadgeConfig = z.infer<typeof MarkerBadgeConfigSchema>;
+export type TokenPresentation = z.infer<typeof TokenPresentationSchema>;
+export type StackBadgeStyle = z.infer<typeof StackBadgeStyleSchema>;
+export type TokenGridLayout = z.infer<typeof TokenGridLayoutSchema>;
+export type TokenLaneLayoutDefinition = z.infer<typeof TokenLaneLayoutDefinitionSchema>;
+export type TokenLaneLayoutPreset = z.infer<typeof TokenLaneLayoutPresetSchema>;
+export type ZoneTokenLayout = z.infer<typeof ZoneTokenLayoutSchema>;
+export type ZoneTokenLayoutDefaults = z.infer<typeof ZoneTokenLayoutDefaultsSchema>;
+export type ZoneTokenLayoutAssignments = z.infer<typeof ZoneTokenLayoutAssignmentsSchema>;
+export type ZoneTokenLayouts = z.infer<typeof ZoneTokenLayoutsSchema>;
 export type ZonesConfig = z.infer<typeof ZonesConfigSchema>;
 export type EdgeVisualStyle = z.infer<typeof EdgeVisualStyleSchema>;
 export type EdgesConfig = z.infer<typeof EdgesConfigSchema>;
@@ -408,6 +536,7 @@ export type CardFieldLayout = z.infer<typeof CardFieldLayoutSchema>;
 export type CardTemplate = z.infer<typeof CardTemplateSchema>;
 export type CardTemplateAssignment = z.infer<typeof CardTemplateAssignmentSchema>;
 export type CardsConfig = z.infer<typeof CardsConfigSchema>;
+export type TokensConfig = z.infer<typeof TokensConfigSchema>;
 export type VariablePanel = z.infer<typeof VariablePanelSchema>;
 export type VariableFormatting = z.infer<typeof VariableFormattingSchema>;
 export type VariablesConfig = z.infer<typeof VariablesConfigSchema>;

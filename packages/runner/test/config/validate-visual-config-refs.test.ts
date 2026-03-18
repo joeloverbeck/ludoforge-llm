@@ -16,6 +16,32 @@ describe('validate-visual-config-refs', () => {
       zones: {
         overrides: { 'zone:a': { label: 'A' } },
         layoutRoles: { 'zone:b': 'hand' },
+        tokenLayouts: {
+          presets: {
+            'fitl-map-space': {
+              mode: 'lanes',
+              laneGap: 24,
+              laneOrder: ['regular', 'base'],
+              lanes: {
+                regular: {
+                  anchor: 'center',
+                  pack: 'centeredRow',
+                  spacingX: 32,
+                },
+                base: {
+                  anchor: 'belowPreviousLane',
+                  pack: 'centeredRow',
+                  spacingX: 42,
+                },
+              },
+            },
+          },
+          assignments: {
+            byCategory: {
+              city: 'fitl-map-space',
+            },
+          },
+        },
       },
       tableOverlays: {
         playerSeatAnchorZones: ['zone:a'],
@@ -27,7 +53,13 @@ describe('validate-visual-config-refs', () => {
         },
       },
       tokenTypes: {
-        tokenA: { shape: 'circle' },
+        tokenA: {
+          shape: 'circle',
+          presentation: {
+            lane: 'regular',
+            scale: 1,
+          },
+        },
       },
       factions: {
         factionA: { color: '#111111' },
@@ -66,6 +98,13 @@ describe('validate-visual-config-refs', () => {
         overrides: {
           'missing:zone': { label: 'oops' },
         },
+        tokenLayouts: {
+          assignments: {
+            byCategory: {
+              jungle: 'fitl-map-space',
+            },
+          },
+        },
       },
       tokenTypes: {
         missingToken: { shape: 'circle' },
@@ -84,7 +123,14 @@ describe('validate-visual-config-refs', () => {
     };
 
     const errors = validateVisualConfigRefs(config, fixtureContext());
-    expect(errors.map((error) => error.category)).toEqual(['zone', 'tokenType', 'faction', 'variable', 'edge']);
+    expect(errors.map((error) => error.category)).toEqual([
+      'zone',
+      'tokenType',
+      'zoneCategory',
+      'faction',
+      'variable',
+      'edge',
+    ]);
   });
 
   it('reports unknown tableOverlays.playerSeatAnchorZones references', () => {
@@ -132,6 +178,7 @@ describe('validate-visual-config-refs', () => {
     } as unknown as GameDef);
 
     expect(context.zoneIds).toEqual(new Set(['zone:a', 'zone:b']));
+    expect(context.zoneCategories).toEqual(new Set(['city']));
     expect(context.tokenTypeIds).toEqual(new Set(['tokenA']));
     expect(context.factionIds).toEqual(new Set(['factionA']));
     expect(context.variableNames).toEqual(new Set(['globalA', 'playerA']));
@@ -176,6 +223,107 @@ describe('validate-visual-config-refs', () => {
     ]);
   });
 
+  it('reports unknown token layout assignment categories', () => {
+    const config: VisualConfig = {
+      version: 1,
+      zones: {
+        tokenLayouts: {
+          presets: {
+            'fitl-map-space': {
+              mode: 'lanes',
+              laneGap: 24,
+              laneOrder: ['regular'],
+              lanes: {
+                regular: {
+                  anchor: 'center',
+                  pack: 'centeredRow',
+                  spacingX: 32,
+                },
+              },
+            },
+          },
+          assignments: {
+            byCategory: {
+              jungle: 'fitl-map-space',
+            },
+          },
+        },
+      },
+    };
+
+    expect(validateVisualConfigRefs(config, fixtureContext())).toEqual([
+      {
+        category: 'zoneCategory',
+        configPath: 'zones.tokenLayouts.assignments.byCategory.jungle',
+        referencedId: 'jungle',
+        message: 'Unknown zoneCategory id',
+      },
+    ]);
+  });
+
+  it('reports token presentation lanes that no assigned lane layout can satisfy', () => {
+    const config: VisualConfig = {
+      version: 1,
+      zones: {
+        tokenLayouts: {
+          presets: {
+            'fitl-map-space': {
+              mode: 'lanes',
+              laneGap: 24,
+              laneOrder: ['regular'],
+              lanes: {
+                regular: {
+                  anchor: 'center',
+                  pack: 'centeredRow',
+                  spacingX: 32,
+                },
+              },
+            },
+          },
+          assignments: {
+            byCategory: {
+              city: 'fitl-map-space',
+            },
+          },
+        },
+      },
+      tokenTypes: {
+        tokenA: {
+          presentation: {
+            lane: 'base',
+            scale: 1.5,
+          },
+        },
+      },
+      tokenTypeDefaults: [
+        {
+          match: { idPrefixes: ['card-'] },
+          style: {
+            presentation: {
+              lane: 'reserve',
+              scale: 1,
+            },
+          },
+        },
+      ],
+    };
+
+    expect(validateVisualConfigRefs(config, fixtureContext())).toEqual([
+      {
+        category: 'tokenType',
+        configPath: 'tokenTypes.tokenA.presentation.lane',
+        referencedId: 'base',
+        message: 'Presentation lane is not satisfiable by any assigned lane layout',
+      },
+      {
+        category: 'tokenType',
+        configPath: 'tokenTypeDefaults[0].style.presentation.lane',
+        referencedId: 'reserve',
+        message: 'Presentation lane is not satisfiable by any assigned lane layout',
+      },
+    ]);
+  });
+
   it('validateAndCreateProvider returns provider when config is valid', () => {
     const provider = validateAndCreateProvider(
       {
@@ -193,6 +341,7 @@ describe('validate-visual-config-refs', () => {
 function fixtureContext(): VisualConfigRefValidationContext {
   return {
     zoneIds: new Set(['zone:a', 'zone:b']),
+    zoneCategories: new Set(['city', 'province']),
     tokenTypeIds: new Set(['tokenA']),
     factionIds: new Set(['factionA']),
     variableNames: new Set(['varA']),

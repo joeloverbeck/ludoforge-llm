@@ -2,13 +2,15 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import type { MctsSearchDiagnostics } from '../../../src/agents/index.js';
-import { asActionId, type Move, type PlayerId, type Token } from '../../../src/kernel/index.js';
+import { asActionId, type GameDef, type GameState, type Move, type PlayerId, type Token } from '../../../src/kernel/index.js';
 
 import {
   categoryCompetence,
   monsoonAwareness,
   passStrategicValue,
   resourceDiscipline,
+  victoryDefense,
+  victoryProgress,
   type CompetenceEvalContext,
 } from './fitl-competence-evaluators.js';
 import {
@@ -55,7 +57,8 @@ const createContext = (
     readonly actionClass?: string;
     readonly freeOperation?: boolean;
     readonly budget?: CompetenceEvalContext['budget'];
-    readonly globalVars?: Readonly<Record<string, number | boolean>>;
+    readonly globalVarsBefore?: Readonly<Record<string, number | boolean>>;
+    readonly globalVarsAfter?: Readonly<Record<string, number | boolean>>;
     readonly lookaheadIsCoup?: boolean;
   },
 ): CompetenceEvalContext => {
@@ -64,8 +67,8 @@ const createContext = (
   const lookaheadZoneId = def.turnOrder?.type === 'cardDriven'
     ? def.turnOrder.config.turnFlow.cardLifecycle.lookahead
     : null;
-  const state = engineerScenarioState(baseState, {
-    ...(options?.globalVars === undefined ? {} : { globalVars: options.globalVars }),
+  const stateBefore = engineerScenarioState(baseState, {
+    ...(options?.globalVarsBefore === undefined ? {} : { globalVars: options.globalVarsBefore }),
     ...(lookaheadZoneId === null || options?.lookaheadIsCoup === undefined
       ? {}
       : {
@@ -74,6 +77,9 @@ const createContext = (
         },
       }),
   });
+  const stateAfter = options?.globalVarsAfter === undefined
+    ? stateBefore
+    : engineerScenarioState(stateBefore, { globalVars: options.globalVarsAfter });
   const move: Move = {
     actionId: asActionId(actionId),
     params: {},
@@ -82,9 +88,9 @@ const createContext = (
   };
   return {
     def,
-    stateBefore: state,
+    stateBefore,
     move,
-    stateAfter: state,
+    stateAfter,
     playerId: options?.playerId ?? VC_PLAYER,
     diagnostics: diagnosticsStub,
     budget: options?.budget ?? 'interactive',
@@ -126,7 +132,7 @@ describe('resourceDiscipline', () => {
     const evaluator = resourceDiscipline();
 
     const result = evaluator.evaluate(createContext('pass', {
-      globalVars: { vcResources: 0 },
+      globalVarsBefore: { vcResources: 0 },
       playerId: VC_PLAYER,
       budget: 'turn',
     }));
@@ -139,7 +145,7 @@ describe('resourceDiscipline', () => {
     const evaluator = resourceDiscipline();
 
     const result = evaluator.evaluate(createContext('rally', {
-      globalVars: { vcResources: 0 },
+      globalVarsBefore: { vcResources: 0 },
       playerId: VC_PLAYER,
       actionClass: 'operation',
       budget: 'turn',
@@ -153,7 +159,7 @@ describe('resourceDiscipline', () => {
     const evaluator = resourceDiscipline();
 
     const result = evaluator.evaluate(createContext('rally', {
-      globalVars: { vcResources: 0 },
+      globalVarsBefore: { vcResources: 0 },
       playerId: VC_PLAYER,
       actionClass: 'operation',
       freeOperation: true,
@@ -168,7 +174,7 @@ describe('resourceDiscipline', () => {
     const evaluator = resourceDiscipline();
 
     const result = evaluator.evaluate(createContext('rally', {
-      globalVars: { arvnResources: 5 },
+      globalVarsBefore: { arvnResources: 5 },
       playerId: ARVN_PLAYER,
       actionClass: 'operation',
       budget: 'turn',
@@ -225,7 +231,7 @@ describe('passStrategicValue', () => {
     });
 
     const result = evaluator.evaluate(createContext('pass', {
-      globalVars: { vcResources: 0 },
+      globalVarsBefore: { vcResources: 0 },
       playerId: VC_PLAYER,
       budget: 'background',
     }));
@@ -242,7 +248,7 @@ describe('passStrategicValue', () => {
     });
 
     const result = evaluator.evaluate(createContext('pass', {
-      globalVars: { vcResources: 3 },
+      globalVarsBefore: { vcResources: 3 },
       playerId: VC_PLAYER,
       budget: 'background',
     }));
@@ -259,7 +265,7 @@ describe('passStrategicValue', () => {
     });
 
     const result = evaluator.evaluate(createContext('pass', {
-      globalVars: { vcResources: 3 },
+      globalVarsBefore: { vcResources: 3 },
       playerId: VC_PLAYER,
       budget: 'background',
     }));
@@ -275,12 +281,135 @@ describe('passStrategicValue', () => {
     });
 
     const result = evaluator.evaluate(createContext('rally', {
-      globalVars: { vcResources: 3 },
+      globalVarsBefore: { vcResources: 3 },
       playerId: VC_PLAYER,
       budget: 'background',
     }));
 
     assert.equal(result.passed, true);
     assert.equal(result.explanation, 'Skipped — move is not pass');
+  });
+});
+
+describe('victoryProgress', () => {
+  const computeVictory = (_def: GameDef, state: GameState): number =>
+    typeof state.globalVars.testVictory === 'number' ? state.globalVars.testVictory : 0;
+
+  it('passes when the move improves distance to the threshold', () => {
+    const evaluator = victoryProgress(computeVictory, 35, 2);
+
+    const result = evaluator.evaluate(createContext('rally', {
+      globalVarsBefore: { testVictory: 30 },
+      globalVarsAfter: { testVictory: 33 },
+      budget: 'turn',
+    }));
+
+    assert.equal(result.passed, true);
+    assert.equal(result.score, 3);
+    assert.match(result.explanation, /before=30/u);
+    assert.match(result.explanation, /after=33/u);
+  });
+
+  it('passes when the score is unchanged within tolerance', () => {
+    const evaluator = victoryProgress(computeVictory, 35, 2);
+
+    const result = evaluator.evaluate(createContext('rally', {
+      globalVarsBefore: { testVictory: 30 },
+      globalVarsAfter: { testVictory: 30 },
+      budget: 'turn',
+    }));
+
+    assert.equal(result.passed, true);
+    assert.equal(result.score, 0);
+  });
+
+  it('fails when regression exceeds tolerance', () => {
+    const evaluator = victoryProgress(computeVictory, 35, 2);
+
+    const result = evaluator.evaluate(createContext('rally', {
+      globalVarsBefore: { testVictory: 30 },
+      globalVarsAfter: { testVictory: 27 },
+      budget: 'turn',
+    }));
+
+    assert.equal(result.passed, false);
+    assert.equal(result.score, -3);
+    assert.match(result.explanation, /Failed/u);
+  });
+
+  it('treats threshold crossing as continued progress', () => {
+    const evaluator = victoryProgress(computeVictory, 35, 0);
+
+    const result = evaluator.evaluate(createContext('rally', {
+      globalVarsBefore: { testVictory: 34 },
+      globalVarsAfter: { testVictory: 36 },
+      budget: 'turn',
+    }));
+
+    assert.equal(result.passed, true);
+    assert.equal(result.score, 2);
+    assert.match(result.explanation, /dist=1/u);
+    assert.match(result.explanation, /dist=-1/u);
+  });
+});
+
+describe('victoryDefense', () => {
+  const computeOwnVictory = (_def: GameDef, state: GameState): number =>
+    typeof state.globalVars.ownVictory === 'number' ? state.globalVars.ownVictory : 0;
+  const computeOpponentVictory = (
+    _def: GameDef,
+    state: GameState,
+  ): number => (typeof state.globalVars.opponentVictory === 'number' ? state.globalVars.opponentVictory : 0);
+
+  it('passes when the faction keeps its relative lead', () => {
+    const evaluator = victoryDefense(computeOwnVictory, computeOpponentVictory, 35, 18, 0);
+
+    const result = evaluator.evaluate(createContext('assault', {
+      globalVarsBefore: { ownVictory: 30, opponentVictory: 10 },
+      globalVarsAfter: { ownVictory: 32, opponentVictory: 11 },
+      budget: 'turn',
+    }));
+
+    assert.equal(result.passed, true);
+    assert.equal(result.score, 1);
+    assert.match(result.explanation, /lead 3->4/u);
+  });
+
+  it('fails when the faction loses its relative lead beyond tolerance', () => {
+    const evaluator = victoryDefense(computeOwnVictory, computeOpponentVictory, 35, 18, 1);
+
+    const result = evaluator.evaluate(createContext('assault', {
+      globalVarsBefore: { ownVictory: 30, opponentVictory: 10 },
+      globalVarsAfter: { ownVictory: 28, opponentVictory: 13 },
+      budget: 'turn',
+    }));
+
+    assert.equal(result.passed, false);
+    assert.equal(result.score, -5);
+    assert.match(result.explanation, /lead 3->-2/u);
+  });
+
+  it('passes when the lead shrinks within tolerance', () => {
+    const evaluator = victoryDefense(computeOwnVictory, computeOpponentVictory, 35, 18, 2);
+
+    const result = evaluator.evaluate(createContext('assault', {
+      globalVarsBefore: { ownVictory: 30, opponentVictory: 10 },
+      globalVarsAfter: { ownVictory: 30, opponentVictory: 11 },
+      budget: 'turn',
+    }));
+
+    assert.equal(result.passed, true);
+    assert.equal(result.score, -1);
+    assert.match(result.explanation, /tolerance=2/u);
+  });
+
+  it('exposes stable evaluator metadata', () => {
+    const evaluator = victoryDefense(computeOwnVictory, computeOpponentVictory, 35, 18, 0);
+
+    assert.equal(evaluator.name, 'victoryDefense');
+    assert.equal(evaluator.minBudget, 'turn');
+    const progress = victoryProgress(computeOwnVictory, 35, 0);
+    assert.equal(progress.name, 'victoryProgress');
+    assert.equal(progress.minBudget, 'turn');
   });
 });

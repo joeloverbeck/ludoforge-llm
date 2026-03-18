@@ -1,5 +1,5 @@
 import type { MctsBudgetProfile, MctsSearchDiagnostics } from '../../../src/agents/index.js';
-import type { GameState, Move, PlayerId, ValidatedGameDef } from '../../../src/kernel/index.js';
+import type { GameDef, GameState, Move, PlayerId, ValidatedGameDef } from '../../../src/kernel/index.js';
 
 export interface CompetenceEvalContext {
   readonly def: ValidatedGameDef;
@@ -23,6 +23,32 @@ export interface CompetenceEvaluator {
   readonly minBudget: MctsBudgetProfile;
   readonly evaluate: (ctx: CompetenceEvalContext) => CompetenceEvalResult;
 }
+
+type VictoryScoreComputer = (def: GameDef, state: GameState) => number;
+
+interface VictoryDistanceSnapshot {
+  readonly scoreBefore: number;
+  readonly scoreAfter: number;
+  readonly distanceBefore: number;
+  readonly distanceAfter: number;
+}
+
+const getVictoryDistanceSnapshot = (
+  def: GameDef,
+  stateBefore: GameState,
+  stateAfter: GameState,
+  computeVictory: VictoryScoreComputer,
+  threshold: number,
+): VictoryDistanceSnapshot => {
+  const scoreBefore = computeVictory(def, stateBefore);
+  const scoreAfter = computeVictory(def, stateAfter);
+  return {
+    scoreBefore,
+    scoreAfter,
+    distanceBefore: threshold - scoreBefore,
+    distanceAfter: threshold - scoreAfter,
+  };
+};
 
 export const categoryCompetence = (acceptableActionIds: readonly string[]): CompetenceEvaluator => ({
   name: 'categoryCompetence',
@@ -52,6 +78,69 @@ export const budgetRank = (budget: MctsBudgetProfile): number => {
       return 3;
   }
 };
+
+export const victoryProgress = (
+  computeVictory: VictoryScoreComputer,
+  threshold: number,
+  tolerance: number,
+): CompetenceEvaluator => ({
+  name: 'victoryProgress',
+  minBudget: 'turn',
+  evaluate: (ctx): CompetenceEvalResult => {
+    const snapshot = getVictoryDistanceSnapshot(
+      ctx.def,
+      ctx.stateBefore,
+      ctx.stateAfter,
+      computeVictory,
+      threshold,
+    );
+    const score = snapshot.distanceBefore - snapshot.distanceAfter;
+    const passed = snapshot.distanceAfter <= snapshot.distanceBefore + tolerance;
+    return {
+      evaluatorName: 'victoryProgress',
+      passed,
+      score,
+      explanation: `${passed ? 'Passed' : 'Failed'} — threshold=${threshold}, before=${snapshot.scoreBefore} (dist=${snapshot.distanceBefore}), after=${snapshot.scoreAfter} (dist=${snapshot.distanceAfter}), delta=${score}, tolerance=${tolerance}`,
+    };
+  },
+});
+
+export const victoryDefense = (
+  computeOwnVictory: VictoryScoreComputer,
+  computeOpponentVictory: VictoryScoreComputer,
+  ownThreshold: number,
+  opponentThreshold: number,
+  tolerance: number,
+): CompetenceEvaluator => ({
+  name: 'victoryDefense',
+  minBudget: 'turn',
+  evaluate: (ctx): CompetenceEvalResult => {
+    const own = getVictoryDistanceSnapshot(
+      ctx.def,
+      ctx.stateBefore,
+      ctx.stateAfter,
+      computeOwnVictory,
+      ownThreshold,
+    );
+    const opponent = getVictoryDistanceSnapshot(
+      ctx.def,
+      ctx.stateBefore,
+      ctx.stateAfter,
+      computeOpponentVictory,
+      opponentThreshold,
+    );
+    const leadBefore = opponent.distanceBefore - own.distanceBefore;
+    const leadAfter = opponent.distanceAfter - own.distanceAfter;
+    const score = leadAfter - leadBefore;
+    const passed = leadAfter >= leadBefore - tolerance;
+    return {
+      evaluatorName: 'victoryDefense',
+      passed,
+      score,
+      explanation: `${passed ? 'Passed' : 'Failed'} — own dist ${own.distanceBefore}->${own.distanceAfter}, opponent dist ${opponent.distanceBefore}->${opponent.distanceAfter}, lead ${leadBefore}->${leadAfter}, delta=${score}, tolerance=${tolerance}`,
+    };
+  },
+});
 
 const getCardDrivenTurnFlow = (def: ValidatedGameDef) =>
   def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config.turnFlow : null;

@@ -24,6 +24,9 @@ import type { MoveKey } from './move-key.js';
 import { canonicalMoveKey } from './move-key.js';
 import type { MctsSearchVisitor } from './visitor.js';
 import type { MutableDiagnosticsAccumulator } from './diagnostics.js';
+import { recordDecisionDiscoverOptions } from './diagnostics.js';
+import type { DiscoveryCache } from './state-cache.js';
+import { getDiscoveryCacheEntry, setDiscoveryCacheEntry } from './state-cache.js';
 import type { PlayerId } from '../../kernel/branded.js';
 
 // ---------------------------------------------------------------------------
@@ -53,6 +56,10 @@ export interface DecisionExpansionContext {
   readonly runtime?: GameDefRuntime;
   /** Override for testing.  Defaults to kernel `legalChoicesDiscover`. */
   readonly discoverChoices?: DiscoverChoicesFn;
+  /** Per-search discovery cache. When provided, discovery results are cached by stateHash + moveKey. */
+  readonly discoveryCache?: DiscoveryCache;
+  /** Max entries for the discovery cache (defaults to 1024). */
+  readonly discoveryCacheMax?: number;
 }
 
 /** Discriminated union of expansion outcomes. */
@@ -311,7 +318,36 @@ export function expandDecisionNode(
     throw new Error('expandDecisionNode: node.decisionPlayer must not be null');
   }
 
-  const response = discover(def, state, partialMove, { chainCompoundSA: true }, runtime);
+  const acc = ctx.accumulator;
+  const partialMoveKey = canonicalMoveKey(partialMove);
+  const { discoveryCache, discoveryCacheMax = 1024 } = ctx;
+
+  // Check discovery cache first.
+  let response: ChoiceRequest;
+  if (discoveryCache !== undefined) {
+    const cached = getDiscoveryCacheEntry(discoveryCache, state.stateHash, partialMoveKey);
+    if (cached !== undefined) {
+      if (acc !== undefined) {
+        acc.decisionDiscoverCacheHits += 1;
+      }
+      response = cached;
+    } else {
+      const tStart = acc !== undefined ? performance.now() : 0;
+      response = discover(def, state, partialMove, { chainCompoundSA: true }, runtime);
+      if (acc !== undefined) {
+        acc.decisionDiscoverCallCount += 1;
+        acc.decisionDiscoverTimeMs += performance.now() - tStart;
+      }
+      setDiscoveryCacheEntry(discoveryCache, state.stateHash, partialMoveKey, response, discoveryCacheMax);
+    }
+  } else {
+    const tStart = acc !== undefined ? performance.now() : 0;
+    response = discover(def, state, partialMove, { chainCompoundSA: true }, runtime);
+    if (acc !== undefined) {
+      acc.decisionDiscoverCallCount += 1;
+      acc.decisionDiscoverTimeMs += performance.now() - tStart;
+    }
+  }
 
   return handleChoiceResponse(
     response, node, pool, partialMove, decisionPlayer, ctx,
@@ -393,7 +429,35 @@ function expandPendingDecision(
     const advancedMove = advancePartialMove(partialMove, decisionKey, singleOption.value, request.decisionPath);
 
     const discover = ctx.discoverChoices ?? legalChoicesDiscover;
-    const nextResponse = discover(def, state, advancedMove, { chainCompoundSA: true }, ctx.runtime);
+    const fscAcc = ctx.accumulator;
+    const advancedMoveKey = canonicalMoveKey(advancedMove);
+    const { discoveryCache: fscCache, discoveryCacheMax: fscMax = 1024 } = ctx;
+
+    let nextResponse: ChoiceRequest;
+    if (fscCache !== undefined) {
+      const cached = getDiscoveryCacheEntry(fscCache, state.stateHash, advancedMoveKey);
+      if (cached !== undefined) {
+        if (fscAcc !== undefined) {
+          fscAcc.decisionDiscoverCacheHits += 1;
+        }
+        nextResponse = cached;
+      } else {
+        const fscStart = fscAcc !== undefined ? performance.now() : 0;
+        nextResponse = discover(def, state, advancedMove, { chainCompoundSA: true }, ctx.runtime);
+        if (fscAcc !== undefined) {
+          fscAcc.decisionDiscoverCallCount += 1;
+          fscAcc.decisionDiscoverTimeMs += performance.now() - fscStart;
+        }
+        setDiscoveryCacheEntry(fscCache, state.stateHash, advancedMoveKey, nextResponse, fscMax);
+      }
+    } else {
+      const fscStart = fscAcc !== undefined ? performance.now() : 0;
+      nextResponse = discover(def, state, advancedMove, { chainCompoundSA: true }, ctx.runtime);
+      if (fscAcc !== undefined) {
+        fscAcc.decisionDiscoverCallCount += 1;
+        fscAcc.decisionDiscoverTimeMs += performance.now() - fscStart;
+      }
+    }
 
     // Update the parent node's partialMove in place (mutable -- MCTS exception).
     parentNode.partialMove = advancedMove;
@@ -407,8 +471,11 @@ function expandPendingDecision(
   const wideningBypassed = optionsToExpand.length <= decisionWideningCap;
   const decisionDepth = computeDecisionDepth(parentNode) + 1;
 
-  if (accumulator && decisionDepth > accumulator.decisionDepthMax) {
-    accumulator.decisionDepthMax = decisionDepth;
+  if (accumulator) {
+    if (decisionDepth > accumulator.decisionDepthMax) {
+      accumulator.decisionDepthMax = decisionDepth;
+    }
+    recordDecisionDiscoverOptions(accumulator, decisionDepth, optionsToExpand.length);
   }
 
   // Allocate child nodes for each option.

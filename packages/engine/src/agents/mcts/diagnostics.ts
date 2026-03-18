@@ -114,6 +114,13 @@ export interface MutableDiagnosticsAccumulator {
   /** Number of evaluateForAllPlayers calls that contributed to min/max tracking. */
   heuristicEvalSamples: number;
 
+  // Decision discovery instrumentation
+  decisionDiscoverCallCount: number;
+  decisionDiscoverTimeMs: number;
+  decisionDiscoverCacheHits: number;
+  /** Per-depth option counts: depth → list of option counts observed. */
+  decisionDiscoverOptionsByDepth: Map<number, number[]>;
+
   // Aggregation arrays (for computing averages)
   leafRewardSpans: number[];
   selectionDepths: number[];
@@ -197,6 +204,11 @@ export function createAccumulator(): MutableDiagnosticsAccumulator {
     postSigmoidRewardMax: -Infinity,
     heuristicEvalSamples: 0,
 
+    decisionDiscoverCallCount: 0,
+    decisionDiscoverTimeMs: 0,
+    decisionDiscoverCacheHits: 0,
+    decisionDiscoverOptionsByDepth: new Map(),
+
     leafRewardSpans: [],
     selectionDepths: [],
   };
@@ -224,6 +236,22 @@ export function recordHeuristicEvalSpread(
     if (r > acc.postSigmoidRewardMax) acc.postSigmoidRewardMax = r;
   }
   acc.heuristicEvalSamples += 1;
+}
+
+/**
+ * Record the number of decision options discovered at a given depth.
+ */
+export function recordDecisionDiscoverOptions(
+  acc: MutableDiagnosticsAccumulator,
+  depth: number,
+  optionCount: number,
+): void {
+  const existing = acc.decisionDiscoverOptionsByDepth.get(depth);
+  if (existing !== undefined) {
+    existing.push(optionCount);
+  } else {
+    acc.decisionDiscoverOptionsByDepth.set(depth, [optionCount]);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -337,6 +365,12 @@ export interface MctsSearchDiagnostics {
   readonly postSigmoidRewardMax?: number;
   readonly postSigmoidRewardSpread?: number;
 
+  // Decision discovery instrumentation
+  readonly decisionDiscoverCallCount?: number;
+  readonly decisionDiscoverTimeMs?: number;
+  readonly decisionDiscoverCacheHits?: number;
+  readonly decisionDiscoverOptionsByDepth?: Readonly<Record<number, { readonly avg: number; readonly max: number; readonly count: number }>>;
+
   // Derived averages
   readonly avgSelectionDepth?: number;
   readonly avgLeafRewardSpan?: number;
@@ -368,6 +402,23 @@ function computeBranchingByDepth(
   const result: Record<number, { avg: number; max: number; count: number }> = {};
   for (const [depth, entry] of byDepth) {
     result[depth] = { avg: entry.total / entry.count, max: entry.max, count: entry.count };
+  }
+  return result;
+}
+
+/** Compute per-depth decision discovery option statistics. */
+function computeDiscoverOptionsByDepth(
+  byDepth: ReadonlyMap<number, readonly number[]>,
+): Record<number, { avg: number; max: number; count: number }> {
+  const result: Record<number, { avg: number; max: number; count: number }> = {};
+  for (const [depth, counts] of byDepth) {
+    if (counts.length === 0) continue;
+    const total = counts.reduce((a, b) => a + b, 0);
+    result[depth] = {
+      avg: total / counts.length,
+      max: Math.max(...counts),
+      count: counts.length,
+    };
   }
   return result;
 }
@@ -581,6 +632,14 @@ export function collectDiagnostics(
     pendingFamiliesTotal: accumulator.pendingFamiliesTotal,
     pendingFamiliesWithVisits: accumulator.pendingFamiliesWithVisits,
     pendingFamilyQuotaUsed: accumulator.pendingFamilyQuotaUsed,
+
+    // Decision discovery instrumentation
+    decisionDiscoverCallCount: accumulator.decisionDiscoverCallCount,
+    decisionDiscoverTimeMs: accumulator.decisionDiscoverTimeMs,
+    decisionDiscoverCacheHits: accumulator.decisionDiscoverCacheHits,
+    ...(accumulator.decisionDiscoverOptionsByDepth.size > 0
+      ? { decisionDiscoverOptionsByDepth: computeDiscoverOptionsByDepth(accumulator.decisionDiscoverOptionsByDepth) }
+      : {}),
 
     // Raw heuristic score spread
     ...(accumulator.heuristicEvalSamples > 0

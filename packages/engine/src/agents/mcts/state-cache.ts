@@ -10,6 +10,7 @@
  */
 
 import type { GameDef, GameState, Move, TerminalResult } from '../../kernel/types.js';
+import type { ChoiceRequest } from '../../kernel/types-core.js';
 import type { GameDefRuntime } from '../../kernel/gamedef-runtime.js';
 import type { MctsConfig } from './config.js';
 import type { MutableDiagnosticsAccumulator } from './diagnostics.js';
@@ -561,4 +562,72 @@ export function getOrComputeClassification(
 
   // Not cacheable (stateHash === 0n) — fall back to full classification.
   return classifyMovesForSearch(def, state, moves, runtime, visitor, acc);
+}
+
+// ---------------------------------------------------------------------------
+// Decision discovery cache
+// ---------------------------------------------------------------------------
+
+/**
+ * Composite key for the decision discovery cache.
+ * Encodes `stateHash` and `MoveKey` (canonical partial move key) as a single string.
+ *
+ * The `MoveKey` of the partial move uniquely determines what `legalChoicesDiscover()`
+ * will return for a given state, making it the correct cache key component.
+ */
+type DiscoveryCacheKey = string & { readonly __brand: 'DiscoveryCacheKey' };
+
+function makeDiscoveryCacheKey(stateHash: bigint, moveKey: MoveKey): DiscoveryCacheKey {
+  return `${stateHash}|${moveKey}` as DiscoveryCacheKey;
+}
+
+/**
+ * Per-search cache for `legalChoicesDiscover()` results.
+ *
+ * Keyed by `stateHash + DecisionKey`. Entries with `stateHash === 0n`
+ * are never cached (hidden-information states). Eviction is
+ * insertion-order (Map preserves insertion order in ES2015+).
+ */
+export type DiscoveryCache = Map<DiscoveryCacheKey, ChoiceRequest>;
+
+/** Create an empty per-search discovery cache. */
+export function createDiscoveryCache(): DiscoveryCache {
+  return new Map<DiscoveryCacheKey, ChoiceRequest>();
+}
+
+/**
+ * Look up a cached discovery result.
+ * Returns `undefined` on miss or when `stateHash === 0n`.
+ */
+export function getDiscoveryCacheEntry(
+  cache: DiscoveryCache,
+  stateHash: bigint,
+  moveKey: MoveKey,
+): ChoiceRequest | undefined {
+  if (stateHash === 0n) return undefined;
+  return cache.get(makeDiscoveryCacheKey(stateHash, moveKey));
+}
+
+/**
+ * Store a discovery result in the cache. Evicts oldest if at capacity.
+ * Does nothing when `stateHash === 0n`.
+ */
+export function setDiscoveryCacheEntry(
+  cache: DiscoveryCache,
+  stateHash: bigint,
+  moveKey: MoveKey,
+  result: ChoiceRequest,
+  maxEntries: number,
+): void {
+  if (stateHash === 0n) return;
+
+  // Evict oldest if at capacity.
+  if (cache.size >= maxEntries) {
+    const firstKey = cache.keys().next().value;
+    if (firstKey !== undefined) {
+      cache.delete(firstKey);
+    }
+  }
+
+  cache.set(makeDiscoveryCacheKey(stateHash, moveKey), result);
 }

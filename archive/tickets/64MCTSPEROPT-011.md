@@ -1,6 +1,6 @@
 # 64MCTSPEROPT-011: Decision Discovery Diagnostics and Caching
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — diagnostics, caching for decision discovery

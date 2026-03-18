@@ -40,6 +40,7 @@ import { createMastStats, updateMastStats } from './mast.js';
 import type { StateInfoCache } from './state-cache.js';
 import {
   createStateInfoCache,
+  createDiscoveryCache,
   getOrComputeTerminal,
   getOrComputeLegalMoves,
   getOrComputeRewards,
@@ -169,6 +170,8 @@ export function runOneIteration(
   stateCache?: StateInfoCache,
   maxCacheEntries?: number,
   iterationIndex: number = 0,
+  discoveryCache?: import('./state-cache.js').DiscoveryCache,
+  discoveryCacheMax?: number,
 ): { readonly rng: Rng } {
   let currentNode = root;
   let currentState = sampledState;
@@ -201,6 +204,8 @@ export function runOneIteration(
           ...(config.visitor !== undefined ? { visitor: config.visitor } : {}),
           ...(acc !== undefined ? { accumulator: acc } : {}),
           ...(runtime !== undefined ? { runtime } : {}),
+          ...(discoveryCache !== undefined ? { discoveryCache } : {}),
+          ...(discoveryCacheMax !== undefined ? { discoveryCacheMax } : {}),
         };
 
         const expansionResult = expandDecisionNode(currentNode, pool, ctx);
@@ -1146,6 +1151,10 @@ export function runSearch(
     ? (config.maxStateInfoCacheEntries ?? Math.min(pool.capacity, config.iterations * 4))
     : undefined;
 
+  // Create per-search decision discovery cache (same lifecycle as state cache).
+  const discoveryCache = cacheEnabled ? createDiscoveryCache() : undefined;
+  const discoveryCacheMax = maxCacheEntries;
+
   // Gap 5: Capture heap at search start (Node.js only).
   if (acc !== undefined && typeof process !== 'undefined' && typeof process.memoryUsage === 'function') {
     acc.heapUsedAtStartBytes = process.memoryUsage().heapUsed;
@@ -1226,6 +1235,8 @@ export function runSearch(
       stateCache,
       maxCacheEntries,
       iterations,
+      discoveryCache,
+      discoveryCacheMax,
     );
     // Consume the iteration's RNG output (determinism is via fork chain).
     void result;

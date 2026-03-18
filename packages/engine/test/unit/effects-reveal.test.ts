@@ -186,6 +186,7 @@ describe('effects reveal', () => {
           eventContext: 'actionEffect',
           effectPath: 'effects',
         },
+        seq: 0,
       },
     ]);
   });
@@ -608,6 +609,7 @@ describe('effects conceal', () => {
           eventContext: 'actionEffect',
           effectPath: 'effects',
         },
+        seq: 0,
       },
     ]);
   });

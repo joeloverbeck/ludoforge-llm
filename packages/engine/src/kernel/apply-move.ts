@@ -1309,6 +1309,9 @@ const applyMoveCore = (
     ],
     warnings: runtime.collector.warnings,
     ...(runtime.collector.trace !== null ? { effectTrace: runtime.collector.trace } : {}),
+    ...(runtime.collector.conditionTrace !== null ? { conditionTrace: runtime.collector.conditionTrace } : {}),
+    ...(runtime.collector.decisionTrace !== null ? { decisionTrace: runtime.collector.decisionTrace } : {}),
+    ...(runtime.collector.selectorTrace !== null ? { selectorTrace: runtime.collector.selectorTrace } : {}),
   };
 };
 
@@ -1491,6 +1494,9 @@ const applySimultaneousSubmission = (
     triggerFirings: [...triggerFirings, ...lifecycleAndAdvanceLog],
     warnings: commitRuntime.collector.warnings,
     ...(commitRuntime.collector.trace === null ? {} : { effectTrace: commitRuntime.collector.trace }),
+    ...(commitRuntime.collector.conditionTrace === null ? {} : { conditionTrace: commitRuntime.collector.conditionTrace }),
+    ...(commitRuntime.collector.decisionTrace === null ? {} : { decisionTrace: commitRuntime.collector.decisionTrace }),
+    ...(commitRuntime.collector.selectorTrace === null ? {} : { selectorTrace: commitRuntime.collector.selectorTrace }),
   };
 };
 

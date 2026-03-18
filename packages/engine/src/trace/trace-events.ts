@@ -1,6 +1,10 @@
 import type {
+  ConditionTraceEntry,
+  DecisionTraceEntry,
   EffectTraceEntry,
   Move,
+  MoveContext,
+  SelectorTraceEntry,
   StateDelta,
   TerminalResult,
   TriggerLogEntry,
@@ -28,10 +32,15 @@ export interface MoveAppliedEvent {
   readonly kind: 'move-applied';
   readonly turnCount: number;
   readonly player: PlayerId;
+  readonly seatId?: string;
   readonly move: Move;
   readonly deltas: readonly StateDelta[];
   readonly triggerFirings: readonly TriggerLogEntry[];
   readonly effectTrace: readonly EffectTraceEntry[];
+  readonly conditionTrace?: readonly ConditionTraceEntry[];
+  readonly decisionTrace?: readonly DecisionTraceEntry[];
+  readonly selectorTrace?: readonly SelectorTraceEntry[];
+  readonly moveContext?: MoveContext;
   readonly aiDecision?: AiDecisionTrace;
 }
 

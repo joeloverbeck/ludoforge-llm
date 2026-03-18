@@ -19,7 +19,7 @@ import {
 } from './declared-action-param-domain.js';
 import { createDiscoveryProbeEffectContext, createDiscoveryStrictEffectContext } from './effect-context.js';
 import type { ReadContext } from './eval-context.js';
-import { resolveEventEffectList } from './event-execution.js';
+import { resolveEventCardPendingChoice, resolveEventEffectList } from './event-execution.js';
 import { buildMoveRuntimeBindings, resolvePipelineDecisionBindingsForMove } from './move-runtime-bindings.js';
 import {
   decideDiscoveryLegalChoicesPipelineViability,
@@ -47,6 +47,8 @@ import {
 } from './free-operation-discovery-analysis.js';
 import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { isCardEventActionId } from './action-capabilities.js';
+import { evalCondition } from './eval-condition.js';
+import { findPhaseDef } from './phase-lookup.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type {
@@ -851,8 +853,45 @@ const legalChoicesWithPreparedContextInternal = (
     };
     return finalizeRequest(request);
   }
+  // Event card implicit param resolution (side, branch)
+  if (isCardEventActionId(def, action.id)) {
+    const eventPendingChoice = resolveEventCardPendingChoice(def, state, partialMove);
+    if (eventPendingChoice !== null) {
+      if (cst !== undefined) {
+        cst.targetEnumTimeMs += performance.now() - tTargetEnum;
+      }
+      const request = !shouldEvaluateOptionLegality
+        ? eventPendingChoice
+        : {
+          ...eventPendingChoice,
+          options: mapPendingChoiceOptions(partialMove, eventPendingChoice, options, evaluateProbeLegality, options?._diagnosticsAccumulator),
+        };
+      return finalizeRequest(request);
+    }
+  }
   if (cst !== undefined) {
     cst.targetEnumTimeMs += performance.now() - tTargetEnum;
+  }
+
+  // All declared params are resolved — evaluate phase-default and action
+  // preconditions.  This mirrors enumerateParams (legal-moves.ts:302-309)
+  // and validateMove (apply-move.ts:742).
+  const currentPhaseDef = findPhaseDef(def, state.currentPhase);
+  if (currentPhaseDef?.actionDefaults?.pre !== undefined) {
+    if (!evalCondition(currentPhaseDef.actionDefaults.pre, evalCtx)) {
+      return finalizeRequest({
+        kind: 'illegal',
+        complete: false,
+        reason: 'actionPreconditionFailed',
+      });
+    }
+  }
+  if (action.pre !== null && !evalCondition(action.pre, evalCtx)) {
+    return finalizeRequest({
+      kind: 'illegal',
+      complete: false,
+      reason: 'actionPreconditionFailed',
+    });
   }
 
   const tPipeline = cst !== undefined ? performance.now() : 0;

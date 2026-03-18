@@ -305,7 +305,7 @@ describe('ActionToolbar', () => {
     const fakeElement = {} as HTMLElement;
     moveButton.props.onPointerEnter({ currentTarget: fakeElement });
     expect(onActionHoverStart).toHaveBeenCalledTimes(1);
-    expect(onActionHoverStart).toHaveBeenCalledWith('move', fakeElement);
+    expect(onActionHoverStart).toHaveBeenCalledWith('move', fakeElement, expect.anything());
   });
 
   it('onPointerLeave calls onActionHoverEnd', () => {

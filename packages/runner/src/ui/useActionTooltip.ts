@@ -26,7 +26,7 @@ type TooltipInteractionState = 'idle' | 'hovering-action' | 'hovering-tooltip' |
 
 export function useActionTooltip(bridge: GameBridge): {
   readonly tooltipState: ActionTooltipState;
-  readonly onActionHoverStart: (actionId: string, element: HTMLElement) => void;
+  readonly onActionHoverStart: (actionId: string, element: HTMLElement, actorPlayer?: number) => void;
   readonly onActionHoverEnd: () => void;
   readonly onTooltipPointerEnter: () => void;
   readonly onTooltipPointerLeave: () => void;
@@ -69,11 +69,14 @@ export function useActionTooltip(bridge: GameBridge): {
     }, GRACE_MS);
   }, [clearGraceTimer, dismiss]);
 
-  const onActionHoverStart = useCallback((actionId: string, element: HTMLElement) => {
+  const actorPlayerRef = useRef<number | undefined>(undefined);
+
+  const onActionHoverStart = useCallback((actionId: string, element: HTMLElement, actorPlayer?: number) => {
     clearPendingTimer();
     clearGraceTimer();
     interactionStateRef.current = 'hovering-action';
     requestCounterRef.current += 1;
+    actorPlayerRef.current = actorPlayer;
     const capturedCounter = requestCounterRef.current;
 
     setTooltipState({
@@ -95,7 +98,8 @@ export function useActionTooltip(bridge: GameBridge): {
         loading: true,
       }));
 
-      bridge.describeAction(actionId).then(
+      const context = actorPlayerRef.current != null ? { actorPlayer: actorPlayerRef.current } : undefined;
+      bridge.describeAction(actionId, context).then(
         (result) => {
           if (requestCounterRef.current !== capturedCounter) {
             return;

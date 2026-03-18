@@ -37,6 +37,7 @@ import type {
   LegalMoveEnumerationResult,
   Move,
   MoveParamScalar,
+  PlayerId,
   TerminalResult,
 } from '@ludoforge/engine/runtime';
 
@@ -124,7 +125,7 @@ export interface GameWorkerAPI {
     stamp: OperationStamp,
     onStep?: (result: ApplyMoveResult, moveIndex: number) => void,
   ): Promise<readonly ApplyMoveResult[]>;
-  describeAction(actionId: string): Promise<AnnotatedActionDescription | null>;
+  describeAction(actionId: string, context?: { readonly actorPlayer?: number }): Promise<AnnotatedActionDescription | null>;
   terminalResult(): Promise<TerminalResult | null>;
   getState(): Promise<GameState>;
   getMetadata(): Promise<GameMetadata>;
@@ -490,17 +491,20 @@ export function createGameWorker(): GameWorkerAPI {
       });
     },
 
-    async describeAction(actionId: string): Promise<AnnotatedActionDescription | null> {
+    async describeAction(actionId: string, callerContext?: { readonly actorPlayer?: number }): Promise<AnnotatedActionDescription | null> {
       return withInternalErrorMapping(() => {
         const current = assertInitialized(def, state);
         const actionDef = current.def.actions.find((a) => String(a.id) === actionId);
         if (!actionDef) return null;
         const currentRuntime = runtime ?? createGameDefRuntime(current.def);
+        const actorPlayer = callerContext?.actorPlayer != null
+          ? (callerContext.actorPlayer as PlayerId)
+          : current.state.activePlayer;
         const context: AnnotationContext = {
           def: current.def,
           state: current.state,
           activePlayer: current.state.activePlayer,
-          actorPlayer: current.state.activePlayer,
+          actorPlayer,
           runtime: currentRuntime,
         };
         return engineDescribeAction(actionDef, context);

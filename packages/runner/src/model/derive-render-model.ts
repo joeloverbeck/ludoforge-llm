@@ -64,6 +64,9 @@ interface EventCardProjection {
   readonly title: string;
   readonly orderNumber: number | null;
   readonly eligibility: readonly RenderEligibilityEntry[] | null;
+  readonly sideMode: 'single' | 'dual';
+  readonly unshadedText: string | null;
+  readonly shadedText: string | null;
 }
 
 interface GameDefEventDeckProjection {
@@ -334,7 +337,14 @@ function deriveStaticRenderDerivation(def: GameDef): StaticRenderDerivation {
             factionId: seatOrderMapping[String(entry)] ?? String(entry),
           }))
         : null;
-      cardsById.set(card.id, { title: card.title, orderNumber: card.order ?? null, eligibility });
+      cardsById.set(card.id, {
+        title: card.title,
+        orderNumber: card.order ?? null,
+        eligibility,
+        sideMode: card.sideMode,
+        unshadedText: card.unshaded?.text ?? null,
+        shadedText: card.shaded?.text ?? null,
+      });
       cardTitleById.set(card.id, card.title);
     }
 
@@ -573,6 +583,9 @@ function resolveEventCard(
     title: projection.title,
     orderNumber: projection.orderNumber,
     eligibility: projection.eligibility,
+    sideMode: projection.sideMode,
+    unshadedText: projection.unshadedText,
+    shadedText: projection.shadedText,
   };
 }
 
@@ -1374,7 +1387,7 @@ function deriveChoiceUi(
 
     const tokensById = new Map(tokens.map((token) => [token.id, token] as const));
     const playersById = new Map(players.map((player) => [player.id, player] as const));
-    const options = pending.options.map((option) => {
+    const allOptions = pending.options.map((option) => {
       const resolved = resolveChoiceOption(
         option.value,
         pending.targetKinds,
@@ -1392,6 +1405,13 @@ function deriveChoiceUi(
         ...(option.resolution !== undefined ? { resolution: option.resolution } : {}),
       };
     });
+
+    // Filter out options that failed action preconditions — these are categorically
+    // unpresentable (the player cannot execute that action at all).
+    const options = allOptions.filter(
+      (opt) => !(opt.legality === 'illegal' && opt.illegalReason === 'actionPreconditionFailed'),
+    );
+
     if (pending.type === 'chooseN') {
       const min = normalizeChoiceBound(pending.min);
       const rawMax = normalizeChoiceBound(pending.max);

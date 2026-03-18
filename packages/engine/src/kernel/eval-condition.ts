@@ -2,12 +2,13 @@ import type { ReadContext } from './eval-context.js';
 import { missingVarError, typeMismatchError, zonePropNotFoundError } from './eval-error.js';
 import { booleanArityMessage, isNonEmptyArray } from './boolean-arity-policy.js';
 import { evalValue } from './eval-value.js';
+import { emitConditionTrace } from './execution-collector.js';
 import { resolvePredicateValue } from './predicate-value-resolution.js';
 import { resolveMapSpaceId, resolveSingleZoneSel } from './resolve-selectors.js';
 import { queryConnectedZones } from './spatial.js';
 import { isSpaceMarkerStateAllowed, resolveSpaceMarkerShift } from './space-marker-rules.js';
 import { matchesMembership } from './query-predicate.js';
-import type { ConditionAST, ScalarArrayValue, ScalarValue } from './types.js';
+import type { ConditionAST, ConditionTraceEntry, EffectTraceProvenance, ScalarArrayValue, ScalarValue } from './types.js';
 
 function expectOrderingNumber(
   value: ScalarValue | ScalarArrayValue,
@@ -219,4 +220,25 @@ export function evalCondition(cond: ConditionAST, ctx: ReadContext): boolean {
       return _exhaustive;
     }
   }
+}
+
+/**
+ * Evaluate a condition and emit a trace entry at top-level call sites.
+ * Only emits when the collector has conditionTrace enabled.
+ */
+export function evalConditionTraced(
+  cond: ConditionAST,
+  ctx: ReadContext,
+  traceContext: ConditionTraceEntry['context'],
+  provenance: EffectTraceProvenance,
+): boolean {
+  const result = evalCondition(cond, ctx);
+  emitConditionTrace(ctx.collector, {
+    kind: 'conditionEval',
+    condition: cond,
+    result,
+    context: traceContext,
+    provenance,
+  });
+  return result;
 }

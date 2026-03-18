@@ -66,7 +66,7 @@ describe('ExecutionCollector', () => {
       };
       emitTrace(c, entry);
       assert.equal(c.trace!.length, 1);
-      assert.equal(c.trace![0], entry);
+      assert.deepEqual(c.trace![0], { ...entry, seq: 0 });
     });
 
     it('is a no-op when trace is disabled', () => {

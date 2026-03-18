@@ -919,14 +919,20 @@ export function createGameStore(
             candidateCount,
             selectedIndex,
           };
+          const tracePlayer = state.renderModel.activePlayerID;
+          const tracePlayerName = state.renderModel.players.find((p) => p.id === tracePlayer)?.displayName;
           options.traceBus.emit({
             kind: 'move-applied',
             turnCount: mutationInputs.gameState.turnCount,
-            player: state.renderModel.activePlayerID,
+            player: tracePlayer,
+            ...(tracePlayerName !== undefined ? { seatId: tracePlayerName } : {}),
             move: completedMove,
             deltas: [],
             triggerFirings: result.triggerFirings,
             effectTrace: result.effectTrace ?? [],
+            ...(result.conditionTrace !== undefined ? { conditionTrace: result.conditionTrace } : {}),
+            ...(result.decisionTrace !== undefined ? { decisionTrace: result.decisionTrace } : {}),
+            ...(result.selectorTrace !== undefined ? { selectorTrace: result.selectorTrace } : {}),
             aiDecision,
           });
 
@@ -1111,14 +1117,20 @@ export function createGameStore(
               options?.onMoveApplied?.(move);
 
               if (options?.traceBus !== undefined) {
+                const humanTracePlayer = state.renderModel?.activePlayerID ?? state.playerID!;
+                const humanTracePlayerName = state.renderModel?.players.find((p) => p.id === humanTracePlayer)?.displayName;
                 options.traceBus.emit({
                   kind: 'move-applied',
                   turnCount: mutationInputs.gameState.turnCount,
-                  player: state.renderModel?.activePlayerID ?? state.playerID!,
+                  player: humanTracePlayer,
+                  ...(humanTracePlayerName !== undefined ? { seatId: humanTracePlayerName } : {}),
                   move,
                   deltas: [],
                   triggerFirings: result.triggerFirings,
                   effectTrace: result.effectTrace ?? [],
+                  ...(result.conditionTrace !== undefined ? { conditionTrace: result.conditionTrace } : {}),
+                  ...(result.decisionTrace !== undefined ? { decisionTrace: result.decisionTrace } : {}),
+                  ...(result.selectorTrace !== undefined ? { selectorTrace: result.selectorTrace } : {}),
                 });
 
                 if (mutationInputs.terminal !== null) {

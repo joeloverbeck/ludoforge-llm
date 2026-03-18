@@ -1,2 +1,5 @@
 export { computeDeltas } from './delta.js';
+export type { EnrichedGameTrace, EnrichedMoveLog } from './enriched-trace-types.js';
+export { enrichTrace } from './trace-enrichment.js';
 export { runGame, runGames } from './simulator.js';
+export { writeEnrichedTrace } from './trace-writer.js';

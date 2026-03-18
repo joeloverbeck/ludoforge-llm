@@ -7,7 +7,7 @@ import styles from './ActionToolbar.module.css';
 
 interface ActionToolbarProps {
   readonly store: StoreApi<GameStore>;
-  readonly onActionHoverStart?: (actionId: string, element: HTMLElement) => void;
+  readonly onActionHoverStart?: (actionId: string, element: HTMLElement, actorPlayer?: number) => void;
   readonly onActionHoverEnd?: () => void;
 }
 
@@ -52,7 +52,7 @@ export function ActionToolbar({ store, onActionHoverStart, onActionHoverEnd }: A
                     }
                     void store.getState().selectAction(actionId, action.actionClass);
                   }}
-                  onPointerEnter={(e) => onActionHoverStart?.(action.actionId, e.currentTarget)}
+                  onPointerEnter={(e) => onActionHoverStart?.(action.actionId, e.currentTarget, toolbarModel.activePlayerID != null ? Number(toolbarModel.activePlayerID) : undefined)}
                   onPointerLeave={() => onActionHoverEnd?.()}
                 >
                   <span className={styles.label}>{action.displayName}</span>

@@ -153,6 +153,9 @@ export interface RenderEventCard {
   readonly title: string;
   readonly orderNumber: number | null;
   readonly eligibility: readonly RenderEligibilityEntry[] | null;
+  readonly sideMode: 'single' | 'dual';
+  readonly unshadedText: string | null;
+  readonly shadedText: string | null;
 }
 
 export interface RenderEventDeck {

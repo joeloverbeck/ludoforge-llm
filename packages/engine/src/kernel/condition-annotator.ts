@@ -21,11 +21,13 @@ import type { ActionDef, ActionUsageRecord, ConditionAST, GameDef, GameState, Va
 import type { ActionPipelineDef } from './types-operations.js';
 import type { EffectAST } from './types-ast.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
-import type { ActionTooltipPayload, RuleCard, RuleState, RuleStateLimitUsage } from './tooltip-rule-card.js';
+import type { ActionTooltipPayload, ContentStep, RuleCard, RuleState, RuleStateLimitUsage } from './tooltip-rule-card.js';
 import { normalizeEffect, type NormalizerContext } from './tooltip-normalizer.js';
 import { planContent } from './tooltip-content-planner.js';
 import { realizeContentPlan } from './tooltip-template-realizer.js';
 import { extractBlockers } from './tooltip-blocker-extractor.js';
+import { isCardEventAction } from './action-capabilities.js';
+import type { EventCardDef } from './types-events.js';
 
 // ---------------------------------------------------------------------------
 // AnnotationContext — everything the annotator needs from the caller
@@ -337,6 +339,50 @@ const collectRuleCardEffects = (
 };
 
 // ---------------------------------------------------------------------------
+// Event card resolution for event-action tooltip enrichment
+// ---------------------------------------------------------------------------
+
+const resolveCurrentEventCard = (def: GameDef, state: GameState): EventCardDef | null => {
+  const turnOrder = def.turnOrder;
+  if (turnOrder?.type !== 'cardDriven') return null;
+  const playedZoneId = turnOrder.config.turnFlow.cardLifecycle?.played;
+  if (playedZoneId === undefined) return null;
+  const token = state.zones[playedZoneId]?.[0];
+  if (token === undefined) return null;
+  const cardId = typeof token.props.cardId === 'string' && token.props.cardId.length > 0
+    ? token.props.cardId
+    : String(token.id);
+  for (const deck of def.eventDecks ?? []) {
+    const card = deck.cards.find((c) => c.id === cardId);
+    if (card !== undefined) return card;
+  }
+  return null;
+};
+
+const buildEventRuleCard = (eventCard: EventCardDef): RuleCard => {
+  const synopsis = eventCard.order !== undefined
+    ? `${eventCard.title} #${eventCard.order}`
+    : eventCard.title;
+  const steps: ContentStep[] = [];
+  let stepNumber = 1;
+  if (eventCard.unshaded?.text !== undefined) {
+    steps.push({
+      stepNumber: stepNumber++,
+      header: 'Unshaded',
+      lines: [{ text: eventCard.unshaded.text, astPath: 'event.unshaded.text' }],
+    });
+  }
+  if (eventCard.shaded?.text !== undefined) {
+    steps.push({
+      stepNumber,
+      header: 'Shaded',
+      lines: [{ text: eventCard.shaded.text, astPath: 'event.shaded.text' }],
+    });
+  }
+  return { synopsis, steps, modifiers: [] };
+};
+
+// ---------------------------------------------------------------------------
 // Tooltip pipeline
 // ---------------------------------------------------------------------------
 
@@ -345,7 +391,18 @@ const buildRuleCard = (
   def: GameDef,
   runtime: GameDefRuntime,
   evalCtx: ReadContext,
+  state?: GameState,
 ): RuleCard => {
+  // For event actions, build a card-content-based RuleCard instead of AST-derived one
+  if (isCardEventAction(action) && state !== undefined) {
+    const eventCard = resolveCurrentEventCard(def, state);
+    if (eventCard !== null) {
+      const eventRuleCard = buildEventRuleCard(eventCard);
+      runtime.ruleCardCache.set(`${String(action.id)}:event:${eventCard.id}`, eventRuleCard);
+      return eventRuleCard;
+    }
+  }
+
   // Extract __actionClass from runtime bindings to enable context-aware branch selection
   const actionClassBinding = evalCtx.bindings.__actionClass as string | undefined;
 
@@ -429,7 +486,7 @@ const buildTooltipPayload = (
   limitUsage: readonly LimitUsageInfo[],
 ): ActionTooltipPayload | undefined => {
   try {
-    const ruleCard = buildRuleCard(action, context.def, context.runtime, evalCtx);
+    const ruleCard = buildRuleCard(action, context.def, context.runtime, evalCtx, context.state);
     const ruleState = buildRuleState(action, ruleCard, evalCtx, limitUsage, context.def);
     return { ruleCard, ruleState };
   } catch {

@@ -466,8 +466,8 @@ describe('deriveRenderModel state metadata', () => {
         displayName: 'Strategy',
         drawZoneId: 'draw:none',
         discardZoneId: 'discard:none',
-        playedCard: { id: 'card-a', title: 'Card A', orderNumber: null, eligibility: null },
-        lookaheadCard: { id: 'card-b', title: 'Card B', orderNumber: null, eligibility: null },
+        playedCard: { id: 'card-a', title: 'Card A', orderNumber: null, eligibility: null, sideMode: 'single', unshadedText: null, shadedText: null },
+        lookaheadCard: { id: 'card-b', title: 'Card B', orderNumber: null, eligibility: null, sideMode: 'single', unshadedText: null, shadedText: null },
         deckSize: 2,
         discardSize: 1,
       },
@@ -503,12 +503,18 @@ describe('deriveRenderModel state metadata', () => {
       title: 'Card A',
       orderNumber: null,
       eligibility: null,
+      sideMode: 'single',
+      unshadedText: null,
+      shadedText: null,
     });
     expect(model.eventDecks[0]?.lookaheadCard).toEqual({
       id: 'card-b',
       title: 'Card B',
       orderNumber: null,
       eligibility: null,
+      sideMode: 'single',
+      unshadedText: null,
+      shadedText: null,
     });
   });
 

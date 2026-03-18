@@ -1,4 +1,4 @@
-import { Fragment, type ReactElement } from 'react';
+import { Fragment, useCallback, type PointerEvent, type ReactElement } from 'react';
 import type { StoreApi } from 'zustand';
 import { useStore } from 'zustand';
 
@@ -9,17 +9,32 @@ import { buildFactionColorValue } from './faction-color-style.js';
 
 interface EventDeckPanelProps {
   readonly store: StoreApi<GameStore>;
+  readonly onCardHoverStart?: (card: RenderEventCard, element: HTMLElement) => void;
+  readonly onCardHoverEnd?: () => void;
 }
 
 interface CardWidgetProps {
   readonly label: string;
   readonly card: RenderEventCard | null;
   readonly testId: string;
+  readonly onPointerEnter?: ((card: RenderEventCard, element: HTMLElement) => void) | undefined;
+  readonly onPointerLeave?: (() => void) | undefined;
 }
 
-function CardWidget({ label, card, testId }: CardWidgetProps): ReactElement {
+function CardWidget({ label, card, testId, onPointerEnter, onPointerLeave }: CardWidgetProps): ReactElement {
+  const handlePointerEnter = useCallback((e: PointerEvent<HTMLDivElement>) => {
+    if (card !== null && onPointerEnter !== undefined) {
+      onPointerEnter(card, e.currentTarget);
+    }
+  }, [card, onPointerEnter]);
+
   return (
-    <div className={styles.cardWidget} data-testid={testId}>
+    <div
+      className={styles.cardWidget}
+      data-testid={testId}
+      onPointerEnter={handlePointerEnter}
+      onPointerLeave={onPointerLeave}
+    >
       <span className={styles.cardLabel}>{label}</span>
       <span className={styles.cardTitle} data-testid={`${testId}-title`}>
         {card === null ? 'No card' : card.title}
@@ -47,7 +62,7 @@ function CardWidget({ label, card, testId }: CardWidgetProps): ReactElement {
 
 const EMPTY_EVENT_DECKS: readonly RenderEventDeck[] = [];
 
-export function EventDeckPanel({ store }: EventDeckPanelProps): ReactElement | null {
+export function EventDeckPanel({ store, onCardHoverStart, onCardHoverEnd }: EventDeckPanelProps): ReactElement | null {
   const eventDecks = useStore(store, (state) => state.renderModel?.eventDecks ?? EMPTY_EVENT_DECKS);
 
   if (eventDecks.length === 0) {
@@ -64,11 +79,15 @@ export function EventDeckPanel({ store }: EventDeckPanelProps): ReactElement | n
               label="Now Playing"
               card={deck.playedCard}
               testId={`event-deck-played-${deck.id}`}
+              onPointerEnter={onCardHoverStart}
+              onPointerLeave={onCardHoverEnd}
             />
             <CardWidget
               label="Up Next"
               card={deck.lookaheadCard}
               testId={`event-deck-lookahead-${deck.id}`}
+              onPointerEnter={onCardHoverStart}
+              onPointerLeave={onCardHoverEnd}
             />
           </div>
           <p className={styles.counts}>

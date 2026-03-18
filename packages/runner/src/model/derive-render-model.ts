@@ -64,6 +64,9 @@ interface EventCardProjection {
   readonly title: string;
   readonly orderNumber: number | null;
   readonly eligibility: readonly RenderEligibilityEntry[] | null;
+  readonly sideMode: 'single' | 'dual';
+  readonly unshadedText: string | null;
+  readonly shadedText: string | null;
 }
 
 interface GameDefEventDeckProjection {
@@ -334,7 +337,14 @@ function deriveStaticRenderDerivation(def: GameDef): StaticRenderDerivation {
             factionId: seatOrderMapping[String(entry)] ?? String(entry),
           }))
         : null;
-      cardsById.set(card.id, { title: card.title, orderNumber: card.order ?? null, eligibility });
+      cardsById.set(card.id, {
+        title: card.title,
+        orderNumber: card.order ?? null,
+        eligibility,
+        sideMode: card.sideMode,
+        unshadedText: card.unshaded?.text ?? null,
+        shadedText: card.shaded?.text ?? null,
+      });
       cardTitleById.set(card.id, card.title);
     }
 
@@ -573,6 +583,9 @@ function resolveEventCard(
     title: projection.title,
     orderNumber: projection.orderNumber,
     eligibility: projection.eligibility,
+    sideMode: projection.sideMode,
+    unshadedText: projection.unshadedText,
+    shadedText: projection.shadedText,
   };
 }
 

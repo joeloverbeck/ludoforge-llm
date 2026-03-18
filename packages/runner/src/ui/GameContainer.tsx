@@ -33,7 +33,9 @@ import { AITurnOverlay } from './AITurnOverlay.js';
 import { WarningsToast } from './WarningsToast.js';
 import { TooltipLayer } from './TooltipLayer.js';
 import { useActionTooltip } from './useActionTooltip.js';
+import { useCardTooltip } from './useCardTooltip.js';
 import { ActionTooltip } from './ActionTooltip.js';
+import { EventCardTooltip } from './EventCardTooltip.js';
 import { PhaseBannerOverlay } from './PhaseBannerOverlay.js';
 import { ShowdownOverlay } from './ShowdownOverlay.js';
 import { TerminalOverlay } from './TerminalOverlay.js';
@@ -138,6 +140,13 @@ export function GameContainer({
     onTooltipPointerEnter,
     onTooltipPointerLeave,
   } = useActionTooltip(bridge);
+  const {
+    cardTooltipState,
+    onCardHoverStart,
+    onCardHoverEnd,
+    onCardTooltipPointerEnter,
+    onCardTooltipPointerLeave,
+  } = useCardTooltip();
   const keyboardCoordinator = useMemo(
     () => (typeof document === 'undefined' ? null : createKeyboardCoordinator(document)),
     [],
@@ -212,12 +221,12 @@ export function GameContainer({
   const overlayDiagnostics: OverlayPanelDiagnostics | undefined = animationDiagnosticBuffer === undefined
     ? undefined
     : { animationDiagnosticBuffer };
-  const overlayPanelProps: OverlayPanelProps = overlayDiagnostics === undefined
-    ? { store }
-    : {
-        store,
-        diagnostics: overlayDiagnostics,
-      };
+  const overlayPanelProps: OverlayPanelProps = {
+    store,
+    onCardHoverStart,
+    onCardHoverEnd,
+    ...(overlayDiagnostics !== undefined ? { diagnostics: overlayDiagnostics } : {}),
+  };
   const sidePanelContent = (
     <>
       {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.side, overlayPanelProps)}
@@ -349,6 +358,14 @@ export function GameContainer({
                   anchorElement={actionTooltipState.anchorElement}
                   onPointerEnter={onTooltipPointerEnter}
                   onPointerLeave={onTooltipPointerLeave}
+                />
+              )}
+              {cardTooltipState.card !== null && cardTooltipState.anchorElement !== null && (
+                <EventCardTooltip
+                  card={cardTooltipState.card}
+                  anchorElement={cardTooltipState.anchorElement}
+                  onPointerEnter={onCardTooltipPointerEnter}
+                  onPointerLeave={onCardTooltipPointerLeave}
                 />
               )}
             </>

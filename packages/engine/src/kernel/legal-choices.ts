@@ -47,6 +47,8 @@ import {
 } from './free-operation-discovery-analysis.js';
 import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { isCardEventActionId } from './action-capabilities.js';
+import { evalCondition } from './eval-condition.js';
+import { findPhaseDef } from './phase-lookup.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type {
@@ -846,6 +848,27 @@ const legalChoicesWithPreparedContextInternal = (
   }
   if (cst !== undefined) {
     cst.targetEnumTimeMs += performance.now() - tTargetEnum;
+  }
+
+  // All declared params are resolved — evaluate phase-default and action
+  // preconditions.  This mirrors enumerateParams (legal-moves.ts:302-309)
+  // and validateMove (apply-move.ts:742).
+  const currentPhaseDef = findPhaseDef(def, state.currentPhase);
+  if (currentPhaseDef?.actionDefaults?.pre !== undefined) {
+    if (!evalCondition(currentPhaseDef.actionDefaults.pre, evalCtx)) {
+      return finalizeRequest({
+        kind: 'illegal',
+        complete: false,
+        reason: 'actionPreconditionFailed',
+      });
+    }
+  }
+  if (action.pre !== null && !evalCondition(action.pre, evalCtx)) {
+    return finalizeRequest({
+      kind: 'illegal',
+      complete: false,
+      reason: 'actionPreconditionFailed',
+    });
   }
 
   const tPipeline = cst !== undefined ? performance.now() : 0;

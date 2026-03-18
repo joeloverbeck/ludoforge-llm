@@ -9,6 +9,7 @@ import {
   legalChoicesDiscover,
   legalChoicesEvaluate,
   type ActionDef,
+  type ConditionAST,
   type EffectAST,
   type GameDef,
   type GameState,
@@ -243,5 +244,95 @@ describe('legalChoicesDiscover() — illegal path edge cases', () => {
     if (result.kind === 'illegal') {
       assert.equal(result.reason, 'emptyDomain');
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// action.pre precondition enforcement in legalChoices
+// ---------------------------------------------------------------------------
+
+describe('legalChoicesDiscover() — action.pre precondition enforcement', () => {
+  // Action with two params and a precondition that checks param2 != 'blocked'
+  const preCond: ConditionAST = {
+    op: '!=',
+    left: { ref: 'binding', name: 'mode' },
+    right: 'blocked',
+  };
+
+  const makePreAction = (pre: ConditionAST | null): ActionDef => ({
+    id: asActionId('preAction'),
+    actor: 'active',
+    executor: 'actor',
+    phase: [asPhaseId('main')],
+    params: [
+      { name: 'target', domain: { query: 'enums', values: ['a', 'b'] } },
+      { name: 'mode', domain: { query: 'enums', values: ['allowed', 'blocked'] } },
+    ],
+    pre,
+    cost: [],
+    effects: [],
+    limits: [],
+  });
+
+  it('returns illegal when all params resolved and action.pre fails', () => {
+    const action = makePreAction(preCond);
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState();
+
+    const move = makeMove('preAction', { target: 'a', mode: 'blocked' });
+    const result = legalChoicesDiscover(def, state, move);
+    assert.equal(result.kind, 'illegal');
+    if (result.kind === 'illegal') {
+      assert.equal(result.reason, 'actionPreconditionFailed');
+    }
+  });
+
+  it('returns complete when all params resolved and action.pre passes', () => {
+    const action = makePreAction(preCond);
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState();
+
+    const move = makeMove('preAction', { target: 'a', mode: 'allowed' });
+    const result = legalChoicesDiscover(def, state, move);
+    assert.equal(result.kind, 'complete');
+  });
+
+  it('returns pending (not illegal) when params are still partial', () => {
+    const action = makePreAction(preCond);
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState();
+
+    const move = makeMove('preAction', { target: 'a' });
+    const result = legalChoicesDiscover(def, state, move);
+    assert.equal(result.kind, 'pending');
+  });
+
+  it('marks failing option as illegal in probe-based evaluation', () => {
+    const action = makePreAction(preCond);
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState();
+
+    // Partial move with first param only — probe second param options
+    const move = makeMove('preAction', { target: 'a' });
+    const result = legalChoicesEvaluate(def, state, move);
+    assert.equal(result.kind, 'pending');
+    if (result.kind === 'pending') {
+      const allowedOpt = result.options.find((o) => o.value === 'allowed');
+      const blockedOpt = result.options.find((o) => o.value === 'blocked');
+      assert.ok(allowedOpt, 'allowed option should exist');
+      assert.ok(blockedOpt, 'blocked option should exist');
+      assert.equal(allowedOpt!.legality, 'legal');
+      assert.equal(blockedOpt!.legality, 'illegal');
+    }
+  });
+
+  it('returns complete when action has no precondition (pre: null)', () => {
+    const action = makePreAction(null);
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState();
+
+    const move = makeMove('preAction', { target: 'a', mode: 'blocked' });
+    const result = legalChoicesDiscover(def, state, move);
+    assert.equal(result.kind, 'complete');
   });
 });

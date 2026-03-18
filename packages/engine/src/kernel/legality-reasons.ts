@@ -30,6 +30,7 @@ export type FreeOperationChoiceIllegalReason = (typeof FREE_OPERATION_CHOICE_ILL
 
 export const DISCOVERY_ILLEGAL_REASONS = [
   'emptyDomain',
+  'actionPreconditionFailed',
 ] as const;
 
 export type DiscoveryIllegalReason = (typeof DISCOVERY_ILLEGAL_REASONS)[number];

@@ -10,6 +10,7 @@ import { omitOptionalStateKey } from './state-shape.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
 import type {
   ActiveLastingEffect,
+  ChoicePendingRequest,
   EffectAST,
   EventBranchDef,
   EventCardDef,
@@ -234,6 +235,71 @@ export const resolveCurrentEventCardState = (
   return null;
 };
 
+export const resolveEventCardPendingChoice = (
+  def: GameDef,
+  state: GameState,
+  partialMove: Move,
+): ChoicePendingRequest | null => {
+  const current = resolveCurrentEventCardState(def, state);
+  if (current === null) {
+    return null;
+  }
+  const card = current.card;
+  const hasUnshaded = card.unshaded !== undefined;
+  const hasShaded = card.shaded !== undefined;
+
+  if (!Object.prototype.hasOwnProperty.call(partialMove.params, 'side')) {
+    // Need a side choice only when the card truly has both sides
+    if (hasUnshaded && hasShaded) {
+      return {
+        kind: 'pending',
+        complete: false,
+        decisionPlayer: state.activePlayer,
+        decisionKey: 'side' as ChoicePendingRequest['decisionKey'],
+        name: 'side',
+        type: 'chooseOne',
+        options: [
+          { value: 'unshaded', legality: 'unknown', illegalReason: null },
+          { value: 'shaded', legality: 'unknown', illegalReason: null },
+        ],
+        targetKinds: [],
+      };
+    }
+    // Single-side card — no choice needed
+    return null;
+  }
+
+  // Side is resolved — check for branch choice
+  const sideParam = partialMove.params.side;
+  const sideDef = sideParam === 'unshaded' ? card.unshaded
+    : sideParam === 'shaded' ? card.shaded
+      : undefined;
+  if (sideDef === undefined) {
+    return null;
+  }
+  const branches = sideDef.branches;
+  if (branches === undefined || branches.length <= 1) {
+    return null;
+  }
+  if (Object.prototype.hasOwnProperty.call(partialMove.params, 'branch')) {
+    return null;
+  }
+  return {
+    kind: 'pending',
+    complete: false,
+    decisionPlayer: state.activePlayer,
+    decisionKey: 'branch' as ChoicePendingRequest['decisionKey'],
+    name: 'branch',
+    type: 'chooseOne',
+    options: branches.map((b) => ({
+      value: b.id,
+      legality: 'unknown' as const,
+      illegalReason: null,
+    })),
+    targetKinds: [],
+  };
+};
+
 const resolveEventCardFromMove = (def: GameDef, move: Move): EventCardDef | null => {
   const explicitCardId = move.params.eventCardId;
   if (typeof explicitCardId !== 'string' || explicitCardId.length === 0) {
@@ -264,12 +330,16 @@ const resolveSelectedSide = (card: EventCardDef, move: Move): { readonly sideId:
   if (byParam === 'shaded' && card.shaded !== undefined) {
     return { sideId: 'shaded', side: card.shaded };
   }
-  if (card.unshaded !== undefined) {
-    return { sideId: 'unshaded', side: card.unshaded };
+  // Auto-resolve ONLY when the card has exactly one side defined
+  const hasUnshaded = card.unshaded !== undefined;
+  const hasShaded = card.shaded !== undefined;
+  if (hasUnshaded && !hasShaded) {
+    return { sideId: 'unshaded', side: card.unshaded! };
   }
-  if (card.shaded !== undefined) {
-    return { sideId: 'shaded', side: card.shaded };
+  if (hasShaded && !hasUnshaded) {
+    return { sideId: 'shaded', side: card.shaded! };
   }
+  // Dual-use card without explicit side — should have been caught by choice flow
   return null;
 };
 

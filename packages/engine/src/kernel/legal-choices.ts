@@ -19,7 +19,7 @@ import {
 } from './declared-action-param-domain.js';
 import { createDiscoveryProbeEffectContext, createDiscoveryStrictEffectContext } from './effect-context.js';
 import type { ReadContext } from './eval-context.js';
-import { resolveEventEffectList } from './event-execution.js';
+import { resolveEventCardPendingChoice, resolveEventEffectList } from './event-execution.js';
 import { buildMoveRuntimeBindings, resolvePipelineDecisionBindingsForMove } from './move-runtime-bindings.js';
 import {
   decideDiscoveryLegalChoicesPipelineViability,
@@ -845,6 +845,22 @@ const legalChoicesWithPreparedContextInternal = (
       options: mapPendingChoiceOptions(partialMove, actionParamRequest, options, evaluateProbeLegality, options?._diagnosticsAccumulator),
     };
     return finalizeRequest(request);
+  }
+  // Event card implicit param resolution (side, branch)
+  if (isCardEventActionId(def, action.id)) {
+    const eventPendingChoice = resolveEventCardPendingChoice(def, state, partialMove);
+    if (eventPendingChoice !== null) {
+      if (cst !== undefined) {
+        cst.targetEnumTimeMs += performance.now() - tTargetEnum;
+      }
+      const request = !shouldEvaluateOptionLegality
+        ? eventPendingChoice
+        : {
+          ...eventPendingChoice,
+          options: mapPendingChoiceOptions(partialMove, eventPendingChoice, options, evaluateProbeLegality, options?._diagnosticsAccumulator),
+        };
+      return finalizeRequest(request);
+    }
   }
   if (cst !== undefined) {
     cst.targetEnumTimeMs += performance.now() - tTargetEnum;

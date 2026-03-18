@@ -12,7 +12,7 @@
  * moves are returned to the caller for state-node creation.
  */
 
-import type { Move, ChoiceRequest, ChoicePendingRequest, ChoiceStochasticPendingRequest, CompoundDecisionPath, CompoundMovePayload } from '../../kernel/types-core.js';
+import type { Move, ChoiceRequest, ChoicePendingRequest, ChoicePendingChooseNRequest, ChoiceStochasticPendingRequest, CompoundDecisionPath, CompoundMovePayload } from '../../kernel/types-core.js';
 import type { MoveParamScalar, MoveParamValue } from '../../kernel/types-ast.js';
 import type { GameDef, GameState } from '../../kernel/types.js';
 import type { GameDefRuntime } from '../../kernel/gamedef-runtime.js';
@@ -282,6 +282,88 @@ function filterChooseNOptions(request: ChoicePendingRequest): FilteredOptions {
 }
 
 // ---------------------------------------------------------------------------
+// chooseN incremental tree helpers
+// ---------------------------------------------------------------------------
+
+/** Canonical key for value-based ordering comparison. */
+function optionValueKey(value: MoveParamValue): string {
+  return JSON.stringify([typeof value, value]);
+}
+
+/**
+ * Extract the accumulated chooseN selections from the partial move params.
+ * Returns an empty array if the binding is not yet set.
+ */
+function getAccumulatedChooseN(
+  partialMove: Move,
+  decisionKey: string,
+  decisionPath?: CompoundDecisionPath,
+): readonly MoveParamScalar[] {
+  if (decisionPath === 'compound.specialActivity') {
+    const saParam = partialMove.compound?.specialActivity.params[decisionKey];
+    return Array.isArray(saParam) ? saParam as readonly MoveParamScalar[] : [];
+  }
+  const mainParam = partialMove.params[decisionKey];
+  return Array.isArray(mainParam) ? mainParam as readonly MoveParamScalar[] : [];
+}
+
+/**
+ * Create a move with the chooseN binding set to the finalized array.
+ * Used for confirm nodes where the accumulated array IS the final selection.
+ */
+function setChooseNParam(
+  partialMove: Move,
+  decisionKey: string,
+  accumulated: readonly MoveParamScalar[],
+  decisionPath?: CompoundDecisionPath,
+): Move {
+  if (decisionPath === 'compound.specialActivity') {
+    const compound = partialMove.compound!;
+    const updatedSA: Move = {
+      ...compound.specialActivity,
+      params: {
+        ...compound.specialActivity.params,
+        [decisionKey]: [...accumulated] as unknown as MoveParamValue,
+      },
+    };
+    const updatedCompound: CompoundMovePayload = {
+      ...compound,
+      specialActivity: updatedSA,
+    };
+    return { ...partialMove, compound: updatedCompound };
+  }
+  return {
+    ...partialMove,
+    params: {
+      ...partialMove.params,
+      [decisionKey]: [...accumulated] as unknown as MoveParamValue,
+    },
+  };
+}
+
+/**
+ * Filter options by lexicographic ordering relative to accumulated selections.
+ * Excludes already-accumulated values and options that precede the last
+ * accumulated value in canonical order (prevents duplicate permutations).
+ */
+function filterByLexicographicOrder(
+  options: readonly ExpandableOption[],
+  accumulated: readonly MoveParamScalar[],
+): readonly ExpandableOption[] {
+  if (accumulated.length === 0) return options;
+
+  const accumulatedKeys = new Set(accumulated.map((v) => optionValueKey(v as MoveParamValue)));
+  const lastAccumKey = optionValueKey(accumulated[accumulated.length - 1] as MoveParamValue);
+
+  return options.filter((opt) => {
+    const key = optionValueKey(opt.value);
+    if (accumulatedKeys.has(key)) return false;
+    if (key <= lastAccumKey) return false;
+    return true;
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Pool node wiring (mutable casts — same pattern as search.ts)
 // ---------------------------------------------------------------------------
 
@@ -435,59 +517,45 @@ function expandPendingDecision(
   decisionPlayer: PlayerId,
   ctx: DecisionExpansionContext,
 ): DecisionExpansionResult {
-  const { def, state, decisionWideningCap, visitor, accumulator } = ctx;
+  // Route chooseN to the incremental selection tree expansion.
+  if (request.type === 'chooseN') {
+    return expandChooseNDecision(
+      request, parentNode, pool, partialMove, decisionPlayer, ctx,
+    );
+  }
+
+  return expandChooseOneDecision(
+    request, parentNode, pool, partialMove, decisionPlayer, ctx,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// chooseOne expansion (unchanged from original)
+// ---------------------------------------------------------------------------
+
+function expandChooseOneDecision(
+  request: ChoicePendingRequest,
+  parentNode: MctsNode,
+  pool: NodePool,
+  partialMove: Move,
+  decisionPlayer: PlayerId,
+  ctx: DecisionExpansionContext,
+): DecisionExpansionResult {
+  const { state, decisionWideningCap, visitor, accumulator } = ctx;
   const decisionKey = request.decisionKey;
   const decisionName = request.name;
 
-  // Determine which options to expand based on type and legality.
-  let optionsToExpand: readonly ExpandableOption[];
-
-  if (request.type === 'chooseN') {
-    const filtered = filterChooseNOptions(request);
-    optionsToExpand = [...filtered.expandable, ...filtered.wideningCandidates];
-  } else {
-    optionsToExpand = request.options.map((opt, i) => ({
-      value: opt.value as MoveParamValue,
-      index: i,
-    }));
-  }
+  const optionsToExpand: readonly ExpandableOption[] = request.options.map((opt, i) => ({
+    value: opt.value as MoveParamValue,
+    index: i,
+  }));
 
   // ----- Forced-sequence compression -----
-  // If exactly 1 legal option, skip node allocation and recurse.
   if (optionsToExpand.length === 1) {
     const singleOption = optionsToExpand[0]!;
     const advancedMove = advancePartialMove(partialMove, decisionKey, singleOption.value, request.decisionPath, request.type);
 
-    const discover = ctx.discoverChoices ?? legalChoicesDiscover;
-    const fscAcc = ctx.accumulator;
-    const advancedMoveKey = canonicalMoveKey(advancedMove);
-    const { discoveryCache: fscCache, discoveryCacheMax: fscMax = 1024 } = ctx;
-
-    let nextResponse: ChoiceRequest;
-    if (fscCache !== undefined) {
-      const cached = getDiscoveryCacheEntry(fscCache, state.stateHash, advancedMoveKey);
-      if (cached !== undefined) {
-        if (fscAcc !== undefined) {
-          fscAcc.decisionDiscoverCacheHits += 1;
-        }
-        nextResponse = cached;
-      } else {
-        const fscStart = fscAcc !== undefined ? performance.now() : 0;
-        nextResponse = discover(def, state, advancedMove, { chainCompoundSA: true }, ctx.runtime);
-        if (fscAcc !== undefined) {
-          fscAcc.decisionDiscoverCallCount += 1;
-          fscAcc.decisionDiscoverTimeMs += performance.now() - fscStart;
-        }
-        setDiscoveryCacheEntry(fscCache, state.stateHash, advancedMoveKey, nextResponse, fscMax);
-      }
-    } else {
-      const fscStart = fscAcc !== undefined ? performance.now() : 0;
-      nextResponse = discover(def, state, advancedMove, { chainCompoundSA: true }, ctx.runtime);
-      if (fscAcc !== undefined) {
-        fscAcc.decisionDiscoverCallCount += 1;
-        fscAcc.decisionDiscoverTimeMs += performance.now() - fscStart;
-      }
-    }
+    const nextResponse = discoverWithCache(ctx, state, advancedMove);
 
     // Update the parent node's partialMove in place (mutable -- MCTS exception).
     parentNode.partialMove = advancedMove;
@@ -549,4 +617,224 @@ function expandPendingDecision(
     decisionDepth,
     wideningBypassed,
   };
+}
+
+// ---------------------------------------------------------------------------
+// chooseN incremental selection tree expansion
+// ---------------------------------------------------------------------------
+
+/**
+ * Expand a chooseN decision as an incremental selection tree.
+ *
+ * Each child represents adding one more option to the growing selection array.
+ * A "confirm" child is added when `canConfirm === true`, representing the
+ * decision to finalize the current selection without adding more items.
+ *
+ * Lexicographic ordering prevents duplicate permutations: children at each
+ * level only include options whose canonical value key > the last selected
+ * option's key.
+ *
+ * Forced-sequence compression:
+ * - 1 eligible option + canConfirm false → compress (must pick that option)
+ * - 0 eligible options + canConfirm true → compress (must confirm)
+ * - 1 eligible option + canConfirm true → 2 choices, do NOT compress
+ */
+function expandChooseNDecision(
+  request: ChoicePendingChooseNRequest,
+  parentNode: MctsNode,
+  pool: NodePool,
+  partialMove: Move,
+  decisionPlayer: PlayerId,
+  ctx: DecisionExpansionContext,
+): DecisionExpansionResult {
+  const { decisionWideningCap, visitor, accumulator } = ctx;
+  const decisionKey = request.decisionKey;
+  const decisionName = request.name;
+
+  // Get accumulated selections from the partial move params.
+  const accumulated = getAccumulatedChooseN(partialMove, decisionKey, request.decisionPath);
+
+  // Filter options: remove illegal, separate legal from widening candidates.
+  const filtered = filterChooseNOptions(request);
+  const allExpandable = [...filtered.expandable, ...filtered.wideningCandidates];
+
+  // Apply lexicographic ordering: exclude accumulated items and options
+  // that precede the last accumulated value (prevents duplicate permutations).
+  const eligible = filterByLexicographicOrder(allExpandable, accumulated);
+
+  // Use the request's canConfirm (reflects kernel assessment).
+  const canConfirm = request.canConfirm;
+
+  // Effective choice count: eligible options + confirm (if applicable).
+  const effectiveCount = eligible.length + (canConfirm ? 1 : 0);
+
+  // ----- Dead end: no valid choices -----
+  if (effectiveCount === 0) {
+    emitDecisionIllegal(visitor, partialMove.actionId, decisionName, 'chooseNDeadEnd');
+    if (accumulator) {
+      accumulator.decisionIllegalPruned += 1;
+    }
+    return { kind: 'illegal', reason: 'chooseNDeadEnd', decisionName };
+  }
+
+  // ----- Forced-sequence compression -----
+  if (effectiveCount === 1) {
+    if (canConfirm && eligible.length === 0) {
+      // Only choice is to confirm with the current accumulated array.
+      const confirmMove = setChooseNParam(partialMove, decisionKey, accumulated, request.decisionPath);
+      parentNode.partialMove = confirmMove;
+
+      const nextResponse = discoverWithCache(ctx, ctx.state, confirmMove);
+      return handleChoiceResponse(
+        nextResponse, parentNode, pool, confirmMove, decisionPlayer, ctx,
+      );
+    }
+
+    if (!canConfirm && eligible.length === 1) {
+      // Only choice is to add the single remaining option.
+      const singleOption = eligible[0]!;
+      const advancedMove = advancePartialMove(
+        partialMove, decisionKey, singleOption.value, request.decisionPath, 'chooseN',
+      );
+      parentNode.partialMove = advancedMove;
+
+      const nextResponse = discoverWithCache(ctx, ctx.state, advancedMove);
+      return handleChoiceResponse(
+        nextResponse, parentNode, pool, advancedMove, decisionPlayer, ctx,
+      );
+    }
+  }
+
+  // ----- Progressive widening bypass -----
+  const wideningBypassed = effectiveCount <= decisionWideningCap;
+  const decisionDepth = computeDecisionDepth(parentNode) + 1;
+
+  if (accumulator) {
+    if (decisionDepth > accumulator.decisionDepthMax) {
+      accumulator.decisionDepthMax = decisionDepth;
+    }
+    recordDecisionDiscoverOptions(accumulator, decisionDepth, effectiveCount);
+  }
+
+  // ----- Allocate child nodes -----
+  const children: MctsNode[] = [];
+
+  // Confirm child: finalized array, advances to next decision when expanded.
+  if (canConfirm) {
+    const confirmMove = setChooseNParam(partialMove, decisionKey, accumulated, request.decisionPath);
+    const confirmMoveKey = canonicalMoveKey(confirmMove);
+    const confirmBinding = '$confirm:' + decisionKey;
+
+    let child: MctsNode;
+    try {
+      child = pool.allocate();
+    } catch {
+      return emitPoolExhausted(visitor, pool);
+    }
+
+    wireDecisionChild(child, parentNode, confirmMove, confirmMoveKey, decisionPlayer, confirmBinding, 'chooseN');
+    parentNode.children.push(child);
+    children.push(child);
+
+    if (accumulator) {
+      accumulator.decisionNodesCreated += 1;
+    }
+
+    emitDecisionNodeCreated(
+      visitor, partialMove.actionId, decisionName, effectiveCount, decisionDepth,
+    );
+  }
+
+  // Non-confirm children: each adds one option to the accumulated array.
+  for (const option of eligible) {
+    const childMove = advancePartialMove(
+      partialMove, decisionKey, option.value, request.decisionPath, 'chooseN',
+    );
+    const moveKey = canonicalMoveKey(childMove);
+
+    let child: MctsNode;
+    try {
+      child = pool.allocate();
+    } catch {
+      return emitPoolExhausted(visitor, pool);
+    }
+
+    wireDecisionChild(child, parentNode, childMove, moveKey, decisionPlayer, decisionKey, 'chooseN');
+    parentNode.children.push(child);
+    children.push(child);
+
+    if (accumulator) {
+      accumulator.decisionNodesCreated += 1;
+    }
+
+    emitDecisionNodeCreated(
+      visitor, partialMove.actionId, decisionName, effectiveCount, decisionDepth,
+    );
+  }
+
+  return {
+    kind: 'expanded',
+    children,
+    decisionName,
+    decisionDepth,
+    wideningBypassed,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Shared helpers for forced-sequence compression discovery
+// ---------------------------------------------------------------------------
+
+/** Run discover with cache support (extracted to reduce duplication). */
+function discoverWithCache(
+  ctx: DecisionExpansionContext,
+  state: GameState,
+  move: Move,
+): ChoiceRequest {
+  const discover = ctx.discoverChoices ?? legalChoicesDiscover;
+  const acc = ctx.accumulator;
+  const moveKey = canonicalMoveKey(move);
+  const { discoveryCache, discoveryCacheMax = 1024 } = ctx;
+
+  if (discoveryCache !== undefined) {
+    const cached = getDiscoveryCacheEntry(discoveryCache, state.stateHash, moveKey);
+    if (cached !== undefined) {
+      if (acc !== undefined) {
+        acc.decisionDiscoverCacheHits += 1;
+      }
+      return cached;
+    }
+
+    const tStart = acc !== undefined ? performance.now() : 0;
+    const response = discover(ctx.def, state, move, { chainCompoundSA: true }, ctx.runtime);
+    if (acc !== undefined) {
+      acc.decisionDiscoverCallCount += 1;
+      acc.decisionDiscoverTimeMs += performance.now() - tStart;
+    }
+    setDiscoveryCacheEntry(discoveryCache, state.stateHash, moveKey, response, discoveryCacheMax);
+    return response;
+  }
+
+  const tStart = acc !== undefined ? performance.now() : 0;
+  const response = discover(ctx.def, state, move, { chainCompoundSA: true }, ctx.runtime);
+  if (acc !== undefined) {
+    acc.decisionDiscoverCallCount += 1;
+    acc.decisionDiscoverTimeMs += performance.now() - tStart;
+  }
+  return response;
+}
+
+/** Emit poolExhausted event and return result. */
+function emitPoolExhausted(
+  visitor: MctsSearchVisitor | undefined,
+  pool: NodePool,
+): DecisionPoolExhaustedResult {
+  if (visitor?.onEvent) {
+    visitor.onEvent({
+      type: 'poolExhausted',
+      capacity: pool.capacity,
+      iteration: -1,
+    });
+  }
+  return { kind: 'poolExhausted' };
 }

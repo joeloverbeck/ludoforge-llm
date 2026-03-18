@@ -14,6 +14,7 @@ const lanePatterns = {
   'e2e:mcts:fitl:interactive': listE2eTestsForLane('e2e:mcts:fitl:interactive').map(toDistTestPath),
   'e2e:mcts:fitl:turn': listE2eTestsForLane('e2e:mcts:fitl:turn').map(toDistTestPath),
   'e2e:mcts:fitl:background': listE2eTestsForLane('e2e:mcts:fitl:background').map(toDistTestPath),
+  'e2e:mcts:fitl:competence': listE2eTestsForLane('e2e:mcts:fitl:competence').map(toDistTestPath),
   'e2e:all': listE2eTestsForLane('e2e:all').map(toDistTestPath),
   integration: listIntegrationTestsForLane('integration').map(toDistTestPath),
   'integration:core': listIntegrationTestsForLane('integration:core').map(toDistTestPath),

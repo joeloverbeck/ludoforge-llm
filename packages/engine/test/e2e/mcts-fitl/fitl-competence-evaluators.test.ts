@@ -79,6 +79,22 @@ const makeToken = (
   },
 });
 
+const makeRuntimeToken = (
+  id: string,
+  runtimeType: Token['type'],
+  semanticType: string,
+  faction: 'VC' | 'ARVN' | 'US' | 'NVA',
+  props: Readonly<Record<string, string>> = {},
+): Token => ({
+  id: asTokenId(id),
+  type: runtimeType,
+  props: {
+    faction,
+    type: semanticType,
+    ...props,
+  },
+});
+
 const cloneLookaheadWithCoupFlag = (isCoup: boolean): Token => {
   const def = compileFitlDef();
   const state = createPlaybookBaseState(def);
@@ -559,6 +575,31 @@ describe('VC strategic evaluators', () => {
     assert.equal(result.explanation, 'Skipped — move is not rally');
   });
 
+  it('vcRallyQuality reads semantic piece type from runtime-shaped FITL tokens', () => {
+    const evaluator = vcRallyQuality();
+
+    const result = evaluator.evaluate(createContext('rally', {
+      budget: 'background',
+      params: { $targetSpaces: ['quang-tri-thua-thien:none'] },
+      zonesBefore: {
+        'quang-tri-thua-thien:none': [
+          makeRuntimeToken('vc-base-home-rt', 'vc-bases', 'base', 'VC', { tunnel: 'untunneled' }),
+          makeRuntimeToken('vc-g-home-rt-1', 'vc-guerrillas', 'guerrilla', 'VC', { activity: 'underground' }),
+        ],
+      },
+      zonesAfter: {
+        'quang-tri-thua-thien:none': [
+          makeRuntimeToken('vc-base-home-rt', 'vc-bases', 'base', 'VC', { tunnel: 'untunneled' }),
+          makeRuntimeToken('vc-g-home-rt-1', 'vc-guerrillas', 'guerrilla', 'VC', { activity: 'underground' }),
+          makeRuntimeToken('vc-g-home-rt-2', 'vc-guerrillas', 'guerrilla', 'VC', { activity: 'underground' }),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.match(result.explanation, /with-base space/u);
+  });
+
   it('vcTerrorTarget passes for a high-population support target', () => {
     const evaluator = vcTerrorTarget();
 
@@ -856,18 +897,18 @@ describe('VC strategic evaluators', () => {
 
     const result = evaluator.evaluate(createContext('tax', {
       budget: 'background',
-      params: { $targetSpaces: ['loc-hue-khe-sanh:none'] },
+      params: { $targetSpaces: ['quang-tri-thua-thien:none'] },
       zonesBefore: {
-        'loc-hue-khe-sanh:none': [
-          makeToken('vc-tax-loc', 'guerrilla', 'VC', { activity: 'underground' }),
+        'quang-tri-thua-thien:none': [
+          makeToken('vc-tax-best', 'guerrilla', 'VC', { activity: 'underground' }),
         ],
         'phuoc-long:none': [
           makeToken('vc-tax-pop0', 'guerrilla', 'VC', { activity: 'underground' }),
         ],
       },
       zonesAfter: {
-        'loc-hue-khe-sanh:none': [
-          makeToken('vc-tax-loc', 'guerrilla', 'VC', { activity: 'active' }),
+        'quang-tri-thua-thien:none': [
+          makeToken('vc-tax-best', 'guerrilla', 'VC', { activity: 'active' }),
         ],
         'phuoc-long:none': [
           makeToken('vc-tax-pop0', 'guerrilla', 'VC', { activity: 'underground' }),
@@ -886,7 +927,7 @@ describe('VC strategic evaluators', () => {
       budget: 'background',
       params: { $targetSpaces: ['phuoc-long:none'] },
       zonesBefore: {
-        'loc-hue-khe-sanh:none': [
+        'loc-saigon-can-tho:none': [
           makeToken('vc-tax-loc', 'guerrilla', 'VC', { activity: 'underground' }),
         ],
         'phuoc-long:none': [
@@ -894,7 +935,7 @@ describe('VC strategic evaluators', () => {
         ],
       },
       zonesAfter: {
-        'loc-hue-khe-sanh:none': [
+        'loc-saigon-can-tho:none': [
           makeToken('vc-tax-loc', 'guerrilla', 'VC', { activity: 'underground' }),
         ],
         'phuoc-long:none': [
@@ -1693,6 +1734,28 @@ describe('ARVN strategic evaluators', () => {
 
     assert.equal(result.passed, true);
     assert.equal(result.explanation, 'Skipped — move is not train');
+  });
+
+  it('arvnTrainCubes reads semantic piece type from runtime-shaped FITL tokens', () => {
+    const evaluator = arvnTrainCubes();
+
+    const result = evaluator.evaluate(createContext('train', {
+      budget: 'background',
+      playerId: ARVN_PLAYER,
+      params: { $targetSpaces: ['saigon:none'] },
+      zonesBefore: {
+        'saigon:none': [],
+      },
+      zonesAfter: {
+        'saigon:none': [
+          makeRuntimeToken('arvn-train-city-rt-1', 'arvn-troops', 'troops', 'ARVN'),
+          makeRuntimeToken('arvn-train-city-rt-2', 'arvn-police', 'police', 'ARVN'),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.match(result.explanation, /top-priority ARVN space/u);
   });
 
   it('arvnGovern passes when govern increases aid', () => {

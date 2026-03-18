@@ -8,22 +8,23 @@
 
 ## Problem
 
-The playbook scenarios (S1–S10) only test positions reachable via normal game replay. Five additional scenarios need engineered game states to test pressure/edge-case situations that can't occur naturally in the first 8 turns: near-win VC, resource-starved NVA, defensive US, pre-Coup ARVN, and late-game NVA blitz. These scenarios use the `engineerScenarioState` helper from ticket 001.
+The playbook scenarios (S1–S10) only test positions reachable via normal game replay. Five additional scenarios should extend the same competence runner with engineered pressure and edge-case situations: near-win VC, resource-starved NVA, defensive US, pre-Coup ARVN, and late-game NVA blitz. The state-engineering helper already exists; the remaining work is to encode these scenarios cleanly in the shared scenario catalog and strengthen helper coverage around the exact override patterns these scenarios depend on.
 
 ## Assumption Reassessment (2026-03-18)
 
-1. `engineerScenarioState` modifies `globalVars`, `perPlayerVars`, zone tokens, and markers — defined in ticket 001.
-2. `createPlaybookBaseState` produces a valid initial state for engineering — confirmed at line 837.
-3. The `CompetenceScenario` type has an optional `engineeredState` field — defined in ticket 001.
-4. The test runner in ticket 008 handles `engineeredState` by calling it instead of `replayToDecisionPoint`.
-5. Victory compute functions exist for all factions — confirmed.
+1. `engineerScenarioState` already exists in `packages/engine/test/e2e/mcts-fitl/fitl-mcts-test-helpers.ts`; it already supports `globalVars`, `perPlayerVars`, `zoneVars`, `zones`, `markers`, and `globalMarkers`.
+2. `createPlaybookBaseState` already produces the canonical playbook starting state for both replay-driven and engineered scenarios.
+3. The `CompetenceScenario` type in `packages/engine/test/e2e/mcts-fitl/fitl-competence-scenarios.ts` already has an optional `engineeredState` hook.
+4. Ticket 008 is responsible for the generic competence runner; this ticket should only extend the shared scenario catalog and add helper/test coverage needed by S11–S15.
+5. Victory helper functions already exist for all four FITL factions in `fitl-mcts-test-helpers.ts`.
+6. There is already one framework/helper immutability test in `fitl-competence-types.test.ts`; this ticket should add narrower override-shape coverage for the engineered scenario patterns instead of duplicating generic immutability assertions.
 
 ## Architecture Check
 
-1. Engineered states are created by modifying the base playbook state — no kernel mutation.
-2. Each scenario specifies exact overrides (globalVars, zone tokens) to create the desired game position.
-3. The test runner needs zero changes — `engineeredState` field already handled by ticket 008's runner.
-4. Scenarios are additive — just append to `COMPETENCE_SCENARIOS`.
+1. Engineered states should remain pure state-builders layered on top of the canonical playbook base state. No production kernel branching and no scenario-specific logic in the runner.
+2. Each engineered scenario should own only the minimal override builder needed to express its position. That is cleaner and more extensible than baking ad hoc engineering branches into shared helpers.
+3. The runner should stay unchanged once ticket 008 lands; this ticket should be scenario-data growth plus focused tests. In practice these engineered scenarios will initially participate in the timed `interactive` e2e lane only, with deeper strategic semantics covered by evaluator/unit tests until FITL search throughput improves and MCTS emits fully resolved moves for pending FITL decisions.
+4. S11–S15 should be appended to the shared `COMPETENCE_SCENARIOS` export so the runner remains the single execution path.
 
 ## What to Change
 
@@ -62,20 +63,20 @@ The playbook scenarios (S1–S10) only test positions reachable via normal game 
 - **Evaluators**: `categoryCompetence(['march','rally','attack'])`, `victoryProgress(computeNvaVictory, 18, 1)`, `nvaMarchSouthward`, `nvaControlGrowth`.
 - **Engineering**: Set `trail=4`. Place 25+ NVA troops in available zone. Place 10+ guerrillas across map.
 
-### 6. Integration tests for `engineerScenarioState`
+### 6. Focused tests for `engineerScenarioState` override shapes used by S11–S15
 
 | Test | Description |
 |------|-------------|
 | globalVar-override | Override `nvaResources=0` → state has 0 NVA resources |
-| zone-token-override | Place 15 NVA troops in specific zone → zone has 15 troops |
+| zone-token-override | Replace a target zone token stack → engineered state reflects exact stack |
 | marker-override | Set support/opposition marker → marker reflects override |
-| immutability | Base state unchanged after engineering |
-| combined-overrides | Multiple overrides applied together → all reflected |
+| global-marker-override | Set a global marker used by engineered scenarios → override is reflected without mutating base state |
+| combined-overrides | Multiple override branches apply together → all reflected and base state stays unchanged |
 
 ## Files to Touch
 
 - `packages/engine/test/e2e/mcts-fitl/fitl-competence-scenarios.ts` (modify — add S11-S15)
-- `packages/engine/test/unit/e2e-helpers/fitl-engineer-scenario-state.test.ts` (new — 5 unit tests for helper)
+- `packages/engine/test/unit/e2e-helpers/fitl-engineer-scenario-state.test.ts` (new — focused helper tests for S11-S15 override patterns)
 
 ## Out of Scope
 
@@ -83,15 +84,14 @@ The playbook scenarios (S1–S10) only test positions reachable via normal game 
 - Production code changes
 - Pool sizing tuning (62MCTSSEAVIS-019)
 - Evaluation function changes
-- Test runner modifications (handled by ticket 008)
+- Test runner modifications beyond what ticket 008 requires
 
 ## Acceptance Criteria
 
 ### Tests That Must Pass
 
-1. `fitl-engineer-scenario-state.test.ts`: All 5 unit tests for `engineerScenarioState` pass.
-2. `fitl-competence.test.ts`: S11–S15 at `interactive` budget — Layer 1 category checks pass.
-3. `fitl-competence.test.ts`: S11–S15 at `turn`/`background` — execute without crashes (higher-layer evaluators may fail pending pool optimization — document expected state).
+1. `fitl-engineer-scenario-state.test.ts`: All focused helper tests for the override shapes used by S11–S15 pass.
+2. `fitl-competence.test.ts`: S11–S15 execute through the shared competence runner at `interactive` budget and all applicable pre-resolution-safe evaluators at that budget pass.
 4. `pnpm turbo typecheck` — no type errors.
 5. `pnpm turbo lint` — no lint errors.
 6. `pnpm -F @ludoforge/engine test` — all existing tests still pass.
@@ -99,7 +99,7 @@ The playbook scenarios (S1–S10) only test positions reachable via normal game 
 ### Invariants
 
 1. No production source code changes.
-2. `engineerScenarioState` never mutates the input state — returns new object.
+2. `engineerScenarioState` never mutates the input state — returns a new state object and preserves untouched branches by reference where possible.
 3. Engineered states produce valid game states that the kernel accepts (legal moves can be enumerated).
 4. S12 (resource-starved NVA) must have exactly 0 NVA resources — not "low."
 5. S13 (defensive US) must have support score ≥ 46 and ≤ 49 — close enough to victory to trigger defensive behavior.
@@ -108,12 +108,12 @@ The playbook scenarios (S1–S10) only test positions reachable via normal game 
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/e2e-helpers/fitl-engineer-scenario-state.test.ts` — 5 unit tests
-2. `packages/engine/test/e2e/mcts-fitl/fitl-competence.test.ts` — 15 additional test cases (5 scenarios x 3 budgets)
+1. `packages/engine/test/unit/e2e-helpers/fitl-engineer-scenario-state.test.ts` — focused helper tests for engineered override shapes
+2. `packages/engine/test/e2e/mcts-fitl/fitl-competence.test.ts` — 5 additional interactive-budget test cases
 
 ### Commands
 
-1. `pnpm turbo build && node --test dist/test/unit/e2e-helpers/fitl-engineer-scenario-state.test.js`
+1. `pnpm turbo build && node --test packages/engine/dist/test/unit/e2e-helpers/fitl-engineer-scenario-state.test.js`
 2. `RUN_MCTS_FITL_E2E=1 pnpm -F @ludoforge/engine test:e2e:mcts:fitl:competence`
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`

@@ -122,6 +122,12 @@ export function isMctsFitlBudgetProfileTest(sourcePath, profile) {
   return baseName === `fitl-mcts-${profile}.test.ts`;
 }
 
+export function isMctsFitlCompetenceTest(sourcePath) {
+  const normalized = sourcePath.replaceAll('\\', '/');
+  const baseName = normalized.split('/').at(-1) ?? normalized;
+  return baseName === 'fitl-competence.test.ts';
+}
+
 export function isSlowE2eTest(sourcePath) {
   const normalized = sourcePath.replaceAll('\\', '/');
   const baseName = normalized.split('/').at(-1) ?? normalized;
@@ -150,6 +156,8 @@ export function listE2eTestsForLane(lane) {
       return ALL_E2E_TESTS.filter((sourcePath) => isMctsFitlBudgetProfileTest(sourcePath, 'turn'));
     case 'e2e:mcts:fitl:background':
       return ALL_E2E_TESTS.filter((sourcePath) => isMctsFitlBudgetProfileTest(sourcePath, 'background'));
+    case 'e2e:mcts:fitl:competence':
+      return ALL_E2E_TESTS.filter((sourcePath) => isMctsFitlCompetenceTest(sourcePath));
     case 'e2e:all':
       return [...ALL_E2E_TESTS];
     default:

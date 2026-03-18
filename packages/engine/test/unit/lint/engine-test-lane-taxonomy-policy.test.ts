@@ -20,6 +20,10 @@ describe('engine test lane taxonomy policy', () => {
     assert.equal(packageJson.scripts?.['test:e2e:slow'], 'RUN_SLOW_E2E=1 node scripts/run-tests.mjs --lane e2e:slow');
     assert.equal(packageJson.scripts?.['test:e2e:mcts'], 'RUN_MCTS_E2E=1 node scripts/run-tests.mjs --lane e2e:mcts');
     assert.equal(packageJson.scripts?.['test:e2e:all'], 'RUN_SLOW_E2E=1 node scripts/run-tests.mjs --lane e2e');
+    assert.equal(
+      packageJson.scripts?.['test:e2e:mcts:fitl:competence'],
+      'RUN_MCTS_FITL_E2E=1 node scripts/run-tests.mjs --lane e2e:mcts:fitl:competence',
+    );
     assert.equal(packageJson.scripts?.['test:integration'], 'node scripts/run-tests.mjs --lane integration');
     assert.equal(packageJson.scripts?.['test:integration:core'], 'node scripts/run-tests.mjs --lane integration:core');
     assert.equal(
@@ -133,12 +137,15 @@ describe('engine test lane taxonomy policy', () => {
     const nonMctsLane = manifest.listE2eTestsForLane('e2e');
     const slowLane = manifest.listE2eTestsForLane('e2e:slow');
     const mctsLane = manifest.listE2eTestsForLane('e2e:mcts');
+    const fitlCompetenceLane = manifest.listE2eTestsForLane('e2e:mcts:fitl:competence');
     const allLane = manifest.listE2eTestsForLane('e2e:all');
     const expectedSlowTests = manifest.E2E_SLOW_EXACT_TESTS.map((name) => `test/e2e/${name}`);
+    const expectedFitlCompetence = 'test/e2e/mcts-fitl/fitl-competence.test.ts';
 
     assert.equal(manifest.ALL_E2E_TESTS.length > 0, true);
     assert.equal(slowLane.length > 0, true);
     assert.equal(mctsLane.length > 0, true);
+    assert.deepEqual(fitlCompetenceLane, [expectedFitlCompetence]);
     assert.deepEqual(new Set(allLane), new Set(manifest.ALL_E2E_TESTS));
 
     for (const sourcePath of allLane) {
@@ -156,6 +163,9 @@ describe('engine test lane taxonomy policy', () => {
       assert.equal(nonMctsLane.includes(sourcePath), false, `${sourcePath} must not leak into the non-MCTS lane`);
       assert.equal(slowLane.includes(sourcePath), false, `${sourcePath} must not leak into the slow non-MCTS lane`);
     }
+
+    assert.equal(mctsLane.includes(expectedFitlCompetence), true, 'competence suite should stay inside the broader MCTS lane');
+    assert.equal(nonMctsLane.includes(expectedFitlCompetence), false, 'competence suite must not leak into the non-MCTS lane');
 
     assert.deepEqual(new Set(slowLane), new Set(expectedSlowTests));
 

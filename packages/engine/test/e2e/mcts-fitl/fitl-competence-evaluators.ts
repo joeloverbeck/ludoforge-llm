@@ -452,6 +452,13 @@ const countTokens = (
   predicate: (token: GameState['zones'][string][number]) => boolean,
 ): number => (state.zones[zoneId] ?? []).filter(predicate).length;
 
+const getTokenPieceType = (
+  token: GameState['zones'][string][number],
+): string | null => {
+  const pieceType = token.props.type;
+  return typeof pieceType === 'string' ? pieceType : null;
+};
+
 const countFactionTokens = (
   state: GameState,
   zoneId: string,
@@ -459,7 +466,7 @@ const countFactionTokens = (
   type?: string,
 ): number => countTokens(state, zoneId, (token) =>
   token.props.faction === faction
-  && (type === undefined || token.type === type));
+  && (type === undefined || getTokenPieceType(token) === type));
 
 const countFactionSetTokens = (
   state: GameState,
@@ -468,7 +475,7 @@ const countFactionSetTokens = (
   type?: string,
 ): number => countTokens(state, zoneId, (token) =>
   factions.has(String(token.props.faction))
-  && (type === undefined || token.type === type));
+  && (type === undefined || getTokenPieceType(token) === type));
 
 const countVcGuerrillas = (
   state: GameState,
@@ -476,11 +483,12 @@ const countVcGuerrillas = (
   activity?: 'active' | 'underground',
 ): number => countTokens(state, zoneId, (token) =>
   token.props.faction === 'VC'
-  && token.type === 'guerrilla'
+  && getTokenPieceType(token) === 'guerrilla'
   && (activity === undefined || token.props.activity === activity));
 
 const countVcBases = (state: GameState, zoneId: string): number =>
-  countTokens(state, zoneId, (token) => token.props.faction === 'VC' && token.type === 'base');
+  countTokens(state, zoneId, (token) =>
+    token.props.faction === 'VC' && getTokenPieceType(token) === 'base');
 
 const countInsurgentGuerrillas = (
   state: GameState,
@@ -488,7 +496,7 @@ const countInsurgentGuerrillas = (
   activity?: 'active' | 'underground',
 ): number => countTokens(state, zoneId, (token) =>
   INSURGENT_FACTIONS.has(String(token.props.faction))
-  && token.type === 'guerrilla'
+  && getTokenPieceType(token) === 'guerrilla'
   && (activity === undefined || token.props.activity === activity));
 
 const countInsurgentPieces = (state: GameState, zoneId: string): number =>
@@ -500,24 +508,24 @@ const countInsurgentBases = (state: GameState, zoneId: string): number =>
 const countTunneledInsurgentBases = (state: GameState, zoneId: string): number =>
   countTokens(state, zoneId, (token) =>
     INSURGENT_FACTIONS.has(String(token.props.faction))
-    && token.type === 'base'
+    && getTokenPieceType(token) === 'base'
     && token.props.tunnel === 'tunneled');
 
 const countUsPieces = (state: GameState, zoneId: string): number =>
   countFactionTokens(state, zoneId, 'US');
 
 const countAllBases = (state: GameState, zoneId: string): number =>
-  countTokens(state, zoneId, (token) => token.type === 'base');
+  countTokens(state, zoneId, (token) => getTokenPieceType(token) === 'base');
 
 const countArvnCubes = (state: GameState, zoneId: string): number =>
   countTokens(state, zoneId, (token) =>
     token.props.faction === 'ARVN'
-    && (token.type === 'troops' || token.type === 'police'));
+    && (getTokenPieceType(token) === 'troops' || getTokenPieceType(token) === 'police'));
 
 const countArvnRangers = (state: GameState, zoneId: string): number =>
   countTokens(state, zoneId, (token) =>
     token.props.faction === 'ARVN'
-    && token.type === 'ranger');
+    && getTokenPieceType(token) === 'ranger');
 
 const countArvnTrainPieces = (state: GameState, zoneId: string): number =>
   countArvnCubes(state, zoneId) + countArvnRangers(state, zoneId);

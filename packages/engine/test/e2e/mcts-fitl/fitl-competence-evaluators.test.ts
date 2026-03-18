@@ -16,6 +16,12 @@ import {
 import {
   categoryCompetence,
   monsoonAwareness,
+  nvaAttackConditions,
+  nvaBombardUsage,
+  nvaControlGrowth,
+  nvaInfiltrateValue,
+  nvaMarchSouthward,
+  nvaRallyTrailImprove,
   passStrategicValue,
   resourceDiscipline,
   vcBaseExpansion,
@@ -34,6 +40,7 @@ import {
   createPlaybookBaseState,
   engineerScenarioState,
   ARVN_PLAYER,
+  NVA_PLAYER,
   VC_PLAYER,
 } from './fitl-mcts-test-helpers.js';
 
@@ -97,6 +104,7 @@ const createContext = (
     readonly zonesBefore?: Readonly<Record<string, readonly Token[]>>;
     readonly zonesAfter?: Readonly<Record<string, readonly Token[]>>;
     readonly params?: Readonly<Record<string, MoveParamValue>>;
+    readonly compound?: Move['compound'];
     readonly lookaheadIsCoup?: boolean;
   },
 ): CompetenceEvalContext => {
@@ -136,6 +144,7 @@ const createContext = (
     params: { ...(options?.params ?? {}) },
     ...(options?.actionClass === undefined ? {} : { actionClass: options.actionClass }),
     ...(options?.freeOperation === undefined ? {} : { freeOperation: options.freeOperation }),
+    ...(options?.compound === undefined ? {} : { compound: options.compound }),
   };
   return {
     def,
@@ -919,5 +928,405 @@ describe('VC strategic evaluators', () => {
 
     assert.equal(result.passed, false);
     assert.match(result.explanation, /better tax line scored/u);
+  });
+});
+
+describe('NVA strategic evaluators', () => {
+  it('nvaAttackConditions passes when attack gains NVA control in the target space', () => {
+    const evaluator = nvaAttackConditions();
+
+    const result = evaluator.evaluate(createContext('attack', {
+      budget: 'background',
+      playerId: NVA_PLAYER,
+      params: { $targetSpaces: ['quang-nam:none'] },
+      zonesBefore: {
+        'quang-nam:none': [
+          makeToken('nva-attack-1', 'troops', 'NVA'),
+          makeToken('nva-attack-2', 'troops', 'NVA'),
+          makeToken('arvn-def-1', 'troops', 'ARVN'),
+          makeToken('arvn-def-2', 'troops', 'ARVN'),
+          makeToken('arvn-def-3', 'troops', 'ARVN'),
+        ],
+      },
+      zonesAfter: {
+        'quang-nam:none': [
+          makeToken('nva-attack-1', 'troops', 'NVA'),
+          makeToken('nva-attack-2', 'troops', 'NVA'),
+          makeToken('arvn-def-1', 'troops', 'ARVN'),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.match(result.explanation, /worthwhile outcome/u);
+  });
+
+  it('nvaAttackConditions passes when attack removes an enemy base', () => {
+    const evaluator = nvaAttackConditions();
+
+    const result = evaluator.evaluate(createContext('attack', {
+      budget: 'background',
+      playerId: NVA_PLAYER,
+      params: { $targetSpaces: ['tay-ninh:none'] },
+      zonesBefore: {
+        'tay-ninh:none': [
+          makeToken('nva-base-hunt-1', 'troops', 'NVA'),
+          makeToken('nva-base-hunt-2', 'troops', 'NVA'),
+          makeToken('arvn-base-target', 'base', 'ARVN'),
+        ],
+      },
+      zonesAfter: {
+        'tay-ninh:none': [
+          makeToken('nva-base-hunt-1', 'troops', 'NVA'),
+          makeToken('nva-base-hunt-2', 'troops', 'NVA'),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, true);
+  });
+
+  it('nvaAttackConditions fails when attack produces no strategic payoff', () => {
+    const evaluator = nvaAttackConditions();
+
+    const result = evaluator.evaluate(createContext('attack', {
+      budget: 'background',
+      playerId: NVA_PLAYER,
+      params: { $targetSpaces: ['quang-tri-thua-thien:none'] },
+      zonesBefore: {
+        'quang-tri-thua-thien:none': [
+          makeToken('nva-no-payoff-1', 'troops', 'NVA'),
+          makeToken('nva-no-payoff-2', 'troops', 'NVA'),
+          makeToken('arvn-no-payoff', 'troops', 'ARVN'),
+        ],
+      },
+      zonesAfter: {
+        'quang-tri-thua-thien:none': [
+          makeToken('nva-no-payoff-1', 'troops', 'NVA'),
+          makeToken('nva-no-payoff-2', 'troops', 'NVA'),
+          makeToken('arvn-no-payoff', 'troops', 'ARVN'),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, false);
+    assert.match(result.explanation, /gained no control/u);
+  });
+
+  it('nvaAttackConditions skips non-attack moves', () => {
+    const evaluator = nvaAttackConditions();
+
+    const result = evaluator.evaluate(createContext('rally', {
+      budget: 'background',
+      playerId: NVA_PLAYER,
+    }));
+
+    assert.equal(result.passed, true);
+    assert.equal(result.explanation, 'Skipped — move is not attack');
+  });
+
+  it('nvaMarchSouthward passes when troops move toward populated South Vietnam', () => {
+    const evaluator = nvaMarchSouthward();
+
+    const result = evaluator.evaluate(createContext('march', {
+      budget: 'background',
+      playerId: NVA_PLAYER,
+      params: { $targetSpaces: ['saigon:none'] },
+      zonesBefore: {
+        'saigon:none': [],
+        'north-vietnam:none': [
+          makeToken('nva-south-1', 'troops', 'NVA'),
+          makeToken('nva-south-2', 'troops', 'NVA'),
+        ],
+      },
+      zonesAfter: {
+        'north-vietnam:none': [],
+        'saigon:none': [
+          makeToken('nva-south-1', 'troops', 'NVA'),
+          makeToken('nva-south-2', 'troops', 'NVA'),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.equal(result.score! > 0, true);
+  });
+
+  it('nvaMarchSouthward fails when troops move away from populated South Vietnam', () => {
+    const evaluator = nvaMarchSouthward();
+
+    const result = evaluator.evaluate(createContext('march', {
+      budget: 'background',
+      playerId: NVA_PLAYER,
+      params: { $targetSpaces: ['north-vietnam:none'] },
+      zonesBefore: {
+        'north-vietnam:none': [],
+        'saigon:none': [
+          makeToken('nva-away-1', 'troops', 'NVA'),
+          makeToken('nva-away-2', 'troops', 'NVA'),
+        ],
+      },
+      zonesAfter: {
+        'saigon:none': [],
+        'north-vietnam:none': [
+          makeToken('nva-away-1', 'troops', 'NVA'),
+          makeToken('nva-away-2', 'troops', 'NVA'),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, false);
+    assert.equal(result.score! < 0, true);
+  });
+
+  it('nvaRallyTrailImprove passes when rally improves trail under strategic pressure', () => {
+    const evaluator = nvaRallyTrailImprove();
+
+    const result = evaluator.evaluate(createContext('rally', {
+      budget: 'background',
+      playerId: NVA_PLAYER,
+      globalVarsBefore: { trail: 2, nvaResources: 4 },
+      globalVarsAfter: { trail: 3, nvaResources: 2 },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.equal(result.score, 1);
+  });
+
+  it('nvaRallyTrailImprove fails when rally omits trail improvement that was legal and warranted', () => {
+    const evaluator = nvaRallyTrailImprove();
+
+    const result = evaluator.evaluate(createContext('rally', {
+      budget: 'background',
+      playerId: NVA_PLAYER,
+      globalVarsBefore: { trail: 2, nvaResources: 4 },
+      globalVarsAfter: { trail: 2, nvaResources: 4 },
+    }));
+
+    assert.equal(result.passed, false);
+    assert.match(result.explanation, /skipped trail improvement/u);
+  });
+
+  it('nvaRallyTrailImprove skips when trail improvement is strategically desirable but illegal', () => {
+    const evaluator = nvaRallyTrailImprove();
+
+    const result = evaluator.evaluate(createContext('rally', {
+      budget: 'background',
+      playerId: NVA_PLAYER,
+      globalVarsBefore: { trail: 2, nvaResources: 1 },
+      globalVarsAfter: { trail: 2, nvaResources: 1 },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.match(result.explanation, /not legal/u);
+  });
+
+  it('nvaControlGrowth passes when NVA victory improves', () => {
+    const evaluator = nvaControlGrowth();
+
+    const result = evaluator.evaluate(createContext('rally', {
+      budget: 'background',
+      playerId: NVA_PLAYER,
+      zonesBefore: {
+        'tay-ninh:none': [],
+      },
+      zonesAfter: {
+        'tay-ninh:none': [
+          makeToken('nva-control-base', 'base', 'NVA', { tunnel: 'untunneled' }),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.equal(result.score, 2);
+  });
+
+  it('nvaControlGrowth fails when NVA victory regresses', () => {
+    const evaluator = nvaControlGrowth();
+
+    const result = evaluator.evaluate(createContext('rally', {
+      budget: 'background',
+      playerId: NVA_PLAYER,
+      zonesBefore: {
+        'tay-ninh:none': [
+          makeToken('nva-control-base', 'base', 'NVA', { tunnel: 'untunneled' }),
+        ],
+      },
+      zonesAfter: {
+        'tay-ninh:none': [],
+      },
+    }));
+
+    assert.equal(result.passed, false);
+    assert.equal(result.score, -2);
+  });
+
+  it('nvaInfiltrateValue passes when compound infiltrate places a base', () => {
+    const evaluator = nvaInfiltrateValue();
+
+    const result = evaluator.evaluate(createContext('march', {
+      budget: 'background',
+      playerId: NVA_PLAYER,
+      actionClass: 'operationPlusSpecialActivity',
+      compound: {
+        specialActivity: {
+          actionId: asActionId('infiltrate'),
+          actionClass: 'operationPlusSpecialActivity',
+          params: { $targetSpaces: ['kien-giang-an-xuyen:none'] },
+        },
+        timing: 'after',
+      },
+      zonesBefore: {
+        'kien-giang-an-xuyen:none': [
+          makeToken('vc-infiltrate-base-target', 'base', 'VC', { tunnel: 'untunneled' }),
+        ],
+      },
+      zonesAfter: {
+        'kien-giang-an-xuyen:none': [
+          makeToken('nva-infiltrate-base', 'base', 'NVA', { tunnel: 'untunneled' }),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.match(result.explanation, /meaningful value/u);
+  });
+
+  it('nvaInfiltrateValue passes when infiltrate creates a major troop buildup', () => {
+    const evaluator = nvaInfiltrateValue();
+
+    const result = evaluator.evaluate(createContext('march', {
+      budget: 'background',
+      playerId: NVA_PLAYER,
+      actionClass: 'operationPlusSpecialActivity',
+      compound: {
+        specialActivity: {
+          actionId: asActionId('infiltrate'),
+          actionClass: 'operationPlusSpecialActivity',
+          params: { $targetSpaces: ['southern-laos:none'] },
+        },
+        timing: 'after',
+      },
+      zonesBefore: {
+        'southern-laos:none': [],
+      },
+      zonesAfter: {
+        'southern-laos:none': [
+          makeToken('nva-build-1', 'troops', 'NVA'),
+          makeToken('nva-build-2', 'troops', 'NVA'),
+          makeToken('nva-build-3', 'troops', 'NVA'),
+          makeToken('nva-build-4', 'troops', 'NVA'),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, true);
+  });
+
+  it('nvaInfiltrateValue fails when infiltrate is strategically trivial', () => {
+    const evaluator = nvaInfiltrateValue();
+
+    const result = evaluator.evaluate(createContext('march', {
+      budget: 'background',
+      playerId: NVA_PLAYER,
+      actionClass: 'operationPlusSpecialActivity',
+      compound: {
+        specialActivity: {
+          actionId: asActionId('infiltrate'),
+          actionClass: 'operationPlusSpecialActivity',
+          params: { $targetSpaces: ['southern-laos:none'] },
+        },
+        timing: 'after',
+      },
+      zonesBefore: {
+        'southern-laos:none': [],
+      },
+      zonesAfter: {
+        'southern-laos:none': [
+          makeToken('nva-trivial-build', 'troops', 'NVA'),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, false);
+    assert.match(result.explanation, /strategically trivial/u);
+  });
+
+  it('nvaBombardUsage passes when a compound move includes Bombard for an authored opportunity', () => {
+    const evaluator = nvaBombardUsage();
+
+    const result = evaluator.evaluate(createContext('march', {
+      budget: 'background',
+      playerId: NVA_PLAYER,
+      actionClass: 'operationPlusSpecialActivity',
+      compound: {
+        specialActivity: {
+          actionId: asActionId('bombard'),
+          actionClass: 'operationPlusSpecialActivity',
+          params: { $targetSpaces: ['quang-tri-thua-thien:none'] },
+        },
+        timing: 'after',
+      },
+      zonesBefore: {
+        'quang-tri-thua-thien:none': [
+          makeToken('us-bombard-1', 'troops', 'US'),
+          makeToken('us-bombard-2', 'troops', 'US'),
+          makeToken('us-bombard-3', 'troops', 'US'),
+        ],
+        'hue:none': [
+          makeToken('nva-bombard-1', 'troops', 'NVA'),
+          makeToken('nva-bombard-2', 'troops', 'NVA'),
+          makeToken('nva-bombard-3', 'troops', 'NVA'),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, true);
+  });
+
+  it('nvaBombardUsage fails when an authored Bombard opportunity is ignored', () => {
+    const evaluator = nvaBombardUsage();
+
+    const result = evaluator.evaluate(createContext('march', {
+      budget: 'background',
+      playerId: NVA_PLAYER,
+      zonesBefore: {
+        'quang-tri-thua-thien:none': [
+          makeToken('us-bombard-1', 'troops', 'US'),
+          makeToken('us-bombard-2', 'troops', 'US'),
+          makeToken('us-bombard-3', 'troops', 'US'),
+        ],
+        'hue:none': [
+          makeToken('nva-bombard-1', 'troops', 'NVA'),
+          makeToken('nva-bombard-2', 'troops', 'NVA'),
+          makeToken('nva-bombard-3', 'troops', 'NVA'),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, false);
+    assert.match(result.explanation, /omitted Bombard/u);
+  });
+
+  it('nvaBombardUsage skips when no authored Bombard opportunity exists', () => {
+    const evaluator = nvaBombardUsage();
+
+    const result = evaluator.evaluate(createContext('march', {
+      budget: 'background',
+      playerId: NVA_PLAYER,
+      zonesBefore: {
+        'quang-tri-thua-thien:none': [
+          makeToken('us-too-few-1', 'troops', 'US'),
+          makeToken('us-too-few-2', 'troops', 'US'),
+        ],
+        'hue:none': [
+          makeToken('nva-too-few-1', 'troops', 'NVA'),
+          makeToken('nva-too-few-2', 'troops', 'NVA'),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.match(result.explanation, /no authored Bombard opportunity/u);
   });
 });

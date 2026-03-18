@@ -1,6 +1,13 @@
 import type { MctsBudgetProfile, MctsSearchDiagnostics } from '../../../src/agents/index.js';
-import type { GameDef, GameState, Move, PlayerId, ValidatedGameDef } from '../../../src/kernel/index.js';
-import { computeVcVictory } from './fitl-mcts-test-helpers.js';
+import {
+  isSoloSeatControlled,
+  type GameDef,
+  type GameState,
+  type Move,
+  type PlayerId,
+  type ValidatedGameDef,
+} from '../../../src/kernel/index.js';
+import { computeNvaVictory, computeVcVictory, FITL_FACTION_CONFIG } from './fitl-mcts-test-helpers.js';
 
 export interface CompetenceEvalContext {
   readonly def: ValidatedGameDef;
@@ -340,8 +347,16 @@ export const passStrategicValue = (
 
 const SUPPORT_STATES = new Set(['activeSupport', 'passiveSupport']);
 const MAP_ZONE_CATEGORIES = new Set(['city', 'province', 'loc']);
+const COIN_FACTIONS = new Set(['US', 'ARVN']);
+const SOUTH_VIETNAM = 'southVietnam';
+const NORTH_VIETNAM = 'northVietnam';
+const MCNAMARA_LINE_VAR = 'mom_mcnamaraLine';
 
 const getMoveActionId = (move: Move): string => String(move.actionId);
+const getCompoundSpecialActionId = (move: Move): string | null =>
+  move.compound === undefined ? null : String(move.compound.specialActivity.actionId);
+const moveIncludesAction = (move: Move, actionId: string): boolean =>
+  getMoveActionId(move) === actionId || getCompoundSpecialActionId(move) === actionId;
 
 const getMoveTargetSpaces = (move: Move): readonly string[] => {
   const targetSpaces = (move.params as Record<string, unknown>).$targetSpaces;
@@ -349,6 +364,19 @@ const getMoveTargetSpaces = (move: Move): readonly string[] => {
     return [];
   }
   return targetSpaces.filter((value): value is string => typeof value === 'string');
+};
+
+const getActionTargetSpaces = (
+  move: Move,
+  actionId: string,
+): readonly string[] => {
+  if (getMoveActionId(move) === actionId) {
+    return getMoveTargetSpaces(move);
+  }
+  if (getCompoundSpecialActionId(move) === actionId) {
+    return getMoveTargetSpaces(move.compound!.specialActivity);
+  }
+  return [];
 };
 
 const getMapZoneIds = (def: ValidatedGameDef): readonly string[] =>
@@ -368,8 +396,22 @@ const getZoneNumericAttribute = (
   return typeof value === 'number' ? value : 0;
 };
 
+const getZoneStringAttribute = (
+  def: ValidatedGameDef,
+  zoneId: string,
+  attribute: string,
+): string | null => {
+  const value = getZoneDef(def, zoneId)?.attributes?.[attribute];
+  return typeof value === 'string' ? value : null;
+};
+
 const isLocZone = (def: ValidatedGameDef, zoneId: string): boolean =>
   getZoneDef(def, zoneId)?.category === 'loc';
+
+const getAdjacentZoneIds = (
+  def: ValidatedGameDef,
+  zoneId: string,
+): readonly string[] => getZoneDef(def, zoneId)?.adjacentTo?.map((edge) => edge.to) ?? [];
 
 const getSupportOppositionState = (state: GameState, zoneId: string): string =>
   String(state.markers[zoneId]?.supportOpposition ?? 'neutral');
@@ -384,6 +426,24 @@ const countTokens = (
   zoneId: string,
   predicate: (token: GameState['zones'][string][number]) => boolean,
 ): number => (state.zones[zoneId] ?? []).filter(predicate).length;
+
+const countFactionTokens = (
+  state: GameState,
+  zoneId: string,
+  faction: string,
+  type?: string,
+): number => countTokens(state, zoneId, (token) =>
+  token.props.faction === faction
+  && (type === undefined || token.type === type));
+
+const countFactionSetTokens = (
+  state: GameState,
+  zoneId: string,
+  factions: ReadonlySet<string>,
+  type?: string,
+): number => countTokens(state, zoneId, (token) =>
+  factions.has(String(token.props.faction))
+  && (type === undefined || token.type === type));
 
 const countVcGuerrillas = (
   state: GameState,
@@ -477,6 +537,101 @@ const inferTargetedZones = (
   }
   return getMapZoneIds(ctx.def).filter(predicate);
 };
+
+const inferActionTargetedZones = (
+  ctx: CompetenceEvalContext,
+  actionId: string,
+  predicate: (zoneId: string) => boolean,
+): readonly string[] => {
+  const fromAction = getActionTargetSpaces(ctx.move, actionId);
+  if (fromAction.length > 0) {
+    return fromAction;
+  }
+  return getMapZoneIds(ctx.def).filter(predicate);
+};
+
+const getSouthVietnamPopulationTargets = (
+  def: ValidatedGameDef,
+): readonly { readonly zoneId: string; readonly population: number }[] =>
+  getMapZoneIds(def)
+    .map((zoneId) => ({
+      zoneId,
+      population: getZoneNumericAttribute(def, zoneId, 'population'),
+      country: getZoneStringAttribute(def, zoneId, 'country'),
+    }))
+    .filter((entry) => entry.country === SOUTH_VIETNAM && entry.population > 0)
+    .map(({ zoneId, population }) => ({ zoneId, population }));
+
+const getZoneDistances = (
+  def: ValidatedGameDef,
+  startZoneId: string,
+): ReadonlyMap<string, number> => {
+  const visited = new Map<string, number>([[startZoneId, 0]]);
+  const queue = [startZoneId];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const currentDistance = visited.get(current)!;
+    for (const adjacent of getAdjacentZoneIds(def, current)) {
+      if (visited.has(adjacent)) {
+        continue;
+      }
+      visited.set(adjacent, currentDistance + 1);
+      queue.push(adjacent);
+    }
+  }
+  return visited;
+};
+
+const getNvaSouthwardScore = (
+  def: ValidatedGameDef,
+  state: GameState,
+): number => {
+  const targets = getSouthVietnamPopulationTargets(def);
+  if (targets.length === 0) {
+    return 0;
+  }
+
+  return getMapZoneIds(def).reduce((score, zoneId) => {
+    const troopCount = countFactionTokens(state, zoneId, 'NVA', 'troops');
+    if (troopCount === 0) {
+      return score;
+    }
+
+    const distances = getZoneDistances(def, zoneId);
+    const bestTargetScore = targets.reduce((best, target) => {
+      const distance = distances.get(target.zoneId);
+      if (distance === undefined) {
+        return best;
+      }
+      return Math.max(best, (target.population * 10) - distance);
+    }, Number.NEGATIVE_INFINITY);
+    return score + (troopCount * bestTargetScore);
+  }, 0);
+};
+
+const countCoinPieces = (state: GameState, zoneId: string): number =>
+  countFactionSetTokens(state, zoneId, COIN_FACTIONS);
+
+const countCoinBases = (state: GameState, zoneId: string): number =>
+  countFactionSetTokens(state, zoneId, COIN_FACTIONS, 'base');
+
+const hasBombardOpportunity = (
+  def: ValidatedGameDef,
+  state: GameState,
+): boolean => getMapZoneIds(def).some((zoneId) => {
+  if (getZoneStringAttribute(def, zoneId, 'country') === NORTH_VIETNAM) {
+    return false;
+  }
+  const hasEnemyPresence = countFactionSetTokens(state, zoneId, COIN_FACTIONS, 'troops') >= 3
+    || countCoinBases(state, zoneId) > 0;
+  if (!hasEnemyPresence) {
+    return false;
+  }
+  const inSpaceTroops = countFactionTokens(state, zoneId, 'NVA', 'troops');
+  const adjacentTroops = getAdjacentZoneIds(def, zoneId)
+    .reduce((sum, adjacentZoneId) => sum + countFactionTokens(state, adjacentZoneId, 'NVA', 'troops'), 0);
+  return inSpaceTroops >= 3 || adjacentTroops >= 3;
+});
 
 export const vcRallyQuality = (): CompetenceEvaluator => ({
   name: 'vcRallyQuality',
@@ -782,6 +937,227 @@ export const vcTaxEfficiency = (): CompetenceEvaluator => ({
         ? `Passed — tax included a top-value authored payoff target (score=${targetedScore})`
         : `Failed — tax targeted score=${targetedScore}, but a better tax line scored ${bestScore}`,
       score: targetedScore,
+    };
+  },
+});
+
+export const nvaAttackConditions = (): CompetenceEvaluator => ({
+  name: 'nvaAttackConditions',
+  minBudget: 'background',
+  evaluate: (ctx): CompetenceEvalResult => {
+    if (getMoveActionId(ctx.move) !== 'attack') {
+      return {
+        evaluatorName: 'nvaAttackConditions',
+        passed: true,
+        explanation: 'Skipped — move is not attack',
+      };
+    }
+
+    const targetedZones = inferActionTargetedZones(ctx, 'attack', (zoneId) =>
+      isSoloSeatControlled(ctx.stateAfter, zoneId, FITL_FACTION_CONFIG)
+      !== isSoloSeatControlled(ctx.stateBefore, zoneId, FITL_FACTION_CONFIG)
+      || countCoinBases(ctx.stateAfter, zoneId) < countCoinBases(ctx.stateBefore, zoneId)
+      || countCoinPieces(ctx.stateBefore, zoneId) - countCoinPieces(ctx.stateAfter, zoneId) > 0);
+    if (targetedZones.length === 0) {
+      return {
+        evaluatorName: 'nvaAttackConditions',
+        passed: false,
+        explanation: 'Failed — attack move produced no identifiable target space',
+      };
+    }
+
+    const worthwhileZone = targetedZones.find((zoneId) => {
+      const controlGain = isSoloSeatControlled(ctx.stateAfter, zoneId, FITL_FACTION_CONFIG)
+        && !isSoloSeatControlled(ctx.stateBefore, zoneId, FITL_FACTION_CONFIG);
+      const baseRemoval = countCoinBases(ctx.stateAfter, zoneId) < countCoinBases(ctx.stateBefore, zoneId);
+      const enemyRemoval = countCoinPieces(ctx.stateBefore, zoneId) - countCoinPieces(ctx.stateAfter, zoneId);
+      return controlGain || baseRemoval || enemyRemoval >= 4;
+    });
+
+    if (worthwhileZone !== undefined) {
+      return {
+        evaluatorName: 'nvaAttackConditions',
+        passed: true,
+        explanation: `Passed — attack produced a worthwhile outcome in '${worthwhileZone}'`,
+      };
+    }
+
+    return {
+      evaluatorName: 'nvaAttackConditions',
+      passed: false,
+      explanation: `Failed — attack in [${targetedZones.join(', ')}] gained no control, removed no enemy base, and removed fewer than 4 enemy pieces`,
+    };
+  },
+});
+
+export const nvaMarchSouthward = (): CompetenceEvaluator => ({
+  name: 'nvaMarchSouthward',
+  minBudget: 'background',
+  evaluate: (ctx): CompetenceEvalResult => {
+    if (getMoveActionId(ctx.move) !== 'march') {
+      return {
+        evaluatorName: 'nvaMarchSouthward',
+        passed: true,
+        explanation: 'Skipped — move is not march',
+      };
+    }
+
+    const scoreBefore = getNvaSouthwardScore(ctx.def, ctx.stateBefore);
+    const scoreAfter = getNvaSouthwardScore(ctx.def, ctx.stateAfter);
+    const passed = scoreAfter >= scoreBefore;
+    return {
+      evaluatorName: 'nvaMarchSouthward',
+      passed,
+      score: scoreAfter - scoreBefore,
+      explanation: passed
+        ? `Passed — NVA troop proximity to populated South Vietnam improved or held (${scoreBefore} -> ${scoreAfter})`
+        : `Failed — NVA troop proximity to populated South Vietnam regressed (${scoreBefore} -> ${scoreAfter})`,
+    };
+  },
+});
+
+export const nvaRallyTrailImprove = (): CompetenceEvaluator => ({
+  name: 'nvaRallyTrailImprove',
+  minBudget: 'background',
+  evaluate: (ctx): CompetenceEvalResult => {
+    if (getMoveActionId(ctx.move) !== 'rally') {
+      return {
+        evaluatorName: 'nvaRallyTrailImprove',
+        passed: true,
+        explanation: 'Skipped — move is not rally',
+      };
+    }
+
+    const trailBefore = ctx.stateBefore.globalVars.trail;
+    const trailAfter = ctx.stateAfter.globalVars.trail;
+    const resourcesBefore = ctx.stateBefore.globalVars.nvaResources;
+    if (typeof trailBefore !== 'number' || typeof trailAfter !== 'number' || typeof resourcesBefore !== 'number') {
+      return {
+        evaluatorName: 'nvaRallyTrailImprove',
+        passed: true,
+        explanation: 'Skipped — trail or nvaResources was not numeric',
+      };
+    }
+
+    const mcNamaraLineActive = ctx.stateBefore.globalVars[MCNAMARA_LINE_VAR] === true;
+    const availableTroops = countFactionTokens(ctx.stateBefore, 'available-NVA:none', 'NVA', 'troops');
+    const strategicallyWarranted = trailBefore < 3 || availableTroops > 20;
+    const legallyAvailable = trailBefore < 4 && resourcesBefore >= 2 && !mcNamaraLineActive;
+    if (!strategicallyWarranted) {
+      return {
+        evaluatorName: 'nvaRallyTrailImprove',
+        passed: true,
+        explanation: `Skipped — trail=${trailBefore} and available NVA troops=${availableTroops} do not force trail improvement`,
+      };
+    }
+    if (!legallyAvailable) {
+      return {
+        evaluatorName: 'nvaRallyTrailImprove',
+        passed: true,
+        explanation: `Skipped — trail improvement was not legal (trail=${trailBefore}, nvaResources=${resourcesBefore}, ${MCNAMARA_LINE_VAR}=${mcNamaraLineActive})`,
+      };
+    }
+
+    const passed = trailAfter > trailBefore;
+    return {
+      evaluatorName: 'nvaRallyTrailImprove',
+      passed,
+      score: trailAfter - trailBefore,
+      explanation: passed
+        ? `Passed — rally improved trail (${trailBefore} -> ${trailAfter}) when strategic conditions were met`
+        : `Failed — rally skipped trail improvement despite trail=${trailBefore}, nvaResources=${resourcesBefore}, available NVA troops=${availableTroops}`,
+    };
+  },
+});
+
+export const nvaControlGrowth = (): CompetenceEvaluator => ({
+  name: 'nvaControlGrowth',
+  minBudget: 'background',
+  evaluate: (ctx): CompetenceEvalResult => {
+    const before = computeNvaVictory(ctx.def, ctx.stateBefore);
+    const after = computeNvaVictory(ctx.def, ctx.stateAfter);
+    const score = after - before;
+    const passed = score >= 0;
+    return {
+      evaluatorName: 'nvaControlGrowth',
+      passed,
+      score,
+      explanation: passed
+        ? `Passed — NVA victory marker improved or held (${before} -> ${after})`
+        : `Failed — NVA victory marker regressed (${before} -> ${after})`,
+    };
+  },
+});
+
+export const nvaInfiltrateValue = (): CompetenceEvaluator => ({
+  name: 'nvaInfiltrateValue',
+  minBudget: 'background',
+  evaluate: (ctx): CompetenceEvalResult => {
+    if (!moveIncludesAction(ctx.move, 'infiltrate')) {
+      return {
+        evaluatorName: 'nvaInfiltrateValue',
+        passed: true,
+        explanation: 'Skipped — move does not include infiltrate',
+      };
+    }
+
+    const targetedZones = inferActionTargetedZones(ctx, 'infiltrate', (zoneId) =>
+      countFactionTokens(ctx.stateAfter, zoneId, 'NVA', 'base') > countFactionTokens(ctx.stateBefore, zoneId, 'NVA', 'base')
+      || countFactionTokens(ctx.stateAfter, zoneId, 'NVA', 'troops') > countFactionTokens(ctx.stateBefore, zoneId, 'NVA', 'troops'));
+    if (targetedZones.length === 0) {
+      return {
+        evaluatorName: 'nvaInfiltrateValue',
+        passed: false,
+        explanation: 'Failed — infiltrate move produced no identifiable target space',
+      };
+    }
+
+    const baseGain = targetedZones.reduce((sum, zoneId) =>
+      sum
+      + Math.max(
+        countFactionTokens(ctx.stateAfter, zoneId, 'NVA', 'base')
+          - countFactionTokens(ctx.stateBefore, zoneId, 'NVA', 'base'),
+        0,
+      ), 0);
+    const troopGain = targetedZones.reduce((sum, zoneId) =>
+      sum
+      + Math.max(
+        countFactionTokens(ctx.stateAfter, zoneId, 'NVA', 'troops')
+          - countFactionTokens(ctx.stateBefore, zoneId, 'NVA', 'troops'),
+        0,
+      ), 0);
+    const passed = baseGain > 0 || troopGain >= 4;
+    return {
+      evaluatorName: 'nvaInfiltrateValue',
+      passed,
+      score: Math.max(baseGain, troopGain),
+      explanation: passed
+        ? `Passed — infiltrate produced meaningful value (baseGain=${baseGain}, troopGain=${troopGain})`
+        : `Failed — infiltrate was strategically trivial (baseGain=${baseGain}, troopGain=${troopGain})`,
+    };
+  },
+});
+
+export const nvaBombardUsage = (): CompetenceEvaluator => ({
+  name: 'nvaBombardUsage',
+  minBudget: 'background',
+  evaluate: (ctx): CompetenceEvalResult => {
+    const bombardChosen = moveIncludesAction(ctx.move, 'bombard');
+    const opportunityExists = hasBombardOpportunity(ctx.def, ctx.stateBefore);
+    if (!opportunityExists) {
+      return {
+        evaluatorName: 'nvaBombardUsage',
+        passed: true,
+        explanation: 'Skipped — no authored Bombard opportunity existed',
+      };
+    }
+
+    return {
+      evaluatorName: 'nvaBombardUsage',
+      passed: bombardChosen,
+      explanation: bombardChosen
+        ? 'Passed — move included Bombard when an authored Bombard opportunity existed'
+        : 'Failed — move omitted Bombard despite an authored Bombard opportunity',
     };
   },
 });

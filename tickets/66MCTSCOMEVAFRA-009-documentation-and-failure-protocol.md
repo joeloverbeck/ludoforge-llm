@@ -4,7 +4,7 @@
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — documentation only
-**Deps**: 66MCTSCOMEVAFRA-008, 66MCTSCOMEVAFRA-008b
+**Deps**: 66MCTSCOMEVAFRA-008, tickets/66MCTSCOMEVAFRA-008b-engineered-scenarios-s11-s15.md
 
 ## Problem
 

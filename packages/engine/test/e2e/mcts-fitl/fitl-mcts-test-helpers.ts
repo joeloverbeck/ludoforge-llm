@@ -29,6 +29,7 @@ import {
   type SeatGroupConfig,
   type Token,
   type ValidatedGameDef,
+  type VariableValue,
   type VictoryFormula,
   type ZoneDef,
 } from '../../../src/kernel/index.js';
@@ -210,6 +211,104 @@ export const engineerPlaybookDeck = (state: GameState): GameState => {
       'deck:none': orderedCards.slice(2),
     },
     nextTokenOrdinal: startOrdinal + orderedCards.length,
+  };
+};
+
+// ---------------------------------------------------------------------------
+// Generic state engineering helper for competence scenarios
+// ---------------------------------------------------------------------------
+
+export interface ScenarioStateOverrides {
+  readonly globalVars?: Readonly<Record<string, VariableValue>>;
+  readonly perPlayerVars?: Readonly<Record<number, Readonly<Record<string, VariableValue>>>>;
+  readonly zoneVars?: Readonly<Record<string, Readonly<Record<string, number>>>>;
+  readonly zones?: Readonly<Record<string, readonly Token[]>>;
+  readonly markers?: Readonly<Record<string, Readonly<Record<string, string>>>>;
+  readonly globalMarkers?: Readonly<Record<string, string>>;
+}
+
+export const engineerScenarioState = (
+  baseState: GameState,
+  overrides: ScenarioStateOverrides,
+): GameState => {
+  const globalVars = overrides.globalVars === undefined
+    ? baseState.globalVars
+    : {
+      ...baseState.globalVars,
+      ...overrides.globalVars,
+    };
+
+  const perPlayerVars = (() => {
+    if (overrides.perPlayerVars === undefined) {
+      return baseState.perPlayerVars;
+    }
+    const perPlayerVars: Record<number, Readonly<Record<string, VariableValue>>> = {
+      ...baseState.perPlayerVars,
+    };
+    for (const [playerId, playerOverrides] of Object.entries(overrides.perPlayerVars)) {
+      const numericPlayerId = Number(playerId);
+      perPlayerVars[numericPlayerId] = {
+        ...(baseState.perPlayerVars[numericPlayerId] ?? {}),
+        ...playerOverrides,
+      };
+    }
+    return perPlayerVars;
+  })();
+
+  const zoneVars = (() => {
+    if (overrides.zoneVars === undefined) {
+      return baseState.zoneVars;
+    }
+    const zoneVars: Record<string, Readonly<Record<string, number>>> = { ...baseState.zoneVars };
+    for (const [zoneId, zoneOverrides] of Object.entries(overrides.zoneVars)) {
+      zoneVars[zoneId] = {
+        ...(baseState.zoneVars[zoneId] ?? {}),
+        ...zoneOverrides,
+      };
+    }
+    return zoneVars;
+  })();
+
+  const zones = (() => {
+    if (overrides.zones === undefined) {
+      return baseState.zones;
+    }
+    const zones: Record<string, readonly Token[]> = { ...baseState.zones };
+    for (const [zoneId, tokens] of Object.entries(overrides.zones)) {
+      zones[zoneId] = [...tokens];
+    }
+    return zones;
+  })();
+
+  const markers = (() => {
+    if (overrides.markers === undefined) {
+      return baseState.markers;
+    }
+    const markers: Record<string, Readonly<Record<string, string>>> = { ...baseState.markers };
+    for (const [zoneId, markerOverrides] of Object.entries(overrides.markers)) {
+      markers[zoneId] = {
+        ...(baseState.markers[zoneId] ?? {}),
+        ...markerOverrides,
+      };
+    }
+    return markers;
+  })();
+
+  const globalMarkers = overrides.globalMarkers === undefined
+    ? baseState.globalMarkers
+    : {
+      ...(baseState.globalMarkers ?? {}),
+      ...overrides.globalMarkers,
+    };
+
+  return {
+    ...baseState,
+    globalVars,
+    perPlayerVars,
+    zoneVars,
+    zones,
+    markers,
+    ...(globalMarkers === undefined ? {} : { globalMarkers }),
   };
 };
 

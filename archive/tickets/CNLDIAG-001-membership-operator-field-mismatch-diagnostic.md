@@ -1,6 +1,6 @@
 # CNLDIAG-001: Emit targeted diagnostic when `op: in` condition uses `left`/`right` instead of `item`/`set`
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/cnl/compile-conditions-conditions.ts`
@@ -115,3 +115,13 @@ For completeness, the comparison operator cases (`==`, `!=`, `<`, etc.) could si
 
 1. `node --test dist/test/unit/cnl/compile-conditions-membership-fields.test.js` (targeted)
 2. `pnpm turbo test --force && pnpm turbo lint && pnpm turbo typecheck` (full verification)
+
+## Outcome
+
+- **Completion date**: 2026-03-18
+- **What changed**:
+  - `packages/engine/src/cnl/compiler-diagnostic-codes.ts` — added `CNL_COMPILER_CONDITION_MEMBERSHIP_FIELD_MISMATCH` and `CNL_COMPILER_CONDITION_COMPARISON_FIELD_MISMATCH` diagnostic codes
+  - `packages/engine/src/cnl/compile-conditions-conditions.ts` — added early detection in `case 'in':` for `left`/`right` fields and in comparison operators for `item`/`set` fields, emitting targeted diagnostics before the confusing `undefined` cascade
+  - `packages/engine/test/unit/cnl/compile-conditions-membership-fields.test.ts` — 6 new tests covering both mismatch directions and happy paths
+- **Deviations**: none — all deliverables implemented as specified, including the symmetric check (ticket item 3)
+- **Verification**: 4978 tests pass, lint clean, typecheck clean

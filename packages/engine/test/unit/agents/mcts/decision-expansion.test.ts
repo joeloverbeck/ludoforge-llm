@@ -69,6 +69,7 @@ function makeDecisionNode(partialMove: Move, parent?: MctsNode): MctsNode {
     decisionPlayer: PLAYER_0,
     partialMove,
     decisionBinding: 'prevBinding',
+    decisionType: 'chooseOne',
   };
   return node;
 }
@@ -126,12 +127,13 @@ describe('expandDecisionNode — chooseOne', () => {
     const childParams = result.children.map((c: MctsNode) => c.partialMove?.params?.province);
     assert.deepEqual(childParams, ['quangTri', 'binhDinh', 'phuBon']);
 
-    // All children should be decision nodes.
+    // All children should be decision nodes with correct decisionType.
     for (const child of result.children) {
       assert.equal(child.nodeKind, 'decision');
       assert.equal(child.decisionPlayer, PLAYER_0);
       assert.equal(child.decisionBinding, 'province');
       assert.equal(child.heuristicPrior, null);
+      assert.equal(child.decisionType, 'chooseOne');
     }
   });
 });
@@ -173,6 +175,11 @@ describe('expandDecisionNode — chooseN', () => {
     if (result.kind !== 'expanded') return;
     // 2 legal + 1 unknown = 3 children.  1 illegal pruned.
     assert.equal(result.children.length, 3);
+
+    // All chooseN children should have decisionType 'chooseN'.
+    for (const child of result.children) {
+      assert.equal(child.decisionType, 'chooseN');
+    }
   });
 
   // ---------------------------------------------------------------------------
@@ -735,5 +742,261 @@ describe('expandDecisionNode — compound SA decisionPath', () => {
     // The completed move should have both main and SA params
     assert.equal(result.move.params.province, 'A');
     assert.equal(result.move.compound?.specialActivity.params.city, 'X');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// chooseN array-valued params (ticket 002)
+// ---------------------------------------------------------------------------
+
+describe('expandDecisionNode — chooseN array params', () => {
+  it('chooseN expansion produces array-valued move params', () => {
+    const pending: ChoiceRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionPlayer: PLAYER_0,
+      decisionKey: dk('$targetSpaces'),
+      name: 'chooseTargets',
+      type: 'chooseN',
+      min: 1,
+      max: 3,
+      selected: [],
+      canConfirm: false,
+      options: [
+        { value: 'zoneA', legality: 'legal', illegalReason: null, resolution: 'exact' },
+        { value: 'zoneB', legality: 'legal', illegalReason: null, resolution: 'exact' },
+        { value: 'zoneC', legality: 'legal', illegalReason: null, resolution: 'exact' },
+      ],
+      targetKinds: [],
+    };
+
+    const discover: DiscoverChoicesFn = () => pending;
+    const pool = createNodePool(20, PLAYER_COUNT);
+    pool.allocate();
+
+    const node = makeDecisionNode(stubPartialMove());
+    const result = expandDecisionNode(node, pool, makeCtx(discover));
+
+    assert.equal(result.kind, 'expanded');
+    if (result.kind !== 'expanded') return;
+    assert.equal(result.children.length, 3);
+
+    // Each child's move param must be an array, not a scalar.
+    for (const child of result.children) {
+      const paramVal = child.partialMove?.params?.$targetSpaces;
+      assert.ok(Array.isArray(paramVal), `expected array, got ${typeof paramVal}: ${String(paramVal)}`);
+    }
+
+    // Verify the array contents are single-element arrays.
+    const paramArrays = result.children.map(
+      (c: MctsNode) => c.partialMove?.params?.$targetSpaces,
+    );
+    assert.deepEqual(paramArrays, [['zoneA'], ['zoneB'], ['zoneC']]);
+  });
+
+  it('chooseOne expansion still produces scalar params (regression)', () => {
+    const pending: ChoiceRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionPlayer: PLAYER_0,
+      decisionKey: dk('province'),
+      name: 'chooseProvince',
+      type: 'chooseOne',
+      options: [
+        { value: 'quangTri', legality: 'unknown', illegalReason: null },
+        { value: 'binhDinh', legality: 'unknown', illegalReason: null },
+      ],
+      targetKinds: [],
+    };
+
+    const discover: DiscoverChoicesFn = () => pending;
+    const pool = createNodePool(20, PLAYER_COUNT);
+    pool.allocate();
+
+    const node = makeDecisionNode(stubPartialMove());
+    const result = expandDecisionNode(node, pool, makeCtx(discover));
+
+    assert.equal(result.kind, 'expanded');
+    if (result.kind !== 'expanded') return;
+
+    // chooseOne params must remain scalar (not wrapped in array).
+    for (const child of result.children) {
+      const paramVal = child.partialMove?.params?.province;
+      assert.ok(!Array.isArray(paramVal), `expected scalar, got array: ${String(paramVal)}`);
+      assert.equal(typeof paramVal, 'string');
+    }
+    assert.equal(result.children[0]!.partialMove?.params?.province, 'quangTri');
+    assert.equal(result.children[1]!.partialMove?.params?.province, 'binhDinh');
+  });
+
+  it('successive chooseN expansions accumulate values in the array', () => {
+    // Simulate: first expansion picks from 3 options, second expansion
+    // picks from remaining 2 options (building on already-selected array).
+    const discover: DiscoverChoicesFn = (_def, _state, probeMove) => {
+      const currentArr = probeMove.params.$targets;
+      if (Array.isArray(currentArr) && currentArr.length >= 1) {
+        // Second expansion: remaining options after first pick.
+        return {
+          kind: 'pending',
+          complete: false,
+          decisionPlayer: PLAYER_0,
+          decisionKey: dk('$targets'),
+          name: 'chooseTargets',
+          type: 'chooseN',
+          min: 1,
+          max: 3,
+          selected: currentArr,
+          canConfirm: false,
+          options: [
+            { value: 'b', legality: 'legal', illegalReason: null, resolution: 'exact' },
+            { value: 'c', legality: 'legal', illegalReason: null, resolution: 'exact' },
+          ],
+          targetKinds: [],
+        } as ChoiceRequest;
+      }
+      // First expansion: 3 options.
+      return {
+        kind: 'pending',
+        complete: false,
+        decisionPlayer: PLAYER_0,
+        decisionKey: dk('$targets'),
+        name: 'chooseTargets',
+        type: 'chooseN',
+        min: 1,
+        max: 3,
+        selected: [],
+        canConfirm: false,
+        options: [
+          { value: 'a', legality: 'legal', illegalReason: null, resolution: 'exact' },
+          { value: 'b', legality: 'legal', illegalReason: null, resolution: 'exact' },
+          { value: 'c', legality: 'legal', illegalReason: null, resolution: 'exact' },
+        ],
+        targetKinds: [],
+      } as ChoiceRequest;
+    };
+
+    const pool = createNodePool(30, PLAYER_COUNT);
+    pool.allocate();
+
+    // First expansion: 3 children with single-element arrays.
+    const node = makeDecisionNode(stubPartialMove());
+    const result1 = expandDecisionNode(node, pool, makeCtx(discover));
+    assert.equal(result1.kind, 'expanded');
+    if (result1.kind !== 'expanded') return;
+    assert.equal(result1.children.length, 3);
+
+    // Pick the first child (params.$targets = ['a']) and expand it.
+    const childA = result1.children[0]!;
+    assert.deepEqual(childA.partialMove?.params?.$targets, ['a']);
+
+    const result2 = expandDecisionNode(childA, pool, makeCtx(discover));
+    assert.equal(result2.kind, 'expanded');
+    if (result2.kind !== 'expanded') return;
+
+    // Second expansion should accumulate: ['a'] + each option.
+    assert.equal(result2.children.length, 2);
+    const accumulated = result2.children.map(
+      (c: MctsNode) => c.partialMove?.params?.$targets,
+    );
+    assert.deepEqual(accumulated, [['a', 'b'], ['a', 'c']]);
+  });
+
+  it('chooseN forced-sequence compression produces array param', () => {
+    let callCount = 0;
+    const discover: DiscoverChoicesFn = () => {
+      callCount += 1;
+      if (callCount === 1) {
+        // Single chooseN option → triggers forced-sequence compression.
+        return {
+          kind: 'pending',
+          complete: false,
+          decisionPlayer: PLAYER_0,
+          decisionKey: dk('$targets'),
+          name: 'chooseTargets',
+          type: 'chooseN',
+          min: 1,
+          max: 1,
+          selected: [],
+          canConfirm: false,
+          options: [
+            { value: 'onlyZone', legality: 'legal', illegalReason: null, resolution: 'exact' },
+          ],
+          targetKinds: [],
+        } as ChoiceRequest;
+      }
+      return { kind: 'complete', complete: true };
+    };
+
+    const pool = createNodePool(10, PLAYER_COUNT);
+    const node = makeDecisionNode(stubPartialMove());
+    const result = expandDecisionNode(node, pool, makeCtx(discover));
+
+    // Forced-sequence compression should complete immediately.
+    assert.equal(result.kind, 'complete');
+    if (result.kind !== 'complete') return;
+
+    // The param should be an array, not a bare scalar.
+    const paramVal = node.partialMove?.params?.$targets;
+    assert.ok(Array.isArray(paramVal), `expected array, got ${typeof paramVal}: ${String(paramVal)}`);
+    assert.deepEqual(paramVal, ['onlyZone']);
+  });
+
+  it('chooseN compound SA params produce arrays', () => {
+    const SA_ACTION_ID = 'governSA';
+    const compoundMove: Move = {
+      actionId: ACTION_ID,
+      params: {} as Move['params'],
+      compound: {
+        specialActivity: {
+          actionId: SA_ACTION_ID,
+          params: {} as Move['params'],
+        },
+        timing: 'after' as const,
+      },
+    } as Move;
+
+    const pending: ChoiceRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionPlayer: PLAYER_0,
+      decisionKey: dk('$saTargets'),
+      name: 'chooseSATargets',
+      type: 'chooseN',
+      min: 1,
+      max: 2,
+      selected: [],
+      canConfirm: false,
+      decisionPath: 'compound.specialActivity',
+      options: [
+        { value: 'x', legality: 'legal', illegalReason: null, resolution: 'exact' },
+        { value: 'y', legality: 'legal', illegalReason: null, resolution: 'exact' },
+      ],
+      targetKinds: [],
+    } as ChoiceRequest;
+
+    const discover: DiscoverChoicesFn = () => pending;
+    const pool = createNodePool(20, PLAYER_COUNT);
+    pool.allocate();
+
+    const node = makeDecisionNode(compoundMove);
+    const result = expandDecisionNode(node, pool, makeCtx(discover));
+
+    assert.equal(result.kind, 'expanded');
+    if (result.kind !== 'expanded') return;
+    assert.equal(result.children.length, 2);
+
+    // SA params should be arrays.
+    for (const child of result.children) {
+      const saParam = child.partialMove?.compound?.specialActivity.params.$saTargets;
+      assert.ok(Array.isArray(saParam), `expected array in SA params, got ${typeof saParam}`);
+    }
+    assert.deepEqual(
+      result.children[0]!.partialMove?.compound?.specialActivity.params.$saTargets,
+      ['x'],
+    );
+    assert.deepEqual(
+      result.children[1]!.partialMove?.compound?.specialActivity.params.$saTargets,
+      ['y'],
+    );
   });
 });

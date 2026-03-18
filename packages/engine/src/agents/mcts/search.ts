@@ -505,6 +505,7 @@ export function runOneIteration(
       decisionRoot.decisionPlayer = actingPlayerForDecision;
       decisionRoot.partialMove = pendingMove;
       decisionRoot.decisionBinding = null;
+      decisionRoot.decisionType = null;
       decisionRoot.availability = 1;
       currentNode.children.push(decisionRoot);
     }
@@ -872,7 +873,7 @@ export function runOneIteration(
 
   if (currentNode.nodeKind === 'decision' && currentNode.partialMove !== null) {
     const boundary = resolveDecisionBoundary(
-      def, currentState, currentNode.partialMove, currentRng, runtime, acc,
+      def, currentState, currentNode.partialMove, currentRng, currentNode, runtime, acc,
     );
     if (boundary !== null) {
       currentState = boundary.state;
@@ -1326,6 +1327,27 @@ export function runSearch(
       }
       acc.familyCoverageAtRoot = representedFamilies.size;
       acc.familyStarvationCount = allFamilies.size - representedFamilies.size;
+
+      // Pending-family coverage: count root children that are decision
+      // root nodes (nodeKind === 'decision').  Decision roots are created
+      // specifically for families whose moves require decision expansion
+      // (i.e., "pending" families).  Using structural tree markers rather
+      // than classification cache status avoids false negatives when
+      // classification evolves during the search.
+      const pendingFamilies = new Set<string>();
+      const pendingFamiliesVisited = new Set<string>();
+      for (const child of root.children) {
+        if (child.nodeKind === 'decision' && child.move !== null) {
+          const family = child.move.actionId;
+          pendingFamilies.add(family);
+          if (child.visits > 0) {
+            pendingFamiliesVisited.add(family);
+          }
+        }
+      }
+      acc.pendingFamiliesTotal = Math.max(acc.pendingFamiliesTotal, pendingFamilies.size);
+      acc.pendingFamiliesWithVisits = pendingFamiliesVisited.size;
+      acc.pendingFamiliesStarved = pendingFamilies.size - pendingFamiliesVisited.size;
     }
   }
 

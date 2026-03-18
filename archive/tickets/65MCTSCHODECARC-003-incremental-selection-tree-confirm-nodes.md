@@ -1,6 +1,6 @@
 # 65MCTSCHODECARC-003: Incremental `chooseN` Selection Tree with Confirm Nodes
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/agents/mcts/decision-expansion.ts`
@@ -99,3 +99,10 @@ When the option count at a `chooseN` level exceeds `decisionWideningCap`, progre
 1. `pnpm turbo build && pnpm turbo typecheck && pnpm turbo lint`
 2. `pnpm -F @ludoforge/engine test -- --test-name-pattern="decision-expansion"` (regression)
 3. `pnpm -F @ludoforge/engine test` (full engine unit suite)
+
+## Outcome
+
+- **Completion date**: 2026-03-18
+- **What changed**: `packages/engine/src/agents/mcts/decision-expansion.ts` — extracted `expandChooseOneDecision` (unchanged chooseOne logic) and added `expandChooseNDecision` implementing the incremental selection tree with confirm nodes. Added helper functions: `getAccumulatedChooseN`, `setChooseNParam`, `filterByLexicographicOrder`, `optionValueKey`. Extracted `discoverWithCache` and `emitPoolExhausted` to reduce duplication in forced-sequence compression paths.
+- **Deviations**: None. Implementation follows the ticket design: confirm nodes use `$confirm:` + decisionKey binding prefix, lexicographic ordering uses canonical value key comparison, forced-sequence compression accounts for canConfirm (1 option + confirm = 2 choices, no compression).
+- **Verification**: `pnpm turbo build` clean, `pnpm turbo typecheck` clean, `pnpm turbo lint` clean, all 682 engine tests pass (0 failures), all existing decision-expansion tests pass unchanged.

@@ -77,6 +77,11 @@ describe('createRootNode', () => {
     const root = createRootNode(2);
     assert.equal(root.decisionBinding, null);
   });
+
+  it('returns decisionType: null', () => {
+    const root = createRootNode(2);
+    assert.equal(root.decisionType, null);
+  });
 });
 
 describe('createChildNode', () => {
@@ -150,6 +155,7 @@ describe('createChildNode', () => {
     assert.equal(child.decisionPlayer, null);
     assert.equal(child.partialMove, null);
     assert.equal(child.decisionBinding, null);
+    assert.equal(child.decisionType, null);
   });
 });
 
@@ -160,37 +166,37 @@ describe('createDecisionChildNode', () => {
 
   it('sets nodeKind to decision', () => {
     const root = createRootNode(2);
-    const child = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2);
+    const child = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2, 'chooseOne');
     assert.equal(child.nodeKind, 'decision');
   });
 
   it('populates decisionPlayer', () => {
     const root = createRootNode(2);
-    const child = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2);
+    const child = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2, 'chooseOne');
     assert.equal(child.decisionPlayer, pid);
   });
 
   it('populates partialMove', () => {
     const root = createRootNode(2);
-    const child = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2);
+    const child = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2, 'chooseOne');
     assert.equal(child.partialMove, move);
   });
 
   it('populates decisionBinding', () => {
     const root = createRootNode(2);
-    const child = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2);
+    const child = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2, 'chooseOne');
     assert.equal(child.decisionBinding, 'targetZone');
   });
 
   it('sets heuristicPrior to null (invariant)', () => {
     const root = createRootNode(2);
-    const child = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2);
+    const child = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2, 'chooseOne');
     assert.equal(child.heuristicPrior, null);
   });
 
   it('links parent and adds to parent children', () => {
     const root = createRootNode(2);
-    const child = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2);
+    const child = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2, 'chooseOne');
     assert.equal(child.parent, root);
     assert.equal(root.children.length, 1);
     assert.equal(root.children[0], child);
@@ -198,9 +204,18 @@ describe('createDecisionChildNode', () => {
 
   it('initializes stats to zero', () => {
     const root = createRootNode(2);
-    const child = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2);
+    const child = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2, 'chooseOne');
     assert.equal(child.visits, 0);
     assert.equal(child.availability, 0);
     assert.deepEqual(child.totalReward, [0, 0]);
+  });
+
+  it('stores decisionType from parameter', () => {
+    const root = createRootNode(2);
+    const chooseOneChild = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2, 'chooseOne');
+    assert.equal(chooseOneChild.decisionType, 'chooseOne');
+
+    const chooseNChild = createDecisionChildNode(root, move, moveKey, pid, 'targetZone', 2, 'chooseN');
+    assert.equal(chooseNChild.decisionType, 'chooseN');
   });
 });

@@ -13,6 +13,7 @@ import type { Move } from '../../../../src/kernel/types-core.js';
 import { resolveDecisionBoundary } from '../../../../src/agents/mcts/decision-boundary.js';
 import type { DecisionBoundaryResult } from '../../../../src/agents/mcts/decision-boundary.js';
 import { createAccumulator } from '../../../../src/agents/mcts/diagnostics.js';
+import { createRootNode } from '../../../../src/agents/mcts/node.js';
 import {
   asActionId,
   asPhaseId,
@@ -20,6 +21,9 @@ import {
   type GameDef,
 } from '../../../../src/kernel/index.js';
 import { createRng } from '../../../../src/kernel/prng.js';
+
+/** State-kind root node — no in-progress chooseN bindings to strip. */
+const DUMMY_LEAF = createRootNode(2);
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -91,7 +95,7 @@ describe('decision-boundary: success path', () => {
     const partialMove: Move = { actionId: aid('boost'), params: {} };
     const rng = createRng(123n);
 
-    const result = resolveDecisionBoundary(def, state, partialMove, rng);
+    const result = resolveDecisionBoundary(def, state, partialMove, rng, DUMMY_LEAF);
 
     assert.notEqual(result, null);
     assert.ok('amount' in result!.move.params);
@@ -105,7 +109,7 @@ describe('decision-boundary: success path', () => {
     const partialMove: Move = { actionId: aid('boost'), params: {} };
     const rng = createRng(456n);
 
-    const result = resolveDecisionBoundary(def, state, partialMove, rng);
+    const result = resolveDecisionBoundary(def, state, partialMove, rng, DUMMY_LEAF);
 
     assert.notEqual(result, null);
     assert.notDeepStrictEqual(result!.state, state);
@@ -123,7 +127,7 @@ describe('decision-boundary: failure path', () => {
     const badMove: Move = { actionId: aid('nonexistent'), params: {} };
     const rng = createRng(789n);
 
-    const result = resolveDecisionBoundary(def, state, badMove, rng);
+    const result = resolveDecisionBoundary(def, state, badMove, rng, DUMMY_LEAF);
 
     assert.equal(result, null);
   });
@@ -141,7 +145,7 @@ describe('decision-boundary: diagnostics', () => {
     const rng = createRng(101n);
     const acc = createAccumulator();
 
-    resolveDecisionBoundary(def, state, partialMove, rng, undefined, acc);
+    resolveDecisionBoundary(def, state, partialMove, rng, DUMMY_LEAF, undefined, acc);
 
     assert.equal(acc.applyMoveCalls, 1);
     assert.equal(acc.decisionCompletionsInRollout, 1);
@@ -154,7 +158,7 @@ describe('decision-boundary: diagnostics', () => {
     const rng = createRng(202n);
     const acc = createAccumulator();
 
-    resolveDecisionBoundary(def, state, badMove, rng, undefined, acc);
+    resolveDecisionBoundary(def, state, badMove, rng, DUMMY_LEAF, undefined, acc);
 
     assert.equal(acc.decisionBoundaryFailures, 1);
     assert.equal(acc.applyMoveCalls, 0);
@@ -168,7 +172,7 @@ describe('decision-boundary: diagnostics', () => {
     const rng = createRng(303n);
     const acc = createAccumulator();
 
-    resolveDecisionBoundary(def, state, partialMove, rng, undefined, acc);
+    resolveDecisionBoundary(def, state, partialMove, rng, DUMMY_LEAF, undefined, acc);
 
     assert.equal(acc.hybridRolloutPlies, 0);
     assert.equal(acc.forcedMovePlies, 0);

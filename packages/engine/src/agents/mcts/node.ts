@@ -69,6 +69,9 @@ export interface MctsNode {
 
   /** Binding name for the current decision step.  Null for state nodes. */
   decisionBinding: string | null;
+
+  /** Type of decision at this node.  Null for state nodes and root. */
+  decisionType: 'chooseOne' | 'chooseN' | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -95,6 +98,7 @@ export function createRootNode(playerCount: number): MctsNode {
     decisionPlayer: null,
     partialMove: null,
     decisionBinding: null,
+    decisionType: null,
   };
 }
 
@@ -126,6 +130,7 @@ export function createChildNode(
     decisionPlayer: null,
     partialMove: null,
     decisionBinding: null,
+    decisionType: null,
   };
   parent.children.push(child);
   return child;
@@ -151,6 +156,7 @@ export function createDecisionChildNode(
   decisionPlayer: PlayerId,
   decisionBinding: string,
   playerCount: number,
+  decisionType: 'chooseOne' | 'chooseN',
 ): MctsNode {
   const child: MctsNode = {
     move,
@@ -166,6 +172,7 @@ export function createDecisionChildNode(
     decisionPlayer,
     partialMove: move,
     decisionBinding,
+    decisionType,
   };
   parent.children.push(child);
   return child;

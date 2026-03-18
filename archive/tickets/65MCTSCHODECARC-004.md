@@ -1,9 +1,9 @@
 # 65MCTSCHODECARC-004: Update `postCompleteSelectedMove` and Search for `chooseN` Trees
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
-**Effort**: Medium
-**Engine Changes**: Yes — `packages/engine/src/agents/mcts/mcts-agent.ts`, potentially `search.ts`
+**Effort**: Medium (verification only — no code changes needed)
+**Engine Changes**: None — existing implementation from tickets 001-003 handles all cases correctly
 **Deps**: 65MCTSCHODECARC-001, 65MCTSCHODECARC-002, 65MCTSCHODECARC-003
 
 ## Problem

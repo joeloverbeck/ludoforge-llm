@@ -47,6 +47,7 @@ function resetNode(node: MctsNode, playerCount: number): void {
   node.decisionPlayer = null;
   node.partialMove = null;
   node.decisionBinding = null;
+  node.decisionType = null;
 }
 
 /**

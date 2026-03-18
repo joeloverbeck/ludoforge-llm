@@ -54,6 +54,7 @@ function makeMockChild(
     decisionPlayer: null,
     partialMove: null,
     decisionBinding: null,
+    decisionType: null,
     provenResult: null,
     heuristicPrior: null,
   } as unknown as MctsNode;

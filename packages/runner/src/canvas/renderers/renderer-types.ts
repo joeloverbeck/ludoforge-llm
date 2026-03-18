@@ -12,10 +12,10 @@ import type { LayoutRole } from '../../config/visual-config-types.js';
 import type { CardTemplate } from '../../config/visual-config-types.js';
 import type {
   RenderAdjacency,
-  RenderModel,
   RenderToken,
   RenderZone,
 } from '../../model/render-model';
+import type { PresentationOverlayNode, PresentationRegionNode } from '../../presentation/presentation-scene.js';
 
 export interface ZoneRenderer {
   update(
@@ -53,18 +53,12 @@ export interface AdjacencyRenderer {
 }
 
 export interface TableOverlayRenderer {
-  update(
-    renderModel: RenderModel | null,
-    positions: ReadonlyMap<string, Position>,
-  ): void;
+  update(items: readonly PresentationOverlayNode[]): void;
   destroy(): void;
 }
 
 export interface RegionBoundaryRenderer {
-  update(
-    zones: readonly RenderZone[],
-    positions: ReadonlyMap<string, Position>,
-  ): void;
+  update(regions: readonly PresentationRegionNode[]): void;
   destroy(): void;
 }
 

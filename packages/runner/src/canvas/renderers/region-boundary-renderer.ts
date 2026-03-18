@@ -1,18 +1,14 @@
 import { Container, Graphics, Text, type TextStyleOptions } from 'pixi.js';
 
-import type { Position } from '../geometry';
-import type { RenderZone } from '../../model/render-model';
-import type { VisualConfigProvider } from '../../config/visual-config-provider.js';
-import type { RegionStyle } from '../../config/visual-config-types.js';
 import type { RegionBoundaryRenderer } from './renderer-types';
 import { convexHull, type Point } from '../geometry/convex-hull.js';
 import { padHull, roundHullCorners } from '../geometry/hull-padding.js';
 import { drawDashedPolygon } from '../geometry/dashed-polygon.js';
+import type { PresentationRegionNode } from '../../presentation/presentation-scene.js';
 
 const DEFAULT_FILL_ALPHA = 0.15;
 const DEFAULT_BORDER_STYLE = 'dashed' as const;
 const DEFAULT_BORDER_WIDTH = 4;
-const DEFAULT_GROUP_BY_ATTRIBUTE = 'country';
 const DEFAULT_PADDING = 40;
 const DEFAULT_CORNER_RADIUS = 30;
 const DASH_WIDTH_MULTIPLIER = 5;
@@ -28,7 +24,7 @@ interface RegionGraphics {
 
 export function createRegionBoundaryRenderer(
   parentContainer: Container,
-  options: { readonly visualConfigProvider: VisualConfigProvider },
+  _unusedLegacyOptions?: unknown,
 ): RegionBoundaryRenderer {
   const regionMap = new Map<string, RegionGraphics>();
 
@@ -70,35 +66,24 @@ export function createRegionBoundaryRenderer(
   }
 
   return {
-    update(zones: readonly RenderZone[], positions: ReadonlyMap<string, Position>): void {
-      const config = options.visualConfigProvider.getRegionBoundaryConfig();
-      if (config === null) {
+    update(regions): void {
+      if (regions.length === 0) {
         clearAll();
         return;
       }
-
-      const groupByAttribute = config.groupByAttribute ?? DEFAULT_GROUP_BY_ATTRIBUTE;
-      const padding = config.padding ?? DEFAULT_PADDING;
-      const cornerRadius = config.cornerRadius ?? DEFAULT_CORNER_RADIUS;
-      const styles = config.styles ?? {};
-
-      const groups = groupZonesByAttribute(zones, groupByAttribute);
       const activeKeys = new Set<string>();
 
-      for (const [attributeValue, groupZones] of groups.entries()) {
-        const style = styles[attributeValue];
-        if (style === undefined) {
-          continue;
-        }
-
-        const cornerPoints = collectZoneCornerPoints(groupZones, positions, options.visualConfigProvider);
-        if (cornerPoints.length === 0) {
-          continue;
-        }
-
-        activeKeys.add(attributeValue);
-        const region = getOrCreateRegion(attributeValue);
-        drawRegion(region, cornerPoints, style, padding, cornerRadius);
+      for (const regionNode of regions) {
+        activeKeys.add(regionNode.key);
+        const region = getOrCreateRegion(regionNode.key);
+        drawRegion(
+          region,
+          regionNode.cornerPoints,
+          regionNode.label,
+          regionNode.style,
+          DEFAULT_PADDING,
+          DEFAULT_CORNER_RADIUS,
+        );
       }
 
       removeStaleRegions(activeKeys);
@@ -110,65 +95,11 @@ export function createRegionBoundaryRenderer(
   };
 }
 
-function groupZonesByAttribute(
-  zones: readonly RenderZone[],
-  attribute: string,
-): ReadonlyMap<string, readonly RenderZone[]> {
-  const groups = new Map<string, RenderZone[]>();
-
-  for (const zone of zones) {
-    const value = zone.attributes[attribute];
-    if (typeof value !== 'string') {
-      continue;
-    }
-
-    let group = groups.get(value);
-    if (group === undefined) {
-      group = [];
-      groups.set(value, group);
-    }
-    group.push(zone);
-  }
-
-  return groups;
-}
-
-function collectZoneCornerPoints(
-  zones: readonly RenderZone[],
-  positions: ReadonlyMap<string, Position>,
-  visualConfigProvider: VisualConfigProvider,
-): readonly Point[] {
-  const points: Point[] = [];
-
-  for (const zone of zones) {
-    const pos = positions.get(zone.id);
-    if (pos === undefined) {
-      continue;
-    }
-
-    const visual = visualConfigProvider.resolveZoneVisual(
-      zone.id,
-      zone.category,
-      zone.attributes as Readonly<Record<string, unknown>>,
-    );
-    const halfW = visual.width / 2;
-    const halfH = visual.height / 2;
-
-    points.push(
-      { x: pos.x - halfW, y: pos.y - halfH },
-      { x: pos.x + halfW, y: pos.y - halfH },
-      { x: pos.x + halfW, y: pos.y + halfH },
-      { x: pos.x - halfW, y: pos.y + halfH },
-    );
-  }
-
-  return points;
-}
-
 function drawRegion(
   region: RegionGraphics,
   cornerPoints: readonly Point[],
-  style: RegionStyle,
+  labelText: string,
+  style: PresentationRegionNode['style'],
   padding: number,
   cornerRadius: number,
 ): void {
@@ -204,7 +135,6 @@ function drawRegion(
   }
 
   // Label — auto-rotate and scale to span the hull's longest axis
-  const labelText = style.label ?? '';
   if (labelText.length === 0) {
     label.text = '';
     return;

@@ -2,11 +2,13 @@ import type { StoreApi } from 'zustand';
 
 import type { RenderAdjacency, RenderModel, RenderToken, RenderVariable, RenderZone } from '../model/render-model';
 import type { GameStore } from '../store/game-store';
+import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { adjacenciesVisuallyEqual, tokensVisuallyEqual, zonesVisuallyEqual } from './canvas-equality';
 import { EMPTY_INTERACTION_HIGHLIGHTS, type InteractionHighlights } from './interaction-highlights.js';
 import type { PositionStore } from './position-store';
 import type { AdjacencyRenderer, RegionBoundaryRenderer, TableOverlayRenderer, TokenRenderer, ZoneRenderer } from './renderers/renderer-types';
 import type { ViewportResult } from './viewport-setup';
+import { buildPresentationScene } from '../presentation/presentation-scene.js';
 
 interface CanvasSnapshotSelectorResult {
   readonly zones: readonly RenderZone[];
@@ -31,6 +33,7 @@ interface SelectorSubscribeStore<TState> extends StoreApi<TState> {
 export interface CanvasUpdaterDeps {
   readonly store: StoreApi<GameStore>;
   readonly positionStore: PositionStore;
+  readonly visualConfigProvider: VisualConfigProvider;
   readonly zoneRenderer: ZoneRenderer;
   readonly adjacencyRenderer: AdjacencyRenderer;
   readonly tokenRenderer: TokenRenderer;
@@ -56,20 +59,24 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
 
   let started = false;
   let latestSnapshot = selectCanvasSnapshot(store.getState());
-  let latestOverlayRenderModel = store.getState().renderModel;
+  let latestRenderModel = store.getState().renderModel;
   let latestPositionSnapshot = deps.positionStore.getSnapshot();
   let latestInteractionHighlights = deps.getInteractionHighlights?.() ?? EMPTY_INTERACTION_HIGHLIGHTS;
   let animationPlaying = store.getState().animationPlaying;
   let queuedSnapshot: CanvasSnapshotSelectorResult | null = null;
 
-  const applySnapshot = (snapshot: CanvasSnapshotSelectorResult): void => {
-    const highlightedZoneIDs = new Set(latestInteractionHighlights.zoneIDs);
-    const highlightedTokenIDs = new Set(latestInteractionHighlights.tokenIDs);
-    deps.regionBoundaryRenderer?.update(snapshot.zones, latestPositionSnapshot.positions);
-    deps.zoneRenderer.update(snapshot.zones, latestPositionSnapshot.positions, highlightedZoneIDs);
-    deps.adjacencyRenderer.update(snapshot.adjacencies, latestPositionSnapshot.positions);
-    deps.tokenRenderer.update(snapshot.tokens, snapshot.zones, deps.zoneRenderer.getContainerMap(), highlightedTokenIDs);
-    deps.tableOverlayRenderer?.update(latestOverlayRenderModel, latestPositionSnapshot.positions);
+  const applySnapshot = (_snapshot: CanvasSnapshotSelectorResult): void => {
+    const scene = buildPresentationScene({
+      renderModel: latestRenderModel,
+      positions: latestPositionSnapshot.positions,
+      visualConfigProvider: deps.visualConfigProvider,
+      interactionHighlights: latestInteractionHighlights,
+    });
+    deps.regionBoundaryRenderer?.update(scene.regions);
+    deps.zoneRenderer.update(scene.zones, latestPositionSnapshot.positions, scene.highlightedZoneIDs);
+    deps.adjacencyRenderer.update(scene.adjacencies, latestPositionSnapshot.positions);
+    deps.tokenRenderer.update(scene.tokens, scene.zones, deps.zoneRenderer.getContainerMap(), scene.highlightedTokenIDs);
+    deps.tableOverlayRenderer?.update(scene.overlays);
   };
 
   const maybeApplySnapshot = (snapshot: CanvasSnapshotSelectorResult): void => {
@@ -91,17 +98,24 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
 
       unsubscribeCallbacks.push(
         store.subscribe(selectCanvasSnapshot, (snapshot) => {
+          latestRenderModel = store.getState().renderModel;
           maybeApplySnapshot(snapshot);
         }, { equalityFn: canvasSnapshotsEqual }),
       );
 
       unsubscribeCallbacks.push(
         store.subscribe((state) => state.renderModel, (renderModel) => {
-          latestOverlayRenderModel = renderModel;
+          latestRenderModel = renderModel;
           if (animationPlaying) {
             return;
           }
-          deps.tableOverlayRenderer?.update(renderModel, latestPositionSnapshot.positions);
+          const scene = buildPresentationScene({
+            renderModel,
+            positions: latestPositionSnapshot.positions,
+            visualConfigProvider: deps.visualConfigProvider,
+            interactionHighlights: latestInteractionHighlights,
+          });
+          deps.tableOverlayRenderer?.update(scene.overlays);
         }, { equalityFn: overlaysVisuallyEqual }),
       );
 
@@ -135,7 +149,7 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
       latestPositionSnapshot = deps.positionStore.getSnapshot();
       deps.viewport.updateWorldBounds(latestPositionSnapshot.bounds);
       deps.viewport.centerOnBounds(latestPositionSnapshot.bounds);
-      latestOverlayRenderModel = store.getState().renderModel;
+      latestRenderModel = store.getState().renderModel;
       latestSnapshot = selectCanvasSnapshot(store.getState());
       if (animationPlaying) {
         queuedSnapshot = latestSnapshot;

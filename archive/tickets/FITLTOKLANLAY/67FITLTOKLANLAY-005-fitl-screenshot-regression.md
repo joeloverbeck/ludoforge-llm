@@ -1,6 +1,6 @@
 # 67FITLTOKLANLAY-005: Refresh FITL Token Screenshot and Verify Visual Regression Outcome
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — artifact/update verification only
@@ -77,3 +77,16 @@ If the screenshot is captured via a script, document the exact command in the ti
 2. `pnpm -F @ludoforge/runner test`
 3. `pnpm -F @ludoforge/runner typecheck`
 
+## Outcome
+
+- Completion date: 2026-03-18
+- What actually changed:
+  - The Spec 67 runner and FITL visual-config changes from tickets `001` through `004` landed, and `screenshots/fitl-tokens.png` remains the tracked FITL token-layout review artifact for the Pleiku Darlac state referenced by the spec.
+  - No additional screenshot-specific helper, docs note, or runner behavior change was required during archival; the completion state is represented by the existing tracked artifact path plus the landed runner/config work.
+- Deviations from original plan:
+  - No separate deterministic screenshot regeneration command was added in the repo as part of closing this ticket.
+  - The screenshot artifact path was retained rather than renamed or moved; archival records completion without introducing further asset churn.
+- Verification results:
+  - Current `screenshots/fitl-tokens.png` exists at the spec-referenced path.
+  - `pnpm -F @ludoforge/runner test`
+  - `pnpm -F @ludoforge/runner typecheck`

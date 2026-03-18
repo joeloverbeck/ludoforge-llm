@@ -267,10 +267,7 @@ export async function createGameCanvasRuntime(
 
   const adjacencyRenderer = deps.createAdjacencyRenderer(gameCanvas.layers.adjacencyLayer, options.visualConfigProvider);
 
-  const regionBoundaryRenderer = createRegionBoundaryRenderer(
-    gameCanvas.layers.regionLayer,
-    { visualConfigProvider: options.visualConfigProvider },
-  );
+  const regionBoundaryRenderer = createRegionBoundaryRenderer(gameCanvas.layers.regionLayer);
 
   const tokenRenderStyleProvider = new VisualConfigTokenRenderStyleProvider(options.visualConfigProvider);
   const tokenRenderer = deps.createTokenRenderer(gameCanvas.layers.tokenGroup, tokenRenderStyleProvider, {
@@ -306,6 +303,7 @@ export async function createGameCanvasRuntime(
   const canvasUpdater = deps.createCanvasUpdater({
     store: options.store,
     positionStore,
+    visualConfigProvider: options.visualConfigProvider,
     zoneRenderer,
     adjacencyRenderer,
     tokenRenderer,

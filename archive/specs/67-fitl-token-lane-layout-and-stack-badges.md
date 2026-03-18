@@ -1,5 +1,7 @@
 # Spec 67 — FITL Token Lane Layout and Stack Badges
 
+**Status**: ✅ COMPLETED
+
 **Depends on**: Spec 42 (per-game visual config)
 
 ## 0. Problem Statement
@@ -343,3 +345,24 @@ This spec is complete when all of the following are true:
 3. Stack count badges are larger, black-outlined, and visibly farther toward the token's top-right corner.
 4. The behavior is configured through runner visual-config schema and provider resolution, not FITL-specific renderer branching.
 5. `GameDef`, simulation, compiler, and kernel remain unchanged and game-agnostic.
+
+## Outcome
+
+- Completion date: 2026-03-18
+- What actually changed:
+  - Runner visual-config schema/types now support declarative token presentation metadata, stack badge styling, and zone token layout presets/assignments for Spec 67-style token lanes.
+  - `VisualConfigProvider` and visual-config ref validation now resolve and validate token presentation, zone token layouts, and stack badge styles through a single runner-owned path.
+  - The token renderer now consumes resolved lane layout and badge metadata to place regular tokens and bases in separate centered lanes, scale base geometry, and render provider-driven stack badges.
+  - FITL production `visual-config.yaml` now opts `city` and `province` spaces into the two-lane map-space layout and classifies FITL force tokens into `regular` and `base` presentation groups.
+  - `screenshots/fitl-tokens.png` remains the tracked visual-review artifact referenced by this spec.
+- Deviations from original plan:
+  - Delivery landed across the supporting `67FITLTOKLANLAY-001` through `67FITLTOKLANLAY-005` ticket sequence rather than as one spec-scoped change.
+  - No engine/compiler/kernel/simulation changes were needed; the work stayed entirely in runner config, provider, renderer, tests, and the FITL visual artifact path.
+- Verification results:
+  - `pnpm -F @ludoforge/runner test -- visual-config-schema.test.ts`
+  - `pnpm -F @ludoforge/runner test -- visual-config-provider.test.ts validate-visual-config-refs.test.ts`
+  - `pnpm -F @ludoforge/runner test -- token-renderer.test.ts canvas-updater.test.ts GameCanvas.test.ts`
+  - `pnpm -F @ludoforge/runner test -- visual-config-files.test.ts visual-config-provider.test.ts`
+  - `pnpm -F @ludoforge/runner test`
+  - `pnpm -F @ludoforge/runner typecheck`
+  - `pnpm -F @ludoforge/runner lint`

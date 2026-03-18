@@ -7,6 +7,7 @@ import { createCanvasUpdater } from '../../src/canvas/canvas-updater';
 import { createPositionStore } from '../../src/canvas/position-store';
 import type { AdjacencyRenderer, TableOverlayRenderer, TokenRenderer, ZoneRenderer } from '../../src/canvas/renderers/renderer-types';
 import type { ViewportResult } from '../../src/canvas/viewport-setup';
+import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import type { RenderModel, RenderToken, RenderZone } from '../../src/model/render-model';
 import type { GameStore } from '../../src/store/game-store';
 
@@ -148,6 +149,8 @@ function createViewportMock(): ViewportResult {
   };
 }
 
+const TEST_VISUAL_CONFIG_PROVIDER = new VisualConfigProvider(null);
+
 describe('createCanvasUpdater', () => {
   it('start subscribes to store and position store', () => {
     const store = createCanvasTestStore({
@@ -164,6 +167,7 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -188,6 +192,7 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -220,6 +225,7 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -254,6 +260,7 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -293,6 +300,7 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -333,6 +341,7 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -355,6 +364,7 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -391,6 +401,7 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -423,6 +434,7 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -466,6 +478,7 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -501,6 +514,7 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,

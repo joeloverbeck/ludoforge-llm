@@ -13,6 +13,7 @@ import type { GameDef, GameState, Move, TerminalResult } from '../../kernel/type
 import type { GameDefRuntime } from '../../kernel/gamedef-runtime.js';
 import type { MctsConfig } from './config.js';
 import type { MutableDiagnosticsAccumulator } from './diagnostics.js';
+import { recordHeuristicEvalSpread } from './diagnostics.js';
 import type { MoveClassification } from './materialization.js';
 import type { MctsSearchVisitor } from './visitor.js';
 import type { MoveKey } from './move-key.js';
@@ -472,10 +473,14 @@ export function getOrComputeRewards(
 
   // Compute
   const tStart = acc !== undefined ? performance.now() : 0;
-  const result = evaluateForAllPlayers(def, state, config.heuristicTemperature, runtime);
+  const diagOut = acc !== undefined ? {} as import('./evaluate.js').EvalDiagnosticsOut : undefined;
+  const result = evaluateForAllPlayers(def, state, config.heuristicTemperature, runtime, diagOut);
   if (acc !== undefined) {
     acc.evaluateStateCalls += 1;
     acc.evaluateTimeMs += performance.now() - tStart;
+    if (diagOut?.rawScores !== undefined) {
+      recordHeuristicEvalSpread(acc, diagOut.rawScores, result);
+    }
   }
 
   // Cache

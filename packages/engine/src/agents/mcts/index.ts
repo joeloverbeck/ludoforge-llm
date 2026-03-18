@@ -25,6 +25,7 @@ export { rollout, simulateToCutoff } from './rollout.js';
 export type { SimulationResult } from './rollout.js';
 
 export { terminalToRewards, sigmoid, evaluateForAllPlayers } from './evaluate.js';
+export type { EvalDiagnosticsOut } from './evaluate.js';
 
 export { createMastStats, updateMastStats, mastSelectMove } from './mast.js';
 export type { MastStats, MastEntry } from './mast.js';
@@ -45,7 +46,7 @@ export type {
   ClassificationStatus, CachedLegalMoveInfo, CachedClassificationEntry,
 } from './state-cache.js';
 
-export { collectDiagnostics, createAccumulator } from './diagnostics.js';
+export { collectDiagnostics, createAccumulator, recordHeuristicEvalSpread } from './diagnostics.js';
 export type { MctsSearchDiagnostics, MutableDiagnosticsAccumulator } from './diagnostics.js';
 
 export type {

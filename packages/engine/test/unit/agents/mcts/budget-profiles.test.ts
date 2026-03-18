@@ -107,27 +107,36 @@ describe('resolveBudgetProfile', () => {
   it('interactive: ~200 iterations, 2s time limit, heuristic leaf eval, lazy classification', () => {
     const cfg = resolveBudgetProfile('interactive');
     assert.equal(cfg.iterations, 200);
+    assert.equal(cfg.minIterations, 8);
     assert.equal(cfg.timeLimitMs, 2_000);
     assert.deepEqual(cfg.leafEvaluator, { type: 'heuristic' });
     assert.equal(cfg.classificationPolicy, 'lazy');
     assert.equal(cfg.fallbackPolicy, 'policyOnly');
+    assert.equal(cfg.rootStopMinVisits, 4);
+    assert.equal(cfg.heuristicTemperature, 2_000);
+    assert.equal(cfg.heuristicBackupAlpha, 0.3);
   });
 
   it('turn: ~1500 iterations, 10s time limit, family widening enabled', () => {
     const cfg = resolveBudgetProfile('turn');
     assert.equal(cfg.iterations, 1500);
+    assert.equal(cfg.minIterations, 64);
     assert.equal(cfg.timeLimitMs, 10_000);
     assert.deepEqual(cfg.leafEvaluator, { type: 'heuristic' });
     assert.equal(cfg.wideningMode, 'familyThenMove');
     assert.equal(cfg.fallbackPolicy, 'sampledOnePly');
+    assert.equal(cfg.heuristicTemperature, 3_000);
   });
 
   it('background: ~5000 iterations, 30s time limit', () => {
     const cfg = resolveBudgetProfile('background');
     assert.equal(cfg.iterations, 5000);
+    assert.equal(cfg.minIterations, 128);
     assert.equal(cfg.timeLimitMs, 30_000);
     assert.deepEqual(cfg.leafEvaluator, { type: 'heuristic' });
     assert.equal(cfg.fallbackPolicy, 'sampledOnePly');
+    assert.equal(cfg.heuristicBackupAlpha, 0.4);
+    assert.equal(cfg.heuristicTemperature, 5_000);
   });
 
   it('analysis: large iterations, may use rollout (auto evaluator)', () => {
@@ -305,8 +314,11 @@ describe('MctsAgent budget profile constructor', () => {
   it('accepts a budget profile name string', () => {
     const agent = new MctsAgent('interactive');
     assert.equal(agent.config.iterations, 200);
+    assert.equal(agent.config.minIterations, 8);
     assert.equal(agent.config.timeLimitMs, 2_000);
     assert.equal(agent.config.fallbackPolicy, 'policyOnly');
+    assert.equal(agent.config.heuristicTemperature, 2_000);
+    assert.equal(agent.config.heuristicBackupAlpha, 0.3);
   });
 
   it('accepts "turn" profile', () => {
@@ -384,6 +396,19 @@ describe('budget profile invariants', () => {
     // dispatchFallback with 'none' returns null — tested above.
   });
 
+  it('interactive has lower minIterations and rootStopMinVisits than turn', () => {
+    const interactive = resolveBudgetProfile('interactive');
+    const turn = resolveBudgetProfile('turn');
+    assert.ok(
+      interactive.minIterations < turn.minIterations,
+      `interactive.minIterations (${interactive.minIterations}) should be < turn.minIterations (${turn.minIterations})`,
+    );
+    assert.ok(
+      interactive.rootStopMinVisits! < turn.rootStopMinVisits!,
+      `interactive.rootStopMinVisits (${interactive.rootStopMinVisits}) should be < turn.rootStopMinVisits (${turn.rootStopMinVisits})`,
+    );
+  });
+
   it('no game-specific logic in profiles', () => {
     // All profiles should only use game-agnostic MctsConfig fields.
     for (const name of BUDGET_PROFILE_NAMES) {
@@ -396,7 +421,8 @@ describe('budget profile invariants', () => {
             iterations: 1, minIterations: 1, timeLimitMs: 1, maxSimulationDepth: 1,
             leafEvaluator: 1, classificationPolicy: 1, wideningMode: 1, fallbackPolicy: 1,
             decisionWideningCap: 1, decisionDepthMultiplier: 1, rootStopMinVisits: 1,
-            heuristicBackupAlpha: 1, explorationConstant: 1, progressiveWideningK: 1,
+            heuristicBackupAlpha: 1, heuristicTemperature: 1,
+            explorationConstant: 1, progressiveWideningK: 1,
             progressiveWideningAlpha: 1,
           }),
           `profile "${name}" has unexpected key "${key}" — check for game-specific logic`,

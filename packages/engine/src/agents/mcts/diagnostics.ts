@@ -106,6 +106,14 @@ export interface MutableDiagnosticsAccumulator {
   pendingFamiliesWithVisits: number;
   pendingFamilyQuotaUsed: number;
 
+  // Raw heuristic score spread tracking (per evaluateForAllPlayers call)
+  rawHeuristicScoreMin: number;
+  rawHeuristicScoreMax: number;
+  postSigmoidRewardMin: number;
+  postSigmoidRewardMax: number;
+  /** Number of evaluateForAllPlayers calls that contributed to min/max tracking. */
+  heuristicEvalSamples: number;
+
   // Aggregation arrays (for computing averages)
   leafRewardSpans: number[];
   selectionDepths: number[];
@@ -183,9 +191,39 @@ export function createAccumulator(): MutableDiagnosticsAccumulator {
     pendingFamiliesWithVisits: 0,
     pendingFamilyQuotaUsed: 0,
 
+    rawHeuristicScoreMin: Infinity,
+    rawHeuristicScoreMax: -Infinity,
+    postSigmoidRewardMin: Infinity,
+    postSigmoidRewardMax: -Infinity,
+    heuristicEvalSamples: 0,
+
     leafRewardSpans: [],
     selectionDepths: [],
   };
+}
+
+/**
+ * Update the accumulator's raw/post-sigmoid score tracking after an
+ * `evaluateForAllPlayers()` call.
+ *
+ * @param acc          - mutable accumulator
+ * @param rawScores    - raw evaluateState outputs (before centering + sigmoid)
+ * @param rewards      - post-sigmoid reward vector returned by evaluateForAllPlayers
+ */
+export function recordHeuristicEvalSpread(
+  acc: MutableDiagnosticsAccumulator,
+  rawScores: readonly number[],
+  rewards: readonly number[],
+): void {
+  for (const r of rawScores) {
+    if (r < acc.rawHeuristicScoreMin) acc.rawHeuristicScoreMin = r;
+    if (r > acc.rawHeuristicScoreMax) acc.rawHeuristicScoreMax = r;
+  }
+  for (const r of rewards) {
+    if (r < acc.postSigmoidRewardMin) acc.postSigmoidRewardMin = r;
+    if (r > acc.postSigmoidRewardMax) acc.postSigmoidRewardMax = r;
+  }
+  acc.heuristicEvalSamples += 1;
 }
 
 // ---------------------------------------------------------------------------
@@ -290,6 +328,14 @@ export interface MctsSearchDiagnostics {
   readonly pendingFamiliesTotal?: number;
   readonly pendingFamiliesWithVisits?: number;
   readonly pendingFamilyQuotaUsed?: number;
+
+  // Raw heuristic score spread (from evaluateForAllPlayers instrumentation)
+  readonly rawHeuristicScoreMin?: number;
+  readonly rawHeuristicScoreMax?: number;
+  readonly rawHeuristicScoreSpread?: number;
+  readonly postSigmoidRewardMin?: number;
+  readonly postSigmoidRewardMax?: number;
+  readonly postSigmoidRewardSpread?: number;
 
   // Derived averages
   readonly avgSelectionDepth?: number;
@@ -535,6 +581,18 @@ export function collectDiagnostics(
     pendingFamiliesTotal: accumulator.pendingFamiliesTotal,
     pendingFamiliesWithVisits: accumulator.pendingFamiliesWithVisits,
     pendingFamilyQuotaUsed: accumulator.pendingFamilyQuotaUsed,
+
+    // Raw heuristic score spread
+    ...(accumulator.heuristicEvalSamples > 0
+      ? {
+          rawHeuristicScoreMin: accumulator.rawHeuristicScoreMin,
+          rawHeuristicScoreMax: accumulator.rawHeuristicScoreMax,
+          rawHeuristicScoreSpread: accumulator.rawHeuristicScoreMax - accumulator.rawHeuristicScoreMin,
+          postSigmoidRewardMin: accumulator.postSigmoidRewardMin,
+          postSigmoidRewardMax: accumulator.postSigmoidRewardMax,
+          postSigmoidRewardSpread: accumulator.postSigmoidRewardMax - accumulator.postSigmoidRewardMin,
+        }
+      : {}),
 
     ...(avgSelectionDepth !== undefined ? { avgSelectionDepth } : {}),
     ...(avgLeafRewardSpan !== undefined ? { avgLeafRewardSpan } : {}),

@@ -34,7 +34,7 @@ import type { SimulationResult } from './rollout.js';
 import { terminalToRewards, evaluateForAllPlayers } from './evaluate.js';
 import { sampleBeliefState } from './belief.js';
 import { canActivateSolver, updateSolverResult, selectSolverAwareChild } from './solver.js';
-import { createAccumulator, collectDiagnostics } from './diagnostics.js';
+import { createAccumulator, collectDiagnostics, recordHeuristicEvalSpread } from './diagnostics.js';
 import type { MastStats } from './mast.js';
 import { createMastStats, updateMastStats } from './mast.js';
 import type { StateInfoCache } from './state-cache.js';
@@ -249,9 +249,16 @@ export function runOneIteration(
               selectionMoveKeys.push(completedMoveKey);
 
               // Capture heuristic prior at the new state node.
-              stateChild.heuristicPrior = [...evaluateForAllPlayers(
-                def, currentState, config.heuristicTemperature, runtime,
-              )];
+              {
+                const priorDiagOut = acc !== undefined ? {} as import('./evaluate.js').EvalDiagnosticsOut : undefined;
+                const priorRewards = evaluateForAllPlayers(
+                  def, currentState, config.heuristicTemperature, runtime, priorDiagOut,
+                );
+                stateChild.heuristicPrior = [...priorRewards];
+                if (acc !== undefined && priorDiagOut?.rawScores !== undefined) {
+                  recordHeuristicEvalSpread(acc, priorDiagOut.rawScores, priorRewards);
+                }
+              }
             } catch (e: unknown) {
               // applyMove failed on completed decision — emit failure, backprop from here.
               if (config.visitor?.onEvent) {
@@ -747,9 +754,16 @@ export function runOneIteration(
         selectionMoveKeys.push(chosen.moveKey);
 
         // Capture heuristic prior at expansion time (for optional blended selection).
-        childNode.heuristicPrior = [...evaluateForAllPlayers(
-          def, currentState, config.heuristicTemperature, runtime,
-        )];
+        {
+          const priorDiagOut = acc !== undefined ? {} as import('./evaluate.js').EvalDiagnosticsOut : undefined;
+          const priorRewards = evaluateForAllPlayers(
+            def, currentState, config.heuristicTemperature, runtime, priorDiagOut,
+          );
+          childNode.heuristicPrior = [...priorRewards];
+          if (acc !== undefined && priorDiagOut?.rawScores !== undefined) {
+            recordHeuristicEvalSpread(acc, priorDiagOut.rawScores, priorRewards);
+          }
+        }
 
         if (acc !== undefined) {
           acc.expansionTimeMs += performance.now() - expStart;
@@ -958,10 +972,14 @@ export function runOneIteration(
         ? getOrComputeRewards(stateCache, def, simResult.state, config, runtime, maxCacheEntries, acc)
         : (() => {
             const tStart = acc !== undefined ? performance.now() : 0;
-            const result = evaluateForAllPlayers(def, simResult.state, config.heuristicTemperature, runtime);
+            const diagOut = acc !== undefined ? {} as import('./evaluate.js').EvalDiagnosticsOut : undefined;
+            const result = evaluateForAllPlayers(def, simResult.state, config.heuristicTemperature, runtime, diagOut);
             if (acc !== undefined) {
               acc.evaluateStateCalls += 1;
               acc.evaluateTimeMs += performance.now() - tStart;
+              if (diagOut?.rawScores !== undefined) {
+                recordHeuristicEvalSpread(acc, diagOut.rawScores, result);
+              }
             }
             return result;
           })();

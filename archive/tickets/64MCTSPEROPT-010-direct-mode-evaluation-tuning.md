@@ -1,6 +1,6 @@
 # 64MCTSPEROPT-010: Direct-Mode Evaluation Signal Tuning
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — MCTS config defaults, diagnostics
@@ -91,3 +91,18 @@ For profiles with small iteration budgets, a non-zero `heuristicBackupAlpha` (e.
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-18
+- **What changed**:
+  - `diagnostics.ts`: Added `rawHeuristicScoreMin/Max`, `postSigmoidRewardMin/Max`, `heuristicEvalSamples` to accumulator; spread fields to `MctsSearchDiagnostics`; `recordHeuristicEvalSpread()` helper; spread derivation in `collectDiagnostics()`.
+  - `evaluate.ts`: Added `EvalDiagnosticsOut` interface and optional `diagnosticsOut` parameter to `evaluateForAllPlayers()` (return type unchanged).
+  - `state-cache.ts`: `getOrComputeRewards()` captures raw scores and records to accumulator.
+  - `search.ts`: All 3 `evaluateForAllPlayers` call sites instrumented with diagnostics capture.
+  - `config.ts`: `interactive` — `minIterations` 16→8, `heuristicTemperature: 2_000`, `heuristicBackupAlpha: 0.3`; `turn` — `heuristicTemperature: 3_000`; `background` — `heuristicTemperature: 5_000`.
+  - `index.ts`: Exported new `EvalDiagnosticsOut` type and `recordHeuristicEvalSpread`.
+  - New test: `evaluation-diagnostics.test.ts` (9 tests).
+  - Updated test: `budget-profiles.test.ts` (new assertions for tuned values, profile comparison, allowed-keys invariant).
+- **Deviations**: `analysis` profile kept default temperature (10_000) since it uses `leafEvaluator: auto` (may use rollout). `interactive.rootStopMinVisits` was already 4 from prior work.
+- **Verification**: `pnpm turbo build` ✅, `pnpm turbo typecheck` ✅, `pnpm -F @ludoforge/engine test` ✅ (5122 tests, 0 failures).

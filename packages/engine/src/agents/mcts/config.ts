@@ -298,7 +298,7 @@ export type MctsBudgetProfile = 'interactive' | 'turn' | 'background' | 'analysi
 export const BUDGET_PROFILES: Readonly<Record<MctsBudgetProfile, Partial<MctsConfig>>> = Object.freeze({
   interactive: Object.freeze({
     iterations: 200,
-    minIterations: 16,
+    minIterations: 8,
     timeLimitMs: 2_000,
     maxSimulationDepth: 16,
     leafEvaluator: Object.freeze({ type: 'heuristic' as const }),
@@ -307,6 +307,8 @@ export const BUDGET_PROFILES: Readonly<Record<MctsBudgetProfile, Partial<MctsCon
     decisionWideningCap: 8,
     decisionDepthMultiplier: 2,
     rootStopMinVisits: 4,
+    heuristicTemperature: 2_000,
+    heuristicBackupAlpha: 0.3,
   }),
   turn: Object.freeze({
     iterations: 1500,
@@ -318,6 +320,7 @@ export const BUDGET_PROFILES: Readonly<Record<MctsBudgetProfile, Partial<MctsCon
     fallbackPolicy: 'sampledOnePly' as const,
     decisionWideningCap: 12,
     decisionDepthMultiplier: 4,
+    heuristicTemperature: 3_000,
   }),
   background: Object.freeze({
     iterations: 5000,
@@ -329,6 +332,7 @@ export const BUDGET_PROFILES: Readonly<Record<MctsBudgetProfile, Partial<MctsCon
     heuristicBackupAlpha: 0.4,
     decisionWideningCap: 16,
     decisionDepthMultiplier: 6,
+    heuristicTemperature: 5_000,
   }),
   analysis: Object.freeze({
     iterations: 20_000,

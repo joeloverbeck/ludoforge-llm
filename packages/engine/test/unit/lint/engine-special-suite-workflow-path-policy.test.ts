@@ -7,8 +7,6 @@ import { parse } from 'yaml';
 import { findRepoRootFile } from '../../helpers/lint-policy-helpers.js';
 
 // Workflows with the full shared path filter set (packages/engine/**, data/games/**, scripts/**, etc.).
-// MCTS workflows intentionally use narrower filters (packages/engine/src/agents/**)
-// to avoid expensive test runs on unrelated engine changes — they are excluded here.
 const WORKFLOW_FILES = [
   '.github/workflows/engine-e2e-all.yml',
   '.github/workflows/engine-fitl-events.yml',

@@ -1,6 +1,6 @@
 # 67AIRETIRE-003: Remove MCTS CI workflows, e2e lanes, and diagnostics
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — engine package scripts, test-lane manifest, e2e suites, lint policy tests
@@ -83,3 +83,19 @@ Delete the MCTS and MCTS-FITL e2e suites, their helpers, and any diagnostics/rep
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo lint`
 3. `pnpm turbo test`
+
+## Outcome
+
+- Completed: 2026-03-18
+- What actually changed:
+  - Deleted all six dedicated `.github/workflows/engine-mcts-*.yml` workflow files.
+  - Removed MCTS-specific engine package scripts, lane manifest branches, run-test dispatch entries, and the MCTS/MCTS-FITL e2e suites plus diagnostics helpers that existed only for those lanes.
+  - Rewrote the engine lane taxonomy test to assert the surviving fast/slow/all e2e partition and updated workflow-path policy coverage to stop expecting removed MCTS workflow paths.
+  - Updated `README.md` so CI and local e2e documentation references only live lane commands.
+- Deviations from original plan:
+  - No changes were required in `.github/workflows/ci.yml` or `.github/workflows/engine-e2e-all.yml` because they no longer referenced the retired MCTS lane contracts.
+  - The resulting lane model is cleaner than the original proposal because `test:e2e` now explicitly means the fast lane while `test:e2e:all` aggregates fast plus slow coverage without any MCTS compatibility naming.
+- Verification results:
+  - `pnpm -F @ludoforge/engine test` ✅
+  - `pnpm turbo lint` ✅
+  - `pnpm turbo test` ✅

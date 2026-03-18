@@ -1,6 +1,6 @@
 # 67AIRETIRE-002: Remove runner MCTS seats, worker paths, and UI
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — trace seat-type contracts only
@@ -75,3 +75,19 @@ Remove MCTS-specific thinking/overlay/dashboard/state plumbing if it has no non-
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm -F @ludoforge/runner typecheck`
 3. `pnpm turbo test`
+
+## Outcome
+
+- Completed: 2026-03-18
+- What actually changed:
+  - Removed all `ai-mcts-*` seat literals from runner session, store, UI, and trace-facing contracts.
+  - Deleted the worker-side dedicated agent request path and the runner bridge logic that only existed to support MCTS seats.
+  - Updated the pre-game seat picker to expose only `Human`, `AI - Greedy`, and `AI - Random`, with non-human defaults now set to `ai-greedy`.
+  - Simplified AI move policy and game-store execution so all AI turns go through the live in-process agent selection path.
+- Deviations from original plan:
+  - The worker routing coverage was removed rather than remapped because the cleaner architecture is to eliminate the dead worker abstraction instead of preserving a compatibility branch.
+  - This ticket landed in the same implementation pass as `67AIRETIRE-001` and `67AIRETIRE-003` so the repository remained buildable and testable throughout the retirement.
+- Verification results:
+  - `pnpm -F @ludoforge/runner test` ✅
+  - `pnpm turbo typecheck` ✅
+  - `pnpm turbo test` ✅

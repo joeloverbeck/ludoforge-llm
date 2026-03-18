@@ -23,7 +23,7 @@ import type { PlayerSeatConfig } from '../session/session-types.js';
 import { assertLifecycleTransition, lifecycleFromTerminal, type GameLifecycle } from './lifecycle-transition.js';
 import type { PartialChoice, PlayerSeat, RenderContext } from './store-types.js';
 import type { AnimationDetailLevel, AnimationPlaybackSpeed } from '../animation/animation-types.js';
-import { isMctsSeat, resolveAiPlaybackDelayMs, resolveAiSeat, selectAiMove, type AiPlaybackSpeed } from './ai-move-policy.js';
+import { resolveAiPlaybackDelayMs, resolveAiSeat, selectAiMove, type AiPlaybackSpeed } from './ai-move-policy.js';
 import type { GameWorkerAPI, OperationStamp, WorkerError } from '../worker/game-worker-api.js';
 import type { AiDecisionTrace, TraceBus } from '@ludoforge/engine/trace';
 
@@ -801,31 +801,14 @@ export function createGameStore(
         let legalMoveResult = state.legalMoveResult ?? await bridge.enumerateLegalMoves();
         const activeSeat = resolveAiSeat(state.playerSeats.get(state.renderModel.activePlayerID));
 
-        // MCTS seats delegate move selection to the worker (off-main-thread search).
-        // Simple seats (random/greedy) select client-side.
-        let selectedMove: Move;
-        let candidateCount: number;
-        let selectedIndex: number;
-
-        if (isMctsSeat(activeSeat)) {
-          if (legalMoveResult.moves.length === 0) {
-            guardSetAndDerive(ctx, { legalMoveResult, error: null });
-            return 'no-legal-moves';
-          }
-          const agentResult = await bridge.requestAgentMove(activeSeat);
-          selectedMove = agentResult.move;
-          candidateCount = agentResult.candidateCount;
-          selectedIndex = 0; // MCTS does not expose a meaningful index
-        } else {
-          const aiSelection = selectAiMove(activeSeat, legalMoveResult.moves);
-          if (aiSelection === null) {
-            guardSetAndDerive(ctx, { legalMoveResult, error: null });
-            return 'no-legal-moves';
-          }
-          selectedMove = aiSelection.move;
-          candidateCount = aiSelection.candidateCount;
-          selectedIndex = aiSelection.selectedIndex;
+        const aiSelection = selectAiMove(activeSeat, legalMoveResult.moves);
+        if (aiSelection === null) {
+          guardSetAndDerive(ctx, { legalMoveResult, error: null });
+          return 'no-legal-moves';
         }
+        let selectedMove: Move = aiSelection.move;
+        let candidateCount: number = aiSelection.candidateCount;
+        let selectedIndex: number = aiSelection.selectedIndex;
 
         let templateMoveResult = await bridge.applyTemplateMove(selectedMove, undefined, toOperationStamp(ctx));
         if (templateMoveResult.outcome === 'uncompletable') {
@@ -845,7 +828,7 @@ export function createGameStore(
         }
 
         // Defense-in-depth: retry with fresh legal moves on illegal outcome
-        if (templateMoveResult.outcome === 'illegal' && !isMctsSeat(activeSeat)) {
+        if (templateMoveResult.outcome === 'illegal') {
           for (let retry = 0; retry < MAX_AI_ILLEGAL_RETRIES; retry += 1) {
             const freshLegalMoveResult = await bridge.enumerateLegalMoves();
             const retrySelection = selectAiMove(activeSeat, freshLegalMoveResult.moves);

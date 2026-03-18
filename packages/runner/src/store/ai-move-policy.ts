@@ -2,13 +2,7 @@ import type { Move } from '@ludoforge/engine/runtime';
 
 import type { PlayerSeat } from './store-types.js';
 
-export type SimpleAiSeat = Extract<PlayerSeat, 'ai-random' | 'ai-greedy'>;
-export type MctsAiSeat = Extract<PlayerSeat, 'ai-mcts-fast' | 'ai-mcts-default' | 'ai-mcts-strong'>;
-export type AiSeat = SimpleAiSeat | MctsAiSeat;
-
-export function isMctsSeat(seat: string): seat is MctsAiSeat {
-  return seat === 'ai-mcts-fast' || seat === 'ai-mcts-default' || seat === 'ai-mcts-strong';
-}
+export type AiSeat = Extract<PlayerSeat, 'ai-random' | 'ai-greedy'>;
 export type AiPlaybackSpeed = '1x' | '2x' | '4x';
 
 export interface AiMoveSelectionResult {
@@ -63,9 +57,6 @@ export function selectAiMove(
 export function resolveAiSeat(seat: PlayerSeat | undefined): AiSeat {
   if (seat === 'ai-greedy') {
     return 'ai-greedy';
-  }
-  if (seat !== undefined && isMctsSeat(seat)) {
-    return seat;
   }
   return 'ai-random';
 }

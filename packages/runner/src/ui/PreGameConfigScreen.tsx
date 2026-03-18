@@ -18,11 +18,8 @@ type SeatType = PlayerSeatConfig['type'];
 
 const SEAT_OPTIONS: ReadonlyArray<{ readonly value: SeatType; readonly label: string }> = [
   { value: 'human', label: 'Human' },
-  { value: 'ai-mcts-default', label: 'AI - MCTS' },
-  { value: 'ai-mcts-fast', label: 'AI - MCTS (Fast)' },
-  { value: 'ai-mcts-strong', label: 'AI - MCTS (Strong)' },
-  { value: 'ai-random', label: 'AI - Random' },
   { value: 'ai-greedy', label: 'AI - Greedy' },
+  { value: 'ai-random', label: 'AI - Random' },
 ];
 
 export function PreGameConfigScreen({ gameId, descriptor, onStartGame, onBack }: PreGameConfigScreenProps): ReactElement {
@@ -93,7 +90,7 @@ export function PreGameConfigScreen({ gameId, descriptor, onStartGame, onBack }:
 
       <section aria-label="Seat assignments" className={styles.seats}>
         {Array.from({ length: playerCount }, (_, seatIndex) => {
-          const seatType = seatTypes[seatIndex] ?? 'ai-mcts-default';
+          const seatType = seatTypes[seatIndex] ?? 'ai-greedy';
           return (
             <div key={seatIndex} className={styles.seatRow} data-testid={`pre-game-seat-row-${seatIndex}`}>
               <span data-testid={`pre-game-seat-label-${seatIndex}`}>
@@ -169,13 +166,13 @@ function resolveSeatLabel(
 }
 
 function buildSeatTypes(playerCount: number): readonly SeatType[] {
-  return Array.from({ length: playerCount }, (_, index) => (index === 0 ? 'human' : 'ai-mcts-default'));
+  return Array.from({ length: playerCount }, (_, index) => (index === 0 ? 'human' : 'ai-greedy'));
 }
 
 function resizeSeatTypes(current: readonly SeatType[], playerCount: number): readonly SeatType[] {
   const next = current.slice(0, playerCount);
   while (next.length < playerCount) {
-    next.push(next.length === 0 ? 'human' : 'ai-mcts-default');
+    next.push(next.length === 0 ? 'human' : 'ai-greedy');
   }
   return next;
 }

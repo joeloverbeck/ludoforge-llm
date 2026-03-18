@@ -955,6 +955,57 @@ export const runFitlMctsSearch = (
   };
 };
 
+/**
+ * Run a single MCTS search preserving the profile's `timeLimitMs`.
+ * Used by budget-competence tests that need wall-clock enforcement.
+ */
+export const runFitlMctsTimedSearch = (
+  def: ValidatedGameDef,
+  state: GameState,
+  playerId: PlayerId,
+  profile: MctsBudgetProfile,
+): FitlSearchResult & { readonly timeLimitMs: number; readonly legalMoveIds: readonly string[] } => {
+  const baseConfig = resolveBudgetProfile(profile);
+  const config = { ...baseConfig, diagnostics: true };
+
+  const runtime = createGameDefRuntime(def);
+  const rng = createRng(BigInt(42 + 9999));
+  const moves = legalMoves(def, state, undefined, runtime);
+  if (moves.length < 2) {
+    throw new Error(`Expected ≥2 legal moves at search state, got ${moves.length}`);
+  }
+
+  const observation = derivePlayerObservation(def, state, playerId);
+  const root = createRootNode(state.playerCount);
+  const poolCapacity = Math.max(config.iterations + 1, moves.length * 4);
+  const pool = createNodePool(poolCapacity, state.playerCount);
+  const [searchRng] = fork(rng);
+
+  const start = Date.now();
+  const result = runSearch(
+    root, def, state, observation, playerId,
+    config, searchRng, moves, runtime, pool,
+  );
+  const elapsedMs = Date.now() - start;
+
+  const bestChild = selectRootDecision(root, playerId);
+
+  if (result.diagnostics === undefined) {
+    throw new Error('Expected diagnostics to be present (config.diagnostics was true)');
+  }
+
+  const legalMoveIds = moves.map((m) => String(m.actionId));
+
+  return {
+    move: bestChild.move as Move,
+    iterations: result.iterations,
+    diagnostics: result.diagnostics,
+    elapsedMs,
+    timeLimitMs: baseConfig.timeLimitMs ?? Infinity,
+    legalMoveIds,
+  };
+};
+
 // ---------------------------------------------------------------------------
 // Assertion helpers
 // ---------------------------------------------------------------------------

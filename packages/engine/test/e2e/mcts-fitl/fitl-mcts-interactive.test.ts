@@ -67,6 +67,7 @@
  *    intercept *before* `applyMove`.
  * 4. Pool is adequate at 201 for 200 iterations.
  */
+import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { applyMove } from '../../../src/kernel/index.js';
@@ -112,6 +113,35 @@ describe('FITL MCTS interactive-profile competence', { skip: !RUN_MCTS_FITL_E2E 
         const state = replayToDecisionPoint(def, baseState, scenario.turnIndex, scenario.moveIndex);
         const result = runFitlMctsSearch(def, state, scenario.playerId, 'interactive', visitor);
         assertMoveCategory(result.move, INTERACTIVE_ACCEPTABLE[i]!, scenario.label);
+      });
+    }
+  });
+
+  describe('pending-family coverage', () => {
+    // Pending FITL operations (rally, march, attack, train) must not be starved.
+    const PENDING_FAMILIES = ['rally', 'march', 'attack', 'train'];
+
+    for (const scenario of CATEGORY_SCENARIOS) {
+      it(`${scenario.label} — pending families receive visits`, () => {
+        const state = replayToDecisionPoint(def, baseState, scenario.turnIndex, scenario.moveIndex);
+        const result = runFitlMctsSearch(def, state, scenario.playerId, 'interactive', visitor);
+        const d = result.diagnostics;
+
+        // At least one pending family must have received visits
+        assert.ok(
+          (d.pendingFamiliesWithVisits ?? 0) > 0,
+          `${scenario.label}: pendingFamiliesWithVisits should be >0, got ${d.pendingFamiliesWithVisits ?? 0}`,
+        );
+
+        // At least one pending operation family has >0 root-level visits
+        const visits = d.rootChildVisits;
+        const pendingWithVisits = PENDING_FAMILIES.filter((family) =>
+          Object.keys(visits).some((key) => key.startsWith(family) && visits[key]! > 0),
+        );
+        assert.ok(
+          pendingWithVisits.length > 0,
+          `${scenario.label}: expected at least one of [${PENDING_FAMILIES.join(', ')}] to have root visits, got none. Visits: ${JSON.stringify(visits)}`,
+        );
       });
     }
   });

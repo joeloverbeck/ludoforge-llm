@@ -852,6 +852,163 @@ describe('deriveRenderModel state metadata', () => {
     });
   });
 
+  it('filters out options with actionPreconditionFailed from discreteOne', () => {
+    const def = compileFixture();
+    const state = initialState(def, 230, 2).state;
+
+    const choicePending: ChoicePendingRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionKey: asDecisionKey('target'),
+      name: 'target',
+      type: 'chooseOne',
+      options: [
+        { value: 'table:none', legality: 'legal', illegalReason: null },
+        { value: 'blocked-action', legality: 'illegal', illegalReason: 'actionPreconditionFailed' },
+        { value: 'blocked-zone', legality: 'illegal', illegalReason: 'emptyDomain' },
+      ],
+      targetKinds: [],
+    };
+
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        choicePending,
+        selectedAction: asActionId('tick'),
+        partialMove: { actionId: asActionId('tick'), params: {} },
+      }),
+    );
+
+    expect(model.choiceUi).toEqual({
+      kind: 'discreteOne',
+      decisionKey: asDecisionKey('target'),
+      options: [
+        expectedRenderChoiceOption('table:none', 'Table None', 'legal', null),
+        expectedRenderChoiceOption('blocked-zone', 'Blocked Zone', 'illegal', 'emptyDomain'),
+      ],
+    });
+  });
+
+  it('filters out options with actionPreconditionFailed from discreteMany', () => {
+    const def = compileFixture();
+    const state = initialState(def, 230, 2).state;
+
+    const choicePending: ChoicePendingRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionKey: asDecisionKey('target'),
+      name: 'target',
+      type: 'chooseN',
+      min: 1,
+      max: 3,
+      selected: [],
+      canConfirm: false,
+      options: [
+        { value: 'table:none', legality: 'legal', illegalReason: null },
+        { value: 'blocked-action', legality: 'illegal', illegalReason: 'actionPreconditionFailed' },
+      ],
+      targetKinds: [],
+    };
+
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        choicePending,
+        selectedAction: asActionId('tick'),
+        partialMove: { actionId: asActionId('tick'), params: {} },
+      }),
+    );
+
+    expect(model.choiceUi).toEqual({
+      kind: 'discreteMany',
+      decisionKey: asDecisionKey('target'),
+      options: [
+        expectedRenderChoiceOption('table:none', 'Table None', 'legal', null),
+      ],
+      min: 1,
+      max: 3,
+      selectedChoiceValueIds: [],
+      canConfirm: false,
+    });
+  });
+
+  it('preserves all options when none have actionPreconditionFailed', () => {
+    const def = compileFixture();
+    const state = initialState(def, 230, 2).state;
+
+    const choicePending: ChoicePendingRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionKey: asDecisionKey('target'),
+      name: 'target',
+      type: 'chooseOne',
+      options: [
+        { value: 'table:none', legality: 'legal', illegalReason: null },
+        { value: 'blocked-zone', legality: 'illegal', illegalReason: 'pipelineLegalityFailed' },
+      ],
+      targetKinds: ['zone'],
+    };
+
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        choicePending,
+        selectedAction: asActionId('tick'),
+        partialMove: { actionId: asActionId('tick'), params: {} },
+      }),
+    );
+
+    expect(model.choiceUi).toEqual({
+      kind: 'discreteOne',
+      decisionKey: asDecisionKey('target'),
+      options: [
+        expectedRenderChoiceOption('table:none', 'Table None', 'legal', null, {
+          kind: 'zone',
+          entityId: 'table:none',
+          displaySource: 'zone',
+        }),
+        expectedRenderChoiceOption('blocked-zone', 'Blocked Zone', 'illegal', 'pipelineLegalityFailed'),
+      ],
+    });
+  });
+
+  it('returns empty options when all have actionPreconditionFailed', () => {
+    const def = compileFixture();
+    const state = initialState(def, 230, 2).state;
+
+    const choicePending: ChoicePendingRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionKey: asDecisionKey('target'),
+      name: 'target',
+      type: 'chooseOne',
+      options: [
+        { value: 'a', legality: 'illegal', illegalReason: 'actionPreconditionFailed' },
+        { value: 'b', legality: 'illegal', illegalReason: 'actionPreconditionFailed' },
+      ],
+      targetKinds: [],
+    };
+
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        choicePending,
+        selectedAction: asActionId('tick'),
+        partialMove: { actionId: asActionId('tick'), params: {} },
+      }),
+    );
+
+    expect(model.choiceUi).toEqual({
+      kind: 'discreteOne',
+      decisionKey: asDecisionKey('target'),
+      options: [],
+    });
+  });
+
   it('resolves token target labels and metadata using projected tokens', () => {
     const def = compileFixture();
     const baseState = initialState(def, 2310, 2).state;

@@ -65,7 +65,7 @@ describe('useActionTooltip', () => {
     });
 
     expect(describeAction).toHaveBeenCalledTimes(1);
-    expect(describeAction).toHaveBeenCalledWith('action-1');
+    expect(describeAction).toHaveBeenCalledWith('action-1', undefined);
   });
 
   it('discards stale response when hovering a new action before previous resolves', async () => {

@@ -1374,7 +1374,7 @@ function deriveChoiceUi(
 
     const tokensById = new Map(tokens.map((token) => [token.id, token] as const));
     const playersById = new Map(players.map((player) => [player.id, player] as const));
-    const options = pending.options.map((option) => {
+    const allOptions = pending.options.map((option) => {
       const resolved = resolveChoiceOption(
         option.value,
         pending.targetKinds,
@@ -1392,6 +1392,13 @@ function deriveChoiceUi(
         ...(option.resolution !== undefined ? { resolution: option.resolution } : {}),
       };
     });
+
+    // Filter out options that failed action preconditions — these are categorically
+    // unpresentable (the player cannot execute that action at all).
+    const options = allOptions.filter(
+      (opt) => !(opt.legality === 'illegal' && opt.illegalReason === 'actionPreconditionFailed'),
+    );
+
     if (pending.type === 'chooseN') {
       const min = normalizeChoiceBound(pending.min);
       const rawMax = normalizeChoiceBound(pending.max);

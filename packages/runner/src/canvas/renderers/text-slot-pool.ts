@@ -47,6 +47,7 @@ export function createTextSlotPool(parentContainer: Container): TextSlotPool {
 
   function destroyAll(): void {
     for (const slot of slots) {
+      slot.removeFromParent();
       safeDestroyDisplayObject(slot);
     }
     slots.length = 0;

@@ -193,6 +193,31 @@ describe('createTextSlotPool', () => {
     expect(pool.allocatedCount).toBe(0);
   });
 
+  it('destroyAll removes each slot from parent before destroying', () => {
+    const parent = new MockContainer() as unknown as Container;
+    const pool = createTextSlotPool(parent);
+
+    const slot0 = pool.acquire(0) as unknown as InstanceType<typeof MockText>;
+    const slot1 = pool.acquire(1) as unknown as InstanceType<typeof MockText>;
+
+    pool.destroyAll();
+
+    expect(slot0.removeFromParent).toHaveBeenCalledTimes(1);
+    expect(slot1.removeFromParent).toHaveBeenCalledTimes(1);
+  });
+
+  it('destroyAll tolerates slots already removed from parent', () => {
+    const parent = new MockContainer() as unknown as Container;
+    const pool = createTextSlotPool(parent);
+
+    const slot0 = pool.acquire(0) as unknown as InstanceType<typeof MockText>;
+    slot0.parent = null;
+
+    expect(() => pool.destroyAll()).not.toThrow();
+    expect(slot0.removeFromParent).toHaveBeenCalledTimes(1);
+    expect(slot0.destroy).toHaveBeenCalledTimes(1);
+  });
+
   it('new Text instances have eventMode none and interactiveChildren false', () => {
     const parent = new MockContainer() as unknown as Container;
     const pool = createTextSlotPool(parent);

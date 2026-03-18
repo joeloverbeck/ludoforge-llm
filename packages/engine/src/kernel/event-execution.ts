@@ -1,7 +1,7 @@
 import { buildAdjacencyGraph } from './spatial.js';
 import { applyEffects } from './effects.js';
 import { createExecutionEffectContext } from './effect-context.js';
-import { evalCondition } from './eval-condition.js';
+import { evalCondition, evalConditionTraced } from './eval-condition.js';
 import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
 import { createCollector } from './execution-collector.js';
 import { isCardEventMove } from './action-capabilities.js';
@@ -397,16 +397,26 @@ const isPlayableEventContext = (
   }
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = buildRuntimeTableIndex(def);
-  return evalCondition(context.card.playCondition, createEvalContext({
-    def,
-    adjacencyGraph,
-    runtimeTableIndex,
-    state,
-    activePlayer: state.activePlayer,
-    actorPlayer: state.activePlayer,
-    bindings: { ...move.params },
-    resources: createEvalRuntimeResources({ collector: createCollector() }),
-  }));
+  return evalConditionTraced(
+    context.card.playCondition,
+    createEvalContext({
+      def,
+      adjacencyGraph,
+      runtimeTableIndex,
+      state,
+      activePlayer: state.activePlayer,
+      actorPlayer: state.activePlayer,
+      bindings: { ...move.params },
+      resources: createEvalRuntimeResources({ collector: createCollector() }),
+    }),
+    'playCondition',
+    {
+      phase: String(state.currentPhase),
+      eventContext: 'actionEffect',
+      actionId: String(move.actionId),
+      effectPath: 'playCondition',
+    },
+  );
 };
 
 const resolvePlayableEventExecutionContext = (

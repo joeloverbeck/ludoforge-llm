@@ -7,6 +7,7 @@ import {
   selectorCardinalityError,
   typeMismatchError,
 } from './eval-error.js';
+import { emitSelectorTrace } from './execution-collector.js';
 import {
   selectorCardinalityPlayerCountContext,
   selectorCardinalityPlayerResolvedContext,
@@ -97,29 +98,20 @@ function resolveBoundZoneBinding(zoneBinding: ZoneSel, ctx: Pick<ReadContext, 'b
 
 export function resolvePlayerSel(sel: PlayerSel, ctx: ReadContext): readonly PlayerId[] {
   const players = listPlayers(ctx);
+  let resolved: readonly PlayerId[];
 
   if (sel === 'actor') {
-    return sortAndDedupePlayers([ctx.actorPlayer]);
-  }
-
-  if (sel === 'active') {
-    return sortAndDedupePlayers([ctx.activePlayer]);
-  }
-
-  if (sel === 'all') {
-    return players;
-  }
-
-  if (sel === 'allOther') {
-    return players.filter((playerId) => playerId !== ctx.actorPlayer);
-  }
-
-  if (typeof sel === 'object' && sel !== null && 'id' in sel) {
+    resolved = sortAndDedupePlayers([ctx.actorPlayer]);
+  } else if (sel === 'active') {
+    resolved = sortAndDedupePlayers([ctx.activePlayer]);
+  } else if (sel === 'all') {
+    resolved = players;
+  } else if (sel === 'allOther') {
+    resolved = players.filter((playerId) => playerId !== ctx.actorPlayer);
+  } else if (typeof sel === 'object' && sel !== null && 'id' in sel) {
     assertKnownPlayer(sel.id, ctx, sel);
-    return [sel.id];
-  }
-
-  if (typeof sel === 'object' && sel !== null && 'chosen' in sel) {
+    resolved = [sel.id];
+  } else if (typeof sel === 'object' && sel !== null && 'chosen' in sel) {
     const boundValue = ctx.bindings[sel.chosen];
     if (boundValue === undefined) {
       throw missingBindingError(`Chosen player binding not found: ${sel.chosen}`, {
@@ -138,27 +130,40 @@ export function resolvePlayerSel(sel: PlayerSel, ctx: ReadContext): readonly Pla
     }
 
     assertKnownPlayer(boundValue, ctx, sel);
-    return [boundValue];
-  }
-
-  if (typeof sel !== 'object' || sel === null || !('relative' in sel)) {
+    resolved = [boundValue];
+  } else if (typeof sel !== 'object' || sel === null || !('relative' in sel)) {
     throw typeMismatchError('Invalid player selector value', {
       selector: sel,
       expected: 'actor|active|all|allOther|{id}|{chosen}|{relative}',
     });
+  } else {
+    if (players.length === 0) {
+      throw selectorCardinalityError(
+        'Cannot resolve relative selector with zero players',
+        selectorCardinalityPlayerCountContext(sel, ctx.state.playerCount),
+      );
+    }
+
+    const actorIndex = Number(ctx.actorPlayer);
+    const offset = sel.relative === 'left' ? -1 : 1;
+    const wrappedIndex = (actorIndex + offset + players.length) % players.length;
+    resolved = [asPlayerId(wrappedIndex)];
   }
 
-  if (players.length === 0) {
-    throw selectorCardinalityError(
-      'Cannot resolve relative selector with zero players',
-      selectorCardinalityPlayerCountContext(sel, ctx.state.playerCount),
-    );
-  }
+  emitSelectorTrace(ctx.collector, {
+    kind: 'selectorResolution',
+    selectorType: 'player',
+    selectorExpr: sel,
+    candidateCount: players.length,
+    resolvedIds: resolved.map(String),
+    provenance: {
+      phase: String(ctx.state.currentPhase),
+      eventContext: 'actionEffect',
+      effectPath: 'selectorResolution',
+    },
+  });
 
-  const actorIndex = Number(ctx.actorPlayer);
-  const offset = sel.relative === 'left' ? -1 : 1;
-  const wrappedIndex = (actorIndex + offset + players.length) % players.length;
-  return [asPlayerId(wrappedIndex)];
+  return resolved;
 }
 
 export function resolveSinglePlayerSel(sel: PlayerSel, ctx: ReadContext): PlayerId {
@@ -173,7 +178,7 @@ export function resolveSinglePlayerSel(sel: PlayerSel, ctx: ReadContext): Player
   return resolved[0]!;
 }
 
-export function resolveZoneSel(sel: ZoneSel, ctx: ReadContext): readonly ZoneId[] {
+function resolveZoneSelCore(sel: ZoneSel, ctx: ReadContext): readonly ZoneId[] {
   if (sel.startsWith('$')) {
     const boundValue = resolveBoundZoneBinding(sel, ctx);
 
@@ -289,6 +294,23 @@ export function resolveZoneSel(sel: ZoneSel, ctx: ReadContext): readonly ZoneId[
   }
 
   return sortAndDedupeZones(resolved);
+}
+
+export function resolveZoneSel(sel: ZoneSel, ctx: ReadContext): readonly ZoneId[] {
+  const resolved = resolveZoneSelCore(sel, ctx);
+  emitSelectorTrace(ctx.collector, {
+    kind: 'selectorResolution',
+    selectorType: 'zone',
+    selectorExpr: sel,
+    candidateCount: ctx.def.zones.length,
+    resolvedIds: resolved.map(String),
+    provenance: {
+      phase: String(ctx.state.currentPhase),
+      eventContext: 'actionEffect',
+      effectPath: 'selectorResolution',
+    },
+  });
+  return resolved;
 }
 
 export function resolveSingleZoneSel(sel: ZoneSel, ctx: ReadContext): ZoneId {

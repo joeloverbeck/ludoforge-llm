@@ -12,7 +12,8 @@ import { nextInt } from './prng.js';
 import { resolveSinglePlayerSel } from './resolve-selectors.js';
 import { resolveZoneWithNormalization, selectorResolutionFailurePolicyForMode } from './selector-resolution-normalization.js';
 import { findSpaceMarkerConstraintViolation, resolveSpaceMarkerShift } from './space-marker-rules.js';
-import { withTracePath } from './trace-provenance.js';
+import { resolveTraceProvenance, withTracePath } from './trace-provenance.js';
+import { emitDecisionTrace } from './execution-collector.js';
 import { computeTierAdmissibility, type PrioritizedTierEntry } from './prioritized-tier-legality.js';
 import { validateChooseNSelectedSequence } from './choose-n-selected-validation.js';
 import { normalizeChoiceDomain, toChoiceComparableValue, type MembershipScalar } from './value-membership.js';
@@ -671,6 +672,16 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
   }
   const selectedBinding = comparableBindingMap.get(selectedComparable);
 
+  emitDecisionTrace(ctx.collector, {
+    kind: 'decision',
+    decisionKey,
+    type: 'chooseOne',
+    player: choiceDecisionPlayer,
+    options: normalizedOptions,
+    selected: [selected as MoveParamScalar],
+    provenance: resolveTraceProvenance(ctx),
+  });
+
   return {
     state: ctx.state,
     rng: ctx.rng,
@@ -895,6 +906,18 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   for (const selected of selectedSequence) {
     selectedBindings.push(comparableBindingMap.get(selected));
   }
+
+  emitDecisionTrace(ctx.collector, {
+    kind: 'decision',
+    decisionKey,
+    type: 'chooseN',
+    player: choiceDecisionPlayer,
+    options: normalizedOptions,
+    selected: selectedSequence,
+    min: minCardinality,
+    max: clampedMax,
+    provenance: resolveTraceProvenance(ctx),
+  });
 
   return {
     state: ctx.state,

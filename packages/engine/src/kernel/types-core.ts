@@ -908,7 +908,7 @@ export interface EffectTraceProvenance {
   readonly effectPath: string;
 }
 
-export type EffectTraceEntry =
+export type EffectTraceEntryBase =
   | EffectTraceForEach
   | EffectTraceReduce
   | EffectTraceMoveToken
@@ -922,10 +922,58 @@ export type EffectTraceEntry =
   | EffectTraceShuffle
   | EffectTraceLifecycleEvent;
 
+export type EffectTraceEntry = EffectTraceEntryBase & { readonly seq?: number };
+
+// ── Condition / Decision / Selector Trace ─────────────────
+
+export interface ConditionTraceEntry {
+  readonly kind: 'conditionEval';
+  readonly seq: number;
+  readonly condition: ConditionAST;
+  readonly result: boolean;
+  readonly context: 'actionPre' | 'triggerWhen' | 'triggerMatch' | 'ifBranch' | 'costValidation' | 'playCondition';
+  readonly provenance: EffectTraceProvenance;
+}
+
+export interface DecisionTraceEntry {
+  readonly kind: 'decision';
+  readonly seq: number;
+  readonly decisionKey: string;
+  readonly type: 'chooseOne' | 'chooseN';
+  readonly player: PlayerId;
+  readonly options: readonly MoveParamValue[];
+  readonly selected: readonly MoveParamScalar[];
+  readonly min?: number;
+  readonly max?: number;
+  readonly provenance: EffectTraceProvenance;
+}
+
+export interface SelectorTraceEntry {
+  readonly kind: 'selectorResolution';
+  readonly seq: number;
+  readonly selectorType: 'player' | 'zone' | 'token';
+  readonly selectorExpr: unknown;
+  readonly candidateCount: number;
+  readonly resolvedIds: readonly string[];
+  readonly provenance: EffectTraceProvenance;
+}
+
+// ── Move Context ──────────────────────────────────────────
+
+export interface MoveContext {
+  readonly currentCardId?: string;
+  readonly previewCardId?: string;
+  readonly eventSide?: string;
+  readonly turnFlowWindow?: string;
+}
+
 // ── Execution Options & Collector ─────────────────────────
 
 export interface ExecutionOptions {
   readonly trace?: boolean;
+  readonly conditionTrace?: boolean;
+  readonly decisionTrace?: boolean;
+  readonly selectorTrace?: boolean;
   readonly advanceToDecisionPoint?: boolean;
   readonly maxPhaseTransitionsPerMove?: number;
 }
@@ -933,6 +981,10 @@ export interface ExecutionOptions {
 export interface ExecutionCollector {
   readonly warnings: RuntimeWarning[];
   readonly trace: EffectTraceEntry[] | null;
+  readonly conditionTrace: ConditionTraceEntry[] | null;
+  readonly decisionTrace: DecisionTraceEntry[] | null;
+  readonly selectorTrace: SelectorTraceEntry[] | null;
+  nextSeq: number;
 }
 
 export interface ApplyMoveResult {
@@ -940,6 +992,9 @@ export interface ApplyMoveResult {
   readonly triggerFirings: readonly TriggerLogEntry[];
   readonly warnings: readonly RuntimeWarning[];
   readonly effectTrace?: readonly EffectTraceEntry[];
+  readonly conditionTrace?: readonly ConditionTraceEntry[];
+  readonly decisionTrace?: readonly DecisionTraceEntry[];
+  readonly selectorTrace?: readonly SelectorTraceEntry[];
 }
 
 export interface MoveLog {
@@ -951,6 +1006,10 @@ export interface MoveLog {
   readonly triggerFirings: readonly TriggerLogEntry[];
   readonly warnings: readonly RuntimeWarning[];
   readonly effectTrace?: readonly EffectTraceEntry[];
+  readonly conditionTrace?: readonly ConditionTraceEntry[];
+  readonly decisionTrace?: readonly DecisionTraceEntry[];
+  readonly selectorTrace?: readonly SelectorTraceEntry[];
+  readonly moveContext?: MoveContext;
 }
 
 export interface PlayerScore {

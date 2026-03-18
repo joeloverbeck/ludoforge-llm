@@ -5,10 +5,19 @@ function formatDelta(delta: { readonly path: string; readonly before: unknown; r
 }
 
 function formatMoveApplied(event: MoveAppliedEvent): void {
+  const playerLabel = event.seatId ?? `Player ${String(event.player)}`;
   const aiLabel = event.aiDecision !== undefined
     ? ` [${event.aiDecision.seatType}]`
     : '';
-  const header = `Turn ${String(event.turnCount)} | Player ${String(event.player)} | ${String(event.move.actionId)}${aiLabel}`;
+  const contextParts: string[] = [];
+  if (event.moveContext?.currentCardId !== undefined) {
+    contextParts.push(`card=${event.moveContext.currentCardId}`);
+  }
+  if (event.moveContext?.eventSide !== undefined) {
+    contextParts.push(event.moveContext.eventSide);
+  }
+  const contextLabel = contextParts.length > 0 ? ` (${contextParts.join(', ')})` : '';
+  const header = `Turn ${String(event.turnCount)} | ${playerLabel} | ${String(event.move.actionId)}${contextLabel}${aiLabel}`;
 
   console.group(`▶ ${header}`);
 
@@ -36,10 +45,10 @@ function formatMoveApplied(event: MoveAppliedEvent): void {
     for (const entry of event.effectTrace) {
       switch (entry.kind) {
         case 'moveToken':
-          console.log(`moveToken: ${entry.tokenId} → ${entry.to}`);
+          console.log(`moveToken: ${entry.tokenId} ${entry.from} → ${entry.to}`);
           break;
         case 'varChange':
-          console.log(`varChange: ${entry.varName} = ${JSON.stringify(entry.newValue)}`);
+          console.log(`varChange: ${entry.varName} ${JSON.stringify(entry.oldValue)} → ${JSON.stringify(entry.newValue)}`);
           break;
         case 'createToken':
           console.log(`createToken: ${entry.tokenId} (${entry.type}) → ${entry.zone}`);
@@ -57,6 +66,18 @@ function formatMoveApplied(event: MoveAppliedEvent): void {
           console.log(`${entry.kind}`);
           break;
       }
+    }
+    console.groupEnd();
+  }
+
+  if (event.decisionTrace !== undefined && event.decisionTrace.length > 0) {
+    console.group(`▶ Decisions (${String(event.decisionTrace.length)})`);
+    for (const decision of event.decisionTrace) {
+      const selectedStr = decision.selected.map((v) => JSON.stringify(v)).join(', ');
+      const boundsStr = decision.min !== undefined || decision.max !== undefined
+        ? ` [${String(decision.min ?? 0)}..${String(decision.max ?? '∞')}]`
+        : '';
+      console.log(`${decision.type} ${decision.decisionKey}: selected [${selectedStr}] from ${String(decision.options.length)} options${boundsStr}`);
     }
     console.groupEnd();
   }

@@ -524,7 +524,7 @@ describe('texas hold\'em real-play action-by-action replay e2e', () => {
     assert.equal(Number(state.globalVars.pot), 0);
     assert.equal(state.perPlayerVars['5']?.allIn, true);
 
-    const lifecycleResources = createEvalRuntimeResources({ collector: { warnings: [], trace: [] } });
+    const lifecycleResources = createEvalRuntimeResources({ collector: { warnings: [], trace: [], conditionTrace: null, decisionTrace: null, selectorTrace: null, nextSeq: 0 } });
     let guard = 0;
     while (state.currentPhase !== 'showdown' && guard < 24) {
       state = advancePhase({

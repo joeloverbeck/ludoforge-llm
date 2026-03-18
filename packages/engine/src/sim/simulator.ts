@@ -4,6 +4,8 @@ import type {
   Agent,
   ExecutionOptions,
   GameTrace,
+  Move,
+  MoveContext,
   MoveLog,
   Rng,
   SimulationStopReason,
@@ -27,6 +29,33 @@ const validateMaxTurns = (maxTurns: number): void => {
   if (maxTurns < 0) {
     throw new RangeError(`maxTurns must be a non-negative safe integer, received ${String(maxTurns)}`);
   }
+};
+
+const captureMoveContext = (move: Move): MoveContext | undefined => {
+  const actionId = String(move.actionId);
+  const eventSide = actionId.includes('shaded')
+    ? 'shaded'
+    : actionId.includes('unshaded')
+      ? 'unshaded'
+      : undefined;
+  const currentCardId = typeof move.params['$cardId'] === 'string'
+    ? move.params['$cardId']
+    : typeof move.params['cardId'] === 'string'
+      ? move.params['cardId']
+      : undefined;
+  const turnFlowWindow = typeof move.params['__windowId'] === 'string'
+    ? move.params['__windowId']
+    : undefined;
+
+  if (eventSide === undefined && currentCardId === undefined && turnFlowWindow === undefined) {
+    return undefined;
+  }
+
+  return {
+    ...(currentCardId !== undefined ? { currentCardId } : {}),
+    ...(eventSide !== undefined ? { eventSide } : {}),
+    ...(turnFlowWindow !== undefined ? { turnFlowWindow } : {}),
+  };
 };
 
 const createAgentRngByPlayer = (seed: number, playerCount: number): readonly Rng[] =>
@@ -97,6 +126,7 @@ export const runGame = (
     agentRngByPlayer[player] = selected.rng;
 
     const preState = state;
+    const moveContext = captureMoveContext(selected.move);
     const applied = applyMove(validatedDef, state, selected.move, options, runtime);
     state = applied.state;
 
@@ -109,6 +139,10 @@ export const runGame = (
       triggerFirings: applied.triggerFirings,
       warnings: applied.warnings,
       ...(applied.effectTrace !== undefined ? { effectTrace: applied.effectTrace } : {}),
+      ...(applied.conditionTrace !== undefined ? { conditionTrace: applied.conditionTrace } : {}),
+      ...(applied.decisionTrace !== undefined ? { decisionTrace: applied.decisionTrace } : {}),
+      ...(applied.selectorTrace !== undefined ? { selectorTrace: applied.selectorTrace } : {}),
+      ...(moveContext !== undefined ? { moveContext } : {}),
     });
   }
 

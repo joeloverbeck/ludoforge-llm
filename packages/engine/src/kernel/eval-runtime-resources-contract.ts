@@ -4,7 +4,7 @@ import { kernelRuntimeError } from './runtime-error.js';
 const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 const EVAL_RUNTIME_RESOURCE_KEYS = ['collector'] as const;
-const EVAL_RUNTIME_COLLECTOR_KEYS = ['warnings', 'trace'] as const;
+const EVAL_RUNTIME_COLLECTOR_KEYS = ['warnings', 'trace', 'conditionTrace', 'decisionTrace', 'selectorTrace', 'nextSeq'] as const;
 
 const describeType = (value: unknown): string => {
   if (value === null) {

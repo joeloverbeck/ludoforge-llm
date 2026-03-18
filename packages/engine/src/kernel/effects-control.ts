@@ -1,4 +1,4 @@
-import { evalCondition } from './eval-condition.js';
+import { evalConditionTraced } from './eval-condition.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { rebaseIterationPath, withIterationSegment } from './decision-scope.js';
@@ -31,7 +31,12 @@ export const applyIf = (
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const predicate = evalCondition(effect.if.when, evalCtx);
+  const predicate = evalConditionTraced(
+    effect.if.when,
+    evalCtx,
+    'ifBranch',
+    resolveTraceProvenance(ctx),
+  );
 
   if (predicate) {
     const thenResult = applyEffectsWithBudget(effect.if.then, withTracePath(ctx, '.if.then'), budget);

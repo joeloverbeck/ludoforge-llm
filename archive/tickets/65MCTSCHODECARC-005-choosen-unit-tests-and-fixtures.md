@@ -1,6 +1,6 @@
 # 65MCTSCHODECARC-005: `chooseN` Unit Tests and Game Def Fixture
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test-only
@@ -83,3 +83,10 @@ The existing `decision-expansion.test.ts` already uses this pattern — follow i
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern="decision-expansion-choosen"` (targeted)
 2. `pnpm -F @ludoforge/engine test -- --test-name-pattern="decision-expansion"` (regression)
 3. `pnpm turbo build && pnpm turbo typecheck && pnpm turbo lint && pnpm turbo test`
+
+## Outcome
+
+- **Completion date**: 2026-03-18
+- **What changed**: Created `packages/engine/test/unit/agents/mcts/decision-expansion-choosen.test.ts` with all 10 unit tests as specified. No production source code modified.
+- **Deviations**: None. All 10 tests implemented exactly as specified. The fixture helper (`makeChooseNRequest`) was placed inline in the test file rather than a shared module, since it is self-contained and not needed elsewhere.
+- **Verification**: `pnpm turbo build` ✅, `pnpm turbo typecheck` ✅, `pnpm turbo lint` ✅, `pnpm turbo test` ✅ (5208 tests, 0 failures). All 10 new tests pass. All existing `decision-expansion.test.ts` tests pass (no regressions).

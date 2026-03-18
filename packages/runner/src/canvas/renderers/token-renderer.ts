@@ -15,6 +15,7 @@ import { drawTokenShape } from './token-shape-drawer.js';
 import { drawTokenSymbol } from './token-symbol-drawer.js';
 import { drawCardContent, destroyCardContentPool } from './card-template-renderer.js';
 import { safeDestroyContainer } from './safe-destroy.js';
+import { createManagedText } from '../text/text-runtime.js';
 import {
   type ResolvedTokenRenderStyle,
   resolveTokenRenderStyle,
@@ -232,18 +233,16 @@ function createTokenVisualElements(): TokenVisualElements {
   const frontSymbol = new Graphics();
   const backSymbol = new Graphics();
 
-  const countBadge = new Text({
+  const countBadge = createManagedText({
     text: '',
     style: {
       fill: '#f8fafc',
       fontSize: 10,
       fontFamily: 'monospace',
     },
+    anchor: { x: 1, y: 0 },
+    visible: false,
   });
-  countBadge.anchor.set(1, 0);
-  countBadge.eventMode = 'none';
-  countBadge.interactiveChildren = false;
-  countBadge.visible = false;
 
   return {
     frontBase,

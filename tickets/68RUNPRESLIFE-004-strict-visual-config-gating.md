@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: archive/tickets/RUNPRESLIFE/68RUNPRESLIFE-001-presentation-scene-contract.md, tickets/68RUNPRESLIFE-006-complete-scene-migration-for-tokens-and-announcements.md, archive/specs/42-per-game-visual-config.md, archive/tickets/FITLTOKLANLAY/67FITLTOKLANLAY-004-fitl-visual-config-migration.md
+**Deps**: archive/tickets/RUNPRESLIFE/68RUNPRESLIFE-001-presentation-scene-contract.md, archive/tickets/RUNPRESLIFE/68RUNPRESLIFE-006-complete-scene-migration-for-tokens-and-announcements.md, archive/specs/42-per-game-visual-config.md, archive/tickets/FITLTOKLANLAY/67FITLTOKLANLAY-004-fitl-visual-config-migration.md
 
 ## Problem
 

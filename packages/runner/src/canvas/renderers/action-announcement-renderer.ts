@@ -2,7 +2,7 @@ import { gsap } from 'gsap';
 import { Text, type Container } from 'pixi.js';
 
 import type { PresentationActionAnnouncementSpec } from '../../presentation/action-announcement-presentation.js';
-import { safeDestroyDisplayObject } from './safe-destroy.js';
+import { createManagedText, destroyManagedText } from '../text/text-runtime.js';
 
 const FADE_IN_SECONDS = 0.3;
 const HOLD_SECONDS = 1.5;
@@ -41,8 +41,7 @@ export function createActionAnnouncementRenderer(
     }
 
     playerState.active.timeline.kill();
-    playerState.active.textNode.removeFromParent();
-    safeDestroyDisplayObject(playerState.active.textNode);
+    destroyManagedText(playerState.active.textNode);
     playerState.active = null;
   };
 
@@ -59,7 +58,8 @@ export function createActionAnnouncementRenderer(
       return;
     }
 
-    const textNode = new Text({
+    const textNode = createManagedText({
+      parent: options.parentContainer,
       text: nextSpec.text,
       style: {
         fill: '#ffffff',
@@ -77,18 +77,16 @@ export function createActionAnnouncementRenderer(
           angle: Math.PI / 2,
         },
       },
+      anchor: { x: 0.5, y: 0.5 },
+      position: { x: nextSpec.anchor.x, y: nextSpec.anchor.y },
     });
-    textNode.anchor.set(0.5, 0.5);
-    textNode.position.set(nextSpec.anchor.x, nextSpec.anchor.y);
     textNode.alpha = 0;
-    options.parentContainer.addChild(textNode);
 
     const fadeOutTargetY = nextSpec.anchor.y - ANNOUNCEMENT_RISE;
     const timeline = gsap.timeline({
       onComplete: () => {
         const currentPlayerState = announcementByPlayer.get(playerKey);
-        textNode.removeFromParent();
-        safeDestroyDisplayObject(textNode);
+        destroyManagedText(textNode);
         if (currentPlayerState !== undefined) {
           currentPlayerState.active = null;
           maybeRenderNext(playerKey);

@@ -1,8 +1,8 @@
 import type { Container } from 'pixi.js';
 
 import type { CardTemplate } from '../../config/visual-config-types.js';
+import { createManagedText, createTextSlotPool, type TextSlotPool } from '../text/text-runtime.js';
 import { type ResolvedCardField, resolveCardTemplateFields } from '../../config/card-field-resolver.js';
-import { createTextSlotPool, type TextSlotPool } from './text-slot-pool.js';
 
 type CardFieldValue = number | string | boolean;
 
@@ -12,7 +12,12 @@ const poolByContainer = new WeakMap<Container, TextSlotPool>();
 function getOrCreatePool(container: Container): TextSlotPool {
   let pool = poolByContainer.get(container);
   if (pool === undefined) {
-    pool = createTextSlotPool(container);
+    pool = createTextSlotPool({
+      parentContainer: container,
+      createText: () => createManagedText({
+        style: { fill: '#f8fafc', fontSize: 12, fontFamily: 'monospace' },
+      }),
+    });
     poolByContainer.set(container, pool);
   }
   return pool;

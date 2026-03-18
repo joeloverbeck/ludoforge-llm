@@ -5,6 +5,7 @@ import { convexHull, type Point } from '../geometry/convex-hull.js';
 import { padHull, roundHullCorners } from '../geometry/hull-padding.js';
 import { drawDashedPolygon } from '../geometry/dashed-polygon.js';
 import type { PresentationRegionNode } from '../../presentation/presentation-scene.js';
+import { createManagedText, destroyManagedText } from '../text/text-runtime.js';
 
 const DEFAULT_FILL_ALPHA = 0.15;
 const DEFAULT_BORDER_STYLE = 'dashed' as const;
@@ -31,7 +32,7 @@ export function createRegionBoundaryRenderer(
   function clearAll(): void {
     for (const entry of regionMap.values()) {
       entry.graphics.destroy();
-      entry.label.destroy();
+      destroyManagedText(entry.label);
     }
     regionMap.clear();
   }
@@ -43,8 +44,11 @@ export function createRegionBoundaryRenderer(
     }
 
     const graphics = new Graphics();
-    const label = new Text({ text: '', style: buildLabelStyle() });
-    label.anchor.set(0.5, 0.5);
+    const label = createManagedText({
+      text: '',
+      style: buildLabelStyle(),
+      anchor: { x: 0.5, y: 0.5 },
+    });
     label.alpha = LABEL_ALPHA;
 
     parentContainer.addChild(graphics);
@@ -59,7 +63,7 @@ export function createRegionBoundaryRenderer(
     for (const [key, entry] of regionMap.entries()) {
       if (!activeKeys.has(key)) {
         entry.graphics.destroy();
-        entry.label.destroy();
+        destroyManagedText(entry.label);
         regionMap.delete(key);
       }
     }

@@ -4,6 +4,7 @@ import type { TableOverlayRenderer } from './renderer-types.js';
 import type { PresentationMarkerOverlayNode, PresentationOverlayNode, PresentationTextOverlayNode } from '../../presentation/presentation-scene.js';
 import { safeDestroyDisplayObject } from './safe-destroy.js';
 import { parseHexColor } from './shape-utils.js';
+import { createManagedText, createTextSlotPool } from '../text/text-runtime.js';
 
 const DEFAULT_TEXT_COLOR = '#f8fafc';
 const DEFAULT_TEXT_FONT_SIZE = 12;
@@ -22,35 +23,19 @@ export function createTableOverlayRenderer(
 ): TableOverlayRenderer {
   let lastSignature: string | null = null;
 
-  const textSlots: Text[] = [];
-  const markerSlots: MarkerSlot[] = [];
-  let activeTextCount = 0;
-  let activeMarkerCount = 0;
-
-  function acquireTextSlot(index: number): Text {
-    if (index < textSlots.length) {
-      const slot = textSlots[index]!;
-      slot.visible = true;
-      slot.renderable = true;
-      if (slot.parent !== parentContainer) {
-        parentContainer.addChild(slot);
-      }
-      return slot;
-    }
-    const slot = new Text({
-      text: '',
+  const textSlots = createTextSlotPool({
+    parentContainer,
+    createText: () => createManagedText({
       style: {
         fill: DEFAULT_TEXT_COLOR,
         fontSize: DEFAULT_TEXT_FONT_SIZE,
         fontFamily: 'monospace',
       },
-    });
-    slot.eventMode = 'none';
-    slot.interactiveChildren = false;
-    textSlots.push(slot);
-    parentContainer.addChild(slot);
-    return slot;
-  }
+    }),
+  });
+  const markerSlots: MarkerSlot[] = [];
+  let allocatedTextCount = 0;
+  let activeMarkerCount = 0;
 
   function acquireMarkerSlot(index: number): MarkerSlot {
     if (index < markerSlots.length) {
@@ -67,17 +52,15 @@ export function createTableOverlayRenderer(
     container.interactiveChildren = false;
 
     const badge = new Graphics();
-    const label = new Text({
+    const label = createManagedText({
       text: DEFAULT_MARKER_LABEL,
       style: {
         fill: '#111827',
         fontSize: 11,
         fontFamily: 'monospace',
       },
+      anchor: { x: 0.5, y: 0.5 },
     });
-    label.anchor.set(0.5, 0.5);
-    label.eventMode = 'none';
-    label.interactiveChildren = false;
 
     container.addChild(badge, label);
     const slot: MarkerSlot = { container, badge, label };
@@ -124,13 +107,11 @@ export function createTableOverlayRenderer(
   }
 
   function hideExcessSlots(textCount: number, markerCount: number): void {
-    for (let i = textCount; i < activeTextCount; i++) {
-      const slot = textSlots[i] as Text | undefined;
-      if (slot !== undefined) {
-        slot.visible = false;
-        slot.renderable = false;
-        slot.removeFromParent();
-      }
+    for (let i = textCount; i < allocatedTextCount; i += 1) {
+      const slot = textSlots.acquire(i);
+      slot.visible = false;
+      slot.renderable = false;
+      slot.removeFromParent();
     }
     for (let i = markerCount; i < activeMarkerCount; i++) {
       const slot = markerSlots[i] as MarkerSlot | undefined;
@@ -140,20 +121,17 @@ export function createTableOverlayRenderer(
         slot.container.removeFromParent();
       }
     }
-    activeTextCount = textCount;
+    allocatedTextCount = textSlots.allocatedCount;
     activeMarkerCount = markerCount;
   }
 
   function destroyAllSlots(): void {
-    for (const slot of textSlots) {
-      safeDestroyDisplayObject(slot);
-    }
+    textSlots.destroyAll();
     for (const slot of markerSlots) {
       safeDestroyDisplayObject(slot.container);
     }
-    textSlots.length = 0;
     markerSlots.length = 0;
-    activeTextCount = 0;
+    allocatedTextCount = 0;
     activeMarkerCount = 0;
   }
 
@@ -178,7 +156,7 @@ export function createTableOverlayRenderer(
 
       for (const resolved of resolvedItems) {
         if (resolved.type === 'text') {
-          const slot = acquireTextSlot(textIndex);
+          const slot = textSlots.acquire(textIndex);
           updateTextSlot(slot, resolved);
           textIndex += 1;
         } else {

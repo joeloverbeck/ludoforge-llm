@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner verification only
-**Deps**: tickets/68RUNPRESLIFE-002-retained-text-runtime.md, tickets/68RUNPRESLIFE-003-frame-commit-and-disposal-lifecycle.md, tickets/68RUNPRESLIFE-004-strict-visual-config-gating.md, tickets/68RUNPRESLIFE-006-complete-scene-migration-for-tokens-and-announcements.md
+**Deps**: archive/tickets/RUNPRESLIFE/68RUNPRESLIFE-002-retained-text-runtime.md, tickets/68RUNPRESLIFE-003-frame-commit-and-disposal-lifecycle.md, tickets/68RUNPRESLIFE-004-strict-visual-config-gating.md, archive/tickets/RUNPRESLIFE/68RUNPRESLIFE-006-complete-scene-migration-for-tokens-and-announcements.md
 
 ## Problem
 

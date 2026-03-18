@@ -19,6 +19,7 @@ import {
   ZONE_RENDER_WIDTH as ZONE_WIDTH,
   ZONE_RENDER_HEIGHT as ZONE_HEIGHT,
 } from '../../layout/layout-constants.js';
+import { createManagedText } from '../text/text-runtime.js';
 
 const ZONE_CORNER_RADIUS = 12;
 const LINE_CORNER_RADIUS = 4;
@@ -206,7 +207,7 @@ interface TextOptions {
 }
 
 function createText(text: string, x: number, y: number, fontSize: number, opts: TextOptions = {}): Text {
-  const label = new Text({
+  const labelOptions = {
     text,
     style: {
       fill: opts.fill ?? '#f5f7fa',
@@ -215,15 +216,11 @@ function createText(text: string, x: number, y: number, fontSize: number, opts: 
       ...(opts.fontWeight !== undefined ? { fontWeight: opts.fontWeight as 'bold' | 'normal' } : {}),
       ...(opts.stroke !== undefined ? { stroke: opts.stroke } : {}),
     },
-  });
-
-  if (opts.anchor !== undefined) {
-    label.anchor.set(opts.anchor.x, opts.anchor.y);
-  }
-  label.position.set(x, y);
-  label.eventMode = 'none';
-  label.interactiveChildren = false;
-  return label;
+    position: { x, y },
+  };
+  return opts.anchor === undefined
+    ? createManagedText(labelOptions)
+    : createManagedText({ ...labelOptions, anchor: opts.anchor });
 }
 
 function updateZoneVisuals(

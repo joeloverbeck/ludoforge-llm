@@ -1,4 +1,5 @@
 import { Container, Graphics, Text } from 'pixi.js';
+import { createManagedText } from '../text/text-runtime.js';
 import { safeDestroyChildren } from './safe-destroy.js';
 
 interface HiddenStackMetrics {
@@ -48,7 +49,7 @@ export function createHiddenZoneStackVisual(): HiddenZoneStackVisual {
   cards.interactiveChildren = false;
 
   const badge = new Graphics();
-  const countLabel = new Text({
+  const countLabel = createManagedText({
     text: '',
     style: {
       fill: CARD_BACK_PALETTE.badgeTextColor,
@@ -57,8 +58,6 @@ export function createHiddenZoneStackVisual(): HiddenZoneStackVisual {
       fontWeight: '700',
     },
   });
-  countLabel.eventMode = 'none';
-  countLabel.interactiveChildren = false;
 
   root.addChild(cards, badge, countLabel);
 

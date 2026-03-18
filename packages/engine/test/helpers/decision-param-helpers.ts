@@ -18,6 +18,17 @@ const MAX_DECISION_STEPS = 256;
 const INDEXED_DECISION_KEY_PATTERN = /^decision:.*#\d+$/;
 
 export interface DecisionOverrideRule {
+  /**
+   * Predicate that selects which decision this override applies to.
+   *
+   * Prefer matching on `request.name` (the bind name, e.g. `'$myBinding'`)
+   * rather than `request.decisionKey`. The `decisionKey` uses a compiled
+   * doc-path format like `decision:doc.eventDecks.0.cards.N...::$bind` —
+   * it does NOT contain the YAML `internalDecisionId`.
+   *
+   * @example
+   * when: (r) => r.name === '$linebackerNvaBasesToRemove'
+   */
   readonly when: (request: ChoicePendingRequest) => boolean;
   readonly value: MoveParamValue | ((request: ChoicePendingRequest) => MoveParamValue | undefined);
 }

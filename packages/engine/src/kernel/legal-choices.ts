@@ -170,10 +170,17 @@ export interface LegalChoicesRuntimeOptions {
    * and adds elapsed time to this object.  Zero-cost when undefined.
    */
   readonly classificationSubphaseTiming?: ClassificationSubphaseTiming;
+  /**
+   * Transient chooseN selections — intermediate accumulated arrays for
+   * in-progress chooseN decisions.  When provided, the kernel uses these
+   * instead of `move.params[decisionKey]` for the specified bindings,
+   * allowing incremental decision expansion (e.g., MCTS) to track
+   * partial selections without the kernel treating them as finalized.
+   */
+  readonly transientChooseNSelections?: Readonly<Record<string, readonly MoveParamScalar[]>>;
 }
 
 interface LegalChoicesInternalOptions extends LegalChoicesRuntimeOptions {
-  readonly transientChooseNSelections?: Readonly<Record<string, readonly MoveParamScalar[]>>;
   /** Mutable accumulator for diagnostics collection. Internal only — created by public API when collectDiagnostics is true. */
   readonly _diagnosticsAccumulator?: ChooseNDiagnosticsAccumulator;
 }

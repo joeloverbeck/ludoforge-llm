@@ -16,6 +16,9 @@ import { createAccumulator } from '../../../../src/agents/mcts/diagnostics.js';
 import { runOneIteration } from '../../../../src/agents/mcts/search.js';
 import { createRootNode } from '../../../../src/agents/mcts/node.js';
 import type { MctsNode } from '../../../../src/agents/mcts/node.js';
+
+/** State-kind root node — no in-progress chooseN bindings to strip. */
+const DUMMY_LEAF = createRootNode(2);
 import { createNodePool } from '../../../../src/agents/mcts/node-pool.js';
 import { validateMctsConfig } from '../../../../src/agents/mcts/config.js';
 import { createGameDefRuntime } from '../../../../src/kernel/gamedef-runtime.js';
@@ -145,7 +148,7 @@ describe('rollout-decision: completes via completeTemplateMove', () => {
     const partialMove: Move = { actionId: aid('boost'), params: {} };
     const rng = createRng(123n);
 
-    const result = resolveDecisionBoundary(def, state, partialMove, rng);
+    const result = resolveDecisionBoundary(def, state, partialMove, rng, DUMMY_LEAF);
 
     assert.notEqual(result, null);
     assert.ok('amount' in result!.move.params);
@@ -163,7 +166,7 @@ describe('rollout-decision: completes via completeTemplateMove', () => {
     };
     const rng = createRng(456n);
 
-    const result = resolveDecisionBoundary(def, state, partialMove, rng);
+    const result = resolveDecisionBoundary(def, state, partialMove, rng, DUMMY_LEAF);
 
     assert.notEqual(result, null);
     assert.equal(result!.move.params.amount, 2);
@@ -183,7 +186,7 @@ describe('rollout-decision: apply exactly once', () => {
     const acc = createAccumulator();
 
     const before = acc.applyMoveCalls;
-    const result = resolveDecisionBoundary(def, state, partialMove, rng, undefined, acc);
+    const result = resolveDecisionBoundary(def, state, partialMove, rng, DUMMY_LEAF, undefined, acc);
 
     assert.notEqual(result, null);
     assert.equal(acc.applyMoveCalls, before + 1);
@@ -195,7 +198,7 @@ describe('rollout-decision: apply exactly once', () => {
     const partialMove: Move = { actionId: aid('boost'), params: {} };
     const rng = createRng(101n);
 
-    const result = resolveDecisionBoundary(def, state, partialMove, rng);
+    const result = resolveDecisionBoundary(def, state, partialMove, rng, DUMMY_LEAF);
 
     assert.notEqual(result, null);
     // Boost adds 2 VP — state should differ.
@@ -215,7 +218,7 @@ describe('rollout-decision: no cutoff increment', () => {
     const rng = createRng(202n);
     const acc = createAccumulator();
 
-    resolveDecisionBoundary(def, state, partialMove, rng, undefined, acc);
+    resolveDecisionBoundary(def, state, partialMove, rng, DUMMY_LEAF, undefined, acc);
 
     // These counters track simulation plies, not decision completion.
     assert.equal(acc.hybridRolloutPlies, 0);
@@ -229,7 +232,7 @@ describe('rollout-decision: no cutoff increment', () => {
     const rng = createRng(303n);
     const acc = createAccumulator();
 
-    resolveDecisionBoundary(def, state, partialMove, rng, undefined, acc);
+    resolveDecisionBoundary(def, state, partialMove, rng, DUMMY_LEAF, undefined, acc);
 
     assert.equal(acc.decisionCompletionsInRollout, 1);
   });
@@ -335,7 +338,7 @@ describe('rollout-decision: failed completion backpropagates loss', () => {
     const rng = createRng(606n);
     const acc = createAccumulator();
 
-    const result = resolveDecisionBoundary(def, state, badMove, rng, undefined, acc);
+    const result = resolveDecisionBoundary(def, state, badMove, rng, DUMMY_LEAF, undefined, acc);
 
     assert.equal(result, null);
     assert.equal(acc.decisionBoundaryFailures, 1);
@@ -354,7 +357,7 @@ describe('rollout-decision: failed completion backpropagates loss', () => {
     // (unknown action id) — resolveDecisionBoundary should catch it.
     const badMove: Move = { actionId: aid('nonexistent'), params: {} };
 
-    const result = resolveDecisionBoundary(def, state, badMove, rng, undefined, acc);
+    const result = resolveDecisionBoundary(def, state, badMove, rng, DUMMY_LEAF, undefined, acc);
 
     assert.equal(result, null);
     assert.equal(acc.decisionBoundaryFailures, 1);

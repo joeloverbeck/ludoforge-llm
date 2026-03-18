@@ -417,8 +417,7 @@ export function expandDecisionNode(
   pool: NodePool,
   ctx: DecisionExpansionContext,
 ): DecisionExpansionResult {
-  const { def, state, runtime } = ctx;
-  const discover = ctx.discoverChoices ?? legalChoicesDiscover;
+  const { state } = ctx;
 
   const partialMove = node.partialMove;
   if (partialMove === null) {
@@ -430,36 +429,12 @@ export function expandDecisionNode(
     throw new Error('expandDecisionNode: node.decisionPlayer must not be null');
   }
 
-  const acc = ctx.accumulator;
-  const partialMoveKey = canonicalMoveKey(partialMove);
-  const { discoveryCache, discoveryCacheMax = 1024 } = ctx;
+  // Determine the active chooseN binding (if any) for transient selection handling.
+  const activeChooseNBinding = node.decisionType === 'chooseN' && node.decisionBinding !== null
+    ? node.decisionBinding
+    : undefined;
 
-  // Check discovery cache first.
-  let response: ChoiceRequest;
-  if (discoveryCache !== undefined) {
-    const cached = getDiscoveryCacheEntry(discoveryCache, state.stateHash, partialMoveKey);
-    if (cached !== undefined) {
-      if (acc !== undefined) {
-        acc.decisionDiscoverCacheHits += 1;
-      }
-      response = cached;
-    } else {
-      const tStart = acc !== undefined ? performance.now() : 0;
-      response = discover(def, state, partialMove, { chainCompoundSA: true }, runtime);
-      if (acc !== undefined) {
-        acc.decisionDiscoverCallCount += 1;
-        acc.decisionDiscoverTimeMs += performance.now() - tStart;
-      }
-      setDiscoveryCacheEntry(discoveryCache, state.stateHash, partialMoveKey, response, discoveryCacheMax);
-    }
-  } else {
-    const tStart = acc !== undefined ? performance.now() : 0;
-    response = discover(def, state, partialMove, { chainCompoundSA: true }, runtime);
-    if (acc !== undefined) {
-      acc.decisionDiscoverCallCount += 1;
-      acc.decisionDiscoverTimeMs += performance.now() - tStart;
-    }
-  }
+  const response = discoverWithCache(ctx, state, partialMove, activeChooseNBinding);
 
   return handleChoiceResponse(
     response, node, pool, partialMove, decisionPlayer, ctx,
@@ -660,10 +635,15 @@ function expandChooseNDecision(
 
   // Apply lexicographic ordering: exclude accumulated items and options
   // that precede the last accumulated value (prevents duplicate permutations).
-  const eligible = filterByLexicographicOrder(allExpandable, accumulated);
+  const unfilteredEligible = filterByLexicographicOrder(allExpandable, accumulated);
 
   // Use the request's canConfirm (reflects kernel assessment).
   const canConfirm = request.canConfirm;
+
+  // Enforce max cardinality: when accumulated items already reach max,
+  // no more option children should be created — only confirm is valid.
+  const maxCardinality = request.max ?? allExpandable.length;
+  const eligible = accumulated.length >= maxCardinality ? [] : unfilteredEligible;
 
   // Effective choice count: eligible options + confirm (if applicable).
   const effectiveCount = eligible.length + (canConfirm ? 1 : 0);
@@ -698,7 +678,7 @@ function expandChooseNDecision(
       );
       parentNode.partialMove = advancedMove;
 
-      const nextResponse = discoverWithCache(ctx, ctx.state, advancedMove);
+      const nextResponse = discoverWithCache(ctx, ctx.state, advancedMove, decisionKey);
       return handleChoiceResponse(
         nextResponse, parentNode, pool, advancedMove, decisionPlayer, ctx,
       );
@@ -785,15 +765,42 @@ function expandChooseNDecision(
 // Shared helpers for forced-sequence compression discovery
 // ---------------------------------------------------------------------------
 
-/** Run discover with cache support (extracted to reduce duplication). */
+/**
+ * Run discover with cache support (extracted to reduce duplication).
+ *
+ * When `activeChooseNBinding` is provided, the binding's intermediate
+ * accumulated array is stripped from `move.params` and passed via
+ * `transientChooseNSelections` so the kernel treats it as in-progress
+ * rather than finalized.
+ */
 function discoverWithCache(
   ctx: DecisionExpansionContext,
   state: GameState,
   move: Move,
+  activeChooseNBinding?: string,
 ): ChoiceRequest {
   const discover = ctx.discoverChoices ?? legalChoicesDiscover;
   const acc = ctx.accumulator;
-  const moveKey = canonicalMoveKey(move);
+
+  // Strip in-progress chooseN binding from params if present.
+  let discoverMove = move;
+  let options: { chainCompoundSA: true; transientChooseNSelections?: Readonly<Record<string, readonly MoveParamScalar[]>> } = { chainCompoundSA: true };
+
+  if (activeChooseNBinding !== undefined) {
+    const accumulated = move.params[activeChooseNBinding];
+    if (Array.isArray(accumulated)) {
+      const cleanedParams = Object.fromEntries(
+        Object.entries(move.params).filter(([k]) => k !== activeChooseNBinding),
+      );
+      discoverMove = { ...move, params: cleanedParams };
+      options = {
+        chainCompoundSA: true,
+        transientChooseNSelections: { [activeChooseNBinding]: accumulated as readonly MoveParamScalar[] },
+      };
+    }
+  }
+
+  const moveKey = canonicalMoveKey(discoverMove);
   const { discoveryCache, discoveryCacheMax = 1024 } = ctx;
 
   if (discoveryCache !== undefined) {
@@ -806,7 +813,7 @@ function discoverWithCache(
     }
 
     const tStart = acc !== undefined ? performance.now() : 0;
-    const response = discover(ctx.def, state, move, { chainCompoundSA: true }, ctx.runtime);
+    const response = discover(ctx.def, state, discoverMove, options, ctx.runtime);
     if (acc !== undefined) {
       acc.decisionDiscoverCallCount += 1;
       acc.decisionDiscoverTimeMs += performance.now() - tStart;
@@ -816,7 +823,7 @@ function discoverWithCache(
   }
 
   const tStart = acc !== undefined ? performance.now() : 0;
-  const response = discover(ctx.def, state, move, { chainCompoundSA: true }, ctx.runtime);
+  const response = discover(ctx.def, state, discoverMove, options, ctx.runtime);
   if (acc !== undefined) {
     acc.decisionDiscoverCallCount += 1;
     acc.decisionDiscoverTimeMs += performance.now() - tStart;

@@ -133,10 +133,14 @@ describe('FITL MCTS interactive-profile competence', { skip: !RUN_MCTS_FITL_E2E 
           `${scenario.label}: pendingFamiliesWithVisits should be >0, got ${d.pendingFamiliesWithVisits ?? 0}`,
         );
 
-        // At least one pending operation family has >0 root-level visits
+        // At least one pending operation family has >0 root-level visits.
+        // Root child keys may use regular format (e.g., 'rally{...}') or
+        // decision root format (e.g., 'D:rally').
         const visits = d.rootChildVisits;
         const pendingWithVisits = PENDING_FAMILIES.filter((family) =>
-          Object.keys(visits).some((key) => key.startsWith(family) && visits[key]! > 0),
+          Object.keys(visits).some((key) =>
+            (key.startsWith(family) || key === `D:${family}`) && visits[key]! > 0,
+          ),
         );
         assert.ok(
           pendingWithVisits.length > 0,

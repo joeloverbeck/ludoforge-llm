@@ -104,7 +104,11 @@ export interface MutableDiagnosticsAccumulator {
   // Pending-family coverage counters
   pendingFamiliesTotal: number;
   pendingFamiliesWithVisits: number;
+  pendingFamiliesStarved: number;
   pendingFamilyQuotaUsed: number;
+
+  // Decision tree depth by family (family → max decision depth observed)
+  decisionTreeDepthByFamily: Map<string, number>;
 
   // Raw heuristic score spread tracking (per evaluateForAllPlayers call)
   rawHeuristicScoreMin: number;
@@ -202,7 +206,10 @@ export function createAccumulator(): MutableDiagnosticsAccumulator {
 
     pendingFamiliesTotal: 0,
     pendingFamiliesWithVisits: 0,
+    pendingFamiliesStarved: 0,
     pendingFamilyQuotaUsed: 0,
+
+    decisionTreeDepthByFamily: new Map(),
 
     rawHeuristicScoreMin: Infinity,
     rawHeuristicScoreMax: -Infinity,
@@ -366,7 +373,11 @@ export interface MctsSearchDiagnostics {
   // Pending-family coverage counters
   readonly pendingFamiliesTotal?: number;
   readonly pendingFamiliesWithVisits?: number;
+  readonly pendingFamiliesStarved?: number;
   readonly pendingFamilyQuotaUsed?: number;
+
+  // Decision tree depth by family (family → max decision depth observed)
+  readonly decisionTreeDepthByFamily?: Readonly<Record<string, number>>;
 
   // Raw heuristic score spread (from evaluateForAllPlayers instrumentation)
   readonly rawHeuristicScoreMin?: number;
@@ -473,22 +484,52 @@ export function collectDiagnostics(
   startTime?: number,
   accumulator?: MutableDiagnosticsAccumulator,
 ): MctsSearchDiagnostics {
-  // Count nodes and max depth via iterative BFS.
+  // Count nodes, max depth, and decision depth by family via iterative BFS.
   let nodesAllocated = 0;
   let maxTreeDepth = 0;
+  const decisionDepthByFamily = new Map<string, number>();
 
-  const stack: Array<{ readonly node: MctsNode; readonly depth: number }> = [
-    { node: root, depth: 0 },
-  ];
+  const stack: Array<{
+    readonly node: MctsNode;
+    readonly depth: number;
+    readonly family: string | null;
+    readonly decisionDepth: number;
+  }> = [{ node: root, depth: 0, family: null, decisionDepth: 0 }];
 
   while (stack.length > 0) {
-    const { node, depth } = stack.pop()!;
+    const { node, depth, family, decisionDepth } = stack.pop()!;
     nodesAllocated += 1;
     if (depth > maxTreeDepth) {
       maxTreeDepth = depth;
     }
+
+    // Track max decision depth per root-child family.
+    if (family !== null && node.nodeKind === 'decision') {
+      const current = decisionDepthByFamily.get(family) ?? 0;
+      if (decisionDepth > current) {
+        decisionDepthByFamily.set(family, decisionDepth);
+      }
+    }
+
     for (const child of node.children) {
-      stack.push({ node: child, depth: depth + 1 });
+      // Root children establish the family; deeper nodes inherit it.
+      const childFamily = depth === 0 && child.move !== null
+        ? child.move.actionId
+        : family;
+      const childDecisionDepth = child.nodeKind === 'decision'
+        ? decisionDepth + 1
+        : decisionDepth;
+      stack.push({ node: child, depth: depth + 1, family: childFamily, decisionDepth: childDecisionDepth });
+    }
+  }
+
+  // Merge tree-derived decision depth by family into accumulator.
+  if (accumulator !== undefined) {
+    for (const [fam, depth] of decisionDepthByFamily) {
+      const current = accumulator.decisionTreeDepthByFamily.get(fam) ?? 0;
+      if (depth > current) {
+        accumulator.decisionTreeDepthByFamily.set(fam, depth);
+      }
     }
   }
 
@@ -648,7 +689,13 @@ export function collectDiagnostics(
     // Pending-family coverage counters
     pendingFamiliesTotal: accumulator.pendingFamiliesTotal,
     pendingFamiliesWithVisits: accumulator.pendingFamiliesWithVisits,
+    pendingFamiliesStarved: accumulator.pendingFamiliesStarved,
     pendingFamilyQuotaUsed: accumulator.pendingFamilyQuotaUsed,
+
+    // Decision tree depth by family
+    ...(accumulator.decisionTreeDepthByFamily.size > 0
+      ? { decisionTreeDepthByFamily: Object.fromEntries(accumulator.decisionTreeDepthByFamily) }
+      : {}),
 
     // Decision discovery instrumentation
     decisionDiscoverCallCount: accumulator.decisionDiscoverCallCount,

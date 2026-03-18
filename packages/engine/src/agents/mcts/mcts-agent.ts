@@ -22,6 +22,7 @@ import { selectStochasticFallback } from '../agent-move-selection.js';
 import { evaluateForAllPlayers } from './evaluate.js';
 import { familyKey } from './move-key.js';
 import { applyMove } from '../../kernel/apply-move.js';
+import { stripIncompleteChooseNBindings } from './decision-boundary.js';
 import {
   splitSearchBudget, forkWorkerRngs, extractRootChildInfos,
   mergeRootResults, selectBestMergedChild,
@@ -85,9 +86,14 @@ export function postCompleteSelectedMove(
         }
       }
 
+      // Strip any in-progress chooseN bindings before template completion.
+      // The tree stores intermediate accumulated arrays in move.params that
+      // the kernel would reject as cardinality mismatches.
+      const cleanedMove = stripIncompleteChooseNBindings(deepestMove, current);
+
       // Complete remaining decisions via fast random completion.
       try {
-        const result = completeTemplateMove(def, state, deepestMove, cursor, runtime);
+        const result = completeTemplateMove(def, state, cleanedMove, cursor, runtime);
         if (result.kind === 'completed') {
           return { move: result.move, rng: result.rng };
         }

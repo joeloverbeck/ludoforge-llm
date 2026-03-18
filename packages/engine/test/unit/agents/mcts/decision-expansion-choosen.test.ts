@@ -17,11 +17,31 @@ import type { GameDef, GameState } from '../../../../src/kernel/types.js';
 import type { MctsNode } from '../../../../src/agents/mcts/node.js';
 import { expandDecisionNode } from '../../../../src/agents/mcts/decision-expansion.js';
 import type { DecisionExpansionContext, DiscoverChoicesFn } from '../../../../src/agents/mcts/decision-expansion.js';
+import type { LegalChoicesRuntimeOptions } from '../../../../src/kernel/legal-choices.js';
+import type { MoveParamScalar } from '../../../../src/kernel/types-ast.js';
 import { createRootNode } from '../../../../src/agents/mcts/node.js';
 import { createNodePool } from '../../../../src/agents/mcts/node-pool.js';
 import { asPlayerId } from '../../../../src/kernel/branded.js';
 
 const dk = (s: string): DecisionKey => s as DecisionKey;
+
+/**
+ * Extract the accumulated chooseN array for a binding, checking both
+ * the move params (for finalized/confirmed values) and the
+ * transientChooseNSelections (for in-progress intermediate arrays
+ * stripped by discoverWithCache).
+ */
+function getAccumulated(
+  probeMove: Move,
+  binding: string,
+  options?: LegalChoicesRuntimeOptions,
+): readonly MoveParamScalar[] | undefined {
+  const fromParams = probeMove.params[binding];
+  if (Array.isArray(fromParams)) return fromParams as readonly MoveParamScalar[];
+  const fromTransient = options?.transientChooseNSelections?.[binding];
+  if (fromTransient !== undefined) return fromTransient;
+  return undefined;
+}
 
 // ---------------------------------------------------------------------------
 // Minimal stubs (same pattern as decision-expansion.test.ts)
@@ -163,9 +183,9 @@ describe('chooseN unit — incremental selection', () => {
   it('expand chooseN with 3 options, max 2 shows correct depth and accumulation', () => {
     // First expansion: 3 options, min:1, max:2, canConfirm:false
     // Second expansion (after picking first item): remaining options + canConfirm:true
-    const discover: DiscoverChoicesFn = (_def, _state, probeMove) => {
-      const current = probeMove.params.$targets;
-      if (Array.isArray(current) && current.length >= 1) {
+    const discover: DiscoverChoicesFn = (_def, _state, probeMove, opts) => {
+      const current = getAccumulated(probeMove, '$targets', opts);
+      if (current !== undefined && current.length >= 1) {
         // After first pick: return remaining options with canConfirm
         return makeChooseNRequest({
           decisionKey: '$targets',
@@ -328,9 +348,9 @@ describe('chooseN unit — duplicate prevention', () => {
   it('children at level 2 only include options with index > parent selected index', () => {
     // After picking 'b' (index 1), only 'c' (index 2) should be available.
     // 'a' (index 0) should be excluded (would produce duplicate permutation).
-    const discover: DiscoverChoicesFn = (_def, _state, probeMove) => {
-      const current = probeMove.params.$targets;
-      if (Array.isArray(current) && current.length >= 1) {
+    const discover: DiscoverChoicesFn = (_def, _state, probeMove, opts) => {
+      const current = getAccumulated(probeMove, '$targets', opts);
+      if (current !== undefined && current.length >= 1) {
         // After first pick: return ALL options, but expansion should filter.
         return makeChooseNRequest({
           decisionKey: '$targets',
@@ -391,9 +411,9 @@ describe('chooseN unit — min/max cardinality', () => {
     // Level 0: 0 selected, canConfirm: false (0 < min:1)
     // Level 1: 1 selected, canConfirm: true (1 >= min:1)
     // Level 3: 3 selected, canConfirm: true, no more options (at max)
-    const discover: DiscoverChoicesFn = (_def, _state, probeMove) => {
-      const current = probeMove.params.$targets;
-      const len = Array.isArray(current) ? current.length : 0;
+    const discover: DiscoverChoicesFn = (_def, _state, probeMove, opts) => {
+      const current = getAccumulated(probeMove, '$targets', opts);
+      const len = current !== undefined ? current.length : 0;
 
       if (len >= 3) {
         // At max:3 — no more options, only confirm via forced-sequence compression.

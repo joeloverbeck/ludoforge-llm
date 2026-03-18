@@ -800,6 +800,49 @@ describe('createTokenRenderer', () => {
     expect(secondTextNode.destroyed).toBe(false);
   });
 
+  it('retires removed card-content containers through the disposal queue', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider({
+      tokenVisual: { shape: 'card', color: '#ff0000' },
+      cardTemplatesByTokenType: {
+        'card-AS': {
+          width: 48,
+          height: 68,
+          layout: {
+            rank: { y: 8, align: 'center' },
+          },
+        },
+      },
+    });
+    const queue = createDisposalQueue({ scheduleFlush: () => {} });
+    const renderer = createRenderer(parent, colorProvider, { disposalQueue: queue });
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'card-AS', faceUp: true, properties: { rank: 'A' } })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
+    const cardContent = tokenContainer.children[5] as InstanceType<typeof MockContainer>;
+    expect(cardContent.children).toHaveLength(1);
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'troop-a', faceUp: true })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    expect(cardContent.parent).toBeNull();
+    expect(cardContent.destroyed).toBe(false);
+
+    queue.flush();
+
+    expect(cardContent.destroyed).toBe(true);
+  });
+
   it('renders non-card token shapes using shape-specific primitives instead of circle fallback', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider({

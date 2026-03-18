@@ -14,7 +14,6 @@ import { buildRegularPolygonPoints, parseHexColor } from './shape-utils';
 import { drawTokenShape } from './token-shape-drawer.js';
 import { drawTokenSymbol } from './token-symbol-drawer.js';
 import { drawCardContent, destroyCardContentPool } from './card-template-renderer.js';
-import { safeDestroyContainer } from './safe-destroy.js';
 import { createManagedText } from '../text/text-runtime.js';
 import {
   type ResolvedTokenRenderStyle,
@@ -166,6 +165,7 @@ export function createTokenRenderer(
           entry.stackCount,
           renderStyle,
           badgeStyle,
+          options.disposalQueue,
           tokenRenderStyleProvider,
           highlightedTokenIDs.has(token.id),
         );
@@ -261,6 +261,7 @@ function updateTokenVisuals(
   tokenCount: number,
   renderStyle: ResolvedTokenRenderStyle,
   badgeStyle: ResolvedStackBadgeStyle,
+  disposalQueue: DisposalQueue,
   tokenRenderStyleProvider: TokenRenderStyleProvider,
   isInteractionHighlighted: boolean,
 ): void {
@@ -274,7 +275,7 @@ function updateTokenVisuals(
   drawTokenSymbol(visuals.frontSymbol, tokenSymbols.symbol, resolveSymbolSize(renderStyle.shape, renderStyle.dimensions));
   drawTokenSymbol(visuals.backSymbol, tokenSymbols.backSymbol, resolveSymbolSize(renderStyle.shape, renderStyle.dimensions));
   tokenContainer.hitArea = resolveTokenHitArea(renderStyle.shape, renderStyle.dimensions);
-  syncCardContent(tokenContainer, visuals, token, renderStyle.cardTemplate, isFaceUp);
+  syncCardContent(tokenContainer, visuals, token, renderStyle.cardTemplate, isFaceUp, disposalQueue);
   setTokenFaceVisibility(visuals, isFaceUp);
   visuals.countBadge.text = tokenCount > 1 ? String(tokenCount) : '';
   visuals.countBadge.visible = tokenCount > 1;
@@ -369,12 +370,12 @@ function syncCardContent(
   token: RenderToken,
   cardTemplate: CardTemplate | null,
   isFaceUp: boolean,
+  disposalQueue: DisposalQueue,
 ): void {
   if (cardTemplate === null) {
     if (visuals.frontContent !== null) {
       destroyCardContentPool(visuals.frontContent);
-      visuals.frontContent.removeFromParent();
-      safeDestroyContainer(visuals.frontContent);
+      disposalQueue.enqueue(visuals.frontContent);
     }
     visuals.frontContent = null;
     return;

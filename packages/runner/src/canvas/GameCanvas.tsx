@@ -271,7 +271,9 @@ export async function createGameCanvasRuntime(
     markerBadgeConfig: options.visualConfigProvider.getMarkerBadgeConfig(),
   });
 
-  const adjacencyRenderer = deps.createAdjacencyRenderer(gameCanvas.layers.adjacencyLayer, options.visualConfigProvider);
+  const adjacencyRenderer = deps.createAdjacencyRenderer(gameCanvas.layers.adjacencyLayer, options.visualConfigProvider, {
+    disposalQueue,
+  });
 
   const regionBoundaryRenderer = createRegionBoundaryRenderer(gameCanvas.layers.regionLayer);
 

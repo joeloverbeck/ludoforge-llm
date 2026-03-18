@@ -1,5 +1,6 @@
 # MCTS Performance Analysis: FITL Game — Comprehensive Report
 
+**Status**: COMPLETED
 **Date**: 2026-03-17
 **Purpose**: Provide an external LLM research agent with complete data to assess whether MCTS can be made viable for complex board games like Fire in the Lake (FITL), and what alternatives exist.
 
@@ -836,3 +837,10 @@ BATCH 0-50 — children=14, nodes=42, elapsed=512108ms
 7. **Is there a way to parallelize MCTS iterations while preserving determinism?** Root parallelization (independent trees merged) vs leaf parallelization (parallel rollouts) — which is more viable for deterministic engines?
 
 8. **Would compiling effect ASTs to JavaScript functions (JIT-style) be a game-agnostic optimization?** Effects are currently interpreted from AST nodes. A one-time compilation step at game load could eliminate interpreter overhead.
+
+## Outcome
+
+- Completion date: 2026-03-18
+- What changed: This completed report was moved out of the active top-level reports directory during the MCTS retirement cleanup.
+- Deviations from original plan: None to report content; only its location and active-surface visibility changed.
+- Verification results: Active-doc references were updated as part of the retirement cleanup.

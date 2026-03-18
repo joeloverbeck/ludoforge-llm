@@ -1,5 +1,7 @@
 # Spec 62 — MCTS Search Visitor & Incremental Decision Expansion
 
+**Status**: NOT IMPLEMENTED
+
 **Supersedes**: Spec 61 (MCTS Decision-Sequence Materialization)
 
 ## 0. Problem Statement
@@ -810,3 +812,7 @@ The `CiDiagnosticsReporter` reads `MCTS_DIAGNOSTICS_DIR` from the environment. I
 - Backward compatibility with old MCTS config shapes
 - Changes to `legalMoves()` enumeration (templates are the intended output)
 - GameSpecDoc or visual-config.yaml changes
+
+## Archival Note
+
+Archived on 2026-03-18 as part of the MCTS retirement cleanup. This specification is preserved as historical design context only and is no longer part of the active architecture plan.

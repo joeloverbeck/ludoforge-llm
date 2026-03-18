@@ -1,5 +1,7 @@
 # Spec 66 — MCTS Competence Evaluation Framework
 
+**Status**: NOT IMPLEMENTED
+
 **Depends on**: Spec 63 (runtime move classification), 62MCTSSEAVIS-019 (pool sizing — enabler, not blocker)
 
 ## 0. Problem Statement
@@ -611,3 +613,7 @@ The competence test file itself (`fitl-competence.test.ts`) is the integration t
 - Texas Hold'em competence — a separate spec if needed. The framework is game-agnostic; only the evaluators are FITL-specific.
 - Runner AI overlay integration.
 - Non-player AI flowchart implementation (Spec 30) — the competence tests validate MCTS search, not the non-player AI bot.
+
+## Archival Note
+
+Archived on 2026-03-18 as part of the MCTS retirement cleanup. This specification is preserved as historical design context only and is no longer part of the active architecture plan.

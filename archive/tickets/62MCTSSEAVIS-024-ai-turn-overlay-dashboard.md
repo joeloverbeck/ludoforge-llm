@@ -1,6 +1,6 @@
 # 62MCTSSEAVIS-024: AITurnOverlay Dashboard Enhancement
 
-**Status**: PENDING
+**Status**: NOT IMPLEMENTED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — runner UI only
@@ -76,3 +76,7 @@ Style the dashboard: progress bar, action bars, stats layout. Keep it compact an
 
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm turbo build && pnpm turbo typecheck`
+
+## Archival Note
+
+Archived on 2026-03-18 as part of the MCTS retirement cleanup. This work item remained unfinished and was removed from the active planning surface so the repository no longer presents MCTS as current architecture.

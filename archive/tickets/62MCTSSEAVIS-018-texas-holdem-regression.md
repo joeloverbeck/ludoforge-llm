@@ -1,6 +1,6 @@
 # 62MCTSSEAVIS-018: Texas Hold'em MCTS Regression Check
 
-**Status**: PENDING
+**Status**: NOT IMPLEMENTED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — test execution only
@@ -56,3 +56,7 @@ Execute the existing Texas Hold'em MCTS test suite with decision nodes enabled.
 
 1. `pnpm -F @ludoforge/engine test -- --test-path-pattern texas` (or equivalent)
 2. `pnpm -F @ludoforge/engine test`
+
+## Archival Note
+
+Archived on 2026-03-18 as part of the MCTS retirement cleanup. This work item remained unfinished and was removed from the active planning surface so the repository no longer presents MCTS as current architecture.

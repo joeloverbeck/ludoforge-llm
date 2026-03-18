@@ -1,6 +1,6 @@
 # 62MCTSSEAVIS-020: CI Workflow YAML — Diagnostics Upload
 
-**Status**: PENDING
+**Status**: NOT IMPLEMENTED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — CI config only
@@ -72,3 +72,7 @@ pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck && pnpm turbo test
 
 1. Validate YAML syntax for all modified files
 2. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck && pnpm turbo test`
+
+## Archival Note
+
+Archived on 2026-03-18 as part of the MCTS retirement cleanup. This work item remained unfinished and was removed from the active planning surface so the repository no longer presents MCTS as current architecture.

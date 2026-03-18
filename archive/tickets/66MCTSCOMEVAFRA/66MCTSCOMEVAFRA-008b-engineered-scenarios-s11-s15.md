@@ -1,6 +1,6 @@
 # 66MCTSCOMEVAFRA-008b: Engineered Scenarios S11–S15
 
-**Status**: PENDING
+**Status**: NOT IMPLEMENTED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — test infrastructure only
@@ -117,3 +117,7 @@ The playbook scenarios (S1–S10) only test positions reachable via normal game 
 2. `RUN_MCTS_FITL_E2E=1 pnpm -F @ludoforge/engine test:e2e:mcts:fitl:competence`
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`
+
+## Archival Note
+
+Archived on 2026-03-18 as part of the MCTS retirement cleanup. This work item remained unfinished and was removed from the active planning surface so the repository no longer presents MCTS as current architecture.

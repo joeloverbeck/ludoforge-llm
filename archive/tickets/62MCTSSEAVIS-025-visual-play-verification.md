@@ -1,6 +1,6 @@
 # 62MCTSSEAVIS-025: Visual Play Verification with FITL
 
-**Status**: PENDING
+**Status**: NOT IMPLEMENTED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — manual verification
@@ -61,3 +61,7 @@ Note any visual issues, performance problems, or UX improvements for future tick
 
 1. `pnpm -F @ludoforge/runner dev`
 2. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck && pnpm turbo test`
+
+## Archival Note
+
+Archived on 2026-03-18 as part of the MCTS retirement cleanup. This work item remained unfinished and was removed from the active planning surface so the repository no longer presents MCTS as current architecture.

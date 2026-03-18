@@ -1,6 +1,6 @@
 # 63MCTSRUNMOVCLA-008: Full Regression Suite + Edge Case Tests
 
-**Status**: PENDING
+**Status**: NOT IMPLEMENTED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — tests only
@@ -107,3 +107,7 @@ Run Texas Hold'em MCTS E2E tests to confirm no regression for a game that was al
 2. `pnpm -F @ludoforge/engine test:e2e` (with appropriate env vars)
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`
+
+## Archival Note
+
+Archived on 2026-03-18 as part of the MCTS retirement cleanup. This work item remained unfinished and was removed from the active planning surface so the repository no longer presents MCTS as current architecture.

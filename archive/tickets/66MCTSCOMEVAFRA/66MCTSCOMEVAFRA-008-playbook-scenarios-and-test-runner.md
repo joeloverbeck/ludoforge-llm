@@ -1,6 +1,6 @@
 # 66MCTSCOMEVAFRA-008: Playbook Scenarios S1–S10 + Test Runner + Test Lane
 
-**Status**: PENDING
+**Status**: NOT IMPLEMENTED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test infrastructure only
@@ -121,3 +121,7 @@ Each scenario should currently run at `['interactive']` in the dedicated e2e com
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`
 5. `pnpm -F @ludoforge/engine test`
+
+## Archival Note
+
+Archived on 2026-03-18 as part of the MCTS retirement cleanup. This work item remained unfinished and was removed from the active planning surface so the repository no longer presents MCTS as current architecture.

@@ -1,5 +1,7 @@
 # Spec 63 — MCTS Runtime Move Classification
 
+**Status**: NOT IMPLEMENTED
+
 **Depends on**: Spec 62 (decision expansion infrastructure)
 
 ## 0. Problem Statement
@@ -486,3 +488,7 @@ This spec removes `concreteActionIds` from `GameDefRuntime` and renames visitor 
 - Texas Hold'em regression (62MCTSSEAVIS-018)
 - Runner AI overlay integration (Spec 62 Section 4)
 - Performance optimization of `legalChoicesEvaluate` (future work if profiling shows bottleneck)
+
+## Archival Note
+
+Archived on 2026-03-18 as part of the MCTS retirement cleanup. This specification is preserved as historical design context only and is no longer part of the active architecture plan.

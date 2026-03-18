@@ -26,7 +26,7 @@ Implement the Section 8 bot AI from the FITL rules for solitaire and <4 player s
 
 ### Out of Scope
 
-- UCT/MCTS agent (post-MVP, different `Agent` implementation)
+- Additional experimental agent families outside the Section 8 bot scope
 - Existing `RandomAgent` and `GreedyAgent` (already work, unchanged)
 - Human player interface (out of scope for engine)
 - Non-player rules for expansions or variants

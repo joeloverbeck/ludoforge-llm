@@ -1,6 +1,6 @@
 # 62MCTSSEAVIS-019: Node Pool Sizing Tuning
 
-**Status**: PENDING
+**Status**: NOT IMPLEMENTED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Possibly — agents/mcts/config.ts, mcts-agent.ts
@@ -74,3 +74,7 @@ Adjust `decisionDepthMultiplier` in fast/default/strong presets based on profili
 
 1. `RUN_MCTS_FITL_E2E=1 pnpm -F @ludoforge/engine test:e2e` (with visitor showing pool stats)
 2. `pnpm -F @ludoforge/engine test`
+
+## Archival Note
+
+Archived on 2026-03-18 as part of the MCTS retirement cleanup. This work item remained unfinished and was removed from the active planning surface so the repository no longer presents MCTS as current architecture.

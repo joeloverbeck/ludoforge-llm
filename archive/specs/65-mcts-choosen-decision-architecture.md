@@ -1,6 +1,6 @@
 # Spec 65 — MCTS `chooseN` Decision Tree Architecture
 
-**Status**: PENDING
+**Status**: NOT IMPLEMENTED
 
 **Depends on**: Spec 62 (MCTS search visitor & incremental decisions), Spec 64 (cost-aware MCTS)
 
@@ -269,3 +269,7 @@ This fixture must be game-agnostic (no FITL-specific logic) and self-contained.
 6. Write integration tests.
 7. Run FITL MCTS E2E tests.
 8. Run full verification suite.
+
+## Archival Note
+
+Archived on 2026-03-18 as part of the MCTS retirement cleanup. This specification is preserved as historical design context only and is no longer part of the active architecture plan.

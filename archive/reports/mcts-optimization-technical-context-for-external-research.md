@@ -1,5 +1,6 @@
 # MCTS Performance Optimization — Technical Context for External Research
 
+**Status**: COMPLETED
 **Date**: 2026-03-17
 **Purpose**: Provide an external LLM researcher with complete technical context to identify issues, improvements, and beneficial features for the MCTS performance optimization effort (Spec 64).
 
@@ -721,3 +722,10 @@ interface MctsSearchDiagnostics {
 | Cache hit rate | 13-23% |
 | Iteration timing variance | p95/p50 = 1.67× |
 | Template completion success rate | 100% |
+
+## Outcome
+
+- Completion date: 2026-03-18
+- What changed: This completed report was moved out of the active top-level reports directory during the MCTS retirement cleanup.
+- Deviations from original plan: None to report content; only its location and active-surface visibility changed.
+- Verification results: Active-doc references were updated as part of the retirement cleanup.

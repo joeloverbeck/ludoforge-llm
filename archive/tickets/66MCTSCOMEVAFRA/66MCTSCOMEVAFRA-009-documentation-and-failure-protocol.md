@@ -1,10 +1,10 @@
 # 66MCTSCOMEVAFRA-009: Documentation — Competence Testing Guide + Failure Escalation Protocol
 
-**Status**: PENDING
+**Status**: NOT IMPLEMENTED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — documentation only
-**Deps**: 66MCTSCOMEVAFRA-008, tickets/66MCTSCOMEVAFRA-008b-engineered-scenarios-s11-s15.md
+**Deps**: 66MCTSCOMEVAFRA-008, archive/tickets/66MCTSCOMEVAFRA/66MCTSCOMEVAFRA-008b-engineered-scenarios-s11-s15.md
 
 ## Problem
 
@@ -78,3 +78,7 @@ None — documentation only.
 
 1. Verify referenced file paths exist: `ls packages/engine/test/e2e/mcts-fitl/fitl-competence*.ts`
 2. Verify test lane works: `RUN_MCTS_FITL_E2E=1 pnpm -F @ludoforge/engine test:e2e:mcts:fitl:competence`
+
+## Archival Note
+
+Archived on 2026-03-18 as part of the MCTS retirement cleanup. This work item remained unfinished and was removed from the active planning surface so the repository no longer presents MCTS as current architecture.

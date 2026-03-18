@@ -1,6 +1,6 @@
 # 62MCTSSEAVIS-023: Action Display Name Mapping Utility
 
-**Status**: PENDING
+**Status**: NOT IMPLEMENTED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — runner only
@@ -58,3 +58,7 @@ If the existing `display-name.ts` utility already handles this, extend it.
 
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm turbo build && pnpm turbo typecheck`
+
+## Archival Note
+
+Archived on 2026-03-18 as part of the MCTS retirement cleanup. This work item remained unfinished and was removed from the active planning surface so the repository no longer presents MCTS as current architecture.

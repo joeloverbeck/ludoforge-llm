@@ -1,6 +1,6 @@
 # 62MCTSSEAVIS-017: FITL MCTS Default & Strong Test Validation
 
-**Status**: PENDING
+**Status**: NOT IMPLEMENTED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — test tuning only
@@ -62,3 +62,7 @@ Update test expectations based on observed behavior. Document any preset-specifi
 1. `RUN_MCTS_FITL_E2E=1 MCTS_PRESET=default pnpm -F @ludoforge/engine test:e2e`
 2. `RUN_MCTS_FITL_E2E=1 MCTS_PRESET=strong pnpm -F @ludoforge/engine test:e2e`
 3. `pnpm -F @ludoforge/engine test`
+
+## Archival Note
+
+Archived on 2026-03-18 as part of the MCTS retirement cleanup. This work item remained unfinished and was removed from the active planning surface so the repository no longer presents MCTS as current architecture.

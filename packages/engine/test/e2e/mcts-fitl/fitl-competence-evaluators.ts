@@ -7,7 +7,12 @@ import {
   type PlayerId,
   type ValidatedGameDef,
 } from '../../../src/kernel/index.js';
-import { computeNvaVictory, computeVcVictory, FITL_FACTION_CONFIG } from './fitl-mcts-test-helpers.js';
+import {
+  computeNvaVictory,
+  computeUsVictory,
+  computeVcVictory,
+  FITL_FACTION_CONFIG,
+} from './fitl-mcts-test-helpers.js';
 
 export interface CompetenceEvalContext {
   readonly def: ValidatedGameDef;
@@ -348,22 +353,41 @@ export const passStrategicValue = (
 const SUPPORT_STATES = new Set(['activeSupport', 'passiveSupport']);
 const MAP_ZONE_CATEGORIES = new Set(['city', 'province', 'loc']);
 const COIN_FACTIONS = new Set(['US', 'ARVN']);
+const INSURGENT_FACTIONS = new Set(['NVA', 'VC']);
 const SOUTH_VIETNAM = 'southVietnam';
 const NORTH_VIETNAM = 'northVietnam';
 const MCNAMARA_LINE_VAR = 'mom_mcnamaraLine';
 
 const getMoveActionId = (move: Move): string => String(move.actionId);
+const getActionMove = (move: Move, actionId: string): Move | null => {
+  if (getMoveActionId(move) === actionId) {
+    return move;
+  }
+  if (getCompoundSpecialActionId(move) === actionId) {
+    return move.compound!.specialActivity;
+  }
+  return null;
+};
 const getCompoundSpecialActionId = (move: Move): string | null =>
   move.compound === undefined ? null : String(move.compound.specialActivity.actionId);
 const moveIncludesAction = (move: Move, actionId: string): boolean =>
   getMoveActionId(move) === actionId || getCompoundSpecialActionId(move) === actionId;
 
-const getMoveTargetSpaces = (move: Move): readonly string[] => {
-  const targetSpaces = (move.params as Record<string, unknown>).$targetSpaces;
-  if (!Array.isArray(targetSpaces)) {
+const getMoveParamString = (move: Move, paramName: string): string | null => {
+  const value = (move.params as Record<string, unknown>)[paramName];
+  return typeof value === 'string' ? value : null;
+};
+
+const getMoveParamStringArray = (move: Move, paramName: string): readonly string[] => {
+  const value = (move.params as Record<string, unknown>)[paramName];
+  if (!Array.isArray(value)) {
     return [];
   }
-  return targetSpaces.filter((value): value is string => typeof value === 'string');
+  return value.filter((entry): entry is string => typeof entry === 'string');
+};
+
+const getMoveTargetSpaces = (move: Move): readonly string[] => {
+  return getMoveParamStringArray(move, '$targetSpaces');
 };
 
 const getActionTargetSpaces = (
@@ -456,6 +480,30 @@ const countVcGuerrillas = (
 
 const countVcBases = (state: GameState, zoneId: string): number =>
   countTokens(state, zoneId, (token) => token.props.faction === 'VC' && token.type === 'base');
+
+const countInsurgentGuerrillas = (
+  state: GameState,
+  zoneId: string,
+  activity?: 'active' | 'underground',
+): number => countTokens(state, zoneId, (token) =>
+  INSURGENT_FACTIONS.has(String(token.props.faction))
+  && token.type === 'guerrilla'
+  && (activity === undefined || token.props.activity === activity));
+
+const countInsurgentPieces = (state: GameState, zoneId: string): number =>
+  countFactionSetTokens(state, zoneId, INSURGENT_FACTIONS);
+
+const countInsurgentBases = (state: GameState, zoneId: string): number =>
+  countFactionSetTokens(state, zoneId, INSURGENT_FACTIONS, 'base');
+
+const countTunneledInsurgentBases = (state: GameState, zoneId: string): number =>
+  countTokens(state, zoneId, (token) =>
+    INSURGENT_FACTIONS.has(String(token.props.faction))
+    && token.type === 'base'
+    && token.props.tunnel === 'tunneled');
+
+const countUsPieces = (state: GameState, zoneId: string): number =>
+  countFactionTokens(state, zoneId, 'US');
 
 const countAllBases = (state: GameState, zoneId: string): number =>
   countTokens(state, zoneId, (token) => token.type === 'base');
@@ -632,6 +680,48 @@ const hasBombardOpportunity = (
     .reduce((sum, adjacentZoneId) => sum + countFactionTokens(state, adjacentZoneId, 'NVA', 'troops'), 0);
   return inSpaceTroops >= 3 || adjacentTroops >= 3;
 });
+
+const getAirStrikeTargetSpaces = (move: Move): readonly string[] => {
+  const airStrikeMove = getActionMove(move, 'airStrike');
+  if (airStrikeMove === null) {
+    return [];
+  }
+  return [
+    ...getMoveParamStringArray(airStrikeMove, '$spaces'),
+    ...getMoveParamStringArray(airStrikeMove, '$arcLightNoCoinProvinces'),
+  ];
+};
+
+const getSupportShiftHeadroom = (state: GameState, zoneId: string): number => {
+  switch (getSupportOppositionState(state, zoneId)) {
+    case 'activeSupport':
+      return 0;
+    case 'passiveSupport':
+      return 1;
+    case 'neutral':
+      return 2;
+    case 'passiveOpposition':
+      return 3;
+    case 'activeOpposition':
+      return 4;
+    default:
+      return 0;
+  }
+};
+
+const getUsPacificationOpportunityScore = (
+  def: ValidatedGameDef,
+  state: GameState,
+  zoneId: string,
+): number => {
+  const population = getZoneNumericAttribute(def, zoneId, 'population');
+  const headroom = getSupportShiftHeadroom(state, zoneId);
+  if (population <= 0 || headroom <= 0) {
+    return 0;
+  }
+  const noTerrorBonus = getTerrorCount(state, zoneId) === 0 ? 1 : 0;
+  return (population * headroom * 10) + noTerrorBonus;
+};
 
 export const vcRallyQuality = (): CompetenceEvaluator => ({
   name: 'vcRallyQuality',
@@ -1158,6 +1248,257 @@ export const nvaBombardUsage = (): CompetenceEvaluator => ({
       explanation: bombardChosen
         ? 'Passed — move included Bombard when an authored Bombard opportunity existed'
         : 'Failed — move omitted Bombard despite an authored Bombard opportunity',
+    };
+  },
+});
+
+export const usSweepActivation = (): CompetenceEvaluator => ({
+  name: 'usSweepActivation',
+  minBudget: 'background',
+  evaluate: (ctx): CompetenceEvalResult => {
+    if (getMoveActionId(ctx.move) !== 'sweep') {
+      return {
+        evaluatorName: 'usSweepActivation',
+        passed: true,
+        explanation: 'Skipped — move is not sweep',
+      };
+    }
+
+    const targetedZones = inferActionTargetedZones(ctx, 'sweep', (zoneId) =>
+      countInsurgentGuerrillas(ctx.stateBefore, zoneId, 'underground')
+        > countInsurgentGuerrillas(ctx.stateAfter, zoneId, 'underground')
+      || countInsurgentGuerrillas(ctx.stateAfter, zoneId, 'active')
+        > countInsurgentGuerrillas(ctx.stateBefore, zoneId, 'active'));
+    if (targetedZones.length === 0) {
+      return {
+        evaluatorName: 'usSweepActivation',
+        passed: false,
+        explanation: 'Failed — sweep move produced no identifiable target space',
+      };
+    }
+
+    const activatedZone = targetedZones.find((zoneId) =>
+      countInsurgentGuerrillas(ctx.stateBefore, zoneId, 'underground')
+        > countInsurgentGuerrillas(ctx.stateAfter, zoneId, 'underground')
+      && countInsurgentGuerrillas(ctx.stateAfter, zoneId, 'active')
+        > countInsurgentGuerrillas(ctx.stateBefore, zoneId, 'active'));
+    const passed = activatedZone !== undefined;
+    return {
+      evaluatorName: 'usSweepActivation',
+      passed,
+      explanation: passed
+        ? `Passed — sweep activated underground insurgents in '${activatedZone}'`
+        : `Failed — sweep in [${targetedZones.join(', ')}] activated no underground insurgents`,
+    };
+  },
+});
+
+export const usAssaultRemoval = (): CompetenceEvaluator => ({
+  name: 'usAssaultRemoval',
+  minBudget: 'background',
+  evaluate: (ctx): CompetenceEvalResult => {
+    if (getMoveActionId(ctx.move) !== 'assault') {
+      return {
+        evaluatorName: 'usAssaultRemoval',
+        passed: true,
+        explanation: 'Skipped — move is not assault',
+      };
+    }
+
+    const targetedZones = inferActionTargetedZones(ctx, 'assault', (zoneId) =>
+      isSoloSeatControlled(ctx.stateAfter, zoneId, FITL_FACTION_CONFIG)
+        !== isSoloSeatControlled(ctx.stateBefore, zoneId, FITL_FACTION_CONFIG)
+      || countInsurgentBases(ctx.stateAfter, zoneId) < countInsurgentBases(ctx.stateBefore, zoneId)
+      || countTunneledInsurgentBases(ctx.stateAfter, zoneId) < countTunneledInsurgentBases(ctx.stateBefore, zoneId)
+      || countInsurgentPieces(ctx.stateAfter, zoneId) < countInsurgentPieces(ctx.stateBefore, zoneId));
+    if (targetedZones.length === 0) {
+      return {
+        evaluatorName: 'usAssaultRemoval',
+        passed: false,
+        explanation: 'Failed — assault move produced no identifiable target space',
+      };
+    }
+
+    const worthwhileZone = targetedZones.find((zoneId) => {
+      const removedNvaControl = isSoloSeatControlled(ctx.stateBefore, zoneId, FITL_FACTION_CONFIG)
+        && !isSoloSeatControlled(ctx.stateAfter, zoneId, FITL_FACTION_CONFIG);
+      const baseRemoval = countInsurgentBases(ctx.stateAfter, zoneId) < countInsurgentBases(ctx.stateBefore, zoneId);
+      const tunnelExposure = countTunneledInsurgentBases(ctx.stateAfter, zoneId)
+        < countTunneledInsurgentBases(ctx.stateBefore, zoneId);
+      const enemyRemoval = countInsurgentPieces(ctx.stateBefore, zoneId) - countInsurgentPieces(ctx.stateAfter, zoneId);
+      return removedNvaControl || baseRemoval || tunnelExposure || enemyRemoval >= 6;
+    });
+
+    return {
+      evaluatorName: 'usAssaultRemoval',
+      passed: worthwhileZone !== undefined,
+      explanation: worthwhileZone !== undefined
+        ? `Passed — assault produced a worthwhile outcome in '${worthwhileZone}'`
+        : `Failed — assault in [${targetedZones.join(', ')}] removed no NVA control, enemy base/tunnel, or 6+ enemy pieces`,
+    };
+  },
+});
+
+export const usSupportGrowth = (): CompetenceEvaluator => ({
+  name: 'usSupportGrowth',
+  minBudget: 'background',
+  evaluate: (ctx): CompetenceEvalResult => {
+    const before = computeUsVictory(ctx.def, ctx.stateBefore);
+    const after = computeUsVictory(ctx.def, ctx.stateAfter);
+    const score = after - before;
+    const passed = score >= 0;
+    return {
+      evaluatorName: 'usSupportGrowth',
+      passed,
+      score,
+      explanation: passed
+        ? `Passed — US victory marker improved or held (${before} -> ${after})`
+        : `Failed — US victory marker regressed (${before} -> ${after})`,
+    };
+  },
+});
+
+export const usTrailDegradation = (): CompetenceEvaluator => ({
+  name: 'usTrailDegradation',
+  minBudget: 'background',
+  evaluate: (ctx): CompetenceEvalResult => {
+    const airStrikeMove = getActionMove(ctx.move, 'airStrike');
+    if (airStrikeMove === null) {
+      return {
+        evaluatorName: 'usTrailDegradation',
+        passed: true,
+        explanation: 'Skipped — move does not include airStrike',
+      };
+    }
+
+    const trailBefore = ctx.stateBefore.globalVars.trail;
+    const airStrikeWindowMode = ctx.stateBefore.globalVars.fitl_airStrikeWindowMode;
+    const oriskanyActive = ctx.stateBefore.globalVars.mom_oriskany === true;
+    const wildWeaselsActive = ctx.stateBefore.globalVars.mom_wildWeasels === true;
+    if (typeof trailBefore !== 'number' || typeof airStrikeWindowMode !== 'number') {
+      return {
+        evaluatorName: 'usTrailDegradation',
+        passed: true,
+        explanation: 'Skipped — trail or fitl_airStrikeWindowMode was not numeric',
+      };
+    }
+
+    if (trailBefore < 3) {
+      return {
+        evaluatorName: 'usTrailDegradation',
+        passed: true,
+        explanation: `Skipped — trail=${trailBefore} is below the high-trail threshold`,
+      };
+    }
+
+    const targetedSpaceCount = getAirStrikeTargetSpaces(ctx.move).length;
+    const degradeLegal = trailBefore > 0
+      && airStrikeWindowMode === 0
+      && !oriskanyActive
+      && (!wildWeaselsActive || targetedSpaceCount === 0);
+    if (!degradeLegal) {
+      return {
+        evaluatorName: 'usTrailDegradation',
+        passed: true,
+        explanation: `Skipped — trail degradation was not legal (trail=${trailBefore}, fitl_airStrikeWindowMode=${airStrikeWindowMode}, mom_oriskany=${oriskanyActive}, mom_wildWeasels=${wildWeaselsActive}, targetedSpaces=${targetedSpaceCount})`,
+      };
+    }
+
+    const passed = getMoveParamString(airStrikeMove, '$degradeTrail') === 'yes';
+    return {
+      evaluatorName: 'usTrailDegradation',
+      passed,
+      explanation: passed
+        ? `Passed — airStrike included trail degradation at trail=${trailBefore}`
+        : `Failed — airStrike omitted trail degradation at trail=${trailBefore} when degradation was legal`,
+    };
+  },
+});
+
+export const usPacification = (): CompetenceEvaluator => ({
+  name: 'usPacification',
+  minBudget: 'background',
+  evaluate: (ctx): CompetenceEvalResult => {
+    if (getMoveActionId(ctx.move) !== 'coupPacifyUS') {
+      return {
+        evaluatorName: 'usPacification',
+        passed: true,
+        explanation: 'Skipped — move is not coupPacifyUS',
+      };
+    }
+
+    const targetSpace = getMoveParamString(ctx.move, 'targetSpace');
+    const action = getMoveParamString(ctx.move, 'action');
+    if (targetSpace === null || action === null) {
+      return {
+        evaluatorName: 'usPacification',
+        passed: false,
+        explanation: 'Failed — coupPacifyUS move was missing targetSpace or action',
+      };
+    }
+
+    const candidateScores = getMapZoneIds(ctx.def)
+      .map((zoneId) => ({ zoneId, score: getUsPacificationOpportunityScore(ctx.def, ctx.stateBefore, zoneId) }))
+      .filter((entry) => entry.score > 0);
+    if (candidateScores.length === 0) {
+      return {
+        evaluatorName: 'usPacification',
+        passed: true,
+        explanation: 'Skipped — no meaningful US pacification opportunities were present',
+      };
+    }
+
+    const bestScore = candidateScores.reduce((best, entry) => Math.max(best, entry.score), 0);
+    const targetedScore = getUsPacificationOpportunityScore(ctx.def, ctx.stateBefore, targetSpace);
+
+    if (action === 'removeTerror') {
+      const supportsLaterShift = getTerrorCount(ctx.stateBefore, targetSpace) > 0
+        && getSupportShiftHeadroom(ctx.stateBefore, targetSpace) > 0;
+      return {
+        evaluatorName: 'usPacification',
+        passed: supportsLaterShift && targetedScore >= bestScore,
+        explanation: supportsLaterShift && targetedScore >= bestScore
+          ? `Passed — coupPacifyUS removed terror in a top-value future-shift space '${targetSpace}'`
+          : `Failed — coupPacifyUS removed terror in '${targetSpace}' without supporting the strongest available shift line`,
+        score: targetedScore,
+      };
+    }
+
+    const passed = action === 'shiftSupport' && targetedScore >= bestScore;
+    return {
+      evaluatorName: 'usPacification',
+      passed,
+      explanation: passed
+        ? `Passed — coupPacifyUS shifted support in a top-value space '${targetSpace}'`
+        : `Failed — coupPacifyUS targeted score=${targetedScore} in '${targetSpace}', but a better pacification line scored ${bestScore}`,
+      score: targetedScore,
+    };
+  },
+});
+
+export const usForcePreservation = (): CompetenceEvaluator => ({
+  name: 'usForcePreservation',
+  minBudget: 'background',
+  evaluate: (ctx): CompetenceEvalResult => {
+    if (!isPaidActionClass(ctx.move) && ctx.move.actionClass !== 'specialActivity') {
+      return {
+        evaluatorName: 'usForcePreservation',
+        passed: true,
+        explanation: `Skipped — move actionClass '${String(ctx.move.actionClass ?? 'none')}' is outside voluntary-operation scope`,
+      };
+    }
+
+    const casualtiesDelta = countUsPieces(ctx.stateAfter, 'casualties-US:none') - countUsPieces(ctx.stateBefore, 'casualties-US:none');
+    const availableDelta = countUsPieces(ctx.stateAfter, 'available-US:none') - countUsPieces(ctx.stateBefore, 'available-US:none');
+    const losses = Math.max(casualtiesDelta, 0) + Math.max(availableDelta, 0);
+    const passed = losses <= 2;
+    return {
+      evaluatorName: 'usForcePreservation',
+      passed,
+      score: -losses,
+      explanation: passed
+        ? `Passed — voluntary move kept US losses within limit (losses=${losses})`
+        : `Failed — voluntary move lost too many US pieces (losses=${losses})`,
     };
   },
 });

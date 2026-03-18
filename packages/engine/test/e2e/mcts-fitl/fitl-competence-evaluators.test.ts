@@ -24,6 +24,12 @@ import {
   nvaRallyTrailImprove,
   passStrategicValue,
   resourceDiscipline,
+  usAssaultRemoval,
+  usForcePreservation,
+  usPacification,
+  usSupportGrowth,
+  usSweepActivation,
+  usTrailDegradation,
   vcBaseExpansion,
   vcOppositionGrowth,
   vcRallyQuality,
@@ -41,6 +47,7 @@ import {
   engineerScenarioState,
   ARVN_PLAYER,
   NVA_PLAYER,
+  US_PLAYER,
   VC_PLAYER,
 } from './fitl-mcts-test-helpers.js';
 
@@ -1328,5 +1335,296 @@ describe('NVA strategic evaluators', () => {
 
     assert.equal(result.passed, true);
     assert.match(result.explanation, /no authored Bombard opportunity/u);
+  });
+});
+
+describe('US strategic evaluators', () => {
+  it('usSweepActivation passes when sweep activates underground insurgents', () => {
+    const evaluator = usSweepActivation();
+
+    const result = evaluator.evaluate(createContext('sweep', {
+      budget: 'background',
+      playerId: US_PLAYER,
+      params: { $targetSpaces: ['quang-nam:none'] },
+      zonesBefore: {
+        'quang-nam:none': [
+          makeToken('us-sweep-1', 'troops', 'US'),
+          makeToken('vc-sweep-1', 'guerrilla', 'VC', { activity: 'underground' }),
+        ],
+      },
+      zonesAfter: {
+        'quang-nam:none': [
+          makeToken('us-sweep-1', 'troops', 'US'),
+          makeToken('vc-sweep-1', 'guerrilla', 'VC', { activity: 'active' }),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.match(result.explanation, /activated underground insurgents/u);
+  });
+
+  it('usSweepActivation fails when sweep leaves insurgents underground', () => {
+    const evaluator = usSweepActivation();
+
+    const result = evaluator.evaluate(createContext('sweep', {
+      budget: 'background',
+      playerId: US_PLAYER,
+      params: { $targetSpaces: ['quang-nam:none'] },
+      zonesBefore: {
+        'quang-nam:none': [
+          makeToken('us-sweep-1', 'troops', 'US'),
+          makeToken('vc-sweep-1', 'guerrilla', 'VC', { activity: 'underground' }),
+        ],
+      },
+      zonesAfter: {
+        'quang-nam:none': [
+          makeToken('us-sweep-1', 'troops', 'US'),
+          makeToken('vc-sweep-1', 'guerrilla', 'VC', { activity: 'underground' }),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, false);
+    assert.match(result.explanation, /activated no underground insurgents/u);
+  });
+
+  it('usSweepActivation skips non-sweep moves', () => {
+    const evaluator = usSweepActivation();
+
+    const result = evaluator.evaluate(createContext('assault', {
+      budget: 'background',
+      playerId: US_PLAYER,
+    }));
+
+    assert.equal(result.passed, true);
+    assert.equal(result.explanation, 'Skipped — move is not sweep');
+  });
+
+  it('usAssaultRemoval passes when assault removes an enemy base', () => {
+    const evaluator = usAssaultRemoval();
+
+    const result = evaluator.evaluate(createContext('assault', {
+      budget: 'background',
+      playerId: US_PLAYER,
+      params: { $targetSpaces: ['tay-ninh:none'] },
+      zonesBefore: {
+        'tay-ninh:none': [
+          makeToken('us-assault-1', 'troops', 'US'),
+          makeToken('us-assault-2', 'troops', 'US'),
+          makeToken('vc-base-target', 'base', 'VC', { tunnel: 'untunneled' }),
+        ],
+      },
+      zonesAfter: {
+        'tay-ninh:none': [
+          makeToken('us-assault-1', 'troops', 'US'),
+          makeToken('us-assault-2', 'troops', 'US'),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.match(result.explanation, /worthwhile outcome/u);
+  });
+
+  it('usAssaultRemoval fails when assault produces no meaningful strategic outcome', () => {
+    const evaluator = usAssaultRemoval();
+
+    const result = evaluator.evaluate(createContext('assault', {
+      budget: 'background',
+      playerId: US_PLAYER,
+      params: { $targetSpaces: ['tay-ninh:none'] },
+      zonesBefore: {
+        'tay-ninh:none': [
+          makeToken('us-assault-1', 'troops', 'US'),
+          makeToken('us-assault-2', 'troops', 'US'),
+          makeToken('vc-g-1', 'guerrilla', 'VC', { activity: 'active' }),
+          makeToken('vc-g-2', 'guerrilla', 'VC', { activity: 'active' }),
+        ],
+      },
+      zonesAfter: {
+        'tay-ninh:none': [
+          makeToken('us-assault-1', 'troops', 'US'),
+          makeToken('us-assault-2', 'troops', 'US'),
+          makeToken('vc-g-2', 'guerrilla', 'VC', { activity: 'active' }),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, false);
+    assert.match(result.explanation, /removed no NVA control, enemy base\/tunnel, or 6\+ enemy pieces/u);
+  });
+
+  it('usSupportGrowth passes when the US victory marker improves', () => {
+    const evaluator = usSupportGrowth();
+
+    const result = evaluator.evaluate(createContext('train', {
+      budget: 'background',
+      playerId: US_PLAYER,
+      markersBefore: {
+        'quang-nam:none': { supportOpposition: 'neutral' },
+      },
+      markersAfter: {
+        'quang-nam:none': { supportOpposition: 'passiveSupport' },
+      },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.equal(result.score, 1);
+  });
+
+  it('usSupportGrowth fails when the US victory marker regresses', () => {
+    const evaluator = usSupportGrowth();
+
+    const result = evaluator.evaluate(createContext('train', {
+      budget: 'background',
+      playerId: US_PLAYER,
+      markersBefore: {
+        'quang-nam:none': { supportOpposition: 'activeSupport' },
+      },
+      markersAfter: {
+        'quang-nam:none': { supportOpposition: 'passiveSupport' },
+      },
+    }));
+
+    assert.equal(result.passed, false);
+    assert.equal(result.score, -1);
+  });
+
+  it('usTrailDegradation passes when compound airStrike includes trail degradation', () => {
+    const evaluator = usTrailDegradation();
+
+    const result = evaluator.evaluate(createContext('train', {
+      budget: 'background',
+      playerId: US_PLAYER,
+      actionClass: 'operationPlusSpecialActivity',
+      globalVarsBefore: { trail: 3, fitl_airStrikeWindowMode: 0 },
+      compound: {
+        specialActivity: {
+          actionId: asActionId('airStrike'),
+          actionClass: 'operationPlusSpecialActivity',
+          params: {
+            $spaces: ['quang-tri-thua-thien:none'],
+            $degradeTrail: 'yes',
+          },
+        },
+        timing: 'after',
+      },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.match(result.explanation, /included trail degradation/u);
+  });
+
+  it('usTrailDegradation fails when compound airStrike omits trail degradation at high trail', () => {
+    const evaluator = usTrailDegradation();
+
+    const result = evaluator.evaluate(createContext('train', {
+      budget: 'background',
+      playerId: US_PLAYER,
+      actionClass: 'operationPlusSpecialActivity',
+      globalVarsBefore: { trail: 3, fitl_airStrikeWindowMode: 0 },
+      compound: {
+        specialActivity: {
+          actionId: asActionId('airStrike'),
+          actionClass: 'operationPlusSpecialActivity',
+          params: {
+            $spaces: ['quang-tri-thua-thien:none'],
+            $degradeTrail: 'no',
+          },
+        },
+        timing: 'after',
+      },
+    }));
+
+    assert.equal(result.passed, false);
+    assert.match(result.explanation, /omitted trail degradation/u);
+  });
+
+  it('usTrailDegradation skips when the move does not include airStrike', () => {
+    const evaluator = usTrailDegradation();
+
+    const result = evaluator.evaluate(createContext('sweep', {
+      budget: 'background',
+      playerId: US_PLAYER,
+      globalVarsBefore: { trail: 3, fitl_airStrikeWindowMode: 0 },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.equal(result.explanation, 'Skipped — move does not include airStrike');
+  });
+
+  it('usPacification passes when coupPacifyUS picks the strongest shift space', () => {
+    const evaluator = usPacification();
+
+    const result = evaluator.evaluate(createContext('coupPacifyUS', {
+      budget: 'background',
+      playerId: US_PLAYER,
+      params: { targetSpace: 'saigon:none', action: 'shiftSupport' },
+      markersBefore: {
+        'saigon:none': { supportOpposition: 'activeOpposition' },
+        'hue:none': { supportOpposition: 'activeOpposition' },
+      },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.match(result.explanation, /top-value space/u);
+  });
+
+  it('usPacification fails when coupPacifyUS chooses a weaker shift target', () => {
+    const evaluator = usPacification();
+
+    const result = evaluator.evaluate(createContext('coupPacifyUS', {
+      budget: 'background',
+      playerId: US_PLAYER,
+      params: { targetSpace: 'hue:none', action: 'shiftSupport' },
+      markersBefore: {
+        'saigon:none': { supportOpposition: 'activeOpposition' },
+        'hue:none': { supportOpposition: 'activeOpposition' },
+      },
+    }));
+
+    assert.equal(result.passed, false);
+    assert.match(result.explanation, /better pacification line scored/u);
+  });
+
+  it('usForcePreservation passes when voluntary US losses stay within 2 pieces', () => {
+    const evaluator = usForcePreservation();
+
+    const result = evaluator.evaluate(createContext('assault', {
+      budget: 'background',
+      playerId: US_PLAYER,
+      actionClass: 'operation',
+      zonesAfter: {
+        'casualties-US:none': [
+          makeToken('us-loss-1', 'troops', 'US'),
+          makeToken('us-loss-2', 'troops', 'US'),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.equal(result.score, -2);
+  });
+
+  it('usForcePreservation fails when voluntary US losses exceed 2 pieces', () => {
+    const evaluator = usForcePreservation();
+
+    const result = evaluator.evaluate(createContext('assault', {
+      budget: 'background',
+      playerId: US_PLAYER,
+      actionClass: 'operation',
+      zonesAfter: {
+        'casualties-US:none': [
+          makeToken('us-loss-1', 'troops', 'US'),
+          makeToken('us-loss-2', 'troops', 'US'),
+          makeToken('us-loss-3', 'troops', 'US'),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, false);
+    assert.equal(result.score, -3);
+    assert.match(result.explanation, /lost too many US pieces/u);
   });
 });

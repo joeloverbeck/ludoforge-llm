@@ -1,6 +1,6 @@
 # EASTEROFF-001: Replace verbose `op: or` category filter with `op: in` in Easter Offensive macro
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — game data only
@@ -79,3 +79,10 @@ With:
 1. `pnpm turbo build --force` (verify compilation)
 2. `node --test dist/test/integration/fitl-events-easter-offensive.test.js` (targeted)
 3. `pnpm turbo test --force && pnpm turbo lint && pnpm turbo typecheck` (full verification)
+
+## Outcome
+
+- **Completion date**: 2026-03-18
+- **What changed**: Replaced the verbose `op: or` with 3 `==` args in the `easter-offensive` macro's `chooseN` filter with a single `op: in` using `item`/`set` fields. Additionally performed a full audit of `20-macros.md` and `30-rules-actions.md`, replacing 35 additional verbose `op: or` patterns with `op: in` across coup support, train, sweep, rally, govern, transport, march, and terror operations.
+- **Deviations from plan**: The ticket scoped out auditing other macros. The audit was performed as a follow-up request and found 35 more candidates beyond the original Easter Offensive fix.
+- **Verification**: 4978/4978 engine tests pass, lint clean, typecheck clean.

@@ -167,19 +167,17 @@ effectMacros:
     effects:
       - if:
           when:
-            op: or
-            args:
-              - { op: '==', left: { ref: markerState, space: { param: space }, marker: supportOpposition }, right: activeSupport }
-              - { op: '==', left: { ref: markerState, space: { param: space }, marker: supportOpposition }, right: passiveSupport }
+            op: in
+            item: { ref: markerState, space: { param: space }, marker: supportOpposition }
+            set: [activeSupport, passiveSupport]
           then:
             - shiftMarker: { space: { param: space }, marker: supportOpposition, delta: -1 }
           else:
             - if:
                 when:
-                  op: or
-                  args:
-                    - { op: '==', left: { ref: markerState, space: { param: space }, marker: supportOpposition }, right: activeOpposition }
-                    - { op: '==', left: { ref: markerState, space: { param: space }, marker: supportOpposition }, right: passiveOpposition }
+                  op: in
+                  item: { ref: markerState, space: { param: space }, marker: supportOpposition }
+                  set: [activeOpposition, passiveOpposition]
                 then:
                   - shiftMarker: { space: { param: space }, marker: supportOpposition, delta: 1 }
                 else: []
@@ -198,10 +196,9 @@ effectMacros:
               op: and
               args:
                 - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                - op: or
-                  args:
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                - op: in
+                  item: { ref: zoneProp, zone: $zone, prop: country }
+                  set: [laos, cambodia]
 
   # ── remove-support-from-space ─────────────────────────────────────────────
   # Shared helper for effects that remove Support from a specific space
@@ -1112,10 +1109,9 @@ effectMacros:
                                 args:
                                   - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
                                   - { op: '>', left: { ref: gvar, var: { param: resourceVar } }, right: 0 }
-                              - op: or
-                                args:
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                              - op: in
+                                item: { ref: zoneProp, zone: $zone, prop: category }
+                                set: ['province', 'city']
                       # Cap Cadres unshaded: VC needs >=2 guerrillas for Terror
                       - op: or
                         args:
@@ -1166,10 +1162,9 @@ effectMacros:
                                 args:
                                   - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
                                   - { op: '>', left: { ref: gvar, var: { param: resourceVar } }, right: 0 }
-                              - op: or
-                                args:
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                              - op: in
+                                item: { ref: zoneProp, zone: $zone, prop: category }
+                                set: ['province', 'city']
                       # Cap Cadres unshaded: VC needs >=2 guerrillas for Terror
                       - op: or
                         args:
@@ -1216,10 +1211,9 @@ effectMacros:
                   filter:
                     op: and
                     args:
-                      - op: or
-                        args:
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                      - op: in
+                        item: { ref: zoneProp, zone: $zone, prop: category }
+                        set: ['province', 'city']
                       - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'passiveSupport' }
                       - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'activeSupport' }
                 min: 0
@@ -1232,10 +1226,9 @@ effectMacros:
                   filter:
                     op: and
                     args:
-                      - op: or
-                        args:
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                      - op: in
+                        item: { ref: zoneProp, zone: $zone, prop: category }
+                        set: ['province', 'city']
                       - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'passiveSupport' }
                       - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'activeSupport' }
                 min: 0
@@ -1628,10 +1621,9 @@ effectMacros:
                                 args:
                                   - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
                                   - { op: '>', left: { ref: gvar, var: { param: resourceVar } }, right: 0 }
-                              - op: or
-                                args:
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                              - op: in
+                                item: { ref: zoneProp, zone: $zone, prop: category }
+                                set: ['province', 'city']
                       - op: '>'
                         left:
                           aggregate:
@@ -1678,10 +1670,9 @@ effectMacros:
                                       args:
                                         - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
                                         - { op: '>', left: { ref: gvar, var: { param: resourceVar } }, right: 0 }
-                                    - op: or
-                                      args:
-                                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                                    - op: in
+                                      item: { ref: zoneProp, zone: $zone, prop: category }
+                                      set: ['province', 'city']
                             - op: '>'
                               left:
                                 aggregate:
@@ -1731,10 +1722,9 @@ effectMacros:
                                       args:
                                         - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
                                         - { op: '>', left: { ref: gvar, var: { param: resourceVar } }, right: 0 }
-                                    - op: or
-                                      args:
-                                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                                    - op: in
+                                      item: { ref: zoneProp, zone: $zone, prop: category }
+                                      set: ['province', 'city']
                             - op: '>'
                               left:
                                 aggregate:
@@ -4246,11 +4236,9 @@ effectMacros:
             filter:
               op: and
               args:
-                - op: or
-                  args:
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
+                - op: in
+                  item: { ref: zoneProp, zone: $zone, prop: category }
+                  set: ['province', 'city', 'loc']
                 - op: '>'
                   left:
                     aggregate:

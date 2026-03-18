@@ -223,7 +223,7 @@ describe('runSearch rootStopReason', () => {
       iterations: 20,
       minIterations: 0,
       diagnostics: true,
-      rolloutMode: 'direct',
+      leafEvaluator: { type: 'heuristic' },
     });
 
     const result = runSearch(root, def, state, obs, observer, config, createRng(123n), rootMoves, runtime, pool);
@@ -247,7 +247,7 @@ describe('runSearch rootStopReason', () => {
       minIterations: 0,
       timeLimitMs: 1,
       diagnostics: true,
-      rolloutMode: 'direct',
+      leafEvaluator: { type: 'heuristic' },
     });
 
     const result = runSearch(root, def, state, obs, observer, config, createRng(123n), rootMoves, runtime, pool);
@@ -272,7 +272,7 @@ describe('runSearch rootStopReason', () => {
       iterations: 50,
       minIterations: 50,
       diagnostics: true,
-      rolloutMode: 'direct',
+      leafEvaluator: { type: 'heuristic' },
     });
 
     const result = runSearch(root, def, state, obs, observer, config, createRng(123n), rootMoves, runtime, pool);
@@ -292,7 +292,7 @@ describe('runSearch rootStopReason', () => {
       iterations: 500,
       minIterations: 16,
       diagnostics: true,
-      rolloutMode: 'direct',
+      leafEvaluator: { type: 'heuristic' },
       rootStopConfidenceDelta: 1e-3,
       rootStopMinVisits: 16,
     });

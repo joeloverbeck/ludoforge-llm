@@ -1,5 +1,5 @@
 /**
- * FITL MCTS fast-preset competence tests (200 iterations).
+ * FITL MCTS interactive-profile competence tests (200 iterations).
  *
  * Broad acceptable move sets — tests "don't be incompetent".
  * Gated by RUN_MCTS_FITL_E2E=1 environment variable.
@@ -67,6 +67,7 @@
  *    intercept *before* `applyMove`.
  * 4. Pool is adequate at 201 for 200 iterations.
  */
+import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { applyMove } from '../../../src/kernel/index.js';
@@ -86,10 +87,10 @@ import {
 } from './fitl-mcts-test-helpers.js';
 
 // ---------------------------------------------------------------------------
-// Fast profile: broad acceptable categories
+// Interactive profile: broad acceptable categories
 // ---------------------------------------------------------------------------
 
-const FAST_ACCEPTABLE: readonly (readonly string[])[] = [
+const INTERACTIVE_ACCEPTABLE: readonly (readonly string[])[] = [
   /* S1: T1 VC  */ ['event', 'terror', 'rally'],
   /* S2: T1 ARVN */ ['train', 'patrol', 'sweep', 'assault'],
   /* S3: T2 NVA  */ ['rally', 'march', 'attack'],
@@ -101,17 +102,46 @@ const FAST_ACCEPTABLE: readonly (readonly string[])[] = [
   /* S9: T7 NVA  */ ['attack', 'march', 'rally'],
 ];
 
-describe('FITL MCTS fast-preset competence', { skip: !RUN_MCTS_FITL_E2E }, () => {
+describe('FITL MCTS interactive-profile competence', { skip: !RUN_MCTS_FITL_E2E }, () => {
   const def = compileFitlDef();
   const baseState = createPlaybookBaseState(def);
-  const visitor = createConsoleVisitor('[MCTS-FAST]');
+  const visitor = createConsoleVisitor('[MCTS-INTERACTIVE]');
 
   describe('move-category competence', () => {
     for (const [i, scenario] of CATEGORY_SCENARIOS.entries()) {
       it(scenario.label, () => {
         const state = replayToDecisionPoint(def, baseState, scenario.turnIndex, scenario.moveIndex);
-        const result = runFitlMctsSearch(def, state, scenario.playerId, 'fast', visitor);
-        assertMoveCategory(result.move, FAST_ACCEPTABLE[i]!, scenario.label);
+        const result = runFitlMctsSearch(def, state, scenario.playerId, 'interactive', visitor);
+        assertMoveCategory(result.move, INTERACTIVE_ACCEPTABLE[i]!, scenario.label);
+      });
+    }
+  });
+
+  describe('pending-family coverage', () => {
+    // Pending FITL operations (rally, march, attack, train) must not be starved.
+    const PENDING_FAMILIES = ['rally', 'march', 'attack', 'train'];
+
+    for (const scenario of CATEGORY_SCENARIOS) {
+      it(`${scenario.label} — pending families receive visits`, () => {
+        const state = replayToDecisionPoint(def, baseState, scenario.turnIndex, scenario.moveIndex);
+        const result = runFitlMctsSearch(def, state, scenario.playerId, 'interactive', visitor);
+        const d = result.diagnostics;
+
+        // At least one pending family must have received visits
+        assert.ok(
+          (d.pendingFamiliesWithVisits ?? 0) > 0,
+          `${scenario.label}: pendingFamiliesWithVisits should be >0, got ${d.pendingFamiliesWithVisits ?? 0}`,
+        );
+
+        // At least one pending operation family has >0 root-level visits
+        const visits = d.rootChildVisits;
+        const pendingWithVisits = PENDING_FAMILIES.filter((family) =>
+          Object.keys(visits).some((key) => key.startsWith(family) && visits[key]! > 0),
+        );
+        assert.ok(
+          pendingWithVisits.length > 0,
+          `${scenario.label}: expected at least one of [${PENDING_FAMILIES.join(', ')}] to have root visits, got none. Visits: ${JSON.stringify(visits)}`,
+        );
       });
     }
   });
@@ -121,7 +151,7 @@ describe('FITL MCTS fast-preset competence', { skip: !RUN_MCTS_FITL_E2E }, () =>
       const stateBefore = replayToDecisionPoint(
         def, baseState, VICTORY_SCENARIO.turnIndex, VICTORY_SCENARIO.moveIndex,
       );
-      const result = runFitlMctsSearch(def, stateBefore, VICTORY_SCENARIO.playerId, 'fast', visitor);
+      const result = runFitlMctsSearch(def, stateBefore, VICTORY_SCENARIO.playerId, 'interactive', visitor);
       const stateAfter = applyMove(def, stateBefore, result.move).state;
       assertVictoryNonDegrading(def, stateBefore, stateAfter, computeUsVictory, 3, VICTORY_SCENARIO.label);
     });

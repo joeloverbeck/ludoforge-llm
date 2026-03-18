@@ -5,12 +5,12 @@ import { describe, it } from 'node:test';
 import { pathToFileURL } from 'node:url';
 
 /**
- * Lane isolation tests for MCTS profile lanes.
+ * Lane isolation tests for MCTS budget-profile lanes.
  *
  * These tests verify that:
- * 1. Each profile lane (e2e:mcts:fast, e2e:mcts:default, e2e:mcts:strong)
+ * 1. Each profile lane (e2e:mcts:interactive, e2e:mcts:turn, e2e:mcts:background)
  *    maps to exactly one test file — the correct profile-specific file.
- * 2. Each profile test file only references its intended preset.
+ * 2. Each profile test file only references its intended budget profile.
  * 3. The combined e2e:mcts lane includes all profile files.
  *
  * These tests do NOT run any MCTS agent code — they only inspect the lane
@@ -28,25 +28,25 @@ const manifest = (await import(manifestUrl)) as {
   listE2eTestsForLane: (lane: string) => string[];
 };
 
-const PROFILE_LANES = ['e2e:mcts:fast', 'e2e:mcts:default', 'e2e:mcts:strong'] as const;
+const PROFILE_LANES = ['e2e:mcts:interactive', 'e2e:mcts:turn', 'e2e:mcts:background'] as const;
 type ProfileLane = (typeof PROFILE_LANES)[number];
 
 const EXPECTED_FILES: Record<ProfileLane, string> = {
-  'e2e:mcts:fast': 'test/e2e/mcts/texas-holdem-mcts-fast.test.ts',
-  'e2e:mcts:default': 'test/e2e/mcts/texas-holdem-mcts-default.test.ts',
-  'e2e:mcts:strong': 'test/e2e/mcts/texas-holdem-mcts-strong.test.ts',
+  'e2e:mcts:interactive': 'test/e2e/mcts/texas-holdem-mcts-interactive.test.ts',
+  'e2e:mcts:turn': 'test/e2e/mcts/texas-holdem-mcts-turn.test.ts',
+  'e2e:mcts:background': 'test/e2e/mcts/texas-holdem-mcts-background.test.ts',
 };
 
-const PRESET_KEYWORDS: Record<string, readonly string[]> = {
-  fast: ["'fast'", "resolvePreset('fast')", 'createMctsAgents('],
-  default: ["'default'", "resolvePreset('default')", 'createTimeBudgetedDefaultAgents('],
-  strong: ["'strong'", "resolvePreset('strong')", 'createMctsAgents('],
+const PROFILE_KEYWORDS: Record<string, readonly string[]> = {
+  interactive: ["'interactive'", "resolveBudgetProfile('interactive')", 'createMctsAgents('],
+  turn: ["'turn'", "resolveBudgetProfile('turn')", 'createMctsAgents('],
+  background: ["'background'", "resolveBudgetProfile('background')", 'createMctsAgents('],
 };
 
-const OTHER_PRESETS: Record<string, readonly string[]> = {
-  fast: ['default', 'strong'],
-  default: ['fast', 'strong'],
-  strong: ['fast', 'default'],
+const OTHER_PROFILES: Record<string, readonly string[]> = {
+  interactive: ['turn', 'background'],
+  turn: ['interactive', 'background'],
+  background: ['interactive', 'turn'],
 };
 
 describe('MCTS lane isolation', () => {
@@ -90,28 +90,28 @@ describe('MCTS lane isolation', () => {
     });
   });
 
-  describe('test file content uses only intended preset', () => {
+  describe('test file content uses only intended budget profile', () => {
     for (const lane of PROFILE_LANES) {
       const profile = lane.split(':').at(-1)!;
       const filePath = resolve(ENGINE_ROOT, EXPECTED_FILES[lane]);
 
-      it(`${profile} test file references the '${profile}' preset`, () => {
+      it(`${profile} test file references the '${profile}' profile`, () => {
         const content = readFileSync(filePath, 'utf-8');
-        const keywords = PRESET_KEYWORDS[profile] ?? [];
-        const hasPreset = keywords.some((kw) => content.includes(kw));
-        assert.ok(hasPreset, `${EXPECTED_FILES[lane]} should reference preset '${profile}'`);
+        const keywords = PROFILE_KEYWORDS[profile] ?? [];
+        const hasProfile = keywords.some((kw) => content.includes(kw));
+        assert.ok(hasProfile, `${EXPECTED_FILES[lane]} should reference budget profile '${profile}'`);
       });
 
-      it(`${profile} test file does not directly use other presets`, () => {
+      it(`${profile} test file does not directly use other profiles`, () => {
         const content = readFileSync(filePath, 'utf-8');
-        for (const other of OTHER_PRESETS[profile] ?? []) {
-          // Check for direct preset usage patterns: resolvePreset('X') or createMctsAgents(N, 'X')
-          const directUsagePattern = new RegExp(`(?:resolvePreset|createMctsAgents)\\([^)]*'${other}'`, 'g');
+        for (const other of OTHER_PROFILES[profile] ?? []) {
+          // Check for direct profile usage patterns: resolveBudgetProfile('X') or createMctsAgents(N, 'X')
+          const directUsagePattern = new RegExp(`(?:resolveBudgetProfile|createMctsAgents)\\([^)]*'${other}'`, 'g');
           const matches = content.match(directUsagePattern);
           assert.equal(
             matches,
             null,
-            `${EXPECTED_FILES[lane]} should not directly use '${other}' preset, found: ${JSON.stringify(matches)}`,
+            `${EXPECTED_FILES[lane]} should not directly use '${other}' profile, found: ${JSON.stringify(matches)}`,
           );
         }
       });

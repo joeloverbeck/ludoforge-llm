@@ -1,4 +1,4 @@
-name: Engine MCTS FITL E2E (fast)
+name: Engine MCTS FITL E2E (interactive)
 on:
   push:
     branches: [main]
@@ -28,10 +28,10 @@ on:
       - '.github/workflows/engine-mcts-fitl-fast.yml'
   workflow_dispatch:
 concurrency:
-  group: engine-mcts-fitl-fast-${{ github.ref }}
+  group: engine-mcts-fitl-interactive-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  engine-mcts-fitl-fast:
+  engine-mcts-fitl-interactive:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -44,4 +44,4 @@ jobs:
       - run: pnpm guard:worktree-pointers
       - run: pnpm install --frozen-lockfile
       - run: pnpm -F @ludoforge/engine build
-      - run: pnpm -F @ludoforge/engine test:e2e:mcts:fitl:fast
+      - run: pnpm -F @ludoforge/engine test:e2e:mcts:fitl:interactive

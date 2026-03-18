@@ -44,6 +44,7 @@ export interface MutableDiagnosticsAccumulator {
   terminalCacheHits: number;
   legalMovesCacheHits: number;
   rewardCacheHits: number;
+  classificationCacheHits: number;
 
   // Compressed-ply counters
   forcedMovePlies: number;
@@ -59,6 +60,72 @@ export interface MutableDiagnosticsAccumulator {
   decisionCompletionsInRollout: number;
   decisionIllegalPruned: number;
   decisionBoundaryFailures: number;
+
+  // Gap 1: Per-kernel-call timing (ms)
+  legalMovesTimeMs: number;
+  applyMoveTimeMs: number;
+  terminalTimeMs: number;
+  materializeTimeMs: number;
+  evaluateTimeMs: number;
+
+  // Gap 2: State size metrics
+  stateSizeSamples: number[];
+
+  // Gap 3: Effect chain profiling
+  totalTriggerFirings: number;
+  maxTriggerFiringsPerMove: number;
+
+  // Gap 4: Materialization breakdown
+  templateCompletionAttempts: number;
+  templateCompletionSuccesses: number;
+  templateCompletionFailures: number;
+
+  // Gap 5: Memory pressure
+  heapUsedAtStartBytes: number;
+  heapUsedAtEndBytes: number;
+
+  // Gap 6: Branching factor per depth
+  branchingFactorSamples: Array<{ depth: number; count: number }>;
+
+  // Gap 7: Per-iteration timing
+  iterationTimeSamples: number[];
+
+  // Lazy expansion counters
+  lazyExpansionCandidatesClassified: number;
+  lazyExpansionShortlistSize: number;
+  lazyExpansionFrontierExhausted: number;
+  lazyExpansionFallbackToExhaustive: number;
+
+  // Family widening counters
+  familyCoverageAtRoot: number;
+  familyStarvationCount: number;
+  familyTotalAtRoot: number;
+
+  // Pending-family coverage counters
+  pendingFamiliesTotal: number;
+  pendingFamiliesWithVisits: number;
+  pendingFamilyQuotaUsed: number;
+
+  // Raw heuristic score spread tracking (per evaluateForAllPlayers call)
+  rawHeuristicScoreMin: number;
+  rawHeuristicScoreMax: number;
+  postSigmoidRewardMin: number;
+  postSigmoidRewardMax: number;
+  /** Number of evaluateForAllPlayers calls that contributed to min/max tracking. */
+  heuristicEvalSamples: number;
+
+  // Decision discovery instrumentation
+  decisionDiscoverCallCount: number;
+  decisionDiscoverTimeMs: number;
+  decisionDiscoverCacheHits: number;
+  /** Per-depth option counts: depth → list of option counts observed. */
+  decisionDiscoverOptionsByDepth: Map<number, number[]>;
+
+  // Classification subphase timing (ms) — populated when diagnostics enabled
+  classificationBindingTimeMs: number;
+  classificationTargetEnumTimeMs: number;
+  classificationPredicateTimeMs: number;
+  classificationPipelineTimeMs: number;
 
   // Aggregation arrays (for computing averages)
   leafRewardSpans: number[];
@@ -88,6 +155,7 @@ export function createAccumulator(): MutableDiagnosticsAccumulator {
     terminalCacheHits: 0,
     legalMovesCacheHits: 0,
     rewardCacheHits: 0,
+    classificationCacheHits: 0,
 
     forcedMovePlies: 0,
     hybridRolloutPlies: 0,
@@ -101,9 +169,100 @@ export function createAccumulator(): MutableDiagnosticsAccumulator {
     decisionIllegalPruned: 0,
     decisionBoundaryFailures: 0,
 
+    legalMovesTimeMs: 0,
+    applyMoveTimeMs: 0,
+    terminalTimeMs: 0,
+    materializeTimeMs: 0,
+    evaluateTimeMs: 0,
+
+    stateSizeSamples: [],
+
+    totalTriggerFirings: 0,
+    maxTriggerFiringsPerMove: 0,
+
+    templateCompletionAttempts: 0,
+    templateCompletionSuccesses: 0,
+    templateCompletionFailures: 0,
+
+    heapUsedAtStartBytes: 0,
+    heapUsedAtEndBytes: 0,
+
+    branchingFactorSamples: [],
+
+    iterationTimeSamples: [],
+
+    lazyExpansionCandidatesClassified: 0,
+    lazyExpansionShortlistSize: 0,
+    lazyExpansionFrontierExhausted: 0,
+    lazyExpansionFallbackToExhaustive: 0,
+
+    familyCoverageAtRoot: 0,
+    familyStarvationCount: 0,
+    familyTotalAtRoot: 0,
+
+    pendingFamiliesTotal: 0,
+    pendingFamiliesWithVisits: 0,
+    pendingFamilyQuotaUsed: 0,
+
+    rawHeuristicScoreMin: Infinity,
+    rawHeuristicScoreMax: -Infinity,
+    postSigmoidRewardMin: Infinity,
+    postSigmoidRewardMax: -Infinity,
+    heuristicEvalSamples: 0,
+
+    decisionDiscoverCallCount: 0,
+    decisionDiscoverTimeMs: 0,
+    decisionDiscoverCacheHits: 0,
+    decisionDiscoverOptionsByDepth: new Map(),
+
+    classificationBindingTimeMs: 0,
+    classificationTargetEnumTimeMs: 0,
+    classificationPredicateTimeMs: 0,
+    classificationPipelineTimeMs: 0,
+
     leafRewardSpans: [],
     selectionDepths: [],
   };
+}
+
+/**
+ * Update the accumulator's raw/post-sigmoid score tracking after an
+ * `evaluateForAllPlayers()` call.
+ *
+ * @param acc          - mutable accumulator
+ * @param rawScores    - raw evaluateState outputs (before centering + sigmoid)
+ * @param rewards      - post-sigmoid reward vector returned by evaluateForAllPlayers
+ */
+export function recordHeuristicEvalSpread(
+  acc: MutableDiagnosticsAccumulator,
+  rawScores: readonly number[],
+  rewards: readonly number[],
+): void {
+  for (const r of rawScores) {
+    if (r < acc.rawHeuristicScoreMin) acc.rawHeuristicScoreMin = r;
+    if (r > acc.rawHeuristicScoreMax) acc.rawHeuristicScoreMax = r;
+  }
+  for (const r of rewards) {
+    if (r < acc.postSigmoidRewardMin) acc.postSigmoidRewardMin = r;
+    if (r > acc.postSigmoidRewardMax) acc.postSigmoidRewardMax = r;
+  }
+  acc.heuristicEvalSamples += 1;
+}
+
+/**
+ * Record the number of decision options discovered at a given depth.
+ */
+export function recordDecisionDiscoverOptions(
+  acc: MutableDiagnosticsAccumulator,
+  depth: number,
+  optionCount: number,
+): void {
+  const existing = acc.decisionDiscoverOptionsByDepth.get(depth);
+  if (existing !== undefined) {
+    existing.push(optionCount);
+  } else {
+    acc.decisionDiscoverOptionsByDepth.set(depth, [optionCount]);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -138,6 +297,7 @@ export interface MctsSearchDiagnostics {
   readonly terminalCacheHits?: number;
   readonly legalMovesCacheHits?: number;
   readonly rewardCacheHits?: number;
+  readonly classificationCacheHits?: number;
 
   // Compressed-ply counters
   readonly forcedMovePlies?: number;
@@ -154,13 +314,144 @@ export interface MctsSearchDiagnostics {
   readonly decisionIllegalPruned?: number;
   readonly decisionBoundaryFailures?: number;
 
+  // Gap 1: Per-kernel-call timing (ms)
+  readonly legalMovesTimeMs?: number;
+  readonly applyMoveTimeMs?: number;
+  readonly terminalTimeMs?: number;
+  readonly materializeTimeMs?: number;
+  readonly evaluateTimeMs?: number;
+
+  // Gap 2: State size metrics (derived)
+  readonly avgStateSizeBytes?: number;
+  readonly maxStateSizeBytes?: number;
+  readonly stateSizeSampleCount?: number;
+
+  // Gap 3: Effect chain profiling
+  readonly totalTriggerFirings?: number;
+  readonly maxTriggerFiringsPerMove?: number;
+  readonly avgTriggerFiringsPerMove?: number;
+
+  // Gap 4: Materialization breakdown
+  readonly templateCompletionAttempts?: number;
+  readonly templateCompletionSuccesses?: number;
+  readonly templateCompletionFailures?: number;
+
+  // Gap 5: Memory pressure
+  readonly heapUsedAtStartBytes?: number;
+  readonly heapUsedAtEndBytes?: number;
+  readonly heapGrowthBytes?: number;
+
+  // Gap 6: Branching factor (derived)
+  readonly avgBranchingFactor?: number;
+  readonly maxBranchingFactor?: number;
+  readonly branchingFactorByDepth?: Readonly<Record<number, { readonly avg: number; readonly max: number; readonly count: number }>>;
+
+  // Gap 7: Per-iteration timing (derived)
+  readonly iterationTimeP50Ms?: number;
+  readonly iterationTimeP95Ms?: number;
+  readonly iterationTimeMaxMs?: number;
+  readonly iterationTimeStddevMs?: number;
+
+  // Lazy expansion counters
+  readonly lazyExpansionCandidatesClassified?: number;
+  readonly lazyExpansionShortlistSize?: number;
+  readonly lazyExpansionFrontierExhausted?: number;
+  readonly lazyExpansionFallbackToExhaustive?: number;
+
+  // Family widening counters
+  readonly familyCoverageAtRoot?: number;
+  readonly familyStarvationCount?: number;
+  readonly familyTotalAtRoot?: number;
+
+  // Pending-family coverage counters
+  readonly pendingFamiliesTotal?: number;
+  readonly pendingFamiliesWithVisits?: number;
+  readonly pendingFamilyQuotaUsed?: number;
+
+  // Raw heuristic score spread (from evaluateForAllPlayers instrumentation)
+  readonly rawHeuristicScoreMin?: number;
+  readonly rawHeuristicScoreMax?: number;
+  readonly rawHeuristicScoreSpread?: number;
+  readonly postSigmoidRewardMin?: number;
+  readonly postSigmoidRewardMax?: number;
+  readonly postSigmoidRewardSpread?: number;
+
+  // Decision discovery instrumentation
+  readonly decisionDiscoverCallCount?: number;
+  readonly decisionDiscoverTimeMs?: number;
+  readonly decisionDiscoverCacheHits?: number;
+  readonly decisionDiscoverOptionsByDepth?: Readonly<Record<number, { readonly avg: number; readonly max: number; readonly count: number }>>;
+
+  // Classification subphase timing (ms)
+  readonly classificationBindingTimeMs?: number;
+  readonly classificationTargetEnumTimeMs?: number;
+  readonly classificationPredicateTimeMs?: number;
+  readonly classificationPipelineTimeMs?: number;
+
   // Derived averages
   readonly avgSelectionDepth?: number;
   readonly avgLeafRewardSpan?: number;
 
   // Mode / stop metadata
-  readonly rolloutMode?: 'legacy' | 'hybrid' | 'direct';
+  readonly leafEvaluatorType?: 'heuristic' | 'rollout' | 'auto';
   readonly rootStopReason?: 'none' | 'solver' | 'time' | 'confidence' | 'iterations';
+}
+
+// ---------------------------------------------------------------------------
+// Private helpers for derived metrics
+// ---------------------------------------------------------------------------
+
+/** Compute per-depth branching factor statistics. */
+function computeBranchingByDepth(
+  samples: readonly { readonly depth: number; readonly count: number }[],
+): Record<number, { avg: number; max: number; count: number }> {
+  const byDepth = new Map<number, { total: number; max: number; count: number }>();
+  for (const s of samples) {
+    const entry = byDepth.get(s.depth);
+    if (entry !== undefined) {
+      entry.total += s.count;
+      entry.count += 1;
+      if (s.count > entry.max) entry.max = s.count;
+    } else {
+      byDepth.set(s.depth, { total: s.count, max: s.count, count: 1 });
+    }
+  }
+  const result: Record<number, { avg: number; max: number; count: number }> = {};
+  for (const [depth, entry] of byDepth) {
+    result[depth] = { avg: entry.total / entry.count, max: entry.max, count: entry.count };
+  }
+  return result;
+}
+
+/** Compute per-depth decision discovery option statistics. */
+function computeDiscoverOptionsByDepth(
+  byDepth: ReadonlyMap<number, readonly number[]>,
+): Record<number, { avg: number; max: number; count: number }> {
+  const result: Record<number, { avg: number; max: number; count: number }> = {};
+  for (const [depth, counts] of byDepth) {
+    if (counts.length === 0) continue;
+    const total = counts.reduce((a, b) => a + b, 0);
+    result[depth] = {
+      avg: total / counts.length,
+      max: Math.max(...counts),
+      count: counts.length,
+    };
+  }
+  return result;
+}
+
+/** Compute percentile, max, and stddev from sorted timing samples. */
+function computeIterationStats(
+  samples: readonly number[],
+): { p50: number; p95: number; max: number; stddev: number } | undefined {
+  if (samples.length === 0) return undefined;
+  const sorted = [...samples].sort((a, b) => a - b);
+  const p50 = sorted[Math.floor(sorted.length * 0.5)]!;
+  const p95 = sorted[Math.floor(sorted.length * 0.95)]!;
+  const max = sorted[sorted.length - 1]!;
+  const mean = sorted.reduce((a, b) => a + b, 0) / sorted.length;
+  const variance = sorted.reduce((acc, v) => acc + (v - mean) ** 2, 0) / sorted.length;
+  return { p50, p95, max, stddev: Math.sqrt(variance) };
 }
 
 // ---------------------------------------------------------------------------
@@ -235,6 +526,48 @@ export function collectDiagnostics(
         accumulator.leafRewardSpans.length
       : undefined;
 
+  // Gap 2: State size derived metrics.
+  const stateSizeSamples = accumulator.stateSizeSamples;
+  const stateSizeMetrics = stateSizeSamples.length > 0
+    ? {
+        avgStateSizeBytes: stateSizeSamples.reduce((a, b) => a + b, 0) / stateSizeSamples.length,
+        maxStateSizeBytes: Math.max(...stateSizeSamples),
+        stateSizeSampleCount: stateSizeSamples.length,
+      }
+    : {};
+
+  // Gap 3: Trigger firings derived average.
+  const totalApplyMoves = accumulator.applyMoveCalls;
+  const avgTriggerFiringsPerMove = totalApplyMoves > 0
+    ? accumulator.totalTriggerFirings / totalApplyMoves
+    : 0;
+
+  // Gap 5: Heap growth.
+  const heapGrowth = accumulator.heapUsedAtEndBytes > 0 && accumulator.heapUsedAtStartBytes > 0
+    ? { heapGrowthBytes: accumulator.heapUsedAtEndBytes - accumulator.heapUsedAtStartBytes }
+    : {};
+
+  // Gap 6: Branching factor derived metrics.
+  const bfSamples = accumulator.branchingFactorSamples;
+  const branchingMetrics = bfSamples.length > 0
+    ? {
+        avgBranchingFactor: bfSamples.reduce((a, b) => a + b.count, 0) / bfSamples.length,
+        maxBranchingFactor: Math.max(...bfSamples.map(s => s.count)),
+        branchingFactorByDepth: computeBranchingByDepth(bfSamples),
+      }
+    : {};
+
+  // Gap 7: Per-iteration timing derived metrics.
+  const iterStats = computeIterationStats(accumulator.iterationTimeSamples);
+  const iterationMetrics = iterStats !== undefined
+    ? {
+        iterationTimeP50Ms: iterStats.p50,
+        iterationTimeP95Ms: iterStats.p95,
+        iterationTimeMaxMs: iterStats.max,
+        iterationTimeStddevMs: iterStats.stddev,
+      }
+    : {};
+
   return {
     ...base,
 
@@ -256,6 +589,7 @@ export function collectDiagnostics(
     terminalCacheHits: accumulator.terminalCacheHits,
     legalMovesCacheHits: accumulator.legalMovesCacheHits,
     rewardCacheHits: accumulator.rewardCacheHits,
+    classificationCacheHits: accumulator.classificationCacheHits,
 
     forcedMovePlies: accumulator.forcedMovePlies,
     hybridRolloutPlies: accumulator.hybridRolloutPlies,
@@ -268,6 +602,79 @@ export function collectDiagnostics(
     decisionCompletionsInRollout: accumulator.decisionCompletionsInRollout,
     decisionIllegalPruned: accumulator.decisionIllegalPruned,
     decisionBoundaryFailures: accumulator.decisionBoundaryFailures,
+
+    // Gap 1: Per-kernel-call timing
+    legalMovesTimeMs: accumulator.legalMovesTimeMs,
+    applyMoveTimeMs: accumulator.applyMoveTimeMs,
+    terminalTimeMs: accumulator.terminalTimeMs,
+    materializeTimeMs: accumulator.materializeTimeMs,
+    evaluateTimeMs: accumulator.evaluateTimeMs,
+
+    // Gap 2: State size metrics
+    ...stateSizeMetrics,
+
+    // Gap 3: Effect chain profiling
+    totalTriggerFirings: accumulator.totalTriggerFirings,
+    maxTriggerFiringsPerMove: accumulator.maxTriggerFiringsPerMove,
+    avgTriggerFiringsPerMove,
+
+    // Gap 4: Materialization breakdown
+    templateCompletionAttempts: accumulator.templateCompletionAttempts,
+    templateCompletionSuccesses: accumulator.templateCompletionSuccesses,
+    templateCompletionFailures: accumulator.templateCompletionFailures,
+
+    // Gap 5: Memory pressure
+    heapUsedAtStartBytes: accumulator.heapUsedAtStartBytes,
+    heapUsedAtEndBytes: accumulator.heapUsedAtEndBytes,
+    ...heapGrowth,
+
+    // Gap 6: Branching factor
+    ...branchingMetrics,
+
+    // Gap 7: Per-iteration timing
+    ...iterationMetrics,
+
+    // Lazy expansion counters
+    lazyExpansionCandidatesClassified: accumulator.lazyExpansionCandidatesClassified,
+    lazyExpansionShortlistSize: accumulator.lazyExpansionShortlistSize,
+    lazyExpansionFrontierExhausted: accumulator.lazyExpansionFrontierExhausted,
+    lazyExpansionFallbackToExhaustive: accumulator.lazyExpansionFallbackToExhaustive,
+
+    // Family widening counters
+    familyCoverageAtRoot: accumulator.familyCoverageAtRoot,
+    familyStarvationCount: accumulator.familyStarvationCount,
+    familyTotalAtRoot: accumulator.familyTotalAtRoot,
+
+    // Pending-family coverage counters
+    pendingFamiliesTotal: accumulator.pendingFamiliesTotal,
+    pendingFamiliesWithVisits: accumulator.pendingFamiliesWithVisits,
+    pendingFamilyQuotaUsed: accumulator.pendingFamilyQuotaUsed,
+
+    // Decision discovery instrumentation
+    decisionDiscoverCallCount: accumulator.decisionDiscoverCallCount,
+    decisionDiscoverTimeMs: accumulator.decisionDiscoverTimeMs,
+    decisionDiscoverCacheHits: accumulator.decisionDiscoverCacheHits,
+    ...(accumulator.decisionDiscoverOptionsByDepth.size > 0
+      ? { decisionDiscoverOptionsByDepth: computeDiscoverOptionsByDepth(accumulator.decisionDiscoverOptionsByDepth) }
+      : {}),
+
+    // Classification subphase timing
+    classificationBindingTimeMs: accumulator.classificationBindingTimeMs,
+    classificationTargetEnumTimeMs: accumulator.classificationTargetEnumTimeMs,
+    classificationPredicateTimeMs: accumulator.classificationPredicateTimeMs,
+    classificationPipelineTimeMs: accumulator.classificationPipelineTimeMs,
+
+    // Raw heuristic score spread
+    ...(accumulator.heuristicEvalSamples > 0
+      ? {
+          rawHeuristicScoreMin: accumulator.rawHeuristicScoreMin,
+          rawHeuristicScoreMax: accumulator.rawHeuristicScoreMax,
+          rawHeuristicScoreSpread: accumulator.rawHeuristicScoreMax - accumulator.rawHeuristicScoreMin,
+          postSigmoidRewardMin: accumulator.postSigmoidRewardMin,
+          postSigmoidRewardMax: accumulator.postSigmoidRewardMax,
+          postSigmoidRewardSpread: accumulator.postSigmoidRewardMax - accumulator.postSigmoidRewardMin,
+        }
+      : {}),
 
     ...(avgSelectionDepth !== undefined ? { avgSelectionDepth } : {}),
     ...(avgLeafRewardSpan !== undefined ? { avgLeafRewardSpan } : {}),

@@ -1,5 +1,5 @@
 /**
- * FITL MCTS strong-preset competence tests (5000 iterations).
+ * FITL MCTS background-profile competence tests (5000 iterations).
  *
  * Strict acceptable move sets — tests "matches expert-level play".
  * Gated by RUN_MCTS_FITL_E2E=1 environment variable.
@@ -22,10 +22,10 @@ import {
 } from './fitl-mcts-test-helpers.js';
 
 // ---------------------------------------------------------------------------
-// Strong profile: strict expected categories
+// Background profile: strict expected categories
 // ---------------------------------------------------------------------------
 
-const STRONG_ACCEPTABLE: readonly (readonly string[])[] = [
+const BACKGROUND_ACCEPTABLE: readonly (readonly string[])[] = [
   /* S1: T1 VC  */ ['event'],
   /* S2: T1 ARVN */ ['train'],
   /* S3: T2 NVA  */ ['rally'],
@@ -37,7 +37,7 @@ const STRONG_ACCEPTABLE: readonly (readonly string[])[] = [
   /* S9: T7 NVA  */ ['attack'],
 ];
 
-describe('FITL MCTS strong-preset competence', { skip: !RUN_MCTS_FITL_E2E }, () => {
+describe('FITL MCTS background-profile competence', { skip: !RUN_MCTS_FITL_E2E }, () => {
   const def = compileFitlDef();
   const baseState = createPlaybookBaseState(def);
 
@@ -45,8 +45,8 @@ describe('FITL MCTS strong-preset competence', { skip: !RUN_MCTS_FITL_E2E }, () 
     for (const [i, scenario] of CATEGORY_SCENARIOS.entries()) {
       it(scenario.label, () => {
         const state = replayToDecisionPoint(def, baseState, scenario.turnIndex, scenario.moveIndex);
-        const result = runFitlMctsSearch(def, state, scenario.playerId, 'strong');
-        assertMoveCategory(result.move, STRONG_ACCEPTABLE[i]!, scenario.label);
+        const result = runFitlMctsSearch(def, state, scenario.playerId, 'background');
+        assertMoveCategory(result.move, BACKGROUND_ACCEPTABLE[i]!, scenario.label);
       });
     }
   });
@@ -56,7 +56,7 @@ describe('FITL MCTS strong-preset competence', { skip: !RUN_MCTS_FITL_E2E }, () 
       const stateBefore = replayToDecisionPoint(
         def, baseState, VICTORY_SCENARIO.turnIndex, VICTORY_SCENARIO.moveIndex,
       );
-      const result = runFitlMctsSearch(def, stateBefore, VICTORY_SCENARIO.playerId, 'strong');
+      const result = runFitlMctsSearch(def, stateBefore, VICTORY_SCENARIO.playerId, 'background');
       const stateAfter = applyMove(def, stateBefore, result.move).state;
       assertVictoryNonDegrading(def, stateBefore, stateAfter, computeUsVictory, 0, VICTORY_SCENARIO.label);
     });

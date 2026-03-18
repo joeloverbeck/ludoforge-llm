@@ -46,6 +46,14 @@ export const terminalToRewards = (result: TerminalResult, playerCount: number): 
 export const sigmoid = (x: number): number => 1 / (1 + Math.exp(-x));
 
 /**
+ * Optional output parameter for capturing raw evaluation data.
+ * Used by diagnostics instrumentation without changing the return type.
+ */
+export interface EvalDiagnosticsOut {
+  rawScores?: readonly number[];
+}
+
+/**
  * Evaluate a non-terminal state for all players and return a `(0,1)` reward
  * vector using a centered-logistic transform.
  *
@@ -56,16 +64,24 @@ export const sigmoid = (x: number): number => 1 / (1 + Math.exp(-x));
  * The centering ensures that when all players have equal evaluations the output
  * is exactly `0.5` for everyone. The `temperature` parameter controls the
  * spread — higher temperature compresses outputs toward `0.5`.
+ *
+ * When `diagnosticsOut` is provided, the raw evaluation scores (before
+ * centering and sigmoid) are written to it. This is a side-channel for
+ * diagnostics and does not affect the return value.
  */
 export const evaluateForAllPlayers = (
   def: GameDef,
   state: GameState,
   temperature: number,
   runtime?: GameDefRuntime,
+  diagnosticsOut?: EvalDiagnosticsOut,
 ): readonly number[] => {
   const raw: readonly number[] = Array.from({ length: state.playerCount }, (_, i) =>
     evaluateState(def, state, i as PlayerId, runtime),
   );
+  if (diagnosticsOut !== undefined) {
+    diagnosticsOut.rawScores = raw;
+  }
   const mean = raw.reduce((sum, v) => sum + v, 0) / raw.length;
   return raw.map((v) => sigmoid((v - mean) / temperature));
 };

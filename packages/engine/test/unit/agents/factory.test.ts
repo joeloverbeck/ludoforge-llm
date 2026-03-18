@@ -142,7 +142,7 @@ describe('parseAgentSpec', () => {
   it('throws descriptive error for invalid preset name', () => {
     assert.throws(
       () => parseAgentSpec('mcts:invalid', 1),
-      /Unknown MCTS preset or iteration count: "invalid"/,
+      /Unknown MCTS profile or iteration count: "invalid"/,
     );
   });
 

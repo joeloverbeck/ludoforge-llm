@@ -8,6 +8,7 @@
 
 import type { Move, CompoundMovePayload } from '../../kernel/types-core.js';
 import type { MoveParamValue } from '../../kernel/types-ast.js';
+import type { TurnFlowActionClass } from '../../contracts/turn-flow-action-class-contract.js';
 
 /** Opaque string key used to deduplicate concrete moves in the search tree. */
 export type MoveKey = string;
@@ -70,4 +71,26 @@ function serializeMove(move: Move): string {
  */
 export function canonicalMoveKey(move: Move): MoveKey {
   return serializeMove(move);
+}
+
+/**
+ * Coarse grouping key — groups moves by `actionId` only.
+ *
+ * Moves with the same `actionId` but different params or compound payloads
+ * share a family. This is intentionally coarser than `canonicalMoveKey`.
+ */
+export function familyKey(move: Move): string {
+  return move.actionId;
+}
+
+/**
+ * Abstract move key with optional action-class integration.
+ *
+ * When a `TurnFlowActionClass` is available (e.g. FITL), returns that class
+ * as an even coarser grouping than `familyKey`. Without it, falls back to
+ * `actionId`.
+ */
+export function abstractMoveKey(move: Move, actionClass?: TurnFlowActionClass): string {
+  if (actionClass) return actionClass;
+  return move.actionId;
 }

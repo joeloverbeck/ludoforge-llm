@@ -204,7 +204,7 @@ describe('MCTS decision integration — concrete-only game', () => {
     const config = validateMctsConfig({
       iterations: 50,
       minIterations: 0,
-      rolloutMode: 'direct',
+      leafEvaluator: { type: 'heuristic' },
       diagnostics: true,
     });
 
@@ -250,7 +250,7 @@ describe('MCTS decision integration — game with template moves', () => {
     const config = validateMctsConfig({
       iterations: 100,
       minIterations: 0,
-      rolloutMode: 'direct',
+      leafEvaluator: { type: 'heuristic' },
       diagnostics: true,
       visitor: {
         onEvent: (event: MctsSearchEvent) => { events.push(event); },

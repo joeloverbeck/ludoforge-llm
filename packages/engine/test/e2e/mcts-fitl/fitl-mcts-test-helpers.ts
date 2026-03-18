@@ -36,13 +36,13 @@ import { advanceToDecisionPoint } from '../../../src/kernel/phase-advance.js';
 import { initializeTurnFlowEligibilityState } from '../../../src/kernel/turn-flow-eligibility.js';
 
 import {
-  resolvePreset,
+  resolveBudgetProfile,
   runSearch,
   createRootNode,
   createNodePool,
   selectRootDecision,
 } from '../../../src/agents/index.js';
-import type { MctsPreset, MctsSearchDiagnostics, MctsSearchVisitor } from '../../../src/agents/index.js';
+import type { MctsBudgetProfile, MctsSearchDiagnostics, MctsSearchVisitor } from '../../../src/agents/index.js';
 
 import { assertNoErrors } from '../../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../../helpers/production-spec-helpers.js';
@@ -912,10 +912,10 @@ export const runFitlMctsSearch = (
   def: ValidatedGameDef,
   state: GameState,
   playerId: PlayerId,
-  preset: MctsPreset,
+  profile: MctsBudgetProfile,
   visitor?: MctsSearchVisitor,
 ): FitlSearchResult => {
-  const baseConfig = resolvePreset(preset);
+  const baseConfig = resolveBudgetProfile(profile);
   // Remove timeLimitMs to ensure deterministic iteration count
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { timeLimitMs: _, ...configWithoutTime } = baseConfig;
@@ -952,6 +952,57 @@ export const runFitlMctsSearch = (
     iterations: result.iterations,
     diagnostics: result.diagnostics,
     elapsedMs,
+  };
+};
+
+/**
+ * Run a single MCTS search preserving the profile's `timeLimitMs`.
+ * Used by budget-competence tests that need wall-clock enforcement.
+ */
+export const runFitlMctsTimedSearch = (
+  def: ValidatedGameDef,
+  state: GameState,
+  playerId: PlayerId,
+  profile: MctsBudgetProfile,
+): FitlSearchResult & { readonly timeLimitMs: number; readonly legalMoveIds: readonly string[] } => {
+  const baseConfig = resolveBudgetProfile(profile);
+  const config = { ...baseConfig, diagnostics: true };
+
+  const runtime = createGameDefRuntime(def);
+  const rng = createRng(BigInt(42 + 9999));
+  const moves = legalMoves(def, state, undefined, runtime);
+  if (moves.length < 2) {
+    throw new Error(`Expected ≥2 legal moves at search state, got ${moves.length}`);
+  }
+
+  const observation = derivePlayerObservation(def, state, playerId);
+  const root = createRootNode(state.playerCount);
+  const poolCapacity = Math.max(config.iterations + 1, moves.length * 4);
+  const pool = createNodePool(poolCapacity, state.playerCount);
+  const [searchRng] = fork(rng);
+
+  const start = Date.now();
+  const result = runSearch(
+    root, def, state, observation, playerId,
+    config, searchRng, moves, runtime, pool,
+  );
+  const elapsedMs = Date.now() - start;
+
+  const bestChild = selectRootDecision(root, playerId);
+
+  if (result.diagnostics === undefined) {
+    throw new Error('Expected diagnostics to be present (config.diagnostics was true)');
+  }
+
+  const legalMoveIds = moves.map((m) => String(m.actionId));
+
+  return {
+    move: bestChild.move as Move,
+    iterations: result.iterations,
+    diagnostics: result.diagnostics,
+    elapsedMs,
+    timeLimitMs: baseConfig.timeLimitMs ?? Infinity,
+    legalMoveIds,
   };
 };
 

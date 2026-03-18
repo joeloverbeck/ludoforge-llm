@@ -124,6 +124,29 @@ export {
   MAX_CHOOSE_N_TOTAL_WITNESS_NODES,
 };
 
+/**
+ * Mutable accumulator for classification subphase timing.
+ *
+ * When provided via `LegalChoicesRuntimeOptions.classificationSubphaseTiming`,
+ * `legalChoicesEvaluate()` adds elapsed time (ms) to these fields for each
+ * identifiable subphase.  Zero-cost when omitted — no `performance.now()` calls.
+ */
+export interface ClassificationSubphaseTiming {
+  /** Time spent building context, adjacency graph, bindings, free-op analysis. */
+  bindingTimeMs: number;
+  /** Time spent in `resolveActionParamPendingChoice` and option enumeration. */
+  targetEnumTimeMs: number;
+  /** Time spent in `resolveActionApplicabilityPreflight` and pipeline predicate evaluation. */
+  predicateTimeMs: number;
+  /** Time spent iterating pipeline stages, cost checking, and effect discovery. */
+  pipelineTimeMs: number;
+}
+
+/** Create a zeroed `ClassificationSubphaseTiming`. */
+export function createClassificationSubphaseTiming(): ClassificationSubphaseTiming {
+  return { bindingTimeMs: 0, targetEnumTimeMs: 0, predicateTimeMs: 0, pipelineTimeMs: 0 };
+}
+
 export interface LegalChoicesRuntimeOptions {
   readonly onDeferredPredicatesEvaluated?: (count: number) => void;
   readonly onProbeContextPrepared?: () => void;
@@ -141,6 +164,12 @@ export interface LegalChoicesRuntimeOptions {
    * normalization/replay callers that handle SA normalization separately.
    */
   readonly chainCompoundSA?: boolean;
+  /**
+   * Optional mutable accumulator for classification subphase timing.
+   * When provided, `legalChoicesEvaluate` instruments its internal subphases
+   * and adds elapsed time to this object.  Zero-cost when undefined.
+   */
+  readonly classificationSubphaseTiming?: ClassificationSubphaseTiming;
 }
 
 interface LegalChoicesInternalOptions extends LegalChoicesRuntimeOptions {
@@ -726,6 +755,8 @@ const legalChoicesWithPreparedContextInternal = (
   allowAmbiguousFreeOperationOverlapDiscovery = false,
 ): ChoiceRequest => {
   const { def, state, action, adjacencyGraph, runtimeTableIndex, seatResolution } = context;
+  const cst = options?.classificationSubphaseTiming;
+  const tFreeOp = cst !== undefined ? performance.now() : 0;
   let freeOperationAnalysis: ReturnType<typeof resolveFreeOperationDiscoveryAnalysis> | undefined;
   let freeOperationAmbiguousOverlapReason: Extract<ChoiceIllegalRequest['reason'], 'freeOperationAmbiguousOverlap'> | null = null;
   if (partialMove.freeOperation === true) {
@@ -736,6 +767,7 @@ const legalChoicesWithPreparedContextInternal = (
     if (deniedCause !== null) {
       const deniedReason = toFreeOperationChoiceIllegalReason(deniedCause);
       if (!(allowAmbiguousFreeOperationOverlapDiscovery && deniedReason === 'freeOperationAmbiguousOverlap')) {
+        if (cst !== undefined) { cst.bindingTimeMs += performance.now() - tFreeOp; }
         return {
           kind: 'illegal',
           complete: false,
@@ -745,6 +777,9 @@ const legalChoicesWithPreparedContextInternal = (
       freeOperationAmbiguousOverlapReason = deniedReason;
     }
     freeOperationAnalysis = analysis;
+  }
+  if (cst !== undefined) {
+    cst.bindingTimeMs += performance.now() - tFreeOp;
   }
 
   const finalizeRequest = (request: ChoiceRequest): ChoiceRequest => {
@@ -760,9 +795,14 @@ const legalChoicesWithPreparedContextInternal = (
       };
   };
 
+  const tBinding = cst !== undefined ? performance.now() : 0;
   const baseBindings: Record<string, unknown> = {
     ...buildMoveRuntimeBindings(partialMove),
   };
+  if (cst !== undefined) {
+    cst.bindingTimeMs += performance.now() - tBinding;
+  }
+  const tPredicate = cst !== undefined ? performance.now() : 0;
   const preflight = resolveActionApplicabilityPreflight({
     def,
     state,
@@ -773,6 +813,9 @@ const legalChoicesWithPreparedContextInternal = (
     runtimeTableIndex,
     ...buildFreeOperationPreflightOverlay(freeOperationAnalysis, partialMove, 'legalChoices'),
   });
+  if (cst !== undefined) {
+    cst.predicateTimeMs += performance.now() - tPredicate;
+  }
   if (preflight.kind === 'notApplicable') {
     return { kind: 'illegal', complete: false, reason: toChoiceIllegalReason(preflight.reason) };
   }
@@ -787,8 +830,12 @@ const legalChoicesWithPreparedContextInternal = (
   }
   const evalCtx = preflight.evalCtx;
   const pipelineDispatch = preflight.pipelineDispatch;
+  const tTargetEnum = cst !== undefined ? performance.now() : 0;
   const actionParamRequest = resolveActionParamPendingChoice(action, evalCtx, partialMove);
   if (actionParamRequest !== null) {
+    if (cst !== undefined) {
+      cst.targetEnumTimeMs += performance.now() - tTargetEnum;
+    }
     const request = !shouldEvaluateOptionLegality
       ? actionParamRequest
       : {
@@ -797,7 +844,16 @@ const legalChoicesWithPreparedContextInternal = (
     };
     return finalizeRequest(request);
   }
+  if (cst !== undefined) {
+    cst.targetEnumTimeMs += performance.now() - tTargetEnum;
+  }
 
+  const tPipeline = cst !== undefined ? performance.now() : 0;
+  const recordPipeline = (): void => {
+    if (cst !== undefined) {
+      cst.pipelineTimeMs += performance.now() - tPipeline;
+    }
+  };
   const eventEffects = isCardEventActionId(def, action.id)
     ? resolveEventEffectList(def, state, partialMove)
     : [];
@@ -820,6 +876,7 @@ const legalChoicesWithPreparedContextInternal = (
     }
     const viabilityDecision = decideDiscoveryLegalChoicesPipelineViability(status);
     if (viabilityDecision.kind === 'illegalChoice') {
+      recordPipeline();
       return finalizeRequest({ kind: 'illegal', complete: false, reason: toChoiceIllegalReason(viabilityDecision.outcome) });
     }
     let stageState = state;
@@ -844,6 +901,7 @@ const legalChoicesWithPreparedContextInternal = (
       }
       const stageDecision = decideDiscoveryLegalChoicesPipelineViability(stageStatus);
       if (stageDecision.kind === 'illegalChoice') {
+        recordPipeline();
         return finalizeRequest({ kind: 'illegal', complete: false, reason: toChoiceIllegalReason(stageDecision.outcome) });
       }
       if (stageStatus.atomicity === 'partial' && stageStatus.costValidation === 'failed') {
@@ -854,9 +912,11 @@ const legalChoicesWithPreparedContextInternal = (
       stageBindings = stageResult.bindings;
       if (!shouldEvaluateOptionLegality || stageResult.request.kind !== 'pending') {
         if (stageResult.request.kind !== 'complete') {
+          recordPipeline();
           return finalizeRequest(stageResult.request);
         }
       } else {
+        recordPipeline();
         return finalizeRequest({
           ...stageResult.request,
           options: mapPendingChoiceOptions(partialMove, stageResult.request, options, evaluateProbeLegality, options?._diagnosticsAccumulator),
@@ -870,9 +930,11 @@ const legalChoicesWithPreparedContextInternal = (
     };
     const request = executeDiscoveryEffects(eventEffects, eventEvalCtx, partialMove).request;
     if (!shouldEvaluateOptionLegality || request.kind !== 'pending') {
+      recordPipeline();
       return finalizeRequest(request);
     }
 
+    recordPipeline();
     return finalizeRequest({
       ...request,
       options: mapPendingChoiceOptions(partialMove, request, options, evaluateProbeLegality, options?._diagnosticsAccumulator),
@@ -886,9 +948,11 @@ const legalChoicesWithPreparedContextInternal = (
     options,
   ).request;
   if (!shouldEvaluateOptionLegality || request.kind !== 'pending') {
+    recordPipeline();
     return finalizeRequest(request);
   }
 
+  recordPipeline();
   return finalizeRequest({
     ...request,
     options: mapPendingChoiceOptions(partialMove, request, options, evaluateProbeLegality, options?._diagnosticsAccumulator),
@@ -1154,7 +1218,12 @@ export function legalChoicesEvaluate(
   runtime?: GameDefRuntime,
 ): ChoiceRequest {
   validateTurnFlowRuntimeStateInvariants(state);
+  const cst = options?.classificationSubphaseTiming;
+  const t0 = cst !== undefined ? performance.now() : 0;
   const context = prepareLegalChoicesContext(def, state, partialMove, runtime);
+  if (cst !== undefined) {
+    cst.bindingTimeMs += performance.now() - t0;
+  }
   options?.onProbeContextPrepared?.();
   const accumulator = options?.collectDiagnostics === true
     ? createDiagnosticsAccumulator('exactEnumeration')

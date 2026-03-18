@@ -10,12 +10,42 @@
 
 import type { GameDef, GameState, Move, Rng } from '../../kernel/types.js';
 import type { GameDefRuntime } from '../../kernel/gamedef-runtime.js';
-import { legalChoicesEvaluate } from '../../kernel/legal-choices.js';
+import { legalChoicesEvaluate, createClassificationSubphaseTiming } from '../../kernel/legal-choices.js';
+import type { LegalChoicesRuntimeOptions } from '../../kernel/legal-choices.js';
 import { completeTemplateMove } from '../../kernel/move-completion.js';
 import { canonicalMoveKey } from './move-key.js';
 import type { ConcreteMoveCandidate } from './expansion.js';
 import type { MctsSearchVisitor } from './visitor.js';
 import type { MctsNode } from './node.js';
+import type { MutableDiagnosticsAccumulator } from './diagnostics.js';
+
+/**
+ * Build `LegalChoicesRuntimeOptions` that feed subphase timing into the
+ * MCTS diagnostics accumulator.  Returns `undefined` when `acc` is not
+ * provided (zero-cost path).
+ */
+function buildSubphaseOptions(
+  acc: MutableDiagnosticsAccumulator | undefined,
+): LegalChoicesRuntimeOptions | undefined {
+  if (acc === undefined) return undefined;
+  const cst = createClassificationSubphaseTiming();
+  return { classificationSubphaseTiming: cst };
+}
+
+/**
+ * Flush a subphase timing object into the MCTS accumulator.
+ */
+function flushSubphaseTiming(
+  acc: MutableDiagnosticsAccumulator,
+  opts: LegalChoicesRuntimeOptions | undefined,
+): void {
+  const cst = opts?.classificationSubphaseTiming;
+  if (cst === undefined) return;
+  acc.classificationBindingTimeMs += cst.bindingTimeMs;
+  acc.classificationTargetEnumTimeMs += cst.targetEnumTimeMs;
+  acc.classificationPredicateTimeMs += cst.predicateTimeMs;
+  acc.classificationPipelineTimeMs += cst.pipelineTimeMs;
+}
 
 // ---------------------------------------------------------------------------
 // MoveClassification
@@ -59,18 +89,24 @@ export function classifyMovesForSearch(
   moves: readonly Move[],
   runtime?: GameDefRuntime,
   visitor?: MctsSearchVisitor,
+  acc?: MutableDiagnosticsAccumulator,
 ): MoveClassification {
   const ready: ConcreteMoveCandidate[] = [];
   const pending: Move[] = [];
   const seenReadyKeys = new Set<string>();
   const seenPendingKeys = new Set<string>();
+  const subOpts = buildSubphaseOptions(acc);
 
   for (let i = 0; i < moves.length; i += 1) {
     const move = moves[i]!;
 
     let kind: string;
     try {
-      kind = legalChoicesEvaluate(def, state, move, undefined, runtime).kind;
+      const tStart = acc !== undefined ? performance.now() : 0;
+      kind = legalChoicesEvaluate(def, state, move, subOpts, runtime).kind;
+      if (acc !== undefined) {
+        acc.materializeTimeMs += performance.now() - tStart;
+      }
     } catch {
       if (visitor?.onEvent) {
         visitor.onEvent({
@@ -120,7 +156,71 @@ export function classifyMovesForSearch(
     }
   }
 
+  if (acc !== undefined) {
+    flushSubphaseTiming(acc, subOpts);
+  }
   return { ready, pending };
+}
+
+// ---------------------------------------------------------------------------
+// classifySingleMove
+// ---------------------------------------------------------------------------
+
+/**
+ * Classification result for a single move.
+ *
+ * - `complete`  → move is ready (fully parameterized, all preconditions met)
+ * - `pending`   → move needs further decisions before it can be applied
+ * - `illegal`   → move is not legal in the current state
+ * - `pendingStochastic` → move requires stochastic resolution
+ * - `error`     → classification threw an exception
+ */
+export type SingleMoveClassificationKind =
+  | 'complete'
+  | 'pending'
+  | 'illegal'
+  | 'pendingStochastic'
+  | 'error';
+
+/**
+ * Classify a single move via `legalChoicesEvaluate`.
+ *
+ * Returns the classification kind. This is the atomic building block for
+ * incremental per-move classification — callers classify one move at a time
+ * instead of sweeping the entire move list.
+ *
+ * Pure function — no RNG consumed, no side effects beyond visitor events.
+ */
+export function classifySingleMove(
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  runtime?: GameDefRuntime,
+  visitor?: MctsSearchVisitor,
+  acc?: MutableDiagnosticsAccumulator,
+): SingleMoveClassificationKind {
+  const subOpts = buildSubphaseOptions(acc);
+  try {
+    const tStart = acc !== undefined ? performance.now() : 0;
+    const kind = legalChoicesEvaluate(def, state, move, subOpts, runtime).kind;
+    if (acc !== undefined) {
+      acc.materializeTimeMs += performance.now() - tStart;
+      flushSubphaseTiming(acc, subOpts);
+    }
+    return kind as SingleMoveClassificationKind;
+  } catch {
+    if (acc !== undefined) {
+      flushSubphaseTiming(acc, subOpts);
+    }
+    if (visitor?.onEvent) {
+      visitor.onEvent({
+        type: 'moveDropped',
+        actionId: move.actionId,
+        reason: 'unsatisfiable',
+      });
+    }
+    return 'error';
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -149,10 +249,12 @@ export function materializeMovesForRollout(
   limitPerTemplate: number,
   runtime?: GameDefRuntime,
   visitor?: MctsSearchVisitor,
+  acc?: MutableDiagnosticsAccumulator,
 ): { readonly candidates: readonly ConcreteMoveCandidate[]; readonly rng: Rng } {
   const candidates: ConcreteMoveCandidate[] = [];
   const seenKeys = new Set<string>();
   let cursor: Rng = rng;
+  const subOpts = buildSubphaseOptions(acc);
 
   for (let i = 0; i < moves.length; i += 1) {
     const move = moves[i]!;
@@ -160,7 +262,11 @@ export function materializeMovesForRollout(
     // Classify every move via legalChoicesEvaluate — no compile-time shortcuts.
     let kind: string;
     try {
-      kind = legalChoicesEvaluate(def, state, move, undefined, runtime).kind;
+      const tStart = acc !== undefined ? performance.now() : 0;
+      kind = legalChoicesEvaluate(def, state, move, subOpts, runtime).kind;
+      if (acc !== undefined) {
+        acc.materializeTimeMs += performance.now() - tStart;
+      }
     } catch {
       if (visitor?.onEvent) {
         visitor.onEvent({
@@ -184,9 +290,11 @@ export function materializeMovesForRollout(
       case 'pending': {
         // Complete via random parameter filling, up to limitPerTemplate attempts.
         for (let attempt = 0; attempt < limitPerTemplate; attempt += 1) {
+          if (acc !== undefined) acc.templateCompletionAttempts += 1;
           const result = completeTemplateMove(def, state, move, cursor, runtime);
 
           if (result.kind === 'completed') {
+            if (acc !== undefined) acc.templateCompletionSuccesses += 1;
             cursor = result.rng;
             const key = canonicalMoveKey(result.move);
             if (!seenKeys.has(key)) {
@@ -194,6 +302,7 @@ export function materializeMovesForRollout(
               candidates.push({ move: result.move, moveKey: key });
             }
           } else if (result.kind === 'stochasticUnresolved') {
+            if (acc !== undefined) acc.templateCompletionFailures += 1;
             // Consume RNG for determinism but do NOT add as candidate.
             cursor = result.rng;
             if (visitor?.onEvent) {
@@ -205,6 +314,7 @@ export function materializeMovesForRollout(
             }
             break;
           } else {
+            if (acc !== undefined) acc.templateCompletionFailures += 1;
             // unsatisfiable — no further attempts will succeed.
             if (visitor?.onEvent) {
               visitor.onEvent({
@@ -236,6 +346,9 @@ export function materializeMovesForRollout(
     }
   }
 
+  if (acc !== undefined) {
+    flushSubphaseTiming(acc, subOpts);
+  }
   return { candidates, rng: cursor };
 }
 

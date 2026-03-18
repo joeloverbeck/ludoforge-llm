@@ -20,28 +20,40 @@ import { applyMove } from '../../kernel/apply-move.js';
 import { terminalResult } from '../../kernel/terminal.js';
 import { fork } from '../../kernel/prng.js';
 import { selectChild, selectDecisionChild } from './isuct.js';
-import { shouldExpand, selectExpansionCandidate } from './expansion.js';
+import { shouldExpand, selectExpansionCandidate, selectExpansionCandidateLazy, selectExpansionCandidateFamilyFirst } from './expansion.js';
+import type { LazyExpansionResult } from './expansion.js';
 import { classifyMovesForSearch, filterAvailableCandidates } from './materialization.js';
 import type { MoveClassification } from './materialization.js';
+import type { LeafEvaluator } from './config.js';
 import { templateDecisionRootKey } from './decision-key.js';
 import { expandDecisionNode } from './decision-expansion.js';
 import type { DecisionExpansionContext } from './decision-expansion.js';
 import { canonicalMoveKey } from './move-key.js';
-import { rollout, simulateToCutoff, resolveDecisionBoundary } from './rollout.js';
+import { rollout, simulateToCutoff } from './rollout.js';
+import { resolveDecisionBoundary } from './decision-boundary.js';
 import type { SimulationResult } from './rollout.js';
 import { terminalToRewards, evaluateForAllPlayers } from './evaluate.js';
 import { sampleBeliefState } from './belief.js';
 import { canActivateSolver, updateSolverResult, selectSolverAwareChild } from './solver.js';
-import { createAccumulator, collectDiagnostics } from './diagnostics.js';
+import { createAccumulator, collectDiagnostics, recordHeuristicEvalSpread } from './diagnostics.js';
 import type { MastStats } from './mast.js';
 import { createMastStats, updateMastStats } from './mast.js';
 import type { StateInfoCache } from './state-cache.js';
 import {
   createStateInfoCache,
+  createDiscoveryCache,
   getOrComputeTerminal,
   getOrComputeLegalMoves,
   getOrComputeRewards,
+  getOrComputeClassification,
+  getOrInitClassificationEntry,
+  classifySpecificMove,
 } from './state-cache.js';
+import {
+  filterAvailableByClassification,
+  resolveUnknownChildren,
+} from './availability.js';
+import type { ClassificationPolicy, WideningMode } from './config.js';
 
 // ---------------------------------------------------------------------------
 // Confidence-based root stopping (Hoeffding bound)
@@ -159,6 +171,8 @@ export function runOneIteration(
   stateCache?: StateInfoCache,
   maxCacheEntries?: number,
   iterationIndex: number = 0,
+  discoveryCache?: import('./state-cache.js').DiscoveryCache,
+  discoveryCacheMax?: number,
 ): { readonly rng: Rng } {
   let currentNode = root;
   let currentState = sampledState;
@@ -191,6 +205,8 @@ export function runOneIteration(
           ...(config.visitor !== undefined ? { visitor: config.visitor } : {}),
           ...(acc !== undefined ? { accumulator: acc } : {}),
           ...(runtime !== undefined ? { runtime } : {}),
+          ...(discoveryCache !== undefined ? { discoveryCache } : {}),
+          ...(discoveryCacheMax !== undefined ? { discoveryCacheMax } : {}),
         };
 
         const expansionResult = expandDecisionNode(currentNode, pool, ctx);
@@ -199,10 +215,17 @@ export function runOneIteration(
           case 'complete': {
             // Decision sequence resolved — applyMove exactly once.
             try {
+              const amStart5 = acc !== undefined ? performance.now() : 0;
               const applied = applyMove(
                 def, currentState, expansionResult.move, undefined, runtime,
               );
-              if (acc !== undefined) { acc.applyMoveCalls += 1; }
+              if (acc !== undefined) {
+                acc.applyMoveCalls += 1;
+                acc.applyMoveTimeMs += performance.now() - amStart5;
+                const tc = applied.triggerFirings.length;
+                acc.totalTriggerFirings += tc;
+                if (tc > acc.maxTriggerFiringsPerMove) acc.maxTriggerFiringsPerMove = tc;
+              }
               currentState = applied.state;
 
               // Create a state child node for the completed move.
@@ -232,9 +255,16 @@ export function runOneIteration(
               selectionMoveKeys.push(completedMoveKey);
 
               // Capture heuristic prior at the new state node.
-              stateChild.heuristicPrior = [...evaluateForAllPlayers(
-                def, currentState, config.heuristicTemperature, runtime,
-              )];
+              {
+                const priorDiagOut = acc !== undefined ? {} as import('./evaluate.js').EvalDiagnosticsOut : undefined;
+                const priorRewards = evaluateForAllPlayers(
+                  def, currentState, config.heuristicTemperature, runtime, priorDiagOut,
+                );
+                stateChild.heuristicPrior = [...priorRewards];
+                if (acc !== undefined && priorDiagOut?.rawScores !== undefined) {
+                  recordHeuristicEvalSpread(acc, priorDiagOut.rawScores, priorRewards);
+                }
+              }
             } catch (e: unknown) {
               // applyMove failed on completed decision — emit failure, backprop from here.
               if (config.visitor?.onEvent) {
@@ -308,8 +338,13 @@ export function runOneIteration(
         : stateCache !== undefined && maxCacheEntries !== undefined
           ? getOrComputeLegalMoves(stateCache, def, currentState, runtime, maxCacheEntries, acc)
           : (() => {
-              if (acc !== undefined) { acc.legalMovesCalls += 1; }
-              return legalMoves(def, currentState, undefined, runtime);
+              const tStart = acc !== undefined ? performance.now() : 0;
+              const result = legalMoves(def, currentState, undefined, runtime);
+              if (acc !== undefined) {
+                acc.legalMovesCalls += 1;
+                acc.legalMovesTimeMs += performance.now() - tStart;
+              }
+              return result;
             })();
 
     if (movesAtNode.length === 0) {
@@ -317,14 +352,113 @@ export function runOneIteration(
       break;
     }
 
-    // Classify all legal moves at this state node via runtime readiness
-    // (legalChoicesEvaluate per move — no compile-time shortcuts).
-    const classification: MoveClassification = classifyMovesForSearch(
-      def, currentState, movesAtNode, runtime, config.visitor,
-    );
-    const candidates = classification.ready;
-    if (acc !== undefined) {
-      acc.materializeCalls += 1;
+    // Gap 6: Record branching factor at this selection depth.
+    if (acc !== undefined && currentNode !== root) {
+      acc.branchingFactorSamples.push({ depth: selectionDepth, count: movesAtNode.length });
+    }
+
+    // ── Move classification and availability ───────────────────────
+    // Determine which moves are ready/pending and which children are
+    // available using sound availability checking (spec 3.5).
+    //
+    // Policy: 'exhaustive' (or when cache unavailable) does a full sweep.
+    //         'lazy' uses incremental per-move classification.
+    //         'auto' (default) uses exhaustive for backward compatibility.
+    const effectivePolicy: ClassificationPolicy =
+      config.classificationPolicy ?? 'auto';
+    const useLazy = effectivePolicy === 'lazy' ||
+      (effectivePolicy === 'auto' && false); // auto → exhaustive for now
+
+    let candidates: readonly import('./expansion.js').ConcreteMoveCandidate[];
+    let pendingMoves: readonly Move[];
+    let availableChildren: MctsNode[];
+
+    if (useLazy && stateCache !== undefined && maxCacheEntries !== undefined) {
+      // ── Lazy path: incremental classification ─────────────────────
+      // Get or create the incremental entry without exhausting it.
+      const classEntry = getOrInitClassificationEntry(
+        stateCache, currentState, movesAtNode, maxCacheEntries,
+      );
+
+      if (classEntry !== null) {
+        // Use sound availability checking against the incremental entry.
+        const { available, unknown: unknowns } = filterAvailableByClassification(
+          currentNode.children, classEntry,
+        );
+
+        // Resolve unknown children on demand (at most one legalChoicesEvaluate per unknown child).
+        if (unknowns.length > 0) {
+          const newlyAvailable = resolveUnknownChildren(
+            unknowns,
+            (index) => classifySpecificMove(classEntry, index, def, currentState, runtime, config.visitor, acc),
+          );
+          available.push(...newlyAvailable);
+        }
+
+        availableChildren = available;
+
+        // Also increment availability for decision root children with pending status.
+        for (const child of currentNode.children) {
+          if (child.nodeKind === 'decision' && child.moveKey !== null) {
+            // Decision roots use template keys — check if any pending info matches.
+            // Decision roots are already handled by filterAvailableByClassification
+            // since their moveKey matches the entry. But if they were created by
+            // a prior iteration, ensure they're counted.
+            if (!availableChildren.includes(child)) {
+              // Check if the decision root's underlying action is pending.
+              for (const info of classEntry.infos) {
+                if (info.status === 'pending' && child.moveKey === templateDecisionRootKey(info.move.actionId)) {
+                  child.availability += 1;
+                  availableChildren.push(child);
+                  break;
+                }
+              }
+            }
+          }
+        }
+
+        // Extract ready candidates for expansion (moves not yet expanded as children).
+        const readyCandidates: import('./expansion.js').ConcreteMoveCandidate[] = [];
+        const pendingList: Move[] = [];
+        for (const info of classEntry.infos) {
+          if (info.status === 'ready') {
+            readyCandidates.push({ move: info.move, moveKey: info.moveKey });
+          } else if (info.status === 'pending') {
+            pendingList.push(info.move);
+          }
+        }
+        candidates = readyCandidates;
+        pendingMoves = pendingList;
+      } else {
+        // Uncacheable state (hash === 0n) — fall back to exhaustive.
+        const classification = classifyMovesForSearch(
+          def, currentState, movesAtNode, runtime, config.visitor, acc,
+        );
+        candidates = classification.ready;
+        pendingMoves = classification.pending;
+        availableChildren = [];
+      }
+
+      if (acc !== undefined) {
+        acc.materializeCalls += 1;
+      }
+    } else {
+      // ── Exhaustive path: full classification sweep ────────────────
+      const classification: MoveClassification =
+        stateCache !== undefined && maxCacheEntries !== undefined
+          ? getOrComputeClassification(
+              stateCache, def, currentState, movesAtNode, runtime,
+              maxCacheEntries, config.visitor, acc,
+            )
+          : classifyMovesForSearch(
+              def, currentState, movesAtNode, runtime, config.visitor, acc,
+            );
+      candidates = classification.ready;
+      pendingMoves = classification.pending;
+      if (acc !== undefined) {
+        acc.materializeCalls += 1;
+      }
+      availableChildren = [];
     }
 
     // ── Decision root creation for pending moves ────────────────────
@@ -332,7 +466,7 @@ export function runOneIteration(
     // When selection picks a decision root, it enters the decision
     // subtree and expands via expandDecisionNode.
     const actingPlayerForDecision = currentState.activePlayer as PlayerId;
-    for (const pendingMove of classification.pending) {
+    for (const pendingMove of pendingMoves) {
       const rootKey = templateDecisionRootKey(pendingMove.actionId);
 
       // Check if a decision root for this action already exists.
@@ -376,7 +510,7 @@ export function runOneIteration(
     }
 
     // Total available candidates includes both ready and pending moves.
-    const totalCandidateCount = candidates.length + classification.pending.length;
+    const totalCandidateCount = candidates.length + pendingMoves.length;
 
     if (totalCandidateCount === 0) {
       break;
@@ -388,7 +522,7 @@ export function runOneIteration(
     if (
       config.compressForcedSequences !== false &&
       candidates.length === 1 &&
-      classification.pending.length === 0
+      pendingMoves.length === 0
     ) {
       // Safety cap: break if forced plies exceed the limit.
       if (forcedPlies >= maxForcedPlies) {
@@ -397,10 +531,15 @@ export function runOneIteration(
       const forced = candidates[0]!;
       selectionMoveKeys.push(forced.moveKey);
 
+      const amStart = acc !== undefined ? performance.now() : 0;
       const applied = applyMove(def, currentState, forced.move, undefined, runtime);
       if (acc !== undefined) {
         acc.applyMoveCalls += 1;
+        acc.applyMoveTimeMs += performance.now() - amStart;
         acc.forcedMovePlies += 1;
+        const tc = applied.triggerFirings.length;
+        acc.totalTriggerFirings += tc;
+        if (tc > acc.maxTriggerFiringsPerMove) acc.maxTriggerFiringsPerMove = tc;
       }
       currentState = applied.state;
       selectionDepth += 1;
@@ -410,8 +549,13 @@ export function runOneIteration(
       const terminal = stateCache !== undefined && maxCacheEntries !== undefined
         ? getOrComputeTerminal(stateCache, def, currentState, runtime, maxCacheEntries, acc)
         : (() => {
-            if (acc !== undefined) { acc.terminalCalls += 1; }
-            return terminalResult(def, currentState, runtime);
+            const tStart = acc !== undefined ? performance.now() : 0;
+            const result = terminalResult(def, currentState, runtime);
+            if (acc !== undefined) {
+              acc.terminalCalls += 1;
+              acc.terminalTimeMs += performance.now() - tStart;
+            }
+            return result;
           })();
       if (terminal !== null) {
         break;
@@ -427,18 +571,37 @@ export function runOneIteration(
       continue;
     }
 
-    // Build a lookup of candidate moveKeys for availability matching.
-    const candidateKeySet = new Set<string>();
-    for (const c of candidates) {
-      candidateKeySet.add(c.moveKey);
+    // ── Exhaustive-path availability matching ───────────────────────
+    // When using the exhaustive path, build availability from the
+    // candidate key set (original behavior).
+    if (!useLazy || availableChildren.length === 0) {
+      const candidateKeySet = new Set<string>();
+      for (const c of candidates) {
+        candidateKeySet.add(c.moveKey);
+      }
+
+      // Determine which existing children are available (legal in this world).
+      availableChildren = [];
+      for (const child of currentNode.children) {
+        if (child.moveKey !== null && candidateKeySet.has(child.moveKey)) {
+          child.availability += 1;
+          availableChildren.push(child);
+        }
+      }
     }
 
-    // Determine which existing children are available (legal in this world).
-    const availableChildren: MctsNode[] = [];
+    // Also include decision root children in availability matching.
+    // Decision roots may have been created above and already have availability=1,
+    // but existing decision roots from prior iterations need to be matched.
     for (const child of currentNode.children) {
-      if (child.moveKey !== null && candidateKeySet.has(child.moveKey)) {
-        child.availability += 1;
-        availableChildren.push(child);
+      if (child.nodeKind === 'decision' && child.moveKey !== null && !availableChildren.includes(child)) {
+        for (const pm of pendingMoves) {
+          if (child.moveKey === templateDecisionRootKey(pm.actionId)) {
+            child.availability += 1;
+            availableChildren.push(child);
+            break;
+          }
+        }
       }
     }
 
@@ -447,28 +610,116 @@ export function runOneIteration(
       shouldExpand(currentNode, config.progressiveWideningK, config.progressiveWideningAlpha) &&
       availableChildren.length < totalCandidateCount
     ) {
-      // There are unexpanded candidates — try to expand one.
-      const unexpanded = filterAvailableCandidates(currentNode, candidates);
+      // Build the set of existing child keys for dedup.
+      const existingChildKeys = new Set<string>();
+      for (const child of currentNode.children) {
+        if (child.moveKey !== null) existingChildKeys.add(child.moveKey);
+      }
 
-      if (unexpanded.length > 0) {
+      // Determine root-best hint for frontier ordering.
+      let rootBestKey: string | null = null;
+      if (currentNode === root && root.children.length > 0) {
+        let bestVisits = -1;
+        for (const child of root.children) {
+          if (child.visits > bestVisits) {
+            bestVisits = child.visits;
+            rootBestKey = child.moveKey;
+          }
+        }
+      }
+
+      // Try lazy expansion when the lazy classification path is active
+      // and we have an incremental classification entry.
+      const classEntryForExpansion = useLazy && stateCache !== undefined && maxCacheEntries !== undefined
+        ? getOrInitClassificationEntry(stateCache, currentState, movesAtNode, maxCacheEntries)
+        : null;
+
+      let expansionResult: { readonly candidate: import('./expansion.js').ConcreteMoveCandidate; readonly rng: Rng } | null = null;
+
+      if (classEntryForExpansion !== null) {
+        // ── Lazy expansion path ──────────────────────────────────────
+        const shortlistSize = config.expansionShortlistSize ?? 4;
+        const exhaustiveThreshold = config.expansionExhaustiveThreshold ?? 10;
+        const actingPlayer = currentState.activePlayer as PlayerId;
+
+        // Family-first widening at depth 0-1 when configured.
+        const effectiveWidening: WideningMode = config.wideningMode ?? 'move';
+        const useFamilyFirst = effectiveWidening === 'familyThenMove' && selectionDepth <= 1;
+
+        let lazyResult: LazyExpansionResult | null;
+
+        if (useFamilyFirst) {
+          // Build family counts from existing children.
+          const childFamilyCounts = new Map<string, number>();
+          for (const child of currentNode.children) {
+            if (child.move !== null) {
+              const fk = child.move.actionId;
+              childFamilyCounts.set(fk, (childFamilyCounts.get(fk) ?? 0) + 1);
+            }
+          }
+          const maxVariants = config.maxVariantsPerFamilyBeforeCoverage ?? 1;
+
+          const pendingQuota = config.pendingFamilyQuotaRoot ?? 1;
+
+          lazyResult = selectExpansionCandidateFamilyFirst(
+            classEntryForExpansion,
+            existingChildKeys,
+            childFamilyCounts,
+            maxVariants,
+            pendingQuota,
+            rootBestKey,
+            shortlistSize,
+            exhaustiveThreshold,
+            def,
+            currentState,
+            actingPlayer,
+            currentRng,
+            runtime,
+            config.visitor,
+            acc,
+          );
+        } else {
+          lazyResult = selectExpansionCandidateLazy(
+            classEntryForExpansion,
+            existingChildKeys,
+            rootBestKey,
+            shortlistSize,
+            exhaustiveThreshold,
+            def,
+            currentState,
+            actingPlayer,
+            currentRng,
+            runtime,
+            config.visitor,
+            acc,
+          );
+        }
+
+        if (lazyResult !== null) {
+          expansionResult = lazyResult;
+        }
+      } else {
+        // ── Exhaustive expansion path (original) ─────────────────────
+        const unexpanded = filterAvailableCandidates(currentNode, candidates);
+        if (unexpanded.length > 0) {
+          const actingPlayer = currentState.activePlayer as PlayerId;
+          const result = selectExpansionCandidate(
+            unexpanded, def, currentState, actingPlayer, currentRng, runtime, config.visitor,
+          );
+          expansionResult = result;
+        }
+      }
+
+      if (expansionResult !== null) {
+        const chosen = expansionResult.candidate;
+        currentRng = expansionResult.rng;
+
         if (acc !== undefined) {
           acc.selectionTimeMs += performance.now() - selStart;
           selectionRecorded = true;
         }
 
         const expStart = acc !== undefined ? performance.now() : 0;
-
-        const actingPlayer = currentState.activePlayer as PlayerId;
-        const { candidate: chosen, rng: postExpansion } = selectExpansionCandidate(
-          unexpanded,
-          def,
-          currentState,
-          actingPlayer,
-          currentRng,
-          runtime,
-          config.visitor,
-        );
-        currentRng = postExpansion;
 
         // Allocate a child node from the pool.
         let childNode: MctsNode;
@@ -494,9 +745,14 @@ export function runOneIteration(
         currentNode.children.push(childNode);
 
         // Advance into the expanded child.
+        const amStart2 = acc !== undefined ? performance.now() : 0;
         const applied = applyMove(def, currentState, chosen.move, undefined, runtime);
         if (acc !== undefined) {
           acc.applyMoveCalls += 1;
+          acc.applyMoveTimeMs += performance.now() - amStart2;
+          const tc = applied.triggerFirings.length;
+          acc.totalTriggerFirings += tc;
+          if (tc > acc.maxTriggerFiringsPerMove) acc.maxTriggerFiringsPerMove = tc;
         }
         currentState = applied.state;
         currentNode = childNode;
@@ -504,9 +760,16 @@ export function runOneIteration(
         selectionMoveKeys.push(chosen.moveKey);
 
         // Capture heuristic prior at expansion time (for optional blended selection).
-        childNode.heuristicPrior = [...evaluateForAllPlayers(
-          def, currentState, config.heuristicTemperature, runtime,
-        )];
+        {
+          const priorDiagOut = acc !== undefined ? {} as import('./evaluate.js').EvalDiagnosticsOut : undefined;
+          const priorRewards = evaluateForAllPlayers(
+            def, currentState, config.heuristicTemperature, runtime, priorDiagOut,
+          );
+          childNode.heuristicPrior = [...priorRewards];
+          if (acc !== undefined && priorDiagOut?.rawScores !== undefined) {
+            recordHeuristicEvalSpread(acc, priorDiagOut.rawScores, priorRewards);
+          }
+        }
 
         if (acc !== undefined) {
           acc.expansionTimeMs += performance.now() - expStart;
@@ -537,9 +800,14 @@ export function runOneIteration(
           }
           continue;
         }
+        const amStart3 = acc !== undefined ? performance.now() : 0;
         const applied = applyMove(def, currentState, solverChild.move!, undefined, runtime);
         if (acc !== undefined) {
           acc.applyMoveCalls += 1;
+          acc.applyMoveTimeMs += performance.now() - amStart3;
+          const tc = applied.triggerFirings.length;
+          acc.totalTriggerFirings += tc;
+          if (tc > acc.maxTriggerFiringsPerMove) acc.maxTriggerFiringsPerMove = tc;
         }
         currentState = applied.state;
         currentNode = solverChild;
@@ -570,9 +838,14 @@ export function runOneIteration(
     }
 
     // Apply the selected child's move to advance the state.
+    const amStart4 = acc !== undefined ? performance.now() : 0;
     const applied = applyMove(def, currentState, selected.move!, undefined, runtime);
     if (acc !== undefined) {
       acc.applyMoveCalls += 1;
+      acc.applyMoveTimeMs += performance.now() - amStart4;
+      const tc = applied.triggerFirings.length;
+      acc.totalTriggerFirings += tc;
+      if (tc > acc.maxTriggerFiringsPerMove) acc.maxTriggerFiringsPerMove = tc;
     }
     currentState = applied.state;
     currentNode = selected;
@@ -625,28 +898,51 @@ export function runOneIteration(
       depth: 0,
       traversedMoveKeys: [],
     };
-  } else switch (config.rolloutMode) {
-    case 'legacy':
-      simResult = rollout(def, currentState, currentRng, config, runtime, acc, stateCache, maxCacheEntries);
-      break;
-    case 'hybrid':
-      simResult = simulateToCutoff(def, currentState, currentRng, config, runtime, acc, mastStats, stateCache, maxCacheEntries);
-      break;
-    case 'direct':
-      // No simulation — evaluate the expansion state directly.
+  } else {
+    const evaluator: LeafEvaluator = config.leafEvaluator ?? { type: 'heuristic' };
+
+    if (evaluator.type === 'rollout') {
+      // Build rollout config slice from the LeafEvaluator fields.
+      const rolloutSlice = {
+        rolloutPolicy: evaluator.policy,
+        rolloutEpsilon: evaluator.epsilon ?? 0.15,
+        rolloutCandidateSample: evaluator.candidateSample ?? 6,
+        maxSimulationDepth: evaluator.maxSimulationDepth,
+        templateCompletionsPerVisit: evaluator.templateCompletionsPerVisit ?? 2,
+      };
+
+      if (evaluator.mode === 'hybrid') {
+        const cutoffSlice = {
+          ...rolloutSlice,
+          hybridCutoffDepth: evaluator.hybridCutoffDepth ?? 6,
+          mastWarmUpThreshold: evaluator.mastWarmUpThreshold ?? 32,
+          compressForcedSequences: config.compressForcedSequences ?? true,
+        };
+        simResult = simulateToCutoff(def, currentState, currentRng, cutoffSlice, runtime, acc, mastStats, stateCache, maxCacheEntries);
+      } else {
+        // 'full' or default — legacy full rollout.
+        simResult = rollout(def, currentState, currentRng, rolloutSlice, runtime, acc, stateCache, maxCacheEntries);
+      }
+    } else {
+      // 'heuristic' or 'auto' — no simulation, evaluate expansion state directly.
       simResult = {
         state: currentState,
         terminal: stateCache !== undefined && maxCacheEntries !== undefined
           ? getOrComputeTerminal(stateCache, def, currentState, runtime, maxCacheEntries, acc)
           : (() => {
-              if (acc !== undefined) { acc.terminalCalls += 1; }
-              return terminalResult(def, currentState, runtime);
+              const tStart = acc !== undefined ? performance.now() : 0;
+              const result = terminalResult(def, currentState, runtime);
+              if (acc !== undefined) {
+                acc.terminalCalls += 1;
+                acc.terminalTimeMs += performance.now() - tStart;
+              }
+              return result;
             })(),
         rng: currentRng,
         depth: 0,
         traversedMoveKeys: [],
       };
-      break;
+    }
   }
 
   currentRng = simResult.rng;
@@ -667,8 +963,13 @@ export function runOneIteration(
     const endTerminal = stateCache !== undefined && maxCacheEntries !== undefined
       ? getOrComputeTerminal(stateCache, def, simResult.state, runtime, maxCacheEntries, acc)
       : (() => {
-          if (acc !== undefined) { acc.terminalCalls += 1; }
-          return terminalResult(def, simResult.state, runtime);
+          const tStart = acc !== undefined ? performance.now() : 0;
+          const result = terminalResult(def, simResult.state, runtime);
+          if (acc !== undefined) {
+            acc.terminalCalls += 1;
+            acc.terminalTimeMs += performance.now() - tStart;
+          }
+          return result;
         })();
     if (endTerminal !== null) {
       rewards = terminalToRewards(endTerminal, sampledState.playerCount);
@@ -676,8 +977,17 @@ export function runOneIteration(
       rewards = stateCache !== undefined && maxCacheEntries !== undefined
         ? getOrComputeRewards(stateCache, def, simResult.state, config, runtime, maxCacheEntries, acc)
         : (() => {
-            if (acc !== undefined) { acc.evaluateStateCalls += 1; }
-            return evaluateForAllPlayers(def, simResult.state, config.heuristicTemperature, runtime);
+            const tStart = acc !== undefined ? performance.now() : 0;
+            const diagOut = acc !== undefined ? {} as import('./evaluate.js').EvalDiagnosticsOut : undefined;
+            const result = evaluateForAllPlayers(def, simResult.state, config.heuristicTemperature, runtime, diagOut);
+            if (acc !== undefined) {
+              acc.evaluateStateCalls += 1;
+              acc.evaluateTimeMs += performance.now() - tStart;
+              if (diagOut?.rawScores !== undefined) {
+                recordHeuristicEvalSpread(acc, diagOut.rawScores, result);
+              }
+            }
+            return result;
           })();
     }
   }
@@ -829,7 +1139,11 @@ export function runSearch(
   const solverActive = canActivateSolver(def, state, config);
 
   // Create MAST stats local to this search run.
-  const mastStats = config.rolloutPolicy === 'mast' ? createMastStats() : undefined;
+  // MAST is only used during rollout evaluation with the 'mast' policy.
+  const evaluatorForMast = config.leafEvaluator ?? { type: 'heuristic' as const };
+  const mastStats = (evaluatorForMast.type === 'rollout' && evaluatorForMast.policy === 'mast')
+    ? createMastStats()
+    : undefined;
 
   // Create per-search state-info cache when enabled (default: true).
   const cacheEnabled = config.enableStateInfoCache !== false;
@@ -837,6 +1151,15 @@ export function runSearch(
   const maxCacheEntries = cacheEnabled
     ? (config.maxStateInfoCacheEntries ?? Math.min(pool.capacity, config.iterations * 4))
     : undefined;
+
+  // Create per-search decision discovery cache (same lifecycle as state cache).
+  const discoveryCache = cacheEnabled ? createDiscoveryCache() : undefined;
+  const discoveryCacheMax = maxCacheEntries;
+
+  // Gap 5: Capture heap at search start (Node.js only).
+  if (acc !== undefined && typeof process !== 'undefined' && typeof process.memoryUsage === 'function') {
+    acc.heapUsedAtStartBytes = process.memoryUsage().heapUsed;
+  }
 
   const deadline =
     config.timeLimitMs !== undefined ? Date.now() + config.timeLimitMs : undefined;
@@ -875,6 +1198,9 @@ export function runSearch(
       break;
     }
 
+    // Gap 7: Per-iteration timing.
+    const iterStart = acc !== undefined ? performance.now() : 0;
+
     // Fork an iteration-local RNG.
     const [iterationRng, nextSearchRng] = fork(currentRng);
     currentRng = nextSearchRng;
@@ -884,6 +1210,14 @@ export function runSearch(
     const belief = sampleBeliefState(def, state, observation, observer, iterationRng);
     if (acc !== undefined) {
       acc.beliefSamplingTimeMs += performance.now() - beliefStart;
+    }
+
+    // Gap 2: State size sampling (every 10th iteration).
+    // Uses a BigInt-safe replacer since GameState contains bigint stateHash.
+    if (acc !== undefined && iterations % 10 === 0) {
+      acc.stateSizeSamples.push(
+        JSON.stringify(belief.state, (_k, v) => typeof v === 'bigint' ? v.toString() : v as unknown).length,
+      );
     }
 
     // Run one full iteration on the sampled state.
@@ -902,11 +1236,18 @@ export function runSearch(
       stateCache,
       maxCacheEntries,
       iterations,
+      discoveryCache,
+      discoveryCacheMax,
     );
     // Consume the iteration's RNG output (determinism is via fork chain).
     void result;
 
     iterations += 1;
+
+    // Gap 7: Record iteration timing.
+    if (acc !== undefined) {
+      acc.iterationTimeSamples.push(performance.now() - iterStart);
+    }
 
     // ── Visitor: emit iterationBatch every VISITOR_BATCH_SIZE iterations ──
     if (
@@ -959,13 +1300,42 @@ export function runSearch(
     });
   }
 
+  // Gap 5: Capture heap at search end (Node.js only).
+  if (acc !== undefined && typeof process !== 'undefined' && typeof process.memoryUsage === 'function') {
+    acc.heapUsedAtEndBytes = process.memoryUsage().heapUsed;
+  }
+
+  // Family coverage diagnostics at root.
+  if (acc !== undefined && stateCache !== undefined && maxCacheEntries !== undefined) {
+    const rootMoves = getOrComputeLegalMoves(stateCache, def, state, runtime, maxCacheEntries, acc);
+    const rootClassEntry = getOrInitClassificationEntry(stateCache, state, rootMoves, maxCacheEntries);
+    if (rootClassEntry !== null) {
+      // Count total families in the candidate pool.
+      const allFamilies = new Set<string>();
+      for (let i = 0; i < rootClassEntry.infos.length; i += 1) {
+        allFamilies.add(rootClassEntry.infos[i]!.familyKey);
+      }
+      acc.familyTotalAtRoot = allFamilies.size;
+
+      // Count represented families from root children.
+      const representedFamilies = new Set<string>();
+      for (const child of root.children) {
+        if (child.move !== null && child.visits > 0) {
+          representedFamilies.add(child.move.actionId);
+        }
+      }
+      acc.familyCoverageAtRoot = representedFamilies.size;
+      acc.familyStarvationCount = allFamilies.size - representedFamilies.size;
+    }
+  }
+
   // Collect diagnostics if enabled.
   if (acc !== undefined && searchStart !== undefined) {
     const diag = collectDiagnostics(root, iterations, searchStart, acc);
     return {
       rng: currentRng,
       iterations,
-      diagnostics: { ...diag, rolloutMode: config.rolloutMode, rootStopReason: stopReason },
+      diagnostics: { ...diag, leafEvaluatorType: (config.leafEvaluator ?? { type: 'heuristic' as const }).type, rootStopReason: stopReason },
     };
   }
 

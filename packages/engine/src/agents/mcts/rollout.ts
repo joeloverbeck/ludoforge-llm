@@ -13,15 +13,13 @@
  * the `hybrid` rollout mode (ticket 63MCTSPERROLLFRESEA-002).
  */
 
-import type { GameDef, GameState, Move, Rng, TerminalResult } from '../../kernel/types.js';
+import type { GameDef, GameState, Rng, TerminalResult } from '../../kernel/types.js';
 import type { GameDefRuntime } from '../../kernel/gamedef-runtime.js';
-import type { MctsConfig } from './config.js';
 import type { MutableDiagnosticsAccumulator } from './diagnostics.js';
 import { legalMoves } from '../../kernel/legal-moves.js';
 import { applyMove } from '../../kernel/apply-move.js';
 import { terminalResult } from '../../kernel/terminal.js';
 import { evaluateState } from '../evaluate-state.js';
-import { completeTemplateMove } from '../../kernel/move-completion.js';
 import { materializeMovesForRollout } from './materialization.js';
 import { nextInt, fork } from '../../kernel/prng.js';
 import type { PlayerId } from '../../kernel/branded.js';
@@ -43,79 +41,35 @@ export interface SimulationResult {
 }
 
 // ---------------------------------------------------------------------------
-// Decision boundary result
+// Re-export decision boundary from its dedicated module.
 // ---------------------------------------------------------------------------
 
-export interface DecisionBoundaryResult {
-  readonly state: GameState;
-  readonly rng: Rng;
-  readonly move: Move;
+export { resolveDecisionBoundary } from './decision-boundary.js';
+export type { DecisionBoundaryResult } from './decision-boundary.js';
+
+// ---------------------------------------------------------------------------
+// Rollout config subsets — standalone interfaces matching LeafEvaluator rollout fields
+// ---------------------------------------------------------------------------
+
+/** Config subset consumed by the full rollout simulation. */
+export interface RolloutConfigSlice {
+  readonly rolloutPolicy: 'random' | 'epsilonGreedy' | 'mast';
+  readonly rolloutEpsilon: number;
+  readonly rolloutCandidateSample: number;
+  readonly maxSimulationDepth: number;
+  readonly templateCompletionsPerVisit: number;
 }
 
-// ---------------------------------------------------------------------------
-// Decision boundary resolution
-// ---------------------------------------------------------------------------
-
-/**
- * Resolve a decision boundary by completing a partial move via random
- * decision completion, then applying the completed move.
- *
- * Called when selection exits the tree at a decision node — the partial
- * move has some decisions filled by tree traversal, and the rest need
- * random completion before simulation can begin.
- *
- * Decision completion does NOT count toward the simulation cutoff budget.
- * The cutoff counts complete game plies, not mid-decision steps.
- *
- * @returns The post-decision state and consumed RNG on success, or
- *          `null` when completion fails (backpropagate loss).
- */
-export function resolveDecisionBoundary(
-  def: GameDef,
-  state: GameState,
-  partialMove: Move,
-  rng: Rng,
-  runtime?: GameDefRuntime,
-  acc?: MutableDiagnosticsAccumulator,
-): DecisionBoundaryResult | null {
-  try {
-    const result = completeTemplateMove(def, state, partialMove, rng, runtime);
-
-    if (result.kind !== 'completed') {
-      if (acc !== undefined) {
-        acc.decisionBoundaryFailures += 1;
-      }
-      return null;
-    }
-
-    const applied = applyMove(def, state, result.move, undefined, runtime);
-    if (acc !== undefined) {
-      acc.applyMoveCalls += 1;
-      acc.decisionCompletionsInRollout += 1;
-    }
-    return { state: applied.state, rng: result.rng, move: result.move };
-  } catch {
-    if (acc !== undefined) {
-      acc.decisionBoundaryFailures += 1;
-    }
-    return null;
-  }
+/** Config subset consumed by the hybrid cutoff simulation. */
+export interface CutoffConfigSlice {
+  readonly rolloutPolicy: 'random' | 'epsilonGreedy' | 'mast';
+  readonly rolloutEpsilon: number;
+  readonly rolloutCandidateSample: number;
+  readonly hybridCutoffDepth: number;
+  readonly templateCompletionsPerVisit: number;
+  readonly mastWarmUpThreshold: number;
+  readonly compressForcedSequences?: boolean;
 }
-
-// ---------------------------------------------------------------------------
-// Rollout config subset
-// ---------------------------------------------------------------------------
-
-type RolloutConfigSlice = Pick<
-  MctsConfig,
-  'rolloutPolicy' | 'rolloutEpsilon' | 'rolloutCandidateSample' | 'maxSimulationDepth' | 'templateCompletionsPerVisit'
->;
-
-/** Config subset for the hybrid cutoff simulation. */
-type CutoffConfigSlice = Pick<
-  MctsConfig,
-  'rolloutPolicy' | 'rolloutEpsilon' | 'rolloutCandidateSample' | 'hybridCutoffDepth' | 'templateCompletionsPerVisit' | 'mastWarmUpThreshold' | 'compressForcedSequences'
->;
 
 // ---------------------------------------------------------------------------
 // rollout (legacy full simulation)
@@ -147,8 +101,13 @@ export function rollout(
     const terminal = stateCache !== undefined && maxCacheEntries !== undefined
       ? getOrComputeTerminal(stateCache, def, currentState, runtime, maxCacheEntries, acc)
       : (() => {
-          if (acc !== undefined) { acc.terminalCalls += 1; }
-          return terminalResult(def, currentState, runtime);
+          const tStart = acc !== undefined ? performance.now() : 0;
+          const result = terminalResult(def, currentState, runtime);
+          if (acc !== undefined) {
+            acc.terminalCalls += 1;
+            acc.terminalTimeMs += performance.now() - tStart;
+          }
+          return result;
         })();
     if (terminal !== null) {
       return { state: currentState, terminal, rng: currentRng, depth, traversedMoveKeys };
@@ -158,11 +117,21 @@ export function rollout(
     const moves = stateCache !== undefined && maxCacheEntries !== undefined
       ? getOrComputeLegalMoves(stateCache, def, currentState, runtime, maxCacheEntries, acc)
       : (() => {
-          if (acc !== undefined) { acc.legalMovesCalls += 1; }
-          return legalMoves(def, currentState, undefined, runtime);
+          const tStart = acc !== undefined ? performance.now() : 0;
+          const result = legalMoves(def, currentState, undefined, runtime);
+          if (acc !== undefined) {
+            acc.legalMovesCalls += 1;
+            acc.legalMovesTimeMs += performance.now() - tStart;
+          }
+          return result;
         })();
     if (moves.length === 0) {
       return { state: currentState, terminal: null, rng: currentRng, depth, traversedMoveKeys };
+    }
+
+    // Gap 6: Record branching factor at this rollout depth.
+    if (acc !== undefined) {
+      acc.branchingFactorSamples.push({ depth, count: moves.length });
     }
 
     // 3. Sample up to rolloutCandidateSample candidates
@@ -173,6 +142,8 @@ export function rollout(
       currentRng,
       config.templateCompletionsPerVisit,
       runtime,
+      undefined,
+      acc,
     );
     currentRng = postMaterializeRng;
     if (acc !== undefined) {
@@ -201,9 +172,14 @@ export function rollout(
     // 5. Apply chosen move
     const chosen = sampled[chosenIndex]!;
     try {
+      const amStart = acc !== undefined ? performance.now() : 0;
       const applied = applyMove(def, currentState, chosen.move, undefined, runtime);
       if (acc !== undefined) {
         acc.applyMoveCalls += 1;
+        acc.applyMoveTimeMs += performance.now() - amStart;
+        const tc = applied.triggerFirings.length;
+        acc.totalTriggerFirings += tc;
+        if (tc > acc.maxTriggerFiringsPerMove) acc.maxTriggerFiringsPerMove = tc;
       }
       currentState = applied.state;
       traversedMoveKeys.push(chosen.moveKey);
@@ -219,8 +195,13 @@ export function rollout(
   const finalTerminal = stateCache !== undefined && maxCacheEntries !== undefined
     ? getOrComputeTerminal(stateCache, def, currentState, runtime, maxCacheEntries, acc)
     : (() => {
-        if (acc !== undefined) { acc.terminalCalls += 1; }
-        return terminalResult(def, currentState, runtime);
+        const tStart = acc !== undefined ? performance.now() : 0;
+        const result = terminalResult(def, currentState, runtime);
+        if (acc !== undefined) {
+          acc.terminalCalls += 1;
+          acc.terminalTimeMs += performance.now() - tStart;
+        }
+        return result;
       })();
   return { state: currentState, terminal: finalTerminal, rng: currentRng, depth, traversedMoveKeys };
 }
@@ -260,8 +241,13 @@ export function simulateToCutoff(
     const terminal = stateCache !== undefined && maxCacheEntries !== undefined
       ? getOrComputeTerminal(stateCache, def, currentState, runtime, maxCacheEntries, acc)
       : (() => {
-          if (acc !== undefined) { acc.terminalCalls += 1; }
-          return terminalResult(def, currentState, runtime);
+          const tStart = acc !== undefined ? performance.now() : 0;
+          const result = terminalResult(def, currentState, runtime);
+          if (acc !== undefined) {
+            acc.terminalCalls += 1;
+            acc.terminalTimeMs += performance.now() - tStart;
+          }
+          return result;
         })();
     if (terminal !== null) {
       return { state: currentState, terminal, rng: currentRng, depth, traversedMoveKeys };
@@ -271,16 +257,27 @@ export function simulateToCutoff(
     const moves = stateCache !== undefined && maxCacheEntries !== undefined
       ? getOrComputeLegalMoves(stateCache, def, currentState, runtime, maxCacheEntries, acc)
       : (() => {
-          if (acc !== undefined) { acc.legalMovesCalls += 1; }
-          return legalMoves(def, currentState, undefined, runtime);
+          const tStart = acc !== undefined ? performance.now() : 0;
+          const result = legalMoves(def, currentState, undefined, runtime);
+          if (acc !== undefined) {
+            acc.legalMovesCalls += 1;
+            acc.legalMovesTimeMs += performance.now() - tStart;
+          }
+          return result;
         })();
     if (moves.length === 0) {
       return { state: currentState, terminal: null, rng: currentRng, depth, traversedMoveKeys };
     }
 
+    // Gap 6: Record branching factor at this cutoff depth.
+    if (acc !== undefined) {
+      acc.branchingFactorSamples.push({ depth, count: moves.length });
+    }
+
     // 3. Materialize candidates
     const matResult = materializeMovesForRollout(
       def, currentState, moves, currentRng, config.templateCompletionsPerVisit, runtime,
+      undefined, acc,
     );
     const { candidates } = matResult;
     currentRng = matResult.rng;
@@ -301,10 +298,15 @@ export function simulateToCutoff(
     ) {
       const forced = candidates[0]!;
       try {
+        const amStart = acc !== undefined ? performance.now() : 0;
         const applied = applyMove(def, currentState, forced.move, undefined, runtime);
         if (acc !== undefined) {
           acc.applyMoveCalls += 1;
+          acc.applyMoveTimeMs += performance.now() - amStart;
           acc.forcedMovePlies += 1;
+          const tc = applied.triggerFirings.length;
+          acc.totalTriggerFirings += tc;
+          if (tc > acc.maxTriggerFiringsPerMove) acc.maxTriggerFiringsPerMove = tc;
         }
         currentState = applied.state;
         traversedMoveKeys.push(forced.moveKey);
@@ -351,10 +353,15 @@ export function simulateToCutoff(
 
     // 5. Apply
     try {
+      const amStart = acc !== undefined ? performance.now() : 0;
       const applied = applyMove(def, currentState, chosenCandidate.move, undefined, runtime);
       if (acc !== undefined) {
         acc.applyMoveCalls += 1;
+        acc.applyMoveTimeMs += performance.now() - amStart;
         acc.hybridRolloutPlies += 1;
+        const tc = applied.triggerFirings.length;
+        acc.totalTriggerFirings += tc;
+        if (tc > acc.maxTriggerFiringsPerMove) acc.maxTriggerFiringsPerMove = tc;
       }
       currentState = applied.state;
       traversedMoveKeys.push(chosenCandidate.moveKey);
@@ -370,8 +377,13 @@ export function simulateToCutoff(
   const finalTerminal = stateCache !== undefined && maxCacheEntries !== undefined
     ? getOrComputeTerminal(stateCache, def, currentState, runtime, maxCacheEntries, acc)
     : (() => {
-        if (acc !== undefined) { acc.terminalCalls += 1; }
-        return terminalResult(def, currentState, runtime);
+        const tStart = acc !== undefined ? performance.now() : 0;
+        const result = terminalResult(def, currentState, runtime);
+        if (acc !== undefined) {
+          acc.terminalCalls += 1;
+          acc.terminalTimeMs += performance.now() - tStart;
+        }
+        return result;
       })();
   return { state: currentState, terminal: finalTerminal, rng: currentRng, depth, traversedMoveKeys };
 }
@@ -381,7 +393,10 @@ export function simulateToCutoff(
 // ---------------------------------------------------------------------------
 
 /** Policy config subset shared by pickMove. */
-type PolicyConfigSlice = Pick<MctsConfig, 'rolloutPolicy' | 'rolloutEpsilon'>;
+interface PolicyConfigSlice {
+  readonly rolloutPolicy: 'random' | 'epsilonGreedy' | 'mast';
+  readonly rolloutEpsilon: number;
+}
 
 /**
  * Pick a move index according to the rollout policy (random or epsilon-greedy).
@@ -419,9 +434,14 @@ function pickMove(
   for (let i = 0; i < sampled.length; i += 1) {
     const candidate = sampled[i]!;
     try {
+      const amStart = acc !== undefined ? performance.now() : 0;
       const applied = applyMove(def, currentState, candidate.move, undefined, runtime);
       if (acc !== undefined) {
         acc.applyMoveCalls += 1;
+        acc.applyMoveTimeMs += performance.now() - amStart;
+        const tc = applied.triggerFirings.length;
+        acc.totalTriggerFirings += tc;
+        if (tc > acc.maxTriggerFiringsPerMove) acc.maxTriggerFiringsPerMove = tc;
       }
       const score = evaluateState(def, applied.state, actingPlayer, runtime);
       if (score > bestScore) {

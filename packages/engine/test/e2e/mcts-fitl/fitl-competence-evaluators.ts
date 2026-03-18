@@ -24,6 +24,22 @@ export interface CompetenceEvaluator {
   readonly evaluate: (ctx: CompetenceEvalContext) => CompetenceEvalResult;
 }
 
+export const categoryCompetence = (acceptableActionIds: readonly string[]): CompetenceEvaluator => ({
+  name: 'categoryCompetence',
+  minBudget: 'interactive',
+  evaluate: (ctx): CompetenceEvalResult => {
+    const actualActionId = String(ctx.move.actionId);
+    const passed = acceptableActionIds.includes(actualActionId);
+    return {
+      evaluatorName: 'categoryCompetence',
+      passed,
+      explanation: passed
+        ? `actionId '${actualActionId}' is acceptable`
+        : `expected actionId in [${acceptableActionIds.join(', ')}], got '${actualActionId}'`,
+    };
+  },
+});
+
 export const budgetRank = (budget: MctsBudgetProfile): number => {
   switch (budget) {
     case 'interactive':

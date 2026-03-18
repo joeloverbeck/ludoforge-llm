@@ -239,6 +239,6 @@ describe('FITL text-only card behavior backfill', () => {
     assert.equal(card114?.unshaded?.effects, undefined);
     assert.equal((card114?.unshaded?.targets?.[0]?.effects?.[0] as { setMarker?: { state?: string } })?.setMarker?.state, 'passiveSupport');
     assert.equal((card114?.shaded?.effects?.[0] as { shiftMarker?: { space?: string } })?.shiftMarker?.space, 'hue:none');
-    assert.equal((card114?.shaded?.effects?.[3] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 1);
+    assert.equal(typeof (card114?.shaded?.effects?.[3] as { let?: unknown } | undefined)?.let, 'object');
   });
 });

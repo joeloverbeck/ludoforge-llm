@@ -1,4 +1,4 @@
-name: Engine MCTS E2E (default)
+name: Engine MCTS E2E (turn)
 on:
   push:
     branches: [main]
@@ -26,10 +26,10 @@ on:
       - '.github/workflows/engine-mcts-e2e-default.yml'
   workflow_dispatch:
 concurrency:
-  group: engine-mcts-e2e-default-${{ github.ref }}
+  group: engine-mcts-e2e-turn-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  engine-mcts-e2e-default:
+  engine-mcts-e2e-turn:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -42,4 +42,4 @@ jobs:
       - run: pnpm guard:worktree-pointers
       - run: pnpm install --frozen-lockfile
       - run: pnpm -F @ludoforge/engine build
-      - run: pnpm -F @ludoforge/engine test:e2e:mcts:default
+      - run: pnpm -F @ludoforge/engine test:e2e:mcts:turn

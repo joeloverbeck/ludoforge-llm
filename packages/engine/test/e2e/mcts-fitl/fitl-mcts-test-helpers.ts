@@ -36,13 +36,13 @@ import { advanceToDecisionPoint } from '../../../src/kernel/phase-advance.js';
 import { initializeTurnFlowEligibilityState } from '../../../src/kernel/turn-flow-eligibility.js';
 
 import {
-  resolvePreset,
+  resolveBudgetProfile,
   runSearch,
   createRootNode,
   createNodePool,
   selectRootDecision,
 } from '../../../src/agents/index.js';
-import type { MctsPreset, MctsSearchDiagnostics, MctsSearchVisitor } from '../../../src/agents/index.js';
+import type { MctsBudgetProfile, MctsSearchDiagnostics, MctsSearchVisitor } from '../../../src/agents/index.js';
 
 import { assertNoErrors } from '../../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../../helpers/production-spec-helpers.js';
@@ -912,10 +912,10 @@ export const runFitlMctsSearch = (
   def: ValidatedGameDef,
   state: GameState,
   playerId: PlayerId,
-  preset: MctsPreset,
+  profile: MctsBudgetProfile,
   visitor?: MctsSearchVisitor,
 ): FitlSearchResult => {
-  const baseConfig = resolvePreset(preset);
+  const baseConfig = resolveBudgetProfile(profile);
   // Remove timeLimitMs to ensure deterministic iteration count
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { timeLimitMs: _, ...configWithoutTime } = baseConfig;

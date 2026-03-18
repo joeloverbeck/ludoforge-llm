@@ -1,6 +1,6 @@
 # 64MCTSPEROPT-014: CI Workflow Preset-to-Profile Migration
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — CI/workflow changes only
@@ -85,3 +85,16 @@ If `fitl-mcts-fast.test.ts` et al. call `resolvePreset('fast')`, update to `reso
 
 1. `pnpm -F @ludoforge/engine test:e2e`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-18
+- **What changed**: Full migration from deprecated preset names (`fast`/`default`/`strong`) to budget profile names (`interactive`/`turn`/`background`) across the entire MCTS test infrastructure:
+  - Renamed 6 test files (3 FITL, 3 Texas Hold'em) to use profile names
+  - Updated 2 test helper files (`mcts-test-helpers.ts`, `fitl-mcts-test-helpers.ts`) to use `resolveBudgetProfile`/`MctsBudgetProfile`
+  - Updated 4 additional test files (`mode-compare`, `campaign-bench`, `simple-game-mcts`, `fitl-mcts-profiler`)
+  - Updated lane manifest (`test-lane-manifest.mjs`) and test runner (`run-tests.mjs`)
+  - Updated 6 pnpm script names in `packages/engine/package.json`
+  - Updated 6 CI workflow files (names, concurrency groups, job IDs, script refs)
+- **Deviations from original plan**: Scope expanded beyond the ticket's original "mechanical CI workflow update" to include full end-to-end migration (test files, helpers, lane manifest, scripts). Duplicated smoke+determinism tests removed from `campaign-bench.test.ts` as part of redundancy cleanup.
+- **Verification**: `pnpm turbo build` pass, `pnpm turbo typecheck` pass, `pnpm turbo lint` pass

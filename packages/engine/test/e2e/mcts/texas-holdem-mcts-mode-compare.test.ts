@@ -7,7 +7,7 @@
  * diagnostics, and move agreement.
  *
  * Key assertions:
- * - `rollout-hybrid` is faster than `rollout-full` for each preset.
+ * - `rollout-hybrid` is faster than `rollout-full` for each profile.
  * - All evaluators produce deterministic results within themselves.
  * - Move disagreements between evaluators are logged (not asserted —
  *   different evaluators may legitimately choose different moves).
@@ -40,10 +40,10 @@ describe('texas hold\'em MCTS evaluator comparison', () => {
   // ── Single-position diagnostics ──────────────────────────────────────
 
   describe('single-position diagnostics', () => {
-    it('records per-evaluator diagnostics for fast preset', () => {
+    it('records per-evaluator diagnostics for interactive profile', () => {
       const def = compileTexasDef();
       for (const { name, evaluator } of EVALUATORS) {
-        const result = runPositionSearch(def, COMPARE_SEED, COMPARE_PLAYER_COUNT, 'fast', evaluator);
+        const result = runPositionSearch(def, COMPARE_SEED, COMPARE_PLAYER_COUNT, 'interactive', evaluator);
         assert.ok(result.iterations > 0, `${name}: expected >0 iterations`);
         assert.ok(
           result.diagnostics.leafEvaluatorType !== undefined,
@@ -53,16 +53,16 @@ describe('texas hold\'em MCTS evaluator comparison', () => {
           result.diagnostics.rootStopReason !== undefined,
           `${name}: should have a stop reason`,
         );
-        console.log(`[evaluator-compare] fast/${name}:\n${formatSearchDiagnostics(result.diagnostics)}`);
+        console.log(`[evaluator-compare] interactive/${name}:\n${formatSearchDiagnostics(result.diagnostics)}`);
       }
     });
 
-    it('records per-evaluator diagnostics for default preset', () => {
+    it('records per-evaluator diagnostics for turn profile', () => {
       const def = compileTexasDef();
       for (const { name, evaluator } of EVALUATORS) {
-        const result = runPositionSearch(def, COMPARE_SEED, COMPARE_PLAYER_COUNT, 'default', evaluator);
+        const result = runPositionSearch(def, COMPARE_SEED, COMPARE_PLAYER_COUNT, 'turn', evaluator);
         assert.ok(result.iterations > 0, `${name}: expected >0 iterations`);
-        console.log(`[evaluator-compare] default/${name}:\n${formatSearchDiagnostics(result.diagnostics)}`);
+        console.log(`[evaluator-compare] turn/${name}:\n${formatSearchDiagnostics(result.diagnostics)}`);
       }
     });
   });
@@ -70,16 +70,16 @@ describe('texas hold\'em MCTS evaluator comparison', () => {
   // ── Speed comparison ─────────────────────────────────────────────────
 
   describe('rollout-hybrid is faster than rollout-full', () => {
-    it('rollout-hybrid is faster than rollout-full for fast preset (full game)', () => {
+    it('rollout-hybrid is faster than rollout-full for interactive profile (full game)', () => {
       const def = compileTexasDef();
-      const fullAgents = createMctsAgentsWithEvaluator(COMPARE_PLAYER_COUNT, 'fast', ROLLOUT_FULL);
-      const hybridAgents = createMctsAgentsWithEvaluator(COMPARE_PLAYER_COUNT, 'fast', ROLLOUT_HYBRID);
+      const fullAgents = createMctsAgentsWithEvaluator(COMPARE_PLAYER_COUNT, 'interactive', ROLLOUT_FULL);
+      const hybridAgents = createMctsAgentsWithEvaluator(COMPARE_PLAYER_COUNT, 'interactive', ROLLOUT_HYBRID);
 
       const full = runTimedGame(def, COMPARE_SEED, fullAgents, COMPARE_MAX_TURNS, COMPARE_PLAYER_COUNT);
       const hybrid = runTimedGame(def, COMPARE_SEED, hybridAgents, COMPARE_MAX_TURNS, COMPARE_PLAYER_COUNT);
 
       console.log(
-        `[evaluator-compare] fast game: full=${full.elapsedMs}ms, hybrid=${hybrid.elapsedMs}ms, ` +
+        `[evaluator-compare] interactive game: full=${full.elapsedMs}ms, hybrid=${hybrid.elapsedMs}ms, ` +
         `speedup=${(full.elapsedMs / Math.max(hybrid.elapsedMs, 1)).toFixed(2)}x`,
       );
 
@@ -89,16 +89,16 @@ describe('texas hold\'em MCTS evaluator comparison', () => {
       );
     });
 
-    it('rollout-hybrid is faster than rollout-full for default preset (full game)', () => {
+    it('rollout-hybrid is faster than rollout-full for turn profile (full game)', () => {
       const def = compileTexasDef();
-      const fullAgents = createMctsAgentsWithEvaluator(COMPARE_PLAYER_COUNT, 'default', ROLLOUT_FULL);
-      const hybridAgents = createMctsAgentsWithEvaluator(COMPARE_PLAYER_COUNT, 'default', ROLLOUT_HYBRID);
+      const fullAgents = createMctsAgentsWithEvaluator(COMPARE_PLAYER_COUNT, 'turn', ROLLOUT_FULL);
+      const hybridAgents = createMctsAgentsWithEvaluator(COMPARE_PLAYER_COUNT, 'turn', ROLLOUT_HYBRID);
 
       const full = runTimedGame(def, COMPARE_SEED, fullAgents, COMPARE_MAX_TURNS, COMPARE_PLAYER_COUNT);
       const hybrid = runTimedGame(def, COMPARE_SEED, hybridAgents, COMPARE_MAX_TURNS, COMPARE_PLAYER_COUNT);
 
       console.log(
-        `[evaluator-compare] default game: full=${full.elapsedMs}ms, hybrid=${hybrid.elapsedMs}ms, ` +
+        `[evaluator-compare] turn game: full=${full.elapsedMs}ms, hybrid=${hybrid.elapsedMs}ms, ` +
         `speedup=${(full.elapsedMs / Math.max(hybrid.elapsedMs, 1)).toFixed(2)}x`,
       );
 
@@ -108,15 +108,15 @@ describe('texas hold\'em MCTS evaluator comparison', () => {
       );
     });
 
-    it('rollout-hybrid is faster than rollout-full for strong preset (single position)', () => {
+    it('rollout-hybrid is faster than rollout-full for background profile (single position)', () => {
       const def = compileTexasDef();
 
-      // Strong preset is too slow for full games in CI, use single-position comparison.
-      const full = runPositionSearch(def, COMPARE_SEED, COMPARE_PLAYER_COUNT, 'strong', ROLLOUT_FULL);
-      const hybrid = runPositionSearch(def, COMPARE_SEED, COMPARE_PLAYER_COUNT, 'strong', ROLLOUT_HYBRID);
+      // Background profile is too slow for full games in CI, use single-position comparison.
+      const full = runPositionSearch(def, COMPARE_SEED, COMPARE_PLAYER_COUNT, 'background', ROLLOUT_FULL);
+      const hybrid = runPositionSearch(def, COMPARE_SEED, COMPARE_PLAYER_COUNT, 'background', ROLLOUT_HYBRID);
 
       console.log(
-        `[evaluator-compare] strong position: full=${full.elapsedMs}ms, hybrid=${hybrid.elapsedMs}ms, ` +
+        `[evaluator-compare] background position: full=${full.elapsedMs}ms, hybrid=${hybrid.elapsedMs}ms, ` +
         `speedup=${(full.elapsedMs / Math.max(hybrid.elapsedMs, 1)).toFixed(2)}x`,
       );
 
@@ -134,8 +134,8 @@ describe('texas hold\'em MCTS evaluator comparison', () => {
       it(`${name} evaluator produces deterministic results (same seed = same move)`, () => {
         const def = compileTexasDef();
 
-        const resultA = runPositionSearch(def, COMPARE_SEED, COMPARE_PLAYER_COUNT, 'fast', evaluator);
-        const resultB = runPositionSearch(def, COMPARE_SEED, COMPARE_PLAYER_COUNT, 'fast', evaluator);
+        const resultA = runPositionSearch(def, COMPARE_SEED, COMPARE_PLAYER_COUNT, 'interactive', evaluator);
+        const resultB = runPositionSearch(def, COMPARE_SEED, COMPARE_PLAYER_COUNT, 'interactive', evaluator);
 
         assert.deepEqual(
           resultA.move,
@@ -160,8 +160,8 @@ describe('texas hold\'em MCTS evaluator comparison', () => {
       let agreements = 0;
 
       for (const seed of seeds) {
-        const full = runPositionSearch(def, seed, COMPARE_PLAYER_COUNT, 'fast', ROLLOUT_FULL);
-        const hybrid = runPositionSearch(def, seed, COMPARE_PLAYER_COUNT, 'fast', ROLLOUT_HYBRID);
+        const full = runPositionSearch(def, seed, COMPARE_PLAYER_COUNT, 'interactive', ROLLOUT_FULL);
+        const hybrid = runPositionSearch(def, seed, COMPARE_PLAYER_COUNT, 'interactive', ROLLOUT_HYBRID);
 
         const agree = JSON.stringify(full.move) === JSON.stringify(hybrid.move);
         if (agree) {

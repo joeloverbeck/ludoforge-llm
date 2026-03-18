@@ -7,39 +7,39 @@ import {
   RUN_MCTS_E2E,
   assertValidStopReason,
   compileTexasDef,
-  createTimeBudgetedDefaultAgents,
+  createTimeBudgetedTurnAgents,
   loadTrace,
-  resolvePreset,
+  resolveBudgetProfile,
   runGame,
   type LeafEvaluator,
 } from './mcts-test-helpers.js';
 
 /**
- * MCTS default preset tests — uses hybrid rollout mode with MAST playout
- * policy. The default preset exercises deeper search than fast.
+ * MCTS turn profile tests — uses heuristic evaluation with family widening.
+ * The turn profile exercises deeper search than interactive.
  *
- * All default preset tests use time-budgeted agents (timeLimitMs: 1000,
+ * All turn profile tests use time-budgeted agents (timeLimitMs: 1000,
  * minIterations: 4) to prevent test timeouts while still exercising
- * the hybrid rollout path.
+ * the search path.
  *
  * Core tests always run. Extended tests are gated behind RUN_MCTS_E2E.
  */
 
-describe('texas hold\'em MCTS default preset e2e', () => {
+describe('texas hold\'em MCTS turn profile e2e', () => {
   // ── Core smoke test (always runs) ──────────────────────────────────────
 
-  it('completes 2-player game with MCTS default agents', () => {
+  it('completes 2-player game with MCTS turn agents', () => {
     const def = compileTexasDef();
-    const trace = loadTrace(def, 202, createTimeBudgetedDefaultAgents(2), 2, DEFAULT_MAX_TURNS);
+    const trace = loadTrace(def, 202, createTimeBudgetedTurnAgents(2), 2, DEFAULT_MAX_TURNS);
     assertValidStopReason(trace);
   });
 
-  it('default preset uses heuristic leaf evaluator', () => {
-    const config = resolvePreset('default');
+  it('turn profile uses heuristic leaf evaluator', () => {
+    const config = resolveBudgetProfile('turn');
     assert.equal(
       (config.leafEvaluator?.type ?? 'heuristic'),
       'heuristic',
-      'default preset should use heuristic leaf evaluator',
+      'turn profile should use heuristic leaf evaluator',
     );
   });
 
@@ -47,13 +47,13 @@ describe('texas hold\'em MCTS default preset e2e', () => {
 
   describe('determinism by leaf evaluator', () => {
     /**
-     * Create deterministic default-preset agents with a specific leaf evaluator.
+     * Create deterministic turn-profile agents with a specific leaf evaluator.
      * Uses a small fixed iteration count WITHOUT a time limit — wall-clock
      * limits cause non-deterministic iteration counts across runs.
      */
     const createDeterministicWithEvaluator = (count: number, evaluator: LeafEvaluator): readonly MctsAgent[] =>
       Array.from({ length: count }, () =>
-        new MctsAgent({ ...resolvePreset('default'), leafEvaluator: evaluator, iterations: 50, minIterations: 50 }),
+        new MctsAgent({ ...resolveBudgetProfile('turn'), leafEvaluator: evaluator, iterations: 50, minIterations: 50 }),
       );
 
     const evaluators: readonly { name: string; evaluator: LeafEvaluator }[] = [
@@ -92,20 +92,20 @@ describe('texas hold\'em MCTS default preset e2e', () => {
 
   describe('extended tournaments', () => {
     if (RUN_MCTS_E2E) {
-      it('[slow] completes 3-player tournament with MCTS default agents', () => {
+      it('[slow] completes 3-player tournament with MCTS turn agents', () => {
         const def = compileTexasDef();
-        const trace = loadTrace(def, 302, createTimeBudgetedDefaultAgents(3), 3, DEFAULT_MAX_TURNS);
+        const trace = loadTrace(def, 302, createTimeBudgetedTurnAgents(3), 3, DEFAULT_MAX_TURNS);
         assertValidStopReason(trace);
       });
 
-      it('[slow] completes 6-player tournament with MCTS default agents', () => {
+      it('[slow] completes 6-player tournament with MCTS turn agents', () => {
         const def = compileTexasDef();
-        const trace = loadTrace(def, 602, createTimeBudgetedDefaultAgents(6), 6, DEFAULT_MAX_TURNS);
+        const trace = loadTrace(def, 602, createTimeBudgetedTurnAgents(6), 6, DEFAULT_MAX_TURNS);
         assertValidStopReason(trace);
       });
     } else {
-      it.skip('[slow] completes 3-player tournament with MCTS default agents', () => {});
-      it.skip('[slow] completes 6-player tournament with MCTS default agents', () => {});
+      it.skip('[slow] completes 3-player tournament with MCTS turn agents', () => {});
+      it.skip('[slow] completes 6-player tournament with MCTS turn agents', () => {});
     }
   });
 });

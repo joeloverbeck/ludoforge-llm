@@ -21,7 +21,7 @@ import {
   type PlayerId,
 } from '../../../src/kernel/index.js';
 import {
-  resolvePreset,
+  resolveBudgetProfile,
   runSearch,
   createRootNode,
   createNodePool,
@@ -45,7 +45,7 @@ describe('simple game MCTS — single position search', () => {
 
     assert.ok(moves.length >= 2, `expected ≥2 legal moves, got ${moves.length}`);
 
-    const config = { ...resolvePreset('fast'), diagnostics: true };
+    const config = { ...resolveBudgetProfile('interactive'), diagnostics: true };
     const rng = createRng(42n);
     const observation = derivePlayerObservation(def, state, playerId);
     const root = createRootNode(state.playerCount);
@@ -69,7 +69,7 @@ describe('simple game MCTS — single position search', () => {
     const playerId = state.activePlayer as PlayerId;
     const moves = legalMoves(def, state, undefined, runtime);
 
-    const config = { ...resolvePreset('fast'), diagnostics: true };
+    const config = { ...resolveBudgetProfile('interactive'), diagnostics: true };
     const rng = createRng(42n);
     const observation = derivePlayerObservation(def, state, playerId);
     const root = createRootNode(state.playerCount);
@@ -100,7 +100,7 @@ describe('simple game MCTS — single position search', () => {
     const moves = legalMoves(def, state, undefined, runtime);
 
     const config = {
-      ...resolvePreset('fast'),
+      ...resolveBudgetProfile('interactive'),
       classificationPolicy: 'lazy' as const,
       diagnostics: true,
     };
@@ -128,8 +128,8 @@ describe('simple game MCTS — full game simulation', () => {
   it('MCTS agent completes a full game without errors', () => {
     const def = createSimpleMctsGameDef();
     const agents = [
-      new MctsAgent(resolvePreset('fast')),
-      new MctsAgent(resolvePreset('fast')),
+      new MctsAgent(resolveBudgetProfile('interactive')),
+      new MctsAgent(resolveBudgetProfile('interactive')),
     ];
 
     const trace = runGame(def, 42, agents, 100, 2);
@@ -144,8 +144,8 @@ describe('simple game MCTS — full game simulation', () => {
   it('game reaches terminal condition', () => {
     const def = createSimpleMctsGameDef();
     const agents = [
-      new MctsAgent(resolvePreset('fast')),
-      new MctsAgent(resolvePreset('fast')),
+      new MctsAgent(resolveBudgetProfile('interactive')),
+      new MctsAgent(resolveBudgetProfile('interactive')),
     ];
 
     // With simple VP-gaining actions and a 10 VP threshold, the game

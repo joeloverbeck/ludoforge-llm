@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 
 import {
   MctsAgent,
-  resolvePreset,
+  resolveBudgetProfile,
   GreedyAgent,
   RandomAgent,
   runSearch,
@@ -10,7 +10,7 @@ import {
   createNodePool,
   selectRootDecision,
 } from '../../../src/agents/index.js';
-import type { MctsPreset, LeafEvaluator, MctsSearchDiagnostics } from '../../../src/agents/index.js';
+import type { MctsBudgetProfile, LeafEvaluator, MctsSearchDiagnostics } from '../../../src/agents/index.js';
 import {
   assertValidatedGameDef,
   createGameDefRuntime,
@@ -30,8 +30,8 @@ import { runGame } from '../../../src/sim/index.js';
 import { assertNoDiagnostics, assertNoErrors } from '../../helpers/diagnostic-helpers.js';
 import { compileTexasProductionSpec } from '../../helpers/production-spec-helpers.js';
 
-export { GreedyAgent, MctsAgent, RandomAgent, resolvePreset, runGame, serializeTrace };
-export type { Agent, GameTrace, LeafEvaluator, MctsPreset, MctsSearchDiagnostics, ValidatedGameDef };
+export { GreedyAgent, MctsAgent, RandomAgent, resolveBudgetProfile, runGame, serializeTrace };
+export type { Agent, GameTrace, LeafEvaluator, MctsBudgetProfile, MctsSearchDiagnostics, ValidatedGameDef };
 
 export const FAST_MAX_TURNS = 200;
 export const DEFAULT_MAX_TURNS = 20;
@@ -49,16 +49,16 @@ export const compileTexasDef = (): ValidatedGameDef => {
   return assertValidatedGameDef(compiled.gameDef);
 };
 
-export const createMctsAgents = (count: number, preset: 'fast' | 'default' | 'strong'): readonly Agent[] =>
-  Array.from({ length: count }, () => new MctsAgent(resolvePreset(preset)));
+export const createMctsAgents = (count: number, profile: MctsBudgetProfile): readonly Agent[] =>
+  Array.from({ length: count }, () => new MctsAgent(resolveBudgetProfile(profile)));
 
 /**
  * Create MCTS agents with a tight time budget suitable for e2e testing.
  * Uses the default preset but overrides timeLimitMs and minIterations
  * to prevent test timeouts while still exercising epsilon-greedy rollouts.
  */
-export const createTimeBudgetedDefaultAgents = (count: number): readonly Agent[] =>
-  Array.from({ length: count }, () => new MctsAgent({ ...resolvePreset('default'), timeLimitMs: 1_000, minIterations: 4 }));
+export const createTimeBudgetedTurnAgents = (count: number): readonly Agent[] =>
+  Array.from({ length: count }, () => new MctsAgent({ ...resolveBudgetProfile('turn'), timeLimitMs: 1_000, minIterations: 4 }));
 
 export const loadTrace = (
   def: ValidatedGameDef,
@@ -105,11 +105,11 @@ export const assertValidStopReason = (trace: GameTrace): void => {
 /** Create MCTS agents with a specific leaf evaluator override. */
 export const createMctsAgentsWithEvaluator = (
   count: number,
-  preset: MctsPreset,
+  profile: MctsBudgetProfile,
   leafEvaluator: LeafEvaluator,
 ): readonly Agent[] =>
   Array.from({ length: count }, () =>
-    new MctsAgent({ ...resolvePreset(preset), leafEvaluator }),
+    new MctsAgent({ ...resolveBudgetProfile(profile), leafEvaluator }),
   );
 
 /** Result of a timed game run. */
@@ -149,10 +149,10 @@ export const runPositionSearch = (
   def: ValidatedGameDef,
   seed: number,
   playerCount: number,
-  preset: MctsPreset,
+  profile: MctsBudgetProfile,
   leafEvaluator: LeafEvaluator,
 ): PositionSearchResult => {
-  const config = { ...resolvePreset(preset), leafEvaluator, diagnostics: true };
+  const config = { ...resolveBudgetProfile(profile), leafEvaluator, diagnostics: true };
   const runtime = createGameDefRuntime(def);
   const initResult = initialState(def, seed, playerCount);
   const state = initResult.state;

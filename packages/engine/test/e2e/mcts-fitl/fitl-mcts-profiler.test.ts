@@ -15,7 +15,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-  resolvePreset,
+  resolveBudgetProfile,
   runSearch,
   createRootNode,
   createNodePool,
@@ -62,7 +62,7 @@ function runProfileSearch(
   playerId: PlayerId,
   iterations: number,
 ): ProfileResult {
-  const baseConfig = resolvePreset('fast');
+  const baseConfig = resolveBudgetProfile('interactive');
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { timeLimitMs: _, ...configWithoutTime } = baseConfig;
   const visitor = createConsoleVisitor('[PROFILE]');

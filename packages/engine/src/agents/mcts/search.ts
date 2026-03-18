@@ -20,7 +20,7 @@ import { applyMove } from '../../kernel/apply-move.js';
 import { terminalResult } from '../../kernel/terminal.js';
 import { fork } from '../../kernel/prng.js';
 import { selectChild, selectDecisionChild } from './isuct.js';
-import { shouldExpand, selectExpansionCandidate, selectExpansionCandidateLazy } from './expansion.js';
+import { shouldExpand, selectExpansionCandidate, selectExpansionCandidateLazy, selectExpansionCandidateFamilyFirst } from './expansion.js';
 import type { LazyExpansionResult } from './expansion.js';
 import { classifyMovesForSearch, filterAvailableCandidates } from './materialization.js';
 import type { MoveClassification } from './materialization.js';
@@ -51,7 +51,7 @@ import {
   filterAvailableByClassification,
   resolveUnknownChildren,
 } from './availability.js';
-import type { ClassificationPolicy } from './config.js';
+import type { ClassificationPolicy, WideningMode } from './config.js';
 
 // ---------------------------------------------------------------------------
 // Confidence-based root stopping (Hoeffding bound)
@@ -629,20 +629,55 @@ export function runOneIteration(
         const exhaustiveThreshold = config.expansionExhaustiveThreshold ?? 10;
         const actingPlayer = currentState.activePlayer as PlayerId;
 
-        const lazyResult: LazyExpansionResult | null = selectExpansionCandidateLazy(
-          classEntryForExpansion,
-          existingChildKeys,
-          rootBestKey,
-          shortlistSize,
-          exhaustiveThreshold,
-          def,
-          currentState,
-          actingPlayer,
-          currentRng,
-          runtime,
-          config.visitor,
-          acc,
-        );
+        // Family-first widening at depth 0-1 when configured.
+        const effectiveWidening: WideningMode = config.wideningMode ?? 'move';
+        const useFamilyFirst = effectiveWidening === 'familyThenMove' && selectionDepth <= 1;
+
+        let lazyResult: LazyExpansionResult | null;
+
+        if (useFamilyFirst) {
+          // Build family counts from existing children.
+          const childFamilyCounts = new Map<string, number>();
+          for (const child of currentNode.children) {
+            if (child.move !== null) {
+              const fk = child.move.actionId;
+              childFamilyCounts.set(fk, (childFamilyCounts.get(fk) ?? 0) + 1);
+            }
+          }
+          const maxVariants = config.maxVariantsPerFamilyBeforeCoverage ?? 1;
+
+          lazyResult = selectExpansionCandidateFamilyFirst(
+            classEntryForExpansion,
+            existingChildKeys,
+            childFamilyCounts,
+            maxVariants,
+            rootBestKey,
+            shortlistSize,
+            exhaustiveThreshold,
+            def,
+            currentState,
+            actingPlayer,
+            currentRng,
+            runtime,
+            config.visitor,
+            acc,
+          );
+        } else {
+          lazyResult = selectExpansionCandidateLazy(
+            classEntryForExpansion,
+            existingChildKeys,
+            rootBestKey,
+            shortlistSize,
+            exhaustiveThreshold,
+            def,
+            currentState,
+            actingPlayer,
+            currentRng,
+            runtime,
+            config.visitor,
+            acc,
+          );
+        }
 
         if (lazyResult !== null) {
           expansionResult = lazyResult;
@@ -1235,6 +1270,30 @@ export function runSearch(
   // Gap 5: Capture heap at search end (Node.js only).
   if (acc !== undefined && typeof process !== 'undefined' && typeof process.memoryUsage === 'function') {
     acc.heapUsedAtEndBytes = process.memoryUsage().heapUsed;
+  }
+
+  // Family coverage diagnostics at root.
+  if (acc !== undefined && stateCache !== undefined && maxCacheEntries !== undefined) {
+    const rootMoves = getOrComputeLegalMoves(stateCache, def, state, runtime, maxCacheEntries, acc);
+    const rootClassEntry = getOrInitClassificationEntry(stateCache, state, rootMoves, maxCacheEntries);
+    if (rootClassEntry !== null) {
+      // Count total families in the candidate pool.
+      const allFamilies = new Set<string>();
+      for (let i = 0; i < rootClassEntry.infos.length; i += 1) {
+        allFamilies.add(rootClassEntry.infos[i]!.familyKey);
+      }
+      acc.familyTotalAtRoot = allFamilies.size;
+
+      // Count represented families from root children.
+      const representedFamilies = new Set<string>();
+      for (const child of root.children) {
+        if (child.move !== null && child.visits > 0) {
+          representedFamilies.add(child.move.actionId);
+        }
+      }
+      acc.familyCoverageAtRoot = representedFamilies.size;
+      acc.familyStarvationCount = allFamilies.size - representedFamilies.size;
+    }
   }
 
   // Collect diagnostics if enabled.

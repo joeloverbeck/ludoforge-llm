@@ -18,6 +18,10 @@ type SolverMode = (typeof SOLVER_MODES)[number];
 const CLASSIFICATION_POLICIES = ['auto', 'exhaustive', 'lazy'] as const;
 export type ClassificationPolicy = (typeof CLASSIFICATION_POLICIES)[number];
 
+/** Allowed widening modes (spec section 3.7). */
+const WIDENING_MODES = ['move', 'familyThenMove'] as const;
+export type WideningMode = (typeof WIDENING_MODES)[number];
+
 /** Allowed leaf evaluator types. */
 const LEAF_EVALUATOR_TYPES = ['heuristic', 'rollout', 'auto'] as const;
 
@@ -115,6 +119,21 @@ export interface MctsConfig {
    * - `'lazy'`: incremental per-move classification.
    */
   readonly classificationPolicy?: ClassificationPolicy;
+
+  /**
+   * Widening mode for expansion (spec section 3.7).
+   * - `'move'`: ordinary move-level progressive widening (default).
+   * - `'familyThenMove'`: widen over action families first at depth 0-1,
+   *   then over concrete variants within each family.
+   */
+  readonly wideningMode?: WideningMode;
+
+  /**
+   * Cap on concrete siblings per family before all families have at least
+   * one child. Only applies when `wideningMode === 'familyThenMove'`.
+   * Default: 1.
+   */
+  readonly maxVariantsPerFamilyBeforeCoverage?: number;
 
   /**
    * Maximum candidates evaluated with one-step applyMove+evaluate during
@@ -328,6 +347,16 @@ export function validateMctsConfig(partial: Partial<MctsConfig>): MctsConfig {
   // Classification policy
   if (merged.classificationPolicy !== undefined) {
     assertOneOf('classificationPolicy', merged.classificationPolicy, CLASSIFICATION_POLICIES);
+  }
+
+  // Widening mode
+  if (merged.wideningMode !== undefined) {
+    assertOneOf('wideningMode', merged.wideningMode, WIDENING_MODES);
+  }
+
+  // Max variants per family before coverage
+  if (merged.maxVariantsPerFamilyBeforeCoverage !== undefined) {
+    assertPositiveInt('maxVariantsPerFamilyBeforeCoverage', merged.maxVariantsPerFamilyBeforeCoverage);
   }
 
   // Expansion shortlist size

@@ -1,6 +1,6 @@
 # 64MCTSPEROPT-007: Family-First Widening at Root and Shallow Depths
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — MCTS expansion/selection widening logic
@@ -96,3 +96,16 @@ Track: `familyCoverageAtRoot` (how many families represented after N iterations)
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-18
+- **What changed**:
+  - `config.ts`: Added `wideningMode?: 'move' | 'familyThenMove'` and `maxVariantsPerFamilyBeforeCoverage?: number` with validation
+  - `expansion.ts`: Added `buildFamilyAwareFrontier()` and `selectExpansionCandidateFamilyFirst()` — family-aware frontier scoring and lazy expansion with family priority; falls back to move-level when family count ≤ 3
+  - `search.ts`: At depth 0-1 with `familyThenMove`, routes expansion through family-first path; added family coverage diagnostics collection after search loop
+  - `diagnostics.ts`: Added `familyCoverageAtRoot`, `familyStarvationCount`, `familyTotalAtRoot` to accumulator and result types
+  - `index.ts`: Exported `WideningMode` type
+  - `family-widening.test.ts` (new): 12 tests covering all acceptance criteria
+- **Deviations**: None — all deliverables implemented as specified
+- **Verification**: `pnpm turbo typecheck` ✅, `pnpm turbo lint` ✅, `pnpm -F @ludoforge/engine test` — 5072 tests pass, 0 failures ✅

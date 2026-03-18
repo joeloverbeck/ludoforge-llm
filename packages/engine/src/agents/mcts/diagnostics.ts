@@ -96,6 +96,11 @@ export interface MutableDiagnosticsAccumulator {
   lazyExpansionFrontierExhausted: number;
   lazyExpansionFallbackToExhaustive: number;
 
+  // Family widening counters
+  familyCoverageAtRoot: number;
+  familyStarvationCount: number;
+  familyTotalAtRoot: number;
+
   // Aggregation arrays (for computing averages)
   leafRewardSpans: number[];
   selectionDepths: number[];
@@ -164,6 +169,10 @@ export function createAccumulator(): MutableDiagnosticsAccumulator {
     lazyExpansionShortlistSize: 0,
     lazyExpansionFrontierExhausted: 0,
     lazyExpansionFallbackToExhaustive: 0,
+
+    familyCoverageAtRoot: 0,
+    familyStarvationCount: 0,
+    familyTotalAtRoot: 0,
 
     leafRewardSpans: [],
     selectionDepths: [],
@@ -262,6 +271,11 @@ export interface MctsSearchDiagnostics {
   readonly lazyExpansionShortlistSize?: number;
   readonly lazyExpansionFrontierExhausted?: number;
   readonly lazyExpansionFallbackToExhaustive?: number;
+
+  // Family widening counters
+  readonly familyCoverageAtRoot?: number;
+  readonly familyStarvationCount?: number;
+  readonly familyTotalAtRoot?: number;
 
   // Derived averages
   readonly avgSelectionDepth?: number;
@@ -497,6 +511,11 @@ export function collectDiagnostics(
     lazyExpansionShortlistSize: accumulator.lazyExpansionShortlistSize,
     lazyExpansionFrontierExhausted: accumulator.lazyExpansionFrontierExhausted,
     lazyExpansionFallbackToExhaustive: accumulator.lazyExpansionFallbackToExhaustive,
+
+    // Family widening counters
+    familyCoverageAtRoot: accumulator.familyCoverageAtRoot,
+    familyStarvationCount: accumulator.familyStarvationCount,
+    familyTotalAtRoot: accumulator.familyTotalAtRoot,
 
     ...(avgSelectionDepth !== undefined ? { avgSelectionDepth } : {}),
     ...(avgLeafRewardSpan !== undefined ? { avgLeafRewardSpan } : {}),

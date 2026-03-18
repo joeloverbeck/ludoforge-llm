@@ -462,3 +462,212 @@ function kindToStatus(kind: SingleMoveClassificationKind): ClassificationStatus 
     default: return 'illegal';
   }
 }
+
+// ---------------------------------------------------------------------------
+// Family-first frontier ordering (spec section 3.7)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a cheaply-ordered frontier that prefers candidates from
+ * unrepresented families. Used at depth 0-1 when `wideningMode` is
+ * `'familyThenMove'`.
+ *
+ * Scoring:
+ * - +10000 for candidates from families with no existing children
+ * - +5000 for candidates whose family is under the per-family cap
+ * - Root-best hint, status bonuses, and PRNG tie-break (same as plain)
+ *
+ * Falls through to ordinary `buildOrderedFrontier` when total family
+ * count is ≤ 3 (family-first adds no value).
+ */
+export function buildFamilyAwareFrontier(
+  classEntry: CachedClassificationEntry,
+  existingKeys: ReadonlySet<string>,
+  existingChildFamilyCounts: ReadonlyMap<string, number>,
+  maxVariantsBeforeCoverage: number,
+  rootBestKey: MoveKey | null,
+  rng: Rng,
+): { readonly frontier: readonly FrontierEntry[]; readonly rng: Rng } {
+  // Count total families in the candidate pool.
+  const allFamilies = new Set<string>();
+  for (let i = 0; i < classEntry.infos.length; i += 1) {
+    allFamilies.add(classEntry.infos[i]!.familyKey);
+  }
+
+  // Fall back to move-level ordering when family cardinality is small.
+  if (allFamilies.size <= 3) {
+    return buildOrderedFrontier(classEntry, existingKeys, rootBestKey, rng);
+  }
+
+  // Determine which families are already represented among existing children.
+  const representedFamilies = new Set<string>(existingChildFamilyCounts.keys());
+
+  // Check whether all families have at least one child.
+  let allFamiliesCovered = true;
+  for (const fk of allFamilies) {
+    if (!representedFamilies.has(fk)) {
+      allFamiliesCovered = false;
+      break;
+    }
+  }
+
+  const entries: FrontierEntry[] = [];
+  let currentRng = rng;
+
+  for (let i = 0; i < classEntry.infos.length; i += 1) {
+    const info = classEntry.infos[i]!;
+
+    if (existingKeys.has(info.moveKey)) continue;
+    if (info.status === 'illegal' || info.status === 'pendingStochastic') continue;
+
+    let score = 0;
+
+    // Family coverage: strongly prefer unrepresented families.
+    if (!representedFamilies.has(info.familyKey)) {
+      score += 10000;
+    } else if (!allFamiliesCovered) {
+      // Family is represented but not all families are covered yet —
+      // only allow if under the per-family cap.
+      const currentCount = existingChildFamilyCounts.get(info.familyKey) ?? 0;
+      if (currentCount < maxVariantsBeforeCoverage) {
+        score += 5000;
+      }
+      // Otherwise score stays low — deprioritized until all families covered.
+    } else {
+      // All families covered — allow more variants freely.
+      score += 5000;
+    }
+
+    // Root-best hint.
+    if (rootBestKey !== null && info.moveKey === rootBestKey) {
+      score += 1000;
+    }
+
+    // Status bonus.
+    if (info.status === 'ready') {
+      score += 10;
+    } else if (info.status === 'pending') {
+      score += 5;
+    }
+
+    // PRNG tie-break.
+    const [tieVal, nextRng] = nextInt(currentRng, 0, 999);
+    currentRng = nextRng;
+    score += tieVal / 1000;
+
+    entries.push({ info, infoIndex: i, cheapScore: score });
+  }
+
+  entries.sort((a, b) => b.cheapScore - a.cheapScore);
+  return { frontier: entries, rng: currentRng };
+}
+
+// ---------------------------------------------------------------------------
+// Family-aware lazy expansion
+// ---------------------------------------------------------------------------
+
+/**
+ * Select an expansion candidate using family-first widening.
+ *
+ * Delegates to `buildFamilyAwareFrontier` for frontier ordering, then
+ * follows the same classify-on-demand + shortlist pattern as
+ * `selectExpansionCandidateLazy`.
+ *
+ * @param classEntry                 - incremental classification entry
+ * @param existingKeys               - moveKeys already expanded as children
+ * @param existingChildFamilyCounts  - family → count of existing children
+ * @param maxVariantsBeforeCoverage  - per-family cap (default 1)
+ * @param rootBestKey                - optional root-best hint
+ * @param shortlistSize              - max candidates for one-step eval
+ * @param exhaustiveThreshold        - fall back when candidates < this
+ * @param def / state / actingPlayer / rng / runtime / visitor / acc - standard
+ */
+export function selectExpansionCandidateFamilyFirst(
+  classEntry: CachedClassificationEntry,
+  existingKeys: ReadonlySet<string>,
+  existingChildFamilyCounts: ReadonlyMap<string, number>,
+  maxVariantsBeforeCoverage: number,
+  rootBestKey: MoveKey | null,
+  shortlistSize: number,
+  exhaustiveThreshold: number,
+  def: GameDef,
+  state: GameState,
+  actingPlayer: PlayerId,
+  rng: Rng,
+  runtime?: GameDefRuntime,
+  visitor?: MctsSearchVisitor,
+  acc?: MutableDiagnosticsAccumulator,
+): LazyExpansionResult | null {
+  // Count unexpanded candidates.
+  let unexpandedCount = 0;
+  for (let i = 0; i < classEntry.infos.length; i += 1) {
+    const info = classEntry.infos[i]!;
+    if (existingKeys.has(info.moveKey)) continue;
+    if (info.status === 'illegal' || info.status === 'pendingStochastic') continue;
+    unexpandedCount += 1;
+  }
+
+  if (unexpandedCount === 0) {
+    if (acc !== undefined) acc.lazyExpansionFrontierExhausted += 1;
+    return null;
+  }
+
+  // Small candidate count → fall back to exhaustive.
+  if (unexpandedCount < exhaustiveThreshold) {
+    if (acc !== undefined) acc.lazyExpansionFallbackToExhaustive += 1;
+    const candidates: ConcreteMoveCandidate[] = [];
+    for (let i = 0; i < classEntry.infos.length; i += 1) {
+      const info = classEntry.infos[i]!;
+      if (existingKeys.has(info.moveKey)) continue;
+      if (info.status === 'unknown') {
+        classifyNextCandidateAt(classEntry, i, def, state, runtime, visitor, acc);
+        if (acc !== undefined) acc.lazyExpansionCandidatesClassified += 1;
+      }
+      if (info.status === 'ready') {
+        candidates.push({ move: info.move, moveKey: info.moveKey });
+      }
+    }
+    if (candidates.length === 0) {
+      if (acc !== undefined) acc.lazyExpansionFrontierExhausted += 1;
+      return null;
+    }
+    const result = selectExpansionCandidate(candidates, def, state, actingPlayer, rng, runtime, visitor);
+    return { candidate: result.candidate, rng: result.rng };
+  }
+
+  // Family-aware frontier.
+  const { frontier, rng: postFrontier } = buildFamilyAwareFrontier(
+    classEntry, existingKeys, existingChildFamilyCounts,
+    maxVariantsBeforeCoverage, rootBestKey, rng,
+  );
+
+  const shortlist: ConcreteMoveCandidate[] = [];
+  let candidatesClassified = 0;
+
+  for (const entry of frontier) {
+    if (shortlist.length >= shortlistSize) break;
+
+    const { info, infoIndex } = entry;
+
+    if (info.status === 'unknown') {
+      classifyNextCandidateAt(classEntry, infoIndex, def, state, runtime, visitor, acc);
+      candidatesClassified += 1;
+    }
+
+    if (info.status === 'ready') {
+      shortlist.push({ move: info.move, moveKey: info.moveKey });
+    }
+  }
+
+  if (acc !== undefined) {
+    acc.lazyExpansionCandidatesClassified += candidatesClassified;
+    acc.lazyExpansionShortlistSize += shortlist.length;
+    if (shortlist.length === 0) acc.lazyExpansionFrontierExhausted += 1;
+  }
+
+  if (shortlist.length === 0) return null;
+  if (shortlist.length === 1) return { candidate: shortlist[0]!, rng: postFrontier };
+
+  const result = selectExpansionCandidate(shortlist, def, state, actingPlayer, postFrontier, runtime, visitor);
+  return { candidate: result.candidate, rng: result.rng };
+}

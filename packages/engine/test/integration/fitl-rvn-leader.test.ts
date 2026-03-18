@@ -680,6 +680,189 @@ describe('FITL RVN leader lingering effects', () => {
     );
   });
 
+  it('verifies US Train pacification profile uses Ky-aware cost macro and leader check', () => {
+    const { parsed } = compileProductionSpec();
+    const profiles = parsed.doc.actionPipelines ?? [];
+    const usTrainProfile = profiles.find((profile) => profile.id === 'train-us-profile');
+    assert.ok(usTrainProfile, 'Expected train-us-profile in production spec');
+
+    const macroCallNodes = findDeep(usTrainProfile, (node) =>
+      node?.macro === 'rvn-leader-pacification-cost',
+    );
+    assert.ok(macroCallNodes.length >= 1, 'US Train profile should invoke rvn-leader-pacification-cost macro');
+
+    const leaderComparisons = findDeep(usTrainProfile, (node) =>
+      node?.op === '==' &&
+      JSON.stringify(node?.left ?? {}).includes('activeLeader') &&
+      node?.right === 'ky',
+    );
+    assert.ok(
+      leaderComparisons.length >= 1,
+      'US Train profile should check activeLeader == ky for cost modifier',
+    );
+  });
+
+  it('applies Ky pacification cost for multiple levels at once (2 levels → 2 extra vs baseline)', () => {
+    const def = compileDef();
+    const space = 'qui-nhon:none';
+
+    const runMultiPacify = (leader: LeaderState): GameState => {
+      const baseState = clearAllZones(initialState(def, 9011, 4).state);
+      const setup: GameState = {
+        ...baseState,
+        activePlayer: asPlayerId(1),
+        globalVars: {
+          ...baseState.globalVars,
+          arvnResources: 30,
+        },
+        zones: {
+          ...baseState.zones,
+          [space]: [
+            makeToken('multi-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+            makeToken('multi-arvn-p', 'police', 'ARVN', { type: 'police' }),
+          ],
+        },
+        markers: {
+          ...baseState.markers,
+          [space]: {
+            ...(baseState.markers[space] ?? {}),
+            supportOpposition: 'passiveOpposition',
+          },
+        },
+      };
+
+      return applyMoveWithResolvedDecisionIds(def, withActiveLeader(setup, leader), {
+        actionId: asActionId('train'),
+        params: {
+          $targetSpaces: [space],
+          $trainChoice: 'rangers',
+          $subActionSpaces: [space],
+          $subAction: 'pacify',
+          $pacLevels: 2,
+        },
+      }).state;
+    };
+
+    const kyResult = runMultiPacify('ky');
+    const thieuResult = runMultiPacify('thieu');
+    assert.equal(
+      globalVarNumber(thieuResult, 'arvnResources') - globalVarNumber(kyResult, 'arvnResources'),
+      2,
+      'Ky should cost 2 extra ARVN resources for 2 pacification levels (1 extra per level)',
+    );
+  });
+
+  it('reverts pacification cost after leader transition from Ky to Thieu', () => {
+    const def = compileDef();
+    const space = 'qui-nhon:none';
+
+    const runWithLeader = (leader: LeaderState): GameState => {
+      const baseState = clearAllZones(initialState(def, 9012, 4).state);
+      const setup: GameState = {
+        ...baseState,
+        activePlayer: asPlayerId(1),
+        globalVars: {
+          ...baseState.globalVars,
+          arvnResources: 30,
+        },
+        zones: {
+          ...baseState.zones,
+          [space]: [
+            makeToken('revert-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+            makeToken('revert-arvn-p', 'police', 'ARVN', { type: 'police' }),
+          ],
+        },
+        markers: {
+          ...baseState.markers,
+          [space]: {
+            ...(baseState.markers[space] ?? {}),
+            supportOpposition: 'neutral',
+          },
+        },
+      };
+
+      return applyMoveWithResolvedDecisionIds(def, withActiveLeader(setup, leader), {
+        actionId: asActionId('train'),
+        params: {
+          $targetSpaces: [space],
+          $trainChoice: 'rangers',
+          $subActionSpaces: [space],
+          $subAction: 'pacify',
+          $pacLevels: 1,
+        },
+      }).state;
+    };
+
+    const kyResources = globalVarNumber(runWithLeader('ky'), 'arvnResources');
+    const thieuResources = globalVarNumber(runWithLeader('thieu'), 'arvnResources');
+    assert.equal(
+      thieuResources - kyResources,
+      1,
+      'Switching from Ky to Thieu should save exactly 1 ARVN resource per pacification level',
+    );
+    assert.ok(
+      thieuResources > kyResources,
+      'Thieu should leave more ARVN resources than Ky after pacification',
+    );
+  });
+
+  it('confirms Ky pacification with terror costs extra per terror AND per level (delta = 3 for 1 terror + 2 levels)', () => {
+    const def = compileDef();
+    const space = 'qui-nhon:none';
+
+    const runTerrorMultiPacify = (leader: LeaderState): GameState => {
+      const baseState = clearAllZones(initialState(def, 9013, 4).state);
+      const setup: GameState = {
+        ...baseState,
+        activePlayer: asPlayerId(1),
+        globalVars: {
+          ...baseState.globalVars,
+          arvnResources: 30,
+        },
+        zones: {
+          ...baseState.zones,
+          [space]: [
+            makeToken('terror-multi-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+            makeToken('terror-multi-arvn-p', 'police', 'ARVN', { type: 'police' }),
+          ],
+        },
+        markers: {
+          ...baseState.markers,
+          [space]: {
+            ...(baseState.markers[space] ?? {}),
+            supportOpposition: 'passiveOpposition',
+          },
+        },
+        zoneVars: {
+          ...baseState.zoneVars,
+          [space]: {
+            ...(baseState.zoneVars[space] ?? {}),
+            terrorCount: 1,
+          },
+        },
+      };
+
+      return applyMoveWithResolvedDecisionIds(def, withActiveLeader(setup, leader), {
+        actionId: asActionId('train'),
+        params: {
+          $targetSpaces: [space],
+          $trainChoice: 'rangers',
+          $subActionSpaces: [space],
+          $subAction: 'pacify',
+          $pacLevels: 2,
+        },
+      }).state;
+    };
+
+    const kyResult = runTerrorMultiPacify('ky');
+    const thieuResult = runTerrorMultiPacify('thieu');
+    assert.equal(
+      globalVarNumber(thieuResult, 'arvnResources') - globalVarNumber(kyResult, 'arvnResources'),
+      3,
+      'Ky costs 1 extra per terror removal + 1 extra per each of 2 levels = 3 extra total',
+    );
+  });
+
   it('keeps Thieu as no-op and compiles deferred Desertion helper for Spec 29 wiring', () => {
     const { parsed } = compileProductionSpec();
     const profiles = parsed.doc.actionPipelines ?? [];

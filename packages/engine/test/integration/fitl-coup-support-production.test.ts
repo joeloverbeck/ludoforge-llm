@@ -585,4 +585,128 @@ describe('FITL coup support phase production actions', () => {
       params: { targetSpace: 'quang-nam:none', action: 'shiftOpposition' },
     }));
   });
+
+  it('applies Ky Coup pacification cost (4) for ARVN support shift without Blowtorch Komer', () => {
+    const def = DEF;
+    const base = withClearedZones(initialState(def, 8720, 4).state);
+    const target = 'quang-nam:none';
+
+    const state = withNeutralSupportSpace(withCoupSupportPhase(base, {
+      activePlayer: 1 as GameState['activePlayer'],
+      globalVars: {
+        ...base.globalVars,
+        arvnResources: 20,
+      },
+      globalMarkers: {
+        ...(base.globalMarkers ?? {}),
+        activeLeader: 'ky',
+      },
+    }), target, arvnPacifyPieces('arvn-ky-shift'));
+
+    const result = applyMove(def, state, {
+      actionId: asActionId('coupPacifyARVN'),
+      params: { targetSpace: target, action: 'shiftSupport' },
+    });
+
+    assert.equal(result.state.globalVars.arvnResources, 16, 'Ky Coup pacification should cost 4 per support shift');
+    assert.equal(result.state.markers[target]?.supportOpposition, 'passiveSupport');
+  });
+
+  it('applies Ky Coup pacification cost (4) for US terror removal without Blowtorch Komer', () => {
+    const def = DEF;
+    const base = withClearedZones(initialState(def, 8721, 4).state);
+    const target = 'quang-nam:none';
+
+    const state = withNeutralSupportSpace(withCoupSupportPhase(base, {
+      activePlayer: 0 as GameState['activePlayer'],
+      globalVars: {
+        ...base.globalVars,
+        arvnResources: 20,
+        totalEcon: 15,
+      },
+      globalMarkers: {
+        ...(base.globalMarkers ?? {}),
+        activeLeader: 'ky',
+      },
+    }), target, usPacifyPieces('us-ky-terror'), { terrorCount: 1 });
+
+    const result = applyMove(def, state, {
+      actionId: asActionId('coupPacifyUS'),
+      params: { targetSpace: target, action: 'removeTerror' },
+    });
+
+    assert.equal(result.state.globalVars.arvnResources, 16, 'Ky Coup US terror removal should cost 4 ARVN resources');
+    assert.equal(result.state.zoneVars[target]?.terrorCount ?? 0, 0);
+  });
+
+  it('applies Ky Coup pacification cost (4) for ARVN terror removal without Blowtorch Komer', () => {
+    const def = DEF;
+    const base = withClearedZones(initialState(def, 8722, 4).state);
+    const target = 'quang-nam:none';
+
+    const state = withNeutralSupportSpace(withCoupSupportPhase(base, {
+      activePlayer: 1 as GameState['activePlayer'],
+      globalVars: {
+        ...base.globalVars,
+        arvnResources: 20,
+      },
+      globalMarkers: {
+        ...(base.globalMarkers ?? {}),
+        activeLeader: 'ky',
+      },
+    }), target, arvnPacifyPieces('arvn-ky-terror'), { terrorCount: 1 });
+
+    const result = applyMove(def, state, {
+      actionId: asActionId('coupPacifyARVN'),
+      params: { targetSpace: target, action: 'removeTerror' },
+    });
+
+    assert.equal(result.state.globalVars.arvnResources, 16, 'Ky Coup ARVN terror removal should cost 4 ARVN resources');
+    assert.equal(result.state.zoneVars[target]?.terrorCount ?? 0, 0);
+  });
+
+  it('enforces Ky Coup pacification resource boundary (exactly 4 succeeds, 3 fails)', () => {
+    const def = DEF;
+    const base = withClearedZones(initialState(def, 8723, 4).state);
+    const target = 'quang-nam:none';
+
+    const stateWith4 = withNeutralSupportSpace(withCoupSupportPhase(base, {
+      activePlayer: 1 as GameState['activePlayer'],
+      globalVars: {
+        ...base.globalVars,
+        arvnResources: 4,
+      },
+      globalMarkers: {
+        ...(base.globalMarkers ?? {}),
+        activeLeader: 'ky',
+      },
+    }), target, arvnPacifyPieces('arvn-ky-boundary-ok'));
+
+    const successResult = applyMove(def, stateWith4, {
+      actionId: asActionId('coupPacifyARVN'),
+      params: { targetSpace: target, action: 'shiftSupport' },
+    });
+    assert.equal(successResult.state.globalVars.arvnResources, 0, 'Exactly 4 ARVN resources with Ky should succeed');
+    assert.equal(successResult.state.markers[target]?.supportOpposition, 'passiveSupport');
+
+    const stateWith3 = withNeutralSupportSpace(withCoupSupportPhase(base, {
+      activePlayer: 1 as GameState['activePlayer'],
+      globalVars: {
+        ...base.globalVars,
+        arvnResources: 3,
+      },
+      globalMarkers: {
+        ...(base.globalMarkers ?? {}),
+        activeLeader: 'ky',
+      },
+    }), target, arvnPacifyPieces('arvn-ky-boundary-fail'));
+
+    assert.throws(
+      () => applyMove(def, stateWith3, {
+        actionId: asActionId('coupPacifyARVN'),
+        params: { targetSpace: target, action: 'shiftSupport' },
+      }),
+      'Only 3 ARVN resources with Ky should fail (needs 4)',
+    );
+  });
 });

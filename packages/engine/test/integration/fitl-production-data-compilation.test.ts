@@ -319,7 +319,7 @@ describe('FITL production data integration compilation', () => {
 
     const activeLeader = globalMarkerById.get('activeLeader');
     assert.notEqual(activeLeader, undefined, 'Expected activeLeader global marker lattice');
-    assert.deepEqual(activeLeader?.states, ['minh', 'khanh', 'youngTurks', 'ky', 'thieu']);
+    assert.deepEqual(activeLeader?.states, ['none', 'minh', 'khanh', 'youngTurks', 'ky', 'thieu']);
     assert.equal(activeLeader?.defaultState, 'minh');
 
     const leaderFlipped = globalMarkerById.get('leaderFlipped');

@@ -12,7 +12,7 @@ describe('FITL RVN leader definitions', () => {
 
     const activeLeader = compiled.gameDef?.globalMarkerLattices?.find((lattice) => lattice.id === 'activeLeader');
     assert.notEqual(activeLeader, undefined, 'Expected activeLeader global marker lattice to exist');
-    assert.deepEqual(activeLeader?.states, ['minh', 'khanh', 'youngTurks', 'ky', 'thieu']);
+    assert.deepEqual(activeLeader?.states, ['none', 'minh', 'khanh', 'youngTurks', 'ky', 'thieu']);
     assert.equal(activeLeader?.defaultState, 'minh');
   });
 

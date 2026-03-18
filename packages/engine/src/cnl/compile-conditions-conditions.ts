@@ -82,6 +82,19 @@ export function createConditionLowerers(
       case '<=':
       case '>':
       case '>=': {
+        if (source.left === undefined && (source.item !== undefined || source.set !== undefined)) {
+          return {
+            value: null,
+            diagnostics: [{
+              code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONDITION_COMPARISON_FIELD_MISMATCH,
+              path,
+              severity: 'error',
+              message: `Comparison "op: ${source.op}" requires "left" and "right" fields, not "item" and "set". `
+                + `Use: { op: ${source.op}, left: <value-expr>, right: <value-expr> }.`,
+              suggestion: 'Rename "item" to "left" and "set" to "right".',
+            }],
+          };
+        }
         const left = runtime.lowerValueNode(source.left, context, `${path}.left`);
         const right = runtime.lowerValueNode(source.right, context, `${path}.right`);
         const diagnostics = [...left.diagnostics, ...right.diagnostics];
@@ -107,6 +120,19 @@ export function createConditionLowerers(
         };
       }
       case 'in': {
+        if (source.item === undefined && (source.left !== undefined || source.right !== undefined)) {
+          return {
+            value: null,
+            diagnostics: [{
+              code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONDITION_MEMBERSHIP_FIELD_MISMATCH,
+              path,
+              severity: 'error',
+              message: `Condition "op: in" requires "item" and "set" fields, not "left" and "right". `
+                + `Use: { op: in, item: <value-to-test>, set: <array-or-value-expr> }.`,
+              suggestion: 'Rename "left" to "item" and "right" to "set".',
+            }],
+          };
+        }
         const item = runtime.lowerValueNode(source.item, context, `${path}.item`);
         const set = runtime.lowerValueNode(source.set, context, `${path}.set`);
         const diagnostics = [...item.diagnostics, ...set.diagnostics];

@@ -285,13 +285,15 @@ describe('FITL COIN operations integration', () => {
       assert.ok(limOpChooseN.length >= 1, 'Expected chooseN max:1 for LimOp');
       assert.ok(normalChooseN.length >= 1, 'Expected chooseN max with grantContext maxSpaces and fallback 99 for full operation');
 
-      const categoryGuards = findDeep(selectSpaces.effects, (node: any) =>
-        node?.op === '==' &&
-        node?.left?.ref === 'zoneProp' &&
-        node?.left?.prop === 'category' &&
-        (node?.right === 'province' || node?.right === 'city'),
-      );
-      assert.ok(categoryGuards.length >= 4, 'Expected province/city filters in both selection branches');
+      const categoryGuards = findDeep(selectSpaces.effects, (node: any) => {
+        if (node?.op !== 'in') return false;
+        if (node?.item?.ref !== 'zoneProp' || node?.item?.prop !== 'category') return false;
+        const setValues = Array.isArray(node?.set) ? node.set
+          : Array.isArray(node?.set?.scalarArray) ? node.set.scalarArray
+          : null;
+        return setValues !== null && setValues.includes('province') && setValues.includes('city');
+      });
+      assert.ok(categoryGuards.length >= 2, 'Expected province/city filters in both selection branches');
 
       const northVietnamExclusions = findDeep(selectSpaces.effects, (node: any) =>
         node?.op === '!=' &&
@@ -425,13 +427,15 @@ describe('FITL COIN operations integration', () => {
       assert.ok(affordabilityCap.length >= 1, 'Expected full-op branch affordability max floorDiv(arvnResources, 3)');
       assert.ok(capabilityMinCap.length >= 1, 'Expected cap_caps shaded branch max equivalent to min(2, floorDiv(arvnResources, 3))');
 
-      const categoryGuards = findDeep(selectSpaces.effects, (node: any) =>
-        node?.op === '==' &&
-        node?.left?.ref === 'zoneProp' &&
-        node?.left?.prop === 'category' &&
-        (node?.right === 'province' || node?.right === 'city'),
-      );
-      assert.ok(categoryGuards.length >= 4, 'Expected province/city filters in both branches');
+      const categoryGuards = findDeep(selectSpaces.effects, (node: any) => {
+        if (node?.op !== 'in') return false;
+        if (node?.item?.ref !== 'zoneProp' || node?.item?.prop !== 'category') return false;
+        const setValues = Array.isArray(node?.set) ? node.set
+          : Array.isArray(node?.set?.scalarArray) ? node.set.scalarArray
+          : null;
+        return setValues !== null && setValues.includes('province') && setValues.includes('city');
+      });
+      assert.ok(categoryGuards.length >= 2, 'Expected province/city filters in both branches');
 
       const northVietnamExclusions = findDeep(selectSpaces.effects, (node: any) =>
         node?.op === '!=' &&

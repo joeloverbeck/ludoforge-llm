@@ -16,7 +16,7 @@ import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-help
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
-type LeaderState = 'minh' | 'khanh' | 'youngTurks' | 'ky' | 'thieu';
+type LeaderState = 'none' | 'minh' | 'khanh' | 'youngTurks' | 'ky' | 'thieu';
 
 const makeToken = (id: string, type: string, faction: string, extra?: Record<string, unknown>): Token => ({
   id: asTokenId(id),
@@ -247,6 +247,374 @@ describe('FITL RVN leader lingering effects', () => {
     );
   });
 
+  it('applies Young Turks +2 Patronage even when Govern uses aid mode', () => {
+    const def = compileDef();
+    const space = 'can-tho:none';
+
+    const baseState = clearAllZones(initialState(def, 9010, 4).state);
+    const setup: GameState = {
+      ...baseState,
+      activePlayer: asPlayerId(1),
+      globalVars: {
+        ...baseState.globalVars,
+        aid: 30,
+        patronage: 10,
+      },
+      zones: {
+        ...baseState.zones,
+        [space]: [
+          makeToken('gov-aid-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('gov-aid-arvn-p', 'police', 'ARVN', { type: 'police' }),
+          makeToken('gov-aid-us-t', 'troops', 'US', { type: 'troops' }),
+        ],
+      },
+      markers: {
+        ...baseState.markers,
+        [space]: {
+          ...(baseState.markers[space] ?? {}),
+          supportOpposition: 'activeSupport',
+        },
+      },
+    };
+
+    const runGovern = (leader: LeaderState): GameState =>
+      applyMoveWithResolvedDecisionIds(def, withActiveLeader(setup, leader), {
+        actionId: asActionId('govern'),
+        params: {
+          $targetSpaces: [space],
+          [`$governMode@${space}`]: 'aid',
+        },
+      }).state;
+
+    const yt = runGovern('youngTurks');
+    const baseline = runGovern('thieu');
+
+    assert.equal(
+      globalVarNumber(yt, 'patronage') - globalVarNumber(baseline, 'patronage'),
+      2,
+      'Young Turks +2 Patronage should apply even in aid mode',
+    );
+  });
+
+  it('applies Young Turks +2 Patronage as flat bonus (not per space) with multi-space Govern', () => {
+    const def = compileDef();
+    const spaceA = 'can-tho:none';
+    const spaceB = 'qui-nhon:none';
+
+    const baseState = clearAllZones(initialState(def, 9011, 4).state);
+    const setup: GameState = {
+      ...baseState,
+      activePlayer: asPlayerId(1),
+      globalVars: {
+        ...baseState.globalVars,
+        aid: 40,
+        patronage: 10,
+      },
+      zones: {
+        ...baseState.zones,
+        [spaceA]: [
+          makeToken('gov-multi-a-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('gov-multi-a-arvn-p', 'police', 'ARVN', { type: 'police' }),
+          makeToken('gov-multi-a-us-t', 'troops', 'US', { type: 'troops' }),
+        ],
+        [spaceB]: [
+          makeToken('gov-multi-b-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('gov-multi-b-arvn-p', 'police', 'ARVN', { type: 'police' }),
+          makeToken('gov-multi-b-us-t', 'troops', 'US', { type: 'troops' }),
+        ],
+      },
+      markers: {
+        ...baseState.markers,
+        [spaceA]: {
+          ...(baseState.markers[spaceA] ?? {}),
+          supportOpposition: 'activeSupport',
+        },
+        [spaceB]: {
+          ...(baseState.markers[spaceB] ?? {}),
+          supportOpposition: 'activeSupport',
+        },
+      },
+    };
+
+    const runGovern = (leader: LeaderState): GameState =>
+      applyMoveWithResolvedDecisionIds(def, withActiveLeader(setup, leader), {
+        actionId: asActionId('govern'),
+        params: {
+          $targetSpaces: [spaceA, spaceB],
+          [`$governMode@${spaceA}`]: 'patronage',
+          [`$governMode@${spaceB}`]: 'patronage',
+        },
+      }).state;
+
+    const yt = runGovern('youngTurks');
+    const baseline = runGovern('thieu');
+
+    assert.equal(
+      globalVarNumber(yt, 'patronage') - globalVarNumber(baseline, 'patronage'),
+      2,
+      'Young Turks bonus should be flat +2 per Govern action, not +2 per space',
+    );
+  });
+
+  it('does not apply Young Turks +2 Patronage on Transport', () => {
+    const def = compileDef();
+    const origin = 'da-nang:none';
+    const destination = 'qui-nhon:none';
+
+    const baseState = clearAllZones(initialState(def, 9012, 4).state);
+    const setup: GameState = {
+      ...baseState,
+      activePlayer: asPlayerId(1),
+      globalVars: {
+        ...baseState.globalVars,
+        patronage: 10,
+      },
+      zones: {
+        ...baseState.zones,
+        [origin]: [
+          makeToken('transport-yt-t', 'troops', 'ARVN', { type: 'troops' }),
+        ],
+      },
+    };
+
+    const result = applyMoveWithResolvedDecisionIds(
+      def,
+      withActiveLeader(setup, 'youngTurks'),
+      {
+        actionId: asActionId('transport'),
+        params: {
+          $transportOrigin: origin,
+          $transportDestination: destination,
+        },
+      },
+    ).state;
+
+    assert.equal(
+      globalVarNumber(result, 'patronage'),
+      10,
+      'Transport should not trigger Young Turks Patronage bonus',
+    );
+  });
+
+  it('does not apply +2 Patronage bonus for any non-Young-Turks leader', () => {
+    const def = compileDef();
+    const space = 'can-tho:none';
+
+    const baseState = clearAllZones(initialState(def, 9013, 4).state);
+    const setup: GameState = {
+      ...baseState,
+      activePlayer: asPlayerId(1),
+      globalVars: {
+        ...baseState.globalVars,
+        aid: 30,
+        patronage: 10,
+      },
+      zones: {
+        ...baseState.zones,
+        [space]: [
+          makeToken('gov-leaders-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('gov-leaders-arvn-p', 'police', 'ARVN', { type: 'police' }),
+          makeToken('gov-leaders-us-t', 'troops', 'US', { type: 'troops' }),
+        ],
+      },
+      markers: {
+        ...baseState.markers,
+        [space]: {
+          ...(baseState.markers[space] ?? {}),
+          supportOpposition: 'activeSupport',
+        },
+      },
+    };
+
+    const runGovern = (leader: LeaderState): number =>
+      globalVarNumber(
+        applyMoveWithResolvedDecisionIds(def, withActiveLeader(setup, leader), {
+          actionId: asActionId('govern'),
+          params: {
+            $targetSpaces: [space],
+            [`$governMode@${space}`]: 'patronage',
+          },
+        }).state,
+        'patronage',
+      );
+
+    const minh = runGovern('minh');
+    const khanh = runGovern('khanh');
+    const ky = runGovern('ky');
+    const thieu = runGovern('thieu');
+
+    assert.equal(minh, khanh, 'Minh and Khanh should produce identical Govern patronage');
+    assert.equal(khanh, ky, 'Khanh and Ky should produce identical Govern patronage');
+    assert.equal(ky, thieu, 'Ky and Thieu should produce identical Govern patronage');
+  });
+
+  it('clamps Young Turks Patronage bonus at the 75 cap', () => {
+    const def = compileDef();
+    const space = 'can-tho:none';
+
+    const baseState = clearAllZones(initialState(def, 9014, 4).state);
+    const setup: GameState = {
+      ...baseState,
+      activePlayer: asPlayerId(1),
+      globalVars: {
+        ...baseState.globalVars,
+        aid: 30,
+        patronage: 74,
+      },
+      zones: {
+        ...baseState.zones,
+        [space]: [
+          makeToken('gov-cap-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('gov-cap-arvn-p', 'police', 'ARVN', { type: 'police' }),
+          makeToken('gov-cap-us-t', 'troops', 'US', { type: 'troops' }),
+        ],
+      },
+      markers: {
+        ...baseState.markers,
+        [space]: {
+          ...(baseState.markers[space] ?? {}),
+          supportOpposition: 'activeSupport',
+        },
+      },
+    };
+
+    const result = applyMoveWithResolvedDecisionIds(
+      def,
+      withActiveLeader(setup, 'youngTurks'),
+      {
+        actionId: asActionId('govern'),
+        params: {
+          $targetSpaces: [space],
+          [`$governMode@${space}`]: 'patronage',
+        },
+      },
+    ).state;
+
+    assert.ok(
+      globalVarNumber(result, 'patronage') <= 75,
+      `Patronage should clamp at 75, got ${globalVarNumber(result, 'patronage')}`,
+    );
+  });
+
+  it('applies Young Turks +2 Patronage even with cap_mandateOfHeaven shaded (1-space limit)', () => {
+    const def = compileDef();
+    const space = 'can-tho:none';
+
+    const baseState = clearAllZones(initialState(def, 9015, 4).state);
+    const setup: GameState = {
+      ...baseState,
+      activePlayer: asPlayerId(1),
+      globalVars: {
+        ...baseState.globalVars,
+        aid: 30,
+        patronage: 10,
+      },
+      globalMarkers: {
+        ...baseState.globalMarkers,
+        cap_mandateOfHeaven: 'shaded',
+      },
+      zones: {
+        ...baseState.zones,
+        [space]: [
+          makeToken('gov-mandate-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('gov-mandate-arvn-p', 'police', 'ARVN', { type: 'police' }),
+          makeToken('gov-mandate-us-t', 'troops', 'US', { type: 'troops' }),
+        ],
+      },
+      markers: {
+        ...baseState.markers,
+        [space]: {
+          ...(baseState.markers[space] ?? {}),
+          supportOpposition: 'activeSupport',
+        },
+      },
+    };
+
+    const runGovern = (leader: LeaderState): GameState =>
+      applyMoveWithResolvedDecisionIds(def, withActiveLeader(setup, leader), {
+        actionId: asActionId('govern'),
+        params: {
+          $targetSpaces: [space],
+          [`$governMode@${space}`]: 'patronage',
+        },
+      }).state;
+
+    const yt = runGovern('youngTurks');
+    const baseline = runGovern('thieu');
+
+    assert.equal(
+      globalVarNumber(yt, 'patronage') - globalVarNumber(baseline, 'patronage'),
+      2,
+      'Young Turks +2 should apply even when Mandate of Heaven shaded restricts Govern to 1 space',
+    );
+  });
+
+  it('stops Young Turks bonus after leader transition', () => {
+    const def = compileDef();
+    const space = 'can-tho:none';
+
+    const baseState = clearAllZones(initialState(def, 9016, 4).state);
+    const setup: GameState = {
+      ...baseState,
+      activePlayer: asPlayerId(1),
+      globalVars: {
+        ...baseState.globalVars,
+        aid: 30,
+        patronage: 10,
+      },
+      zones: {
+        ...baseState.zones,
+        [space]: [
+          makeToken('gov-trans-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('gov-trans-arvn-p', 'police', 'ARVN', { type: 'police' }),
+          makeToken('gov-trans-us-t', 'troops', 'US', { type: 'troops' }),
+        ],
+      },
+      markers: {
+        ...baseState.markers,
+        [space]: {
+          ...(baseState.markers[space] ?? {}),
+          supportOpposition: 'activeSupport',
+        },
+      },
+    };
+
+    const ytResult = applyMoveWithResolvedDecisionIds(
+      def,
+      withActiveLeader(setup, 'youngTurks'),
+      {
+        actionId: asActionId('govern'),
+        params: {
+          $targetSpaces: [space],
+          [`$governMode@${space}`]: 'patronage',
+        },
+      },
+    ).state;
+
+    const ytPatronage = globalVarNumber(ytResult, 'patronage');
+
+    // Simulate leader transition: change leader to thieu on the same base setup
+    const afterTransition = applyMoveWithResolvedDecisionIds(
+      def,
+      withActiveLeader(setup, 'thieu'),
+      {
+        actionId: asActionId('govern'),
+        params: {
+          $targetSpaces: [space],
+          [`$governMode@${space}`]: 'patronage',
+        },
+      },
+    ).state;
+
+    const thieuPatronage = globalVarNumber(afterTransition, 'patronage');
+
+    assert.equal(
+      ytPatronage - thieuPatronage,
+      2,
+      'After leader transition from Young Turks, Govern should no longer receive +2 bonus',
+    );
+  });
+
   it('applies Ky pacification cost as 4 per level (and 4 per Terror)', () => {
     const def = compileDef();
     const space = 'qui-nhon:none';
@@ -312,6 +680,189 @@ describe('FITL RVN leader lingering effects', () => {
     );
   });
 
+  it('verifies US Train pacification profile uses Ky-aware cost macro and leader check', () => {
+    const { parsed } = compileProductionSpec();
+    const profiles = parsed.doc.actionPipelines ?? [];
+    const usTrainProfile = profiles.find((profile) => profile.id === 'train-us-profile');
+    assert.ok(usTrainProfile, 'Expected train-us-profile in production spec');
+
+    const macroCallNodes = findDeep(usTrainProfile, (node) =>
+      node?.macro === 'rvn-leader-pacification-cost',
+    );
+    assert.ok(macroCallNodes.length >= 1, 'US Train profile should invoke rvn-leader-pacification-cost macro');
+
+    const leaderComparisons = findDeep(usTrainProfile, (node) =>
+      node?.op === '==' &&
+      JSON.stringify(node?.left ?? {}).includes('activeLeader') &&
+      node?.right === 'ky',
+    );
+    assert.ok(
+      leaderComparisons.length >= 1,
+      'US Train profile should check activeLeader == ky for cost modifier',
+    );
+  });
+
+  it('applies Ky pacification cost for multiple levels at once (2 levels → 2 extra vs baseline)', () => {
+    const def = compileDef();
+    const space = 'qui-nhon:none';
+
+    const runMultiPacify = (leader: LeaderState): GameState => {
+      const baseState = clearAllZones(initialState(def, 9011, 4).state);
+      const setup: GameState = {
+        ...baseState,
+        activePlayer: asPlayerId(1),
+        globalVars: {
+          ...baseState.globalVars,
+          arvnResources: 30,
+        },
+        zones: {
+          ...baseState.zones,
+          [space]: [
+            makeToken('multi-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+            makeToken('multi-arvn-p', 'police', 'ARVN', { type: 'police' }),
+          ],
+        },
+        markers: {
+          ...baseState.markers,
+          [space]: {
+            ...(baseState.markers[space] ?? {}),
+            supportOpposition: 'passiveOpposition',
+          },
+        },
+      };
+
+      return applyMoveWithResolvedDecisionIds(def, withActiveLeader(setup, leader), {
+        actionId: asActionId('train'),
+        params: {
+          $targetSpaces: [space],
+          $trainChoice: 'rangers',
+          $subActionSpaces: [space],
+          $subAction: 'pacify',
+          $pacLevels: 2,
+        },
+      }).state;
+    };
+
+    const kyResult = runMultiPacify('ky');
+    const thieuResult = runMultiPacify('thieu');
+    assert.equal(
+      globalVarNumber(thieuResult, 'arvnResources') - globalVarNumber(kyResult, 'arvnResources'),
+      2,
+      'Ky should cost 2 extra ARVN resources for 2 pacification levels (1 extra per level)',
+    );
+  });
+
+  it('reverts pacification cost after leader transition from Ky to Thieu', () => {
+    const def = compileDef();
+    const space = 'qui-nhon:none';
+
+    const runWithLeader = (leader: LeaderState): GameState => {
+      const baseState = clearAllZones(initialState(def, 9012, 4).state);
+      const setup: GameState = {
+        ...baseState,
+        activePlayer: asPlayerId(1),
+        globalVars: {
+          ...baseState.globalVars,
+          arvnResources: 30,
+        },
+        zones: {
+          ...baseState.zones,
+          [space]: [
+            makeToken('revert-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+            makeToken('revert-arvn-p', 'police', 'ARVN', { type: 'police' }),
+          ],
+        },
+        markers: {
+          ...baseState.markers,
+          [space]: {
+            ...(baseState.markers[space] ?? {}),
+            supportOpposition: 'neutral',
+          },
+        },
+      };
+
+      return applyMoveWithResolvedDecisionIds(def, withActiveLeader(setup, leader), {
+        actionId: asActionId('train'),
+        params: {
+          $targetSpaces: [space],
+          $trainChoice: 'rangers',
+          $subActionSpaces: [space],
+          $subAction: 'pacify',
+          $pacLevels: 1,
+        },
+      }).state;
+    };
+
+    const kyResources = globalVarNumber(runWithLeader('ky'), 'arvnResources');
+    const thieuResources = globalVarNumber(runWithLeader('thieu'), 'arvnResources');
+    assert.equal(
+      thieuResources - kyResources,
+      1,
+      'Switching from Ky to Thieu should save exactly 1 ARVN resource per pacification level',
+    );
+    assert.ok(
+      thieuResources > kyResources,
+      'Thieu should leave more ARVN resources than Ky after pacification',
+    );
+  });
+
+  it('confirms Ky pacification with terror costs extra per terror AND per level (delta = 3 for 1 terror + 2 levels)', () => {
+    const def = compileDef();
+    const space = 'qui-nhon:none';
+
+    const runTerrorMultiPacify = (leader: LeaderState): GameState => {
+      const baseState = clearAllZones(initialState(def, 9013, 4).state);
+      const setup: GameState = {
+        ...baseState,
+        activePlayer: asPlayerId(1),
+        globalVars: {
+          ...baseState.globalVars,
+          arvnResources: 30,
+        },
+        zones: {
+          ...baseState.zones,
+          [space]: [
+            makeToken('terror-multi-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+            makeToken('terror-multi-arvn-p', 'police', 'ARVN', { type: 'police' }),
+          ],
+        },
+        markers: {
+          ...baseState.markers,
+          [space]: {
+            ...(baseState.markers[space] ?? {}),
+            supportOpposition: 'passiveOpposition',
+          },
+        },
+        zoneVars: {
+          ...baseState.zoneVars,
+          [space]: {
+            ...(baseState.zoneVars[space] ?? {}),
+            terrorCount: 1,
+          },
+        },
+      };
+
+      return applyMoveWithResolvedDecisionIds(def, withActiveLeader(setup, leader), {
+        actionId: asActionId('train'),
+        params: {
+          $targetSpaces: [space],
+          $trainChoice: 'rangers',
+          $subActionSpaces: [space],
+          $subAction: 'pacify',
+          $pacLevels: 2,
+        },
+      }).state;
+    };
+
+    const kyResult = runTerrorMultiPacify('ky');
+    const thieuResult = runTerrorMultiPacify('thieu');
+    assert.equal(
+      globalVarNumber(thieuResult, 'arvnResources') - globalVarNumber(kyResult, 'arvnResources'),
+      3,
+      'Ky costs 1 extra per terror removal + 1 extra per each of 2 levels = 3 extra total',
+    );
+  });
+
   it('keeps Thieu as no-op and compiles deferred Desertion helper for Spec 29 wiring', () => {
     const { parsed } = compileProductionSpec();
     const profiles = parsed.doc.actionPipelines ?? [];
@@ -352,12 +903,20 @@ describe('FITL RVN leader lingering effects', () => {
     assert.equal(card129?.title, 'Failed Attempt');
     assert.equal(card130?.title, 'Failed Attempt');
 
-    assert.equal(
-      card129?.unshaded?.effects?.some((effect) => 'setGlobalMarker' in effect),
-      false,
-      'Failed Attempt cards should not mutate activeLeader directly',
+    const card129MinhCancel = findDeep(card129?.unshaded?.effects, (node) =>
+      node?.setGlobalMarker?.marker === 'activeLeader' && node?.setGlobalMarker?.state === 'none',
     );
-    assert.equal(card130?.unshaded?.effects?.some((effect) => 'setGlobalMarker' in effect), false);
+    assert.ok(
+      card129MinhCancel.length >= 1,
+      'Card 129 should conditionally cancel Minh (setGlobalMarker to none)',
+    );
+    const card130MinhCancel = findDeep(card130?.unshaded?.effects, (node) =>
+      node?.setGlobalMarker?.marker === 'activeLeader' && node?.setGlobalMarker?.state === 'none',
+    );
+    assert.ok(
+      card130MinhCancel.length >= 1,
+      'Card 130 should conditionally cancel Minh (setGlobalMarker to none)',
+    );
 
     const card129HasDesertion = findDeep(card129?.unshaded?.effects, (node) =>
       node?.forEach?.limit?.op === '/' &&
@@ -372,5 +931,15 @@ describe('FITL RVN leader lingering effects', () => {
 
     assert.ok(card129HasDesertion.length >= 1, 'Card 129 should encode ARVN cube-thirds desertion loop');
     assert.ok(card130HasDesertion.length >= 1, 'Card 130 should encode ARVN cube-thirds desertion loop');
+  });
+
+  it('includes none state in activeLeader globalMarkerLattice for Failed Attempt cancellation', () => {
+    const def = compileDef();
+    const lattice = def.globalMarkerLattices?.find((l) => l.id === 'activeLeader');
+    assert.ok(lattice, 'Expected activeLeader globalMarkerLattice');
+    assert.ok(
+      lattice.states.includes('none'),
+      'activeLeader lattice should include none state for Failed Attempt Minh cancellation',
+    );
   });
 });

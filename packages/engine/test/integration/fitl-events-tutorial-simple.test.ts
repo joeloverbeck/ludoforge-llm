@@ -158,7 +158,7 @@ describe('FITL tutorial simple event-card production spec', () => {
     assert.equal(card?.unshaded?.effects, undefined);
     const unshadedPlace = card?.unshaded?.targets?.[0]?.effects?.find((effect) => 'removeByPriority' in effect);
     assert.notEqual(unshadedPlace, undefined);
-    assert.equal(unshadedPlace?.removeByPriority.budget, 6);
+    assert.equal(unshadedPlace?.removeByPriority.budget, 1);
 
     const shadedTarget = card?.shaded?.targets?.[0];
     assert.equal(shadedTarget?.selector?.query, 'mapSpaces');
@@ -168,8 +168,11 @@ describe('FITL tutorial simple event-card production spec', () => {
     assert.deepEqual(shadedShift, {
       shiftMarker: { space: '$targetProvince', marker: 'supportOpposition', delta: -1 },
     });
-    const shadedPlace = card?.shaded?.targets?.[0]?.effects?.find((effect) => 'removeByPriority' in effect);
-    assert.notEqual(shadedPlace, undefined);
-    assert.equal(shadedPlace?.removeByPriority.budget, 3);
+    const shadedChoose = card?.shaded?.targets?.[0]?.effects?.find((effect) => 'chooseN' in effect) as
+      { chooseN?: { bind?: string; min?: number; max?: unknown } } | undefined;
+    assert.notEqual(shadedChoose, undefined, 'card-112 shaded must include chooseN for VC guerrilla placement');
+    assert.equal(shadedChoose?.chooseN?.bind, '$colonelChauGuerrilla');
+    const shadedForEach = card?.shaded?.targets?.[0]?.effects?.find((effect) => 'forEach' in effect);
+    assert.notEqual(shadedForEach, undefined, 'card-112 shaded must include forEach for placed guerrilla movement');
   });
 });

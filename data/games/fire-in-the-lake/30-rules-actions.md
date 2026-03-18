@@ -187,10 +187,9 @@ actions:
     phase: [coupSupport]
     params: []
     pre:
-      op: or
-      args:
-        - { op: '==', left: { ref: activePlayer }, right: 0 }
-        - { op: '==', left: { ref: activePlayer }, right: 1 }
+      op: in
+      item: { ref: activePlayer }
+      set: [0, 1]
     cost: []
     effects: []
     limits: []
@@ -212,10 +211,9 @@ actions:
         domain:
           query: mapSpaces
           filter:
-            op: or
-            args:
-              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
-              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+            op: in
+            item: { ref: zoneProp, zone: $zone, prop: category }
+            set: [city, province]
       - name: action
         domain: { query: enums, values: [removeTerror, shiftSupport] }
     pre:
@@ -334,10 +332,9 @@ actions:
         domain:
           query: mapSpaces
           filter:
-            op: or
-            args:
-              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
-              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+            op: in
+            item: { ref: zoneProp, zone: $zone, prop: category }
+            set: [city, province]
       - name: action
         domain: { query: enums, values: [removeTerror, shiftSupport] }
     pre:
@@ -477,10 +474,9 @@ actions:
         domain:
           query: mapSpaces
           filter:
-            op: or
-            args:
-              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
-              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+            op: in
+            item: { ref: zoneProp, zone: $zone, prop: category }
+            set: [city, province]
       - name: action
         domain: { query: enums, values: [removeTerror, shiftOpposition] }
     pre:
@@ -1256,10 +1252,9 @@ actions:
     phase: [honoluluPacify]
     params: []
     pre:
-      op: or
-      args:
-        - { op: '==', left: { ref: activePlayer }, right: 0 }
-        - { op: '==', left: { ref: activePlayer }, right: 1 }
+      op: in
+      item: { ref: activePlayer }
+      set: [0, 1]
     cost: []
     effects:
       - popInterruptPhase: {}
@@ -1280,10 +1275,9 @@ actions:
         domain:
           query: mapSpaces
           filter:
-            op: or
-            args:
-              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
-              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+            op: in
+            item: { ref: zoneProp, zone: $zone, prop: category }
+            set: [city, province]
       - name: action
         domain: { query: enums, values: [removeTerror, shiftSupport] }
     pre:
@@ -1387,10 +1381,9 @@ actions:
         domain:
           query: mapSpaces
           filter:
-            op: or
-            args:
-              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
-              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+            op: in
+            item: { ref: zoneProp, zone: $zone, prop: category }
+            set: [city, province]
       - name: action
         domain: { query: enums, values: [removeTerror, shiftSupport] }
     pre:
@@ -1513,10 +1506,9 @@ actions:
     phase: [apcPacify]
     params: []
     pre:
-      op: or
-      args:
-        - { op: '==', left: { ref: activePlayer }, right: 0 }
-        - { op: '==', left: { ref: activePlayer }, right: 1 }
+      op: in
+      item: { ref: activePlayer }
+      set: [0, 1]
     cost: []
     effects: []
     limits: []
@@ -1526,10 +1518,9 @@ actions:
     phase: [apcPacify]
     params: []
     pre:
-      op: or
-      args:
-        - { op: '==', left: { ref: activePlayer }, right: 0 }
-        - { op: '==', left: { ref: activePlayer }, right: 1 }
+      op: in
+      item: { ref: activePlayer }
+      set: [0, 1]
     cost: []
     effects:
       - popInterruptPhase: {}
@@ -1562,10 +1553,9 @@ actionPipelines:
                       filter:
                         op: and
                         args:
-                          - op: or
-                            args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                          - op: in
+                            item: { ref: zoneProp, zone: $zone, prop: category }
+                            set: ['city', 'province']
                           - op: '>'
                             left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, op: eq, value: 'US' }] } } } }
                             right: 0
@@ -1579,10 +1569,9 @@ actionPipelines:
                       filter:
                         op: and
                         args:
-                          - op: or
-                            args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                          - op: in
+                            item: { ref: zoneProp, zone: $zone, prop: category }
+                            set: ['city', 'province']
                           - op: '>'
                             left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, op: eq, value: 'US' }] } } } }
                             right: 0
@@ -1834,10 +1823,9 @@ actionPipelines:
                       filter:
                         op: and
                         args:
-                          - op: or
-                            args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                          - op: in
+                            item: { ref: zoneProp, zone: $zone, prop: category }
+                            set: ['city', 'province']
                           - conditionMacro: fitl-space-without-nva-control
                             args:
                               spaceExpr: $zone
@@ -1851,10 +1839,9 @@ actionPipelines:
                       filter:
                         op: and
                         args:
-                          - op: or
-                            args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                          - op: in
+                            item: { ref: zoneProp, zone: $zone, prop: category }
+                            set: ['city', 'province']
                           - conditionMacro: fitl-space-without-nva-control
                             args:
                               spaceExpr: $zone
@@ -2386,10 +2373,9 @@ actionPipelines:
                       filter:
                         op: and
                         args:
-                          - op: or
-                            args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                          - op: in
+                            item: { ref: zoneProp, zone: $zone, prop: category }
+                            set: ['province', 'city']
                           - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'northVietnam' }
                     min: 1
                     max: 1
@@ -2404,10 +2390,9 @@ actionPipelines:
                             filter:
                               op: and
                               args:
-                                - op: or
-                                  args:
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                                - op: in
+                                  item: { ref: zoneProp, zone: $zone, prop: category }
+                                  set: ['province', 'city']
                                 - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'northVietnam' }
                           min: 1
                           max: 2
@@ -2419,10 +2404,9 @@ actionPipelines:
                             filter:
                               op: and
                               args:
-                                - op: or
-                                  args:
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                                - op: in
+                                  item: { ref: zoneProp, zone: $zone, prop: category }
+                                  set: ['province', 'city']
                                 - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'northVietnam' }
                           min: 1
                           max:
@@ -2550,10 +2534,9 @@ actionPipelines:
                       filter:
                         op: and
                         args:
-                          - op: or
-                            args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                          - op: in
+                            item: { ref: zoneProp, zone: $zone, prop: category }
+                            set: ['province', 'city']
                           - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'northVietnam' }
                     min: 1
                     max: 1
@@ -2568,10 +2551,9 @@ actionPipelines:
                             filter:
                               op: and
                               args:
-                                - op: or
-                                  args:
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                                - op: in
+                                  item: { ref: zoneProp, zone: $zone, prop: category }
+                                  set: ['province', 'city']
                                 - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'northVietnam' }
                           min: 1
                           max:
@@ -2593,10 +2575,9 @@ actionPipelines:
                             filter:
                               op: and
                               args:
-                                - op: or
-                                  args:
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                                - op: in
+                                  item: { ref: zoneProp, zone: $zone, prop: category }
+                                  set: ['province', 'city']
                                 - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'northVietnam' }
                           min: 1
                           max:
@@ -3374,10 +3355,9 @@ actionPipelines:
                                       zone: $cadresSpace
                                       filter: { op: and, args: [{ prop: faction, op: eq, value: 'VC' }, { prop: type, op: eq, value: base }] }
                                 right: 0
-                              - op: or
-                                args:
-                                  - { op: '==', left: { ref: zoneProp, zone: $cadresSpace, prop: category }, right: city }
-                                  - { op: '==', left: { ref: zoneProp, zone: $cadresSpace, prop: category }, right: province }
+                              - op: in
+                                item: { ref: zoneProp, zone: $cadresSpace, prop: category }
+                                set: [city, province]
                               - { op: '>', left: { ref: zoneProp, zone: $cadresSpace, prop: population }, right: 0 }
                           then:
                             # Pay 1 VC Resource (costs even if the Rally was free)
@@ -4506,10 +4486,9 @@ actionPipelines:
                                       when:
                                         op: and
                                         args:
-                                          - op: or
-                                            args:
-                                              - { op: '==', left: { ref: zoneProp, zone: $space, prop: category }, right: province }
-                                              - { op: '==', left: { ref: zoneProp, zone: $space, prop: category }, right: city }
+                                          - op: in
+                                            item: { ref: zoneProp, zone: $space, prop: category }
+                                            set: [province, city]
                                           - { op: '>', left: { ref: zoneProp, zone: $space, prop: population }, right: 0 }
                                           - { op: '!=', left: { ref: markerState, space: $space, marker: supportOpposition }, right: activeOpposition }
                                           - op: or
@@ -4819,14 +4798,12 @@ actionPipelines:
                       filter:
                         op: and
                         args:
-                          - op: or
-                            args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
-                          - op: or
-                            args:
-                              - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: passiveSupport }
-                              - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeSupport }
+                          - op: in
+                            item: { ref: zoneProp, zone: $zone, prop: category }
+                            set: [province, city]
+                          - op: in
+                            item: { ref: markerState, space: $zone, marker: supportOpposition }
+                            set: [passiveSupport, activeSupport]
                           - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
                           - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
                           - op: '>'
@@ -5033,10 +5010,9 @@ actionPipelines:
                               via:
                                 op: and
                                 args:
-                                  - op: or
-                                    args:
-                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
-                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                                  - op: in
+                                    item: { ref: zoneProp, zone: $zone, prop: category }
+                                    set: [loc, city]
                                   - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
                                   - op: '=='
                                     left:
@@ -5060,10 +5036,9 @@ actionPipelines:
                               via:
                                 op: and
                                 args:
-                                  - op: or
-                                    args:
-                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
-                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                                  - op: in
+                                    item: { ref: zoneProp, zone: $zone, prop: category }
+                                    set: [loc, city]
                                   - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
                                   - op: '=='
                                     left:

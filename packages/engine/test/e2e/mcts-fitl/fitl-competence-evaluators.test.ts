@@ -14,6 +14,12 @@ import {
 } from '../../../src/kernel/index.js';
 
 import {
+  arvnAidPreservation,
+  arvnControlMaintain,
+  arvnGovern,
+  arvnLocControl,
+  arvnSweepRaid,
+  arvnTrainCubes,
   categoryCompetence,
   monsoonAwareness,
   nvaAttackConditions,
@@ -1626,5 +1632,277 @@ describe('US strategic evaluators', () => {
     assert.equal(result.passed, false);
     assert.equal(result.score, -3);
     assert.match(result.explanation, /lost too many US pieces/u);
+  });
+});
+
+describe('ARVN strategic evaluators', () => {
+  it('arvnTrainCubes passes when train improves the strongest city priority', () => {
+    const evaluator = arvnTrainCubes();
+
+    const result = evaluator.evaluate(createContext('train', {
+      budget: 'background',
+      playerId: ARVN_PLAYER,
+      params: { $targetSpaces: ['saigon:none'] },
+      zonesBefore: {
+        'saigon:none': [],
+        'phuoc-long:none': [],
+      },
+      zonesAfter: {
+        'saigon:none': [
+          makeToken('arvn-train-city-1', 'troops', 'ARVN'),
+          makeToken('arvn-train-city-2', 'police', 'ARVN'),
+        ],
+        'phuoc-long:none': [],
+      },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.match(result.explanation, /top-priority ARVN space/u);
+  });
+
+  it('arvnTrainCubes fails when train improves only a weaker province while a city is available', () => {
+    const evaluator = arvnTrainCubes();
+
+    const result = evaluator.evaluate(createContext('train', {
+      budget: 'background',
+      playerId: ARVN_PLAYER,
+      params: { $targetSpaces: ['phuoc-long:none'] },
+      zonesBefore: {
+        'saigon:none': [],
+        'phuoc-long:none': [],
+      },
+      zonesAfter: {
+        'saigon:none': [],
+        'phuoc-long:none': [
+          makeToken('arvn-train-province-1', 'troops', 'ARVN'),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, false);
+    assert.match(result.explanation, /while 'saigon:none' scored/u);
+  });
+
+  it('arvnTrainCubes skips non-train moves', () => {
+    const evaluator = arvnTrainCubes();
+
+    const result = evaluator.evaluate(createContext('govern', {
+      budget: 'background',
+      playerId: ARVN_PLAYER,
+    }));
+
+    assert.equal(result.passed, true);
+    assert.equal(result.explanation, 'Skipped — move is not train');
+  });
+
+  it('arvnGovern passes when govern increases aid', () => {
+    const evaluator = arvnGovern();
+
+    const result = evaluator.evaluate(createContext('govern', {
+      budget: 'background',
+      playerId: ARVN_PLAYER,
+      globalVarsBefore: { aid: 15, patronage: 10 },
+      globalVarsAfter: { aid: 18, patronage: 10 },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.match(result.explanation, /strategic payoff/u);
+  });
+
+  it('arvnGovern also evaluates compound govern moves', () => {
+    const evaluator = arvnGovern();
+
+    const result = evaluator.evaluate(createContext('train', {
+      budget: 'background',
+      playerId: ARVN_PLAYER,
+      actionClass: 'operationPlusSpecialActivity',
+      globalVarsBefore: { aid: 15, patronage: 10 },
+      globalVarsAfter: { aid: 15, patronage: 12 },
+      compound: {
+        specialActivity: {
+          actionId: asActionId('govern'),
+          actionClass: 'operationPlusSpecialActivity',
+          params: { $targetSpaces: ['can-tho:none'] },
+        },
+        timing: 'after',
+      },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.match(result.explanation, /patronageDelta=2/u);
+  });
+
+  it('arvnGovern fails when govern produces no aid or patronage gain', () => {
+    const evaluator = arvnGovern();
+
+    const result = evaluator.evaluate(createContext('govern', {
+      budget: 'background',
+      playerId: ARVN_PLAYER,
+      globalVarsBefore: { aid: 15, patronage: 10 },
+      globalVarsAfter: { aid: 15, patronage: 10 },
+    }));
+
+    assert.equal(result.passed, false);
+    assert.match(result.explanation, /no aid or patronage gain/u);
+  });
+
+  it('arvnControlMaintain passes when ARVN victory improves', () => {
+    const evaluator = arvnControlMaintain();
+
+    const result = evaluator.evaluate(createContext('train', {
+      budget: 'background',
+      playerId: ARVN_PLAYER,
+      globalVarsBefore: { patronage: 10 },
+      globalVarsAfter: { patronage: 12 },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.equal(result.score, 2);
+  });
+
+  it('arvnControlMaintain fails when ARVN victory regresses', () => {
+    const evaluator = arvnControlMaintain();
+
+    const result = evaluator.evaluate(createContext('train', {
+      budget: 'background',
+      playerId: ARVN_PLAYER,
+      globalVarsBefore: { patronage: 10 },
+      globalVarsAfter: { patronage: 8 },
+    }));
+
+    assert.equal(result.passed, false);
+    assert.equal(result.score, -2);
+  });
+
+  it('arvnSweepRaid passes when sweep removes insurgent guerrillas', () => {
+    const evaluator = arvnSweepRaid();
+
+    const result = evaluator.evaluate(createContext('sweep', {
+      budget: 'background',
+      playerId: ARVN_PLAYER,
+      params: { $targetSpaces: ['quang-nam:none'] },
+      zonesBefore: {
+        'quang-nam:none': [
+          makeToken('vc-sweep-target-1', 'guerrilla', 'VC', { activity: 'active' }),
+          makeToken('vc-sweep-target-2', 'guerrilla', 'VC', { activity: 'underground' }),
+        ],
+      },
+      zonesAfter: {
+        'quang-nam:none': [
+          makeToken('vc-sweep-target-2', 'guerrilla', 'VC', { activity: 'active' }),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.match(result.explanation, /produced payoff/u);
+  });
+
+  it('arvnSweepRaid also credits compound raid lines that gain resources', () => {
+    const evaluator = arvnSweepRaid();
+
+    const result = evaluator.evaluate(createContext('sweep', {
+      budget: 'background',
+      playerId: ARVN_PLAYER,
+      actionClass: 'operationPlusSpecialActivity',
+      globalVarsBefore: { arvnResources: 5 },
+      globalVarsAfter: { arvnResources: 7 },
+      compound: {
+        specialActivity: {
+          actionId: asActionId('raid'),
+          actionClass: 'operationPlusSpecialActivity',
+          params: { $targetSpaces: ['quang-tri-thua-thien:none'] },
+        },
+        timing: 'after',
+      },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.match(result.explanation, /resourceDelta=2/u);
+  });
+
+  it('arvnSweepRaid fails when sweep or raid produces no payoff', () => {
+    const evaluator = arvnSweepRaid();
+
+    const result = evaluator.evaluate(createContext('sweep', {
+      budget: 'background',
+      playerId: ARVN_PLAYER,
+      params: { $targetSpaces: ['quang-nam:none'] },
+      globalVarsBefore: { arvnResources: 5 },
+      globalVarsAfter: { arvnResources: 5 },
+      zonesBefore: {
+        'quang-nam:none': [
+          makeToken('vc-no-payoff-1', 'guerrilla', 'VC', { activity: 'active' }),
+        ],
+      },
+      zonesAfter: {
+        'quang-nam:none': [
+          makeToken('vc-no-payoff-1', 'guerrilla', 'VC', { activity: 'active' }),
+        ],
+      },
+    }));
+
+    assert.equal(result.passed, false);
+    assert.match(result.explanation, /no guerrilla removal or resource gain/u);
+  });
+
+  it('arvnLocControl passes when patrol targets a sabotaged LoC', () => {
+    const evaluator = arvnLocControl();
+
+    const result = evaluator.evaluate(createContext('patrol', {
+      budget: 'background',
+      playerId: ARVN_PLAYER,
+      globalVarsBefore: { arvnResources: 3 },
+      markersBefore: {
+        'loc-hue-khe-sanh:none': { sabotage: 'sabotage' },
+      },
+      params: { $targetLoCs: ['loc-hue-khe-sanh:none'] },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.match(result.explanation, /targeted sabotaged LoC/u);
+  });
+
+  it('arvnLocControl fails when a sabotaged LoC is ignored', () => {
+    const evaluator = arvnLocControl();
+
+    const result = evaluator.evaluate(createContext('govern', {
+      budget: 'background',
+      playerId: ARVN_PLAYER,
+      globalVarsBefore: { arvnResources: 3 },
+      markersBefore: {
+        'loc-hue-khe-sanh:none': { sabotage: 'sabotage' },
+      },
+    }));
+
+    assert.equal(result.passed, false);
+    assert.match(result.explanation, /instead of patrol/u);
+  });
+
+  it('arvnAidPreservation passes when govern keeps aid at the Total Econ floor', () => {
+    const evaluator = arvnAidPreservation();
+
+    const result = evaluator.evaluate(createContext('govern', {
+      budget: 'background',
+      playerId: ARVN_PLAYER,
+      globalVarsAfter: { aid: 12, totalEcon: 12 },
+    }));
+
+    assert.equal(result.passed, true);
+    assert.equal(result.score, 0);
+  });
+
+  it('arvnAidPreservation fails when govern leaves aid below Total Econ', () => {
+    const evaluator = arvnAidPreservation();
+
+    const result = evaluator.evaluate(createContext('govern', {
+      budget: 'background',
+      playerId: ARVN_PLAYER,
+      globalVarsAfter: { aid: 10, totalEcon: 12 },
+    }));
+
+    assert.equal(result.passed, false);
+    assert.equal(result.score, -2);
+    assert.match(result.explanation, /below Total Econ/u);
   });
 });

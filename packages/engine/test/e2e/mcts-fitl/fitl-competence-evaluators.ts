@@ -8,6 +8,7 @@ import {
   type ValidatedGameDef,
 } from '../../../src/kernel/index.js';
 import {
+  computeArvnVictory,
   computeNvaVictory,
   computeUsVictory,
   computeVcVictory,
@@ -512,6 +513,52 @@ const countArvnCubes = (state: GameState, zoneId: string): number =>
   countTokens(state, zoneId, (token) =>
     token.props.faction === 'ARVN'
     && (token.type === 'troops' || token.type === 'police'));
+
+const countArvnRangers = (state: GameState, zoneId: string): number =>
+  countTokens(state, zoneId, (token) =>
+    token.props.faction === 'ARVN'
+    && token.type === 'ranger');
+
+const countArvnTrainPieces = (state: GameState, zoneId: string): number =>
+  countArvnCubes(state, zoneId) + countArvnRangers(state, zoneId);
+
+const getNumericGlobalVar = (
+  state: GameState,
+  varName: string,
+): number | null => {
+  const value = state.globalVars[varName];
+  return typeof value === 'number' ? value : null;
+};
+
+const hasSabotageMarker = (state: GameState, zoneId: string): boolean =>
+  state.markers[zoneId]?.sabotage === 'sabotage';
+
+const getArvnTrainOpportunityScore = (
+  def: ValidatedGameDef,
+  state: GameState,
+  zoneId: string,
+): number => {
+  const zone = getZoneDef(def, zoneId);
+  if (zone === undefined || (zone.category !== 'city' && zone.category !== 'province')) {
+    return 0;
+  }
+  if (getZoneStringAttribute(def, zoneId, 'country') === NORTH_VIETNAM) {
+    return 0;
+  }
+
+  const population = getZoneNumericAttribute(def, zoneId, 'population');
+  const cityBonus = zone.category === 'city' ? 50 : 0;
+  const insurgentPressure = countInsurgentPieces(state, zoneId) * 5;
+  const currentArvnPresencePenalty = countArvnTrainPieces(state, zoneId);
+  return cityBonus + (population * 10) + insurgentPressure - currentArvnPresencePenalty;
+};
+
+const getArvnTrainImprovement = (
+  stateBefore: GameState,
+  stateAfter: GameState,
+  zoneId: string,
+): number =>
+  countArvnTrainPieces(stateAfter, zoneId) - countArvnTrainPieces(stateBefore, zoneId);
 
 const countImprovedUndergroundVc = (
   stateBefore: GameState,
@@ -1499,6 +1546,239 @@ export const usForcePreservation = (): CompetenceEvaluator => ({
       explanation: passed
         ? `Passed — voluntary move kept US losses within limit (losses=${losses})`
         : `Failed — voluntary move lost too many US pieces (losses=${losses})`,
+    };
+  },
+});
+
+export const arvnTrainCubes = (): CompetenceEvaluator => ({
+  name: 'arvnTrainCubes',
+  minBudget: 'background',
+  evaluate: (ctx): CompetenceEvalResult => {
+    if (getMoveActionId(ctx.move) !== 'train') {
+      return {
+        evaluatorName: 'arvnTrainCubes',
+        passed: true,
+        explanation: 'Skipped — move is not train',
+      };
+    }
+
+    const candidateScores = getMapZoneIds(ctx.def)
+      .map((zoneId) => ({
+        zoneId,
+        score: getArvnTrainOpportunityScore(ctx.def, ctx.stateBefore, zoneId),
+      }))
+      .filter((entry) => entry.score > 0);
+    if (candidateScores.length === 0) {
+      return {
+        evaluatorName: 'arvnTrainCubes',
+        passed: true,
+        explanation: 'Skipped — no meaningful ARVN training priorities were present',
+      };
+    }
+
+    const improvedZones = getMapZoneIds(ctx.def)
+      .map((zoneId) => ({
+        zoneId,
+        score: getArvnTrainOpportunityScore(ctx.def, ctx.stateBefore, zoneId),
+        improvement: getArvnTrainImprovement(ctx.stateBefore, ctx.stateAfter, zoneId),
+      }))
+      .filter((entry) => entry.improvement > 0);
+    if (improvedZones.length === 0) {
+      return {
+        evaluatorName: 'arvnTrainCubes',
+        passed: false,
+        explanation: 'Failed — train produced no identifiable ARVN piece growth',
+        score: 0,
+      };
+    }
+
+    const bestCandidate = candidateScores.reduce((best, candidate) =>
+      candidate.score > best.score ? candidate : best);
+    const bestImproved = improvedZones.reduce((best, candidate) =>
+      candidate.score > best.score ? candidate : best);
+    const passed = bestImproved.score >= bestCandidate.score;
+
+    return {
+      evaluatorName: 'arvnTrainCubes',
+      passed,
+      score: bestImproved.improvement,
+      explanation: passed
+        ? `Passed — train improved top-priority ARVN space '${bestImproved.zoneId}'`
+        : `Failed — train improved '${bestImproved.zoneId}' (score=${bestImproved.score}) while '${bestCandidate.zoneId}' scored ${bestCandidate.score}`,
+    };
+  },
+});
+
+export const arvnGovern = (): CompetenceEvaluator => ({
+  name: 'arvnGovern',
+  minBudget: 'background',
+  evaluate: (ctx): CompetenceEvalResult => {
+    const governMove = getActionMove(ctx.move, 'govern');
+    if (governMove === null) {
+      return {
+        evaluatorName: 'arvnGovern',
+        passed: true,
+        explanation: 'Skipped — move does not include govern',
+      };
+    }
+
+    const aidBefore = getNumericGlobalVar(ctx.stateBefore, 'aid');
+    const aidAfter = getNumericGlobalVar(ctx.stateAfter, 'aid');
+    const patronageBefore = getNumericGlobalVar(ctx.stateBefore, 'patronage');
+    const patronageAfter = getNumericGlobalVar(ctx.stateAfter, 'patronage');
+    if (aidBefore === null || aidAfter === null || patronageBefore === null || patronageAfter === null) {
+      return {
+        evaluatorName: 'arvnGovern',
+        passed: true,
+        explanation: 'Skipped — aid or patronage was not numeric',
+      };
+    }
+
+    const aidDelta = aidAfter - aidBefore;
+    const patronageDelta = patronageAfter - patronageBefore;
+    const passed = aidDelta > 0 || patronageDelta > 0;
+    return {
+      evaluatorName: 'arvnGovern',
+      passed,
+      score: aidDelta + patronageDelta,
+      explanation: passed
+        ? `Passed — govern produced strategic payoff (aidDelta=${aidDelta}, patronageDelta=${patronageDelta})`
+        : `Failed — govern produced no aid or patronage gain (aidDelta=${aidDelta}, patronageDelta=${patronageDelta})`,
+    };
+  },
+});
+
+export const arvnControlMaintain = (): CompetenceEvaluator => ({
+  name: 'arvnControlMaintain',
+  minBudget: 'background',
+  evaluate: (ctx): CompetenceEvalResult => {
+    const before = computeArvnVictory(ctx.def, ctx.stateBefore);
+    const after = computeArvnVictory(ctx.def, ctx.stateAfter);
+    const score = after - before;
+    const passed = score >= 0;
+    return {
+      evaluatorName: 'arvnControlMaintain',
+      passed,
+      score,
+      explanation: passed
+        ? `Passed — ARVN victory marker improved or held (${before} -> ${after})`
+        : `Failed — ARVN victory marker regressed (${before} -> ${after})`,
+    };
+  },
+});
+
+export const arvnSweepRaid = (): CompetenceEvaluator => ({
+  name: 'arvnSweepRaid',
+  minBudget: 'background',
+  evaluate: (ctx): CompetenceEvalResult => {
+    const actionId = getMoveActionId(ctx.move);
+    if (actionId !== 'sweep' && actionId !== 'raid' && !moveIncludesAction(ctx.move, 'raid')) {
+      return {
+        evaluatorName: 'arvnSweepRaid',
+        passed: true,
+        explanation: 'Skipped — move is not ARVN sweep/raid pressure',
+      };
+    }
+
+    const sweepTargets = inferActionTargetedZones(ctx, 'sweep', (zoneId) =>
+      countInsurgentGuerrillas(ctx.stateAfter, zoneId) < countInsurgentGuerrillas(ctx.stateBefore, zoneId));
+    const raidTargets = inferActionTargetedZones(ctx, 'raid', (zoneId) =>
+      countInsurgentGuerrillas(ctx.stateAfter, zoneId) < countInsurgentGuerrillas(ctx.stateBefore, zoneId));
+    const targetedZones = [...new Set([...sweepTargets, ...raidTargets])];
+    const guerrillaRemoval = targetedZones.reduce((sum, zoneId) =>
+      sum + Math.max(countInsurgentGuerrillas(ctx.stateBefore, zoneId) - countInsurgentGuerrillas(ctx.stateAfter, zoneId), 0), 0);
+
+    const resourcesBefore = getNumericGlobalVar(ctx.stateBefore, 'arvnResources');
+    const resourcesAfter = getNumericGlobalVar(ctx.stateAfter, 'arvnResources');
+    const resourceDelta = resourcesBefore === null || resourcesAfter === null ? 0 : resourcesAfter - resourcesBefore;
+    const passed = guerrillaRemoval > 0 || resourceDelta > 0;
+
+    return {
+      evaluatorName: 'arvnSweepRaid',
+      passed,
+      score: guerrillaRemoval + resourceDelta,
+      explanation: passed
+        ? `Passed — ARVN pressure produced payoff (guerrillaRemoval=${guerrillaRemoval}, resourceDelta=${resourceDelta})`
+        : `Failed — ARVN sweep/raid line produced no guerrilla removal or resource gain`,
+    };
+  },
+});
+
+export const arvnLocControl = (): CompetenceEvaluator => ({
+  name: 'arvnLocControl',
+  minBudget: 'background',
+  evaluate: (ctx): CompetenceEvalResult => {
+    const sabotagedLocs = getMapZoneIds(ctx.def).filter((zoneId) =>
+      isLocZone(ctx.def, zoneId) && hasSabotageMarker(ctx.stateBefore, zoneId));
+    if (sabotagedLocs.length === 0) {
+      return {
+        evaluatorName: 'arvnLocControl',
+        passed: true,
+        explanation: 'Skipped — no sabotaged LoCs were present',
+      };
+    }
+
+    const arvnResources = getNumericGlobalVar(ctx.stateBefore, 'arvnResources');
+    if (arvnResources === null || arvnResources < 3) {
+      return {
+        evaluatorName: 'arvnLocControl',
+        passed: true,
+        explanation: `Skipped — ARVN resources below patrol threshold (${arvnResources ?? 'n/a'})`,
+      };
+    }
+
+    if (getMoveActionId(ctx.move) !== 'patrol') {
+      return {
+        evaluatorName: 'arvnLocControl',
+        passed: false,
+        explanation: `Failed — sabotaged LoCs [${sabotagedLocs.join(', ')}] were present, but move actionId was '${getMoveActionId(ctx.move)}' instead of patrol`,
+      };
+    }
+
+    const targetedLocs = getMoveParamStringArray(ctx.move, '$targetLoCs');
+    const targetedSabotaged = targetedLocs.filter((zoneId) => sabotagedLocs.includes(zoneId));
+    const passed = targetedSabotaged.length > 0;
+    return {
+      evaluatorName: 'arvnLocControl',
+      passed,
+      score: targetedSabotaged.length,
+      explanation: passed
+        ? `Passed — patrol targeted sabotaged LoC(s) [${targetedSabotaged.join(', ')}]`
+        : `Failed — patrol ignored sabotaged LoCs [${sabotagedLocs.join(', ')}]`,
+    };
+  },
+});
+
+export const arvnAidPreservation = (): CompetenceEvaluator => ({
+  name: 'arvnAidPreservation',
+  minBudget: 'background',
+  evaluate: (ctx): CompetenceEvalResult => {
+    if (getActionMove(ctx.move, 'govern') === null) {
+      return {
+        evaluatorName: 'arvnAidPreservation',
+        passed: true,
+        explanation: 'Skipped — move does not include govern',
+      };
+    }
+
+    const aidAfter = getNumericGlobalVar(ctx.stateAfter, 'aid');
+    const totalEconAfter = getNumericGlobalVar(ctx.stateAfter, 'totalEcon');
+    if (aidAfter === null || totalEconAfter === null) {
+      return {
+        evaluatorName: 'arvnAidPreservation',
+        passed: true,
+        explanation: 'Skipped — aid or totalEcon was not numeric',
+      };
+    }
+
+    const passed = aidAfter >= totalEconAfter;
+    return {
+      evaluatorName: 'arvnAidPreservation',
+      passed,
+      score: aidAfter - totalEconAfter,
+      explanation: passed
+        ? `Passed — govern preserved Aid above Total Econ (aid=${aidAfter}, totalEcon=${totalEconAfter})`
+        : `Failed — govern left Aid below Total Econ (aid=${aidAfter}, totalEcon=${totalEconAfter})`,
     };
   },
 });

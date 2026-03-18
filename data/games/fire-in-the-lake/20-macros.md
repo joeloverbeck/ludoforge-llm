@@ -4056,6 +4056,398 @@ effectMacros:
               args:
                 space: $tetAttackSpace
 
+  # ── easter-offensive-free-march-resolve ────────────────────────────────────
+  # Simplified free-march resolver for Easter Offensive Step 1.
+  # No cost logic, no origin restriction, no Trail-4 free cost.
+  # NVA player chooses guerrillas + troops from adjacent zones to march into destSpace.
+  - id: easter-offensive-free-march-resolve
+    exports: ['$eoMovingGuerrillas@{$destSpace}', '$eoMovingTroops@{$destSpace}']
+    params:
+      - { name: destSpace, type: string }
+      - { name: maxActivatedGuerrillas, type: value }
+    effects:
+      - chooseN:
+          bind: '$eoMovingGuerrillas@{$destSpace}'
+          options:
+            query: tokensInAdjacentZones
+            zone: { param: destSpace }
+            filter:
+              op: and
+              args:
+                - { prop: faction, op: eq, value: NVA }
+                - { prop: type, op: eq, value: guerrilla }
+          min: 0
+          max: 99
+      - chooseN:
+          bind: '$eoMovingTroops@{$destSpace}'
+          options:
+            query: tokensInAdjacentZones
+            zone: { param: destSpace }
+            filter:
+              op: and
+              args:
+                - { prop: faction, op: eq, value: NVA }
+                - { prop: type, op: eq, value: troops }
+          min: 0
+          max: 99
+      - let:
+          bind: $eoMovingCount
+          value:
+            op: '+'
+            left: { aggregate: { op: count, query: { query: binding, name: '$eoMovingGuerrillas@{$destSpace}' } } }
+            right: { aggregate: { op: count, query: { query: binding, name: '$eoMovingTroops@{$destSpace}' } } }
+          in:
+            - if:
+                when: { op: '>', left: { ref: binding, name: $eoMovingCount }, right: 0 }
+                then:
+                  - forEach:
+                      bind: $eoPiece
+                      over: { query: binding, name: '$eoMovingGuerrillas@{$destSpace}' }
+                      effects:
+                        - moveToken:
+                            token: $eoPiece
+                            from: { zoneExpr: { ref: tokenZone, token: $eoPiece } }
+                            to: { param: destSpace }
+                  - forEach:
+                      bind: $eoPiece
+                      over: { query: binding, name: '$eoMovingTroops@{$destSpace}' }
+                      effects:
+                        - moveToken:
+                            token: $eoPiece
+                            from: { zoneExpr: { ref: tokenZone, token: $eoPiece } }
+                            to: { param: destSpace }
+                  - let:
+                      bind: $eoIsLocOrSupport
+                      value:
+                        if:
+                          when:
+                            op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: { param: destSpace }, prop: category }, right: 'loc' }
+                              - op: or
+                                args:
+                                  - { op: '==', left: { ref: markerState, space: { param: destSpace }, marker: supportOpposition }, right: 'passiveSupport' }
+                                  - { op: '==', left: { ref: markerState, space: { param: destSpace }, marker: supportOpposition }, right: 'activeSupport' }
+                          then: true
+                          else: false
+                      in:
+                        - let:
+                            bind: $eoCoinCount
+                            value:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: { param: destSpace }
+                                  filter:
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                      - { prop: type, op: in, value: ['troops', 'police', 'irregular', 'ranger'] }
+                            in:
+                              - if:
+                                  when:
+                                    op: and
+                                    args:
+                                      - { op: '==', left: { ref: binding, name: $eoIsLocOrSupport }, right: true }
+                                      - op: '>'
+                                        left:
+                                          op: '+'
+                                          left: { ref: binding, name: $eoMovingCount }
+                                          right: { ref: binding, name: $eoCoinCount }
+                                        right: 3
+                                  then:
+                                    - forEach:
+                                        bind: $eoActivatedPiece
+                                        over: { query: binding, name: '$eoMovingGuerrillas@{$destSpace}' }
+                                        limit: { param: maxActivatedGuerrillas }
+                                        effects:
+                                          - setTokenProp: { token: $eoActivatedPiece, prop: activity, value: active }
+                                    - if:
+                                        when:
+                                          op: and
+                                          args:
+                                            - { op: '==', left: { ref: gvar, var: mom_claymores }, right: true }
+                                            - op: '>'
+                                              left: { aggregate: { op: count, query: { query: binding, name: '$eoMovingGuerrillas@{$destSpace}' } } }
+                                              right: 0
+                                        then:
+                                          - forEach:
+                                              bind: $eoClaymoresRemoved
+                                              over: { query: binding, name: '$eoMovingGuerrillas@{$destSpace}' }
+                                              limit: 1
+                                              effects:
+                                                - moveToken:
+                                                    token: $eoClaymoresRemoved
+                                                    from: { zoneExpr: { ref: tokenZone, token: $eoClaymoresRemoved } }
+                                                    to:
+                                                      zoneExpr: 'available-NVA:none'
+
+  # ── easter-offensive-loc-troop-movement ──────────────────────────────────
+  # Easter Offensive Step 2: NVA Troops on LoCs with no US/ARVN
+  # may optionally move 1 space (all selected go to same adjacent space).
+  - id: easter-offensive-loc-troop-movement
+    params:
+      - { name: locSpace, type: string }
+    exports: []
+    effects:
+      - chooseN:
+          bind: $eoLocTroops
+          options:
+            query: tokensInZone
+            zone: { param: locSpace }
+            filter:
+              op: and
+              args:
+                - { prop: faction, op: eq, value: NVA }
+                - { prop: type, op: eq, value: troops }
+          min: 0
+          max: 99
+      - if:
+          when:
+            op: '>'
+            left: { aggregate: { op: count, query: { query: binding, name: $eoLocTroops } } }
+            right: 0
+          then:
+            - chooseOne:
+                bind: $eoLocDest
+                options:
+                  query: adjacentZones
+                  zone: { param: locSpace }
+            - forEach:
+                bind: $eoLocTroop
+                over: { query: binding, name: $eoLocTroops }
+                effects:
+                  - moveToken:
+                      token: $eoLocTroop
+                      from: { param: locSpace }
+                      to: { zoneExpr: { ref: binding, name: $eoLocDest } }
+
+  # ── easter-offensive ─────────────────────────────────────────────────────
+  # Top-level orchestrator for Card-122 Easter Offensive (NVA Pivotal Event).
+  # Step 1: NVA free Marches.
+  # Step 2: NVA Troops on LoCs with no US/ARVN may move 1 space.
+  # Step 3: All NVA Troops free Attack (Troops variant: damage = floor(nvaTroops/2)).
+  - id: easter-offensive
+    params: []
+    exports:
+      - $eoMarchDestinations
+      - $eoMarchDest
+      - $eoLocSpace
+      - $eoAttackSpace
+    effects:
+      # ── STEP 1: NVA free Marches ──
+      # NVA chooses destination spaces (any map space with adjacent NVA guerrilla or troops).
+      - chooseN:
+          bind: $eoMarchDestinations
+          chooser: NVA
+          options:
+            query: mapSpaces
+            filter:
+              op: and
+              args:
+                - op: or
+                  args:
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInAdjacentZones
+                        zone: $zone
+                        filter:
+                          op: and
+                          args:
+                            - { prop: faction, op: eq, value: NVA }
+                            - { prop: type, op: in, value: [guerrilla, troops] }
+                  right: 0
+          min: 0
+          max: 99
+      - forEach:
+          bind: $eoMarchDest
+          over: { query: binding, name: $eoMarchDestinations }
+          effects:
+            - macro: easter-offensive-free-march-resolve
+              args:
+                destSpace: $eoMarchDest
+                maxActivatedGuerrillas: 99
+
+      # ── STEP 2: NVA Troops on LoCs with no US/ARVN may move 1 space ──
+      - forEach:
+          bind: $eoLocSpace
+          over:
+            query: mapSpaces
+            filter:
+              op: and
+              args:
+                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: $zone
+                        filter:
+                          op: and
+                          args:
+                            - { prop: faction, op: eq, value: NVA }
+                            - { prop: type, op: eq, value: troops }
+                  right: 0
+                - op: '=='
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: $zone
+                        filter:
+                          { prop: faction, op: in, value: ['US', 'ARVN'] }
+                  right: 0
+          effects:
+            - macro: easter-offensive-loc-troop-movement
+              args:
+                locSpace: $eoLocSpace
+
+      # ── STEP 3: All NVA Troops free Attack (Troops variant) ──
+      # Mandatory in every space where NVA Troops AND COIN pieces coexist.
+      # Troops Attack: damage = floor(nvaTroops / 2). No die roll, no guerrilla activation.
+      # PT-76 shaded: 1 chosen space gets damage = nvaTroops instead.
+      - if:
+          when: { op: '==', left: { ref: globalMarkerState, marker: cap_pt76 }, right: shaded }
+          then:
+            - chooseOne:
+                bind: $eoPt76EnhancedSpace
+                chooser: NVA
+                options:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - { prop: faction, op: eq, value: NVA }
+                                  - { prop: type, op: eq, value: troops }
+                        right: 0
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                { prop: faction, op: in, value: ['US', 'ARVN'] }
+                        right: 0
+            - forEach:
+                bind: $eoAttackSpace
+                over:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - { prop: faction, op: eq, value: NVA }
+                                  - { prop: type, op: eq, value: troops }
+                        right: 0
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                { prop: faction, op: in, value: ['US', 'ARVN'] }
+                        right: 0
+                effects:
+                  - let:
+                      bind: $eoNvaTroops
+                      value: { aggregate: { op: count, query: { query: tokensInZone, zone: $eoAttackSpace, filter: { op: and, args: [{ prop: faction, op: eq, value: NVA }, { prop: type, op: eq, value: troops }] } } } }
+                      in:
+                        - let:
+                            bind: $eoDamage
+                            value:
+                              if:
+                                when:
+                                  op: and
+                                  args:
+                                    - { op: '==', left: { ref: binding, name: $eoAttackSpace }, right: { ref: binding, name: $eoPt76EnhancedSpace } }
+                                    - { op: '>', left: { ref: binding, name: $eoNvaTroops }, right: 0 }
+                                then: { ref: binding, name: $eoNvaTroops }
+                                else: { op: '/', left: { ref: binding, name: $eoNvaTroops }, right: 2 }
+                            in:
+                              - macro: insurgent-attack-removal-order
+                                args:
+                                  space: $eoAttackSpace
+                                  damageExpr: { ref: binding, name: $eoDamage }
+                                  attackerFaction: NVA
+          else:
+            - forEach:
+                bind: $eoAttackSpace
+                over:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - { prop: faction, op: eq, value: NVA }
+                                  - { prop: type, op: eq, value: troops }
+                        right: 0
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                { prop: faction, op: in, value: ['US', 'ARVN'] }
+                        right: 0
+                effects:
+                  - let:
+                      bind: $eoNvaTroops
+                      value: { aggregate: { op: count, query: { query: tokensInZone, zone: $eoAttackSpace, filter: { op: and, args: [{ prop: faction, op: eq, value: NVA }, { prop: type, op: eq, value: troops }] } } } }
+                      in:
+                        - let:
+                            bind: $eoDamage
+                            value: { op: '/', left: { ref: binding, name: $eoNvaTroops }, right: 2 }
+                            in:
+                              - macro: insurgent-attack-removal-order
+                                args:
+                                  space: $eoAttackSpace
+                                  damageExpr: { ref: binding, name: $eoDamage }
+                                  attackerFaction: NVA
+
 conditionMacros:
   # Shared geography predicate: Laos or Cambodia map space.
   - id: fitl-space-in-laos-cambodia

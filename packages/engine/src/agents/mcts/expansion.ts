@@ -573,10 +573,17 @@ export function buildFamilyAwareFrontier(
  * follows the same classify-on-demand + shortlist pattern as
  * `selectExpansionCandidateLazy`.
  *
+ * After filling the ready-move shortlist, performs a secondary pass to
+ * discover pending families: classifies up to `pendingFamilyQuotaRoot`
+ * additional candidates from families that have no existing children,
+ * ensuring that pending moves are discovered in the cache and decision
+ * root nodes can be created by the caller.
+ *
  * @param classEntry                 - incremental classification entry
  * @param existingKeys               - moveKeys already expanded as children
  * @param existingChildFamilyCounts  - family → count of existing children
  * @param maxVariantsBeforeCoverage  - per-family cap (default 1)
+ * @param pendingFamilyQuotaRoot     - max pending families to discover (default 1)
  * @param rootBestKey                - optional root-best hint
  * @param shortlistSize              - max candidates for one-step eval
  * @param exhaustiveThreshold        - fall back when candidates < this
@@ -587,6 +594,7 @@ export function selectExpansionCandidateFamilyFirst(
   existingKeys: ReadonlySet<string>,
   existingChildFamilyCounts: ReadonlyMap<string, number>,
   maxVariantsBeforeCoverage: number,
+  pendingFamilyQuotaRoot: number,
   rootBestKey: MoveKey | null,
   shortlistSize: number,
   exhaustiveThreshold: number,
@@ -643,8 +651,11 @@ export function selectExpansionCandidateFamilyFirst(
 
   const shortlist: ConcreteMoveCandidate[] = [];
   let candidatesClassified = 0;
+  // Track which frontier entries were consumed in the main shortlist pass.
+  let mainPassEnd = 0;
 
   for (const entry of frontier) {
+    mainPassEnd += 1;
     if (shortlist.length >= shortlistSize) break;
 
     const { info, infoIndex } = entry;
@@ -656,6 +667,69 @@ export function selectExpansionCandidateFamilyFirst(
 
     if (info.status === 'ready') {
       shortlist.push({ move: info.move, moveKey: info.moveKey });
+    }
+  }
+
+  // ── Pending-family discovery pass ──────────────────────────────
+  // After the main shortlist pass, classify additional candidates from
+  // unrepresented families to discover pending moves. This ensures
+  // decision root nodes can be created for pending operations.
+  if (pendingFamilyQuotaRoot > 0) {
+    // Collect families already known to have pending moves.
+    const discoveredPendingFamilies = new Set<string>();
+    for (const info of classEntry.infos) {
+      if (info.status === 'pending') {
+        discoveredPendingFamilies.add(info.familyKey);
+      }
+    }
+
+    // Families with existing children don't need discovery.
+    const representedFamilies = new Set<string>(existingChildFamilyCounts.keys());
+
+    let quotaRemaining = pendingFamilyQuotaRoot - discoveredPendingFamilies.size;
+
+    if (quotaRemaining > 0) {
+      // Walk remaining frontier entries (beyond the main pass).
+      for (let fi = mainPassEnd; fi < frontier.length && quotaRemaining > 0; fi += 1) {
+        const entry = frontier[fi]!;
+        const { info, infoIndex } = entry;
+
+        // Only interested in unknown candidates from unrepresented families.
+        if (info.status !== 'unknown') continue;
+        if (representedFamilies.has(info.familyKey)) continue;
+        if (discoveredPendingFamilies.has(info.familyKey)) continue;
+
+        // Classify to discover if this is a pending move.
+        classifyNextCandidateAt(classEntry, infoIndex, def, state, runtime, visitor, acc);
+        candidatesClassified += 1;
+
+        // Re-read status after mutation by classifyNextCandidateAt.
+        // (Must re-read from the array to bypass TS narrowing.)
+        const classifiedInfo = classEntry.infos[infoIndex]!;
+        if (classifiedInfo.status === 'pending') {
+          discoveredPendingFamilies.add(classifiedInfo.familyKey);
+          quotaRemaining -= 1;
+          if (acc !== undefined) {
+            acc.pendingFamilyQuotaUsed += 1;
+          }
+        } else if (classifiedInfo.status === 'ready') {
+          // Bonus: discovered a ready candidate — add to shortlist if room.
+          if (shortlist.length < shortlistSize) {
+            shortlist.push({ move: classifiedInfo.move, moveKey: classifiedInfo.moveKey });
+          }
+        }
+      }
+    }
+
+    // Track total pending families discovered for diagnostics.
+    if (acc !== undefined) {
+      const pendingFamiliesSet = new Set<string>();
+      for (const info of classEntry.infos) {
+        if (info.status === 'pending') {
+          pendingFamiliesSet.add(info.familyKey);
+        }
+      }
+      acc.pendingFamiliesTotal = Math.max(acc.pendingFamiliesTotal, pendingFamiliesSet.size);
     }
   }
 

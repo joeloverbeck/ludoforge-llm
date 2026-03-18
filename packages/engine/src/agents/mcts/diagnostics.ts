@@ -101,6 +101,11 @@ export interface MutableDiagnosticsAccumulator {
   familyStarvationCount: number;
   familyTotalAtRoot: number;
 
+  // Pending-family coverage counters
+  pendingFamiliesTotal: number;
+  pendingFamiliesWithVisits: number;
+  pendingFamilyQuotaUsed: number;
+
   // Aggregation arrays (for computing averages)
   leafRewardSpans: number[];
   selectionDepths: number[];
@@ -173,6 +178,10 @@ export function createAccumulator(): MutableDiagnosticsAccumulator {
     familyCoverageAtRoot: 0,
     familyStarvationCount: 0,
     familyTotalAtRoot: 0,
+
+    pendingFamiliesTotal: 0,
+    pendingFamiliesWithVisits: 0,
+    pendingFamilyQuotaUsed: 0,
 
     leafRewardSpans: [],
     selectionDepths: [],
@@ -276,6 +285,11 @@ export interface MctsSearchDiagnostics {
   readonly familyCoverageAtRoot?: number;
   readonly familyStarvationCount?: number;
   readonly familyTotalAtRoot?: number;
+
+  // Pending-family coverage counters
+  readonly pendingFamiliesTotal?: number;
+  readonly pendingFamiliesWithVisits?: number;
+  readonly pendingFamilyQuotaUsed?: number;
 
   // Derived averages
   readonly avgSelectionDepth?: number;
@@ -516,6 +530,11 @@ export function collectDiagnostics(
     familyCoverageAtRoot: accumulator.familyCoverageAtRoot,
     familyStarvationCount: accumulator.familyStarvationCount,
     familyTotalAtRoot: accumulator.familyTotalAtRoot,
+
+    // Pending-family coverage counters
+    pendingFamiliesTotal: accumulator.pendingFamiliesTotal,
+    pendingFamiliesWithVisits: accumulator.pendingFamiliesWithVisits,
+    pendingFamilyQuotaUsed: accumulator.pendingFamilyQuotaUsed,
 
     ...(avgSelectionDepth !== undefined ? { avgSelectionDepth } : {}),
     ...(avgLeafRewardSpan !== undefined ? { avgLeafRewardSpan } : {}),

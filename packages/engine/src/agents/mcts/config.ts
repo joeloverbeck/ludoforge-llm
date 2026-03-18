@@ -136,6 +136,15 @@ export interface MctsConfig {
   readonly maxVariantsPerFamilyBeforeCoverage?: number;
 
   /**
+   * Number of early expansion slots reserved for pending families at the
+   * root (depth 0). Ensures that pending operations (e.g. rally, march,
+   * attack in FITL) are not starved by ready-move variants.
+   * Only applies when `wideningMode === 'familyThenMove'`.
+   * Default: 1.
+   */
+  readonly pendingFamilyQuotaRoot?: number;
+
+  /**
    * Maximum candidates evaluated with one-step applyMove+evaluate during
    * lazy expansion. When branching is high, only this many frontier
    * candidates pay for the expensive one-step evaluation. Default 4.
@@ -357,6 +366,11 @@ export function validateMctsConfig(partial: Partial<MctsConfig>): MctsConfig {
   // Max variants per family before coverage
   if (merged.maxVariantsPerFamilyBeforeCoverage !== undefined) {
     assertPositiveInt('maxVariantsPerFamilyBeforeCoverage', merged.maxVariantsPerFamilyBeforeCoverage);
+  }
+
+  // Pending family quota at root
+  if (merged.pendingFamilyQuotaRoot !== undefined) {
+    assertNonNegativeInt('pendingFamilyQuotaRoot', merged.pendingFamilyQuotaRoot);
   }
 
   // Expansion shortlist size

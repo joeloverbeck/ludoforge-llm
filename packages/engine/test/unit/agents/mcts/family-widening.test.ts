@@ -249,6 +249,7 @@ describe('selectExpansionCandidateFamilyFirst', () => {
         expandedKeys,
         expandedFamilyCounts,
         1, // maxVariantsBeforeCoverage
+        1, // pendingFamilyQuotaRoot
         null,
         4, // shortlistSize
         10, // exhaustiveThreshold (high so we don't fall back)
@@ -307,7 +308,7 @@ describe('selectExpansionCandidateFamilyFirst', () => {
     for (let round = 0; round < 6; round += 1) {
       const result = selectExpansionCandidateFamilyFirst(
         entry, expandedKeys, expandedFamilyCounts,
-        maxVariants, null, 4, 10,
+        maxVariants, 1, null, 4, 10,
         def, state, actingPlayer, currentRng,
       );
       if (result === null) break;

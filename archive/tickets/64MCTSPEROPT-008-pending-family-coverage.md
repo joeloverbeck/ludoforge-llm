@@ -1,6 +1,6 @@
 # 64MCTSPEROPT-008: Pending-Family Coverage Rules
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — MCTS expansion pending-move handling
@@ -91,3 +91,16 @@ In the FITL S1 and S3 scenarios, assert that at least one pending family (e.g., 
 1. `pnpm -F @ludoforge/engine test`
 2. `RUN_MCTS_FITL_E2E=1 pnpm -F @ludoforge/engine test:e2e`
 3. `pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-18
+- **What changed**:
+  - `config.ts`: Added `pendingFamilyQuotaRoot?: number` (default 1) with `assertNonNegativeInt` validation.
+  - `expansion.ts`: Added `pendingFamilyQuotaRoot` parameter to `selectExpansionCandidateFamilyFirst`. After the main shortlist pass, a secondary discovery pass classifies unknown candidates from unrepresented families to discover pending moves (up to quota). Discovered pending moves remain in the `CachedClassificationEntry` so `search.ts` can create decision root nodes.
+  - `diagnostics.ts`: Added `pendingFamiliesTotal`, `pendingFamiliesWithVisits`, `pendingFamilyQuotaUsed` to accumulator and result.
+  - `search.ts`: Updated call site to pass `config.pendingFamilyQuotaRoot ?? 1`.
+  - `family-widening.test.ts`: Updated existing calls for new parameter.
+  - `pending-family-coverage.test.ts` (new): 5 tests covering diagnostics tracking, ready-only expansion, quota=0, no-pending fallthrough, and discovery from unknowns.
+- **Deviations**: FITL E2E stress test assertion (acceptance criterion 4) was not added because S1-S7 scenarios currently crash due to incomplete decision-param support. The assertion should be added once decision-node architecture is complete.
+- **Verification**: `pnpm turbo build` ✅, `pnpm turbo typecheck` ✅, `pnpm -F @ludoforge/engine test` — 5077 pass, 0 fail ✅.

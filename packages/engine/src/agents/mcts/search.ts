@@ -646,11 +646,14 @@ export function runOneIteration(
           }
           const maxVariants = config.maxVariantsPerFamilyBeforeCoverage ?? 1;
 
+          const pendingQuota = config.pendingFamilyQuotaRoot ?? 1;
+
           lazyResult = selectExpansionCandidateFamilyFirst(
             classEntryForExpansion,
             existingChildKeys,
             childFamilyCounts,
             maxVariants,
+            pendingQuota,
             rootBestKey,
             shortlistSize,
             exhaustiveThreshold,

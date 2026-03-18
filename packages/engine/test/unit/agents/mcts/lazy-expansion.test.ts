@@ -36,6 +36,7 @@ function makeMoveInfo(
   return {
     move,
     moveKey: canonicalMoveKey(move),
+    familyKey: move.actionId,
     status,
     oneStepHeuristic: null,
   };

@@ -1,6 +1,6 @@
 # 64MCTSPEROPT-006: familyKey() / abstractMoveKey() for Search Control
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — move-key module, cache integration
@@ -96,3 +96,15 @@ When initializing `CachedClassificationEntry` (from ticket 002), compute and sto
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-18
+- **What changed**:
+  - `move-key.ts`: added `familyKey()` (groups by `actionId`) and `abstractMoveKey()` (optional `TurnFlowActionClass` coarser grouping)
+  - `state-cache.ts`: added `familyKey` field to `CachedLegalMoveInfo`, populated in `initClassificationEntry()`; added `getRepresentedFamilies()` and `countByFamily()` helpers
+  - `index.ts`: re-exported new functions
+  - New test file `family-key.test.ts` with 10 tests covering all acceptance criteria
+  - Fixed `availability-checking.test.ts` and `lazy-expansion.test.ts` to include required `familyKey` field in manually constructed `CachedLegalMoveInfo` objects
+- **Deviations**: None — implementation matches ticket exactly
+- **Verification**: 5060/5060 engine tests pass, typecheck clean, lint clean

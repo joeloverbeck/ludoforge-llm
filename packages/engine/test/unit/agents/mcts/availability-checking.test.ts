@@ -63,9 +63,11 @@ function makeCachedInfo(
   moveKey: MoveKey,
   status: ClassificationStatus,
 ): CachedLegalMoveInfo {
+  const move = makeMove(moveKey.split('|')[0]!);
   return {
-    move: makeMove(moveKey.split('|')[0]!),
+    move,
     moveKey,
+    familyKey: move.actionId,
     status,
   };
 }

@@ -21,7 +21,7 @@ import { legalMoves } from '../../kernel/legal-moves.js';
 import { evaluateForAllPlayers } from './evaluate.js';
 import { classifyMovesForSearch, classifySingleMove } from './materialization.js';
 import type { SingleMoveClassificationKind } from './materialization.js';
-import { canonicalMoveKey } from './move-key.js';
+import { canonicalMoveKey, familyKey as computeFamilyKey } from './move-key.js';
 import type { ConcreteMoveCandidate } from './expansion.js';
 
 // ---------------------------------------------------------------------------
@@ -40,6 +40,7 @@ export type ClassificationStatus =
 export interface CachedLegalMoveInfo {
   readonly move: Move;
   readonly moveKey: MoveKey;
+  readonly familyKey: string;
   status: ClassificationStatus;
   oneStepHeuristic?: readonly number[] | null;
 }
@@ -130,7 +131,7 @@ export function initClassificationEntry(
     const key = canonicalMoveKey(move);
     if (!seenKeys.has(key)) {
       seenKeys.add(key);
-      infos.push({ move, moveKey: key, status: 'unknown' });
+      infos.push({ move, moveKey: key, familyKey: computeFamilyKey(move), status: 'unknown' });
     }
   }
 
@@ -223,6 +224,33 @@ export function getClassifiedMovesByStatus(
     }
   }
   return result;
+}
+
+/**
+ * Return the set of unique family keys represented in the classification entry.
+ */
+export function getRepresentedFamilies(
+  entry: CachedClassificationEntry,
+): Set<string> {
+  const families = new Set<string>();
+  for (let i = 0; i < entry.infos.length; i += 1) {
+    families.add(entry.infos[i]!.familyKey);
+  }
+  return families;
+}
+
+/**
+ * Return a map of family key → count of moves in that family.
+ */
+export function countByFamily(
+  entry: CachedClassificationEntry,
+): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (let i = 0; i < entry.infos.length; i += 1) {
+    const fk = entry.infos[i]!.familyKey;
+    counts.set(fk, (counts.get(fk) ?? 0) + 1);
+  }
+  return counts;
 }
 
 /**

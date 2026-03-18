@@ -13,7 +13,7 @@
  */
 
 import type { Move, ChoiceRequest, ChoicePendingRequest, ChoiceStochasticPendingRequest, CompoundDecisionPath, CompoundMovePayload } from '../../kernel/types-core.js';
-import type { MoveParamValue } from '../../kernel/types-ast.js';
+import type { MoveParamScalar, MoveParamValue } from '../../kernel/types-ast.js';
 import type { GameDef, GameState } from '../../kernel/types.js';
 import type { GameDefRuntime } from '../../kernel/gamedef-runtime.js';
 import type { LegalChoicesRuntimeOptions } from '../../kernel/legal-choices.js';
@@ -119,7 +119,22 @@ function advanceMainParams(
   partialMove: Move,
   decisionKey: string,
   value: MoveParamValue,
+  decisionType?: 'chooseOne' | 'chooseN',
 ): Move {
+  if (decisionType === 'chooseN') {
+    const existing = partialMove.params[decisionKey];
+    const currentArray: MoveParamScalar[] = Array.isArray(existing)
+      ? [...existing as readonly MoveParamScalar[]]
+      : [];
+    currentArray.push(value as MoveParamScalar);
+    return {
+      ...partialMove,
+      params: {
+        ...partialMove.params,
+        [decisionKey]: currentArray as unknown as MoveParamValue,
+      },
+    };
+  }
   return {
     ...partialMove,
     params: {
@@ -134,16 +149,28 @@ function advanceCompoundSAParams(
   partialMove: Move,
   decisionKey: string,
   value: MoveParamValue,
+  decisionType?: 'chooseOne' | 'chooseN',
 ): Move {
   const compound = partialMove.compound;
   if (compound === undefined) {
     throw new Error('advanceCompoundSAParams: move has no compound payload');
   }
+  let paramValue: MoveParamValue;
+  if (decisionType === 'chooseN') {
+    const existing = compound.specialActivity.params[decisionKey];
+    const currentArray: MoveParamScalar[] = Array.isArray(existing)
+      ? [...existing as readonly MoveParamScalar[]]
+      : [];
+    currentArray.push(value as MoveParamScalar);
+    paramValue = currentArray as unknown as MoveParamValue;
+  } else {
+    paramValue = value;
+  }
   const updatedSA: Move = {
     ...compound.specialActivity,
     params: {
       ...compound.specialActivity.params,
-      [decisionKey]: value,
+      [decisionKey]: paramValue,
     },
   };
   const updatedCompound: CompoundMovePayload = {
@@ -162,11 +189,12 @@ function advancePartialMove(
   decisionKey: string,
   value: MoveParamValue,
   decisionPath?: CompoundDecisionPath,
+  decisionType?: 'chooseOne' | 'chooseN',
 ): Move {
   if (decisionPath === 'compound.specialActivity') {
-    return advanceCompoundSAParams(partialMove, decisionKey, value);
+    return advanceCompoundSAParams(partialMove, decisionKey, value, decisionType);
   }
-  return advanceMainParams(partialMove, decisionKey, value);
+  return advanceMainParams(partialMove, decisionKey, value, decisionType);
 }
 
 function emitDecisionNodeCreated(
@@ -428,7 +456,7 @@ function expandPendingDecision(
   // If exactly 1 legal option, skip node allocation and recurse.
   if (optionsToExpand.length === 1) {
     const singleOption = optionsToExpand[0]!;
-    const advancedMove = advancePartialMove(partialMove, decisionKey, singleOption.value, request.decisionPath);
+    const advancedMove = advancePartialMove(partialMove, decisionKey, singleOption.value, request.decisionPath, request.type);
 
     const discover = ctx.discoverChoices ?? legalChoicesDiscover;
     const fscAcc = ctx.accumulator;
@@ -484,7 +512,7 @@ function expandPendingDecision(
   const children: MctsNode[] = [];
 
   for (const option of optionsToExpand) {
-    const childMove = advancePartialMove(partialMove, decisionKey, option.value, request.decisionPath);
+    const childMove = advancePartialMove(partialMove, decisionKey, option.value, request.decisionPath, request.type);
     const moveKey = canonicalMoveKey(childMove);
 
     let child: MctsNode;

@@ -1,6 +1,6 @@
 # 65MCTSCHODECARC-002: Array-Valued Move Params for `chooseN` Decision Nodes
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/mcts/decision-expansion.ts`
@@ -94,3 +94,12 @@ Pass `request.type` when calling `advancePartialMove` so the function knows whet
 
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern="decision-expansion"` (targeted)
 2. `pnpm turbo build && pnpm turbo typecheck && pnpm turbo lint && pnpm turbo test`
+
+## Outcome
+
+- **Completion date**: 2026-03-18
+- **What changed**:
+  - `packages/engine/src/agents/mcts/decision-expansion.ts`: `advanceMainParams`, `advanceCompoundSAParams`, and `advancePartialMove` now accept a `decisionType` parameter. When `'chooseN'`, values accumulate into a `MoveParamScalar[]` instead of overwriting as a scalar. Both call sites (forced-sequence compression and main expansion loop) pass `request.type` through.
+  - `packages/engine/test/unit/agents/mcts/decision-expansion.test.ts`: 5 new tests — array param storage for `chooseN`, scalar regression for `chooseOne`, successive accumulation, forced-sequence compression array output, compound SA array params.
+- **Deviations from plan**: None. Implementation matched the ticket exactly.
+- **Verification results**: Typecheck clean, lint clean, 5195 engine tests pass (0 failures).

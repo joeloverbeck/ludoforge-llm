@@ -23,7 +23,7 @@ Competence is not a single metric. It operates at three levels of granularity:
 | Level | Question | Example |
 |-------|----------|---------|
 | **Category** | Did the agent pick a reasonable operation type? | VC picked `rally` (not `pass`) |
-| **Victory trend** | Did the move improve or maintain the faction's victory score? | VC opposition+bases score increased |
+| **Victory progress** | Did the move close the gap to the faction's victory threshold? | VC opposition+bases score moved toward threshold of 35 |
 | **Strategic quality** | Did the move follow sound faction-specific strategic principles? | VC rallied in a province with an existing base and <4 guerrillas |
 
 The current tests operate only at Level 1. This spec designs a framework that supports all three levels.
@@ -160,26 +160,67 @@ categoryCompetence(acceptableActionIds: readonly string[]): CompetenceEvaluator
 
 This is functionally identical to the existing `assertMoveCategory` but wrapped in the evaluator interface for composability.
 
-### 3.2 Layer 2: Victory Trend
+### 3.2 Layer 2: Victory Progress & Defense
 
-**Purpose**: Assert the move does not significantly degrade the faction's victory score. Uses the existing `computeVictoryMarker` kernel API with the faction-specific `VictoryFormula` from the game data.
+#### 3.2.1 Victory Progress
+
+**Purpose**: Threshold-aware victory progress evaluator. Measures whether the move closes the gap to the faction's victory threshold. More meaningful than simple delta — recognizes urgency near threshold.
+
+**FITL victory thresholds** (from `data/games/fire-in-the-lake/91-victory-standings.md`):
+- US: Support + Available >= **50**
+- ARVN: COIN-Controlled Pop + Patronage >= **50**
+- NVA: NVA-Controlled Pop + NVA Bases >= **18**
+- VC: Opposition + VC Bases >= **35**
 
 ```
-victoryTrend(
+victoryProgress(
   computeVictory: (def: GameDef, state: GameState) => number,
+  threshold: number,
   tolerance: number,
 ): CompetenceEvaluator
 ```
 
 - `minBudget`: `'turn'` (needs enough search budget for the move to be non-random)
-- `evaluate`: `victoryScore(stateAfter) >= victoryScore(stateBefore) - tolerance`
-- Reports the actual delta as `score` for diagnostics.
+- Evaluation logic:
+  - `distBefore = threshold - computeVictory(def, stateBefore)`
+  - `distAfter = threshold - computeVictory(def, stateAfter)`
+  - `passed = distAfter <= distBefore + tolerance`
+  - `score = distBefore - distAfter` (positive = progress toward victory)
+- Reports the distance delta as `score` for diagnostics.
 
 The `computeVictory` function is faction-specific and already exists in `fitl-mcts-test-helpers.ts` (`computeUsVictory`, `computeNvaVictory`, `computeVcVictory`, `computeArvnVictory`).
+
+#### 3.2.2 Victory Defense
+
+**Purpose**: Checks that the faction's lead over opponents is maintained. Used in defensive scenarios where the faction should protect its advantage.
+
+```
+victoryDefense(
+  computeOwnVictory: (def: GameDef, state: GameState) => number,
+  computeOpponentVictory: (def: GameDef, state: GameState) => number,
+  ownThreshold: number,
+  opponentThreshold: number,
+  tolerance: number,
+): CompetenceEvaluator
+```
+
+- `minBudget`: `'turn'`
+- Evaluation logic: the faction's distance-to-victory should remain smaller than (or not significantly worse relative to) the opponent's distance-to-victory.
+- Used in scenarios like S13 where the faction is close to winning and needs to defend its position.
 
 ### 3.3 Layer 3: Strategic Quality Evaluators
 
 These encode faction-specific strategic principles from the FITL rules (Section 8.5–8.8: Non-Player faction flowcharts) and the factions guide. Each evaluator checks a specific strategic property of the state delta.
+
+#### 3.3.0 Cross-Faction Strategic Evaluators
+
+**Source**: Rules Sections 5-8, faction guide.
+
+| Evaluator | minBudget | Strategic Principle | What It Checks |
+|-----------|-----------|-------------------|----------------|
+| `resourceDiscipline` | `turn` | "Don't waste resources on low-value operations at 0 resources" | Faction passes (not wastes resources on low-value ops) when resources = 0. NVA/VC pass at 0; ARVN passes if Available < 12 pieces. Detects reckless spending. |
+| `monsoonAwareness` | `background` | "Hard constraints during monsoon turn" | During monsoon turn (last card before Coup): no Sweep, no March, no Pivotal Event. Validates the agent recognizes hard constraints. |
+| `passStrategicValue` | `background` | "Pass should be strategic, not pointless" | When the agent passes, it should gain resources AND the upcoming card should be weak/irrelevant to the faction. Detects pointless passing vs. strategic passing. |
 
 #### 3.3.1 VC Strategic Evaluators
 
@@ -192,6 +233,8 @@ These encode faction-specific strategic principles from the FITL rules (Section 
 | `vcBaseExpansion` | "Place bases wherever 4+ VC guerrillas" (8.5.2) | After rally: if 4+ guerrillas existed anywhere, a base was placed |
 | `vcOppositionGrowth` | "VC victory = opposition + bases" | Opposition total increased or maintained |
 | `vcResourceManagement` | "Tax when 0 resources, don't tax at >9 unless on LoCs" (8.5.1) | Resources didn't drop to 0 without tax; didn't waste resources on low-value operations |
+| `vcSubvertTargeting` | "Subvert removes 2 ARVN cubes or replaces 1 with VC guerrilla" (8.5) | When VC has Underground guerrillas co-located with ARVN cubes, Subvert should target spaces where it flips cubes (only 1 ARVN cube present) or removes max COIN Control |
+| `vcTaxEfficiency` | "Tax priority: 2-Econ LoCs first, then 1-Econ LoCs, then Active Support spaces" (8.5.1) | Tax targets 2-Econ LoCs first, then 1-Econ LoCs, then Active Support spaces. Validates resource generation isn't random |
 
 #### 3.3.2 NVA Strategic Evaluators
 
@@ -204,6 +247,7 @@ These encode faction-specific strategic principles from the FITL rules (Section 
 | `nvaRallyTrailImprove` | "Rally + improve trail when trail <3 or available >20 troops" (8.6.4) | After rally: trail improved when affordable |
 | `nvaControlGrowth` | "NVA victory = NVA-controlled population + NVA bases on map" | NVA control score increased or maintained |
 | `nvaInfiltrateValue` | "Infiltrate only if base or 4+ troops placed" (8.6.4) | Infiltrate not wasted on trivial placements |
+| `nvaBombardUsage` | "Bombard when >=3 NVA Troops in/adjacent to enemy-occupied space" (8.6) | When NVA has >=3 Troops in a space and >=3 NVA Troops adjacent to a US/ARVN-occupied space, Bombard should be used (not ignored). Bombard is a free piece-removal opportunity |
 
 #### 3.3.3 US Strategic Evaluators
 
@@ -214,8 +258,9 @@ These encode faction-specific strategic principles from the FITL rules (Section 
 | `usSweepActivation` | "Sweep to activate guerrillas, then assault" (8.8.1) | After sweep: previously underground guerrillas now active |
 | `usAssaultRemoval` | "Assault where it removes control, bases, or 6+ enemy" (8.8.2) | Assault targeted high-value spaces |
 | `usSupportGrowth` | "US victory = support + available pieces" | Support total increased or maintained |
-| `usAirPower` | "Air strike/air lift used strategically — degrade trail, move to threatened areas" | Air operations targeted meaningful objectives |
+| `usTrailDegradation` | "When Trail >= 3 and Air Strike available, include degradeTrail: yes" (8.8) | Trail degradation is often higher priority than piece removal for US. When Trail >= 3 and Air Strike is available, Air Strike should include trail degradation |
 | `usPacification` | "Pacify in highest-population spaces at coup" | Coup pacification targeted max-population spaces |
+| `usForcePreservation` | "US should not lose more than 2 pieces per turn from voluntary operations" | US should not Assault into strong NVA positions suicidally. Detects reckless aggression that wastes US pieces |
 
 #### 3.3.4 ARVN Strategic Evaluators
 
@@ -227,6 +272,8 @@ These encode faction-specific strategic principles from the FITL rules (Section 
 | `arvnGovern` | "Govern to increase patronage or aid" (8.7.3) | After govern: patronage increased |
 | `arvnControlMaintain` | "ARVN victory = COIN-controlled population + patronage" | COIN control score maintained or improved |
 | `arvnSweepRaid` | "Sweep then raid to remove guerrillas and gain resources" (8.7) | After sweep+raid: guerrillas removed, resources gained |
+| `arvnLocControl` | "Patrol/Sweep LoCs when Sabotage markers present and Resources >= 3" (8.7) | ARVN should Patrol/Sweep LoCs when Sabotage markers are present and ARVN Resources >= 3. LoC control directly affects Econ earnings at Coup. Sabotage reduces ARVN income |
+| `arvnAidPreservation` | "Govern should not drain Aid below Total Econ" (6.2.3) | Govern operations should not drain Aid below Total Econ (which would block US spending). "US may only spend ARVN Resources exceeding Total Econ" |
 
 ### 3.4 Evaluator Implementation Pattern
 
@@ -349,6 +396,44 @@ The initial scenario set reuses the existing 10 playbook scenarios (S1–S10) bu
 | S8: T6 ARVN — Henry Cabot Lodge | ARVN | Turn 6, ARVN first eligible | ARVN should sweep/assault |
 | S9: T7 NVA — Booby Traps | NVA | Turn 7, NVA eligible | NVA should attack (troops in position) |
 | S10: T8 US — coup pacification | US | Turn 8, coup phase | US should pacify highest-pop spaces |
+| S11: Near-win VC | VC | Engineered: opposition=33, VC bases=1, scattered guerrillas | VC should Terror aggressively in high-pop Support spaces to cross 35 threshold. Should NOT rally/march (too slow) |
+| S12: NVA resource-starved | NVA | Engineered: NVA resources=0, Trail at 2, 15 troops on map | NVA should Pass (gain resource). Any operation at 0 resources is illegal or wasteful. Tests resource awareness |
+| S13: US defensive | US | Engineered: Support at 48, Available=3, NVA massing in 2-pop provinces | US should Sweep/Assault to protect Support spaces, not Train. Defensive posture when close to victory and under threat |
+| S14: ARVN pre-Coup | ARVN | Playbook Turn 7 + advance to monsoon card | ARVN should Train (place cubes for Redeploy positioning) or Govern (build Patronage before Coup scoring). No Sweep (monsoon) |
+| S15: NVA late-game blitz | NVA | Engineered: Trail at 4, 25+ NVA troops available, 10+ guerrillas on map | NVA should March into SVN population centers for Control. Trail at 4 = free march in Laos/Cambodia. Tests recognizing winning conditions |
+
+S11, S12, S13, S15 use the `engineerScenarioState()` helper (see below) that modifies `createPlaybookBaseState()` output with specific global var and zone overrides. S14 reuses existing playbook replay at Turn 7 + advance.
+
+#### 5.1.1 Engineered Scenario State Helper
+
+New helper function in `fitl-mcts-test-helpers.ts`:
+
+```typescript
+/**
+ * Create an engineered game state by modifying the base playbook state.
+ * Used for pressure/edge-case scenarios that can't be reached via normal replay.
+ */
+export const engineerScenarioState = (
+  def: ValidatedGameDef,
+  baseState: GameState,
+  overrides: {
+    globalVars?: Partial<Record<string, number | boolean>>;
+    perPlayerVars?: Partial<Record<PlayerId, Partial<Record<string, number>>>>;
+    zoneTokenOverrides?: Record<string, Token[]>;
+    markerOverrides?: Record<string, Record<string, string>>;
+  },
+): GameState => { /* ... */ };
+```
+
+The `CompetenceScenario` type gains an optional `engineeredState` field:
+
+```typescript
+export interface CompetenceScenario {
+  // ... existing fields ...
+  /** Optional: use an engineered state instead of playbook replay. */
+  readonly engineeredState?: (def: ValidatedGameDef, baseState: GameState) => GameState;
+}
+```
 
 ### 5.2 Scenario Composition Example
 
@@ -364,7 +449,7 @@ const S1_VC_BURNING_BONZE: CompetenceScenario = {
     // Layer 1: always checked
     categoryCompetence(['event', 'rally', 'march', 'attack', 'terror', 'tax', 'ambushVc']),
     // Layer 2: checked at turn+ budget
-    victoryTrend(computeVcVictory, 2),
+    victoryProgress(computeVcVictory, 35, 2),
     // Layer 3: checked at background budget only
     vcRallyQuality(),
     vcOppositionGrowth(),
@@ -415,13 +500,51 @@ AFTER FURTHER OPTIMIZATION (rollout, eval function, etc.):
 | Rollout change makes all moves look equal | Layer 1 fails (search picks pass) or Layer 2 (victory degrades) |
 | Code refactoring breaks decision expansion | Layer 1 fails (crashes or pass-only) |
 
+### 6.3 Failure Escalation Protocol
+
+When competence tests consistently fail at a given budget tier, follow this
+diagnostic sequence:
+
+1. **Examine MCTS diagnostics** (visitor events):
+   - Pool exhaustion occurring? -> Pool capacity insufficient -> Address in
+     62MCTSSEAVIS-019 (pool sizing tickets).
+   - Visit distribution flat? -> UCT exploration constant may need tuning.
+   - Decision nodes receiving visits? -> If not, decision expansion may be
+     broken -> Debug via Spec 62 decision expansion tests.
+
+2. **Examine rollout quality**:
+   - Rollout depth reaching terminal states? -> If not, rollout cutoff may
+     be too shallow for FITL's game length.
+   - Random rollouts producing meaningful signal? -> FITL has 4 factions
+     with competing goals; pure random rollouts may converge slowly.
+
+3. **Examine the MCTS evaluation heuristic** (`evaluate-state.ts`):
+   - **Current heuristic is victory-threshold-blind.** It scores per-player
+     integer variables by range-normalized weight (OWN=10000, OPPONENT=2500)
+     but has no concept of distance-to-victory-threshold. A move from
+     opposition 33->35 (winning for VC) scores identically to 10->12
+     (irrelevant).
+   - **Recommended improvement**: Replace generic per-var weighting with
+     victory-formula-aware scoring that weights progress toward the
+     faction's specific threshold. The `computeVictoryMarker()` kernel
+     API and `VictoryFormula` type already exist for this purpose.
+   - **Scope**: Heuristic improvements are a separate spec/ticket series.
+     Competence tests define the *goal*; heuristic changes are the *means*.
+
+4. **File targeted improvement tickets**:
+   - If (1) pool -> pool sizing tickets
+   - If (2) rollout -> rollout improvement tickets
+   - If (3) heuristic -> new spec for victory-aware MCTS evaluation
+   - Each ticket should reference the specific failing competence scenario(s)
+     as acceptance criteria.
+
 ## 7. Strategic Knowledge Sources
 
 ### 7.1 Primary Sources
 
 | Source | Location | Content |
 |--------|----------|---------|
-| FITL Rules Section 8 | `reports/fire-in-the-lake-rules-non-player-factions.md` | Non-player flowcharts: operation priorities, space selection, piece placement |
+| FITL Rules Section 8 | `reports/fire-in-the-lake-rules-section-8.md` | Non-player flowcharts: operation priorities, space selection, piece placement |
 | Victory Standings | `data/games/fire-in-the-lake/91-victory-standings.md` | Victory formulas: thresholds, scoring functions per faction |
 | Terminal Conditions | `data/games/fire-in-the-lake/90-terminal.md` | Game-ending conditions |
 | Rules Sections 1-7 | `reports/fire-in-the-lake-rules-section-*.md` | Core rules: operations, special activities, events |
@@ -460,15 +583,17 @@ The competence test file itself (`fitl-competence.test.ts`) is the integration t
 
 | Ticket | Scope | Deps |
 |--------|-------|------|
-| 66MCTSCOMP-001 | Core types: `CompetenceEvaluator`, `CompetenceEvalContext`, `CompetenceEvalResult`, `CompetenceScenario` | None |
+| 66MCTSCOMP-001 | Core types: `CompetenceEvaluator`, `CompetenceEvalContext`, `CompetenceEvalResult`, `CompetenceScenario` + `engineerScenarioState` helper | None |
 | 66MCTSCOMP-002 | Layer 1 evaluator: `categoryCompetence` + unit tests | 001 |
-| 66MCTSCOMP-003 | Layer 2 evaluator: `victoryTrend` + unit tests | 001 |
-| 66MCTSCOMP-004 | VC strategic evaluators (Layer 3): `vcRallyQuality`, `vcTerrorTarget`, `vcOppositionGrowth`, `vcBaseExpansion` + unit tests | 001 |
-| 66MCTSCOMP-005 | NVA strategic evaluators (Layer 3): `nvaAttackConditions`, `nvaMarchSouthward`, `nvaControlGrowth`, `nvaRallyTrailImprove` + unit tests | 001 |
-| 66MCTSCOMP-006 | US strategic evaluators (Layer 3): `usSweepActivation`, `usAssaultRemoval`, `usSupportGrowth`, `usPacification` + unit tests | 001 |
-| 66MCTSCOMP-007 | ARVN strategic evaluators (Layer 3): `arvnTrainCubes`, `arvnGovern`, `arvnControlMaintain` + unit tests | 001 |
-| 66MCTSCOMP-008 | Competence scenario definitions (S1-S10) + test runner + test lane | 002, 003, 004-007 |
-| 66MCTSCOMP-009 | Documentation: competence testing guide for adding new scenarios/evaluators | 008 |
+| 66MCTSCOMP-002b | Cross-faction evaluators: `resourceDiscipline`, `monsoonAwareness`, `passStrategicValue` + unit tests | 001 |
+| 66MCTSCOMP-003 | Layer 2 evaluators: `victoryProgress`, `victoryDefense` + unit tests | 001 |
+| 66MCTSCOMP-004 | VC strategic evaluators (7): `vcRallyQuality`, `vcTerrorTarget`, `vcBaseExpansion`, `vcOppositionGrowth`, `vcResourceManagement` + `vcSubvertTargeting`, `vcTaxEfficiency` + unit tests | 001 |
+| 66MCTSCOMP-005 | NVA strategic evaluators (6): `nvaAttackConditions`, `nvaMarchSouthward`, `nvaRallyTrailImprove`, `nvaControlGrowth`, `nvaInfiltrateValue` + `nvaBombardUsage` + unit tests | 001 |
+| 66MCTSCOMP-006 | US strategic evaluators (6): `usSweepActivation`, `usAssaultRemoval`, `usSupportGrowth`, `usPacification` + `usTrailDegradation` (replaces `usAirPower`), `usForcePreservation` + unit tests | 001 |
+| 66MCTSCOMP-007 | ARVN strategic evaluators (6): `arvnTrainCubes`, `arvnGovern`, `arvnControlMaintain`, `arvnSweepRaid` + `arvnLocControl`, `arvnAidPreservation` + unit tests | 001 |
+| 66MCTSCOMP-008 | Playbook scenarios S1-S10 + test runner + test lane | 002, 002b, 003, 004-007 |
+| 66MCTSCOMP-008b | Engineered scenarios S11-S15 + `engineerScenarioState` integration tests | 001, 008 |
+| 66MCTSCOMP-009 | Documentation: competence testing guide + failure escalation protocol | 008, 008b |
 
 ## 10. Invariants
 
@@ -482,7 +607,7 @@ The competence test file itself (`fitl-competence.test.ts`) is the integration t
 ## 11. Out of Scope
 
 - Pool sizing tuning (62MCTSSEAVIS-019) — this spec defines the goal, that spec provides the means.
-- Evaluation function changes — competence tests validate the *result* of evaluation, not the evaluation function itself.
+- Evaluation function changes — competence tests validate the *result* of evaluation, not the evaluation function itself. However, Section 6.3 documents the escalation path when competence tests reveal heuristic blindness.
 - Texas Hold'em competence — a separate spec if needed. The framework is game-agnostic; only the evaluators are FITL-specific.
 - Runner AI overlay integration.
 - Non-player AI flowchart implementation (Spec 30) — the competence tests validate MCTS search, not the non-player AI bot.

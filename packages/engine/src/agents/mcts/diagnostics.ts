@@ -121,6 +121,12 @@ export interface MutableDiagnosticsAccumulator {
   /** Per-depth option counts: depth → list of option counts observed. */
   decisionDiscoverOptionsByDepth: Map<number, number[]>;
 
+  // Classification subphase timing (ms) — populated when diagnostics enabled
+  classificationBindingTimeMs: number;
+  classificationTargetEnumTimeMs: number;
+  classificationPredicateTimeMs: number;
+  classificationPipelineTimeMs: number;
+
   // Aggregation arrays (for computing averages)
   leafRewardSpans: number[];
   selectionDepths: number[];
@@ -208,6 +214,11 @@ export function createAccumulator(): MutableDiagnosticsAccumulator {
     decisionDiscoverTimeMs: 0,
     decisionDiscoverCacheHits: 0,
     decisionDiscoverOptionsByDepth: new Map(),
+
+    classificationBindingTimeMs: 0,
+    classificationTargetEnumTimeMs: 0,
+    classificationPredicateTimeMs: 0,
+    classificationPipelineTimeMs: 0,
 
     leafRewardSpans: [],
     selectionDepths: [],
@@ -370,6 +381,12 @@ export interface MctsSearchDiagnostics {
   readonly decisionDiscoverTimeMs?: number;
   readonly decisionDiscoverCacheHits?: number;
   readonly decisionDiscoverOptionsByDepth?: Readonly<Record<number, { readonly avg: number; readonly max: number; readonly count: number }>>;
+
+  // Classification subphase timing (ms)
+  readonly classificationBindingTimeMs?: number;
+  readonly classificationTargetEnumTimeMs?: number;
+  readonly classificationPredicateTimeMs?: number;
+  readonly classificationPipelineTimeMs?: number;
 
   // Derived averages
   readonly avgSelectionDepth?: number;
@@ -640,6 +657,12 @@ export function collectDiagnostics(
     ...(accumulator.decisionDiscoverOptionsByDepth.size > 0
       ? { decisionDiscoverOptionsByDepth: computeDiscoverOptionsByDepth(accumulator.decisionDiscoverOptionsByDepth) }
       : {}),
+
+    // Classification subphase timing
+    classificationBindingTimeMs: accumulator.classificationBindingTimeMs,
+    classificationTargetEnumTimeMs: accumulator.classificationTargetEnumTimeMs,
+    classificationPredicateTimeMs: accumulator.classificationPredicateTimeMs,
+    classificationPipelineTimeMs: accumulator.classificationPipelineTimeMs,
 
     // Raw heuristic score spread
     ...(accumulator.heuristicEvalSamples > 0

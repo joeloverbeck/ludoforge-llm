@@ -1,6 +1,6 @@
 # 64MCTSPEROPT-012: Classification and Discovery Subphase Diagnostics
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — kernel instrumentation hooks, diagnostics
@@ -93,3 +93,15 @@ Expose subphase timings in the final diagnostics result.
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-18
+- **What changed**:
+  - `packages/engine/src/kernel/legal-choices.ts`: Added `ClassificationSubphaseTiming` interface, `createClassificationSubphaseTiming()` factory, and `classificationSubphaseTiming` option on `LegalChoicesRuntimeOptions`. Instrumented 4 subphases (binding construction, predicate evaluation, target enumeration, pipeline validation) inside `legalChoicesEvaluate()` and `legalChoicesWithPreparedContextInternal()`.
+  - `packages/engine/src/agents/mcts/diagnostics.ts`: Added 4 subphase fields (`classificationBindingTimeMs`, `classificationTargetEnumTimeMs`, `classificationPredicateTimeMs`, `classificationPipelineTimeMs`) to `MutableDiagnosticsAccumulator`, `createAccumulator()`, `MctsSearchDiagnostics`, and `collectDiagnostics()`.
+  - `packages/engine/src/agents/mcts/materialization.ts`: Added `buildSubphaseOptions()`/`flushSubphaseTiming()` helpers. Wired subphase timing into `classifyMovesForSearch`, `classifySingleMove`, `materializeMovesForRollout`.
+  - `packages/engine/test/unit/agents/mcts/classification-subphase-diagnostics.test.ts` (new): 4 tests verifying subphase fields populated, zero overhead when disabled, sum within tolerance of materializeTimeMs.
+  - `packages/engine/test/unit/kernel/legal-choices-diagnostics.test.ts` (new): 5 tests verifying kernel-level timing hooks, accumulation, return-value invariance, zero-overhead path.
+- **Deviations from original plan**: `state-cache.ts` did not need modification — it already passes `acc` to materialization functions which now internally create and flush subphase timing. No other deviations.
+- **Verification results**: `pnpm turbo typecheck` passes, `pnpm turbo lint` passes, `pnpm -F @ludoforge/engine test` — 5149 tests pass, 0 failures.

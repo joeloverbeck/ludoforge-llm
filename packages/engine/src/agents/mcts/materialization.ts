@@ -10,13 +10,42 @@
 
 import type { GameDef, GameState, Move, Rng } from '../../kernel/types.js';
 import type { GameDefRuntime } from '../../kernel/gamedef-runtime.js';
-import { legalChoicesEvaluate } from '../../kernel/legal-choices.js';
+import { legalChoicesEvaluate, createClassificationSubphaseTiming } from '../../kernel/legal-choices.js';
+import type { LegalChoicesRuntimeOptions } from '../../kernel/legal-choices.js';
 import { completeTemplateMove } from '../../kernel/move-completion.js';
 import { canonicalMoveKey } from './move-key.js';
 import type { ConcreteMoveCandidate } from './expansion.js';
 import type { MctsSearchVisitor } from './visitor.js';
 import type { MctsNode } from './node.js';
 import type { MutableDiagnosticsAccumulator } from './diagnostics.js';
+
+/**
+ * Build `LegalChoicesRuntimeOptions` that feed subphase timing into the
+ * MCTS diagnostics accumulator.  Returns `undefined` when `acc` is not
+ * provided (zero-cost path).
+ */
+function buildSubphaseOptions(
+  acc: MutableDiagnosticsAccumulator | undefined,
+): LegalChoicesRuntimeOptions | undefined {
+  if (acc === undefined) return undefined;
+  const cst = createClassificationSubphaseTiming();
+  return { classificationSubphaseTiming: cst };
+}
+
+/**
+ * Flush a subphase timing object into the MCTS accumulator.
+ */
+function flushSubphaseTiming(
+  acc: MutableDiagnosticsAccumulator,
+  opts: LegalChoicesRuntimeOptions | undefined,
+): void {
+  const cst = opts?.classificationSubphaseTiming;
+  if (cst === undefined) return;
+  acc.classificationBindingTimeMs += cst.bindingTimeMs;
+  acc.classificationTargetEnumTimeMs += cst.targetEnumTimeMs;
+  acc.classificationPredicateTimeMs += cst.predicateTimeMs;
+  acc.classificationPipelineTimeMs += cst.pipelineTimeMs;
+}
 
 // ---------------------------------------------------------------------------
 // MoveClassification
@@ -66,6 +95,7 @@ export function classifyMovesForSearch(
   const pending: Move[] = [];
   const seenReadyKeys = new Set<string>();
   const seenPendingKeys = new Set<string>();
+  const subOpts = buildSubphaseOptions(acc);
 
   for (let i = 0; i < moves.length; i += 1) {
     const move = moves[i]!;
@@ -73,7 +103,7 @@ export function classifyMovesForSearch(
     let kind: string;
     try {
       const tStart = acc !== undefined ? performance.now() : 0;
-      kind = legalChoicesEvaluate(def, state, move, undefined, runtime).kind;
+      kind = legalChoicesEvaluate(def, state, move, subOpts, runtime).kind;
       if (acc !== undefined) {
         acc.materializeTimeMs += performance.now() - tStart;
       }
@@ -126,6 +156,9 @@ export function classifyMovesForSearch(
     }
   }
 
+  if (acc !== undefined) {
+    flushSubphaseTiming(acc, subOpts);
+  }
   return { ready, pending };
 }
 
@@ -166,14 +199,19 @@ export function classifySingleMove(
   visitor?: MctsSearchVisitor,
   acc?: MutableDiagnosticsAccumulator,
 ): SingleMoveClassificationKind {
+  const subOpts = buildSubphaseOptions(acc);
   try {
     const tStart = acc !== undefined ? performance.now() : 0;
-    const kind = legalChoicesEvaluate(def, state, move, undefined, runtime).kind;
+    const kind = legalChoicesEvaluate(def, state, move, subOpts, runtime).kind;
     if (acc !== undefined) {
       acc.materializeTimeMs += performance.now() - tStart;
+      flushSubphaseTiming(acc, subOpts);
     }
     return kind as SingleMoveClassificationKind;
   } catch {
+    if (acc !== undefined) {
+      flushSubphaseTiming(acc, subOpts);
+    }
     if (visitor?.onEvent) {
       visitor.onEvent({
         type: 'moveDropped',
@@ -216,6 +254,7 @@ export function materializeMovesForRollout(
   const candidates: ConcreteMoveCandidate[] = [];
   const seenKeys = new Set<string>();
   let cursor: Rng = rng;
+  const subOpts = buildSubphaseOptions(acc);
 
   for (let i = 0; i < moves.length; i += 1) {
     const move = moves[i]!;
@@ -224,7 +263,7 @@ export function materializeMovesForRollout(
     let kind: string;
     try {
       const tStart = acc !== undefined ? performance.now() : 0;
-      kind = legalChoicesEvaluate(def, state, move, undefined, runtime).kind;
+      kind = legalChoicesEvaluate(def, state, move, subOpts, runtime).kind;
       if (acc !== undefined) {
         acc.materializeTimeMs += performance.now() - tStart;
       }
@@ -307,6 +346,9 @@ export function materializeMovesForRollout(
     }
   }
 
+  if (acc !== undefined) {
+    flushSubphaseTiming(acc, subOpts);
+  }
   return { candidates, rng: cursor };
 }
 

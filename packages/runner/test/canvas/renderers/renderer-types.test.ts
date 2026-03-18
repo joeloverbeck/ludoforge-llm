@@ -12,9 +12,9 @@ import type {
 import type { Position } from '../../../src/canvas/geometry';
 import type {
   RenderAdjacency,
-  RenderToken,
   RenderZone,
 } from '../../../src/model/render-model';
+import type { PresentationTokenNode } from '../../../src/presentation/token-presentation';
 
 describe('renderer-types', () => {
   it('defines Position as a readonly numeric pair', () => {
@@ -44,8 +44,7 @@ describe('renderer-types', () => {
 
     const renderer: TokenRenderer = {
       update: (
-        _tokens: readonly RenderToken[],
-        _zones: readonly RenderZone[],
+        _tokens: readonly PresentationTokenNode[],
         _zoneContainers: ReadonlyMap<string, Container>,
       ) => {},
       getContainerMap: () => containerMap,

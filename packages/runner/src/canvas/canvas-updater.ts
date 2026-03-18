@@ -6,7 +6,14 @@ import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { adjacenciesVisuallyEqual, tokensVisuallyEqual, zonesVisuallyEqual } from './canvas-equality';
 import { EMPTY_INTERACTION_HIGHLIGHTS, type InteractionHighlights } from './interaction-highlights.js';
 import type { PositionStore } from './position-store';
-import type { AdjacencyRenderer, RegionBoundaryRenderer, TableOverlayRenderer, TokenRenderer, ZoneRenderer } from './renderers/renderer-types';
+import type {
+  AdjacencyRenderer,
+  RegionBoundaryRenderer,
+  TableOverlayRenderer,
+  TokenRenderer,
+  TokenRenderStyleProvider,
+  ZoneRenderer,
+} from './renderers/renderer-types';
 import type { ViewportResult } from './viewport-setup';
 import { buildPresentationScene } from '../presentation/presentation-scene.js';
 
@@ -34,6 +41,7 @@ export interface CanvasUpdaterDeps {
   readonly store: StoreApi<GameStore>;
   readonly positionStore: PositionStore;
   readonly visualConfigProvider: VisualConfigProvider;
+  readonly tokenRenderStyleProvider: TokenRenderStyleProvider;
   readonly zoneRenderer: ZoneRenderer;
   readonly adjacencyRenderer: AdjacencyRenderer;
   readonly tokenRenderer: TokenRenderer;
@@ -70,12 +78,13 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
       renderModel: latestRenderModel,
       positions: latestPositionSnapshot.positions,
       visualConfigProvider: deps.visualConfigProvider,
+      tokenRenderStyleProvider: deps.tokenRenderStyleProvider,
       interactionHighlights: latestInteractionHighlights,
     });
     deps.regionBoundaryRenderer?.update(scene.regions);
     deps.zoneRenderer.update(scene.zones, latestPositionSnapshot.positions, scene.highlightedZoneIDs);
     deps.adjacencyRenderer.update(scene.adjacencies, latestPositionSnapshot.positions);
-    deps.tokenRenderer.update(scene.tokens, scene.zones, deps.zoneRenderer.getContainerMap(), scene.highlightedTokenIDs);
+    deps.tokenRenderer.update(scene.tokens, deps.zoneRenderer.getContainerMap(), scene.highlightedTokenIDs);
     deps.tableOverlayRenderer?.update(scene.overlays);
   };
 
@@ -113,6 +122,7 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
             renderModel,
             positions: latestPositionSnapshot.positions,
             visualConfigProvider: deps.visualConfigProvider,
+            tokenRenderStyleProvider: deps.tokenRenderStyleProvider,
             interactionHighlights: latestInteractionHighlights,
           });
           deps.tableOverlayRenderer?.update(scene.overlays);

@@ -2,6 +2,7 @@ import { asPlayerId, type AttributeValue } from '@ludoforge/engine/runtime';
 import { describe, expect, it } from 'vitest';
 
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
+import { VisualConfigTokenRenderStyleProvider } from '../../src/canvas/renderers/token-render-style-provider.js';
 import { buildPresentationScene } from '../../src/presentation/presentation-scene.js';
 import type { RenderModel, RenderVariable, RenderZone } from '../../src/model/render-model.js';
 
@@ -107,6 +108,7 @@ describe('buildPresentationScene', () => {
       }),
       positions,
       visualConfigProvider: provider,
+      tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(provider),
       interactionHighlights: { zoneIDs: [], tokenIDs: [] },
     });
 
@@ -155,6 +157,7 @@ describe('buildPresentationScene', () => {
       }),
       positions,
       visualConfigProvider: provider,
+      tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(provider),
       interactionHighlights: { zoneIDs: [], tokenIDs: [] },
     });
 
@@ -174,10 +177,69 @@ describe('buildPresentationScene', () => {
       renderModel: makeRenderModel(),
       positions,
       visualConfigProvider: provider,
+      tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(provider),
       interactionHighlights: { zoneIDs: ['shared:center'], tokenIDs: ['token:1'] },
     });
 
     expect(scene.highlightedZoneIDs.has('shared:center')).toBe(true);
     expect(scene.highlightedTokenIDs.has('token:1')).toBe(true);
+  });
+
+  it('resolves token grouping and offsets before renderer mutation', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        tokenLayouts: {
+          presets: {
+            provinceLanes: {
+              mode: 'lanes',
+              laneGap: 20,
+              laneOrder: ['front', 'back'],
+              lanes: {
+                front: { anchor: 'center', pack: 'centeredRow', spacingX: 10, spacingY: 0 },
+                back: { anchor: 'belowPreviousLane', pack: 'centeredRow', spacingX: 10, spacingY: 0 },
+              },
+            },
+          },
+          assignments: {
+            byCategory: {
+              province: 'provinceLanes',
+            },
+          },
+        },
+      },
+      tokenTypes: {
+        troop: { presentation: { lane: 'front', scale: 1 } },
+        support: { presentation: { lane: 'back', scale: 1 } },
+      },
+    });
+
+    const scene = buildPresentationScene({
+      renderModel: makeRenderModel({
+        zones: [makeZone('zone:a')],
+        tokens: [
+          { id: 'token:1', type: 'troop', zoneID: 'zone:a', ownerID: asPlayerId(0), factionId: null, faceUp: true, properties: {}, isSelectable: false, isSelected: false },
+          { id: 'token:2', type: 'troop', zoneID: 'zone:a', ownerID: asPlayerId(0), factionId: null, faceUp: true, properties: {}, isSelectable: false, isSelected: false },
+          { id: 'token:3', type: 'support', zoneID: 'zone:a', ownerID: asPlayerId(0), factionId: null, faceUp: true, properties: {}, isSelectable: false, isSelected: false },
+        ],
+      }),
+      positions,
+      visualConfigProvider: provider,
+      tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(provider),
+      interactionHighlights: { zoneIDs: [], tokenIDs: [] },
+    });
+
+    expect(scene.tokens).toHaveLength(2);
+    expect(scene.tokens[0]).toMatchObject({
+      stackCount: 2,
+      zoneId: 'zone:a',
+      offset: { x: 0, y: 0 },
+    });
+    expect(scene.tokens[1]).toMatchObject({
+      stackCount: 1,
+      zoneId: 'zone:a',
+      offset: { x: 0, y: 48 },
+    });
+    expect(scene.tokens[0]?.signature).not.toBe(scene.tokens[1]?.signature);
   });
 });

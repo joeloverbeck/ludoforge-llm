@@ -218,6 +218,7 @@ import { createTokenRenderer } from '../../../src/canvas/renderers/token-rendere
 import { createDisposalQueue } from '../../../src/canvas/renderers/disposal-queue';
 import type { TokenShape } from '../../../src/config/visual-config-defaults';
 import type { RenderToken, RenderZone } from '../../../src/model/render-model';
+import { resolvePresentationTokenNodes } from '../../../src/presentation/token-presentation';
 
 function makeToken(overrides: Partial<RenderToken> = {}): RenderToken {
   return {
@@ -415,13 +416,21 @@ function createRenderer(
     tokens: readonly RenderToken[],
     zoneContainers: ReadonlyMap<string, Container>,
     highlightedTokenIDs?: ReadonlySet<string>,
-  ) => renderer.update(tokens, synthesizeZones(tokens, zoneContainers), zoneContainers, highlightedTokenIDs);
+  ) => renderer.update(
+    resolvePresentationTokenNodes(synthesizeTokens(tokens), synthesizeZones(tokens, zoneContainers), colorProvider),
+    zoneContainers,
+    highlightedTokenIDs,
+  );
   const updateWithZones = (
     tokens: readonly RenderToken[],
     zones: readonly RenderZone[],
     zoneContainers: ReadonlyMap<string, Container>,
     highlightedTokenIDs?: ReadonlySet<string>,
-  ) => renderer.update(tokens, zones, zoneContainers, highlightedTokenIDs);
+  ) => renderer.update(
+    resolvePresentationTokenNodes(synthesizeTokens(tokens), zones, colorProvider),
+    zoneContainers,
+    highlightedTokenIDs,
+  );
 
   return {
     ...renderer,
@@ -442,6 +451,10 @@ function synthesizeZones(
     zoneIds.add(zoneId);
   }
   return Array.from(zoneIds, (zoneId) => makeZone({ id: zoneId }));
+}
+
+function synthesizeTokens(tokens: readonly RenderToken[]): readonly RenderToken[] {
+  return tokens;
 }
 
 describe('createTokenRenderer', () => {

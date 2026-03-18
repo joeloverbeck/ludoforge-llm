@@ -5,6 +5,11 @@ import type { RegionStyle, TableOverlayItemConfig } from '../config/visual-confi
 import type { Position } from '../canvas/geometry.js';
 import type { InteractionHighlights } from '../canvas/interaction-highlights.js';
 import type { RenderAdjacency, RenderModel, RenderVariable, RenderZone } from '../model/render-model.js';
+import {
+  resolvePresentationTokenNodes,
+  type PresentationTokenNode,
+} from './token-presentation.js';
+import type { TokenRenderStyleProvider } from '../canvas/renderers/renderer-types.js';
 
 export interface PresentationOverlayPoint {
   readonly x: number;
@@ -38,7 +43,7 @@ export interface PresentationRegionNode {
 
 export interface PresentationScene {
   readonly zones: readonly RenderZone[];
-  readonly tokens: NonNullable<RenderModel['tokens']>;
+  readonly tokens: readonly PresentationTokenNode[];
   readonly adjacencies: readonly RenderAdjacency[];
   readonly highlightedZoneIDs: ReadonlySet<string>;
   readonly highlightedTokenIDs: ReadonlySet<string>;
@@ -50,6 +55,7 @@ interface BuildPresentationSceneOptions {
   readonly renderModel: RenderModel | null;
   readonly positions: ReadonlyMap<string, Position>;
   readonly visualConfigProvider: VisualConfigProvider;
+  readonly tokenRenderStyleProvider: TokenRenderStyleProvider;
   readonly interactionHighlights: InteractionHighlights;
 }
 
@@ -81,7 +87,11 @@ export function buildPresentationScene(options: BuildPresentationSceneOptions): 
 
   return {
     zones: renderModel.zones,
-    tokens: renderModel.tokens,
+    tokens: resolvePresentationTokenNodes(
+      renderModel.tokens,
+      renderModel.zones,
+      options.tokenRenderStyleProvider,
+    ),
     adjacencies: renderModel.adjacencies,
     highlightedZoneIDs,
     highlightedTokenIDs,

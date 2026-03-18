@@ -38,6 +38,10 @@ import { setupViewport, type ViewportResult } from './viewport-setup';
 import { getOrComputeLayout, type FullLayoutResult } from '../layout/layout-cache.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { EMPTY_INTERACTION_HIGHLIGHTS, type InteractionHighlights } from './interaction-highlights.js';
+import {
+  createActionAnnouncementPresenter,
+  type ActionAnnouncementPresenter,
+} from '../presentation/action-announcement-presentation.js';
 
 const DEFAULT_BACKGROUND_COLOR = 0x0b1020;
 const DEFAULT_WORLD_SIZE = 1;
@@ -105,6 +109,7 @@ interface GameCanvasRuntimeDeps {
   readonly createTokenRenderer: typeof createTokenRenderer;
   readonly createTableOverlayRenderer: typeof createTableOverlayRenderer;
   readonly createActionAnnouncementRenderer: typeof createActionAnnouncementRenderer;
+  readonly createActionAnnouncementPresenter: typeof createActionAnnouncementPresenter;
   readonly createCanvasUpdater: typeof createCanvasUpdater;
   readonly createCoordinateBridge: typeof createCoordinateBridge;
   readonly createAnimationController: typeof createAnimationController;
@@ -125,6 +130,7 @@ const DEFAULT_RUNTIME_DEPS: GameCanvasRuntimeDeps = {
   createTokenRenderer,
   createTableOverlayRenderer,
   createActionAnnouncementRenderer,
+  createActionAnnouncementPresenter,
   createCanvasUpdater,
   createCoordinateBridge,
   createAnimationController,
@@ -295,15 +301,21 @@ export async function createGameCanvasRuntime(
     options.visualConfigProvider,
   );
   const actionAnnouncementRenderer = deps.createActionAnnouncementRenderer({
+    parentContainer: gameCanvas.layers.effectsGroup,
+  });
+  const actionAnnouncementPresenter = deps.createActionAnnouncementPresenter({
     store: options.store,
     positionStore,
-    parentContainer: gameCanvas.layers.effectsGroup,
+    onAnnouncement: (spec) => {
+      actionAnnouncementRenderer.enqueue(spec);
+    },
   });
 
   const canvasUpdater = deps.createCanvasUpdater({
     store: options.store,
     positionStore,
     visualConfigProvider: options.visualConfigProvider,
+    tokenRenderStyleProvider,
     zoneRenderer,
     adjacencyRenderer,
     tokenRenderer,
@@ -316,7 +328,8 @@ export async function createGameCanvasRuntime(
 
   let animationController: AnimationController | null = null;
   let aiPlaybackController: AiPlaybackController | null = null;
-  let actionAnnouncements: ActionAnnouncementRenderer | null = null;
+  let actionAnnouncementDisplay: ActionAnnouncementRenderer | null = null;
+  let actionAnnouncementSource: ActionAnnouncementPresenter | null = null;
   let reducedMotionObserver: ReducedMotionObserver | null = null;
   try {
     animationController = deps.createAnimationController({
@@ -353,10 +366,11 @@ export async function createGameCanvasRuntime(
   options.onAnimationDiagnosticBufferChange?.(animationController?.getDiagnosticBuffer() ?? null);
 
   try {
-    actionAnnouncementRenderer.start();
-    actionAnnouncements = actionAnnouncementRenderer;
+    actionAnnouncementDisplay = actionAnnouncementRenderer;
+    actionAnnouncementSource = actionAnnouncementPresenter;
+    actionAnnouncementPresenter.start();
   } catch (error) {
-    console.warn('Action announcement renderer initialization failed. Continuing without AI action announcements.', error);
+    console.warn('Action announcement presentation initialization failed. Continuing without AI action announcements.', error);
   }
 
   try {
@@ -522,7 +536,8 @@ export async function createGameCanvasRuntime(
       reducedMotionObserver?.destroy();
       unsubscribePhaseAnnouncement();
       cleanupKeyboardSelect();
-      actionAnnouncements?.destroy();
+      actionAnnouncementSource?.destroy();
+      actionAnnouncementDisplay?.destroy();
       aiPlaybackController?.destroy();
       animationController?.destroy();
       ariaAnnouncer.destroy();

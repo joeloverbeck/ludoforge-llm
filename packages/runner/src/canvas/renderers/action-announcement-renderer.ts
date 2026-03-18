@@ -1,32 +1,13 @@
 import { gsap } from 'gsap';
-import type { Move } from '@ludoforge/engine/runtime';
 import { Text, type Container } from 'pixi.js';
-import type { StoreApi } from 'zustand';
 
-import type { AppliedMoveEvent, GameStore } from '../../store/game-store.js';
-import type { PositionStore } from '../position-store.js';
-import { formatIdAsDisplayName } from '../../utils/format-display-name.js';
+import type { PresentationActionAnnouncementSpec } from '../../presentation/action-announcement-presentation.js';
 import { safeDestroyDisplayObject } from './safe-destroy.js';
 
 const FADE_IN_SECONDS = 0.3;
 const HOLD_SECONDS = 1.5;
 const FADE_OUT_SECONDS = 0.7;
-const PLAYER_ANNOUNCEMENT_Y_OFFSET = 72;
 const ANNOUNCEMENT_RISE = 18;
-
-interface SelectorSubscribeStore<TState> extends StoreApi<TState> {
-  subscribe: {
-    (listener: (state: TState, previousState: TState) => void): () => void;
-    <TSelected>(
-      selector: (state: TState) => TSelected,
-      listener: (selectedState: TSelected, previousSelectedState: TSelected) => void,
-      options?: {
-        readonly equalityFn?: (a: TSelected, b: TSelected) => boolean;
-        readonly fireImmediately?: boolean;
-      },
-    ): () => void;
-  };
-}
 
 interface ActiveAnnouncement {
   readonly textNode: Text;
@@ -35,96 +16,23 @@ interface ActiveAnnouncement {
 
 interface PlayerAnnouncementState {
   active: ActiveAnnouncement | null;
-  readonly queue: AnnouncementPayload[];
+  readonly queue: PresentationActionAnnouncementSpec[];
 }
 
 export interface ActionAnnouncementRenderer {
-  start(): void;
+  enqueue(spec: PresentationActionAnnouncementSpec): void;
   destroy(): void;
 }
 
 export interface ActionAnnouncementRendererOptions {
-  readonly store: StoreApi<GameStore>;
-  readonly positionStore: PositionStore;
   readonly parentContainer: Container;
-}
-
-interface AnnouncementPayload {
-  readonly actorId: AppliedMoveEvent['actorId'];
-  readonly text: string;
-}
-
-function isAiSeat(seat: AppliedMoveEvent['actorSeat']): boolean {
-  return seat !== 'human' && seat !== 'unknown';
-}
-
-function formatMoveSummary(move: Move): string {
-  const params = Object.values(move.params);
-  if (params.length === 0) {
-    return '';
-  }
-  const formatted = params
-    .map((value) => formatMoveParamValue(value))
-    .filter((value) => value.length > 0);
-  if (formatted.length === 0) {
-    return '';
-  }
-  return ` (${formatted.join(', ')})`;
-}
-
-function formatMoveParamValue(value: Move['params'][string]): string {
-  if (Array.isArray(value)) {
-    const entries = value.map((entry) => String(entry));
-    return entries.length === 0 ? '' : `[${entries.join(', ')}]`;
-  }
-  return String(value);
-}
-
-function formatAnnouncementText(state: GameStore, move: Move): string {
-  const actionId = String(move.actionId);
-  const actionDisplayName = state.renderModel?.actionGroups
-    .flatMap((group) => group.actions)
-    .find((action) => action.actionId === actionId)
-    ?.displayName
-    ?? formatIdAsDisplayName(actionId);
-  return `${actionDisplayName}${formatMoveSummary(move)}`;
-}
-
-function resolveAnnouncementAnchor(
-  state: GameStore,
-  positionStore: PositionStore,
-  actorId: AppliedMoveEvent['actorId'],
-): { x: number; y: number } | null {
-  const renderModel = state.renderModel;
-  if (renderModel === null) {
-    return null;
-  }
-
-  const positions = positionStore.getSnapshot().positions;
-  const ownerZones = renderModel.zones
-    .filter((zone) => zone.ownerID === actorId)
-    .sort((left, right) => left.id.localeCompare(right.id));
-  for (const zone of ownerZones) {
-    const position = positions.get(zone.id);
-    if (position === undefined) {
-      continue;
-    }
-    return {
-      x: position.x,
-      y: position.y + PLAYER_ANNOUNCEMENT_Y_OFFSET,
-    };
-  }
-  return null;
 }
 
 export function createActionAnnouncementRenderer(
   options: ActionAnnouncementRendererOptions,
 ): ActionAnnouncementRenderer {
-  const selectorStore = options.store as SelectorSubscribeStore<GameStore>;
   const announcementByPlayer = new Map<string, PlayerAnnouncementState>();
-  let started = false;
   let destroyed = false;
-  let unsubscribe: (() => void) | null = null;
 
   const clearActiveAnnouncement = (playerKey: string): void => {
     const playerState = announcementByPlayer.get(playerKey);
@@ -146,20 +54,13 @@ export function createActionAnnouncementRenderer(
     if (playerState === undefined || playerState.active !== null) {
       return;
     }
-    const nextPayload = playerState.queue.shift();
-    if (nextPayload === undefined) {
-      return;
-    }
-
-    const state = selectorStore.getState();
-    const anchor = resolveAnnouncementAnchor(state, options.positionStore, nextPayload.actorId);
-    if (anchor === null) {
-      maybeRenderNext(playerKey);
+    const nextSpec = playerState.queue.shift();
+    if (nextSpec === undefined) {
       return;
     }
 
     const textNode = new Text({
-      text: nextPayload.text,
+      text: nextSpec.text,
       style: {
         fill: '#ffffff',
         fontSize: 22,
@@ -178,11 +79,11 @@ export function createActionAnnouncementRenderer(
       },
     });
     textNode.anchor.set(0.5, 0.5);
-    textNode.position.set(anchor.x, anchor.y);
+    textNode.position.set(nextSpec.anchor.x, nextSpec.anchor.y);
     textNode.alpha = 0;
     options.parentContainer.addChild(textNode);
 
-    const fadeOutTargetY = anchor.y - ANNOUNCEMENT_RISE;
+    const fadeOutTargetY = nextSpec.anchor.y - ANNOUNCEMENT_RISE;
     const timeline = gsap.timeline({
       onComplete: () => {
         const currentPlayerState = announcementByPlayer.get(playerKey);
@@ -215,34 +116,19 @@ export function createActionAnnouncementRenderer(
     };
   };
 
-  const queueAnnouncement = (playerId: string, payload: AnnouncementPayload): void => {
-    const playerState = announcementByPlayer.get(playerId) ?? { active: null, queue: [] };
-    playerState.queue.push(payload);
-    announcementByPlayer.set(playerId, playerState);
-    maybeRenderNext(playerId);
+  const queueAnnouncement = (spec: PresentationActionAnnouncementSpec): void => {
+    const playerState = announcementByPlayer.get(spec.queueKey) ?? { active: null, queue: [] };
+    playerState.queue.push(spec);
+    announcementByPlayer.set(spec.queueKey, playerState);
+    maybeRenderNext(spec.queueKey);
   };
 
   return {
-    start(): void {
-      if (started || destroyed) {
+    enqueue(spec: PresentationActionAnnouncementSpec): void {
+      if (destroyed) {
         return;
       }
-      started = true;
-      unsubscribe = selectorStore.subscribe(
-        (state) => state.appliedMoveEvent,
-        (event, previousEvent) => {
-          if (event === null || event === previousEvent || previousEvent?.sequence === event.sequence) {
-            return;
-          }
-          if (!isAiSeat(event.actorSeat)) {
-            return;
-          }
-          queueAnnouncement(String(event.actorId), {
-            actorId: event.actorId,
-            text: formatAnnouncementText(selectorStore.getState(), event.move),
-          });
-        },
-      );
+      queueAnnouncement(spec);
     },
 
     destroy(): void {
@@ -250,9 +136,6 @@ export function createActionAnnouncementRenderer(
         return;
       }
       destroyed = true;
-      started = false;
-      unsubscribe?.();
-      unsubscribe = null;
 
       for (const [playerKey] of announcementByPlayer.entries()) {
         clearActiveAnnouncement(playerKey);

@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createCanvasUpdater } from '../../src/canvas/canvas-updater';
 import { createPositionStore } from '../../src/canvas/position-store';
+import { VisualConfigTokenRenderStyleProvider } from '../../src/canvas/renderers/token-render-style-provider';
 import type { AdjacencyRenderer, TableOverlayRenderer, TokenRenderer, ZoneRenderer } from '../../src/canvas/renderers/renderer-types';
 import type { ViewportResult } from '../../src/canvas/viewport-setup';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
@@ -150,6 +151,7 @@ function createViewportMock(): ViewportResult {
 }
 
 const TEST_VISUAL_CONFIG_PROVIDER = new VisualConfigProvider(null);
+const TEST_TOKEN_RENDER_STYLE_PROVIDER = new VisualConfigTokenRenderStyleProvider(TEST_VISUAL_CONFIG_PROVIDER);
 
 describe('createCanvasUpdater', () => {
   it('start subscribes to store and position store', () => {
@@ -168,6 +170,7 @@ describe('createCanvasUpdater', () => {
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
       visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -193,6 +196,7 @@ describe('createCanvasUpdater', () => {
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
       visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -204,12 +208,18 @@ describe('createCanvasUpdater', () => {
     expect(viewport.updateWorldBounds).toHaveBeenCalledWith(snapshot.bounds);
     expect(renderers.zoneRenderer.update).toHaveBeenCalledWith(model.zones, snapshot.positions, new Set());
     expect(renderers.adjacencyRenderer.update).toHaveBeenCalledWith(model.adjacencies, snapshot.positions);
-    expect(renderers.tokenRenderer.update).toHaveBeenCalledWith(
-      model.tokens,
-      model.zones,
-      renderers.zoneRenderer.getContainerMap(),
-      new Set(),
-    );
+    const tokenCall = vi.mocked(renderers.tokenRenderer.update).mock.calls[0];
+    expect(tokenCall?.[0]).toMatchObject([
+      {
+        renderId: 'token:1',
+        zoneId: 'zone:a',
+        tokenIds: ['token:1'],
+        stackCount: 1,
+        offset: { x: -90, y: -18 },
+      },
+    ]);
+    expect(tokenCall?.[1]).toBe(renderers.zoneRenderer.getContainerMap());
+    expect(tokenCall?.[2]).toEqual(new Set());
   });
 
   it('updates table overlays when variable state changes even if zones/tokens/adjacencies are unchanged', () => {
@@ -226,6 +236,7 @@ describe('createCanvasUpdater', () => {
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
       visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -261,6 +272,7 @@ describe('createCanvasUpdater', () => {
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
       visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -301,6 +313,7 @@ describe('createCanvasUpdater', () => {
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
       visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -342,6 +355,7 @@ describe('createCanvasUpdater', () => {
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
       visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -365,6 +379,7 @@ describe('createCanvasUpdater', () => {
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
       visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -402,6 +417,7 @@ describe('createCanvasUpdater', () => {
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
       visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -435,6 +451,7 @@ describe('createCanvasUpdater', () => {
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
       visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -479,6 +496,7 @@ describe('createCanvasUpdater', () => {
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
       visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -515,6 +533,7 @@ describe('createCanvasUpdater', () => {
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
       visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -537,8 +556,14 @@ describe('createCanvasUpdater', () => {
       new Set(['zone:a']),
     );
     expect(renderers.tokenRenderer.update).toHaveBeenCalledWith(
-      model.tokens,
-      model.zones,
+      expect.arrayContaining([
+        expect.objectContaining({
+          renderId: 'token:1',
+          zoneId: 'zone:a',
+          tokenIds: ['token:1'],
+          stackCount: 1,
+        }),
+      ]),
       renderers.zoneRenderer.getContainerMap(),
       new Set(['token:1']),
     );

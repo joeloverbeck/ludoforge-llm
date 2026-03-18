@@ -16,6 +16,7 @@ import type {
   RenderZone,
 } from '../../model/render-model';
 import type { PresentationOverlayNode, PresentationRegionNode } from '../../presentation/presentation-scene.js';
+import type { PresentationTokenNode } from '../../presentation/token-presentation.js';
 
 export interface ZoneRenderer {
   update(
@@ -29,8 +30,7 @@ export interface ZoneRenderer {
 
 export interface TokenRenderer {
   update(
-    tokens: readonly RenderToken[],
-    zones: readonly RenderZone[],
+    tokens: readonly PresentationTokenNode[],
     zoneContainers: ReadonlyMap<string, Container>,
     highlightedTokenIDs?: ReadonlySet<string>,
   ): void;

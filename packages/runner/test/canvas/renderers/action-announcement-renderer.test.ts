@@ -1,10 +1,8 @@
-import { subscribeWithSelector } from 'zustand/middleware';
-import { createStore, type StoreApi } from 'zustand/vanilla';
-import { asActionId, asPlayerId, type Move } from '@ludoforge/engine/runtime';
+import { asPlayerId } from '@ludoforge/engine/runtime';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createActionAnnouncementRenderer } from '../../../src/canvas/renderers/action-announcement-renderer.js';
-import type { GameStore } from '../../../src/store/game-store.js';
+import type { PresentationActionAnnouncementSpec } from '../../../src/presentation/action-announcement-presentation.js';
 
 const {
   MockContainer,
@@ -77,33 +75,16 @@ const {
     }
   }
 
-  type OnComplete = (() => void) | undefined;
-  class MockTimeline {
-    readonly onComplete: OnComplete;
-
-    killed = false;
-
-    constructor(onComplete: OnComplete) {
-      this.onComplete = onComplete;
-    }
-
-    to(): this {
-      return this;
-    }
-
-    kill(): void {
-      this.killed = true;
-    }
-
-    complete(): void {
-      this.onComplete?.();
-    }
-  }
-
   return {
     MockContainer: MockContainerClass,
     MockText: MockTextClass,
-    timelineInstances: [] as MockTimeline[],
+    timelineInstances: [] as Array<{
+      killed: boolean;
+      onComplete: (() => void) | undefined;
+      to: () => unknown;
+      kill: () => void;
+      complete: () => void;
+    }>,
   };
 });
 
@@ -134,38 +115,16 @@ vi.mock('gsap', () => ({
   },
 }));
 
-interface RuntimeState {
-  readonly renderModel: GameStore['renderModel'];
-  readonly appliedMoveEvent: GameStore['appliedMoveEvent'];
-}
-
-function makeRenderModel(): NonNullable<GameStore['renderModel']> {
+function makeSpec(overrides: Partial<PresentationActionAnnouncementSpec> = {}): PresentationActionAnnouncementSpec {
   return {
-    zones: [
-      {
-        id: 'zone:player-1',
-        ownerID: asPlayerId(1),
-      },
-    ],
-    actionGroups: [
-      {
-        groupName: 'main',
-        actions: [
-          { actionId: 'tick', displayName: 'Tick', isAvailable: true },
-          { actionId: 'raise', displayName: 'Raise', isAvailable: true },
-        ],
-      },
-    ],
-  } as unknown as NonNullable<GameStore['renderModel']>;
-}
-
-function createRuntimeStore(initialRenderModel: GameStore['renderModel']): StoreApi<RuntimeState> {
-  return createStore<RuntimeState>()(
-    subscribeWithSelector((): RuntimeState => ({
-      renderModel: initialRenderModel,
-      appliedMoveEvent: null,
-    })),
-  );
+    queueKey: String(asPlayerId(1)),
+    actorId: asPlayerId(1),
+    text: 'Tick',
+    anchor: { x: 120, y: 152 },
+    sequence: 1,
+    signature: '1|1|Tick|120|152',
+    ...overrides,
+  };
 }
 
 describe('createActionAnnouncementRenderer', () => {
@@ -173,30 +132,13 @@ describe('createActionAnnouncementRenderer', () => {
     timelineInstances.length = 0;
   });
 
-  it('renders a floating label for AI applied-move events and removes it on completion', () => {
-    const store = createRuntimeStore(makeRenderModel());
+  it('renders an announcement spec and removes it on completion', () => {
     const parent = new MockContainer();
     const renderer = createActionAnnouncementRenderer({
-      store: store as unknown as StoreApi<GameStore>,
-      positionStore: {
-        getSnapshot: () => ({
-          zoneIDs: ['zone:player-1'],
-          positions: new Map([['zone:player-1', { x: 120, y: 80 }]]),
-          bounds: { minX: 0, minY: 0, maxX: 300, maxY: 200 },
-        }),
-      } as never,
       parentContainer: parent as never,
     });
-    renderer.start();
 
-    store.setState({
-      appliedMoveEvent: {
-        sequence: 1,
-        actorId: asPlayerId(1),
-        actorSeat: 'ai-random',
-        move: { actionId: asActionId('tick'), params: {} },
-      },
-    });
+    renderer.enqueue(makeSpec());
 
     expect(parent.children).toHaveLength(1);
     expect((parent.children[0] as unknown as { text: string }).text).toBe('Tick');
@@ -207,69 +149,14 @@ describe('createActionAnnouncementRenderer', () => {
     renderer.destroy();
   });
 
-  it('ignores human applied-move events', () => {
-    const store = createRuntimeStore(makeRenderModel());
+  it('queues rapid same-player announcement specs and displays them in order', () => {
     const parent = new MockContainer();
     const renderer = createActionAnnouncementRenderer({
-      store: store as unknown as StoreApi<GameStore>,
-      positionStore: {
-        getSnapshot: () => ({
-          zoneIDs: ['zone:player-1'],
-          positions: new Map([['zone:player-1', { x: 120, y: 80 }]]),
-          bounds: { minX: 0, minY: 0, maxX: 300, maxY: 200 },
-        }),
-      } as never,
       parentContainer: parent as never,
     });
-    renderer.start();
 
-    store.setState({
-      appliedMoveEvent: {
-        sequence: 1,
-        actorId: asPlayerId(1),
-        actorSeat: 'human',
-        move: { actionId: asActionId('tick'), params: {} },
-      },
-    });
-
-    expect(parent.children).toHaveLength(0);
-    renderer.destroy();
-  });
-
-  it('queues rapid same-player AI events and displays them in order', () => {
-    const store = createRuntimeStore(makeRenderModel());
-    const parent = new MockContainer();
-    const renderer = createActionAnnouncementRenderer({
-      store: store as unknown as StoreApi<GameStore>,
-      positionStore: {
-        getSnapshot: () => ({
-          zoneIDs: ['zone:player-1'],
-          positions: new Map([['zone:player-1', { x: 120, y: 80 }]]),
-          bounds: { minX: 0, minY: 0, maxX: 300, maxY: 200 },
-        }),
-      } as never,
-      parentContainer: parent as never,
-    });
-    renderer.start();
-
-    const firstMove: Move = { actionId: asActionId('tick'), params: {} };
-    const secondMove: Move = { actionId: asActionId('raise'), params: { amount: 200 } };
-    store.setState({
-      appliedMoveEvent: {
-        sequence: 1,
-        actorId: asPlayerId(1),
-        actorSeat: 'ai-random',
-        move: firstMove,
-      },
-    });
-    store.setState({
-      appliedMoveEvent: {
-        sequence: 2,
-        actorId: asPlayerId(1),
-        actorSeat: 'ai-random',
-        move: secondMove,
-      },
-    });
+    renderer.enqueue(makeSpec({ sequence: 1, text: 'Tick' }));
+    renderer.enqueue(makeSpec({ sequence: 2, text: 'Raise (200)', signature: '2|1|Raise (200)|120|152' }));
 
     expect(parent.children).toHaveLength(1);
     expect((parent.children[0] as unknown as { text: string }).text).toBe('Tick');
@@ -284,30 +171,36 @@ describe('createActionAnnouncementRenderer', () => {
     renderer.destroy();
   });
 
-  it('kills active timelines and clears display objects on destroy', () => {
-    const store = createRuntimeStore(makeRenderModel());
+  it('renders different players independently', () => {
     const parent = new MockContainer();
     const renderer = createActionAnnouncementRenderer({
-      store: store as unknown as StoreApi<GameStore>,
-      positionStore: {
-        getSnapshot: () => ({
-          zoneIDs: ['zone:player-1'],
-          positions: new Map([['zone:player-1', { x: 120, y: 80 }]]),
-          bounds: { minX: 0, minY: 0, maxX: 300, maxY: 200 },
-        }),
-      } as never,
       parentContainer: parent as never,
     });
-    renderer.start();
 
-    store.setState({
-      appliedMoveEvent: {
-        sequence: 1,
-        actorId: asPlayerId(1),
-        actorSeat: 'ai-greedy',
-        move: { actionId: asActionId('tick'), params: {} },
-      },
+    renderer.enqueue(makeSpec({ queueKey: '1', actorId: asPlayerId(1), text: 'Tick' }));
+    renderer.enqueue(makeSpec({
+      queueKey: '2',
+      actorId: asPlayerId(2),
+      text: 'Raise',
+      anchor: { x: 200, y: 120 },
+      sequence: 2,
+      signature: '2|2|Raise|200|120',
+    }));
+
+    expect(parent.children).toHaveLength(2);
+    expect((parent.children[0] as unknown as { text: string }).text).toBe('Tick');
+    expect((parent.children[1] as unknown as { text: string }).text).toBe('Raise');
+
+    renderer.destroy();
+  });
+
+  it('kills active timelines and clears display objects on destroy', () => {
+    const parent = new MockContainer();
+    const renderer = createActionAnnouncementRenderer({
+      parentContainer: parent as never,
     });
+
+    renderer.enqueue(makeSpec());
 
     expect(parent.children).toHaveLength(1);
     renderer.destroy();

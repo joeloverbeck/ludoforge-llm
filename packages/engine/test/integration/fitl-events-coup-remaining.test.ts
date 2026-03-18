@@ -70,9 +70,12 @@ describe('FITL remaining coup event-card production spec', () => {
     assert.ok(card129FirstEffect && 'addVar' in card129FirstEffect);
     assert.equal(card129FirstEffect.addVar.var, 'leaderBoxCardCount');
     assert.equal(card129FirstEffect.addVar.delta, 1);
-    assert.equal(
-      card129?.unshaded?.effects?.some((effect) => 'setGlobalMarker' in effect),
-      false,
+    const card129MinhCancellation = findDeep(card129?.unshaded?.effects, (node) =>
+      node?.setGlobalMarker?.marker === 'activeLeader' && node?.setGlobalMarker?.state === 'none',
+    );
+    assert.ok(
+      card129MinhCancellation.length >= 1,
+      'Card 129 should conditionally cancel Minh (setGlobalMarker to none)',
     );
     const card129HasDesertion = findDeep(card129?.unshaded?.effects, (node) =>
       node?.forEach?.limit?.op === '/' &&
@@ -91,9 +94,12 @@ describe('FITL remaining coup event-card production spec', () => {
     assert.ok(card130FirstEffect && 'addVar' in card130FirstEffect);
     assert.equal(card130FirstEffect.addVar.var, 'leaderBoxCardCount');
     assert.equal(card130FirstEffect.addVar.delta, 1);
-    assert.equal(
-      card130?.unshaded?.effects?.some((effect) => 'setGlobalMarker' in effect),
-      false,
+    const card130MinhCancellation = findDeep(card130?.unshaded?.effects, (node) =>
+      node?.setGlobalMarker?.marker === 'activeLeader' && node?.setGlobalMarker?.state === 'none',
+    );
+    assert.ok(
+      card130MinhCancellation.length >= 1,
+      'Card 130 should conditionally cancel Minh (setGlobalMarker to none)',
     );
     const card130HasDesertion = findDeep(card130?.unshaded?.effects, (node) =>
       node?.forEach?.limit?.op === '/' &&

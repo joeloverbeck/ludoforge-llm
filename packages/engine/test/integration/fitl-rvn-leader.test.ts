@@ -16,7 +16,7 @@ import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-help
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
-type LeaderState = 'minh' | 'khanh' | 'youngTurks' | 'ky' | 'thieu';
+type LeaderState = 'none' | 'minh' | 'khanh' | 'youngTurks' | 'ky' | 'thieu';
 
 const makeToken = (id: string, type: string, faction: string, extra?: Record<string, unknown>): Token => ({
   id: asTokenId(id),
@@ -903,12 +903,20 @@ describe('FITL RVN leader lingering effects', () => {
     assert.equal(card129?.title, 'Failed Attempt');
     assert.equal(card130?.title, 'Failed Attempt');
 
-    assert.equal(
-      card129?.unshaded?.effects?.some((effect) => 'setGlobalMarker' in effect),
-      false,
-      'Failed Attempt cards should not mutate activeLeader directly',
+    const card129MinhCancel = findDeep(card129?.unshaded?.effects, (node) =>
+      node?.setGlobalMarker?.marker === 'activeLeader' && node?.setGlobalMarker?.state === 'none',
     );
-    assert.equal(card130?.unshaded?.effects?.some((effect) => 'setGlobalMarker' in effect), false);
+    assert.ok(
+      card129MinhCancel.length >= 1,
+      'Card 129 should conditionally cancel Minh (setGlobalMarker to none)',
+    );
+    const card130MinhCancel = findDeep(card130?.unshaded?.effects, (node) =>
+      node?.setGlobalMarker?.marker === 'activeLeader' && node?.setGlobalMarker?.state === 'none',
+    );
+    assert.ok(
+      card130MinhCancel.length >= 1,
+      'Card 130 should conditionally cancel Minh (setGlobalMarker to none)',
+    );
 
     const card129HasDesertion = findDeep(card129?.unshaded?.effects, (node) =>
       node?.forEach?.limit?.op === '/' &&
@@ -923,5 +931,15 @@ describe('FITL RVN leader lingering effects', () => {
 
     assert.ok(card129HasDesertion.length >= 1, 'Card 129 should encode ARVN cube-thirds desertion loop');
     assert.ok(card130HasDesertion.length >= 1, 'Card 130 should encode ARVN cube-thirds desertion loop');
+  });
+
+  it('includes none state in activeLeader globalMarkerLattice for Failed Attempt cancellation', () => {
+    const def = compileDef();
+    const lattice = def.globalMarkerLattices?.find((l) => l.id === 'activeLeader');
+    assert.ok(lattice, 'Expected activeLeader globalMarkerLattice');
+    assert.ok(
+      lattice.states.includes('none'),
+      'activeLeader lattice should include none state for Failed Attempt Minh cancellation',
+    );
   });
 });

@@ -100,6 +100,7 @@ globalMarkerLattices:
       defaultState: inactive
   - id: activeLeader
     states:
+      - none
       - minh
       - khanh
       - youngTurks

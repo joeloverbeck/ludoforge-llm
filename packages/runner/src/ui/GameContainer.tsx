@@ -44,6 +44,7 @@ import { VictoryStandingsBar } from './VictoryStandingsBar.js';
 import { deriveBottomBarState } from './bottom-bar-mode.js';
 import { buildFactionCssVariableStyle } from './faction-color-style.js';
 import { EventLogPanel } from './EventLogPanel.js';
+import { createRunnerUiStore } from './runner-ui-store.js';
 import { useEventLogEntries } from './useEventLogEntries.js';
 import type { OverlayPanelComponent, OverlayPanelDiagnostics, OverlayPanelProps } from './overlay-panel-contract.js';
 import styles from './GameContainer.module.css';
@@ -127,8 +128,9 @@ export function GameContainer({
   const error = useStore(store, (state) => state.error);
   const renderModel = useStore(store, (state) => state.renderModel);
   const gameDefFactions = useStore(store, (state) => state.gameDef?.seats);
+  const runnerUiStore = useMemo(createRunnerUiStore, []);
   const [hoverAnchor, setHoverAnchor] = useState<HoverAnchor | null>(null);
-  const [eventLogVisible, setEventLogVisible] = useState(true);
+  const eventLogVisible = useStore(runnerUiStore, (state) => state.eventLogVisible);
   const [interactionHighlights, setInteractionHighlights] = useState<InteractionHighlights>(EMPTY_INTERACTION_HIGHLIGHTS);
   const [selectedEventLogEntryId, setSelectedEventLogEntryId] = useState<string | null>(null);
   const [animationDiagnosticBuffer, setAnimationDiagnosticBuffer] = useState<DiagnosticBuffer | undefined>(undefined);
@@ -168,14 +170,14 @@ export function GameContainer({
         return false;
       }
 
-      setEventLogVisible((current) => !current);
+      runnerUiStore.getState().toggleEventLogVisible();
       return true;
     }, { priority: 15 });
-  }, [keyboardCoordinator]);
+  }, [keyboardCoordinator, runnerUiStore]);
 
   useEffect(() => {
-    setEventLogVisible(true);
-  }, [store]);
+    runnerUiStore.getState().resetChromeState();
+  }, [runnerUiStore, store]);
 
   useEffect(() => {
     setInteractionHighlights(EMPTY_INTERACTION_HIGHLIGHTS);
@@ -297,7 +299,7 @@ export function GameContainer({
                   className={`${styles.sessionButton} ${eventLogVisible ? styles.eventLogToggleActive : ''}`}
                   data-testid="event-log-toggle-button"
                   onClick={() => {
-                    setEventLogVisible((current) => !current);
+                    runnerUiStore.getState().toggleEventLogVisible();
                   }}
                 >
                   {eventLogVisible ? 'Hide Log' : 'Show Log'}

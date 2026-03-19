@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — runner UI component work only
-**Deps**: specs/60-runner-control-surface-and-settings-menu.md, tickets/60RUNCONSUR-001-add-runner-ui-store-for-chrome-state.md, tickets/60RUNCONSUR-003-add-runner-control-descriptor-builder.md
+**Deps**: specs/60-runner-control-surface-and-settings-menu.md, archive/tickets/60RUNCONSUR-001-add-runner-ui-store-for-chrome-state.md, tickets/60RUNCONSUR-003-add-runner-control-descriptor-builder.md
 
 ## Problem
 

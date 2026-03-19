@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner overlay contract refactor only
-**Deps**: specs/60-runner-control-surface-and-settings-menu.md, tickets/60RUNCONSUR-001-add-runner-ui-store-for-chrome-state.md
+**Deps**: specs/60-runner-control-surface-and-settings-menu.md, archive/tickets/60RUNCONSUR-001-add-runner-ui-store-for-chrome-state.md
 
 ## Problem
 

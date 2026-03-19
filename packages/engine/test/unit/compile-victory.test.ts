@@ -195,4 +195,32 @@ describe('compile victory lowering', () => {
       true,
     );
   });
+
+  it('lowers margins and ranking even when checkpoints are absent', () => {
+    const diagnostics: Parameters<typeof lowerVictory>[1] = [];
+    const lowered = lowerVictory(
+      {
+        margins: [
+          {
+            seat: 'us',
+            value: 3,
+          },
+        ],
+        ranking: { order: 'desc' },
+      } as unknown as Parameters<typeof lowerVictory>[0],
+      diagnostics,
+      baseContext(),
+    );
+
+    assert.deepEqual(diagnostics, []);
+    assert.deepEqual(lowered, {
+      margins: [
+        {
+          seat: 'us',
+          value: 3,
+        },
+      ],
+      ranking: { order: 'desc' },
+    });
+  });
 });

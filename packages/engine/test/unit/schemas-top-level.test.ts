@@ -192,8 +192,23 @@ describe('top-level runtime schemas', () => {
     const result = GameDefSchema.safeParse({
       ...minimalGameDef,
       agents: {
-        schemaVersion: 1,
+        schemaVersion: 2,
         catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        surfaceVisibility: {
+          globalVars: {},
+          perPlayerVars: {},
+          derivedMetrics: {},
+          victory: {
+            currentMargin: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
+            currentRank: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
+          },
+        },
         parameterDefs: {
           passFloor: {
             type: 'number',
@@ -248,7 +263,22 @@ describe('top-level runtime schemas', () => {
     const result = GameDefSchema.safeParse({
       ...minimalGameDef,
       agents: {
-        schemaVersion: 1,
+        schemaVersion: 2,
+        surfaceVisibility: {
+          globalVars: {},
+          perPlayerVars: {},
+          derivedMetrics: {},
+          victory: {
+            currentMargin: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
+            currentRank: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
+          },
+        },
         parameterDefs: {},
         candidateParamDefs: {},
         library: {

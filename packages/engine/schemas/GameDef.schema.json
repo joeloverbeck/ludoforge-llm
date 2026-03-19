@@ -1762,10 +1762,325 @@
       "properties": {
         "schemaVersion": {
           "type": "number",
-          "const": 1
+          "const": 2
         },
         "catalogFingerprint": {
           "type": "string"
+        },
+        "surfaceVisibility": {
+          "type": "object",
+          "properties": {
+            "globalVars": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "current": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "public"
+                      },
+                      {
+                        "type": "string",
+                        "const": "seatVisible"
+                      },
+                      {
+                        "type": "string",
+                        "const": "hidden"
+                      }
+                    ]
+                  },
+                  "preview": {
+                    "type": "object",
+                    "properties": {
+                      "visibility": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "const": "public"
+                          },
+                          {
+                            "type": "string",
+                            "const": "seatVisible"
+                          },
+                          {
+                            "type": "string",
+                            "const": "hidden"
+                          }
+                        ]
+                      },
+                      "allowWhenHiddenSampling": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "visibility",
+                      "allowWhenHiddenSampling"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "current",
+                  "preview"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "perPlayerVars": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "current": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "public"
+                      },
+                      {
+                        "type": "string",
+                        "const": "seatVisible"
+                      },
+                      {
+                        "type": "string",
+                        "const": "hidden"
+                      }
+                    ]
+                  },
+                  "preview": {
+                    "type": "object",
+                    "properties": {
+                      "visibility": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "const": "public"
+                          },
+                          {
+                            "type": "string",
+                            "const": "seatVisible"
+                          },
+                          {
+                            "type": "string",
+                            "const": "hidden"
+                          }
+                        ]
+                      },
+                      "allowWhenHiddenSampling": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "visibility",
+                      "allowWhenHiddenSampling"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "current",
+                  "preview"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "derivedMetrics": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "current": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "public"
+                      },
+                      {
+                        "type": "string",
+                        "const": "seatVisible"
+                      },
+                      {
+                        "type": "string",
+                        "const": "hidden"
+                      }
+                    ]
+                  },
+                  "preview": {
+                    "type": "object",
+                    "properties": {
+                      "visibility": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "const": "public"
+                          },
+                          {
+                            "type": "string",
+                            "const": "seatVisible"
+                          },
+                          {
+                            "type": "string",
+                            "const": "hidden"
+                          }
+                        ]
+                      },
+                      "allowWhenHiddenSampling": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "visibility",
+                      "allowWhenHiddenSampling"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "current",
+                  "preview"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "victory": {
+              "type": "object",
+              "properties": {
+                "currentMargin": {
+                  "type": "object",
+                  "properties": {
+                    "current": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "public"
+                        },
+                        {
+                          "type": "string",
+                          "const": "seatVisible"
+                        },
+                        {
+                          "type": "string",
+                          "const": "hidden"
+                        }
+                      ]
+                    },
+                    "preview": {
+                      "type": "object",
+                      "properties": {
+                        "visibility": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "public"
+                            },
+                            {
+                              "type": "string",
+                              "const": "seatVisible"
+                            },
+                            {
+                              "type": "string",
+                              "const": "hidden"
+                            }
+                          ]
+                        },
+                        "allowWhenHiddenSampling": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "visibility",
+                        "allowWhenHiddenSampling"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "current",
+                    "preview"
+                  ],
+                  "additionalProperties": false
+                },
+                "currentRank": {
+                  "type": "object",
+                  "properties": {
+                    "current": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "public"
+                        },
+                        {
+                          "type": "string",
+                          "const": "seatVisible"
+                        },
+                        {
+                          "type": "string",
+                          "const": "hidden"
+                        }
+                      ]
+                    },
+                    "preview": {
+                      "type": "object",
+                      "properties": {
+                        "visibility": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "public"
+                            },
+                            {
+                              "type": "string",
+                              "const": "seatVisible"
+                            },
+                            {
+                              "type": "string",
+                              "const": "hidden"
+                            }
+                          ]
+                        },
+                        "allowWhenHiddenSampling": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "visibility",
+                        "allowWhenHiddenSampling"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "current",
+                    "preview"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "currentMargin",
+                "currentRank"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "globalVars",
+            "perPlayerVars",
+            "derivedMetrics",
+            "victory"
+          ],
+          "additionalProperties": false
         },
         "parameterDefs": {
           "type": "object",
@@ -2594,6 +2909,7 @@
       "required": [
         "schemaVersion",
         "catalogFingerprint",
+        "surfaceVisibility",
         "parameterDefs",
         "candidateParamDefs",
         "library",

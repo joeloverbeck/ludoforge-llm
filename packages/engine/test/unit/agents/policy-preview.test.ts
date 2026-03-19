@@ -26,6 +26,42 @@ function createDef(): GameDef {
     tokenTypes: [],
     setup: [],
     turnStructure: { phases: [{ id: phaseId }] },
+    agents: {
+      schemaVersion: 2,
+      catalogFingerprint: 'preview-catalog',
+      surfaceVisibility: {
+        globalVars: {
+          score: {
+            current: 'public',
+            preview: { visibility: 'public', allowWhenHiddenSampling: true },
+          },
+        },
+        perPlayerVars: {},
+        derivedMetrics: {},
+        victory: {
+          currentMargin: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          currentRank: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+        },
+      },
+      parameterDefs: {},
+      candidateParamDefs: {},
+      library: {
+        stateFeatures: {},
+        candidateFeatures: {},
+        candidateAggregates: {},
+        pruningRules: {},
+        scoreTerms: {},
+        tieBreakers: {},
+      },
+      profiles: {},
+      bindingsBySeat: {},
+    },
     actions: [],
     triggers: [],
     terminal: {
@@ -150,7 +186,7 @@ describe('policy-preview', () => {
     assert.equal(runtime.resolveNumericRef(candidate, 'preview.var.global.score'), undefined);
   });
 
-  it('masks preview refs when the resulting state still contains hidden sampling', () => {
+  it('keeps safe preview refs available while masking unsafe refs when hidden sampling remains', () => {
     const def = createDef();
     const state = initialState(def, 1, 2).state;
     const candidate = createCandidate();
@@ -174,6 +210,7 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveNumericRef(candidate, 'preview.var.global.score'), undefined);
+    assert.equal(runtime.resolveNumericRef(candidate, 'preview.var.global.score'), 9);
+    assert.equal(runtime.resolveNumericRef(candidate, 'preview.victory.currentMargin.us'), undefined);
   });
 });

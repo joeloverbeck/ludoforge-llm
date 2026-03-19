@@ -1,4 +1,5 @@
 import { fingerprintPolicyIr } from '../agents/policy-ir.js';
+import { resolvePolicySurfaceRef } from '../agents/policy-surface.js';
 import { analyzePolicyExpr, type AnalyzePolicyExprContext, type ResolvedPolicyRef } from '../agents/policy-expr.js';
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { collectChoiceBindingSpecs } from '../kernel/move-runtime-bindings.js';
@@ -9,6 +10,7 @@ import type {
   AgentPolicyCatalog,
   AgentPolicyCostClass,
   AgentPolicyExpr,
+  AgentPolicySurfaceVisibilityClass,
   AgentPolicyValueType,
   CompiledAgentAggregate,
   CompiledAgentCandidateParamDef,
@@ -16,6 +18,8 @@ import type {
   CompiledAgentDependencyRefs,
   CompiledAgentLibraryIndex,
   CompiledAgentParameterDef,
+  CompiledAgentPolicySurfaceCatalog,
+  CompiledAgentPolicySurfaceVisibility,
   CompiledAgentProfile,
   CompiledAgentPruningRule,
   CompiledAgentScoreTerm,
@@ -30,6 +34,7 @@ import type {
   GameSpecAgentProfileDef,
   GameSpecAgentsSection,
   GameSpecCandidateFeatureDef,
+  GameSpecPolicySurfaceVisibilityDef,
   GameSpecStateFeatureDef,
   GameSpecTieBreakerDef,
 } from './game-spec-doc.js';
@@ -55,7 +60,10 @@ const TIE_BREAKER_KINDS = new Set<TieBreakerKind>([
 
 export interface LowerAgentsOptions {
   readonly referenceSeatIds?: readonly string[];
+  readonly globalVarIds?: readonly string[];
+  readonly perPlayerVarIds?: readonly string[];
   readonly policyMetricIds?: readonly string[];
+  readonly hasVictoryMargins?: boolean;
   readonly actionDefs?: GameDef['actions'];
   readonly actionPipelines?: GameDef['actionPipelines'];
 }
@@ -69,16 +77,25 @@ export function lowerAgents(
     return undefined;
   }
 
+  const surfaceVisibility = lowerSurfaceVisibility(agents.visibility, diagnostics, options);
   const parameterDefs = lowerParameterDefs(agents.parameters, diagnostics);
   const candidateParamDefs = lowerCandidateParamDefs(options.actionDefs, options.actionPipelines);
-  const libraryCompiler = new AgentLibraryCompiler(agents.library, parameterDefs, candidateParamDefs, diagnostics, options);
+  const libraryCompiler = new AgentLibraryCompiler(
+    agents.library,
+    surfaceVisibility,
+    parameterDefs,
+    candidateParamDefs,
+    diagnostics,
+    options,
+  );
   const library = libraryCompiler.compile();
   const profiles = addProfileFingerprints(
     lowerProfiles(agents.profiles, agents.library, library, parameterDefs, diagnostics),
   );
   const bindingsBySeat = lowerBindings(agents.bindings, profiles, diagnostics, options);
   const catalogWithoutFingerprint = {
-    schemaVersion: 1,
+    schemaVersion: 2,
+    surfaceVisibility,
     parameterDefs,
     candidateParamDefs,
     library,
@@ -90,6 +107,134 @@ export function lowerAgents(
     ...catalogWithoutFingerprint,
     catalogFingerprint: fingerprintPolicyIr(catalogWithoutFingerprint),
   } satisfies AgentPolicyCatalog;
+}
+
+function lowerSurfaceVisibility(
+  visibility: GameSpecAgentsSection['visibility'],
+  diagnostics: Diagnostic[],
+  options: LowerAgentsOptions,
+): CompiledAgentPolicySurfaceCatalog {
+  return {
+    globalVars: lowerSurfaceVisibilityMap(
+      options.globalVarIds ?? [],
+      visibility?.globalVars,
+      diagnostics,
+      'doc.agents.visibility.globalVars',
+      {
+        current: 'public',
+        preview: { visibility: 'public', allowWhenHiddenSampling: true },
+      },
+    ),
+    perPlayerVars: lowerSurfaceVisibilityMap(
+      options.perPlayerVarIds ?? [],
+      visibility?.perPlayerVars,
+      diagnostics,
+      'doc.agents.visibility.perPlayerVars',
+      {
+        current: 'seatVisible',
+        preview: { visibility: 'seatVisible', allowWhenHiddenSampling: true },
+      },
+    ),
+    derivedMetrics: lowerSurfaceVisibilityMap(
+      options.policyMetricIds ?? [],
+      visibility?.derivedMetrics,
+      diagnostics,
+      'doc.agents.visibility.derivedMetrics',
+      {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+    ),
+    victory: {
+      currentMargin: lowerSurfaceVisibilityEntry(
+        visibility?.victory?.currentMargin,
+        diagnostics,
+        'doc.agents.visibility.victory.currentMargin',
+        {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+      ),
+      currentRank: lowerSurfaceVisibilityEntry(
+        visibility?.victory?.currentRank,
+        diagnostics,
+        'doc.agents.visibility.victory.currentRank',
+        {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+      ),
+    },
+  };
+}
+
+function lowerSurfaceVisibilityMap(
+  knownIds: readonly string[],
+  overrides: Readonly<Record<string, GameSpecPolicySurfaceVisibilityDef>> | undefined,
+  diagnostics: Diagnostic[],
+  path: string,
+  defaults: CompiledAgentPolicySurfaceVisibility,
+): Readonly<Record<string, CompiledAgentPolicySurfaceVisibility>> {
+  const compiled: Record<string, CompiledAgentPolicySurfaceVisibility> = {};
+  const knownIdSet = new Set(knownIds);
+  for (const id of knownIds) {
+    compiled[id] = lowerSurfaceVisibilityEntry(overrides?.[id], diagnostics, `${path}.${id}`, defaults);
+  }
+  for (const overrideId of Object.keys(overrides ?? {})) {
+    if (knownIdSet.has(overrideId)) {
+      continue;
+    }
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_VISIBILITY_SURFACE_UNKNOWN,
+      path: `${path}.${overrideId}`,
+      severity: 'error',
+      message: `Policy visibility override targets unknown surface "${overrideId}".`,
+      suggestion: 'Declare visibility only for authored globalVars, perPlayerVars, or derivedMetrics that exist in the compiled policy surface.',
+    });
+  }
+  return compiled;
+}
+
+function lowerSurfaceVisibilityEntry(
+  entry: GameSpecPolicySurfaceVisibilityDef | undefined,
+  diagnostics: Diagnostic[],
+  path: string,
+  defaults: CompiledAgentPolicySurfaceVisibility,
+): CompiledAgentPolicySurfaceVisibility {
+  const current = normalizeSurfaceVisibilityClass(entry?.current, `${path}.current`, diagnostics) ?? defaults.current;
+  const previewVisibility = normalizeSurfaceVisibilityClass(entry?.preview?.visibility, `${path}.preview.visibility`, diagnostics)
+    ?? current;
+  const allowWhenHiddenSampling = typeof entry?.preview?.allowWhenHiddenSampling === 'boolean'
+    ? entry.preview.allowWhenHiddenSampling
+    : defaults.preview.allowWhenHiddenSampling;
+  return {
+    current,
+    preview: {
+      visibility: previewVisibility,
+      allowWhenHiddenSampling,
+    },
+  };
+}
+
+function normalizeSurfaceVisibilityClass(
+  value: unknown,
+  path: string,
+  diagnostics: Diagnostic[],
+): AgentPolicySurfaceVisibilityClass | null {
+  if (value === undefined) {
+    return null;
+  }
+  if (value === 'public' || value === 'seatVisible' || value === 'hidden') {
+    return value;
+  }
+  diagnostics.push({
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_VISIBILITY_VALUE_INVALID,
+    path,
+    severity: 'error',
+    message: `Policy visibility value "${String(value)}" is invalid.`,
+    suggestion: 'Use one of: public, seatVisible, hidden.',
+  });
+  return null;
 }
 
 function addProfileFingerprints(
@@ -701,6 +846,7 @@ class AgentLibraryCompiler {
 
   constructor(
     authoredLibrary: GameSpecAgentLibrary | undefined,
+    private readonly surfaceVisibility: CompiledAgentPolicySurfaceCatalog,
     private readonly parameterDefs: Readonly<Record<string, CompiledAgentParameterDef>>,
     private readonly candidateParamDefs: Readonly<Record<string, CompiledAgentCandidateParamDef>>,
     private readonly diagnostics: Diagnostic[],
@@ -1233,16 +1379,8 @@ class AgentLibraryCompiler {
       return previewResolved;
     }
 
-    if (
-      refPath.startsWith('metric.')
-      || refPath.startsWith('victory.currentMargin.')
-      || refPath.startsWith('victory.currentRank.')
-      || refPath.startsWith('var.global.')
-      || refPath.startsWith('var.seat.')
-    ) {
-      if (refPath.startsWith('metric.') && !this.isKnownMetricRef(refPath.slice('metric.'.length), path)) {
-        return null;
-      }
+    const surfaceResolved = this.resolveSurfaceRuntimeRef(refPath, path, false);
+    if (surfaceResolved !== null) {
       return { type: 'number', costClass: 'state' };
     }
 
@@ -1265,20 +1403,64 @@ class AgentLibraryCompiler {
       return null;
     }
     const nestedPath = refPath.slice('preview.'.length);
-    if (
-      nestedPath.startsWith('metric.')
-      || nestedPath.startsWith('victory.currentMargin.')
-      || nestedPath.startsWith('victory.currentRank.')
-      || nestedPath.startsWith('var.global.')
-      || nestedPath.startsWith('var.seat.')
-    ) {
-      if (nestedPath.startsWith('metric.') && !this.isKnownMetricRef(nestedPath.slice('metric.'.length), path)) {
-        return null;
-      }
+    if (this.resolveSurfaceRuntimeRef(nestedPath, path, true) !== null) {
       return { type: 'number', costClass: 'preview' };
     }
     this.reportUnknownLibraryRef(refPath, path);
     return null;
+  }
+
+  private resolveSurfaceRuntimeRef(
+    refPath: string,
+    path: string,
+    preview: boolean,
+  ): ResolvedPolicyRef | null {
+    const resolved = resolvePolicySurfaceRef(this.surfaceVisibility, refPath);
+    if (resolved === null) {
+      return null;
+    }
+    if (!this.validateResolvedSurfaceRef(resolved, path, refPath, preview)) {
+      return null;
+    }
+    return { type: 'number', costClass: preview ? 'preview' : 'state' };
+  }
+
+  private validateResolvedSurfaceRef(
+    resolved: NonNullable<ReturnType<typeof resolvePolicySurfaceRef>>,
+    path: string,
+    refPath: string,
+    preview: boolean,
+  ): boolean {
+    if (
+      (resolved.family === 'victoryCurrentMargin' || resolved.family === 'victoryCurrentRank')
+      && this.options.hasVictoryMargins === false
+    ) {
+      this.reportUnknownLibraryRef(refPath, path);
+      return false;
+    }
+    const visibility = preview ? resolved.visibility.preview.visibility : resolved.visibility.current;
+    if (visibility === 'hidden') {
+      this.reportUnknownLibraryRef(refPath, path);
+      return false;
+    }
+    if (resolved.seatToken !== undefined && !this.isKnownSeatToken(resolved.seatToken, path, refPath)) {
+      return false;
+    }
+    return true;
+  }
+
+  private isKnownSeatToken(seatToken: string, path: string, refPath: string): boolean {
+    if (seatToken === 'self' || seatToken === 'active') {
+      return true;
+    }
+    if (this.options.referenceSeatIds === undefined) {
+      return true;
+    }
+    if (this.options.referenceSeatIds.includes(seatToken)) {
+      return true;
+    }
+    this.reportUnknownLibraryRef(refPath, path);
+    return false;
   }
 
   private reportCycle(category: string, entryId: string, stack: readonly string[]): void {
@@ -1311,20 +1493,6 @@ class AgentLibraryCompiler {
     });
   }
 
-  private isKnownMetricRef(metricId: string, path: string): boolean {
-    if (metricId.length === 0) {
-      this.reportUnknownLibraryRef('metric.', path);
-      return false;
-    }
-    if (this.options.policyMetricIds === undefined) {
-      return true;
-    }
-    if (this.options.policyMetricIds.includes(metricId)) {
-      return true;
-    }
-    this.reportUnknownLibraryRef(`metric.${metricId}`, path);
-    return false;
-  }
 }
 
 function normalizeParameterValue(

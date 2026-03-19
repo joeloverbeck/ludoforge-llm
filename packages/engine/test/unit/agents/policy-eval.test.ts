@@ -86,8 +86,38 @@ function createCatalog(
   candidateParamDefs: AgentPolicyCatalog['candidateParamDefs'] = {},
 ): AgentPolicyCatalog {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     catalogFingerprint: 'catalog',
+    surfaceVisibility: {
+      globalVars: {
+        usMargin: {
+          current: 'public',
+          preview: { visibility: 'public', allowWhenHiddenSampling: true },
+        },
+      },
+      perPlayerVars: {
+        tempo: {
+          current: 'seatVisible',
+          preview: { visibility: 'seatVisible', allowWhenHiddenSampling: true },
+        },
+      },
+      derivedMetrics: {
+        boardPressure: {
+          current: 'public',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+      },
+      victory: {
+        currentMargin: {
+          current: 'public',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+        currentRank: {
+          current: 'public',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+      },
+    },
     parameterDefs: {
       passFloor: {
         type: 'number',
@@ -336,6 +366,12 @@ describe('policy-eval', () => {
             expr: { ref: 'preview.var.global.usMargin' },
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
           },
+          maskedProjectedStanding: {
+            type: 'number',
+            costClass: 'preview',
+            expr: { ref: 'preview.victory.currentMargin.us' },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
         },
         scoreTerms: {
           preferProjectedMargin: {
@@ -350,17 +386,24 @@ describe('policy-eval', () => {
             value: { ref: 'feature.projectedMargin' },
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['projectedMargin'], aggregates: [] },
           },
+          ignoreMaskedStanding: {
+            costClass: 'preview',
+            weight: 1,
+            value: { ref: 'feature.maskedProjectedStanding' },
+            unknownAs: 0,
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['maskedProjectedStanding'], aggregates: [] },
+          },
         },
       },
       {
         use: {
           pruningRules: [],
-          scoreTerms: ['preferProjectedMargin', 'reinforceProjectedMargin'],
+          scoreTerms: ['preferProjectedMargin', 'reinforceProjectedMargin', 'ignoreMaskedStanding'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
-          candidateFeatures: ['projectedMargin'],
+          candidateFeatures: ['projectedMargin', 'maskedProjectedStanding'],
           candidateAggregates: [],
         },
       },

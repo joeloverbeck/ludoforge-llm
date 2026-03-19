@@ -251,6 +251,38 @@ export const ScoringDefSchema = z
   })
   .strict();
 
+export const AgentPolicySurfaceVisibilityClassSchema = z.union([
+  z.literal('public'),
+  z.literal('seatVisible'),
+  z.literal('hidden'),
+]);
+
+export const CompiledAgentPolicySurfacePreviewVisibilitySchema = z
+  .object({
+    visibility: AgentPolicySurfaceVisibilityClassSchema,
+    allowWhenHiddenSampling: BooleanSchema,
+  })
+  .strict();
+
+export const CompiledAgentPolicySurfaceVisibilitySchema = z
+  .object({
+    current: AgentPolicySurfaceVisibilityClassSchema,
+    preview: CompiledAgentPolicySurfacePreviewVisibilitySchema,
+  })
+  .strict();
+
+export const CompiledAgentPolicySurfaceCatalogSchema = z
+  .object({
+    globalVars: z.record(StringSchema, CompiledAgentPolicySurfaceVisibilitySchema),
+    perPlayerVars: z.record(StringSchema, CompiledAgentPolicySurfaceVisibilitySchema),
+    derivedMetrics: z.record(StringSchema, CompiledAgentPolicySurfaceVisibilitySchema),
+    victory: z.object({
+      currentMargin: CompiledAgentPolicySurfaceVisibilitySchema,
+      currentRank: CompiledAgentPolicySurfaceVisibilitySchema,
+    }).strict(),
+  })
+  .strict();
+
 export const TerminalEvaluationDefSchema = z
   .object({
     conditions: z.array(EndConditionSchema),
@@ -661,8 +693,9 @@ const CompiledAgentProfileSchema = z
 
 const AgentPolicyCatalogSchema = z
   .object({
-    schemaVersion: z.literal(1),
+    schemaVersion: z.literal(2),
     catalogFingerprint: StringSchema,
+    surfaceVisibility: CompiledAgentPolicySurfaceCatalogSchema,
     parameterDefs: z.record(StringSchema, CompiledAgentParameterDefSchema),
     candidateParamDefs: z.record(StringSchema, CompiledAgentCandidateParamDefSchema),
     library: CompiledAgentLibraryIndexSchema,

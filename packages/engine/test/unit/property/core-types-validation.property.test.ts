@@ -24,8 +24,23 @@ describe('core-types validation property-style checks', () => {
         ...base,
         metadata: { ...base.metadata, id: 'fixture-minimal-agents' },
         agents: {
-          schemaVersion: 1,
+          schemaVersion: 2,
           catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          surfaceVisibility: {
+            globalVars: {},
+            perPlayerVars: {},
+            derivedMetrics: {},
+            victory: {
+              currentMargin: {
+                current: 'hidden',
+                preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+              },
+              currentRank: {
+                current: 'hidden',
+                preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+              },
+            },
+          },
           parameterDefs: {},
           candidateParamDefs: {},
           library: {

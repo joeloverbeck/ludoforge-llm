@@ -8,7 +8,7 @@ function createCompileReadyDoc() {
   return {
     ...createEmptyGameSpecDoc(),
     metadata: { id: 'agents-demo', players: { min: 2, max: 2 } },
-    zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+    zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack', attributes: { population: 0 } }],
     turnStructure: { phases: [{ id: 'main' }] },
     actions: [
       {
@@ -23,7 +23,16 @@ function createCompileReadyDoc() {
         limits: [],
       },
     ],
-    terminal: { conditions: [{ when: { op: '==', left: 1, right: 0 }, result: { type: 'draw' } }] },
+    terminal: {
+      conditions: [{ when: { op: '==', left: 1, right: 0 }, result: { type: 'draw' } }],
+      margins: [
+        { seat: 'us', value: 0 },
+        { seat: 'arvn', value: 0 },
+      ],
+      ranking: {
+        order: 'desc' as const,
+      },
+    },
   };
 }
 
@@ -37,12 +46,28 @@ function createSeatCatalogAsset(seatIds: readonly string[]) {
   };
 }
 
+function createVisibility(overrides: NonNullable<NonNullable<GameSpecDoc['agents']>['visibility']> = {}) {
+  return {
+    globalVars: overrides.globalVars ?? {},
+    perPlayerVars: overrides.perPlayerVars ?? {},
+    derivedMetrics: overrides.derivedMetrics ?? {},
+    victory: {
+      currentMargin: {
+        current: 'public' as const,
+        ...(overrides.victory?.currentMargin ?? {}),
+      },
+      ...(overrides.victory?.currentRank === undefined ? {} : { currentRank: overrides.victory.currentRank }),
+    },
+  };
+}
+
 describe('agents authoring surface', () => {
   it('lowers valid authored policy library items into a typed GameDef.agents catalog', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us', 'arvn'])],
       agents: {
+        visibility: createVisibility(),
         parameters: {
           passFloor: {
             type: 'number',
@@ -167,6 +192,27 @@ describe('agents authoring surface', () => {
       },
     });
     assert.deepEqual(agents.candidateParamDefs, {});
+    assert.deepEqual(agents.surfaceVisibility, {
+      globalVars: {},
+      perPlayerVars: {},
+      derivedMetrics: {},
+      victory: {
+        currentMargin: {
+          current: 'public',
+          preview: {
+            visibility: 'public',
+            allowWhenHiddenSampling: false,
+          },
+        },
+        currentRank: {
+          current: 'hidden',
+          preview: {
+            visibility: 'hidden',
+            allowWhenHiddenSampling: false,
+          },
+        },
+      },
+    });
     assert.deepEqual(agents.library, {
       stateFeatures: {
         currentMargin: {
@@ -294,6 +340,7 @@ describe('agents authoring surface', () => {
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
       agents: {
+        visibility: createVisibility(),
         parameters: {
           mode: {
             type: 'enum' as const,
@@ -366,6 +413,7 @@ describe('agents authoring surface', () => {
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
       agents: {
+        visibility: createVisibility(),
         bindings: {
           us: 'baseline',
         },
@@ -452,6 +500,73 @@ describe('agents authoring surface', () => {
     assert.equal(
       firstBaselineProfile.fingerprint,
       secondBaselineProfile.fingerprint,
+    );
+  });
+
+  it('rejects refs whose shared visibility contract marks them hidden', () => {
+    const compiled = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      derivedMetrics: [
+        {
+          id: 'knownMetric',
+          computation: 'markerTotal',
+          requirements: [{ key: 'population', expectedType: 'number' }],
+          runtime: {
+            kind: 'markerTotal',
+            markerId: 'support',
+            markerConfig: {
+              activeState: 'activeSupport',
+              passiveState: 'passiveSupport',
+            },
+            defaultMarkerState: 'neutral',
+          },
+        },
+      ],
+      agents: {
+        visibility: createVisibility({
+          derivedMetrics: {
+            knownMetric: {
+              current: 'hidden',
+            },
+          },
+        }),
+        library: {
+          stateFeatures: {
+            hiddenMetric: {
+              type: 'number',
+              expr: { ref: 'metric.knownMetric' },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(compiled.gameDef, null);
+    assert.ok(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN'
+          && diagnostic.path === 'doc.agents.library.stateFeatures.hiddenMetric.expr.ref',
+      ),
     );
   });
 
@@ -1057,6 +1172,13 @@ describe('agents authoring surface', () => {
         },
       ],
       agents: {
+        visibility: createVisibility({
+          derivedMetrics: {
+            knownMetric: {
+              current: 'public',
+            },
+          },
+        }),
         parameters: {},
         library: {
           candidateFeatures: {
@@ -1118,6 +1240,13 @@ describe('agents authoring surface', () => {
         },
       ],
       agents: {
+        visibility: createVisibility({
+          derivedMetrics: {
+            knownMetric: {
+              current: 'public',
+            },
+          },
+        }),
         parameters: {},
         library: {
           stateFeatures: {

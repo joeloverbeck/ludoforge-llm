@@ -21,6 +21,7 @@ import type {
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import { pickRandom } from './agent-move-selection.js';
 import { createPolicyPreviewRuntime } from './policy-preview.js';
+import { isSurfaceVisibilityAccessible, resolvePolicySurfaceRef } from './policy-surface.js';
 
 type PolicyValue = AgentParameterValue | undefined;
 
@@ -527,8 +528,22 @@ class EvaluationContext {
     if (refPath.startsWith('preview.')) {
       return candidate === undefined ? undefined : this.previewRuntime.resolveNumericRef(candidate, refPath);
     }
-    if (refPath.startsWith('metric.')) {
-      const metricId = refPath.slice('metric.'.length);
+    const resolvedSurface = resolvePolicySurfaceRef(this.catalog.surfaceVisibility, refPath);
+    if (resolvedSurface === null) {
+      throw this.runtimeError(
+        'UNSUPPORTED_RUNTIME_REF',
+        `Policy runtime ref "${refPath}" is unsupported by the non-preview evaluator runtime.`,
+        { refPath },
+      );
+    }
+    const resolvedSeatId = resolvedSurface.seatToken === undefined
+      ? undefined
+      : this.resolveSeatToken(resolvedSurface.seatToken);
+    if (!isSurfaceVisibilityAccessible(resolvedSurface.visibility.current, this.seatId, resolvedSeatId)) {
+      return undefined;
+    }
+    if (resolvedSurface.family === 'derivedMetric') {
+      const metricId = resolvedSurface.id;
       if (this.metricCache.has(metricId)) {
         return this.metricCache.get(metricId);
       }
@@ -536,28 +551,23 @@ class EvaluationContext {
       this.metricCache.set(metricId, value);
       return value;
     }
-    if (refPath.startsWith('var.global.')) {
-      const variableId = refPath.slice('var.global.'.length);
+    if (resolvedSurface.family === 'globalVar') {
+      const variableId = resolvedSurface.id;
       const value = this.input.state.globalVars[variableId];
       return typeof value === 'number' ? value : undefined;
     }
-    if (refPath.startsWith('var.seat.')) {
+    if (resolvedSurface.family === 'perPlayerVar') {
       return this.resolveSeatVarRef(refPath);
     }
-    if (refPath.startsWith('victory.currentMargin.')) {
+    if (resolvedSurface.family === 'victoryCurrentMargin') {
       const seatToken = refPath.slice('victory.currentMargin.'.length);
       return this.getVictorySurface().marginBySeat.get(this.resolveSeatToken(seatToken));
     }
-    if (refPath.startsWith('victory.currentRank.')) {
+    if (resolvedSurface.family === 'victoryCurrentRank') {
       const seatToken = refPath.slice('victory.currentRank.'.length);
       return this.getVictorySurface().rankBySeat.get(this.resolveSeatToken(seatToken));
     }
-
-    throw this.runtimeError(
-      'UNSUPPORTED_RUNTIME_REF',
-      `Policy runtime ref "${refPath}" is unsupported by the non-preview evaluator runtime.`,
-      { refPath },
-    );
+    return undefined;
   }
 
   private resolveSeatVarRef(refPath: string): PolicyValue {

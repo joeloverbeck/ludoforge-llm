@@ -674,6 +674,8 @@ function compileExpandedDoc(
         ...(seatIdentityContract.contract.referenceSeatIds === undefined
           ? {}
           : { referenceSeatIds: seatIdentityContract.contract.referenceSeatIds }),
+        ...{ globalVarIds: mergedGlobalVars.map((variable) => variable.name) },
+        ...{ perPlayerVarIds: perPlayerVars.value.map((variable) => variable.name) },
         ...(actions === null ? {} : { actionDefs: actions }),
         ...(sections.actionPipelines === null ? {} : { actionPipelines: sections.actionPipelines }),
         ...(
@@ -681,6 +683,7 @@ function compileExpandedDoc(
             ? {}
             : { policyMetricIds: (resolvedTableRefDoc.derivedMetrics ?? []).map((metric) => metric.id) }
         ),
+        ...{ hasVictoryMargins: (terminal?.margins?.length ?? 0) > 0 },
       },
     ),
   );

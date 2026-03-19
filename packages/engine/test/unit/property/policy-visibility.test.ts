@@ -18,8 +18,31 @@ const phaseId = asPhaseId('main');
 
 function createCatalog(): AgentPolicyCatalog {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     catalogFingerprint: 'visibility-catalog',
+    surfaceVisibility: {
+      globalVars: {
+        usMargin: {
+          current: 'public',
+          preview: {
+            visibility: 'public',
+            allowWhenHiddenSampling: true,
+          },
+        },
+      },
+      perPlayerVars: {},
+      derivedMetrics: {},
+      victory: {
+        currentMargin: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+        currentRank: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+      },
+    },
     parameterDefs: {},
     candidateParamDefs: {},
     library: {

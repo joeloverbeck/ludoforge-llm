@@ -297,6 +297,7 @@ export type AgentParameterType = 'number' | 'integer' | 'boolean' | 'enum' | 'id
 export type AgentParameterValue = number | boolean | string | readonly string[];
 export type AgentPolicyValueType = 'number' | 'boolean' | 'id' | 'idList';
 export type AgentPolicyCostClass = 'state' | 'candidate' | 'preview';
+export type AgentPolicySurfaceVisibilityClass = 'public' | 'seatVisible' | 'hidden';
 export type AgentPolicyExpr =
   | string
   | number
@@ -304,6 +305,26 @@ export type AgentPolicyExpr =
   | null
   | readonly AgentPolicyExpr[]
   | { readonly [key: string]: AgentPolicyExpr };
+
+export interface CompiledAgentPolicySurfacePreviewVisibility {
+  readonly visibility: AgentPolicySurfaceVisibilityClass;
+  readonly allowWhenHiddenSampling: boolean;
+}
+
+export interface CompiledAgentPolicySurfaceVisibility {
+  readonly current: AgentPolicySurfaceVisibilityClass;
+  readonly preview: CompiledAgentPolicySurfacePreviewVisibility;
+}
+
+export interface CompiledAgentPolicySurfaceCatalog {
+  readonly globalVars: Readonly<Record<string, CompiledAgentPolicySurfaceVisibility>>;
+  readonly perPlayerVars: Readonly<Record<string, CompiledAgentPolicySurfaceVisibility>>;
+  readonly derivedMetrics: Readonly<Record<string, CompiledAgentPolicySurfaceVisibility>>;
+  readonly victory: {
+    readonly currentMargin: CompiledAgentPolicySurfaceVisibility;
+    readonly currentRank: CompiledAgentPolicySurfaceVisibility;
+  };
+}
 
 export interface CompiledAgentParameterDef {
   readonly type: AgentParameterType;
@@ -407,8 +428,9 @@ export interface CompiledAgentProfile {
 }
 
 export interface AgentPolicyCatalog {
-  readonly schemaVersion: 1;
+  readonly schemaVersion: 2;
   readonly catalogFingerprint: string;
+  readonly surfaceVisibility: CompiledAgentPolicySurfaceCatalog;
   readonly parameterDefs: Readonly<Record<string, CompiledAgentParameterDef>>;
   readonly candidateParamDefs: Readonly<Record<string, CompiledAgentCandidateParamDef>>;
   readonly library: CompiledAgentLibraryIndex;

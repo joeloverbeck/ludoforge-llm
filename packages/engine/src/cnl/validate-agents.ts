@@ -2,8 +2,12 @@ import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import { isNonEmptyTrimmedString, isNonEmptyString, isRecord, validateUnknownKeys } from './validate-spec-shared.js';
 
-const AGENTS_SECTION_KEYS = ['parameters', 'library', 'profiles', 'bindings'] as const;
+const AGENTS_SECTION_KEYS = ['parameters', 'visibility', 'library', 'profiles', 'bindings'] as const;
 const AGENT_PARAMETER_KEYS = ['type', 'default', 'min', 'max', 'tunable', 'values', 'allowedIds'] as const;
+const AGENT_VISIBILITY_SECTION_KEYS = ['globalVars', 'perPlayerVars', 'derivedMetrics', 'victory'] as const;
+const AGENT_VISIBILITY_KEYS = ['current', 'preview'] as const;
+const AGENT_VISIBILITY_PREVIEW_KEYS = ['visibility', 'allowWhenHiddenSampling'] as const;
+const AGENT_VISIBILITY_VICTORY_KEYS = ['currentMargin', 'currentRank'] as const;
 const AGENT_LIBRARY_KEYS = [
   'stateFeatures',
   'candidateFeatures',
@@ -46,9 +50,93 @@ export function validateAgents(doc: GameSpecDoc, diagnostics: Diagnostic[]): voi
 
   validateUnknownKeys(doc.agents, AGENTS_SECTION_KEYS, 'doc.agents', diagnostics, 'agents');
   validateNamedDefinitionMap(doc.agents.parameters, 'doc.agents.parameters', diagnostics, 'agents parameter map');
+  validateVisibility(doc.agents.visibility, diagnostics);
   validateLibrary(doc.agents.library, diagnostics);
   validateProfiles(doc.agents.profiles, diagnostics);
   validateBindings(doc.agents.bindings, diagnostics);
+}
+
+function validateVisibility(visibility: unknown, diagnostics: Diagnostic[]): void {
+  if (!validateRecordMap(visibility, 'doc.agents.visibility', diagnostics, 'agents visibility')) {
+    return;
+  }
+
+  validateUnknownKeys(visibility, AGENT_VISIBILITY_SECTION_KEYS, 'doc.agents.visibility', diagnostics, 'agents visibility');
+  validateVisibilityMap(visibility.globalVars, 'doc.agents.visibility.globalVars', diagnostics);
+  validateVisibilityMap(visibility.perPlayerVars, 'doc.agents.visibility.perPlayerVars', diagnostics);
+  validateVisibilityMap(visibility.derivedMetrics, 'doc.agents.visibility.derivedMetrics', diagnostics);
+
+  if (visibility.victory === undefined) {
+    return;
+  }
+  if (!isRecord(visibility.victory)) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_AGENTS_DEFINITION_INVALID',
+      path: 'doc.agents.visibility.victory',
+      severity: 'error',
+      message: 'agents visibility.victory must be an object.',
+      suggestion: 'Define victory visibility overrides as an object keyed by currentMargin/currentRank.',
+    });
+    return;
+  }
+  validateUnknownKeys(
+    visibility.victory,
+    AGENT_VISIBILITY_VICTORY_KEYS,
+    'doc.agents.visibility.victory',
+    diagnostics,
+    'agents visibility victory',
+  );
+  validateVisibilityEntry(visibility.victory.currentMargin, 'doc.agents.visibility.victory.currentMargin', diagnostics);
+  validateVisibilityEntry(visibility.victory.currentRank, 'doc.agents.visibility.victory.currentRank', diagnostics);
+}
+
+function validateVisibilityMap(value: unknown, path: string, diagnostics: Diagnostic[]): void {
+  if (!validateRecordMap(value, path, diagnostics, 'agents visibility map')) {
+    return;
+  }
+
+  for (const [entryId, entryValue] of Object.entries(value)) {
+    if (!isNonEmptyTrimmedString(entryId)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_AGENTS_ID_INVALID',
+        path: `${path}.${entryId}`,
+        severity: 'error',
+        message: 'agents visibility ids must be non-empty strings without surrounding whitespace.',
+        suggestion: 'Use trimmed surface ids for authored visibility entries.',
+      });
+    }
+    validateVisibilityEntry(entryValue, `${path}.${entryId}`, diagnostics);
+  }
+}
+
+function validateVisibilityEntry(value: unknown, path: string, diagnostics: Diagnostic[]): void {
+  if (value === undefined) {
+    return;
+  }
+  if (!isRecord(value)) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_AGENTS_DEFINITION_INVALID',
+      path,
+      severity: 'error',
+      message: 'agents visibility entries must be objects.',
+      suggestion: 'Define visibility entries with current and/or preview fields.',
+    });
+    return;
+  }
+  validateUnknownKeys(value, AGENT_VISIBILITY_KEYS, path, diagnostics, 'agents visibility entry');
+  if (value.preview !== undefined) {
+    if (!isRecord(value.preview)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_AGENTS_DEFINITION_INVALID',
+        path: `${path}.preview`,
+        severity: 'error',
+        message: 'agents visibility preview entries must be objects.',
+        suggestion: 'Define preview visibility with visibility and/or allowWhenHiddenSampling.',
+      });
+      return;
+    }
+    validateUnknownKeys(value.preview, AGENT_VISIBILITY_PREVIEW_KEYS, `${path}.preview`, diagnostics, 'agents visibility preview');
+  }
 }
 
 function validateLibrary(library: unknown, diagnostics: Diagnostic[]): void {

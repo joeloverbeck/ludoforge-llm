@@ -32,8 +32,23 @@ function createAction(id: string): ActionDef {
 
 function createCatalog(): AgentPolicyCatalog {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     catalogFingerprint: 'catalog',
+    surfaceVisibility: {
+      globalVars: {},
+      perPlayerVars: {},
+      derivedMetrics: {},
+      victory: {
+        currentMargin: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+        currentRank: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+      },
+    },
     parameterDefs: {},
     candidateParamDefs: {},
     library: {

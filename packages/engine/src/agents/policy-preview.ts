@@ -9,6 +9,7 @@ import { buildSeatResolutionIndex, resolvePlayerIndexForSeatValue, type SeatReso
 import type { PlayerId } from '../kernel/branded.js';
 import type { GameDef, GameState, Move, RngState } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
+import { isSurfaceVisibilityAccessible, resolvePolicySurfaceRef } from './policy-surface.js';
 
 export interface PolicyPreviewCandidate {
   readonly move: Move;
@@ -55,6 +56,7 @@ type PreviewOutcome =
   | {
       readonly kind: 'ready';
       readonly state: GameState;
+      readonly requiresHiddenSampling: boolean;
       readonly metricCache: Map<string, number>;
       victorySurface: VictorySurface | null;
     }
@@ -88,7 +90,20 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         return undefined;
       }
       const nestedPath = refPath.slice('preview.'.length);
-      if (nestedPath.startsWith('metric.')) {
+      const resolved = input.def.agents === undefined ? null : resolvePolicySurfaceRef(input.def.agents.surfaceVisibility, nestedPath);
+      if (resolved === null) {
+        return undefined;
+      }
+      const resolvedSeatId = resolved.seatToken === undefined
+        ? undefined
+        : resolveSeatToken(input.def, preview.state, resolved.seatToken, input.seatId);
+      if (!isSurfaceVisibilityAccessible(resolved.visibility.preview.visibility, input.seatId, resolvedSeatId)) {
+        return undefined;
+      }
+      if (preview.requiresHiddenSampling && !resolved.visibility.preview.allowWhenHiddenSampling) {
+        return undefined;
+      }
+      if (resolved.family === 'derivedMetric') {
         const metricId = nestedPath.slice('metric.'.length);
         const cachedValue = preview.metricCache.get(metricId);
         if (cachedValue !== undefined) {
@@ -98,19 +113,19 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         preview.metricCache.set(metricId, value);
         return value;
       }
-      if (nestedPath.startsWith('var.global.')) {
+      if (resolved.family === 'globalVar') {
         const variableId = nestedPath.slice('var.global.'.length);
         const value = preview.state.globalVars[variableId];
         return typeof value === 'number' ? value : undefined;
       }
-      if (nestedPath.startsWith('var.seat.')) {
+      if (resolved.family === 'perPlayerVar') {
         return resolveSeatVarRef(input.def, preview.state, nestedPath, input.seatId, seatResolutionIndex);
       }
-      if (nestedPath.startsWith('victory.currentMargin.')) {
+      if (resolved.family === 'victoryCurrentMargin') {
         const seatToken = nestedPath.slice('victory.currentMargin.'.length);
         return getVictorySurface(input.def, preview).marginBySeat.get(resolveSeatToken(input.def, preview.state, seatToken, input.seatId));
       }
-      if (nestedPath.startsWith('victory.currentRank.')) {
+      if (resolved.family === 'victoryCurrentRank') {
         const seatToken = nestedPath.slice('victory.currentRank.'.length);
         return getVictorySurface(input.def, preview).rankBySeat.get(resolveSeatToken(input.def, preview.state, seatToken, input.seatId));
       }
@@ -141,12 +156,10 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         return { kind: 'unknown', reason: 'random' };
       }
       const observation = deps.derivePlayerObservation(input.def, previewState, input.playerId);
-      if (observation.requiresHiddenSampling) {
-        return { kind: 'unknown', reason: 'hidden' };
-      }
       return {
         kind: 'ready',
         state: previewState,
+        requiresHiddenSampling: observation.requiresHiddenSampling,
         metricCache: new Map<string, number>(),
         victorySurface: null,
       };

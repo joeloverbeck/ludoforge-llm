@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — verification and performance gating only
-**Deps**: specs/15-gamespec-agent-policy-ir.md, tickets/15GAMAGEPOLIR-011-author-baseline-fitl-policy-library-profiles-and-bindings.md, tickets/15GAMAGEPOLIR-012-author-baseline-texas-holdem-policy-library-profiles-and-bindings.md, tickets/15GAMAGEPOLIR-017-add-explicit-policy-visibility-ownership-for-preview-safe-runtime-surfaces.md
+**Deps**: specs/15-gamespec-agent-policy-ir.md, tickets/15GAMAGEPOLIR-011-author-baseline-fitl-policy-library-profiles-and-bindings.md, tickets/15GAMAGEPOLIR-012-author-baseline-texas-holdem-policy-library-profiles-and-bindings.md, archive/tickets/15GAMAGEPOLIR/15GAMAGEPOLIR-017-add-explicit-policy-visibility-ownership-for-preview-safe-runtime-surfaces.md
 
 ## Problem
 

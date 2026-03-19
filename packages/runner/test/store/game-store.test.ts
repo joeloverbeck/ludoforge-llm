@@ -199,8 +199,24 @@ describe('createGameStore', () => {
     expect(state.playerID).toEqual(asPlayerId(0));
     expect(state.legalMoveResult).not.toBeNull();
     expect(state.renderModel).not.toBeNull();
+    expect(state.worldLayout).not.toBeNull();
+    expect(state.worldLayout?.positions.size).toBe(def.zones.length);
     expect(state.gameLifecycle).toBe('playing');
     expect(state.loading).toBe(false);
+  });
+
+  it('keeps worldLayout stable across game-state-only mutations', async () => {
+    const def = compileStoreFixture(5);
+    const bridge = createGameWorker();
+    const store = createStoreWithDefaultVisuals(bridge);
+
+    await store.getState().initGame(def, 11, TWO_PLAYER_CONFIG);
+    const initialWorldLayout = store.getState().worldLayout;
+
+    await store.getState().selectAction(asActionId('tick'));
+    await store.getState().confirmMove();
+
+    expect(store.getState().worldLayout).toBe(initialWorldLayout);
   });
 
   it('initGame with terminal state enters terminal lifecycle', async () => {

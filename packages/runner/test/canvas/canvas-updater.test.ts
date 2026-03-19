@@ -629,7 +629,7 @@ describe('createCanvasUpdater', () => {
     updater.start();
     vi.clearAllMocks();
 
-    positionStore.setPositions({
+    positionStore.setActiveLayout({
       positions: new Map([['zone:a', { x: 10, y: 20 }]]),
       bounds: {
         minX: 0,
@@ -766,7 +766,7 @@ describe('createCanvasUpdater', () => {
       }),
     });
 
-    positionStore.setZoneIDs(['zone:a', 'zone:b']);
+    positionStore.setFallbackZoneIDs(['zone:a', 'zone:b']);
 
     expect(renderers.zoneRenderer.update).not.toHaveBeenCalled();
     expect(renderers.adjacencyRenderer.update).not.toHaveBeenCalled();

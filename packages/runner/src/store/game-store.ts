@@ -28,6 +28,8 @@ import type { AnimationDetailLevel, AnimationPlaybackSpeed } from '../animation/
 import { resolveAiPlaybackDelayMs, resolveAiSeat, selectAiMove, type AiPlaybackSpeed } from './ai-move-policy.js';
 import type { GameWorkerAPI, OperationStamp, WorkerError } from '../worker/game-worker-api.js';
 import type { AiDecisionTrace, TraceBus } from '@ludoforge/engine/trace';
+import { getOrComputeLayout } from '../layout/layout-cache.js';
+import type { WorldLayoutModel } from '../layout/world-layout-model.js';
 
 interface GameStoreState {
   readonly gameDef: GameDef | null;
@@ -58,6 +60,7 @@ interface GameStoreState {
   readonly appliedMoveEvent: AppliedMoveEvent | null;
   readonly appliedMoveSequence: number;
   readonly activePhaseBanner: string | null;
+  readonly worldLayout: WorldLayoutModel | null;
   readonly runnerProjection: RunnerProjectionBundle | null;
   readonly runnerFrame: RunnerFrame | null;
   readonly renderModel: RenderModel | null;
@@ -200,6 +203,7 @@ const INITIAL_STATE: Omit<GameStoreState, 'playerSeats'> = {
   appliedMoveEvent: null,
   appliedMoveSequence: 0,
   activePhaseBanner: null,
+  worldLayout: null,
   runnerProjection: null,
   runnerFrame: null,
   renderModel: null,
@@ -226,6 +230,7 @@ function resetSessionState(): Pick<
   | 'playerSeats'
   | 'appliedMoveEvent'
   | 'appliedMoveSequence'
+  | 'worldLayout'
 > {
   return {
     gameDef: null,
@@ -244,6 +249,7 @@ function resetSessionState(): Pick<
     playerSeats: new Map<PlayerId, PlayerSeat>(),
     appliedMoveEvent: null,
     appliedMoveSequence: 0,
+    worldLayout: null,
   };
 }
 
@@ -526,6 +532,17 @@ function deriveStoreRunnerProjection(
   return deriveRunnerFrame(inputs.gameState, inputs.gameDef, context, previousProjection);
 }
 
+function deriveStoreWorldLayout(
+  gameDef: GameDef | null,
+  visualConfigProvider: VisualConfigProvider,
+): WorldLayoutModel | null {
+  if (gameDef === null || !Array.isArray(gameDef.zones)) {
+    return null;
+  }
+
+  return getOrComputeLayout(gameDef, visualConfigProvider).worldLayout;
+}
+
 function toRenderDerivationInputs(state: MutableGameStoreState): RenderDerivationInputs {
   return {
     gameDef: state.gameDef,
@@ -571,6 +588,7 @@ function snapshotMutableState(state: GameStore): MutableGameStoreState {
     appliedMoveEvent: state.appliedMoveEvent,
     appliedMoveSequence: state.appliedMoveSequence,
     activePhaseBanner: state.activePhaseBanner,
+    worldLayout: state.worldLayout,
   };
 }
 
@@ -648,8 +666,10 @@ export function createGameStore(
             current.runnerProjection,
           );
           const runnerFrame = runnerProjection?.frame ?? null;
+          const worldLayout = deriveStoreWorldLayout(nextState.gameDef, visualConfigProvider);
           return {
             ...patch,
+            worldLayout,
             runnerProjection,
             runnerFrame,
             renderModel: runnerProjection === null

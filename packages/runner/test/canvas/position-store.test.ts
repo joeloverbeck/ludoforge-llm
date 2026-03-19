@@ -87,12 +87,12 @@ describe('computeGridLayout', () => {
 });
 
 describe('createPositionStore', () => {
-  it('notifies subscribers when layout updates through setZoneIDs', () => {
+  it('notifies subscribers when fallback grid updates through setFallbackZoneIDs', () => {
     const store = createPositionStore();
     const listener = vi.fn();
 
     const unsubscribe = store.subscribe(listener);
-    store.setZoneIDs(['a', 'b', 'c']);
+    store.setFallbackZoneIDs(['a', 'b', 'c']);
 
     expect(listener).toHaveBeenCalledTimes(1);
     const nextSnapshot = listener.mock.calls[0]?.[0];
@@ -102,19 +102,19 @@ describe('createPositionStore', () => {
     unsubscribe();
   });
 
-  it('does not notify subscribers for identical ordered zone IDs', () => {
+  it('does not notify subscribers for identical ordered fallback zone IDs', () => {
     const store = createPositionStore(['a', 'b']);
     const listener = vi.fn();
 
     const unsubscribe = store.subscribe(listener);
-    store.setZoneIDs(['a', 'b']);
+    store.setFallbackZoneIDs(['a', 'b']);
 
     expect(listener).not.toHaveBeenCalled();
 
     unsubscribe();
   });
 
-  it('accepts injected layouts via setPositions for future layout-engine handoff', () => {
+  it('accepts injected active layouts without re-deriving them locally', () => {
     const store = createPositionStore(['a']);
     const listener = vi.fn();
 
@@ -132,7 +132,7 @@ describe('createPositionStore', () => {
     };
 
     const unsubscribe = store.subscribe(listener);
-    store.setPositions(next, ['a', 'b']);
+    store.setActiveLayout(next, ['a', 'b']);
 
     const snapshot = store.getSnapshot();
     expect(snapshot.zoneIDs).toEqual(['a', 'b']);

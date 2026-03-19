@@ -9,13 +9,10 @@ import { GameCanvas, createGameCanvasRuntime, createScopedLifecycleCallback } fr
 import type { CoordinateBridge } from '../../src/canvas/coordinate-bridge';
 import type { GameStore } from '../../src/store/game-store';
 import type { DiagnosticBuffer } from '../../src/animation/diagnostic-buffer.js';
-import { getOrComputeLayout } from '../../src/layout/layout-cache.js';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import { drawTableBackground } from '../../src/canvas/renderers/table-background-renderer.js';
+import type { WorldLayoutModel } from '../../src/layout/world-layout-model.js';
 
-vi.mock('../../src/layout/layout-cache.js', () => ({
-  getOrComputeLayout: vi.fn(),
-}));
 vi.mock('../../src/canvas/renderers/table-background-renderer.js', () => ({
   drawTableBackground: vi.fn(),
 }));
@@ -23,6 +20,7 @@ vi.mock('../../src/canvas/renderers/table-background-renderer.js', () => ({
 interface RuntimeStoreState {
   readonly renderModel: GameStore['renderModel'];
   readonly gameDef: GameDef | null;
+  readonly worldLayout: WorldLayoutModel | null;
   readonly animationPlaying: boolean;
   readonly animationPlaybackSpeed: GameStore['animationPlaybackSpeed'];
   readonly animationPaused: boolean;
@@ -34,12 +32,16 @@ interface RuntimeStoreState {
   requestAnimationSkipCurrent(): void;
 }
 
-function createRuntimeStore(initialRenderModel: GameStore['renderModel']): StoreApi<RuntimeStoreState> {
+function createRuntimeStore(
+  initialRenderModel: GameStore['renderModel'],
+  initialWorldLayout: WorldLayoutModel | null = null,
+): StoreApi<RuntimeStoreState> {
   let store!: StoreApi<RuntimeStoreState>;
   store = createStore<RuntimeStoreState>()(
     subscribeWithSelector((): RuntimeStoreState => ({
       renderModel: initialRenderModel,
       gameDef: null,
+      worldLayout: initialWorldLayout,
       animationPlaying: false,
       animationPlaybackSpeed: '1x',
       animationPaused: false,
@@ -68,6 +70,29 @@ function makeRenderModel(zoneIds: readonly string[]): GameStore['renderModel'] {
   } as unknown as NonNullable<GameStore['renderModel']>;
 }
 
+function makeWorldLayout(zoneIds: readonly string[]): WorldLayoutModel {
+  const positions = new Map<string, { x: number; y: number }>();
+  for (const [index, zoneId] of zoneIds.entries()) {
+    positions.set(zoneId, { x: 40 + index * 100, y: 60 });
+  }
+
+  return {
+    positions,
+    bounds: {
+      minX: 0,
+      minY: 0,
+      maxX: Math.max(320, zoneIds.length * 100 + 20),
+      maxY: 120,
+    },
+    boardBounds: {
+      minX: 20,
+      minY: 30,
+      maxX: Math.max(260, zoneIds.length * 100 - 40),
+      maxY: 180,
+    },
+  };
+}
+
 function createRuntimeFixture() {
   const lifecycle: string[] = [];
   let movedListener: (() => void) | null = null;
@@ -78,8 +103,8 @@ function createRuntimeFixture() {
       positions: new Map([['zone:a', { x: 0, y: 0 }]]),
       bounds: { minX: 0, minY: 0, maxX: 400, maxY: 300 },
     })),
-    setZoneIDs: vi.fn(),
-    setPositions: vi.fn(),
+    setFallbackZoneIDs: vi.fn(),
+    setActiveLayout: vi.fn(),
     subscribe: vi.fn(() => {
       lifecycle.push('position-unsubscribe-registered');
       return () => {
@@ -355,7 +380,6 @@ function flushMicrotasks(): Promise<void> {
   return Promise.resolve();
 }
 
-const mockedGetOrComputeLayout = vi.mocked(getOrComputeLayout);
 const mockedDrawTableBackground = vi.mocked(drawTableBackground);
 const TEST_VISUAL_CONFIG_PROVIDER = new VisualConfigProvider(null);
 
@@ -409,30 +433,7 @@ describe('GameCanvas', () => {
 
 describe('createGameCanvasRuntime', () => {
   beforeEach(() => {
-    mockedGetOrComputeLayout.mockReset();
     mockedDrawTableBackground.mockReset();
-    mockedGetOrComputeLayout.mockReturnValue({
-      mode: 'table',
-      boardBounds: {
-        minX: 20,
-        minY: 30,
-        maxX: 260,
-        maxY: 180,
-      },
-      positionMap: {
-        positions: new Map([
-          ['zone:deck', { x: 40, y: 60 }],
-          ['zone:burn', { x: 140, y: 60 }],
-          ['zone:hand:p1', { x: 240, y: 60 }],
-        ]),
-        bounds: {
-          minX: 0,
-          minY: 0,
-          maxX: 320,
-          maxY: 120,
-        },
-      },
-    });
   });
 
   it('initializes canvas pipeline and wires hover-anchor publishing', async () => {
@@ -548,7 +549,7 @@ describe('createGameCanvasRuntime', () => {
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
 
-    store.setState({ gameDef });
+    store.setState({ gameDef, worldLayout: makeWorldLayout(['zone:deck', 'zone:burn', 'zone:hand:p1']) });
     await flushMicrotasks();
 
     expect(mockedDrawTableBackground).toHaveBeenCalledWith(
@@ -562,7 +563,7 @@ describe('createGameCanvasRuntime', () => {
       },
     );
 
-    store.setState({ gameDef: null });
+    store.setState({ gameDef: null, worldLayout: null });
     await flushMicrotasks();
 
     expect(mockedDrawTableBackground).toHaveBeenCalledWith(
@@ -574,9 +575,12 @@ describe('createGameCanvasRuntime', () => {
     runtime.destroy();
   });
 
-  it('computes layout once during init when gameDef already exists in store state', async () => {
+  it('consumes store-owned world layout during init when gameDef already exists in store state', async () => {
     const fixture = createRuntimeFixture();
-    const store = createRuntimeStore(makeRenderModel(['zone:deck', 'zone:burn', 'zone:hand:p1']));
+    const store = createRuntimeStore(
+      makeRenderModel(['zone:deck', 'zone:burn', 'zone:hand:p1']),
+      makeWorldLayout(['zone:deck', 'zone:burn', 'zone:hand:p1']),
+    );
     const gameDef = makeGameDefWithZones(['zone:deck', 'zone:burn', 'zone:hand:p1']);
     store.setState({ gameDef });
 
@@ -590,8 +594,10 @@ describe('createGameCanvasRuntime', () => {
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
 
-    expect(mockedGetOrComputeLayout).toHaveBeenCalledTimes(1);
-    expect(mockedGetOrComputeLayout).toHaveBeenCalledWith(gameDef, TEST_VISUAL_CONFIG_PROVIDER);
+    expect(fixture.positionStore.setActiveLayout).toHaveBeenCalledWith(
+      store.getState().worldLayout,
+      ['zone:deck', 'zone:burn', 'zone:hand:p1'],
+    );
 
     runtime.destroy();
   });
@@ -1002,10 +1008,10 @@ describe('createGameCanvasRuntime', () => {
 
     store.setState({
       gameDef,
+      worldLayout: makeWorldLayout(['zone:deck', 'zone:burn', 'zone:hand:p1']),
     });
 
-    expect(mockedGetOrComputeLayout).toHaveBeenCalledWith(gameDef, TEST_VISUAL_CONFIG_PROVIDER);
-    expect(fixture.positionStore.setPositions).toHaveBeenCalledWith(expect.objectContaining({
+    expect(fixture.positionStore.setActiveLayout).toHaveBeenCalledWith(expect.objectContaining({
       positions: expect.any(Map),
       bounds: expect.any(Object),
     }), [
@@ -1013,7 +1019,7 @@ describe('createGameCanvasRuntime', () => {
       'zone:burn',
       'zone:hand:p1',
     ]);
-    expect(fixture.positionStore.setZoneIDs).not.toHaveBeenCalled();
+    expect(fixture.positionStore.setFallbackZoneIDs).not.toHaveBeenCalled();
 
     runtime.destroy();
   });
@@ -1021,7 +1027,10 @@ describe('createGameCanvasRuntime', () => {
   it('applies layout positions during runtime creation when initial GameDef exists', async () => {
     const fixture = createRuntimeFixture();
     const gameDef = makeGameDefWithZones(['zone:deck', 'zone:burn', 'zone:hand:p1']);
-    const store = createRuntimeStore(makeRenderModel(['zone:visible-only']));
+    const store = createRuntimeStore(
+      makeRenderModel(['zone:visible-only']),
+      makeWorldLayout(['zone:deck', 'zone:burn', 'zone:hand:p1']),
+    );
     store.setState({ gameDef });
 
     const runtime = await createGameCanvasRuntime(
@@ -1034,12 +1043,11 @@ describe('createGameCanvasRuntime', () => {
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
 
-    expect(mockedGetOrComputeLayout).toHaveBeenCalledWith(gameDef, TEST_VISUAL_CONFIG_PROVIDER);
-    expect(fixture.positionStore.setPositions).toHaveBeenCalledWith(expect.objectContaining({
+    expect(fixture.positionStore.setActiveLayout).toHaveBeenCalledWith(expect.objectContaining({
       positions: expect.any(Map),
       bounds: expect.any(Object),
     }), ['zone:deck', 'zone:burn', 'zone:hand:p1']);
-    expect(fixture.positionStore.setZoneIDs).not.toHaveBeenCalled();
+    expect(fixture.positionStore.setFallbackZoneIDs).not.toHaveBeenCalled();
 
     runtime.destroy();
   });
@@ -1061,13 +1069,11 @@ describe('createGameCanvasRuntime', () => {
     const firstDef = makeGameDefWithZones(['zone:deck', 'zone:burn']);
     const secondDef = makeGameDefWithZones(['zone:alpha', 'zone:beta', 'zone:gamma']);
 
-    store.setState({ gameDef: firstDef });
-    store.setState({ gameDef: secondDef });
+    store.setState({ gameDef: firstDef, worldLayout: makeWorldLayout(['zone:deck', 'zone:burn']) });
+    store.setState({ gameDef: secondDef, worldLayout: makeWorldLayout(['zone:alpha', 'zone:beta', 'zone:gamma']) });
 
-    expect(mockedGetOrComputeLayout).toHaveBeenNthCalledWith(1, firstDef, TEST_VISUAL_CONFIG_PROVIDER);
-    expect(mockedGetOrComputeLayout).toHaveBeenNthCalledWith(2, secondDef, TEST_VISUAL_CONFIG_PROVIDER);
-    expect(fixture.positionStore.setPositions).toHaveBeenNthCalledWith(1, expect.any(Object), ['zone:deck', 'zone:burn']);
-    expect(fixture.positionStore.setPositions).toHaveBeenNthCalledWith(2, expect.any(Object), ['zone:alpha', 'zone:beta', 'zone:gamma']);
+    expect(fixture.positionStore.setActiveLayout).toHaveBeenNthCalledWith(1, expect.any(Object), ['zone:deck', 'zone:burn']);
+    expect(fixture.positionStore.setActiveLayout).toHaveBeenNthCalledWith(2, expect.any(Object), ['zone:alpha', 'zone:beta', 'zone:gamma']);
 
     runtime.destroy();
   });
@@ -1088,11 +1094,12 @@ describe('createGameCanvasRuntime', () => {
 
     store.setState({
       gameDef: makeGameDefWithZones(['zone:deck', 'zone:burn']),
+      worldLayout: makeWorldLayout(['zone:deck', 'zone:burn']),
       renderModel: makeRenderModel(['zone:render-only-a', 'zone:render-only-b']),
     });
 
-    expect(fixture.positionStore.setPositions).toHaveBeenCalledTimes(1);
-    expect(fixture.positionStore.setZoneIDs).not.toHaveBeenCalled();
+    expect(fixture.positionStore.setActiveLayout).toHaveBeenCalledTimes(1);
+    expect(fixture.positionStore.setFallbackZoneIDs).not.toHaveBeenCalled();
 
     runtime.destroy();
   });
@@ -1112,16 +1119,16 @@ describe('createGameCanvasRuntime', () => {
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
 
-    store.setState({ gameDef });
-    store.setState({ gameDef: null, renderModel: makeRenderModel(['zone:render-fallback']) });
+    store.setState({ gameDef, worldLayout: makeWorldLayout(['zone:deck', 'zone:burn']) });
+    store.setState({ gameDef: null, worldLayout: null, renderModel: makeRenderModel(['zone:render-fallback']) });
 
-    expect(fixture.positionStore.setPositions).toHaveBeenCalledTimes(1);
-    expect(fixture.positionStore.setZoneIDs).toHaveBeenCalledWith(['zone:render-fallback']);
+    expect(fixture.positionStore.setActiveLayout).toHaveBeenCalledTimes(1);
+    expect(fixture.positionStore.setFallbackZoneIDs).toHaveBeenCalledWith(['zone:render-fallback']);
 
     runtime.destroy();
   });
 
-  it('unsubscribes GameDef layout listener on destroy', async () => {
+  it('unsubscribes world layout listener on destroy', async () => {
     const fixture = createRuntimeFixture();
     const store = createRuntimeStore(makeRenderModel(['zone:a']));
 
@@ -1136,10 +1143,12 @@ describe('createGameCanvasRuntime', () => {
     );
 
     runtime.destroy();
-    store.setState({ gameDef: makeGameDefWithZones(['zone:deck', 'zone:burn']) });
+    store.setState({
+      gameDef: makeGameDefWithZones(['zone:deck', 'zone:burn']),
+      worldLayout: makeWorldLayout(['zone:deck', 'zone:burn']),
+    });
 
-    expect(mockedGetOrComputeLayout).not.toHaveBeenCalled();
-    expect(fixture.positionStore.setPositions).not.toHaveBeenCalled();
+    expect(fixture.positionStore.setActiveLayout).not.toHaveBeenCalled();
   });
 
   it('remounts cleanly with paired updater start/destroy and no leaked zone subscriptions', async () => {
@@ -1178,7 +1187,7 @@ describe('createGameCanvasRuntime', () => {
 
     store.setState({ renderModel: makeRenderModel(['zone:a', 'zone:b']) });
 
-    expect(fixture.positionStore.setZoneIDs).toHaveBeenCalledTimes(0);
+    expect(fixture.positionStore.setFallbackZoneIDs).toHaveBeenCalledTimes(0);
   });
 
   it('continues runtime initialization when animation controller setup fails', async () => {

@@ -6,8 +6,8 @@ export interface PositionStoreSnapshot extends ZonePositionMap {
 
 export interface PositionStore {
   getSnapshot(): PositionStoreSnapshot;
-  setZoneIDs(zoneIDs: readonly string[]): void;
-  setPositions(next: ZonePositionMap, zoneIDs?: readonly string[]): void;
+  setFallbackZoneIDs(zoneIDs: readonly string[]): void;
+  setActiveLayout(next: ZonePositionMap, zoneIDs: readonly string[]): void;
   subscribe(listener: (snapshot: PositionStoreSnapshot) => void): () => void;
 }
 
@@ -88,7 +88,7 @@ export function createPositionStore(initialZoneIDs: readonly string[] = []): Pos
       return snapshot;
     },
 
-    setZoneIDs(zoneIDs: readonly string[]): void {
+    setFallbackZoneIDs(zoneIDs: readonly string[]): void {
       const nextSnapshot = createSnapshot(zoneIDs, computeGridLayout(zoneIDs));
       if (snapshotsEqual(snapshot, nextSnapshot)) {
         return;
@@ -97,7 +97,7 @@ export function createPositionStore(initialZoneIDs: readonly string[] = []): Pos
       notifyListeners(listeners, snapshot);
     },
 
-    setPositions(next: ZonePositionMap, zoneIDs: readonly string[] = snapshot.zoneIDs): void {
+    setActiveLayout(next: ZonePositionMap, zoneIDs: readonly string[]): void {
       const nextSnapshot = createSnapshot(zoneIDs, next);
       if (snapshotsEqual(snapshot, nextSnapshot)) {
         return;

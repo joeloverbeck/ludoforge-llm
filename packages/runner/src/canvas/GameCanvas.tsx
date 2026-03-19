@@ -35,13 +35,13 @@ import {
 } from './renderers/action-announcement-renderer.js';
 import { createCanvasUpdater, type CanvasUpdater } from './canvas-updater';
 import { setupViewport, type ViewportResult } from './viewport-setup';
-import { getOrComputeLayout, type FullLayoutResult } from '../layout/layout-cache.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { EMPTY_INTERACTION_HIGHLIGHTS, type InteractionHighlights } from './interaction-highlights.js';
 import {
   createActionAnnouncementPresenter,
   type ActionAnnouncementPresenter,
 } from '../presentation/action-announcement-presentation.js';
+import type { WorldLayoutModel } from '../layout/world-layout-model.js';
 
 const DEFAULT_BACKGROUND_COLOR = 0x0b1020;
 const DEFAULT_WORLD_SIZE = 1;
@@ -181,55 +181,51 @@ export async function createGameCanvasRuntime(
   const selectorStore = options.store as SelectorSubscribeStore<GameStore>;
   const initialState = selectorStore.getState();
   const initialZoneIDs = selectZoneIDs(initialState);
-  const initialGameDef = initialState.gameDef;
-  const positionStore = deps.createPositionStore(initialGameDef === null ? initialZoneIDs : []);
+  const initialWorldLayout = initialState.worldLayout;
+  const positionStore = deps.createPositionStore(initialWorldLayout === null ? initialZoneIDs : []);
 
-  const applyGameDefLayout = (gameDef: GameStore['gameDef']): FullLayoutResult | null => {
-    if (gameDef === null) {
-      positionStore.setZoneIDs(selectZoneIDs(selectorStore.getState()));
+  const applyWorldLayout = (
+    worldLayout: WorldLayoutModel | null,
+    gameDef: GameStore['gameDef'],
+  ): WorldLayoutModel | null => {
+    if (worldLayout === null || !Array.isArray(gameDef?.zones)) {
+      positionStore.setFallbackZoneIDs(selectZoneIDs(selectorStore.getState()));
       if (layersForBackground !== null) {
         drawTableBackground(layersForBackground.backgroundLayer, null, EMPTY_TABLE_BOUNDS);
       }
       return null;
     }
 
-    if (!Array.isArray(gameDef.zones)) {
-      positionStore.setZoneIDs(selectZoneIDs(selectorStore.getState()));
-      if (layersForBackground !== null) {
-        drawTableBackground(layersForBackground.backgroundLayer, null, EMPTY_TABLE_BOUNDS);
-      }
-      return null;
-    }
-
-    const layoutResult = getOrComputeLayout(gameDef, options.visualConfigProvider);
     const gameDefZoneIDs = gameDef.zones.map((zone) => zone.id);
-    positionStore.setPositions(layoutResult.positionMap, gameDefZoneIDs);
+    positionStore.setActiveLayout(worldLayout, gameDefZoneIDs);
     if (layersForBackground !== null) {
       drawTableBackground(
         layersForBackground.backgroundLayer,
         options.visualConfigProvider.getTableBackground(),
-        layoutResult.boardBounds,
+        worldLayout.boardBounds,
       );
     }
-    return layoutResult;
+    return worldLayout;
   };
 
-  let initialLayoutResult: FullLayoutResult | null = null;
-  if (initialGameDef !== null) {
-    initialLayoutResult = applyGameDefLayout(initialGameDef);
+  let initialLayoutResult: WorldLayoutModel | null = null;
+  if (initialWorldLayout !== null) {
+    initialLayoutResult = applyWorldLayout(initialWorldLayout, initialState.gameDef);
   }
 
   const gameCanvas = await deps.createGameCanvas(options.container, {
     backgroundColor: options.backgroundColor,
   });
   layersForBackground = gameCanvas.layers;
-  const currentGameDef = selectorStore.getState().gameDef;
-  if (currentGameDef === null || !Array.isArray(currentGameDef.zones)) {
+  const currentState = selectorStore.getState();
+  const currentGameDef = currentState.gameDef;
+  const currentWorldLayout = currentState.worldLayout;
+  if (currentWorldLayout === null || currentGameDef === null || !Array.isArray(currentGameDef.zones)) {
     drawTableBackground(gameCanvas.layers.backgroundLayer, null, EMPTY_TABLE_BOUNDS);
   } else {
-    const layoutResult = initialLayoutResult !== null && currentGameDef === initialGameDef
+    const layoutResult = initialLayoutResult !== null && currentWorldLayout === initialWorldLayout
       ? initialLayoutResult
-      : getOrComputeLayout(currentGameDef, options.visualConfigProvider);
+      : currentWorldLayout;
     drawTableBackground(
       gameCanvas.layers.backgroundLayer,
       options.visualConfigProvider.getTableBackground(),
@@ -395,18 +391,18 @@ export async function createGameCanvasRuntime(
   }
 
   const unsubscribeZoneIDs = selectorStore.subscribe(selectZoneIDs, (zoneIDs) => {
-    if (selectorStore.getState().gameDef !== null) {
+    if (selectorStore.getState().worldLayout !== null) {
       return;
     }
-    positionStore.setZoneIDs(zoneIDs);
+    positionStore.setFallbackZoneIDs(zoneIDs);
   }, { equalityFn: stringArraysEqual });
-  const unsubscribeGameDef = selectorStore.subscribe(
-    (state) => state.gameDef,
-    (gameDef, previousGameDef) => {
-      if (gameDef === previousGameDef) {
+  const unsubscribeWorldLayout = selectorStore.subscribe(
+    (state) => state.worldLayout,
+    (worldLayout, previousWorldLayout) => {
+      if (worldLayout === previousWorldLayout) {
         return;
       }
-      applyGameDefLayout(gameDef);
+      applyWorldLayout(worldLayout, selectorStore.getState().gameDef);
     },
   );
   const unsubscribeAnimationPlaybackSpeed = selectorStore.subscribe(
@@ -529,7 +525,7 @@ export async function createGameCanvasRuntime(
       hoverTargetController.destroy();
       options.onHoverAnchorChange?.(null);
       unsubscribeZoneIDs();
-      unsubscribeGameDef();
+      unsubscribeWorldLayout();
       unsubscribeAnimationPlaybackSpeed();
       unsubscribeAnimationPaused();
       unsubscribeAnimationSkipRequestToken();

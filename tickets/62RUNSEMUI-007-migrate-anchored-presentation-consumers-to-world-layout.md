@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: `specs/62-runner-semantic-ui-projection-boundary.md`, `archive/tickets/62RUNSEMUI/62RUNSEMUI-003-project-table-overlays-before-scene-assembly.md`, `tickets/62RUNSEMUI-006-introduce-explicit-world-layout-contract.md`
+**Deps**: `specs/62-runner-semantic-ui-projection-boundary.md`, `archive/tickets/62RUNSEMUI/62RUNSEMUI-003-project-table-overlays-before-scene-assembly.md`, `archive/tickets/62RUNSEMUI/62RUNSEMUI-006-introduce-explicit-world-layout-contract.md`
 
 ## Problem
 
@@ -16,6 +16,7 @@ Anchored presentation features still depend on canvas-local position plumbing in
 2. [`packages/runner/src/presentation/action-announcement-presentation.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/presentation/action-announcement-presentation.ts) still reads positions through `PositionStore`, which keeps anchored presenter logic coupled to canvas-local infrastructure.
 3. [`packages/runner/src/canvas/canvas-updater.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/canvas/canvas-updater.ts) still resolves anchored overlay projection from the local position snapshot rather than from an explicit shared world-layout input.
 4. The current architecture has no general anchored-surface contract, so each anchored feature risks inventing its own position/anchor dependency path.
+5. After `62RUNSEMUI-006`, `packages/runner/src/canvas/position-store.ts` is already narrowed to runtime adapter behavior, but its name still implies stable layout ownership. That terminology cleanup should not be folded into this ticket unless required for wiring touch points; ticket `62RUNSEMUI-008` owns the naming/module cleanup explicitly.
 
 ## Architecture Check
 
@@ -23,6 +24,7 @@ Anchored presentation features still depend on canvas-local position plumbing in
 2. This preserves the agnostic boundary: semantic facts remain in projection bundles, layout remains in the world-layout contract, and game-specific wiring remains in `visual-config.yaml`.
 3. No backwards-compatibility aliasing should preserve the old `PositionStore` dependency path for anchored presenters once the world-layout path exists.
 4. This ticket improves extensibility beyond the current features because future anchored surfaces can follow the same projector contract instead of inventing new layout plumbing.
+5. The ticket should consume the runtime layout adapter only as temporary runtime wiring where unavoidable; it should not normalize `PositionStore` terminology as the long-term contract name.
 
 ## What to Change
 

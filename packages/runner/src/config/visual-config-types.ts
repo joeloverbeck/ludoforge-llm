@@ -380,25 +380,6 @@ const TokensConfigSchema = z.object({
   stackBadge: StackBadgeStyleSchema.optional(),
 });
 
-const VariablePanelSchema = z.object({
-  name: z.string(),
-  vars: z.array(z.string()),
-});
-
-const VariableFormattingSchema = z.object({
-  type: z.string(),
-  min: z.number().optional(),
-  max: z.number().optional(),
-  labels: z.array(z.string()).optional(),
-  suffix: z.string().optional(),
-});
-
-const VariablesConfigSchema = z.object({
-  prominent: z.array(z.string()).optional(),
-  panels: z.array(VariablePanelSchema).optional(),
-  formatting: z.record(z.string(), VariableFormattingSchema).optional(),
-});
-
 const TableOverlayItemSchema = z.object({
   kind: z.enum(['globalVar', 'perPlayerVar', 'marker']),
   varName: z.string(),
@@ -425,6 +406,33 @@ const TableOverlaysSchema = z.object({
     });
   }
 });
+
+const ShowdownVisibilitySchema = z.object({
+  phase: z.string(),
+}).strict();
+
+const ShowdownRankingSourceSchema = z.object({
+  kind: z.literal('perPlayerVar'),
+  name: z.string(),
+}).strict();
+
+const ShowdownZoneSelectorSchema = z.object({
+  zones: z.array(z.string()).min(1),
+}).strict();
+
+const ShowdownSurfaceSchema = z.object({
+  when: ShowdownVisibilitySchema,
+  ranking: z.object({
+    source: ShowdownRankingSourceSchema,
+    hideZeroScores: z.boolean().optional(),
+  }).strict(),
+  communityCards: ShowdownZoneSelectorSchema,
+  playerCards: ShowdownZoneSelectorSchema,
+}).strict();
+
+const RunnerSurfacesConfigSchema = z.object({
+  showdown: ShowdownSurfaceSchema.optional(),
+}).strict();
 
 const PhaseBannersSchema = z.object({
   phases: z.array(z.string()).min(1),
@@ -470,6 +478,16 @@ const ActionGroupPolicySchema = z.object({
   hide: z.array(z.string()).optional(),
 });
 
+const RunnerChromeTopBarStatusAlignmentSchema = z.enum(['center', 'start']);
+
+const RunnerChromeTopBarSchema = z.object({
+  statusAlignment: RunnerChromeTopBarStatusAlignmentSchema.optional(),
+}).strict();
+
+const RunnerChromeConfigSchema = z.object({
+  topBar: RunnerChromeTopBarSchema.optional(),
+}).strict();
+
 export const VisualConfigSchema = z.object({
   version: z.literal(1),
   layout: LayoutConfigSchema.optional(),
@@ -483,13 +501,14 @@ export const VisualConfigSchema = z.object({
   cardAnimation: CardAnimationConfigSchema.optional(),
   animations: AnimationsConfigSchema.optional(),
   cards: CardsConfigSchema.optional(),
-  variables: VariablesConfigSchema.optional(),
   tableOverlays: TableOverlaysSchema.optional(),
+  runnerSurfaces: RunnerSurfacesConfigSchema.optional(),
   phaseBanners: PhaseBannersSchema.optional(),
   victoryStandings: VictoryStandingsVisualSchema.optional(),
   actionGroupPolicy: ActionGroupPolicySchema.optional(),
   regions: RegionBoundaryConfigSchema.optional(),
-});
+  runnerChrome: RunnerChromeConfigSchema.optional(),
+}).strict();
 
 export type LayoutMode = z.infer<typeof LayoutModeSchema>;
 export type LayoutRole = z.infer<typeof LayoutRoleSchema>;
@@ -537,11 +556,13 @@ export type CardTemplate = z.infer<typeof CardTemplateSchema>;
 export type CardTemplateAssignment = z.infer<typeof CardTemplateAssignmentSchema>;
 export type CardsConfig = z.infer<typeof CardsConfigSchema>;
 export type TokensConfig = z.infer<typeof TokensConfigSchema>;
-export type VariablePanel = z.infer<typeof VariablePanelSchema>;
-export type VariableFormatting = z.infer<typeof VariableFormattingSchema>;
-export type VariablesConfig = z.infer<typeof VariablesConfigSchema>;
 export type TableOverlayItemConfig = z.infer<typeof TableOverlayItemSchema>;
 export type TableOverlaysConfig = z.infer<typeof TableOverlaysSchema>;
+export type ShowdownVisibilityConfig = z.infer<typeof ShowdownVisibilitySchema>;
+export type ShowdownRankingSourceConfig = z.infer<typeof ShowdownRankingSourceSchema>;
+export type ShowdownZoneSelectorConfig = z.infer<typeof ShowdownZoneSelectorSchema>;
+export type ShowdownSurfaceConfig = z.infer<typeof ShowdownSurfaceSchema>;
+export type RunnerSurfacesConfig = z.infer<typeof RunnerSurfacesConfigSchema>;
 export type PhaseBannersConfig = z.infer<typeof PhaseBannersSchema>;
 export type VictoryTooltipComponent = z.infer<typeof VictoryTooltipComponentSchema>;
 export type VictoryTooltipBreakdown = z.infer<typeof VictoryTooltipBreakdownSchema>;
@@ -554,4 +575,7 @@ export type ActionGroupPolicy = z.infer<typeof ActionGroupPolicySchema>;
 export type RegionBorderStyle = z.infer<typeof RegionBorderStyleSchema>;
 export type RegionStyle = z.infer<typeof RegionStyleSchema>;
 export type RegionBoundaryConfig = z.infer<typeof RegionBoundaryConfigSchema>;
+export type RunnerChromeTopBarStatusAlignment = z.infer<typeof RunnerChromeTopBarStatusAlignmentSchema>;
+export type RunnerChromeTopBarConfig = z.infer<typeof RunnerChromeTopBarSchema>;
+export type RunnerChromeConfig = z.infer<typeof RunnerChromeConfigSchema>;
 export type VisualConfig = z.infer<typeof VisualConfigSchema>;

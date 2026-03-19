@@ -1,12 +1,18 @@
-import { asPlayerId } from '@ludoforge/engine/runtime';
+import { asPlayerId, type PlayerId } from '@ludoforge/engine/runtime';
 import { describe, expect, it, vi } from 'vitest';
 import type { Container } from 'pixi.js';
 
 import { VisualConfigProvider } from '../../../src/config/visual-config-provider';
 import { createTableOverlayRenderer } from '../../../src/canvas/renderers/table-overlay-renderer';
-import { resolveOverlayNodes } from '../../../src/presentation/presentation-scene.js';
-import type { RenderModel, RenderVariable, RenderZone } from '../../../src/model/render-model';
-import type { RunnerFrame } from '../../../src/model/runner-frame.js';
+import type { WorldLayoutModel } from '../../../src/layout/world-layout-model.js';
+import type { RenderModel, RenderZone } from '../../../src/model/render-model';
+import type { RunnerFrame, RunnerProjectionSource } from '../../../src/model/runner-frame.js';
+import { projectTableOverlaySurface } from '../../../src/presentation/project-table-overlay-surface.js';
+
+interface ProjectionSourceFixture {
+  readonly globalVars: readonly { name: string; value: number | boolean }[];
+  readonly playerVars: ReadonlyMap<PlayerId, readonly { name: string; value: number | boolean }[]>;
+}
 
 const {
   MockContainer,
@@ -136,13 +142,6 @@ function makeRenderModel(overrides: Partial<RenderModel> = {}): RenderModel {
     ],
     adjacencies: [],
     tokens: [],
-    globalVars: [],
-    playerVars: new Map([
-      [asPlayerId(0), []],
-      [asPlayerId(1), []],
-    ]),
-    globalMarkers: [],
-    tracks: [],
     activeEffects: [],
     players: [
       {
@@ -177,6 +176,10 @@ function makeRenderModel(overrides: Partial<RenderModel> = {}): RenderModel {
     choiceUi: { kind: 'none' },
     moveEnumerationWarnings: [],
     runtimeEligible: [],
+    surfaces: {
+      tableOverlays: [],
+      showdown: null,
+    },
     victoryStandings: null,
     terminal: null,
     ...overrides,
@@ -203,11 +206,21 @@ function makeZone(overrides: Partial<RenderZone>): RenderZone {
   };
 }
 
-function asVar(name: string, value: number | boolean): RenderVariable {
+function asVar(name: string, value: number | boolean) {
   return {
     name,
     value,
-    displayName: name,
+  } as const;
+}
+
+function makeProjectionSource(overrides: Partial<ProjectionSourceFixture> = {}): ProjectionSourceFixture {
+  return {
+    globalVars: [],
+    playerVars: new Map([
+      [asPlayerId(0), []],
+      [asPlayerId(1), []],
+    ]),
+    ...overrides,
   };
 }
 
@@ -216,12 +229,28 @@ function updateRenderer(
   provider: VisualConfigProvider,
   renderModel: RenderModel | null,
   positions: ReadonlyMap<string, { x: number; y: number }>,
+  projectionSource: ProjectionSourceFixture = makeProjectionSource(),
 ): void {
-  renderer.update(
-    renderModel === null
-      ? []
-      : resolveOverlayNodes(toRunnerFrame(renderModel), renderModel.zones, positions, provider),
-  );
+  renderer.update(projectTableOverlaySurface({
+    projection: renderModel === null
+      ? null
+      : {
+          frame: toRunnerFrame(renderModel),
+          source: toRunnerProjectionSource(projectionSource),
+        },
+    worldLayout: makeWorldLayout(positions),
+    visualConfigProvider: provider,
+  }));
+}
+
+function makeWorldLayout(
+  positions: ReadonlyMap<string, { x: number; y: number }>,
+): WorldLayoutModel {
+  return {
+    positions: new Map(positions),
+    bounds: { minX: -120, minY: -120, maxX: 240, maxY: 240 },
+    boardBounds: { minX: -80, minY: -80, maxX: 200, maxY: 200 },
+  };
 }
 
 function toRunnerFrame(renderModel: RenderModel): RunnerFrame {
@@ -246,15 +275,6 @@ function toRunnerFrame(renderModel: RenderModel): RunnerFrame {
     })),
     adjacencies: renderModel.adjacencies,
     tokens: renderModel.tokens,
-    globalVars: renderModel.globalVars.map(({ name, value }) => ({ name, value })),
-    playerVars: new Map(
-      Array.from(renderModel.playerVars.entries()).map(([playerId, variables]) => [
-        playerId,
-        variables.map(({ name, value }) => ({ name, value })),
-      ]),
-    ),
-    globalMarkers: renderModel.globalMarkers.map(({ id, state, possibleStates }) => ({ id, state, possibleStates })),
-    tracks: renderModel.tracks.map(({ id, scope, seat, min, max, currentValue }) => ({ id, scope, seat, min, max, currentValue })),
     activeEffects: renderModel.activeEffects.map((effect) => ({
       id: effect.id,
       sourceCardId: effect.id,
@@ -306,6 +326,18 @@ function toRunnerFrame(renderModel: RenderModel): RunnerFrame {
   };
 }
 
+function toRunnerProjectionSource(projectionSource: ProjectionSourceFixture): RunnerProjectionSource {
+  return {
+    globalVars: projectionSource.globalVars.map(({ name, value }) => ({ name, value })),
+    playerVars: new Map(
+      Array.from(projectionSource.playerVars.entries()).map(([playerId, variables]) => [
+        playerId,
+        variables.map(({ name, value }) => ({ name, value })),
+      ]),
+    ),
+  };
+}
+
 describe('createTableOverlayRenderer', () => {
   const positions = new Map([
     ['shared:center', { x: 0, y: 0 }],
@@ -331,18 +363,21 @@ describe('createTableOverlayRenderer', () => {
     });
     const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-    updateRenderer(renderer, provider, 
-      makeRenderModel({
+    updateRenderer(
+      renderer,
+      provider,
+      makeRenderModel(),
+      positions,
+      makeProjectionSource({
         globalVars: [asVar('pot', 42)],
       }),
-      positions,
     );
 
     const label = parent.children[0] as InstanceType<typeof MockText>;
     expect(parent.children).toHaveLength(1);
     expect(label.text).toBe('Pot: 42');
-    expect(label.position.x).toBe(0);
-    expect(label.position.y).toBeCloseTo(126.6666666667, 6);
+    expect(label.position.x).toBe(60);
+    expect(label.position.y).toBe(120);
   });
 
   it('updates globalVar overlay when value changes', () => {
@@ -355,9 +390,9 @@ describe('createTableOverlayRenderer', () => {
     });
     const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-    updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
+    updateRenderer(renderer, provider, makeRenderModel(), positions, makeProjectionSource({ globalVars: [asVar('pot', 10)] }));
 
-    updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('pot', 55)] }), positions);
+    updateRenderer(renderer, provider, makeRenderModel(), positions, makeProjectionSource({ globalVars: [asVar('pot', 55)] }));
     const secondLabel = parent.children[0] as InstanceType<typeof MockText>;
 
     expect(parent.children).toHaveLength(1);
@@ -383,7 +418,7 @@ describe('createTableOverlayRenderer', () => {
     });
     const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-    updateRenderer(renderer, provider, 
+    updateRenderer(renderer, provider,
       makeRenderModel({
         players: [
           {
@@ -403,12 +438,14 @@ describe('createTableOverlayRenderer', () => {
             factionId: null,
           },
         ],
+      }),
+      positions,
+      makeProjectionSource({
         playerVars: new Map([
           [asPlayerId(0), [asVar('streetBet', 25)]],
           [asPlayerId(1), [asVar('streetBet', 99)]],
         ]),
       }),
-      positions,
     );
 
     const label = parent.children[0] as InstanceType<typeof MockText>;
@@ -439,11 +476,14 @@ describe('createTableOverlayRenderer', () => {
     });
     const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-    updateRenderer(renderer, provider, 
-      makeRenderModel({
+    updateRenderer(
+      renderer,
+      provider,
+      makeRenderModel(),
+      positions,
+      makeProjectionSource({
         globalVars: [asVar('dealerSeat', 1)],
       }),
-      positions,
     );
 
     const marker = parent.children[0] as InstanceType<typeof MockContainer>;
@@ -467,12 +507,12 @@ describe('createTableOverlayRenderer', () => {
     });
     const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-    updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('dealerSeat', 0)] }), positions);
+    updateRenderer(renderer, provider, makeRenderModel(), positions, makeProjectionSource({ globalVars: [asVar('dealerSeat', 0)] }));
     const firstMarker = parent.children[0] as InstanceType<typeof MockContainer>;
     expect(firstMarker.position.x).toBe(-100);
     expect(firstMarker.position.y).toBe(100);
 
-    updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('dealerSeat', 1)] }), positions);
+    updateRenderer(renderer, provider, makeRenderModel(), positions, makeProjectionSource({ globalVars: [asVar('dealerSeat', 1)] }));
     const secondMarker = parent.children[0] as InstanceType<typeof MockContainer>;
     expect(secondMarker.position.x).toBe(100);
     expect(secondMarker.position.y).toBe(100);
@@ -484,7 +524,7 @@ describe('createTableOverlayRenderer', () => {
     const provider = new VisualConfigProvider({ version: 1 });
     const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-    updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('pot', 12)] }), positions);
+    updateRenderer(renderer, provider, makeRenderModel(), positions, makeProjectionSource({ globalVars: [asVar('pot', 12)] }));
 
     expect(parent.children).toHaveLength(0);
   });
@@ -500,11 +540,14 @@ describe('createTableOverlayRenderer', () => {
     });
     const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-    updateRenderer(renderer, provider, 
-      makeRenderModel({
+    updateRenderer(
+      renderer,
+      provider,
+      makeRenderModel(),
+      positions,
+      makeProjectionSource({
         globalVars: [asVar('dealerSeat', 0)],
       }),
-      positions,
     );
 
     expect(parent.children).toHaveLength(0);
@@ -521,13 +564,13 @@ describe('createTableOverlayRenderer', () => {
       });
       const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-      updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('pot', 42)] }), positions);
+      updateRenderer(renderer, provider, makeRenderModel(), positions, makeProjectionSource({ globalVars: [asVar('pot', 42)] }));
 
       const firstChild = parent.children[0] as InstanceType<typeof MockText>;
       expect(parent.children).toHaveLength(1);
       expect(firstChild.text).toBe('Pot: 42');
 
-      updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('pot', 42)] }), positions);
+      updateRenderer(renderer, provider, makeRenderModel(), positions, makeProjectionSource({ globalVars: [asVar('pot', 42)] }));
 
       expect(parent.children).toHaveLength(1);
       expect(parent.children[0]).toBe(firstChild);
@@ -544,10 +587,10 @@ describe('createTableOverlayRenderer', () => {
       });
       const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-      updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
+      updateRenderer(renderer, provider, makeRenderModel(), positions, makeProjectionSource({ globalVars: [asVar('pot', 10)] }));
       const firstChild = parent.children[0] as InstanceType<typeof MockText>;
 
-      updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('pot', 20)] }), positions);
+      updateRenderer(renderer, provider, makeRenderModel(), positions, makeProjectionSource({ globalVars: [asVar('pot', 20)] }));
 
       expect(parent.children).toHaveLength(1);
       expect(parent.children[0]).toBe(firstChild);
@@ -566,10 +609,10 @@ describe('createTableOverlayRenderer', () => {
       });
       const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-      updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('dealerSeat', 0)] }), positions);
+      updateRenderer(renderer, provider, makeRenderModel(), positions, makeProjectionSource({ globalVars: [asVar('dealerSeat', 0)] }));
       const markerRef = parent.children[0] as InstanceType<typeof MockContainer>;
 
-      updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('dealerSeat', 1)] }), positions);
+      updateRenderer(renderer, provider, makeRenderModel(), positions, makeProjectionSource({ globalVars: [asVar('dealerSeat', 1)] }));
 
       expect(parent.children).toHaveLength(1);
       expect(parent.children[0]).toBe(markerRef);
@@ -597,21 +640,22 @@ describe('createTableOverlayRenderer', () => {
       const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
       // Two active players → two text slots
-      updateRenderer(renderer, provider, 
-        makeRenderModel({
+      updateRenderer(renderer, provider,
+        makeRenderModel(),
+        positions,
+        makeProjectionSource({
           playerVars: new Map([
             [asPlayerId(0), [asVar('streetBet', 10)]],
             [asPlayerId(1), [asVar('streetBet', 20)]],
           ]),
         }),
-        positions,
       );
       expect(parent.children).toHaveLength(2);
       const firstSlot = parent.children[0] as InstanceType<typeof MockText>;
       const secondSlot = parent.children[1] as InstanceType<typeof MockText>;
 
       // One player eliminated -> the removed keyed overlay is retired.
-      updateRenderer(renderer, provider, 
+      updateRenderer(renderer, provider,
         makeRenderModel({
           players: [
             {
@@ -631,12 +675,14 @@ describe('createTableOverlayRenderer', () => {
               factionId: null,
             },
           ],
+        }),
+        positions,
+        makeProjectionSource({
           playerVars: new Map([
             [asPlayerId(0), [asVar('streetBet', 10)]],
             [asPlayerId(1), [asVar('streetBet', 20)]],
           ]),
         }),
-        positions,
       );
       expect(parent.children).toHaveLength(1);
       expect(parent.children[0]).toBe(firstSlot);
@@ -662,21 +708,22 @@ describe('createTableOverlayRenderer', () => {
       const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
       // Two players
-      updateRenderer(renderer, provider, 
-        makeRenderModel({
+      updateRenderer(renderer, provider,
+        makeRenderModel(),
+        positions,
+        makeProjectionSource({
           playerVars: new Map([
             [asPlayerId(0), [asVar('streetBet', 10)]],
             [asPlayerId(1), [asVar('streetBet', 20)]],
           ]),
         }),
-        positions,
       );
       const firstSlot = parent.children[0];
       const secondSlot = parent.children[1];
       expect(parent.children).toHaveLength(2);
 
       // One player eliminated.
-      updateRenderer(renderer, provider, 
+      updateRenderer(renderer, provider,
         makeRenderModel({
           players: [
             {
@@ -696,25 +743,28 @@ describe('createTableOverlayRenderer', () => {
               factionId: null,
             },
           ],
+        }),
+        positions,
+        makeProjectionSource({
           playerVars: new Map([
             [asPlayerId(0), [asVar('streetBet', 10)]],
             [asPlayerId(1), [asVar('streetBet', 20)]],
           ]),
         }),
-        positions,
       );
       expect(parent.children).toHaveLength(1);
       expect(secondSlot?.destroyed).toBe(true);
 
       // Both players active again.
-      updateRenderer(renderer, provider, 
-        makeRenderModel({
+      updateRenderer(renderer, provider,
+        makeRenderModel(),
+        positions,
+        makeProjectionSource({
           playerVars: new Map([
             [asPlayerId(0), [asVar('streetBet', 30)]],
             [asPlayerId(1), [asVar('streetBet', 40)]],
           ]),
         }),
-        positions,
       );
       expect(parent.children).toHaveLength(2);
       expect(parent.children[0]).toBe(firstSlot);
@@ -731,11 +781,11 @@ describe('createTableOverlayRenderer', () => {
       });
       const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-      updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
+      updateRenderer(renderer, provider, makeRenderModel(), positions, makeProjectionSource({ globalVars: [asVar('pot', 10)] }));
       const child = parent.children[0] as InstanceType<typeof MockText>;
       const destroySpy = vi.spyOn(child, 'destroy');
 
-      updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('pot', 20)] }), positions);
+      updateRenderer(renderer, provider, makeRenderModel(), positions, makeProjectionSource({ globalVars: [asVar('pot', 20)] }));
 
       expect(destroySpy).not.toHaveBeenCalled();
     });
@@ -750,11 +800,11 @@ describe('createTableOverlayRenderer', () => {
       });
       const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-      updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
+      updateRenderer(renderer, provider, makeRenderModel(), positions, makeProjectionSource({ globalVars: [asVar('pot', 10)] }));
       const child = parent.children[0] as InstanceType<typeof MockText>;
       expect(parent.children).toHaveLength(1);
 
-      updateRenderer(renderer, provider, null as unknown as RenderModel, positions);
+      updateRenderer(renderer, provider, null, positions);
       expect(parent.children).toHaveLength(0);
       expect(child.destroyed).toBe(true);
     });
@@ -778,20 +828,21 @@ describe('createTableOverlayRenderer', () => {
       const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
       // Two players active.
-      updateRenderer(renderer, provider, 
-        makeRenderModel({
+      updateRenderer(renderer, provider,
+        makeRenderModel(),
+        positions,
+        makeProjectionSource({
           playerVars: new Map([
             [asPlayerId(0), [asVar('streetBet', 10)]],
             [asPlayerId(1), [asVar('streetBet', 20)]],
           ]),
         }),
-        positions,
       );
       const firstSlot = parent.children[0] as InstanceType<typeof MockText>;
       const secondSlot = parent.children[1] as InstanceType<typeof MockText>;
 
       // Remove player 0, leaving only player 1.
-      updateRenderer(renderer, provider, 
+      updateRenderer(renderer, provider,
         makeRenderModel({
           players: [
             {
@@ -803,11 +854,13 @@ describe('createTableOverlayRenderer', () => {
               factionId: null,
             },
           ],
+        }),
+        positions,
+        makeProjectionSource({
           playerVars: new Map([
             [asPlayerId(1), [asVar('streetBet', 20)]],
           ]),
         }),
-        positions,
       );
       expect(parent.children).toHaveLength(1);
       expect(parent.children[0]).toBe(secondSlot);

@@ -15,10 +15,10 @@ import type {
 } from '../../model/render-model';
 import type {
   PresentationAdjacencyNode,
-  PresentationOverlayNode,
   PresentationRegionNode,
   PresentationZoneNode,
 } from '../../presentation/presentation-scene.js';
+import type { TableOverlaySurfaceNode } from '../../presentation/project-table-overlay-surface.js';
 import type { PresentationTokenNode } from '../../presentation/token-presentation.js';
 
 export interface ZoneRenderer {
@@ -54,7 +54,7 @@ export interface AdjacencyRenderer {
 }
 
 export interface TableOverlayRenderer {
-  update(items: readonly PresentationOverlayNode[]): void;
+  update(items: readonly TableOverlaySurfaceNode[]): void;
   destroy(): void;
 }
 

@@ -9,17 +9,17 @@ import { ZONE_HALF_HEIGHT, ZONE_HALF_WIDTH } from './layout-constants.js';
 import { EMPTY_BOUNDS, promoteCardRoleZones } from './layout-helpers.js';
 import type { LayoutMode } from './layout-types.js';
 import type { Position, ZonePositionMap } from '../spatial/position-types.js';
+import type { WorldLayoutModel } from './world-layout-model.js';
 
-export interface FullLayoutResult {
-  readonly positionMap: ZonePositionMap;
+export interface LayoutComputationResult {
+  readonly worldLayout: WorldLayoutModel;
   readonly mode: LayoutMode;
-  readonly boardBounds: ZonePositionMap['bounds'];
 }
 
-const layoutCache = new Map<string, FullLayoutResult>();
+const layoutCache = new Map<string, LayoutComputationResult>();
 let gameDefHashCache = new WeakMap<GameDef, string>();
 
-export function getOrComputeLayout(def: GameDef, visualConfigProvider: VisualConfigProvider): FullLayoutResult {
+export function getOrComputeLayout(def: GameDef, visualConfigProvider: VisualConfigProvider): LayoutComputationResult {
   const cacheKey = createLayoutCacheKey(def, visualConfigProvider.configHash);
   const cached = layoutCache.get(cacheKey);
   if (cached !== undefined) {
@@ -52,12 +52,12 @@ export function getOrComputeLayout(def: GameDef, visualConfigProvider: VisualCon
     positions.set(zoneID, { x: position.x, y: position.y });
   }
 
-  const result: FullLayoutResult = {
+  const result: LayoutComputationResult = {
     mode,
-    boardBounds: boardLayout.boardBounds,
-    positionMap: {
+    worldLayout: {
       positions,
       bounds: computeUnifiedBounds(positions),
+      boardBounds: boardLayout.boardBounds,
     },
   };
 

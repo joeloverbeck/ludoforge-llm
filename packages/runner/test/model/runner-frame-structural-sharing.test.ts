@@ -99,7 +99,7 @@ function token(id: string, props: Token['props'] = {}): Token {
 }
 
 describe('deriveRunnerFrame structural sharing', () => {
-  it('reuses unchanged zone and token references across unrelated context changes', () => {
+  it('reuses unchanged semantic frame and projection-source references across unrelated context changes', () => {
     const def = compileFixture();
     const base = initialState(def, 123, 2).state;
     const state: GameState = {
@@ -126,11 +126,13 @@ describe('deriveRunnerFrame structural sharing', () => {
       first,
     );
 
-    expect(second.zones).toBe(first.zones);
-    expect(second.tokens).toBe(first.tokens);
-    expect(second.zones[0]).toBe(first.zones[0]);
-    expect(second.tokens[0]).toBe(first.tokens[0]);
-    expect(second.tokens[1]).toBe(first.tokens[1]);
+    expect(second.frame.zones).toBe(first.frame.zones);
+    expect(second.frame.tokens).toBe(first.frame.tokens);
+    expect(second.frame.zones[0]).toBe(first.frame.zones[0]);
+    expect(second.frame.tokens[0]).toBe(first.frame.tokens[0]);
+    expect(second.frame.tokens[1]).toBe(first.frame.tokens[1]);
+    expect(second.source.globalVars).toBe(first.source.globalVars);
+    expect(second.source.playerVars).toBe(first.source.playerVars);
   });
 
   it('replaces only changed token entities and preserves unchanged ones', () => {
@@ -160,10 +162,10 @@ describe('deriveRunnerFrame structural sharing', () => {
     const first = deriveRunnerFrame(stateA, def, makeContext(), null);
     const second = deriveRunnerFrame(stateB, def, makeContext(), first);
 
-    const firstTokenOne = first.tokens.find((entry) => entry.id === 'token:1');
-    const firstTokenTwo = first.tokens.find((entry) => entry.id === 'token:2');
-    const secondTokenOne = second.tokens.find((entry) => entry.id === 'token:1');
-    const secondTokenTwo = second.tokens.find((entry) => entry.id === 'token:2');
+    const firstTokenOne = first.frame.tokens.find((entry) => entry.id === 'token:1');
+    const firstTokenTwo = first.frame.tokens.find((entry) => entry.id === 'token:2');
+    const secondTokenOne = second.frame.tokens.find((entry) => entry.id === 'token:1');
+    const secondTokenTwo = second.frame.tokens.find((entry) => entry.id === 'token:2');
 
     expect(firstTokenOne).toBeDefined();
     expect(firstTokenTwo).toBeDefined();

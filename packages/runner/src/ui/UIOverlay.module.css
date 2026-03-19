@@ -36,6 +36,10 @@
   pointer-events: none;
 }
 
+.topStatusStartAligned {
+  justify-content: flex-start;
+}
+
 .topSession {
   grid-column: 3;
   display: flex;
@@ -52,7 +56,7 @@
   pointer-events: none;
 }
 
-.leftPanel {
+.leftRail {
   position: absolute;
   inset: 100px auto 96px 0;
   width: auto;
@@ -63,7 +67,7 @@
   pointer-events: none;
 }
 
-.sidePanels {
+.rightRail {
   position: absolute;
   inset: 100px 0 96px auto;
   width: 320px;
@@ -76,10 +80,32 @@
   pointer-events: none;
 }
 
-.bottomBar {
+.bottomRegion {
   position: absolute;
   inset: auto 0 0 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--space-md);
+  padding: 0 var(--space-md) var(--space-md);
   min-height: 88px;
+  pointer-events: none;
+}
+
+.bottomPrimary {
+  min-width: 0;
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.bottomRightDock {
+  width: min(320px, 34vw);
+  max-width: 100%;
+  display: flex;
+  align-items: end;
+  justify-content: flex-end;
   pointer-events: none;
 }
 
@@ -87,4 +113,21 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
+}
+
+@media (max-width: 960px) {
+  .bottomRegion {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+  }
+
+  .bottomRightDock {
+    grid-row: 1;
+    width: min(100%, 420px);
+    justify-self: end;
+  }
+
+  .bottomPrimary {
+    grid-row: 2;
+  }
 }

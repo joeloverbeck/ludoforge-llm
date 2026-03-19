@@ -46,6 +46,24 @@ describe('validate-visual-config-refs', () => {
       tableOverlays: {
         playerSeatAnchorZones: ['zone:a'],
       },
+      runnerSurfaces: {
+        showdown: {
+          when: { phase: 'showdown' },
+          ranking: {
+            source: {
+              kind: 'perPlayerVar',
+              name: 'playerA',
+            },
+            hideZeroScores: true,
+          },
+          communityCards: {
+            zones: ['zone:a'],
+          },
+          playerCards: {
+            zones: ['zone:b'],
+          },
+        },
+      },
       layout: {
         hints: {
           fixed: [{ zone: 'zone:a', x: 0, y: 0 }],
@@ -63,13 +81,6 @@ describe('validate-visual-config-refs', () => {
       },
       factions: {
         factionA: { color: '#111111' },
-      },
-      variables: {
-        prominent: ['varA'],
-        panels: [{ name: 'Panel', vars: ['varA'] }],
-        formatting: {
-          varA: { type: 'number' },
-        },
       },
       cardAnimation: {
         cardTokenTypes: { ids: ['tokenA'] },
@@ -112,9 +123,6 @@ describe('validate-visual-config-refs', () => {
       factions: {
         missingFaction: { color: '#ff0000' },
       },
-      variables: {
-        prominent: ['missingVar'],
-      },
       edges: {
         categoryStyles: {
           missingEdge: { color: '#00ff00' },
@@ -128,7 +136,6 @@ describe('validate-visual-config-refs', () => {
       'tokenType',
       'zoneCategory',
       'faction',
-      'variable',
       'edge',
     ]);
   });
@@ -175,18 +182,36 @@ describe('validate-visual-config-refs', () => {
       seats: [{ id: 'factionA' }],
       globalVars: [{ name: 'globalA' }],
       perPlayerVars: [{ name: 'playerA' }],
+      turnStructure: {
+        phases: [{ id: 'showdown' }, { id: 'main' }],
+      },
     } as unknown as GameDef);
 
     expect(context.zoneIds).toEqual(new Set(['zone:a', 'zone:b']));
     expect(context.zoneCategories).toEqual(new Set(['city']));
     expect(context.tokenTypeIds).toEqual(new Set(['tokenA']));
     expect(context.factionIds).toEqual(new Set(['factionA']));
-    expect(context.variableNames).toEqual(new Set(['globalA', 'playerA']));
     expect(context.edgeCategories).toEqual(new Set(['city', 'road', 'river']));
+    expect(context.phaseIds).toEqual(new Set(['showdown', 'main']));
+    expect(context.globalVarNames).toEqual(new Set(['globalA']));
+    expect(context.perPlayerVarNames).toEqual(new Set(['playerA']));
   });
 
   it('validateAndCreateProvider throws for malformed non-null config', () => {
     expect(() => validateAndCreateProvider({ version: 2 }, fixtureContext())).toThrow(/Invalid visual config schema/u);
+  });
+
+  it('validateAndCreateProvider rejects deleted variables config surface at schema boundary', () => {
+    expect(() =>
+      validateAndCreateProvider(
+        {
+          version: 1,
+          variables: {
+            prominent: ['varA'],
+          },
+        },
+        fixtureContext(),
+      )).toThrow(/Invalid visual config schema/u);
   });
 
   it('validateAndCreateProvider throws for invalid references', () => {
@@ -218,6 +243,58 @@ describe('validate-visual-config-refs', () => {
         category: 'zone',
         configPath: 'zones.hiddenZones[0]',
         referencedId: 'missing:zone',
+        message: 'Unknown zone id',
+      },
+    ]);
+  });
+
+  it('reports showdown phase, variable, and zone reference errors with precise paths', () => {
+    const config: VisualConfig = {
+      version: 1,
+      runnerSurfaces: {
+        showdown: {
+          when: {
+            phase: 'missing-phase',
+          },
+          ranking: {
+            source: {
+              kind: 'perPlayerVar',
+              name: 'missing-player-var',
+            },
+          },
+          communityCards: {
+            zones: ['missing:community'],
+          },
+          playerCards: {
+            zones: ['missing:hand'],
+          },
+        },
+      },
+    };
+
+    expect(validateVisualConfigRefs(config, fixtureContext())).toEqual([
+      {
+        category: 'phase',
+        configPath: 'runnerSurfaces.showdown.when.phase',
+        referencedId: 'missing-phase',
+        message: 'Unknown phase id',
+      },
+      {
+        category: 'perPlayerVar',
+        configPath: 'runnerSurfaces.showdown.ranking.source.name',
+        referencedId: 'missing-player-var',
+        message: 'Unknown per-player variable name',
+      },
+      {
+        category: 'zone',
+        configPath: 'runnerSurfaces.showdown.communityCards.zones[0]',
+        referencedId: 'missing:community',
+        message: 'Unknown zone id',
+      },
+      {
+        category: 'zone',
+        configPath: 'runnerSurfaces.showdown.playerCards.zones[0]',
+        referencedId: 'missing:hand',
         message: 'Unknown zone id',
       },
     ]);
@@ -344,7 +421,9 @@ function fixtureContext(): VisualConfigRefValidationContext {
     zoneCategories: new Set(['city', 'province']),
     tokenTypeIds: new Set(['tokenA']),
     factionIds: new Set(['factionA']),
-    variableNames: new Set(['varA']),
     edgeCategories: new Set(['road']),
+    phaseIds: new Set(['main', 'showdown']),
+    globalVarNames: new Set(['globalA']),
+    perPlayerVarNames: new Set(['playerA']),
   };
 }

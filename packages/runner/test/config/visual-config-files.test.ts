@@ -430,6 +430,24 @@ describe('visual-config.yaml files', () => {
         },
       ],
     });
+    expect(parsed.runnerSurfaces?.showdown).toEqual({
+      when: {
+        phase: 'showdown',
+      },
+      ranking: {
+        source: {
+          kind: 'perPlayerVar',
+          name: 'showdownScore',
+        },
+        hideZeroScores: true,
+      },
+      communityCards: {
+        zones: ['community:none'],
+      },
+      playerCards: {
+        zones: ['hand:0', 'hand:1', 'hand:2', 'hand:3', 'hand:4', 'hand:5', 'hand:6', 'hand:7', 'hand:8', 'hand:9'],
+      },
+    });
     const tableOverlays = parsed.tableOverlays?.items ?? [];
     const betOverlay = tableOverlays.find(
       (item) => item.kind === 'perPlayerVar' && item.varName === 'streetBet',

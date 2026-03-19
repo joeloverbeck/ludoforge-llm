@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactElement } from 'react';
 import { useStore } from 'zustand';
 import type { StoreApi } from 'zustand';
 
@@ -21,13 +21,10 @@ import { EventDeckPanel } from './EventDeckPanel.js';
 import { LoadingState } from './LoadingState.js';
 import { InterruptBanner } from './InterruptBanner.js';
 import { PhaseIndicator } from './PhaseIndicator.js';
-import { Scoreboard } from './Scoreboard.js';
-import { GlobalMarkersBar } from './GlobalMarkersBar.js';
 import { ActiveEffectsPanel } from './ActiveEffectsPanel.js';
 import { TurnOrderDisplay } from './TurnOrderDisplay.js';
 import { UndoControl } from './UndoControl.js';
 import { UIOverlay } from './UIOverlay.js';
-import { VariablesPanel } from './VariablesPanel.js';
 import { PlayerHandPanel } from './PlayerHandPanel.js';
 import { AITurnOverlay } from './AITurnOverlay.js';
 import { WarningsToast } from './WarningsToast.js';
@@ -39,12 +36,14 @@ import { EventCardTooltip } from './EventCardTooltip.js';
 import { PhaseBannerOverlay } from './PhaseBannerOverlay.js';
 import { ShowdownOverlay } from './ShowdownOverlay.js';
 import { TerminalOverlay } from './TerminalOverlay.js';
-import { AnimationControls } from './AnimationControls.js';
 import { VictoryStandingsBar } from './VictoryStandingsBar.js';
 import { deriveBottomBarState } from './bottom-bar-mode.js';
 import { buildFactionCssVariableStyle } from './faction-color-style.js';
 import { EventLogPanel } from './EventLogPanel.js';
+import { buildRunnerControlSections } from './runner-control-surface.js';
 import { createRunnerUiStore } from './runner-ui-store.js';
+import { SettingsMenu } from './SettingsMenu.js';
+import { SettingsMenuTrigger } from './SettingsMenuTrigger.js';
 import { useEventLogEntries } from './useEventLogEntries.js';
 import type { OverlayPanelComponent, OverlayPanelDiagnostics, OverlayPanelProps } from './overlay-panel-contract.js';
 import styles from './GameContainer.module.css';
@@ -61,7 +60,7 @@ interface GameContainerProps {
   readonly onLoad?: () => void;
 }
 
-type OverlayRegion = 'topStatus' | 'left' | 'side' | 'floating';
+type OverlayRegion = 'topStatus' | 'left' | 'right' | 'floating';
 
 const OVERLAY_REGION_PANELS: Readonly<Record<OverlayRegion, readonly OverlayPanelComponent[]>> = {
   topStatus: [
@@ -73,10 +72,7 @@ const OVERLAY_REGION_PANELS: Readonly<Record<OverlayRegion, readonly OverlayPane
   left: [
     EligiblePanel,
   ],
-  side: [
-    VariablesPanel,
-    Scoreboard,
-    GlobalMarkersBar,
+  right: [
     ActiveEffectsPanel,
   ],
   floating: [
@@ -129,7 +125,21 @@ export function GameContainer({
   const gameDefFactions = useStore(store, (state) => state.gameDef?.seats);
   const runnerUiStore = useMemo(createRunnerUiStore, []);
   const [hoverAnchor, setHoverAnchor] = useState<HoverAnchor | null>(null);
+  const settingsMenuOpen = useStore(runnerUiStore, (state) => state.settingsMenuOpen);
   const eventLogVisible = useStore(runnerUiStore, (state) => state.eventLogVisible);
+  const settingsMenuTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const settingsMenuId = useId();
+  const settingsMenuTriggerId = useId();
+  const animationPlaying = useStore(store, (state) => state.animationPlaying);
+  const animationPaused = useStore(store, (state) => state.animationPaused);
+  const animationPlaybackSpeed = useStore(store, (state) => state.animationPlaybackSpeed);
+  const aiPlaybackDetailLevel = useStore(store, (state) => state.aiPlaybackDetailLevel);
+  const aiPlaybackAutoSkip = useStore(store, (state) => state.aiPlaybackAutoSkip);
+  const setAnimationPlaybackSpeed = useStore(store, (state) => state.setAnimationPlaybackSpeed);
+  const setAnimationPaused = useStore(store, (state) => state.setAnimationPaused);
+  const requestAnimationSkipCurrent = useStore(store, (state) => state.requestAnimationSkipCurrent);
+  const setAiPlaybackDetailLevel = useStore(store, (state) => state.setAiPlaybackDetailLevel);
+  const setAiPlaybackAutoSkip = useStore(store, (state) => state.setAiPlaybackAutoSkip);
   const [interactionHighlights, setInteractionHighlights] = useState<InteractionHighlights>(EMPTY_INTERACTION_HIGHLIGHTS);
   const [selectedEventLogEntryId, setSelectedEventLogEntryId] = useState<string | null>(null);
   const [animationDiagnosticBuffer, setAnimationDiagnosticBuffer] = useState<DiagnosticBuffer | undefined>(undefined);
@@ -228,26 +238,37 @@ export function GameContainer({
     onCardHoverEnd,
     ...(overlayDiagnostics !== undefined ? { diagnostics: overlayDiagnostics } : {}),
   };
-  const sidePanelContent = (
-    <>
-      {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.side, overlayPanelProps)}
-      {eventLogVisible ? (
-        <EventLogPanel
-          entries={eventLogEntries}
-          selectedEntryId={selectedEventLogEntryId}
-          onSelectEntry={(entry) => {
-            setSelectedEventLogEntryId(entry.id);
-            setInteractionHighlights({
-              zoneIDs: entry.zoneIds,
-              tokenIDs: entry.tokenIds,
-            });
-          }}
-        />
-      ) : null}
-    </>
+  const runnerControlSections = buildRunnerControlSections(
+    {
+      animationPlaying,
+      animationPaused,
+      animationPlaybackSpeed,
+      aiPlaybackDetailLevel,
+      aiPlaybackAutoSkip,
+    },
+    {
+      setAnimationPlaybackSpeed,
+      setAnimationPaused,
+      requestAnimationSkipCurrent,
+      setAiPlaybackDetailLevel,
+      setAiPlaybackAutoSkip,
+    },
+    {
+      ...(animationDiagnosticBuffer === undefined || !import.meta.env.DEV
+        ? {}
+        : {
+          diagnostics: {
+            available: true,
+            download: () => {
+              animationDiagnosticBuffer.downloadAsJson();
+            },
+          },
+        }),
+    },
   );
+  const rightRailContent = renderOverlayRegionPanels(OVERLAY_REGION_PANELS.right, overlayPanelProps);
 
-  const bottomBarContent = (() => {
+  const bottomPrimaryContent = (() => {
     switch (bottomBarState.kind) {
       case 'actions':
         return (
@@ -273,10 +294,44 @@ export function GameContainer({
     }
   })();
 
+  const bottomRightDockContent = eventLogVisible ? (
+    <EventLogPanel
+      entries={eventLogEntries}
+      selectedEntryId={selectedEventLogEntryId}
+      onSelectEntry={(entry) => {
+        setSelectedEventLogEntryId(entry.id);
+        setInteractionHighlights({
+          zoneIDs: entry.zoneIds,
+          tokenIDs: entry.tokenIds,
+        });
+      }}
+    />
+  ) : null;
+
   const topStatusContent = renderOverlayRegionPanels(OVERLAY_REGION_PANELS.topStatus, overlayPanelProps);
   const topSessionContent = (
     <div className={styles.sessionChrome}>
-      <AnimationControls {...overlayPanelProps} />
+      <div className={styles.settingsMenuAnchor}>
+        <SettingsMenuTrigger
+          ref={settingsMenuTriggerRef}
+          id={settingsMenuTriggerId}
+          menuId={settingsMenuId}
+          open={settingsMenuOpen}
+          onClick={() => {
+            runnerUiStore.getState().toggleSettingsMenu();
+          }}
+        />
+        <SettingsMenu
+          id={settingsMenuId}
+          triggerId={settingsMenuTriggerId}
+          triggerRef={settingsMenuTriggerRef}
+          open={settingsMenuOpen}
+          sections={runnerControlSections}
+          onClose={() => {
+            runnerUiStore.getState().closeSettingsMenu();
+          }}
+        />
+      </div>
       <div className={styles.sessionButtons}>
         <button
           type="button"
@@ -336,12 +391,14 @@ export function GameContainer({
           />
         </div>
         <UIOverlay
-          leftPanelContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.left, overlayPanelProps)}
+          leftRailContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.left, overlayPanelProps)}
           scoringBarContent={<VictoryStandingsBar store={store} />}
+          topBarPresentation={visualConfigProvider.getRunnerChromeTopBar()}
           topStatusContent={topStatusContent}
           topSessionContent={topSessionContent}
-          sidePanelContent={sidePanelContent}
-          bottomBarContent={bottomBarContent}
+          rightRailContent={rightRailContent}
+          bottomPrimaryContent={bottomPrimaryContent}
+          bottomRightDockContent={bottomRightDockContent}
           floatingContent={(
             <>
               {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.floating, overlayPanelProps)}

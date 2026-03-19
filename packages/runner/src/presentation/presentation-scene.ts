@@ -1,40 +1,26 @@
-import { asPlayerId } from '@ludoforge/engine/runtime';
-
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
-import type { RegionStyle, TableOverlayItemConfig } from '../config/visual-config-types.js';
+import type { RegionStyle } from '../config/visual-config-types.js';
 import type { Position } from '../canvas/geometry.js';
 import type { InteractionHighlights } from '../canvas/interaction-highlights.js';
-import type { RunnerAdjacency, RunnerFrame, RunnerVariable, RunnerZone } from '../model/runner-frame.js';
+import type {
+  RunnerAdjacency,
+  RunnerFrame,
+  RunnerZone,
+} from '../model/runner-frame.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
 import {
   resolvePresentationTokenNodes,
   type PresentationTokenNode,
 } from './token-presentation.js';
 import type { TokenRenderStyleProvider } from '../canvas/renderers/renderer-types.js';
+import type { TableOverlaySurfaceNode } from './project-table-overlay-surface.js';
 
 export interface PresentationOverlayPoint {
   readonly x: number;
   readonly y: number;
 }
 
-export interface PresentationTextOverlayNode {
-  readonly key: string;
-  readonly type: 'text';
-  readonly text: string;
-  readonly item: TableOverlayItemConfig;
-  readonly point: PresentationOverlayPoint;
-  readonly signature: string;
-}
-
-export interface PresentationMarkerOverlayNode {
-  readonly key: string;
-  readonly type: 'marker';
-  readonly item: TableOverlayItemConfig;
-  readonly point: PresentationOverlayPoint;
-  readonly signature: string;
-}
-
-export type PresentationOverlayNode = PresentationTextOverlayNode | PresentationMarkerOverlayNode;
+export type PresentationOverlayNode = TableOverlaySurfaceNode;
 
 export interface PresentationRegionNode {
   readonly key: string;
@@ -109,6 +95,7 @@ export interface PresentationScene {
 
 interface BuildPresentationSceneOptions {
   readonly runnerFrame: RunnerFrame | null;
+  readonly overlays: readonly PresentationOverlayNode[];
   readonly positions: ReadonlyMap<string, Position>;
   readonly visualConfigProvider: VisualConfigProvider;
   readonly tokenRenderStyleProvider: TokenRenderStyleProvider;
@@ -133,7 +120,7 @@ export function buildPresentationScene(options: BuildPresentationSceneOptions): 
     ? new Set(options.interactionHighlights.tokenIDs)
     : new Set<string>();
 
-  if (runnerFrame === null) {
+  if (runnerFrame == null) {
     return {
       zones: [],
       tokens: [],
@@ -157,7 +144,7 @@ export function buildPresentationScene(options: BuildPresentationSceneOptions): 
       highlightedTokenIDs,
     ),
     adjacencies: resolveAdjacencyNodes(runnerFrame.adjacencies, visibleZoneIDs),
-    overlays: resolveOverlayNodes(runnerFrame, zones, options.positions, options.visualConfigProvider),
+    overlays: options.overlays,
     regions: resolveRegionNodes(zones, options.positions, options.visualConfigProvider),
   };
 }
@@ -304,98 +291,6 @@ export function resolveAdjacencyNodes(
     }));
 }
 
-export function resolveOverlayNodes(
-  runnerFrame: RunnerFrame,
-  visibleZones: readonly Pick<PresentationZoneNode, 'id' | 'ownerID'>[],
-  positions: ReadonlyMap<string, Position>,
-  visualConfigProvider: VisualConfigProvider,
-): readonly PresentationOverlayNode[] {
-  const items = visualConfigProvider.getTableOverlays()?.items ?? [];
-  if (items.length === 0) {
-    return EMPTY_OVERLAYS;
-  }
-
-  const seatAnchors = deriveSeatAnchors(
-    visibleZones,
-    positions,
-    new Set(visualConfigProvider.getPlayerSeatAnchorZones()),
-  );
-  const tableCenter = deriveTableCenter(visibleZones, positions);
-  const result: PresentationOverlayNode[] = [];
-
-  for (const [itemIndex, item] of items.entries()) {
-    switch (item.kind) {
-      case 'globalVar': {
-        const value = findVarValue(runnerFrame.globalVars, item.varName);
-        if (value === null) {
-          continue;
-        }
-        const target = resolveOverlayPosition(item, tableCenter, null);
-        if (target === null) {
-          continue;
-        }
-        const text = resolveOverlayLabel(item.label, value);
-        result.push({
-          key: `overlay:${itemIndex}`,
-          type: 'text',
-          text,
-          item,
-          point: target,
-          signature: `t|${text}|${target.x}|${target.y}`,
-        });
-        break;
-      }
-      case 'perPlayerVar': {
-        for (const player of runnerFrame.players) {
-          if (player.isEliminated) {
-            continue;
-          }
-          const target = resolveOverlayPosition(item, tableCenter, seatAnchors.get(player.id) ?? null);
-          if (target === null) {
-            continue;
-          }
-          const playerVars = runnerFrame.playerVars.get(player.id) ?? [];
-          const value = findVarValue(playerVars, item.varName);
-          if (value === null) {
-            continue;
-          }
-          const text = resolveOverlayLabel(item.label, value);
-          result.push({
-            key: `overlay:${itemIndex}:player:${player.id}`,
-            type: 'text',
-            text,
-            item,
-            point: target,
-            signature: `t|${text}|${target.x}|${target.y}`,
-          });
-        }
-        break;
-      }
-      case 'marker': {
-        const rawValue = findVarValue(runnerFrame.globalVars, item.varName);
-        if (typeof rawValue !== 'number' || !Number.isFinite(rawValue)) {
-          continue;
-        }
-        const playerId = asPlayerId(Math.trunc(rawValue));
-        const target = resolveOverlayPosition(item, tableCenter, seatAnchors.get(playerId) ?? null);
-        if (target === null) {
-          continue;
-        }
-        result.push({
-          key: `overlay:${itemIndex}`,
-          type: 'marker',
-          item,
-          point: target,
-          signature: `m|${item.label ?? ''}|${item.markerShape ?? ''}|${target.x}|${target.y}`,
-        });
-        break;
-      }
-    }
-  }
-
-  return result;
-}
-
 export function resolveRegionNodes(
   zones: readonly Pick<PresentationZoneNode, 'id' | 'attributes' | 'visual'>[],
   positions: ReadonlyMap<string, Position>,
@@ -432,105 +327,6 @@ export function resolveRegionNodes(
   }
 
   return result;
-}
-
-function resolveOverlayPosition(
-  item: TableOverlayItemConfig,
-  tableCenter: PresentationOverlayPoint,
-  seatAnchor: PresentationOverlayPoint | null,
-): PresentationOverlayPoint | null {
-  const offsetX = item.offsetX ?? 0;
-  const offsetY = item.offsetY ?? 0;
-
-  if (item.position === 'tableCenter') {
-    return { x: tableCenter.x + offsetX, y: tableCenter.y + offsetY };
-  }
-  if (seatAnchor === null) {
-    return null;
-  }
-  return { x: seatAnchor.x + offsetX, y: seatAnchor.y + offsetY };
-}
-
-function deriveSeatAnchors(
-  zones: readonly Pick<PresentationZoneNode, 'id' | 'ownerID'>[],
-  positions: ReadonlyMap<string, Position>,
-  playerSeatAnchorZones: ReadonlySet<string>,
-): ReadonlyMap<number, PresentationOverlayPoint> {
-  const accumulators = new Map<number, { sumX: number; sumY: number; count: number }>();
-
-  for (const zone of zones) {
-    if (!playerSeatAnchorZones.has(zone.id) || zone.ownerID === null) {
-      continue;
-    }
-    const position = positions.get(zone.id);
-    if (position === undefined) {
-      continue;
-    }
-
-    const key = Number(zone.ownerID);
-    const current = accumulators.get(key) ?? { sumX: 0, sumY: 0, count: 0 };
-    current.sumX += position.x;
-    current.sumY += position.y;
-    current.count += 1;
-    accumulators.set(key, current);
-  }
-
-  const anchors = new Map<number, PresentationOverlayPoint>();
-  for (const [playerId, accumulator] of accumulators) {
-    if (accumulator.count <= 0) {
-      continue;
-    }
-    anchors.set(playerId, {
-      x: accumulator.sumX / accumulator.count,
-      y: accumulator.sumY / accumulator.count,
-    });
-  }
-
-  return anchors;
-}
-
-function deriveTableCenter(
-  zones: readonly Pick<PresentationZoneNode, 'id'>[],
-  positions: ReadonlyMap<string, Position>,
-): PresentationOverlayPoint {
-  let sumX = 0;
-  let sumY = 0;
-  let count = 0;
-
-  for (const zone of zones) {
-    const point = positions.get(zone.id);
-    if (point === undefined) {
-      continue;
-    }
-    sumX += point.x;
-    sumY += point.y;
-    count += 1;
-  }
-
-  if (count <= 0) {
-    return { x: 0, y: 0 };
-  }
-
-  return {
-    x: sumX / count,
-    y: sumY / count,
-  };
-}
-
-function findVarValue(
-  vars: readonly RunnerVariable[],
-  varName: string,
-): number | boolean | null {
-  const found = vars.find((entry) => entry.name === varName);
-  return found?.value ?? null;
-}
-
-function resolveOverlayLabel(label: string | undefined, value: number | boolean): string {
-  const valueText = String(value);
-  if (label === undefined || label.length === 0) {
-    return valueText;
-  }
-  return `${label}: ${valueText}`;
 }
 
 function groupZonesByAttribute(

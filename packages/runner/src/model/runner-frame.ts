@@ -30,14 +30,15 @@ export interface RunnerChoiceContext {
   readonly iterationTotal: number | null;
 }
 
+export interface RunnerProjectionSource {
+  readonly globalVars: readonly RunnerVariable[];
+  readonly playerVars: ReadonlyMap<PlayerId, readonly RunnerVariable[]>;
+}
+
 export interface RunnerFrame {
   readonly zones: readonly RunnerZone[];
   readonly adjacencies: readonly RunnerAdjacency[];
   readonly tokens: readonly RunnerToken[];
-  readonly globalVars: readonly RunnerVariable[];
-  readonly playerVars: ReadonlyMap<PlayerId, readonly RunnerVariable[]>;
-  readonly globalMarkers: readonly RunnerGlobalMarker[];
-  readonly tracks: readonly RunnerTrack[];
   readonly activeEffects: readonly RunnerLastingEffect[];
   readonly players: readonly RunnerPlayer[];
   readonly activePlayerID: PlayerId;
@@ -56,6 +57,11 @@ export interface RunnerFrame {
   readonly runtimeEligible: readonly RunnerRuntimeEligibleFaction[];
   readonly victoryStandings: readonly RunnerVictoryStandingEntry[] | null;
   readonly terminal: RunnerTerminal | null;
+}
+
+export interface RunnerProjectionBundle {
+  readonly frame: RunnerFrame;
+  readonly source: RunnerProjectionSource;
 }
 
 export interface RunnerZone {
@@ -101,21 +107,6 @@ export interface RunnerMarker {
   readonly id: string;
   readonly state: string;
   readonly possibleStates: readonly string[];
-}
-
-export interface RunnerGlobalMarker {
-  readonly id: string;
-  readonly state: string;
-  readonly possibleStates: readonly string[];
-}
-
-export interface RunnerTrack {
-  readonly id: string;
-  readonly scope: 'global' | 'seat';
-  readonly seat: string | null;
-  readonly min: number;
-  readonly max: number;
-  readonly currentValue: number;
 }
 
 export interface RunnerLastingEffect {

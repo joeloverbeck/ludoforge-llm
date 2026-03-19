@@ -31,14 +31,54 @@ export interface RenderChoiceContext {
   readonly iterationProgress: string | null;
 }
 
+export interface RenderSurfacePoint {
+  readonly x: number;
+  readonly y: number;
+}
+
+export type RenderTableOverlayNode =
+  | {
+      readonly key: string;
+      readonly type: 'text';
+      readonly text: string;
+      readonly point: RenderSurfacePoint;
+      readonly signature: string;
+    }
+  | {
+      readonly key: string;
+      readonly type: 'marker';
+      readonly point: RenderSurfacePoint;
+      readonly signature: string;
+    };
+
+export interface RenderShowdownCard {
+  readonly id: string;
+  readonly type: string;
+  readonly faceUp: boolean;
+  readonly properties: Readonly<Record<string, number | string | boolean>>;
+}
+
+export interface RenderShowdownPlayerEntry {
+  readonly playerId: PlayerId;
+  readonly displayName: string;
+  readonly score: number;
+  readonly holeCards: readonly RenderShowdownCard[];
+}
+
+export interface ShowdownSurfaceModel {
+  readonly communityCards: readonly RenderShowdownCard[];
+  readonly rankedPlayers: readonly RenderShowdownPlayerEntry[];
+}
+
+export interface RenderSurfaceModel {
+  readonly tableOverlays: readonly RenderTableOverlayNode[];
+  readonly showdown: ShowdownSurfaceModel | null;
+}
+
 export interface RenderModel {
   readonly zones: readonly RenderZone[];
   readonly adjacencies: readonly RenderAdjacency[];
   readonly tokens: readonly RenderToken[];
-  readonly globalVars: readonly RenderVariable[];
-  readonly playerVars: ReadonlyMap<PlayerId, readonly RenderVariable[]>;
-  readonly globalMarkers: readonly RenderGlobalMarker[];
-  readonly tracks: readonly RenderTrack[];
   readonly activeEffects: readonly RenderLastingEffect[];
   readonly players: readonly RenderPlayer[];
   readonly activePlayerID: PlayerId;
@@ -56,6 +96,7 @@ export interface RenderModel {
   readonly choiceUi: RenderChoiceUi;
   readonly moveEnumerationWarnings: readonly RenderWarning[];
   readonly runtimeEligible: readonly RenderRuntimeEligibleFaction[];
+  readonly surfaces: RenderSurfaceModel;
   readonly victoryStandings: readonly RenderVictoryStandingEntry[] | null;
   readonly terminal: RenderTerminal | null;
 }
@@ -107,23 +148,6 @@ export interface RenderMarker {
   readonly displayName: string;
   readonly state: string;
   readonly possibleStates: readonly string[];
-}
-
-export interface RenderGlobalMarker {
-  readonly id: string;
-  readonly displayName: string;
-  readonly state: string;
-  readonly possibleStates: readonly string[];
-}
-
-export interface RenderTrack {
-  readonly id: string;
-  readonly displayName: string;
-  readonly scope: 'global' | 'seat';
-  readonly seat: string | null;
-  readonly min: number;
-  readonly max: number;
-  readonly currentValue: number;
 }
 
 export interface RenderLastingEffect {

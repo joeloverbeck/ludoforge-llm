@@ -4,10 +4,11 @@ import { VisualConfigProvider } from '../../../src/config/visual-config-provider
 import { deriveRunnerFrame } from '../../../src/model/derive-runner-frame.js';
 import { projectRenderModel } from '../../../src/model/project-render-model.js';
 import type { RenderModel } from '../../../src/model/render-model.js';
-import type { RunnerFrame } from '../../../src/model/runner-frame.js';
+import type { RunnerFrame, RunnerProjectionBundle } from '../../../src/model/runner-frame.js';
 import type { RenderContext } from '../../../src/store/store-types.js';
 
 export interface DerivedProjection {
+  readonly bundle: RunnerProjectionBundle;
   readonly frame: RunnerFrame;
   readonly model: RenderModel;
 }
@@ -23,12 +24,12 @@ export function deriveProjectedRenderModel(
   context: RenderContext,
   options: DeriveProjectedRenderModelOptions = {},
 ): DerivedProjection {
-  const frame = deriveRunnerFrame(state, def, context, options.previous?.frame ?? null);
+  const bundle = deriveRunnerFrame(state, def, context, options.previous?.bundle ?? null);
   const model = projectRenderModel(
-    frame,
+    bundle,
     options.visualConfigProvider ?? new VisualConfigProvider(null),
     options.previous?.model ?? null,
   );
 
-  return { frame, model };
+  return { bundle, frame: bundle.frame, model };
 }

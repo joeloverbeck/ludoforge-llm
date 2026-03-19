@@ -135,18 +135,6 @@ describe('VisualConfigSchema', () => {
           },
         },
       },
-      variables: {
-        prominent: ['resources-us'],
-        panels: [{ name: 'Faction Resources', vars: ['resources-us', 'resources-arvn'] }],
-        formatting: {
-          support: {
-            type: 'track',
-            min: -2,
-            max: 2,
-            labels: ['A', 'B', 'C', 'D', 'E'],
-          },
-        },
-      },
     };
 
     const result = VisualConfigSchema.safeParse(config);
@@ -180,6 +168,19 @@ describe('VisualConfigSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts runnerChrome top-bar presentation hints', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      runnerChrome: {
+        topBar: {
+          statusAlignment: 'start',
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it('parses edges config when present', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,
@@ -194,6 +195,31 @@ describe('VisualConfigSchema', () => {
 
   it('rejects invalid version', () => {
     const result = VisualConfigSchema.safeParse({ version: 2 });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects deleted variables visual-config surface', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      variables: {
+        prominent: ['resources-us'],
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects behavior-encoding fields under runnerChrome topBar', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      runnerChrome: {
+        topBar: {
+          statusAlignment: 'center',
+          menuItems: ['playback'],
+        },
+      },
+    });
+
     expect(result.success).toBe(false);
   });
 
@@ -475,6 +501,61 @@ describe('VisualConfigSchema', () => {
         ],
       },
     });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts explicit showdown surface config', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      runnerSurfaces: {
+        showdown: {
+          when: {
+            phase: 'showdown',
+          },
+          ranking: {
+            source: {
+              kind: 'perPlayerVar',
+              name: 'showdownScore',
+            },
+            hideZeroScores: true,
+          },
+          communityCards: {
+            zones: ['community:none'],
+          },
+          playerCards: {
+            zones: ['hand:0', 'hand:1'],
+          },
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects showdown surface config with malformed ranking source', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      runnerSurfaces: {
+        showdown: {
+          when: {
+            phase: 'showdown',
+          },
+          ranking: {
+            source: {
+              kind: 'globalVar',
+              name: 'showdownScore',
+            },
+          },
+          communityCards: {
+            zones: ['community:none'],
+          },
+          playerCards: {
+            zones: ['hand:0', 'hand:1'],
+          },
+        },
+      },
+    });
+
     expect(result.success).toBe(false);
   });
 

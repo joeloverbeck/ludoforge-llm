@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   computeGridLayout,
-  createPositionStore,
-} from '../../src/canvas/position-store';
+  createRuntimeLayoutStore,
+} from '../../src/canvas/runtime-layout-store';
 import type { ZonePositionMap } from '../../src/spatial/position-types';
 
 describe('computeGridLayout', () => {
@@ -86,13 +86,13 @@ describe('computeGridLayout', () => {
   });
 });
 
-describe('createPositionStore', () => {
-  it('notifies subscribers when layout updates through setZoneIDs', () => {
-    const store = createPositionStore();
+describe('createRuntimeLayoutStore', () => {
+  it('notifies subscribers when fallback grid updates through setFallbackZoneIDs', () => {
+    const store = createRuntimeLayoutStore();
     const listener = vi.fn();
 
     const unsubscribe = store.subscribe(listener);
-    store.setZoneIDs(['a', 'b', 'c']);
+    store.setFallbackZoneIDs(['a', 'b', 'c']);
 
     expect(listener).toHaveBeenCalledTimes(1);
     const nextSnapshot = listener.mock.calls[0]?.[0];
@@ -102,20 +102,20 @@ describe('createPositionStore', () => {
     unsubscribe();
   });
 
-  it('does not notify subscribers for identical ordered zone IDs', () => {
-    const store = createPositionStore(['a', 'b']);
+  it('does not notify subscribers for identical ordered fallback zone IDs', () => {
+    const store = createRuntimeLayoutStore(['a', 'b']);
     const listener = vi.fn();
 
     const unsubscribe = store.subscribe(listener);
-    store.setZoneIDs(['a', 'b']);
+    store.setFallbackZoneIDs(['a', 'b']);
 
     expect(listener).not.toHaveBeenCalled();
 
     unsubscribe();
   });
 
-  it('accepts injected layouts via setPositions for future layout-engine handoff', () => {
-    const store = createPositionStore(['a']);
+  it('accepts injected active layouts without re-deriving them locally', () => {
+    const store = createRuntimeLayoutStore(['a']);
     const listener = vi.fn();
 
     const next: ZonePositionMap = {
@@ -132,12 +132,42 @@ describe('createPositionStore', () => {
     };
 
     const unsubscribe = store.subscribe(listener);
-    store.setPositions(next, ['a', 'b']);
+    store.setActiveLayout(next, ['a', 'b']);
 
     const snapshot = store.getSnapshot();
     expect(snapshot.zoneIDs).toEqual(['a', 'b']);
     expect(mapEntries(snapshot.positions)).toEqual(mapEntries(next.positions));
     expect(snapshot.bounds).toEqual(next.bounds);
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    unsubscribe();
+  });
+
+  it('does not notify subscribers for identical active layout snapshots', () => {
+    const store = createRuntimeLayoutStore(['a']);
+    const listener = vi.fn();
+    const layout: ZonePositionMap = {
+      positions: new Map([['a', { x: 10, y: 20 }]]),
+      bounds: {
+        minX: 0,
+        minY: 0,
+        maxX: 50,
+        maxY: 60,
+      },
+    };
+
+    const unsubscribe = store.subscribe(listener);
+    store.setActiveLayout(layout, ['a']);
+    store.setActiveLayout({
+      positions: new Map([['a', { x: 10, y: 20 }]]),
+      bounds: {
+        minX: 0,
+        minY: 0,
+        maxX: 50,
+        maxY: 60,
+      },
+    }, ['a']);
+
     expect(listener).toHaveBeenCalledTimes(1);
 
     unsubscribe();

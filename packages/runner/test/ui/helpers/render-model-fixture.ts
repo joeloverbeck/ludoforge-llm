@@ -1,4 +1,4 @@
-import { asPlayerId, type PlayerId } from '@ludoforge/engine/runtime';
+import { asPlayerId } from '@ludoforge/engine/runtime';
 import type { StoreApi } from 'zustand';
 
 import type { GameStore } from '../../../src/store/game-store.js';
@@ -10,10 +10,6 @@ export function makeRenderModelFixture(
     zones: [],
     adjacencies: [],
     tokens: [],
-    globalVars: [],
-    playerVars: new Map<PlayerId, readonly { readonly name: string; readonly value: number | boolean; readonly displayName: string }[]>(),
-    globalMarkers: [],
-    tracks: [],
     activeEffects: [],
     players: [
       {
@@ -48,6 +44,10 @@ export function makeRenderModelFixture(
     choiceUi: { kind: 'none' },
     moveEnumerationWarnings: [],
     runtimeEligible: [],
+    surfaces: {
+      tableOverlays: [],
+      showdown: null,
+    },
     victoryStandings: null,
     terminal: null,
     ...overrides,
@@ -55,7 +55,7 @@ export function makeRenderModelFixture(
 }
 
 export function createRenderModelStore(renderModel: GameStore['renderModel']): StoreApi<GameStore> {
-  const snapshot = { runnerFrame: null, renderModel };
+  const snapshot = { runnerProjection: null, runnerFrame: null, renderModel };
   return {
     getState: () => snapshot,
     getInitialState: () => snapshot,

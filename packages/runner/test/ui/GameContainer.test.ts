@@ -38,20 +38,17 @@ interface CapturedGameCanvasProps {
   readonly onAnimationDiagnosticBufferChange?: (buffer: DiagnosticBuffer | null) => void;
 }
 
-interface CapturedAnimationControlsProps {
-  readonly store: unknown;
-  readonly diagnostics?: {
-    readonly animationDiagnosticBuffer?: DiagnosticBuffer;
-  };
-}
-
 interface CapturedUIOverlayProps {
   readonly topStatusContent?: ReactNode;
   readonly topSessionContent?: ReactNode;
+  readonly topBarPresentation?: {
+    readonly statusAlignment: 'center' | 'start';
+  };
   readonly scoringBarContent?: ReactNode;
-  readonly leftPanelContent?: ReactNode;
-  readonly sidePanelContent?: ReactNode;
-  readonly bottomBarContent?: ReactNode;
+  readonly leftRailContent?: ReactNode;
+  readonly rightRailContent?: ReactNode;
+  readonly bottomPrimaryContent?: ReactNode;
+  readonly bottomRightDockContent?: ReactNode;
   readonly floatingContent?: ReactNode;
 }
 
@@ -70,7 +67,6 @@ const testDoubles = vi.hoisted(() => ({
   errorStateProps: null as CapturedErrorStateProps | null,
   tooltipLayerProps: null as CapturedTooltipLayerProps | null,
   gameCanvasProps: null as CapturedGameCanvasProps | null,
-  animationControlsProps: null as CapturedAnimationControlsProps | null,
   uiOverlayProps: null as CapturedUIOverlayProps | null,
   actionToolbarProps: null as CapturedActionToolbarProps | null,
   actionTooltipProps: null as CapturedActionTooltipProps | null,
@@ -122,13 +118,6 @@ vi.mock('../../src/ui/EventDeckPanel.js', () => ({
   EventDeckPanel: () => createElement('div', { 'data-testid': 'event-deck-panel' }),
 }));
 
-vi.mock('../../src/ui/AnimationControls.js', () => ({
-  AnimationControls: (props: CapturedAnimationControlsProps) => {
-    testDoubles.animationControlsProps = props;
-    return createElement('div', { 'data-testid': 'animation-controls' });
-  },
-}));
-
 vi.mock('../../src/ui/UIOverlay.js', () => ({
   UIOverlay: (props: CapturedUIOverlayProps) => {
     testDoubles.uiOverlayProps = props;
@@ -138,9 +127,10 @@ vi.mock('../../src/ui/UIOverlay.js', () => ({
       createElement('div', { 'data-testid': 'ui-overlay-top-status' }, props.topStatusContent),
       createElement('div', { 'data-testid': 'ui-overlay-top-session' }, props.topSessionContent),
       createElement('div', { 'data-testid': 'ui-overlay-scoring' }, props.scoringBarContent),
-      createElement('div', { 'data-testid': 'ui-overlay-left' }, props.leftPanelContent),
-      createElement('div', { 'data-testid': 'ui-overlay-side' }, props.sidePanelContent),
-      createElement('div', { 'data-testid': 'ui-overlay-bottom' }, props.bottomBarContent),
+      createElement('div', { 'data-testid': 'ui-overlay-left-rail' }, props.leftRailContent),
+      createElement('div', { 'data-testid': 'ui-overlay-right-rail' }, props.rightRailContent),
+      createElement('div', { 'data-testid': 'ui-overlay-bottom-primary' }, props.bottomPrimaryContent),
+      createElement('div', { 'data-testid': 'ui-overlay-bottom-right-dock' }, props.bottomRightDockContent),
       createElement('div', { 'data-testid': 'ui-overlay-floating' }, props.floatingContent),
     );
   },
@@ -152,28 +142,6 @@ vi.mock('../../src/ui/EventLogPanel.js', () => ({
 
 vi.mock('../../src/ui/InterruptBanner.js', () => ({
   InterruptBanner: () => createElement('div', { 'data-testid': 'interrupt-banner' }),
-}));
-
-vi.mock('../../src/ui/VariablesPanel.js', async () => {
-  const React = await import('react');
-  const { VisualConfigContext } = await import('../../src/config/visual-config-context.js');
-  return {
-    VariablesPanel: () => {
-      const provider = React.useContext(VisualConfigContext);
-      return createElement('div', {
-        'data-testid': 'variables-panel',
-        'data-has-visual-config': provider === null ? 'false' : 'true',
-      });
-    },
-  };
-});
-
-vi.mock('../../src/ui/Scoreboard.js', () => ({
-  Scoreboard: () => createElement('div', { 'data-testid': 'scoreboard' }),
-}));
-
-vi.mock('../../src/ui/GlobalMarkersBar.js', () => ({
-  GlobalMarkersBar: () => createElement('div', { 'data-testid': 'global-markers-bar' }),
 }));
 
 vi.mock('../../src/ui/ActiveEffectsPanel.js', () => ({
@@ -239,10 +207,6 @@ function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']
     zones: [],
     adjacencies: [],
     tokens: [],
-    globalVars: [],
-    playerVars: new Map(),
-    globalMarkers: [],
-    tracks: [],
     activeEffects: [],
     players: [
       {
@@ -277,6 +241,10 @@ function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']
     choiceUi: { kind: 'none' },
     moveEnumerationWarnings: [],
     runtimeEligible: [],
+    surfaces: {
+      tableOverlays: [],
+      showdown: null,
+    },
     victoryStandings: null,
     terminal: null,
     ...overrides,
@@ -374,7 +342,6 @@ describe('GameContainer', () => {
   it('renders GameCanvas and UIOverlay when lifecycle is playing', () => {
     testDoubles.tooltipLayerProps = null;
     testDoubles.gameCanvasProps = null;
-    testDoubles.animationControlsProps = null;
     testDoubles.uiOverlayProps = null;
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
@@ -402,20 +369,23 @@ describe('GameContainer', () => {
     }
     const topStatusHtml = renderToStaticMarkup(createElement('div', null, overlayProps.topStatusContent));
     const topSessionHtml = renderToStaticMarkup(createElement('div', null, overlayProps.topSessionContent));
+    const rightRailHtml = renderToStaticMarkup(createElement('div', null, overlayProps.rightRailContent));
+    const bottomDockHtml = renderToStaticMarkup(createElement('div', null, overlayProps.bottomRightDockContent));
     expect(topStatusHtml).toContain('data-testid="phase-indicator"');
     expect(topStatusHtml).toContain('data-testid="turn-order-display"');
     expect(topStatusHtml).toContain('data-testid="interrupt-banner"');
     expect(topStatusHtml).toContain('data-testid="event-deck-panel"');
-    expect(topStatusHtml).not.toContain('data-testid="animation-controls"');
-    expect(topSessionHtml).toContain('data-testid="animation-controls"');
+    expect(topStatusHtml).not.toContain('data-testid="settings-menu-trigger"');
+    expect(topSessionHtml).toContain('data-testid="settings-menu-trigger"');
     expect(topSessionHtml).toContain('data-testid="event-log-toggle-button"');
-    expect(html).toContain('data-testid="animation-controls"');
-    expect(html).toContain('data-testid="variables-panel"');
-    expect(html).toContain('data-has-visual-config="true"');
-    expect(html).toContain('data-testid="scoreboard"');
-    expect(html).toContain('data-testid="global-markers-bar"');
-    expect(html).toContain('data-testid="active-effects-panel"');
-    expect(html).toContain('data-testid="event-log-panel"');
+    expect(topSessionHtml).not.toContain('data-testid="settings-menu"');
+    expect(html).toContain('data-testid="settings-menu-trigger"');
+    expect(html).not.toContain('data-testid="variables-panel"');
+    expect(rightRailHtml).toContain('data-testid="active-effects-panel"');
+    expect(rightRailHtml).not.toContain('data-testid="event-log-panel"');
+    expect(rightRailHtml).not.toContain('data-testid="scoreboard"');
+    expect(rightRailHtml).not.toContain('data-testid="global-markers-bar"');
+    expect(bottomDockHtml).toContain('data-testid="event-log-panel"');
     expect(html).toContain('data-testid="warnings-toast"');
     expect(html).toContain('data-testid="player-hand-panel"');
     expect(html).toContain('data-testid="terminal-overlay"');
@@ -428,13 +398,9 @@ describe('GameContainer', () => {
       'event-deck-panel',
     ]);
     expectAppearsInOrder(html, [
-      'animation-controls',
+      'settings-menu-trigger',
       'event-log-toggle-button',
-      'variables-panel',
-      'scoreboard',
-      'global-markers-bar',
       'active-effects-panel',
-      'event-log-panel',
     ]);
     expect(testDoubles.tooltipLayerProps).toMatchObject({
       hoverTarget: null,
@@ -448,11 +414,9 @@ describe('GameContainer', () => {
     expect(gameCanvasProps.onHoverAnchorChange).toEqual(expect.any(Function));
     expect(gameCanvasProps.onAnimationDiagnosticBufferChange).toEqual(expect.any(Function));
     expect(gameCanvasProps.interactionHighlights).toEqual({ zoneIDs: [], tokenIDs: [] });
-    const animationControlsProps = testDoubles.animationControlsProps as CapturedAnimationControlsProps | null;
-    expect(animationControlsProps?.diagnostics?.animationDiagnosticBuffer).toBeUndefined();
   });
 
-  it('places session buttons and animation controls in the top session slot', () => {
+  it('places the settings trigger and session buttons in the top session slot', () => {
     testDoubles.uiOverlayProps = null;
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
@@ -480,7 +444,8 @@ describe('GameContainer', () => {
     expect(topStatusHtml).not.toContain('data-testid="session-save-button"');
     expect(topStatusHtml).not.toContain('data-testid="session-load-button"');
     expect(topStatusHtml).not.toContain('data-testid="session-quit-button"');
-    expect(topSessionHtml).toContain('data-testid="animation-controls"');
+    expect(topStatusHtml).not.toContain('data-testid="settings-menu-trigger"');
+    expect(topSessionHtml).toContain('data-testid="settings-menu-trigger"');
     expect(topSessionHtml).toContain('data-testid="event-log-toggle-button"');
     expect(topSessionHtml).toContain('data-testid="session-save-button"');
     expect(topSessionHtml).toContain('data-testid="session-load-button"');
@@ -488,6 +453,37 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="session-save-button"');
     expect(html).toContain('data-testid="session-load-button"');
     expect(html).toContain('data-testid="session-quit-button"');
+  });
+
+  it('passes runnerChrome top-bar presentation hints from the visual config provider into UIOverlay', () => {
+    testDoubles.uiOverlayProps = null;
+    renderToStaticMarkup(
+      createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+        }),
+        visualConfigProvider: new VisualConfigProvider({
+          version: 1,
+          runnerChrome: {
+            topBar: {
+              statusAlignment: 'start',
+            },
+          },
+        }),
+      }),
+    );
+
+    const overlayProps = testDoubles.uiOverlayProps as CapturedUIOverlayProps | null;
+    expect(overlayProps).not.toBeNull();
+    if (overlayProps === null) {
+      throw new Error('Expected UIOverlay props to be captured.');
+    }
+
+    expect(overlayProps.topBarPresentation).toEqual({
+      statusAlignment: 'start',
+    });
   });
 
   it('renders GameCanvas and UIOverlay when lifecycle is terminal', () => {
@@ -516,17 +512,17 @@ describe('GameContainer', () => {
     }
     const topStatusHtml = renderToStaticMarkup(createElement('div', null, overlayProps.topStatusContent));
     const topSessionHtml = renderToStaticMarkup(createElement('div', null, overlayProps.topSessionContent));
+    const rightRailHtml = renderToStaticMarkup(createElement('div', null, overlayProps.rightRailContent));
     expect(topStatusHtml).toContain('data-testid="phase-indicator"');
     expect(topStatusHtml).toContain('data-testid="turn-order-display"');
     expect(topStatusHtml).toContain('data-testid="interrupt-banner"');
     expect(topStatusHtml).toContain('data-testid="event-deck-panel"');
-    expect(topSessionHtml).toContain('data-testid="animation-controls"');
-    expect(html).toContain('data-testid="animation-controls"');
-    expect(html).toContain('data-testid="variables-panel"');
-    expect(html).toContain('data-has-visual-config="true"');
-    expect(html).toContain('data-testid="scoreboard"');
-    expect(html).toContain('data-testid="global-markers-bar"');
-    expect(html).toContain('data-testid="active-effects-panel"');
+    expect(topSessionHtml).toContain('data-testid="settings-menu-trigger"');
+    expect(html).toContain('data-testid="settings-menu-trigger"');
+    expect(html).not.toContain('data-testid="variables-panel"');
+    expect(rightRailHtml).toContain('data-testid="active-effects-panel"');
+    expect(rightRailHtml).not.toContain('data-testid="scoreboard"');
+    expect(rightRailHtml).not.toContain('data-testid="global-markers-bar"');
     expect(html).toContain('data-testid="player-hand-panel"');
     expect(html).toContain('data-testid="terminal-overlay"');
     expectAppearsInOrder(html, [
@@ -536,10 +532,7 @@ describe('GameContainer', () => {
       'event-deck-panel',
     ]);
     expectAppearsInOrder(html, [
-      'animation-controls',
-      'variables-panel',
-      'scoreboard',
-      'global-markers-bar',
+      'settings-menu-trigger',
       'active-effects-panel',
     ]);
   });
@@ -808,8 +801,9 @@ describe('GameContainer', () => {
     });
   });
 
-  it('provides visual config context to VariablesPanel', () => {
-    const html = renderToStaticMarkup(
+  it('does not register VariablesPanel in the right rail', () => {
+    testDoubles.uiOverlayProps = null;
+    renderToStaticMarkup(
       createElement(GameContainer, {
         bridge: TEST_BRIDGE,
         store: createContainerStore({
@@ -820,8 +814,135 @@ describe('GameContainer', () => {
       }),
     );
 
-    expect(html).toContain('data-testid="variables-panel"');
-    expect(html).toContain('data-has-visual-config="true"');
+    const overlayProps = testDoubles.uiOverlayProps as CapturedUIOverlayProps | null;
+    expect(overlayProps).not.toBeNull();
+    if (overlayProps === null) {
+      throw new Error('Expected UIOverlay props to be captured.');
+    }
+
+    const rightRailHtml = renderToStaticMarkup(createElement('div', null, overlayProps.rightRailContent));
+    expect(rightRailHtml).not.toContain('data-testid="variables-panel"');
+  });
+
+  it('routes EventLogPanel through the bottom-right dock instead of the right rail', () => {
+    testDoubles.uiOverlayProps = null;
+    renderToStaticMarkup(
+      createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+        }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+        readOnlyMode: true,
+      }),
+    );
+
+    const overlayProps = testDoubles.uiOverlayProps as CapturedUIOverlayProps | null;
+    expect(overlayProps).not.toBeNull();
+    if (overlayProps === null) {
+      throw new Error('Expected UIOverlay props to be captured.');
+    }
+
+    const rightRailHtml = renderToStaticMarkup(createElement('div', null, overlayProps.rightRailContent));
+    const bottomDockHtml = renderToStaticMarkup(createElement('div', null, overlayProps.bottomRightDockContent));
+
+    expect(rightRailHtml).not.toContain('data-testid="event-log-panel"');
+    expect(bottomDockHtml).toContain('data-testid="event-log-panel"');
+  });
+
+  it('keeps the event log docked across action, choice, AI-turn, and read-only bottom states', () => {
+    const scenarios = [
+      {
+        name: 'actions',
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+          renderModel: makeRenderModel(),
+        }),
+        readOnlyMode: false,
+        expectedPrimaryTestId: 'action-toolbar',
+      },
+      {
+        name: 'choicePending',
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+          renderModel: makeRenderModel({
+            choiceUi: {
+              kind: 'discreteOne',
+              decisionKey: asDecisionKey('test-decision'),
+              options: [{
+                choiceValueId: 's:1:x',
+                value: 'x',
+                displayName: 'X',
+                target: { kind: 'scalar', entityId: null, displaySource: 'fallback' },
+                legality: 'legal',
+                illegalReason: null,
+              }],
+            },
+          }),
+          selectedAction: asActionId('pass'),
+          partialMove: { actionId: asActionId('pass'), params: {} },
+        }),
+        readOnlyMode: false,
+        expectedPrimaryTestId: 'choice-panel-choicePending',
+      },
+      {
+        name: 'aiTurn',
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+          renderModel: makeRenderModel({
+            activePlayerID: asPlayerId(1),
+          }),
+        }),
+        readOnlyMode: false,
+        expectedPrimaryTestId: 'ai-turn-overlay',
+      },
+      {
+        name: 'readOnly',
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+          renderModel: makeRenderModel(),
+        }),
+        readOnlyMode: true,
+        expectedPrimaryTestId: null,
+      },
+    ] as const;
+
+    for (const scenario of scenarios) {
+      testDoubles.uiOverlayProps = null;
+
+      renderToStaticMarkup(
+        createElement(GameContainer, {
+          bridge: TEST_BRIDGE,
+          store: scenario.store,
+          visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+          readOnlyMode: scenario.readOnlyMode,
+        }),
+      );
+
+      const overlayProps = testDoubles.uiOverlayProps as CapturedUIOverlayProps | null;
+      expect(overlayProps, `Expected UIOverlay props for ${scenario.name}.`).not.toBeNull();
+      if (overlayProps === null) {
+        throw new Error(`Expected UIOverlay props to be captured for ${scenario.name}.`);
+      }
+
+      const rightRailHtml = renderToStaticMarkup(createElement('div', null, overlayProps.rightRailContent));
+      const bottomPrimaryHtml = renderToStaticMarkup(createElement('div', null, overlayProps.bottomPrimaryContent));
+      const bottomDockHtml = renderToStaticMarkup(createElement('div', null, overlayProps.bottomRightDockContent));
+
+      expect(rightRailHtml, `Expected right rail ownership for ${scenario.name}.`).not.toContain('data-testid="event-log-panel"');
+      expect(bottomDockHtml, `Expected dock ownership for ${scenario.name}.`).toContain('data-testid="event-log-panel"');
+      if (scenario.expectedPrimaryTestId === null) {
+        expect(bottomPrimaryHtml, `Expected empty bottom primary slot for ${scenario.name}.`).not.toContain('data-testid=');
+      } else {
+        expect(bottomPrimaryHtml, `Expected primary bottom content for ${scenario.name}.`)
+          .toContain(`data-testid="${scenario.expectedPrimaryTestId}"`);
+      }
+    }
   });
 
   it('passes onActionHoverStart and onActionHoverEnd to ActionToolbar', () => {

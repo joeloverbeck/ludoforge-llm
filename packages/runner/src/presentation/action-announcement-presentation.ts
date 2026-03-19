@@ -1,9 +1,9 @@
 import type { Move } from '@ludoforge/engine/runtime';
 import type { StoreApi } from 'zustand';
 
+import type { WorldLayoutModel } from '../layout/world-layout-model.js';
 import type { RenderModel } from '../model/render-model.js';
 import type { AppliedMoveEvent, GameStore } from '../store/game-store.js';
-import type { PositionStore } from '../canvas/position-store.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
 
 const PLAYER_ANNOUNCEMENT_Y_OFFSET = 72;
@@ -41,7 +41,6 @@ export interface ActionAnnouncementPresenter {
 
 export interface ActionAnnouncementPresenterOptions {
   readonly store: StoreApi<GameStore>;
-  readonly positionStore: PositionStore;
   readonly onAnnouncement: (spec: PresentationActionAnnouncementSpec) => void;
 }
 
@@ -67,7 +66,7 @@ export function createActionAnnouncementPresenter(
           }
           const spec = resolveActionAnnouncementSpec(
             selectorStore.getState().renderModel,
-            options.positionStore.getSnapshot().positions,
+            selectorStore.getState().worldLayout,
             event,
           );
           if (spec !== null) {
@@ -91,17 +90,17 @@ export function createActionAnnouncementPresenter(
 
 export function resolveActionAnnouncementSpec(
   renderModel: RenderModel | null,
-  positions: ReadonlyMap<string, { readonly x: number; readonly y: number }>,
+  worldLayout: WorldLayoutModel | null,
   event: AppliedMoveEvent,
 ): PresentationActionAnnouncementSpec | null {
   if (!isAiSeat(event.actorSeat)) {
     return null;
   }
-  if (renderModel === null) {
+  if (renderModel === null || worldLayout === null) {
     return null;
   }
 
-  const anchor = resolveAnnouncementAnchor(renderModel, positions, event.actorId);
+  const anchor = resolveAnnouncementAnchor(renderModel, worldLayout, event.actorId);
   if (anchor === null) {
     return null;
   }
@@ -155,14 +154,14 @@ function formatAnnouncementText(renderModel: RenderModel, move: Move): string {
 
 function resolveAnnouncementAnchor(
   renderModel: RenderModel,
-  positions: ReadonlyMap<string, { readonly x: number; readonly y: number }>,
+  worldLayout: WorldLayoutModel,
   actorId: AppliedMoveEvent['actorId'],
 ): { x: number; y: number } | null {
   const ownerZones = renderModel.zones
     .filter((zone) => zone.ownerID === actorId)
     .sort((left, right) => left.id.localeCompare(right.id));
   for (const zone of ownerZones) {
-    const position = positions.get(zone.id);
+    const position = worldLayout.positions.get(zone.id);
     if (position === undefined) {
       continue;
     }

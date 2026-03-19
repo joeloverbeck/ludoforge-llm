@@ -23,7 +23,7 @@ describe('layout-cache', () => {
     const second = getOrComputeLayout(def, NULL_PROVIDER);
 
     expect(second).toBe(first);
-    expect(second.positionMap.positions.size).toBe(3);
+    expect(second.worldLayout.positions.size).toBe(3);
   });
 
   it('keeps separate cache entries per GameDef metadata id', () => {
@@ -46,7 +46,7 @@ describe('layout-cache', () => {
     ], 'table'), NULL_PROVIDER);
 
     expect(second).not.toBe(first);
-    expect(second.positionMap.positions.size).toBe(3);
+    expect(second.worldLayout.positions.size).toBe(3);
   });
 
   it('returns the cached entry for equivalent GameDef content with the same metadata id', () => {
@@ -83,13 +83,13 @@ describe('layout-cache', () => {
 
     const result = getOrComputeLayout(def, NULL_PROVIDER);
 
-    expect([...result.positionMap.positions.keys()].sort()).toEqual(['board-a', 'board-b', 'deck:none', 'hand:0']);
+    expect([...result.worldLayout.positions.keys()].sort()).toEqual(['board-a', 'board-b', 'deck:none', 'hand:0']);
 
-    for (const position of result.positionMap.positions.values()) {
-      expect(position.x).toBeGreaterThanOrEqual(result.positionMap.bounds.minX);
-      expect(position.x).toBeLessThanOrEqual(result.positionMap.bounds.maxX);
-      expect(position.y).toBeGreaterThanOrEqual(result.positionMap.bounds.minY);
-      expect(position.y).toBeLessThanOrEqual(result.positionMap.bounds.maxY);
+    for (const position of result.worldLayout.positions.values()) {
+      expect(position.x).toBeGreaterThanOrEqual(result.worldLayout.bounds.minX);
+      expect(position.x).toBeLessThanOrEqual(result.worldLayout.bounds.maxX);
+      expect(position.y).toBeGreaterThanOrEqual(result.worldLayout.bounds.minY);
+      expect(position.y).toBeLessThanOrEqual(result.worldLayout.bounds.maxY);
     }
   });
 
@@ -102,14 +102,14 @@ describe('layout-cache', () => {
     const result = getOrComputeLayout(def, providerWithLayoutMode('track'));
 
     expect(result.mode).toBe('track');
-    expect(result.positionMap.positions.size).toBe(2);
+    expect(result.worldLayout.positions.size).toBe(2);
   });
 
   it('returns empty positions with zero-area bounds for empty zone lists', () => {
     const result = getOrComputeLayout(makeDef('game-a', [], 'table'), NULL_PROVIDER);
 
-    expect(result.positionMap.positions.size).toBe(0);
-    expect(result.positionMap.bounds).toEqual({ minX: 0, minY: 0, maxX: 0, maxY: 0 });
+    expect(result.worldLayout.positions.size).toBe(0);
+    expect(result.worldLayout.bounds).toEqual({ minX: 0, minY: 0, maxX: 0, maxY: 0 });
   });
 
   it('unified bounds pad by half zone dimensions beyond position extremes', () => {
@@ -119,16 +119,16 @@ describe('layout-cache', () => {
     ], 'table');
 
     const result = getOrComputeLayout(def, NULL_PROVIDER);
-    const rawPositions = [...result.positionMap.positions.values()];
+    const rawPositions = [...result.worldLayout.positions.values()];
     const rawMinX = Math.min(...rawPositions.map((p) => p.x));
     const rawMaxX = Math.max(...rawPositions.map((p) => p.x));
     const rawMinY = Math.min(...rawPositions.map((p) => p.y));
     const rawMaxY = Math.max(...rawPositions.map((p) => p.y));
 
-    expect(result.positionMap.bounds.minX).toBeLessThanOrEqual(rawMinX - ZONE_HALF_WIDTH);
-    expect(result.positionMap.bounds.maxX).toBeGreaterThanOrEqual(rawMaxX + ZONE_HALF_WIDTH);
-    expect(result.positionMap.bounds.minY).toBeLessThanOrEqual(rawMinY - ZONE_HALF_HEIGHT);
-    expect(result.positionMap.bounds.maxY).toBeGreaterThanOrEqual(rawMaxY + ZONE_HALF_HEIGHT);
+    expect(result.worldLayout.bounds.minX).toBeLessThanOrEqual(rawMinX - ZONE_HALF_WIDTH);
+    expect(result.worldLayout.bounds.maxX).toBeGreaterThanOrEqual(rawMaxX + ZONE_HALF_WIDTH);
+    expect(result.worldLayout.bounds.minY).toBeLessThanOrEqual(rawMinY - ZONE_HALF_HEIGHT);
+    expect(result.worldLayout.bounds.maxY).toBeGreaterThanOrEqual(rawMaxY + ZONE_HALF_HEIGHT);
   });
 
   it('single-position unified bounds still pads by half zone dimensions', () => {
@@ -137,12 +137,12 @@ describe('layout-cache', () => {
     ], 'table');
 
     const result = getOrComputeLayout(def, NULL_PROVIDER);
-    const pos = result.positionMap.positions.get('solo')!;
+    const pos = result.worldLayout.positions.get('solo')!;
 
-    expect(result.positionMap.bounds.minX).toBe(pos.x - ZONE_HALF_WIDTH);
-    expect(result.positionMap.bounds.maxX).toBe(pos.x + ZONE_HALF_WIDTH);
-    expect(result.positionMap.bounds.minY).toBe(pos.y - ZONE_HALF_HEIGHT);
-    expect(result.positionMap.bounds.maxY).toBe(pos.y + ZONE_HALF_HEIGHT);
+    expect(result.worldLayout.bounds.minX).toBe(pos.x - ZONE_HALF_WIDTH);
+    expect(result.worldLayout.bounds.maxX).toBe(pos.x + ZONE_HALF_WIDTH);
+    expect(result.worldLayout.bounds.minY).toBe(pos.y - ZONE_HALF_HEIGHT);
+    expect(result.worldLayout.bounds.maxY).toBe(pos.y + ZONE_HALF_HEIGHT);
   });
 
   it('recomputes when visual config identity changes for the same GameDef', () => {
@@ -183,10 +183,10 @@ describe('layout-cache', () => {
       discard: ['discard:none'],
     }));
 
-    const draw = result.positionMap.positions.get('draw:none');
-    const shared = result.positionMap.positions.get('shared:none');
-    const discard = result.positionMap.positions.get('discard:none');
-    const bench = result.positionMap.positions.get('bench:none');
+    const draw = result.worldLayout.positions.get('draw:none');
+    const shared = result.worldLayout.positions.get('shared:none');
+    const discard = result.worldLayout.positions.get('discard:none');
+    const bench = result.worldLayout.positions.get('bench:none');
 
     expect(draw).toBeDefined();
     expect(shared).toBeDefined();
@@ -206,7 +206,7 @@ describe('layout-cache', () => {
 
     const result = getOrComputeLayout(def, NULL_PROVIDER);
 
-    expect(result.boardBounds.maxX).toBeLessThan(result.positionMap.bounds.maxX);
+    expect(result.worldLayout.boardBounds.maxX).toBeLessThan(result.worldLayout.bounds.maxX);
   });
 });
 

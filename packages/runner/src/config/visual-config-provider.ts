@@ -24,6 +24,7 @@ import type {
   MarkerBadgeConfig,
   RegionBoundaryConfig,
   RegionStyle,
+  ShowdownSurfaceConfig,
   TableBackgroundConfig,
   TableOverlaysConfig,
   TokenTypeDefault,
@@ -34,9 +35,9 @@ import type {
   LayoutMode,
   LayoutRole,
   StackBadgeStyle,
-  VariablesConfig,
   VictoryTooltipBreakdown,
   VisualConfig,
+  RunnerChromeTopBarStatusAlignment,
   ZoneTokenLayout,
 } from './visual-config-types.js';
 
@@ -116,6 +117,10 @@ export interface ResolvedZoneHighlightPolicy {
   readonly enabled: boolean;
   readonly includeKinds: readonly ZoneHighlightSourceKind[];
   readonly moveEndpoints: ZoneHighlightMoveEndpoints;
+}
+
+export interface ResolvedRunnerChromeTopBar {
+  readonly statusAlignment: RunnerChromeTopBarStatusAlignment;
 }
 
 export class VisualConfigProvider {
@@ -361,8 +366,10 @@ export class VisualConfigProvider {
     };
   }
 
-  getVariablesConfig(): VariablesConfig | null {
-    return this.config?.variables ?? null;
+  getRunnerChromeTopBar(): ResolvedRunnerChromeTopBar {
+    return {
+      statusAlignment: this.config?.runnerChrome?.topBar?.statusAlignment ?? 'center',
+    };
   }
 
   getLayoutHints(): LayoutHints | null {
@@ -375,6 +382,10 @@ export class VisualConfigProvider {
 
   getTableOverlays(): TableOverlaysConfig | null {
     return this.config?.tableOverlays ?? null;
+  }
+
+  getShowdownSurface(): ShowdownSurfaceConfig | null {
+    return this.config?.runnerSurfaces?.showdown ?? null;
   }
 
   getPlayerSeatAnchorZones(): readonly string[] {

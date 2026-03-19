@@ -8,7 +8,6 @@ import {
   type Move,
   type DecisionKey,
   type MoveParamValue,
-  type NumericTrackDef,
   parseDecisionKey,
   type PlayerId,
   type RevealGrant,
@@ -29,15 +28,15 @@ import type {
   RunnerEligibilityEntry,
   RunnerEventCard,
   RunnerEventDeck,
+  RunnerProjectionBundle,
+  RunnerProjectionSource,
   RunnerFrame,
-  RunnerGlobalMarker,
   RunnerLastingEffect,
   RunnerLastingEffectAttribute,
   RunnerMarker,
   RunnerPlayer,
   RunnerRuntimeEligibleFaction,
   RunnerToken,
-  RunnerTrack,
   RunnerVariable,
   RunnerZone,
 } from './runner-frame.js';
@@ -51,9 +50,7 @@ const OWNER_ZONE_ID_PATTERN = /^.+:(\d+)$/;
 
 interface StaticRenderDerivation {
   readonly markerStatesById: ReadonlyMap<string, readonly string[]>;
-  readonly globalMarkerStatesById: ReadonlyMap<string, readonly string[]>;
   readonly cardTitleById: ReadonlyMap<string, string>;
-  readonly trackDefs: readonly NumericTrackDef[];
   readonly eventDecks: readonly GameDefEventDeckProjection[];
   readonly playedCardZoneId: string | null;
   readonly lookaheadCardZoneId: string | null;
@@ -80,8 +77,8 @@ export function deriveRunnerFrame(
   state: GameState,
   def: GameDef,
   context: RenderContext,
-  previousFrame: RunnerFrame | null = null,
-): RunnerFrame {
+  previousBundle: RunnerProjectionBundle | null = null,
+): RunnerProjectionBundle {
   const staticDerivation = deriveStaticRenderDerivation(def);
   const selectionTargets = deriveSelectionTargets(context);
   const zoneDerivation = deriveZones(state, def, context, selectionTargets.selectableZoneIDs);
@@ -106,8 +103,6 @@ export function deriveRunnerFrame(
   const adjacencies = deriveAdjacencies(def, zones, highlightedAdjacencyKeys);
   const globalVars = deriveGlobalVars(state);
   const playerVars = derivePlayerVars(state);
-  const globalMarkers = deriveGlobalMarkers(state, staticDerivation.globalMarkerStatesById);
-  const tracks = deriveTracks(state, staticDerivation.trackDefs);
   const activeEffects = deriveActiveEffects(state, staticDerivation.cardTitleById);
   const interruptStack = state.interruptPhaseStack ?? [];
   const eventDecks = deriveEventDecks(state, staticDerivation.eventDecks, staticDerivation.playedCardZoneId, staticDerivation.lookaheadCardZoneId);
@@ -124,10 +119,6 @@ export function deriveRunnerFrame(
     })),
     adjacencies,
     tokens,
-    globalVars,
-    playerVars,
-    globalMarkers,
-    tracks,
     activeEffects,
     players,
     activePlayerID: state.activePlayer,
@@ -151,14 +142,43 @@ export function deriveRunnerFrame(
     terminal: deriveTerminal(context.terminal),
   };
 
-  return stabilizeRunnerFrame(previousFrame, nextFrame);
+  const nextSource: RunnerProjectionSource = {
+    globalVars,
+    playerVars,
+  };
+
+  return stabilizeProjectionBundle(previousBundle, nextFrame, nextSource);
 }
 
-function stabilizeRunnerFrame(previous: RunnerFrame | null, next: RunnerFrame): RunnerFrame {
+function stabilizeProjectionBundle(
+  previous: RunnerProjectionBundle | null,
+  nextFrame: RunnerFrame,
+  nextSource: RunnerProjectionSource,
+): RunnerProjectionBundle {
   if (previous === null) {
-    return next;
+    return {
+      frame: nextFrame,
+      source: nextSource,
+    };
   }
 
+  const frame = stabilizeRunnerFrame(previous.frame, nextFrame);
+  const source = stabilizeProjectionSource(previous.source, nextSource);
+
+  if (frame === nextFrame && source === nextSource) {
+    return {
+      frame,
+      source,
+    };
+  }
+
+  return {
+    frame,
+    source,
+  };
+}
+
+function stabilizeRunnerFrame(previous: RunnerFrame, next: RunnerFrame): RunnerFrame {
   const stabilizedZones = stabilizeZoneArray(previous.zones, next.zones);
   const stabilizedTokens = stabilizeTokenArray(previous.tokens, next.tokens);
 
@@ -170,6 +190,23 @@ function stabilizeRunnerFrame(previous: RunnerFrame | null, next: RunnerFrame): 
     ...next,
     zones: stabilizedZones,
     tokens: stabilizedTokens,
+  };
+}
+
+function stabilizeProjectionSource(
+  previous: RunnerProjectionSource,
+  next: RunnerProjectionSource,
+): RunnerProjectionSource {
+  const globalVars = stabilizeVariableArray(previous.globalVars, next.globalVars);
+  const playerVars = stabilizePlayerVarMap(previous.playerVars, next.playerVars);
+
+  if (globalVars === next.globalVars && playerVars === next.playerVars) {
+    return next;
+  }
+
+  return {
+    globalVars,
+    playerVars,
   };
 }
 
@@ -219,6 +256,64 @@ function stabilizeTokenArray(previous: readonly RunnerToken[], next: readonly Ru
   return hasChange ? stabilized : next;
 }
 
+function stabilizeVariableArray(
+  previous: readonly RunnerVariable[],
+  next: readonly RunnerVariable[],
+): readonly RunnerVariable[] {
+  if (isVariableArrayEqual(previous, next)) {
+    return previous;
+  }
+  return next;
+}
+
+function stabilizePlayerVarMap(
+  previous: ReadonlyMap<PlayerId, readonly RunnerVariable[]>,
+  next: ReadonlyMap<PlayerId, readonly RunnerVariable[]>,
+): ReadonlyMap<PlayerId, readonly RunnerVariable[]> {
+  if (previous.size !== next.size) {
+    return next;
+  }
+
+  let changed = false;
+  const stabilized = new Map<PlayerId, readonly RunnerVariable[]>();
+
+  for (const [playerId, nextVars] of next.entries()) {
+    const previousVars = previous.get(playerId);
+    if (previousVars === undefined) {
+      return next;
+    }
+    const vars = isVariableArrayEqual(previousVars, nextVars) ? previousVars : nextVars;
+    if (vars !== previousVars) {
+      changed = true;
+    }
+    stabilized.set(playerId, vars);
+  }
+
+  if (!changed && stabilized.size === previous.size) {
+    let sameOrder = true;
+    const previousEntries = Array.from(previous.entries());
+    const stabilizedEntries = Array.from(stabilized.entries());
+    for (let index = 0; index < previousEntries.length; index += 1) {
+      const previousEntry = previousEntries[index];
+      const stabilizedEntry = stabilizedEntries[index];
+      if (
+        previousEntry === undefined
+        || stabilizedEntry === undefined
+        || previousEntry[0] !== stabilizedEntry[0]
+        || previousEntry[1] !== stabilizedEntry[1]
+      ) {
+        sameOrder = false;
+        break;
+      }
+    }
+    if (sameOrder) {
+      return previous;
+    }
+  }
+
+  return stabilized;
+}
+
 function isZoneEquivalent(left: RunnerZone, right: RunnerZone): boolean {
   return left.id === right.id
     && left.ordering === right.ordering
@@ -259,6 +354,19 @@ function isMarkerArrayEqual(left: readonly RunnerMarker[], right: readonly Runne
     return leftMarker.id === rightMarker.id
       && leftMarker.state === rightMarker.state
       && isStringArrayEqual(leftMarker.possibleStates, rightMarker.possibleStates);
+  });
+}
+
+function isVariableArrayEqual(left: readonly RunnerVariable[], right: readonly RunnerVariable[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((leftVar, index) => {
+    const rightVar = right[index];
+    return rightVar !== undefined
+      && leftVar.name === rightVar.name
+      && Object.is(leftVar.value, rightVar.value);
   });
 }
 
@@ -354,9 +462,7 @@ function deriveStaticRenderDerivation(def: GameDef): StaticRenderDerivation {
 
   return {
     markerStatesById: buildMarkerStatesById(def.markerLattices),
-    globalMarkerStatesById: buildMarkerStatesById(def.globalMarkerLattices),
     cardTitleById,
-    trackDefs: def.tracks ?? [],
     eventDecks,
     playedCardZoneId,
     lookaheadCardZoneId,
@@ -417,50 +523,6 @@ function deriveZoneMarkers(
       state: markerState,
       possibleStates: markerStatesById.get(id) ?? [],
     }));
-}
-
-function deriveGlobalMarkers(
-  state: GameState,
-  statesById: ReadonlyMap<string, readonly string[]>,
-): readonly RunnerGlobalMarker[] {
-  return Object.entries(state.globalMarkers ?? {})
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([id, markerState]) => ({
-      id,
-      state: markerState,
-      possibleStates: statesById.get(id) ?? [],
-    }));
-}
-
-function deriveTracks(state: GameState, trackDefs: readonly NumericTrackDef[]): readonly RunnerTrack[] {
-  return trackDefs.map((track) => ({
-    id: track.id,
-    scope: track.scope,
-    seat: track.seat ?? null,
-    min: track.min,
-    max: track.max,
-    currentValue: resolveTrackValue(state, track),
-  }));
-}
-
-function resolveTrackValue(state: GameState, track: NumericTrackDef): number {
-  if (track.scope === 'global') {
-    const value = state.globalVars[track.id];
-    return typeof value === 'number' ? value : track.min;
-  }
-
-  const seat = track.seat;
-  if (seat === undefined || state.turnOrderState.type !== 'cardDriven') {
-    return track.min;
-  }
-
-  const playerIndex = state.turnOrderState.runtime.seatOrder.indexOf(seat);
-  if (!Number.isInteger(playerIndex) || playerIndex < 0 || playerIndex >= state.playerCount) {
-    return track.min;
-  }
-
-  const value = state.perPlayerVars[playerIndex]?.[track.id];
-  return typeof value === 'number' ? value : track.min;
 }
 
 function deriveActiveEffects(

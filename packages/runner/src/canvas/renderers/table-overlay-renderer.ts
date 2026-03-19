@@ -1,14 +1,11 @@
 import { Container, Graphics, Text } from 'pixi.js';
 
 import type { TableOverlayRenderer } from './renderer-types.js';
-import type { PresentationMarkerOverlayNode, PresentationTextOverlayNode } from '../../presentation/presentation-scene.js';
+import type { TableOverlayMarkerNode, TableOverlayTextNode } from '../../presentation/project-table-overlay-surface.js';
 import { safeDestroyDisplayObject } from './safe-destroy.js';
 import { parseHexColor } from './shape-utils.js';
 import { createKeyedTextReconciler, createManagedText } from '../text/text-runtime.js';
 
-const DEFAULT_TEXT_COLOR = '#f8fafc';
-const DEFAULT_TEXT_FONT_SIZE = 12;
-const DEFAULT_MARKER_SHAPE = 'circle';
 const DEFAULT_MARKER_LABEL = '*';
 
 interface MarkerSlot {
@@ -56,14 +53,13 @@ export function createTableOverlayRenderer(
     return slot;
   }
 
-  function updateMarkerSlot(slot: MarkerSlot, resolved: PresentationMarkerOverlayNode): void {
+  function updateMarkerSlot(slot: MarkerSlot, resolved: TableOverlayMarkerNode): void {
     slot.container.visible = true;
     slot.container.renderable = true;
     slot.container.position.set(resolved.point.x, resolved.point.y);
 
-    const markerColor =
-      parseHexColor(resolved.item.color ?? '#fbbf24', { allowNamedColors: true }) ?? 0xfbbf24;
-    const markerShape = resolved.item.markerShape ?? DEFAULT_MARKER_SHAPE;
+    const markerColor = parseHexColor(resolved.style.color, { allowNamedColors: true }) ?? 0xfbbf24;
+    const markerShape = resolved.style.shape;
 
     slot.badge.clear();
     if (markerShape === 'badge') {
@@ -73,11 +69,11 @@ export function createTableOverlayRenderer(
     }
     slot.badge.fill(markerColor);
 
-    slot.label.text = resolved.item.label ?? DEFAULT_MARKER_LABEL;
+    slot.label.text = resolved.style.label;
     slot.label.style = {
-      fill: '#111827',
-      fontSize: resolved.item.fontSize ?? 11,
-      fontFamily: 'monospace',
+      fill: resolved.style.textColor,
+      fontSize: resolved.style.fontSize,
+      fontFamily: resolved.style.fontFamily,
     };
   }
 
@@ -94,14 +90,14 @@ export function createTableOverlayRenderer(
   return {
     update(resolvedItems): void {
       const textSpecs = resolvedItems
-        .filter((item): item is PresentationTextOverlayNode => item.type === 'text')
+        .filter((item): item is TableOverlayTextNode => item.type === 'text')
         .map((item) => ({
           key: item.key,
           text: item.text,
           style: {
-            fill: item.item.color ?? DEFAULT_TEXT_COLOR,
-            fontSize: item.item.fontSize ?? DEFAULT_TEXT_FONT_SIZE,
-            fontFamily: 'monospace',
+            fill: item.style.color,
+            fontSize: item.style.fontSize,
+            fontFamily: item.style.fontFamily,
           },
           position: { x: item.point.x, y: item.point.y },
         }));

@@ -5,6 +5,7 @@ import {
   asPhaseId,
   asPlayerId,
   asTokenId,
+  asZoneId,
   initialState,
   type DecisionKey,
   type MoveParamValue,
@@ -333,57 +334,137 @@ function withStateMetadata(baseDef: GameDef, baseState: GameState): { readonly d
 }
 
 describe('projectRenderModel state metadata', () => {
-  it('derives global/player vars and space/global markers with lattice states', () => {
+  it('keeps raw variable bags internal and exposes only explicit surfaces', () => {
     const baseDef = compileFixture();
     const baseState = initialState(baseDef, 5, 2).state;
     const { def, state } = withStateMetadata(baseDef, baseState);
 
     const model = deriveModel(state, def, makeRenderContext(state.playerCount));
 
-    expect(model.globalVars).toEqual([
-      { name: 'round', value: 3, displayName: 'Round' },
-      { name: 'threat', value: true, displayName: 'Threat' },
-    ]);
-    expect(model.playerVars.get(asPlayerId(0))).toEqual([
-      { name: 'eligible', value: true, displayName: 'Eligible' },
-      { name: 'support', value: 7, displayName: 'Support' },
-    ]);
-    expect(model.playerVars.get(asPlayerId(1))).toEqual([
-      { name: 'eligible', value: false, displayName: 'Eligible' },
-      { name: 'support', value: 2, displayName: 'Support' },
-    ]);
+    expect(model.surfaces).toEqual({
+      tableOverlays: [],
+      showdown: null,
+    });
+    expect('globalVars' in (model as object)).toBe(false);
+    expect('playerVars' in (model as object)).toBe(false);
+    expect('globalMarkers' in (model as object)).toBe(false);
+    expect('tracks' in (model as object)).toBe(false);
 
     expect(model.zones.find((zone) => zone.id === 'table:none')?.markers).toEqual([
       { id: 'status', displayName: 'Status', state: 'fortified', possibleStates: [] },
       { id: 'terror', displayName: 'Terror', state: 'high', possibleStates: ['none', 'low', 'high'] },
     ]);
-    expect(model.globalMarkers).toEqual([
-      { id: 'support', displayName: 'Support', state: 'high', possibleStates: ['low', 'high'] },
-      { id: 'threat_level', displayName: 'Threat Level', state: 'low', possibleStates: [] },
-    ]);
   });
 
-  it('keeps unknown marker states while retaining known lattice state domains', () => {
+  it('projects showdown surface from config plus projection source', () => {
     const baseDef = compileFixture();
-    const baseState = initialState(baseDef, 50, 2).state;
-    const { def, state: stateWithMetadata } = withStateMetadata(baseDef, baseState);
-    const state: GameState = {
-      ...stateWithMetadata,
-      globalMarkers: {
-        support: 'unexpected-state',
+    const showdownDef: GameDef = {
+      ...baseDef,
+      perPlayerVars: [
+        ...baseDef.perPlayerVars,
+        {
+          name: 'showdownScore',
+          type: 'int',
+          init: 0,
+          min: 0,
+          max: 10_000_000,
+        },
+      ],
+      zones: [
+        ...baseDef.zones,
+        {
+          id: asZoneId('community:none'),
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'queue',
+        },
+        {
+          id: asZoneId('hand:0'),
+          owner: 'player',
+          ownerPlayerIndex: 0,
+          visibility: 'owner',
+          ordering: 'set',
+        },
+        {
+          id: asZoneId('hand:1'),
+          owner: 'player',
+          ownerPlayerIndex: 1,
+          visibility: 'owner',
+          ordering: 'set',
+        },
+      ],
+      turnStructure: {
+        phases: [{ id: asPhaseId('main') }, { id: asPhaseId('showdown') }],
+      },
+    };
+    const state = initialState(baseDef, 66, 2).state;
+
+    const showdownState: GameState = {
+      ...state,
+      currentPhase: asPhaseId('showdown'),
+      perPlayerVars: {
+        ...state.perPlayerVars,
+        '0': { ...state.perPlayerVars['0'], showdownScore: 8500000 },
+        '1': { ...state.perPlayerVars['1'], showdownScore: 0 },
+      },
+      zones: {
+        ...state.zones,
+        'community:none': [
+          token('tok:c1', 'poker-card', { rank: 'A', suit: 'hearts' }),
+          token('tok:c2', 'poker-card', { rank: 'K', suit: 'spades' }),
+        ],
+        'hand:0': [
+          token('tok:h0a', 'poker-card', { rank: 'J', suit: 'clubs' }),
+          token('tok:h0b', 'poker-card', { rank: 'J', suit: 'diamonds' }),
+        ],
+        'hand:1': [
+          token('tok:h1a', 'poker-card', { rank: '9', suit: 'clubs' }),
+          token('tok:h1b', 'poker-card', { rank: '8', suit: 'diamonds' }),
+        ],
       },
     };
 
-    const model = deriveModel(state, def, makeRenderContext(state.playerCount));
+    const model = deriveModel(showdownState, showdownDef, makeRenderContext(showdownState.playerCount), {
+      visualConfigProvider: new VisualConfigProvider({
+        version: 1,
+        runnerSurfaces: {
+          showdown: {
+            when: { phase: 'showdown' },
+            ranking: {
+              source: {
+                kind: 'perPlayerVar',
+                name: 'showdownScore',
+              },
+              hideZeroScores: true,
+            },
+            communityCards: {
+              zones: ['community:none'],
+            },
+            playerCards: {
+              zones: ['hand:0', 'hand:1'],
+            },
+          },
+        },
+      }),
+    });
 
-    expect(model.globalMarkers).toEqual([
-      {
-        id: 'support',
-        displayName: 'Support',
-        state: 'unexpected-state',
-        possibleStates: ['low', 'high'],
-      },
-    ]);
+    expect(model.surfaces.showdown).toEqual({
+      communityCards: [
+        { id: 'tok:c1', type: 'poker-card', faceUp: true, properties: { rank: 'A', suit: 'hearts' } },
+        { id: 'tok:c2', type: 'poker-card', faceUp: true, properties: { rank: 'K', suit: 'spades' } },
+      ],
+      rankedPlayers: [
+        {
+          playerId: asPlayerId(0),
+          displayName: '0',
+          score: 8500000,
+          holeCards: [
+            { id: 'tok:h0a', type: 'poker-card', faceUp: true, properties: { rank: 'J', suit: 'clubs' } },
+            { id: 'tok:h0b', type: 'poker-card', faceUp: true, properties: { rank: 'J', suit: 'diamonds' } },
+          ],
+        },
+      ],
+    });
   });
 
   it('handles missing optional metadata without crashing', () => {
@@ -392,49 +473,10 @@ describe('projectRenderModel state metadata', () => {
 
     const model = deriveModel(state, def, makeRenderContext(state.playerCount));
 
-    expect(model.globalMarkers).toEqual([]);
     expect(model.activeEffects).toEqual([]);
     expect(model.eventDecks).toEqual([]);
     expect(model.interruptStack).toEqual([]);
     expect(model.isInInterrupt).toBe(false);
-  });
-
-  it('derives tracks for global and faction scopes with safe fallback', () => {
-    const baseDef = compileFixture();
-    const baseState = initialState(baseDef, 7, 2).state;
-    const { def, state } = withStateMetadata(baseDef, baseState);
-
-    const model = deriveModel(state, def, makeRenderContext(state.playerCount));
-
-    expect(model.tracks).toEqual([
-      {
-        id: 'round',
-        displayName: 'Round',
-        scope: 'global',
-        seat: null,
-        min: 0,
-        max: 20,
-        currentValue: 3,
-      },
-      {
-        id: 'support',
-        displayName: 'Support',
-        scope: 'seat',
-        seat: 'us',
-        min: 0,
-        max: 100,
-        currentValue: 7,
-      },
-      {
-        id: 'momentum',
-        displayName: 'Momentum',
-        scope: 'seat',
-        seat: 'arvn',
-        min: 3,
-        max: 9,
-        currentValue: 3,
-      },
-    ]);
   });
 
   it('derives active effects, interrupt stack, and event deck metadata', () => {
@@ -566,7 +608,7 @@ describe('projectRenderModel state metadata', () => {
     ]);
   });
 
-  it('projects global markers and active effects in deterministic source order/key order', () => {
+  it('projects active effects in deterministic source order/key order without reviving dead fields', () => {
     const baseDef = compileFixture();
     const baseState = initialState(baseDef, 81, 2).state;
     const { def, state: stateWithMetadata } = withStateMetadata(baseDef, baseState);
@@ -596,10 +638,7 @@ describe('projectRenderModel state metadata', () => {
 
     const model = deriveModel(state, def, makeRenderContext(state.playerCount));
 
-    expect(model.globalMarkers).toEqual([
-      { id: 'alpha', displayName: 'Alpha', state: 'low', possibleStates: [] },
-      { id: 'zeta', displayName: 'Zeta', state: 'high', possibleStates: [] },
-    ]);
+    expect('globalMarkers' in (model as object)).toBe(false);
     expect(model.activeEffects.map((effect) => effect.id)).toEqual(['effect-b', 'effect-a']);
   });
 

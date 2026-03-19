@@ -137,3 +137,17 @@ tableOverlays:
       offsetY: 75
       markerShape: circle
       color: "#fbbf24"
+
+runnerSurfaces:
+  showdown:
+    when:
+      phase: showdown
+    ranking:
+      source:
+        kind: perPlayerVar
+        name: showdownScore
+      hideZeroScores: true
+    communityCards:
+      zones: ["community:none"]
+    playerCards:
+      zones: ["hand:0", "hand:1", "hand:2", "hand:3", "hand:4", "hand:5", "hand:6", "hand:7", "hand:8", "hand:9"]

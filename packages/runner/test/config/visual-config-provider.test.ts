@@ -52,6 +52,29 @@ describe('VisualConfigProvider', () => {
     expect(provider.getCardAnimation()).toBeNull();
   });
 
+  it('runner chrome top bar resolves to runner-owned defaults when omitted', () => {
+    const provider = new VisualConfigProvider({ version: 1 });
+
+    expect(provider.getRunnerChromeTopBar()).toEqual({
+      statusAlignment: 'center',
+    });
+  });
+
+  it('runner chrome top bar resolves configured presentation overrides', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      runnerChrome: {
+        topBar: {
+          statusAlignment: 'start',
+        },
+      },
+    });
+
+    expect(provider.getRunnerChromeTopBar()).toEqual({
+      statusAlignment: 'start',
+    });
+  });
+
   it('table overlays return configured value or null', () => {
     const withOverlays = new VisualConfigProvider({
       version: 1,
@@ -81,6 +104,49 @@ describe('VisualConfigProvider', () => {
     expect(withoutOverlays.getTableOverlays()).toBeNull();
     expect(withOverlays.getPlayerSeatAnchorZones()).toEqual(['seat:0', 'seat:1']);
     expect(withoutOverlays.getPlayerSeatAnchorZones()).toEqual([]);
+  });
+
+  it('showdown surface returns configured value or null', () => {
+    const withShowdown = new VisualConfigProvider({
+      version: 1,
+      runnerSurfaces: {
+        showdown: {
+          when: { phase: 'showdown' },
+          ranking: {
+            source: {
+              kind: 'perPlayerVar',
+              name: 'showdownScore',
+            },
+            hideZeroScores: true,
+          },
+          communityCards: {
+            zones: ['community:none'],
+          },
+          playerCards: {
+            zones: ['hand:0', 'hand:1'],
+          },
+        },
+      },
+    });
+    const withoutShowdown = new VisualConfigProvider({ version: 1 });
+
+    expect(withShowdown.getShowdownSurface()).toEqual({
+      when: { phase: 'showdown' },
+      ranking: {
+        source: {
+          kind: 'perPlayerVar',
+          name: 'showdownScore',
+        },
+        hideZeroScores: true,
+      },
+      communityCards: {
+        zones: ['community:none'],
+      },
+      playerCards: {
+        zones: ['hand:0', 'hand:1'],
+      },
+    });
+    expect(withoutShowdown.getShowdownSurface()).toBeNull();
   });
 
   it('category style merges over defaults', () => {
@@ -740,11 +806,7 @@ describe('VisualConfigProvider', () => {
     expect(provider.getLayoutRole('unknown')).toBeNull();
   });
 
-  it('animation preset and variables config return configured values', () => {
-    const variables = {
-      prominent: ['pot'],
-    };
-
+  it('animation preset returns configured value and missing values default to null', () => {
     const provider = new VisualConfigProvider({
       version: 1,
       animations: {
@@ -752,12 +814,10 @@ describe('VisualConfigProvider', () => {
           moveToken: 'pulse',
         },
       },
-      variables,
     });
 
     expect(provider.getAnimationPreset('moveToken')).toBe('pulse');
     expect(provider.getAnimationPreset('cardDeal')).toBeNull();
-    expect(provider.getVariablesConfig()).toEqual(variables);
   });
 
   it('card template lookups resolve assignments and missing values', () => {

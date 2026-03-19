@@ -212,10 +212,12 @@ describe('createCanvasUpdater', () => {
         id: 'zone:a',
         displayName: 'Zone A',
         visual: { shape: 'rectangle', width: 160, height: 100, color: null },
+        render: expect.objectContaining({
+          fillColor: '#4d5c6d',
+        }),
       },
     ]);
     expect(zoneCall?.[1]).toBe(snapshot.positions);
-    expect(zoneCall?.[2]).toEqual(new Set());
     expect(zoneCall?.[0]).not.toBe(model.zones);
     const adjacencyCall = vi.mocked(renderers.adjacencyRenderer.update).mock.calls[0];
     expect(adjacencyCall?.[0]).toEqual(model.adjacencies);
@@ -229,10 +231,12 @@ describe('createCanvasUpdater', () => {
         tokenIds: ['token:1'],
         stackCount: 1,
         offset: { x: -90, y: -18 },
+        render: expect.objectContaining({
+          frontColor: expect.any(String),
+        }),
       },
     ]);
     expect(tokenCall?.[1]).toBe(renderers.zoneRenderer.getContainerMap());
-    expect(tokenCall?.[2]).toEqual(new Set());
   });
 
   it('builds scene-owned zone nodes from the visual config before calling renderers', () => {
@@ -472,10 +476,12 @@ describe('createCanvasUpdater', () => {
           id: 'zone:a',
           displayName: 'Zone A',
           visual: { shape: 'rectangle', width: 160, height: 100, color: null },
+          render: expect.objectContaining({
+            fillColor: '#4d5c6d',
+          }),
         }),
       ]),
       latestSnapshot.positions,
-      new Set(),
     );
   });
 
@@ -630,10 +636,12 @@ describe('createCanvasUpdater', () => {
           id: 'zone:a',
           displayName: 'Zone A',
           visual: { shape: 'rectangle', width: 160, height: 100, color: null },
+          render: expect.objectContaining({
+            stroke: { color: '#60a5fa', width: 3, alpha: 1 },
+          }),
         }),
       ]),
       positionStore.getSnapshot().positions,
-      new Set(['zone:a']),
     );
     expect(renderers.tokenRenderer.update).toHaveBeenCalledWith(
       expect.arrayContaining([
@@ -642,10 +650,12 @@ describe('createCanvasUpdater', () => {
           zoneId: 'zone:a',
           tokenIds: ['token:1'],
           stackCount: 1,
+          render: expect.objectContaining({
+            stroke: { color: '#60a5fa', width: 3, alpha: 1 },
+          }),
         }),
       ]),
       renderers.zoneRenderer.getContainerMap(),
-      new Set(['token:1']),
     );
   });
 });

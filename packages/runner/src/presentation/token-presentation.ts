@@ -1,5 +1,10 @@
+import { asPlayerId } from '@ludoforge/engine/runtime';
+
 import type { TokenShape } from '../config/visual-config-defaults.js';
+import type { ResolvedCardField } from '../config/card-field-resolver.js';
+import { resolveCardTemplateFields } from '../config/card-field-resolver.js';
 import type {
+  ResolvedStackBadgeStyle,
   ResolvedTokenPresentation,
   ResolvedTokenVisual,
 } from '../config/visual-config-provider.js';
@@ -13,17 +18,59 @@ const CARD_WIDTH = 24;
 const CARD_HEIGHT = 34;
 const STACK_OFFSET_X = 2;
 const STACK_OFFSET_Y = 1;
+const NEUTRAL_TOKEN_COLOR = '#6b7280';
+const CARD_BACK_COLOR = '#1f2937';
+
+interface PresentationStrokeSpec {
+  readonly color: string;
+  readonly width: number;
+  readonly alpha: number;
+}
+
+interface PresentationTokenCardContentSpec {
+  readonly template: CardTemplate;
+  readonly fields: readonly ResolvedCardField[];
+}
+
+interface PresentationTokenStackBadgeSpec {
+  readonly text: string;
+  readonly visible: boolean;
+  readonly style: ResolvedStackBadgeStyle;
+  readonly position: {
+    readonly x: number;
+    readonly y: number;
+  };
+}
+
+export interface PresentationTokenRenderSpec {
+  readonly shape: TokenShape;
+  readonly dimensions: {
+    readonly width: number;
+    readonly height: number;
+  };
+  readonly frontColor: string;
+  readonly backColor: string;
+  readonly stroke: PresentationStrokeSpec;
+  readonly symbol: string | null;
+  readonly backSymbol: string | null;
+  readonly stackBadge: PresentationTokenStackBadgeSpec;
+  readonly cardContent: PresentationTokenCardContentSpec | null;
+  readonly scale: number;
+}
 
 export interface PresentationTokenNode {
   readonly renderId: string;
-  readonly representative: RenderToken;
+  readonly representativeTokenId: string;
   readonly tokenIds: readonly string[];
   readonly stackCount: number;
   readonly zoneId: string;
+  readonly faceUp: boolean;
+  readonly isSelectable: boolean;
   readonly offset: {
     readonly x: number;
     readonly y: number;
   };
+  readonly render: PresentationTokenRenderSpec;
   readonly signature: string;
 }
 
@@ -48,20 +95,33 @@ export function resolvePresentationTokenNodes(
   tokens: readonly RenderToken[],
   zones: readonly RenderZone[],
   tokenRenderStyleProvider: TokenRenderStyleProvider,
+  highlightedTokenIDs: ReadonlySet<string> = new Set<string>(),
 ): readonly PresentationTokenNode[] {
   const entries = buildRenderEntries(tokens);
   const offsetsByRenderId = buildZoneOffsetsByRenderId(entries, zones, tokenRenderStyleProvider);
+  const stackBadgeStyle = tokenRenderStyleProvider.getStackBadgeStyle();
 
   return entries.map((entry) => {
     const offset = offsetsByRenderId.get(entry.renderId) ?? { x: 0, y: 0 };
+    const stackCount = entry.tokenIds.length;
+    const render = resolveTokenRenderSpec(
+      entry.representative,
+      stackCount,
+      tokenRenderStyleProvider,
+      stackBadgeStyle,
+      highlightedTokenIDs.has(entry.representative.id),
+    );
     return {
       renderId: entry.renderId,
-      representative: entry.representative,
+      representativeTokenId: entry.representative.id,
       tokenIds: entry.tokenIds,
-      stackCount: entry.tokenIds.length,
+      stackCount,
       zoneId: entry.representative.zoneID,
+      faceUp: entry.representative.faceUp,
+      isSelectable: entry.representative.isSelectable,
       offset,
-      signature: buildTokenNodeSignature(entry, offset),
+      render,
+      signature: buildTokenNodeSignature(entry, offset, render),
     };
   });
 }
@@ -88,6 +148,7 @@ export function resolveTokenRenderStyle(
 function buildTokenNodeSignature(
   entry: TokenRenderEntry,
   offset: { readonly x: number; readonly y: number },
+  render: PresentationTokenRenderSpec,
 ): string {
   const representative = entry.representative;
   return [
@@ -100,7 +161,46 @@ function buildTokenNodeSignature(
     representative.ownerID ?? 'none',
     representative.factionId ?? 'none',
     representative.faceUp ? 'up' : 'down',
+    render.frontColor,
+    render.stroke.color,
+    render.stroke.width,
+    render.stroke.alpha,
+    render.symbol ?? 'none',
+    render.backSymbol ?? 'none',
+    render.cardContent?.fields.map((field) => `${field.fieldName}:${field.text}:${field.color}`).join(',') ?? 'no-card',
   ].join('|');
+}
+
+function resolveTokenRenderSpec(
+  token: RenderToken,
+  stackCount: number,
+  tokenRenderStyleProvider: TokenRenderStyleProvider,
+  stackBadgeStyle: ResolvedStackBadgeStyle,
+  isInteractionHighlighted: boolean,
+): PresentationTokenRenderSpec {
+  const renderStyle = resolveTokenRenderStyle(token, tokenRenderStyleProvider);
+  const symbols = tokenRenderStyleProvider.resolveTokenSymbols(token.type, token.properties);
+
+  return {
+    shape: renderStyle.shape,
+    dimensions: renderStyle.dimensions,
+    frontColor: resolveTokenColor(token, renderStyle.tokenVisual, tokenRenderStyleProvider),
+    backColor: CARD_BACK_COLOR,
+    stroke: resolveStroke(token, isInteractionHighlighted),
+    symbol: symbols.symbol,
+    backSymbol: symbols.backSymbol,
+    stackBadge: {
+      text: stackCount > 1 ? String(stackCount) : '',
+      visible: stackCount > 1,
+      style: stackBadgeStyle,
+      position: {
+        x: renderStyle.dimensions.width / 2 + stackBadgeStyle.offsetX,
+        y: -renderStyle.dimensions.height / 2 + stackBadgeStyle.offsetY,
+      },
+    },
+    cardContent: resolveCardContentSpec(renderStyle.cardTemplate, token.properties),
+    scale: token.isSelected ? 1.08 : 1,
+  };
 }
 
 function buildZoneOffsetsByRenderId(
@@ -344,6 +444,70 @@ function stackGroupKey(token: RenderToken): string {
     token.ownerID,
     token.faceUp,
   ]);
+}
+
+function resolveTokenColor(
+  token: RenderToken,
+  tokenVisual: ResolvedTokenVisual,
+  tokenRenderStyleProvider: TokenRenderStyleProvider,
+): string {
+  if (typeof tokenVisual.color === 'string' && tokenVisual.color.trim().length > 0) {
+    return tokenVisual.color;
+  }
+
+  if (token.factionId !== null) {
+    return tokenRenderStyleProvider.getColor(token.factionId, token.ownerID ?? asPlayerId(0));
+  }
+  if (token.ownerID !== null) {
+    return tokenRenderStyleProvider.getColor(null, token.ownerID);
+  }
+  return NEUTRAL_TOKEN_COLOR;
+}
+
+function resolveStroke(token: RenderToken, isInteractionHighlighted: boolean): PresentationStrokeSpec {
+  if (token.isSelected) {
+    return {
+      color: '#f8fafc',
+      width: 3.5,
+      alpha: 1,
+    };
+  }
+
+  if (isInteractionHighlighted) {
+    return {
+      color: '#60a5fa',
+      width: 3,
+      alpha: 1,
+    };
+  }
+
+  if (token.isSelectable) {
+    return {
+      color: '#93c5fd',
+      width: 2.5,
+      alpha: 0.95,
+    };
+  }
+
+  return {
+    color: '#0f172a',
+    width: 1.5,
+    alpha: 0.9,
+  };
+}
+
+function resolveCardContentSpec(
+  cardTemplate: CardTemplate | null,
+  tokenProperties: Readonly<Record<string, string | number | boolean>>,
+): PresentationTokenCardContentSpec | null {
+  if (cardTemplate === null) {
+    return null;
+  }
+
+  return {
+    template: cardTemplate,
+    fields: resolveCardTemplateFields(cardTemplate.layout, tokenProperties),
+  };
 }
 
 function resolveTokenShape(shape: TokenShape | undefined): TokenShape {

@@ -12,8 +12,8 @@ import type {
 import type { Position } from '../../../src/canvas/geometry';
 import type {
   RenderAdjacency,
-  RenderZone,
 } from '../../../src/model/render-model';
+import type { PresentationZoneNode } from '../../../src/presentation/presentation-scene';
 import type { PresentationTokenNode } from '../../../src/presentation/token-presentation';
 
 describe('renderer-types', () => {
@@ -29,7 +29,7 @@ describe('renderer-types', () => {
 
     const renderer: ZoneRenderer = {
       update: (
-        _zones: readonly RenderZone[],
+        _zones: readonly PresentationZoneNode[],
         _positions: ReadonlyMap<string, Position>,
       ) => {},
       getContainerMap: () => containerMap,

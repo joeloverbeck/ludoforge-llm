@@ -169,7 +169,10 @@ describe('buildPresentationScene', () => {
       id: 'zone:a',
       displayName: 'Configured Zone A',
       visual: { shape: 'hexagon', width: 120, height: 90, color: '#2a6e3f' },
-      markers: [],
+      render: {
+        fillColor: '#2a6e3f',
+        nameLabel: { text: 'Configured Zone A' },
+      },
     });
     expect(scene.zones).not.toBe(renderModel.zones);
     expect(scene.zones[0]).not.toBe(renderModel.zones[0]);
@@ -217,18 +220,23 @@ describe('buildPresentationScene', () => {
     expect(scene.regions[0]?.cornerPoints).toContainEqual({ x: 320, y: 100 });
   });
 
-  it('carries interaction highlight sets as part of the scene contract', () => {
+  it('resolves interaction highlights into render-ready zone and token strokes', () => {
     const provider = new VisualConfigProvider(null);
     const scene = buildPresentationScene({
-      renderModel: makeRenderModel(),
+      renderModel: makeRenderModel({
+        zones: [makeZone('shared:center')],
+        tokens: [
+          { id: 'token:1', type: 'troop', zoneID: 'shared:center', ownerID: asPlayerId(0), factionId: null, faceUp: true, properties: {}, isSelectable: false, isSelected: false },
+        ],
+      }),
       positions,
       visualConfigProvider: provider,
       tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(provider),
       interactionHighlights: { zoneIDs: ['shared:center'], tokenIDs: ['token:1'] },
     });
 
-    expect(scene.highlightedZoneIDs.has('shared:center')).toBe(true);
-    expect(scene.highlightedTokenIDs.has('token:1')).toBe(true);
+    expect(scene.zones[0]?.render.stroke).toEqual({ color: '#60a5fa', width: 3, alpha: 1 });
+    expect(scene.tokens[0]?.render.stroke).toEqual({ color: '#60a5fa', width: 3, alpha: 1 });
   });
 
   it('resolves token grouping and offsets before renderer mutation', () => {

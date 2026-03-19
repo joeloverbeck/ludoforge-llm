@@ -268,7 +268,6 @@ export async function createGameCanvasRuntime(
           },
         },
       ),
-    markerBadgeConfig: options.visualConfigProvider.getMarkerBadgeConfig(),
   });
 
   const adjacencyRenderer = deps.createAdjacencyRenderer(gameCanvas.layers.adjacencyLayer, options.visualConfigProvider, {
@@ -278,7 +277,7 @@ export async function createGameCanvasRuntime(
   const regionBoundaryRenderer = createRegionBoundaryRenderer(gameCanvas.layers.regionLayer);
 
   const tokenRenderStyleProvider = new VisualConfigTokenRenderStyleProvider(options.visualConfigProvider);
-  const tokenRenderer = deps.createTokenRenderer(gameCanvas.layers.tokenGroup, tokenRenderStyleProvider, {
+  const tokenRenderer = deps.createTokenRenderer(gameCanvas.layers.tokenGroup, {
     bindSelection: (tokenContainer, tokenId, isSelectable) =>
       deps.attachTokenSelectHandlers(
         tokenContainer,

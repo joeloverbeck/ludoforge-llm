@@ -82,9 +82,9 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
       interactionHighlights: latestInteractionHighlights,
     });
     deps.regionBoundaryRenderer?.update(scene.regions);
-    deps.zoneRenderer.update(scene.zones, latestPositionSnapshot.positions, scene.highlightedZoneIDs);
+    deps.zoneRenderer.update(scene.zones, latestPositionSnapshot.positions);
     deps.adjacencyRenderer.update(scene.adjacencies, latestPositionSnapshot.positions);
-    deps.tokenRenderer.update(scene.tokens, deps.zoneRenderer.getContainerMap(), scene.highlightedTokenIDs);
+    deps.tokenRenderer.update(scene.tokens, deps.zoneRenderer.getContainerMap());
     deps.tableOverlayRenderer?.update(scene.overlays);
   };
 

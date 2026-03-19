@@ -50,18 +50,45 @@ export interface PresentationMarkerNode {
   readonly state: string;
 }
 
+interface PresentationStrokeSpec {
+  readonly color: string;
+  readonly width: number;
+  readonly alpha: number;
+}
+
+interface PresentationZoneLabelSpec {
+  readonly text: string;
+  readonly x: number;
+  readonly y: number;
+  readonly visible: boolean;
+}
+
+interface PresentationZoneBadgeSpec {
+  readonly text: string;
+  readonly color: string;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+export interface PresentationZoneRenderSpec {
+  readonly fillColor: string;
+  readonly stroke: PresentationStrokeSpec;
+  readonly hiddenStackCount: number;
+  readonly nameLabel: PresentationZoneLabelSpec;
+  readonly markersLabel: PresentationZoneLabelSpec;
+  readonly badge: PresentationZoneBadgeSpec | null;
+}
+
 export interface PresentationZoneNode {
   readonly id: string;
   readonly displayName: string;
-  readonly visibility: RenderZone['visibility'];
-  readonly ownerID: RenderZone['ownerID'];
-  readonly hiddenTokenCount: number;
   readonly isSelectable: boolean;
-  readonly isHighlighted: boolean;
   readonly category: string | null;
   readonly attributes: RenderZone['attributes'];
   readonly visual: ReturnType<VisualConfigProvider['resolveZoneVisual']>;
-  readonly markers: readonly PresentationMarkerNode[];
+  readonly render: PresentationZoneRenderSpec;
 }
 
 export interface PresentationAdjacencyNode {
@@ -75,8 +102,6 @@ export interface PresentationScene {
   readonly zones: readonly PresentationZoneNode[];
   readonly tokens: readonly PresentationTokenNode[];
   readonly adjacencies: readonly PresentationAdjacencyNode[];
-  readonly highlightedZoneIDs: ReadonlySet<string>;
-  readonly highlightedTokenIDs: ReadonlySet<string>;
   readonly overlays: readonly PresentationOverlayNode[];
   readonly regions: readonly PresentationRegionNode[];
 }
@@ -89,33 +114,35 @@ interface BuildPresentationSceneOptions {
   readonly interactionHighlights: InteractionHighlights;
 }
 
-const EMPTY_ZONE_IDS: ReadonlySet<string> = new Set();
-const EMPTY_TOKEN_IDS: ReadonlySet<string> = new Set();
 const EMPTY_OVERLAYS: readonly PresentationOverlayNode[] = [];
 const EMPTY_REGIONS: readonly PresentationRegionNode[] = [];
+const LABEL_GAP = 8;
+const LABEL_LINE_HEIGHT = 18;
+const ZONE_HIGHLIGHT_STROKE: PresentationStrokeSpec = { color: '#facc15', width: 4, alpha: 1 };
+const ZONE_INTERACTION_STROKE: PresentationStrokeSpec = { color: '#60a5fa', width: 3, alpha: 1 };
+const ZONE_SELECTABLE_STROKE: PresentationStrokeSpec = { color: '#93c5fd', width: 2, alpha: 0.95 };
+const ZONE_DEFAULT_STROKE: PresentationStrokeSpec = { color: '#111827', width: 1, alpha: 0.7 };
 
 export function buildPresentationScene(options: BuildPresentationSceneOptions): PresentationScene {
   const { renderModel } = options;
   const highlightedZoneIDs = options.interactionHighlights.zoneIDs.length > 0
     ? new Set(options.interactionHighlights.zoneIDs)
-    : EMPTY_ZONE_IDS;
+    : new Set<string>();
   const highlightedTokenIDs = options.interactionHighlights.tokenIDs.length > 0
     ? new Set(options.interactionHighlights.tokenIDs)
-    : EMPTY_TOKEN_IDS;
+    : new Set<string>();
 
   if (renderModel === null) {
     return {
       zones: [],
       tokens: [],
       adjacencies: [],
-      highlightedZoneIDs,
-      highlightedTokenIDs,
       overlays: EMPTY_OVERLAYS,
       regions: EMPTY_REGIONS,
     };
   }
 
-  const zones = resolveZoneNodes(renderModel.zones, options.visualConfigProvider);
+  const zones = resolveZoneNodes(renderModel.zones, options.visualConfigProvider, highlightedZoneIDs);
 
   return {
     zones,
@@ -123,10 +150,9 @@ export function buildPresentationScene(options: BuildPresentationSceneOptions): 
       renderModel.tokens,
       renderModel.zones,
       options.tokenRenderStyleProvider,
+      highlightedTokenIDs,
     ),
     adjacencies: resolveAdjacencyNodes(renderModel.adjacencies),
-    highlightedZoneIDs,
-    highlightedTokenIDs,
     overlays: resolveOverlayNodes(renderModel, options.positions, options.visualConfigProvider),
     regions: resolveRegionNodes(zones, options.positions, options.visualConfigProvider),
   };
@@ -135,24 +161,128 @@ export function buildPresentationScene(options: BuildPresentationSceneOptions): 
 export function resolveZoneNodes(
   zones: readonly RenderZone[],
   visualConfigProvider: VisualConfigProvider,
+  highlightedZoneIDs: ReadonlySet<string> = new Set<string>(),
 ): readonly PresentationZoneNode[] {
-  return zones.map((zone) => ({
-    id: zone.id,
-    displayName: visualConfigProvider.getZoneLabel(zone.id) ?? formatIdAsDisplayName(zone.id),
-    visibility: zone.visibility,
-    ownerID: zone.ownerID,
-    hiddenTokenCount: zone.hiddenTokenCount,
-    isSelectable: zone.isSelectable,
-    isHighlighted: zone.isHighlighted,
-    category: zone.category,
-    attributes: zone.attributes,
-    visual: visualConfigProvider.resolveZoneVisual(zone.id, zone.category, zone.attributes),
-    markers: zone.markers.map((marker) => ({
-      id: marker.id,
-      displayName: formatIdAsDisplayName(marker.id),
-      state: marker.state,
-    })),
-  }));
+  const markerBadgeConfig = visualConfigProvider.getMarkerBadgeConfig();
+  return zones.map((zone) => {
+    const displayName = visualConfigProvider.getZoneLabel(zone.id) ?? formatIdAsDisplayName(zone.id);
+    const visual = visualConfigProvider.resolveZoneVisual(zone.id, zone.category, zone.attributes);
+    return {
+      id: zone.id,
+      displayName,
+      isSelectable: zone.isSelectable,
+      category: zone.category,
+      attributes: zone.attributes,
+      visual,
+      render: resolveZoneRenderSpec(zone, displayName, visual, highlightedZoneIDs.has(zone.id), markerBadgeConfig),
+    };
+  });
+}
+
+function resolveZoneRenderSpec(
+  zone: RenderZone,
+  displayName: string,
+  visual: ReturnType<VisualConfigProvider['resolveZoneVisual']>,
+  isInteractionHighlighted: boolean,
+  markerBadgeConfig: ReturnType<VisualConfigProvider['getMarkerBadgeConfig']>,
+): PresentationZoneRenderSpec {
+  const bottomEdge = visual.shape === 'circle'
+    ? Math.min(visual.width, visual.height) / 2
+    : visual.height / 2;
+  const badge = resolveZoneBadge(zone, visual, markerBadgeConfig);
+  const markersLabelText = resolveMarkerLabelText(zone, markerBadgeConfig);
+
+  return {
+    fillColor: resolveZoneFillColor(zone, visual.color),
+    stroke: resolveZoneStroke(zone, isInteractionHighlighted),
+    hiddenStackCount: zone.hiddenTokenCount,
+    nameLabel: {
+      text: displayName,
+      x: 0,
+      y: bottomEdge + LABEL_GAP,
+      visible: true,
+    },
+    markersLabel: {
+      text: markersLabelText,
+      x: 0,
+      y: bottomEdge + LABEL_GAP + LABEL_LINE_HEIGHT,
+      visible: markersLabelText.length > 0,
+    },
+    badge,
+  };
+}
+
+function resolveZoneFillColor(zone: RenderZone, visualColor: string | null | undefined): string {
+  if (typeof visualColor === 'string' && visualColor.trim().length > 0) {
+    return visualColor;
+  }
+
+  if (zone.visibility === 'hidden') {
+    return '#2a2f38';
+  }
+  if (zone.ownerID !== null) {
+    return '#304f7a';
+  }
+  if (zone.visibility === 'owner') {
+    return '#3f4d5c';
+  }
+  return '#4d5c6d';
+}
+
+function resolveZoneStroke(zone: RenderZone, isInteractionHighlighted: boolean): PresentationStrokeSpec {
+  if (zone.isHighlighted) {
+    return ZONE_HIGHLIGHT_STROKE;
+  }
+  if (isInteractionHighlighted) {
+    return ZONE_INTERACTION_STROKE;
+  }
+  if (zone.isSelectable) {
+    return ZONE_SELECTABLE_STROKE;
+  }
+  return ZONE_DEFAULT_STROKE;
+}
+
+function resolveMarkerLabelText(
+  zone: RenderZone,
+  markerBadgeConfig: ReturnType<VisualConfigProvider['getMarkerBadgeConfig']>,
+): string {
+  const filteredMarkers = markerBadgeConfig === null
+    ? zone.markers
+    : zone.markers.filter((marker) => marker.id !== markerBadgeConfig.markerId);
+  return filteredMarkers
+    .map((marker) => `${formatIdAsDisplayName(marker.id)}:${marker.state}`)
+    .join('  ');
+}
+
+function resolveZoneBadge(
+  zone: RenderZone,
+  visual: ReturnType<VisualConfigProvider['resolveZoneVisual']>,
+  markerBadgeConfig: ReturnType<VisualConfigProvider['getMarkerBadgeConfig']>,
+): PresentationZoneBadgeSpec | null {
+  if (markerBadgeConfig === null) {
+    return null;
+  }
+
+  const marker = zone.markers.find((entry) => entry.id === markerBadgeConfig.markerId);
+  if (marker === undefined) {
+    return null;
+  }
+
+  const badgeEntry = markerBadgeConfig.colorMap[marker.state];
+  if (badgeEntry === undefined) {
+    return null;
+  }
+
+  const width = markerBadgeConfig.width ?? 30;
+  const height = markerBadgeConfig.height ?? 20;
+  return {
+    text: badgeEntry.abbreviation,
+    color: badgeEntry.color,
+    x: visual.width / 2 - width - 4,
+    y: visual.height / 2 - height - 4,
+    width,
+    height,
+  };
 }
 
 export function resolveAdjacencyNodes(

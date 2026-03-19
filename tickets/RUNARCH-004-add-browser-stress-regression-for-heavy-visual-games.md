@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner verification only
-**Deps**: archive/tickets/RUNARCH/RUNARCH-001-make-presentation-scene-the-authoritative-canvas-frame.md, archive/tickets/RUNARCH/RUNARCH-002-canonical-keyed-text-reconciler.md, tickets/RUNARCH-003-complete-renderer-migration-to-presentation-specs.md, archive/tickets/RUNPRESLIFE/68RUNPRESLIFE-005-fitl-canvas-stress-regression.md
+**Deps**: archive/tickets/RUNARCH/RUNARCH-001-make-presentation-scene-the-authoritative-canvas-frame.md, archive/tickets/RUNARCH/RUNARCH-002-canonical-keyed-text-reconciler.md, archive/tickets/RUNARCH/RUNARCH-003-complete-renderer-migration-to-presentation-specs.md, tickets/RUNARCH-005-extract-semantic-runner-frame-from-render-model.md, archive/tickets/RUNPRESLIFE/68RUNPRESLIFE-005-fitl-canvas-stress-regression.md
 
 ## Problem
 
@@ -16,8 +16,8 @@ That is a missing architecture quality gate. A clean architecture is not complet
 
 1. The archived FITL browser stress ticket was left not implemented, so the crash class still depends on manual discovery rather than a machine-enforced browser regression harness.
 2. FITL remains the right first heavy-weight fixture because it exercises dense text, overlays, regions, token layouts, card faces, and lifecycle churn simultaneously.
-3. The regression harness should target the new architecture after the reconciler/spec migration lands, not the pre-migration implementation details.
-4. Corrected scope: this ticket is not a substitute for architectural cleanup; it is the verification gate that ensures the new architecture actually holds under real browser rendering.
+3. The regression harness should target the post-migration runner architecture after renderer-spec ownership and semantic-frame extraction land, not the pre-migration `RenderModel` implementation details.
+4. Corrected scope: this ticket is not a substitute for architectural cleanup; it is the verification gate that ensures the architecture defined by `RUNARCH-001` through `RUNARCH-005` actually holds under real browser rendering.
 
 ## Architecture Check
 
@@ -61,6 +61,10 @@ Treat the following as failures:
 
 Structure the harness so additional large games can be added later without rewriting the framework.
 
+### 4. Validate the final architecture, not an intermediate one
+
+Do not couple the browser harness to transitional runner contracts that still expose mixed presentation data in the store model. The harness should exercise the post-`RUNARCH-005` architecture and remain agnostic to whether the canvas/UI surfaces are backed by Pixi, DOM selectors, or later internal refactors.
+
 ## Files to Touch
 
 - `packages/runner/test/e2e/*` or equivalent browser integration area (new/modify)
@@ -70,6 +74,7 @@ Structure the harness so additional large games can be added later without rewri
 
 ## Out of Scope
 
+- owning semantic-frame extraction or store/view-model cleanup directly; that belongs to `RUNARCH-005`
 - altering runner implementation behavior directly except where observability hooks are required
 - FITL-specific rendering hacks
 - visual polish changes unrelated to stability

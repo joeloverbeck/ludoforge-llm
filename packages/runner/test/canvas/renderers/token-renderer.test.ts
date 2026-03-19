@@ -408,7 +408,7 @@ function createRenderer(
   },
 ) {
   const disposalQueue = options?.disposalQueue ?? createDisposalQueue({ scheduleFlush: () => {} });
-  const renderer = createTokenRenderer(parent as unknown as Container, colorProvider, {
+  const rawRenderer = createTokenRenderer(parent as unknown as Container, {
     disposalQueue,
     ...(options?.bindSelection === undefined ? {} : { bindSelection: options.bindSelection }),
   });
@@ -416,24 +416,22 @@ function createRenderer(
     tokens: readonly RenderToken[],
     zoneContainers: ReadonlyMap<string, Container>,
     highlightedTokenIDs?: ReadonlySet<string>,
-  ) => renderer.update(
-    resolvePresentationTokenNodes(synthesizeTokens(tokens), synthesizeZones(tokens, zoneContainers), colorProvider),
+  ) => rawRenderer.update(
+    resolvePresentationTokenNodes(synthesizeTokens(tokens), synthesizeZones(tokens, zoneContainers), colorProvider, highlightedTokenIDs),
     zoneContainers,
-    highlightedTokenIDs,
   );
   const updateWithZones = (
     tokens: readonly RenderToken[],
     zones: readonly RenderZone[],
     zoneContainers: ReadonlyMap<string, Container>,
     highlightedTokenIDs?: ReadonlySet<string>,
-  ) => renderer.update(
-    resolvePresentationTokenNodes(synthesizeTokens(tokens), zones, colorProvider),
+  ) => rawRenderer.update(
+    resolvePresentationTokenNodes(synthesizeTokens(tokens), zones, colorProvider, highlightedTokenIDs),
     zoneContainers,
-    highlightedTokenIDs,
   );
 
   return {
-    ...renderer,
+    ...rawRenderer,
     update,
     updateWithZones,
   };

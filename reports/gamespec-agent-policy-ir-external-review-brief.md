@@ -62,55 +62,231 @@ The reviewer should treat the following constraints as hard requirements:
 6. Fire in the Lake is the proof target and is highly asymmetric by faction.
 7. The eventual goal is policy evolution for every implemented game.
 
-## Current Relevant Code/Docs
+## Embedded Architecture Evidence
 
-### Simulator seam
+The reviewer should assume the following facts about the current codebase. These are distilled from the current implementation and existing internal specs so you do not need repo access to reason about them.
 
-- [`packages/engine/src/sim/simulator.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/src/sim/simulator.ts)
-- `runGame(...)` asks an `Agent` to choose a move each turn and otherwise stays generic.
+### 1. Simulator seam is already generic
 
-### Agent interface
+The current simulation loop is conceptually:
 
-- [`packages/engine/src/kernel/types-core.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/src/kernel/types-core.ts)
-- The `Agent` contract is generic and simple.
+```typescript
+while (true) {
+  if (terminalResult(def, state) !== null) break;
+  const legal = legalMoves(def, state);
+  const player = state.activePlayer;
+  const selected = agents[player].chooseMove({
+    def,
+    state,
+    playerId: player,
+    legalMoves: legal,
+    rng,
+    runtime,
+  });
+  state = applyMove(def, state, selected.move).state;
+  trace.push(...);
+}
+```
 
-### Current built-in agents
+What this proves:
 
-- [`packages/engine/src/agents/factory.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/src/agents/factory.ts)
-- [`packages/engine/src/agents/greedy-agent.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/src/agents/greedy-agent.ts)
-- [`packages/engine/src/agents/random-agent.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/src/agents/random-agent.ts)
+- simulation already has the correct generic ownership boundary,
+- the simulator does not need game-specific branches to support authored policies,
+- the right architectural insertion point is the `Agent` implementation layer and the compiled data it consumes.
 
-### Current evaluator heuristic
+### 2. Current `Agent` interface is small and generic
 
-- [`packages/engine/src/agents/evaluate-state.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/src/agents/evaluate-state.ts)
-- Important because it shows the current engine already has a generic scoring seam, but it is too shallow and too externalized for asymmetric authored AI.
+The current contract is effectively:
 
-### GameSpecDoc schema surface
+```typescript
+interface Agent {
+  chooseMove(input: {
+    def: GameDef;
+    state: GameState;
+    playerId: PlayerId;
+    legalMoves: readonly Move[];
+    rng: Rng;
+    runtime?: GameDefRuntime;
+  }): { move: Move; rng: Rng };
+}
+```
 
-- [`packages/engine/src/cnl/game-spec-doc.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/src/cnl/game-spec-doc.ts)
-- Important because the spec proposes extending this file with a first-class `agents` section.
+What this proves:
 
-### Terminal / victory
+- simulation already consumes agents generically,
+- a future `PolicyAgent` can fit into the existing seam,
+- the architectural challenge is policy representation, not simulator coupling.
 
-- [`packages/engine/src/kernel/terminal.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/src/kernel/terminal.ts)
-- [`data/games/fire-in-the-lake/90-terminal.md`](/home/joeloverbeck/projects/ludoforge-llm/data/games/fire-in-the-lake/90-terminal.md)
-- Important because authored AI should be able to optimize against authored victory margins and terminal conditions through generic runtime references.
+### 3. Current built-in agents are only `random` and `greedy`
 
-### Existing FITL bot spec to supersede/reframe
+The current agent factory accepts only:
 
-- [`specs/30-fitl-non-player-ai.md`](/home/joeloverbeck/projects/ludoforge-llm/specs/30-fitl-non-player-ai.md)
-- Important because it assumes an external `Section8Agent` instead of a first-class `GameSpecDoc` policy IR.
+- `random`
+- `greedy`
 
-### Existing evolution spec that likely needs follow-up changes
+Anything else is rejected as an unknown agent type.
 
-- [`specs/14-evolution-pipeline.md`](/home/joeloverbeck/projects/ludoforge-llm/specs/14-evolution-pipeline.md)
-- Important because it currently assumes fixed external agents during evaluation.
+What this proves:
 
-### Improvement-loop references
+- the current architecture is still centered on generic developer/testing agents,
+- there is no first-class notion of game-authored policy in the runtime,
+- CLI and runner assumptions are currently too narrow for the long-term direction.
 
-- [`reports/iterative-improvement-logic.md`](/home/joeloverbeck/projects/ludoforge-llm/reports/iterative-improvement-logic.md)
-- [`.claude/skills/improve-loop/SKILL.md`](/home/joeloverbeck/projects/ludoforge-llm/.claude/skills/improve-loop/SKILL.md)
-- Important because later evolution/improvement should mutate only the policy IR and keep the evaluation harness fixed.
+### 4. Current greedy evaluation is generic but shallow
+
+The current greedy agent does this in essence:
+
+1. expand candidate moves,
+2. apply each candidate once,
+3. score the resulting state with a generic evaluator,
+4. choose the highest-scoring move,
+5. break ties with RNG.
+
+Its evaluator currently combines:
+
+- terminal win/loss detection,
+- optional `terminal.scoring` evaluation,
+- normalized own per-player variable values,
+- penalties for opponent per-player variable values.
+
+What this proves:
+
+- the engine already has a generic post-move scoring seam,
+- but that seam is too shallow and too externalized to express strong asymmetric authored policies,
+- moving policy into `GameSpecDoc` is an architectural generalization of an already-existing generic pattern.
+
+### 5. `GameSpecDoc` currently has no AI section
+
+The current top-level `GameSpecDoc` schema includes sections such as:
+
+- `metadata`
+- `constants`
+- `dataAssets`
+- `globalVars`
+- `perPlayerVars`
+- `zones`
+- `tokenTypes`
+- `setup`
+- `turnStructure`
+- `turnOrder`
+- `actionPipelines`
+- `derivedMetrics`
+- `eventDecks`
+- `terminal`
+- `actions`
+- `triggers`
+- `effectMacros`
+- `conditionMacros`
+- `victoryStandings`
+- `verbalization`
+
+It does not currently include a first-class `agents` section.
+
+What this proves:
+
+- the spec is not filling an existing feature gap with a cosmetic rename,
+- it is adding a genuinely missing authoring surface,
+- the absence of `agents` is the clearest current architectural hole.
+
+### 6. Current terminal and victory logic is already data-authored and generic
+
+The runtime already supports:
+
+- authored checkpoint-style victory conditions,
+- authored seat-based victory margins,
+- authored ranking direction and tie-break order,
+- generic evaluation of those terminal conditions from compiled game data.
+
+For Fire in the Lake specifically, the authored terminal data already encodes per-seat victory logic like:
+
+- US victory based on support plus available pieces relative to threshold,
+- ARVN victory based on controlled population plus patronage,
+- NVA victory based on controlled population plus NVA bases,
+- VC victory based on opposition plus VC bases,
+- final-coup ranking by authored seat margins and authored tie-break order.
+
+What this proves:
+
+- game-specific victory logic is already successfully expressed as data rather than engine branches,
+- authored AI optimizing against authored terminal margins is consistent with the existing architecture,
+- the proposal extends an established design pattern rather than inventing a new one.
+
+### 7. Existing FITL bot planning assumed an external bespoke agent
+
+The earlier FITL bot plan assumed:
+
+- a `Section8Agent` implemented in TypeScript,
+- faction-specific priority tables in code,
+- event evaluation logic in code,
+- space targeting heuristics in code,
+- piece selection logic in code,
+- no kernel changes needed because the custom behavior would live at the agent layer.
+
+What this proves:
+
+- the repository already recognized that FITL needs asymmetric faction-aware decisioning,
+- but the previous ownership decision put that asymmetry in code instead of authored game data,
+- Spec 15 is intentionally reframing that choice rather than denying FITL’s asymmetry.
+
+### 8. Existing evolution design assumes fixed external agents
+
+The current evolution design assumes roughly this evaluation flow:
+
+1. LLM generates or mutates a game spec.
+2. Compiler produces a `GameDef`.
+3. Simulator runs a fixed list of external agents.
+4. Evaluator scores traces.
+5. Evolution selects by fitness.
+
+The evolution config assumes a field conceptually equivalent to:
+
+```typescript
+interface EvolutionConfig {
+  simulationRuns: number;
+  maxTurns: number;
+  agents: readonly Agent[];
+}
+```
+
+What this proves:
+
+- the current evolution architecture treats agents as external fixtures,
+- that is fine for generic game-generation experiments,
+- but it is the wrong boundary for evolving game-specific asymmetric AI policies.
+
+### 9. Existing improvement-loop design requires a bounded mutable artifact and a fixed harness
+
+The current iterative-improvement design is built on these principles:
+
+- a fixed evaluation harness must remain immutable,
+- one bounded mutable system is changed each experiment,
+- accept/reject is driven by quantitative measurement,
+- experiments are logged and rolled back cleanly,
+- the loop should not mutate the evaluator to game the metric.
+
+What this proves for AI policy evolution:
+
+- the mutable artifact should be the authored policy IR, not engine code,
+- the evaluation harness should fix rules, scenarios, seeds, and metrics,
+- the architecture must make policy mutation bounded and serializable.
+
+## Why the New Spec Is a Response to This Evidence
+
+The spec is trying to resolve the tension created by the evidence above:
+
+- simulator is already generic enough,
+- terminal evaluation is already data-authored,
+- `GameSpecDoc` lacks an AI surface,
+- current agents are too external and too narrow,
+- FITL asymmetry is real and must be expressed somewhere,
+- evolution needs a bounded mutable policy artifact.
+
+The proposed answer is:
+
+- add a first-class `agents` section to `GameSpecDoc`,
+- compile it into a generic policy catalog in `GameDef`,
+- interpret it with a generic `PolicyAgent`,
+- later evolve that bounded policy IR instead of external bespoke agents.
 
 ## What the New Spec Proposes
 
@@ -129,6 +305,18 @@ The spec proposes:
 5. Seat-bound policy profiles so asymmetric games like FITL can define one profile per seat/faction.
 6. Generic policy traces to explain decisions.
 7. An evolution-ready bounded policy search space.
+
+## Reviewer Ground Truth
+
+Use the following as hard ground truth when critiquing the spec:
+
+- The team does not want backwards compatibility.
+- The team wants cleaner architecture over preserving current external-agent conventions.
+- `GameSpecDoc` is the correct home for game-specific, non-visual AI behavior.
+- `visual-config.yaml` must remain presentation-only.
+- `GameDef` and simulation must remain generic.
+- Fire in the Lake is the stress test and is strongly asymmetric by seat/faction.
+- The final long-term goal is automatic evolution of authored game-specific policies.
 
 ## What Reviewers Should Evaluate
 
@@ -263,4 +451,3 @@ This spec is intentionally trying to create a clean boundary:
 - future evolution mutates bounded policy IR.
 
 The external review should stress-test whether that boundary is the right one and whether the proposed IR is the right size and shape to make the long-term architecture cleaner instead of just moving complexity around.
-

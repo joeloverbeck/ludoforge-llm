@@ -1,5 +1,6 @@
 import type { Container } from 'pixi.js';
 
+import type { ResolvedCardField } from '../../config/card-field-resolver.js';
 import type { CardTemplate } from '../../config/visual-config-types.js';
 import { createKeyedTextReconciler, type KeyedTextReconciler } from '../text/text-runtime.js';
 import { resolveCardTemplateFields } from '../../config/card-field-resolver.js';
@@ -22,7 +23,14 @@ export function drawCardContent(
   template: CardTemplate,
   fields: Readonly<Record<string, CardFieldValue>>,
 ): void {
-  const resolvedFields = resolveCardTemplateFields(template.layout, fields);
+  drawResolvedCardContent(container, template, resolveCardTemplateFields(template.layout, fields));
+}
+
+export function drawResolvedCardContent(
+  container: Container,
+  template: CardTemplate,
+  resolvedFields: readonly ResolvedCardField[],
+): void {
   const runtime = getOrCreateRuntime(container);
 
   if (resolvedFields.length === 0) {

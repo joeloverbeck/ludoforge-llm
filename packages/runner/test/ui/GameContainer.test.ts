@@ -144,20 +144,6 @@ vi.mock('../../src/ui/InterruptBanner.js', () => ({
   InterruptBanner: () => createElement('div', { 'data-testid': 'interrupt-banner' }),
 }));
 
-vi.mock('../../src/ui/VariablesPanel.js', async () => {
-  const React = await import('react');
-  const { VisualConfigContext } = await import('../../src/config/visual-config-context.js');
-  return {
-    VariablesPanel: () => {
-      const provider = React.useContext(VisualConfigContext);
-      return createElement('div', {
-        'data-testid': 'variables-panel',
-        'data-has-visual-config': provider === null ? 'false' : 'true',
-      });
-    },
-  };
-});
-
 vi.mock('../../src/ui/Scoreboard.js', () => ({
   Scoreboard: () => createElement('div', { 'data-testid': 'scoreboard' }),
 }));
@@ -402,8 +388,7 @@ describe('GameContainer', () => {
     expect(topSessionHtml).toContain('data-testid="event-log-toggle-button"');
     expect(topSessionHtml).not.toContain('data-testid="settings-menu"');
     expect(html).toContain('data-testid="settings-menu-trigger"');
-    expect(html).toContain('data-has-visual-config="true"');
-    expect(rightRailHtml).toContain('data-testid="variables-panel"');
+    expect(html).not.toContain('data-testid="variables-panel"');
     expect(rightRailHtml).toContain('data-testid="scoreboard"');
     expect(rightRailHtml).toContain('data-testid="global-markers-bar"');
     expect(rightRailHtml).toContain('data-testid="active-effects-panel"');
@@ -423,7 +408,6 @@ describe('GameContainer', () => {
     expectAppearsInOrder(html, [
       'settings-menu-trigger',
       'event-log-toggle-button',
-      'variables-panel',
       'scoreboard',
       'global-markers-bar',
       'active-effects-panel',
@@ -545,8 +529,7 @@ describe('GameContainer', () => {
     expect(topStatusHtml).toContain('data-testid="event-deck-panel"');
     expect(topSessionHtml).toContain('data-testid="settings-menu-trigger"');
     expect(html).toContain('data-testid="settings-menu-trigger"');
-    expect(html).toContain('data-has-visual-config="true"');
-    expect(rightRailHtml).toContain('data-testid="variables-panel"');
+    expect(html).not.toContain('data-testid="variables-panel"');
     expect(rightRailHtml).toContain('data-testid="scoreboard"');
     expect(rightRailHtml).toContain('data-testid="global-markers-bar"');
     expect(rightRailHtml).toContain('data-testid="active-effects-panel"');
@@ -560,7 +543,6 @@ describe('GameContainer', () => {
     ]);
     expectAppearsInOrder(html, [
       'settings-menu-trigger',
-      'variables-panel',
       'scoreboard',
       'global-markers-bar',
       'active-effects-panel',
@@ -831,7 +813,7 @@ describe('GameContainer', () => {
     });
   });
 
-  it('provides visual config context to VariablesPanel', () => {
+  it('does not register VariablesPanel in the right rail', () => {
     testDoubles.uiOverlayProps = null;
     renderToStaticMarkup(
       createElement(GameContainer, {
@@ -851,7 +833,7 @@ describe('GameContainer', () => {
     }
 
     const rightRailHtml = renderToStaticMarkup(createElement('div', null, overlayProps.rightRailContent));
-    expect(rightRailHtml).toContain('data-testid="variables-panel"');
+    expect(rightRailHtml).not.toContain('data-testid="variables-panel"');
   });
 
   it('routes EventLogPanel through the bottom-right dock instead of the right rail', () => {

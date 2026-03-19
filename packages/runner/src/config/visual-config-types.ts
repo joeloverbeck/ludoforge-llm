@@ -380,25 +380,6 @@ const TokensConfigSchema = z.object({
   stackBadge: StackBadgeStyleSchema.optional(),
 });
 
-const VariablePanelSchema = z.object({
-  name: z.string(),
-  vars: z.array(z.string()),
-});
-
-const VariableFormattingSchema = z.object({
-  type: z.string(),
-  min: z.number().optional(),
-  max: z.number().optional(),
-  labels: z.array(z.string()).optional(),
-  suffix: z.string().optional(),
-});
-
-const VariablesConfigSchema = z.object({
-  prominent: z.array(z.string()).optional(),
-  panels: z.array(VariablePanelSchema).optional(),
-  formatting: z.record(z.string(), VariableFormattingSchema).optional(),
-});
-
 const TableOverlayItemSchema = z.object({
   kind: z.enum(['globalVar', 'perPlayerVar', 'marker']),
   varName: z.string(),
@@ -493,14 +474,13 @@ export const VisualConfigSchema = z.object({
   cardAnimation: CardAnimationConfigSchema.optional(),
   animations: AnimationsConfigSchema.optional(),
   cards: CardsConfigSchema.optional(),
-  variables: VariablesConfigSchema.optional(),
   tableOverlays: TableOverlaysSchema.optional(),
   phaseBanners: PhaseBannersSchema.optional(),
   victoryStandings: VictoryStandingsVisualSchema.optional(),
   actionGroupPolicy: ActionGroupPolicySchema.optional(),
   regions: RegionBoundaryConfigSchema.optional(),
   runnerChrome: RunnerChromeConfigSchema.optional(),
-});
+}).strict();
 
 export type LayoutMode = z.infer<typeof LayoutModeSchema>;
 export type LayoutRole = z.infer<typeof LayoutRoleSchema>;
@@ -548,9 +528,6 @@ export type CardTemplate = z.infer<typeof CardTemplateSchema>;
 export type CardTemplateAssignment = z.infer<typeof CardTemplateAssignmentSchema>;
 export type CardsConfig = z.infer<typeof CardsConfigSchema>;
 export type TokensConfig = z.infer<typeof TokensConfigSchema>;
-export type VariablePanel = z.infer<typeof VariablePanelSchema>;
-export type VariableFormatting = z.infer<typeof VariableFormattingSchema>;
-export type VariablesConfig = z.infer<typeof VariablesConfigSchema>;
 export type TableOverlayItemConfig = z.infer<typeof TableOverlayItemSchema>;
 export type TableOverlaysConfig = z.infer<typeof TableOverlaysSchema>;
 export type PhaseBannersConfig = z.infer<typeof PhaseBannersSchema>;

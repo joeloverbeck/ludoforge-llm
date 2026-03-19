@@ -8,12 +8,11 @@ export interface VisualConfigRefValidationContext {
   readonly zoneCategories: ReadonlySet<string>;
   readonly tokenTypeIds: ReadonlySet<string>;
   readonly factionIds: ReadonlySet<string>;
-  readonly variableNames: ReadonlySet<string>;
   readonly edgeCategories: ReadonlySet<string>;
 }
 
 export interface VisualConfigRefError {
-  readonly category: 'zone' | 'zoneCategory' | 'tokenType' | 'faction' | 'variable' | 'edge';
+  readonly category: 'zone' | 'zoneCategory' | 'tokenType' | 'faction' | 'edge';
   readonly configPath: string;
   readonly referencedId: string;
   readonly message: string;
@@ -40,7 +39,6 @@ export function buildRefValidationContext(gameDef: GameDef): VisualConfigRefVali
     zoneCategories,
     tokenTypeIds: new Set(gameDef.tokenTypes.map((tokenType) => tokenType.id)),
     factionIds: new Set((gameDef.seats ?? []).map((seat) => seat.id)),
-    variableNames: new Set([...gameDef.globalVars, ...gameDef.perPlayerVars].map((variable) => variable.name)),
     edgeCategories,
   };
 }
@@ -98,17 +96,6 @@ export function validateVisualConfigRefs(
   );
 
   validateObjectKeys(config.factions, context.factionIds, 'faction', 'factions', errors);
-
-  validateStringList(config.variables?.prominent, context.variableNames, 'variable', 'variables.prominent', errors);
-  validateNestedArray(
-    config.variables?.panels,
-    context.variableNames,
-    'variable',
-    'variables.panels',
-    errors,
-    (entry) => entry.vars,
-  );
-  validateObjectKeys(config.variables?.formatting, context.variableNames, 'variable', 'variables.formatting', errors);
 
   validateObjectKeys(config.edges?.categoryStyles, context.edgeCategories, 'edge', 'edges.categoryStyles', errors);
 

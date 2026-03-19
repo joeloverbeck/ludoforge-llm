@@ -135,18 +135,6 @@ describe('VisualConfigSchema', () => {
           },
         },
       },
-      variables: {
-        prominent: ['resources-us'],
-        panels: [{ name: 'Faction Resources', vars: ['resources-us', 'resources-arvn'] }],
-        formatting: {
-          support: {
-            type: 'track',
-            min: -2,
-            max: 2,
-            labels: ['A', 'B', 'C', 'D', 'E'],
-          },
-        },
-      },
     };
 
     const result = VisualConfigSchema.safeParse(config);
@@ -207,6 +195,17 @@ describe('VisualConfigSchema', () => {
 
   it('rejects invalid version', () => {
     const result = VisualConfigSchema.safeParse({ version: 2 });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects deleted variables visual-config surface', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      variables: {
+        prominent: ['resources-us'],
+      },
+    });
+
     expect(result.success).toBe(false);
   });
 

@@ -763,11 +763,7 @@ describe('VisualConfigProvider', () => {
     expect(provider.getLayoutRole('unknown')).toBeNull();
   });
 
-  it('animation preset and variables config return configured values', () => {
-    const variables = {
-      prominent: ['pot'],
-    };
-
+  it('animation preset returns configured value and missing values default to null', () => {
     const provider = new VisualConfigProvider({
       version: 1,
       animations: {
@@ -775,12 +771,10 @@ describe('VisualConfigProvider', () => {
           moveToken: 'pulse',
         },
       },
-      variables,
     });
 
     expect(provider.getAnimationPreset('moveToken')).toBe('pulse');
     expect(provider.getAnimationPreset('cardDeal')).toBeNull();
-    expect(provider.getVariablesConfig()).toEqual(variables);
   });
 
   it('card template lookups resolve assignments and missing values', () => {

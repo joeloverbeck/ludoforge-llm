@@ -34,7 +34,6 @@ import type {
   LayoutMode,
   LayoutRole,
   StackBadgeStyle,
-  VariablesConfig,
   VictoryTooltipBreakdown,
   VisualConfig,
   RunnerChromeTopBarStatusAlignment,
@@ -364,10 +363,6 @@ export class VisualConfigProvider {
       includeKinds,
       moveEndpoints: policy?.moveEndpoints ?? 'both',
     };
-  }
-
-  getVariablesConfig(): VariablesConfig | null {
-    return this.config?.variables ?? null;
   }
 
   getRunnerChromeTopBar(): ResolvedRunnerChromeTopBar {

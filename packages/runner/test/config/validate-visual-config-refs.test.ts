@@ -64,13 +64,6 @@ describe('validate-visual-config-refs', () => {
       factions: {
         factionA: { color: '#111111' },
       },
-      variables: {
-        prominent: ['varA'],
-        panels: [{ name: 'Panel', vars: ['varA'] }],
-        formatting: {
-          varA: { type: 'number' },
-        },
-      },
       cardAnimation: {
         cardTokenTypes: { ids: ['tokenA'] },
         zoneRoles: {
@@ -112,9 +105,6 @@ describe('validate-visual-config-refs', () => {
       factions: {
         missingFaction: { color: '#ff0000' },
       },
-      variables: {
-        prominent: ['missingVar'],
-      },
       edges: {
         categoryStyles: {
           missingEdge: { color: '#00ff00' },
@@ -128,7 +118,6 @@ describe('validate-visual-config-refs', () => {
       'tokenType',
       'zoneCategory',
       'faction',
-      'variable',
       'edge',
     ]);
   });
@@ -181,12 +170,24 @@ describe('validate-visual-config-refs', () => {
     expect(context.zoneCategories).toEqual(new Set(['city']));
     expect(context.tokenTypeIds).toEqual(new Set(['tokenA']));
     expect(context.factionIds).toEqual(new Set(['factionA']));
-    expect(context.variableNames).toEqual(new Set(['globalA', 'playerA']));
     expect(context.edgeCategories).toEqual(new Set(['city', 'road', 'river']));
   });
 
   it('validateAndCreateProvider throws for malformed non-null config', () => {
     expect(() => validateAndCreateProvider({ version: 2 }, fixtureContext())).toThrow(/Invalid visual config schema/u);
+  });
+
+  it('validateAndCreateProvider rejects deleted variables config surface at schema boundary', () => {
+    expect(() =>
+      validateAndCreateProvider(
+        {
+          version: 1,
+          variables: {
+            prominent: ['varA'],
+          },
+        },
+        fixtureContext(),
+      )).toThrow(/Invalid visual config schema/u);
   });
 
   it('validateAndCreateProvider throws for invalid references', () => {
@@ -344,7 +345,6 @@ function fixtureContext(): VisualConfigRefValidationContext {
     zoneCategories: new Set(['city', 'province']),
     tokenTypeIds: new Set(['tokenA']),
     factionIds: new Set(['factionA']),
-    variableNames: new Set(['varA']),
     edgeCategories: new Set(['road']),
   };
 }

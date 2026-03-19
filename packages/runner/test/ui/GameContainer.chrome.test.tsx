@@ -66,10 +66,6 @@ vi.mock('../../src/ui/UndoControl.js', () => ({
   UndoControl: () => createElement('div'),
 }));
 
-vi.mock('../../src/ui/VariablesPanel.js', () => ({
-  VariablesPanel: () => createElement('div'),
-}));
-
 vi.mock('../../src/ui/PlayerHandPanel.js', () => ({
   PlayerHandPanel: () => createElement('div'),
 }));

@@ -27,7 +27,6 @@ import { ActiveEffectsPanel } from './ActiveEffectsPanel.js';
 import { TurnOrderDisplay } from './TurnOrderDisplay.js';
 import { UndoControl } from './UndoControl.js';
 import { UIOverlay } from './UIOverlay.js';
-import { VariablesPanel } from './VariablesPanel.js';
 import { PlayerHandPanel } from './PlayerHandPanel.js';
 import { AITurnOverlay } from './AITurnOverlay.js';
 import { WarningsToast } from './WarningsToast.js';
@@ -76,7 +75,6 @@ const OVERLAY_REGION_PANELS: Readonly<Record<OverlayRegion, readonly OverlayPane
     EligiblePanel,
   ],
   right: [
-    VariablesPanel,
     Scoreboard,
     GlobalMarkersBar,
     ActiveEffectsPanel,

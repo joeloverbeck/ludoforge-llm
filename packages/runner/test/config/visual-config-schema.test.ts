@@ -504,6 +504,61 @@ describe('VisualConfigSchema', () => {
     expect(result.success).toBe(false);
   });
 
+  it('accepts explicit showdown surface config', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      runnerSurfaces: {
+        showdown: {
+          when: {
+            phase: 'showdown',
+          },
+          ranking: {
+            source: {
+              kind: 'perPlayerVar',
+              name: 'showdownScore',
+            },
+            hideZeroScores: true,
+          },
+          communityCards: {
+            zones: ['community:none'],
+          },
+          playerCards: {
+            zones: ['hand:0', 'hand:1'],
+          },
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects showdown surface config with malformed ranking source', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      runnerSurfaces: {
+        showdown: {
+          when: {
+            phase: 'showdown',
+          },
+          ranking: {
+            source: {
+              kind: 'globalVar',
+              name: 'showdownScore',
+            },
+          },
+          communityCards: {
+            zones: ['community:none'],
+          },
+          playerCards: {
+            zones: ['hand:0', 'hand:1'],
+          },
+        },
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it('rejects invalid card field align values', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,

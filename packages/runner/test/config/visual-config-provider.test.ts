@@ -106,6 +106,49 @@ describe('VisualConfigProvider', () => {
     expect(withoutOverlays.getPlayerSeatAnchorZones()).toEqual([]);
   });
 
+  it('showdown surface returns configured value or null', () => {
+    const withShowdown = new VisualConfigProvider({
+      version: 1,
+      runnerSurfaces: {
+        showdown: {
+          when: { phase: 'showdown' },
+          ranking: {
+            source: {
+              kind: 'perPlayerVar',
+              name: 'showdownScore',
+            },
+            hideZeroScores: true,
+          },
+          communityCards: {
+            zones: ['community:none'],
+          },
+          playerCards: {
+            zones: ['hand:0', 'hand:1'],
+          },
+        },
+      },
+    });
+    const withoutShowdown = new VisualConfigProvider({ version: 1 });
+
+    expect(withShowdown.getShowdownSurface()).toEqual({
+      when: { phase: 'showdown' },
+      ranking: {
+        source: {
+          kind: 'perPlayerVar',
+          name: 'showdownScore',
+        },
+        hideZeroScores: true,
+      },
+      communityCards: {
+        zones: ['community:none'],
+      },
+      playerCards: {
+        zones: ['hand:0', 'hand:1'],
+      },
+    });
+    expect(withoutShowdown.getShowdownSurface()).toBeNull();
+  });
+
   it('category style merges over defaults', () => {
     const provider = new VisualConfigProvider({
       version: 1,

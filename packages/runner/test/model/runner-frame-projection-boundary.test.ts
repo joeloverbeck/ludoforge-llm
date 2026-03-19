@@ -136,7 +136,8 @@ describe('runner frame / render model boundary', () => {
 
     expect(renderModel.zones.map((zone) => zone.id)).toEqual(['table:none']);
     expect(renderModel.zones[0]?.displayName).toBe('Center Table');
-    expect(renderModel.globalVars).toEqual([{ name: 'tick', value: 0, displayName: 'Tick' }]);
+    expect('globalVars' in (renderModel as object)).toBe(false);
+    expect('playerVars' in (renderModel as object)).toBe(false);
     expect(renderModel.choiceUi.kind).toBe('discreteOne');
     if (renderModel.choiceUi.kind === 'discreteOne') {
       expect(renderModel.choiceUi.options.map((option) => option.displayName)).toEqual(['Center Table', 'Reserve None']);

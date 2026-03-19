@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { asPlayerId } from '@ludoforge/engine/runtime';
-import type { DecisionKey, MoveParamValue, PlayerId } from '@ludoforge/engine/runtime';
+import type { DecisionKey, MoveParamValue } from '@ludoforge/engine/runtime';
 
 import { serializeChoiceValueIdentity } from '../../src/model/choice-value-utils';
 import type {
@@ -53,10 +53,6 @@ describe('render-model types', () => {
           isSelected: false,
         },
       ],
-      globalVars: [{ name: 'round', value: 1, displayName: 'Round' }],
-      playerVars: new Map<PlayerId, readonly { readonly name: string; readonly value: number | boolean; readonly displayName: string }[]>([
-        [playerZero, [{ name: 'money', value: 3, displayName: 'Money' }]],
-      ]),
       activeEffects: [
         {
           id: 'effect:1',

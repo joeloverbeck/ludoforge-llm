@@ -46,6 +46,24 @@ describe('validate-visual-config-refs', () => {
       tableOverlays: {
         playerSeatAnchorZones: ['zone:a'],
       },
+      runnerSurfaces: {
+        showdown: {
+          when: { phase: 'showdown' },
+          ranking: {
+            source: {
+              kind: 'perPlayerVar',
+              name: 'playerA',
+            },
+            hideZeroScores: true,
+          },
+          communityCards: {
+            zones: ['zone:a'],
+          },
+          playerCards: {
+            zones: ['zone:b'],
+          },
+        },
+      },
       layout: {
         hints: {
           fixed: [{ zone: 'zone:a', x: 0, y: 0 }],
@@ -164,6 +182,9 @@ describe('validate-visual-config-refs', () => {
       seats: [{ id: 'factionA' }],
       globalVars: [{ name: 'globalA' }],
       perPlayerVars: [{ name: 'playerA' }],
+      turnStructure: {
+        phases: [{ id: 'showdown' }, { id: 'main' }],
+      },
     } as unknown as GameDef);
 
     expect(context.zoneIds).toEqual(new Set(['zone:a', 'zone:b']));
@@ -171,6 +192,9 @@ describe('validate-visual-config-refs', () => {
     expect(context.tokenTypeIds).toEqual(new Set(['tokenA']));
     expect(context.factionIds).toEqual(new Set(['factionA']));
     expect(context.edgeCategories).toEqual(new Set(['city', 'road', 'river']));
+    expect(context.phaseIds).toEqual(new Set(['showdown', 'main']));
+    expect(context.globalVarNames).toEqual(new Set(['globalA']));
+    expect(context.perPlayerVarNames).toEqual(new Set(['playerA']));
   });
 
   it('validateAndCreateProvider throws for malformed non-null config', () => {
@@ -219,6 +243,58 @@ describe('validate-visual-config-refs', () => {
         category: 'zone',
         configPath: 'zones.hiddenZones[0]',
         referencedId: 'missing:zone',
+        message: 'Unknown zone id',
+      },
+    ]);
+  });
+
+  it('reports showdown phase, variable, and zone reference errors with precise paths', () => {
+    const config: VisualConfig = {
+      version: 1,
+      runnerSurfaces: {
+        showdown: {
+          when: {
+            phase: 'missing-phase',
+          },
+          ranking: {
+            source: {
+              kind: 'perPlayerVar',
+              name: 'missing-player-var',
+            },
+          },
+          communityCards: {
+            zones: ['missing:community'],
+          },
+          playerCards: {
+            zones: ['missing:hand'],
+          },
+        },
+      },
+    };
+
+    expect(validateVisualConfigRefs(config, fixtureContext())).toEqual([
+      {
+        category: 'phase',
+        configPath: 'runnerSurfaces.showdown.when.phase',
+        referencedId: 'missing-phase',
+        message: 'Unknown phase id',
+      },
+      {
+        category: 'perPlayerVar',
+        configPath: 'runnerSurfaces.showdown.ranking.source.name',
+        referencedId: 'missing-player-var',
+        message: 'Unknown per-player variable name',
+      },
+      {
+        category: 'zone',
+        configPath: 'runnerSurfaces.showdown.communityCards.zones[0]',
+        referencedId: 'missing:community',
+        message: 'Unknown zone id',
+      },
+      {
+        category: 'zone',
+        configPath: 'runnerSurfaces.showdown.playerCards.zones[0]',
+        referencedId: 'missing:hand',
         message: 'Unknown zone id',
       },
     ]);
@@ -346,5 +422,8 @@ function fixtureContext(): VisualConfigRefValidationContext {
     tokenTypeIds: new Set(['tokenA']),
     factionIds: new Set(['factionA']),
     edgeCategories: new Set(['road']),
+    phaseIds: new Set(['main', 'showdown']),
+    globalVarNames: new Set(['globalA']),
+    perPlayerVarNames: new Set(['playerA']),
   };
 }

@@ -1,4 +1,4 @@
-import { asPlayerId } from '@ludoforge/engine/runtime';
+import { asPlayerId, type PlayerId } from '@ludoforge/engine/runtime';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { describe, expect, it, vi } from 'vitest';
@@ -10,14 +10,19 @@ import type { AdjacencyRenderer, TableOverlayRenderer, TokenRenderer, ZoneRender
 import type { ViewportResult } from '../../src/canvas/viewport-setup';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import type { WorldLayoutModel } from '../../src/layout/world-layout-model.js';
-import type { RenderModel, RenderToken, RenderZone } from '../../src/model/render-model';
+import type { RenderModel, RenderToken, RenderVariable, RenderZone } from '../../src/model/render-model';
 import type { RunnerFrame, RunnerProjectionBundle } from '../../src/model/runner-frame.js';
 import type { GameStore } from '../../src/store/game-store';
+
+type RenderModelWithProjectionVars = RenderModel & {
+  readonly globalVars: readonly RenderVariable[];
+  readonly playerVars: ReadonlyMap<PlayerId, readonly RenderVariable[]>;
+};
 
 interface CanvasTestStoreState {
   readonly runnerProjection: RunnerProjectionBundle | null;
   readonly runnerFrame: RunnerFrame | null;
-  readonly renderModel: RenderModel | null;
+  readonly renderModel: RenderModelWithProjectionVars | null;
   readonly worldLayout: WorldLayoutModel | null;
   readonly animationPlaying: boolean;
 }
@@ -57,7 +62,7 @@ function makeToken(overrides: Partial<RenderToken> = {}): RenderToken {
   };
 }
 
-function makeRenderModel(overrides: Partial<RenderModel> = {}): RenderModel {
+function makeRenderModel(overrides: Partial<RenderModelWithProjectionVars> = {}): RenderModelWithProjectionVars {
   return {
     zones: [makeZone()],
     adjacencies: [{ from: 'zone:a', to: 'zone:b', category: null, isHighlighted: false }],
@@ -187,7 +192,7 @@ function createCanvasTestStore(initial: Omit<CanvasTestStoreState, 'runnerProjec
   return store;
 }
 
-function toRunnerFrame(renderModel: RenderModel): RunnerFrame {
+function toRunnerFrame(renderModel: RenderModelWithProjectionVars): RunnerFrame {
   return {
     zones: renderModel.zones.map((zone) => ({
       id: zone.id,
@@ -238,7 +243,7 @@ function toRunnerFrame(renderModel: RenderModel): RunnerFrame {
   };
 }
 
-function toRunnerProjection(renderModel: RenderModel): RunnerProjectionBundle {
+function toRunnerProjection(renderModel: RenderModelWithProjectionVars): RunnerProjectionBundle {
   return {
     frame: toRunnerFrame(renderModel),
     source: {

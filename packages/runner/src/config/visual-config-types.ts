@@ -407,6 +407,33 @@ const TableOverlaysSchema = z.object({
   }
 });
 
+const ShowdownVisibilitySchema = z.object({
+  phase: z.string(),
+}).strict();
+
+const ShowdownRankingSourceSchema = z.object({
+  kind: z.literal('perPlayerVar'),
+  name: z.string(),
+}).strict();
+
+const ShowdownZoneSelectorSchema = z.object({
+  zones: z.array(z.string()).min(1),
+}).strict();
+
+const ShowdownSurfaceSchema = z.object({
+  when: ShowdownVisibilitySchema,
+  ranking: z.object({
+    source: ShowdownRankingSourceSchema,
+    hideZeroScores: z.boolean().optional(),
+  }).strict(),
+  communityCards: ShowdownZoneSelectorSchema,
+  playerCards: ShowdownZoneSelectorSchema,
+}).strict();
+
+const RunnerSurfacesConfigSchema = z.object({
+  showdown: ShowdownSurfaceSchema.optional(),
+}).strict();
+
 const PhaseBannersSchema = z.object({
   phases: z.array(z.string()).min(1),
 });
@@ -475,6 +502,7 @@ export const VisualConfigSchema = z.object({
   animations: AnimationsConfigSchema.optional(),
   cards: CardsConfigSchema.optional(),
   tableOverlays: TableOverlaysSchema.optional(),
+  runnerSurfaces: RunnerSurfacesConfigSchema.optional(),
   phaseBanners: PhaseBannersSchema.optional(),
   victoryStandings: VictoryStandingsVisualSchema.optional(),
   actionGroupPolicy: ActionGroupPolicySchema.optional(),
@@ -530,6 +558,11 @@ export type CardsConfig = z.infer<typeof CardsConfigSchema>;
 export type TokensConfig = z.infer<typeof TokensConfigSchema>;
 export type TableOverlayItemConfig = z.infer<typeof TableOverlayItemSchema>;
 export type TableOverlaysConfig = z.infer<typeof TableOverlaysSchema>;
+export type ShowdownVisibilityConfig = z.infer<typeof ShowdownVisibilitySchema>;
+export type ShowdownRankingSourceConfig = z.infer<typeof ShowdownRankingSourceSchema>;
+export type ShowdownZoneSelectorConfig = z.infer<typeof ShowdownZoneSelectorSchema>;
+export type ShowdownSurfaceConfig = z.infer<typeof ShowdownSurfaceSchema>;
+export type RunnerSurfacesConfig = z.infer<typeof RunnerSurfacesConfigSchema>;
 export type PhaseBannersConfig = z.infer<typeof PhaseBannersSchema>;
 export type VictoryTooltipComponent = z.infer<typeof VictoryTooltipComponentSchema>;
 export type VictoryTooltipBreakdown = z.infer<typeof VictoryTooltipBreakdownSchema>;

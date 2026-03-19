@@ -1,4 +1,4 @@
-import { asPlayerId, type PlayerId } from '@ludoforge/engine/runtime';
+import { asPlayerId } from '@ludoforge/engine/runtime';
 import type { StoreApi } from 'zustand';
 
 import type { GameStore } from '../../../src/store/game-store.js';
@@ -10,8 +10,6 @@ export function makeRenderModelFixture(
     zones: [],
     adjacencies: [],
     tokens: [],
-    globalVars: [],
-    playerVars: new Map<PlayerId, readonly { readonly name: string; readonly value: number | boolean; readonly displayName: string }[]>(),
     activeEffects: [],
     players: [
       {

@@ -12,8 +12,6 @@ function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']
     zones: [],
     adjacencies: [],
     tokens: [],
-    globalVars: [],
-    playerVars: new Map(),
     activeEffects: [],
     players: [
       {

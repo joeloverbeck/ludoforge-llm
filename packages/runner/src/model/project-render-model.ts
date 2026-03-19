@@ -22,6 +22,7 @@ import type {
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
 import { formatChoiceValueFallback, formatChoiceValueResolved } from './choice-value-utils.js';
+import { projectShowdownSurface, showdownSurfaceEqual } from './project-showdown-surface.js';
 
 const EMPTY_RENDER_SURFACES: RenderModel['surfaces'] = {
   tableOverlays: [],
@@ -33,7 +34,7 @@ export function projectRenderModel(
   visualConfigProvider: VisualConfigProvider,
   previousModel: RenderModel | null = null,
 ): RenderModel {
-  const { frame, source } = bundle;
+  const { frame } = bundle;
   const hiddenZones = visualConfigProvider.getHiddenZones();
   const zones = projectZones(frame.zones, visualConfigProvider, hiddenZones);
   const visibleZoneIds = new Set(zones.map((zone) => zone.id));
@@ -48,19 +49,6 @@ export function projectRenderModel(
     zones,
     adjacencies: frame.adjacencies.filter((adjacency) => visibleZoneIds.has(adjacency.from) && visibleZoneIds.has(adjacency.to)),
     tokens,
-    globalVars: source.globalVars.map((variable) => ({
-      ...variable,
-      displayName: formatIdAsDisplayName(variable.name),
-    })),
-    playerVars: new Map(
-      Array.from(source.playerVars.entries()).map(([playerId, variables]) => [
-        playerId,
-        variables.map((variable) => ({
-          ...variable,
-          displayName: formatIdAsDisplayName(variable.name),
-        })),
-      ]),
-    ),
     activeEffects: frame.activeEffects.map((effect) => ({
       id: effect.id,
       displayName: effect.sourceCardTitle,
@@ -103,7 +91,10 @@ export function projectRenderModel(
       ...entry,
       displayName: visualConfigProvider.getFactionDisplayName(entry.factionId) ?? formatIdAsDisplayName(entry.seatId),
     })),
-    surfaces: EMPTY_RENDER_SURFACES,
+    surfaces: {
+      tableOverlays: EMPTY_RENDER_SURFACES.tableOverlays,
+      showdown: projectShowdownSurface(bundle, players, visualConfigProvider),
+    },
     victoryStandings: frame.victoryStandings,
     terminal: frame.terminal,
   };
@@ -291,8 +282,13 @@ function stabilizeRenderModel(previous: RenderModel | null, next: RenderModel): 
 
   const stabilizedZones = stabilizeZoneArray(previous.zones, next.zones);
   const stabilizedTokens = stabilizeTokenArray(previous.tokens, next.tokens);
+  const stabilizedSurfaces = stabilizeSurfaceModel(previous.surfaces, next.surfaces);
 
-  if (stabilizedZones === next.zones && stabilizedTokens === next.tokens) {
+  if (
+    stabilizedZones === next.zones
+    && stabilizedTokens === next.tokens
+    && stabilizedSurfaces === next.surfaces
+  ) {
     return next;
   }
 
@@ -300,7 +296,29 @@ function stabilizeRenderModel(previous: RenderModel | null, next: RenderModel): 
     ...next,
     zones: stabilizedZones,
     tokens: stabilizedTokens,
+    surfaces: stabilizedSurfaces,
   };
+}
+
+function stabilizeSurfaceModel(
+  previous: RenderModel['surfaces'],
+  next: RenderModel['surfaces'],
+): RenderModel['surfaces'] {
+  if (
+    previous.tableOverlays === next.tableOverlays
+    && showdownSurfaceEqual(previous.showdown, next.showdown)
+  ) {
+    return previous;
+  }
+
+  if (showdownSurfaceEqual(previous.showdown, next.showdown)) {
+    return {
+      ...next,
+      showdown: previous.showdown,
+    };
+  }
+
+  return next;
 }
 
 function stabilizeZoneArray(previous: readonly RenderZone[], next: readonly RenderZone[]): readonly RenderZone[] {

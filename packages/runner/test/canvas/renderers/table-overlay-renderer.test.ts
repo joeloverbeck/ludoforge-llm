@@ -1,4 +1,4 @@
-import { asPlayerId } from '@ludoforge/engine/runtime';
+import { asPlayerId, type PlayerId } from '@ludoforge/engine/runtime';
 import { describe, expect, it, vi } from 'vitest';
 import type { Container } from 'pixi.js';
 
@@ -8,6 +8,11 @@ import type { WorldLayoutModel } from '../../../src/layout/world-layout-model.js
 import type { RenderModel, RenderVariable, RenderZone } from '../../../src/model/render-model';
 import type { RunnerFrame, RunnerProjectionSource } from '../../../src/model/runner-frame.js';
 import { projectTableOverlaySurface } from '../../../src/presentation/project-table-overlay-surface.js';
+
+type RenderModelWithProjectionVars = RenderModel & {
+  readonly globalVars: readonly RenderVariable[];
+  readonly playerVars: ReadonlyMap<PlayerId, readonly RenderVariable[]>;
+};
 
 const {
   MockContainer,
@@ -128,7 +133,7 @@ vi.mock('pixi.js', () => ({
   Text: MockText,
 }));
 
-function makeRenderModel(overrides: Partial<RenderModel> = {}): RenderModel {
+function makeRenderModel(overrides: Partial<RenderModelWithProjectionVars> = {}): RenderModelWithProjectionVars {
   return {
     zones: [
       makeZone({ id: 'shared:center', ownerID: null }),
@@ -217,7 +222,7 @@ function asVar(name: string, value: number | boolean): RenderVariable {
 function updateRenderer(
   renderer: ReturnType<typeof createTableOverlayRenderer>,
   provider: VisualConfigProvider,
-  renderModel: RenderModel | null,
+  renderModel: RenderModelWithProjectionVars | null,
   positions: ReadonlyMap<string, { x: number; y: number }>,
 ): void {
   renderer.update(projectTableOverlaySurface({
@@ -242,7 +247,7 @@ function makeWorldLayout(
   };
 }
 
-function toRunnerFrame(renderModel: RenderModel): RunnerFrame {
+function toRunnerFrame(renderModel: RenderModelWithProjectionVars): RunnerFrame {
   return {
     zones: renderModel.zones.map((zone) => ({
       id: zone.id,
@@ -315,7 +320,7 @@ function toRunnerFrame(renderModel: RenderModel): RunnerFrame {
   };
 }
 
-function toRunnerProjectionSource(renderModel: RenderModel): RunnerProjectionSource {
+function toRunnerProjectionSource(renderModel: RenderModelWithProjectionVars): RunnerProjectionSource {
   return {
     globalVars: renderModel.globalVars.map(({ name, value }) => ({ name, value })),
     playerVars: new Map(
@@ -775,7 +780,7 @@ describe('createTableOverlayRenderer', () => {
       const child = parent.children[0] as InstanceType<typeof MockText>;
       expect(parent.children).toHaveLength(1);
 
-      updateRenderer(renderer, provider, null as unknown as RenderModel, positions);
+      updateRenderer(renderer, provider, null as unknown as RenderModelWithProjectionVars, positions);
       expect(parent.children).toHaveLength(0);
       expect(child.destroyed).toBe(true);
     });

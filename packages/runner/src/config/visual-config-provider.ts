@@ -24,6 +24,7 @@ import type {
   MarkerBadgeConfig,
   RegionBoundaryConfig,
   RegionStyle,
+  ShowdownSurfaceConfig,
   TableBackgroundConfig,
   TableOverlaysConfig,
   TokenTypeDefault,
@@ -381,6 +382,10 @@ export class VisualConfigProvider {
 
   getTableOverlays(): TableOverlaysConfig | null {
     return this.config?.tableOverlays ?? null;
+  }
+
+  getShowdownSurface(): ShowdownSurfaceConfig | null {
+    return this.config?.runnerSurfaces?.showdown ?? null;
   }
 
   getPlayerSeatAnchorZones(): readonly string[] {

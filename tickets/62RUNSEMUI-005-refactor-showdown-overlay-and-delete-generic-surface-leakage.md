@@ -4,66 +4,60 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: `specs/62-runner-semantic-ui-projection-boundary.md`, `archive/tickets/62RUNSEMUI/62RUNSEMUI-002-add-explicit-render-surface-contracts.md`, `tickets/62RUNSEMUI-004-add-visual-config-driven-showdown-surface-projection.md`
+**Deps**: `specs/62-runner-semantic-ui-projection-boundary.md`, `archive/tickets/62RUNSEMUI/62RUNSEMUI-002-add-explicit-render-surface-contracts.md`, `archive/tickets/62RUNSEMUI/62RUNSEMUI-004-add-visual-config-driven-showdown-surface-projection.md`
 
 ## Problem
 
-After the showdown surface model exists, `ShowdownOverlay` must stop deriving its own semantics from `phaseName`, zones, tokens, players, and `playerVars`. The final cleanup in Spec 62 is to move the component onto explicit projected surface data and then delete generic render-model fields that only survived to support old surface derivation.
+Ticket `62RUNSEMUI-004` completed the showdown migration already:
+
+- `ShowdownOverlay` now renders from `surfaces.showdown`
+- `RenderModel.globalVars` / `RenderModel.playerVars` have been deleted
+- showdown wiring now lives in `visual-config.yaml`
+
+This ticket is now only needed for any follow-up cleanup that remains after that migration, especially structural-sharing hardening and boundary regressions that may still be worth tightening.
 
 ## Assumption Reassessment (2026-03-19)
 
-1. [`packages/runner/src/ui/ShowdownOverlay.tsx`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/ui/ShowdownOverlay.tsx) currently derives rankings directly from `renderModel.playerVars`, `renderModel.zones`, and `renderModel.tokens`.
-2. Test helpers and UI tests such as [`packages/runner/test/ui/ShowdownOverlay.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/ui/ShowdownOverlay.test.ts) and [`packages/runner/test/ui/helpers/render-model-fixture.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/ui/helpers/render-model-fixture.ts) currently assume those generic fields are sufficient to build the overlay.
-3. In current production code, `ShowdownOverlay` is the only live runner consumer still deriving presentation semantics from `RenderModel.playerVars` / `globalVars`; table overlays now consume `RunnerProjectionBundle.source` through a dedicated projector instead of reading `RenderModel`.
-4. Once showdown consumes `surfaces.showdown`, `RenderModel.globalVars` and `RenderModel.playerVars` should be removed if no remaining non-surface consumer truly requires them. The internal projection source remains valid; the public render-model bags do not.
+1. [`packages/runner/src/ui/ShowdownOverlay.tsx`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/ui/ShowdownOverlay.tsx) already renders `renderModel?.surfaces.showdown` directly.
+2. [`packages/runner/src/model/render-model.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/model/render-model.ts) no longer exposes `globalVars` or `playerVars`.
+3. Table overlays still correctly consume `RunnerProjectionBundle.source` through [`packages/runner/src/presentation/project-table-overlay-surface.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/presentation/project-table-overlay-surface.ts) instead of reading `RenderModel`.
+4. That table-overlay architecture is intentional and should not be “normalized” by pushing anchored canvas surfaces into `RenderModel`; anchored canvas surfaces should continue to project from internal semantic + world-layout contracts rather than from the public DOM-facing render-model surface.
+5. The only plausible remaining value in this ticket is extra hardening around structural sharing, boundary tests, or deletion of any new leakage if it reappears.
 
 ## Architecture Check
 
 1. UI components should render explicit surface contracts only; this keeps semantic derivation and presentation wiring out of React components.
 2. Deleting the generic var bags after migration is cleaner than preserving them as tempting escape hatches for future surfaces.
 3. The cleanup remains runner-only and does not move any game-specific presentation knowledge into engine/runtime code.
-4. This ticket should delete public render-model leakage only after the showdown projector exists; it must not pull world-layout or anchored-surface concerns back into `RenderModel`.
+4. Do not pull world-layout or anchored-surface concerns back into `RenderModel`. `RenderModel` is for explicit UI-facing DOM surface contracts; anchored canvas surfaces may continue to consume `RunnerProjectionBundle` plus `WorldLayoutModel` directly.
+5. If no concrete follow-up cleanup remains after validation, this ticket should be closed rather than inventing work.
 
 ## What to Change
 
-### 1. Refactor `ShowdownOverlay` to read only the showdown surface model
+### 1. Reassess whether any meaningful follow-up work remains
 
-Update [`packages/runner/src/ui/ShowdownOverlay.tsx`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/ui/ShowdownOverlay.tsx) so it:
+Before implementing more code, verify whether there is still any real bug, regression risk, or architectural gap left after `62RUNSEMUI-004`.
 
-- selects `renderModel?.surfaces.showdown`
-- renders directly from that data
-- stops deriving from `phaseName`, zone prefixes, or `playerVars`
+### 2. If needed, limit work to hardening
 
-If `phaseName` is still needed anywhere for non-showdown UI, it may remain on `RenderModel`; it must not be used as a showdown-specific derivation crutch inside this component.
+Potential remaining work, if justified by code/tests:
 
-### 2. Delete obsolete generic render-model fields
+- strengthen showdown surface structural-sharing tests
+- tighten boundary tests to guard against future raw-data leakage
+- clean up any leftover test-only assumptions that still model the old architecture
 
-Remove `RenderModel.playerVars`, `RenderModel.globalVars`, and any other surface-specific generic leakage that remains only to support overlay/showdown consumers.
+### 3. Preserve the anchored-surface boundary explicitly
 
-Update any remaining legitimate consumer to use either:
+Do not move table overlays or other anchored canvas features onto `RenderModel` just for consistency. The correct split is:
 
-- semantic frame data
-- the internal projection source
-- or explicit surface contracts
-
-### 3. Tighten boundary and structural-sharing tests
-
-Add tests that prove:
-
-- `ShowdownOverlay` renders from surface data only
-- unrelated changes do not force showdown surface churn
-- the reduced `RenderModel` contract no longer exposes deleted generic bags
+- explicit DOM-facing special surfaces like showdown can live on `RenderModel.surfaces`
+- anchored canvas surfaces can continue projecting from internal semantic source plus `WorldLayoutModel`
 
 ## Files to Touch
 
-- [`packages/runner/src/model/render-model.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/model/render-model.ts) (modify)
-- [`packages/runner/src/model/project-render-model.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/model/project-render-model.ts) (modify)
-- [`packages/runner/src/ui/ShowdownOverlay.tsx`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/ui/ShowdownOverlay.tsx) (modify)
-- [`packages/runner/test/ui/ShowdownOverlay.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/ui/ShowdownOverlay.test.ts) (modify)
-- [`packages/runner/test/ui/helpers/render-model-fixture.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/ui/helpers/render-model-fixture.ts) (modify)
-- [`packages/runner/test/model/runner-frame-projection-boundary.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/model/runner-frame-projection-boundary.test.ts) (modify)
-- [`packages/runner/test/model/render-model-types.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/model/render-model-types.test.ts) (modify)
-- [`packages/runner/test/model/project-render-model-structural-sharing.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/model/project-render-model-structural-sharing.test.ts) (modify)
+- [`packages/runner/test/model/project-render-model-structural-sharing.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/model/project-render-model-structural-sharing.test.ts) (modify if needed)
+- [`packages/runner/test/model/runner-frame-projection-boundary.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/model/runner-frame-projection-boundary.test.ts) (modify if needed)
+- [`packages/runner/test/ui/ShowdownOverlay.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/ui/ShowdownOverlay.test.ts) (modify only if new regressions are found)
 
 ## Out of Scope
 
@@ -77,35 +71,31 @@ Add tests that prove:
 
 ### Tests That Must Pass
 
-1. [`packages/runner/test/ui/ShowdownOverlay.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/ui/ShowdownOverlay.test.ts) proves the component renders from `surfaces.showdown` only and no longer needs generic vars or zone-prefix conventions.
-2. [`packages/runner/test/model/render-model-types.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/model/render-model-types.test.ts) proves `RenderModel` no longer exposes deleted generic var bags.
-3. [`packages/runner/test/model/runner-frame-projection-boundary.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/model/runner-frame-projection-boundary.test.ts) proves the semantic/render boundary is reduced to semantic frame plus explicit surfaces.
-4. [`packages/runner/test/model/project-render-model-structural-sharing.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/model/project-render-model-structural-sharing.test.ts) proves showdown surface identity is stable when projected showdown output is unchanged.
+1. If this ticket remains active, [`packages/runner/test/model/project-render-model-structural-sharing.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/model/project-render-model-structural-sharing.test.ts) should prove showdown surface identity is stable when projected showdown output is unchanged.
+2. Any added boundary tests must preserve the rule that anchored canvas surfaces are allowed to depend on internal projection source plus `WorldLayoutModel` without being reintroduced as `RenderModel` fields.
 5. Command: `pnpm -F @ludoforge/runner test`
 6. Command: `pnpm -F @ludoforge/runner typecheck`
 7. Command: `pnpm -F @ludoforge/runner lint`
 
 ### Invariants
 
-1. `ShowdownOverlay` must not inspect `playerVars`, `globalVars`, zone prefixes, or raw token groupings to derive showdown semantics after this ticket.
-2. `RenderModel` must expose explicit surfaces rather than generic raw-data bags for special UI surfaces.
-3. Deletion is real deletion: no backwards-compatibility aliases, duplicate fields, or shadow getters may remain.
-4. `RunnerProjectionSource` may still retain low-level semantic facts needed for internal projectors; this ticket only deletes the public render-model leakage once its consumers are gone.
+1. `RenderModel` must not regain raw variable bags or other generic leakage for surface-specific needs.
+2. `RunnerProjectionSource` remains valid for internal projectors.
+3. Anchored canvas surfaces must not be forced onto `RenderModel` purely for symmetry with DOM-facing surfaces.
+4. No compatibility aliases or shadow getters should be introduced if another leaky field is deleted later.
 
 ## Test Plan
 
 ### New/Modified Tests
 
-1. [`packages/runner/test/ui/ShowdownOverlay.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/ui/ShowdownOverlay.test.ts) — rebuild fixtures around `surfaces.showdown`, including null/hidden/zero-score cases.
-2. [`packages/runner/test/model/render-model-types.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/model/render-model-types.test.ts) — remove old var-bag assumptions and assert the reduced contract.
-3. [`packages/runner/test/model/runner-frame-projection-boundary.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/model/runner-frame-projection-boundary.test.ts) — add explicit negative assertions for deleted render-model fields.
-4. [`packages/runner/test/model/project-render-model-structural-sharing.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/model/project-render-model-structural-sharing.test.ts) — cover unchanged showdown surface reuse and unrelated-state non-churn.
+1. [`packages/runner/test/model/project-render-model-structural-sharing.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/model/project-render-model-structural-sharing.test.ts) — add coverage only if showdown-surface reuse or unrelated-state churn still lacks protection.
+2. [`packages/runner/test/model/runner-frame-projection-boundary.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/model/runner-frame-projection-boundary.test.ts) — strengthen only if another leakage path is found.
+3. Avoid adding tests that imply table overlays should move from internal projector inputs onto `RenderModel`.
 
 ### Commands
 
-1. `pnpm -F @ludoforge/runner test -- ShowdownOverlay`
-2. `pnpm -F @ludoforge/runner test -- render-model-types`
-3. `pnpm -F @ludoforge/runner test -- project-render-model-structural-sharing`
+1. `pnpm -F @ludoforge/runner test -- project-render-model-structural-sharing`
+2. `pnpm -F @ludoforge/runner test -- runner-frame-projection-boundary`
 4. `pnpm -F @ludoforge/runner test`
 5. `pnpm -F @ludoforge/runner typecheck`
 6. `pnpm -F @ludoforge/runner lint`

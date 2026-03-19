@@ -79,8 +79,6 @@ export interface RenderModel {
   readonly zones: readonly RenderZone[];
   readonly adjacencies: readonly RenderAdjacency[];
   readonly tokens: readonly RenderToken[];
-  readonly globalVars: readonly RenderVariable[];
-  readonly playerVars: ReadonlyMap<PlayerId, readonly RenderVariable[]>;
   readonly activeEffects: readonly RenderLastingEffect[];
   readonly players: readonly RenderPlayer[];
   readonly activePlayerID: PlayerId;

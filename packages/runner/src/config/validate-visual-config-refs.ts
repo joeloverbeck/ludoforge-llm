@@ -9,10 +9,13 @@ export interface VisualConfigRefValidationContext {
   readonly tokenTypeIds: ReadonlySet<string>;
   readonly factionIds: ReadonlySet<string>;
   readonly edgeCategories: ReadonlySet<string>;
+  readonly phaseIds: ReadonlySet<string>;
+  readonly globalVarNames: ReadonlySet<string>;
+  readonly perPlayerVarNames: ReadonlySet<string>;
 }
 
 export interface VisualConfigRefError {
-  readonly category: 'zone' | 'zoneCategory' | 'tokenType' | 'faction' | 'edge';
+  readonly category: 'zone' | 'zoneCategory' | 'tokenType' | 'faction' | 'edge' | 'phase' | 'globalVar' | 'perPlayerVar';
   readonly configPath: string;
   readonly referencedId: string;
   readonly message: string;
@@ -40,6 +43,9 @@ export function buildRefValidationContext(gameDef: GameDef): VisualConfigRefVali
     tokenTypeIds: new Set(gameDef.tokenTypes.map((tokenType) => tokenType.id)),
     factionIds: new Set((gameDef.seats ?? []).map((seat) => seat.id)),
     edgeCategories,
+    phaseIds: new Set((gameDef.turnStructure?.phases ?? []).map((phase) => String(phase.id))),
+    globalVarNames: new Set((gameDef.globalVars ?? []).map((variable) => variable.name)),
+    perPlayerVarNames: new Set((gameDef.perPlayerVars ?? []).map((variable) => variable.name)),
   };
 }
 
@@ -59,6 +65,7 @@ export function validateVisualConfigRefs(
     'tableOverlays.playerSeatAnchorZones',
     errors,
   );
+  validateShowdownSurface(config, context, errors);
   validateArray(config.layout?.hints?.fixed, context.zoneIds, 'zone', 'layout.hints.fixed', errors, (entry) => entry.zone);
   validateNestedArray(
     config.layout?.hints?.regions,
@@ -100,6 +107,48 @@ export function validateVisualConfigRefs(
   validateObjectKeys(config.edges?.categoryStyles, context.edgeCategories, 'edge', 'edges.categoryStyles', errors);
 
   return errors;
+}
+
+function validateShowdownSurface(
+  config: VisualConfig,
+  context: VisualConfigRefValidationContext,
+  errors: VisualConfigRefError[],
+): void {
+  const showdown = config.runnerSurfaces?.showdown;
+  if (showdown === undefined) {
+    return;
+  }
+
+  validateScalar(
+    showdown.when.phase,
+    context.phaseIds,
+    'phase',
+    'runnerSurfaces.showdown.when.phase',
+    errors,
+    'Unknown phase id',
+  );
+  validateScalar(
+    showdown.ranking.source.name,
+    context.perPlayerVarNames,
+    'perPlayerVar',
+    'runnerSurfaces.showdown.ranking.source.name',
+    errors,
+    'Unknown per-player variable name',
+  );
+  validateStringList(
+    showdown.communityCards.zones,
+    context.zoneIds,
+    'zone',
+    'runnerSurfaces.showdown.communityCards.zones',
+    errors,
+  );
+  validateStringList(
+    showdown.playerCards.zones,
+    context.zoneIds,
+    'zone',
+    'runnerSurfaces.showdown.playerCards.zones',
+    errors,
+  );
 }
 
 export function validateAndCreateProvider(
@@ -175,6 +224,26 @@ function validateStringList(
       });
     }
   }
+}
+
+function validateScalar(
+  value: string | undefined,
+  knownIds: ReadonlySet<string>,
+  category: VisualConfigRefError['category'],
+  path: string,
+  errors: VisualConfigRefError[],
+  message: string,
+): void {
+  if (value === undefined || knownIds.has(value)) {
+    return;
+  }
+
+  errors.push({
+    category,
+    configPath: path,
+    referencedId: value,
+    message,
+  });
 }
 
 function validateArray<T>(

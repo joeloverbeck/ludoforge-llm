@@ -1447,8 +1447,7 @@ class AgentLibraryCompiler {
     }
     return {
       ref: {
-        kind: 'surface',
-        phase: resolved.phase,
+        kind: resolved.kind,
         family: resolved.family,
         id: resolved.id,
         ...(resolved.seatToken === undefined ? {} : { seatToken: resolved.seatToken }),

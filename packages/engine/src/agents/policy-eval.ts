@@ -4,6 +4,7 @@ import type {
   AgentPolicyCatalog,
   AgentPolicyExpr,
   CompiledAgentPolicyRef,
+  CompiledAgentPolicySurfaceRef,
   AgentParameterValue,
   CompiledAgentProfile,
   CompiledAgentTieBreaker,
@@ -16,8 +17,6 @@ import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import { pickRandom } from './agent-move-selection.js';
 import {
   createPolicyRuntimeProviders,
-  type PolicyCurrentSurfaceRef,
-  type PolicyPreviewSurfaceRef,
   type PolicyRuntimeProviders,
   type PolicyValue,
 } from './policy-runtime.js';
@@ -454,21 +453,22 @@ class EvaluationContext {
         return candidate === undefined ? undefined : this.runtimeProviders.candidates.resolveCandidateIntrinsic(candidate, ref.intrinsic);
       case 'candidateParam':
         return candidate === undefined ? undefined : this.runtimeProviders.candidates.resolveCandidateParam(candidate, ref.id);
-      case 'surface':
+      case 'currentSurface':
+      case 'previewSurface':
         return this.resolveSurfaceRef(ref, candidate);
     }
   }
 
   private resolveSurfaceRef(
-    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'surface' }>,
+    ref: CompiledAgentPolicySurfaceRef,
     candidate: CandidateEntry | undefined,
   ): PolicyValue {
-    if (ref.phase === 'preview') {
+    if (ref.kind === 'previewSurface') {
       return candidate === undefined
         ? undefined
-        : this.runtimeProviders.previewSurface.resolveSurface(candidate, ref as PolicyPreviewSurfaceRef);
+        : this.runtimeProviders.previewSurface.resolveSurface(candidate, ref);
     }
-    return this.runtimeProviders.currentSurface.resolveSurface(ref as PolicyCurrentSurfaceRef);
+    return this.runtimeProviders.currentSurface.resolveSurface(ref);
   }
 
   private runtimeError(

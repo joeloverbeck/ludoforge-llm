@@ -228,7 +228,7 @@ describe('agents authoring surface', () => {
         currentMargin: {
           type: 'number',
           costClass: 'state',
-          expr: refExpr({ kind: 'surface', phase: 'current', family: 'victoryCurrentMargin', id: 'currentMargin', seatToken: 'us' }),
+          expr: refExpr({ kind: 'currentSurface', family: 'victoryCurrentMargin', id: 'currentMargin', seatToken: 'us' }),
           dependencies: {
             parameters: [],
             stateFeatures: [],
@@ -1310,5 +1310,50 @@ describe('agents authoring surface', () => {
       ),
       false,
     );
+  });
+
+  it('lowers preview authored refs into preview surface variants', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        visibility: createVisibility(),
+        parameters: {},
+        library: {
+          candidateFeatures: {
+            projectedMargin: {
+              type: 'number',
+              expr: { ref: 'preview.victory.currentMargin.us' },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(result.gameDef === null, false);
+    assert.deepEqual(result.gameDef?.agents?.library.candidateFeatures.projectedMargin?.expr, refExpr({
+      kind: 'previewSurface',
+      family: 'victoryCurrentMargin',
+      id: 'currentMargin',
+      seatToken: 'us',
+    }));
   });
 });

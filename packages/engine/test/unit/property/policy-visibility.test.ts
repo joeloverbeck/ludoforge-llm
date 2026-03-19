@@ -56,7 +56,7 @@ function createCatalog(): AgentPolicyCatalog {
         projectedMargin: {
           type: 'number',
           costClass: 'preview',
-          expr: refExpr({ kind: 'surface', phase: 'preview', family: 'globalVar', id: 'usMargin' }),
+          expr: refExpr({ kind: 'previewSurface', family: 'globalVar', id: 'usMargin' }),
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
         },
       },

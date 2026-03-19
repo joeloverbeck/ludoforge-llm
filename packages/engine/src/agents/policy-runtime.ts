@@ -6,6 +6,8 @@ import type {
   AgentParameterValue,
   AgentPolicyCatalog,
   CompiledAgentPolicyRef,
+  CompiledAgentPolicyCurrentSurfaceRef,
+  CompiledAgentPolicyPreviewSurfaceRef,
   GameDef,
   GameState,
   Move,
@@ -21,9 +23,6 @@ import {
 } from './policy-surface.js';
 
 export type PolicyValue = AgentParameterValue | undefined;
-export type PolicySurfaceRef = Extract<CompiledAgentPolicyRef, { readonly kind: 'surface' }>;
-export type PolicyCurrentSurfaceRef = PolicySurfaceRef & { readonly phase: 'current' };
-export type PolicyPreviewSurfaceRef = PolicySurfaceRef & { readonly phase: 'preview' };
 
 export interface PolicyRuntimeCandidate {
   readonly move: Move;
@@ -45,13 +44,13 @@ export interface PolicyCandidateProvider {
 }
 
 export interface PolicyCurrentSurfaceProvider {
-  resolveSurface(ref: PolicyCurrentSurfaceRef): PolicyValue;
+  resolveSurface(ref: CompiledAgentPolicyCurrentSurfaceRef): PolicyValue;
 }
 
 export interface PolicyPreviewSurfaceProvider {
   resolveSurface(
     candidate: PolicyRuntimeCandidate,
-    ref: PolicyPreviewSurfaceRef,
+    ref: CompiledAgentPolicyPreviewSurfaceRef,
   ): PolicyValue;
 }
 
@@ -197,7 +196,7 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
 function resolveSeatVarRef(
   def: GameDef,
   state: GameState,
-  ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'surface' }>,
+  ref: CompiledAgentPolicyCurrentSurfaceRef | CompiledAgentPolicyPreviewSurfaceRef,
   seatId: string,
   seatResolutionIndex: SeatResolutionIndex,
 ): number | undefined {

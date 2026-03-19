@@ -574,6 +574,18 @@ const AgentPolicyLiteralSchema = z.union([
   z.array(StringSchema),
 ]);
 
+const CompiledAgentPolicySurfaceRefBaseSchema = {
+  family: z.union([
+    z.literal('globalVar'),
+    z.literal('perPlayerVar'),
+    z.literal('derivedMetric'),
+    z.literal('victoryCurrentMargin'),
+    z.literal('victoryCurrentRank'),
+  ]),
+  id: StringSchema,
+  seatToken: StringSchema.optional(),
+} as const;
+
 const CompiledAgentPolicyRefSchema = z.union([
   z.object({
     kind: z.literal('library'),
@@ -581,17 +593,12 @@ const CompiledAgentPolicyRefSchema = z.union([
     id: StringSchema,
   }).strict(),
   z.object({
-    kind: z.literal('surface'),
-    phase: z.union([z.literal('current'), z.literal('preview')]),
-    family: z.union([
-      z.literal('globalVar'),
-      z.literal('perPlayerVar'),
-      z.literal('derivedMetric'),
-      z.literal('victoryCurrentMargin'),
-      z.literal('victoryCurrentRank'),
-    ]),
-    id: StringSchema,
-    seatToken: StringSchema.optional(),
+    kind: z.literal('currentSurface'),
+    ...CompiledAgentPolicySurfaceRefBaseSchema,
+  }).strict(),
+  z.object({
+    kind: z.literal('previewSurface'),
+    ...CompiledAgentPolicySurfaceRefBaseSchema,
   }).strict(),
   z.object({
     kind: z.literal('candidateIntrinsic'),

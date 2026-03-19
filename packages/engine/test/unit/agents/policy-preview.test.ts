@@ -2,27 +2,25 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { createPolicyPreviewRuntime } from '../../../src/agents/policy-preview.js';
-import type { PolicyPreviewSurfaceRef } from '../../../src/agents/policy-runtime.js';
 import {
   asActionId,
   asPhaseId,
   asPlayerId,
   initialState,
+  type CompiledAgentPolicyPreviewSurfaceRef,
   type GameDef,
   type Move,
   type PlayerObservation,
 } from '../../../src/kernel/index.js';
 
 const phaseId = asPhaseId('main');
-const previewScoreRef: PolicyPreviewSurfaceRef = {
-  kind: 'surface',
-  phase: 'preview',
+const previewScoreRef: CompiledAgentPolicyPreviewSurfaceRef = {
+  kind: 'previewSurface',
   family: 'globalVar',
   id: 'score',
 };
-const previewMarginRef: PolicyPreviewSurfaceRef = {
-  kind: 'surface',
-  phase: 'preview',
+const previewMarginRef: CompiledAgentPolicyPreviewSurfaceRef = {
+  kind: 'previewSurface',
   family: 'victoryCurrentMargin',
   id: 'currentMargin',
   seatToken: 'us',

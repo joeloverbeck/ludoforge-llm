@@ -3,9 +3,14 @@ import { derivePlayerObservation } from '../kernel/observation.js';
 import { applyMove, probeMoveViability, type MoveViabilityProbeResult } from '../kernel/apply-move.js';
 import { buildSeatResolutionIndex, resolvePlayerIndexForSeatValue, type SeatResolutionIndex } from '../kernel/identity.js';
 import type { PlayerId } from '../kernel/branded.js';
-import type { CompiledAgentPolicyRef, GameDef, GameState, Move, RngState } from '../kernel/types.js';
+import type {
+  CompiledAgentPolicyPreviewSurfaceRef,
+  GameDef,
+  GameState,
+  Move,
+  RngState,
+} from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
-import type { PolicyPreviewSurfaceRef } from './policy-runtime.js';
 import {
   buildPolicyVictorySurface,
   getPolicySurfaceVisibility,
@@ -49,7 +54,7 @@ export interface CreatePolicyPreviewRuntimeInput {
 export interface PolicyPreviewRuntime {
   resolveSurface(
     candidate: PolicyPreviewCandidate,
-    ref: PolicyPreviewSurfaceRef,
+    ref: CompiledAgentPolicyPreviewSurfaceRef,
   ): number | undefined;
 }
 
@@ -175,7 +180,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
 function resolveSeatVarRef(
   def: GameDef,
   state: GameState,
-  ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'surface' }>,
+  ref: CompiledAgentPolicyPreviewSurfaceRef,
   seatId: string,
   seatResolutionIndex: SeatResolutionIndex,
 ): number | undefined {

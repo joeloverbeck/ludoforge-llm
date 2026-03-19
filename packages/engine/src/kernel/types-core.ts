@@ -329,19 +329,27 @@ export type CompiledAgentPolicySurfaceRefFamily =
   | 'derivedMetric'
   | 'victoryCurrentMargin'
   | 'victoryCurrentRank';
+export interface CompiledAgentPolicySurfaceRefBase {
+  readonly family: CompiledAgentPolicySurfaceRefFamily;
+  readonly id: string;
+  readonly seatToken?: string;
+}
+export interface CompiledAgentPolicyCurrentSurfaceRef extends CompiledAgentPolicySurfaceRefBase {
+  readonly kind: 'currentSurface';
+}
+export interface CompiledAgentPolicyPreviewSurfaceRef extends CompiledAgentPolicySurfaceRefBase {
+  readonly kind: 'previewSurface';
+}
+export type CompiledAgentPolicySurfaceRef =
+  | CompiledAgentPolicyCurrentSurfaceRef
+  | CompiledAgentPolicyPreviewSurfaceRef;
 export type CompiledAgentPolicyRef =
   | {
       readonly kind: 'library';
       readonly refKind: CompiledAgentPolicyLibraryRefKind;
       readonly id: string;
     }
-  | {
-      readonly kind: 'surface';
-      readonly phase: 'current' | 'preview';
-      readonly family: CompiledAgentPolicySurfaceRefFamily;
-      readonly id: string;
-      readonly seatToken?: string;
-    }
+  | CompiledAgentPolicySurfaceRef
   | {
       readonly kind: 'candidateIntrinsic';
       readonly intrinsic: 'actionId' | 'stableMoveKey' | 'isPass';

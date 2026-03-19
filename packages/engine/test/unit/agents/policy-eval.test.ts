@@ -2,11 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { evaluatePolicyMove, evaluatePolicyMoveCore } from '../../../src/agents/policy-eval.js';
-import {
-  createPolicyRuntimeProviders,
-  type PolicyCurrentSurfaceRef,
-  type PolicyPreviewSurfaceRef,
-} from '../../../src/agents/policy-runtime.js';
+import { createPolicyRuntimeProviders } from '../../../src/agents/policy-runtime.js';
 import {
   asActionId,
   asPhaseId,
@@ -16,6 +12,8 @@ import {
   type AgentPolicyCatalog,
   type AgentPolicyExpr,
   type AgentPolicyLiteral,
+  type CompiledAgentPolicyCurrentSurfaceRef,
+  type CompiledAgentPolicyPreviewSurfaceRef,
   type CompiledAgentPolicyRef,
   type GameDef,
   type Move,
@@ -153,7 +151,7 @@ function createCatalog(
         currentMargin: {
           type: 'number',
           costClass: 'state',
-          expr: refExpr({ kind: 'surface', phase: 'current', family: 'victoryCurrentMargin', id: 'currentMargin', seatToken: 'us' }),
+          expr: refExpr({ kind: 'currentSurface', family: 'victoryCurrentMargin', id: 'currentMargin', seatToken: 'us' }),
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
         },
         ...(overrides.stateFeatures ?? {}),
@@ -316,20 +314,18 @@ describe('policy-eval', () => {
     assert.equal(providers.candidates.resolveCandidateParam(candidate, 'eventCardId'), 'card-2');
     assert.equal(
       providers.currentSurface.resolveSurface({
-        kind: 'surface',
-        phase: 'current',
+        kind: 'currentSurface',
         family: 'globalVar',
         id: 'usMargin',
-      } satisfies PolicyCurrentSurfaceRef),
+      } satisfies CompiledAgentPolicyCurrentSurfaceRef),
       1,
     );
     assert.equal(
       providers.previewSurface.resolveSurface(candidate, {
-        kind: 'surface',
-        phase: 'preview',
+        kind: 'previewSurface',
         family: 'globalVar',
         id: 'usMargin',
-      } satisfies PolicyPreviewSurfaceRef),
+      } satisfies CompiledAgentPolicyPreviewSurfaceRef),
       4,
     );
   });
@@ -439,13 +435,13 @@ describe('policy-eval', () => {
           projectedMargin: {
             type: 'number',
             costClass: 'preview',
-            expr: refExpr({ kind: 'surface', phase: 'preview', family: 'globalVar', id: 'usMargin' }),
+            expr: refExpr({ kind: 'previewSurface', family: 'globalVar', id: 'usMargin' }),
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
           },
           maskedProjectedStanding: {
             type: 'number',
             costClass: 'preview',
-            expr: refExpr({ kind: 'surface', phase: 'preview', family: 'victoryCurrentMargin', id: 'currentMargin', seatToken: 'us' }),
+            expr: refExpr({ kind: 'previewSurface', family: 'victoryCurrentMargin', id: 'currentMargin', seatToken: 'us' }),
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
           },
         },
@@ -506,7 +502,7 @@ describe('policy-eval', () => {
           unsupportedMetric: {
             type: 'number',
             costClass: 'state',
-            expr: refExpr({ kind: 'surface', phase: 'current', family: 'derivedMetric', id: 'boardPressure' }),
+            expr: refExpr({ kind: 'currentSurface', family: 'derivedMetric', id: 'boardPressure' }),
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
           },
         },
@@ -548,7 +544,7 @@ describe('policy-eval', () => {
           unknownSurface: {
             type: 'number',
             costClass: 'state',
-            expr: refExpr({ kind: 'surface', phase: 'current', family: 'globalVar', id: 'notExposed' }),
+            expr: refExpr({ kind: 'currentSurface', family: 'globalVar', id: 'notExposed' }),
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
           },
         },

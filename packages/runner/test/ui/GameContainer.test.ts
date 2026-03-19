@@ -38,13 +38,6 @@ interface CapturedGameCanvasProps {
   readonly onAnimationDiagnosticBufferChange?: (buffer: DiagnosticBuffer | null) => void;
 }
 
-interface CapturedAnimationControlsProps {
-  readonly store: unknown;
-  readonly diagnostics?: {
-    readonly animationDiagnosticBuffer?: DiagnosticBuffer;
-  };
-}
-
 interface CapturedUIOverlayProps {
   readonly topStatusContent?: ReactNode;
   readonly topSessionContent?: ReactNode;
@@ -70,7 +63,6 @@ const testDoubles = vi.hoisted(() => ({
   errorStateProps: null as CapturedErrorStateProps | null,
   tooltipLayerProps: null as CapturedTooltipLayerProps | null,
   gameCanvasProps: null as CapturedGameCanvasProps | null,
-  animationControlsProps: null as CapturedAnimationControlsProps | null,
   uiOverlayProps: null as CapturedUIOverlayProps | null,
   actionToolbarProps: null as CapturedActionToolbarProps | null,
   actionTooltipProps: null as CapturedActionTooltipProps | null,
@@ -120,13 +112,6 @@ vi.mock('../../src/ui/TurnOrderDisplay.js', () => ({
 
 vi.mock('../../src/ui/EventDeckPanel.js', () => ({
   EventDeckPanel: () => createElement('div', { 'data-testid': 'event-deck-panel' }),
-}));
-
-vi.mock('../../src/ui/AnimationControls.js', () => ({
-  AnimationControls: (props: CapturedAnimationControlsProps) => {
-    testDoubles.animationControlsProps = props;
-    return createElement('div', { 'data-testid': 'animation-controls' });
-  },
 }));
 
 vi.mock('../../src/ui/UIOverlay.js', () => ({
@@ -374,7 +359,6 @@ describe('GameContainer', () => {
   it('renders GameCanvas and UIOverlay when lifecycle is playing', () => {
     testDoubles.tooltipLayerProps = null;
     testDoubles.gameCanvasProps = null;
-    testDoubles.animationControlsProps = null;
     testDoubles.uiOverlayProps = null;
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
@@ -406,10 +390,11 @@ describe('GameContainer', () => {
     expect(topStatusHtml).toContain('data-testid="turn-order-display"');
     expect(topStatusHtml).toContain('data-testid="interrupt-banner"');
     expect(topStatusHtml).toContain('data-testid="event-deck-panel"');
-    expect(topStatusHtml).not.toContain('data-testid="animation-controls"');
-    expect(topSessionHtml).toContain('data-testid="animation-controls"');
+    expect(topStatusHtml).not.toContain('data-testid="settings-menu-trigger"');
+    expect(topSessionHtml).toContain('data-testid="settings-menu-trigger"');
     expect(topSessionHtml).toContain('data-testid="event-log-toggle-button"');
-    expect(html).toContain('data-testid="animation-controls"');
+    expect(topSessionHtml).not.toContain('data-testid="settings-menu"');
+    expect(html).toContain('data-testid="settings-menu-trigger"');
     expect(html).toContain('data-testid="variables-panel"');
     expect(html).toContain('data-has-visual-config="true"');
     expect(html).toContain('data-testid="scoreboard"');
@@ -428,7 +413,7 @@ describe('GameContainer', () => {
       'event-deck-panel',
     ]);
     expectAppearsInOrder(html, [
-      'animation-controls',
+      'settings-menu-trigger',
       'event-log-toggle-button',
       'variables-panel',
       'scoreboard',
@@ -448,11 +433,9 @@ describe('GameContainer', () => {
     expect(gameCanvasProps.onHoverAnchorChange).toEqual(expect.any(Function));
     expect(gameCanvasProps.onAnimationDiagnosticBufferChange).toEqual(expect.any(Function));
     expect(gameCanvasProps.interactionHighlights).toEqual({ zoneIDs: [], tokenIDs: [] });
-    const animationControlsProps = testDoubles.animationControlsProps as CapturedAnimationControlsProps | null;
-    expect(animationControlsProps?.diagnostics?.animationDiagnosticBuffer).toBeUndefined();
   });
 
-  it('places session buttons and animation controls in the top session slot', () => {
+  it('places the settings trigger and session buttons in the top session slot', () => {
     testDoubles.uiOverlayProps = null;
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
@@ -480,7 +463,8 @@ describe('GameContainer', () => {
     expect(topStatusHtml).not.toContain('data-testid="session-save-button"');
     expect(topStatusHtml).not.toContain('data-testid="session-load-button"');
     expect(topStatusHtml).not.toContain('data-testid="session-quit-button"');
-    expect(topSessionHtml).toContain('data-testid="animation-controls"');
+    expect(topStatusHtml).not.toContain('data-testid="settings-menu-trigger"');
+    expect(topSessionHtml).toContain('data-testid="settings-menu-trigger"');
     expect(topSessionHtml).toContain('data-testid="event-log-toggle-button"');
     expect(topSessionHtml).toContain('data-testid="session-save-button"');
     expect(topSessionHtml).toContain('data-testid="session-load-button"');
@@ -520,8 +504,8 @@ describe('GameContainer', () => {
     expect(topStatusHtml).toContain('data-testid="turn-order-display"');
     expect(topStatusHtml).toContain('data-testid="interrupt-banner"');
     expect(topStatusHtml).toContain('data-testid="event-deck-panel"');
-    expect(topSessionHtml).toContain('data-testid="animation-controls"');
-    expect(html).toContain('data-testid="animation-controls"');
+    expect(topSessionHtml).toContain('data-testid="settings-menu-trigger"');
+    expect(html).toContain('data-testid="settings-menu-trigger"');
     expect(html).toContain('data-testid="variables-panel"');
     expect(html).toContain('data-has-visual-config="true"');
     expect(html).toContain('data-testid="scoreboard"');
@@ -536,7 +520,7 @@ describe('GameContainer', () => {
       'event-deck-panel',
     ]);
     expectAppearsInOrder(html, [
-      'animation-controls',
+      'settings-menu-trigger',
       'variables-panel',
       'scoreboard',
       'global-markers-bar',

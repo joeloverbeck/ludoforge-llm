@@ -17,6 +17,19 @@
   gap: var(--space-sm);
 }
 
+.settingsMenuAnchor {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.settingsMenuAnchor :global([data-testid='settings-menu']) {
+  position: absolute;
+  top: calc(100% + var(--space-xs));
+  right: 0;
+  z-index: var(--z-overlay);
+}
+
 .quitButton {
   border: 1px solid var(--border-subtle);
   border-radius: 8px;

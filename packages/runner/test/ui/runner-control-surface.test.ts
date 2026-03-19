@@ -117,4 +117,69 @@ describe('runner-control-surface', () => {
       hidden: false,
     });
   });
+
+  it('wires descriptor callbacks to the supplied playback and ai actions', () => {
+    const actions = createActions();
+
+    const sections = buildRunnerControlSections({
+      animationPlaying: true,
+      animationPaused: false,
+      animationPlaybackSpeed: '1x',
+      aiPlaybackDetailLevel: 'standard',
+      aiPlaybackAutoSkip: false,
+    }, actions, {
+      diagnostics: {
+        available: true,
+        download: vi.fn(),
+      },
+    });
+
+    const speedControl = sections[0]?.controls[0];
+    const pauseControl = sections[0]?.controls[1];
+    const skipControl = sections[0]?.controls[2];
+    const aiDetailControl = sections[1]?.controls[0];
+    const aiAutoSkipControl = sections[1]?.controls[1];
+
+    if (speedControl?.kind !== 'segmented' || pauseControl?.kind !== 'action' || skipControl?.kind !== 'action' || aiDetailControl?.kind !== 'select' || aiAutoSkipControl?.kind !== 'toggle') {
+      throw new Error('Expected playback and AI control descriptors.');
+    }
+
+    speedControl.onSelect('4x');
+    pauseControl.onSelect();
+    skipControl.onSelect();
+    aiDetailControl.onSelect('minimal');
+    aiAutoSkipControl.onToggle(true);
+
+    expect(actions.setAnimationPlaybackSpeed).toHaveBeenCalledWith('4x');
+    expect(actions.setAnimationPaused).toHaveBeenCalledWith(true);
+    expect(actions.requestAnimationSkipCurrent).toHaveBeenCalledTimes(1);
+    expect(actions.setAiPlaybackDetailLevel).toHaveBeenCalledWith('minimal');
+    expect(actions.setAiPlaybackAutoSkip).toHaveBeenCalledWith(true);
+  });
+
+  it('delegates diagnostics download through the descriptor action when available', () => {
+    const actions = createActions();
+    const download = vi.fn();
+
+    const sections = buildRunnerControlSections({
+      animationPlaying: true,
+      animationPaused: false,
+      animationPlaybackSpeed: '1x',
+      aiPlaybackDetailLevel: 'standard',
+      aiPlaybackAutoSkip: false,
+    }, actions, {
+      diagnostics: {
+        available: true,
+        download,
+      },
+    });
+
+    if (sections[2]?.controls[0]?.kind !== 'action') {
+      throw new Error('Expected diagnostics download action.');
+    }
+
+    sections[2].controls[0].onSelect();
+
+    expect(download).toHaveBeenCalledTimes(1);
+  });
 });

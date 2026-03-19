@@ -1,87 +1,281 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { createAgent, parseAgentSpec } from '../../../src/agents/factory.js';
-import { RandomAgent } from '../../../src/agents/random-agent.js';
+import { createAgent, normalizeAgentDescriptor, parseAgentDescriptor, parseAgentSpec } from '../../../src/agents/factory.js';
 import { GreedyAgent } from '../../../src/agents/greedy-agent.js';
 import { PolicyAgent } from '../../../src/agents/policy-agent.js';
+import { RandomAgent } from '../../../src/agents/random-agent.js';
+import {
+  asActionId,
+  asPhaseId,
+  asPlayerId,
+  createRng,
+  initialState,
+  type AgentPolicyCatalog,
+  type AgentPolicyExpr,
+  type CompiledAgentPolicyRef,
+  type GameDef,
+  type Move,
+} from '../../../src/kernel/index.js';
 
-describe('createAgent', () => {
-  it('returns RandomAgent for "random"', () => {
-    const agent = createAgent('random');
-    assert.ok(agent instanceof RandomAgent);
+const phaseId = asPhaseId('main');
+
+const literal = (value: string | number | boolean): AgentPolicyExpr => ({ kind: 'literal', value });
+const refExpr = (ref: CompiledAgentPolicyRef): AgentPolicyExpr => ({ kind: 'ref', ref });
+const opExpr = (op: Extract<AgentPolicyExpr, { readonly kind: 'op' }>['op'], ...args: AgentPolicyExpr[]): AgentPolicyExpr => ({
+  kind: 'op',
+  op,
+  args,
+});
+
+function createCatalog(): AgentPolicyCatalog {
+  return {
+    schemaVersion: 2,
+    catalogFingerprint: 'catalog',
+    surfaceVisibility: {
+      globalVars: {},
+      perPlayerVars: {},
+      derivedMetrics: {},
+      victory: {
+        currentMargin: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
+        currentRank: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
+      },
+    },
+    parameterDefs: {},
+    candidateParamDefs: {},
+    library: {
+      stateFeatures: {},
+      candidateFeatures: {
+        isEvent: {
+          type: 'boolean',
+          costClass: 'candidate',
+          expr: opExpr('eq', refExpr({ kind: 'candidateIntrinsic', intrinsic: 'actionId' }), literal('event')),
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        },
+      },
+      candidateAggregates: {},
+      pruningRules: {},
+      scoreTerms: {
+        preferPass: {
+          costClass: 'candidate',
+          weight: literal(10),
+          value: opExpr('boolToNumber', refExpr({ kind: 'candidateIntrinsic', intrinsic: 'isPass' })),
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        },
+        preferEvent: {
+          costClass: 'candidate',
+          weight: literal(10),
+          value: opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'isEvent' })),
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['isEvent'], aggregates: [] },
+        },
+      },
+      tieBreakers: {
+        stableMoveKey: {
+          kind: 'stableMoveKey',
+          costClass: 'state',
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        },
+      },
+    },
+    profiles: {
+      passive: {
+        fingerprint: 'passive-fingerprint',
+        params: {},
+        use: {
+          pruningRules: [],
+          scoreTerms: ['preferPass'],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: [],
+          candidateFeatures: [],
+          candidateAggregates: [],
+        },
+      },
+      aggressive: {
+        fingerprint: 'aggressive-fingerprint',
+        params: {},
+        use: {
+          pruningRules: [],
+          scoreTerms: ['preferEvent'],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: [],
+          candidateFeatures: ['isEvent'],
+          candidateAggregates: [],
+        },
+      },
+    },
+    bindingsBySeat: {
+      us: 'passive',
+    },
+  };
+}
+
+function createDef(): GameDef {
+  return {
+    metadata: { id: 'policy-agent', players: { min: 2, max: 2 } },
+    constants: {},
+    globalVars: [],
+    perPlayerVars: [],
+    zones: [],
+    derivedMetrics: [],
+    seats: [{ id: 'us' }, { id: 'arvn' }],
+    tokenTypes: [],
+    setup: [],
+    turnStructure: { phases: [{ id: phaseId }] },
+    agents: createCatalog(),
+    actions: [
+      {
+        id: asActionId('pass'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [phaseId],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+      {
+        id: asActionId('event'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [phaseId],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+    ],
+    triggers: [],
+    terminal: { conditions: [] },
+  };
+}
+
+function createInput(def: GameDef): Parameters<PolicyAgent['chooseMove']>[0] {
+  const state = initialState(def, 7, 2).state;
+  const legalMoves: readonly Move[] = [
+    { actionId: asActionId('pass'), params: {} },
+    { actionId: asActionId('event'), params: {} },
+  ];
+  return {
+    def,
+    state,
+    playerId: asPlayerId(0),
+    legalMoves,
+    rng: createRng(7n),
+  };
+}
+
+describe('normalizeAgentDescriptor', () => {
+  it('accepts builtin descriptors', () => {
+    assert.deepEqual(normalizeAgentDescriptor({ kind: 'builtin', builtinId: 'random' }), {
+      kind: 'builtin',
+      builtinId: 'random',
+    });
   });
 
-  it('returns GreedyAgent for "greedy"', () => {
-    const agent = createAgent('greedy');
-    assert.ok(agent instanceof GreedyAgent);
-  });
-
-  it('returns PolicyAgent for "policy"', () => {
-    const agent = createAgent('policy');
-    assert.ok(agent instanceof PolicyAgent);
-  });
-
-  it('throws for unknown type', () => {
+  it('rejects unknown builtin descriptors', () => {
     assert.throws(
-      () => createAgent('unknown' as never),
-      /Unknown agent type/,
+      () => normalizeAgentDescriptor({ kind: 'builtin', builtinId: 'smart' as never }),
+      /Unknown builtin agent id: smart\. Allowed: random, greedy/,
+    );
+  });
+
+  it('rejects empty policy profile overrides', () => {
+    assert.throws(
+      () => normalizeAgentDescriptor({ kind: 'policy', profileId: '   ' }),
+      /Policy agent profileId cannot be empty/,
     );
   });
 });
 
+describe('parseAgentDescriptor', () => {
+  it('parses builtin descriptors from explicit builtin sugar', () => {
+    assert.deepEqual(parseAgentDescriptor(' builtin:GREEDY '), { kind: 'builtin', builtinId: 'greedy' });
+  });
+
+  it('parses policy descriptors with and without explicit profiles', () => {
+    assert.deepEqual(parseAgentDescriptor('policy'), { kind: 'policy' });
+    assert.deepEqual(parseAgentDescriptor('policy:aggressive'), { kind: 'policy', profileId: 'aggressive' });
+  });
+
+  it('rejects retired naked builtin strings', () => {
+    assert.throws(
+      () => parseAgentDescriptor('random'),
+      /Unknown agent descriptor: random\. Allowed forms: policy, policy:<profileId>, builtin:random, builtin:greedy/,
+    );
+  });
+});
+
+describe('createAgent', () => {
+  it('returns RandomAgent for a builtin random descriptor', () => {
+    const agent = createAgent({ kind: 'builtin', builtinId: 'random' });
+    assert.ok(agent instanceof RandomAgent);
+  });
+
+  it('returns GreedyAgent for a builtin greedy descriptor', () => {
+    const agent = createAgent({ kind: 'builtin', builtinId: 'greedy' });
+    assert.ok(agent instanceof GreedyAgent);
+  });
+
+  it('returns PolicyAgent for a policy descriptor', () => {
+    const agent = createAgent({ kind: 'policy' });
+    assert.ok(agent instanceof PolicyAgent);
+  });
+
+  it('uses authored seat bindings by default for policy descriptors', () => {
+    const def = createDef();
+    const agent = createAgent({ kind: 'policy' });
+    const result = agent.chooseMove(createInput(def));
+
+    assert.deepEqual(result.move, { actionId: asActionId('pass'), params: {} });
+    assert.equal(result.agentDecision?.kind, 'policy');
+    if (result.agentDecision?.kind !== 'policy') {
+      assert.fail('expected policy agent decision');
+    }
+    assert.equal(result.agentDecision.requestedProfileId, null);
+    assert.equal(result.agentDecision.resolvedProfileId, 'passive');
+  });
+
+  it('forces an explicit authored profile when the descriptor supplies one', () => {
+    const def = createDef();
+    const agent = createAgent({ kind: 'policy', profileId: 'aggressive' });
+    const result = agent.chooseMove(createInput(def));
+
+    assert.deepEqual(result.move, { actionId: asActionId('event'), params: {} });
+    assert.equal(result.agentDecision?.kind, 'policy');
+    if (result.agentDecision?.kind !== 'policy') {
+      assert.fail('expected policy agent decision');
+    }
+    assert.equal(result.agentDecision.requestedProfileId, 'aggressive');
+    assert.equal(result.agentDecision.resolvedProfileId, 'aggressive');
+  });
+});
+
 describe('parseAgentSpec', () => {
-  it('parses "random,greedy" for 2 players', () => {
-    const agents = parseAgentSpec('random,greedy', 2);
-    assert.equal(agents.length, 2);
-    assert.ok(agents[0] instanceof RandomAgent);
-    assert.ok(agents[1] instanceof GreedyAgent);
-  });
-
-  it('parses "greedy" for a single player', () => {
-    const agents = parseAgentSpec('greedy', 1);
-    assert.equal(agents.length, 1);
-    assert.ok(agents[0] instanceof GreedyAgent);
-  });
-
-  it('parses "policy" for a single player', () => {
-    const agents = parseAgentSpec('policy', 1);
-    assert.equal(agents.length, 1);
-    assert.ok(agents[0] instanceof PolicyAgent);
+  it('parses ordered descriptors from a comma-separated spec', () => {
+    const descriptors = parseAgentSpec('builtin:random, policy:aggressive', 2);
+    assert.deepEqual(descriptors, [
+      { kind: 'builtin', builtinId: 'random' },
+      { kind: 'policy', profileId: 'aggressive' },
+    ]);
   });
 
   it('throws when player count does not match', () => {
     assert.throws(
-      () => parseAgentSpec('greedy', 2),
-      /1 agents but game needs 2/,
+      () => parseAgentSpec('builtin:greedy', 2),
+      /Agent spec has 1 agents but game needs 2/,
     );
   });
 
-  it('throws for retired mcts agent types in spec', () => {
+  it('rejects malformed slots after empty-token filtering', () => {
     assert.throws(
-      () => parseAgentSpec('mcts,random', 2),
-      /Unknown agent type: mcts\. Allowed: random, greedy, policy/,
+      () => parseAgentSpec('builtin:random,,builtin:smart', 2),
+      /Unknown builtin agent id: smart\. Allowed: random, greedy/,
     );
-  });
-
-  it('parses surviving random,greedy specs', () => {
-    const agents = parseAgentSpec('random,greedy', 2);
-    assert.equal(agents.length, 2);
-    assert.ok(agents[0] instanceof RandomAgent);
-    assert.ok(agents[1] instanceof GreedyAgent);
-  });
-
-  it('handles whitespace in spec parts', () => {
-    const agents = parseAgentSpec(' random , greedy ', 2);
-    assert.equal(agents.length, 2);
-    assert.ok(agents[0] instanceof RandomAgent);
-    assert.ok(agents[1] instanceof GreedyAgent);
-  });
-
-  it('handles case insensitivity', () => {
-    const agents = parseAgentSpec('GREEDY,Random', 2);
-    assert.equal(agents.length, 2);
-    assert.ok(agents[0] instanceof GreedyAgent);
-    assert.ok(agents[1] instanceof RandomAgent);
   });
 });

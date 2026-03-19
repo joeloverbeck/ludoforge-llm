@@ -881,6 +881,100 @@ describe('GameContainer', () => {
     expect(bottomDockHtml).toContain('data-testid="event-log-panel"');
   });
 
+  it('keeps the event log docked across action, choice, AI-turn, and read-only bottom states', () => {
+    const scenarios = [
+      {
+        name: 'actions',
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+          renderModel: makeRenderModel(),
+        }),
+        readOnlyMode: false,
+        expectedPrimaryTestId: 'action-toolbar',
+      },
+      {
+        name: 'choicePending',
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+          renderModel: makeRenderModel({
+            choiceUi: {
+              kind: 'discreteOne',
+              decisionKey: asDecisionKey('test-decision'),
+              options: [{
+                choiceValueId: 's:1:x',
+                value: 'x',
+                displayName: 'X',
+                target: { kind: 'scalar', entityId: null, displaySource: 'fallback' },
+                legality: 'legal',
+                illegalReason: null,
+              }],
+            },
+          }),
+          selectedAction: asActionId('pass'),
+          partialMove: { actionId: asActionId('pass'), params: {} },
+        }),
+        readOnlyMode: false,
+        expectedPrimaryTestId: 'choice-panel-choicePending',
+      },
+      {
+        name: 'aiTurn',
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+          renderModel: makeRenderModel({
+            activePlayerID: asPlayerId(1),
+          }),
+        }),
+        readOnlyMode: false,
+        expectedPrimaryTestId: 'ai-turn-overlay',
+      },
+      {
+        name: 'readOnly',
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+          renderModel: makeRenderModel(),
+        }),
+        readOnlyMode: true,
+        expectedPrimaryTestId: null,
+      },
+    ] as const;
+
+    for (const scenario of scenarios) {
+      testDoubles.uiOverlayProps = null;
+
+      renderToStaticMarkup(
+        createElement(GameContainer, {
+          bridge: TEST_BRIDGE,
+          store: scenario.store,
+          visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+          readOnlyMode: scenario.readOnlyMode,
+        }),
+      );
+
+      const overlayProps = testDoubles.uiOverlayProps as CapturedUIOverlayProps | null;
+      expect(overlayProps, `Expected UIOverlay props for ${scenario.name}.`).not.toBeNull();
+      if (overlayProps === null) {
+        throw new Error(`Expected UIOverlay props to be captured for ${scenario.name}.`);
+      }
+
+      const rightRailHtml = renderToStaticMarkup(createElement('div', null, overlayProps.rightRailContent));
+      const bottomPrimaryHtml = renderToStaticMarkup(createElement('div', null, overlayProps.bottomPrimaryContent));
+      const bottomDockHtml = renderToStaticMarkup(createElement('div', null, overlayProps.bottomRightDockContent));
+
+      expect(rightRailHtml, `Expected right rail ownership for ${scenario.name}.`).not.toContain('data-testid="event-log-panel"');
+      expect(bottomDockHtml, `Expected dock ownership for ${scenario.name}.`).toContain('data-testid="event-log-panel"');
+      if (scenario.expectedPrimaryTestId === null) {
+        expect(bottomPrimaryHtml, `Expected empty bottom primary slot for ${scenario.name}.`).not.toContain('data-testid=');
+      } else {
+        expect(bottomPrimaryHtml, `Expected primary bottom content for ${scenario.name}.`)
+          .toContain(`data-testid="${scenario.expectedPrimaryTestId}"`);
+      }
+    }
+  });
+
   it('passes onActionHoverStart and onActionHoverEnd to ActionToolbar', () => {
     testDoubles.actionToolbarProps = null;
     testDoubles.actionTooltipHookState = {

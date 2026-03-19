@@ -228,7 +228,12 @@ describe('agents authoring surface', () => {
         currentMargin: {
           type: 'number',
           costClass: 'state',
-          expr: refExpr({ kind: 'currentSurface', family: 'victoryCurrentMargin', id: 'currentMargin', seatToken: 'us' }),
+          expr: refExpr({
+            kind: 'currentSurface',
+            family: 'victoryCurrentMargin',
+            id: 'currentMargin',
+            selector: { kind: 'role', seatToken: 'us' },
+          }),
           dependencies: {
             parameters: [],
             stateFeatures: [],
@@ -1353,7 +1358,110 @@ describe('agents authoring surface', () => {
       kind: 'previewSurface',
       family: 'victoryCurrentMargin',
       id: 'currentMargin',
-      seatToken: 'us',
+      selector: { kind: 'role', seatToken: 'us' },
     }));
+  });
+
+  it('lowers explicit player-scoped per-player refs into player selectors', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      perPlayerVars: [{ name: 'resources', type: 'int', init: 0, min: 0, max: 10 }],
+      dataAssets: [createSeatCatalogAsset(['us', 'arvn'])],
+      agents: {
+        visibility: createVisibility({
+          perPlayerVars: {
+            resources: {
+              current: 'public',
+            },
+          },
+        }),
+        parameters: {},
+        library: {
+          stateFeatures: {
+            selfResources: {
+              type: 'number',
+              expr: { ref: 'var.player.self.resources' },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+    assert.deepEqual(result.gameDef?.agents?.library.stateFeatures.selfResources?.expr, refExpr({
+      kind: 'currentSurface',
+      family: 'perPlayerVar',
+      id: 'resources',
+      selector: { kind: 'player', player: 'self' },
+    }));
+  });
+
+  it('rejects role-scoped per-player refs when the spec can instantiate duplicate runtime roles', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      metadata: { id: 'agents-demo-symmetric', players: { min: 2, max: 4 } },
+      perPlayerVars: [{ name: 'tempo', type: 'int', init: 0, min: 0, max: 10 }],
+      dataAssets: [createSeatCatalogAsset(['neutral'])],
+      agents: {
+        visibility: createVisibility({
+          perPlayerVars: {
+            tempo: {
+              current: 'public',
+            },
+          },
+        }),
+        parameters: {},
+        library: {
+          stateFeatures: {
+            ambiguousTempo: {
+              type: 'number',
+              expr: { ref: 'var.seat.neutral.tempo' },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          neutral: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), true);
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.message.includes('ambiguous because this spec can instantiate duplicate runtime players')),
+      true,
+    );
   });
 });

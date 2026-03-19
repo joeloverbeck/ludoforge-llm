@@ -315,6 +315,10 @@ function walkExpr(expr: AgentPolicyExpr, visitRef: (ref: CompiledAgentPolicyRef)
 }
 
 function surfaceRefKey(ref: CompiledAgentPolicySurfaceRef): string {
-  const seatSuffix = ref.seatToken === undefined ? '' : `.${ref.seatToken}`;
-  return `${ref.family}.${ref.id}${seatSuffix}`;
+  if (ref.selector === undefined) {
+    return `${ref.family}.${ref.id}`;
+  }
+  return ref.selector.kind === 'role'
+    ? `${ref.family}.${ref.id}.${ref.selector.seatToken}`
+    : `${ref.family}.${ref.id}.${ref.selector.player}`;
 }

@@ -831,8 +831,12 @@ function emptyPreviewUsage(): PolicyEvaluationPreviewUsage {
 }
 
 function previewRefKey(ref: CompiledAgentPolicySurfaceRef): string {
-  const seatSuffix = ref.seatToken === undefined ? '' : `.${ref.seatToken}`;
-  return `${ref.family}.${ref.id}${seatSuffix}`;
+  if (ref.selector === undefined) {
+    return `${ref.family}.${ref.id}`;
+  }
+  return ref.selector.kind === 'role'
+    ? `${ref.family}.${ref.id}.${ref.selector.seatToken}`
+    : `${ref.family}.${ref.id}.${ref.selector.player}`;
 }
 
 function sumValues(values: readonly PolicyValue[]): PolicyValue {

@@ -583,7 +583,16 @@ const CompiledAgentPolicySurfaceRefBaseSchema = {
     z.literal('victoryCurrentRank'),
   ]),
   id: StringSchema,
-  seatToken: StringSchema.optional(),
+  selector: z.union([
+    z.object({
+      kind: z.literal('role'),
+      seatToken: StringSchema,
+    }).strict(),
+    z.object({
+      kind: z.literal('player'),
+      player: z.union([z.literal('self'), z.literal('active')]),
+    }).strict(),
+  ]).optional(),
 } as const;
 
 const CompiledAgentPolicyRefSchema = z.union([

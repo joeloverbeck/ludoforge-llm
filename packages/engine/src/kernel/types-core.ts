@@ -329,10 +329,19 @@ export type CompiledAgentPolicySurfaceRefFamily =
   | 'derivedMetric'
   | 'victoryCurrentMargin'
   | 'victoryCurrentRank';
+export type CompiledAgentPolicySurfaceSelector =
+  | {
+      readonly kind: 'role';
+      readonly seatToken: string;
+    }
+  | {
+      readonly kind: 'player';
+      readonly player: 'self' | 'active';
+    };
 export interface CompiledAgentPolicySurfaceRefBase {
   readonly family: CompiledAgentPolicySurfaceRefFamily;
   readonly id: string;
-  readonly seatToken?: string;
+  readonly selector?: CompiledAgentPolicySurfaceSelector;
 }
 export interface CompiledAgentPolicyCurrentSurfaceRef extends CompiledAgentPolicySurfaceRefBase {
   readonly kind: 'currentSurface';

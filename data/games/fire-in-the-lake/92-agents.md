@@ -50,7 +50,7 @@ agents:
       selfResources:
         type: number
         expr:
-          ref: var.seat.self.resources
+          ref: var.player.self.resources
 
     candidateFeatures:
       isPass:

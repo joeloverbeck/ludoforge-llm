@@ -151,7 +151,12 @@ function createCatalog(
         currentMargin: {
           type: 'number',
           costClass: 'state',
-          expr: refExpr({ kind: 'currentSurface', family: 'victoryCurrentMargin', id: 'currentMargin', seatToken: 'us' }),
+          expr: refExpr({
+            kind: 'currentSurface',
+            family: 'victoryCurrentMargin',
+            id: 'currentMargin',
+            selector: { kind: 'role', seatToken: 'us' },
+          }),
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
         },
         ...(overrides.stateFeatures ?? {}),
@@ -330,6 +335,39 @@ describe('policy-eval', () => {
     );
   });
 
+  it('resolves player-scoped per-player refs by runtime player identity in symmetric seats', () => {
+    const def = createBaseDef(createCatalog());
+    const baseState = initialState(def, 7, 2).state;
+    const state = {
+      ...baseState,
+      perPlayerVars: [
+        { tempo: 1 },
+        { tempo: 6 },
+      ],
+    };
+    const providers = createPolicyRuntimeProviders({
+      def: {
+        ...def,
+        seats: [{ id: 'neutral' }, { id: 'neutral' }],
+      },
+      state,
+      playerId: asPlayerId(1),
+      seatId: 'neutral',
+      catalog: def.agents!,
+      runtimeError: (code, message) => new Error(`${code}: ${message}`),
+    });
+
+    assert.equal(
+      providers.currentSurface.resolveSurface({
+        kind: 'currentSurface',
+        family: 'perPlayerVar',
+        id: 'tempo',
+        selector: { kind: 'player', player: 'self' },
+      } satisfies CompiledAgentPolicyCurrentSurfaceRef),
+      6,
+    );
+  });
+
   it('prunes pass, scores surviving candidates, and resolves deterministic ties by stable move key', () => {
     const input = createInput(createCatalog(), createMoves('operation', 'pass', 'event'));
 
@@ -441,7 +479,12 @@ describe('policy-eval', () => {
           maskedProjectedStanding: {
             type: 'number',
             costClass: 'preview',
-            expr: refExpr({ kind: 'previewSurface', family: 'victoryCurrentMargin', id: 'currentMargin', seatToken: 'us' }),
+            expr: refExpr({
+              kind: 'previewSurface',
+              family: 'victoryCurrentMargin',
+              id: 'currentMargin',
+              selector: { kind: 'role', seatToken: 'us' },
+            }),
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
           },
         },

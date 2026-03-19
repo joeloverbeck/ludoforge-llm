@@ -18,7 +18,7 @@ import {
   buildPolicyVictorySurface,
   getPolicySurfaceVisibility,
   isSurfaceVisibilityAccessible,
-  resolvePolicySeatToken,
+  resolvePolicyRoleSelector,
   type PolicyVictorySurface,
 } from './policy-surface.js';
 
@@ -139,10 +139,19 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
             { ref },
           );
         }
-        const resolvedSeatId = ref.seatToken === undefined
+        const targetPlayerIndex = ref.family === 'perPlayerVar'
+          ? resolvePerPlayerTargetIndex(input.def, input.state, ref, input.playerId, input.seatId, seatResolutionIndex)
+          : undefined;
+        const resolvedSeatId = ref.selector?.kind !== 'role'
           ? undefined
-          : resolvePolicySeatToken(input.def, input.state, ref.seatToken, input.seatId);
-        if (!isSurfaceVisibilityAccessible(visibility.current, input.seatId, resolvedSeatId)) {
+          : resolvePolicyRoleSelector(input.def, input.state, ref.selector, input.seatId);
+        if (!isSurfaceVisibilityAccessible(
+          visibility.current,
+          input.seatId,
+          resolvedSeatId,
+          Number(input.playerId),
+          targetPlayerIndex,
+        )) {
           return undefined;
         }
         if (ref.family === 'derivedMetric') {
@@ -158,7 +167,7 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
           return typeof value === 'number' ? value : undefined;
         }
         if (ref.family === 'perPlayerVar') {
-          return resolveSeatVarRef(input.def, input.state, ref, input.seatId, seatResolutionIndex);
+          return resolveSeatVarRef(input.state, ref, targetPlayerIndex);
         }
         if ((input.def.terminal.margins ?? []).length === 0) {
           throw input.runtimeError(
@@ -176,10 +185,10 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
             );
           }
         }
-        if (ref.seatToken === undefined) {
+        if (ref.selector?.kind !== 'role') {
           return undefined;
         }
-        const seatId = resolvePolicySeatToken(input.def, input.state, ref.seatToken, input.seatId);
+        const seatId = resolvePolicyRoleSelector(input.def, input.state, ref.selector, input.seatId);
         return ref.family === 'victoryCurrentMargin'
           ? victorySurface.marginBySeat.get(seatId)
           : victorySurface.rankBySeat.get(seatId);
@@ -193,21 +202,31 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
   };
 }
 
-function resolveSeatVarRef(
+function resolvePerPlayerTargetIndex(
   def: GameDef,
   state: GameState,
   ref: CompiledAgentPolicyCurrentSurfaceRef | CompiledAgentPolicyPreviewSurfaceRef,
+  actingPlayerId: PlayerId,
   seatId: string,
   seatResolutionIndex: SeatResolutionIndex,
 ): number | undefined {
-  if (ref.family !== 'perPlayerVar' || ref.seatToken === undefined) {
+  if (ref.family !== 'perPlayerVar' || ref.selector === undefined) {
     return undefined;
   }
-  const playerIndex = resolvePlayerIndexForSeatValue(
-    resolvePolicySeatToken(def, state, ref.seatToken, seatId),
-    seatResolutionIndex,
-  );
-  if (playerIndex === null) {
+  return ref.selector.kind === 'player'
+    ? (ref.selector.player === 'self' ? Number(actingPlayerId) : Number(state.activePlayer))
+    : resolvePlayerIndexForSeatValue(
+      resolvePolicyRoleSelector(def, state, ref.selector, seatId),
+      seatResolutionIndex,
+    ) ?? undefined;
+}
+
+function resolveSeatVarRef(
+  state: GameState,
+  ref: CompiledAgentPolicyCurrentSurfaceRef | CompiledAgentPolicyPreviewSurfaceRef,
+  playerIndex: number | undefined,
+): number | undefined {
+  if (ref.family !== 'perPlayerVar' || playerIndex === undefined) {
     return undefined;
   }
   const value = state.perPlayerVars[playerIndex]?.[ref.id];

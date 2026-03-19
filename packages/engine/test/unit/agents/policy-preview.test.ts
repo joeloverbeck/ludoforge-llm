@@ -23,7 +23,13 @@ const previewMarginRef: CompiledAgentPolicyPreviewSurfaceRef = {
   kind: 'previewSurface',
   family: 'victoryCurrentMargin',
   id: 'currentMargin',
-  seatToken: 'us',
+  selector: { kind: 'role', seatToken: 'us' },
+};
+const previewSelfTempoRef: CompiledAgentPolicyPreviewSurfaceRef = {
+  kind: 'previewSurface',
+  family: 'perPlayerVar',
+  id: 'tempo',
+  selector: { kind: 'player', player: 'self' },
 };
 
 function createDef(): GameDef {
@@ -31,7 +37,7 @@ function createDef(): GameDef {
     metadata: { id: 'policy-preview-test', players: { min: 2, max: 2 } },
     constants: {},
     globalVars: [{ name: 'score', type: 'int', init: 1, min: -10, max: 10 }],
-    perPlayerVars: [],
+    perPlayerVars: [{ name: 'tempo', type: 'int', init: 0, min: 0, max: 10 }],
     zones: [],
     derivedMetrics: [],
     seats: [{ id: 'us' }, { id: 'arvn' }],
@@ -48,7 +54,12 @@ function createDef(): GameDef {
             preview: { visibility: 'public', allowWhenHiddenSampling: true },
           },
         },
-        perPlayerVars: {},
+        perPlayerVars: {
+          tempo: {
+            current: 'seatVisible',
+            preview: { visibility: 'seatVisible', allowWhenHiddenSampling: true },
+          },
+        },
         derivedMetrics: {},
         victory: {
           currentMargin: {
@@ -224,5 +235,35 @@ describe('policy-preview', () => {
 
     assert.equal(runtime.resolveSurface(candidate, previewScoreRef), 9);
     assert.equal(runtime.resolveSurface(candidate, previewMarginRef), undefined);
+  });
+
+  it('resolves player-scoped preview per-player refs by runtime player identity', () => {
+    const def = createDef();
+    const baseState = initialState(def, 1, 2).state;
+    const state = {
+      ...baseState,
+      perPlayerVars: [
+        { tempo: 2 },
+        { tempo: 7 },
+      ],
+      activePlayer: asPlayerId(0),
+    };
+    const candidate = createCandidate();
+    const runtime = createPolicyPreviewRuntime({
+      def: {
+        ...def,
+        seats: [{ id: 'neutral' }, { id: 'neutral' }],
+      },
+      state,
+      playerId: asPlayerId(1),
+      seatId: 'neutral',
+      dependencies: {
+        classifyPlayableMoveCandidate: () => ({ kind: 'playableComplete', move: candidate.move, warnings: [] }),
+        applyMove: () => ({ state }),
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.equal(runtime.resolveSurface(candidate, previewSelfTempoRef), 7);
   });
 });

@@ -59,6 +59,7 @@ const TIE_BREAKER_KINDS = new Set<TieBreakerKind>([
 
 export interface LowerAgentsOptions {
   readonly referenceSeatIds?: readonly string[];
+  readonly playerCountMax?: number;
   readonly globalVarIds?: readonly string[];
   readonly perPlayerVarIds?: readonly string[];
   readonly policyMetricIds?: readonly string[];
@@ -1450,7 +1451,7 @@ class AgentLibraryCompiler {
         kind: resolved.kind,
         family: resolved.family,
         id: resolved.id,
-        ...(resolved.seatToken === undefined ? {} : { seatToken: resolved.seatToken }),
+        ...(resolved.selector === undefined ? {} : { selector: resolved.selector }),
       },
     };
   }
@@ -1473,8 +1474,30 @@ class AgentLibraryCompiler {
       this.reportUnknownLibraryRef(refPath, path);
       return false;
     }
-    if (resolved.seatToken !== undefined && !this.isKnownSeatToken(resolved.seatToken, path, refPath)) {
+    if (resolved.selector?.kind === 'role' && !this.isKnownSeatToken(resolved.selector.seatToken, path, refPath)) {
       return false;
+    }
+    if (resolved.family === 'perPlayerVar' && resolved.selector?.kind === 'role') {
+      if (resolved.selector.seatToken === 'self' || resolved.selector.seatToken === 'active') {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
+          path,
+          severity: 'error',
+          message: `Per-player policy ref "${refPath}" uses seat-scoped "${resolved.selector.seatToken}" where a runtime-player selector is required.`,
+          suggestion: `Use ${preview ? 'preview.' : ''}var.player.${resolved.selector.seatToken}.${resolved.id} for acting-player scoped per-player reads.`,
+        });
+        return false;
+      }
+      if (this.hasPotentialDuplicateRuntimeRoles()) {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
+          path,
+          severity: 'error',
+          message: `Per-player policy ref "${refPath}" is ambiguous because this spec can instantiate duplicate runtime players for one canonical seat.`,
+          suggestion: 'Use var.player.self/active for runtime-player reads, or limit the spec so each canonical seat maps to at most one runtime player.',
+        });
+        return false;
+      }
     }
     return true;
   }
@@ -1521,6 +1544,13 @@ class AgentLibraryCompiler {
       message: `Invalid candidate param ref "${refPath}".`,
       suggestion: 'Use exactly candidate.param.<paramName> for a concrete move param with a policy-visible compiled candidate-param contract.',
     });
+  }
+
+  private hasPotentialDuplicateRuntimeRoles(): boolean {
+    if (this.options.playerCountMax === undefined || this.options.referenceSeatIds === undefined) {
+      return false;
+    }
+    return this.options.playerCountMax > this.options.referenceSeatIds.length;
   }
 
 }

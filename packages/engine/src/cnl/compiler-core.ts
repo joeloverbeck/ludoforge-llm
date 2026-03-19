@@ -674,6 +674,7 @@ function compileExpandedDoc(
         ...(seatIdentityContract.contract.referenceSeatIds === undefined
           ? {}
           : { referenceSeatIds: seatIdentityContract.contract.referenceSeatIds }),
+        ...(resolvedTableRefDoc.metadata === null ? {} : { playerCountMax: resolvedTableRefDoc.metadata.players.max }),
         ...{ globalVarIds: mergedGlobalVars.map((variable) => variable.name) },
         ...{ perPlayerVarIds: perPlayerVars.value.map((variable) => variable.name) },
         ...(actions === null ? {} : { actionDefs: actions }),

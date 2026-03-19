@@ -6,6 +6,7 @@ import type {
   AgentPolicySurfaceVisibilityClass,
   CompiledAgentPolicySurfaceRef,
   CompiledAgentPolicySurfaceCatalog,
+  CompiledAgentPolicySurfaceSelector,
   CompiledAgentPolicySurfaceVisibility,
   GameDef,
   GameState,
@@ -53,7 +54,33 @@ export function parseAuthoredPolicySurfaceRef(
       kind,
       family: 'perPlayerVar',
       id: variableId,
-      seatToken,
+      selector: {
+        kind: 'role',
+        seatToken,
+      },
+      visibility,
+    };
+  }
+
+  if (refPath.startsWith('var.player.')) {
+    const parts = refPath.split('.');
+    if (parts.length !== 4) {
+      return null;
+    }
+    const playerSelector = parts[2];
+    const variableId = parts[3];
+    if ((playerSelector !== 'self' && playerSelector !== 'active') || variableId === undefined) {
+      return null;
+    }
+    const visibility = catalog.perPlayerVars[variableId];
+    return visibility === undefined ? null : {
+      kind,
+      family: 'perPlayerVar',
+      id: variableId,
+      selector: {
+        kind: 'player',
+        player: playerSelector,
+      },
       visibility,
     };
   }
@@ -78,7 +105,10 @@ export function parseAuthoredPolicySurfaceRef(
       kind,
       family: 'victoryCurrentMargin',
       id: 'currentMargin',
-      seatToken,
+      selector: {
+        kind: 'role',
+        seatToken,
+      },
       visibility: catalog.victory.currentMargin,
     };
   }
@@ -92,7 +122,10 @@ export function parseAuthoredPolicySurfaceRef(
       kind,
       family: 'victoryCurrentRank',
       id: 'currentRank',
-      seatToken,
+      selector: {
+        kind: 'role',
+        seatToken,
+      },
       visibility: catalog.victory.currentRank,
     };
   }
@@ -122,23 +155,29 @@ export function isSurfaceVisibilityAccessible(
   visibility: AgentPolicySurfaceVisibilityClass,
   actingSeatId: string,
   resolvedSeatId?: string,
+  actingPlayerIndex?: number,
+  resolvedPlayerIndex?: number,
 ): boolean {
   switch (visibility) {
     case 'public':
       return true;
     case 'seatVisible':
+      if (actingPlayerIndex !== undefined && resolvedPlayerIndex !== undefined) {
+        return actingPlayerIndex === resolvedPlayerIndex;
+      }
       return resolvedSeatId === actingSeatId;
     case 'hidden':
       return false;
   }
 }
 
-export function resolvePolicySeatToken(
+export function resolvePolicyRoleSelector(
   def: GameDef | undefined,
   state: GameState,
-  seatToken: string,
+  selector: Extract<CompiledAgentPolicySurfaceSelector, { readonly kind: 'role' }>,
   actingSeatId: string,
 ): string {
+  const { seatToken } = selector;
   if (seatToken === 'self') {
     return actingSeatId;
   }

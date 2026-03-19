@@ -10,15 +10,14 @@ import {
   type Token,
 } from '@ludoforge/engine/runtime';
 
-import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
-import { deriveRenderModel } from '../../src/model/derive-render-model.js';
 import type { RenderContext } from '../../src/store/store-types.js';
+import { deriveProjectedRenderModel } from './helpers/derive-projected-render-model.js';
 
 function compileFixture(): GameDef {
   const compiled = compileGameSpecToGameDef({
     ...createEmptyGameSpecDoc(),
     metadata: {
-      id: 'runner-derive-render-model-structural-sharing-test',
+      id: 'runner-project-render-model-structural-sharing-test',
       players: {
         min: 2,
         max: 2,
@@ -87,7 +86,6 @@ function makeContext(overrides: Partial<RenderContext> = {}): RenderContext {
       [asPlayerId(1), 'human' as const],
     ]),
     terminal: null,
-    visualConfigProvider: new VisualConfigProvider(null),
     ...overrides,
   };
 }
@@ -100,7 +98,7 @@ function token(id: string, props: Token['props'] = {}): Token {
   };
 }
 
-describe('deriveRenderModel structural sharing', () => {
+describe('projectRenderModel structural sharing', () => {
   it('reuses unchanged zone and token references across unrelated context changes', () => {
     const def = compileFixture();
     const base = initialState(def, 123, 2).state;
@@ -115,8 +113,8 @@ describe('deriveRenderModel structural sharing', () => {
       },
     };
 
-    const first = deriveRenderModel(state, def, makeContext(), null);
-    const second = deriveRenderModel(
+    const first = deriveProjectedRenderModel(state, def, makeContext());
+    const second = deriveProjectedRenderModel(
       state,
       def,
       makeContext({
@@ -125,14 +123,14 @@ describe('deriveRenderModel structural sharing', () => {
           warnings: [{ code: 'EMPTY_QUERY_RESULT', message: 'unrelated change', context: {} }],
         },
       }),
-      first,
+      { previous: first },
     );
 
-    expect(second.zones).toBe(first.zones);
-    expect(second.tokens).toBe(first.tokens);
-    expect(second.zones[0]).toBe(first.zones[0]);
-    expect(second.tokens[0]).toBe(first.tokens[0]);
-    expect(second.tokens[1]).toBe(first.tokens[1]);
+    expect(second.model.zones).toBe(first.model.zones);
+    expect(second.model.tokens).toBe(first.model.tokens);
+    expect(second.model.zones[0]).toBe(first.model.zones[0]);
+    expect(second.model.tokens[0]).toBe(first.model.tokens[0]);
+    expect(second.model.tokens[1]).toBe(first.model.tokens[1]);
   });
 
   it('replaces only changed token entities and preserves unchanged ones', () => {
@@ -159,13 +157,13 @@ describe('deriveRenderModel structural sharing', () => {
       },
     };
 
-    const first = deriveRenderModel(stateA, def, makeContext(), null);
-    const second = deriveRenderModel(stateB, def, makeContext(), first);
+    const first = deriveProjectedRenderModel(stateA, def, makeContext());
+    const second = deriveProjectedRenderModel(stateB, def, makeContext(), { previous: first });
 
-    const firstTokenOne = first.tokens.find((entry) => entry.id === 'token:1');
-    const firstTokenTwo = first.tokens.find((entry) => entry.id === 'token:2');
-    const secondTokenOne = second.tokens.find((entry) => entry.id === 'token:1');
-    const secondTokenTwo = second.tokens.find((entry) => entry.id === 'token:2');
+    const firstTokenOne = first.model.tokens.find((entry) => entry.id === 'token:1');
+    const firstTokenTwo = first.model.tokens.find((entry) => entry.id === 'token:2');
+    const secondTokenOne = second.model.tokens.find((entry) => entry.id === 'token:1');
+    const secondTokenTwo = second.model.tokens.find((entry) => entry.id === 'token:2');
 
     expect(firstTokenOne).toBeDefined();
     expect(firstTokenTwo).toBeDefined();

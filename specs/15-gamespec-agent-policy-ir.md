@@ -1,490 +1,1073 @@
-# Spec 15: GameSpec Agent Policy IR
+# Spec 15: GameSpec Authored Agent Policy IR
 
-**Status**: Draft
-**Priority**: P1
-**Complexity**: XL
-**Dependencies**: Spec 08b, Spec 09, Spec 10, Spec 11
-**Estimated effort**: 6-9 days
-**Source sections**: Spec 14, Spec 30, iterative-improvement analysis, FITL architecture constraints
+**Status**: Draft  
+**Priority**: P1  
+**Complexity**: XL  
+**Dependencies**: Spec 08b, Spec 09, Spec 10, Spec 11  
+**Estimated effort**: 8-12 days  
+**Source sections**: Spec 14, Spec 30 (historical specialized-agent baseline), `docs/fitl-event-authoring-cookbook.md`, current visual-config boundary validations
 
 ## Overview
 
-Introduce a first-class, generic AI policy intermediate representation inside `GameSpecDoc` so games can define their own non-visual bot behavior without hardcoding game-specific logic in engine code.
+Introduce a first-class authored agent policy section in `GameSpecDoc` and compile it into a normalized, typed, deterministic, JSON-serializable `AgentPolicyCatalog` in `GameDef`.
 
-This spec does not implement evolution. It establishes the architectural substrate that evolution will later mutate. The goal is to make game-authored agents a clean, validated, inspectable, deterministic runtime concept rather than an external ad hoc convention or a collection of bespoke TypeScript agents.
+This spec is the substrate for future policy evolution, not the evolution system itself. The authored surface must therefore be:
 
-The design principles are:
+- bounded
+- typed
+- visibility-safe
+- deterministic
+- diffable
+- locally mutable
 
-- `GameSpecDoc` owns game-specific, non-visual bot behavior.
-- `visual-config.yaml` remains presentation-only.
-- `GameDef` and simulation remain game-agnostic.
-- Policy runtime is generic and reusable across all games.
-- No backwards compatibility is required. Existing random/greedy-only assumptions may be removed or reworked.
-- Evolution must mutate a bounded policy IR, not arbitrary game YAML.
+V1 is intentionally narrow:
+
+- evaluate concrete legal moves only
+- no template move completion
+- no rollouts or tree search
+- no scripting
+- no direct raw state scanning from policy
+- no hidden-information leaks
+- no profile inheritance
+
+Policy logic lives in reusable library items. Numeric thresholds, weights, flags, and preferred orders live in explicit parameter definitions. Profiles are flat assemblies of library items plus parameter values. Seat bindings are a separate map.
+
+The engine compiles authored policies into pure data and executes them through a generic `PolicyAgent`. Simulation and `GameDef` remain game-agnostic. Policy authoring lives in `GameSpecDoc` and scenario-linked game data only. `visual-config.yaml` remains presentation-only and must not participate in policy compilation or evaluation.
 
 ## Problem Statement
 
-The current architecture has three mismatches:
+The current architecture still has the wrong ownership boundary for long-term AI:
 
-1. `GameSpecDoc` can express game rules, turn flow, and victory logic, but not bot policy.
-2. The engine exposes a generic `Agent` interface, but real policies are currently external TypeScript implementations.
-3. The planned evolution pipeline assumes fixed external agents, which is the wrong ownership boundary for asymmetric games such as Fire in the Lake.
+1. `GameSpecDoc` can express rules, turn flow, and victory logic, but not first-class bot policy.
+2. Real game-specific bot behavior still lives outside authored game data.
+3. Future evolution needs a bounded mutation target, but current agent logic is not one.
+4. The draft leaves four dangerous areas too loose:
+   - hidden-information access,
+   - candidate completion,
+   - evaluation cost,
+   - seat/scenario resolution.
 
-This creates an architectural split where:
-
-- game-specific rules live in data,
-- game-specific AI lives in code,
-- and evolution has no bounded, declarative agent search space.
-
-That split is acceptable for prototypes but not for a robust long-term architecture.
+That is not acceptable long term. Fire in the Lake needs seat-asymmetric authored policies. Texas Hold'em proves the runtime must also work under imperfect information. The architecture must not solve one by cheating on the other.
 
 ## Goals
 
-- Add a generic `agents` section to `GameSpecDoc`.
-- Compile agent policy definitions into a generic `GameDef` runtime representation.
-- Provide a generic `PolicyAgent` interpreter that implements the existing simulation seam.
-- Support asymmetric faction/seat policies without simulator specialization.
-- Support deterministic self-play, traceability, and later policy evolution.
-- Ensure policies can reference terminal scoring, victory margins, legal move structure, and state-derived features generically.
-- Make agent decisions explainable and inspectable in traces.
+- Add a first-class `agents` section to `GameSpecDoc`.
+- Compile it into `GameDef.agents` as a normalized `AgentPolicyCatalog`.
+- Provide a generic `PolicyAgent` and policy evaluator.
+- Bind policies by seat id through a separate top-level binding map.
+- Make the mutation surface explicit via named parameters with bounds and tunability metadata.
+- Keep policies deterministic, inspectable, and visibility-safe.
+- Support both perfect-information and imperfect-information games through the same runtime.
+- Keep game-specific logic in authored data, not engine branches.
+- Make policy evaluation measurable, benchmarkable, and suitable for iterative improvement.
+- Keep compiled policy IR serializable through existing `GameDef` JSON tooling.
 
 ## Non-Goals
 
-- Free-form scripting or embedding TypeScript/JavaScript in specs.
-- General ML model execution inside the engine.
-- Recreating FITL Section 8 flowcharts as hardcoded engine behavior.
-- Introducing visual/presentation concerns into policy definitions.
-- Implementing evolution in this spec.
+- Embedded JS/TS/Lua or free-form scripting.
+- Tree search, rollouts, or generic planning in v1.
+- Template move completion or multi-step candidate construction in v1.
+- Profile inheritance, recursive fragments, or mixins.
+- Raw policy access to hidden state or visual configuration.
+- Evolution implementation in this spec.
 
-## Architectural Decision
+## Architectural Decisions
 
-Add a new top-level `agents` section to `GameSpecDoc` and `GameDef`.
+### 1. Separate the authoring model from the compiled IR
 
-The engine will provide:
+`GameSpecDoc.agents` is the authoring format. `GameDef.agents` is the normalized runtime IR. They are not the same structure.
 
-- a generic policy IR schema,
-- compiler lowering and validation,
-- a generic runtime evaluator for that IR,
-- a generic `PolicyAgent` implementation,
-- generic decision telemetry.
+Authoring format should optimize for readability, reuse, bounded mutation, and diffability.  
+Compiled IR should optimize for determinism, validation, fast evaluation, and traces.
 
-Games will provide:
+### 2. Separate profiles from seat bindings
 
-- policy feature definitions,
-- seat/faction policy profiles,
-- optional reusable rule blocks,
-- seat bindings from game seats to policy profiles.
+Profiles are reusable policy assemblies. Bindings map seats to profiles.
 
-## Core Model
+Do not bake seat bindings into profile definitions. That makes reuse harder, diffs noisier, and mutation less clean.
 
-### 1. Policy Library vs Policy Profile
+Bindings are keyed by canonical seat ids, never by player index. Validation happens against the resolved seat catalog and selected scenario inputs, not against incidental runtime player ordering.
 
-Split policy data into two layers:
+### 3. V1 evaluates concrete legal moves only
 
-- **Policy library**: reusable feature extractors, candidate filters, and score terms.
-- **Policy profile**: a seat-bound policy assembled from library primitives plus weights, thresholds, and tie-break rules.
+V1 policies evaluate the concrete `legalMoves` provided to the agent. That is the candidate set.
 
-This keeps policy definitions DRY and gives evolution a bounded parameter space.
+Do not add `templateLegalMoves` or generic completion in v1. That is search disguised as configuration and it is exactly how performance cliffs creep back in.
 
-### 2. Candidate-Based Decisioning
+If a game needs stronger decision quality, the first response is better derived metrics and better concrete move generation, not policy-driven search.
 
-The runtime policy model is candidate-based:
+### 4. Separate policy logic from tunable parameters
 
-1. Enumerate legal moves.
-2. Optionally complete decision sequences into concrete candidates using generic engine mechanisms.
-3. Compute per-candidate features.
-4. Filter or penalize candidates.
-5. Score candidates by a weighted declarative formula.
-6. Apply deterministic tie-break rules.
-7. Return exactly one legal move.
+Weights, thresholds, booleans, enum choices, and preferred id orders must be declared as explicit parameters with types, bounds, and tunability metadata.
 
-This model is generic enough for Texas Hold'em and FITL, while remaining much cheaper and more inspectable than MCTS.
+Future evolution should mutate parameter values and ordered profile selections, not arbitrary expression trees.
 
-### 3. Seat-Specific Asymmetry
+### 5. Policies evaluate against a policy-visible surface, not raw state
 
-Policies are bound by seat id, not by player index.
+Policies may read only approved, seat-visible references resolved through generic runtime surfaces.
 
-This is required for:
+If a policy needs a game concept, author it as a variable or derived metric first. Do not let policies rummage through raw zones, hidden cards, or engine internals.
 
-- fixed-seat asymmetry in games like FITL,
-- future seat catalogs and card-driven seat orders,
-- per-faction evolution without simulator specialization.
+### 6. Profiles stay flat in v1
+
+Profiles do not contain inline anonymous logic and do not inherit from other profiles.  
+All reusable logic lives in the library. Profiles only:
+
+- choose named rules, terms, and tie-breakers in order
+- provide parameter values
+
+This is deliberate. It keeps the compiled IR small and keeps mutation bounded.
+
+### 7. Built-in developer agents remain opt-in tools
+
+`random` and `greedy` may remain as developer/testing agents, but they stop shaping the architecture.
+
+The default non-human path is `policy`, which resolves authored seat bindings.
+
+### 8. Compiled policy IR must stay JSON-serializable
+
+`GameDef` is serialized, diffed, schema-validated, and passed through CLI/runner tooling. Compiled policy IR must therefore use plain JSON-compatible arrays, records, literals, and branded ids.
+
+Do not use `Map`, `Set`, functions, class instances, or other runtime-only containers inside `GameDef.agents`.
+
+### 9. Internal agent selection uses structured descriptors, not string parsing
+
+CLI sugar may accept text such as `policy` or `builtin:greedy`, but engine and runner boundaries must normalize that into structured descriptors before execution.
+
+Do not let stringly-typed agent modes become the long-term runtime contract.
 
 ## GameSpecDoc Additions
 
-Add the following top-level section:
+Add a new top-level `agents` section.
 
-```yaml
-agents:
-  library:
-    moveFeatures: []
-    stateFeatures: []
-    candidateFilters: []
-    scoreTerms: []
-    tieBreakers: []
-  profiles:
-    - id: pass-baseline
-      seatBindings: [us, arvn, nva, vc]
-      candidateSource: concreteLegalMoves
-      scorePlan:
-        filters: []
-        terms: []
-        fallback: pass
-      tieBreakPlan:
-        - type: stableMoveKey
-  defaults:
-    unknownSeatPolicy: error
-```
+Authoring format:
+
+    agents:
+      parameters:
+        preferEventWeight:
+          type: number
+          default: 1.0
+          min: -10
+          max: 10
+          tunable: true
+
+        passFloor:
+          type: number
+          default: 0.25
+          min: -5
+          max: 5
+          tunable: true
+
+      library:
+        stateFeatures:
+          currentUsMargin:
+            type: number
+            expr:
+              ref: victory.currentMargin.us
+
+        candidateFeatures:
+          isEvent:
+            type: boolean
+            expr:
+              eq:
+                - { ref: candidate.actionId }
+                - { const: play-event }
+
+          projectedUsMargin:
+            type: number
+            expr:
+              ref: preview.victory.currentMargin.us
+
+        candidateAggregates:
+          bestNonPassProjectedMargin:
+            type: number
+            op: max
+            of:
+              ref: feature.projectedUsMargin
+            where:
+              not:
+                ref: candidate.isPass
+
+        pruningRules:
+          dropPassWhenStrongerMoveExists:
+            when:
+              and:
+                - { ref: candidate.isPass }
+                - gt:
+                    - { ref: aggregate.bestNonPassProjectedMargin }
+                    - { param: passFloor }
+            onEmpty: skipRule
+
+        scoreTerms:
+          preferEvents:
+            weight:
+              param: preferEventWeight
+            value:
+              boolToNumber:
+                ref: feature.isEvent
+
+        tieBreakers:
+          higherProjectedUsMargin:
+            kind: higherExpr
+            value:
+              ref: feature.projectedUsMargin
+
+          stableMoveKey:
+            kind: stableMoveKey
+
+      profiles:
+        fitl-us:
+          params:
+            preferEventWeight: 1.25
+            passFloor: 0.50
+          use:
+            pruningRules:
+              - dropPassWhenStrongerMoveExists
+            scoreTerms:
+              - preferEvents
+            tieBreakers:
+              - higherProjectedUsMargin
+              - stableMoveKey
+
+        fitl-arvn:
+          params: {}
+          use:
+            pruningRules: []
+            scoreTerms: []
+            tieBreakers:
+              - stableMoveKey
+
+      bindings:
+        us: fitl-us
+        arvn: fitl-arvn
+        nva: fitl-nva
+        vc: fitl-vc
+
+Notes:
+
+- named collections under `agents` are maps keyed by id, not arrays
+- order matters only where explicitly represented by lists in a profile or by ordered parameter values
+- profiles may share the same library items with different parameter values
+- multiple seats may bind to the same profile
+
+### Prerequisite Visibility Metadata
+
+Any existing authored surface used by policy evaluation must be classifiable generically as one of:
+
+- `public`
+- `seatVisible`
+- `hidden`
+
+If an existing section such as vars, metrics, or public metadata cannot currently express that distinction, extend that section generically as prerequisite work rather than granting policies raw omniscient access.
+
+### Prerequisite Seat Resolution
+
+Policy bindings must resolve against the same canonical seat ids selected by the compiled scenario and seat-catalog pipeline.
+
+Requirements:
+
+- policy compilation must validate bindings against resolved seat ids, not only `metadata.players.min/max`
+- ambiguous or missing scenario/seat-catalog resolution must prevent policy binding compilation
+- runtime must resolve `seat.self`, `seat.active`, and seat-scoped refs through canonical seat ids, not positional player indexes
+- traces may include both `playerId` and `seatId`, but policy semantics are seat-based
 
 ### New Types
 
-At minimum, define:
+At minimum, add:
 
 - `GameSpecAgentsSection`
+- `GameSpecAgentParameterDef`
 - `GameSpecAgentLibrary`
-- `GameSpecAgentProfile`
-- `GameSpecMoveFeatureDef`
 - `GameSpecStateFeatureDef`
-- `GameSpecCandidateFilterDef`
+- `GameSpecCandidateFeatureDef`
+- `GameSpecCandidateAggregateDef`
+- `GameSpecPruningRuleDef`
 - `GameSpecScoreTermDef`
 - `GameSpecTieBreakerDef`
-- `GameSpecSeatAgentBinding`
+- `GameSpecAgentProfileDef`
+- `GameSpecSeatPolicyBindings`
+- `GameSpecPolicyExpr`
 
-## Policy IR Semantics
+## Authoring Model
 
-### Candidate Sources
+### Parameters
 
-Supported initial source kinds:
+Parameters are the primary bounded mutation surface.
 
-- `templateLegalMoves`
-- `concreteLegalMoves`
+Supported parameter types in v1:
 
-`concreteLegalMoves` is the default for complex games because it lets policy reason over completed moves rather than partial templates.
+- `number`
+- `integer`
+- `boolean`
+- `enum`
+- `idOrder`
 
-### Feature Classes
+Rules:
 
-#### State Features
+- tunable numeric parameters must declare finite `min` and `max`
+- tunable enum parameters must declare an explicit allowed set
+- `idOrder` parameters must declare the allowed ids they can order
+- profiles may override defaults but may not violate parameter bounds or allowed values
+- if a profile omits a required parameter with no default, compilation fails
 
-Read-only values computed once per decision point.
+### Library
 
-Examples:
+The library contains all named reusable logic:
 
-- current seat victory margin
-- leader seat on current card
-- current event card metadata
-- support/opposition aggregates
-- resource levels
-- active turn-flow window
+- state features
+- candidate features
+- candidate aggregates
+- pruning rules
+- score terms
+- tie-breakers
 
-#### Move Features
+Library items may reference:
 
-Values computed per candidate move.
+- parameters
+- other features
+- aggregates
+- approved runtime refs
 
-Examples:
+They may not reference:
 
-- action id / action class
-- event side
-- targeted zones
-- targeted token counts
-- delta in a declared metric after applying the move
-- delta in seat victory margin after applying the move
-- whether the move passes
-- whether the move consumes a scarce resource
+- profile ids
+- seat bindings
+- visual config
+- engine internals not exposed through the policy surface
 
-### Score Terms
+Dependency rules:
 
-Each candidate receives a score:
+- state features may depend on parameters, runtime refs, and other state features
+- candidate features may depend on parameters, state features, candidate refs, preview refs, and other candidate features
+- candidate aggregates may depend on candidate features and other aggregates when acyclic
+- pruning rules, score terms, and tie-breakers may depend on any of the above
 
-```text
-totalScore =
-  sum(enabled term contributions)
-  + deterministic tie-break comparison chain
-```
+### Profiles
 
-Supported term shapes:
+Profiles are flat ordered assemblies of library items plus parameter values.
 
-- constant weight
-- feature value times weight
-- conditional bonus/penalty
-- normalized delta bonus
-- rank-based bonus
-- threshold gate
+A profile may contain only:
 
-### Filters
+- parameter overrides
+- ordered `pruningRules`
+- ordered `scoreTerms`
+- ordered `tieBreakers`
 
-Filters are generic boolean predicates over candidate or state features.
+Profiles may not define inline expressions or anonymous rules. If logic is worth keeping, give it a name in the library.
 
-Examples:
+### Bindings
 
-- reject `pass` if any non-pass move exceeds a minimum utility threshold
-- reject event plays below a configured event score floor
-- prefer moves matching current strategic mode
+`bindings` map `seatId -> profileId`.
 
-Filters may not inspect hidden engine internals. They can only use declared generic references and computed features.
+Rules:
 
-### Tie-Breakers
+- every seat used by a policy-backed simulation must resolve to exactly one profile
+- multiple seats may bind to the same profile
+- runner/CLI may override bindings for experiments, but authored bindings remain the default
 
-Tie-breakers must be deterministic and explicit.
+Compilation note:
 
-Supported tie-breakers:
+- binding validation occurs after scenario-linked seat resolution
+- games that do not author seat-specific asymmetry may bind every seat to the same profile
 
-- highest/lowest feature value
-- preferred action id order
-- preferred seat-defined category order
-- stable move key
-- RNG tie-break using provided `Rng`
+## Policy Expression DSL
 
-RNG tie-break is allowed only as the final stage.
+All policy logic is expressed through a typed declarative DSL.
 
-## Generic Runtime References
+Supported scalar types:
 
-To be evolution-friendly, the IR must expose useful but bounded references.
+- `number`
+- `boolean`
+- `enum`
+- `id`
+- `idList` only where explicitly allowed by parameter type or tie-breaker kind
 
-Add generic policy reference surfaces for:
+Supported expression forms in v1:
 
-- `policy.stateFeature.<id>`
-- `policy.moveFeature.<id>`
-- `policy.candidate.actionId`
-- `policy.candidate.actionClass`
-- `policy.candidate.params.<name>`
-- `policy.candidate.isPass`
-- `policy.candidate.moveContext`
-- `policy.eval.victoryMargin.<seat>`
-- `policy.eval.terminalRanking.<seat>`
-- `policy.eval.scoring.<seat>`
-- `policy.eval.postMoveVictoryMargin.<seat>`
-- `policy.eval.postMoveScoring.<seat>`
+- constants
+- parameter refs
+- runtime refs
+- feature refs
+- aggregate refs
+- arithmetic: `add`, `sub`, `mul`, `div`, `min`, `max`, `clamp`, `abs`, `neg`
+- comparison: `eq`, `ne`, `lt`, `lte`, `gt`, `gte`
+- boolean: `and`, `or`, `not`
+- selection: `if`
+- membership: `in`
+- null/unknown handling: `coalesce`
+- simple conversion helpers: `boolToNumber`
 
-The key requirement is that these references are generic. FITL-specific names belong only in authored feature definitions.
+Not allowed in v1:
+
+- loops
+- recursion
+- dynamic reference construction
+- user-defined functions
+- string concatenation as logic
+- arbitrary collection traversal
+- nesting `preview` inside `preview`
+
+Every expression must be fully type-checked at compile time.
+
+Authoring note:
+
+- policy expressions are not a general-purpose replacement for effect/condition/value DSLs
+- if a required concept is missing from the approved policy surface, extend that generic surface explicitly instead of tunneling raw engine objects into policy expressions
+
+## Cost Classes
+
+Every feature, aggregate, pruning rule, score term, and tie-breaker has an inferred cost class.
+
+Cost classes in v1:
+
+- `state` — depends only on state-visible refs, parameters, and cheaper dependencies
+- `candidate` — depends on candidate metadata and cheaper dependencies, but no preview
+- `preview` — requires preview
+
+Rules:
+
+- the cost class of a node is the highest cost class of its dependencies
+- runtime must evaluate cheaper work before preview work
+- preview work must be lazy and cached
+- diagnostics must report cost classes per profile
+
+## Approved Policy Reference Surface
+
+Policies do not read raw `GameState`. They read approved generic policy refs.
+
+### Always-available built-ins
+
+- `seat.self`
+- `seat.active`
+- `turn.phaseId`
+- `turn.stepId`
+- `turn.round`
+- `candidate.actionId`
+- `candidate.param.<name>` for scalar params and fixed id lists only
+- `candidate.isPass`
+- `candidate.stableMoveKey`
+
+The candidate set consists only of fully decision-complete concrete legal moves already produced by the generic legality/decision pipeline.
+
+### Approved authored state surfaces
+
+Policies may read authored runtime data only when it is classifiable as public or acting-seat-visible:
+
+- `var.global.<id>`
+- `var.seat.<seat>.<id>`
+- `metric.<id>`
+- `victory.currentMargin.<seat>`
+- `victory.currentRank.<seat>`
+- explicitly public current-state metadata already exposed by the generic runtime, such as current public card or event metadata
+
+### Preview-safe surfaces
+
+Candidate features may read `preview.*` versions of the approved authored state surfaces:
+
+- `preview.var.global.<id>`
+- `preview.var.seat.<seat>.<id>`
+- `preview.metric.<id>`
+- `preview.victory.currentMargin.<seat>`
+- `preview.victory.currentRank.<seat>`
+
+`preview.*` means:
+
+- apply the candidate once through a generic preview layer
+- expose only refs that remain deterministic and visible to the acting seat at decision time
+- return `unknown` for anything hidden, random, or unresolved
+- preview operates on a concrete move only; it does not complete templates, resolve fresh decisions, or enumerate follow-up legal moves
+
+### Explicitly forbidden
+
+Policies may not read:
+
+- raw hidden zone contents
+- opponent private cards
+- deck order
+- future random outcomes
+- raw token scans or zone iteration if not already exposed as vars or metrics
+- verbalization strings
+- visual config
+- engine-private runtime caches
+
+If a policy needs some concept such as support pressure, coup timing pressure, pot-odds proxy, or own hand-strength proxy, author it as a variable or derived metric first.
+
+## Candidate Evaluation Model
+
+V1 policy evaluation is strictly one-ply over the provided `legalMoves`.
+
+### Evaluation phases
+
+1. Resolve acting seat and bound profile.
+2. Canonicalize the candidate list by stable move key.
+3. Compute state features once.
+4. Compute cheap candidate features that do not require preview.
+5. Apply ordered pruning rules, lazily computing any needed non-preview aggregates over the current candidate set.
+6. Compute preview-backed candidate features only for surviving candidates, lazily and at most once per candidate.
+7. Compute any aggregates that depend on preview-backed features, lazily over the current surviving candidate set.
+8. Sum score term contributions for surviving candidates.
+9. Keep candidates with maximal score.
+10. Apply ordered tie-breakers.
+11. Return exactly one legal move.
+
+Aggregate caches are invalidated whenever the current candidate set changes.
+
+### Candidate aggregates
+
+Candidate aggregates provide bounded cross-candidate reasoning without opening the door to search.
+
+Supported aggregate ops in v1:
+
+- `max`
+- `min`
+- `count`
+- `any`
+- `all`
+- `rankDense`
+- `rankOrdinal`
+
+Rules:
+
+- aggregates operate only over the current candidate set at the point they are used
+- aggregates may reference already-computed features only
+- aggregates may not iterate raw game state
+- aggregates may not depend on final tie-break outcomes
+- nested aggregate chains are allowed only when acyclic and when each step remains `O(n)`
+
+This is enough to express rules like:
+
+- reject pass if any non-pass move clears a threshold
+- reward top-ranked moves by a specific feature
+- prefer rare move types only when the field is otherwise weak
+
+### Pruning rules
+
+Pruning rules are ordered candidate elimination rules.
+
+Each pruning rule defines:
+
+- `when`: boolean expression evaluated per candidate
+- `onEmpty`: `skipRule` or `error`
+
+Semantics:
+
+- if `when` is true for a candidate, that candidate is removed
+- if `when` is `unknown`, treat it as `false` unless the authored expression explicitly coalesces otherwise
+- if applying the rule would remove every remaining candidate:
+  - `skipRule`: ignore that rule for this decision point
+  - `error`: emit a policy error and jump to emergency fallback
+
+Default recommendation: use `skipRule` unless the rule encodes a structural invariant that must never be violated.
+
+Pruning rules are for coarse elimination only. Anything that smells like a preference belongs in score terms, not in hard pruning.
+
+### Score terms
+
+Each surviving candidate receives:
+
+    totalScore = sum(termContribution)
+
+Each score term defines:
+
+- optional `when`
+- `weight`
+- `value`
+- optional `unknownAs`
+- optional `clamp`
+
+Contribution semantics:
+
+- if `when` exists and evaluates `false` or `unknown`, contribution is `0` unless the expression explicitly coalesces otherwise
+- otherwise contribution is `weight * value`, then optionally clamped
+- if the term result is `unknown`, use `unknownAs` if provided, else `0`
+
+This single shape replaces a zoo of special term kinds. Constant bonuses, feature weights, threshold bonuses, rank bonuses, and penalties all fit here.
+
+### Tie-breakers
+
+Tie-breakers are applied after score equality.
+
+Supported kinds in v1:
+
+- `higherExpr`
+- `lowerExpr`
+- `preferredEnumOrder`
+- `preferredIdOrder`
+- `rng`
+- `stableMoveKey`
+
+Rules:
+
+- tie-breakers are ordered
+- `rng` may appear only after all deterministic tie-breakers
+- if `rng` is used, it must sample from the tied set after canonical stable-key ordering
+- if `rng` is not used, the final tie-breaker must be `stableMoveKey`
+- for `higherExpr` and `lowerExpr`, known values beat `unknown`; if all tied candidates are `unknown`, the tie-breaker has no effect
+- for `preferredEnumOrder` and `preferredIdOrder`, unknown or unlisted values sort last
+
+This makes the runtime deterministic for the same seed while remaining invariant to input move order.
+
+### Determinism Rules
+
+The policy runtime must be deterministic under the intended information model.
+
+Rules:
+
+- candidate order is canonicalized before evaluation
+- `stableMoveKey` must be derived from a canonical move serialization independent of map or object insertion order
+- RNG may be consumed only by an explicit `rng` tie-breaker
+- the same visible decision surface plus the same seed must yield the same selected move
+- hidden information unavailable to the acting seat must not change policy evaluation
+
+### Emergency fallback
+
+`PolicyAgent` must always return a legal move.
+
+If evaluation fails at runtime despite successful compilation, the agent must:
+
+1. emit a `policy.emergencyFallback` trace event with the reason
+2. return the canonical first legal move by stable move key
+
+This is a safety net, not normal behavior. Golden tests and benchmark scenarios should treat emergency fallback as a failure condition.
+
+## Visibility and Preview Rules
+
+This section is non-negotiable.
+
+### Visibility
+
+Policy evaluation must be invariant to hidden information that the acting seat cannot observe.
+
+Equivalent acting-seat observations must produce identical:
+
+- feature values
+- candidate pruning decisions
+- scores
+- tie-break paths
+- selected move
+
+If two full states differ only in hidden information unavailable to the acting seat, authored policy may not produce different results.
+
+### Preview
+
+`preview.*` exists to support one-ply heuristics without cheating.
+
+Rules:
+
+- preview is a generic runtime service, not raw policy access to `applyMove`
+- preview may internally reuse `applyMove`, but the exposed surface must be masked through the policy visibility rules
+- preview may expose only deterministic, seat-visible refs after the move
+- if a candidate's effect depends on hidden information or unresolved randomness, affected preview refs resolve to `unknown`
+- score terms may handle `unknown`
+- pruning rules depending on `unknown` use boolean `false` unless explicitly coalesced otherwise
+- preview is cached per surviving candidate
+- preview may not request legal moves for the previewed state
+- preview may not recurse
+
+In perfect-information games, preview will often expose useful victory-margin or metric deltas.  
+In imperfect-information games such as Texas Hold'em, preview must not leak undealt cards, opponent private cards, or deck order.
 
 ## Compiler Responsibilities
 
 The compiler must:
 
-1. Parse the new `agents` section.
-2. Validate schema and determinism constraints.
-3. Lower policy definitions into a runtime-safe `GameDef` policy IR.
-4. Validate seat bindings against declared seats.
-5. Validate all feature and term references.
-6. Reject cyclic feature dependencies.
-7. Reject policy expressions that depend on presentation config.
-8. Reject policies that require hidden state visibility beyond the acting seat's legal decision surface.
+1. Parse and validate the new `agents` section.
+2. Lower authoring maps into a normalized runtime catalog with stable ids.
+3. Type-check every expression.
+4. Resolve all feature, aggregate, parameter, and profile references.
+5. Classify every runtime ref by visibility and preview-safety.
+6. Infer cost class for every feature, aggregate, rule, term, and tie-breaker.
+7. Reject cycles in the feature and aggregate dependency graph.
+8. Reject inline anonymous logic inside profiles.
+9. Reject references to visual config or presentation-only metadata.
+10. Reject refs to hidden or preview-unsafe data.
+11. Reject arbitrary raw state traversal not already surfaced as vars, metrics, or public metadata.
+12. Reject duplicate entries in a profile's rule, term, or tie-break lists.
+13. Reject profiles whose deterministic tie-break contract is incomplete.
+14. Compute catalog and profile fingerprints for traceability.
+15. Produce a static diagnostics report with:
+    - resolved profile dependencies
+    - parameter tables and defaults
+    - visibility classifications
+    - preview usage
+    - cost summary
+    - fingerprints
 
 ## GameDef Additions
 
-Add a new optional field:
+Add:
 
-```typescript
-interface GameDef {
-  readonly agents?: AgentPolicyCatalog;
-}
-```
+    interface GameDef {
+      readonly agents?: AgentPolicyCatalog;
+    }
 
 Where:
 
-- `AgentPolicyCatalog` is a generic, compiled runtime representation.
-- No game-specific code lives in it.
-- It is pure data.
+    interface AgentPolicyCatalog {
+      readonly schemaVersion: 1;
+      readonly catalogFingerprint: string;
+      readonly parameterDefs: Readonly<Record<ParamId, CompiledParameterDef>>;
+      readonly profiles: Readonly<Record<PolicyProfileId, CompiledPolicyProfile>>;
+      readonly bindingsBySeat: Readonly<Record<SeatId, PolicyProfileId>>;
+      readonly libraryIndex: CompiledPolicyLibraryIndex;
+    }
+
+A compiled profile should include at least:
+
+- profile id
+- profile fingerprint
+- resolved parameter values
+- dependency-ordered features
+- dependency-ordered aggregates
+- ordered pruning rules
+- ordered score terms
+- ordered tie-breakers
+- cost summary
+
+Requirements:
+
+- compiled catalog is pure data
+- no game-specific code lives in it
+- authored ids remain available for traces and diagnostics
+- compiled IR stores resolved refs, dependency order, cost classes, and parameter metadata
+- compiled IR remains valid JSON and round-trips through `GameDef` serialization without custom revivers
 
 ## Runtime Components
 
+### Agent Descriptor Model
+
+Normalize agent selection into structured descriptors before execution:
+
+    type AgentDescriptor =
+      | { readonly kind: 'policy'; readonly profileId?: PolicyProfileId }
+      | { readonly kind: 'builtin'; readonly builtinId: 'random' | 'greedy' };
+
+Runner-only seat configuration may wrap this in a higher-level controller descriptor such as:
+
+    type SeatController =
+      | { readonly kind: 'human' }
+      | { readonly kind: 'agent'; readonly agent: AgentDescriptor };
+
+Rules:
+
+- engine factories and runner state must store structured descriptors, not `ai-greedy`-style sentinel strings
+- CLI may parse textual shorthands, but must lower them immediately into structured descriptors
+- `policy` without `profileId` means resolve authored binding for the acting seat
+- `policy` with `profileId` means force that authored profile for experimentation
+
 ### PolicyAgent
 
-Create a generic `PolicyAgent` implementation with the same simulator contract as every other agent:
+Create a generic `PolicyAgent` with the existing simulator contract:
 
-- input: `def`, `state`, `playerId`, `legalMoves`, `rng`, `runtime`
-- output: `{ move, rng }`
+    chooseMove(input: {
+      def: GameDef;
+      state: GameState;
+      playerId: PlayerId;
+      legalMoves: readonly Move[];
+      rng: Rng;
+      runtime?: GameDefRuntime;
+    }): { move: Move; rng: Rng }
 
-`PolicyAgent` resolves the acting seat, loads the bound profile, computes candidate scores, and returns the selected legal move.
+Responsibilities:
 
-### Candidate Evaluation Runtime
+- resolve acting seat
+- resolve bound profile
+- evaluate candidates
+- select one legal move
+- emit policy traces
+- never inspect undeclared game-specific behavior paths
 
-Add a reusable policy evaluator module responsible for:
+### Policy Evaluator
 
-- candidate completion,
-- feature evaluation,
-- post-move evaluation using `applyMove`,
-- score accumulation,
-- tie-breaking,
-- optional trace emission.
+Add a reusable evaluator module responsible for:
 
-This runtime must be pure and deterministic for the same `(GameDef, state, playerId, legalMoves, rng)`.
+- canonical candidate ordering
+- feature evaluation
+- aggregate evaluation
+- pruning
+- lazy preview evaluation
+- score accumulation
+- tie-breaking
+- deterministic RNG usage
+- trace emission
 
-### Policy Trace
+The evaluator must be pure and deterministic for the same compiled catalog, same visible decision surface, same legal moves, and same RNG state.
 
-Extend trace output to capture policy reasoning generically:
+### Preview Runtime
 
+Add a generic preview module responsible for:
+
+- applying a candidate one ply for policy evaluation
+- masking or rejecting hidden or preview-unsafe refs
+- caching preview results per candidate
+- never expanding into search or re-enumerating legal moves
+
+### Diagnostics
+
+Add a generic diagnostics formatter that can print or serialize:
+
+- resolved profile plan
+- cost tiers
+- visible vs preview refs
+- parameter values
+- fingerprints
+
+This is important for the iterative improvement loop. Policies must be inspectable without reading engine code.
+
+## Trace Model
+
+Replace narrow `ai-random` / `ai-greedy` framing with generic policy-aware traces.
+
+Do not keep policy decisions encoded as a two-value seat-type enum. Trace payloads must identify the resolved agent descriptor and, for policy agents, the resolved profile and seat ids.
+
+Always-on decision summary should capture:
+
+- seat id
 - resolved profile id
-- candidate count before/after filters
-- per-candidate final score
-- winning candidate index
-- top contributing score terms
-- tie-break path used
+- profile fingerprint
+- initial candidate count
+- candidate count after each pruning rule
+- selected candidate stable key
+- final score
+- tie-break chain used
+- whether emergency fallback fired
 
-This replaces the current narrow `ai-random` / `ai-greedy` trace framing.
+Verbose decision traces should additionally capture:
+
+- per-candidate stable key
+- per-candidate elimination reason
+- per-candidate score contributions by term
+- preview refs evaluated
+- unknown values encountered and how they were handled
+
+Trace verbosity should be runtime-configurable. Full candidate tables should be opt-in, not mandatory overhead on every run.
 
 ## CLI and Runner Implications
 
-The architecture should converge on policy-aware agent selection:
+Stop assuming only `random` and `greedy`.
 
-- CLI `--agents` must support policy-bound seats and generic runtime agent kinds.
-- Runner AI seat config must stop assuming only `random` and `greedy`.
-- FITL solitaire should ultimately pick authored seat policies by default.
+CLI shorthands may remain:
 
-No backwards compatibility means these interfaces may be redesigned rather than patched.
+- `policy` — use authored seat bindings
+- `policy:<profileId>` — force a specific authored profile
+- `builtin:random`
+- `builtin:greedy`
 
-## FITL Authoring Model
+Rules:
 
-For Fire in the Lake, authored policy should be structured as:
+- non-human seats default to `policy`
+- authored bindings remain the default seat resolution
+- built-in developer agents remain available for smoke tests and debugging
+- CLI and runner config should be redesigned around structured agent descriptors, not patched with more string cases
+- runner pre-game configuration should expose human vs agent first, then agent descriptor details
 
-- shared library of generic move/state features,
-- four separate seat profiles: `fitl-us`, `fitl-arvn`, `fitl-nva`, `fitl-vc`,
-- a minimal baseline profile for early smoke tests,
-- reusable profile fragments for event-vs-operation preference, resource preservation, support/opposition pressure, and coup timing.
+## Authoring Guidance
 
-The authored content remains game data. The runtime remains generic.
+### Fire in the Lake
 
-## Texas Hold'em Authoring Model
+FITL should author:
 
-Texas Hold'em should use the same runtime architecture but much simpler policies:
+- derived metrics for support and opposition pressure, resource pressure, coup pressure, and event or opportunity value proxies
+- four seat-bound profiles via top-level bindings
+- shared library items reused across those profiles
+- minimal baseline profiles first, then stronger faction-specific policies
 
-- fold/check/call/raise preference terms,
-- pot odds approximations encoded as features,
-- street-aware aggression thresholds,
-- hand-strength proxy terms.
+Do not add FITL-specific runtime branches. If FITL needs a concept, author the metric.
 
-This validates that the policy IR is not COIN-specific.
+### Texas Hold'em
+
+Texas Hold'em should author:
+
+- seat-visible derived metrics for own hand-strength proxy, pot-odds proxy, stack pressure, street phase, and position pressure
+- simpler score terms around fold, check, call, and raise choice
+- minimal or no preview usage before showdown, because most interesting future outcomes depend on hidden cards
+
+Do not let Hold'em policies inspect opponent hole cards, deck order, or undealt board cards through preview or victory evaluation.
 
 ## Evolution Readiness Requirements
 
-This spec must make future evolution straightforward.
+This spec exists to make future policy evolution practical.
 
-Therefore the IR must be:
+Therefore the mutable surface must be explicit and bounded.
 
-- bounded,
-- serializable,
-- diffable,
-- composable,
-- locally mutable,
-- safe to validate before simulation.
+Primary mutation targets:
 
-Evolution should later mutate:
+- parameter values
+- profile inclusion or exclusion of named pruning rules
+- profile inclusion or exclusion of named score terms
+- profile tie-break order
+- `idOrder` parameter values
 
-- term weights,
-- thresholds,
-- preferred action/category orders,
-- enabled/disabled filters,
-- profile composition,
-- selected reusable fragments.
+Secondary mutation targets, to be allowed only by future evolution config:
 
-Evolution should not mutate:
+- shared parameter defaults
+- seat bindings for controlled experiments
 
-- compiler/runtime code,
-- simulator logic,
-- trace semantics,
-- victory evaluation logic,
-- presentation config.
+Not mutation targets:
+
+- runtime or compiler code
+- simulator logic
+- preview semantics
+- visual config
+- raw authored rules outside the declared agents section
+
+The compiled catalog must expose enough metadata for a future evaluator to mutate policies without editing arbitrary YAML fragments blindly.
 
 ## Validation Rules
 
 Required validation rules include:
 
-1. Every seat used in simulation must resolve to exactly one policy profile.
-2. No policy profile may reference unknown features or seats.
-3. Feature dependency graphs must be acyclic.
-4. Tie-break chains must end deterministically.
-5. Policies may only reference generic runtime surfaces approved for policy evaluation.
-6. Post-move evaluation terms must declare explicit budgets and reuse compiled runtime caches.
-7. Candidate completion must be bounded to avoid combinatorial blowups.
-8. Policies may not depend on visual config or presentation-only metadata.
+1. Every policy-backed seat resolves to exactly one profile.
+2. Every referenced profile, parameter, feature, aggregate, rule, term, and tie-breaker exists.
+3. Every expression is well-typed.
+4. Feature and aggregate dependency graphs are acyclic.
+5. Duplicate rule, term, or tie-break entries in a profile are invalid.
+6. Tunable numeric parameters have finite bounds.
+7. `idOrder` parameters may only contain allowed ids exactly once each.
+8. Candidate param refs target only scalar leaves or fixed id lists.
+9. Preview refs are allowed only on preview-safe surfaces.
+10. Policies may not depend on hidden information outside acting-seat visibility.
+11. Policies may not reference visual config or presentation metadata.
+12. Profiles must end in deterministic tie-break semantics: `stableMoveKey`, or canonicalized `rng`.
+13. No silent truncation of legal candidates is allowed.
+14. Emergency fallback must be traceable whenever it occurs.
+15. Division-by-zero and other invalid arithmetic states must resolve deterministically via compile-time rejection or explicit guarding or coalescing.
 
 ## Performance Constraints
 
-This architecture exists partly because universal MCTS was too slow.
+This architecture exists partly because unrestricted search was too slow.
 
 Therefore:
 
-- policy evaluation must be O(number of concrete candidates) with bounded per-candidate work,
-- post-move evaluation should reuse `GameDefRuntime`,
-- optional feature caching should be per-decision-point only,
-- no deep tree search is required for v1,
-- each policy term must have predictable cost characteristics.
+- evaluation is one-ply over the provided legal move list
+- cheap features and pruning run before preview
+- preview is lazy and cached
+- no rollout, no tree expansion, and no legal-move re-enumeration during evaluation
+- candidate aggregates must remain `O(n)` over the current candidate set
+- per-candidate work must be predictable from compiled cost classes
+- runtime must expose hard safety limits and fail loudly rather than silently truncate
 
-For FITL, the acceptance target is that a single turn is measured in milliseconds to low seconds, not minutes.
+Acceptance target:
+
+- authored policy evaluation must stay comfortably below specialized search-heavy or rule-procedural baselines
+- FITL benchmark scenarios should complete decisions in milliseconds to low seconds, not minutes
 
 ## Testing Requirements
 
 ### Unit Tests
 
 - parse and lower valid `agents` sections
-- reject invalid seat bindings
-- reject cyclic feature dependencies
-- deterministic candidate scoring with same seed
-- deterministic tie-break semantics
+- reject invalid bindings
+- reject bindings that reference seats absent from the resolved seat catalog/scenario
+- reject invalid parameter values
+- reject cyclic feature or aggregate dependencies
+- reject hidden or preview-unsafe refs
+- deterministic stable move key generation
+- pruning `onEmpty` semantics
+- score term unknown handling
+- tie-break determinism
 - profile selection by seat id
+- fingerprint stability for unchanged authored policy
+- `GameDef.agents` JSON serialization round-trips without loss
 
 ### Integration Tests
 
 - `PolicyAgent` returns only legal moves
-- same state + seed + profile yields identical move
-- FITL authored seat profiles can complete long self-play runs without runtime errors
-- Texas Hold'em authored policy profiles work through the same runtime
+- same visible decision surface plus same seed plus same profile yields identical move
+- two states that differ only in hidden, acting-seat-invisible data yield identical policy evaluation
+- FITL authored profiles complete long self-play runs without runtime errors
+- Texas Hold'em authored policies use the same runtime without hidden-info leaks
+- scenario-selected seat catalogs resolve the correct authored policy bindings
 
 ### Property Tests
 
 - policy evaluation never returns a move outside `legalMoves`
-- deterministic replay holds for identical seeds
-- disabling all non-fallback candidates still yields a valid fallback outcome if one is configured
+- permutation of input `legalMoves` order does not change the selected move except through canonical RNG with the same seed
+- emergency fallback, if triggered, still returns a legal move
+- identical seeds replay deterministically
+- pruning with `skipRule` never empties the candidate set
 
 ### Golden Tests
 
-- authored FITL baseline profiles lower to expected `GameDef.agents` IR
-- policy traces match expected structure for fixed seeds
+- baseline FITL profiles lower to expected compiled `GameDef.agents`
+- baseline Texas Hold'em profiles lower to expected compiled `GameDef.agents`
+- policy traces match expected summary structure for fixed seeds
+- verbose candidate tables match expected reasoning for curated scenarios
+
+### Benchmark Tests
+
+- fixed scenario corpus for FITL and Texas Hold'em
+- report candidate counts, preview counts, and p50/p95 decision times
+- fail the benchmark suite on major regressions
+- record emergency fallback count; expected value is zero in benchmark corpora
 
 ## Migration Plan
 
-1. Add `GameSpecDoc.agents` and compiler/lowering support.
-2. Add `GameDef.agents` runtime schema.
-3. Implement generic `PolicyAgent`.
-4. Update CLI and runner to support policy-backed AI selection.
-5. Author a minimal baseline policy for both existing games.
-6. Replace FITL-specific external bot assumptions with authored FITL seat profiles.
-7. Update evolution design to mutate policy IR rather than assume external fixed agents.
+1. Add `GameSpecDoc.agents` schema, parameter model, and compiler support.
+2. Add prerequisite generic visibility metadata and scenario-aware seat-resolution hooks for policy surfaces.
+3. Add `GameDef.agents` normalized JSON-serializable runtime schema with fingerprints.
+4. Implement policy expression evaluation, candidate aggregates, and pruning.
+5. Implement visibility classification and preview runtime.
+6. Implement generic `PolicyAgent`.
+7. Redesign CLI and runner agent descriptors around structured `policy` plus built-ins.
+8. Author minimal baseline policies and needed derived metrics for FITL and Texas Hold'em in `GameSpecDoc` / scenario-linked data only.
+9. Move default non-human execution to authored `policy`.
+10. Update future evolution specs to target parameters and profile assemblies rather than external fixed agents.
+
+## Decisions Replacing the Previous Open Questions
+
+1. V1 is strictly one-ply. No rollout primitive is reserved now.
+2. V1 profiles stay flat. Reuse happens through named library items only.
+3. `random` and `greedy` remain available as built-in developer agents, but they are no longer the default architecture or runner assumption.
 
 ## Acceptance Criteria
 
-- [ ] `GameSpecDoc` can declare generic, seat-bound AI policies.
-- [ ] `GameDef` carries a compiled, generic policy catalog.
-- [ ] Simulation remains unchanged except for consuming generic `Agent` implementations.
-- [ ] `PolicyAgent` can execute authored policies without game-specific code branches.
-- [ ] FITL can express four asymmetric seat policies as game data.
-- [ ] Texas Hold'em can express a simpler authored policy through the same runtime.
+- [ ] `GameSpecDoc` can declare authored policies through parameters, library items, flat profiles, and seat bindings.
+- [ ] `GameDef` carries a compiled `AgentPolicyCatalog` with fingerprints.
+- [ ] `GameDef.agents` remains JSON-serializable and schema-valid.
+- [ ] `PolicyAgent` executes authored policies with no game-specific runtime branches.
+- [ ] V1 evaluates only concrete legal moves and does not support template completion or rollouts.
+- [ ] Policies may read only approved visible refs and preview-safe refs.
+- [ ] Hidden information unavailable to the acting seat cannot affect policy results.
+- [ ] Policy bindings resolve against canonical scenario-selected seat ids, not player indexes.
+- [ ] Fire in the Lake can express four asymmetric seat policies as authored game data.
+- [ ] Texas Hold'em can express authored policies through the same runtime without hidden-info leakage.
 - [ ] Policy traces explain why a move was selected.
-- [ ] The architecture is evolution-ready: bounded, mutable, validated, and deterministic.
+- [ ] Random and greedy remain opt-in tools, not architectural defaults.
+- [ ] `visual-config.yaml` remains presentation-only and contains no policy authoring or policy runtime data.
+- [ ] The compiled policy surface is bounded, deterministic, validated, and evolution-ready.
 
 ## Files to Create/Modify
 
-```text
-packages/engine/src/cnl/game-spec-doc.ts
-packages/engine/src/cnl/compiler-core.ts
-packages/engine/src/cnl/compile-agents.ts
-packages/engine/src/kernel/types-core.ts
-packages/engine/src/kernel/schemas-core.ts
-packages/engine/src/agents/policy-agent.ts
-packages/engine/src/agents/policy-eval.ts
-packages/engine/src/agents/factory.ts
-packages/engine/src/trace/trace-events.ts
-packages/engine/test/unit/cnl/compile-agents.test.ts
-packages/engine/test/unit/agents/policy-agent.test.ts
-packages/engine/test/integration/fitl-policy-agent.test.ts
-packages/engine/test/integration/texas-holdem-policy-agent.test.ts
-data/games/fire-in-the-lake/*.md
-data/games/texas-holdem/*.md
-```
-
-## Open Questions
-
-1. Should post-move feature evaluation be limited to one-ply lookahead only in v1, or should the IR reserve a generic shallow rollout primitive now?
-2. Should profile composition be explicit in the first version, or should v1 keep profiles flat and only allow reuse through library references?
-3. Should the CLI and runner still expose `random` and `greedy` as developer tools, or should all non-human seats move immediately to authored policy selection?
-
+    packages/engine/src/cnl/game-spec-doc.ts
+    packages/engine/src/cnl/compiler-core.ts
+    packages/engine/src/cnl/compile-agents.ts
+    packages/engine/src/kernel/types-core.ts
+    packages/engine/src/kernel/schemas-core.ts
+    packages/engine/src/agents/policy-ir.ts
+    packages/engine/src/agents/policy-expr.ts
+    packages/engine/src/agents/policy-agent.ts
+    packages/engine/src/agents/policy-eval.ts
+    packages/engine/src/agents/policy-preview.ts
+    packages/engine/src/agents/policy-diagnostics.ts
+    packages/engine/src/agents/factory.ts
+    packages/engine/src/trace/trace-events.ts
+    packages/runner/src/store/store-types.ts
+    packages/runner/src/session/session-types.ts
+    packages/runner/src/store/ai-move-policy.ts
+    packages/runner/src/ui/PreGameConfigScreen.tsx
+    packages/runner/src/trace/console-trace-subscriber.ts
+    packages/engine/test/unit/cnl/compile-agents.test.ts
+    packages/engine/test/unit/agents/policy-expr.test.ts
+    packages/engine/test/unit/agents/policy-preview.test.ts
+    packages/engine/test/unit/agents/policy-agent.test.ts
+    packages/engine/test/integration/fitl-policy-agent.test.ts
+    packages/engine/test/integration/texas-holdem-policy-agent.test.ts
+    packages/engine/test/property/policy-determinism.test.ts
+    packages/engine/test/property/policy-visibility.test.ts
+    packages/engine/test/benchmark/policy-agent.bench.ts
+    data/games/fire-in-the-lake.game-spec.md
+    data/games/fire-in-the-lake/*.md
+    data/games/texas-holdem.game-spec.md
+    data/games/texas-holdem/*.md
+    no policy data in data/games/*/visual-config.yaml

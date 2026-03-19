@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner verification only
-**Deps**: archive/tickets/RUNARCH/RUNARCH-001-make-presentation-scene-the-authoritative-canvas-frame.md, archive/tickets/RUNARCH/RUNARCH-002-canonical-keyed-text-reconciler.md, archive/tickets/RUNARCH/RUNARCH-003-complete-renderer-migration-to-presentation-specs.md, archive/tickets/RUNARCH/RUNARCH-005-extract-semantic-runner-frame-from-render-model.md, tickets/RUNARCH-006-remove-legacy-derive-render-model-wrapper.md, archive/tickets/RUNPRESLIFE/68RUNPRESLIFE-005-fitl-canvas-stress-regression.md
+**Deps**: archive/tickets/RUNARCH/RUNARCH-001-make-presentation-scene-the-authoritative-canvas-frame.md, archive/tickets/RUNARCH/RUNARCH-002-canonical-keyed-text-reconciler.md, archive/tickets/RUNARCH/RUNARCH-003-complete-renderer-migration-to-presentation-specs.md, archive/tickets/RUNARCH/RUNARCH-005-extract-semantic-runner-frame-from-render-model.md, archive/tickets/RUNARCH/RUNARCH-006-remove-legacy-derive-render-model-wrapper.md, archive/tickets/RUNPRESLIFE/68RUNPRESLIFE-005-fitl-canvas-stress-regression.md
 
 ## Problem
 
@@ -16,7 +16,7 @@ That is a missing architecture quality gate. A clean architecture is not complet
 
 1. The archived FITL browser stress ticket was left not implemented, so the crash class still depends on manual discovery rather than a machine-enforced browser regression harness.
 2. FITL remains the right first heavy-weight fixture because it exercises dense text, overlays, regions, token layouts, card faces, and lifecycle churn simultaneously.
-3. `RUNARCH-005` is archived, but the codebase still retains a legacy `derive-render-model.ts` convenience wrapper used by older model tests. That wrapper is transitional cleanup debt, not the architecture this browser harness should validate.
+3. `RUNARCH-005` is archived and `RUNARCH-006` removes the legacy `derive-render-model.ts` convenience wrapper. This browser harness should validate the explicit `RunnerFrame` plus `projectRenderModel()` architecture, not any mixed transitional path.
 4. Corrected scope: this ticket is not a substitute for architectural cleanup; it is the verification gate that ensures the final runner boundary defined by `RUNARCH-001` through `RUNARCH-006` holds under real browser rendering.
 
 ## Architecture Check
@@ -63,7 +63,7 @@ Structure the harness so additional large games can be added later without rewri
 
 ### 4. Validate the final architecture, not an intermediate one
 
-Do not couple the browser harness to transitional runner contracts such as the legacy `derive-render-model.ts` wrapper. The harness should exercise the post-`RUNARCH-006` architecture and remain agnostic to whether the canvas/UI surfaces are backed by Pixi, DOM selectors, or later internal refactors.
+Do not couple the browser harness to removed or transitional runner contracts such as the old `derive-render-model.ts` wrapper. The harness should exercise the post-`RUNARCH-006` architecture and remain agnostic to whether the canvas/UI surfaces are backed by Pixi, DOM selectors, or later internal refactors.
 
 ## Files to Touch
 

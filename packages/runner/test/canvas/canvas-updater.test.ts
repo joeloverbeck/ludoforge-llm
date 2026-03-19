@@ -113,28 +113,45 @@ function createCanvasTestStore(initial: Omit<CanvasTestStoreState, 'runnerFrame'
     subscribeWithSelector(() => snapshot),
   );
   const baseSetState = store.setState.bind(store);
+
+  const materializeState = (
+    state: CanvasTestStoreState,
+    next: Partial<CanvasTestStoreState>,
+  ): CanvasTestStoreState => ({
+    ...state,
+    ...next,
+    runnerFrame: 'renderModel' in next
+      ? (next.renderModel === null ? null : toRunnerFrame(next.renderModel))
+      : state.runnerFrame,
+  });
+
   store.setState = ((partial, replace) => {
     if (typeof partial === 'function') {
+      if (replace === true) {
+        return baseSetState((state) => {
+          const next = partial(state);
+          if (next === null || typeof next !== 'object') {
+            return state;
+          }
+          return materializeState(state, next as Partial<CanvasTestStoreState>);
+        }, true);
+      }
+
       return baseSetState((state) => {
         const next = partial(state);
         if (next === null || typeof next !== 'object') {
-          return next;
+          return state;
         }
-        return {
-          ...next,
-          runnerFrame: 'renderModel' in next
-            ? (next.renderModel === null ? null : toRunnerFrame(next.renderModel))
-            : state.runnerFrame,
-        };
-      }, replace);
+        return materializeState(state, next as Partial<CanvasTestStoreState>);
+      });
     }
     const next = partial as Partial<CanvasTestStoreState>;
-    return baseSetState({
-      ...next,
-      runnerFrame: 'renderModel' in next
-        ? (next.renderModel === null ? null : toRunnerFrame(next.renderModel))
-        : store.getState().runnerFrame,
-    }, replace);
+
+    if (replace === true) {
+      return baseSetState(materializeState(store.getState(), next), true);
+    }
+
+    return baseSetState(materializeState(store.getState(), next));
   }) as typeof store.setState;
   return store;
 }

@@ -1,6 +1,6 @@
 # RUNARCH-006: Remove Legacy `derive-render-model` Wrapper
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only boundary cleanup
@@ -20,15 +20,17 @@ This is no longer an implementation convenience; it is boundary debt. A clean, d
 ## Assumption Reassessment (2026-03-19)
 
 1. `packages/runner/src/store/game-store.ts` already uses `deriveRunnerFrame()` and `projectRenderModel()` directly. The remaining wrapper is not part of the authoritative runtime path.
-2. Current direct `deriveRenderModel()` usage is concentrated in runner model tests (`derive-render-model-state`, `derive-render-model-zones`, and `derive-render-model-structural-sharing`). That means the cleanup is real, but the blast radius is contained and should be handled as a deliberate migration rather than left indefinitely.
-3. `packages/runner/src/store/store-types.ts` still includes `visualConfigProvider?: VisualConfigProvider` on `RenderContext`. That is a corrected scope item this ticket must remove because semantic derivation should not even type-reference visual-config concerns.
-4. Corrected scope: this ticket should finish the architecture introduced by `RUNARCH-005`, not add another compatibility layer. Delete the wrapper, migrate remaining tests/callers, and tighten the type boundary so semantic inputs remain presentation-agnostic.
+2. Current direct `deriveRenderModel()` usage is limited to three runner model test files: `derive-render-model-state`, `derive-render-model-zones`, and `derive-render-model-structural-sharing`. Supporting boundary/type tests also still mention the leaked provider field on `RenderContext`, so the cleanup blast radius is still contained but slightly different from a pure call-site migration.
+3. `packages/runner/src/store/store-types.ts` still includes `visualConfigProvider?: VisualConfigProvider` on `RenderContext`, and `packages/runner/test/store/store-types.test.ts` explicitly constructs that field. That is a corrected scope item this ticket must remove because semantic derivation should not even type-reference visual-config concerns.
+4. `tickets/RUNARCH-004-add-browser-stress-regression-for-heavy-visual-games.md` already depends on this cleanup. This ticket only needs to keep that reference accurate; it does not need to introduce the dependency from scratch.
+5. Corrected scope: this ticket should finish the architecture introduced by `RUNARCH-005`, not add another compatibility layer. Delete the wrapper, migrate remaining tests/callers, and tighten the type boundary so semantic inputs remain presentation-agnostic.
 
 ## Architecture Check
 
 1. Removing the wrapper is cleaner than preserving a "convenience" API because the wrapper encodes the old mixed mental model and invites future callers to bypass the explicit semantic/projection split.
-2. Removing `VisualConfigProvider` from `RenderContext` preserves the repository contract cleanly: `GameSpecDoc` contains game-specific non-visual data, `visual-config.yaml` contains game-specific visual presentation data, and neither `GameDef` nor semantic derivation imports visual policy.
-3. No backwards-compatibility aliasing or shim should survive this cleanup. Break direct `deriveRenderModel()` callers and migrate them to the explicit two-step architecture.
+2. The current wrapper is architecturally worse than dead code because it cannot pass a real previous `RunnerFrame`, so it hides the actual semantic/projection boundary and makes stability assertions easy to attach to the wrong layer.
+3. Removing `VisualConfigProvider` from `RenderContext` preserves the repository contract cleanly: `GameSpecDoc` contains game-specific non-visual data, `visual-config.yaml` contains game-specific visual presentation data, and neither `GameDef` nor semantic derivation imports visual policy.
+4. No backwards-compatibility aliasing or shim should survive this cleanup. Break direct `deriveRenderModel()` callers and migrate them to the explicit two-step architecture.
 
 ## What to Change
 
@@ -58,21 +60,22 @@ Migrate existing mixed-era model tests into boundary-accurate coverage:
 - semantic derivation tests should target `RunnerFrame`
 - projection tests should target `projectRenderModel()`
 - structural-sharing assertions should live on the layer that actually owns that stability guarantee
+- existing boundary tests such as `runner-frame-projection-boundary.test.ts` should be expanded only where they materially improve coverage, not duplicated
 
 Renaming test files is preferred if that makes ownership clearer. Do not keep misleading test names that imply a mixed derivation architecture after the wrapper is removed.
 
 ### 4. Update dependent tickets and references
 
-Update any active ticket references that still describe `derive-render-model.ts` as a legitimate architectural boundary. `RUNARCH-004` should explicitly depend on this cleanup so browser stress validation targets the final architecture rather than a transitional one.
+Update any active ticket references that still describe `derive-render-model.ts` as a legitimate architectural boundary. For `RUNARCH-004`, verify the existing dependency/reference still describes this cleanup correctly so browser stress validation targets the final architecture rather than a transitional one.
 
 ## Files to Touch
 
 - `packages/runner/src/model/derive-render-model.ts` (delete)
 - `packages/runner/src/store/store-types.ts` (modify)
+- `packages/runner/test/store/store-types.test.ts` (modify)
 - `packages/runner/test/model/*derive-render-model*` (modify/rename/split)
 - `packages/runner/test/model/*runner-frame*` (modify/add as needed)
-- `packages/runner/test/ui/helpers/*` (modify as needed)
-- `tickets/RUNARCH-004-add-browser-stress-regression-for-heavy-visual-games.md` (modify if needed for dependency/reference alignment)
+- `tickets/RUNARCH-004-add-browser-stress-regression-for-heavy-visual-games.md` (modify only if dependency/reference wording needs alignment)
 
 ## Out of Scope
 
@@ -105,6 +108,7 @@ Update any active ticket references that still describe `derive-render-model.ts`
 1. `packages/runner/test/model/*runner-frame*` — semantic derivation assertions updated or expanded to cover facts previously asserted through the wrapper.
 2. `packages/runner/test/model/*render-model*` or renamed projection tests — DOM/UI projection assertions moved to `projectRenderModel()` with provider ownership kept at projection time.
 3. Structural-sharing regression coverage — updated so the tests assert stability at the correct boundary instead of through the deleted wrapper.
+4. `packages/runner/test/store/store-types.test.ts` — type-level coverage updated so `RenderContext` no longer permits presentation-layer provider leakage.
 
 ### Commands
 
@@ -112,3 +116,22 @@ Update any active ticket references that still describe `derive-render-model.ts`
 2. `pnpm -F @ludoforge/runner typecheck`
 3. `pnpm -F @ludoforge/runner lint`
 4. `pnpm run check:ticket-deps`
+
+## Outcome
+
+- Completion date: 2026-03-19
+- What changed:
+  - deleted `packages/runner/src/model/derive-render-model.ts`
+  - removed `visualConfigProvider` from `RenderContext`
+  - migrated wrapper-based runner model tests to an explicit derive-then-project helper
+  - renamed the wrapper-era test files to `project-render-model-*`
+  - added direct semantic structural-sharing coverage in `runner-frame-structural-sharing.test.ts`
+  - updated `tickets/RUNARCH-004-add-browser-stress-regression-for-heavy-visual-games.md` so it now references the final post-cleanup architecture rather than an extant wrapper
+- Deviations from original plan:
+  - no production runner/store architecture changes were needed beyond deleting the wrapper and tightening the semantic context type because the store path was already on the correct `RunnerFrame` to `projectRenderModel()` boundary
+  - a small test-only typing fix was required in `packages/runner/test/canvas/canvas-updater.test.ts` so `pnpm -F @ludoforge/runner typecheck` could pass; this was outside the wrapper cleanup itself but necessary for the requested quality gate
+- Verification results:
+  - `pnpm -F @ludoforge/runner test` passed
+  - `pnpm -F @ludoforge/runner typecheck` passed
+  - `pnpm -F @ludoforge/runner lint` passed
+  - `pnpm run check:ticket-deps` passed

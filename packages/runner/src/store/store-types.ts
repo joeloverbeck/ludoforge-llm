@@ -8,7 +8,6 @@ import type {
   PlayerId,
   TerminalResult,
 } from '@ludoforge/engine/runtime';
-import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 
 export type PlayerSeat = 'human' | 'ai-random' | 'ai-greedy';
 
@@ -29,5 +28,4 @@ export interface RenderContext {
   readonly choiceStack: readonly PartialChoice[];
   readonly playerSeats: ReadonlyMap<PlayerId, PlayerSeat>;
   readonly terminal: TerminalResult | null;
-  readonly visualConfigProvider?: VisualConfigProvider;
 }

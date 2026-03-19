@@ -14,13 +14,15 @@
 
 1. `packages/runner/src/ui/AnimationControls.tsx` still mixes control-state binding, availability rules, and rendering in one component.
 2. No runner control-descriptor module currently exists under `packages/runner/src/ui/`.
-3. Corrected scope: this ticket should define the control model and builder only; it should not introduce popover UI yet.
+3. `archive/tickets/RUNCONSUR/60RUNCONSUR-002-split-top-overlay-into-status-and-session-chrome.md` moved `AnimationControls` into the session lane, but that only corrected placement. The remaining architectural smell is that the legacy component still owns control semantics in JSX.
+4. Corrected scope: this ticket should define the control model and builder only; it should not introduce popover UI yet.
 
 ## Architecture Check
 
 1. A descriptor builder is cleaner than letting each control surface duplicate store selectors and availability logic.
 2. The descriptor layer remains runner-owned and does not move playback semantics into `visual-config.yaml`, `GameDef`, or simulation state.
-3. No legacy JSX-first composition should remain the authoritative control definition after this ticket.
+3. This ticket is the point where control semantics stop living inside `AnimationControls`; after it lands, the legacy component should be demoted to an adapter at most, not the authoritative behavior definition.
+4. No legacy JSX-first composition should remain the authoritative control definition after this ticket.
 
 ## What to Change
 

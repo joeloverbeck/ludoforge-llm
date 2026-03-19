@@ -16,12 +16,33 @@
 }
 
 .topBar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  column-gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
   min-height: 64px;
   width: 100%;
+  pointer-events: none;
+}
+
+.topStatus {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  min-width: 0;
+  pointer-events: none;
+}
+
+.topSession {
+  grid-column: 3;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  min-width: 0;
   pointer-events: none;
 }
 

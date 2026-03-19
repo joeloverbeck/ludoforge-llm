@@ -3,7 +3,8 @@ import type { ReactElement, ReactNode } from 'react';
 import styles from './UIOverlay.module.css';
 
 interface UIOverlayProps {
-  readonly topBarContent?: ReactNode;
+  readonly topStatusContent?: ReactNode;
+  readonly topSessionContent?: ReactNode;
   readonly scoringBarContent?: ReactNode;
   readonly leftPanelContent?: ReactNode;
   readonly sidePanelContent?: ReactNode;
@@ -12,7 +13,8 @@ interface UIOverlayProps {
 }
 
 export function UIOverlay({
-  topBarContent,
+  topStatusContent,
+  topSessionContent,
   scoringBarContent,
   leftPanelContent,
   sidePanelContent,
@@ -23,7 +25,12 @@ export function UIOverlay({
     <div className={styles.overlay} data-testid="ui-overlay">
       <div className={styles.topRegion}>
         <div className={styles.topBar} data-testid="ui-overlay-top">
-          {topBarContent}
+          <div className={styles.topStatus} data-testid="ui-overlay-top-status">
+            {topStatusContent}
+          </div>
+          <div className={styles.topSession} data-testid="ui-overlay-top-session">
+            {topSessionContent}
+          </div>
         </div>
         {scoringBarContent != null && (
           <div className={styles.scoringBar} data-testid="ui-overlay-scoring">

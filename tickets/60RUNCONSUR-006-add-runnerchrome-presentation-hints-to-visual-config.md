@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner config schema/provider only
-**Deps**: specs/60-runner-control-surface-and-settings-menu.md, tickets/60RUNCONSUR-002-split-top-overlay-into-status-and-session-chrome.md
+**Deps**: specs/60-runner-control-surface-and-settings-menu.md, archive/tickets/RUNCONSUR/60RUNCONSUR-002-split-top-overlay-into-status-and-session-chrome.md
 
 ## Problem
 

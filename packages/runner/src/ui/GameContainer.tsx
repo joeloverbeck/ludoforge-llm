@@ -61,15 +61,14 @@ interface GameContainerProps {
   readonly onLoad?: () => void;
 }
 
-type OverlayRegion = 'top' | 'left' | 'side' | 'floating';
+type OverlayRegion = 'topStatus' | 'left' | 'side' | 'floating';
 
 const OVERLAY_REGION_PANELS: Readonly<Record<OverlayRegion, readonly OverlayPanelComponent[]>> = {
-  top: [
+  topStatus: [
     PhaseIndicator,
     TurnOrderDisplay,
     InterruptBanner,
     EventDeckPanel,
-    AnimationControls,
   ],
   left: [
     EligiblePanel,
@@ -274,6 +273,55 @@ export function GameContainer({
     }
   })();
 
+  const topStatusContent = renderOverlayRegionPanels(OVERLAY_REGION_PANELS.topStatus, overlayPanelProps);
+  const topSessionContent = (
+    <div className={styles.sessionChrome}>
+      <AnimationControls {...overlayPanelProps} />
+      <div className={styles.sessionButtons}>
+        <button
+          type="button"
+          className={`${styles.sessionButton} ${eventLogVisible ? styles.eventLogToggleActive : ''}`}
+          data-testid="event-log-toggle-button"
+          onClick={() => {
+            runnerUiStore.getState().toggleEventLogVisible();
+          }}
+        >
+          {eventLogVisible ? 'Hide Log' : 'Show Log'}
+        </button>
+        {onSave === undefined ? null : (
+          <button
+            type="button"
+            className={styles.sessionButton}
+            data-testid="session-save-button"
+            onClick={onSave}
+          >
+            Save
+          </button>
+        )}
+        {onLoad === undefined ? null : (
+          <button
+            type="button"
+            className={styles.sessionButton}
+            data-testid="session-load-button"
+            onClick={onLoad}
+          >
+            Load
+          </button>
+        )}
+      </div>
+      {onQuit === undefined ? null : (
+        <button
+          type="button"
+          className={styles.quitButton}
+          data-testid="session-quit-button"
+          onClick={onQuit}
+        >
+          Quit
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <VisualConfigContext.Provider value={visualConfigProvider}>
       <div className={styles.container} style={factionCssVariableStyle}>
@@ -290,53 +338,8 @@ export function GameContainer({
         <UIOverlay
           leftPanelContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.left, overlayPanelProps)}
           scoringBarContent={<VictoryStandingsBar store={store} />}
-          topBarContent={(
-            <>
-              {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.top, overlayPanelProps)}
-              <div className={styles.sessionButtons}>
-                <button
-                  type="button"
-                  className={`${styles.sessionButton} ${eventLogVisible ? styles.eventLogToggleActive : ''}`}
-                  data-testid="event-log-toggle-button"
-                  onClick={() => {
-                    runnerUiStore.getState().toggleEventLogVisible();
-                  }}
-                >
-                  {eventLogVisible ? 'Hide Log' : 'Show Log'}
-                </button>
-                {onSave === undefined ? null : (
-                  <button
-                    type="button"
-                    className={styles.sessionButton}
-                    data-testid="session-save-button"
-                    onClick={onSave}
-                  >
-                    Save
-                  </button>
-                )}
-                {onLoad === undefined ? null : (
-                  <button
-                    type="button"
-                    className={styles.sessionButton}
-                    data-testid="session-load-button"
-                    onClick={onLoad}
-                  >
-                    Load
-                  </button>
-                )}
-              </div>
-              {onQuit === undefined ? null : (
-                <button
-                  type="button"
-                  className={styles.quitButton}
-                  data-testid="session-quit-button"
-                  onClick={onQuit}
-                >
-                  Quit
-                </button>
-              )}
-            </>
-          )}
+          topStatusContent={topStatusContent}
+          topSessionContent={topSessionContent}
           sidePanelContent={sidePanelContent}
           bottomBarContent={bottomBarContent}
           floatingContent={(

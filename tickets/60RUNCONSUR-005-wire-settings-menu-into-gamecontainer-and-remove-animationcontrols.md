@@ -4,23 +4,25 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only integration and legacy removal
-**Deps**: specs/60-runner-control-surface-and-settings-menu.md, archive/tickets/60RUNCONSUR-001-add-runner-ui-store-for-chrome-state.md, tickets/60RUNCONSUR-002-split-top-overlay-into-status-and-session-chrome.md, tickets/60RUNCONSUR-003-add-runner-control-descriptor-builder.md, tickets/60RUNCONSUR-004-build-settings-menu-surface-components.md
+**Deps**: specs/60-runner-control-surface-and-settings-menu.md, archive/tickets/60RUNCONSUR-001-add-runner-ui-store-for-chrome-state.md, archive/tickets/RUNCONSUR/60RUNCONSUR-002-split-top-overlay-into-status-and-session-chrome.md, tickets/60RUNCONSUR-003-add-runner-control-descriptor-builder.md, tickets/60RUNCONSUR-004-build-settings-menu-surface-components.md
 
 ## Problem
 
-The spec’s user-visible outcome is not complete until the persistent `AnimationControls` panel is gone from the top HUD and replaced by a settings trigger positioned immediately to the left of the event-log toggle. The repo currently still renders the legacy panel as a top overlay region member.
+The spec’s user-visible outcome is not complete until the legacy `AnimationControls` component is gone and replaced by a settings trigger positioned immediately to the left of the event-log toggle. After `archive/tickets/RUNCONSUR/60RUNCONSUR-002-split-top-overlay-into-status-and-session-chrome.md`, the panel no longer pollutes the status lane, but the deeper architectural smell remains: runner-control semantics still live inside a dedicated JSX component instead of a descriptor-driven control surface.
 
 ## Assumption Reassessment (2026-03-19)
 
-1. `OVERLAY_REGION_PANELS.top` in `packages/runner/src/ui/GameContainer.tsx` still includes `AnimationControls`.
+1. `packages/runner/src/ui/GameContainer.tsx` still renders `AnimationControls`, now in the top session chrome instead of the top status overlay contract.
 2. `packages/runner/test/ui/AnimationControls.test.tsx` exists as the legacy component’s focused test surface.
-3. Corrected scope: this ticket should perform the actual migration and removal, but it should not expand into visual-config schema work.
+3. `archive/tickets/RUNCONSUR/60RUNCONSUR-002-split-top-overlay-into-status-and-session-chrome.md` already established the top status vs top session boundary, so this ticket should not re-litigate that split; it should finish the migration by removing the legacy component entirely.
+4. Corrected scope: this ticket should perform the actual migration and removal, but it should not expand into visual-config schema work.
 
 ## Architecture Check
 
 1. Wiring the menu through the new descriptor builder and runner UI store is cleaner than embedding fresh control logic directly in `GameContainer`.
-2. Removing `AnimationControls` from `OVERLAY_REGION_PANELS.top` restores the intended boundary: top overlays represent persistent game-state/status content only.
-3. No compatibility path should keep the old panel mounted behind a flag or hidden fallback.
+2. This ticket is the true cleanup point for the remaining smell: after it lands, runner-control semantics should be owned by the descriptor builder plus menu surface, not by `AnimationControls` under a different placement.
+3. Removing the legacy component finishes the intended boundary: top status chrome stays persistent game-state UI, while session/config chrome is descriptor-driven and menu-backed.
+4. No compatibility path should keep the old panel mounted behind a flag, hidden fallback, or menu-only wrapper around the same JSX implementation.
 
 ## What to Change
 
@@ -41,7 +43,7 @@ Use the descriptor builder and menu surface to expose:
 
 ### 3. Remove the legacy `AnimationControls` panel
 
-Delete the old component/module CSS and stop including it in `OVERLAY_REGION_PANELS.top`. Update or replace legacy tests with integration coverage and descriptor tests.
+Delete the old component/module CSS and stop rendering it from `GameContainer` at all. Update or replace legacy tests with integration coverage and descriptor tests; do not preserve `AnimationControls` as an internal renderer behind the new menu.
 
 ## File List It Expects to Touch
 

@@ -1,4 +1,4 @@
-import { createElement } from 'react';
+import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { describe, expect, it, vi } from 'vitest';
@@ -45,6 +45,16 @@ interface CapturedAnimationControlsProps {
   };
 }
 
+interface CapturedUIOverlayProps {
+  readonly topStatusContent?: ReactNode;
+  readonly topSessionContent?: ReactNode;
+  readonly scoringBarContent?: ReactNode;
+  readonly leftPanelContent?: ReactNode;
+  readonly sidePanelContent?: ReactNode;
+  readonly bottomBarContent?: ReactNode;
+  readonly floatingContent?: ReactNode;
+}
+
 interface CapturedActionToolbarProps {
   readonly store: unknown;
   readonly onActionHoverStart?: (actionId: string, element: HTMLElement) => void;
@@ -61,6 +71,7 @@ const testDoubles = vi.hoisted(() => ({
   tooltipLayerProps: null as CapturedTooltipLayerProps | null,
   gameCanvasProps: null as CapturedGameCanvasProps | null,
   animationControlsProps: null as CapturedAnimationControlsProps | null,
+  uiOverlayProps: null as CapturedUIOverlayProps | null,
   actionToolbarProps: null as CapturedActionToolbarProps | null,
   actionTooltipProps: null as CapturedActionTooltipProps | null,
   actionTooltipHookState: {
@@ -115,6 +126,23 @@ vi.mock('../../src/ui/AnimationControls.js', () => ({
   AnimationControls: (props: CapturedAnimationControlsProps) => {
     testDoubles.animationControlsProps = props;
     return createElement('div', { 'data-testid': 'animation-controls' });
+  },
+}));
+
+vi.mock('../../src/ui/UIOverlay.js', () => ({
+  UIOverlay: (props: CapturedUIOverlayProps) => {
+    testDoubles.uiOverlayProps = props;
+    return createElement(
+      'div',
+      { 'data-testid': 'ui-overlay' },
+      createElement('div', { 'data-testid': 'ui-overlay-top-status' }, props.topStatusContent),
+      createElement('div', { 'data-testid': 'ui-overlay-top-session' }, props.topSessionContent),
+      createElement('div', { 'data-testid': 'ui-overlay-scoring' }, props.scoringBarContent),
+      createElement('div', { 'data-testid': 'ui-overlay-left' }, props.leftPanelContent),
+      createElement('div', { 'data-testid': 'ui-overlay-side' }, props.sidePanelContent),
+      createElement('div', { 'data-testid': 'ui-overlay-bottom' }, props.bottomBarContent),
+      createElement('div', { 'data-testid': 'ui-overlay-floating' }, props.floatingContent),
+    );
   },
 }));
 
@@ -347,6 +375,7 @@ describe('GameContainer', () => {
     testDoubles.tooltipLayerProps = null;
     testDoubles.gameCanvasProps = null;
     testDoubles.animationControlsProps = null;
+    testDoubles.uiOverlayProps = null;
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
         bridge: TEST_BRIDGE,
@@ -364,6 +393,22 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="phase-indicator"');
     expect(html).toContain('data-testid="turn-order-display"');
     expect(html).toContain('data-testid="event-deck-panel"');
+    expect(html).toContain('data-testid="ui-overlay-top-status"');
+    expect(html).toContain('data-testid="ui-overlay-top-session"');
+    const overlayProps = testDoubles.uiOverlayProps as CapturedUIOverlayProps | null;
+    expect(overlayProps).not.toBeNull();
+    if (overlayProps === null) {
+      throw new Error('Expected UIOverlay props to be captured.');
+    }
+    const topStatusHtml = renderToStaticMarkup(createElement('div', null, overlayProps.topStatusContent));
+    const topSessionHtml = renderToStaticMarkup(createElement('div', null, overlayProps.topSessionContent));
+    expect(topStatusHtml).toContain('data-testid="phase-indicator"');
+    expect(topStatusHtml).toContain('data-testid="turn-order-display"');
+    expect(topStatusHtml).toContain('data-testid="interrupt-banner"');
+    expect(topStatusHtml).toContain('data-testid="event-deck-panel"');
+    expect(topStatusHtml).not.toContain('data-testid="animation-controls"');
+    expect(topSessionHtml).toContain('data-testid="animation-controls"');
+    expect(topSessionHtml).toContain('data-testid="event-log-toggle-button"');
     expect(html).toContain('data-testid="animation-controls"');
     expect(html).toContain('data-testid="variables-panel"');
     expect(html).toContain('data-has-visual-config="true"');
@@ -381,9 +426,10 @@ describe('GameContainer', () => {
       'turn-order-display',
       'interrupt-banner',
       'event-deck-panel',
-      'animation-controls',
     ]);
     expectAppearsInOrder(html, [
+      'animation-controls',
+      'event-log-toggle-button',
       'variables-panel',
       'scoreboard',
       'global-markers-bar',
@@ -406,7 +452,46 @@ describe('GameContainer', () => {
     expect(animationControlsProps?.diagnostics?.animationDiagnosticBuffer).toBeUndefined();
   });
 
+  it('places session buttons and animation controls in the top session slot', () => {
+    testDoubles.uiOverlayProps = null;
+    const html = renderToStaticMarkup(
+      createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+        }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+        onSave: vi.fn(),
+        onLoad: vi.fn(),
+        onQuit: vi.fn(),
+      }),
+    );
+
+    const overlayProps = testDoubles.uiOverlayProps as CapturedUIOverlayProps | null;
+    expect(overlayProps).not.toBeNull();
+    if (overlayProps === null) {
+      throw new Error('Expected UIOverlay props to be captured.');
+    }
+
+    const topStatusHtml = renderToStaticMarkup(createElement('div', null, overlayProps.topStatusContent));
+    const topSessionHtml = renderToStaticMarkup(createElement('div', null, overlayProps.topSessionContent));
+
+    expect(topStatusHtml).not.toContain('data-testid="session-save-button"');
+    expect(topStatusHtml).not.toContain('data-testid="session-load-button"');
+    expect(topStatusHtml).not.toContain('data-testid="session-quit-button"');
+    expect(topSessionHtml).toContain('data-testid="animation-controls"');
+    expect(topSessionHtml).toContain('data-testid="event-log-toggle-button"');
+    expect(topSessionHtml).toContain('data-testid="session-save-button"');
+    expect(topSessionHtml).toContain('data-testid="session-load-button"');
+    expect(topSessionHtml).toContain('data-testid="session-quit-button"');
+    expect(html).toContain('data-testid="session-save-button"');
+    expect(html).toContain('data-testid="session-load-button"');
+    expect(html).toContain('data-testid="session-quit-button"');
+  });
+
   it('renders GameCanvas and UIOverlay when lifecycle is terminal', () => {
+    testDoubles.uiOverlayProps = null;
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
         bridge: TEST_BRIDGE,
@@ -424,6 +509,18 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="phase-indicator"');
     expect(html).toContain('data-testid="turn-order-display"');
     expect(html).toContain('data-testid="event-deck-panel"');
+    const overlayProps = testDoubles.uiOverlayProps as CapturedUIOverlayProps | null;
+    expect(overlayProps).not.toBeNull();
+    if (overlayProps === null) {
+      throw new Error('Expected UIOverlay props to be captured.');
+    }
+    const topStatusHtml = renderToStaticMarkup(createElement('div', null, overlayProps.topStatusContent));
+    const topSessionHtml = renderToStaticMarkup(createElement('div', null, overlayProps.topSessionContent));
+    expect(topStatusHtml).toContain('data-testid="phase-indicator"');
+    expect(topStatusHtml).toContain('data-testid="turn-order-display"');
+    expect(topStatusHtml).toContain('data-testid="interrupt-banner"');
+    expect(topStatusHtml).toContain('data-testid="event-deck-panel"');
+    expect(topSessionHtml).toContain('data-testid="animation-controls"');
     expect(html).toContain('data-testid="animation-controls"');
     expect(html).toContain('data-testid="variables-panel"');
     expect(html).toContain('data-has-visual-config="true"');
@@ -437,9 +534,9 @@ describe('GameContainer', () => {
       'turn-order-display',
       'interrupt-banner',
       'event-deck-panel',
-      'animation-controls',
     ]);
     expectAppearsInOrder(html, [
+      'animation-controls',
       'variables-panel',
       'scoreboard',
       'global-markers-bar',

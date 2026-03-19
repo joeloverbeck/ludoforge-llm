@@ -457,6 +457,54 @@ const VerbalizationDefSchema = z
   })
   .strict();
 
+const AgentParameterValueSchema = z.union([
+  NumberSchema,
+  BooleanSchema,
+  StringSchema,
+  z.array(StringSchema),
+]);
+
+const CompiledAgentParameterDefSchema = z
+  .object({
+    type: z.union([
+      z.literal('number'),
+      z.literal('integer'),
+      z.literal('boolean'),
+      z.literal('enum'),
+      z.literal('idOrder'),
+    ]),
+    required: BooleanSchema,
+    tunable: BooleanSchema,
+    default: AgentParameterValueSchema.optional(),
+    min: NumberSchema.optional(),
+    max: NumberSchema.optional(),
+    values: z.array(StringSchema).optional(),
+    allowedIds: z.array(StringSchema).optional(),
+  })
+  .strict();
+
+const CompiledAgentProfileSchema = z
+  .object({
+    params: z.record(StringSchema, AgentParameterValueSchema),
+    use: z
+      .object({
+        pruningRules: z.array(StringSchema),
+        scoreTerms: z.array(StringSchema),
+        tieBreakers: z.array(StringSchema),
+      })
+      .strict(),
+  })
+  .strict();
+
+const AgentPolicyCatalogSchema = z
+  .object({
+    schemaVersion: z.literal(1),
+    parameterDefs: z.record(StringSchema, CompiledAgentParameterDefSchema),
+    profiles: z.record(StringSchema, CompiledAgentProfileSchema),
+    bindingsBySeat: z.record(StringSchema, StringSchema),
+  })
+  .strict();
+
 export const GameDefSchema = z
   .object({
     metadata: z
@@ -481,6 +529,7 @@ export const GameDefSchema = z
     turnOrder: TurnOrderSchema.optional(),
     actionPipelines: z.array(ActionPipelineSchema).optional(),
     derivedMetrics: z.array(DerivedMetricDefSchema).optional(),
+    agents: AgentPolicyCatalogSchema.optional(),
     actions: z.array(ActionDefSchema),
     triggers: z.array(TriggerDefSchema),
     terminal: TerminalEvaluationDefSchema,

@@ -188,6 +188,42 @@ describe('top-level runtime schemas', () => {
     assert.equal(DataAssetEnvelopeSchema.safeParse(scenarioEnvelope).success, true);
   });
 
+  it('parses GameDef.agents catalog skeletons', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      agents: {
+        schemaVersion: 1,
+        parameterDefs: {
+          passFloor: {
+            type: 'number',
+            required: false,
+            tunable: true,
+            default: 0.25,
+            min: -5,
+            max: 5,
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {
+              passFloor: 0.5,
+            },
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindingsBySeat: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(result.success, true);
+  });
+
   it('parses valid map payload contracts with typed tracks and marker lattices', () => {
     const result = MapPayloadSchema.safeParse({
       spaces: [

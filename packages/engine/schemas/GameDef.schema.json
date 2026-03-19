@@ -1595,6 +1595,185 @@
         "additionalProperties": false
       }
     },
+    "agents": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "number",
+          "const": 1
+        },
+        "parameterDefs": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "const": "number"
+                  },
+                  {
+                    "type": "string",
+                    "const": "integer"
+                  },
+                  {
+                    "type": "string",
+                    "const": "boolean"
+                  },
+                  {
+                    "type": "string",
+                    "const": "enum"
+                  },
+                  {
+                    "type": "string",
+                    "const": "idOrder"
+                  }
+                ]
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "tunable": {
+                "type": "boolean"
+              },
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              },
+              "min": {
+                "type": "number"
+              },
+              "max": {
+                "type": "number"
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "allowedIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "type",
+              "required",
+              "tunable"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "profiles": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "params": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  ]
+                }
+              },
+              "use": {
+                "type": "object",
+                "properties": {
+                  "pruningRules": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "scoreTerms": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "tieBreakers": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "pruningRules",
+                  "scoreTerms",
+                  "tieBreakers"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "params",
+              "use"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "bindingsBySeat": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "parameterDefs",
+        "profiles",
+        "bindingsBySeat"
+      ],
+      "additionalProperties": false
+    },
     "actions": {
       "type": "array",
       "items": {

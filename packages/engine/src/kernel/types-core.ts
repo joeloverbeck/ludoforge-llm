@@ -266,6 +266,37 @@ export interface VictoryStandingsDef {
   readonly tieBreakOrder: readonly string[];
 }
 
+export type AgentParameterType = 'number' | 'integer' | 'boolean' | 'enum' | 'idOrder';
+
+export type AgentParameterValue = number | boolean | string | readonly string[];
+
+export interface CompiledAgentParameterDef {
+  readonly type: AgentParameterType;
+  readonly required: boolean;
+  readonly tunable: boolean;
+  readonly default?: AgentParameterValue;
+  readonly min?: number;
+  readonly max?: number;
+  readonly values?: readonly string[];
+  readonly allowedIds?: readonly string[];
+}
+
+export interface CompiledAgentProfile {
+  readonly params: Readonly<Record<string, AgentParameterValue>>;
+  readonly use: {
+    readonly pruningRules: readonly string[];
+    readonly scoreTerms: readonly string[];
+    readonly tieBreakers: readonly string[];
+  };
+}
+
+export interface AgentPolicyCatalog {
+  readonly schemaVersion: 1;
+  readonly parameterDefs: Readonly<Record<string, CompiledAgentParameterDef>>;
+  readonly profiles: Readonly<Record<string, CompiledAgentProfile>>;
+  readonly bindingsBySeat: Readonly<Record<string, string>>;
+}
+
 export interface GameDef {
   readonly metadata: {
     readonly id: string;
@@ -287,6 +318,7 @@ export interface GameDef {
   readonly turnOrder?: TurnOrderStrategy;
   readonly actionPipelines?: readonly ActionPipelineDef[];
   readonly derivedMetrics?: readonly DerivedMetricDef[];
+  readonly agents?: AgentPolicyCatalog;
   readonly actions: readonly ActionDef[];
   readonly triggers: readonly TriggerDef[];
   readonly terminal: TerminalEvaluationDef;

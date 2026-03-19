@@ -264,6 +264,40 @@ describe('PolicyAgent', () => {
     assert.equal(result.agentDecision.emergencyFallback, false);
   });
 
+  it('reuses a single canonical seat binding for symmetric games', () => {
+    const def = createDef({
+      seats: [{ id: 'neutral' }],
+      agents: {
+        ...createCatalog(),
+        bindingsBySeat: {
+          neutral: 'passive',
+        },
+      },
+    });
+    const agent = new PolicyAgent();
+    const state = initialState(def, 7, 2).state;
+
+    const result = agent.chooseMove({
+      def,
+      state,
+      playerId: asPlayerId(1),
+      legalMoves: [
+        { actionId: asActionId('pass'), params: {} },
+        { actionId: asActionId('event'), params: {} },
+      ],
+      rng: createRng(7n),
+    });
+
+    assert.deepEqual(result.move, { actionId: asActionId('pass'), params: {} });
+    assert.equal(result.agentDecision?.kind, 'policy');
+    if (result.agentDecision?.kind !== 'policy') {
+      assert.fail('expected policy agent decision');
+    }
+    assert.equal(result.agentDecision.seatId, 'neutral');
+    assert.equal(result.agentDecision.resolvedProfileId, 'passive');
+    assert.equal(result.agentDecision.emergencyFallback, false);
+  });
+
   it('emits emergency fallback metadata when the requested profile is missing', () => {
     const def = createDef();
     const agent = new PolicyAgent({ profileId: 'missing-profile' });

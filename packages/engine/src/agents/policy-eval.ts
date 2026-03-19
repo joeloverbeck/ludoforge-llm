@@ -566,7 +566,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
     });
   }
 
-  const seatId = input.def.seats?.[input.playerId]?.id ?? null;
+  const seatId = resolvePolicyBindingSeatId(input.def, input.playerId);
   if (seatId === null) {
     return failureWithMetadata(candidates, null, requestedProfileId, null, {
       code: 'SEAT_UNRESOLVED',
@@ -947,4 +947,18 @@ function selectByPreferredOrder(
     return candidates;
   }
   return ranked.filter((entry) => entry.rank === bestRank).map((entry) => entry.candidate);
+}
+
+function resolvePolicyBindingSeatId(def: GameDef, playerId: PlayerId): string | null {
+  const directSeatId = def.seats?.[playerId]?.id;
+  if (typeof directSeatId === 'string' && directSeatId.length > 0) {
+    return directSeatId;
+  }
+
+  if (def.seats?.length === 1) {
+    const sharedSeatId = def.seats[0]?.id;
+    return typeof sharedSeatId === 'string' && sharedSeatId.length > 0 ? sharedSeatId : null;
+  }
+
+  return null;
 }

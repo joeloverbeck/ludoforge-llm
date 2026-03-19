@@ -18,9 +18,9 @@ import {
 } from '@ludoforge/engine/runtime';
 
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
-import { deriveRenderModel } from '../../src/model/derive-render-model.js';
 import { serializeChoiceValueIdentity } from '../../src/model/choice-value-utils.js';
 import type { RenderContext } from '../../src/store/store-types.js';
+import { deriveProjectedRenderModel, type DerivedProjection } from './helpers/derive-projected-render-model.js';
 
 const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 
@@ -28,7 +28,7 @@ function compileFixture(): GameDef {
   const compiled = compileGameSpecToGameDef({
     ...createEmptyGameSpecDoc(),
     metadata: {
-      id: 'runner-derive-render-model-state-test',
+      id: 'runner-project-render-model-state-test',
       players: {
         min: 2,
         max: 2,
@@ -137,9 +137,20 @@ function makeRenderContext(
       Array.from({ length: playerCount }, (_unused, player) => [asPlayerId(player), 'human' as const]),
     ),
     terminal: null,
-    visualConfigProvider: new VisualConfigProvider(null),
     ...overrides,
   };
+}
+
+function deriveModel(
+  state: GameState,
+  def: GameDef,
+  context: RenderContext,
+  options: {
+    readonly previous?: DerivedProjection | null;
+    readonly visualConfigProvider?: VisualConfigProvider;
+  } = {},
+) {
+  return deriveProjectedRenderModel(state, def, context, options).model;
 }
 
 function token(id: string, type = 'piece', props: Token['props'] = {}): Token {
@@ -321,13 +332,13 @@ function withStateMetadata(baseDef: GameDef, baseState: GameState): { readonly d
   return { def, state };
 }
 
-describe('deriveRenderModel state metadata', () => {
+describe('projectRenderModel state metadata', () => {
   it('derives global/player vars and space/global markers with lattice states', () => {
     const baseDef = compileFixture();
     const baseState = initialState(baseDef, 5, 2).state;
     const { def, state } = withStateMetadata(baseDef, baseState);
 
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+    const model = deriveModel(state, def, makeRenderContext(state.playerCount));
 
     expect(model.globalVars).toEqual([
       { name: 'round', value: 3, displayName: 'Round' },
@@ -363,7 +374,7 @@ describe('deriveRenderModel state metadata', () => {
       },
     };
 
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+    const model = deriveModel(state, def, makeRenderContext(state.playerCount));
 
     expect(model.globalMarkers).toEqual([
       {
@@ -379,7 +390,7 @@ describe('deriveRenderModel state metadata', () => {
     const def = compileFixture();
     const state = initialState(def, 6, 2).state;
 
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+    const model = deriveModel(state, def, makeRenderContext(state.playerCount));
 
     expect(model.globalMarkers).toEqual([]);
     expect(model.activeEffects).toEqual([]);
@@ -393,7 +404,7 @@ describe('deriveRenderModel state metadata', () => {
     const baseState = initialState(baseDef, 7, 2).state;
     const { def, state } = withStateMetadata(baseDef, baseState);
 
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+    const model = deriveModel(state, def, makeRenderContext(state.playerCount));
 
     expect(model.tracks).toEqual([
       {
@@ -431,7 +442,7 @@ describe('deriveRenderModel state metadata', () => {
     const baseState = initialState(baseDef, 8, 2).state;
     const { def, state } = withStateMetadata(baseDef, baseState);
 
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+    const model = deriveModel(state, def, makeRenderContext(state.playerCount));
 
     expect(model.activeEffects).toEqual([
       {
@@ -496,7 +507,7 @@ describe('deriveRenderModel state metadata', () => {
       },
     };
 
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+    const model = deriveModel(state, def, makeRenderContext(state.playerCount));
 
     expect(model.eventDecks[0]?.playedCard).toEqual({
       id: 'card-a',
@@ -538,7 +549,7 @@ describe('deriveRenderModel state metadata', () => {
       ],
     };
 
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+    const model = deriveModel(state, def, makeRenderContext(state.playerCount));
 
     expect(model.activeEffects).toEqual([
       {
@@ -583,7 +594,7 @@ describe('deriveRenderModel state metadata', () => {
       ],
     };
 
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+    const model = deriveModel(state, def, makeRenderContext(state.playerCount));
 
     expect(model.globalMarkers).toEqual([
       { id: 'alpha', displayName: 'Alpha', state: 'low', possibleStates: [] },
@@ -604,7 +615,7 @@ describe('deriveRenderModel state metadata', () => {
       },
     });
 
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -690,18 +701,18 @@ describe('deriveRenderModel state metadata', () => {
       },
     };
 
-    const model = deriveRenderModel(
+    const visualConfigProvider = new VisualConfigProvider({
+      version: 1,
+      factions: {
+        us: { displayName: 'United States' },
+        nva: { displayName: 'North Vietnam' },
+      },
+    });
+    const model = deriveModel(
       state,
       def,
-      makeRenderContext(state.playerCount, asPlayerId(0), {
-        visualConfigProvider: new VisualConfigProvider({
-          version: 1,
-          factions: {
-            us: { displayName: 'United States' },
-            nva: { displayName: 'North Vietnam' },
-          },
-        }),
-      }),
+      makeRenderContext(state.playerCount, asPlayerId(0)),
+      { visualConfigProvider },
     );
 
     expect(model.players).toEqual([
@@ -736,7 +747,7 @@ describe('deriveRenderModel state metadata', () => {
       },
     };
 
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+    const model = deriveModel(state, def, makeRenderContext(state.playerCount));
 
     expect(model.turnOrderType).toBe('fixedOrder');
     expect(model.turnOrder).toEqual([asPlayerId(1), asPlayerId(0)]);
@@ -773,7 +784,7 @@ describe('deriveRenderModel state metadata', () => {
       targetKinds: [],
     };
 
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -834,7 +845,7 @@ describe('deriveRenderModel state metadata', () => {
       targetKinds: ['zone'],
     };
 
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -876,7 +887,7 @@ describe('deriveRenderModel state metadata', () => {
       targetKinds: [],
     };
 
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -917,7 +928,7 @@ describe('deriveRenderModel state metadata', () => {
       targetKinds: [],
     };
 
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -957,7 +968,7 @@ describe('deriveRenderModel state metadata', () => {
       targetKinds: ['zone'],
     };
 
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -998,7 +1009,7 @@ describe('deriveRenderModel state metadata', () => {
       targetKinds: [],
     };
 
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -1038,7 +1049,7 @@ describe('deriveRenderModel state metadata', () => {
       targetKinds: ['token'],
     };
 
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -1078,7 +1089,7 @@ describe('deriveRenderModel state metadata', () => {
       targetKinds: ['zone'],
     };
 
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -1125,7 +1136,7 @@ describe('deriveRenderModel state metadata', () => {
       targetKinds: ['zone'],
     };
 
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -1161,7 +1172,7 @@ describe('deriveRenderModel state metadata', () => {
       options: [],
       targetKinds: [],
     };
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -1193,7 +1204,7 @@ describe('deriveRenderModel state metadata', () => {
       options: [{ value: 'table:none', legality: 'legal', illegalReason: null }],
       targetKinds: ['zone'],
     };
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -1220,7 +1231,7 @@ describe('deriveRenderModel state metadata', () => {
   it('maps no-pending selected-action context to confirmReady choiceUi', () => {
     const def = compileFixture();
     const state = initialState(def, 234, 2).state;
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -1244,7 +1255,7 @@ describe('deriveRenderModel state metadata', () => {
       options: [{ value: 'table:none', legality: 'legal', illegalReason: null }],
       targetKinds: ['zone'],
     };
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -1268,7 +1279,7 @@ describe('deriveRenderModel state metadata', () => {
       options: [{ value: 'table:none', legality: 'legal', illegalReason: null }],
       targetKinds: ['zone'],
     };
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -1283,7 +1294,7 @@ describe('deriveRenderModel state metadata', () => {
   it('maps selectedAction without partialMove to invalid confirm-ready state', () => {
     const def = compileFixture();
     const state = initialState(def, 236, 2).state;
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -1298,7 +1309,7 @@ describe('deriveRenderModel state metadata', () => {
   it('maps partialMove without selectedAction to invalid confirm-ready state', () => {
     const def = compileFixture();
     const state = initialState(def, 239, 2).state;
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -1313,7 +1324,7 @@ describe('deriveRenderModel state metadata', () => {
   it('maps selectedAction/partialMove action mismatch to invalid choiceUi', () => {
     const def = compileFixture();
     const state = initialState(def, 237, 2).state;
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -1346,7 +1357,7 @@ describe('deriveRenderModel state metadata', () => {
       ],
     };
 
-    const winModel = deriveRenderModel(
+    const winModel = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), { terminal: winTerminal }),
@@ -1363,21 +1374,21 @@ describe('deriveRenderModel state metadata', () => {
       },
     });
 
-    const lossModel = deriveRenderModel(
+    const lossModel = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), { terminal: { type: 'lossAll' } }),
     );
     expect(lossModel.terminal).toEqual({ type: 'lossAll', message: 'All players lose.' });
 
-    const drawModel = deriveRenderModel(
+    const drawModel = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), { terminal: { type: 'draw' } }),
     );
     expect(drawModel.terminal).toEqual({ type: 'draw', message: 'The game is a draw.' });
 
-    const scoreModel = deriveRenderModel(
+    const scoreModel = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), { terminal: scoreTerminal }),
@@ -1404,7 +1415,7 @@ describe('deriveRenderModel state metadata', () => {
     ];
 
     const legalMoveResult: LegalMoveEnumerationResult = { moves, warnings: [] };
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), { legalMoveResult }),
@@ -1441,13 +1452,11 @@ describe('deriveRenderModel state metadata', () => {
     });
 
     const legalMoveResult: LegalMoveEnumerationResult = { moves, warnings: [] };
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
-      makeRenderContext(state.playerCount, asPlayerId(0), {
-        legalMoveResult,
-        visualConfigProvider: coinPolicy,
-      }),
+      makeRenderContext(state.playerCount, asPlayerId(0), { legalMoveResult }),
+      { visualConfigProvider: coinPolicy },
     );
 
     const groupKeys = model.actionGroups.map((group) => group.groupKey);
@@ -1492,13 +1501,11 @@ describe('deriveRenderModel state metadata', () => {
     });
 
     const legalMoveResult: LegalMoveEnumerationResult = { moves, warnings: [] };
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
-      makeRenderContext(state.playerCount, asPlayerId(0), {
-        legalMoveResult,
-        visualConfigProvider: multiSynthPolicy,
-      }),
+      makeRenderContext(state.playerCount, asPlayerId(0), { legalMoveResult }),
+      { visualConfigProvider: multiSynthPolicy },
     );
 
     const groupKeys = model.actionGroups.map((g) => g.groupKey);
@@ -1521,7 +1528,7 @@ describe('deriveRenderModel state metadata', () => {
     ];
 
     const legalMoveResult: LegalMoveEnumerationResult = { moves, warnings: [] };
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), { legalMoveResult }),
@@ -1558,13 +1565,11 @@ describe('deriveRenderModel state metadata', () => {
     });
 
     const legalMoveResult: LegalMoveEnumerationResult = { moves, warnings: [] };
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
-      makeRenderContext(state.playerCount, asPlayerId(0), {
-        legalMoveResult,
-        visualConfigProvider: coinPolicy,
-      }),
+      makeRenderContext(state.playerCount, asPlayerId(0), { legalMoveResult }),
+      { visualConfigProvider: coinPolicy },
     );
 
     const opSaGroup = model.actionGroups.find((g) => g.groupKey === 'operationPlusSpecialActivity');
@@ -1628,7 +1633,7 @@ describe('deriveRenderModel state metadata', () => {
       },
     };
 
-    const model = deriveRenderModel(metaState, def, makeRenderContext(metaState.playerCount));
+    const model = deriveModel(metaState, def, makeRenderContext(metaState.playerCount));
 
     expect(model.eventDecks[0]?.playedCard?.eligibility).toEqual([
       { label: 'ARVN', factionId: 'arvn' },
@@ -1677,7 +1682,7 @@ describe('deriveRenderModel state metadata', () => {
       },
     };
 
-    const model = deriveRenderModel(metaState, def, makeRenderContext(metaState.playerCount));
+    const model = deriveModel(metaState, def, makeRenderContext(metaState.playerCount));
 
     expect(model.eventDecks[0]?.playedCard?.eligibility).toBeNull();
     expect(model.eventDecks[0]?.lookaheadCard?.eligibility).toBeNull();
@@ -1698,7 +1703,7 @@ describe('deriveRenderModel state metadata', () => {
       }],
     };
 
-    const model = deriveRenderModel(baseState, defWithEvents, makeRenderContext(baseState.playerCount));
+    const model = deriveModel(baseState, defWithEvents, makeRenderContext(baseState.playerCount));
 
     // No card-driven turn order means no seat order config, so eligibility should be null
     const playedCard = model.eventDecks[0]?.playedCard;
@@ -1746,7 +1751,7 @@ describe('deriveRenderModel state metadata', () => {
       },
     };
 
-    const model = deriveRenderModel(metaState, def, makeRenderContext(metaState.playerCount));
+    const model = deriveModel(metaState, def, makeRenderContext(metaState.playerCount));
 
     expect(model.eventDecks[0]?.playedCard?.eligibility).toEqual([
       { label: 'us', factionId: 'us' },
@@ -1758,7 +1763,7 @@ describe('deriveRenderModel state metadata', () => {
     const fixtureDef = compileFixture();
     const fixtureState = initialState(fixtureDef, 5, 2).state;
     const { def, state: metaState } = withStateMetadata(fixtureDef, fixtureState);
-    const model = deriveRenderModel(metaState, def, makeRenderContext(metaState.playerCount));
+    const model = deriveModel(metaState, def, makeRenderContext(metaState.playerCount));
 
     expect(model.runtimeEligible).toEqual([
       { seatId: 'us', displayName: 'Us', factionId: 'us', seatIndex: 0 },
@@ -1781,7 +1786,7 @@ describe('deriveRenderModel state metadata', () => {
         },
       },
     };
-    const model = deriveRenderModel(stateWithIneligible, def, makeRenderContext(stateWithIneligible.playerCount));
+    const model = deriveModel(stateWithIneligible, def, makeRenderContext(stateWithIneligible.playerCount));
 
     expect(model.runtimeEligible).toEqual([
       { seatId: 'nva', displayName: 'Nva', factionId: 'nva', seatIndex: 1 },
@@ -1791,13 +1796,13 @@ describe('deriveRenderModel state metadata', () => {
   it('returns empty runtimeEligible for roundRobin turn order', () => {
     const fixtureDef = compileFixture();
     const fixtureState = initialState(fixtureDef, 5, 2).state;
-    const model = deriveRenderModel(fixtureState, fixtureDef, makeRenderContext(fixtureState.playerCount));
+    const model = deriveModel(fixtureState, fixtureDef, makeRenderContext(fixtureState.playerCount));
 
     expect(model.runtimeEligible).toEqual([]);
   });
 });
 
-describe('deriveRenderModel choiceContext', () => {
+describe('projectRenderModel choiceContext', () => {
   function compileAndInit(): { def: GameDef; state: GameState } {
     const def = compileFixture();
     const { state } = initialState(def, 5, 2);
@@ -1818,7 +1823,7 @@ describe('deriveRenderModel choiceContext', () => {
         targetKinds: [],
       },
     });
-    const model = deriveRenderModel(state, def, ctx);
+    const model = deriveModel(state, def, ctx);
     expect(model.choiceContext).toBeNull();
   });
 
@@ -1828,12 +1833,16 @@ describe('deriveRenderModel choiceContext', () => {
       selectedAction: asActionId('train'),
       choicePending: null,
     });
-    const model = deriveRenderModel(state, def, ctx);
+    const model = deriveModel(state, def, ctx);
     expect(model.choiceContext).toBeNull();
   });
 
   it('returns actionDisplayName from visual config when available', () => {
     const { def, state } = compileAndInit();
+    const visualConfigProvider = new VisualConfigProvider({
+      version: 1,
+      actions: { train: { displayName: 'Train Troops' } },
+    });
     const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
       selectedAction: asActionId('train'),
       choicePending: {
@@ -1845,12 +1854,8 @@ describe('deriveRenderModel choiceContext', () => {
         options: [],
         targetKinds: [],
       },
-      visualConfigProvider: new VisualConfigProvider({
-        version: 1,
-        actions: { train: { displayName: 'Train Troops' } },
-      }),
     });
-    const model = deriveRenderModel(state, def, ctx);
+    const model = deriveModel(state, def, ctx, { visualConfigProvider });
     expect(model.choiceContext).not.toBeNull();
     expect(model.choiceContext!.actionDisplayName).toBe('Train Troops');
   });
@@ -1869,13 +1874,17 @@ describe('deriveRenderModel choiceContext', () => {
         targetKinds: [],
       },
     });
-    const model = deriveRenderModel(state, def, ctx);
+    const model = deriveModel(state, def, ctx);
     expect(model.choiceContext).not.toBeNull();
     expect(model.choiceContext!.actionDisplayName).toBe('Train');
   });
 
   it('returns decisionPrompt from visual config when available', () => {
     const { def, state } = compileAndInit();
+    const visualConfigProvider = new VisualConfigProvider({
+      version: 1,
+      actions: { train: { choices: { targetSpace: { prompt: 'Select a space to train in' } } } },
+    });
     const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
       selectedAction: asActionId('train'),
       choicePending: {
@@ -1887,12 +1896,8 @@ describe('deriveRenderModel choiceContext', () => {
         options: [],
         targetKinds: [],
       },
-      visualConfigProvider: new VisualConfigProvider({
-        version: 1,
-        actions: { train: { choices: { targetSpace: { prompt: 'Select a space to train in' } } } },
-      }),
     });
-    const model = deriveRenderModel(state, def, ctx);
+    const model = deriveModel(state, def, ctx, { visualConfigProvider });
     expect(model.choiceContext!.decisionPrompt).toBe('Select a space to train in');
   });
 
@@ -1914,7 +1919,7 @@ describe('deriveRenderModel choiceContext', () => {
         canConfirm: false,
       },
     });
-    const model = deriveRenderModel(state, def, ctx);
+    const model = deriveModel(state, def, ctx);
     expect(model.choiceContext!.boundsText).toBe('1-6');
   });
 
@@ -1936,7 +1941,7 @@ describe('deriveRenderModel choiceContext', () => {
         canConfirm: false,
       },
     });
-    const model = deriveRenderModel(state, def, ctx);
+    const model = deriveModel(state, def, ctx);
     expect(model.choiceContext!.boundsText).toBe('3');
   });
 
@@ -1954,7 +1959,7 @@ describe('deriveRenderModel choiceContext', () => {
         targetKinds: [],
       },
     });
-    const model = deriveRenderModel(state, def, ctx);
+    const model = deriveModel(state, def, ctx);
     expect(model.choiceContext!.boundsText).toBeNull();
   });
 
@@ -1975,7 +1980,7 @@ describe('deriveRenderModel choiceContext', () => {
         { decisionKey: asDecisionKey('spaces'), name: 'spaces', value: ['table', 'hand'] as unknown as MoveParamValue },
       ],
     });
-    const model = deriveRenderModel(state, def, ctx);
+    const model = deriveModel(state, def, ctx);
     expect(model.choiceContext!.iterationLabel).toBe('Table');
     expect(model.choiceContext!.iterationProgress).toBe('1 of 2');
   });
@@ -1994,7 +1999,7 @@ describe('deriveRenderModel choiceContext', () => {
         targetKinds: [],
       },
     });
-    const model = deriveRenderModel(state, def, ctx);
+    const model = deriveModel(state, def, ctx);
     expect(model.choiceContext!.iterationLabel).toBeNull();
     expect(model.choiceContext!.iterationProgress).toBeNull();
   });
@@ -2013,7 +2018,7 @@ describe('deriveRenderModel choiceContext', () => {
         targetKinds: [],
       },
     });
-    const model = deriveRenderModel(state, def, ctx);
+    const model = deriveModel(state, def, ctx);
     expect(model.choiceContext!.decisionParamName).toBe('targetProvince');
   });
 
@@ -2031,7 +2036,7 @@ describe('deriveRenderModel choiceContext', () => {
       targetKinds: ['zone'],
     };
 
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -2061,7 +2066,7 @@ describe('deriveRenderModel choiceContext', () => {
       targetKinds: [],
     };
 
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -2094,7 +2099,7 @@ describe('deriveRenderModel choiceContext', () => {
       targetKinds: [],
     };
 
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {

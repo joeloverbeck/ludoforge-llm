@@ -4,7 +4,9 @@ import type { Container } from 'pixi.js';
 
 import { VisualConfigProvider } from '../../../src/config/visual-config-provider';
 import { createTableOverlayRenderer } from '../../../src/canvas/renderers/table-overlay-renderer';
+import { resolveOverlayNodes } from '../../../src/presentation/presentation-scene.js';
 import type { RenderModel, RenderVariable, RenderZone } from '../../../src/model/render-model';
+import type { RunnerFrame } from '../../../src/model/runner-frame.js';
 
 const {
   MockContainer,
@@ -209,6 +211,101 @@ function asVar(name: string, value: number | boolean): RenderVariable {
   };
 }
 
+function updateRenderer(
+  renderer: ReturnType<typeof createTableOverlayRenderer>,
+  provider: VisualConfigProvider,
+  renderModel: RenderModel | null,
+  positions: ReadonlyMap<string, { x: number; y: number }>,
+): void {
+  renderer.update(
+    renderModel === null
+      ? []
+      : resolveOverlayNodes(toRunnerFrame(renderModel), renderModel.zones, positions, provider),
+  );
+}
+
+function toRunnerFrame(renderModel: RenderModel): RunnerFrame {
+  return {
+    zones: renderModel.zones.map((zone) => ({
+      id: zone.id,
+      ordering: zone.ordering,
+      tokenIDs: zone.tokenIDs,
+      hiddenTokenCount: zone.hiddenTokenCount,
+      markers: zone.markers.map((marker) => ({
+        id: marker.id,
+        state: marker.state,
+        possibleStates: marker.possibleStates,
+      })),
+      visibility: zone.visibility,
+      isSelectable: zone.isSelectable,
+      isHighlighted: zone.isHighlighted,
+      ownerID: zone.ownerID,
+      category: zone.category,
+      attributes: zone.attributes,
+      metadata: zone.metadata,
+    })),
+    adjacencies: renderModel.adjacencies,
+    tokens: renderModel.tokens,
+    globalVars: renderModel.globalVars.map(({ name, value }) => ({ name, value })),
+    playerVars: new Map(
+      Array.from(renderModel.playerVars.entries()).map(([playerId, variables]) => [
+        playerId,
+        variables.map(({ name, value }) => ({ name, value })),
+      ]),
+    ),
+    globalMarkers: renderModel.globalMarkers.map(({ id, state, possibleStates }) => ({ id, state, possibleStates })),
+    tracks: renderModel.tracks.map(({ id, scope, seat, min, max, currentValue }) => ({ id, scope, seat, min, max, currentValue })),
+    activeEffects: renderModel.activeEffects.map((effect) => ({
+      id: effect.id,
+      sourceCardId: effect.id,
+      sourceCardTitle: effect.displayName,
+      attributes: effect.attributes.map((attribute) => ({ key: attribute.key, value: attribute.value })),
+    })),
+    players: renderModel.players.map(({ id, isHuman, isActive, isEliminated, factionId }) => ({ id, isHuman, isActive, isEliminated, factionId })),
+    activePlayerID: renderModel.activePlayerID,
+    turnOrder: renderModel.turnOrder,
+    turnOrderType: renderModel.turnOrderType,
+    simultaneousSubmitted: renderModel.simultaneousSubmitted,
+    interruptStack: renderModel.interruptStack,
+    isInInterrupt: renderModel.isInInterrupt,
+    phaseName: renderModel.phaseName,
+    eventDecks: renderModel.eventDecks.map(({ id, drawZoneId, discardZoneId, playedCard, lookaheadCard, deckSize, discardSize }) => ({
+      id,
+      drawZoneId,
+      discardZoneId,
+      playedCard,
+      lookaheadCard,
+      deckSize,
+      discardSize,
+    })),
+    actionGroups: renderModel.actionGroups.map(({ groupKey, actions }) => ({ groupKey, actions })),
+    choiceBreadcrumb: renderModel.choiceBreadcrumb.map((step) => ({
+      decisionKey: step.decisionKey,
+      name: step.name,
+      chosenValueId: step.chosenValueId,
+      chosenValue: step.chosenValue,
+      iterationGroupId: step.iterationGroupId,
+      iterationEntityId: null,
+    })),
+    choiceContext: renderModel.choiceContext === null
+      ? null
+      : {
+          selectedActionId: renderModel.choiceContext.actionDisplayName,
+          decisionParamName: renderModel.choiceContext.decisionParamName,
+          minSelections: null,
+          maxSelections: null,
+          iterationEntityId: null,
+          iterationIndex: null,
+          iterationTotal: null,
+        },
+    choiceUi: renderModel.choiceUi as RunnerFrame['choiceUi'],
+    moveEnumerationWarnings: renderModel.moveEnumerationWarnings,
+    runtimeEligible: renderModel.runtimeEligible.map(({ seatId, factionId, seatIndex }) => ({ seatId, factionId, seatIndex })),
+    victoryStandings: renderModel.victoryStandings,
+    terminal: renderModel.terminal,
+  };
+}
+
 describe('createTableOverlayRenderer', () => {
   const positions = new Map([
     ['shared:center', { x: 0, y: 0 }],
@@ -234,7 +331,7 @@ describe('createTableOverlayRenderer', () => {
     });
     const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-    renderer.update(
+    updateRenderer(renderer, provider, 
       makeRenderModel({
         globalVars: [asVar('pot', 42)],
       }),
@@ -258,9 +355,9 @@ describe('createTableOverlayRenderer', () => {
     });
     const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-    renderer.update(makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
+    updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
 
-    renderer.update(makeRenderModel({ globalVars: [asVar('pot', 55)] }), positions);
+    updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('pot', 55)] }), positions);
     const secondLabel = parent.children[0] as InstanceType<typeof MockText>;
 
     expect(parent.children).toHaveLength(1);
@@ -286,7 +383,7 @@ describe('createTableOverlayRenderer', () => {
     });
     const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-    renderer.update(
+    updateRenderer(renderer, provider, 
       makeRenderModel({
         players: [
           {
@@ -342,7 +439,7 @@ describe('createTableOverlayRenderer', () => {
     });
     const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-    renderer.update(
+    updateRenderer(renderer, provider, 
       makeRenderModel({
         globalVars: [asVar('dealerSeat', 1)],
       }),
@@ -370,12 +467,12 @@ describe('createTableOverlayRenderer', () => {
     });
     const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-    renderer.update(makeRenderModel({ globalVars: [asVar('dealerSeat', 0)] }), positions);
+    updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('dealerSeat', 0)] }), positions);
     const firstMarker = parent.children[0] as InstanceType<typeof MockContainer>;
     expect(firstMarker.position.x).toBe(-100);
     expect(firstMarker.position.y).toBe(100);
 
-    renderer.update(makeRenderModel({ globalVars: [asVar('dealerSeat', 1)] }), positions);
+    updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('dealerSeat', 1)] }), positions);
     const secondMarker = parent.children[0] as InstanceType<typeof MockContainer>;
     expect(secondMarker.position.x).toBe(100);
     expect(secondMarker.position.y).toBe(100);
@@ -387,7 +484,7 @@ describe('createTableOverlayRenderer', () => {
     const provider = new VisualConfigProvider({ version: 1 });
     const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-    renderer.update(makeRenderModel({ globalVars: [asVar('pot', 12)] }), positions);
+    updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('pot', 12)] }), positions);
 
     expect(parent.children).toHaveLength(0);
   });
@@ -403,7 +500,7 @@ describe('createTableOverlayRenderer', () => {
     });
     const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-    renderer.update(
+    updateRenderer(renderer, provider, 
       makeRenderModel({
         globalVars: [asVar('dealerSeat', 0)],
       }),
@@ -413,7 +510,7 @@ describe('createTableOverlayRenderer', () => {
     expect(parent.children).toHaveLength(0);
   });
 
-  describe('slot-based reuse', () => {
+  describe('keyed reconciliation', () => {
     it('does not destroy and recreate children when update is called with identical inputs', () => {
       const parent = new MockContainer();
       const provider = new VisualConfigProvider({
@@ -424,13 +521,13 @@ describe('createTableOverlayRenderer', () => {
       });
       const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-      renderer.update(makeRenderModel({ globalVars: [asVar('pot', 42)] }), positions);
+      updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('pot', 42)] }), positions);
 
       const firstChild = parent.children[0] as InstanceType<typeof MockText>;
       expect(parent.children).toHaveLength(1);
       expect(firstChild.text).toBe('Pot: 42');
 
-      renderer.update(makeRenderModel({ globalVars: [asVar('pot', 42)] }), positions);
+      updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('pot', 42)] }), positions);
 
       expect(parent.children).toHaveLength(1);
       expect(parent.children[0]).toBe(firstChild);
@@ -447,10 +544,10 @@ describe('createTableOverlayRenderer', () => {
       });
       const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-      renderer.update(makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
+      updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
       const firstChild = parent.children[0] as InstanceType<typeof MockText>;
 
-      renderer.update(makeRenderModel({ globalVars: [asVar('pot', 20)] }), positions);
+      updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('pot', 20)] }), positions);
 
       expect(parent.children).toHaveLength(1);
       expect(parent.children[0]).toBe(firstChild);
@@ -469,10 +566,10 @@ describe('createTableOverlayRenderer', () => {
       });
       const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-      renderer.update(makeRenderModel({ globalVars: [asVar('dealerSeat', 0)] }), positions);
+      updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('dealerSeat', 0)] }), positions);
       const markerRef = parent.children[0] as InstanceType<typeof MockContainer>;
 
-      renderer.update(makeRenderModel({ globalVars: [asVar('dealerSeat', 1)] }), positions);
+      updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('dealerSeat', 1)] }), positions);
 
       expect(parent.children).toHaveLength(1);
       expect(parent.children[0]).toBe(markerRef);
@@ -481,7 +578,7 @@ describe('createTableOverlayRenderer', () => {
       expect(markerRef.position.y).toBe(100);
     });
 
-    it('hides excess text slots when item count decreases', () => {
+    it('retires removed per-player overlays when item count decreases', () => {
       const parent = new MockContainer();
       const provider = new VisualConfigProvider({
         version: 1,
@@ -500,7 +597,7 @@ describe('createTableOverlayRenderer', () => {
       const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
       // Two active players → two text slots
-      renderer.update(
+      updateRenderer(renderer, provider, 
         makeRenderModel({
           playerVars: new Map([
             [asPlayerId(0), [asVar('streetBet', 10)]],
@@ -513,8 +610,8 @@ describe('createTableOverlayRenderer', () => {
       const firstSlot = parent.children[0] as InstanceType<typeof MockText>;
       const secondSlot = parent.children[1] as InstanceType<typeof MockText>;
 
-      // One player eliminated → one text slot visible, second hidden
-      renderer.update(
+      // One player eliminated -> the removed keyed overlay is retired.
+      updateRenderer(renderer, provider, 
         makeRenderModel({
           players: [
             {
@@ -543,10 +640,10 @@ describe('createTableOverlayRenderer', () => {
       );
       expect(parent.children).toHaveLength(1);
       expect(parent.children[0]).toBe(firstSlot);
-      expect(secondSlot.destroyed).toBe(false);
+      expect(secondSlot.destroyed).toBe(true);
     });
 
-    it('shows previously hidden slots when item count increases again', () => {
+    it('creates a new text node when a removed keyed overlay returns', () => {
       const parent = new MockContainer();
       const provider = new VisualConfigProvider({
         version: 1,
@@ -565,7 +662,7 @@ describe('createTableOverlayRenderer', () => {
       const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
       // Two players
-      renderer.update(
+      updateRenderer(renderer, provider, 
         makeRenderModel({
           playerVars: new Map([
             [asPlayerId(0), [asVar('streetBet', 10)]],
@@ -578,8 +675,8 @@ describe('createTableOverlayRenderer', () => {
       const secondSlot = parent.children[1];
       expect(parent.children).toHaveLength(2);
 
-      // One player eliminated
-      renderer.update(
+      // One player eliminated.
+      updateRenderer(renderer, provider, 
         makeRenderModel({
           players: [
             {
@@ -607,9 +704,10 @@ describe('createTableOverlayRenderer', () => {
         positions,
       );
       expect(parent.children).toHaveLength(1);
+      expect(secondSlot?.destroyed).toBe(true);
 
-      // Both players active again
-      renderer.update(
+      // Both players active again.
+      updateRenderer(renderer, provider, 
         makeRenderModel({
           playerVars: new Map([
             [asPlayerId(0), [asVar('streetBet', 30)]],
@@ -620,7 +718,7 @@ describe('createTableOverlayRenderer', () => {
       );
       expect(parent.children).toHaveLength(2);
       expect(parent.children[0]).toBe(firstSlot);
-      expect(parent.children[1]).toBe(secondSlot);
+      expect(parent.children[1]).not.toBe(secondSlot);
     });
 
     it('does not call destroy() on Text objects during update cycle', () => {
@@ -633,16 +731,16 @@ describe('createTableOverlayRenderer', () => {
       });
       const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-      renderer.update(makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
+      updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
       const child = parent.children[0] as InstanceType<typeof MockText>;
       const destroySpy = vi.spyOn(child, 'destroy');
 
-      renderer.update(makeRenderModel({ globalVars: [asVar('pot', 20)] }), positions);
+      updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('pot', 20)] }), positions);
 
       expect(destroySpy).not.toHaveBeenCalled();
     });
 
-    it('hides children when renderModel becomes null after a non-null update', () => {
+    it('retires children when renderModel becomes null after a non-null update', () => {
       const parent = new MockContainer();
       const provider = new VisualConfigProvider({
         version: 1,
@@ -652,16 +750,16 @@ describe('createTableOverlayRenderer', () => {
       });
       const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-      renderer.update(makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
+      updateRenderer(renderer, provider, makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
       const child = parent.children[0] as InstanceType<typeof MockText>;
       expect(parent.children).toHaveLength(1);
 
-      renderer.update(null as unknown as RenderModel, positions);
+      updateRenderer(renderer, provider, null as unknown as RenderModel, positions);
       expect(parent.children).toHaveLength(0);
-      expect(child.destroyed).toBe(false);
+      expect(child.destroyed).toBe(true);
     });
 
-    it('destroy() destroys all pooled objects including hidden ones', () => {
+    it('preserves semantic player identity instead of reusing slot zero for a different player', () => {
       const parent = new MockContainer();
       const provider = new VisualConfigProvider({
         version: 1,
@@ -679,8 +777,8 @@ describe('createTableOverlayRenderer', () => {
       });
       const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-      // Two players active
-      renderer.update(
+      // Two players active.
+      updateRenderer(renderer, provider, 
         makeRenderModel({
           playerVars: new Map([
             [asPlayerId(0), [asVar('streetBet', 10)]],
@@ -692,40 +790,29 @@ describe('createTableOverlayRenderer', () => {
       const firstSlot = parent.children[0] as InstanceType<typeof MockText>;
       const secondSlot = parent.children[1] as InstanceType<typeof MockText>;
 
-      // Hide second slot
-      renderer.update(
+      // Remove player 0, leaving only player 1.
+      updateRenderer(renderer, provider, 
         makeRenderModel({
           players: [
             {
-              id: asPlayerId(0),
-              displayName: 'P0',
+              id: asPlayerId(1),
+              displayName: 'P1',
               isHuman: true,
               isActive: true,
               isEliminated: false,
               factionId: null,
             },
-            {
-              id: asPlayerId(1),
-              displayName: 'P1',
-              isHuman: true,
-              isActive: false,
-              isEliminated: true,
-              factionId: null,
-            },
           ],
           playerVars: new Map([
-            [asPlayerId(0), [asVar('streetBet', 10)]],
             [asPlayerId(1), [asVar('streetBet', 20)]],
           ]),
         }),
         positions,
       );
-      expect(secondSlot.destroyed).toBe(false);
-
-      // Destroy the renderer — all pooled objects destroyed
-      renderer.destroy();
+      expect(parent.children).toHaveLength(1);
+      expect(parent.children[0]).toBe(secondSlot);
       expect(firstSlot.destroyed).toBe(true);
-      expect(secondSlot.destroyed).toBe(true);
+      expect(secondSlot.destroyed).toBe(false);
     });
   });
 });

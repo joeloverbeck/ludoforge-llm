@@ -1,18 +1,18 @@
 import type {
-  RenderAdjacency,
-  RenderMarker,
-  RenderToken,
-  RenderZone,
-} from '../model/render-model';
+  RunnerAdjacency,
+  RunnerMarker,
+  RunnerToken,
+  RunnerZone,
+} from '../model/runner-frame.js';
 
-export type ZoneVisualComparator = (prev: RenderZone, next: RenderZone) => boolean;
-export type TokenVisualComparator = (prev: RenderToken, next: RenderToken) => boolean;
-export type AdjacencyVisualComparator = (prev: RenderAdjacency, next: RenderAdjacency) => boolean;
+export type ZoneVisualComparator = (prev: RunnerZone, next: RunnerZone) => boolean;
+export type TokenVisualComparator = (prev: RunnerToken, next: RunnerToken) => boolean;
+export type AdjacencyVisualComparator = (prev: RunnerAdjacency, next: RunnerAdjacency) => boolean;
 
 export interface CanvasEqualityComparators {
-  zonesVisuallyEqual(prev: readonly RenderZone[], next: readonly RenderZone[]): boolean;
-  tokensVisuallyEqual(prev: readonly RenderToken[], next: readonly RenderToken[]): boolean;
-  adjacenciesVisuallyEqual(prev: readonly RenderAdjacency[], next: readonly RenderAdjacency[]): boolean;
+  zonesVisuallyEqual(prev: readonly RunnerZone[], next: readonly RunnerZone[]): boolean;
+  tokensVisuallyEqual(prev: readonly RunnerToken[], next: readonly RunnerToken[]): boolean;
+  adjacenciesVisuallyEqual(prev: readonly RunnerAdjacency[], next: readonly RunnerAdjacency[]): boolean;
 }
 
 export interface CanvasEqualityComparatorOverrides {
@@ -29,13 +29,13 @@ export function createCanvasEqualityComparators(
   const adjacencyComparator = overrides.adjacencyComparator ?? adjacenciesVisuallyEqualItem;
 
   return {
-    zonesVisuallyEqual(prev: readonly RenderZone[], next: readonly RenderZone[]): boolean {
+    zonesVisuallyEqual(prev: readonly RunnerZone[], next: readonly RunnerZone[]): boolean {
       return orderedArrayEqual(prev, next, zoneComparator);
     },
-    tokensVisuallyEqual(prev: readonly RenderToken[], next: readonly RenderToken[]): boolean {
+    tokensVisuallyEqual(prev: readonly RunnerToken[], next: readonly RunnerToken[]): boolean {
       return orderedArrayEqual(prev, next, tokenComparator);
     },
-    adjacenciesVisuallyEqual(prev: readonly RenderAdjacency[], next: readonly RenderAdjacency[]): boolean {
+    adjacenciesVisuallyEqual(prev: readonly RunnerAdjacency[], next: readonly RunnerAdjacency[]): boolean {
       return orderedArrayEqual(prev, next, adjacencyComparator);
     },
   };
@@ -44,34 +44,33 @@ export function createCanvasEqualityComparators(
 const DEFAULT_CANVAS_EQUALITY_COMPARATORS = createCanvasEqualityComparators();
 
 export function zonesVisuallyEqual(
-  prev: readonly RenderZone[],
-  next: readonly RenderZone[],
+  prev: readonly RunnerZone[],
+  next: readonly RunnerZone[],
 ): boolean {
   return DEFAULT_CANVAS_EQUALITY_COMPARATORS.zonesVisuallyEqual(prev, next);
 }
 
 export function tokensVisuallyEqual(
-  prev: readonly RenderToken[],
-  next: readonly RenderToken[],
+  prev: readonly RunnerToken[],
+  next: readonly RunnerToken[],
 ): boolean {
   return DEFAULT_CANVAS_EQUALITY_COMPARATORS.tokensVisuallyEqual(prev, next);
 }
 
 export function adjacenciesVisuallyEqual(
-  prev: readonly RenderAdjacency[],
-  next: readonly RenderAdjacency[],
+  prev: readonly RunnerAdjacency[],
+  next: readonly RunnerAdjacency[],
 ): boolean {
   return DEFAULT_CANVAS_EQUALITY_COMPARATORS.adjacenciesVisuallyEqual(prev, next);
 }
 
-function zonesVisuallyEqualItem(previous: RenderZone, current: RenderZone): boolean {
+function zonesVisuallyEqualItem(previous: RunnerZone, current: RunnerZone): boolean {
   return (
     previous.id === current.id
-    && previous.displayName === current.displayName
+    && previous.ordering === current.ordering
     && previous.visibility === current.visibility
     && previous.ownerID === current.ownerID
     && previous.category === current.category
-    && isZoneVisualEqual(previous.visual, current.visual)
     && previous.isSelectable === current.isSelectable
     && previous.isHighlighted === current.isHighlighted
     && previous.hiddenTokenCount === current.hiddenTokenCount
@@ -80,7 +79,7 @@ function zonesVisuallyEqualItem(previous: RenderZone, current: RenderZone): bool
   );
 }
 
-function tokensVisuallyEqualItem(previous: RenderToken, current: RenderToken): boolean {
+function tokensVisuallyEqualItem(previous: RunnerToken, current: RunnerToken): boolean {
   return (
     previous.id === current.id
     && previous.type === current.type
@@ -93,7 +92,7 @@ function tokensVisuallyEqualItem(previous: RenderToken, current: RenderToken): b
   );
 }
 
-function adjacenciesVisuallyEqualItem(previous: RenderAdjacency, current: RenderAdjacency): boolean {
+function adjacenciesVisuallyEqualItem(previous: RunnerAdjacency, current: RunnerAdjacency): boolean {
   return (
     previous.from === current.from
     && previous.to === current.to
@@ -149,7 +148,7 @@ function stringArraysEqual(prev: readonly string[], next: readonly string[]): bo
   return true;
 }
 
-function markersEqual(prev: readonly RenderMarker[], next: readonly RenderMarker[]): boolean {
+function markersEqual(prev: readonly RunnerMarker[], next: readonly RunnerMarker[]): boolean {
   if (prev === next) {
     return true;
   }
@@ -168,7 +167,6 @@ function markersEqual(prev: readonly RenderMarker[], next: readonly RenderMarker
 
     if (
       previous.id !== current.id
-      || previous.displayName !== current.displayName
       || previous.state !== current.state
     ) {
       return false;
@@ -176,11 +174,4 @@ function markersEqual(prev: readonly RenderMarker[], next: readonly RenderMarker
   }
 
   return true;
-}
-
-function isZoneVisualEqual(previous: RenderZone['visual'], current: RenderZone['visual']): boolean {
-  return previous.shape === current.shape
-    && previous.width === current.width
-    && previous.height === current.height
-    && previous.color === current.color;
 }

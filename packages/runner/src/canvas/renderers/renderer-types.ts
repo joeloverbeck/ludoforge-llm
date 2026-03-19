@@ -2,20 +2,29 @@ import type { PlayerId } from '@ludoforge/engine/runtime';
 import type { Container } from 'pixi.js';
 
 import type { Position } from '../geometry';
-import type { ResolvedTokenVisual } from '../../config/visual-config-provider.js';
+import type {
+  ResolvedStackBadgeStyle,
+  ResolvedTokenPresentation,
+  ResolvedTokenVisual,
+  ResolvedZoneTokenLayout,
+} from '../../config/visual-config-provider.js';
+import type { LayoutRole } from '../../config/visual-config-types.js';
 import type { CardTemplate } from '../../config/visual-config-types.js';
 import type {
-  RenderAdjacency,
-  RenderModel,
   RenderToken,
-  RenderZone,
 } from '../../model/render-model';
+import type {
+  PresentationAdjacencyNode,
+  PresentationOverlayNode,
+  PresentationRegionNode,
+  PresentationZoneNode,
+} from '../../presentation/presentation-scene.js';
+import type { PresentationTokenNode } from '../../presentation/token-presentation.js';
 
 export interface ZoneRenderer {
   update(
-    zones: readonly RenderZone[],
+    zones: readonly PresentationZoneNode[],
     positions: ReadonlyMap<string, Position>,
-    highlightedZoneIDs?: ReadonlySet<string>,
   ): void;
   getContainerMap(): ReadonlyMap<string, Container>;
   destroy(): void;
@@ -23,9 +32,8 @@ export interface ZoneRenderer {
 
 export interface TokenRenderer {
   update(
-    tokens: readonly RenderToken[],
+    tokens: readonly PresentationTokenNode[],
     zoneContainers: ReadonlyMap<string, Container>,
-    highlightedTokenIDs?: ReadonlySet<string>,
   ): void;
   getContainerMap(): ReadonlyMap<string, Container>;
   getFaceControllerMap?(): ReadonlyMap<string, TokenFaceController>;
@@ -39,30 +47,29 @@ export interface TokenFaceController {
 
 export interface AdjacencyRenderer {
   update(
-    adjacencies: readonly RenderAdjacency[],
+    adjacencies: readonly PresentationAdjacencyNode[],
     positions: ReadonlyMap<string, Position>,
   ): void;
   destroy(): void;
 }
 
 export interface TableOverlayRenderer {
-  update(
-    renderModel: RenderModel | null,
-    positions: ReadonlyMap<string, Position>,
-  ): void;
+  update(items: readonly PresentationOverlayNode[]): void;
   destroy(): void;
 }
 
 export interface RegionBoundaryRenderer {
-  update(
-    zones: readonly RenderZone[],
-    positions: ReadonlyMap<string, Position>,
-  ): void;
+  update(regions: readonly PresentationRegionNode[]): void;
   destroy(): void;
 }
 
-export interface FactionColorProvider {
+export interface TokenRenderStyleProvider {
   getTokenTypeVisual(tokenTypeId: string): ResolvedTokenVisual;
+  getTokenTypePresentation(tokenTypeId: string): ResolvedTokenPresentation;
+  resolveZoneTokenLayout(zoneId: string, category: string | null): ResolvedZoneTokenLayout;
+  getStackBadgeStyle(): ResolvedStackBadgeStyle;
+  getZoneLayoutRole(zoneId: string): LayoutRole | null;
+  isSharedZone(zoneId: string): boolean;
   resolveTokenSymbols(
     tokenTypeId: string,
     tokenProperties: Readonly<Record<string, string | number | boolean>>,

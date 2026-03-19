@@ -100,7 +100,7 @@ Do not duplicate or drift this procedure in other files; update `docs/archival-w
 <!-- gitnexus:start -->
 # GitNexus MCP
 
-This project is indexed by GitNexus as **66mctscomevafra** (10736 symbols, 32200 relationships, 300 execution flows).
+This project is indexed by GitNexus as **15gamagepolir** (10298 symbols, 30123 relationships, 300 execution flows).
 
 ## Always Start Here
 

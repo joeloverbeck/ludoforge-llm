@@ -77,4 +77,45 @@ describe('resolveSectionsFromBlock', () => {
     assert.equal(result.resolved.length, 1);
     assert.equal(result.resolved[0]?.section, 'phaseTemplates');
   });
+
+  it('recognizes agents via canonical top-level key', () => {
+    const result = resolveSectionsFromBlock({
+      agents: {
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+      },
+    });
+
+    assert.equal(result.issue, undefined);
+    assert.equal(result.resolved.length, 1);
+    assert.equal(result.resolved[0]?.section, 'agents');
+  });
+
+  it('recognizes agents via explicit section annotation', () => {
+    const result = resolveSectionsFromBlock({
+      section: 'agents',
+      profiles: {
+        baseline: {
+          params: {},
+          use: {
+            pruningRules: [],
+            scoreTerms: [],
+            tieBreakers: ['stableMoveKey'],
+          },
+        },
+      },
+    });
+
+    assert.equal(result.issue, undefined);
+    assert.equal(result.resolved.length, 1);
+    assert.equal(result.resolved[0]?.section, 'agents');
+  });
 });

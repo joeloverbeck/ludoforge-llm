@@ -5,12 +5,16 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createCanvasUpdater } from '../../src/canvas/canvas-updater';
 import { createPositionStore } from '../../src/canvas/position-store';
+import { VisualConfigTokenRenderStyleProvider } from '../../src/canvas/renderers/token-render-style-provider';
 import type { AdjacencyRenderer, TableOverlayRenderer, TokenRenderer, ZoneRenderer } from '../../src/canvas/renderers/renderer-types';
 import type { ViewportResult } from '../../src/canvas/viewport-setup';
+import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import type { RenderModel, RenderToken, RenderZone } from '../../src/model/render-model';
+import type { RunnerFrame } from '../../src/model/runner-frame.js';
 import type { GameStore } from '../../src/store/game-store';
 
 interface CanvasTestStoreState {
+  readonly runnerFrame: RunnerFrame | null;
   readonly renderModel: RenderModel | null;
   readonly animationPlaying: boolean;
 }
@@ -99,10 +103,112 @@ function asVar(name: string, value: number | boolean) {
   } as const;
 }
 
-function createCanvasTestStore(initial: CanvasTestStoreState): StoreApi<CanvasTestStoreState> {
-  return createStore<CanvasTestStoreState>()(
-    subscribeWithSelector(() => initial),
+function createCanvasTestStore(initial: Omit<CanvasTestStoreState, 'runnerFrame'> & { runnerFrame?: RunnerFrame | null }): StoreApi<CanvasTestStoreState> {
+  const snapshot: CanvasTestStoreState = {
+    runnerFrame: initial.runnerFrame ?? (initial.renderModel === null ? null : toRunnerFrame(initial.renderModel)),
+    renderModel: initial.renderModel,
+    animationPlaying: initial.animationPlaying,
+  };
+  const store = createStore<CanvasTestStoreState>()(
+    subscribeWithSelector(() => snapshot),
   );
+  const baseSetState = store.setState.bind(store);
+
+  const materializeState = (
+    state: CanvasTestStoreState,
+    next: Partial<CanvasTestStoreState>,
+  ): CanvasTestStoreState => ({
+    ...state,
+    ...next,
+    runnerFrame: 'renderModel' in next
+      ? (next.renderModel === null ? null : toRunnerFrame(next.renderModel))
+      : state.runnerFrame,
+  });
+
+  store.setState = ((partial, replace) => {
+    if (typeof partial === 'function') {
+      if (replace === true) {
+        return baseSetState((state) => {
+          const next = partial(state);
+          if (next === null || typeof next !== 'object') {
+            return state;
+          }
+          return materializeState(state, next as Partial<CanvasTestStoreState>);
+        }, true);
+      }
+
+      return baseSetState((state) => {
+        const next = partial(state);
+        if (next === null || typeof next !== 'object') {
+          return state;
+        }
+        return materializeState(state, next as Partial<CanvasTestStoreState>);
+      });
+    }
+    const next = partial as Partial<CanvasTestStoreState>;
+
+    if (replace === true) {
+      return baseSetState(materializeState(store.getState(), next), true);
+    }
+
+    return baseSetState(materializeState(store.getState(), next));
+  }) as typeof store.setState;
+  return store;
+}
+
+function toRunnerFrame(renderModel: RenderModel): RunnerFrame {
+  return {
+    zones: renderModel.zones.map((zone) => ({
+      id: zone.id,
+      ordering: zone.ordering,
+      tokenIDs: zone.tokenIDs,
+      hiddenTokenCount: zone.hiddenTokenCount,
+      markers: zone.markers.map((marker) => ({ id: marker.id, state: marker.state, possibleStates: marker.possibleStates })),
+      visibility: zone.visibility,
+      isSelectable: zone.isSelectable,
+      isHighlighted: zone.isHighlighted,
+      ownerID: zone.ownerID,
+      category: zone.category,
+      attributes: zone.attributes,
+      metadata: zone.metadata,
+    })),
+    adjacencies: renderModel.adjacencies,
+    tokens: renderModel.tokens,
+    globalVars: renderModel.globalVars.map(({ name, value }) => ({ name, value })),
+    playerVars: new Map(Array.from(renderModel.playerVars.entries()).map(([playerId, vars]) => [playerId, vars.map(({ name, value }) => ({ name, value }))])),
+    globalMarkers: renderModel.globalMarkers.map(({ id, state, possibleStates }) => ({ id, state, possibleStates })),
+    tracks: renderModel.tracks.map(({ id, scope, seat, min, max, currentValue }) => ({ id, scope, seat, min, max, currentValue })),
+    activeEffects: renderModel.activeEffects.map((effect) => ({
+      id: effect.id,
+      sourceCardId: effect.id,
+      sourceCardTitle: effect.displayName,
+      attributes: effect.attributes.map((attribute) => ({ key: attribute.key, value: attribute.value })),
+    })),
+    players: renderModel.players.map(({ id, isHuman, isActive, isEliminated, factionId }) => ({ id, isHuman, isActive, isEliminated, factionId })),
+    activePlayerID: renderModel.activePlayerID,
+    turnOrder: renderModel.turnOrder,
+    turnOrderType: renderModel.turnOrderType,
+    simultaneousSubmitted: renderModel.simultaneousSubmitted,
+    interruptStack: renderModel.interruptStack,
+    isInInterrupt: renderModel.isInInterrupt,
+    phaseName: renderModel.phaseName,
+    eventDecks: renderModel.eventDecks.map(({ id, drawZoneId, discardZoneId, playedCard, lookaheadCard, deckSize, discardSize }) => ({ id, drawZoneId, discardZoneId, playedCard, lookaheadCard, deckSize, discardSize })),
+    actionGroups: renderModel.actionGroups.map(({ groupKey, actions }) => ({ groupKey, actions })),
+    choiceBreadcrumb: renderModel.choiceBreadcrumb.map((step) => ({
+      decisionKey: step.decisionKey,
+      name: step.name,
+      chosenValueId: step.chosenValueId,
+      chosenValue: step.chosenValue,
+      iterationGroupId: step.iterationGroupId,
+      iterationEntityId: null,
+    })),
+    choiceContext: null,
+    choiceUi: renderModel.choiceUi as RunnerFrame['choiceUi'],
+    moveEnumerationWarnings: renderModel.moveEnumerationWarnings,
+    runtimeEligible: renderModel.runtimeEligible.map(({ seatId, factionId, seatIndex }) => ({ seatId, factionId, seatIndex })),
+    victoryStandings: renderModel.victoryStandings,
+    terminal: renderModel.terminal,
+  };
 }
 
 function createRendererMocks() {
@@ -148,6 +254,9 @@ function createViewportMock(): ViewportResult {
   };
 }
 
+const TEST_VISUAL_CONFIG_PROVIDER = new VisualConfigProvider(null);
+const TEST_TOKEN_RENDER_STYLE_PROVIDER = new VisualConfigTokenRenderStyleProvider(TEST_VISUAL_CONFIG_PROVIDER);
+
 describe('createCanvasUpdater', () => {
   it('start subscribes to store and position store', () => {
     const store = createCanvasTestStore({
@@ -164,6 +273,8 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -188,6 +299,8 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -197,13 +310,87 @@ describe('createCanvasUpdater', () => {
     updater.start();
 
     expect(viewport.updateWorldBounds).toHaveBeenCalledWith(snapshot.bounds);
-    expect(renderers.zoneRenderer.update).toHaveBeenCalledWith(model.zones, snapshot.positions, new Set());
-    expect(renderers.adjacencyRenderer.update).toHaveBeenCalledWith(model.adjacencies, snapshot.positions);
-    expect(renderers.tokenRenderer.update).toHaveBeenCalledWith(
-      model.tokens,
-      renderers.zoneRenderer.getContainerMap(),
-      new Set(),
-    );
+    const zoneCall = vi.mocked(renderers.zoneRenderer.update).mock.calls[0];
+    expect(zoneCall?.[0]).toMatchObject([
+      {
+        id: 'zone:a',
+        displayName: 'Zone A',
+        visual: { shape: 'rectangle', width: 160, height: 100, color: null },
+        render: expect.objectContaining({
+          fillColor: '#4d5c6d',
+        }),
+      },
+    ]);
+    expect(zoneCall?.[1]).toBe(snapshot.positions);
+    expect(zoneCall?.[0]).not.toBe(model.zones);
+    const adjacencyCall = vi.mocked(renderers.adjacencyRenderer.update).mock.calls[0];
+    expect(adjacencyCall?.[0]).toEqual([]);
+    expect(adjacencyCall?.[1]).toBe(snapshot.positions);
+    const tokenCall = vi.mocked(renderers.tokenRenderer.update).mock.calls[0];
+    expect(tokenCall?.[0]).toMatchObject([
+      {
+        renderId: 'token:1',
+        zoneId: 'zone:a',
+        tokenIds: ['token:1'],
+        stackCount: 1,
+        offset: { x: -90, y: -18 },
+        render: expect.objectContaining({
+          frontColor: expect.any(String),
+        }),
+      },
+    ]);
+    expect(tokenCall?.[1]).toBe(renderers.zoneRenderer.getContainerMap());
+  });
+
+  it('builds scene-owned zone nodes from the visual config before calling renderers', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        categoryStyles: {
+          city: { shape: 'hexagon', width: 120, height: 80, color: '#123456' },
+        },
+        overrides: {
+          'zone:a': { label: 'Configured Zone A' },
+        },
+      },
+    });
+    const tokenStyleProvider = new VisualConfigTokenRenderStyleProvider(provider);
+    const model = makeRenderModel({
+      zones: [
+        makeZone({
+          category: 'city',
+          displayName: 'Mixed Zone A',
+          visual: { shape: 'circle', width: 90, height: 90, color: '#ff00ff' },
+        }),
+      ],
+    });
+    const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
+    const positionStore = createPositionStore(['zone:a']);
+
+    const renderers = createRendererMocks();
+    const viewport = createViewportMock();
+
+    const updater = createCanvasUpdater({
+      store: store as unknown as StoreApi<GameStore>,
+      positionStore,
+      visualConfigProvider: provider,
+      tokenRenderStyleProvider: tokenStyleProvider,
+      zoneRenderer: renderers.zoneRenderer,
+      adjacencyRenderer: renderers.adjacencyRenderer,
+      tokenRenderer: renderers.tokenRenderer,
+      viewport,
+    });
+
+    updater.start();
+
+    const zoneCall = vi.mocked(renderers.zoneRenderer.update).mock.calls[0];
+    expect(zoneCall?.[0]).toMatchObject([
+      {
+        id: 'zone:a',
+        displayName: 'Configured Zone A',
+        visual: { shape: 'hexagon', width: 120, height: 80, color: '#123456' },
+      },
+    ]);
   });
 
   it('updates table overlays when variable state changes even if zones/tokens/adjacencies are unchanged', () => {
@@ -219,6 +406,8 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -253,6 +442,8 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -292,6 +483,8 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -332,6 +525,8 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -354,6 +549,8 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -376,7 +573,19 @@ describe('createCanvasUpdater', () => {
     const latestSnapshot = positionStore.getSnapshot();
 
     expect(viewport.updateWorldBounds).toHaveBeenCalledWith(latestSnapshot.bounds);
-    expect(renderers.zoneRenderer.update).toHaveBeenCalledWith(model.zones, latestSnapshot.positions, new Set());
+    expect(renderers.zoneRenderer.update).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'zone:a',
+          displayName: 'Zone A',
+          visual: { shape: 'rectangle', width: 160, height: 100, color: null },
+          render: expect.objectContaining({
+            fillColor: '#4d5c6d',
+          }),
+        }),
+      ]),
+      latestSnapshot.positions,
+    );
   });
 
   it('gates renderer updates while animation is playing', () => {
@@ -390,6 +599,8 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -422,6 +633,8 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -465,6 +678,8 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -500,6 +715,8 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -517,14 +734,31 @@ describe('createCanvasUpdater', () => {
     expect(renderers.zoneRenderer.update).toHaveBeenCalledTimes(1);
     expect(renderers.tokenRenderer.update).toHaveBeenCalledTimes(1);
     expect(renderers.zoneRenderer.update).toHaveBeenCalledWith(
-      model.zones,
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'zone:a',
+          displayName: 'Zone A',
+          visual: { shape: 'rectangle', width: 160, height: 100, color: null },
+          render: expect.objectContaining({
+            stroke: { color: '#60a5fa', width: 3, alpha: 1 },
+          }),
+        }),
+      ]),
       positionStore.getSnapshot().positions,
-      new Set(['zone:a']),
     );
     expect(renderers.tokenRenderer.update).toHaveBeenCalledWith(
-      model.tokens,
+      expect.arrayContaining([
+        expect.objectContaining({
+          renderId: 'token:1',
+          zoneId: 'zone:a',
+          tokenIds: ['token:1'],
+          stackCount: 1,
+          render: expect.objectContaining({
+            stroke: { color: '#60a5fa', width: 3, alpha: 1 },
+          }),
+        }),
+      ]),
       renderers.zoneRenderer.getContainerMap(),
-      new Set(['token:1']),
     );
   });
 });

@@ -1,7 +1,5 @@
 import { Container, Graphics, Rectangle, Text } from 'pixi.js';
 
-import type { RenderZone } from '../../model/render-model';
-import type { MarkerBadgeConfig } from '../../config/visual-config-types.js';
 import type { Position } from '../geometry';
 import type { ZoneRenderer } from './renderer-types';
 import { ContainerPool } from './container-pool';
@@ -19,11 +17,11 @@ import {
   ZONE_RENDER_WIDTH as ZONE_WIDTH,
   ZONE_RENDER_HEIGHT as ZONE_HEIGHT,
 } from '../../layout/layout-constants.js';
+import { createManagedText } from '../text/text-runtime.js';
+import type { PresentationZoneNode } from '../../presentation/presentation-scene.js';
 
 const ZONE_CORNER_RADIUS = 12;
 const LINE_CORNER_RADIUS = 4;
-const LABEL_GAP = 8;
-const LABEL_LINE_HEIGHT = 18;
 const LABEL_AREA_HEIGHT = 40;
 
 interface ZoneVisualElements {
@@ -41,7 +39,6 @@ interface ZoneRendererOptions {
     zoneId: string,
     isSelectable: () => boolean,
   ) => () => void;
-  readonly markerBadgeConfig?: MarkerBadgeConfig | null;
 }
 
 export function createZoneRenderer(
@@ -56,9 +53,8 @@ export function createZoneRenderer(
 
   return {
     update(
-      zones: readonly RenderZone[],
+      zones: readonly PresentationZoneNode[],
       positions: ReadonlyMap<string, Position>,
-      highlightedZoneIDs: ReadonlySet<string> = new Set<string>(),
     ): void {
       const nextZoneIds = new Set(zones.map((zone) => zone.id));
 
@@ -123,7 +119,7 @@ export function createZoneRenderer(
           zoneContainer.position.set(position.x, position.y);
         }
 
-        updateZoneVisuals(visuals, zone, highlightedZoneIDs.has(zone.id), options.markerBadgeConfig ?? null);
+        updateZoneVisuals(visuals, zone);
         const dimensions = resolveVisualDimensions(zone.visual, {
           width: ZONE_WIDTH,
           height: ZONE_HEIGHT,
@@ -206,7 +202,7 @@ interface TextOptions {
 }
 
 function createText(text: string, x: number, y: number, fontSize: number, opts: TextOptions = {}): Text {
-  const label = new Text({
+  const labelOptions = {
     text,
     style: {
       fill: opts.fill ?? '#f5f7fa',
@@ -215,51 +211,40 @@ function createText(text: string, x: number, y: number, fontSize: number, opts: 
       ...(opts.fontWeight !== undefined ? { fontWeight: opts.fontWeight as 'bold' | 'normal' } : {}),
       ...(opts.stroke !== undefined ? { stroke: opts.stroke } : {}),
     },
-  });
-
-  if (opts.anchor !== undefined) {
-    label.anchor.set(opts.anchor.x, opts.anchor.y);
-  }
-  label.position.set(x, y);
-  label.eventMode = 'none';
-  label.interactiveChildren = false;
-  return label;
+    position: { x, y },
+  };
+  return opts.anchor === undefined
+    ? createManagedText(labelOptions)
+    : createManagedText({ ...labelOptions, anchor: opts.anchor });
 }
 
 function updateZoneVisuals(
   visuals: ZoneVisualElements,
-  zone: RenderZone,
-  isInteractionHighlighted: boolean,
-  badgeConfig: MarkerBadgeConfig | null,
+  zone: PresentationZoneNode,
 ): void {
   const dimensions = resolveVisualDimensions(zone.visual, {
     width: ZONE_WIDTH,
     height: ZONE_HEIGHT,
   });
-  drawZoneBase(visuals.base, zone, isInteractionHighlighted);
+  drawZoneBase(visuals.base, zone);
   updateHiddenZoneStackVisual(
     visuals.hiddenStack,
-    zone.hiddenTokenCount,
+    zone.render.hiddenStackCount,
     dimensions.width,
     dimensions.height,
   );
-  layoutZoneLabels(visuals, dimensions.width, dimensions.height, zone.visual.shape);
-
-  visuals.nameLabel.text = zone.displayName;
-
-  updateMarkerBadge(visuals, zone, dimensions, badgeConfig);
-
-  const filteredMarkers = badgeConfig === null
-    ? zone.markers
-    : zone.markers.filter((m) => m.id !== badgeConfig.markerId);
-  const markerText = filteredMarkers.map((marker) => `${marker.displayName}:${marker.state}`).join('  ');
-  visuals.markersLabel.text = markerText;
-  visuals.markersLabel.visible = markerText.length > 0;
+  visuals.nameLabel.text = zone.render.nameLabel.text;
+  visuals.nameLabel.position.set(zone.render.nameLabel.x, zone.render.nameLabel.y);
+  visuals.nameLabel.visible = zone.render.nameLabel.visible;
+  visuals.markersLabel.text = zone.render.markersLabel.text;
+  visuals.markersLabel.position.set(zone.render.markersLabel.x, zone.render.markersLabel.y);
+  visuals.markersLabel.visible = zone.render.markersLabel.visible;
+  updateMarkerBadge(visuals, zone.render.badge);
 }
 
-function drawZoneBase(base: Graphics, zone: RenderZone, isInteractionHighlighted: boolean): void {
-  const fill = resolveFillColor(zone);
-  const stroke = resolveStroke(zone, isInteractionHighlighted);
+function drawZoneBase(base: Graphics, zone: PresentationZoneNode): void {
+  const fill = parseHexColor(zone.render.fillColor ?? undefined) ?? 0x4d5c6d;
+  const strokeColor = parseHexColor(zone.render.stroke.color ?? undefined) ?? 0x111827;
   const dimensions = resolveVisualDimensions(zone.visual, {
     width: ZONE_WIDTH,
     height: ZONE_HEIGHT,
@@ -271,36 +256,11 @@ function drawZoneBase(base: Graphics, zone: RenderZone, isInteractionHighlighted
     rectangleCornerRadius: ZONE_CORNER_RADIUS,
     lineCornerRadius: LINE_CORNER_RADIUS,
   });
-  base.fill({ color: fill }).stroke(stroke);
-}
-
-function resolveFillColor(zone: RenderZone): number {
-  const visualColor = parseHexColor(zone.visual.color ?? undefined);
-  if (visualColor !== null) {
-    return visualColor;
-  }
-
-  if (zone.visibility === 'hidden') {
-    return 0x2a2f38;
-  }
-
-  if (zone.ownerID !== null) {
-    return 0x304f7a;
-  }
-
-  if (zone.visibility === 'owner') {
-    return 0x3f4d5c;
-  }
-
-  return 0x4d5c6d;
-}
-
-function layoutZoneLabels(visuals: ZoneVisualElements, width: number, height: number, shape: string): void {
-  const bottomEdge = shape === 'circle'
-    ? Math.min(width, height) / 2
-    : height / 2;
-  visuals.nameLabel.position.set(0, bottomEdge + LABEL_GAP);
-  visuals.markersLabel.position.set(0, bottomEdge + LABEL_GAP + LABEL_LINE_HEIGHT);
+  base.fill({ color: fill }).stroke({
+    color: strokeColor,
+    width: zone.render.stroke.width,
+    alpha: zone.render.stroke.alpha,
+  });
 }
 
 function hideBadge(visuals: ZoneVisualElements): void {
@@ -310,71 +270,20 @@ function hideBadge(visuals: ZoneVisualElements): void {
 
 function updateMarkerBadge(
   visuals: ZoneVisualElements,
-  zone: RenderZone,
-  dimensions: { readonly width: number; readonly height: number },
-  badgeConfig: MarkerBadgeConfig | null,
+  badge: PresentationZoneNode['render']['badge'],
 ): void {
-  if (badgeConfig === null) {
+  if (badge === null) {
     hideBadge(visuals);
     return;
   }
 
-  const marker = zone.markers.find((m) => m.id === badgeConfig.markerId);
-  if (marker === undefined) {
-    hideBadge(visuals);
-    return;
-  }
-
-  const entry = badgeConfig.colorMap[marker.state];
-  if (entry === undefined) {
-    hideBadge(visuals);
-    return;
-  }
-
-  const bw = badgeConfig.width ?? 30;
-  const bh = badgeConfig.height ?? 20;
-  const bx = dimensions.width / 2 - bw - 4;
-  const by = dimensions.height / 2 - bh - 4;
-
-  const fillColor = parseHexColor(entry.color);
+  const fillColor = parseHexColor(badge.color);
   visuals.badgeGraphics.clear();
-  visuals.badgeGraphics.roundRect(bx, by, bw, bh, 4);
+  visuals.badgeGraphics.roundRect(badge.x, badge.y, badge.width, badge.height, 4);
   visuals.badgeGraphics.fill({ color: fillColor ?? 0x6b7280 });
   visuals.badgeGraphics.visible = true;
 
-  visuals.badgeLabel.text = entry.abbreviation;
-  visuals.badgeLabel.position.set(bx + bw / 2, by + bh / 2);
+  visuals.badgeLabel.text = badge.text;
+  visuals.badgeLabel.position.set(badge.x + badge.width / 2, badge.y + badge.height / 2);
   visuals.badgeLabel.visible = true;
-}
-
-function resolveStroke(zone: RenderZone, isInteractionHighlighted: boolean): { color: number; width: number; alpha: number } {
-  if (zone.isHighlighted) {
-    return {
-      color: 0xfacc15,
-      width: 4,
-      alpha: 1,
-    };
-  }
-
-  if (isInteractionHighlighted) {
-    return {
-      color: 0x60a5fa,
-      width: 3,
-      alpha: 1,
-    };
-  }
-
-  if (zone.isSelectable) {
-    return {
-      color: 0x93c5fd,
-      width: 2,
-      alpha: 0.95,
-    };
-  }
-
-  return {
-    color: 0x111827,
-    width: 1,
-    alpha: 0.7,
-  };
 }

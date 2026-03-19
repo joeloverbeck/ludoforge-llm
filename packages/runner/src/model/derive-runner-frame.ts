@@ -19,31 +19,31 @@ import {
 } from '@ludoforge/engine/runtime';
 
 import type {
-  RenderAction,
-  RenderAdjacency,
-  RenderChoiceContext,
-
-  RenderChoiceTarget,
-  RenderChoiceUi,
-  RenderChoiceUiInvalidReason,
-  RenderEligibilityEntry,
-  RenderEventCard,
-  RenderEventDeck,
-  RenderGlobalMarker,
-  RenderLastingEffect,
-  RenderLastingEffectAttribute,
-  RenderMarker,
-  RenderModel,
-  RenderRuntimeEligibleFaction,
-  RenderToken,
-  RenderTrack,
-  RenderVariable,
-  RenderZone,
-} from './render-model.js';
-import type { ActionGroupPolicy } from '../config/visual-config-types.js';
+  RunnerAction,
+  RunnerActionGroup,
+  RunnerAdjacency,
+  RunnerChoiceContext,
+  RunnerChoiceTarget,
+  RunnerChoiceUi,
+  RunnerChoiceUiInvalidReason,
+  RunnerEligibilityEntry,
+  RunnerEventCard,
+  RunnerEventDeck,
+  RunnerFrame,
+  RunnerGlobalMarker,
+  RunnerLastingEffect,
+  RunnerLastingEffectAttribute,
+  RunnerMarker,
+  RunnerPlayer,
+  RunnerRuntimeEligibleFaction,
+  RunnerToken,
+  RunnerTrack,
+  RunnerVariable,
+  RunnerZone,
+} from './runner-frame.js';
 import type { RenderContext } from '../store/store-types.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
-import { formatChoiceValueFallback, formatChoiceValueResolved, serializeChoiceValueIdentity } from './choice-value-utils.js';
+import { serializeChoiceValueIdentity } from './choice-value-utils.js';
 import { deriveVictoryStandings } from './derive-victory-standings.js';
 import { parseIterationContext } from './iteration-context.js';
 
@@ -63,7 +63,7 @@ interface StaticRenderDerivation {
 interface EventCardProjection {
   readonly title: string;
   readonly orderNumber: number | null;
-  readonly eligibility: readonly RenderEligibilityEntry[] | null;
+  readonly eligibility: readonly RunnerEligibilityEntry[] | null;
   readonly sideMode: 'single' | 'dual';
   readonly unshadedText: string | null;
   readonly shadedText: string | null;
@@ -71,18 +71,17 @@ interface EventCardProjection {
 
 interface GameDefEventDeckProjection {
   readonly id: string;
-  readonly displayName: string;
   readonly drawZoneId: string;
   readonly discardZoneId: string;
   readonly cardsById: ReadonlyMap<string, EventCardProjection>;
 }
 
-export function deriveRenderModel(
+export function deriveRunnerFrame(
   state: GameState,
   def: GameDef,
   context: RenderContext,
-  previousModel: RenderModel | null = null,
-): RenderModel {
+  previousFrame: RunnerFrame | null = null,
+): RunnerFrame {
   const staticDerivation = deriveStaticRenderDerivation(def);
   const selectionTargets = deriveSelectionTargets(context);
   const zoneDerivation = deriveZones(state, def, context, selectionTargets.selectableZoneIDs);
@@ -118,7 +117,7 @@ export function deriveRenderModel(
   const choiceUi = deriveChoiceUi(context, zonesById, tokens, players);
   const choiceContext = deriveChoiceContext(context, zonesById);
 
-  const nextModel: RenderModel = {
+  const nextFrame: RunnerFrame = {
     zones: zones.map((zone) => ({
       ...zone,
       markers: deriveZoneMarkers(zone.id, state, staticDerivation.markerStatesById),
@@ -138,12 +137,8 @@ export function deriveRenderModel(
     interruptStack,
     isInInterrupt: interruptStack.length > 0,
     phaseName: String(state.currentPhase),
-    phaseDisplayName: formatIdAsDisplayName(String(state.currentPhase)),
     eventDecks,
-    actionGroups: deriveActionGroups(
-      context.legalMoveResult?.moves ?? [],
-      context.visualConfigProvider.getActionGroupPolicy(),
-    ),
+    actionGroups: deriveActionGroups(context.legalMoveResult?.moves ?? []),
     choiceBreadcrumb: deriveChoiceBreadcrumb(context, zonesById),
     choiceContext,
     choiceUi,
@@ -156,10 +151,10 @@ export function deriveRenderModel(
     terminal: deriveTerminal(context.terminal),
   };
 
-  return stabilizeRenderModel(previousModel, nextModel);
+  return stabilizeRunnerFrame(previousFrame, nextFrame);
 }
 
-function stabilizeRenderModel(previous: RenderModel | null, next: RenderModel): RenderModel {
+function stabilizeRunnerFrame(previous: RunnerFrame | null, next: RunnerFrame): RunnerFrame {
   if (previous === null) {
     return next;
   }
@@ -178,7 +173,7 @@ function stabilizeRenderModel(previous: RenderModel | null, next: RenderModel): 
   };
 }
 
-function stabilizeZoneArray(previous: readonly RenderZone[], next: readonly RenderZone[]): readonly RenderZone[] {
+function stabilizeZoneArray(previous: readonly RunnerZone[], next: readonly RunnerZone[]): readonly RunnerZone[] {
   if (previous.length === 0 || next.length === 0) {
     return next;
   }
@@ -201,7 +196,7 @@ function stabilizeZoneArray(previous: readonly RenderZone[], next: readonly Rend
   return hasChange ? stabilized : next;
 }
 
-function stabilizeTokenArray(previous: readonly RenderToken[], next: readonly RenderToken[]): readonly RenderToken[] {
+function stabilizeTokenArray(previous: readonly RunnerToken[], next: readonly RunnerToken[]): readonly RunnerToken[] {
   if (previous.length === 0 || next.length === 0) {
     return next;
   }
@@ -224,9 +219,8 @@ function stabilizeTokenArray(previous: readonly RenderToken[], next: readonly Re
   return hasChange ? stabilized : next;
 }
 
-function isZoneEquivalent(left: RenderZone, right: RenderZone): boolean {
+function isZoneEquivalent(left: RunnerZone, right: RunnerZone): boolean {
   return left.id === right.id
-    && left.displayName === right.displayName
     && left.ordering === right.ordering
     && left.hiddenTokenCount === right.hiddenTokenCount
     && left.visibility === right.visibility
@@ -235,16 +229,12 @@ function isZoneEquivalent(left: RenderZone, right: RenderZone): boolean {
     && left.ownerID === right.ownerID
     && left.category === right.category
     && isAttributeRecordEqual(left.attributes, right.attributes)
-    && left.visual.shape === right.visual.shape
-    && left.visual.width === right.visual.width
-    && left.visual.height === right.visual.height
-    && left.visual.color === right.visual.color
     && isStringArrayEqual(left.tokenIDs, right.tokenIDs)
     && isMarkerArrayEqual(left.markers, right.markers)
     && isShallowRecordEqual(left.metadata, right.metadata);
 }
 
-function isTokenEquivalent(left: RenderToken, right: RenderToken): boolean {
+function isTokenEquivalent(left: RunnerToken, right: RunnerToken): boolean {
   return left.id === right.id
     && left.type === right.type
     && left.zoneID === right.zoneID
@@ -256,7 +246,7 @@ function isTokenEquivalent(left: RenderToken, right: RenderToken): boolean {
     && isShallowRecordEqual(left.properties, right.properties);
 }
 
-function isMarkerArrayEqual(left: readonly RenderMarker[], right: readonly RenderMarker[]): boolean {
+function isMarkerArrayEqual(left: readonly RunnerMarker[], right: readonly RunnerMarker[]): boolean {
   if (left.length !== right.length) {
     return false;
   }
@@ -267,7 +257,6 @@ function isMarkerArrayEqual(left: readonly RenderMarker[], right: readonly Rende
       return false;
     }
     return leftMarker.id === rightMarker.id
-      && leftMarker.displayName === rightMarker.displayName
       && leftMarker.state === rightMarker.state
       && isStringArrayEqual(leftMarker.possibleStates, rightMarker.possibleStates);
   });
@@ -293,8 +282,8 @@ function isShallowRecordEqual(
 }
 
 function isAttributeRecordEqual(
-  left: RenderZone['attributes'],
-  right: RenderZone['attributes'],
+  left: RunnerZone['attributes'],
+  right: RunnerZone['attributes'],
 ): boolean {
   const leftKeys = Object.keys(left);
   const rightKeys = Object.keys(right);
@@ -331,7 +320,7 @@ function deriveStaticRenderDerivation(def: GameDef): StaticRenderDerivation {
       const rawSeatOrder = seatOrderMetadataKey !== null
         ? card.metadata?.[seatOrderMetadataKey]
         : undefined;
-      const eligibility: readonly RenderEligibilityEntry[] | null = Array.isArray(rawSeatOrder) && rawSeatOrder.length > 0
+      const eligibility: readonly RunnerEligibilityEntry[] | null = Array.isArray(rawSeatOrder) && rawSeatOrder.length > 0
         ? rawSeatOrder.map((entry: unknown) => ({
             label: String(entry),
             factionId: seatOrderMapping[String(entry)] ?? String(entry),
@@ -350,7 +339,6 @@ function deriveStaticRenderDerivation(def: GameDef): StaticRenderDerivation {
 
     eventDecks.push({
       id: deck.id,
-      displayName: formatIdAsDisplayName(deck.id),
       drawZoneId: deck.drawZone,
       discardZoneId: deck.discardZone,
       cardsById,
@@ -376,31 +364,29 @@ function deriveStaticRenderDerivation(def: GameDef): StaticRenderDerivation {
   };
 }
 
-function deriveGlobalVars(state: GameState): readonly RenderVariable[] {
+function deriveGlobalVars(state: GameState): readonly RunnerVariable[] {
   return Object.entries(state.globalVars)
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([name, value]) => ({
       name,
       value,
-      displayName: formatIdAsDisplayName(name),
     }));
 }
 
-function derivePlayerVars(state: GameState): ReadonlyMap<PlayerId, readonly RenderVariable[]> {
+function derivePlayerVars(state: GameState): ReadonlyMap<PlayerId, readonly RunnerVariable[]> {
   const numericPlayerIds = Object.keys(state.perPlayerVars)
     .map((playerId) => Number(playerId))
     .filter((playerId) => Number.isInteger(playerId) && playerId >= 0 && playerId < state.playerCount)
     .sort((left, right) => left - right);
-  const playerVars = new Map<PlayerId, readonly RenderVariable[]>();
+  const playerVars = new Map<PlayerId, readonly RunnerVariable[]>();
 
   for (const playerId of numericPlayerIds) {
     const playerEntry = state.perPlayerVars[playerId] ?? {};
-    const vars: readonly RenderVariable[] = Object.entries(playerEntry)
+    const vars: readonly RunnerVariable[] = Object.entries(playerEntry)
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([name, value]) => ({
         name,
         value,
-        displayName: formatIdAsDisplayName(name),
       }));
 
     playerVars.set(asPlayerId(playerId), vars);
@@ -423,12 +409,11 @@ function deriveZoneMarkers(
   zoneId: string,
   state: GameState,
   markerStatesById: ReadonlyMap<string, readonly string[]>,
-): readonly RenderMarker[] {
+): readonly RunnerMarker[] {
   return Object.entries(state.markers[zoneId] ?? {})
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([id, markerState]) => ({
       id,
-      displayName: formatIdAsDisplayName(id),
       state: markerState,
       possibleStates: markerStatesById.get(id) ?? [],
     }));
@@ -437,21 +422,19 @@ function deriveZoneMarkers(
 function deriveGlobalMarkers(
   state: GameState,
   statesById: ReadonlyMap<string, readonly string[]>,
-): readonly RenderGlobalMarker[] {
+): readonly RunnerGlobalMarker[] {
   return Object.entries(state.globalMarkers ?? {})
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([id, markerState]) => ({
       id,
-      displayName: formatIdAsDisplayName(id),
       state: markerState,
       possibleStates: statesById.get(id) ?? [],
     }));
 }
 
-function deriveTracks(state: GameState, trackDefs: readonly NumericTrackDef[]): readonly RenderTrack[] {
+function deriveTracks(state: GameState, trackDefs: readonly NumericTrackDef[]): readonly RunnerTrack[] {
   return trackDefs.map((track) => ({
     id: track.id,
-    displayName: formatIdAsDisplayName(track.id),
     scope: track.scope,
     seat: track.seat ?? null,
     min: track.min,
@@ -483,10 +466,11 @@ function resolveTrackValue(state: GameState, track: NumericTrackDef): number {
 function deriveActiveEffects(
   state: GameState,
   cardTitleById: ReadonlyMap<string, string>,
-): readonly RenderLastingEffect[] {
+): readonly RunnerLastingEffect[] {
   return (state.activeLastingEffects ?? []).map((effect) => ({
     id: effect.id,
-    displayName: deriveEffectDisplayName(effect, cardTitleById),
+    sourceCardId: effect.sourceCardId,
+    sourceCardTitle: deriveEffectDisplayName(effect, cardTitleById),
     attributes: deriveEffectAttributes(effect),
   }));
 }
@@ -499,8 +483,8 @@ function deriveEffectDisplayName(
   return cardTitleById.get(sourceCardId) ?? formatIdAsDisplayName(sourceCardId);
 }
 
-function deriveEffectAttributes(effect: ActiveLastingEffect): readonly RenderLastingEffectAttribute[] {
-  const entries: RenderLastingEffectAttribute[] = [];
+function deriveEffectAttributes(effect: ActiveLastingEffect): readonly RunnerLastingEffectAttribute[] {
+  const entries: RunnerLastingEffectAttribute[] = [];
   const excludedKeys = new Set(['id', 'setupEffects', 'teardownEffects']);
   const effectEntries = Object.entries(effect) as readonly (readonly [string, unknown])[];
   const valuesByKey = new Map(effectEntries);
@@ -516,7 +500,6 @@ function deriveEffectAttributes(effect: ActiveLastingEffect): readonly RenderLas
     }
     entries.push({
       key,
-      label: formatIdAsDisplayName(key),
       value,
     });
   }
@@ -539,13 +522,12 @@ function deriveEventDecks(
   eventDecks: readonly GameDefEventDeckProjection[],
   playedCardZoneId: string | null,
   lookaheadCardZoneId: string | null,
-): readonly RenderEventDeck[] {
+): readonly RunnerEventDeck[] {
   const isCardDriven = state.turnOrderState.type === 'cardDriven';
   const playedCardId = isCardDriven ? resolveTopCardId(state, playedCardZoneId) : null;
   const lookaheadCardId = isCardDriven ? resolveTopCardId(state, lookaheadCardZoneId) : null;
   return eventDecks.map((deck) => ({
     id: deck.id,
-    displayName: deck.displayName,
     drawZoneId: deck.drawZoneId,
     discardZoneId: deck.discardZoneId,
     playedCard: resolveEventCard(playedCardId, deck.cardsById),
@@ -570,7 +552,7 @@ function resolveTopCardId(state: GameState, zoneId: string | null): string | nul
 function resolveEventCard(
   cardId: string | null,
   cardsById: ReadonlyMap<string, EventCardProjection>,
-): RenderEventCard | null {
+): RunnerEventCard | null {
   if (cardId === null) {
     return null;
   }
@@ -590,7 +572,7 @@ function resolveEventCard(
 }
 
 interface ZoneDerivationResult {
-  readonly zones: readonly RenderZone[];
+  readonly zones: readonly RunnerZone[];
   readonly visibleTokenIDsByZone: ReadonlyMap<string, readonly string[]>;
 }
 
@@ -600,18 +582,14 @@ function deriveZones(
   context: RenderContext,
   selectableZoneIDs: ReadonlySet<string>,
 ): ZoneDerivationResult {
-  const zones: RenderZone[] = [];
+  const zones: RunnerZone[] = [];
   const visibleTokenIDsByZone = new Map<string, readonly string[]>();
-  const hiddenZones = context.visualConfigProvider.getHiddenZones();
 
   for (const zoneDef of def.zones) {
     if (zoneDef.isInternal === true) {
       continue;
     }
     const zoneID = String(zoneDef.id);
-    if (hiddenZones.has(zoneID)) {
-      continue;
-    }
     const ownerID = zoneDef.owner === 'player' ? parseOwnerPlayerId(zoneID, state.playerCount) : null;
     if (zoneDef.owner === 'player' && ownerID === null) {
       continue;
@@ -629,7 +607,6 @@ function deriveZones(
 
     zones.push({
       id: zoneID,
-      displayName: context.visualConfigProvider.getZoneLabel(zoneID) ?? formatIdAsDisplayName(zoneID),
       ordering: zoneDef.ordering,
       tokenIDs: visibleTokenIDs,
       hiddenTokenCount: zoneTokens.length - visibleTokenIDs.length,
@@ -640,11 +617,6 @@ function deriveZones(
       ownerID,
       category: zoneDef.category ?? null,
       attributes: zoneDef.attributes ?? {},
-      visual: context.visualConfigProvider.resolveZoneVisual(
-        zoneID,
-        zoneDef.category ?? null,
-        zoneDef.attributes ?? {},
-      ),
       metadata: deriveZoneMetadata(zoneDef),
     });
   }
@@ -673,13 +645,13 @@ function deriveZoneMetadata(zoneDef: GameDef['zones'][number]): Readonly<Record<
 
 function deriveTokens(
   state: GameState,
-  zones: readonly RenderZone[],
+  zones: readonly RunnerZone[],
   visibleTokenIDsByZone: ReadonlyMap<string, readonly string[]>,
   selectableTokenIDs: ReadonlySet<string>,
   tokenTypeFactionById: ReadonlyMap<string, string>,
   viewingPlayerID: PlayerId,
-): readonly RenderToken[] {
-  const tokens: RenderToken[] = [];
+): readonly RunnerToken[] {
+  const tokens: RunnerToken[] = [];
 
   for (const zone of zones) {
     const visibleTokenIDs = visibleTokenIDsByZone.get(zone.id) ?? [];
@@ -711,7 +683,7 @@ function deriveTokens(
 }
 
 function deriveTokenFaceUp(
-  zoneVisibility: RenderZone['visibility'],
+  zoneVisibility: RunnerZone['visibility'],
   zoneOwnerID: PlayerId | null,
   viewingPlayerID: PlayerId,
   token: Token,
@@ -747,7 +719,7 @@ function resolveTokenFactionId(
 
 function deriveVisibleTokenIDs(
   zoneTokens: readonly Token[],
-  visibility: RenderZone['visibility'],
+  visibility: RunnerZone['visibility'],
   ownerID: PlayerId | null,
   viewingPlayerID: PlayerId,
   grants: readonly RevealGrant[],
@@ -777,7 +749,7 @@ function deriveVisibleTokenIDs(
 }
 
 function zoneVisibleByDefault(
-  visibility: RenderZone['visibility'],
+  visibility: RunnerZone['visibility'],
   ownerID: PlayerId | null,
   viewingPlayerID: PlayerId,
 ): boolean {
@@ -808,9 +780,9 @@ function grantRevealsToken(grant: RevealGrant, token: Token): boolean {
 
 function deriveAdjacencies(
   def: GameDef,
-  zones: readonly RenderZone[],
+  zones: readonly RunnerZone[],
   highlightedAdjacencyKeys: ReadonlySet<string>,
-): readonly RenderAdjacency[] {
+): readonly RunnerAdjacency[] {
   const renderedZoneById = new Map(zones.map((zone) => [zone.id, zone] as const));
   const zoneDefById = new Map(
     def.zones
@@ -819,7 +791,7 @@ function deriveAdjacencies(
   );
   const renderedZoneIDs = new Set(renderedZoneById.keys());
   const deduped = new Set<string>();
-  const adjacencies: RenderAdjacency[] = [];
+  const adjacencies: RunnerAdjacency[] = [];
 
   for (const zoneDef of def.zones) {
     if (zoneDef.isInternal === true) {
@@ -851,7 +823,7 @@ function deriveAdjacencies(
 }
 
 function pushAdjacency(
-  output: RenderAdjacency[],
+  output: RunnerAdjacency[],
   deduped: Set<string>,
   from: string,
   to: string,
@@ -871,13 +843,13 @@ function toAdjacencyKey(from: string, to: string): string {
   return `${from}->${to}`;
 }
 
-function deriveRuntimeEligible(state: GameState): readonly RenderRuntimeEligibleFaction[] {
+function deriveRuntimeEligible(state: GameState): readonly RunnerRuntimeEligibleFaction[] {
   if (state.turnOrderState.type !== 'cardDriven') {
     return [];
   }
 
   const { seatOrder, eligibility } = state.turnOrderState.runtime;
-  const eligible: RenderRuntimeEligibleFaction[] = [];
+  const eligible: RunnerRuntimeEligibleFaction[] = [];
   for (let i = 0; i < seatOrder.length; i++) {
     const seat = seatOrder[i];
     if (seat === undefined) {
@@ -886,7 +858,6 @@ function deriveRuntimeEligible(state: GameState): readonly RenderRuntimeEligible
     if (eligibility[seat] === true) {
       eligible.push({
         seatId: seat,
-        displayName: formatIdAsDisplayName(seat),
         factionId: seat,
         seatIndex: i,
       });
@@ -994,7 +965,7 @@ function addStringChoiceValues(value: MoveParamValue, output: Set<string>): void
 
 function deriveSelectedZoneIDs(
   choiceStack: RenderContext['choiceStack'],
-  zones: readonly RenderZone[],
+  zones: readonly RunnerZone[],
 ): ReadonlySet<string> {
   if (choiceStack.length === 0 || zones.length === 0) {
     return new Set<string>();
@@ -1017,7 +988,7 @@ function deriveSelectedZoneIDs(
 
 function deriveHighlightedAdjacencyKeys(
   def: GameDef,
-  zones: readonly RenderZone[],
+  zones: readonly RunnerZone[],
   selectableZoneIDs: ReadonlySet<string>,
   selectedZoneIDs: ReadonlySet<string>,
 ): ReadonlySet<string> {
@@ -1081,15 +1052,12 @@ function derivePlayers(
   state: GameState,
   context: RenderContext,
   factionByPlayer: ReadonlyMap<PlayerId, string>,
-): RenderModel['players'] {
+): readonly RunnerPlayer[] {
   return Array.from({ length: state.playerCount }, (_unused, index) => {
     const playerId = asPlayerId(index);
     const faction = factionByPlayer.get(playerId) ?? null;
     return {
       id: playerId,
-      displayName: faction === null
-        ? formatIdAsDisplayName(String(index))
-        : context.visualConfigProvider.getFactionDisplayName(faction) ?? formatIdAsDisplayName(faction),
       isHuman: context.playerSeats.get(playerId) === 'human',
       isActive: playerId === state.activePlayer,
       isEliminated: state.perPlayerVars[index]?.eliminated === true,
@@ -1133,23 +1101,10 @@ function normalizeIndex(index: number, playerCount: number): number {
 
 function deriveActionGroups(
   moves: readonly Move[],
-  policy: ActionGroupPolicy | null,
-): RenderModel['actionGroups'] {
-  const hiddenClasses = new Set(policy?.hide ?? []);
-  const synthesizeRules = policy?.synthesize ?? [];
+): readonly RunnerActionGroup[] {
+  const groupsByClass = new Map<string, Map<string, RunnerAction>>();
 
-  const synthesizeByClass = new Map<string, readonly string[]>();
-  for (const rule of synthesizeRules) {
-    const existing = synthesizeByClass.get(rule.fromClass);
-    synthesizeByClass.set(
-      rule.fromClass,
-      existing !== undefined ? [...existing, rule.intoGroup] : [rule.intoGroup],
-    );
-  }
-
-  const groupsByClass = new Map<string, Map<string, RenderAction>>();
-
-  const ensureGroup = (key: string): Map<string, RenderAction> => {
+  const ensureGroup = (key: string): Map<string, RunnerAction> => {
     if (!groupsByClass.has(key)) {
       groupsByClass.set(key, new Map());
     }
@@ -1162,80 +1117,50 @@ function deriveActionGroups(
         ? move.actionClass
         : null;
     const actionId = String(move.actionId);
-    const displayName = formatIdAsDisplayName(actionId);
-
-    if (ac !== null && hiddenClasses.has(ac)) {
-      continue;
-    }
 
     const groupKey = ac ?? 'Actions';
     const group = ensureGroup(groupKey);
     if (!group.has(actionId)) {
-      group.set(actionId, { actionId, displayName, isAvailable: true, ...(ac !== null ? { actionClass: ac } : {}) });
-    }
-
-    if (ac !== null) {
-      const targets = synthesizeByClass.get(ac);
-      if (targets !== undefined) {
-        for (const target of targets) {
-          const synthGroup = ensureGroup(target);
-          if (!synthGroup.has(actionId)) {
-            synthGroup.set(actionId, { actionId, displayName, isAvailable: true, actionClass: target });
-          }
-        }
-      }
+      group.set(actionId, { actionId, isAvailable: true, ...(ac !== null ? { actionClass: ac } : {}) });
     }
   }
 
   return Array.from(groupsByClass.entries()).map(([groupKey, actionsById]) => ({
     groupKey,
-    groupName: groupKey === 'Actions' ? 'Actions' : formatIdAsDisplayName(groupKey),
     actions: Array.from(actionsById.values()),
   }));
 }
 
 function deriveChoiceContext(
   context: RenderContext,
-  zonesById: ReadonlyMap<string, RenderZone>,
-): RenderChoiceContext | null {
+  zonesById: ReadonlyMap<string, RunnerZone>,
+): RunnerChoiceContext | null {
   if (context.selectedAction === null || context.choicePending === null) {
     return null;
   }
 
-  const { selectedAction, choicePending, visualConfigProvider } = context;
-
-  const actionDisplayName =
-    visualConfigProvider.getActionDisplayName(selectedAction) ??
-    formatIdAsDisplayName(selectedAction);
-
-  const decisionPrompt =
-    visualConfigProvider.getChoicePrompt(selectedAction, choicePending.name) ??
-    formatIdAsDisplayName(choicePending.name);
+  const { selectedAction, choicePending } = context;
 
   const min = choicePending.type === 'chooseN' ? choicePending.min : undefined;
   const max = choicePending.type === 'chooseN' ? choicePending.max : undefined;
-  let boundsText: string | null = null;
-  if (min !== undefined || max !== undefined) {
-    const effectiveMin = min ?? 0;
-    const effectiveMax = max ?? effectiveMin;
-    boundsText = effectiveMin === effectiveMax ? String(effectiveMin) : `${effectiveMin}-${effectiveMax}`;
-  }
-
-  let iterationLabel: string | null = null;
-  let iterationProgress: string | null = null;
+  let iterationEntityId: string | null = null;
+  let iterationIndex: number | null = null;
+  let iterationTotal: number | null = null;
   const iterCtx = parseIterationContext(choicePending.decisionKey, context.choiceStack, zonesById);
   if (iterCtx !== null) {
-    iterationLabel = iterCtx.currentEntityDisplayName;
-    iterationProgress = `${iterCtx.iterationIndex + 1} of ${iterCtx.iterationTotal}`;
+    iterationEntityId = iterCtx.currentEntityId;
+    iterationIndex = iterCtx.iterationIndex;
+    iterationTotal = iterCtx.iterationTotal;
   }
 
   return {
-    actionDisplayName,
-    decisionPrompt,
+    selectedActionId: selectedAction,
     decisionParamName: choicePending.name,
-    boundsText,
-    iterationLabel,
-    iterationProgress,
+    minSelections: normalizeChoiceBound(min),
+    maxSelections: normalizeChoiceBound(max),
+    iterationEntityId,
+    iterationIndex,
+    iterationTotal,
   };
 }
 
@@ -1251,99 +1176,44 @@ function extractIterationGroupId(decisionKey: DecisionKey): string | null {
 
 function deriveChoiceBreadcrumb(
   context: RenderContext,
-  zonesById: ReadonlyMap<string, RenderZone>,
-): RenderModel['choiceBreadcrumb'] {
+  zonesById: ReadonlyMap<string, RunnerZone>,
+): RunnerFrame['choiceBreadcrumb'] {
   return context.choiceStack.map((step, index) => {
     const choiceStackUpToHere = context.choiceStack.slice(0, index + 1);
     const iterCtx = parseIterationContext(step.decisionKey, choiceStackUpToHere, zonesById);
     const iterationGroupId = iterCtx !== null ? extractIterationGroupId(step.decisionKey) : null;
-    const iterationLabel = iterCtx?.currentEntityDisplayName ?? null;
 
     return {
       decisionKey: step.decisionKey,
       name: step.name,
-      displayName: formatIdAsDisplayName(step.name),
       chosenValueId: serializeChoiceValueIdentity(step.value),
       chosenValue: step.value,
-      chosenDisplayName: formatChoiceValueResolved(step.value, zonesById),
       iterationGroupId,
-      iterationLabel,
+      iterationEntityId: iterCtx?.currentEntityId ?? null,
     };
   });
 }
 
-
-interface ChoiceOptionResolution {
-  readonly displayName: string;
-  readonly target: RenderChoiceTarget;
-}
-
-function resolveChoiceOption(
+function resolveChoiceTarget(
   value: MoveParamValue,
   targetKinds: readonly ('zone' | 'token')[],
-  zonesById: ReadonlyMap<string, RenderZone>,
-  tokensById: ReadonlyMap<string, RenderToken>,
-  playersById: ReadonlyMap<PlayerId, RenderModel['players'][number]>,
-): ChoiceOptionResolution {
-  const fallback: ChoiceOptionResolution = {
-    displayName: formatChoiceValueFallback(value),
-    target: {
-      kind: 'scalar',
-      entityId: null,
-      displaySource: 'fallback',
-    },
-  };
-
+  zonesById: ReadonlyMap<string, RunnerZone>,
+  tokens: readonly RunnerToken[],
+): RunnerChoiceTarget {
   if (typeof value !== 'string') {
-    return fallback;
+    return { kind: 'scalar', entityId: null };
   }
 
   for (const targetKind of targetKinds) {
-    if (targetKind === 'zone') {
-      const zone = zonesById.get(value);
-      if (zone !== undefined) {
-        return {
-          displayName: zone.displayName,
-          target: {
-            kind: 'zone',
-            entityId: zone.id,
-            displaySource: 'zone',
-          },
-        };
-      }
-      continue;
+    if (targetKind === 'zone' && zonesById.has(value)) {
+      return { kind: 'zone', entityId: value };
     }
-
-    const token = tokensById.get(value);
-    if (token !== undefined) {
-      return {
-        displayName: formatTokenChoiceDisplayName(token, playersById),
-        target: {
-          kind: 'token',
-          entityId: token.id,
-          displaySource: 'token',
-        },
-      };
+    if (targetKind === 'token' && tokens.some((token) => token.id === value)) {
+      return { kind: 'token', entityId: value };
     }
   }
 
-  return fallback;
-}
-
-function formatTokenChoiceDisplayName(
-  token: RenderToken,
-  playersById: ReadonlyMap<PlayerId, RenderModel['players'][number]>,
-): string {
-  const tokenType = formatIdAsDisplayName(token.type);
-  const tokenId = formatIdAsDisplayName(token.id);
-  const ownerDisplayName = token.ownerID === null
-    ? null
-    : playersById.get(token.ownerID)?.displayName ?? `Player ${token.ownerID}`;
-
-  if (ownerDisplayName === null) {
-    return `${tokenType} (${tokenId})`;
-  }
-  return `${tokenType} (${tokenId}, ${ownerDisplayName})`;
+  return { kind: 'scalar', entityId: null };
 }
 
 function normalizeChoiceBound(value: number | undefined): number | null {
@@ -1353,7 +1223,7 @@ function normalizeChoiceBound(value: number | undefined): number | null {
   return value;
 }
 
-function toInvalidChoiceUi(reason: RenderChoiceUiInvalidReason): RenderChoiceUi {
+function toInvalidChoiceUi(reason: RunnerChoiceUiInvalidReason): RunnerChoiceUi {
   return {
     kind: 'invalid',
     reason,
@@ -1362,10 +1232,10 @@ function toInvalidChoiceUi(reason: RenderChoiceUiInvalidReason): RenderChoiceUi 
 
 function deriveChoiceUi(
   context: RenderContext,
-  zonesById: ReadonlyMap<string, RenderZone>,
-  tokens: readonly RenderToken[],
-  players: readonly RenderModel['players'][number][],
-): RenderChoiceUi {
+  zonesById: ReadonlyMap<string, RunnerZone>,
+  tokens: readonly RunnerToken[],
+  _players: readonly RunnerPlayer[],
+): RunnerChoiceUi {
   const pending = context.choicePending;
   const hasSelectedAction = context.selectedAction !== null;
   const hasPartialMove = context.partialMove !== null;
@@ -1385,21 +1255,12 @@ function deriveChoiceUi(
       return toInvalidChoiceUi('PENDING_CHOICE_MISSING_PARTIAL_MOVE');
     }
 
-    const tokensById = new Map(tokens.map((token) => [token.id, token] as const));
-    const playersById = new Map(players.map((player) => [player.id, player] as const));
     const allOptions = pending.options.map((option) => {
-      const resolved = resolveChoiceOption(
-        option.value,
-        pending.targetKinds,
-        zonesById,
-        tokensById,
-        playersById,
-      );
+      const target = resolveChoiceTarget(option.value, pending.targetKinds, zonesById, tokens);
       return {
         choiceValueId: serializeChoiceValueIdentity(option.value),
         value: option.value,
-        displayName: resolved.displayName,
-        target: resolved.target,
+        target,
         legality: option.legality,
         illegalReason: option.illegalReason,
         ...(option.resolution !== undefined ? { resolution: option.resolution } : {}),
@@ -1453,7 +1314,7 @@ function deriveChoiceUi(
   };
 }
 
-function deriveTerminal(terminal: TerminalResult | null): RenderModel['terminal'] {
+function deriveTerminal(terminal: TerminalResult | null): RunnerFrame['terminal'] {
   if (terminal === null) {
     return null;
   }

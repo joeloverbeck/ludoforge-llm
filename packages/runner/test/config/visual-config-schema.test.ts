@@ -44,6 +44,41 @@ describe('VisualConfigSchema', () => {
           deck: 'card',
           'available-US': 'forcePool',
         },
+        tokenLayouts: {
+          defaults: {
+            other: {
+              mode: 'grid',
+              columns: 6,
+              spacingX: 36,
+              spacingY: 36,
+            },
+          },
+          presets: {
+            'fitl-map-space': {
+              mode: 'lanes',
+              laneGap: 24,
+              laneOrder: ['regular', 'base'],
+              lanes: {
+                regular: {
+                  anchor: 'center',
+                  pack: 'centeredRow',
+                  spacingX: 32,
+                },
+                base: {
+                  anchor: 'belowPreviousLane',
+                  pack: 'centeredRow',
+                  spacingX: 42,
+                },
+              },
+            },
+          },
+          assignments: {
+            byCategory: {
+              city: 'fitl-map-space',
+              province: 'fitl-map-space',
+            },
+          },
+        },
       },
       edges: {
         default: { color: '#6b7280', width: 1.5, alpha: 0.3 },
@@ -52,8 +87,37 @@ describe('VisualConfigSchema', () => {
           loc: { color: '#8b7355', width: 2 },
         },
       },
+      tokens: {
+        stackBadge: {
+          fontFamily: 'monospace',
+          fontSize: 13,
+          fill: '#f8fafc',
+          stroke: '#000000',
+          strokeWidth: 3,
+          anchorX: 1,
+          anchorY: 0,
+          offsetX: 4,
+          offsetY: -4,
+        },
+      },
       tokenTypes: {
-        'us-troops': { shape: 'cube', color: '#e63946', size: 24 },
+        'us-troops': {
+          shape: 'cube',
+          color: '#e63946',
+          size: 24,
+          presentation: {
+            lane: 'regular',
+            scale: 1,
+          },
+        },
+        'us-bases': {
+          shape: 'round-disk',
+          color: '#e63946',
+          presentation: {
+            lane: 'base',
+            scale: 1.5,
+          },
+        },
       },
       animations: {
         actions: {
@@ -270,6 +334,88 @@ describe('VisualConfigSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts token presentation metadata on token types', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      tokenTypes: {
+        'vc-bases': {
+          presentation: {
+            lane: 'base',
+            scale: 1.5,
+          },
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts stack badge styling under tokens config', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      tokens: {
+        stackBadge: {
+          fontSize: 13,
+          fill: '#f8fafc',
+          stroke: '#000000',
+          strokeWidth: 3,
+          anchorX: 1,
+          anchorY: 0,
+          offsetX: 4,
+          offsetY: -4,
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts zone token layout presets and category assignments', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      zones: {
+        tokenLayouts: {
+          defaults: {
+            other: {
+              mode: 'grid',
+              columns: 6,
+              spacingX: 36,
+              spacingY: 36,
+            },
+          },
+          presets: {
+            'fitl-map-space': {
+              mode: 'lanes',
+              laneGap: 24,
+              laneOrder: ['regular', 'base'],
+              lanes: {
+                regular: {
+                  anchor: 'center',
+                  pack: 'centeredRow',
+                  spacingX: 32,
+                },
+                base: {
+                  anchor: 'belowPreviousLane',
+                  pack: 'centeredRow',
+                  spacingX: 42,
+                  spacingY: 20,
+                },
+              },
+            },
+          },
+          assignments: {
+            byCategory: {
+              city: 'fitl-map-space',
+              province: 'fitl-map-space',
+            },
+          },
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it('accepts cards template assignments by token selectors', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,
@@ -401,6 +547,187 @@ describe('VisualConfigSchema', () => {
         mode: 'freeform',
       },
     });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects token presentation scale when non-positive', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      tokenTypes: {
+        'vc-bases': {
+          presentation: {
+            lane: 'base',
+            scale: 0,
+          },
+        },
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects stack badge non-positive font and stroke values', () => {
+    const zeroFont = VisualConfigSchema.safeParse({
+      version: 1,
+      tokens: {
+        stackBadge: {
+          fontSize: 0,
+          fill: '#fff',
+          stroke: '#000',
+          strokeWidth: 3,
+          anchorX: 1,
+          anchorY: 0,
+          offsetX: 4,
+          offsetY: -4,
+        },
+      },
+    });
+    const zeroStroke = VisualConfigSchema.safeParse({
+      version: 1,
+      tokens: {
+        stackBadge: {
+          fontSize: 13,
+          fill: '#fff',
+          stroke: '#000',
+          strokeWidth: 0,
+          anchorX: 1,
+          anchorY: 0,
+          offsetX: 4,
+          offsetY: -4,
+        },
+      },
+    });
+
+    expect(zeroFont.success).toBe(false);
+    expect(zeroStroke.success).toBe(false);
+  });
+
+  it('rejects non-positive token layout spacing and laneGap values', () => {
+    const zeroLaneGap = VisualConfigSchema.safeParse({
+      version: 1,
+      zones: {
+        tokenLayouts: {
+          presets: {
+            'fitl-map-space': {
+              mode: 'lanes',
+              laneGap: 0,
+              laneOrder: ['regular'],
+              lanes: {
+                regular: {
+                  anchor: 'center',
+                  pack: 'centeredRow',
+                  spacingX: 32,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    const zeroSpacing = VisualConfigSchema.safeParse({
+      version: 1,
+      zones: {
+        tokenLayouts: {
+          defaults: {
+            other: {
+              mode: 'grid',
+              spacingX: 0,
+              spacingY: 36,
+            },
+          },
+        },
+      },
+    });
+
+    expect(zeroLaneGap.success).toBe(false);
+    expect(zeroSpacing.success).toBe(false);
+  });
+
+  it('rejects lane presets when laneOrder references an undefined lane', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      zones: {
+        tokenLayouts: {
+          presets: {
+            'fitl-map-space': {
+              mode: 'lanes',
+              laneGap: 24,
+              laneOrder: ['regular', 'base'],
+              lanes: {
+                regular: {
+                  anchor: 'center',
+                  pack: 'centeredRow',
+                  spacingX: 32,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects lane presets when a defined lane is missing from laneOrder', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      zones: {
+        tokenLayouts: {
+          presets: {
+            'fitl-map-space': {
+              mode: 'lanes',
+              laneGap: 24,
+              laneOrder: ['regular'],
+              lanes: {
+                regular: {
+                  anchor: 'center',
+                  pack: 'centeredRow',
+                  spacingX: 32,
+                },
+                base: {
+                  anchor: 'belowPreviousLane',
+                  pack: 'centeredRow',
+                  spacingX: 42,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects category assignments that reference unknown token layout presets', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      zones: {
+        tokenLayouts: {
+          presets: {
+            'fitl-map-space': {
+              mode: 'lanes',
+              laneGap: 24,
+              laneOrder: ['regular'],
+              lanes: {
+                regular: {
+                  anchor: 'center',
+                  pack: 'centeredRow',
+                  spacingX: 32,
+                },
+              },
+            },
+          },
+          assignments: {
+            byCategory: {
+              city: 'missing-preset',
+            },
+          },
+        },
+      },
+    });
+
     expect(result.success).toBe(false);
   });
 

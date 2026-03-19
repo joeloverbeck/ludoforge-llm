@@ -29,12 +29,15 @@ import type {
   TokenTypeDefault,
   TokenTypeSelectors,
   TokenSymbolRule,
+  TokenLaneLayoutDefinition,
   LayoutHints,
   LayoutMode,
   LayoutRole,
+  StackBadgeStyle,
   VariablesConfig,
   VictoryTooltipBreakdown,
   VisualConfig,
+  ZoneTokenLayout,
 } from './visual-config-types.js';
 
 export interface ResolvedZoneVisual {
@@ -56,6 +59,46 @@ export interface ResolvedTokenSymbols {
   readonly symbol: string | null;
   readonly backSymbol: string | null;
 }
+
+export interface ResolvedTokenPresentation {
+  readonly lane: string | null;
+  readonly scale: number;
+}
+
+export interface ResolvedStackBadgeStyle {
+  readonly fontFamily: string;
+  readonly fontSize: number;
+  readonly fill: string;
+  readonly stroke: string;
+  readonly strokeWidth: number;
+  readonly anchorX: number;
+  readonly anchorY: number;
+  readonly offsetX: number;
+  readonly offsetY: number;
+}
+
+export interface ResolvedTokenGridLayout {
+  readonly mode: 'grid';
+  readonly columns: number;
+  readonly spacingX: number;
+  readonly spacingY: number;
+}
+
+export interface ResolvedTokenLaneLayoutDefinition {
+  readonly anchor: TokenLaneLayoutDefinition['anchor'];
+  readonly pack: TokenLaneLayoutDefinition['pack'];
+  readonly spacingX: number;
+  readonly spacingY: number;
+}
+
+export interface ResolvedTokenLaneLayout {
+  readonly mode: 'lanes';
+  readonly laneGap: number;
+  readonly laneOrder: readonly string[];
+  readonly lanes: Readonly<Record<string, ResolvedTokenLaneLayoutDefinition>>;
+}
+
+export type ResolvedZoneTokenLayout = ResolvedTokenGridLayout | ResolvedTokenLaneLayout;
 
 export interface ResolvedEdgeVisual {
   readonly color: string | null;
@@ -126,7 +169,7 @@ export class VisualConfigProvider {
   }
 
   getTokenTypeVisual(tokenTypeId: string): ResolvedTokenVisual {
-    const style = this.config?.tokenTypes?.[tokenTypeId] ?? this.findTokenTypeDefault(tokenTypeId)?.style;
+    const style = this.getTokenTypeStyle(tokenTypeId);
 
     return {
       shape: style?.shape ?? DEFAULT_TOKEN_SHAPE,
@@ -138,7 +181,7 @@ export class VisualConfigProvider {
   }
 
   getTokenTypeDisplayName(tokenTypeId: string): string | null {
-    const style = this.config?.tokenTypes?.[tokenTypeId] ?? this.findTokenTypeDefault(tokenTypeId)?.style;
+    const style = this.getTokenTypeStyle(tokenTypeId);
     return style?.displayName ?? null;
   }
 
@@ -146,7 +189,7 @@ export class VisualConfigProvider {
     tokenTypeId: string,
     tokenProperties: Readonly<Record<string, string | number | boolean>>,
   ): ResolvedTokenSymbols {
-    const style = this.config?.tokenTypes?.[tokenTypeId] ?? this.findTokenTypeDefault(tokenTypeId)?.style;
+    const style = this.getTokenTypeStyle(tokenTypeId);
     const symbolRules = style?.symbolRules ?? [];
 
     let symbol: string | null = style?.symbol ?? null;
@@ -167,6 +210,23 @@ export class VisualConfigProvider {
     return { symbol, backSymbol };
   }
 
+  getTokenTypePresentation(tokenTypeId: string): ResolvedTokenPresentation {
+    const presentation = this.getTokenTypeStyle(tokenTypeId)?.presentation;
+    return {
+      lane: presentation?.lane ?? null,
+      scale: presentation?.scale ?? 1,
+    };
+  }
+
+  resolveZoneTokenLayout(zoneId: string, category: string | null): ResolvedZoneTokenLayout {
+    const configured = this.getConfiguredZoneTokenLayout(zoneId, category);
+    return normalizeZoneTokenLayout(configured);
+  }
+
+  getStackBadgeStyle(): ResolvedStackBadgeStyle {
+    return normalizeStackBadgeStyle(this.config?.tokens?.stackBadge);
+  }
+
   private findTokenTypeDefault(tokenTypeId: string): TokenTypeDefault | null {
     const defaults = this.config?.tokenTypeDefaults ?? [];
     for (const entry of defaults) {
@@ -175,6 +235,32 @@ export class VisualConfigProvider {
       }
     }
     return null;
+  }
+
+  private getTokenTypeStyle(tokenTypeId: string): TokenTypeDefault['style'] | undefined {
+    return this.config?.tokenTypes?.[tokenTypeId] ?? this.findTokenTypeDefault(tokenTypeId)?.style;
+  }
+
+  private getConfiguredZoneTokenLayout(zoneId: string, category: string | null): ZoneTokenLayout | undefined {
+    const tokenLayouts = this.config?.zones?.tokenLayouts;
+    if (tokenLayouts === undefined) {
+      return undefined;
+    }
+
+    const assignedPresetId = category === null ? undefined : tokenLayouts.assignments?.byCategory?.[category];
+    if (assignedPresetId !== undefined) {
+      return tokenLayouts.presets?.[assignedPresetId];
+    }
+
+    const layoutRole = this.getLayoutRole(zoneId);
+    if (layoutRole !== null) {
+      const roleDefault = tokenLayouts.defaults?.[layoutRole];
+      if (roleDefault !== undefined) {
+        return roleDefault;
+      }
+    }
+
+    return tokenLayouts.defaults?.other;
   }
 
   getDefaultCardDimensions(): { readonly width: number; readonly height: number } | null {
@@ -357,6 +443,23 @@ export class VisualConfigProvider {
 }
 
 const EMPTY_STRING_SET: ReadonlySet<string> = Object.freeze(new Set<string>());
+const DEFAULT_STACK_BADGE_STYLE: ResolvedStackBadgeStyle = Object.freeze({
+  fontFamily: 'monospace',
+  fontSize: 10,
+  fill: '#f8fafc',
+  stroke: '#000000',
+  strokeWidth: 0,
+  anchorX: 1,
+  anchorY: 0,
+  offsetX: -2,
+  offsetY: 2,
+});
+const DEFAULT_GRID_TOKEN_LAYOUT: ResolvedTokenGridLayout = Object.freeze({
+  mode: 'grid',
+  columns: 6,
+  spacingX: 36,
+  spacingY: 36,
+});
 
 function applyEdgeStyle(
   target: { color: string | null; width: number; alpha: number },
@@ -471,4 +574,55 @@ function matchesTokenSymbolRule(
     }
   }
   return true;
+}
+
+function normalizeStackBadgeStyle(style: StackBadgeStyle | undefined): ResolvedStackBadgeStyle {
+  if (style === undefined) {
+    return DEFAULT_STACK_BADGE_STYLE;
+  }
+
+  return {
+    fontFamily: style.fontFamily ?? DEFAULT_STACK_BADGE_STYLE.fontFamily,
+    fontSize: style.fontSize,
+    fill: style.fill,
+    stroke: style.stroke,
+    strokeWidth: style.strokeWidth,
+    anchorX: style.anchorX,
+    anchorY: style.anchorY,
+    offsetX: style.offsetX,
+    offsetY: style.offsetY,
+  };
+}
+
+function normalizeZoneTokenLayout(layout: ZoneTokenLayout | undefined): ResolvedZoneTokenLayout {
+  if (layout === undefined) {
+    return DEFAULT_GRID_TOKEN_LAYOUT;
+  }
+
+  if (layout.mode === 'grid') {
+    return {
+      mode: 'grid',
+      columns: layout.columns ?? DEFAULT_GRID_TOKEN_LAYOUT.columns,
+      spacingX: layout.spacingX,
+      spacingY: layout.spacingY,
+    };
+  }
+
+  return {
+    mode: 'lanes',
+    laneGap: layout.laneGap,
+    laneOrder: [...layout.laneOrder],
+    lanes: Object.fromEntries(
+      Object.entries(layout.lanes).map(([laneId, lane]) => [laneId, normalizeLaneLayoutDefinition(lane)]),
+    ),
+  };
+}
+
+function normalizeLaneLayoutDefinition(lane: TokenLaneLayoutDefinition): ResolvedTokenLaneLayoutDefinition {
+  return {
+    anchor: lane.anchor,
+    pack: lane.pack,
+    spacingX: lane.spacingX,
+    spacingY: lane.spacingY ?? DEFAULT_GRID_TOKEN_LAYOUT.spacingY,
+  };
 }

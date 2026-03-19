@@ -30,6 +30,7 @@ describe('parseGameSpec API shape', () => {
       triggers: null,
       effectMacros: null,
       conditionMacros: null,
+      agents: null,
       victoryStandings: null,
       verbalization: null,
     });
@@ -440,6 +441,36 @@ describe('parseGameSpec API shape', () => {
     assert.deepEqual(result.doc.phaseTemplates?.[0]?.params, [{ name: 'minBet' }]);
     assert.ok(result.sourceMap.byPath['phaseTemplates[0].id'] !== undefined);
     assert.ok(result.sourceMap.byPath['phaseTemplates[0].params[0].name'] !== undefined);
+  });
+
+  it('parses agents section and anchors singleton object paths', () => {
+    const result = parseGameSpec([
+      '```yaml',
+      'agents:',
+      '  parameters:',
+      '    passFloor:',
+      '      type: number',
+      '      default: 0.25',
+      '  library:',
+      '    tieBreakers:',
+      '      stableMoveKey:',
+      '        kind: stableMoveKey',
+      '  profiles:',
+      '    baseline:',
+      '      params: {}',
+      '      use:',
+      '        pruningRules: []',
+      '        scoreTerms: []',
+      '        tieBreakers: [stableMoveKey]',
+      '  bindings:',
+      '    us: baseline',
+      '```',
+    ].join('\n'));
+
+    assert.equal(result.doc.agents?.profiles?.baseline?.use.tieBreakers?.[0], 'stableMoveKey');
+    assert.ok(result.sourceMap.byPath['agents.parameters.passFloor.type'] !== undefined);
+    assert.ok(result.sourceMap.byPath['agents.profiles.baseline.use.tieBreakers[0]'] !== undefined);
+    assert.ok(result.sourceMap.byPath['agents.bindings.us'] !== undefined);
   });
 
   it('appends repeated phaseTemplates sections preserving encounter order', () => {

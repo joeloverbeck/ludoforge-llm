@@ -266,6 +266,119 @@ export interface VictoryStandingsDef {
   readonly tieBreakOrder: readonly string[];
 }
 
+export type AgentParameterType = 'number' | 'integer' | 'boolean' | 'enum' | 'idOrder';
+
+export type AgentParameterValue = number | boolean | string | readonly string[];
+export type AgentPolicyValueType = 'number' | 'boolean' | 'id' | 'idList';
+export type AgentPolicyCostClass = 'state' | 'candidate' | 'preview';
+export type AgentPolicyExpr =
+  | string
+  | number
+  | boolean
+  | null
+  | readonly AgentPolicyExpr[]
+  | { readonly [key: string]: AgentPolicyExpr };
+
+export interface CompiledAgentParameterDef {
+  readonly type: AgentParameterType;
+  readonly required: boolean;
+  readonly tunable: boolean;
+  readonly default?: AgentParameterValue;
+  readonly min?: number;
+  readonly max?: number;
+  readonly values?: readonly string[];
+  readonly allowedIds?: readonly string[];
+}
+
+export interface CompiledAgentDependencyRefs {
+  readonly parameters: readonly string[];
+  readonly stateFeatures: readonly string[];
+  readonly candidateFeatures: readonly string[];
+  readonly aggregates: readonly string[];
+}
+
+export interface CompiledAgentStateFeature {
+  readonly type: AgentPolicyValueType;
+  readonly costClass: AgentPolicyCostClass;
+  readonly expr: AgentPolicyExpr;
+  readonly dependencies: CompiledAgentDependencyRefs;
+}
+
+export interface CompiledAgentCandidateFeature {
+  readonly type: AgentPolicyValueType;
+  readonly costClass: AgentPolicyCostClass;
+  readonly expr: AgentPolicyExpr;
+  readonly dependencies: CompiledAgentDependencyRefs;
+}
+
+export interface CompiledAgentAggregate {
+  readonly type: AgentPolicyValueType;
+  readonly costClass: AgentPolicyCostClass;
+  readonly op: string;
+  readonly of: AgentPolicyExpr;
+  readonly where?: AgentPolicyExpr;
+  readonly dependencies: CompiledAgentDependencyRefs;
+}
+
+export interface CompiledAgentPruningRule {
+  readonly costClass: AgentPolicyCostClass;
+  readonly when: AgentPolicyExpr;
+  readonly dependencies: CompiledAgentDependencyRefs;
+  readonly onEmpty: 'skipRule' | 'error';
+}
+
+export interface CompiledAgentScoreTerm {
+  readonly costClass: AgentPolicyCostClass;
+  readonly when?: AgentPolicyExpr;
+  readonly weight: AgentPolicyExpr;
+  readonly value: AgentPolicyExpr;
+  readonly unknownAs?: number;
+  readonly clamp?: {
+    readonly min?: number;
+    readonly max?: number;
+  };
+  readonly dependencies: CompiledAgentDependencyRefs;
+}
+
+export interface CompiledAgentTieBreaker {
+  readonly kind: string;
+  readonly costClass: AgentPolicyCostClass;
+  readonly value?: AgentPolicyExpr;
+  readonly order?: readonly string[];
+  readonly dependencies: CompiledAgentDependencyRefs;
+}
+
+export interface CompiledAgentLibraryIndex {
+  readonly stateFeatures: Readonly<Record<string, CompiledAgentStateFeature>>;
+  readonly candidateFeatures: Readonly<Record<string, CompiledAgentCandidateFeature>>;
+  readonly candidateAggregates: Readonly<Record<string, CompiledAgentAggregate>>;
+  readonly pruningRules: Readonly<Record<string, CompiledAgentPruningRule>>;
+  readonly scoreTerms: Readonly<Record<string, CompiledAgentScoreTerm>>;
+  readonly tieBreakers: Readonly<Record<string, CompiledAgentTieBreaker>>;
+}
+
+export interface CompiledAgentProfile {
+  readonly params: Readonly<Record<string, AgentParameterValue>>;
+  readonly use: {
+    readonly pruningRules: readonly string[];
+    readonly scoreTerms: readonly string[];
+    readonly tieBreakers: readonly string[];
+  };
+  readonly plan: {
+    readonly stateFeatures: readonly string[];
+    readonly candidateFeatures: readonly string[];
+    readonly candidateAggregates: readonly string[];
+  };
+}
+
+export interface AgentPolicyCatalog {
+  readonly schemaVersion: 1;
+  readonly parameterDefs: Readonly<Record<string, CompiledAgentParameterDef>>;
+  readonly library: CompiledAgentLibraryIndex;
+  readonly profiles: Readonly<Record<string, CompiledAgentProfile>>;
+  readonly bindingsBySeat: Readonly<Record<string, string>>;
+}
+
 export interface GameDef {
   readonly metadata: {
     readonly id: string;
@@ -287,6 +400,7 @@ export interface GameDef {
   readonly turnOrder?: TurnOrderStrategy;
   readonly actionPipelines?: readonly ActionPipelineDef[];
   readonly derivedMetrics?: readonly DerivedMetricDef[];
+  readonly agents?: AgentPolicyCatalog;
   readonly actions: readonly ActionDef[];
   readonly triggers: readonly TriggerDef[];
   readonly terminal: TerminalEvaluationDef;

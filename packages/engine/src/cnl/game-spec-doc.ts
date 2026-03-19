@@ -460,6 +460,93 @@ export interface ConditionMacroDef {
   readonly condition: unknown;
 }
 
+export type GameSpecAgentParameterType = 'number' | 'integer' | 'boolean' | 'enum' | 'idOrder';
+
+export interface GameSpecAgentParameterDef {
+  readonly type: GameSpecAgentParameterType;
+  readonly default?: unknown;
+  readonly min?: number;
+  readonly max?: number;
+  readonly tunable?: boolean;
+  readonly values?: readonly string[];
+  readonly allowedIds?: readonly string[];
+}
+
+export type GameSpecPolicyExpr =
+  | string
+  | number
+  | boolean
+  | null
+  | readonly GameSpecPolicyExpr[]
+  | { readonly [key: string]: GameSpecPolicyExpr };
+
+export interface GameSpecStateFeatureDef {
+  readonly type?: string;
+  readonly expr: GameSpecPolicyExpr;
+}
+
+export interface GameSpecCandidateFeatureDef {
+  readonly type?: string;
+  readonly expr: GameSpecPolicyExpr;
+}
+
+export interface GameSpecCandidateAggregateDef {
+  readonly op: string;
+  readonly of: GameSpecPolicyExpr;
+  readonly where?: GameSpecPolicyExpr;
+}
+
+export interface GameSpecPruningRuleDef {
+  readonly when: GameSpecPolicyExpr;
+  readonly onEmpty?: 'skipRule' | 'error';
+}
+
+export interface GameSpecScoreTermDef {
+  readonly when?: GameSpecPolicyExpr;
+  readonly weight: GameSpecPolicyExpr;
+  readonly value: GameSpecPolicyExpr;
+  readonly unknownAs?: number;
+  readonly clamp?: {
+    readonly min?: number;
+    readonly max?: number;
+  };
+}
+
+export interface GameSpecTieBreakerDef {
+  readonly kind: string;
+  readonly value?: GameSpecPolicyExpr;
+  readonly order?: readonly string[];
+}
+
+export interface GameSpecAgentLibrary {
+  readonly stateFeatures?: Readonly<Record<string, GameSpecStateFeatureDef>>;
+  readonly candidateFeatures?: Readonly<Record<string, GameSpecCandidateFeatureDef>>;
+  readonly candidateAggregates?: Readonly<Record<string, GameSpecCandidateAggregateDef>>;
+  readonly pruningRules?: Readonly<Record<string, GameSpecPruningRuleDef>>;
+  readonly scoreTerms?: Readonly<Record<string, GameSpecScoreTermDef>>;
+  readonly tieBreakers?: Readonly<Record<string, GameSpecTieBreakerDef>>;
+}
+
+export interface GameSpecAgentProfileUse {
+  readonly pruningRules?: readonly string[];
+  readonly scoreTerms?: readonly string[];
+  readonly tieBreakers?: readonly string[];
+}
+
+export interface GameSpecAgentProfileDef {
+  readonly params?: Readonly<Record<string, unknown>>;
+  readonly use: GameSpecAgentProfileUse;
+}
+
+export type GameSpecSeatPolicyBindings = Readonly<Record<string, string>>;
+
+export interface GameSpecAgentsSection {
+  readonly parameters?: Readonly<Record<string, GameSpecAgentParameterDef>>;
+  readonly library?: GameSpecAgentLibrary;
+  readonly profiles?: Readonly<Record<string, GameSpecAgentProfileDef>>;
+  readonly bindings?: GameSpecSeatPolicyBindings;
+}
+
 export interface GameSpecDoc {
   readonly imports: readonly GameSpecImport[] | null;
   readonly metadata: GameSpecMetadata | null;
@@ -483,6 +570,7 @@ export interface GameSpecDoc {
   readonly triggers: readonly GameSpecTriggerDef[] | null;
   readonly effectMacros: readonly EffectMacroDef[] | null;
   readonly conditionMacros: readonly ConditionMacroDef[] | null;
+  readonly agents: GameSpecAgentsSection | null;
   readonly victoryStandings: VictoryStandingsDef | null;
   readonly verbalization: GameSpecVerbalization | null;
 }
@@ -545,6 +633,7 @@ export function createEmptyGameSpecDoc(): GameSpecDoc {
     triggers: null,
     effectMacros: null,
     conditionMacros: null,
+    agents: null,
     victoryStandings: null,
     verbalization: null,
   };

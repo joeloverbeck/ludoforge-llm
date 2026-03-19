@@ -214,10 +214,11 @@ vi.mock('pixi.js', () => ({
   Text: MockText,
 }));
 
-import { createTokenRenderer, type TokenLayoutConfig } from '../../../src/canvas/renderers/token-renderer';
+import { createTokenRenderer } from '../../../src/canvas/renderers/token-renderer';
 import { createDisposalQueue } from '../../../src/canvas/renderers/disposal-queue';
 import type { TokenShape } from '../../../src/config/visual-config-defaults';
-import type { RenderToken } from '../../../src/model/render-model';
+import type { RenderToken, RenderZone } from '../../../src/model/render-model';
+import { resolvePresentationTokenNodes } from '../../../src/presentation/token-presentation';
 
 function makeToken(overrides: Partial<RenderToken> = {}): RenderToken {
   return {
@@ -230,6 +231,26 @@ function makeToken(overrides: Partial<RenderToken> = {}): RenderToken {
     properties: {},
     isSelectable: false,
     isSelected: false,
+    ...overrides,
+  };
+}
+
+function makeZone(overrides: Partial<RenderZone> = {}): RenderZone {
+  return {
+    id: 'zone:a',
+    displayName: 'Zone A',
+    ordering: 'set',
+    tokenIDs: [],
+    hiddenTokenCount: 0,
+    markers: [],
+    visibility: 'public',
+    isSelectable: false,
+    isHighlighted: false,
+    ownerID: null,
+    category: null,
+    attributes: {},
+    visual: { shape: 'rectangle', width: 160, height: 100, color: null },
+    metadata: {},
     ...overrides,
   };
 }
@@ -254,6 +275,50 @@ function createColorProvider(overrides: {
     readonly backSymbol?: string;
     readonly size?: number;
   };
+  readonly tokenVisualByType?: Readonly<Record<string, {
+    readonly shape?: TokenShape;
+    readonly color?: string;
+    readonly symbol?: string;
+    readonly backSymbol?: string;
+    readonly size?: number;
+  }>>;
+  readonly tokenPresentation?: {
+    readonly lane?: string | null;
+    readonly scale?: number;
+  };
+  readonly tokenPresentationByType?: Readonly<Record<string, {
+    readonly lane?: string | null;
+    readonly scale?: number;
+  }>>;
+  readonly zoneLayoutRoleById?: Readonly<Record<string, 'card' | 'forcePool' | 'hand' | 'other'>>;
+  readonly sharedZoneIds?: ReadonlySet<string>;
+  readonly zoneTokenLayout?: {
+    readonly mode: 'grid';
+    readonly columns?: number;
+    readonly spacingX: number;
+    readonly spacingY: number;
+  } | {
+    readonly mode: 'lanes';
+    readonly laneGap: number;
+    readonly laneOrder: readonly string[];
+    readonly lanes: Readonly<Record<string, {
+      readonly anchor: 'center' | 'belowPreviousLane';
+      readonly pack: 'centeredRow';
+      readonly spacingX: number;
+      readonly spacingY: number;
+    }>>;
+  };
+  readonly stackBadgeStyle?: {
+    readonly fontFamily?: string;
+    readonly fontSize: number;
+    readonly fill: string;
+    readonly stroke: string;
+    readonly strokeWidth: number;
+    readonly anchorX: number;
+    readonly anchorY: number;
+    readonly offsetX: number;
+    readonly offsetY: number;
+  };
   readonly cardTemplatesByTokenType?: Readonly<Record<string, {
     readonly width: number;
     readonly height: number;
@@ -266,20 +331,63 @@ function createColorProvider(overrides: {
   }>>;
   readonly factionColor?: string;
 } = {}) {
-  const defaultSymbol = overrides.tokenVisual?.symbol ?? null;
-  const defaultBackSymbol = overrides.tokenVisual?.backSymbol ?? null;
+  const resolveVisual = (tokenTypeId: string) => overrides.tokenVisualByType?.[tokenTypeId] ?? overrides.tokenVisual;
+  const resolvePresentation = (tokenTypeId: string) => (
+    overrides.tokenPresentationByType?.[tokenTypeId] ?? overrides.tokenPresentation
+  );
   return {
-    getTokenTypeVisual: vi.fn(() => ({
-      shape: overrides.tokenVisual?.shape ?? 'circle',
-      color: overrides.tokenVisual?.color ?? null,
-      symbol: defaultSymbol,
-      backSymbol: defaultBackSymbol,
-      size: overrides.tokenVisual?.size ?? 28,
+    getTokenTypeVisual: vi.fn((tokenTypeId: string) => {
+      const tokenVisual = resolveVisual(tokenTypeId);
+      return {
+        shape: tokenVisual?.shape ?? 'circle',
+        color: tokenVisual?.color ?? null,
+        symbol: tokenVisual?.symbol ?? null,
+        backSymbol: tokenVisual?.backSymbol ?? null,
+        size: tokenVisual?.size ?? 28,
+      };
+    }),
+    getTokenTypePresentation: vi.fn((tokenTypeId: string) => {
+      const presentation = resolvePresentation(tokenTypeId);
+      return {
+        lane: presentation?.lane ?? null,
+        scale: presentation?.scale ?? 1,
+      };
+    }),
+    resolveZoneTokenLayout: vi.fn(() => (
+      overrides.zoneTokenLayout?.mode === 'grid'
+        ? {
+            mode: 'grid' as const,
+            columns: overrides.zoneTokenLayout.columns ?? 6,
+            spacingX: overrides.zoneTokenLayout.spacingX,
+            spacingY: overrides.zoneTokenLayout.spacingY,
+          }
+        : overrides.zoneTokenLayout ?? {
+            mode: 'grid' as const,
+            columns: 6,
+            spacingX: 36,
+            spacingY: 36,
+          }
+    )),
+    getStackBadgeStyle: vi.fn(() => ({
+      fontFamily: overrides.stackBadgeStyle?.fontFamily ?? 'monospace',
+      fontSize: overrides.stackBadgeStyle?.fontSize ?? 10,
+      fill: overrides.stackBadgeStyle?.fill ?? '#f8fafc',
+      stroke: overrides.stackBadgeStyle?.stroke ?? '#000000',
+      strokeWidth: overrides.stackBadgeStyle?.strokeWidth ?? 0,
+      anchorX: overrides.stackBadgeStyle?.anchorX ?? 1,
+      anchorY: overrides.stackBadgeStyle?.anchorY ?? 0,
+      offsetX: overrides.stackBadgeStyle?.offsetX ?? -2,
+      offsetY: overrides.stackBadgeStyle?.offsetY ?? 2,
     })),
-    resolveTokenSymbols: vi.fn((_tokenTypeId: string, _tokenProperties: Readonly<Record<string, string | number | boolean>>) => ({
-      symbol: defaultSymbol,
-      backSymbol: defaultBackSymbol,
-    })),
+    getZoneLayoutRole: vi.fn((zoneId: string) => overrides.zoneLayoutRoleById?.[zoneId] ?? null),
+    isSharedZone: vi.fn((zoneId: string) => overrides.sharedZoneIds?.has(zoneId) ?? false),
+    resolveTokenSymbols: vi.fn((tokenTypeId: string, _tokenProperties: Readonly<Record<string, string | number | boolean>>) => {
+      const tokenVisual = resolveVisual(tokenTypeId);
+      return {
+        symbol: tokenVisual?.symbol ?? null,
+        backSymbol: tokenVisual?.backSymbol ?? null,
+      };
+    }),
     getCardTemplateForTokenType: vi.fn(
       (tokenTypeId: string) => overrides.cardTemplatesByTokenType?.[tokenTypeId] ?? null,
     ),
@@ -297,15 +405,54 @@ function createRenderer(
       isSelectable: () => boolean,
     ) => () => void;
     readonly disposalQueue?: ReturnType<typeof createDisposalQueue>;
-    readonly layoutConfig?: TokenLayoutConfig;
   },
 ) {
   const disposalQueue = options?.disposalQueue ?? createDisposalQueue({ scheduleFlush: () => {} });
-  return createTokenRenderer(parent as unknown as Container, colorProvider, {
+  const rawRenderer = createTokenRenderer(parent as unknown as Container, {
     disposalQueue,
     ...(options?.bindSelection === undefined ? {} : { bindSelection: options.bindSelection }),
-    ...(options?.layoutConfig === undefined ? {} : { layoutConfig: options.layoutConfig }),
   });
+  const update = (
+    tokens: readonly RenderToken[],
+    zoneContainers: ReadonlyMap<string, Container>,
+    highlightedTokenIDs?: ReadonlySet<string>,
+  ) => rawRenderer.update(
+    resolvePresentationTokenNodes(synthesizeTokens(tokens), synthesizeZones(tokens, zoneContainers), colorProvider, highlightedTokenIDs),
+    zoneContainers,
+  );
+  const updateWithZones = (
+    tokens: readonly RenderToken[],
+    zones: readonly RenderZone[],
+    zoneContainers: ReadonlyMap<string, Container>,
+    highlightedTokenIDs?: ReadonlySet<string>,
+  ) => rawRenderer.update(
+    resolvePresentationTokenNodes(synthesizeTokens(tokens), zones, colorProvider, highlightedTokenIDs),
+    zoneContainers,
+  );
+
+  return {
+    ...rawRenderer,
+    update,
+    updateWithZones,
+  };
+}
+
+function synthesizeZones(
+  tokens: readonly RenderToken[],
+  zoneContainers: ReadonlyMap<string, Container>,
+): readonly RenderZone[] {
+  const zoneIds = new Set<string>();
+  for (const token of tokens) {
+    zoneIds.add(token.zoneID);
+  }
+  for (const zoneId of zoneContainers.keys()) {
+    zoneIds.add(zoneId);
+  }
+  return Array.from(zoneIds, (zoneId) => makeZone({ id: zoneId }));
+}
+
+function synthesizeTokens(tokens: readonly RenderToken[]): readonly RenderToken[] {
+  return tokens;
 }
 
 describe('createTokenRenderer', () => {
@@ -649,6 +796,49 @@ describe('createTokenRenderer', () => {
     expect(cardContent.children[1]).toBe(secondTextNode);
     expect(firstTextNode.destroyed).toBe(false);
     expect(secondTextNode.destroyed).toBe(false);
+  });
+
+  it('retires removed card-content containers through the disposal queue', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider({
+      tokenVisual: { shape: 'card', color: '#ff0000' },
+      cardTemplatesByTokenType: {
+        'card-AS': {
+          width: 48,
+          height: 68,
+          layout: {
+            rank: { y: 8, align: 'center' },
+          },
+        },
+      },
+    });
+    const queue = createDisposalQueue({ scheduleFlush: () => {} });
+    const renderer = createRenderer(parent, colorProvider, { disposalQueue: queue });
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'card-AS', faceUp: true, properties: { rank: 'A' } })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
+    const cardContent = tokenContainer.children[5] as InstanceType<typeof MockContainer>;
+    expect(cardContent.children).toHaveLength(1);
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'troop-a', faceUp: true })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    expect(cardContent.parent).toBeNull();
+    expect(cardContent.destroyed).toBe(false);
+
+    queue.flush();
+
+    expect(cardContent.destroyed).toBe(true);
   });
 
   it('renders non-card token shapes using shape-specific primitives instead of circle fallback', () => {
@@ -1070,17 +1260,14 @@ describe('createTokenRenderer', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider({
       tokenVisual: { shape: 'card', color: '#ff0000' },
+      sharedZoneIds: new Set(['community:none']),
       cardTemplatesByTokenType: {
         'card-2S': { width: 48, height: 68 },
         'card-3H': { width: 48, height: 68 },
         'card-4D': { width: 48, height: 68 },
       },
     });
-    const layoutConfig: TokenLayoutConfig = {
-      zoneLayoutRoles: new Map([['community:none', 'other']]),
-      sharedZoneIds: new Set(['community:none']),
-    };
-    const renderer = createRenderer(parent, colorProvider, { layoutConfig });
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [
@@ -1112,16 +1299,15 @@ describe('createTokenRenderer', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider({
       tokenVisual: { shape: 'card', color: '#ff0000' },
+      zoneLayoutRoleById: {
+        'hand:0': 'hand',
+      },
       cardTemplatesByTokenType: {
         'card-AS': { width: 48, height: 68 },
         'card-KH': { width: 48, height: 68 },
       },
     });
-    const layoutConfig: TokenLayoutConfig = {
-      zoneLayoutRoles: new Map([['hand:0', 'hand']]),
-      sharedZoneIds: new Set(),
-    };
-    const renderer = createRenderer(parent, colorProvider, { layoutConfig });
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [
@@ -1146,12 +1332,11 @@ describe('createTokenRenderer', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider({
       tokenVisual: { shape: 'card', color: '#ff0000' },
+      zoneLayoutRoleById: {
+        'deck:none': 'card',
+      },
     });
-    const layoutConfig: TokenLayoutConfig = {
-      zoneLayoutRoles: new Map([['deck:none', 'card']]),
-      sharedZoneIds: new Set(),
-    };
-    const renderer = createRenderer(parent, colorProvider, { layoutConfig });
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [
@@ -1171,7 +1356,7 @@ describe('createTokenRenderer', () => {
     expect(t1.position.y).toBe(100);
   });
 
-  it('falls back to grid layout when no layoutConfig is provided', () => {
+  it('falls back to provider grid layout when no special zone role is configured', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider();
     const renderer = createRenderer(parent, colorProvider);
@@ -1189,11 +1374,189 @@ describe('createTokenRenderer', () => {
     const t1 = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
     const t2 = renderer.getContainerMap().get('token:2') as InstanceType<typeof MockContainer>;
 
-    // Grid layout: column-based offset (TOKENS_PER_ROW=6, TOKEN_SPACING=36)
+    // Grid layout: provider default columns=6, spacing=36
     expect(t1.position.x).toBe(410);
     expect(t1.position.y).toBe(232);
     expect(t2.position.x).toBe(446);
     expect(t2.position.y).toBe(232);
+  });
+
+  it('centers regular-lane tokens around the zone origin for lane layouts', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider({
+      tokenPresentationByType: {
+        troop: { lane: 'regular', scale: 1 },
+      },
+      zoneTokenLayout: {
+        mode: 'lanes',
+        laneGap: 24,
+        laneOrder: ['regular', 'base'],
+        lanes: {
+          regular: {
+            anchor: 'center',
+            pack: 'centeredRow',
+            spacingX: 32,
+            spacingY: 36,
+          },
+          base: {
+            anchor: 'belowPreviousLane',
+            pack: 'centeredRow',
+            spacingX: 42,
+            spacingY: 36,
+          },
+        },
+      },
+    });
+    const renderer = createRenderer(parent, colorProvider);
+
+    renderer.updateWithZones(
+      [
+        makeToken({ id: 'token:1', type: 'troop', zoneID: 'zone:city', isSelectable: true }),
+        makeToken({ id: 'token:2', type: 'troop', zoneID: 'zone:city', isSelectable: true }),
+      ],
+      [makeZone({ id: 'zone:city', category: 'city' })],
+      createZoneContainers([
+        ['zone:city', { x: 400, y: 220 }],
+      ]),
+    );
+
+    const t1 = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
+    const t2 = renderer.getContainerMap().get('token:2') as InstanceType<typeof MockContainer>;
+
+    expect(t1.position.x).toBe(370);
+    expect(t2.position.x).toBe(430);
+    expect(t1.position.y).toBe(220);
+    expect(t2.position.y).toBe(220);
+  });
+
+  it('places later lanes below earlier lanes using lane gap and scaled dimensions', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider({
+      tokenPresentationByType: {
+        troop: { lane: 'regular', scale: 1 },
+        base: { lane: 'base', scale: 1.5 },
+      },
+      tokenVisualByType: {
+        troop: { shape: 'circle', size: 28 },
+        base: { shape: 'round-disk', size: 28 },
+      },
+      zoneTokenLayout: {
+        mode: 'lanes',
+        laneGap: 24,
+        laneOrder: ['regular', 'base'],
+        lanes: {
+          regular: {
+            anchor: 'center',
+            pack: 'centeredRow',
+            spacingX: 32,
+            spacingY: 36,
+          },
+          base: {
+            anchor: 'belowPreviousLane',
+            pack: 'centeredRow',
+            spacingX: 42,
+            spacingY: 36,
+          },
+        },
+      },
+    });
+    const renderer = createRenderer(parent, colorProvider);
+
+    renderer.updateWithZones(
+      [
+        makeToken({ id: 'token:1', type: 'troop', zoneID: 'zone:city', isSelectable: true }),
+        makeToken({ id: 'token:2', type: 'base', zoneID: 'zone:city', isSelectable: true }),
+      ],
+      [makeZone({ id: 'zone:city', category: 'city' })],
+      createZoneContainers([
+        ['zone:city', { x: 0, y: 0 }],
+      ]),
+    );
+
+    const troop = renderer.getContainerMap().get('token:1') as unknown as InstanceType<typeof MockContainer> & {
+      hitArea: InstanceType<typeof MockCircle>;
+    };
+    const base = renderer.getContainerMap().get('token:2') as unknown as InstanceType<typeof MockContainer> & {
+      hitArea: InstanceType<typeof MockCircle>;
+    };
+
+    expect(troop.position.y).toBe(0);
+    expect(base.position.y).toBe(59);
+    expect(base.hitArea.radius).toBeGreaterThan(troop.hitArea.radius);
+  });
+
+  it('uses presentation scale for hit areas and stack badge corner styling', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider({
+      tokenPresentationByType: {
+        base: { lane: 'base', scale: 1.5 },
+      },
+      tokenVisualByType: {
+        base: { shape: 'round-disk', size: 28, color: '#ff0000' },
+      },
+      zoneTokenLayout: {
+        mode: 'lanes',
+        laneGap: 24,
+        laneOrder: ['regular', 'base'],
+        lanes: {
+          regular: {
+            anchor: 'center',
+            pack: 'centeredRow',
+            spacingX: 32,
+            spacingY: 36,
+          },
+          base: {
+            anchor: 'belowPreviousLane',
+            pack: 'centeredRow',
+            spacingX: 42,
+            spacingY: 36,
+          },
+        },
+      },
+      stackBadgeStyle: {
+        fontSize: 13,
+        fill: '#f8fafc',
+        stroke: '#000000',
+        strokeWidth: 3,
+        anchorX: 1,
+        anchorY: 0,
+        offsetX: 4,
+        offsetY: -4,
+      },
+    });
+    const renderer = createRenderer(parent, colorProvider);
+
+    renderer.updateWithZones(
+      [
+        makeToken({ id: 'token:1', type: 'base', zoneID: 'zone:city' }),
+        makeToken({ id: 'token:2', type: 'base', zoneID: 'zone:city' }),
+      ],
+      [makeZone({ id: 'zone:city', category: 'city' })],
+      createZoneContainers([
+        ['zone:city', { x: 0, y: 0 }],
+      ]),
+    );
+
+    const base = renderer.getContainerMap().get('token:1') as unknown as InstanceType<typeof MockContainer> & {
+      hitArea: InstanceType<typeof MockCircle>;
+    };
+    const badge = base.children[4] as InstanceType<typeof MockText>;
+
+    expect(base.hitArea.radius).toBe(21);
+    expect(badge.text).toBe('2');
+    expect(badge.style).toEqual({
+      fill: '#f8fafc',
+      fontFamily: 'monospace',
+      fontSize: 13,
+      stroke: {
+        color: '#000000',
+        width: 3,
+      },
+    });
+    expect(badge.anchor.x).toBe(1);
+    expect(badge.anchor.y).toBe(0);
+    expect(badge.position.x).toBe(25);
+    expect(badge.position.y).toBe(-25);
   });
 
   it('completes update cycle even when container.destroy() throws', () => {

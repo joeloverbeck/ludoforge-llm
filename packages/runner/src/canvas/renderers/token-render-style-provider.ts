@@ -1,18 +1,45 @@
 import type { PlayerId } from '@ludoforge/engine/runtime';
 
-import type { ResolvedTokenSymbols, ResolvedTokenVisual, VisualConfigProvider } from '../../config/visual-config-provider.js';
-import type { FactionColorProvider } from './renderer-types';
+import type {
+  ResolvedStackBadgeStyle,
+  ResolvedTokenPresentation,
+  ResolvedTokenSymbols,
+  ResolvedTokenVisual,
+  ResolvedZoneTokenLayout,
+  VisualConfigProvider,
+} from '../../config/visual-config-provider.js';
+import type { TokenRenderStyleProvider } from './renderer-types';
 import { DEFAULT_FACTION_PALETTE } from '../../config/visual-config-defaults.js';
-import type { CardTemplate } from '../../config/visual-config-types.js';
+import type { CardTemplate, LayoutRole } from '../../config/visual-config-types.js';
 import { VisualConfigProvider as RuntimeVisualConfigProvider } from '../../config/visual-config-provider.js';
 
 export { DEFAULT_FACTION_PALETTE };
 
-export class DefaultFactionColorProvider implements FactionColorProvider {
+export class DefaultTokenRenderStyleProvider implements TokenRenderStyleProvider {
   private readonly provider = new RuntimeVisualConfigProvider(null);
 
   getTokenTypeVisual(tokenTypeId: string): ResolvedTokenVisual {
     return this.provider.getTokenTypeVisual(tokenTypeId);
+  }
+
+  getTokenTypePresentation(tokenTypeId: string): ResolvedTokenPresentation {
+    return this.provider.getTokenTypePresentation(tokenTypeId);
+  }
+
+  resolveZoneTokenLayout(zoneId: string, category: string | null): ResolvedZoneTokenLayout {
+    return this.provider.resolveZoneTokenLayout(zoneId, category);
+  }
+
+  getStackBadgeStyle(): ResolvedStackBadgeStyle {
+    return this.provider.getStackBadgeStyle();
+  }
+
+  getZoneLayoutRole(zoneId: string): LayoutRole | null {
+    return this.provider.getLayoutRole(zoneId);
+  }
+
+  isSharedZone(_zoneId: string): boolean {
+    return false;
   }
 
   resolveTokenSymbols(
@@ -34,11 +61,32 @@ export class DefaultFactionColorProvider implements FactionColorProvider {
   }
 }
 
-export class VisualConfigFactionColorProvider implements FactionColorProvider {
+export class VisualConfigTokenRenderStyleProvider implements TokenRenderStyleProvider {
   constructor(private readonly provider: VisualConfigProvider) {}
 
   getTokenTypeVisual(tokenTypeId: string): ResolvedTokenVisual {
     return this.provider.getTokenTypeVisual(tokenTypeId);
+  }
+
+  getTokenTypePresentation(tokenTypeId: string): ResolvedTokenPresentation {
+    return this.provider.getTokenTypePresentation(tokenTypeId);
+  }
+
+  resolveZoneTokenLayout(zoneId: string, category: string | null): ResolvedZoneTokenLayout {
+    return this.provider.resolveZoneTokenLayout(zoneId, category);
+  }
+
+  getStackBadgeStyle(): ResolvedStackBadgeStyle {
+    return this.provider.getStackBadgeStyle();
+  }
+
+  getZoneLayoutRole(zoneId: string): LayoutRole | null {
+    return this.provider.getLayoutRole(zoneId);
+  }
+
+  isSharedZone(zoneId: string): boolean {
+    const cardAnimation = this.provider.getCardAnimation();
+    return cardAnimation?.zoneRoles.shared.includes(zoneId) ?? false;
   }
 
   resolveTokenSymbols(

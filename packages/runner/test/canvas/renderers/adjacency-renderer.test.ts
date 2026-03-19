@@ -85,6 +85,7 @@ vi.mock('pixi.js', () => ({
 }));
 
 import { createAdjacencyRenderer } from '../../../src/canvas/renderers/adjacency-renderer';
+import { createDisposalQueue, type DisposalQueue } from '../../../src/canvas/renderers/disposal-queue';
 import type { Position } from '../../../src/canvas/geometry';
 import { VisualConfigProvider } from '../../../src/config/visual-config-provider';
 import type { RenderAdjacency } from '../../../src/model/render-model';
@@ -103,10 +104,23 @@ function createPositions(entries: readonly [string, Position][]): ReadonlyMap<st
   return new Map(entries);
 }
 
+function createRenderer(
+  parent: InstanceType<typeof MockContainer>,
+  visualConfigProvider: VisualConfigProvider,
+  disposalQueue: DisposalQueue = createDisposalQueue({ scheduleFlush: () => {} }),
+) {
+  return {
+    renderer: createAdjacencyRenderer(parent as unknown as Container, visualConfigProvider, {
+      disposalQueue,
+    }),
+    disposalQueue,
+  };
+}
+
 describe('createAdjacencyRenderer', () => {
   it('update with empty array creates no graphics objects', () => {
     const parent = new MockContainer();
-    const renderer = createAdjacencyRenderer(parent as unknown as Container, new VisualConfigProvider(null));
+    const { renderer } = createRenderer(parent, new VisualConfigProvider(null));
 
     renderer.update([], new Map());
 
@@ -115,7 +129,7 @@ describe('createAdjacencyRenderer', () => {
 
   it('creates one graphics object per unique adjacency pair and dedupes reversed pairs', () => {
     const parent = new MockContainer();
-    const renderer = createAdjacencyRenderer(parent as unknown as Container, new VisualConfigProvider(null));
+    const { renderer } = createRenderer(parent, new VisualConfigProvider(null));
 
     renderer.update(
       [
@@ -134,9 +148,10 @@ describe('createAdjacencyRenderer', () => {
     expect(parent.children).toHaveLength(2);
   });
 
-  it('removes and destroys graphics when a pair is removed on subsequent update', () => {
+  it('retires removed graphics through the shared disposal queue', () => {
     const parent = new MockContainer();
-    const renderer = createAdjacencyRenderer(parent as unknown as Container, new VisualConfigProvider(null));
+    const disposalQueue = createDisposalQueue({ scheduleFlush: () => {} });
+    const { renderer } = createRenderer(parent, new VisualConfigProvider(null), disposalQueue);
 
     renderer.update(
       [makeAdjacency({ from: 'zone:a', to: 'zone:b' }), makeAdjacency({ from: 'zone:c', to: 'zone:d' })],
@@ -158,13 +173,15 @@ describe('createAdjacencyRenderer', () => {
       ]),
     );
 
-    expect(firstGraphics.isDestroyed).toBe(true);
+    expect(firstGraphics.isDestroyed).toBe(false);
     expect(parent.children).toHaveLength(1);
+    disposalQueue.flush();
+    expect(firstGraphics.isDestroyed).toBe(true);
   });
 
   it('adds graphics for newly added pairs on subsequent update', () => {
     const parent = new MockContainer();
-    const renderer = createAdjacencyRenderer(parent as unknown as Container, new VisualConfigProvider(null));
+    const { renderer } = createRenderer(parent, new VisualConfigProvider(null));
 
     renderer.update(
       [makeAdjacency({ from: 'zone:a', to: 'zone:b' })],
@@ -189,7 +206,7 @@ describe('createAdjacencyRenderer', () => {
 
   it('updates line endpoints in place when positions change', () => {
     const parent = new MockContainer();
-    const renderer = createAdjacencyRenderer(parent as unknown as Container, new VisualConfigProvider(null));
+    const { renderer } = createRenderer(parent, new VisualConfigProvider(null));
 
     renderer.update(
       [makeAdjacency({ from: 'zone:a', to: 'zone:b' })],
@@ -220,7 +237,7 @@ describe('createAdjacencyRenderer', () => {
 
   it('uses highlighted style when adjacency is highlighted (including merged bidirectional pairs)', () => {
     const parent = new MockContainer();
-    const renderer = createAdjacencyRenderer(parent as unknown as Container, new VisualConfigProvider(null));
+    const { renderer } = createRenderer(parent, new VisualConfigProvider(null));
 
     renderer.update(
       [
@@ -239,8 +256,8 @@ describe('createAdjacencyRenderer', () => {
 
   it('uses category style from visual config provider when present', () => {
     const parent = new MockContainer();
-    const renderer = createAdjacencyRenderer(
-      parent as unknown as Container,
+    const { renderer } = createRenderer(
+      parent,
       new VisualConfigProvider({
         version: 1,
         edges: {
@@ -265,8 +282,8 @@ describe('createAdjacencyRenderer', () => {
 
   it('uses highlighted style over category style when highlighted', () => {
     const parent = new MockContainer();
-    const renderer = createAdjacencyRenderer(
-      parent as unknown as Container,
+    const { renderer } = createRenderer(
+      parent,
       new VisualConfigProvider({
         version: 1,
         edges: {
@@ -296,7 +313,7 @@ describe('createAdjacencyRenderer', () => {
 
   it('skips missing positions without throwing and toggles visibility until positions exist', () => {
     const parent = new MockContainer();
-    const renderer = createAdjacencyRenderer(parent as unknown as Container, new VisualConfigProvider(null));
+    const { renderer } = createRenderer(parent, new VisualConfigProvider(null));
 
     expect(() => {
       renderer.update([makeAdjacency({ from: 'zone:a', to: 'zone:b' })], createPositions([['zone:a', { x: 10, y: 20 }]]));
@@ -319,9 +336,10 @@ describe('createAdjacencyRenderer', () => {
     expect(graphics.visible).toBe(false);
   });
 
-  it('destroy removes and destroys all graphics', () => {
+  it('destroy retires all graphics through the shared disposal queue', () => {
     const parent = new MockContainer();
-    const renderer = createAdjacencyRenderer(parent as unknown as Container, new VisualConfigProvider(null));
+    const disposalQueue = createDisposalQueue({ scheduleFlush: () => {} });
+    const { renderer } = createRenderer(parent, new VisualConfigProvider(null), disposalQueue);
 
     renderer.update(
       [makeAdjacency({ from: 'zone:a', to: 'zone:b' }), makeAdjacency({ from: 'zone:c', to: 'zone:d' })],
@@ -338,8 +356,11 @@ describe('createAdjacencyRenderer', () => {
 
     renderer.destroy();
 
+    expect(first.isDestroyed).toBe(false);
+    expect(second.isDestroyed).toBe(false);
+    expect(parent.children).toHaveLength(0);
+    disposalQueue.flush();
     expect(first.isDestroyed).toBe(true);
     expect(second.isDestroyed).toBe(true);
-    expect(parent.children).toHaveLength(0);
   });
 });

@@ -20,6 +20,7 @@ export const CANONICAL_SECTION_KEYS = [
   'triggers',
   'effectMacros',
   'conditionMacros',
+  'agents',
   'phaseTemplates',
   'victoryStandings',
   'verbalization',
@@ -179,6 +180,9 @@ function identifyByFingerprint(value: Record<string, unknown>): CanonicalSection
   if (isTriggersShape(value)) {
     matches.push('triggers');
   }
+  if (isAgentsShape(value)) {
+    matches.push('agents');
+  }
   if (isSetupShape(value)) {
     matches.push('setup');
   }
@@ -237,6 +241,17 @@ function isActionPipelinesShape(value: Record<string, unknown>): boolean {
     value.actionPipelines.every(
       (entry) => isRecord(entry) && typeof entry.id === 'string' && typeof entry.actionId === 'string',
     )
+  );
+}
+
+function isAgentsShape(value: Record<string, unknown>): boolean {
+  const keys = Object.keys(value);
+  if (keys.length === 0) {
+    return false;
+  }
+
+  return keys.every((key) =>
+    key === 'parameters' || key === 'library' || key === 'profiles' || key === 'bindings',
   );
 }
 

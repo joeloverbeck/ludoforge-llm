@@ -131,6 +131,15 @@ describe('PreGameConfigScreen', () => {
     fireEvent.click(screen.getByTestId('pre-game-back'));
     expect(onBack).toHaveBeenCalledTimes(1);
   });
+
+  it('fails closed when descriptor visual config is malformed', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(() =>
+      renderScreen({
+        resolveVisualConfigYaml: () => ({ version: 2 }),
+      })).toThrow(/Invalid visual config schema/u);
+  });
 });
 
 function renderScreen(

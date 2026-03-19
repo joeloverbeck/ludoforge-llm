@@ -111,17 +111,17 @@ describe('zonesVisuallyEqual', () => {
     ).toBe(false);
   });
 
-  it('returns false when marker displayName changes', () => {
+  it('ignores marker displayName changes because canvas equality now tracks semantic frame data', () => {
     expect(
       zonesVisuallyEqual(
         [makeZone()],
         [makeZone({ markers: [{ id: 'control', displayName: 'Influence', state: 'blue', possibleStates: ['blue', 'red'] }] })],
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 
-  it('returns false when displayName changes', () => {
-    expect(zonesVisuallyEqual([makeZone()], [makeZone({ displayName: 'Zone Prime' })])).toBe(false);
+  it('ignores displayName changes because labels are projection-layer data', () => {
+    expect(zonesVisuallyEqual([makeZone()], [makeZone({ displayName: 'Zone Prime' })])).toBe(true);
   });
 
   it('returns false when visibility changes', () => {
@@ -136,13 +136,13 @@ describe('zonesVisuallyEqual', () => {
     expect(zonesVisuallyEqual([makeZone()], [makeZone({ category: 'city' })])).toBe(false);
   });
 
-  it('returns false when visual hints change', () => {
+  it('ignores visual hint changes because zone visuals are projection-layer data', () => {
     expect(
       zonesVisuallyEqual(
         [makeZone()],
         [makeZone({ visual: { shape: 'hexagon', width: 160, height: 100, color: '#345678' } })],
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('returns true when all compared fields are equal', () => {

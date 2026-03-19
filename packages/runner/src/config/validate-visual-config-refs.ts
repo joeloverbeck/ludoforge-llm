@@ -5,6 +5,7 @@ import { VisualConfigSchema, type VisualConfig } from './visual-config-types.js'
 
 export interface VisualConfigRefValidationContext {
   readonly zoneIds: ReadonlySet<string>;
+  readonly zoneCategories: ReadonlySet<string>;
   readonly tokenTypeIds: ReadonlySet<string>;
   readonly factionIds: ReadonlySet<string>;
   readonly variableNames: ReadonlySet<string>;
@@ -12,7 +13,7 @@ export interface VisualConfigRefValidationContext {
 }
 
 export interface VisualConfigRefError {
-  readonly category: 'zone' | 'tokenType' | 'faction' | 'variable' | 'edge';
+  readonly category: 'zone' | 'zoneCategory' | 'tokenType' | 'faction' | 'variable' | 'edge';
   readonly configPath: string;
   readonly referencedId: string;
   readonly message: string;
@@ -21,8 +22,10 @@ export interface VisualConfigRefError {
 export function buildRefValidationContext(gameDef: GameDef): VisualConfigRefValidationContext {
   const edgeCategories = new Set<string>();
   const presentationZones = gameDef.zones.filter((zone) => zone.isInternal !== true);
+  const zoneCategories = new Set<string>();
   for (const zone of presentationZones) {
     if (typeof zone.category === 'string' && zone.category.length > 0) {
+      zoneCategories.add(zone.category);
       edgeCategories.add(zone.category);
     }
     for (const adjacency of zone.adjacentTo ?? []) {
@@ -34,6 +37,7 @@ export function buildRefValidationContext(gameDef: GameDef): VisualConfigRefVali
 
   return {
     zoneIds: new Set(presentationZones.map((zone) => String(zone.id))),
+    zoneCategories,
     tokenTypeIds: new Set(gameDef.tokenTypes.map((tokenType) => tokenType.id)),
     factionIds: new Set((gameDef.seats ?? []).map((seat) => seat.id)),
     variableNames: new Set([...gameDef.globalVars, ...gameDef.perPlayerVars].map((variable) => variable.name)),
@@ -77,6 +81,14 @@ export function validateVisualConfigRefs(
   }
 
   validateObjectKeys(config.tokenTypes, context.tokenTypeIds, 'tokenType', 'tokenTypes', errors);
+  validateObjectKeys(
+    config.zones?.tokenLayouts?.assignments?.byCategory,
+    context.zoneCategories,
+    'zoneCategory',
+    'zones.tokenLayouts.assignments.byCategory',
+    errors,
+  );
+  validatePresentationLaneAssignments(config, errors);
   validateStringList(
     config.cardAnimation?.cardTokenTypes.ids,
     context.tokenTypeIds,
@@ -240,4 +252,59 @@ function validateNestedArray<T>(
       }
     }
   }
+}
+
+function validatePresentationLaneAssignments(
+  config: VisualConfig,
+  errors: VisualConfigRefError[],
+): void {
+  const satisfiableLanes = collectSatisfiablePresentationLanes(config);
+
+  for (const [tokenTypeId, style] of Object.entries(config.tokenTypes ?? {})) {
+    const lane = style.presentation?.lane;
+    if (lane === undefined || satisfiableLanes.has(lane)) {
+      continue;
+    }
+    errors.push({
+      category: 'tokenType',
+      configPath: `tokenTypes.${tokenTypeId}.presentation.lane`,
+      referencedId: lane,
+      message: 'Presentation lane is not satisfiable by any assigned lane layout',
+    });
+  }
+
+  const defaults = config.tokenTypeDefaults ?? [];
+  for (let index = 0; index < defaults.length; index += 1) {
+    const lane = defaults[index]?.style.presentation?.lane;
+    if (lane === undefined || satisfiableLanes.has(lane)) {
+      continue;
+    }
+    errors.push({
+      category: 'tokenType',
+      configPath: `tokenTypeDefaults[${index}].style.presentation.lane`,
+      referencedId: lane,
+      message: 'Presentation lane is not satisfiable by any assigned lane layout',
+    });
+  }
+}
+
+function collectSatisfiablePresentationLanes(config: VisualConfig): ReadonlySet<string> {
+  const laneIds = new Set<string>();
+  const assignments = config.zones?.tokenLayouts?.assignments?.byCategory;
+  if (assignments === undefined) {
+    return laneIds;
+  }
+
+  const presets = config.zones?.tokenLayouts?.presets ?? {};
+  for (const presetId of Object.values(assignments)) {
+    const preset = presets[presetId];
+    if (preset?.mode !== 'lanes') {
+      continue;
+    }
+    for (const laneId of Object.keys(preset.lanes)) {
+      laneIds.add(laneId);
+    }
+  }
+
+  return laneIds;
 }

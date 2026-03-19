@@ -22,11 +22,11 @@ import { createPositionStore, type PositionStore } from './position-store';
 import { createAdjacencyRenderer } from './renderers/adjacency-renderer';
 import { ContainerPool } from './renderers/container-pool';
 import { createDisposalQueue, type DisposalQueue } from './renderers/disposal-queue';
-import { VisualConfigFactionColorProvider } from './renderers/faction-colors';
+import { VisualConfigTokenRenderStyleProvider } from './renderers/token-render-style-provider';
 import type { AdjacencyRenderer, TableOverlayRenderer, TokenRenderer, ZoneRenderer } from './renderers/renderer-types';
 import { createRegionBoundaryRenderer } from './renderers/region-boundary-renderer.js';
 import { createTableOverlayRenderer } from './renderers/table-overlay-renderer.js';
-import { createTokenRenderer, type TokenLayoutConfig } from './renderers/token-renderer';
+import { createTokenRenderer } from './renderers/token-renderer';
 import { drawTableBackground } from './renderers/table-background-renderer.js';
 import { createZoneRenderer } from './renderers/zone-renderer';
 import {
@@ -38,6 +38,10 @@ import { setupViewport, type ViewportResult } from './viewport-setup';
 import { getOrComputeLayout, type FullLayoutResult } from '../layout/layout-cache.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { EMPTY_INTERACTION_HIGHLIGHTS, type InteractionHighlights } from './interaction-highlights.js';
+import {
+  createActionAnnouncementPresenter,
+  type ActionAnnouncementPresenter,
+} from '../presentation/action-announcement-presentation.js';
 
 const DEFAULT_BACKGROUND_COLOR = 0x0b1020;
 const DEFAULT_WORLD_SIZE = 1;
@@ -105,6 +109,7 @@ interface GameCanvasRuntimeDeps {
   readonly createTokenRenderer: typeof createTokenRenderer;
   readonly createTableOverlayRenderer: typeof createTableOverlayRenderer;
   readonly createActionAnnouncementRenderer: typeof createActionAnnouncementRenderer;
+  readonly createActionAnnouncementPresenter: typeof createActionAnnouncementPresenter;
   readonly createCanvasUpdater: typeof createCanvasUpdater;
   readonly createCoordinateBridge: typeof createCoordinateBridge;
   readonly createAnimationController: typeof createAnimationController;
@@ -125,6 +130,7 @@ const DEFAULT_RUNTIME_DEPS: GameCanvasRuntimeDeps = {
   createTokenRenderer,
   createTableOverlayRenderer,
   createActionAnnouncementRenderer,
+  createActionAnnouncementPresenter,
   createCanvasUpdater,
   createCoordinateBridge,
   createAnimationController,
@@ -262,19 +268,16 @@ export async function createGameCanvasRuntime(
           },
         },
       ),
-    markerBadgeConfig: options.visualConfigProvider.getMarkerBadgeConfig(),
   });
 
-  const adjacencyRenderer = deps.createAdjacencyRenderer(gameCanvas.layers.adjacencyLayer, options.visualConfigProvider);
+  const adjacencyRenderer = deps.createAdjacencyRenderer(gameCanvas.layers.adjacencyLayer, options.visualConfigProvider, {
+    disposalQueue,
+  });
 
-  const regionBoundaryRenderer = createRegionBoundaryRenderer(
-    gameCanvas.layers.regionLayer,
-    { visualConfigProvider: options.visualConfigProvider },
-  );
+  const regionBoundaryRenderer = createRegionBoundaryRenderer(gameCanvas.layers.regionLayer);
 
-  const factionColorProvider = new VisualConfigFactionColorProvider(options.visualConfigProvider);
-  const tokenLayoutConfig = buildTokenLayoutConfig(options.visualConfigProvider);
-  const tokenRenderer = deps.createTokenRenderer(gameCanvas.layers.tokenGroup, factionColorProvider, {
+  const tokenRenderStyleProvider = new VisualConfigTokenRenderStyleProvider(options.visualConfigProvider);
+  const tokenRenderer = deps.createTokenRenderer(gameCanvas.layers.tokenGroup, {
     bindSelection: (tokenContainer, tokenId, isSelectable) =>
       deps.attachTokenSelectHandlers(
         tokenContainer,
@@ -293,21 +296,27 @@ export async function createGameCanvasRuntime(
         },
       ),
     disposalQueue,
-    ...(tokenLayoutConfig !== undefined ? { layoutConfig: tokenLayoutConfig } : {}),
   });
   const tableOverlayRenderer = deps.createTableOverlayRenderer(
     gameCanvas.layers.tableOverlayLayer,
     options.visualConfigProvider,
   );
   const actionAnnouncementRenderer = deps.createActionAnnouncementRenderer({
+    parentContainer: gameCanvas.layers.effectsGroup,
+  });
+  const actionAnnouncementPresenter = deps.createActionAnnouncementPresenter({
     store: options.store,
     positionStore,
-    parentContainer: gameCanvas.layers.effectsGroup,
+    onAnnouncement: (spec) => {
+      actionAnnouncementRenderer.enqueue(spec);
+    },
   });
 
   const canvasUpdater = deps.createCanvasUpdater({
     store: options.store,
     positionStore,
+    visualConfigProvider: options.visualConfigProvider,
+    tokenRenderStyleProvider,
     zoneRenderer,
     adjacencyRenderer,
     tokenRenderer,
@@ -320,7 +329,8 @@ export async function createGameCanvasRuntime(
 
   let animationController: AnimationController | null = null;
   let aiPlaybackController: AiPlaybackController | null = null;
-  let actionAnnouncements: ActionAnnouncementRenderer | null = null;
+  let actionAnnouncementDisplay: ActionAnnouncementRenderer | null = null;
+  let actionAnnouncementSource: ActionAnnouncementPresenter | null = null;
   let reducedMotionObserver: ReducedMotionObserver | null = null;
   try {
     animationController = deps.createAnimationController({
@@ -357,10 +367,11 @@ export async function createGameCanvasRuntime(
   options.onAnimationDiagnosticBufferChange?.(animationController?.getDiagnosticBuffer() ?? null);
 
   try {
-    actionAnnouncementRenderer.start();
-    actionAnnouncements = actionAnnouncementRenderer;
+    actionAnnouncementDisplay = actionAnnouncementRenderer;
+    actionAnnouncementSource = actionAnnouncementPresenter;
+    actionAnnouncementPresenter.start();
   } catch (error) {
-    console.warn('Action announcement renderer initialization failed. Continuing without AI action announcements.', error);
+    console.warn('Action announcement presentation initialization failed. Continuing without AI action announcements.', error);
   }
 
   try {
@@ -526,7 +537,8 @@ export async function createGameCanvasRuntime(
       reducedMotionObserver?.destroy();
       unsubscribePhaseAnnouncement();
       cleanupKeyboardSelect();
-      actionAnnouncements?.destroy();
+      actionAnnouncementSource?.destroy();
+      actionAnnouncementDisplay?.destroy();
       aiPlaybackController?.destroy();
       animationController?.destroy();
       ariaAnnouncer.destroy();
@@ -726,29 +738,4 @@ function stringArraysEqual(prev: readonly string[], next: readonly string[]): bo
   }
 
   return true;
-}
-
-function buildTokenLayoutConfig(provider: VisualConfigProvider): TokenLayoutConfig | undefined {
-  const cardAnimation = provider.getCardAnimation();
-  const layoutRolesRaw = provider.getLayoutRoles();
-  const zoneLayoutRoles = new Map<string, string>();
-  const sharedZoneIds = new Set<string>();
-
-  if (layoutRolesRaw !== null) {
-    for (const [zoneId, role] of Object.entries(layoutRolesRaw)) {
-      zoneLayoutRoles.set(zoneId, role);
-    }
-  }
-
-  if (cardAnimation?.zoneRoles?.shared !== undefined) {
-    for (const zoneId of cardAnimation.zoneRoles.shared) {
-      sharedZoneIds.add(zoneId);
-    }
-  }
-
-  if (zoneLayoutRoles.size === 0 && sharedZoneIds.size === 0) {
-    return undefined;
-  }
-
-  return { zoneLayoutRoles, sharedZoneIds };
 }

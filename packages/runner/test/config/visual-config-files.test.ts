@@ -6,8 +6,14 @@ import { loadGameSpecBundleFromEntrypoint, runGameSpecStagesFromBundle } from '@
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
+import { assertBootstrapTargetDefinitions } from '../../src/bootstrap/bootstrap-registry';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider';
 import { VisualConfigSchema } from '../../src/config/visual-config-types';
+import {
+  buildRefValidationContext,
+  parseVisualConfigStrict,
+  validateVisualConfigRefs,
+} from '../../src/config/validate-visual-config-refs';
 
 function repoRootPath(): string {
   const testDir = dirname(fileURLToPath(import.meta.url));
@@ -20,6 +26,10 @@ function readText(pathFromRepoRoot: string): string {
 
 function readYaml(pathFromRepoRoot: string): unknown {
   return parse(readText(pathFromRepoRoot));
+}
+
+function readJson(pathFromRepoRoot: string): unknown {
+  return JSON.parse(readText(pathFromRepoRoot));
 }
 
 function compileProductionGameDef(pathFromRepoRoot: string) {
@@ -41,6 +51,20 @@ function compileProductionGameDef(pathFromRepoRoot: string) {
 }
 
 describe('visual-config.yaml files', () => {
+  it.each(
+    assertBootstrapTargetDefinitions(readJson('packages/runner/src/bootstrap/bootstrap-targets.json')),
+  )(
+    'production visual config for $id passes strict schema + reference validation against its compiled GameDef',
+    { timeout: 15_000 },
+    (target) => {
+      const parsed = parseVisualConfigStrict(readYaml(`${target.generatedFromSpecPath}/visual-config.yaml`));
+      const gameDef = compileProductionGameDef(target.specEntrypoint);
+      const errors = parsed === null ? [] : validateVisualConfigRefs(parsed, buildRefValidationContext(gameDef));
+
+      expect(errors).toEqual([]);
+    },
+  );
+
   it('FITL visual-config parses and validates against VisualConfigSchema', () => {
     const raw = readText('data/games/fire-in-the-lake/visual-config.yaml');
     expect(raw.trimStart().startsWith('version: 1')).toBe(true);
@@ -81,6 +105,35 @@ describe('visual-config.yaml files', () => {
       expect(['card', 'forcePool', 'hand', 'other']).toContain(role);
     }
 
+    expect(parsed.zones?.tokenLayouts).toEqual({
+      presets: {
+        'fitl-map-space': {
+          mode: 'lanes',
+          laneGap: 24,
+          laneOrder: ['regular', 'base'],
+          lanes: {
+            regular: {
+              anchor: 'center',
+              pack: 'centeredRow',
+              spacingX: 32,
+            },
+            base: {
+              anchor: 'belowPreviousLane',
+              pack: 'centeredRow',
+              spacingX: 42,
+            },
+          },
+        },
+      },
+      assignments: {
+        byCategory: {
+          city: 'fitl-map-space',
+          province: 'fitl-map-space',
+        },
+      },
+    });
+    expect(parsed.zones?.tokenLayouts?.assignments?.byCategory?.loc).toBeUndefined();
+
     expect(parsed.edges?.default).toEqual({
       color: '#6b7280',
       width: 1.5,
@@ -95,6 +148,16 @@ describe('visual-config.yaml files', () => {
       arvn: { color: '#ffff00', displayName: 'ARVN' },
       nva: { color: '#ff0000', displayName: 'NVA' },
       vc: { color: '#00bfff', displayName: 'Viet Cong' },
+    });
+    expect(parsed.tokens?.stackBadge).toEqual({
+      fontSize: 13,
+      fill: '#f8fafc',
+      stroke: '#000000',
+      strokeWidth: 3,
+      anchorX: 1,
+      anchorY: 0,
+      offsetX: 4,
+      offsetY: -4,
     });
 
     const attributeRules = parsed.zones?.attributeRules ?? [];
@@ -137,6 +200,55 @@ describe('visual-config.yaml files', () => {
         symbol: 'star',
       },
     ]);
+
+    expect(parsed.tokenTypes?.['us-troops']?.presentation).toEqual({
+      lane: 'regular',
+      scale: 1,
+    });
+    expect(parsed.tokenTypes?.['us-bases']?.presentation).toEqual({
+      lane: 'base',
+      scale: 1.5,
+    });
+    expect(parsed.tokenTypes?.['us-irregulars']?.presentation).toEqual({
+      lane: 'regular',
+      scale: 1,
+    });
+    expect(parsed.tokenTypes?.['arvn-troops']?.presentation).toEqual({
+      lane: 'regular',
+      scale: 1,
+    });
+    expect(parsed.tokenTypes?.['arvn-police']?.presentation).toEqual({
+      lane: 'regular',
+      scale: 1,
+    });
+    expect(parsed.tokenTypes?.['arvn-rangers']?.presentation).toEqual({
+      lane: 'regular',
+      scale: 1,
+    });
+    expect(parsed.tokenTypes?.['arvn-bases']?.presentation).toEqual({
+      lane: 'base',
+      scale: 1.5,
+    });
+    expect(parsed.tokenTypes?.['nva-troops']?.presentation).toEqual({
+      lane: 'regular',
+      scale: 1,
+    });
+    expect(parsed.tokenTypes?.['nva-guerrillas']?.presentation).toEqual({
+      lane: 'regular',
+      scale: 1,
+    });
+    expect(parsed.tokenTypes?.['nva-bases']?.presentation).toEqual({
+      lane: 'base',
+      scale: 1.5,
+    });
+    expect(parsed.tokenTypes?.['vc-guerrillas']?.presentation).toEqual({
+      lane: 'regular',
+      scale: 1,
+    });
+    expect(parsed.tokenTypes?.['vc-bases']?.presentation).toEqual({
+      lane: 'base',
+      scale: 1.5,
+    });
     },
   );
 

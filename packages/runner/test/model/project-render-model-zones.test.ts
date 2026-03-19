@@ -13,8 +13,8 @@ import {
 } from '@ludoforge/engine/runtime';
 
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
-import { deriveRenderModel } from '../../src/model/derive-render-model.js';
 import type { RenderContext } from '../../src/store/store-types.js';
+import { deriveProjectedRenderModel, type DerivedProjection } from './helpers/derive-projected-render-model.js';
 
 const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 
@@ -38,7 +38,7 @@ function compileFixture(options: CompileFixtureOptions): GameDef {
   const compiled = compileGameSpecToGameDef({
     ...createEmptyGameSpecDoc(),
     metadata: {
-      id: 'runner-derive-render-model-test',
+      id: 'runner-project-render-model-test',
       players: {
         min: options.minPlayers,
         max: options.maxPlayers,
@@ -135,9 +135,20 @@ function makeRenderContext(
       Array.from({ length: playerCount }, (_unused, player) => [asPlayerId(player), 'human' as const]),
     ),
     terminal: null,
-    visualConfigProvider: new VisualConfigProvider(null),
     ...overrides,
   };
+}
+
+function deriveModel(
+  state: GameState,
+  def: GameDef,
+  context: RenderContext,
+  options: {
+    readonly previous?: DerivedProjection | null;
+    readonly visualConfigProvider?: VisualConfigProvider;
+  } = {},
+) {
+  return deriveProjectedRenderModel(state, def, context, options).model;
 }
 
 function token(id: string, type = 'piece', props: Token['props'] = {}): Token {
@@ -148,7 +159,7 @@ function token(id: string, type = 'piece', props: Token['props'] = {}): Token {
   };
 }
 
-describe('deriveRenderModel zones/tokens/adjacencies', () => {
+describe('projectRenderModel zones/tokens/adjacencies', () => {
   it('projects zone category/attributes with provider-resolved visuals and labels', () => {
     const def = compileFixture({
       minPlayers: 2,
@@ -173,22 +184,22 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     });
 
     const state = initialState(def, 99, 2).state;
-    const model = deriveRenderModel(
+    const visualConfigProvider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        categoryStyles: {
+          city: { shape: 'hexagon', width: 120, height: 80, color: '#123456' },
+        },
+        overrides: {
+          'city:none': { label: 'Urban Center' },
+        },
+      },
+    });
+    const model = deriveModel(
       state,
       def,
-      makeRenderContext(state.playerCount, asPlayerId(0), {
-        visualConfigProvider: new VisualConfigProvider({
-          version: 1,
-          zones: {
-            categoryStyles: {
-              city: { shape: 'hexagon', width: 120, height: 80, color: '#123456' },
-            },
-            overrides: {
-              'city:none': { label: 'Urban Center' },
-            },
-          },
-        }),
-      }),
+      makeRenderContext(state.playerCount, asPlayerId(0)),
+      { visualConfigProvider },
     );
 
     const cityZone = model.zones.find((zone) => zone.id === 'city:none');
@@ -237,7 +248,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     });
 
     const state = initialState(def, 99, 2).state;
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+    const model = deriveModel(state, def, makeRenderContext(state.playerCount));
     expect(model.zones.map((zone) => zone.id)).toEqual(['public-board:none']);
   });
 
@@ -256,21 +267,24 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       ],
     });
     const state = initialState(def, 123, 2).state;
-    const contextA = makeRenderContext(state.playerCount, asPlayerId(0), {
-      visualConfigProvider: new VisualConfigProvider({
-        version: 1,
-        zones: { categoryStyles: { city: { shape: 'hexagon', color: '#111111' } } },
-      }),
+    const contextA = makeRenderContext(state.playerCount, asPlayerId(0));
+    const contextB = makeRenderContext(state.playerCount, asPlayerId(0));
+    const providerA = new VisualConfigProvider({
+      version: 1,
+      zones: { categoryStyles: { city: { shape: 'hexagon', color: '#111111' } } },
     });
-    const contextB = makeRenderContext(state.playerCount, asPlayerId(0), {
-      visualConfigProvider: new VisualConfigProvider({
-        version: 1,
-        zones: { categoryStyles: { city: { shape: 'rectangle', color: '#222222' } } },
-      }),
+    const providerB = new VisualConfigProvider({
+      version: 1,
+      zones: { categoryStyles: { city: { shape: 'rectangle', color: '#222222' } } },
     });
 
-    const firstModel = deriveRenderModel(state, def, contextA);
-    const secondModel = deriveRenderModel(state, def, contextB, firstModel);
+    const firstProjection = deriveProjectedRenderModel(state, def, contextA, { visualConfigProvider: providerA });
+    const secondProjection = deriveProjectedRenderModel(state, def, contextB, {
+      previous: firstProjection,
+      visualConfigProvider: providerB,
+    });
+    const firstModel = firstProjection.model;
+    const secondModel = secondProjection.model;
 
     expect(secondModel.zones[0]).not.toBe(firstModel.zones[0]);
     expect(secondModel.zones[0]).toMatchObject({
@@ -313,8 +327,10 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     const state = initialState(defA, 123, 2).state;
     const context = makeRenderContext(state.playerCount);
 
-    const firstModel = deriveRenderModel(state, defA, context);
-    const secondModel = deriveRenderModel(state, defB, context, firstModel);
+    const firstProjection = deriveProjectedRenderModel(state, defA, context);
+    const secondProjection = deriveProjectedRenderModel(state, defB, context, { previous: firstProjection });
+    const firstModel = firstProjection.model;
+    const secondModel = secondProjection.model;
 
     expect(secondModel.zones[0]).not.toBe(firstModel.zones[0]);
     expect(secondModel.zones[0]).toMatchObject({ metadata: { zoneKind: 'board' } });
@@ -353,7 +369,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       },
     };
 
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+    const model = deriveModel(state, def, makeRenderContext(state.playerCount));
 
     expect(model.zones.map((zone) => zone.id)).toEqual(['table:none', 'hand:0', 'hand:1']);
 
@@ -458,7 +474,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       },
     };
 
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount, asPlayerId(0)));
+    const model = deriveModel(state, def, makeRenderContext(state.playerCount, asPlayerId(0)));
 
     expect(model.tokens.map((renderToken) => ({
       id: renderToken.id,
@@ -506,7 +522,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       },
     };
 
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount, asPlayerId(0)));
+    const model = deriveModel(state, def, makeRenderContext(state.playerCount, asPlayerId(0)));
     expect(model.tokens.map((renderToken) => ({
       id: renderToken.id,
       factionId: renderToken.factionId,
@@ -538,7 +554,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     });
 
     const state = initialState(def, 9, 2).state;
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+    const model = deriveModel(state, def, makeRenderContext(state.playerCount));
 
     expect(model.adjacencies).toEqual([
       { from: 'table:none', to: 'hand:0', category: null, isHighlighted: false },
@@ -571,7 +587,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     });
 
     const state = initialState(def, 33, 2).state;
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+    const model = deriveModel(state, def, makeRenderContext(state.playerCount));
 
     expect(model.adjacencies).toEqual([
       { from: 'city:none', to: 'province:none', category: 'city', isHighlighted: false },
@@ -602,7 +618,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     });
 
     const state = initialState(def, 27, 2).state;
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -650,7 +666,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       zones: [],
     };
 
-    const model = deriveRenderModel(state, emptyDef, makeRenderContext(state.playerCount));
+    const model = deriveModel(state, emptyDef, makeRenderContext(state.playerCount));
 
     expect(model.zones).toEqual([]);
     expect(model.tokens).toEqual([]);
@@ -679,7 +695,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       },
     };
 
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount, asPlayerId(1)));
+    const model = deriveModel(state, def, makeRenderContext(state.playerCount, asPlayerId(1)));
     const tableZone = model.zones.find((zone) => zone.id === 'table:none');
     expect(tableZone?.tokenIDs).toEqual(['public-1', 'public-2']);
     expect(tableZone?.hiddenTokenCount).toBe(0);
@@ -712,7 +728,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       },
     };
 
-    const ownerModel = deriveRenderModel(state, def, makeRenderContext(state.playerCount, asPlayerId(0)));
+    const ownerModel = deriveModel(state, def, makeRenderContext(state.playerCount, asPlayerId(0)));
     const ownerHand = ownerModel.zones.find((zone) => zone.id === 'hand:0');
     const ownerOpponentHand = ownerModel.zones.find((zone) => zone.id === 'hand:1');
     expect(ownerHand?.tokenIDs).toEqual(['h0-a', 'h0-b']);
@@ -721,7 +737,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     expect(ownerOpponentHand?.hiddenTokenCount).toBe(1);
     expect(ownerModel.tokens.map((renderToken) => renderToken.id)).toEqual(['h0-a', 'h0-b']);
 
-    const nonOwnerModel = deriveRenderModel(state, def, makeRenderContext(state.playerCount, asPlayerId(1)));
+    const nonOwnerModel = deriveModel(state, def, makeRenderContext(state.playerCount, asPlayerId(1)));
     const nonOwnerHand = nonOwnerModel.zones.find((zone) => zone.id === 'hand:0');
     const nonOwnerOwnHand = nonOwnerModel.zones.find((zone) => zone.id === 'hand:1');
     expect(nonOwnerHand?.tokenIDs).toEqual([]);
@@ -753,7 +769,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       },
     };
 
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount, asPlayerId(1)));
+    const model = deriveModel(state, def, makeRenderContext(state.playerCount, asPlayerId(1)));
     const deckZone = model.zones.find((zone) => zone.id === 'deck:none');
     expect(deckZone?.tokenIDs).toEqual([]);
     expect(deckZone?.hiddenTokenCount).toBe(3);
@@ -791,7 +807,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       },
     };
 
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount, asPlayerId(0)));
+    const model = deriveModel(state, def, makeRenderContext(state.playerCount, asPlayerId(0)));
     const deckZone = model.zones.find((zone) => zone.id === 'deck:none');
     expect(deckZone?.tokenIDs).toEqual(['c1', 'c3']);
     expect(deckZone?.hiddenTokenCount).toBe(1);
@@ -828,13 +844,13 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       },
     };
 
-    const observerModel = deriveRenderModel(state, def, makeRenderContext(state.playerCount, asPlayerId(1)));
+    const observerModel = deriveModel(state, def, makeRenderContext(state.playerCount, asPlayerId(1)));
     const observerZone = observerModel.zones.find((zone) => zone.id === 'hand:0');
     expect(observerZone?.tokenIDs).toEqual(['h0-a']);
     expect(observerZone?.hiddenTokenCount).toBe(1);
     expect(observerModel.tokens.map((renderToken) => renderToken.id)).toEqual(['h0-a']);
 
-    const otherModel = deriveRenderModel(state, def, makeRenderContext(state.playerCount, asPlayerId(2)));
+    const otherModel = deriveModel(state, def, makeRenderContext(state.playerCount, asPlayerId(2)));
     const otherZone = otherModel.zones.find((zone) => zone.id === 'hand:0');
     expect(otherZone?.tokenIDs).toEqual([]);
     expect(otherZone?.hiddenTokenCount).toBe(2);
@@ -871,7 +887,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       },
     };
 
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount, asPlayerId(0)));
+    const model = deriveModel(state, def, makeRenderContext(state.playerCount, asPlayerId(0)));
     const deckZone = model.zones.find((zone) => zone.id === 'deck:none');
     expect(deckZone?.tokenIDs).toEqual([]);
     expect(deckZone?.hiddenTokenCount).toBe(1);
@@ -903,7 +919,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       },
     };
 
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount, asPlayerId(0)));
+    const model = deriveModel(state, def, makeRenderContext(state.playerCount, asPlayerId(0)));
     const tableZone = model.zones.find((zone) => zone.id === 'table:none');
     expect(tableZone?.tokenIDs).toEqual(['t1']);
     expect(tableZone?.hiddenTokenCount).toBe(0);
@@ -937,7 +953,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     });
     const state = initialState(def, 18, 2).state;
 
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount, asPlayerId(1)));
+    const model = deriveModel(state, def, makeRenderContext(state.playerCount, asPlayerId(1)));
     expect(model.zones.map((zone) => [zone.id, zone.tokenIDs, zone.hiddenTokenCount])).toEqual([
       ['table:none', [], 0],
       ['deck:none', [], 0],
@@ -969,7 +985,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       },
     };
 
-    const zoneModel = deriveRenderModel(
+    const zoneModel = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -996,7 +1012,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     ]);
     expect(zoneModel.zones.find((zone) => zone.id === 'table:none')?.isHighlighted).toBe(false);
 
-    const tokenModel = deriveRenderModel(
+    const tokenModel = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -1021,7 +1037,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       ['t2', true],
     ]);
 
-    const composedDecisionIdModel = deriveRenderModel(
+    const composedDecisionIdModel = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -1061,7 +1077,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     });
     const state = initialState(def, 191, 2).state;
 
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -1106,7 +1122,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     });
     const state = initialState(def, 192, 2).state;
 
-    const model = deriveRenderModel(
+    const model = deriveModel(
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
@@ -1141,17 +1157,17 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     });
     const state = initialState(def, 42, 2).state;
 
-    const model = deriveRenderModel(
+    const visualConfigProvider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        hiddenZones: ['hidden-zone:none'],
+      },
+    });
+    const model = deriveModel(
       state,
       def,
-      makeRenderContext(state.playerCount, asPlayerId(0), {
-        visualConfigProvider: new VisualConfigProvider({
-          version: 1,
-          zones: {
-            hiddenZones: ['hidden-zone:none'],
-          },
-        }),
-      }),
+      makeRenderContext(state.playerCount, asPlayerId(0)),
+      { visualConfigProvider },
     );
 
     expect(model.zones.find((zone) => zone.id === 'board:none')).toBeDefined();
@@ -1169,17 +1185,17 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     });
     const state = initialState(def, 42, 2).state;
 
-    const model = deriveRenderModel(
+    const visualConfigProvider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        hiddenZones: [],
+      },
+    });
+    const model = deriveModel(
       state,
       def,
-      makeRenderContext(state.playerCount, asPlayerId(0), {
-        visualConfigProvider: new VisualConfigProvider({
-          version: 1,
-          zones: {
-            hiddenZones: [],
-          },
-        }),
-      }),
+      makeRenderContext(state.playerCount, asPlayerId(0)),
+      { visualConfigProvider },
     );
 
     expect(model.zones.find((zone) => zone.id === 'board:none')).toBeDefined();
@@ -1204,17 +1220,17 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       },
     };
 
-    const model = deriveRenderModel(
+    const visualConfigProvider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        hiddenZones: ['hidden-zone:none'],
+      },
+    });
+    const model = deriveModel(
       state,
       def,
-      makeRenderContext(state.playerCount, asPlayerId(0), {
-        visualConfigProvider: new VisualConfigProvider({
-          version: 1,
-          zones: {
-            hiddenZones: ['hidden-zone:none'],
-          },
-        }),
-      }),
+      makeRenderContext(state.playerCount, asPlayerId(0)),
+      { visualConfigProvider },
     );
 
     const allTokenIds = model.tokens.map((t) => t.id);

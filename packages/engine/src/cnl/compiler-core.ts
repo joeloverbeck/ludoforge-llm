@@ -52,6 +52,8 @@ import {
   toNamedSetCanonicalIdCollisionDiagnostics,
 } from './named-set-utils.js';
 import { compileVerbalization } from './compile-verbalization.js';
+import { validateAgents } from './validate-agents.js';
+import { lowerAgents } from './compile-agents.js';
 
 export interface CompileLimits {
   readonly maxExpandedEffects: number;
@@ -78,6 +80,7 @@ export interface CompileSectionResults {
   readonly turnOrder: Exclude<GameDef['turnOrder'], undefined> | null;
   readonly actionPipelines: Exclude<GameDef['actionPipelines'], undefined> | null;
   readonly derivedMetrics: Exclude<GameDef['derivedMetrics'], undefined> | null;
+  readonly agents: Exclude<GameDef['agents'], undefined> | null;
   readonly terminal: GameDef['terminal'] | null;
   readonly actions: GameDef['actions'] | null;
   readonly triggers: GameDef['triggers'] | null;
@@ -268,6 +271,7 @@ function compileExpandedDoc(
   readonly gameDef: GameDef | null;
   readonly sections: CompileSectionResults;
 } {
+  validateAgents(doc, diagnostics);
   const derivedFromAssets = deriveSectionsFromDataAssets(doc, diagnostics, {
     ...(doc.metadata?.defaultScenarioAssetId === undefined
       ? {}
@@ -296,6 +300,7 @@ function compileExpandedDoc(
     turnOrder: null,
     actionPipelines: null,
     derivedMetrics: null,
+    agents: null,
     terminal: null,
     actions: null,
     triggers: null,
@@ -528,6 +533,9 @@ function compileExpandedDoc(
     sections.derivedMetrics = derivedMetrics.failed ? null : derivedMetrics.value;
   }
 
+  const agents = compileSection(diagnostics, () => lowerAgents(resolvedTableRefDoc.agents, diagnostics));
+  sections.agents = agents.failed || agents.value === undefined ? null : agents.value;
+
   let actions: GameDef['actions'] | null = null;
   const rawActions = resolvedTableRefDoc.actions;
   if (rawActions === null) {
@@ -689,6 +697,7 @@ function compileExpandedDoc(
     ...(sections.turnOrder === null ? {} : { turnOrder: sections.turnOrder }),
     ...(sections.actionPipelines === null ? {} : { actionPipelines: sections.actionPipelines }),
     ...(sections.derivedMetrics === null ? {} : { derivedMetrics: sections.derivedMetrics }),
+    ...(sections.agents === null ? {} : { agents: sections.agents }),
     actions,
     triggers: triggers.value,
     terminal,

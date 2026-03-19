@@ -7,6 +7,7 @@ import {
   normalizeAngleForReadability,
 } from '../../../src/canvas/renderers/region-boundary-renderer.js';
 import { VisualConfigProvider } from '../../../src/config/visual-config-provider.js';
+import { resolveRegionNodes } from '../../../src/presentation/presentation-scene.js';
 import type { RenderZone } from '../../../src/model/render-model';
 import type { Position } from '../../../src/canvas/geometry';
 import type { AttributeValue } from '@ludoforge/engine/runtime';
@@ -38,6 +39,15 @@ function makePositions(entries: Array<[string, number, number]>): ReadonlyMap<st
   return new Map(entries.map(([id, x, y]) => [id, { x, y }]));
 }
 
+function updateRenderer(
+  renderer: ReturnType<typeof createRegionBoundaryRenderer>,
+  provider: VisualConfigProvider,
+  zones: readonly RenderZone[],
+  positions: ReadonlyMap<string, Position>,
+): void {
+  renderer.update(resolveRegionNodes(zones, positions, provider));
+}
+
 describe('createRegionBoundaryRenderer', () => {
   let parentContainer: Container;
 
@@ -52,7 +62,7 @@ describe('createRegionBoundaryRenderer', () => {
     const zones = [makeZone('zone-a', 'province', { country: 'southVietnam' })];
     const positions = makePositions([['zone-a', 100, 100]]);
 
-    renderer.update(zones, positions);
+    updateRenderer(renderer, provider, zones, positions);
     expect(parentContainer.children).toHaveLength(0);
   });
 
@@ -86,7 +96,7 @@ describe('createRegionBoundaryRenderer', () => {
       ['zone-b', 300, 100],
     ]);
 
-    renderer.update(zones, positions);
+    updateRenderer(renderer, provider, zones, positions);
     // Should have added Graphics + Text for one region
     expect(parentContainer.children.length).toBe(2);
   });
@@ -112,7 +122,7 @@ describe('createRegionBoundaryRenderer', () => {
       ['zone-b', 300, 300],
     ]);
 
-    renderer.update(zones, positions);
+    updateRenderer(renderer, provider, zones, positions);
     // 2 regions * (1 Graphics + 1 Text) = 4 children
     expect(parentContainer.children.length).toBe(4);
   });
@@ -137,7 +147,7 @@ describe('createRegionBoundaryRenderer', () => {
       ['zone-b', 300, 300],
     ]);
 
-    renderer.update(zones, positions);
+    updateRenderer(renderer, provider, zones, positions);
     // Only one region (southVietnam)
     expect(parentContainer.children.length).toBe(2);
   });
@@ -163,12 +173,12 @@ describe('createRegionBoundaryRenderer', () => {
       ['zone-a', 100, 100],
       ['zone-b', 300, 300],
     ]);
-    renderer.update(zones1, positions);
+    updateRenderer(renderer, provider, zones1, positions);
     expect(parentContainer.children.length).toBe(4);
 
     // Second update: only southVietnam
     const zones2 = [makeZone('zone-a', 'province', { country: 'southVietnam' })];
-    renderer.update(zones2, positions);
+    updateRenderer(renderer, provider, zones2, positions);
     expect(parentContainer.children.length).toBe(2);
   });
 
@@ -183,7 +193,7 @@ describe('createRegionBoundaryRenderer', () => {
 
     const zones = [makeZone('zone-a', 'province', { country: 'southVietnam' })];
     const positions = makePositions([['zone-a', 100, 100]]);
-    renderer.update(zones, positions);
+    updateRenderer(renderer, provider, zones, positions);
 
     renderer.destroy();
     expect(parentContainer.children.length).toBe(0);
@@ -210,7 +220,7 @@ describe('createRegionBoundaryRenderer', () => {
       ['zone-b', 300, 300],
     ]);
 
-    renderer.update(zones, positions);
+    updateRenderer(renderer, provider, zones, positions);
     // Only highland has a style
     expect(parentContainer.children.length).toBe(2);
   });

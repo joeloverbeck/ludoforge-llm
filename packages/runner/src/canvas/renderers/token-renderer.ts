@@ -1,44 +1,15 @@
 import { Circle, Container, Graphics, Polygon, Rectangle, Text } from 'pixi.js';
-import { asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { RenderToken } from '../../model/render-model';
 import type { TokenShape } from '../../config/visual-config-defaults.js';
-import type { ResolvedTokenVisual } from '../../config/visual-config-provider.js';
-import type { CardTemplate } from '../../config/visual-config-types.js';
 import type { DisposalQueue } from './disposal-queue.js';
-import type { FactionColorProvider, TokenFaceController, TokenRenderer } from './renderer-types';
+import type { TokenFaceController, TokenRenderer } from './renderer-types';
 import { buildRegularPolygonPoints, parseHexColor } from './shape-utils';
 import { drawTokenShape } from './token-shape-drawer.js';
 import { drawTokenSymbol } from './token-symbol-drawer.js';
-import { drawCardContent, destroyCardContentPool } from './card-template-renderer.js';
-import { safeDestroyContainer } from './safe-destroy.js';
-import { computeFanOffset } from '../../layout/fan-offset.js';
-
-const TOKEN_RADIUS = 14;
-const CARD_WIDTH = 24;
-const CARD_HEIGHT = 34;
-const TOKENS_PER_ROW = 6;
-const TOKEN_SPACING = 36;
-const NEUTRAL_TOKEN_COLOR = 0x6b7280;
-const CARD_BACK_COLOR = 0x1f2937;
-
-const DEFAULT_STROKE = {
-  color: 0x0f172a,
-  width: 1.5,
-  alpha: 0.9,
-} as const;
-
-const SELECTABLE_STROKE = {
-  color: 0x93c5fd,
-  width: 2.5,
-  alpha: 0.95,
-} as const;
-
-const SELECTED_STROKE = {
-  color: 0xf8fafc,
-  width: 3.5,
-  alpha: 1,
-} as const;
+import { destroyCardContentPool, drawResolvedCardContent } from './card-template-renderer.js';
+import { createManagedText } from '../text/text-runtime.js';
+import type { PresentationTokenNode } from '../../presentation/token-presentation.js';
 
 interface TokenVisualElements {
   readonly frontBase: Graphics;
@@ -49,11 +20,6 @@ interface TokenVisualElements {
   frontContent: Container | null;
 }
 
-export interface TokenLayoutConfig {
-  readonly zoneLayoutRoles: ReadonlyMap<string, string>;
-  readonly sharedZoneIds: ReadonlySet<string>;
-}
-
 interface TokenRendererOptions {
   readonly disposalQueue: DisposalQueue;
   readonly bindSelection?: (
@@ -61,12 +27,10 @@ interface TokenRendererOptions {
     tokenId: string,
     isSelectable: () => boolean,
   ) => () => void;
-  readonly layoutConfig?: TokenLayoutConfig;
 }
 
 export function createTokenRenderer(
   parentContainer: Container,
-  colorProvider: FactionColorProvider,
   options: TokenRendererOptions,
 ): TokenRenderer {
   const tokenContainers = new Map<string, Container>();
@@ -79,12 +43,10 @@ export function createTokenRenderer(
 
   return {
     update(
-      tokens: readonly RenderToken[],
+      tokens: readonly PresentationTokenNode[],
       zoneContainers: ReadonlyMap<string, Container>,
-      highlightedTokenIDs: ReadonlySet<string> = new Set<string>(),
     ): void {
-      const renderEntries = buildRenderEntries(tokens);
-      const nextTokenIds = new Set(renderEntries.map((entry) => entry.renderId));
+      const nextTokenIds = new Set(tokens.map((entry) => entry.renderId));
       tokenContainerByTokenId.clear();
       tokenFaceControllerByTokenId.clear();
 
@@ -107,16 +69,9 @@ export function createTokenRenderer(
         visualsByContainer.delete(tokenContainer);
       }
 
-      const zoneTokenCounts = new Map<string, number>();
-      const zoneTotalCounts = new Map<string, number>();
-      for (const entry of renderEntries) {
-        const zoneId = entry.representative.zoneID;
-        zoneTotalCounts.set(zoneId, (zoneTotalCounts.get(zoneId) ?? 0) + 1);
-      }
       selectableByTokenId.clear();
 
-      for (const entry of renderEntries) {
-        const token = entry.representative;
+      for (const entry of tokens) {
         let tokenContainer = tokenContainers.get(entry.renderId);
         if (tokenContainer === undefined) {
           tokenContainer = new Container();
@@ -139,7 +94,7 @@ export function createTokenRenderer(
 
         if (options.bindSelection !== undefined) {
           const boundTokenId = boundTokenIdByRenderId.get(entry.renderId);
-          if (boundTokenId !== token.id) {
+          if (boundTokenId !== entry.representativeTokenId) {
             const cleanup = selectionCleanupByRenderId.get(entry.renderId);
             cleanup?.();
 
@@ -147,16 +102,16 @@ export function createTokenRenderer(
               entry.renderId,
               options.bindSelection(
                 tokenContainer,
-                token.id,
-                () => selectableByTokenId.get(token.id) === true,
+                entry.representativeTokenId,
+                () => selectableByTokenId.get(entry.representativeTokenId) === true,
               ),
             );
-            boundTokenIdByRenderId.set(entry.renderId, token.id);
+            boundTokenIdByRenderId.set(entry.renderId, entry.representativeTokenId);
           }
         }
 
-        if (entry.tokenIds.length === 1) {
-          selectableByTokenId.set(token.id, token.isSelectable);
+        if (entry.stackCount === 1) {
+          selectableByTokenId.set(entry.representativeTokenId, entry.isSelectable);
         }
         const visuals = visualsByContainer.get(tokenContainer);
         if (visuals === undefined) {
@@ -167,41 +122,25 @@ export function createTokenRenderer(
           tokenFaceControllerByTokenId.set(tokenId, createFaceController(visuals));
         }
 
-        const tokenIndexInZone = zoneTokenCounts.get(token.zoneID) ?? 0;
-        zoneTokenCounts.set(token.zoneID, tokenIndexInZone + 1);
-
         updateTokenVisuals(
           tokenContainer,
           visuals,
-          token,
-          entry.tokenIds.length,
-          colorProvider,
-          highlightedTokenIDs.has(token.id),
+          entry,
+          options.disposalQueue,
         );
 
-        const zoneContainer = zoneContainers.get(token.zoneID);
+        const zoneContainer = zoneContainers.get(entry.zoneId);
         if (zoneContainer === undefined) {
           tokenContainer.visible = false;
           tokenContainer.alpha = 0;
           continue;
         }
 
-        const totalInZone = zoneTotalCounts.get(token.zoneID) ?? 1;
-        const cardTemplate = colorProvider.getCardTemplateForTokenType(token.type);
-        const tokenVisual = colorProvider.getTokenTypeVisual(token.type);
-        const offset = resolveZoneAwareOffset(
-          token.zoneID,
-          tokenIndexInZone,
-          totalInZone,
-          tokenVisual.shape ?? 'circle',
-          cardTemplate,
-          options.layoutConfig,
-        );
         tokenContainer.visible = true;
         tokenContainer.alpha = 1;
         tokenContainer.position.set(
-          zoneContainer.position.x + offset.x,
-          zoneContainer.position.y + offset.y,
+          zoneContainer.position.x + entry.offset.x,
+          zoneContainer.position.y + entry.offset.y,
         );
       }
     },
@@ -253,18 +192,16 @@ function createTokenVisualElements(): TokenVisualElements {
   const frontSymbol = new Graphics();
   const backSymbol = new Graphics();
 
-  const countBadge = new Text({
+  const countBadge = createManagedText({
     text: '',
     style: {
       fill: '#f8fafc',
       fontSize: 10,
       fontFamily: 'monospace',
     },
+    anchor: { x: 1, y: 0 },
+    visible: false,
   });
-  countBadge.anchor.set(1, 0);
-  countBadge.eventMode = 'none';
-  countBadge.interactiveChildren = false;
-  countBadge.visible = false;
 
   return {
     frontBase,
@@ -279,147 +216,55 @@ function createTokenVisualElements(): TokenVisualElements {
 function updateTokenVisuals(
   tokenContainer: Container,
   visuals: TokenVisualElements,
-  token: RenderToken,
-  tokenCount: number,
-  colorProvider: FactionColorProvider,
-  isInteractionHighlighted: boolean,
+  token: PresentationTokenNode,
+  disposalQueue: DisposalQueue,
 ): void {
-  const tokenVisual = colorProvider.getTokenTypeVisual(token.type);
-  const tokenSymbols = colorProvider.resolveTokenSymbols(token.type, token.properties);
-  const shape = resolveTokenShape(tokenVisual.shape);
-  const cardTemplate = resolveCardTemplate(shape, token.type, colorProvider);
-  const dimensions = resolveTokenDimensions(shape, tokenVisual.size, cardTemplate);
-  const fillColor = resolveTokenColor(token, tokenVisual, colorProvider);
-  const stroke = resolveStroke(token, isInteractionHighlighted);
-  const isFaceUp = token.faceUp;
-
-  drawTokenShape(visuals.frontBase, shape, dimensions, fillColor, stroke);
-  drawTokenShape(visuals.backBase, shape, dimensions, CARD_BACK_COLOR, stroke);
-  drawTokenSymbol(visuals.frontSymbol, tokenSymbols.symbol, resolveSymbolSize(shape, dimensions));
-  drawTokenSymbol(visuals.backSymbol, tokenSymbols.backSymbol, resolveSymbolSize(shape, dimensions));
-  tokenContainer.hitArea = resolveTokenHitArea(shape, dimensions);
-  syncCardContent(tokenContainer, visuals, token, cardTemplate, isFaceUp);
-  setTokenFaceVisibility(visuals, isFaceUp);
-  visuals.countBadge.text = tokenCount > 1 ? String(tokenCount) : '';
-  visuals.countBadge.visible = tokenCount > 1;
-  visuals.countBadge.position.set(dimensions.width / 2 - 2, -dimensions.height / 2 + 2);
-  tokenContainer.scale.set(token.isSelected ? 1.08 : 1, token.isSelected ? 1.08 : 1);
-}
-
-function resolveTokenColor(
-  token: RenderToken,
-  tokenVisual: ResolvedTokenVisual,
-  colorProvider: FactionColorProvider,
-): number {
-  const resolvedTokenTypeColor = parseHexColor(tokenVisual.color ?? undefined, {
+  const { render } = token;
+  const fillColor = parseHexColor(render.frontColor ?? undefined, {
     allowShortHex: true,
     allowNamedColors: true,
-  });
-  if (resolvedTokenTypeColor !== null) {
-    return resolvedTokenTypeColor;
-  }
-
-  if (token.factionId !== null) {
-    const fallbackPlayer = token.ownerID ?? asPlayerId(0);
-    return parseHexColor(colorProvider.getColor(token.factionId, fallbackPlayer), {
-      allowShortHex: true,
-      allowNamedColors: true,
-    })
-      ?? NEUTRAL_TOKEN_COLOR;
-  }
-  if (token.ownerID !== null) {
-    return parseHexColor(colorProvider.getColor(null, token.ownerID), {
-      allowShortHex: true,
-      allowNamedColors: true,
-    })
-      ?? NEUTRAL_TOKEN_COLOR;
-  }
-  return NEUTRAL_TOKEN_COLOR;
-}
-
-function resolveStroke(token: RenderToken, isInteractionHighlighted: boolean): { color: number; width: number; alpha: number } {
-  if (token.isSelected) {
-    return SELECTED_STROKE;
-  }
-
-  if (isInteractionHighlighted) {
-    return {
-      color: 0x60a5fa,
-      width: 3,
-      alpha: 1,
-    };
-  }
-
-  if (token.isSelectable) {
-    return SELECTABLE_STROKE;
-  }
-
-  return DEFAULT_STROKE;
-}
-
-function resolveTokenShape(shape: TokenShape | undefined): TokenShape {
-  return shape ?? 'circle';
-}
-
-function resolveTokenDimensions(
-  shape: TokenShape,
-  size: number | undefined,
-  cardTemplate: CardTemplate | null = null,
-): { readonly width: number; readonly height: number } {
-  const normalizedSize = typeof size === 'number' && Number.isFinite(size) && size > 0 ? size : TOKEN_RADIUS * 2;
-  if (shape === 'card') {
-    if (cardTemplate !== null) {
-      return {
-        width: Math.max(1, Math.round(cardTemplate.width)),
-        height: Math.max(1, Math.round(cardTemplate.height)),
-      };
-    }
-    return {
-      width: Math.max(CARD_WIDTH, Math.round(normalizedSize * 0.9)),
-      height: Math.max(CARD_HEIGHT, Math.round(normalizedSize * 1.25)),
-    };
-  }
-  if (shape === 'square' || shape === 'cube') {
-    const side = Math.max(16, Math.round(normalizedSize));
-    return {
-      width: side,
-      height: side,
-    };
-  }
-  if (shape === 'triangle') {
-    return {
-      width: Math.max(16, Math.round(normalizedSize * 1.06)),
-      height: Math.max(16, Math.round(normalizedSize)),
-    };
-  }
-  if (shape === 'meeple') {
-    return {
-      width: Math.max(16, Math.round(normalizedSize * 0.92)),
-      height: Math.max(16, Math.round(normalizedSize * 1.12)),
-    };
-  }
-  if (shape === 'diamond' || shape === 'hexagon' || shape === 'beveled-cylinder' || shape === 'round-disk') {
-    return {
-      width: Math.max(16, Math.round(normalizedSize)),
-      height: Math.max(16, Math.round(normalizedSize)),
-    };
-  }
-  return {
-    width: normalizedSize,
-    height: normalizedSize,
+  }) ?? 0x6b7280;
+  const backColor = parseHexColor(render.backColor ?? undefined, {
+    allowShortHex: true,
+    allowNamedColors: true,
+  }) ?? 0x1f2937;
+  const strokeColor = parseHexColor(render.stroke.color ?? undefined, {
+    allowShortHex: true,
+    allowNamedColors: true,
+  }) ?? 0x0f172a;
+  const stroke = {
+    color: strokeColor,
+    width: render.stroke.width,
+    alpha: render.stroke.alpha,
   };
+  const isFaceUp = token.faceUp;
+
+  drawTokenShape(visuals.frontBase, render.shape, render.dimensions, fillColor, stroke);
+  drawTokenShape(visuals.backBase, render.shape, render.dimensions, backColor, stroke);
+  drawTokenSymbol(visuals.frontSymbol, render.symbol, resolveSymbolSize(render.shape, render.dimensions));
+  drawTokenSymbol(visuals.backSymbol, render.backSymbol, resolveSymbolSize(render.shape, render.dimensions));
+  tokenContainer.hitArea = resolveTokenHitArea(render.shape, render.dimensions);
+  syncCardContent(tokenContainer, visuals, render.cardContent, isFaceUp, disposalQueue);
+  setTokenFaceVisibility(visuals, isFaceUp);
+  visuals.countBadge.text = render.stackBadge.text;
+  visuals.countBadge.visible = render.stackBadge.visible;
+  visuals.countBadge.style = {
+    fill: render.stackBadge.style.fill,
+    fontFamily: render.stackBadge.style.fontFamily,
+    fontSize: render.stackBadge.style.fontSize,
+    stroke: {
+      color: render.stackBadge.style.stroke,
+      width: render.stackBadge.style.strokeWidth,
+    },
+  };
+  visuals.countBadge.anchor.set(render.stackBadge.style.anchorX, render.stackBadge.style.anchorY);
+  visuals.countBadge.position.set(
+    render.stackBadge.position.x,
+    render.stackBadge.position.y,
+  );
+  tokenContainer.scale.set(render.scale, render.scale);
 }
 
-function resolveCardTemplate(
-  shape: TokenShape,
-  tokenTypeId: string,
-  colorProvider: FactionColorProvider,
-): CardTemplate | null {
-  if (shape !== 'card') {
-    return null;
-  }
-  return colorProvider.getCardTemplateForTokenType(tokenTypeId);
-}
 
 function ensureFrontContentContainer(
   tokenContainer: Container,
@@ -440,22 +285,21 @@ function ensureFrontContentContainer(
 function syncCardContent(
   tokenContainer: Container,
   visuals: TokenVisualElements,
-  token: RenderToken,
-  cardTemplate: CardTemplate | null,
+  cardContent: PresentationTokenNode['render']['cardContent'],
   isFaceUp: boolean,
+  disposalQueue: DisposalQueue,
 ): void {
-  if (cardTemplate === null) {
+  if (cardContent === null) {
     if (visuals.frontContent !== null) {
       destroyCardContentPool(visuals.frontContent);
-      visuals.frontContent.removeFromParent();
-      safeDestroyContainer(visuals.frontContent);
+      disposalQueue.enqueue(visuals.frontContent);
     }
     visuals.frontContent = null;
     return;
   }
 
   const contentContainer = ensureFrontContentContainer(tokenContainer, visuals);
-  drawCardContent(contentContainer, cardTemplate, token.properties);
+  drawResolvedCardContent(contentContainer, cardContent.template, cardContent.fields);
   contentContainer.visible = isFaceUp;
 }
 
@@ -521,90 +365,6 @@ function resolveTokenHitArea(
   }
 }
 
-const STACK_OFFSET_X = 2;
-const STACK_OFFSET_Y = 1;
-
-function resolveZoneAwareOffset(
-  zoneId: string,
-  index: number,
-  totalInZone: number,
-  shape: TokenShape | undefined,
-  cardTemplate: CardTemplate | null,
-  layoutConfig: TokenLayoutConfig | undefined,
-): { x: number; y: number } {
-  const layoutRole = resolveZoneLayoutRole(zoneId, layoutConfig);
-
-  if (layoutRole === 'fan') {
-    return fanOffset(index, totalInZone, shape, cardTemplate);
-  }
-  if (layoutRole === 'stack') {
-    return stackOffset(index);
-  }
-  return gridOffset(index);
-}
-
-function resolveZoneLayoutRole(
-  zoneId: string,
-  layoutConfig: TokenLayoutConfig | undefined,
-): 'fan' | 'stack' | 'grid' {
-  if (layoutConfig === undefined) {
-    return 'grid';
-  }
-
-  if (layoutConfig.sharedZoneIds.has(zoneId)) {
-    return 'fan';
-  }
-
-  const role = layoutConfig.zoneLayoutRoles.get(zoneId);
-  if (role === 'hand') {
-    return 'fan';
-  }
-  if (role === 'card') {
-    return 'stack';
-  }
-  return 'grid';
-}
-
-function fanOffset(
-  index: number,
-  total: number,
-  shape: TokenShape | undefined,
-  cardTemplate: CardTemplate | null,
-): { x: number; y: number } {
-  const itemWidth = resolveItemWidth(shape, cardTemplate);
-  return computeFanOffset(index, total, itemWidth);
-}
-
-function resolveItemWidth(
-  shape: TokenShape | undefined,
-  cardTemplate: CardTemplate | null,
-): number {
-  if (cardTemplate !== null) {
-    return cardTemplate.width;
-  }
-  if (shape === 'card') {
-    return CARD_WIDTH;
-  }
-  return TOKEN_RADIUS * 2;
-}
-
-function stackOffset(index: number): { x: number; y: number } {
-  return {
-    x: index * STACK_OFFSET_X,
-    y: index * STACK_OFFSET_Y,
-  };
-}
-
-function gridOffset(index: number): { x: number; y: number } {
-  const column = index % TOKENS_PER_ROW;
-  const row = Math.floor(index / TOKENS_PER_ROW);
-
-  return {
-    x: (column - (TOKENS_PER_ROW - 1) / 2) * TOKEN_SPACING,
-    y: row * TOKEN_SPACING - TOKEN_SPACING / 2,
-  };
-}
-
 function resolveSymbolSize(
   shape: TokenShape,
   dimensions: { readonly width: number; readonly height: number },
@@ -614,65 +374,4 @@ function resolveSymbolSize(
     return base * 0.42;
   }
   return base * 0.58;
-}
-
-interface TokenRenderEntry {
-  readonly renderId: string;
-  readonly representative: RenderToken;
-  readonly tokenIds: readonly string[];
-}
-
-function buildRenderEntries(tokens: readonly RenderToken[]): readonly TokenRenderEntry[] {
-  const entries: TokenRenderEntry[] = [];
-  const grouped = new Map<string, RenderToken[]>();
-
-  for (const token of tokens) {
-    if (token.isSelectable || token.isSelected) {
-      entries.push({
-        renderId: token.id,
-        representative: token,
-        tokenIds: [token.id],
-      });
-      continue;
-    }
-
-    const key = stackGroupKey(token);
-    const list = grouped.get(key);
-    if (list === undefined) {
-      grouped.set(key, [token]);
-    } else {
-      list.push(token);
-    }
-  }
-
-  for (const [key, groupedTokens] of grouped.entries()) {
-    if (groupedTokens.length === 1) {
-      const singleton = groupedTokens[0]!;
-      entries.push({
-        renderId: singleton.id,
-        representative: singleton,
-        tokenIds: [singleton.id],
-      });
-      continue;
-    }
-
-    entries.push({
-      renderId: key,
-      representative: groupedTokens[0]!,
-      tokenIds: groupedTokens.map((token) => token.id),
-    });
-  }
-
-  return entries;
-}
-
-function stackGroupKey(token: RenderToken): string {
-  return JSON.stringify([
-    'stack',
-    token.zoneID,
-    token.type,
-    token.factionId,
-    token.ownerID,
-    token.faceUp,
-  ]);
 }

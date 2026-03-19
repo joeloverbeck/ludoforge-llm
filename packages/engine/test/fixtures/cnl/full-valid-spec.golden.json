@@ -89,6 +89,7 @@
     "triggers": null,
     "effectMacros": null,
     "conditionMacros": null,
+    "agents": null,
     "victoryStandings": null,
     "verbalization": null
   },

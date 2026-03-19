@@ -260,11 +260,17 @@ function createRuntimeFixture() {
     }),
   };
   const actionAnnouncementRenderer = {
-    start: vi.fn(() => {
-      lifecycle.push('action-announcement-renderer-start');
-    }),
+    enqueue: vi.fn(),
     destroy: vi.fn(() => {
       lifecycle.push('action-announcement-renderer-destroy');
+    }),
+  };
+  const actionAnnouncementPresenter = {
+    start: vi.fn(() => {
+      lifecycle.push('action-announcement-presenter-start');
+    }),
+    destroy: vi.fn(() => {
+      lifecycle.push('action-announcement-presenter-destroy');
     }),
   };
 
@@ -284,7 +290,7 @@ function createRuntimeFixture() {
       return zoneRenderer;
     }),
     createAdjacencyRenderer: vi.fn(() => adjacencyRenderer),
-    createTokenRenderer: vi.fn((_parent, _colors, options: {
+    createTokenRenderer: vi.fn((_parent, options: {
       bindSelection?: (tokenContainer: unknown, tokenId: string, isSelectable: () => boolean) => () => void;
       disposalQueue: unknown;
     }) => {
@@ -293,6 +299,7 @@ function createRuntimeFixture() {
     }),
     createTableOverlayRenderer: vi.fn(() => tableOverlayRenderer),
     createActionAnnouncementRenderer: vi.fn(() => actionAnnouncementRenderer),
+    createActionAnnouncementPresenter: vi.fn(() => actionAnnouncementPresenter),
     createCanvasUpdater: vi.fn(() => canvasUpdater),
     createCoordinateBridge: vi.fn(() => bridge),
     createAnimationController,
@@ -319,6 +326,7 @@ function createRuntimeFixture() {
     animationController,
     aiPlaybackController,
     actionAnnouncementRenderer,
+    actionAnnouncementPresenter,
     createAnimationController,
     createAiPlaybackController,
     createReducedMotionObserver,
@@ -453,14 +461,18 @@ describe('createGameCanvasRuntime', () => {
     expect(fixture.deps.createTokenRenderer).toHaveBeenCalledTimes(1);
     expect(fixture.deps.createTableOverlayRenderer).toHaveBeenCalledTimes(1);
     expect(fixture.deps.createActionAnnouncementRenderer).toHaveBeenCalledTimes(1);
+    expect(fixture.deps.createActionAnnouncementPresenter).toHaveBeenCalledTimes(1);
     expect(fixture.deps.createTableOverlayRenderer).toHaveBeenCalledWith(
       fixture.gameCanvas.layers.tableOverlayLayer,
       TEST_VISUAL_CONFIG_PROVIDER,
     );
     expect(fixture.deps.createActionAnnouncementRenderer).toHaveBeenCalledWith({
+      parentContainer: fixture.gameCanvas.layers.effectsGroup,
+    });
+    expect(fixture.deps.createActionAnnouncementPresenter).toHaveBeenCalledWith({
       store: store as unknown as StoreApi<GameStore>,
       positionStore: fixture.positionStore,
-      parentContainer: fixture.gameCanvas.layers.effectsGroup,
+      onAnnouncement: expect.any(Function),
     });
     expect(fixture.deps.createCanvasUpdater).toHaveBeenCalledTimes(1);
     expect(fixture.deps.createAriaAnnouncer).toHaveBeenCalledTimes(1);
@@ -468,7 +480,7 @@ describe('createGameCanvasRuntime', () => {
     expect(fixture.animationController.start).toHaveBeenCalledTimes(1);
     expect(fixture.createReducedMotionObserver).toHaveBeenCalledTimes(1);
     expect(fixture.animationController.setReducedMotion).toHaveBeenCalledWith(false);
-    expect(fixture.actionAnnouncementRenderer.start).toHaveBeenCalledTimes(1);
+    expect(fixture.actionAnnouncementPresenter.start).toHaveBeenCalledTimes(1);
     expect(fixture.createAiPlaybackController).toHaveBeenCalledTimes(1);
     expect(fixture.aiPlaybackController.start).toHaveBeenCalledTimes(1);
     expect(fixture.attachKeyboardSelect).toHaveBeenCalledTimes(1);
@@ -728,10 +740,11 @@ describe('createGameCanvasRuntime', () => {
     expect(fixture.lifecycle).toEqual([
       'updater-start',
       'animation-controller-start',
-      'action-announcement-renderer-start',
+      'action-announcement-presenter-start',
       'ai-playback-controller-start',
       'reduced-motion-destroy',
       'keyboard-cleanup',
+      'action-announcement-presenter-destroy',
       'action-announcement-renderer-destroy',
       'ai-playback-controller-destroy',
       'animation-controller-destroy',

@@ -1,18 +1,15 @@
-import { Container, Graphics, Text, type TextStyleOptions } from 'pixi.js';
+import { Container, Graphics, type Text, type TextStyleOptions } from 'pixi.js';
 
-import type { Position } from '../geometry';
-import type { RenderZone } from '../../model/render-model';
-import type { VisualConfigProvider } from '../../config/visual-config-provider.js';
-import type { RegionStyle } from '../../config/visual-config-types.js';
 import type { RegionBoundaryRenderer } from './renderer-types';
 import { convexHull, type Point } from '../geometry/convex-hull.js';
 import { padHull, roundHullCorners } from '../geometry/hull-padding.js';
 import { drawDashedPolygon } from '../geometry/dashed-polygon.js';
+import type { PresentationRegionNode } from '../../presentation/presentation-scene.js';
+import { createKeyedTextReconciler } from '../text/text-runtime.js';
 
 const DEFAULT_FILL_ALPHA = 0.15;
 const DEFAULT_BORDER_STYLE = 'dashed' as const;
 const DEFAULT_BORDER_WIDTH = 4;
-const DEFAULT_GROUP_BY_ATTRIBUTE = 'country';
 const DEFAULT_PADDING = 40;
 const DEFAULT_CORNER_RADIUS = 30;
 const DASH_WIDTH_MULTIPLIER = 5;
@@ -21,86 +18,89 @@ const LABEL_REFERENCE_FONT_SIZE = 64;
 const LABEL_ALPHA = 0.25;
 const LABEL_SPAN_FRACTION = 0.7;
 
-interface RegionGraphics {
-  readonly graphics: Graphics;
-  readonly label: Text;
-}
-
 export function createRegionBoundaryRenderer(
   parentContainer: Container,
-  options: { readonly visualConfigProvider: VisualConfigProvider },
+  _unusedLegacyOptions?: unknown,
 ): RegionBoundaryRenderer {
-  const regionMap = new Map<string, RegionGraphics>();
+  const graphicsByRegionKey = new Map<string, Graphics>();
+  const textRuntime = createKeyedTextReconciler({ parentContainer });
 
   function clearAll(): void {
-    for (const entry of regionMap.values()) {
-      entry.graphics.destroy();
-      entry.label.destroy();
+    for (const graphics of graphicsByRegionKey.values()) {
+      graphics.destroy();
     }
-    regionMap.clear();
+    graphicsByRegionKey.clear();
+    textRuntime.destroy();
   }
 
-  function getOrCreateRegion(key: string): RegionGraphics {
-    const existing = regionMap.get(key);
+  function getOrCreateGraphics(key: string): Graphics {
+    const existing = graphicsByRegionKey.get(key);
     if (existing !== undefined) {
       return existing;
     }
 
     const graphics = new Graphics();
-    const label = new Text({ text: '', style: buildLabelStyle() });
-    label.anchor.set(0.5, 0.5);
-    label.alpha = LABEL_ALPHA;
-
     parentContainer.addChild(graphics);
-    parentContainer.addChild(label);
-
-    const entry: RegionGraphics = { graphics, label };
-    regionMap.set(key, entry);
-    return entry;
+    graphicsByRegionKey.set(key, graphics);
+    return graphics;
   }
 
   function removeStaleRegions(activeKeys: ReadonlySet<string>): void {
-    for (const [key, entry] of regionMap.entries()) {
-      if (!activeKeys.has(key)) {
-        entry.graphics.destroy();
-        entry.label.destroy();
-        regionMap.delete(key);
+    for (const [key, graphics] of graphicsByRegionKey.entries()) {
+      if (activeKeys.has(key)) {
+        continue;
       }
+      graphics.destroy();
+      graphicsByRegionKey.delete(key);
     }
   }
 
   return {
-    update(zones: readonly RenderZone[], positions: ReadonlyMap<string, Position>): void {
-      const config = options.visualConfigProvider.getRegionBoundaryConfig();
-      if (config === null) {
+    update(regions): void {
+      if (regions.length === 0) {
         clearAll();
         return;
       }
 
-      const groupByAttribute = config.groupByAttribute ?? DEFAULT_GROUP_BY_ATTRIBUTE;
-      const padding = config.padding ?? DEFAULT_PADDING;
-      const cornerRadius = config.cornerRadius ?? DEFAULT_CORNER_RADIUS;
-      const styles = config.styles ?? {};
-
-      const groups = groupZonesByAttribute(zones, groupByAttribute);
       const activeKeys = new Set<string>();
+      const labelSpecs = [];
 
-      for (const [attributeValue, groupZones] of groups.entries()) {
-        const style = styles[attributeValue];
-        if (style === undefined) {
-          continue;
-        }
+      for (const regionNode of regions) {
+        activeKeys.add(regionNode.key);
+        const graphics = getOrCreateGraphics(regionNode.key);
+        const labelLayout = drawRegionGraphics(
+          graphics,
+          regionNode.cornerPoints,
+          regionNode.style,
+          DEFAULT_PADDING,
+          DEFAULT_CORNER_RADIUS,
+        );
 
-        const cornerPoints = collectZoneCornerPoints(groupZones, positions, options.visualConfigProvider);
-        if (cornerPoints.length === 0) {
-          continue;
-        }
-
-        activeKeys.add(attributeValue);
-        const region = getOrCreateRegion(attributeValue);
-        drawRegion(region, cornerPoints, style, padding, cornerRadius);
+        labelSpecs.push({
+          key: regionNode.key,
+          text: regionNode.label,
+          style: buildLabelStyle(),
+          anchor: { x: 0.5, y: 0.5 },
+          alpha: LABEL_ALPHA,
+          position: { x: labelLayout.centroid.x, y: labelLayout.centroid.y },
+          rotation: labelLayout.axis.angle,
+          apply: (text: Text) => {
+            text.scale.set(1, 1);
+            let measuredWidth = 0;
+            try {
+              measuredWidth = text.width;
+            } catch {
+              // Some test environments do not provide a backing canvas for measurement.
+            }
+            if (measuredWidth > 0) {
+              const scaleFactor = labelLayout.targetWidth / measuredWidth;
+              text.scale.set(scaleFactor, scaleFactor);
+            }
+          },
+        });
       }
 
+      textRuntime.reconcile(labelSpecs);
       removeStaleRegions(activeKeys);
     },
 
@@ -110,76 +110,25 @@ export function createRegionBoundaryRenderer(
   };
 }
 
-function groupZonesByAttribute(
-  zones: readonly RenderZone[],
-  attribute: string,
-): ReadonlyMap<string, readonly RenderZone[]> {
-  const groups = new Map<string, RenderZone[]>();
-
-  for (const zone of zones) {
-    const value = zone.attributes[attribute];
-    if (typeof value !== 'string') {
-      continue;
-    }
-
-    let group = groups.get(value);
-    if (group === undefined) {
-      group = [];
-      groups.set(value, group);
-    }
-    group.push(zone);
-  }
-
-  return groups;
+interface RegionLabelLayout {
+  readonly centroid: Point;
+  readonly axis: LongestAxis;
+  readonly targetWidth: number;
 }
 
-function collectZoneCornerPoints(
-  zones: readonly RenderZone[],
-  positions: ReadonlyMap<string, Position>,
-  visualConfigProvider: VisualConfigProvider,
-): readonly Point[] {
-  const points: Point[] = [];
-
-  for (const zone of zones) {
-    const pos = positions.get(zone.id);
-    if (pos === undefined) {
-      continue;
-    }
-
-    const visual = visualConfigProvider.resolveZoneVisual(
-      zone.id,
-      zone.category,
-      zone.attributes as Readonly<Record<string, unknown>>,
-    );
-    const halfW = visual.width / 2;
-    const halfH = visual.height / 2;
-
-    points.push(
-      { x: pos.x - halfW, y: pos.y - halfH },
-      { x: pos.x + halfW, y: pos.y - halfH },
-      { x: pos.x + halfW, y: pos.y + halfH },
-      { x: pos.x - halfW, y: pos.y + halfH },
-    );
-  }
-
-  return points;
-}
-
-function drawRegion(
-  region: RegionGraphics,
+function drawRegionGraphics(
+  graphics: Graphics,
   cornerPoints: readonly Point[],
-  style: RegionStyle,
+  style: PresentationRegionNode['style'],
   padding: number,
   cornerRadius: number,
-): void {
+): RegionLabelLayout {
   const hull = convexHull(cornerPoints);
   const paddedHull = padHull(hull, padding);
   const roundedHull = roundHullCorners(paddedHull, cornerRadius);
 
-  const { graphics, label } = region;
   graphics.clear();
 
-  // Fill
   const fillColor = style.fillColor;
   const fillAlpha = style.fillAlpha ?? DEFAULT_FILL_ALPHA;
   const flatCoords = flattenPoints(roundedHull);
@@ -187,7 +136,6 @@ function drawRegion(
   graphics.poly(flatCoords);
   graphics.fill({ color: fillColor, alpha: fillAlpha });
 
-  // Border — dash/gap proportional to border width
   const borderColor = style.borderColor ?? fillColor;
   const borderWidth = style.borderWidth ?? DEFAULT_BORDER_WIDTH;
   const borderStyle = style.borderStyle ?? DEFAULT_BORDER_STYLE;
@@ -203,38 +151,14 @@ function drawRegion(
     graphics.stroke({ color: borderColor, width: borderWidth });
   }
 
-  // Label — auto-rotate and scale to span the hull's longest axis
-  const labelText = style.label ?? '';
-  if (labelText.length === 0) {
-    label.text = '';
-    return;
-  }
-
   const centroid = computeCentroid(hull);
   const axis = computeLongestAxis(hull);
 
-  label.text = labelText;
-  label.style.fontSize = LABEL_REFERENCE_FONT_SIZE;
-  label.scale.set(1, 1);
-  label.rotation = 0;
-
-  // Measure at reference size, then compute scale to fill target span.
-  // label.width may throw in environments without a canvas (e.g. tests).
-  let measuredWidth = 0;
-  try {
-    measuredWidth = label.width;
-  } catch {
-    // No canvas available — skip scaling
-  }
-  const targetWidth = axis.length * LABEL_SPAN_FRACTION;
-
-  if (measuredWidth > 0) {
-    const scaleFactor = targetWidth / measuredWidth;
-    label.scale.set(scaleFactor, scaleFactor);
-  }
-
-  label.rotation = axis.angle;
-  label.position.set(centroid.x, centroid.y);
+  return {
+    centroid,
+    axis,
+    targetWidth: axis.length * LABEL_SPAN_FRACTION,
+  };
 }
 
 interface LongestAxis {

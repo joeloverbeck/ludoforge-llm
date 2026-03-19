@@ -8,7 +8,6 @@ import type {
   PlayerId,
   TerminalResult,
 } from '@ludoforge/engine/runtime';
-import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 
 export type PlayerSeat = 'human' | 'ai-random' | 'ai-greedy';
 
@@ -19,7 +18,7 @@ export interface PartialChoice {
   readonly value: MoveParamValue;
 }
 
-/** Context passed to deriveRenderModel() beyond state + def. */
+/** Context passed to semantic frame derivation beyond state + def. */
 export interface RenderContext {
   readonly playerID: PlayerId;
   readonly legalMoveResult: LegalMoveEnumerationResult | null;
@@ -29,5 +28,4 @@ export interface RenderContext {
   readonly choiceStack: readonly PartialChoice[];
   readonly playerSeats: ReadonlyMap<PlayerId, PlayerSeat>;
   readonly terminal: TerminalResult | null;
-  readonly visualConfigProvider: VisualConfigProvider;
 }

@@ -194,7 +194,10 @@ vi.mock('pixi.js', () => ({
 import { createZoneRenderer } from '../../../src/canvas/renderers/zone-renderer';
 import { ContainerPool } from '../../../src/canvas/renderers/container-pool';
 import type { Position } from '../../../src/canvas/geometry';
+import { VisualConfigProvider } from '../../../src/config/visual-config-provider.js';
 import type { RenderZone } from '../../../src/model/render-model';
+import type { PresentationZoneNode } from '../../../src/presentation/presentation-scene.js';
+import { resolveZoneNodes } from '../../../src/presentation/presentation-scene.js';
 
 function makeZone(overrides: Partial<RenderZone> = {}): RenderZone {
   return {
@@ -220,14 +223,48 @@ function createPositions(entries: readonly [string, Position][]): ReadonlyMap<st
   return new Map(entries);
 }
 
-function createRendererHarness(): {
+function toPresentationZones(
+  zones: readonly RenderZone[],
+  provider: VisualConfigProvider = new VisualConfigProvider(null),
+  highlightedZoneIDs?: ReadonlySet<string>,
+) {
+  return resolveZoneNodes(zones, provider, highlightedZoneIDs);
+}
+
+function makePresentationZoneNode(overrides: Partial<PresentationZoneNode> = {}): PresentationZoneNode {
+  const baseZone = toPresentationZones([makeZone()])[0]!;
+  return {
+    ...baseZone,
+    ...overrides,
+    render: overrides.render ?? baseZone.render,
+  };
+}
+
+type ZoneRendererHarness = Omit<ReturnType<typeof createZoneRenderer>, 'update'> & {
+  update(zones: readonly RenderZone[], positions: ReadonlyMap<string, Position>, highlightedZoneIDs?: ReadonlySet<string>): void;
+};
+
+function createRendererHarness(
+  provider: VisualConfigProvider = new VisualConfigProvider(null),
+  options: Parameters<typeof createZoneRenderer>[2] = {},
+): {
   readonly parent: InstanceType<typeof MockContainer>;
   readonly pool: ContainerPool;
-  readonly renderer: ReturnType<typeof createZoneRenderer>;
+  readonly renderer: ZoneRendererHarness;
 } {
   const parent = new MockContainer();
   const pool = new ContainerPool();
-  const renderer = createZoneRenderer(parent as unknown as Container, pool);
+  const rawRenderer = createZoneRenderer(parent as unknown as Container, pool, options);
+  const renderer: ZoneRendererHarness = {
+    ...rawRenderer,
+    update(
+      zones: readonly RenderZone[],
+      positions: ReadonlyMap<string, Position>,
+      highlightedZoneIDs?: ReadonlySet<string>,
+    ): void {
+      rawRenderer.update(resolveZoneNodes(zones, provider, highlightedZoneIDs), positions);
+    },
+  };
   return { parent, pool, renderer };
 }
 
@@ -309,10 +346,27 @@ describe('createZoneRenderer', () => {
     expect(acquireSpy).toHaveBeenCalled();
   });
 
-  it('updates existing zone position and display name in place', () => {
-    const { renderer } = createRendererHarness();
+  it('updates existing zone position and presentation-owned label in place', () => {
+    const parent = new MockContainer();
+    const pool = new ContainerPool();
+    const renderer = createZoneRenderer(parent as unknown as Container, pool);
+    const baseZone = toPresentationZones([makeZone()])[0]!;
+    const updatedZone = {
+      ...baseZone,
+      displayName: 'Zone Prime',
+      render: {
+        ...baseZone.render,
+        nameLabel: {
+          ...baseZone.render.nameLabel,
+          text: 'Zone Prime',
+        },
+      },
+    };
 
-    renderer.update([makeZone({ id: 'zone:a', displayName: 'Zone A' })], createPositions([['zone:a', { x: 5, y: 6 }]]));
+    renderer.update(
+      [baseZone],
+      createPositions([['zone:a', { x: 5, y: 6 }]]),
+    );
 
     const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
     const nameLabel = zoneContainer.children[2] as InstanceType<typeof MockText>;
@@ -322,7 +376,7 @@ describe('createZoneRenderer', () => {
     expect(nameLabel.text).toBe('Zone A');
 
     renderer.update(
-      [makeZone({ id: 'zone:a', displayName: 'Zone Prime' })],
+      [updatedZone],
       createPositions([['zone:a', { x: 50, y: 60 }]]),
     );
 
@@ -461,16 +515,18 @@ describe('createZoneRenderer', () => {
   });
 
   it('invokes bound selection cleanup when zones are removed or renderer is destroyed', () => {
-    const parent = new MockContainer();
-    const pool = new ContainerPool();
     const cleanupByZoneId = new Map<string, ReturnType<typeof vi.fn>>();
     const bindSelection = vi.fn((_: Container, zoneId: string) => {
       const cleanup = vi.fn();
       cleanupByZoneId.set(zoneId, cleanup);
       return cleanup;
     });
-    const renderer = createZoneRenderer(parent as unknown as Container, pool, {
-      bindSelection: (zoneContainer, zoneId, _isSelectable) => bindSelection(zoneContainer, zoneId),
+    const { renderer } = createRendererHarness(new VisualConfigProvider(null), {
+      bindSelection: (
+        zoneContainer: Container,
+        zoneId: string,
+        _isSelectable: () => boolean,
+      ) => bindSelection(zoneContainer, zoneId),
     });
 
     renderer.update([makeZone({ id: 'zone:a' }), makeZone({ id: 'zone:b' })], new Map());
@@ -485,16 +541,18 @@ describe('createZoneRenderer', () => {
   });
 
   it('uses displayName and updates label layout from visual dimensions', () => {
-    const { renderer } = createRendererHarness();
-    renderer.update(
-      [
-        makeZone({
-          displayName: 'Saigon',
-          visual: { shape: 'rectangle', width: 100, height: 80, color: null },
-        }),
-      ],
-      new Map(),
-    );
+    const renderer = createZoneRenderer(new MockContainer() as unknown as Container, new ContainerPool());
+    const baseZone = makePresentationZoneNode();
+    renderer.update([{
+      ...baseZone,
+      displayName: 'Saigon',
+      visual: { ...baseZone.visual, width: 100, height: 80, shape: 'rectangle' },
+      render: {
+        ...baseZone.render,
+        nameLabel: { text: 'Saigon', x: 0, y: 48, visible: true },
+        markersLabel: { text: '', x: 0, y: 66, visible: false },
+      },
+    }], new Map());
 
     const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
     const nameLabel = zoneContainer.children[2] as InstanceType<typeof MockText>;
@@ -507,35 +565,35 @@ describe('createZoneRenderer', () => {
     expect(markersLabel.position.y).toBe(66);
   });
 
-  it('uses visual color when valid and falls back to default color when invalid', () => {
-    const { renderer } = createRendererHarness();
-    renderer.update(
-      [makeZone({ visual: { shape: 'rectangle', width: 160, height: 100, color: '#e63946' } })],
-      new Map(),
-    );
+  it('uses presentation fill color when valid and falls back to renderer default when invalid', () => {
+    const renderer = createZoneRenderer(new MockContainer() as unknown as Container, new ContainerPool());
+    const baseZone = makePresentationZoneNode();
+    renderer.update([{ ...baseZone, render: { ...baseZone.render, fillColor: '#e63946' } }], new Map());
 
     const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
     const base = zoneContainer.children[0] as InstanceType<typeof MockGraphics>;
     expect(base.fillStyle).toEqual({ color: 0xe63946 });
 
-    renderer.update(
-      [makeZone({ visual: { shape: 'rectangle', width: 160, height: 100, color: 'not-a-color' }, visibility: 'hidden' })],
-      new Map(),
-    );
-    expect(base.fillStyle).toEqual({ color: 0x2a2f38 });
+    const fallbackRenderer = createZoneRenderer(new MockContainer() as unknown as Container, new ContainerPool());
+    const hiddenZone = toPresentationZones([makeZone({ visibility: 'hidden' })])[0]!;
+    fallbackRenderer.update([{ ...hiddenZone, render: { ...hiddenZone.render, fillColor: 'not-a-color' } }], new Map());
+    const fallbackZoneContainer = fallbackRenderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
+    const fallbackBase = fallbackZoneContainer.children[0] as InstanceType<typeof MockGraphics>;
+    expect(fallbackBase.fillStyle).toEqual({ color: 0x4d5c6d });
   });
 
   it('positions labels below zone for circle shape using radius', () => {
-    const { renderer } = createRendererHarness();
-    renderer.update(
-      [
-        makeZone({
-          displayName: 'Da Nang',
-          visual: { shape: 'circle', width: 160, height: 160, color: null },
-        }),
-      ],
-      new Map(),
-    );
+    const renderer = createZoneRenderer(new MockContainer() as unknown as Container, new ContainerPool());
+    const baseZone = makePresentationZoneNode();
+    renderer.update([{
+      ...baseZone,
+      displayName: 'Da Nang',
+      visual: { ...baseZone.visual, shape: 'circle', width: 160, height: 160 },
+      render: {
+        ...baseZone.render,
+        nameLabel: { text: 'Da Nang', x: 0, y: 88, visible: true },
+      },
+    }], new Map());
 
     const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
     const nameLabel = zoneContainer.children[2] as InstanceType<typeof MockText>;
@@ -557,16 +615,18 @@ describe('createZoneRenderer', () => {
   });
 
   it('renders badge when zone has matching marker and hides when absent', () => {
-    const parent = new MockContainer();
-    const pool = new ContainerPool();
-    const renderer = createZoneRenderer(parent as unknown as Container, pool, {
-      markerBadgeConfig: {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        markerBadge: {
         markerId: 'support',
         colorMap: {
           activeOpposition: { color: '#dc2626', abbreviation: 'AO' },
         },
       },
+      },
     });
+    const { renderer } = createRendererHarness(provider);
 
     renderer.update(
       [
@@ -592,16 +652,18 @@ describe('createZoneRenderer', () => {
   });
 
   it('filters badge marker from markers text', () => {
-    const parent = new MockContainer();
-    const pool = new ContainerPool();
-    const renderer = createZoneRenderer(parent as unknown as Container, pool, {
-      markerBadgeConfig: {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        markerBadge: {
         markerId: 'support',
         colorMap: {
           activeOpposition: { color: '#dc2626', abbreviation: 'AO' },
         },
       },
+      },
     });
+    const { renderer } = createRendererHarness(provider);
 
     renderer.update(
       [
@@ -623,7 +685,6 @@ describe('createZoneRenderer', () => {
   });
 
   it('dispatches all supported zone shapes from visual hints', () => {
-    const { renderer } = createRendererHarness();
     const shapes = [
       { shape: 'rectangle', expect: { roundRectRadius: 12 } },
       { shape: 'circle', expect: { circleRadius: 20 } },
@@ -636,14 +697,12 @@ describe('createZoneRenderer', () => {
     ] as const;
 
     for (const entry of shapes) {
-      renderer.update(
-        [
-          makeZone({
-            visual: { shape: entry.shape, width: 80, height: 40, color: null },
-          }),
-        ],
-        new Map(),
-      );
+      const renderer = createZoneRenderer(new MockContainer() as unknown as Container, new ContainerPool());
+      const baseZone = makePresentationZoneNode();
+      renderer.update([{
+        ...baseZone,
+        visual: { ...baseZone.visual, shape: entry.shape, width: 80, height: 40 },
+      }], new Map());
 
       const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
       const base = zoneContainer.children[0] as InstanceType<typeof MockGraphics>;

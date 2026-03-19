@@ -25,6 +25,7 @@ describe('compiler structured section results production coverage', () => {
       'turnOrder',
       'actionPipelines',
       'derivedMetrics',
+      'agents',
       'terminal',
       'actions',
       'triggers',

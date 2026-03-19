@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — preview runtime and visibility-safe evaluation
-**Deps**: specs/15-gamespec-agent-policy-ir.md, archive/tickets/15GAMAGEPOLIR/15GAMAGEPOLIR-004-add-policy-visibility-metadata-and-canonical-seat-binding-validation.md, tickets/15GAMAGEPOLIR-006-implement-policy-evaluator-core-for-pruning-scoring-and-tiebreaks.md
+**Deps**: specs/15-gamespec-agent-policy-ir.md, archive/tickets/15GAMAGEPOLIR/15GAMAGEPOLIR-004-add-policy-visibility-metadata-and-canonical-seat-binding-validation.md, archive/tickets/15GAMAGEPOLIR/15GAMAGEPOLIR-006-implement-policy-evaluator-core-for-pruning-scoring-and-tiebreaks.md, tickets/15GAMAGEPOLIR-014-make-policy-metric-refs-executable-through-generic-runtime-contracts.md
 
 ## Problem
 
@@ -15,6 +15,7 @@ Spec 15 allows one-ply preview-backed heuristics, but only if preview stays dete
 1. The kernel already has move application machinery, but Spec 15 explicitly forbids handing raw `applyMove` access to policy logic.
 2. Preview semantics must return `unknown` for hidden/random/unresolved data and must not recurse or enumerate future legal moves.
 3. Corrected scope: this ticket should add the preview runtime and wire preview-backed expressions into evaluator execution, but not broader agent/runner integration.
+4. `preview.metric.*` depends on the same shared executable metric contract as current-state `metric.*`; that prerequisite is tracked separately so preview work does not hardcode metric semantics into the preview layer.
 
 ## Architecture Check
 

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — authored FITL data plus engine integration tests
-**Deps**: specs/15-gamespec-agent-policy-ir.md, docs/fitl-event-authoring-cookbook.md, tickets/15GAMAGEPOLIR-008-integrate-policyagent-with-traces-and-diagnostics.md
+**Deps**: specs/15-gamespec-agent-policy-ir.md, docs/fitl-event-authoring-cookbook.md, tickets/15GAMAGEPOLIR-008-integrate-policyagent-with-traces-and-diagnostics.md, tickets/15GAMAGEPOLIR-014-make-policy-metric-refs-executable-through-generic-runtime-contracts.md, tickets/15GAMAGEPOLIR-015-align-candidate-param-refs-with-concrete-move-contracts.md
 
 ## Problem
 
@@ -15,6 +15,7 @@ Spec 15 is not complete until a real asymmetric game authors seat-bound policies
 1. FITL already has the canonical authored game spec and supporting markdown data files under `data/games/fire-in-the-lake*`.
 2. Spec 15 requires shared library items, four seat-specific bindings, and game-specific heuristics expressed as authored metrics/vars instead of runtime branches.
 3. Corrected scope: this ticket should author a minimal but complete baseline policy pack for FITL. It should not improve search depth, introduce FITL-specific runtime code, or tune for high play strength yet.
+4. Any use of authored `metric.*` or `candidate.param.*` inside FITL policy logic depends on the generic prerequisite tickets that make those surfaces executable and correctly owned.
 
 ## Architecture Check
 

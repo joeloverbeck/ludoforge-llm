@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — authored Texas Hold'em data plus engine integration tests
-**Deps**: specs/15-gamespec-agent-policy-ir.md, tickets/15GAMAGEPOLIR-008-integrate-policyagent-with-traces-and-diagnostics.md
+**Deps**: specs/15-gamespec-agent-policy-ir.md, tickets/15GAMAGEPOLIR-008-integrate-policyagent-with-traces-and-diagnostics.md, tickets/15GAMAGEPOLIR-014-make-policy-metric-refs-executable-through-generic-runtime-contracts.md, tickets/15GAMAGEPOLIR-015-align-candidate-param-refs-with-concrete-move-contracts.md
 
 ## Problem
 
@@ -15,6 +15,7 @@ Spec 15 explicitly uses Texas Hold'em to prove the same policy runtime works und
 1. Texas Hold'em already has the canonical authored game spec and supporting markdown assets under `data/games/texas-holdem*`.
 2. Hold'em policy authoring must rely on seat-visible proxies and mostly avoid preview where future outcomes depend on hidden cards.
 3. Corrected scope: this ticket should author a minimal Hold'em policy pack that exercises the same generic runtime, not optimize poker strength or add game-specific runtime branches.
+4. Any authored reliance on `metric.*` or `candidate.param.*` must rest on the generic prerequisite tickets that own those runtime/compiler contracts.
 
 ## Architecture Check
 

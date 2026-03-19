@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agent integration, trace payloads, diagnostics formatter
-**Deps**: specs/15-gamespec-agent-policy-ir.md, archive/tickets/15GAMAGEPOLIR-005-add-agentpolicycatalog-runtime-ir-schema-and-fingerprints.md, archive/tickets/15GAMAGEPOLIR/15GAMAGEPOLIR-006-implement-policy-evaluator-core-for-pruning-scoring-and-tiebreaks.md, tickets/15GAMAGEPOLIR-007-implement-policy-preview-runtime-and-hidden-info-masking.md
+**Deps**: specs/15-gamespec-agent-policy-ir.md, archive/tickets/15GAMAGEPOLIR-005-add-agentpolicycatalog-runtime-ir-schema-and-fingerprints.md, archive/tickets/15GAMAGEPOLIR/15GAMAGEPOLIR-006-implement-policy-evaluator-core-for-pruning-scoring-and-tiebreaks.md, archive/tickets/15GAMAGEPOLIR/15GAMAGEPOLIR-007-implement-policy-preview-runtime-and-hidden-info-masking.md
 
 ## Problem
 
@@ -14,13 +14,15 @@ Even with a working evaluator, the simulator still needs a generic `PolicyAgent`
 
 1. The engine currently exposes random/greedy agents and trace payloads still encode narrow AI seat types.
 2. Spec 15 requires policy traces to capture seat id, profile id, fingerprint, pruning counts, tie-break chain, preview usage, and emergency fallback.
-3. Corrected scope: this ticket should integrate the engine-side agent and trace path, but it should not yet migrate CLI/runner configuration surfaces.
+3. Archived ticket 007 now provides preview execution, but preview visibility is still conservative rather than per-ref contract-driven; this ticket should report the runtime’s real preview/masking behavior, not invent stronger semantics in diagnostics.
+4. Corrected scope: this ticket should integrate the engine-side agent and trace path, but it should not yet migrate CLI/runner configuration surfaces or own the deeper shared visibility-contract redesign.
 
 ## Architecture Check
 
 1. Integrating `PolicyAgent` behind the existing simulator contract is cleaner than adding a parallel simulation path.
 2. Structured policy-aware trace payloads are cleaner than stretching the existing `ai-random`/`ai-greedy` enum past its intended boundary.
-3. No game-specific trace branches or profile-specific runtime code should be introduced.
+3. Diagnostics should expose the current preview/visibility contract honestly, including conservative masking when it happens, instead of burying it behind generic success labels.
+4. No game-specific trace branches or profile-specific runtime code should be introduced.
 
 ## What to Change
 

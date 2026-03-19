@@ -20,6 +20,7 @@ import type {
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import { pickRandom } from './agent-move-selection.js';
+import { createPolicyPreviewRuntime } from './policy-preview.js';
 
 type PolicyValue = AgentParameterValue | undefined;
 
@@ -119,6 +120,7 @@ class EvaluationContext {
   private readonly aggregateCache = new Map<string, PolicyValue>();
   private readonly metricCache = new Map<string, number>();
   private victorySurface: VictorySurface | null = null;
+  private readonly previewRuntime: ReturnType<typeof createPolicyPreviewRuntime>;
 
   constructor(
     private readonly input: EvaluatePolicyMoveInput,
@@ -139,6 +141,13 @@ class EvaluationContext {
     this.parameterValues = profile.params;
     this.currentCandidates = candidates;
     this.seatResolutionIndex = buildSeatResolutionIndex(input.def, input.state.playerCount);
+    this.previewRuntime = createPolicyPreviewRuntime({
+      def: input.def,
+      state: input.state,
+      playerId: input.playerId,
+      seatId,
+      ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+    });
   }
 
   invalidateAggregates(): void {
@@ -158,7 +167,6 @@ class EvaluationContext {
     if (feature === undefined) {
       throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown state feature "${featureId}".`, { featureId });
     }
-    this.ensureNonPreview(feature.costClass, `state feature "${featureId}"`);
     const value = this.evaluateExpr(feature.expr, undefined);
     this.stateFeatureCache.set(featureId, value);
     return value;
@@ -177,7 +185,6 @@ class EvaluationContext {
     if (feature === undefined) {
       throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown candidate feature "${featureId}".`, { featureId });
     }
-    this.ensureNonPreview(feature.costClass, `candidate feature "${featureId}"`);
     const value = this.evaluateExpr(feature.expr, candidate);
     candidateCache.set(featureId, value);
     return value;
@@ -191,7 +198,6 @@ class EvaluationContext {
     if (aggregate === undefined) {
       throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown candidate aggregate "${aggregateId}".`, { aggregateId });
     }
-    this.ensureNonPreview(aggregate.costClass, `candidate aggregate "${aggregateId}"`);
 
     const included = this.currentCandidates.filter((candidate) => {
       const where = aggregate.where === undefined ? true : this.evaluateExpr(aggregate.where, candidate);
@@ -255,7 +261,6 @@ class EvaluationContext {
     if (scoreTerm === undefined) {
       throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown score term "${scoreTermId}".`, { scoreTermId });
     }
-    this.ensureNonPreview(scoreTerm.costClass, `score term "${scoreTermId}"`);
 
     if (scoreTerm.when !== undefined) {
       const when = this.evaluateExpr(scoreTerm.when, candidate);
@@ -291,7 +296,6 @@ class EvaluationContext {
     if (tieBreaker === undefined) {
       throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown tie-breaker "${tieBreakerId}".`, { tieBreakerId });
     }
-    this.ensureNonPreview(tieBreaker.costClass, `tie-breaker "${tieBreakerId}"`);
 
     switch (tieBreaker.kind) {
       case 'stableMoveKey': {
@@ -521,11 +525,7 @@ class EvaluationContext {
       }
     }
     if (refPath.startsWith('preview.')) {
-      throw this.runtimeError(
-        'UNSUPPORTED_PREVIEW',
-        `Preview refs are not supported by the non-preview policy evaluator runtime ("${refPath}").`,
-        { refPath },
-      );
+      return candidate === undefined ? undefined : this.previewRuntime.resolveNumericRef(candidate, refPath);
     }
     if (refPath.startsWith('metric.')) {
       const metricId = refPath.slice('metric.'.length);
@@ -655,16 +655,6 @@ class EvaluationContext {
     return this.victorySurface;
   }
 
-  ensureNonPreview(costClass: string, label: string): void {
-    if (costClass === 'preview') {
-      throw this.runtimeError(
-        'UNSUPPORTED_PREVIEW',
-        `The non-preview policy evaluator cannot execute ${label} because it depends on preview data.`,
-        { label },
-      );
-    }
-  }
-
   private runtimeError(
     code: PolicyEvaluationFailure['code'],
     message: string,
@@ -743,6 +733,10 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
     }
     for (const candidate of activeCandidates) {
       for (const featureId of profile.plan.candidateFeatures) {
+        const feature = catalog.library.candidateFeatures[featureId];
+        if (feature?.costClass === 'preview') {
+          continue;
+        }
         evaluation.evaluateCandidateFeature(candidate, featureId);
       }
     }
@@ -756,7 +750,6 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           detail: { pruningRuleId },
         });
       }
-      evaluation.ensureNonPreview(pruningRule.costClass, `pruning rule "${pruningRuleId}"`);
       const survivors = activeCandidates.filter((candidate) => {
         const shouldPrune = evaluation.evaluateExpr(pruningRule.when, candidate);
         if (shouldPrune === true) {

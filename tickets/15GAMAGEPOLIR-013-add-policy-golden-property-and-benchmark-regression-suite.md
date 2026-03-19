@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — verification and performance gating only
-**Deps**: specs/15-gamespec-agent-policy-ir.md, tickets/15GAMAGEPOLIR-011-author-baseline-fitl-policy-library-profiles-and-bindings.md, tickets/15GAMAGEPOLIR-012-author-baseline-texas-holdem-policy-library-profiles-and-bindings.md
+**Deps**: specs/15-gamespec-agent-policy-ir.md, tickets/15GAMAGEPOLIR-011-author-baseline-fitl-policy-library-profiles-and-bindings.md, tickets/15GAMAGEPOLIR-012-author-baseline-texas-holdem-policy-library-profiles-and-bindings.md, tickets/15GAMAGEPOLIR-017-add-explicit-policy-visibility-ownership-for-preview-safe-runtime-surfaces.md
 
 ## Problem
 
@@ -14,13 +14,15 @@ Spec 15 requires not only correctness but also determinism, explainability, and 
 
 1. The repo already has unit, integration, performance, and fixture areas, but policy-specific regression coverage does not exist yet.
 2. Spec 15 explicitly calls for compiled IR goldens, trace goldens, property tests, and fixed benchmark corpora for FITL and Texas Hold'em.
-3. Corrected scope: this ticket should add the verification harness and gating, not redesign policy runtime behavior.
+3. Archived ticket 007 added a safe but conservative preview-masking runtime; that behavior should be regression-covered today, but it is not the final architectural target for per-ref preview visibility ownership.
+4. Corrected scope: this ticket should add the verification harness and gating against the architecture delivered by its dependencies, not redesign policy runtime behavior itself.
 
 ## Architecture Check
 
 1. A dedicated regression suite is cleaner than burying policy guarantees in ad hoc integration assertions because determinism/performance regressions need their own visibility.
 2. Using authored FITL and Texas fixtures keeps the verification data-driven and game-agnostic at the runtime layer.
-3. No benchmark should silently truncate work or hide emergency fallbacks to “pass” the suite.
+3. The suite should lock whatever shared visibility contract the runtime actually owns; it must not let coarse temporary masking accidentally become the de facto long-term architecture by lack of explicit dependency ownership.
+4. No benchmark should silently truncate work or hide emergency fallbacks to “pass” the suite.
 
 ## What to Change
 

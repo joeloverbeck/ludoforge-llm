@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — authored Texas Hold'em data plus engine integration tests
-**Deps**: specs/15-gamespec-agent-policy-ir.md, tickets/15GAMAGEPOLIR-008-integrate-policyagent-with-traces-and-diagnostics.md, archive/tickets/15GAMAGEPOLIR/15GAMAGEPOLIR-014-make-policy-metric-refs-executable-through-generic-runtime-contracts.md, archive/tickets/15GAMAGEPOLIR/15GAMAGEPOLIR-015-align-candidate-param-refs-with-concrete-move-contracts.md, archive/tickets/15GAMAGEPOLIR/15GAMAGEPOLIR-016-extend-candidate-param-contract-with-static-choice-binding-shape-support.md
+**Deps**: specs/15-gamespec-agent-policy-ir.md, tickets/15GAMAGEPOLIR-008-integrate-policyagent-with-traces-and-diagnostics.md, tickets/15GAMAGEPOLIR-017-add-explicit-policy-visibility-ownership-for-preview-safe-runtime-surfaces.md, archive/tickets/15GAMAGEPOLIR/15GAMAGEPOLIR-014-make-policy-metric-refs-executable-through-generic-runtime-contracts.md, archive/tickets/15GAMAGEPOLIR/15GAMAGEPOLIR-015-align-candidate-param-refs-with-concrete-move-contracts.md, archive/tickets/15GAMAGEPOLIR/15GAMAGEPOLIR-016-extend-candidate-param-contract-with-static-choice-binding-shape-support.md
 
 ## Problem
 
@@ -13,15 +13,16 @@ Spec 15 explicitly uses Texas Hold'em to prove the same policy runtime works und
 ## Assumption Reassessment (2026-03-19)
 
 1. Texas Hold'em already has the canonical authored game spec and supporting markdown assets under `data/games/texas-holdem*`.
-2. Hold'em policy authoring must rely on seat-visible proxies and mostly avoid preview where future outcomes depend on hidden cards.
-3. Corrected scope: this ticket should author a minimal Hold'em policy pack that exercises the same generic runtime, not optimize poker strength or add game-specific runtime branches.
-4. Any authored reliance on `metric.*` or `candidate.param.*` must rest on the generic prerequisite tickets that own those runtime/compiler contracts.
-5. Archived ticket 015 completed scalar candidate-param ownership, but fixed id-list candidate-param support still depends on a stronger shared move-cardinality contract and is therefore tracked separately in ticket 016.
+2. The current preview runtime is safe but still conservative: archived ticket 007 masks the entire preview surface to `unknown` whenever preview safety cannot yet be proven generically from shared contracts.
+3. Hold'em policy authoring must rely on seat-visible proxies, and any architecturally-complete use of preview in imperfect-information states depends on a shared visibility-ownership ticket rather than on the current conservative masking fallback.
+4. Corrected scope: this ticket should author a minimal Hold'em policy pack against the refined shared visibility contract, not optimize poker strength or add game-specific runtime branches.
+5. Any authored reliance on `metric.*` or `candidate.param.*` must rest on the generic prerequisite tickets that own those runtime/compiler contracts.
+6. Archived ticket 015 completed scalar candidate-param ownership, but fixed id-list candidate-param support still depends on a stronger shared move-cardinality contract and is therefore tracked separately in ticket 016.
 
 ## Architecture Check
 
 1. Authoring Hold'em heuristics as visible metrics/proxies is cleaner than allowing policy access to hidden cards or deck state.
-2. This directly tests the generic visibility/preview contract in an imperfect-information game.
+2. This directly tests the generic visibility/preview contract in an imperfect-information game, so it should depend on the explicit visibility-ownership work rather than canonizing the current coarse masking behavior as the long-term architecture.
 3. No special-case runtime path should expose opponent hole cards, undealt board cards, or deck order.
 
 ## What to Change

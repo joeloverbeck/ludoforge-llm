@@ -25,7 +25,9 @@ function createAction(id: string, params: ActionDef['params'] = []): ActionDef {
     params,
     pre: null,
     cost: [],
-    effects: [],
+    effects: id === 'advance'
+      ? [{ addVar: { scope: 'global', var: 'usMargin', delta: 3 } }]
+      : [],
     limits: [],
   };
 }
@@ -55,7 +57,14 @@ function createBaseDef(agents: AgentPolicyCatalog): GameDef {
     setup: [],
     turnStructure: { phases: [{ id: phaseId }] },
     agents,
-    actions: [createAction('pass'), createAction('event'), createAction('operation'), createAction('alpha'), createAction('beta')],
+    actions: [
+      createAction('pass'),
+      createAction('event'),
+      createAction('operation'),
+      createAction('alpha'),
+      createAction('beta'),
+      createAction('advance'),
+    ],
     triggers: [],
     terminal: {
       conditions: [],
@@ -317,46 +326,58 @@ describe('policy-eval', () => {
     assert.equal(fallback.metadata.failure?.code, 'PRUNING_RULE_EMPTIED_CANDIDATES');
   });
 
-  it('reports preview-backed profiles as unsupported and falls back canonically', () => {
+  it('evaluates preview-backed score terms against one-ply applied state', () => {
     const agents = createCatalog(
       {
         candidateFeatures: {
-          previewMargin: {
+          projectedMargin: {
             type: 'number',
             costClass: 'preview',
-            expr: { ref: 'preview.victory.currentMargin.us' },
+            expr: { ref: 'preview.var.global.usMargin' },
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
           },
         },
         scoreTerms: {
-          preferPreviewMargin: {
+          preferProjectedMargin: {
             costClass: 'preview',
             weight: 1,
-            value: { ref: 'feature.previewMargin' },
-            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['previewMargin'], aggregates: [] },
+            value: { ref: 'feature.projectedMargin' },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['projectedMargin'], aggregates: [] },
+          },
+          reinforceProjectedMargin: {
+            costClass: 'preview',
+            weight: 1,
+            value: { ref: 'feature.projectedMargin' },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['projectedMargin'], aggregates: [] },
           },
         },
       },
       {
         use: {
           pruningRules: [],
-          scoreTerms: ['preferPreviewMargin'],
+          scoreTerms: ['preferProjectedMargin', 'reinforceProjectedMargin'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
-          candidateFeatures: ['previewMargin'],
+          candidateFeatures: ['projectedMargin'],
           candidateAggregates: [],
         },
       },
     );
-    const input = createInput(agents, createMoves('beta', 'alpha'));
+    const input = createInput(agents, createMoves('alpha', 'advance'));
 
     const result = evaluatePolicyMove(input);
 
-    assert.equal(result.move.actionId, asActionId('alpha'));
-    assert.equal(result.metadata.usedFallback, true);
-    assert.equal(result.metadata.failure?.code, 'UNSUPPORTED_PREVIEW');
+    assert.equal(result.move.actionId, asActionId('advance'));
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'advance')?.score,
+      8,
+    );
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'alpha')?.score,
+      2,
+    );
   });
 
   it('resolves metric refs through the shared runtime metric contract', () => {

@@ -10,10 +10,11 @@ import type { AdjacencyRenderer, TableOverlayRenderer, TokenRenderer, ZoneRender
 import type { ViewportResult } from '../../src/canvas/viewport-setup';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import type { RenderModel, RenderToken, RenderZone } from '../../src/model/render-model';
-import type { RunnerFrame } from '../../src/model/runner-frame.js';
+import type { RunnerFrame, RunnerProjectionBundle } from '../../src/model/runner-frame.js';
 import type { GameStore } from '../../src/store/game-store';
 
 interface CanvasTestStoreState {
+  readonly runnerProjection: RunnerProjectionBundle | null;
   readonly runnerFrame: RunnerFrame | null;
   readonly renderModel: RenderModel | null;
   readonly animationPlaying: boolean;
@@ -101,8 +102,12 @@ function asVar(name: string, value: number | boolean) {
   } as const;
 }
 
-function createCanvasTestStore(initial: Omit<CanvasTestStoreState, 'runnerFrame'> & { runnerFrame?: RunnerFrame | null }): StoreApi<CanvasTestStoreState> {
+function createCanvasTestStore(initial: Omit<CanvasTestStoreState, 'runnerProjection' | 'runnerFrame'> & {
+  runnerProjection?: RunnerProjectionBundle | null;
+  runnerFrame?: RunnerFrame | null;
+}): StoreApi<CanvasTestStoreState> {
   const snapshot: CanvasTestStoreState = {
+    runnerProjection: initial.runnerProjection ?? (initial.renderModel === null ? null : toRunnerProjection(initial.renderModel)),
     runnerFrame: initial.runnerFrame ?? (initial.renderModel === null ? null : toRunnerFrame(initial.renderModel)),
     renderModel: initial.renderModel,
     animationPlaying: initial.animationPlaying,
@@ -118,7 +123,14 @@ function createCanvasTestStore(initial: Omit<CanvasTestStoreState, 'runnerFrame'
   ): CanvasTestStoreState => ({
     ...state,
     ...next,
-    runnerFrame: 'renderModel' in next
+    runnerProjection: 'runnerProjection' in next
+      ? (next.runnerProjection ?? null)
+      : 'renderModel' in next
+      ? (next.renderModel === null ? null : toRunnerProjection(next.renderModel))
+      : state.runnerProjection,
+    runnerFrame: 'runnerFrame' in next
+      ? (next.runnerFrame ?? null)
+      : 'renderModel' in next
       ? (next.renderModel === null ? null : toRunnerFrame(next.renderModel))
       : state.runnerFrame,
   });
@@ -172,8 +184,6 @@ function toRunnerFrame(renderModel: RenderModel): RunnerFrame {
     })),
     adjacencies: renderModel.adjacencies,
     tokens: renderModel.tokens,
-    globalVars: renderModel.globalVars.map(({ name, value }) => ({ name, value })),
-    playerVars: new Map(Array.from(renderModel.playerVars.entries()).map(([playerId, vars]) => [playerId, vars.map(({ name, value }) => ({ name, value }))])),
     activeEffects: renderModel.activeEffects.map((effect) => ({
       id: effect.id,
       sourceCardId: effect.id,
@@ -204,6 +214,21 @@ function toRunnerFrame(renderModel: RenderModel): RunnerFrame {
     runtimeEligible: renderModel.runtimeEligible.map(({ seatId, factionId, seatIndex }) => ({ seatId, factionId, seatIndex })),
     victoryStandings: renderModel.victoryStandings,
     terminal: renderModel.terminal,
+  };
+}
+
+function toRunnerProjection(renderModel: RenderModel): RunnerProjectionBundle {
+  return {
+    frame: toRunnerFrame(renderModel),
+    source: {
+      globalVars: renderModel.globalVars.map(({ name, value }) => ({ name, value })),
+      playerVars: new Map(
+        Array.from(renderModel.playerVars.entries()).map(([playerId, vars]) => [
+          playerId,
+          vars.map(({ name, value }) => ({ name, value })),
+        ]),
+      ),
+    },
   };
 }
 

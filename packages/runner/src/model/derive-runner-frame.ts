@@ -28,6 +28,8 @@ import type {
   RunnerEligibilityEntry,
   RunnerEventCard,
   RunnerEventDeck,
+  RunnerProjectionBundle,
+  RunnerProjectionSource,
   RunnerFrame,
   RunnerLastingEffect,
   RunnerLastingEffectAttribute,
@@ -75,8 +77,8 @@ export function deriveRunnerFrame(
   state: GameState,
   def: GameDef,
   context: RenderContext,
-  previousFrame: RunnerFrame | null = null,
-): RunnerFrame {
+  previousBundle: RunnerProjectionBundle | null = null,
+): RunnerProjectionBundle {
   const staticDerivation = deriveStaticRenderDerivation(def);
   const selectionTargets = deriveSelectionTargets(context);
   const zoneDerivation = deriveZones(state, def, context, selectionTargets.selectableZoneIDs);
@@ -117,8 +119,6 @@ export function deriveRunnerFrame(
     })),
     adjacencies,
     tokens,
-    globalVars,
-    playerVars,
     activeEffects,
     players,
     activePlayerID: state.activePlayer,
@@ -142,14 +142,43 @@ export function deriveRunnerFrame(
     terminal: deriveTerminal(context.terminal),
   };
 
-  return stabilizeRunnerFrame(previousFrame, nextFrame);
+  const nextSource: RunnerProjectionSource = {
+    globalVars,
+    playerVars,
+  };
+
+  return stabilizeProjectionBundle(previousBundle, nextFrame, nextSource);
 }
 
-function stabilizeRunnerFrame(previous: RunnerFrame | null, next: RunnerFrame): RunnerFrame {
+function stabilizeProjectionBundle(
+  previous: RunnerProjectionBundle | null,
+  nextFrame: RunnerFrame,
+  nextSource: RunnerProjectionSource,
+): RunnerProjectionBundle {
   if (previous === null) {
-    return next;
+    return {
+      frame: nextFrame,
+      source: nextSource,
+    };
   }
 
+  const frame = stabilizeRunnerFrame(previous.frame, nextFrame);
+  const source = stabilizeProjectionSource(previous.source, nextSource);
+
+  if (frame === nextFrame && source === nextSource) {
+    return {
+      frame,
+      source,
+    };
+  }
+
+  return {
+    frame,
+    source,
+  };
+}
+
+function stabilizeRunnerFrame(previous: RunnerFrame, next: RunnerFrame): RunnerFrame {
   const stabilizedZones = stabilizeZoneArray(previous.zones, next.zones);
   const stabilizedTokens = stabilizeTokenArray(previous.tokens, next.tokens);
 
@@ -161,6 +190,23 @@ function stabilizeRunnerFrame(previous: RunnerFrame | null, next: RunnerFrame): 
     ...next,
     zones: stabilizedZones,
     tokens: stabilizedTokens,
+  };
+}
+
+function stabilizeProjectionSource(
+  previous: RunnerProjectionSource,
+  next: RunnerProjectionSource,
+): RunnerProjectionSource {
+  const globalVars = stabilizeVariableArray(previous.globalVars, next.globalVars);
+  const playerVars = stabilizePlayerVarMap(previous.playerVars, next.playerVars);
+
+  if (globalVars === next.globalVars && playerVars === next.playerVars) {
+    return next;
+  }
+
+  return {
+    globalVars,
+    playerVars,
   };
 }
 
@@ -210,6 +256,64 @@ function stabilizeTokenArray(previous: readonly RunnerToken[], next: readonly Ru
   return hasChange ? stabilized : next;
 }
 
+function stabilizeVariableArray(
+  previous: readonly RunnerVariable[],
+  next: readonly RunnerVariable[],
+): readonly RunnerVariable[] {
+  if (isVariableArrayEqual(previous, next)) {
+    return previous;
+  }
+  return next;
+}
+
+function stabilizePlayerVarMap(
+  previous: ReadonlyMap<PlayerId, readonly RunnerVariable[]>,
+  next: ReadonlyMap<PlayerId, readonly RunnerVariable[]>,
+): ReadonlyMap<PlayerId, readonly RunnerVariable[]> {
+  if (previous.size !== next.size) {
+    return next;
+  }
+
+  let changed = false;
+  const stabilized = new Map<PlayerId, readonly RunnerVariable[]>();
+
+  for (const [playerId, nextVars] of next.entries()) {
+    const previousVars = previous.get(playerId);
+    if (previousVars === undefined) {
+      return next;
+    }
+    const vars = isVariableArrayEqual(previousVars, nextVars) ? previousVars : nextVars;
+    if (vars !== previousVars) {
+      changed = true;
+    }
+    stabilized.set(playerId, vars);
+  }
+
+  if (!changed && stabilized.size === previous.size) {
+    let sameOrder = true;
+    const previousEntries = Array.from(previous.entries());
+    const stabilizedEntries = Array.from(stabilized.entries());
+    for (let index = 0; index < previousEntries.length; index += 1) {
+      const previousEntry = previousEntries[index];
+      const stabilizedEntry = stabilizedEntries[index];
+      if (
+        previousEntry === undefined
+        || stabilizedEntry === undefined
+        || previousEntry[0] !== stabilizedEntry[0]
+        || previousEntry[1] !== stabilizedEntry[1]
+      ) {
+        sameOrder = false;
+        break;
+      }
+    }
+    if (sameOrder) {
+      return previous;
+    }
+  }
+
+  return stabilized;
+}
+
 function isZoneEquivalent(left: RunnerZone, right: RunnerZone): boolean {
   return left.id === right.id
     && left.ordering === right.ordering
@@ -250,6 +354,19 @@ function isMarkerArrayEqual(left: readonly RunnerMarker[], right: readonly Runne
     return leftMarker.id === rightMarker.id
       && leftMarker.state === rightMarker.state
       && isStringArrayEqual(leftMarker.possibleStates, rightMarker.possibleStates);
+  });
+}
+
+function isVariableArrayEqual(left: readonly RunnerVariable[], right: readonly RunnerVariable[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((leftVar, index) => {
+    const rightVar = right[index];
+    return rightVar !== undefined
+      && leftVar.name === rightVar.name
+      && Object.is(leftVar.value, rightVar.value);
   });
 }
 

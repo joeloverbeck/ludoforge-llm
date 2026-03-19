@@ -1,6 +1,14 @@
 import type { StoreApi } from 'zustand';
 
-import type { RunnerAdjacency, RunnerFrame, RunnerToken, RunnerVariable, RunnerZone } from '../model/runner-frame.js';
+import type {
+  RunnerAdjacency,
+  RunnerFrame,
+  RunnerProjectionBundle,
+  RunnerProjectionSource,
+  RunnerToken,
+  RunnerVariable,
+  RunnerZone,
+} from '../model/runner-frame.js';
 import type { GameStore } from '../store/game-store';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { adjacenciesVisuallyEqual, tokensVisuallyEqual, zonesVisuallyEqual } from './canvas-equality';
@@ -67,7 +75,7 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
 
   let started = false;
   let latestSnapshot = selectCanvasSnapshot(store.getState());
-  let latestRunnerFrame = store.getState().runnerFrame;
+  let latestRunnerProjection = store.getState().runnerProjection;
   let latestPositionSnapshot = deps.positionStore.getSnapshot();
   let latestInteractionHighlights = deps.getInteractionHighlights?.() ?? EMPTY_INTERACTION_HIGHLIGHTS;
   let animationPlaying = store.getState().animationPlaying;
@@ -75,7 +83,8 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
 
   const applySnapshot = (_snapshot: CanvasSnapshotSelectorResult): void => {
     const scene = buildPresentationScene({
-      runnerFrame: latestRunnerFrame,
+      runnerFrame: latestRunnerProjection?.frame ?? null,
+      projectionSource: latestRunnerProjection?.source ?? null,
       positions: latestPositionSnapshot.positions,
       visualConfigProvider: deps.visualConfigProvider,
       tokenRenderStyleProvider: deps.tokenRenderStyleProvider,
@@ -107,26 +116,27 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
 
       unsubscribeCallbacks.push(
         store.subscribe(selectCanvasSnapshot, (snapshot) => {
-          latestRunnerFrame = store.getState().runnerFrame;
+          latestRunnerProjection = store.getState().runnerProjection;
           maybeApplySnapshot(snapshot);
         }, { equalityFn: canvasSnapshotsEqual }),
       );
 
       unsubscribeCallbacks.push(
-        store.subscribe((state) => state.runnerFrame, (runnerFrame) => {
-          latestRunnerFrame = runnerFrame;
+        store.subscribe((state) => state.runnerProjection, (runnerProjection) => {
+          latestRunnerProjection = runnerProjection;
           if (animationPlaying) {
             return;
           }
           const scene = buildPresentationScene({
-            runnerFrame,
+            runnerFrame: runnerProjection?.frame ?? null,
+            projectionSource: runnerProjection?.source ?? null,
             positions: latestPositionSnapshot.positions,
             visualConfigProvider: deps.visualConfigProvider,
             tokenRenderStyleProvider: deps.tokenRenderStyleProvider,
             interactionHighlights: latestInteractionHighlights,
           });
           deps.tableOverlayRenderer?.update(scene.overlays);
-        }, { equalityFn: overlaysVisuallyEqual }),
+        }, { equalityFn: projectionBundlesOverlayEqual }),
       );
 
       unsubscribeCallbacks.push(
@@ -159,7 +169,7 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
       latestPositionSnapshot = deps.positionStore.getSnapshot();
       deps.viewport.updateWorldBounds(latestPositionSnapshot.bounds);
       deps.viewport.centerOnBounds(latestPositionSnapshot.bounds);
-      latestRunnerFrame = store.getState().runnerFrame;
+      latestRunnerProjection = store.getState().runnerProjection;
       latestSnapshot = selectCanvasSnapshot(store.getState());
       if (animationPlaying) {
         queuedSnapshot = latestSnapshot;
@@ -194,7 +204,7 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
 
 function selectCanvasSnapshot(state: GameStore): CanvasSnapshotSelectorResult {
   const runnerFrame = state.runnerFrame;
-  if (runnerFrame === null) {
+  if (runnerFrame == null) {
     return {
       zones: EMPTY_ZONES,
       tokens: EMPTY_TOKENS,
@@ -217,18 +227,21 @@ function canvasSnapshotsEqual(prev: CanvasSnapshotSelectorResult, next: CanvasSn
   );
 }
 
-function overlaysVisuallyEqual(prev: RunnerFrame | null, next: RunnerFrame | null): boolean {
+function projectionBundlesOverlayEqual(
+  prev: RunnerProjectionBundle | null | undefined,
+  next: RunnerProjectionBundle | null | undefined,
+): boolean {
   if (prev === next) {
     return true;
   }
-  if (prev === null || next === null) {
+  if (prev == null || next == null) {
     return false;
   }
 
   return (
-    variablesEqual(prev.globalVars, next.globalVars)
-    && playerVarsEqual(prev.playerVars, next.playerVars)
-    && playersEqual(prev.players, next.players)
+    variablesEqual(prev.source.globalVars, next.source.globalVars)
+    && playerVarsEqual(prev.source.playerVars, next.source.playerVars)
+    && playersEqual(prev.frame.players, next.frame.players)
   );
 }
 
@@ -252,8 +265,8 @@ function variablesEqual(prev: readonly RunnerVariable[], next: readonly RunnerVa
 }
 
 function playerVarsEqual(
-  prev: RunnerFrame['playerVars'],
-  next: RunnerFrame['playerVars'],
+  prev: RunnerProjectionSource['playerVars'],
+  next: RunnerProjectionSource['playerVars'],
 ): boolean {
   if (prev.size !== next.size) {
     return false;

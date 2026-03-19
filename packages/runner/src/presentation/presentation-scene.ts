@@ -4,7 +4,13 @@ import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import type { RegionStyle, TableOverlayItemConfig } from '../config/visual-config-types.js';
 import type { Position } from '../canvas/geometry.js';
 import type { InteractionHighlights } from '../canvas/interaction-highlights.js';
-import type { RunnerAdjacency, RunnerFrame, RunnerVariable, RunnerZone } from '../model/runner-frame.js';
+import type {
+  RunnerAdjacency,
+  RunnerFrame,
+  RunnerProjectionSource,
+  RunnerVariable,
+  RunnerZone,
+} from '../model/runner-frame.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
 import {
   resolvePresentationTokenNodes,
@@ -109,6 +115,7 @@ export interface PresentationScene {
 
 interface BuildPresentationSceneOptions {
   readonly runnerFrame: RunnerFrame | null;
+  readonly projectionSource: RunnerProjectionSource | null;
   readonly positions: ReadonlyMap<string, Position>;
   readonly visualConfigProvider: VisualConfigProvider;
   readonly tokenRenderStyleProvider: TokenRenderStyleProvider;
@@ -125,7 +132,7 @@ const ZONE_SELECTABLE_STROKE: PresentationStrokeSpec = { color: '#93c5fd', width
 const ZONE_DEFAULT_STROKE: PresentationStrokeSpec = { color: '#111827', width: 1, alpha: 0.7 };
 
 export function buildPresentationScene(options: BuildPresentationSceneOptions): PresentationScene {
-  const { runnerFrame } = options;
+  const { projectionSource, runnerFrame } = options;
   const highlightedZoneIDs = options.interactionHighlights.zoneIDs.length > 0
     ? new Set(options.interactionHighlights.zoneIDs)
     : new Set<string>();
@@ -133,7 +140,7 @@ export function buildPresentationScene(options: BuildPresentationSceneOptions): 
     ? new Set(options.interactionHighlights.tokenIDs)
     : new Set<string>();
 
-  if (runnerFrame === null) {
+  if (runnerFrame == null || projectionSource == null) {
     return {
       zones: [],
       tokens: [],
@@ -157,7 +164,7 @@ export function buildPresentationScene(options: BuildPresentationSceneOptions): 
       highlightedTokenIDs,
     ),
     adjacencies: resolveAdjacencyNodes(runnerFrame.adjacencies, visibleZoneIDs),
-    overlays: resolveOverlayNodes(runnerFrame, zones, options.positions, options.visualConfigProvider),
+    overlays: resolveOverlayNodes(runnerFrame, projectionSource, zones, options.positions, options.visualConfigProvider),
     regions: resolveRegionNodes(zones, options.positions, options.visualConfigProvider),
   };
 }
@@ -306,6 +313,7 @@ export function resolveAdjacencyNodes(
 
 export function resolveOverlayNodes(
   runnerFrame: RunnerFrame,
+  projectionSource: RunnerProjectionSource,
   visibleZones: readonly Pick<PresentationZoneNode, 'id' | 'ownerID'>[],
   positions: ReadonlyMap<string, Position>,
   visualConfigProvider: VisualConfigProvider,
@@ -326,7 +334,7 @@ export function resolveOverlayNodes(
   for (const [itemIndex, item] of items.entries()) {
     switch (item.kind) {
       case 'globalVar': {
-        const value = findVarValue(runnerFrame.globalVars, item.varName);
+        const value = findVarValue(projectionSource.globalVars, item.varName);
         if (value === null) {
           continue;
         }
@@ -354,7 +362,7 @@ export function resolveOverlayNodes(
           if (target === null) {
             continue;
           }
-          const playerVars = runnerFrame.playerVars.get(player.id) ?? [];
+          const playerVars = projectionSource.playerVars.get(player.id) ?? [];
           const value = findVarValue(playerVars, item.varName);
           if (value === null) {
             continue;
@@ -372,7 +380,7 @@ export function resolveOverlayNodes(
         break;
       }
       case 'marker': {
-        const rawValue = findVarValue(runnerFrame.globalVars, item.varName);
+        const rawValue = findVarValue(projectionSource.globalVars, item.varName);
         if (typeof rawValue !== 'number' || !Number.isFinite(rawValue)) {
           continue;
         }

@@ -30,12 +30,15 @@ export interface RunnerChoiceContext {
   readonly iterationTotal: number | null;
 }
 
+export interface RunnerProjectionSource {
+  readonly globalVars: readonly RunnerVariable[];
+  readonly playerVars: ReadonlyMap<PlayerId, readonly RunnerVariable[]>;
+}
+
 export interface RunnerFrame {
   readonly zones: readonly RunnerZone[];
   readonly adjacencies: readonly RunnerAdjacency[];
   readonly tokens: readonly RunnerToken[];
-  readonly globalVars: readonly RunnerVariable[];
-  readonly playerVars: ReadonlyMap<PlayerId, readonly RunnerVariable[]>;
   readonly activeEffects: readonly RunnerLastingEffect[];
   readonly players: readonly RunnerPlayer[];
   readonly activePlayerID: PlayerId;
@@ -54,6 +57,11 @@ export interface RunnerFrame {
   readonly runtimeEligible: readonly RunnerRuntimeEligibleFaction[];
   readonly victoryStandings: readonly RunnerVictoryStandingEntry[] | null;
   readonly terminal: RunnerTerminal | null;
+}
+
+export interface RunnerProjectionBundle {
+  readonly frame: RunnerFrame;
+  readonly source: RunnerProjectionSource;
 }
 
 export interface RunnerZone {

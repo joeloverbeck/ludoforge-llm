@@ -74,6 +74,7 @@ function createGameStoreFixture(playerId: number | null, lifecycle: GameStore['g
     appliedMoveEvent: null,
     appliedMoveSequence: 0,
     activePhaseBanner: null,
+    runnerProjection: null,
     runnerFrame: null,
     renderModel: null,
     initGame: vi.fn(async () => {}),

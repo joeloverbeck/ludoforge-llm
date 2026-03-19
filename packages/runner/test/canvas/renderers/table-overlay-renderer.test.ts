@@ -6,7 +6,7 @@ import { VisualConfigProvider } from '../../../src/config/visual-config-provider
 import { createTableOverlayRenderer } from '../../../src/canvas/renderers/table-overlay-renderer';
 import { resolveOverlayNodes } from '../../../src/presentation/presentation-scene.js';
 import type { RenderModel, RenderVariable, RenderZone } from '../../../src/model/render-model';
-import type { RunnerFrame } from '../../../src/model/runner-frame.js';
+import type { RunnerFrame, RunnerProjectionSource } from '../../../src/model/runner-frame.js';
 
 const {
   MockContainer,
@@ -218,7 +218,7 @@ function updateRenderer(
   renderer.update(
     renderModel === null
       ? []
-      : resolveOverlayNodes(toRunnerFrame(renderModel), renderModel.zones, positions, provider),
+      : resolveOverlayNodes(toRunnerFrame(renderModel), toRunnerProjectionSource(renderModel), renderModel.zones, positions, provider),
   );
 }
 
@@ -244,13 +244,6 @@ function toRunnerFrame(renderModel: RenderModel): RunnerFrame {
     })),
     adjacencies: renderModel.adjacencies,
     tokens: renderModel.tokens,
-    globalVars: renderModel.globalVars.map(({ name, value }) => ({ name, value })),
-    playerVars: new Map(
-      Array.from(renderModel.playerVars.entries()).map(([playerId, variables]) => [
-        playerId,
-        variables.map(({ name, value }) => ({ name, value })),
-      ]),
-    ),
     activeEffects: renderModel.activeEffects.map((effect) => ({
       id: effect.id,
       sourceCardId: effect.id,
@@ -299,6 +292,18 @@ function toRunnerFrame(renderModel: RenderModel): RunnerFrame {
     runtimeEligible: renderModel.runtimeEligible.map(({ seatId, factionId, seatIndex }) => ({ seatId, factionId, seatIndex })),
     victoryStandings: renderModel.victoryStandings,
     terminal: renderModel.terminal,
+  };
+}
+
+function toRunnerProjectionSource(renderModel: RenderModel): RunnerProjectionSource {
+  return {
+    globalVars: renderModel.globalVars.map(({ name, value }) => ({ name, value })),
+    playerVars: new Map(
+      Array.from(renderModel.playerVars.entries()).map(([playerId, variables]) => [
+        playerId,
+        variables.map(({ name, value }) => ({ name, value })),
+      ]),
+    ),
   };
 }
 

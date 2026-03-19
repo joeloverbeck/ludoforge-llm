@@ -53,7 +53,7 @@ export function makeRenderModelFixture(
 }
 
 export function createRenderModelStore(renderModel: GameStore['renderModel']): StoreApi<GameStore> {
-  const snapshot = { runnerFrame: null, renderModel };
+  const snapshot = { runnerProjection: null, runnerFrame: null, renderModel };
   return {
     getState: () => snapshot,
     getInitialState: () => snapshot,

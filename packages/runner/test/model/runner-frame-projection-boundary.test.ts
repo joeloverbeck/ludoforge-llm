@@ -79,7 +79,7 @@ describe('runner frame / render model boundary', () => {
     const def = compileFixture();
     const state = initialState(def, 1, 2).state;
 
-    const frame = deriveRunnerFrame(state, def, makeContext());
+    const { frame } = deriveRunnerFrame(state, def, makeContext());
     const reserve = frame.zones.find((zone) => zone.id === 'reserve:none');
 
     expect(reserve).toBeDefined();
@@ -90,11 +90,15 @@ describe('runner frame / render model boundary', () => {
   it('does not expose dead global-markers or tracks fields on the frame/model boundary', () => {
     const def = compileFixture();
     const state = initialState(def, 1, 2).state;
-    const frame = deriveRunnerFrame(state, def, makeContext());
-    const renderModel = projectRenderModel(frame, new VisualConfigProvider(null));
+    const bundle = deriveRunnerFrame(state, def, makeContext());
+    const renderModel = projectRenderModel(bundle, new VisualConfigProvider(null));
+    const frame = bundle.frame;
 
     expect('globalMarkers' in (frame as object)).toBe(false);
     expect('tracks' in (frame as object)).toBe(false);
+    expect('globalVars' in (frame as object)).toBe(false);
+    expect('playerVars' in (frame as object)).toBe(false);
+    expect(bundle.source.globalVars).toEqual([{ name: 'tick', value: 0 }]);
     expect('globalMarkers' in (renderModel as object)).toBe(false);
     expect('tracks' in (renderModel as object)).toBe(false);
   });
@@ -114,14 +118,15 @@ describe('runner frame / render model boundary', () => {
           { value: 'reserve:none', legality: 'legal', illegalReason: null },
       ],
     };
-    const frame = deriveRunnerFrame(state, def, makeContext({
+    const bundle = deriveRunnerFrame(state, def, makeContext({
       choicePending,
       partialMove: { actionId: asActionId('tick'), params: {} },
     }));
+    const frame = bundle.frame;
 
     expect(frame.zones.map((zone) => zone.id)).toContain('reserve:none');
 
-    const renderModel = projectRenderModel(frame, new VisualConfigProvider({
+    const renderModel = projectRenderModel(bundle, new VisualConfigProvider({
       version: 1,
       zones: {
         hiddenZones: ['reserve:none'],

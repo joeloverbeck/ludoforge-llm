@@ -18,7 +18,7 @@ import { asPlayerId } from '@ludoforge/engine/runtime';
 
 import { deriveRunnerFrame } from '../model/derive-runner-frame.js';
 import { projectRenderModel } from '../model/project-render-model.js';
-import type { RunnerFrame } from '../model/runner-frame.js';
+import type { RunnerFrame, RunnerProjectionBundle } from '../model/runner-frame.js';
 import type { RenderModel } from '../model/render-model.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import type { PlayerSeatConfig } from '../session/session-types.js';
@@ -58,10 +58,11 @@ interface GameStoreState {
   readonly appliedMoveEvent: AppliedMoveEvent | null;
   readonly appliedMoveSequence: number;
   readonly activePhaseBanner: string | null;
+  readonly runnerProjection: RunnerProjectionBundle | null;
   readonly runnerFrame: RunnerFrame | null;
   readonly renderModel: RenderModel | null;
 }
-type MutableGameStoreState = Omit<GameStoreState, 'runnerFrame' | 'renderModel'>;
+type MutableGameStoreState = Omit<GameStoreState, 'runnerProjection' | 'runnerFrame' | 'renderModel'>;
 
 export type AiStepOutcome =
   | 'advanced'
@@ -199,6 +200,7 @@ const INITIAL_STATE: Omit<GameStoreState, 'playerSeats'> = {
   appliedMoveEvent: null,
   appliedMoveSequence: 0,
   activePhaseBanner: null,
+  runnerProjection: null,
   runnerFrame: null,
   renderModel: null,
 };
@@ -510,10 +512,10 @@ function toRenderContext(inputs: RenderDerivationInputs): RenderContext | null {
   };
 }
 
-function deriveStoreRunnerFrame(
+function deriveStoreRunnerProjection(
   inputs: RenderDerivationInputs,
-  previousFrame: RunnerFrame | null,
-): RunnerFrame | null {
+  previousProjection: RunnerProjectionBundle | null,
+): RunnerProjectionBundle | null {
   if (inputs.gameDef === null || inputs.gameState === null) {
     return null;
   }
@@ -521,7 +523,7 @@ function deriveStoreRunnerFrame(
   if (context === null) {
     return null;
   }
-  return deriveRunnerFrame(inputs.gameState, inputs.gameDef, context, previousFrame);
+  return deriveRunnerFrame(inputs.gameState, inputs.gameDef, context, previousProjection);
 }
 
 function toRenderDerivationInputs(state: MutableGameStoreState): RenderDerivationInputs {
@@ -641,16 +643,18 @@ export function createGameStore(
       const setAndDerive = (patch: Partial<MutableGameStoreState>): void => {
         set((current) => {
           const nextState = materializeNextState(current, patch);
-          const runnerFrame = deriveStoreRunnerFrame(
+          const runnerProjection = deriveStoreRunnerProjection(
             toRenderDerivationInputs(nextState),
-            current.runnerFrame,
+            current.runnerProjection,
           );
+          const runnerFrame = runnerProjection?.frame ?? null;
           return {
             ...patch,
+            runnerProjection,
             runnerFrame,
-            renderModel: runnerFrame === null
+            renderModel: runnerProjection === null
               ? null
-              : projectRenderModel(runnerFrame, visualConfigProvider, current.renderModel),
+              : projectRenderModel(runnerProjection, visualConfigProvider, current.renderModel),
           };
         });
       };

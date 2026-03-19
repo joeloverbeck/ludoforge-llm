@@ -139,6 +139,7 @@ function createContainerStore(overrides: Partial<GameStore> = {}): StoreApi<Game
   return createStore<GameStore>(() => ({
     gameLifecycle: 'playing',
     error: null,
+    runnerProjection: null,
     renderModel: null,
     gameDef: null,
     animationPlaying: true,

@@ -14,6 +14,7 @@ import type {
   RunnerActionGroup,
   RunnerChoiceUi,
   RunnerFrame,
+  RunnerProjectionBundle,
   RunnerPlayer,
   RunnerToken,
   RunnerZone,
@@ -23,10 +24,11 @@ import { formatIdAsDisplayName } from '../utils/format-display-name.js';
 import { formatChoiceValueFallback, formatChoiceValueResolved } from './choice-value-utils.js';
 
 export function projectRenderModel(
-  frame: RunnerFrame,
+  bundle: RunnerProjectionBundle,
   visualConfigProvider: VisualConfigProvider,
   previousModel: RenderModel | null = null,
 ): RenderModel {
+  const { frame, source } = bundle;
   const hiddenZones = visualConfigProvider.getHiddenZones();
   const zones = projectZones(frame.zones, visualConfigProvider, hiddenZones);
   const visibleZoneIds = new Set(zones.map((zone) => zone.id));
@@ -41,12 +43,12 @@ export function projectRenderModel(
     zones,
     adjacencies: frame.adjacencies.filter((adjacency) => visibleZoneIds.has(adjacency.from) && visibleZoneIds.has(adjacency.to)),
     tokens,
-    globalVars: frame.globalVars.map((variable) => ({
+    globalVars: source.globalVars.map((variable) => ({
       ...variable,
       displayName: formatIdAsDisplayName(variable.name),
     })),
     playerVars: new Map(
-      Array.from(frame.playerVars.entries()).map(([playerId, variables]) => [
+      Array.from(source.playerVars.entries()).map(([playerId, variables]) => [
         playerId,
         variables.map((variable) => ({
           ...variable,

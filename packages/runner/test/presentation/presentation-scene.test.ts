@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import { VisualConfigTokenRenderStyleProvider } from '../../src/canvas/renderers/token-render-style-provider.js';
 import { buildPresentationScene } from '../../src/presentation/presentation-scene.js';
-import type { RunnerFrame, RunnerVariable, RunnerZone } from '../../src/model/runner-frame.js';
+import type { RunnerFrame, RunnerProjectionSource, RunnerVariable, RunnerZone } from '../../src/model/runner-frame.js';
 
 function makeZone(
   id: string,
@@ -41,11 +41,6 @@ function makeRunnerFrame(overrides: Partial<RunnerFrame> = {}): RunnerFrame {
     ],
     adjacencies: [],
     tokens: [],
-    globalVars: [],
-    playerVars: new Map([
-      [asPlayerId(0), []],
-      [asPlayerId(1), []],
-    ]),
     activeEffects: [],
     players: [
       { id: asPlayerId(0), isHuman: true, isActive: true, isEliminated: false, factionId: null },
@@ -67,6 +62,17 @@ function makeRunnerFrame(overrides: Partial<RunnerFrame> = {}): RunnerFrame {
     runtimeEligible: [],
     victoryStandings: null,
     terminal: null,
+    ...overrides,
+  };
+}
+
+function makeProjectionSource(overrides: Partial<RunnerProjectionSource> = {}): RunnerProjectionSource {
+  return {
+    globalVars: [],
+    playerVars: new Map([
+      [asPlayerId(0), []],
+      [asPlayerId(1), []],
+    ]),
     ...overrides,
   };
 }
@@ -94,7 +100,8 @@ describe('buildPresentationScene', () => {
     });
 
     const scene = buildPresentationScene({
-      runnerFrame: makeRunnerFrame({
+      runnerFrame: makeRunnerFrame(),
+      projectionSource: makeProjectionSource({
         globalVars: [asVar('pot', 42), asVar('dealerSeat', 1)],
         playerVars: new Map([
           [asPlayerId(0), [asVar('bet', 5)]],
@@ -133,6 +140,7 @@ describe('buildPresentationScene', () => {
 
     const scene = buildPresentationScene({
       runnerFrame,
+      projectionSource: makeProjectionSource(),
       positions,
       visualConfigProvider: provider,
       tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(provider),
@@ -175,6 +183,7 @@ describe('buildPresentationScene', () => {
           makeZone('zone:b', { country: 'southVietnam' }),
         ],
       }),
+      projectionSource: makeProjectionSource(),
       positions,
       visualConfigProvider: provider,
       tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(provider),
@@ -198,6 +207,7 @@ describe('buildPresentationScene', () => {
           { id: 'token:1', type: 'troop', zoneID: 'shared:center', ownerID: asPlayerId(0), factionId: null, faceUp: true, properties: {}, isSelectable: false, isSelected: false },
         ],
       }),
+      projectionSource: makeProjectionSource(),
       positions,
       visualConfigProvider: provider,
       tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(provider),
@@ -246,6 +256,7 @@ describe('buildPresentationScene', () => {
           { id: 'token:3', type: 'support', zoneID: 'zone:a', ownerID: asPlayerId(0), factionId: null, faceUp: true, properties: {}, isSelectable: false, isSelected: false },
         ],
       }),
+      projectionSource: makeProjectionSource(),
       positions,
       visualConfigProvider: provider,
       tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(provider),

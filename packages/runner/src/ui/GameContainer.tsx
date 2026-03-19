@@ -44,6 +44,7 @@ import { VictoryStandingsBar } from './VictoryStandingsBar.js';
 import { deriveBottomBarState } from './bottom-bar-mode.js';
 import { buildFactionCssVariableStyle } from './faction-color-style.js';
 import { EventLogPanel } from './EventLogPanel.js';
+import { createRunnerUiStore } from './runner-ui-store.js';
 import { useEventLogEntries } from './useEventLogEntries.js';
 import type { OverlayPanelComponent, OverlayPanelDiagnostics, OverlayPanelProps } from './overlay-panel-contract.js';
 import styles from './GameContainer.module.css';
@@ -60,15 +61,14 @@ interface GameContainerProps {
   readonly onLoad?: () => void;
 }
 
-type OverlayRegion = 'top' | 'left' | 'side' | 'floating';
+type OverlayRegion = 'topStatus' | 'left' | 'side' | 'floating';
 
 const OVERLAY_REGION_PANELS: Readonly<Record<OverlayRegion, readonly OverlayPanelComponent[]>> = {
-  top: [
+  topStatus: [
     PhaseIndicator,
     TurnOrderDisplay,
     InterruptBanner,
     EventDeckPanel,
-    AnimationControls,
   ],
   left: [
     EligiblePanel,
@@ -127,8 +127,9 @@ export function GameContainer({
   const error = useStore(store, (state) => state.error);
   const renderModel = useStore(store, (state) => state.renderModel);
   const gameDefFactions = useStore(store, (state) => state.gameDef?.seats);
+  const runnerUiStore = useMemo(createRunnerUiStore, []);
   const [hoverAnchor, setHoverAnchor] = useState<HoverAnchor | null>(null);
-  const [eventLogVisible, setEventLogVisible] = useState(true);
+  const eventLogVisible = useStore(runnerUiStore, (state) => state.eventLogVisible);
   const [interactionHighlights, setInteractionHighlights] = useState<InteractionHighlights>(EMPTY_INTERACTION_HIGHLIGHTS);
   const [selectedEventLogEntryId, setSelectedEventLogEntryId] = useState<string | null>(null);
   const [animationDiagnosticBuffer, setAnimationDiagnosticBuffer] = useState<DiagnosticBuffer | undefined>(undefined);
@@ -168,14 +169,14 @@ export function GameContainer({
         return false;
       }
 
-      setEventLogVisible((current) => !current);
+      runnerUiStore.getState().toggleEventLogVisible();
       return true;
     }, { priority: 15 });
-  }, [keyboardCoordinator]);
+  }, [keyboardCoordinator, runnerUiStore]);
 
   useEffect(() => {
-    setEventLogVisible(true);
-  }, [store]);
+    runnerUiStore.getState().resetChromeState();
+  }, [runnerUiStore, store]);
 
   useEffect(() => {
     setInteractionHighlights(EMPTY_INTERACTION_HIGHLIGHTS);
@@ -272,6 +273,55 @@ export function GameContainer({
     }
   })();
 
+  const topStatusContent = renderOverlayRegionPanels(OVERLAY_REGION_PANELS.topStatus, overlayPanelProps);
+  const topSessionContent = (
+    <div className={styles.sessionChrome}>
+      <AnimationControls {...overlayPanelProps} />
+      <div className={styles.sessionButtons}>
+        <button
+          type="button"
+          className={`${styles.sessionButton} ${eventLogVisible ? styles.eventLogToggleActive : ''}`}
+          data-testid="event-log-toggle-button"
+          onClick={() => {
+            runnerUiStore.getState().toggleEventLogVisible();
+          }}
+        >
+          {eventLogVisible ? 'Hide Log' : 'Show Log'}
+        </button>
+        {onSave === undefined ? null : (
+          <button
+            type="button"
+            className={styles.sessionButton}
+            data-testid="session-save-button"
+            onClick={onSave}
+          >
+            Save
+          </button>
+        )}
+        {onLoad === undefined ? null : (
+          <button
+            type="button"
+            className={styles.sessionButton}
+            data-testid="session-load-button"
+            onClick={onLoad}
+          >
+            Load
+          </button>
+        )}
+      </div>
+      {onQuit === undefined ? null : (
+        <button
+          type="button"
+          className={styles.quitButton}
+          data-testid="session-quit-button"
+          onClick={onQuit}
+        >
+          Quit
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <VisualConfigContext.Provider value={visualConfigProvider}>
       <div className={styles.container} style={factionCssVariableStyle}>
@@ -288,53 +338,8 @@ export function GameContainer({
         <UIOverlay
           leftPanelContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.left, overlayPanelProps)}
           scoringBarContent={<VictoryStandingsBar store={store} />}
-          topBarContent={(
-            <>
-              {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.top, overlayPanelProps)}
-              <div className={styles.sessionButtons}>
-                <button
-                  type="button"
-                  className={`${styles.sessionButton} ${eventLogVisible ? styles.eventLogToggleActive : ''}`}
-                  data-testid="event-log-toggle-button"
-                  onClick={() => {
-                    setEventLogVisible((current) => !current);
-                  }}
-                >
-                  {eventLogVisible ? 'Hide Log' : 'Show Log'}
-                </button>
-                {onSave === undefined ? null : (
-                  <button
-                    type="button"
-                    className={styles.sessionButton}
-                    data-testid="session-save-button"
-                    onClick={onSave}
-                  >
-                    Save
-                  </button>
-                )}
-                {onLoad === undefined ? null : (
-                  <button
-                    type="button"
-                    className={styles.sessionButton}
-                    data-testid="session-load-button"
-                    onClick={onLoad}
-                  >
-                    Load
-                  </button>
-                )}
-              </div>
-              {onQuit === undefined ? null : (
-                <button
-                  type="button"
-                  className={styles.quitButton}
-                  data-testid="session-quit-button"
-                  onClick={onQuit}
-                >
-                  Quit
-                </button>
-              )}
-            </>
-          )}
+          topStatusContent={topStatusContent}
+          topSessionContent={topSessionContent}
           sidePanelContent={sidePanelContent}
           bottomBarContent={bottomBarContent}
           floatingContent={(

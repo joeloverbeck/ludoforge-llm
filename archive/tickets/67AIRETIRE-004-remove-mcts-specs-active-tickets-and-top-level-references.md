@@ -75,7 +75,7 @@ Move top-level reports that only exist for MCTS work into `archive/reports/`, an
 3. Top-level `reports/` contains no active MCTS-only reports.
 4. Existing suites and integrity checks:
    - `pnpm run check:ticket-deps`
-   - `node --test scripts/check-ticket-deps.test.mjs scripts/archive-ticket.test.mjs scripts/check-gitnexus-header-stats.test.mjs`
+   - `node --test scripts/check-ticket-deps.test.mjs scripts/archive-ticket.test.mjs`
    - `pnpm turbo test`
 
 ### Invariants
@@ -96,7 +96,7 @@ Move top-level reports that only exist for MCTS work into `archive/reports/`, an
 
 1. `pnpm run check:ticket-deps`
 2. `rg -n "MCTS|mcts" specs tickets reports docs CLAUDE.md --glob '!archive/**'`
-3. `node --test scripts/check-ticket-deps.test.mjs scripts/archive-ticket.test.mjs scripts/check-gitnexus-header-stats.test.mjs`
+3. `node --test scripts/check-ticket-deps.test.mjs scripts/archive-ticket.test.mjs`
 4. `pnpm turbo test`
 
 ## Outcome
@@ -104,4 +104,4 @@ Move top-level reports that only exist for MCTS work into `archive/reports/`, an
 - Completion date: 2026-03-18
 - What changed: Archived the remaining active MCTS specs, active MCTS tickets, and top-level MCTS-only reports; removed the live MCTS references from `CLAUDE.md`; and rewrote the remaining active mention in `specs/30-fitl-non-player-ai.md` to stay architecture-neutral.
 - Deviations from original plan: The initial ticket proposed deletion and named `README.md` plus `specs/00-implementation-roadmap.md` as likely touchpoints. The implementation used the repo's archival workflow instead of deletion and left those untouched because they contained no active MCTS references.
-- Verification results: `pnpm run check:ticket-deps`; `node --test scripts/check-ticket-deps.test.mjs scripts/archive-ticket.test.mjs scripts/check-gitnexus-header-stats.test.mjs`; `pnpm turbo test`; and a final `rg -n "MCTS|mcts" specs tickets reports docs CLAUDE.md --glob '!archive/**'` check confirmed no remaining active-surface MCTS references beyond this ticket before archival.
+- Verification results: `pnpm run check:ticket-deps`; `node --test scripts/check-ticket-deps.test.mjs scripts/archive-ticket.test.mjs`; `pnpm turbo test`; and a final `rg -n "MCTS|mcts" specs tickets reports docs CLAUDE.md --glob '!archive/**'` check confirmed no remaining active-surface MCTS references beyond this ticket before archival.

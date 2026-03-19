@@ -11,6 +11,12 @@
   z-index: var(--z-canvas);
 }
 
+.sessionChrome {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
 .quitButton {
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
@@ -19,6 +25,7 @@
   color: var(--text-primary);
   background: color-mix(in srgb, #dc2626 26%, var(--bg-panel));
   cursor: pointer;
+  pointer-events: auto;
 }
 
 .quitButton:hover {
@@ -26,7 +33,6 @@
 }
 
 .sessionButtons {
-  margin-left: auto;
   display: flex;
   align-items: center;
   gap: var(--space-xs);
@@ -40,6 +46,7 @@
   color: var(--text-primary);
   background: color-mix(in srgb, #1d4ed8 18%, var(--bg-panel));
   cursor: pointer;
+  pointer-events: auto;
 }
 
 .sessionButton:hover {

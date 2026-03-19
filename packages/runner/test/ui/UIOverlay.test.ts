@@ -12,6 +12,8 @@ describe('UIOverlay', () => {
 
     expect(html).toContain('data-testid="ui-overlay"');
     expect(html).toContain('data-testid="ui-overlay-top"');
+    expect(html).toContain('data-testid="ui-overlay-top-status"');
+    expect(html).toContain('data-testid="ui-overlay-top-session"');
     expect(html).toContain('data-testid="ui-overlay-left"');
     expect(html).toContain('data-testid="ui-overlay-side"');
     expect(html).toContain('data-testid="ui-overlay-bottom"');
@@ -30,16 +32,28 @@ describe('UIOverlay', () => {
     expect(html).toContain('bottom controls');
   });
 
-  it('renders provided topBarContent in top region', () => {
+  it('renders provided topStatusContent in top status region', () => {
     const html = renderToStaticMarkup(
       createElement(UIOverlay, {
-        topBarContent: createElement('div', { 'data-testid': 'top-slot-content' }, 'top controls'),
+        topStatusContent: createElement('div', { 'data-testid': 'top-status-slot-content' }, 'top status'),
       }),
     );
 
-    expect(html).toContain('data-testid="ui-overlay-top"');
-    expect(html).toContain('data-testid="top-slot-content"');
-    expect(html).toContain('top controls');
+    expect(html).toContain('data-testid="ui-overlay-top-status"');
+    expect(html).toContain('data-testid="top-status-slot-content"');
+    expect(html).toContain('top status');
+  });
+
+  it('renders provided topSessionContent in top session region', () => {
+    const html = renderToStaticMarkup(
+      createElement(UIOverlay, {
+        topSessionContent: createElement('div', { 'data-testid': 'top-session-slot-content' }, 'top session'),
+      }),
+    );
+
+    expect(html).toContain('data-testid="ui-overlay-top-session"');
+    expect(html).toContain('data-testid="top-session-slot-content"');
+    expect(html).toContain('top session');
   });
 
   it('renders provided sidePanelContent in side region', () => {
@@ -83,6 +97,8 @@ describe('UIOverlay', () => {
       overlay: expect.any(String),
       topRegion: expect.any(String),
       topBar: expect.any(String),
+      topStatus: expect.any(String),
+      topSession: expect.any(String),
       scoringBar: expect.any(String),
       leftPanel: expect.any(String),
       sidePanels: expect.any(String),

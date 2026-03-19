@@ -1,19 +1,19 @@
-# REPOOPS-002: Guard Guidance Docs from Incidental GitNexus Stat Churn
+# REPOOPS-002: Guard Guidance Docs from Incidental Header-Stat Churn
 
 **Status**: ✅ COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — repo tooling/documentation workflow guard
-**Deps**: archive/tickets/REPOOPS/REPOOPS-001-stabilize-gitnexus-header-stats-in-guidance-docs.md
+**Deps**: archive/tickets/REPOOPS/REPOOPS-001-stabilize-guidance-doc-header-stats.md
 
 ## Problem
 
-Running index tooling can update GitNexus symbol/edge counts in `AGENTS.md` and `CLAUDE.md` even when no documentation policy change is intended. These incidental edits create review noise and merge-conflict risk.
+Running index tooling can update header counters in `AGENTS.md` and `CLAUDE.md` even when no documentation policy change is intended. These incidental edits create review noise and merge-conflict risk.
 
 ## Assumption Reassessment (2026-03-06)
 
-1. GitNexus analyze operations can rewrite guidance header stats in `AGENTS.md` and `CLAUDE.md`.
-2. Discrepancy found: the guard already exists in `scripts/check-gitnexus-header-stats.mjs`, is wired in root `package.json` `test`, and already has script-level coverage in `scripts/check-gitnexus-header-stats.test.mjs`.
+1. Index refresh operations can rewrite guidance header stats in `AGENTS.md` and `CLAUDE.md`.
+2. Discrepancy found: the guard already exists, is wired in root `package.json` `test`, and already has script-level coverage.
 3. Existing policy is stricter and cleaner than the original ticket proposal: mixed-purpose changes with counter-only churn are blocked automatically; isolated maintenance-only stat churn is allowed without an override flag.
 4. Scope adjustment required: this ticket should verify and close the already-landed guard architecture rather than re-implement it.
 
@@ -39,13 +39,13 @@ Mark this ticket completed and archive it with an Outcome section documenting wh
 
 ## Files to Touch
 
-- `tickets/REPOOPS-002-guard-guidance-docs-from-incidental-gitnexus-stat-churn.md` (assumptions/scope correction, completion, outcome)
+- `tickets/REPOOPS-002-guard-guidance-docs-from-incidental-header-stat-churn.md` (assumptions/scope correction, completion, outcome)
 - `archive/tickets/REPOOPS/` (archived ticket destination)
 
 ## Out of Scope
 
 - Changes to engine/runtime/kernel behavior.
-- Replacing GitNexus tooling.
+- Replacing the repository indexing tool.
 
 ## Acceptance Criteria
 
@@ -55,7 +55,7 @@ Mark this ticket completed and archive it with an Outcome section documenting wh
    - mixed-purpose changes with counter-only guidance stat churn fail
    - isolated counter-only churn is allowed
 2. Script/unit and repository checks pass:
-   - `node --test scripts/check-gitnexus-header-stats.test.mjs`
+   - the dedicated guidance-doc header-stat guard tests
    - `pnpm run check:ticket-deps`
    - `pnpm lint`
    - `pnpm test`
@@ -70,12 +70,12 @@ Mark this ticket completed and archive it with an Outcome section documenting wh
 ### New/Modified Tests
 
 1. No new tests expected unless verification exposes a coverage gap.
-2. Existing test file `scripts/check-gitnexus-header-stats.test.mjs` is the primary hard-check suite for this ticket reassessment.
+2. The dedicated guidance-doc header-stat guard tests are the primary hard-check suite for this ticket reassessment.
 
 ### Commands
 
 1. `pnpm run check:ticket-deps`
-2. `node --test scripts/check-gitnexus-header-stats.test.mjs`
+2. The dedicated guidance-doc header-stat guard tests
 3. `pnpm lint`
 4. `pnpm test`
 
@@ -84,8 +84,8 @@ Mark this ticket completed and archive it with an Outcome section documenting wh
 - **Completion date**: 2026-03-06
 - **What changed**
 1. Reassessed the ticket against the current repository and corrected assumptions/scope to match existing implementation in:
-   - `scripts/check-gitnexus-header-stats.mjs`
-   - `scripts/check-gitnexus-header-stats.test.mjs`
+   - the dedicated guidance-doc header-stat guard
+   - its script-level test coverage
    - root `package.json` guard wiring
 2. Updated the architecture decision to keep the existing deterministic guard model (block mixed-purpose counter-only churn; allow isolated maintenance-only churn) and explicitly reject adding a manual override flag.
 3. Finalized this ticket as a closure/verification ticket rather than a net-new implementation ticket.
@@ -93,7 +93,7 @@ Mark this ticket completed and archive it with an Outcome section documenting wh
 1. No new guard script, package wiring, or guidance-doc override documentation was added, because all core implementation had already landed.
 2. No new tests were required; existing guard coverage already captures the critical invariant and edge behavior for this scope.
 - **Verification results**
-1. `node --test scripts/check-gitnexus-header-stats.test.mjs` passed.
+1. The dedicated guidance-doc header-stat guard tests passed.
 2. `pnpm run check:ticket-deps` passed.
 3. `pnpm lint` passed.
 4. `pnpm test` passed.

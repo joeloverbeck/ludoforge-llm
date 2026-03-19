@@ -51,7 +51,7 @@ function createAnimationControlsStore(state: {
 }
 
 describe('AnimationControls', () => {
-  it('renders controls shell and speed buttons', () => {
+  it('renders descriptor-backed playback and ai sections', () => {
     const html = renderToStaticMarkup(
       createElement(AnimationControls, {
         store: createAnimationControlsStore({ animationPlaybackSpeed: '2x' }),
@@ -59,6 +59,8 @@ describe('AnimationControls', () => {
     );
 
     expect(html).toContain('data-testid="animation-controls"');
+    expect(html).toContain('data-testid="animation-section-playback"');
+    expect(html).toContain('data-testid="animation-section-ai-playback"');
     expect(html).toContain('data-testid="animation-speed-1x"');
     expect(html).toContain('data-testid="animation-speed-2x"');
     expect(html).toContain('data-testid="animation-speed-4x"');
@@ -139,14 +141,16 @@ describe('AnimationControls', () => {
     }
 
     expect(screen.queryByTestId('animation-download-log')).not.toBeNull();
+    expect(screen.queryByTestId('animation-section-diagnostics')).not.toBeNull();
   });
 
-  it('does not render download button without diagnostic buffer', () => {
+  it('does not render diagnostics section without diagnostic buffer', () => {
     render(createElement(AnimationControls, {
       store: createAnimationControlsStore({}),
     }));
 
     expect(screen.queryByTestId('animation-download-log')).toBeNull();
+    expect(screen.queryByTestId('animation-section-diagnostics')).toBeNull();
   });
 
   it('downloads diagnostics when download button is clicked', () => {

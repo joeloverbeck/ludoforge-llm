@@ -14,7 +14,7 @@ Spec 60's decision-instance architecture has already been landed across engine a
 
 1. The core architecture described by Spec 60 is already present in source: `packages/engine/src/kernel/decision-scope.ts`, required `decisionScope` in effect contexts, `ChoicePendingRequest.decisionKey`, and runner-side `PartialChoice.decisionKey` are implemented.
 2. Runner tests are already predominantly migrated to `decisionKey`; this ticket should not assume a bulk rename remains.
-3. `pnpm turbo test` is the canonical cross-workspace verification command, but root `pnpm test` also runs ticket-dependency and GitNexus-header guards before Turbo tests. Final closure should account for those repo-level checks as well.
+3. `pnpm turbo test` is the canonical cross-workspace verification command, but root `pnpm test` also runs ticket-dependency and other repo-level guards before Turbo tests. Final closure should account for those repo-level checks as well.
 4. `pnpm turbo schema:artifacts` is still required because engine schema artifacts are part of the acceptance surface and may drift from runtime types.
 5. Current local repo metadata (`CLAUDE.md`, AGENTS guidance) still says there are no active tickets, which is stale relative to this ticket. That mismatch is documentation debt, not a blocker for this ticket.
 
@@ -117,7 +117,7 @@ Spec 60's decision-instance architecture has already been landed across engine a
 
 - Completion date: 2026-03-13
 - What actually changed: reassessed the ticket against the current codebase, corrected its assumptions and scope to reflect that the `DecisionKey`/`DecisionScope` architecture was already landed, then ran the full verification battery and repo guard checks.
-- Deviations from original plan: no engine, runner, schema, or test-source changes were required because the migrated architecture and its existing regression coverage were already green. The only failure encountered was a repo guard triggered by incidental GitNexus header counter churn in `AGENTS.md` and `CLAUDE.md`; those incidental counter-only changes were removed.
+- Deviations from original plan: no engine, runner, schema, or test-source changes were required because the migrated architecture and its existing regression coverage were already green. The only failure encountered was a repo guard triggered by incidental guidance-doc header counter churn in `AGENTS.md` and `CLAUDE.md`; those incidental counter-only changes were removed.
 - Verification results:
   - `pnpm turbo build`
   - `pnpm turbo typecheck`

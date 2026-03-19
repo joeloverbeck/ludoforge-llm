@@ -32,4 +32,3 @@ campaigns/*/run.log.build
 # Worktrees
 .worktrees/
 .claude/worktrees/
-.gitnexus

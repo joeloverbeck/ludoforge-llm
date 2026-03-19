@@ -35,6 +35,7 @@ function createCatalog(): AgentPolicyCatalog {
     schemaVersion: 1,
     catalogFingerprint: 'catalog',
     parameterDefs: {},
+    candidateParamDefs: {},
     library: {
       stateFeatures: {},
       candidateFeatures: {},

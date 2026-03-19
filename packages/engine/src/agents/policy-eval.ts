@@ -501,16 +501,23 @@ class EvaluationContext {
       }
       if (refPath.startsWith('candidate.param.')) {
         const paramId = refPath.slice('candidate.param.'.length);
-        const paramValue = candidate.move.params[paramId];
-        if (
-          typeof paramValue === 'number'
-          || typeof paramValue === 'boolean'
-          || typeof paramValue === 'string'
-          || (Array.isArray(paramValue) && paramValue.every((entry) => typeof entry === 'string'))
-        ) {
-          return paramValue as AgentParameterValue;
+        const candidateParamDef = this.catalog.candidateParamDefs[paramId];
+        if (candidateParamDef === undefined) {
+          return undefined;
         }
-        return undefined;
+        const paramValue = candidate.move.params[paramId];
+        switch (candidateParamDef.type) {
+          case 'number':
+            return typeof paramValue === 'number' ? paramValue : undefined;
+          case 'boolean':
+            return typeof paramValue === 'boolean' ? paramValue : undefined;
+          case 'id':
+            return typeof paramValue === 'string' ? paramValue : undefined;
+          case 'idList':
+            return Array.isArray(paramValue) && paramValue.every((entry) => typeof entry === 'string')
+              ? paramValue as AgentParameterValue
+              : undefined;
+        }
       }
     }
     if (refPath.startsWith('preview.')) {

@@ -674,6 +674,7 @@ function compileExpandedDoc(
         ...(seatIdentityContract.contract.referenceSeatIds === undefined
           ? {}
           : { referenceSeatIds: seatIdentityContract.contract.referenceSeatIds }),
+        ...(actions === null ? {} : { actionDefs: actions }),
         ...(
           derivedMetricsCompilationFailed || victoryStandingsCompilationFailed
             ? {}

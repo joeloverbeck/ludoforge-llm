@@ -204,6 +204,11 @@ describe('top-level runtime schemas', () => {
             max: 5,
           },
         },
+        candidateParamDefs: {
+          eventCardId: {
+            type: 'id',
+          },
+        },
         library: {
           stateFeatures: {},
           candidateFeatures: {},
@@ -245,6 +250,7 @@ describe('top-level runtime schemas', () => {
       agents: {
         schemaVersion: 1,
         parameterDefs: {},
+        candidateParamDefs: {},
         library: {
           stateFeatures: {},
           candidateFeatures: {},

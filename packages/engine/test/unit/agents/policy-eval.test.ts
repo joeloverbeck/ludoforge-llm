@@ -16,13 +16,13 @@ import {
 
 const phaseId = asPhaseId('main');
 
-function createAction(id: string): ActionDef {
+function createAction(id: string, params: ActionDef['params'] = []): ActionDef {
   return {
     id: asActionId(id),
     actor: 'active',
     executor: 'actor',
     phase: [phaseId],
-    params: [],
+    params,
     pre: null,
     cost: [],
     effects: [],
@@ -71,7 +71,11 @@ function createBaseDef(agents: AgentPolicyCatalog): GameDef {
   };
 }
 
-function createCatalog(overrides: Partial<AgentPolicyCatalog['library']> = {}, profileOverrides?: Partial<AgentPolicyCatalog['profiles']['baseline']>): AgentPolicyCatalog {
+function createCatalog(
+  overrides: Partial<AgentPolicyCatalog['library']> = {},
+  profileOverrides?: Partial<AgentPolicyCatalog['profiles']['baseline']>,
+  candidateParamDefs: AgentPolicyCatalog['candidateParamDefs'] = {},
+): AgentPolicyCatalog {
   return {
     schemaVersion: 1,
     catalogFingerprint: 'catalog',
@@ -85,6 +89,7 @@ function createCatalog(overrides: Partial<AgentPolicyCatalog['library']> = {}, p
         max: 5,
       },
     },
+    candidateParamDefs,
     library: {
       stateFeatures: {
         currentMargin: {
@@ -394,5 +399,72 @@ describe('policy-eval', () => {
     assert.equal(result.move.actionId, asActionId('alpha'));
     assert.equal(result.metadata.usedFallback, false);
     assert.equal(result.metadata.failure, null);
+  });
+
+  it('reads candidate params through compiled candidate-param defs and treats shape mismatches as unknown', () => {
+    const agents = createCatalog(
+      {
+        candidateFeatures: {
+          cardMatch: {
+            type: 'boolean',
+            costClass: 'candidate',
+            expr: { eq: [{ ref: 'candidate.param.eventCardId' }, 'card-2'] },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+          targetCount: {
+            type: 'number',
+            costClass: 'candidate',
+            expr: { coalesce: [{ ref: 'candidate.param.targetCount' }, 0] },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+        },
+        scoreTerms: {
+          preferMatchingCard: {
+            costClass: 'candidate',
+            weight: 5,
+            value: { boolToNumber: { ref: 'feature.cardMatch' } },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['cardMatch'], aggregates: [] },
+          },
+          preferHigherTargetCount: {
+            costClass: 'candidate',
+            weight: 1,
+            value: { ref: 'feature.targetCount' },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['targetCount'], aggregates: [] },
+          },
+        },
+      },
+      {
+        use: {
+          pruningRules: [],
+          scoreTerms: ['preferMatchingCard', 'preferHigherTargetCount'],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: [],
+          candidateFeatures: ['cardMatch', 'targetCount'],
+          candidateAggregates: [],
+        },
+      },
+      {
+        eventCardId: { type: 'id' },
+        targetCount: { type: 'number' },
+      },
+    );
+    const input = createInput(agents, [
+      { actionId: asActionId('alpha'), params: { eventCardId: 'card-2', targetCount: 2 } },
+      { actionId: asActionId('beta'), params: { eventCardId: ['card-2'], targetCount: '2' } },
+    ]);
+
+    const result = evaluatePolicyMove(input);
+
+    assert.equal(result.move.actionId, asActionId('alpha'));
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'alpha')?.score,
+      7,
+    );
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'beta')?.score,
+      0,
+    );
   });
 });

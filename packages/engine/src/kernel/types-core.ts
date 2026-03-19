@@ -316,6 +316,10 @@ export interface CompiledAgentParameterDef {
   readonly allowedIds?: readonly string[];
 }
 
+export interface CompiledAgentCandidateParamDef {
+  readonly type: AgentPolicyValueType;
+}
+
 export interface CompiledAgentDependencyRefs {
   readonly parameters: readonly string[];
   readonly stateFeatures: readonly string[];
@@ -402,6 +406,7 @@ export interface AgentPolicyCatalog {
   readonly schemaVersion: 1;
   readonly catalogFingerprint: string;
   readonly parameterDefs: Readonly<Record<string, CompiledAgentParameterDef>>;
+  readonly candidateParamDefs: Readonly<Record<string, CompiledAgentCandidateParamDef>>;
   readonly library: CompiledAgentLibraryIndex;
   readonly profiles: Readonly<Record<string, CompiledAgentProfile>>;
   readonly bindingsBySeat: Readonly<Record<string, string>>;

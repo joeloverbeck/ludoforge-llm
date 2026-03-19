@@ -11,6 +11,8 @@ function createContext(parameterDefs: Readonly<Record<string, CompiledAgentParam
       switch (refPath) {
         case 'candidate.isPass':
           return { type: 'boolean' as const, costClass: 'candidate' as const };
+        case 'candidate.param.eventCardId':
+          return { type: 'id' as const, costClass: 'candidate' as const };
         case 'feature.currentMargin':
           return {
             type: 'number' as const,
@@ -84,6 +86,20 @@ describe('policy-expr analysis', () => {
     assert.deepEqual(diagnostics, []);
     assert.equal(analysis?.valueType, 'boolean');
     assert.deepEqual(analysis?.dependencies.parameters, ['preferredActions']);
+  });
+
+  it('uses the resolved candidate-param contract for candidate.param refs', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      { eq: [{ ref: 'candidate.param.eventCardId' }, 'card-2'] },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.deepEqual(diagnostics, []);
+    assert.equal(analysis?.valueType, 'boolean');
+    assert.equal(analysis?.costClass, 'candidate');
   });
 
   it('rejects nested preview refs', () => {

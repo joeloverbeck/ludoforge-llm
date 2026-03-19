@@ -516,6 +516,17 @@ const CompiledAgentParameterDefSchema = z
   })
   .strict();
 
+const CompiledAgentCandidateParamDefSchema = z
+  .object({
+    type: z.union([
+      z.literal('number'),
+      z.literal('boolean'),
+      z.literal('id'),
+      z.literal('idList'),
+    ]),
+  })
+  .strict();
+
 const AgentPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
   z.union([
     StringSchema,
@@ -646,6 +657,7 @@ const AgentPolicyCatalogSchema = z
     schemaVersion: z.literal(1),
     catalogFingerprint: StringSchema,
     parameterDefs: z.record(StringSchema, CompiledAgentParameterDefSchema),
+    candidateParamDefs: z.record(StringSchema, CompiledAgentCandidateParamDefSchema),
     library: CompiledAgentLibraryIndexSchema,
     profiles: z.record(StringSchema, CompiledAgentProfileSchema),
     bindingsBySeat: z.record(StringSchema, StringSchema),

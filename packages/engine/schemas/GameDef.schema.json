@@ -1851,6 +1851,41 @@
             "additionalProperties": false
           }
         },
+        "candidateParamDefs": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "const": "number"
+                  },
+                  {
+                    "type": "string",
+                    "const": "boolean"
+                  },
+                  {
+                    "type": "string",
+                    "const": "id"
+                  },
+                  {
+                    "type": "string",
+                    "const": "idList"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          }
+        },
         "library": {
           "type": "object",
           "properties": {
@@ -2541,6 +2576,7 @@
         "schemaVersion",
         "catalogFingerprint",
         "parameterDefs",
+        "candidateParamDefs",
         "library",
         "profiles",
         "bindingsBySeat"

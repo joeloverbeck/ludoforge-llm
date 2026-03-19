@@ -166,6 +166,7 @@ describe('agents authoring surface', () => {
         allowedIds: ['projected', 'stable'],
       },
     });
+    assert.deepEqual(agents.candidateParamDefs, {});
     assert.deepEqual(agents.library, {
       stateFeatures: {
         currentMargin: {
@@ -769,6 +770,208 @@ describe('agents authoring surface', () => {
     assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_CANDIDATE_PARAM_REF_INVALID' && diagnostic.path === 'doc.agents.library.candidateFeatures.badCandidateParam.expr.ref'));
     assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_AGGREGATE_INPUT_INVALID' && diagnostic.path === 'doc.agents.library.candidateAggregates.badAggregate.of'));
     assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_DIVIDE_BY_ZERO' && diagnostic.path === 'doc.agents.library.scoreTerms.divideByZero.value'));
+  });
+
+  it('derives candidate.param refs from concrete action params instead of agents parameters', () => {
+    const compiled = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      actions: [
+        {
+          id: 'event',
+          actor: 'active',
+          executor: 'actor',
+          phase: ['main'],
+          params: [
+            { name: 'eventCardId', domain: { query: 'enums', values: ['card-1', 'card-2'] } },
+            { name: 'spaces', domain: { query: 'intsInRange', min: 1, max: 3 } },
+          ],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      agents: {
+        parameters: {
+          tuningMode: {
+            type: 'enum',
+            default: 'safe',
+            values: ['safe', 'bold'],
+          },
+        },
+        library: {
+          candidateFeatures: {
+            chosenCard: {
+              type: 'id',
+              expr: { ref: 'candidate.param.eventCardId' },
+            },
+            selectedSpaces: {
+              type: 'number',
+              expr: { ref: 'candidate.param.spaces' },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(compiled.gameDef === null, false);
+    assert.equal(compiled.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+    assert.deepEqual(compiled.gameDef?.agents?.candidateParamDefs, {
+      eventCardId: { type: 'id' },
+      spaces: { type: 'number' },
+    });
+  });
+
+  it('rejects candidate.param refs that alias agents parameters instead of concrete action params', () => {
+    const compiled = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      actions: [
+        {
+          id: 'event',
+          actor: 'active',
+          executor: 'actor',
+          phase: ['main'],
+          params: [{ name: 'eventCardId', domain: { query: 'enums', values: ['card-1'] } }],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      agents: {
+        parameters: {
+          tuningMode: {
+            type: 'enum',
+            default: 'safe',
+            values: ['safe', 'bold'],
+          },
+        },
+        library: {
+          candidateFeatures: {
+            invalidAlias: {
+              type: 'id',
+              expr: { ref: 'candidate.param.tuningMode' },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(compiled.gameDef, null);
+    assert.ok(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_AGENT_CANDIDATE_PARAM_REF_INVALID'
+          && diagnostic.path === 'doc.agents.library.candidateFeatures.invalidAlias.expr.ref',
+      ),
+    );
+  });
+
+  it('rejects candidate.param refs when concrete actions define the same param name with conflicting policy types', () => {
+    const compiled = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      actions: [
+        {
+          id: 'alpha',
+          actor: 'active',
+          executor: 'actor',
+          phase: ['main'],
+          params: [{ name: 'target', domain: { query: 'enums', values: ['zone-a', 'zone-b'] } }],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: 'beta',
+          actor: 'active',
+          executor: 'actor',
+          phase: ['main'],
+          params: [{ name: 'target', domain: { query: 'intsInRange', min: 1, max: 2 } }],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      agents: {
+        parameters: {},
+        library: {
+          candidateFeatures: {
+            conflictingTarget: {
+              type: 'id',
+              expr: { ref: 'candidate.param.target' },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(compiled.gameDef, null);
+    assert.ok(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_AGENT_CANDIDATE_PARAM_REF_INVALID'
+          && diagnostic.path === 'doc.agents.library.candidateFeatures.conflictingTarget.expr.ref',
+      ),
+    );
   });
 
   it('rejects metric refs whose ids are not declared in authored derivedMetrics', () => {

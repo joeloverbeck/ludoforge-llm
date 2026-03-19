@@ -1,6 +1,7 @@
 import { fingerprintPolicyIr } from '../agents/policy-ir.js';
 import { analyzePolicyExpr, type AnalyzePolicyExprContext, type ResolvedPolicyRef } from '../agents/policy-expr.js';
 import type { Diagnostic } from '../kernel/diagnostics.js';
+import { inferQueryRuntimeShapes } from '../kernel/query-shape-inference.js';
 import type {
   AgentParameterType,
   AgentParameterValue,
@@ -9,6 +10,7 @@ import type {
   AgentPolicyExpr,
   AgentPolicyValueType,
   CompiledAgentAggregate,
+  CompiledAgentCandidateParamDef,
   CompiledAgentCandidateFeature,
   CompiledAgentDependencyRefs,
   CompiledAgentLibraryIndex,
@@ -53,6 +55,7 @@ const TIE_BREAKER_KINDS = new Set<TieBreakerKind>([
 export interface LowerAgentsOptions {
   readonly referenceSeatIds?: readonly string[];
   readonly policyMetricIds?: readonly string[];
+  readonly actionDefs?: GameDef['actions'];
 }
 
 export function lowerAgents(
@@ -65,7 +68,8 @@ export function lowerAgents(
   }
 
   const parameterDefs = lowerParameterDefs(agents.parameters, diagnostics);
-  const libraryCompiler = new AgentLibraryCompiler(agents.library, parameterDefs, diagnostics, options);
+  const candidateParamDefs = lowerCandidateParamDefs(options.actionDefs);
+  const libraryCompiler = new AgentLibraryCompiler(agents.library, parameterDefs, candidateParamDefs, diagnostics, options);
   const library = libraryCompiler.compile();
   const profiles = addProfileFingerprints(
     lowerProfiles(agents.profiles, agents.library, library, parameterDefs, diagnostics),
@@ -74,6 +78,7 @@ export function lowerAgents(
   const catalogWithoutFingerprint = {
     schemaVersion: 1,
     parameterDefs,
+    candidateParamDefs,
     library,
     profiles,
     bindingsBySeat,
@@ -114,6 +119,61 @@ function lowerParameterDefs(
   }
 
   return compiled;
+}
+
+function lowerCandidateParamDefs(
+  actions: GameDef['actions'] | undefined,
+): AgentPolicyCatalog['candidateParamDefs'] {
+  const compiled: Record<string, CompiledAgentCandidateParamDef> = {};
+  if (actions === undefined) {
+    return compiled;
+  }
+
+  const candidateParamTypes = new Map<string, AgentPolicyValueType | null>();
+  for (const action of actions) {
+    for (const param of action.params) {
+      const candidateType = classifyCandidateParamType(param.domain);
+      const existingType = candidateParamTypes.get(param.name);
+      if (existingType === null || candidateType === null) {
+        candidateParamTypes.set(param.name, null);
+        continue;
+      }
+      if (existingType === undefined) {
+        candidateParamTypes.set(param.name, candidateType);
+        continue;
+      }
+      if (existingType !== candidateType) {
+        candidateParamTypes.set(param.name, null);
+      }
+    }
+  }
+
+  for (const [paramName, candidateType] of candidateParamTypes.entries()) {
+    if (candidateType !== null) {
+      compiled[paramName] = { type: candidateType };
+    }
+  }
+
+  return compiled;
+}
+
+function classifyCandidateParamType(
+  domain: GameDef['actions'][number]['params'][number]['domain'],
+): AgentPolicyValueType | null {
+  const runtimeShapes = inferQueryRuntimeShapes(domain);
+  if (runtimeShapes.length !== 1) {
+    return null;
+  }
+
+  switch (runtimeShapes[0]) {
+    case 'number':
+      return 'number';
+    case 'string':
+    case 'token':
+      return 'id';
+    default:
+      return null;
+  }
 }
 
 function lowerParameterDef(
@@ -563,6 +623,7 @@ class AgentLibraryCompiler {
   constructor(
     authoredLibrary: GameSpecAgentLibrary | undefined,
     private readonly parameterDefs: Readonly<Record<string, CompiledAgentParameterDef>>,
+    private readonly candidateParamDefs: Readonly<Record<string, CompiledAgentCandidateParamDef>>,
     private readonly diagnostics: Diagnostic[],
     private readonly options: LowerAgentsOptions,
   ) {
@@ -1077,15 +1138,14 @@ class AgentLibraryCompiler {
         this.reportInvalidCandidateParamRef(refPath, path);
         return null;
       }
-      const parameterDef = this.parameterDefs[candidateParamPath];
-      if (parameterDef === undefined) {
+      const candidateParamDef = this.candidateParamDefs[candidateParamPath];
+      if (candidateParamDef === undefined) {
         this.reportInvalidCandidateParamRef(refPath, path);
         return null;
       }
       return {
-        type: parameterTypeToPolicyValueType(parameterDef.type),
+        type: candidateParamDef.type,
         costClass: 'candidate',
-        dependency: { kind: 'parameters', id: candidateParamPath },
       };
     }
 
@@ -1168,7 +1228,7 @@ class AgentLibraryCompiler {
       path,
       severity: 'error',
       message: `Invalid candidate param ref "${refPath}".`,
-      suggestion: 'Use exactly candidate.param.<parameterId> with a declared agents parameter id.',
+      suggestion: 'Use exactly candidate.param.<paramName> for a concrete move param with a policy-visible compiled candidate-param contract.',
     });
   }
 
@@ -1543,19 +1603,6 @@ function isPolicyValueType(value: unknown): value is AgentPolicyValueType {
   return typeof value === 'string' && POLICY_VALUE_TYPES.includes(value as AgentPolicyValueType);
 }
 
-function parameterTypeToPolicyValueType(type: CompiledAgentParameterDef['type']): AgentPolicyValueType {
-  switch (type) {
-    case 'number':
-    case 'integer':
-      return 'number';
-    case 'boolean':
-      return 'boolean';
-    case 'enum':
-      return 'id';
-    case 'idOrder':
-      return 'idList';
-  }
-}
 
 function diagnosticsContainProfileUseErrors(profileId: string, diagnostics: readonly Diagnostic[]): boolean {
   return diagnostics.some(

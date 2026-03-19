@@ -21,8 +21,6 @@ import { EventDeckPanel } from './EventDeckPanel.js';
 import { LoadingState } from './LoadingState.js';
 import { InterruptBanner } from './InterruptBanner.js';
 import { PhaseIndicator } from './PhaseIndicator.js';
-import { Scoreboard } from './Scoreboard.js';
-import { GlobalMarkersBar } from './GlobalMarkersBar.js';
 import { ActiveEffectsPanel } from './ActiveEffectsPanel.js';
 import { TurnOrderDisplay } from './TurnOrderDisplay.js';
 import { UndoControl } from './UndoControl.js';
@@ -75,8 +73,6 @@ const OVERLAY_REGION_PANELS: Readonly<Record<OverlayRegion, readonly OverlayPane
     EligiblePanel,
   ],
   right: [
-    Scoreboard,
-    GlobalMarkersBar,
     ActiveEffectsPanel,
   ],
   floating: [

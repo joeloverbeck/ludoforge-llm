@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner projection cleanup only
-**Deps**: specs/61-runner-right-rail-cleanup-and-event-log-dock.md, archive/tickets/RUNARCH/61RUNRIGRAI-003-delete-variables-panel-and-variables-visual-config-contract.md, tickets/61RUNRIGRAI-004-delete-scoreboard-and-global-markers-placeholder-widgets.md
+**Deps**: specs/61-runner-right-rail-cleanup-and-event-log-dock.md, archive/tickets/RUNARCH/61RUNRIGRAI-003-delete-variables-panel-and-variables-visual-config-contract.md, archive/tickets/RUNARCH/61RUNRIGRAI-004-delete-scoreboard-and-global-markers-placeholder-widgets.md
 
 ## Problem
 

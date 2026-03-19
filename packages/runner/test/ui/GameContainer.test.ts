@@ -144,14 +144,6 @@ vi.mock('../../src/ui/InterruptBanner.js', () => ({
   InterruptBanner: () => createElement('div', { 'data-testid': 'interrupt-banner' }),
 }));
 
-vi.mock('../../src/ui/Scoreboard.js', () => ({
-  Scoreboard: () => createElement('div', { 'data-testid': 'scoreboard' }),
-}));
-
-vi.mock('../../src/ui/GlobalMarkersBar.js', () => ({
-  GlobalMarkersBar: () => createElement('div', { 'data-testid': 'global-markers-bar' }),
-}));
-
 vi.mock('../../src/ui/ActiveEffectsPanel.js', () => ({
   ActiveEffectsPanel: () => createElement('div', { 'data-testid': 'active-effects-panel' }),
 }));
@@ -389,10 +381,10 @@ describe('GameContainer', () => {
     expect(topSessionHtml).not.toContain('data-testid="settings-menu"');
     expect(html).toContain('data-testid="settings-menu-trigger"');
     expect(html).not.toContain('data-testid="variables-panel"');
-    expect(rightRailHtml).toContain('data-testid="scoreboard"');
-    expect(rightRailHtml).toContain('data-testid="global-markers-bar"');
     expect(rightRailHtml).toContain('data-testid="active-effects-panel"');
     expect(rightRailHtml).not.toContain('data-testid="event-log-panel"');
+    expect(rightRailHtml).not.toContain('data-testid="scoreboard"');
+    expect(rightRailHtml).not.toContain('data-testid="global-markers-bar"');
     expect(bottomDockHtml).toContain('data-testid="event-log-panel"');
     expect(html).toContain('data-testid="warnings-toast"');
     expect(html).toContain('data-testid="player-hand-panel"');
@@ -408,8 +400,6 @@ describe('GameContainer', () => {
     expectAppearsInOrder(html, [
       'settings-menu-trigger',
       'event-log-toggle-button',
-      'scoreboard',
-      'global-markers-bar',
       'active-effects-panel',
     ]);
     expect(testDoubles.tooltipLayerProps).toMatchObject({
@@ -530,9 +520,9 @@ describe('GameContainer', () => {
     expect(topSessionHtml).toContain('data-testid="settings-menu-trigger"');
     expect(html).toContain('data-testid="settings-menu-trigger"');
     expect(html).not.toContain('data-testid="variables-panel"');
-    expect(rightRailHtml).toContain('data-testid="scoreboard"');
-    expect(rightRailHtml).toContain('data-testid="global-markers-bar"');
     expect(rightRailHtml).toContain('data-testid="active-effects-panel"');
+    expect(rightRailHtml).not.toContain('data-testid="scoreboard"');
+    expect(rightRailHtml).not.toContain('data-testid="global-markers-bar"');
     expect(html).toContain('data-testid="player-hand-panel"');
     expect(html).toContain('data-testid="terminal-overlay"');
     expectAppearsInOrder(html, [
@@ -543,8 +533,6 @@ describe('GameContainer', () => {
     ]);
     expectAppearsInOrder(html, [
       'settings-menu-trigger',
-      'scoreboard',
-      'global-markers-bar',
       'active-effects-panel',
     ]);
   });

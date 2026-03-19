@@ -46,14 +46,6 @@ vi.mock('../../src/ui/PhaseIndicator.js', () => ({
   PhaseIndicator: () => createElement('div'),
 }));
 
-vi.mock('../../src/ui/Scoreboard.js', () => ({
-  Scoreboard: () => createElement('div'),
-}));
-
-vi.mock('../../src/ui/GlobalMarkersBar.js', () => ({
-  GlobalMarkersBar: () => createElement('div'),
-}));
-
 vi.mock('../../src/ui/ActiveEffectsPanel.js', () => ({
   ActiveEffectsPanel: () => createElement('div'),
 }));

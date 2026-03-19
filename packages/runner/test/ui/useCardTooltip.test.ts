@@ -166,4 +166,40 @@ describe('useCardTooltip', () => {
     expect(result.current.cardTooltipState.anchorElement).toBeNull();
     expect(result.current.cardTooltipState.status).toBe('idle');
   });
+
+  it('supports explicit dismiss after becoming visible', () => {
+    const { result } = renderHook(() => useCardTooltip());
+
+    act(() => {
+      result.current.onCardHoverStart(makeCard(), createAnchorElement());
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(result.current.cardTooltipState.card).not.toBeNull();
+
+    act(() => {
+      result.current.dismissCardTooltip();
+    });
+
+    expect(result.current.cardTooltipState.card).toBeNull();
+    expect(result.current.cardTooltipState.anchorElement).toBeNull();
+    expect(result.current.cardTooltipState.status).toBe('idle');
+  });
+
+  it('replaces a pending hover with the latest hovered card', () => {
+    const { result } = renderHook(() => useCardTooltip());
+    const firstCard = makeCard({ id: 'card-1', title: 'Containment' });
+    const secondCard = makeCard({ id: 'card-2', title: 'Ambush' });
+
+    act(() => {
+      result.current.onCardHoverStart(firstCard, createAnchorElement());
+      vi.advanceTimersByTime(100);
+      result.current.onCardHoverStart(secondCard, createAnchorElement());
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(result.current.cardTooltipState.card).toBe(secondCard);
+    expect(result.current.cardTooltipState.card).not.toBe(firstCard);
+    expect(result.current.cardTooltipState.status).toBe('visible');
+  });
 });

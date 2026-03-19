@@ -23,6 +23,32 @@ const testDoubles = vi.hoisted(() => ({
     revision: 0,
   },
   invalidateActionTooltip: vi.fn(),
+  cardTooltipState: {
+    card: null as {
+      readonly id: string;
+      readonly title: string;
+      readonly orderNumber: number | null;
+      readonly eligibility: null;
+      readonly sideMode: 'single' | 'dual';
+      readonly unshadedText: string | null;
+      readonly shadedText: string | null;
+    } | null,
+    anchorElement: null as HTMLElement | null,
+    status: 'idle' as const,
+    interactionOwner: null as null,
+    revision: 0,
+  },
+  onCardTooltipPointerEnter: vi.fn(),
+  onCardTooltipPointerLeave: vi.fn(),
+  eventCardTooltipProps: null as {
+    readonly card: {
+      readonly id: string;
+      readonly title: string;
+    };
+    readonly anchorElement: HTMLElement;
+    readonly onPointerEnter?: () => void;
+    readonly onPointerLeave?: () => void;
+  } | null,
 }));
 
 vi.mock('../../src/canvas/GameCanvas.js', () => ({
@@ -94,7 +120,10 @@ vi.mock('../../src/ui/ActionTooltip.js', () => ({
 }));
 
 vi.mock('../../src/ui/EventCardTooltip.js', () => ({
-  EventCardTooltip: () => createElement('div'),
+  EventCardTooltip: (props: NonNullable<typeof testDoubles.eventCardTooltipProps>) => {
+    testDoubles.eventCardTooltipProps = props;
+    return createElement('div', { 'data-testid': 'event-card-tooltip' });
+  },
 }));
 
 vi.mock('../../src/ui/PhaseBannerOverlay.js', () => ({
@@ -134,14 +163,11 @@ vi.mock('../../src/ui/useActionTooltip.js', () => ({
 
 vi.mock('../../src/ui/useCardTooltip.js', () => ({
   useCardTooltip: () => ({
-    cardTooltipState: {
-      card: null,
-      anchorElement: null,
-    },
+    cardTooltipState: testDoubles.cardTooltipState,
     onCardHoverStart: vi.fn(),
     onCardHoverEnd: vi.fn(),
-    onCardTooltipPointerEnter: vi.fn(),
-    onCardTooltipPointerLeave: vi.fn(),
+    onCardTooltipPointerEnter: testDoubles.onCardTooltipPointerEnter,
+    onCardTooltipPointerLeave: testDoubles.onCardTooltipPointerLeave,
   }),
 }));
 
@@ -199,10 +225,20 @@ function setVisibleActionTooltipState(surfaceRevision: number): void {
 afterEach(() => {
   cleanup();
   testDoubles.invalidateActionTooltip.mockReset();
+  testDoubles.onCardTooltipPointerEnter.mockReset();
+  testDoubles.onCardTooltipPointerLeave.mockReset();
+  testDoubles.eventCardTooltipProps = null;
   testDoubles.actionTooltipState = {
     sourceKey: null,
     description: null,
     loading: false,
+    anchorElement: null,
+    status: 'idle',
+    interactionOwner: null,
+    revision: 0,
+  };
+  testDoubles.cardTooltipState = {
+    card: null,
     anchorElement: null,
     status: 'idle',
     interactionOwner: null,
@@ -441,5 +477,46 @@ describe('GameContainer chrome state', () => {
       rendered.unmount();
       testDoubles.invalidateActionTooltip.mockReset();
     }
+  });
+
+  it('wires visible card tooltip state into EventCardTooltip', async () => {
+    const anchorElement = document.createElement('div');
+    testDoubles.cardTooltipState = {
+      card: {
+        id: 'card-1',
+        title: 'Containment',
+        orderNumber: 5,
+        eligibility: null,
+        sideMode: 'dual',
+        unshadedText: 'Aid +6.',
+        shadedText: 'NVA Resources +6.',
+      },
+      anchorElement,
+      status: 'visible',
+      interactionOwner: 'source',
+      revision: 1,
+    };
+
+    render(createElement(GameContainer, {
+      bridge: TEST_BRIDGE,
+      store: createContainerStore({
+        renderModel: makeActionRenderModel(),
+      }),
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+    }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('event-card-tooltip')).toBeTruthy();
+    });
+
+    expect(testDoubles.eventCardTooltipProps).toMatchObject({
+      card: {
+        id: 'card-1',
+        title: 'Containment',
+      },
+      anchorElement,
+      onPointerEnter: testDoubles.onCardTooltipPointerEnter,
+      onPointerLeave: testDoubles.onCardTooltipPointerLeave,
+    });
   });
 });

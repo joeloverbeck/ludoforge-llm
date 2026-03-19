@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: `specs/60-runner-hover-tooltip-lifecycle.md`
+**Deps**: `archive/specs/60-runner-hover-tooltip-lifecycle.md`
 
 ## Problem
 

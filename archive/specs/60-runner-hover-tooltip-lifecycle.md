@@ -1,8 +1,6 @@
 # Spec 60 — Runner Hover Tooltip Lifecycle
 
-## Status
-
-Proposed
+**Status**: COMPLETED
 
 ## Summary
 
@@ -258,6 +256,29 @@ Add a runner integration test matching the real bug:
 
 1. hover action button
 2. tooltip appears
+
+## Outcome
+
+Completed: 2026-03-19
+
+What actually changed:
+- added a shared hover-popover session controller in `packages/runner/src/ui/useHoverPopoverSession.ts` and moved both action and card tooltip hooks onto that common lifecycle model
+- added a shared floating-anchor resolver in `packages/runner/src/ui/useResolvedFloatingAnchor.ts`, rewired runner tooltip components to fail closed on detached anchors or unresolved coordinates, and removed visible `(0, 0)` fallback placement
+- introduced structured action tooltip source keys plus container-owned action-surface invalidation in `ActionToolbar`, `useActionTooltip()`, and `GameContainer` so stale action tooltips are dismissed when the action surface rebuilds, confirms, cancels, undoes, changes player, or leaves `'actions'`
+- completed the sequence with regression coverage proving card tooltip wiring still follows the shared hover architecture and the stale action-tooltip scenario stays fixed
+
+Deviations from original plan:
+- the work landed as four narrower runner tickets instead of one monolithic refactor
+- the final event-card slice required only test and wiring verification rather than additional production refactors because the shared hover/session and anchor infrastructure was already in place
+
+Verification results:
+- `pnpm -F @ludoforge/runner test -- useHoverPopoverSession useActionTooltip useCardTooltip`
+- `pnpm -F @ludoforge/runner test -- ActionTooltip EventCardTooltip TooltipLayer`
+- `pnpm -F @ludoforge/runner test -- ActionToolbar useActionTooltip GameContainer.chrome`
+- `pnpm -F @ludoforge/runner test -- useCardTooltip EventCardTooltip GameContainer`
+- `pnpm -F @ludoforge/runner test`
+- `pnpm -F @ludoforge/runner lint`
+- `pnpm -F @ludoforge/runner typecheck`
 3. execute and confirm action
 4. action surface refreshes
 5. tooltip is absent unless a new live hover begins

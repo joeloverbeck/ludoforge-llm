@@ -1,6 +1,6 @@
 # Spec 60: Runner Control Surface and Settings Menu
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P2
 **Complexity**: M
 **Dependencies**: Spec 42 (Per-Game Visual Config), Spec 43 (Session Management), Spec 59 (Codebase Health Audit)
@@ -452,3 +452,19 @@ Likely files:
 - New game-specific HUD widgets
 - Persistence of user preferences across sessions
 - Mobile-first re-layout of the entire runner shell
+
+## Outcome
+
+- Completion date: 2026-03-19
+- What actually changed:
+  - Added a dedicated runner UI store for chrome state, including settings-menu visibility and event-log visibility.
+  - Split overlay chrome into explicit status and session lanes so runner controls no longer share the same surface as persistent game-state HUD content.
+  - Introduced a typed runner control descriptor builder plus reusable settings-menu surface and trigger components.
+  - Wired the settings menu into `GameContainer`, removed the legacy always-visible `AnimationControls` surface, and added a narrow `runnerChrome.topBar.statusAlignment` visual-config hint.
+- Deviations from original plan:
+  - The spec landed as a focused ticket series rather than one monolithic change, which produced a cleaner architectural progression and better test isolation.
+  - The visual-config extension stayed intentionally narrow; speculative spacing and compactness knobs were not added because the runner did not yet have durable generic consumers for them.
+- Verification results:
+  - `pnpm -F @ludoforge/runner test`
+  - `pnpm -F @ludoforge/runner typecheck`
+  - `pnpm -F @ludoforge/runner lint`

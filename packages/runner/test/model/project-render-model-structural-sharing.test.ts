@@ -2,14 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '@ludoforge/engine/cnl';
 import {
   asActionId,
+  asPhaseId,
   asPlayerId,
   asTokenId,
+  asZoneId,
   initialState,
   type GameDef,
   type GameState,
   type Token,
 } from '@ludoforge/engine/runtime';
 
+import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import type { RenderContext } from '../../src/store/store-types.js';
 import { deriveProjectedRenderModel } from './helpers/derive-projected-render-model.js';
 
@@ -71,6 +74,49 @@ function compileFixture(): GameDef {
   }
 
   return compiled.gameDef;
+}
+
+function compileShowdownFixture(): GameDef {
+  const base = compileFixture();
+  return {
+    ...base,
+    perPlayerVars: [
+      ...base.perPlayerVars,
+      {
+        name: 'showdownScore',
+        type: 'int',
+        init: 0,
+        min: 0,
+        max: 10_000_000,
+      },
+    ],
+    zones: [
+      ...base.zones,
+      {
+        id: asZoneId('community:none'),
+        owner: 'none',
+        visibility: 'public',
+        ordering: 'queue',
+      },
+      {
+        id: asZoneId('hand:0'),
+        owner: 'player',
+        ownerPlayerIndex: 0,
+        visibility: 'owner',
+        ordering: 'set',
+      },
+      {
+        id: asZoneId('hand:1'),
+        owner: 'player',
+        ownerPlayerIndex: 1,
+        visibility: 'owner',
+        ordering: 'set',
+      },
+    ],
+    turnStructure: {
+      phases: [{ id: asPhaseId('main') }, { id: asPhaseId('showdown') }],
+    },
+  };
 }
 
 function makeContext(overrides: Partial<RenderContext> = {}): RenderContext {
@@ -173,5 +219,77 @@ describe('projectRenderModel structural sharing', () => {
 
     expect(secondTokenOne).not.toBe(firstTokenOne);
     expect(secondTokenTwo).toBe(firstTokenTwo);
+  });
+
+  it('reuses the showdown surface reference when the projected showdown output is unchanged', () => {
+    const def = compileShowdownFixture();
+    const base = initialState(def, 123, 2).state;
+    const state: GameState = {
+      ...base,
+      currentPhase: asPhaseId('showdown'),
+      perPlayerVars: {
+        ...base.perPlayerVars,
+        '0': { ...base.perPlayerVars['0'], showdownScore: 8500000 },
+        '1': { ...base.perPlayerVars['1'], showdownScore: 3200000 },
+      },
+      zones: {
+        ...base.zones,
+        'community:none': [
+          token('tok:c1', { rank: 'A', suit: 'hearts' }),
+          token('tok:c2', { rank: 'K', suit: 'spades' }),
+        ],
+        'hand:0': [
+          token('tok:h0a', { rank: 'J', suit: 'clubs' }),
+          token('tok:h0b', { rank: 'J', suit: 'diamonds' }),
+        ],
+        'hand:1': [
+          token('tok:h1a', { rank: '9', suit: 'clubs' }),
+          token('tok:h1b', { rank: '8', suit: 'diamonds' }),
+        ],
+      },
+    };
+    const visualConfigProvider = new VisualConfigProvider({
+      version: 1,
+      runnerSurfaces: {
+        showdown: {
+          when: { phase: 'showdown' },
+          ranking: {
+            source: {
+              kind: 'perPlayerVar',
+              name: 'showdownScore',
+            },
+            hideZeroScores: false,
+          },
+          communityCards: {
+            zones: ['community:none'],
+          },
+          playerCards: {
+            zones: ['hand:0', 'hand:1'],
+          },
+        },
+      },
+    });
+
+    const first = deriveProjectedRenderModel(state, def, makeContext(), {
+      visualConfigProvider,
+    });
+    const second = deriveProjectedRenderModel(
+      state,
+      def,
+      makeContext({
+        legalMoveResult: {
+          moves: [],
+          warnings: [{ code: 'EMPTY_QUERY_RESULT', message: 'unrelated change', context: {} }],
+        },
+      }),
+      {
+        previous: first,
+        visualConfigProvider,
+      },
+    );
+
+    expect(first.model.surfaces.showdown).not.toBeNull();
+    expect(second.model.surfaces).toBe(first.model.surfaces);
+    expect(second.model.surfaces.showdown).toBe(first.model.surfaces.showdown);
   });
 });

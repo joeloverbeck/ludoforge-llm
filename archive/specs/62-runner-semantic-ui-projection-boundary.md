@@ -1,6 +1,6 @@
 # Spec 62: Runner Semantic/UI Projection Boundary
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P2
 **Complexity**: M
 **Dependencies**: Spec 60 (Runner Control Surface and Settings Menu), archive/specs/61-runner-right-rail-cleanup-and-event-log-dock.md, current `packages/runner` projection/presentation architecture, current `visual-config.yaml` schema/provider boundary
@@ -539,3 +539,20 @@ No compatibility shims. No aliasing. If something breaks, fix the consumer again
 - Migrating late-derived overlay logic may temporarily increase churn across tests and update/equality code.
 
 These risks are acceptable if the implementation preserves the core rule: semantic truth stays generic, game-specific presentation wiring lives in `visual-config.yaml`, and UI consumers render explicit surface models only.
+
+## Outcome
+
+- Completion date: 2026-03-19
+- What actually changed:
+  - Introduced `RunnerProjectionBundle` / `RunnerProjectionSource` so raw vars remain internal projection input instead of public runner-frame state.
+  - Added explicit render-surface ownership under `RenderModel.surfaces` and moved showdown onto a config-driven explicit surface contract.
+  - Projected table overlays before scene assembly while keeping anchored overlay projection on the internal projection/world-layout side of the boundary rather than forcing it onto `RenderModel`.
+  - Introduced store-owned `WorldLayoutModel`, migrated anchored presentation consumers to it, and renamed the remaining canvas runtime adapter from `position-store` terminology to `runtime-layout-store`.
+  - Finished the series with structural-sharing and boundary-hardening tests so the semantic/UI/layout split is enforced by the suite.
+- Deviations from original plan:
+  - Table overlays did not become `RenderModel.surfaces.tableOverlays`; the final architecture kept them as anchored canvas projection derived from internal semantic source plus world layout, which is cleaner than widening the public DOM-facing render-model contract.
+  - The spec landed through a focused ticket series, and several later tickets were narrowed after reassessment because parts of the intended architecture had already landed.
+- Verification results:
+  - `pnpm -F @ludoforge/runner test`
+  - `pnpm -F @ludoforge/runner typecheck`
+  - `pnpm -F @ludoforge/runner lint`

@@ -10,19 +10,19 @@ import type { AdjacencyRenderer, TableOverlayRenderer, TokenRenderer, ZoneRender
 import type { ViewportResult } from '../../src/canvas/viewport-setup';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import type { WorldLayoutModel } from '../../src/layout/world-layout-model.js';
-import type { RenderModel, RenderToken, RenderVariable, RenderZone } from '../../src/model/render-model';
+import type { RenderModel, RenderToken, RenderZone } from '../../src/model/render-model';
 import type { RunnerFrame, RunnerProjectionBundle } from '../../src/model/runner-frame.js';
 import type { GameStore } from '../../src/store/game-store';
 
-type RenderModelWithProjectionVars = RenderModel & {
-  readonly globalVars: readonly RenderVariable[];
-  readonly playerVars: ReadonlyMap<PlayerId, readonly RenderVariable[]>;
-};
+interface ProjectionVarsFixture {
+  readonly globalVars: readonly { name: string; value: number | boolean }[];
+  readonly playerVars: ReadonlyMap<PlayerId, readonly { name: string; value: number | boolean }[]>;
+}
 
 interface CanvasTestStoreState {
   readonly runnerProjection: RunnerProjectionBundle | null;
   readonly runnerFrame: RunnerFrame | null;
-  readonly renderModel: RenderModelWithProjectionVars | null;
+  readonly renderModel: RenderModel | null;
   readonly worldLayout: WorldLayoutModel | null;
   readonly animationPlaying: boolean;
 }
@@ -62,13 +62,11 @@ function makeToken(overrides: Partial<RenderToken> = {}): RenderToken {
   };
 }
 
-function makeRenderModel(overrides: Partial<RenderModelWithProjectionVars> = {}): RenderModelWithProjectionVars {
+function makeRenderModel(overrides: Partial<RenderModel> = {}): RenderModel {
   return {
     zones: [makeZone()],
     adjacencies: [{ from: 'zone:a', to: 'zone:b', category: null, isHighlighted: false }],
     tokens: [makeToken()],
-    globalVars: [],
-    playerVars: new Map(),
     activeEffects: [],
     players: [
       {
@@ -125,14 +123,24 @@ function makeWorldLayout(zoneIds: readonly string[]): WorldLayoutModel {
   };
 }
 
+function makeProjectionVars(overrides: Partial<ProjectionVarsFixture> = {}): ProjectionVarsFixture {
+  return {
+    globalVars: [],
+    playerVars: new Map(),
+    ...overrides,
+  };
+}
+
 function createCanvasTestStore(initial: Omit<CanvasTestStoreState, 'runnerProjection' | 'runnerFrame' | 'worldLayout'> & {
   worldLayout?: WorldLayoutModel | null;
   runnerProjection?: RunnerProjectionBundle | null;
   runnerFrame?: RunnerFrame | null;
+  projectionVars?: ProjectionVarsFixture;
 }): StoreApi<CanvasTestStoreState> {
   const derivedZoneIds = initial.renderModel?.zones.map((zone) => zone.id) ?? [];
+  const projectionVars = initial.projectionVars ?? makeProjectionVars();
   const snapshot: CanvasTestStoreState = {
-    runnerProjection: initial.runnerProjection ?? (initial.renderModel === null ? null : toRunnerProjection(initial.renderModel)),
+    runnerProjection: initial.runnerProjection ?? (initial.renderModel === null ? null : toRunnerProjection(initial.renderModel, projectionVars)),
     runnerFrame: initial.runnerFrame ?? (initial.renderModel === null ? null : toRunnerFrame(initial.renderModel)),
     renderModel: initial.renderModel,
     worldLayout: initial.worldLayout ?? makeWorldLayout(derivedZoneIds),
@@ -152,7 +160,7 @@ function createCanvasTestStore(initial: Omit<CanvasTestStoreState, 'runnerProjec
     runnerProjection: 'runnerProjection' in next
       ? (next.runnerProjection ?? null)
       : 'renderModel' in next
-      ? (next.renderModel === null ? null : toRunnerProjection(next.renderModel))
+      ? (next.renderModel === null ? null : toRunnerProjection(next.renderModel, projectionVars))
       : state.runnerProjection,
     runnerFrame: 'runnerFrame' in next
       ? (next.runnerFrame ?? null)
@@ -192,7 +200,7 @@ function createCanvasTestStore(initial: Omit<CanvasTestStoreState, 'runnerProjec
   return store;
 }
 
-function toRunnerFrame(renderModel: RenderModelWithProjectionVars): RunnerFrame {
+function toRunnerFrame(renderModel: RenderModel): RunnerFrame {
   return {
     zones: renderModel.zones.map((zone) => ({
       id: zone.id,
@@ -243,13 +251,16 @@ function toRunnerFrame(renderModel: RenderModelWithProjectionVars): RunnerFrame 
   };
 }
 
-function toRunnerProjection(renderModel: RenderModelWithProjectionVars): RunnerProjectionBundle {
+function toRunnerProjection(
+  renderModel: RenderModel,
+  projectionVars: ProjectionVarsFixture,
+): RunnerProjectionBundle {
   return {
     frame: toRunnerFrame(renderModel),
     source: {
-      globalVars: renderModel.globalVars.map(({ name, value }) => ({ name, value })),
+      globalVars: projectionVars.globalVars.map(({ name, value }) => ({ name, value })),
       playerVars: new Map(
-        Array.from(renderModel.playerVars.entries()).map(([playerId, vars]) => [
+        Array.from(projectionVars.playerVars.entries()).map(([playerId, vars]) => [
           playerId,
           vars.map(({ name, value }) => ({ name, value })),
         ]),
@@ -447,10 +458,14 @@ describe('createCanvasUpdater', () => {
   });
 
   it('updates table overlays when projected overlay output changes even if zones/tokens/adjacencies are unchanged', () => {
-    const model = makeRenderModel({
-      globalVars: [asVar('pot', 10)],
+    const model = makeRenderModel();
+    const store = createCanvasTestStore({
+      renderModel: model,
+      projectionVars: makeProjectionVars({
+        globalVars: [asVar('pot', 10)],
+      }),
+      animationPlaying: false,
     });
-    const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
     const runtimeLayoutStore = createRuntimeLayoutStore(['zone:a']);
 
     const renderers = createRendererMocks();
@@ -473,9 +488,10 @@ describe('createCanvasUpdater', () => {
     vi.clearAllMocks();
 
     store.setState({
-      renderModel: makeRenderModel({
+      renderModel: makeRenderModel(),
+      runnerProjection: toRunnerProjection(makeRenderModel(), makeProjectionVars({
         globalVars: [asVar('pot', 25)],
-      }),
+      })),
     });
 
     expect(renderers.tableOverlayRenderer.update).toHaveBeenCalledTimes(1);
@@ -485,10 +501,14 @@ describe('createCanvasUpdater', () => {
   });
 
   it('does not update table overlays when unrelated raw vars change but projected overlay nodes stay the same', () => {
-    const model = makeRenderModel({
-      globalVars: [asVar('pot', 10), asVar('round', 1)],
+    const model = makeRenderModel();
+    const store = createCanvasTestStore({
+      renderModel: model,
+      projectionVars: makeProjectionVars({
+        globalVars: [asVar('pot', 10), asVar('round', 1)],
+      }),
+      animationPlaying: false,
     });
-    const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
     const runtimeLayoutStore = createRuntimeLayoutStore(['zone:a']);
 
     const renderers = createRendererMocks();
@@ -511,9 +531,10 @@ describe('createCanvasUpdater', () => {
     vi.clearAllMocks();
 
     store.setState({
-      renderModel: makeRenderModel({
+      renderModel: makeRenderModel(),
+      runnerProjection: toRunnerProjection(makeRenderModel(), makeProjectionVars({
         globalVars: [asVar('pot', 10), asVar('round', 2)],
-      }),
+      })),
     });
 
     expect(renderers.tableOverlayRenderer.update).not.toHaveBeenCalled();
@@ -523,11 +544,12 @@ describe('createCanvasUpdater', () => {
   });
 
   it('updates table overlays when world layout changes even if semantic projection is unchanged', () => {
-    const model = makeRenderModel({
-      globalVars: [asVar('pot', 10)],
-    });
+    const model = makeRenderModel();
     const store = createCanvasTestStore({
       renderModel: model,
+      projectionVars: makeProjectionVars({
+        globalVars: [asVar('pot', 10)],
+      }),
       worldLayout: makeWorldLayout(['zone:a']),
       animationPlaying: false,
     });

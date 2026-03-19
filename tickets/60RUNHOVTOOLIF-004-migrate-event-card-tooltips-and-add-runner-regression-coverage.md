@@ -8,25 +8,27 @@
 
 ## Problem
 
-Spec 60 explicitly requires action and event-card hover tooltips to share the same lifecycle architecture. Fixing action tooltips alone would remove the immediate stale-tooltip bug, but it would leave `useCardTooltip()` on the older duplicated lifecycle path and preserve inconsistent hover policy across the runner.
+Spec 60 explicitly requires action and event-card hover tooltips to share the same lifecycle architecture. The shared hover-session primitive and shared anchored-floating resolver now exist, but the final runner integration pass still needs to ensure event-card tooltip wiring stays aligned with the post-`003` action-tooltip contract and that the stale-tooltip regression is locked at the container level.
 
 ## Assumption Reassessment (2026-03-19)
 
-1. `packages/runner/src/ui/useCardTooltip.ts` still owns its own debounce/grace state machine today.
-2. `GameContainer` already wires both action and card tooltip hooks, so convergence on one shared hover lifecycle can happen entirely in runner UI code.
-3. The spec’s final acceptance criteria require architectural consistency across action and event-card hover tooltips, not just a one-off action bug fix.
+1. `packages/runner/src/ui/useCardTooltip.ts` no longer owns its own debounce/grace state machine; it already delegates to `packages/runner/src/ui/useHoverPopoverSession.ts`.
+2. `packages/runner/src/ui/EventCardTooltip.tsx` also no longer owns bespoke floating-position glue; it already delegates to `packages/runner/src/ui/useResolvedFloatingAnchor.ts`.
+3. `GameContainer` still wires both action and card tooltip hooks, so final convergence on one shared hover contract remains entirely in runner UI code.
+4. The spec’s final acceptance criteria still require architectural consistency across action and event-card hover tooltips, not just a one-off action bug fix.
 
 ## Architecture Check
 
-1. Migrating event-card tooltips after the shared primitive exists is cleaner than leaving a second legacy hook in place; it removes duplicate lifecycle policy entirely.
-2. Card tooltip lifecycle stays generic presentation logic and does not add any card- or game-specific branching outside existing render-model data.
-3. Regression coverage at the end of the sequence is valuable only after shared lifecycle, anchor gating, and action invalidation are already in place.
+1. This ticket should no longer claim to introduce the shared session primitive or shared anchor resolver for cards; that work is already done.
+2. The remaining architectural value is to keep `GameContainer` and card-tooltip wiring aligned with the final post-`003` contract, so the runner ends with one coherent hover-popover model instead of parallel contracts.
+3. Card tooltip lifecycle stays generic presentation logic and does not add any card- or game-specific branching outside existing render-model data.
+4. Final regression coverage is valuable only after shared lifecycle, anchor gating, and action invalidation are in place, so this ticket still belongs at the end of the sequence.
 
 ## What to Change
 
-### 1. Move event-card hover lifecycle onto the shared session primitive
+### 1. Align event-card tooltip contract with the final shared hover model
 
-Refactor `useCardTooltip()` to consume the shared hover-popover controller/hook rather than managing its own timers directly.
+After `003` lands, update any remaining card-tooltip state naming or prop contracts so card tooltips follow the same runner-level hover session model as action tooltips without introducing aliases or compatibility layers.
 
 ### 2. Align `GameContainer` card-tooltip wiring with the final shared contract
 
@@ -46,7 +48,7 @@ Also keep card tooltip behavior covered so the shared lifecycle architecture sta
 
 ## Files to Touch
 
-- `packages/runner/src/ui/useCardTooltip.ts` (modify)
+- `packages/runner/src/ui/useCardTooltip.ts` (modify only if post-003 contract alignment requires it)
 - `packages/runner/src/ui/GameContainer.tsx` (modify)
 - `packages/runner/src/ui/EventCardTooltip.tsx` (modify only if final shared contract requires it)
 - `packages/runner/test/ui/useCardTooltip.test.ts` (modify)
@@ -75,6 +77,13 @@ Also keep card tooltip behavior covered so the shared lifecycle architecture sta
 1. Action and event-card hover tooltips share the same lifecycle architecture; no duplicated timer/state machine remains.
 2. A hover session only remains visible while backed by a live source and a valid resolved anchor.
 3. No FITL-specific or game-specific conditions are introduced anywhere in runner or engine code to satisfy this ticket.
+
+## Notes
+
+1. `useCardTooltip()` already uses `useHoverPopoverSession()`. Do not re-implement or re-wrap card debounce/grace logic in this ticket.
+2. `EventCardTooltip` already uses the shared resolved-anchor hook. Do not add a second anchor abstraction here.
+3. If `003` lands with a cleaner shared tooltip-session type or naming scheme, prefer converging card wiring onto that contract directly rather than preserving pre-`003` names for compatibility.
+4. The end state should be one runner hover-popover architecture. If `003` fully eliminates any remaining action/card contract divergence, this ticket may collapse mostly into regression tests and `GameContainer` cleanup.
 
 ## Test Plan
 

@@ -16,6 +16,8 @@ const floatingMocks = vi.hoisted(() => ({
   setReference: vi.fn(),
   setFloating: vi.fn(),
   update: vi.fn(async () => {}),
+  x: 120 as number | null,
+  y: 64 as number | null,
   offset: vi.fn((value: number) => ({ name: 'offset', options: value })),
   flip: vi.fn(() => ({ name: 'flip' })),
   shift: vi.fn((options: { padding: number }) => ({ name: 'shift', options })),
@@ -31,8 +33,8 @@ vi.mock('@floating-ui/react-dom', () => ({
   useFloating: (options: { middleware?: unknown[] }) => {
     floatingMocks.useFloatingOptions = options;
     return {
-      x: 120,
-      y: 64,
+      x: floatingMocks.x,
+      y: floatingMocks.y,
       strategy: 'absolute',
       refs: {
         setReference: floatingMocks.setReference,
@@ -55,6 +57,8 @@ afterEach(() => {
   floatingMocks.setReference.mockClear();
   floatingMocks.setFloating.mockClear();
   floatingMocks.update.mockClear();
+  floatingMocks.x = 120;
+  floatingMocks.y = 64;
   floatingMocks.offset.mockClear();
   floatingMocks.flip.mockClear();
   floatingMocks.shift.mockClear();
@@ -233,6 +237,37 @@ describe('TooltipLayer', () => {
     expect(floatingMocks.setReference).toHaveBeenCalled();
     expect(floatingMocks.setFloating).toHaveBeenCalled();
     expect(floatingMocks.update).toHaveBeenCalled();
+  });
+
+  it('does not render when Floating UI coordinates are unresolved', () => {
+    floatingMocks.x = null;
+    const { store } = createLiveStore(makeRenderModel({
+      zones: [{
+        id: 'zone:alpha',
+        displayName: 'Alpha Zone',
+        ordering: 'stack',
+        tokenIDs: [],
+        hiddenTokenCount: 0,
+        markers: [],
+        visibility: 'public',
+        isSelectable: true,
+        isHighlighted: false,
+        ownerID: null,
+        category: null,
+        attributes: {},
+        visual: { shape: 'rectangle', width: 160, height: 100, color: null },
+        metadata: {},
+      }],
+    }));
+
+    const { container } = render(createElement(TooltipLayer, {
+      store,
+      hoverTarget: { kind: 'zone', id: 'zone:alpha' },
+      anchorRect: ANCHOR_RECT,
+    }));
+
+    expect(screen.queryByTestId('tooltip-layer')).toBeNull();
+    expect(container.innerHTML).toBe('');
   });
 
   it('ignores unrelated store updates when hovered payload is unchanged', () => {

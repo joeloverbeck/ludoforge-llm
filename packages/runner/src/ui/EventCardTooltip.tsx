@@ -1,7 +1,8 @@
-import { useEffect, type ReactElement } from 'react';
-import { flip, offset, shift, useFloating } from '@floating-ui/react-dom';
+import type { ReactElement } from 'react';
+import { flip, offset, shift } from '@floating-ui/react-dom';
 
 import type { RenderEventCard } from '../model/render-model.js';
+import { useResolvedFloatingAnchor } from './useResolvedFloatingAnchor.js';
 import styles from './EventCardTooltip.module.css';
 
 interface EventCardTooltipProps {
@@ -12,18 +13,19 @@ interface EventCardTooltipProps {
 }
 
 export function EventCardTooltip({ card, anchorElement, onPointerEnter, onPointerLeave }: EventCardTooltipProps): ReactElement | null {
-  const { x, y, strategy, refs } = useFloating({
+  const { refs, floatingStyle } = useResolvedFloatingAnchor({
+    reference: anchorElement,
     placement: 'bottom',
     middleware: [offset(12), flip(), shift({ padding: 8 })],
   });
 
-  useEffect(() => {
-    refs.setReference(anchorElement);
-  }, [refs, anchorElement]);
-
   const hasContent = card.unshadedText !== null || card.shadedText !== null;
 
   if (!hasContent) {
+    return null;
+  }
+
+  if (floatingStyle === null) {
     return null;
   }
 
@@ -33,11 +35,7 @@ export function EventCardTooltip({ card, anchorElement, onPointerEnter, onPointe
       className={styles.tooltip}
       role="tooltip"
       data-testid="event-card-tooltip"
-      style={{
-        position: strategy,
-        left: x ?? 0,
-        top: y ?? 0,
-      }}
+      style={floatingStyle}
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
     >

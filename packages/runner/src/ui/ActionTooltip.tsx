@@ -1,5 +1,5 @@
-import { useEffect, type ReactElement } from 'react';
-import { flip, offset, shift, useFloating } from '@floating-ui/react-dom';
+import type { ReactElement } from 'react';
+import { flip, offset, shift } from '@floating-ui/react-dom';
 import type { AnnotatedActionDescription } from '@ludoforge/engine/runtime';
 
 import { hasDisplayableContent } from './has-displayable-content.js';
@@ -7,6 +7,7 @@ import { renderGroup } from './display-node-renderers.js';
 import { ModifiersSection } from './ModifiersSection.js';
 import { AvailabilitySection } from './AvailabilitySection.js';
 import { RawAstToggle } from './RawAstToggle.js';
+import { useResolvedFloatingAnchor } from './useResolvedFloatingAnchor.js';
 import styles from './ActionTooltip.module.css';
 
 function capitalize(s: string): string {
@@ -21,16 +22,17 @@ interface ActionTooltipProps {
 }
 
 export function ActionTooltip({ description, anchorElement, onPointerEnter, onPointerLeave }: ActionTooltipProps): ReactElement | null {
-  const { x, y, strategy, refs } = useFloating({
+  const { refs, floatingStyle } = useResolvedFloatingAnchor({
+    reference: anchorElement,
     placement: 'top',
     middleware: [offset(12), flip(), shift({ padding: 8 })],
   });
 
-  useEffect(() => {
-    refs.setReference(anchorElement);
-  }, [refs, anchorElement]);
-
   if (!hasDisplayableContent(description)) {
+    return null;
+  }
+
+  if (floatingStyle === null) {
     return null;
   }
 
@@ -42,11 +44,7 @@ export function ActionTooltip({ description, anchorElement, onPointerEnter, onPo
       className={styles.tooltip}
       role="tooltip"
       data-testid="action-tooltip"
-      style={{
-        position: strategy,
-        left: x ?? 0,
-        top: y ?? 0,
-      }}
+      style={floatingStyle}
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
     >

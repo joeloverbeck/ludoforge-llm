@@ -12,6 +12,7 @@ import {
   dropZoneMissingDiagnostic,
 } from './validate-extensions.js';
 import { validateMetadata, validateVariables } from './validate-metadata.js';
+import { validateAgents } from './validate-agents.js';
 import {
   TRIGGER_EVENT_KEYS,
   TRIGGER_KEYS,
@@ -52,6 +53,7 @@ export function validateGameSpec(
   validateDerivedMetrics(doc, zoneIds, diagnostics);
   validateEventDecks(doc, diagnostics);
   validateScoring(doc, diagnostics);
+  validateAgents(doc, diagnostics);
   validateAuthoredCompilerMetadataBoundary(doc, diagnostics);
 
   validateCrossReferences(doc, zoneIds, actionIds, phaseIds, diagnostics);

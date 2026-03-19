@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — CNL lowering for non-expression policy structures
-**Deps**: specs/15-gamespec-agent-policy-ir.md, tickets/15GAMAGEPOLIR-001-add-authored-agents-section-to-gamespecdoc.md
+**Deps**: specs/15-gamespec-agent-policy-ir.md, archive/tickets/15GAMAGEPOLIR-001-add-authored-agents-section-to-gamespecdoc.md
 
 ## Problem
 

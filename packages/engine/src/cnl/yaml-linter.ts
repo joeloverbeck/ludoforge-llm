@@ -33,6 +33,7 @@ const CANONICAL_SECTION_KEYS = new Set<string>([
   'terminal',
   'actions',
   'triggers',
+  'agents',
   'phaseTemplates',
   'victoryStandings',
 ]);

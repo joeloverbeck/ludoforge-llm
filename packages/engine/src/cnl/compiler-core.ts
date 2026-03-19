@@ -52,6 +52,7 @@ import {
   toNamedSetCanonicalIdCollisionDiagnostics,
 } from './named-set-utils.js';
 import { compileVerbalization } from './compile-verbalization.js';
+import { validateAgents } from './validate-agents.js';
 
 export interface CompileLimits {
   readonly maxExpandedEffects: number;
@@ -268,6 +269,7 @@ function compileExpandedDoc(
   readonly gameDef: GameDef | null;
   readonly sections: CompileSectionResults;
 } {
+  validateAgents(doc, diagnostics);
   const derivedFromAssets = deriveSectionsFromDataAssets(doc, diagnostics, {
     ...(doc.metadata?.defaultScenarioAssetId === undefined
       ? {}

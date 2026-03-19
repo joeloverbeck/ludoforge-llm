@@ -206,6 +206,8 @@ function mergeSection(
       return mergeSingletonTurnOrder(doc, section, value, diagnostics);
     case 'terminal':
       return mergeSingletonTerminal(doc, section, value, diagnostics);
+    case 'agents':
+      return mergeSingletonAgents(doc, section, value, diagnostics);
     case 'victoryStandings':
       return mergeSingletonVictoryStandings(doc, section, value, diagnostics);
     case 'verbalization':
@@ -303,6 +305,21 @@ function mergeSingletonTerminal(
   }
 
   (doc as MutableGameSpecDoc).terminal = asObjectOrNull(value) as MutableGameSpecDoc['terminal'];
+  return buildAnchoredPaths(section, value);
+}
+
+function mergeSingletonAgents(
+  doc: GameSpecDoc,
+  section: 'agents',
+  value: unknown,
+  diagnostics: Diagnostic[],
+): readonly string[] {
+  if (doc.agents !== null) {
+    diagnostics.push(duplicateSingletonSectionDiagnostic('agents', 'doc.agents'));
+    return [];
+  }
+
+  (doc as MutableGameSpecDoc).agents = asObjectOrNull(value) as MutableGameSpecDoc['agents'];
   return buildAnchoredPaths(section, value);
 }
 

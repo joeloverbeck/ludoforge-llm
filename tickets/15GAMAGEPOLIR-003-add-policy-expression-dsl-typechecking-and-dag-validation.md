@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — policy expression compiler and diagnostics
-**Deps**: specs/15-gamespec-agent-policy-ir.md, tickets/15GAMAGEPOLIR-001-add-authored-agents-section-to-gamespecdoc.md, tickets/15GAMAGEPOLIR-002-lower-agent-parameters-profiles-and-bindings.md
+**Deps**: specs/15-gamespec-agent-policy-ir.md, archive/tickets/15GAMAGEPOLIR-001-add-authored-agents-section-to-gamespecdoc.md, tickets/15GAMAGEPOLIR-002-lower-agent-parameters-profiles-and-bindings.md
 
 ## Problem
 

@@ -30,6 +30,7 @@ describe('game-spec-doc', () => {
       triggers: null,
       effectMacros: null,
       conditionMacros: null,
+      agents: null,
       victoryStandings: null,
       verbalization: null,
     };

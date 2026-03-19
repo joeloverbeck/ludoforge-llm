@@ -3,6 +3,11 @@ import { describe, it } from 'node:test';
 
 import { evaluatePolicyMove, evaluatePolicyMoveCore } from '../../../src/agents/policy-eval.js';
 import {
+  createPolicyRuntimeProviders,
+  type PolicyCurrentSurfaceRef,
+  type PolicyPreviewSurfaceRef,
+} from '../../../src/agents/policy-runtime.js';
+import {
   asActionId,
   asPhaseId,
   asPlayerId,
@@ -278,6 +283,57 @@ function createInput(agents: AgentPolicyCatalog, legalMoves: readonly Move[], se
 }
 
 describe('policy-eval', () => {
+  it('routes intrinsic, candidate, current, and preview reads through explicit runtime providers', () => {
+    const input = createInput(
+      createCatalog(
+        {},
+        undefined,
+        {
+          eventCardId: { type: 'id' },
+        },
+      ),
+      [{ actionId: asActionId('advance'), params: { eventCardId: 'card-2' } }],
+    );
+
+    const providers = createPolicyRuntimeProviders({
+      def: input.def,
+      state: input.state,
+      playerId: input.playerId,
+      seatId: 'us',
+      catalog: input.def.agents!,
+      runtimeError: (code, message) => new Error(`${code}: ${message}`),
+    });
+    const candidate = {
+      move: input.legalMoves[0]!,
+      stableMoveKey: 'advance|{"eventCardId":"card-2"}|false|unclassified',
+      actionId: 'advance',
+    };
+
+    assert.equal(providers.intrinsics.resolveSeatIntrinsic('self'), 'us');
+    assert.equal(providers.intrinsics.resolveTurnIntrinsic('phaseId'), 'main');
+    assert.equal(providers.intrinsics.resolveTurnIntrinsic('round'), input.state.turnCount);
+    assert.equal(providers.candidates.resolveCandidateIntrinsic(candidate, 'actionId'), 'advance');
+    assert.equal(providers.candidates.resolveCandidateParam(candidate, 'eventCardId'), 'card-2');
+    assert.equal(
+      providers.currentSurface.resolveSurface({
+        kind: 'surface',
+        phase: 'current',
+        family: 'globalVar',
+        id: 'usMargin',
+      } satisfies PolicyCurrentSurfaceRef),
+      1,
+    );
+    assert.equal(
+      providers.previewSurface.resolveSurface(candidate, {
+        kind: 'surface',
+        phase: 'preview',
+        family: 'globalVar',
+        id: 'usMargin',
+      } satisfies PolicyPreviewSurfaceRef),
+      4,
+    );
+  });
+
   it('prunes pass, scores surviving candidates, and resolves deterministic ties by stable move key', () => {
     const input = createInput(createCatalog(), createMoves('operation', 'pass', 'event'));
 
@@ -483,6 +539,49 @@ describe('policy-eval', () => {
     assert.equal(result.move.actionId, asActionId('alpha'));
     assert.equal(result.metadata.usedFallback, false);
     assert.equal(result.metadata.failure, null);
+  });
+
+  it('reports unsupported current-surface refs as provider-owned runtime failures', () => {
+    const agents = createCatalog(
+      {
+        stateFeatures: {
+          unknownSurface: {
+            type: 'number',
+            costClass: 'state',
+            expr: refExpr({ kind: 'surface', phase: 'current', family: 'globalVar', id: 'notExposed' }),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+        },
+        scoreTerms: {
+          preferUnknownSurface: {
+            costClass: 'state',
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'stateFeature', id: 'unknownSurface' }),
+            dependencies: { parameters: [], stateFeatures: ['unknownSurface'], candidateFeatures: [], aggregates: [] },
+          },
+        },
+      },
+      {
+        use: {
+          pruningRules: [],
+          scoreTerms: ['preferUnknownSurface'],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: ['unknownSurface'],
+          candidateFeatures: [],
+          candidateAggregates: [],
+        },
+      },
+    );
+
+    const core = evaluatePolicyMoveCore(createInput(agents, createMoves('alpha', 'beta')));
+
+    assert.equal(core.kind, 'failure');
+    if (core.kind === 'failure') {
+      assert.equal(core.failure.code, 'UNSUPPORTED_RUNTIME_REF');
+      assert.match(core.failure.message, /unsupported by the non-preview evaluator runtime/);
+    }
   });
 
   it('reads candidate params through compiled candidate-param defs and treats shape mismatches as unknown', () => {

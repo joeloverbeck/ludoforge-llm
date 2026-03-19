@@ -1,11 +1,4 @@
-import { buildAdjacencyGraph } from '../kernel/spatial.js';
-import { buildRuntimeTableIndex } from '../kernel/runtime-table-index.js';
-import { createEvalContext, createEvalRuntimeResources } from '../kernel/eval-context.js';
-import { evalValue } from '../kernel/eval-value.js';
-import { computeDerivedMetricValue } from '../kernel/derived-values.js';
 import type { PlayerId } from '../kernel/branded.js';
-import { buildSeatResolutionIndex, resolvePlayerIndexForSeatValue, type SeatResolutionIndex } from '../kernel/identity.js';
-import { resolveTurnFlowActionClass } from '../kernel/turn-flow-action-class.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import type {
   AgentPolicyCatalog,
@@ -21,10 +14,13 @@ import type {
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import { pickRandom } from './agent-move-selection.js';
-import { createPolicyPreviewRuntime } from './policy-preview.js';
-import { getPolicySurfaceVisibility, isSurfaceVisibilityAccessible } from './policy-surface.js';
-
-type PolicyValue = AgentParameterValue | undefined;
+import {
+  createPolicyRuntimeProviders,
+  type PolicyCurrentSurfaceRef,
+  type PolicyPreviewSurfaceRef,
+  type PolicyRuntimeProviders,
+  type PolicyValue,
+} from './policy-runtime.js';
 
 export interface PolicyEvaluationFailure {
   readonly code:
@@ -95,11 +91,6 @@ interface CandidateEntry {
   score: number;
 }
 
-interface VictorySurface {
-  readonly marginBySeat: ReadonlyMap<string, number>;
-  readonly rankBySeat: ReadonlyMap<string, number>;
-}
-
 class PolicyRuntimeError extends Error {
   readonly failure: PolicyEvaluationFailure;
 
@@ -112,17 +103,12 @@ class PolicyRuntimeError extends Error {
 
 class EvaluationContext {
   private readonly catalog: AgentPolicyCatalog;
-  private readonly seatId: string;
-  private readonly activeSeatId: string | null;
   private readonly parameterValues: Readonly<Record<string, AgentParameterValue>>;
-  private readonly seatResolutionIndex: SeatResolutionIndex;
   private currentCandidates: CandidateEntry[];
   private readonly stateFeatureCache = new Map<string, PolicyValue>();
   private readonly candidateFeatureCache = new Map<string, Map<string, PolicyValue>>();
   private readonly aggregateCache = new Map<string, PolicyValue>();
-  private readonly metricCache = new Map<string, number>();
-  private victorySurface: VictorySurface | null = null;
-  private readonly previewRuntime: ReturnType<typeof createPolicyPreviewRuntime>;
+  private readonly runtimeProviders: PolicyRuntimeProviders;
 
   constructor(
     private readonly input: EvaluatePolicyMoveInput,
@@ -138,16 +124,15 @@ class EvaluationContext {
       });
     }
     this.catalog = catalog;
-    this.seatId = seatId;
-    this.activeSeatId = input.def.seats?.[input.state.activePlayer]?.id ?? null;
     this.parameterValues = profile.params;
     this.currentCandidates = candidates;
-    this.seatResolutionIndex = buildSeatResolutionIndex(input.def, input.state.playerCount);
-    this.previewRuntime = createPolicyPreviewRuntime({
+    this.runtimeProviders = createPolicyRuntimeProviders({
       def: input.def,
       state: input.state,
       playerId: input.playerId,
       seatId,
+      catalog,
+      runtimeError: (code, message, detail) => this.runtimeError(code as PolicyEvaluationFailure['code'], message, detail),
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
     });
   }
@@ -462,53 +447,15 @@ class EvaluationContext {
         }
         return this.evaluateStateFeature(ref.id);
       case 'seatIntrinsic':
-        return ref.intrinsic === 'self' ? this.seatId : this.activeSeatId ?? undefined;
+        return this.runtimeProviders.intrinsics.resolveSeatIntrinsic(ref.intrinsic);
       case 'turnIntrinsic':
-        if (ref.intrinsic === 'phaseId') {
-          return String(this.input.state.currentPhase);
-        }
-        if (ref.intrinsic === 'stepId') {
-          return undefined;
-        }
-        return this.input.state.turnCount;
+        return this.runtimeProviders.intrinsics.resolveTurnIntrinsic(ref.intrinsic);
       case 'candidateIntrinsic':
-        if (candidate === undefined) {
-          return undefined;
-        }
-        if (ref.intrinsic === 'actionId') {
-          return candidate.actionId;
-        }
-        if (ref.intrinsic === 'stableMoveKey') {
-          return candidate.stableMoveKey;
-        }
-        return candidate.actionId === 'pass' || resolveTurnFlowActionClass(this.input.def, candidate.move) === 'pass';
+        return candidate === undefined ? undefined : this.runtimeProviders.candidates.resolveCandidateIntrinsic(candidate, ref.intrinsic);
       case 'candidateParam':
-        if (candidate === undefined) {
-          return undefined;
-        }
-        return this.resolveCandidateParamRef(ref.id, candidate);
+        return candidate === undefined ? undefined : this.runtimeProviders.candidates.resolveCandidateParam(candidate, ref.id);
       case 'surface':
         return this.resolveSurfaceRef(ref, candidate);
-    }
-  }
-
-  private resolveCandidateParamRef(paramId: string, candidate: CandidateEntry): PolicyValue {
-    const candidateParamDef = this.catalog.candidateParamDefs[paramId];
-    if (candidateParamDef === undefined) {
-      return undefined;
-    }
-    const paramValue = candidate.move.params[paramId];
-    switch (candidateParamDef.type) {
-      case 'number':
-        return typeof paramValue === 'number' ? paramValue : undefined;
-      case 'boolean':
-        return typeof paramValue === 'boolean' ? paramValue : undefined;
-      case 'id':
-        return typeof paramValue === 'string' ? paramValue : undefined;
-      case 'idList':
-        return Array.isArray(paramValue) && paramValue.every((entry) => typeof entry === 'string')
-          ? paramValue as AgentParameterValue
-          : undefined;
     }
   }
 
@@ -517,134 +464,11 @@ class EvaluationContext {
     candidate: CandidateEntry | undefined,
   ): PolicyValue {
     if (ref.phase === 'preview') {
-      return candidate === undefined ? undefined : this.previewRuntime.resolveNumericRef(candidate, ref);
+      return candidate === undefined
+        ? undefined
+        : this.runtimeProviders.previewSurface.resolveSurface(candidate, ref as PolicyPreviewSurfaceRef);
     }
-    const visibility = getPolicySurfaceVisibility(this.catalog.surfaceVisibility, ref);
-    if (visibility === null) {
-      throw this.runtimeError(
-        'UNSUPPORTED_RUNTIME_REF',
-        `Policy runtime ref "${ref.family}:${ref.id}" is unsupported by the non-preview evaluator runtime.`,
-        { ref },
-      );
-    }
-    const resolvedSeatId = ref.seatToken === undefined ? undefined : this.resolveSeatToken(ref.seatToken);
-    if (!isSurfaceVisibilityAccessible(visibility.current, this.seatId, resolvedSeatId)) {
-      return undefined;
-    }
-    if (ref.family === 'derivedMetric') {
-      if (this.metricCache.has(ref.id)) {
-        return this.metricCache.get(ref.id);
-      }
-      const value = computeDerivedMetricValue(this.input.def, this.input.state, ref.id);
-      this.metricCache.set(ref.id, value);
-      return value;
-    }
-    if (ref.family === 'globalVar') {
-      const value = this.input.state.globalVars[ref.id];
-      return typeof value === 'number' ? value : undefined;
-    }
-    if (ref.family === 'perPlayerVar') {
-      return this.resolveSeatVarRef(ref);
-    }
-    if (ref.family === 'victoryCurrentMargin') {
-      if (ref.seatToken === undefined) {
-        return undefined;
-      }
-      return this.getVictorySurface().marginBySeat.get(this.resolveSeatToken(ref.seatToken));
-    }
-    if (ref.seatToken === undefined) {
-      return undefined;
-    }
-    return this.getVictorySurface().rankBySeat.get(this.resolveSeatToken(ref.seatToken));
-  }
-
-  private resolveSeatVarRef(ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'surface' }>): PolicyValue {
-    if (ref.family !== 'perPlayerVar' || ref.seatToken === undefined) {
-      return undefined;
-    }
-    const playerIndex = resolvePlayerIndexForSeatValue(this.resolveSeatToken(ref.seatToken), this.seatResolutionIndex);
-    if (playerIndex === null) {
-      return undefined;
-    }
-    const value = this.input.state.perPlayerVars[playerIndex]?.[ref.id];
-    return typeof value === 'number' ? value : undefined;
-  }
-
-  private resolveSeatToken(seatToken: string): string {
-    if (seatToken === 'self') {
-      return this.seatId;
-    }
-    if (seatToken === 'active') {
-      if (this.activeSeatId === null) {
-        throw this.runtimeError('SEAT_UNRESOLVED', 'Active seat id is unavailable for policy evaluation.');
-      }
-      return this.activeSeatId;
-    }
-    return seatToken;
-  }
-
-  private getVictorySurface(): VictorySurface {
-    if (this.victorySurface !== null) {
-      return this.victorySurface;
-    }
-
-    const margins = this.input.def.terminal.margins ?? [];
-    if (margins.length === 0) {
-      throw this.runtimeError(
-        'UNSUPPORTED_RUNTIME_REF',
-        'victory.currentMargin/currentRank refs require def.terminal.margins to be defined.',
-      );
-    }
-
-    const adjacencyGraph = this.input.runtime?.adjacencyGraph ?? buildAdjacencyGraph(this.input.def.zones);
-    const runtimeTableIndex = this.input.runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(this.input.def);
-    const resources = createEvalRuntimeResources();
-    const evalContext = createEvalContext({
-      def: this.input.def,
-      adjacencyGraph,
-      state: this.input.state,
-      activePlayer: this.input.state.activePlayer,
-      actorPlayer: this.input.state.activePlayer,
-      bindings: {},
-      runtimeTableIndex,
-      resources,
-    });
-
-    const rows = margins.map((marginDef) => {
-      const margin = evalValue(marginDef.value, evalContext);
-      if (typeof margin !== 'number') {
-        throw this.runtimeError(
-          'RUNTIME_EVALUATION_ERROR',
-          `Victory margin "${marginDef.seat}" did not evaluate to a number.`,
-          { seat: marginDef.seat },
-        );
-      }
-      return { seat: marginDef.seat, margin };
-    });
-
-    const order = this.input.def.terminal.ranking?.order ?? 'desc';
-    const tieBreakOrder = this.input.def.terminal.ranking?.tieBreakOrder ?? [];
-    const tieBreakIndex = new Map(tieBreakOrder.map((seat, index): readonly [string, number] => [seat, index]));
-    rows.sort((left, right) => {
-      if (left.margin !== right.margin) {
-        return order === 'desc' ? right.margin - left.margin : left.margin - right.margin;
-      }
-      const leftOrder = tieBreakIndex.get(left.seat) ?? Number.MAX_SAFE_INTEGER;
-      const rightOrder = tieBreakIndex.get(right.seat) ?? Number.MAX_SAFE_INTEGER;
-      if (leftOrder !== rightOrder) {
-        return leftOrder - rightOrder;
-      }
-      return left.seat.localeCompare(right.seat);
-    });
-
-    const marginBySeat = new Map<string, number>();
-    const rankBySeat = new Map<string, number>();
-    rows.forEach((row, index) => {
-      marginBySeat.set(row.seat, row.margin);
-      rankBySeat.set(row.seat, index + 1);
-    });
-    this.victorySurface = { marginBySeat, rankBySeat };
-    return this.victorySurface;
+    return this.runtimeProviders.currentSurface.resolveSurface(ref as PolicyCurrentSurfaceRef);
   }
 
   private runtimeError(

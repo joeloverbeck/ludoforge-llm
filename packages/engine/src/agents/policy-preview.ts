@@ -1,7 +1,3 @@
-import { buildAdjacencyGraph } from '../kernel/spatial.js';
-import { buildRuntimeTableIndex } from '../kernel/runtime-table-index.js';
-import { createEvalContext, createEvalRuntimeResources } from '../kernel/eval-context.js';
-import { evalValue } from '../kernel/eval-value.js';
 import { computeDerivedMetricValue } from '../kernel/derived-values.js';
 import { derivePlayerObservation } from '../kernel/observation.js';
 import { applyMove, probeMoveViability, type MoveViabilityProbeResult } from '../kernel/apply-move.js';
@@ -9,7 +5,14 @@ import { buildSeatResolutionIndex, resolvePlayerIndexForSeatValue, type SeatReso
 import type { PlayerId } from '../kernel/branded.js';
 import type { CompiledAgentPolicyRef, GameDef, GameState, Move, RngState } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
-import { getPolicySurfaceVisibility, isSurfaceVisibilityAccessible } from './policy-surface.js';
+import type { PolicyPreviewSurfaceRef } from './policy-runtime.js';
+import {
+  buildPolicyVictorySurface,
+  getPolicySurfaceVisibility,
+  isSurfaceVisibilityAccessible,
+  resolvePolicySeatToken,
+  type PolicyVictorySurface,
+} from './policy-surface.js';
 
 export interface PolicyPreviewCandidate {
   readonly move: Move;
@@ -44,15 +47,10 @@ export interface CreatePolicyPreviewRuntimeInput {
 }
 
 export interface PolicyPreviewRuntime {
-  resolveNumericRef(
+  resolveSurface(
     candidate: PolicyPreviewCandidate,
-    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'surface' }>,
+    ref: PolicyPreviewSurfaceRef,
   ): number | undefined;
-}
-
-interface VictorySurface {
-  readonly marginBySeat: ReadonlyMap<string, number>;
-  readonly rankBySeat: ReadonlyMap<string, number>;
 }
 
 type PreviewOutcome =
@@ -61,7 +59,7 @@ type PreviewOutcome =
       readonly state: GameState;
       readonly requiresHiddenSampling: boolean;
       readonly metricCache: Map<string, number>;
-      victorySurface: VictorySurface | null;
+      victorySurface: PolicyVictorySurface | null;
     }
   | {
       readonly kind: 'unknown';
@@ -84,7 +82,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
   const seatResolutionIndex = buildSeatResolutionIndex(input.def, input.state.playerCount);
 
   return {
-    resolveNumericRef(candidate, ref) {
+    resolveSurface(candidate, ref) {
       const preview = getPreviewOutcome(candidate);
       if (preview.kind !== 'ready') {
         return undefined;
@@ -95,7 +93,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       }
       const resolvedSeatId = ref.seatToken === undefined
         ? undefined
-        : resolveSeatToken(input.def, preview.state, ref.seatToken, input.seatId);
+        : resolvePolicySeatToken(input.def, preview.state, ref.seatToken, input.seatId);
       if (!isSurfaceVisibilityAccessible(visibility.preview.visibility, input.seatId, resolvedSeatId)) {
         return undefined;
       }
@@ -122,13 +120,17 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         if (ref.seatToken === undefined) {
           return undefined;
         }
-        return getVictorySurface(input.def, preview).marginBySeat.get(resolveSeatToken(input.def, preview.state, ref.seatToken, input.seatId));
+        return getVictorySurface(input.def, preview, input.runtime).marginBySeat.get(
+          resolvePolicySeatToken(input.def, preview.state, ref.seatToken, input.seatId),
+        );
       }
       if (ref.family === 'victoryCurrentRank') {
         if (ref.seatToken === undefined) {
           return undefined;
         }
-        return getVictorySurface(input.def, preview).rankBySeat.get(resolveSeatToken(input.def, preview.state, ref.seatToken, input.seatId));
+        return getVictorySurface(input.def, preview, input.runtime).rankBySeat.get(
+          resolvePolicySeatToken(input.def, preview.state, ref.seatToken, input.seatId),
+        );
       }
       return undefined;
     },
@@ -180,7 +182,7 @@ function resolveSeatVarRef(
   if (ref.family !== 'perPlayerVar' || ref.seatToken === undefined) {
     return undefined;
   }
-  const playerIndex = resolvePlayerIndexForSeatValue(resolveSeatToken(def, state, ref.seatToken, seatId), seatResolutionIndex);
+  const playerIndex = resolvePlayerIndexForSeatValue(resolvePolicySeatToken(def, state, ref.seatToken, seatId), seatResolutionIndex);
   if (playerIndex === null) {
     return undefined;
   }
@@ -188,66 +190,15 @@ function resolveSeatVarRef(
   return typeof value === 'number' ? value : undefined;
 }
 
-function resolveSeatToken(def: GameDef | undefined, state: GameState, seatToken: string, seatId: string): string {
-  if (seatToken === 'self') {
-    return seatId;
-  }
-  if (seatToken === 'active') {
-    return def?.seats?.[state.activePlayer]?.id ?? seatId;
-  }
-  return seatToken;
-}
-
-function getVictorySurface(def: GameDef, preview: Extract<PreviewOutcome, { readonly kind: 'ready' }>): VictorySurface {
+function getVictorySurface(
+  def: GameDef,
+  preview: Extract<PreviewOutcome, { readonly kind: 'ready' }>,
+  runtime?: GameDefRuntime,
+): PolicyVictorySurface {
   if (preview.victorySurface !== null) {
     return preview.victorySurface;
   }
-
-  const margins = def.terminal.margins ?? [];
-  const adjacencyGraph = buildAdjacencyGraph(def.zones);
-  const runtimeTableIndex = buildRuntimeTableIndex(def);
-  const resources = createEvalRuntimeResources();
-  const evalContext = createEvalContext({
-    def,
-    adjacencyGraph,
-    state: preview.state,
-    activePlayer: preview.state.activePlayer,
-    actorPlayer: preview.state.activePlayer,
-    bindings: {},
-    runtimeTableIndex,
-    resources,
-  });
-
-  const rows = margins.map((marginDef) => {
-    const margin = evalValue(marginDef.value, evalContext);
-    if (typeof margin !== 'number') {
-      throw new Error(`Victory margin "${marginDef.seat}" did not evaluate to a number.`);
-    }
-    return { seat: marginDef.seat, margin };
-  });
-
-  const order = def.terminal.ranking?.order ?? 'desc';
-  const tieBreakOrder = def.terminal.ranking?.tieBreakOrder ?? [];
-  const tieBreakIndex = new Map(tieBreakOrder.map((seat, index): readonly [string, number] => [seat, index]));
-  rows.sort((left, right) => {
-    if (left.margin !== right.margin) {
-      return order === 'desc' ? right.margin - left.margin : left.margin - right.margin;
-    }
-    const leftOrder = tieBreakIndex.get(left.seat) ?? Number.MAX_SAFE_INTEGER;
-    const rightOrder = tieBreakIndex.get(right.seat) ?? Number.MAX_SAFE_INTEGER;
-    if (leftOrder !== rightOrder) {
-      return leftOrder - rightOrder;
-    }
-    return left.seat.localeCompare(right.seat);
-  });
-
-  const marginBySeat = new Map<string, number>();
-  const rankBySeat = new Map<string, number>();
-  rows.forEach((row, index) => {
-    marginBySeat.set(row.seat, row.margin);
-    rankBySeat.set(row.seat, index + 1);
-  });
-  preview.victorySurface = { marginBySeat, rankBySeat };
+  preview.victorySurface = buildPolicyVictorySurface(def, preview.state, runtime);
   return preview.victorySurface;
 }
 

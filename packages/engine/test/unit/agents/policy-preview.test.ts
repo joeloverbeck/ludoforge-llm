@@ -2,25 +2,25 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { createPolicyPreviewRuntime } from '../../../src/agents/policy-preview.js';
+import type { PolicyPreviewSurfaceRef } from '../../../src/agents/policy-runtime.js';
 import {
   asActionId,
   asPhaseId,
   asPlayerId,
   initialState,
-  type CompiledAgentPolicyRef,
   type GameDef,
   type Move,
   type PlayerObservation,
 } from '../../../src/kernel/index.js';
 
 const phaseId = asPhaseId('main');
-const previewScoreRef: Extract<CompiledAgentPolicyRef, { readonly kind: 'surface' }> = {
+const previewScoreRef: PolicyPreviewSurfaceRef = {
   kind: 'surface',
   phase: 'preview',
   family: 'globalVar',
   id: 'score',
 };
-const previewMarginRef: Extract<CompiledAgentPolicyRef, { readonly kind: 'surface' }> = {
+const previewMarginRef: PolicyPreviewSurfaceRef = {
   kind: 'surface',
   phase: 'preview',
   family: 'victoryCurrentMargin',
@@ -142,8 +142,8 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveNumericRef(candidate, previewScoreRef), 4);
-    assert.equal(runtime.resolveNumericRef(candidate, previewScoreRef), 4);
+    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), 4);
+    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), 4);
     assert.equal(probeCalls, 1);
     assert.equal(applyCalls, 1);
     assert.equal(observationCalls, 1);
@@ -169,7 +169,7 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveNumericRef(candidate, previewScoreRef), undefined);
+    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), undefined);
     assert.equal(applyCalls, 0);
   });
 
@@ -197,7 +197,7 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveNumericRef(candidate, previewScoreRef), undefined);
+    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), undefined);
   });
 
   it('keeps safe preview refs available while masking unsafe refs when hidden sampling remains', () => {
@@ -224,7 +224,7 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveNumericRef(candidate, previewScoreRef), 9);
-    assert.equal(runtime.resolveNumericRef(candidate, previewMarginRef), undefined);
+    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), 9);
+    assert.equal(runtime.resolveSurface(candidate, previewMarginRef), undefined);
   });
 });

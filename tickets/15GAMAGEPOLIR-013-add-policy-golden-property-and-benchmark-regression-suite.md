@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — verification and performance gating only
-**Deps**: specs/15-gamespec-agent-policy-ir.md, tickets/15GAMAGEPOLIR-011-author-baseline-fitl-policy-library-profiles-and-bindings.md, tickets/15GAMAGEPOLIR-012-author-baseline-texas-holdem-policy-library-profiles-and-bindings.md, archive/tickets/15GAMAGEPOLIR/15GAMAGEPOLIR-017-add-explicit-policy-visibility-ownership-for-preview-safe-runtime-surfaces.md
+**Deps**: specs/15-gamespec-agent-policy-ir.md, tickets/15GAMAGEPOLIR-011-author-baseline-fitl-policy-library-profiles-and-bindings.md, tickets/15GAMAGEPOLIR-012-author-baseline-texas-holdem-policy-library-profiles-and-bindings.md, tickets/15GAMAGEPOLIR-020-split-policy-surface-refs-into-discriminated-current-and-preview-ir-variants.md, archive/tickets/15GAMAGEPOLIR/15GAMAGEPOLIR-017-add-explicit-policy-visibility-ownership-for-preview-safe-runtime-surfaces.md
 
 ## Problem
 
@@ -15,14 +15,16 @@ Spec 15 requires not only correctness but also determinism, explainability, and 
 1. The repo already has unit, integration, performance, and fixture areas, but policy-specific regression coverage does not exist yet.
 2. Spec 15 explicitly calls for compiled IR goldens, trace goldens, property tests, and fixed benchmark corpora for FITL and Texas Hold'em.
 3. Archived ticket 007 added a safe but conservative preview-masking runtime; that behavior should be regression-covered today, but it is not the final architectural target for per-ref preview visibility ownership.
-4. Corrected scope: this ticket should add the verification harness and gating against the architecture delivered by its dependencies, not redesign policy runtime behavior itself.
+4. Compiled policy IR goldens should not freeze temporary internal type-shape debt. The discriminated current/preview surface-ref cleanup is owned by ticket 020 and should land before this ticket records canonical compiled catalog fixtures.
+5. Corrected scope: this ticket should add the verification harness and gating against the architecture delivered by its dependencies, not redesign policy runtime behavior itself.
 
 ## Architecture Check
 
 1. A dedicated regression suite is cleaner than burying policy guarantees in ad hoc integration assertions because determinism/performance regressions need their own visibility.
 2. Using authored FITL and Texas fixtures keeps the verification data-driven and game-agnostic at the runtime layer.
 3. The suite should lock whatever shared visibility contract the runtime actually owns; it must not let coarse temporary masking accidentally become the de facto long-term architecture by lack of explicit dependency ownership.
-4. No benchmark should silently truncate work or hide emergency fallbacks to “pass” the suite.
+4. Goldens should capture the canonical post-cleanup policy IR shape, not an avoidable intermediate representation that later tickets already intend to remove.
+5. No benchmark should silently truncate work or hide emergency fallbacks to “pass” the suite.
 
 ## What to Change
 

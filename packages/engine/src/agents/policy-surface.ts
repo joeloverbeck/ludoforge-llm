@@ -1,9 +1,21 @@
+import { buildAdjacencyGraph } from '../kernel/spatial.js';
+import { buildRuntimeTableIndex } from '../kernel/runtime-table-index.js';
+import { createEvalContext, createEvalRuntimeResources } from '../kernel/eval-context.js';
+import { evalValue } from '../kernel/eval-value.js';
 import type {
   AgentPolicySurfaceVisibilityClass,
   CompiledAgentPolicyRef,
   CompiledAgentPolicySurfaceCatalog,
   CompiledAgentPolicySurfaceVisibility,
+  GameDef,
+  GameState,
 } from '../kernel/types.js';
+import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
+
+export interface PolicyVictorySurface {
+  readonly marginBySeat: ReadonlyMap<string, number>;
+  readonly rankBySeat: ReadonlyMap<string, number>;
+}
 
 export interface ResolvedPolicySurfaceRef extends Extract<CompiledAgentPolicyRef, { readonly kind: 'surface' }> {
   readonly visibility: CompiledAgentPolicySurfaceVisibility;
@@ -123,4 +135,71 @@ export function isSurfaceVisibilityAccessible(
     case 'hidden':
       return false;
   }
+}
+
+export function resolvePolicySeatToken(
+  def: GameDef | undefined,
+  state: GameState,
+  seatToken: string,
+  actingSeatId: string,
+): string {
+  if (seatToken === 'self') {
+    return actingSeatId;
+  }
+  if (seatToken === 'active') {
+    return def?.seats?.[state.activePlayer]?.id ?? actingSeatId;
+  }
+  return seatToken;
+}
+
+export function buildPolicyVictorySurface(
+  def: GameDef,
+  state: GameState,
+  runtime?: GameDefRuntime,
+): PolicyVictorySurface {
+  const margins = def.terminal.margins ?? [];
+  const adjacencyGraph = runtime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
+  const runtimeTableIndex = runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
+  const resources = createEvalRuntimeResources();
+  const evalContext = createEvalContext({
+    def,
+    adjacencyGraph,
+    state,
+    activePlayer: state.activePlayer,
+    actorPlayer: state.activePlayer,
+    bindings: {},
+    runtimeTableIndex,
+    resources,
+  });
+
+  const rows = margins.map((marginDef) => {
+    const margin = evalValue(marginDef.value, evalContext);
+    if (typeof margin !== 'number') {
+      throw new Error(`Victory margin "${marginDef.seat}" did not evaluate to a number.`);
+    }
+    return { seat: marginDef.seat, margin };
+  });
+
+  const order = def.terminal.ranking?.order ?? 'desc';
+  const tieBreakOrder = def.terminal.ranking?.tieBreakOrder ?? [];
+  const tieBreakIndex = new Map(tieBreakOrder.map((seat, index): readonly [string, number] => [seat, index]));
+  rows.sort((left, right) => {
+    if (left.margin !== right.margin) {
+      return order === 'desc' ? right.margin - left.margin : left.margin - right.margin;
+    }
+    const leftOrder = tieBreakIndex.get(left.seat) ?? Number.MAX_SAFE_INTEGER;
+    const rightOrder = tieBreakIndex.get(right.seat) ?? Number.MAX_SAFE_INTEGER;
+    if (leftOrder !== rightOrder) {
+      return leftOrder - rightOrder;
+    }
+    return left.seat.localeCompare(right.seat);
+  });
+
+  const marginBySeat = new Map<string, number>();
+  const rankBySeat = new Map<string, number>();
+  rows.forEach((row, index) => {
+    marginBySeat.set(row.seat, row.margin);
+    rankBySeat.set(row.seat, index + 1);
+  });
+  return { marginBySeat, rankBySeat };
 }

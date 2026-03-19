@@ -13,6 +13,8 @@ function createContext(parameterDefs: Readonly<Record<string, CompiledAgentParam
           return { type: 'boolean' as const, costClass: 'candidate' as const };
         case 'candidate.param.eventCardId':
           return { type: 'id' as const, costClass: 'candidate' as const };
+        case 'candidate.param.$targets':
+          return { type: 'idList' as const, costClass: 'candidate' as const };
         case 'feature.currentMargin':
           return {
             type: 'number' as const,
@@ -92,6 +94,20 @@ describe('policy-expr analysis', () => {
     const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
     const analysis = analyzePolicyExpr(
       { eq: [{ ref: 'candidate.param.eventCardId' }, 'card-2'] },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.deepEqual(diagnostics, []);
+    assert.equal(analysis?.valueType, 'boolean');
+    assert.equal(analysis?.costClass, 'candidate');
+  });
+
+  it('uses the resolved candidate-param contract for id-list candidate.param refs', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      { in: ['zone-a', { ref: 'candidate.param.$targets' }] },
       createContext(),
       diagnostics,
       'expr',

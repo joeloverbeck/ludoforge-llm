@@ -467,4 +467,64 @@ describe('policy-eval', () => {
       0,
     );
   });
+
+  it('reads exact id-list candidate params through compiled candidate-param defs', () => {
+    const agents = createCatalog(
+      {
+        candidateFeatures: {
+          targetsZoneA: {
+            type: 'boolean',
+            costClass: 'candidate',
+            expr: { in: ['zone-a', { ref: 'candidate.param.$targets' }] },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+        },
+        scoreTerms: {
+          preferZoneA: {
+            costClass: 'candidate',
+            weight: 1,
+            value: { boolToNumber: { ref: 'feature.targetsZoneA' } },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['targetsZoneA'], aggregates: [] },
+          },
+        },
+      },
+      {
+        use: {
+          pruningRules: [],
+          scoreTerms: ['preferZoneA'],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: [],
+          candidateFeatures: ['targetsZoneA'],
+          candidateAggregates: [],
+        },
+      },
+      {
+        '$targets': {
+          type: 'idList',
+          cardinality: {
+            kind: 'exact',
+            n: 2,
+          },
+        },
+      },
+    );
+    const input = createInput(agents, [
+      { actionId: asActionId('alpha'), params: { '$targets': ['zone-a', 'zone-b'] } },
+      { actionId: asActionId('beta'), params: { '$targets': 'zone-a' } },
+    ]);
+
+    const result = evaluatePolicyMove(input);
+
+    assert.equal(result.move.actionId, asActionId('alpha'));
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'alpha')?.score,
+      1,
+    );
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'beta')?.score,
+      0,
+    );
+  });
 });

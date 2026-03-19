@@ -974,6 +974,129 @@ describe('agents authoring surface', () => {
     );
   });
 
+  it('derives exact chooseN id-list candidate params from static action choice binds', () => {
+    const compiled = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      actions: [
+        {
+          id: 'event',
+          actor: 'active',
+          executor: 'actor',
+          phase: ['main'],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [
+            { chooseN: { bind: '$targets', options: { query: 'zones' }, n: 2 } },
+          ],
+          limits: [],
+        },
+      ],
+      agents: {
+        parameters: {},
+        library: {
+          candidateFeatures: {
+            targetsZoneA: {
+              type: 'boolean',
+              expr: { in: ['zone-a', { ref: 'candidate.param.$targets' }] },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(compiled.gameDef === null, false);
+    assert.equal(compiled.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+    assert.deepEqual(compiled.gameDef?.agents?.candidateParamDefs, {
+      '$targets': {
+        type: 'idList',
+        cardinality: {
+          kind: 'exact',
+          n: 2,
+        },
+      },
+    });
+  });
+
+  it('rejects candidate.param refs for chooseN binds without static exact id-list contracts', () => {
+    const compiled = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      actions: [
+        {
+          id: 'event',
+          actor: 'active',
+          executor: 'actor',
+          phase: ['main'],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [
+            { chooseN: { bind: '$targets', options: { query: 'zones' }, max: 2 } },
+          ],
+          limits: [],
+        },
+      ],
+      agents: {
+        parameters: {},
+        library: {
+          candidateFeatures: {
+            targetsZoneA: {
+              type: 'boolean',
+              expr: { in: ['zone-a', { ref: 'candidate.param.$targets' }] },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(compiled.gameDef, null);
+    assert.ok(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_AGENT_CANDIDATE_PARAM_REF_INVALID'
+          && diagnostic.path === 'doc.agents.library.candidateFeatures.targetsZoneA.expr.in.1.ref',
+      ),
+    );
+  });
+
   it('rejects metric refs whose ids are not declared in authored derivedMetrics', () => {
     const compiled = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),

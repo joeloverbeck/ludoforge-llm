@@ -524,6 +524,13 @@ const CompiledAgentCandidateParamDefSchema = z
       z.literal('id'),
       z.literal('idList'),
     ]),
+    cardinality: z
+      .object({
+        kind: z.literal('exact'),
+        n: z.number().int().nonnegative(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 

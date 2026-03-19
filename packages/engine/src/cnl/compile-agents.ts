@@ -1,6 +1,7 @@
 import { fingerprintPolicyIr } from '../agents/policy-ir.js';
 import { analyzePolicyExpr, type AnalyzePolicyExprContext, type ResolvedPolicyRef } from '../agents/policy-expr.js';
 import type { Diagnostic } from '../kernel/diagnostics.js';
+import { collectChoiceBindingSpecs } from '../kernel/move-runtime-bindings.js';
 import { inferQueryRuntimeShapes } from '../kernel/query-shape-inference.js';
 import type {
   AgentParameterType,
@@ -56,6 +57,7 @@ export interface LowerAgentsOptions {
   readonly referenceSeatIds?: readonly string[];
   readonly policyMetricIds?: readonly string[];
   readonly actionDefs?: GameDef['actions'];
+  readonly actionPipelines?: GameDef['actionPipelines'];
 }
 
 export function lowerAgents(
@@ -68,7 +70,7 @@ export function lowerAgents(
   }
 
   const parameterDefs = lowerParameterDefs(agents.parameters, diagnostics);
-  const candidateParamDefs = lowerCandidateParamDefs(options.actionDefs);
+  const candidateParamDefs = lowerCandidateParamDefs(options.actionDefs, options.actionPipelines);
   const libraryCompiler = new AgentLibraryCompiler(agents.library, parameterDefs, candidateParamDefs, diagnostics, options);
   const library = libraryCompiler.compile();
   const profiles = addProfileFingerprints(
@@ -123,43 +125,81 @@ function lowerParameterDefs(
 
 function lowerCandidateParamDefs(
   actions: GameDef['actions'] | undefined,
+  actionPipelines: GameDef['actionPipelines'] | undefined,
 ): AgentPolicyCatalog['candidateParamDefs'] {
   const compiled: Record<string, CompiledAgentCandidateParamDef> = {};
-  if (actions === undefined) {
+  if (actions === undefined && actionPipelines === undefined) {
     return compiled;
   }
 
-  const candidateParamTypes = new Map<string, AgentPolicyValueType | null>();
-  for (const action of actions) {
+  const candidateParamDefs = new Map<string, CompiledAgentCandidateParamDef | null>();
+  const recordCandidateParamDef = (
+    paramName: string,
+    candidateParamDef: CompiledAgentCandidateParamDef | null,
+  ): void => {
+    const existingDef = candidateParamDefs.get(paramName);
+    if (existingDef === null || candidateParamDef === null) {
+      candidateParamDefs.set(paramName, null);
+      return;
+    }
+    if (existingDef === undefined) {
+      candidateParamDefs.set(paramName, candidateParamDef);
+      return;
+    }
+    if (!candidateParamDefsEqual(existingDef, candidateParamDef)) {
+      candidateParamDefs.set(paramName, null);
+    }
+  };
+
+  for (const action of actions ?? []) {
     for (const param of action.params) {
-      const candidateType = classifyCandidateParamType(param.domain);
-      const existingType = candidateParamTypes.get(param.name);
-      if (existingType === null || candidateType === null) {
-        candidateParamTypes.set(param.name, null);
+      recordCandidateParamDef(param.name, classifyActionParamCandidateParamDef(param.domain));
+    }
+    for (const choiceSpec of collectChoiceBindingSpecs([...action.cost, ...action.effects])) {
+      if (isDynamicBindingTemplate(choiceSpec.bind)) {
         continue;
       }
-      if (existingType === undefined) {
-        candidateParamTypes.set(param.name, candidateType);
-        continue;
-      }
-      if (existingType !== candidateType) {
-        candidateParamTypes.set(param.name, null);
-      }
+      recordCandidateParamDef(choiceSpec.bind, classifyChoiceBindingCandidateParamDef(choiceSpec));
     }
   }
 
-  for (const [paramName, candidateType] of candidateParamTypes.entries()) {
-    if (candidateType !== null) {
-      compiled[paramName] = { type: candidateType };
+  for (const pipeline of actionPipelines ?? []) {
+    for (const choiceSpec of collectChoiceBindingSpecs([
+      ...pipeline.costEffects,
+      ...pipeline.stages.flatMap((stage) => stage.effects),
+    ])) {
+      if (isDynamicBindingTemplate(choiceSpec.bind)) {
+        continue;
+      }
+      recordCandidateParamDef(choiceSpec.bind, classifyChoiceBindingCandidateParamDef(choiceSpec));
+    }
+  }
+
+  for (const [paramName, candidateParamDef] of candidateParamDefs.entries()) {
+    if (candidateParamDef !== null) {
+      compiled[paramName] = candidateParamDef;
     }
   }
 
   return compiled;
 }
 
-function classifyCandidateParamType(
+function candidateParamDefsEqual(
+  left: CompiledAgentCandidateParamDef,
+  right: CompiledAgentCandidateParamDef,
+): boolean {
+  return left.type === right.type
+    && left.cardinality?.kind === right.cardinality?.kind
+    && left.cardinality?.n === right.cardinality?.n;
+}
+
+function isDynamicBindingTemplate(bind: string): boolean {
+  return /\{[^{}]+\}/.test(bind);
+}
+
+function classifyActionParamCandidateParamDef(
   domain: GameDef['actions'][number]['params'][number]['domain'],
-): AgentPolicyValueType | null {
+): CompiledAgentCandidateParamDef | null {
   const runtimeShapes = inferQueryRuntimeShapes(domain);
   if (runtimeShapes.length !== 1) {
     return null;
@@ -167,10 +207,49 @@ function classifyCandidateParamType(
 
   switch (runtimeShapes[0]) {
     case 'number':
-      return 'number';
+      return { type: 'number' };
     case 'string':
     case 'token':
-      return 'id';
+      return { type: 'id' };
+    default:
+      return null;
+  }
+}
+
+function classifyChoiceBindingCandidateParamDef(
+  choiceSpec: ReturnType<typeof collectChoiceBindingSpecs>[number],
+): CompiledAgentCandidateParamDef | null {
+  const runtimeShapes = inferQueryRuntimeShapes(choiceSpec.options);
+  if (runtimeShapes.length !== 1) {
+    return null;
+  }
+
+  if (choiceSpec.kind === 'chooseOne') {
+    switch (runtimeShapes[0]) {
+      case 'number':
+        return { type: 'number' };
+      case 'string':
+      case 'token':
+        return { type: 'id' };
+      default:
+        return null;
+    }
+  }
+
+  if (choiceSpec.n === undefined) {
+    return null;
+  }
+
+  switch (runtimeShapes[0]) {
+    case 'string':
+    case 'token':
+      return {
+        type: 'idList',
+        cardinality: {
+          kind: 'exact',
+          n: choiceSpec.n,
+        },
+      };
     default:
       return null;
   }

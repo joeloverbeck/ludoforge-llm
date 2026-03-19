@@ -318,6 +318,10 @@ export interface CompiledAgentParameterDef {
 
 export interface CompiledAgentCandidateParamDef {
   readonly type: AgentPolicyValueType;
+  readonly cardinality?: {
+    readonly kind: 'exact';
+    readonly n: number;
+  };
 }
 
 export interface CompiledAgentDependencyRefs {

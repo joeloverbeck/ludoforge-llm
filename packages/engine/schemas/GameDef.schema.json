@@ -1878,6 +1878,25 @@
                     "const": "idList"
                   }
                 ]
+              },
+              "cardinality": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "exact"
+                  },
+                  "n": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "kind",
+                  "n"
+                ],
+                "additionalProperties": false
               }
             },
             "required": [

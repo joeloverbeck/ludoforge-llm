@@ -4,6 +4,7 @@ import type { Container } from 'pixi.js';
 
 import { VisualConfigProvider } from '../../../src/config/visual-config-provider';
 import { createTableOverlayRenderer } from '../../../src/canvas/renderers/table-overlay-renderer';
+import type { WorldLayoutModel } from '../../../src/layout/world-layout-model.js';
 import type { RenderModel, RenderVariable, RenderZone } from '../../../src/model/render-model';
 import type { RunnerFrame, RunnerProjectionSource } from '../../../src/model/runner-frame.js';
 import { projectTableOverlaySurface } from '../../../src/presentation/project-table-overlay-surface.js';
@@ -226,9 +227,19 @@ function updateRenderer(
           frame: toRunnerFrame(renderModel),
           source: toRunnerProjectionSource(renderModel),
         },
-    positions,
+    worldLayout: makeWorldLayout(positions),
     visualConfigProvider: provider,
   }));
+}
+
+function makeWorldLayout(
+  positions: ReadonlyMap<string, { x: number; y: number }>,
+): WorldLayoutModel {
+  return {
+    positions: new Map(positions),
+    bounds: { minX: -120, minY: -120, maxX: 240, maxY: 240 },
+    boardBounds: { minX: -80, minY: -80, maxX: 200, maxY: 200 },
+  };
 }
 
 function toRunnerFrame(renderModel: RenderModel): RunnerFrame {
@@ -351,8 +362,8 @@ describe('createTableOverlayRenderer', () => {
     const label = parent.children[0] as InstanceType<typeof MockText>;
     expect(parent.children).toHaveLength(1);
     expect(label.text).toBe('Pot: 42');
-    expect(label.position.x).toBe(0);
-    expect(label.position.y).toBeCloseTo(126.6666666667, 6);
+    expect(label.position.x).toBe(60);
+    expect(label.position.y).toBe(120);
   });
 
   it('updates globalVar overlay when value changes', () => {

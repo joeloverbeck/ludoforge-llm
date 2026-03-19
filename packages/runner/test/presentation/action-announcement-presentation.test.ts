@@ -7,10 +7,12 @@ import {
   createActionAnnouncementPresenter,
   resolveActionAnnouncementSpec,
 } from '../../src/presentation/action-announcement-presentation.js';
+import type { WorldLayoutModel } from '../../src/layout/world-layout-model.js';
 import type { GameStore } from '../../src/store/game-store.js';
 
 interface RuntimeState {
   readonly renderModel: GameStore['renderModel'];
+  readonly worldLayout: WorldLayoutModel | null;
   readonly appliedMoveEvent: GameStore['appliedMoveEvent'];
 }
 
@@ -38,16 +40,27 @@ function createRuntimeStore(initialRenderModel: GameStore['renderModel']): Store
   return createStore<RuntimeState>()(
     subscribeWithSelector((): RuntimeState => ({
       renderModel: initialRenderModel,
+      worldLayout: makeWorldLayout(new Map([['zone:player-1', { x: 120, y: 80 }]])),
       appliedMoveEvent: null,
     })),
   );
+}
+
+function makeWorldLayout(
+  positions: ReadonlyMap<string, { readonly x: number; readonly y: number }>,
+): WorldLayoutModel {
+  return {
+    positions: new Map(positions),
+    bounds: { minX: 0, minY: 0, maxX: 300, maxY: 200 },
+    boardBounds: { minX: 0, minY: 0, maxX: 300, maxY: 200 },
+  };
 }
 
 describe('action-announcement-presentation', () => {
   it('resolves immutable announcement specs before renderer mutation', () => {
     const spec = resolveActionAnnouncementSpec(
       makeRenderModel(),
-      new Map([['zone:player-1', { x: 120, y: 80 }]]),
+      makeWorldLayout(new Map([['zone:player-1', { x: 120, y: 80 }]])),
       {
         sequence: 1,
         actorId: asPlayerId(1),
@@ -67,7 +80,7 @@ describe('action-announcement-presentation', () => {
   it('ignores human and unresolved announcement events', () => {
     const humanSpec = resolveActionAnnouncementSpec(
       makeRenderModel(),
-      new Map([['zone:player-1', { x: 120, y: 80 }]]),
+      makeWorldLayout(new Map([['zone:player-1', { x: 120, y: 80 }]])),
       {
         sequence: 1,
         actorId: asPlayerId(1),
@@ -77,7 +90,7 @@ describe('action-announcement-presentation', () => {
     );
     const missingAnchorSpec = resolveActionAnnouncementSpec(
       makeRenderModel(),
-      new Map(),
+      makeWorldLayout(new Map()),
       {
         sequence: 2,
         actorId: asPlayerId(1),
@@ -95,13 +108,6 @@ describe('action-announcement-presentation', () => {
     const onAnnouncement = vi.fn();
     const presenter = createActionAnnouncementPresenter({
       store: store as unknown as StoreApi<GameStore>,
-      positionStore: {
-        getSnapshot: () => ({
-          zoneIDs: ['zone:player-1'],
-          positions: new Map([['zone:player-1', { x: 120, y: 80 }]]),
-          bounds: { minX: 0, minY: 0, maxX: 300, maxY: 200 },
-        }),
-      } as never,
       onAnnouncement,
     });
 
@@ -121,6 +127,34 @@ describe('action-announcement-presentation', () => {
       text: 'Raise (200)',
       anchor: { x: 120, y: 152 },
       sequence: 1,
+    }));
+
+    presenter.destroy();
+  });
+
+  it('uses the latest store-owned world layout when publishing announcement specs', () => {
+    const store = createRuntimeStore(makeRenderModel());
+    const onAnnouncement = vi.fn();
+    const presenter = createActionAnnouncementPresenter({
+      store: store as unknown as StoreApi<GameStore>,
+      onAnnouncement,
+    });
+
+    presenter.start();
+    store.setState({
+      worldLayout: makeWorldLayout(new Map([['zone:player-1', { x: 240, y: 20 }]])),
+    });
+    store.setState({
+      appliedMoveEvent: {
+        sequence: 1,
+        actorId: asPlayerId(1),
+        actorSeat: 'ai-random',
+        move: { actionId: asActionId('raise'), params: {} },
+      },
+    });
+
+    expect(onAnnouncement).toHaveBeenCalledWith(expect.objectContaining({
+      anchor: { x: 240, y: 92 },
     }));
 
     presenter.destroy();

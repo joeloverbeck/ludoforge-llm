@@ -472,7 +472,6 @@ describe('createGameCanvasRuntime', () => {
     });
     expect(fixture.deps.createActionAnnouncementPresenter).toHaveBeenCalledWith({
       store: store as unknown as StoreApi<GameStore>,
-      positionStore: fixture.positionStore,
       onAnnouncement: expect.any(Function),
     });
     expect(fixture.deps.createCanvasUpdater).toHaveBeenCalledTimes(1);

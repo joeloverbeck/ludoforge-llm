@@ -2,6 +2,7 @@ import { asPlayerId, type AttributeValue } from '@ludoforge/engine/runtime';
 import { describe, expect, it } from 'vitest';
 
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
+import type { WorldLayoutModel } from '../../src/layout/world-layout-model.js';
 import type {
   RunnerFrame,
   RunnerProjectionBundle,
@@ -95,6 +96,27 @@ function makeProjection(overrides: {
   };
 }
 
+function makeWorldLayout(
+  positions: ReadonlyMap<string, { readonly x: number; readonly y: number }>,
+  boardBounds: WorldLayoutModel['boardBounds'] = {
+    minX: -120,
+    minY: -80,
+    maxX: 120,
+    maxY: 80,
+  },
+): WorldLayoutModel {
+  return {
+    positions: new Map(positions),
+    bounds: {
+      minX: -200,
+      minY: -120,
+      maxX: 200,
+      maxY: 160,
+    },
+    boardBounds,
+  };
+}
+
 describe('projectTableOverlaySurface', () => {
   const positions = new Map([
     ['shared:center', { x: 0, y: 0 }],
@@ -125,7 +147,7 @@ describe('projectTableOverlaySurface', () => {
           ]),
         },
       }),
-      positions,
+      worldLayout: makeWorldLayout(positions),
       visualConfigProvider: provider,
     });
 
@@ -133,7 +155,7 @@ describe('projectTableOverlaySurface', () => {
     expect(overlays[0]).toMatchObject({
       type: 'text',
       text: 'Pot: 42',
-      point: { x: 0, y: 106.66666666666667 },
+      point: { x: 0, y: 40 },
       style: { color: '#f8fafc', fontSize: 12, fontFamily: 'monospace' },
     });
     expect(overlays[1]).toMatchObject({
@@ -167,7 +189,7 @@ describe('projectTableOverlaySurface', () => {
           globalVars: [asVar('pot', 42), asVar('round', 1)],
         },
       }),
-      positions,
+      worldLayout: makeWorldLayout(positions),
       visualConfigProvider: provider,
     });
     const second = projectTableOverlaySurface({
@@ -176,10 +198,64 @@ describe('projectTableOverlaySurface', () => {
           globalVars: [asVar('pot', 42), asVar('round', 2)],
         },
       }),
-      positions,
+      worldLayout: makeWorldLayout(positions),
       visualConfigProvider: provider,
     });
 
     expect(tableOverlaySurfaceNodesEqual(first, second)).toBe(true);
+  });
+
+  it('reprojects anchored nodes when world-layout anchors move without semantic changes', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      tableOverlays: {
+        playerSeatAnchorZones: ['seat:0', 'seat:1'],
+        items: [
+          { kind: 'globalVar', varName: 'pot', label: 'Pot', position: 'tableCenter' },
+          { kind: 'perPlayerVar', varName: 'bet', label: 'Bet', position: 'playerSeat' },
+        ],
+      },
+    });
+    const projection = makeProjection({
+      source: {
+        globalVars: [asVar('pot', 42)],
+        playerVars: new Map([
+          [asPlayerId(0), [asVar('bet', 5)]],
+          [asPlayerId(1), [asVar('bet', 9)]],
+        ]),
+      },
+    });
+
+    const first = projectTableOverlaySurface({
+      projection,
+      worldLayout: makeWorldLayout(positions),
+      visualConfigProvider: provider,
+    });
+    const second = projectTableOverlaySurface({
+      projection,
+      worldLayout: makeWorldLayout(new Map([
+        ['shared:center', { x: 0, y: 0 }],
+        ['seat:0', { x: -140, y: 130 }],
+        ['seat:1', { x: 140, y: 130 }],
+      ]), {
+        minX: -160,
+        minY: -90,
+        maxX: 160,
+        maxY: 90,
+      }),
+      visualConfigProvider: provider,
+    });
+
+    expect(tableOverlaySurfaceNodesEqual(first, second)).toBe(false);
+    expect(second[0]).toMatchObject({
+      type: 'text',
+      text: 'Pot: 42',
+      point: { x: 0, y: 0 },
+    });
+    expect(second[1]).toMatchObject({
+      type: 'text',
+      text: 'Bet: 5',
+      point: { x: -140, y: 130 },
+    });
   });
 });

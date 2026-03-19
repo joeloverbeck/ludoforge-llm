@@ -1,8 +1,8 @@
 import { asPlayerId } from '@ludoforge/engine/runtime';
 
-import type { Position } from '../canvas/geometry.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import type { TableOverlayItemConfig } from '../config/visual-config-types.js';
+import type { WorldLayoutModel } from '../layout/world-layout-model.js';
 import type { RunnerProjectionBundle, RunnerVariable, RunnerZone } from '../model/runner-frame.js';
 
 export interface TableOverlaySurfacePoint {
@@ -46,7 +46,7 @@ export type TableOverlaySurfaceNode = TableOverlayTextNode | TableOverlayMarkerN
 
 interface ProjectTableOverlaySurfaceOptions {
   readonly projection: RunnerProjectionBundle | null;
-  readonly positions: ReadonlyMap<string, Position>;
+  readonly worldLayout: WorldLayoutModel | null;
   readonly visualConfigProvider: VisualConfigProvider;
 }
 
@@ -62,8 +62,8 @@ const DEFAULT_MARKER_TEXT_COLOR = '#111827';
 export function projectTableOverlaySurface(
   options: ProjectTableOverlaySurfaceOptions,
 ): readonly TableOverlaySurfaceNode[] {
-  const { projection, positions, visualConfigProvider } = options;
-  if (projection === null) {
+  const { projection, worldLayout, visualConfigProvider } = options;
+  if (projection === null || worldLayout === null) {
     return EMPTY_OVERLAY_SURFACE;
   }
 
@@ -75,10 +75,10 @@ export function projectTableOverlaySurface(
   const visibleZones = projection.frame.zones.filter((zone) => !visualConfigProvider.getHiddenZones().has(zone.id));
   const seatAnchors = deriveSeatAnchors(
     visibleZones,
-    positions,
+    worldLayout.positions,
     new Set(visualConfigProvider.getPlayerSeatAnchorZones()),
   );
-  const tableCenter = deriveTableCenter(visibleZones, positions);
+  const tableCenter = deriveTableCenter(worldLayout);
   const result: TableOverlaySurfaceNode[] = [];
 
   for (const [itemIndex, item] of items.entries()) {
@@ -214,7 +214,7 @@ function resolveOverlayPosition(
 
 function deriveSeatAnchors(
   zones: readonly Pick<RunnerZone, 'id' | 'ownerID'>[],
-  positions: ReadonlyMap<string, Position>,
+  positions: WorldLayoutModel['positions'],
   playerSeatAnchorZones: ReadonlySet<string>,
 ): ReadonlyMap<number, TableOverlaySurfacePoint> {
   const accumulators = new Map<number, { sumX: number; sumY: number; count: number }>();
@@ -250,31 +250,10 @@ function deriveSeatAnchors(
   return anchors;
 }
 
-function deriveTableCenter(
-  zones: readonly Pick<RunnerZone, 'id'>[],
-  positions: ReadonlyMap<string, Position>,
-): TableOverlaySurfacePoint {
-  let sumX = 0;
-  let sumY = 0;
-  let count = 0;
-
-  for (const zone of zones) {
-    const point = positions.get(zone.id);
-    if (point === undefined) {
-      continue;
-    }
-    sumX += point.x;
-    sumY += point.y;
-    count += 1;
-  }
-
-  if (count === 0) {
-    return { x: 0, y: 0 };
-  }
-
+function deriveTableCenter(worldLayout: WorldLayoutModel): TableOverlaySurfacePoint {
   return {
-    x: sumX / count,
-    y: sumY / count,
+    x: (worldLayout.boardBounds.minX + worldLayout.boardBounds.maxX) / 2,
+    y: (worldLayout.boardBounds.minY + worldLayout.boardBounds.maxY) / 2,
   };
 }
 

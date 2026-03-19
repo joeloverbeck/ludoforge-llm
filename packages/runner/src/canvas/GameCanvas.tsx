@@ -302,7 +302,6 @@ export async function createGameCanvasRuntime(
   });
   const actionAnnouncementPresenter = deps.createActionAnnouncementPresenter({
     store: options.store,
-    positionStore,
     onAnnouncement: (spec) => {
       actionAnnouncementRenderer.enqueue(spec);
     },

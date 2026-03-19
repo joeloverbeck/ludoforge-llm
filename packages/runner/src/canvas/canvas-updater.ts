@@ -8,6 +8,7 @@ import type {
 } from '../model/runner-frame.js';
 import type { GameStore } from '../store/game-store';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
+import type { WorldLayoutModel } from '../layout/world-layout-model.js';
 import { adjacenciesVisuallyEqual, tokensVisuallyEqual, zonesVisuallyEqual } from './canvas-equality';
 import { EMPTY_INTERACTION_HIGHLIGHTS, type InteractionHighlights } from './interaction-highlights.js';
 import type { PositionStore } from './position-store';
@@ -77,6 +78,7 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
   let started = false;
   let latestSnapshot = selectCanvasSnapshot(store.getState());
   let latestRunnerProjection = store.getState().runnerProjection;
+  let latestWorldLayout = store.getState().worldLayout;
   let latestPositionSnapshot = deps.positionStore.getSnapshot();
   let latestInteractionHighlights = deps.getInteractionHighlights?.() ?? EMPTY_INTERACTION_HIGHLIGHTS;
   let animationPlaying = store.getState().animationPlaying;
@@ -84,9 +86,10 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
 
   const resolveOverlaySurface = (
     runnerProjection: RunnerProjectionBundle | null | undefined = latestRunnerProjection,
+    worldLayout: WorldLayoutModel | null | undefined = latestWorldLayout,
   ): ReturnType<typeof projectTableOverlaySurface> => projectTableOverlaySurface({
     projection: runnerProjection ?? null,
-    positions: latestPositionSnapshot.positions,
+    worldLayout: worldLayout ?? null,
     visualConfigProvider: deps.visualConfigProvider,
   });
 
@@ -147,6 +150,21 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
       );
 
       unsubscribeCallbacks.push(
+        store.subscribe((state) => state.worldLayout, (worldLayout) => {
+          latestWorldLayout = worldLayout;
+          if (animationPlaying) {
+            return;
+          }
+          deps.tableOverlayRenderer?.update(resolveOverlaySurface(undefined, worldLayout));
+        }, {
+          equalityFn: (prev, next) => tableOverlaySurfaceNodesEqual(
+            resolveOverlaySurface(undefined, prev),
+            resolveOverlaySurface(undefined, next),
+          ),
+        }),
+      );
+
+      unsubscribeCallbacks.push(
         store.subscribe((state) => state.animationPlaying, (playing, previousPlaying) => {
           animationPlaying = playing;
           if (!previousPlaying || playing) {
@@ -177,6 +195,7 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
       deps.viewport.updateWorldBounds(latestPositionSnapshot.bounds);
       deps.viewport.centerOnBounds(latestPositionSnapshot.bounds);
       latestRunnerProjection = store.getState().runnerProjection;
+      latestWorldLayout = store.getState().worldLayout;
       latestSnapshot = selectCanvasSnapshot(store.getState());
       if (animationPlaying) {
         queuedSnapshot = latestSnapshot;

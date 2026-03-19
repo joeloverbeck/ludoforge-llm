@@ -9,6 +9,7 @@ import { VisualConfigTokenRenderStyleProvider } from '../../src/canvas/renderers
 import type { AdjacencyRenderer, TableOverlayRenderer, TokenRenderer, ZoneRenderer } from '../../src/canvas/renderers/renderer-types';
 import type { ViewportResult } from '../../src/canvas/viewport-setup';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
+import type { WorldLayoutModel } from '../../src/layout/world-layout-model.js';
 import type { RenderModel, RenderToken, RenderZone } from '../../src/model/render-model';
 import type { RunnerFrame, RunnerProjectionBundle } from '../../src/model/runner-frame.js';
 import type { GameStore } from '../../src/store/game-store';
@@ -17,6 +18,7 @@ interface CanvasTestStoreState {
   readonly runnerProjection: RunnerProjectionBundle | null;
   readonly runnerFrame: RunnerFrame | null;
   readonly renderModel: RenderModel | null;
+  readonly worldLayout: WorldLayoutModel | null;
   readonly animationPlaying: boolean;
 }
 
@@ -106,14 +108,29 @@ function asVar(name: string, value: number | boolean) {
   } as const;
 }
 
-function createCanvasTestStore(initial: Omit<CanvasTestStoreState, 'runnerProjection' | 'runnerFrame'> & {
+function makeWorldLayout(zoneIds: readonly string[]): WorldLayoutModel {
+  const positions = new Map<string, { x: number; y: number }>();
+  for (const [index, zoneId] of zoneIds.entries()) {
+    positions.set(zoneId, { x: index * 100, y: index * 40 });
+  }
+  return {
+    positions,
+    bounds: { minX: -80, minY: -80, maxX: 320, maxY: 220 },
+    boardBounds: { minX: -40, minY: -20, maxX: 240, maxY: 140 },
+  };
+}
+
+function createCanvasTestStore(initial: Omit<CanvasTestStoreState, 'runnerProjection' | 'runnerFrame' | 'worldLayout'> & {
+  worldLayout?: WorldLayoutModel | null;
   runnerProjection?: RunnerProjectionBundle | null;
   runnerFrame?: RunnerFrame | null;
 }): StoreApi<CanvasTestStoreState> {
+  const derivedZoneIds = initial.renderModel?.zones.map((zone) => zone.id) ?? [];
   const snapshot: CanvasTestStoreState = {
     runnerProjection: initial.runnerProjection ?? (initial.renderModel === null ? null : toRunnerProjection(initial.renderModel)),
     runnerFrame: initial.runnerFrame ?? (initial.renderModel === null ? null : toRunnerFrame(initial.renderModel)),
     renderModel: initial.renderModel,
+    worldLayout: initial.worldLayout ?? makeWorldLayout(derivedZoneIds),
     animationPlaying: initial.animationPlaying,
   };
   const store = createStore<CanvasTestStoreState>()(
@@ -314,7 +331,7 @@ describe('createCanvasUpdater', () => {
 
     updater.start();
 
-    expect(storeSubscribeSpy).toHaveBeenCalledTimes(3);
+    expect(storeSubscribeSpy).toHaveBeenCalledTimes(4);
     expect(positionSubscribeSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -498,6 +515,57 @@ describe('createCanvasUpdater', () => {
     expect(renderers.zoneRenderer.update).not.toHaveBeenCalled();
     expect(renderers.adjacencyRenderer.update).not.toHaveBeenCalled();
     expect(renderers.tokenRenderer.update).not.toHaveBeenCalled();
+  });
+
+  it('updates table overlays when world layout changes even if semantic projection is unchanged', () => {
+    const model = makeRenderModel({
+      globalVars: [asVar('pot', 10)],
+    });
+    const store = createCanvasTestStore({
+      renderModel: model,
+      worldLayout: makeWorldLayout(['zone:a']),
+      animationPlaying: false,
+    });
+    const positionStore = createPositionStore(['zone:a']);
+
+    const renderers = createRendererMocks();
+    const viewport = createViewportMock();
+
+    const updater = createCanvasUpdater({
+      store: store as unknown as StoreApi<GameStore>,
+      positionStore,
+      visualConfigProvider: TEST_TABLE_OVERLAY_PROVIDER,
+      tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(TEST_TABLE_OVERLAY_PROVIDER),
+      zoneRenderer: renderers.zoneRenderer,
+      adjacencyRenderer: renderers.adjacencyRenderer,
+      tokenRenderer: renderers.tokenRenderer,
+      tableOverlayRenderer: renderers.tableOverlayRenderer,
+      viewport,
+    });
+
+    updater.start();
+    expect(renderers.tableOverlayRenderer.update).toHaveBeenCalledTimes(1);
+    vi.clearAllMocks();
+
+    store.setState({
+      worldLayout: {
+        positions: new Map([['zone:a', { x: 200, y: 120 }]]),
+        bounds: { minX: 0, minY: 0, maxX: 260, maxY: 160 },
+        boardBounds: { minX: 100, minY: 80, maxX: 220, maxY: 140 },
+      },
+    });
+
+    expect(renderers.tableOverlayRenderer.update).toHaveBeenCalledTimes(1);
+    expect(renderers.zoneRenderer.update).not.toHaveBeenCalled();
+    expect(renderers.adjacencyRenderer.update).not.toHaveBeenCalled();
+    expect(renderers.tokenRenderer.update).not.toHaveBeenCalled();
+    expect(vi.mocked(renderers.tableOverlayRenderer.update).mock.calls[0]?.[0]).toMatchObject([
+      {
+        type: 'text',
+        text: 'Pot: 10',
+        point: { x: 160, y: 110 },
+      },
+    ]);
   });
 
   it('updates renderers when zones change and ignores metadata-only changes under visual equality gating', () => {

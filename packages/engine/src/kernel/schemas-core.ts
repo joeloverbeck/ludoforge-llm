@@ -1140,6 +1140,87 @@ export const TriggerLogEntrySchema = z.union([
   OperationCompoundStagesReplacedTraceEntrySchema,
 ]);
 
+const AgentDecisionFailureSummarySchema = z
+  .object({
+    code: StringSchema,
+    message: StringSchema,
+  })
+  .strict();
+
+const AgentDecisionScoreContributionSchema = z
+  .object({
+    termId: StringSchema,
+    contribution: NumberSchema,
+  })
+  .strict();
+
+const PolicyCandidateDecisionTraceSchema = z
+  .object({
+    actionId: StringSchema,
+    stableMoveKey: StringSchema,
+    score: NumberSchema,
+    prunedBy: z.array(StringSchema),
+    scoreContributions: z.array(AgentDecisionScoreContributionSchema).optional(),
+    previewRefIds: z.array(StringSchema).optional(),
+    unknownPreviewRefIds: z.array(StringSchema).optional(),
+  })
+  .strict();
+
+const PolicyPruningStepTraceSchema = z
+  .object({
+    ruleId: StringSchema,
+    remainingCandidateCount: NumberSchema,
+    skippedBecauseEmpty: BooleanSchema,
+  })
+  .strict();
+
+const PolicyTieBreakStepTraceSchema = z
+  .object({
+    tieBreakerId: StringSchema,
+    candidateCountBefore: NumberSchema,
+    candidateCountAfter: NumberSchema,
+  })
+  .strict();
+
+const PolicyPreviewUsageTraceSchema = z
+  .object({
+    evaluatedCandidateCount: NumberSchema,
+    refIds: z.array(StringSchema),
+    unknownRefIds: z.array(StringSchema),
+  })
+  .strict();
+
+const AgentDecisionTraceSchema = z.union([
+  z
+    .object({
+      kind: z.literal('builtin'),
+      agent: z.object({ kind: z.literal('builtin'), builtinId: z.union([z.literal('random'), z.literal('greedy')]) }).strict(),
+      candidateCount: NumberSchema,
+      selectedIndex: NumberSchema.optional(),
+      selectedStableMoveKey: StringSchema.optional(),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('policy'),
+      agent: z.object({ kind: z.literal('policy'), profileId: StringSchema.optional() }).strict(),
+      seatId: StringSchema.nullable(),
+      requestedProfileId: StringSchema.nullable(),
+      resolvedProfileId: StringSchema.nullable(),
+      profileFingerprint: StringSchema.nullable(),
+      initialCandidateCount: NumberSchema,
+      selectedStableMoveKey: StringSchema.nullable(),
+      finalScore: NumberSchema.nullable(),
+      pruningSteps: z.array(PolicyPruningStepTraceSchema),
+      tieBreakChain: z.array(PolicyTieBreakStepTraceSchema),
+      previewUsage: PolicyPreviewUsageTraceSchema,
+      emergencyFallback: BooleanSchema,
+      failure: AgentDecisionFailureSummarySchema.nullable(),
+      candidates: z.array(PolicyCandidateDecisionTraceSchema).optional(),
+    })
+    .strict(),
+]);
+
 export const MoveLogSchema = z
   .object({
     stateHash: z.bigint(),
@@ -1150,6 +1231,7 @@ export const MoveLogSchema = z
     triggerFirings: z.array(TriggerLogEntrySchema),
     warnings: z.array(RuntimeWarningSchema),
     effectTrace: z.array(EffectTraceEntrySchema).optional(),
+    agentDecision: AgentDecisionTraceSchema.optional(),
   })
   .strict();
 
@@ -1253,6 +1335,7 @@ export const SerializedMoveLogSchema = z
     triggerFirings: z.array(TriggerLogEntrySchema),
     warnings: z.array(RuntimeWarningSchema),
     effectTrace: z.array(EffectTraceEntrySchema).optional(),
+    agentDecision: AgentDecisionTraceSchema.optional(),
   })
   .strict();
 

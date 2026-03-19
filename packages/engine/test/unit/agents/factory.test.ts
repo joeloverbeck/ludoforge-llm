@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import { createAgent, parseAgentSpec } from '../../../src/agents/factory.js';
 import { RandomAgent } from '../../../src/agents/random-agent.js';
 import { GreedyAgent } from '../../../src/agents/greedy-agent.js';
+import { PolicyAgent } from '../../../src/agents/policy-agent.js';
 
 describe('createAgent', () => {
   it('returns RandomAgent for "random"', () => {
@@ -14,6 +15,11 @@ describe('createAgent', () => {
   it('returns GreedyAgent for "greedy"', () => {
     const agent = createAgent('greedy');
     assert.ok(agent instanceof GreedyAgent);
+  });
+
+  it('returns PolicyAgent for "policy"', () => {
+    const agent = createAgent('policy');
+    assert.ok(agent instanceof PolicyAgent);
   });
 
   it('throws for unknown type', () => {
@@ -38,6 +44,12 @@ describe('parseAgentSpec', () => {
     assert.ok(agents[0] instanceof GreedyAgent);
   });
 
+  it('parses "policy" for a single player', () => {
+    const agents = parseAgentSpec('policy', 1);
+    assert.equal(agents.length, 1);
+    assert.ok(agents[0] instanceof PolicyAgent);
+  });
+
   it('throws when player count does not match', () => {
     assert.throws(
       () => parseAgentSpec('greedy', 2),
@@ -48,7 +60,7 @@ describe('parseAgentSpec', () => {
   it('throws for retired mcts agent types in spec', () => {
     assert.throws(
       () => parseAgentSpec('mcts,random', 2),
-      /Unknown agent type: mcts\. Allowed: random, greedy/,
+      /Unknown agent type: mcts\. Allowed: random, greedy, policy/,
     );
   });
 

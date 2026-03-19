@@ -4,11 +4,20 @@ function formatDelta(delta: { readonly path: string; readonly before: unknown; r
   return `${delta.path}: ${JSON.stringify(delta.before)} → ${JSON.stringify(delta.after)}`;
 }
 
+function formatAgentLabel(event: MoveAppliedEvent): string {
+  if (event.agentDecision === undefined) {
+    return '';
+  }
+  if (event.agentDecision.kind === 'builtin') {
+    return ` [builtin:${event.agentDecision.agent.builtinId}]`;
+  }
+  const profileLabel = event.agentDecision.resolvedProfileId ?? event.agentDecision.requestedProfileId ?? 'unresolved';
+  return ` [policy:${profileLabel}]`;
+}
+
 function formatMoveApplied(event: MoveAppliedEvent): void {
   const playerLabel = event.seatId ?? `Player ${String(event.player)}`;
-  const aiLabel = event.aiDecision !== undefined
-    ? ` [${event.aiDecision.seatType}]`
-    : '';
+  const aiLabel = formatAgentLabel(event);
   const contextParts: string[] = [];
   if (event.moveContext?.currentCardId !== undefined) {
     contextParts.push(`card=${event.moveContext.currentCardId}`);
@@ -82,9 +91,17 @@ function formatMoveApplied(event: MoveAppliedEvent): void {
     console.groupEnd();
   }
 
-  if (event.aiDecision !== undefined) {
-    console.group('▶ AI Decision');
-    console.log(`${event.aiDecision.seatType} | ${String(event.aiDecision.candidateCount)} candidates | selected #${String(event.aiDecision.selectedIndex)}`);
+  if (event.agentDecision !== undefined) {
+    console.group('▶ Agent Decision');
+    if (event.agentDecision.kind === 'builtin') {
+      const selectionLabel = event.agentDecision.selectedStableMoveKey ?? `#${String(event.agentDecision.selectedIndex ?? 0)}`;
+      console.log(`builtin:${event.agentDecision.agent.builtinId} | ${String(event.agentDecision.candidateCount)} candidates | selected ${selectionLabel}`);
+    } else {
+      const fallbackLabel = event.agentDecision.emergencyFallback ? ' | emergency fallback' : '';
+      console.log(
+        `policy:${event.agentDecision.resolvedProfileId ?? 'unresolved'} | ${String(event.agentDecision.initialCandidateCount)} candidates | selected ${event.agentDecision.selectedStableMoveKey ?? 'n/a'}${fallbackLabel}`,
+      );
+    }
     console.groupEnd();
   }
 

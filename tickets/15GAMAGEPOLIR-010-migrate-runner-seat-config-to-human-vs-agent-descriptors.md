@@ -13,14 +13,16 @@ The runner still stores seat types as `'human' | 'ai-random' | 'ai-greedy'`, whi
 ## Assumption Reassessment (2026-03-19)
 
 1. `packages/runner/src/store/store-types.ts`, `session/session-types.ts`, `store/ai-move-policy.ts`, and `ui/PreGameConfigScreen.tsx` still use the legacy AI seat strings.
-2. Spec 15 requires human-vs-agent selection first, then a structured agent descriptor for non-human seats.
-3. Corrected scope: this ticket should migrate runner contracts and UI defaults, but not implement new policy logic itself.
+2. Ticket `15GAMAGEPOLIR-008` already migrated the shared trace consumer path to structured `agentDecision` payloads, so the runner now straddles two models: structured decision telemetry, but legacy string-based seat configuration.
+3. Spec 15 requires human-vs-agent selection first, then a structured agent descriptor for non-human seats.
+4. Corrected scope: this ticket should migrate runner contracts and UI defaults, but not implement new policy logic itself.
 
 ## Architecture Check
 
 1. A `SeatController` shape is cleaner than continuing to encode controller kind and agent kind in one string field.
-2. Keeping the runner on structured descriptors aligns it with the engine contract and removes duplicated parsing logic.
-3. No runner-only string shims should persist as the authoritative seat contract.
+2. The runner should reuse the engine-owned `AgentDescriptor` model already present in core types instead of introducing a runner-only duplicate descriptor schema.
+3. Keeping the runner on structured descriptors aligns it with the engine contract and removes duplicated parsing logic.
+4. No runner-only string shims should persist as the authoritative seat contract.
 
 ## What to Change
 
@@ -34,6 +36,8 @@ Introduce runner-side seat controller shapes:
 ### 2. Update AI move policy and session/store plumbing
 
 Make the runner resolve non-human seats through structured descriptors and default them to authored `policy`.
+
+This includes removing the current `ai-random` / `ai-greedy`-driven selection shortcuts in `store/ai-move-policy.ts` and replacing them with descriptor-aware dispatch that matches the engine-facing contract.
 
 ### 3. Update pre-game configuration UX
 
@@ -50,6 +54,8 @@ Expose:
 - `packages/runner/src/store/ai-move-policy.ts` (modify)
 - `packages/runner/src/ui/PreGameConfigScreen.tsx` (modify)
 - `packages/runner/src/store/game-store.ts` (modify as needed)
+- `packages/runner/src/session/active-game-runtime.ts` (modify if session bootstrap shape changes)
+- `packages/runner/src/session/replay-runtime.ts` (modify if replay/session serialization shape changes)
 - `packages/runner/test/store/ai-move-policy.test.ts` (new/modify)
 - `packages/runner/test/ui/pre-game-config-screen.test.tsx` (new/modify)
 
@@ -65,8 +71,9 @@ Expose:
 
 1. `packages/runner/test/store/ai-move-policy.test.ts` proves non-human seats default to authored `policy` descriptors and built-in random/greedy remain opt-in.
 2. `packages/runner/test/ui/pre-game-config-screen.test.tsx` proves the pre-game UI edits structured human/agent descriptors rather than legacy `ai-*` strings.
-3. Existing suite: `pnpm -F @ludoforge/runner test`
-4. Existing suite: `pnpm -F @ludoforge/runner typecheck`
+3. Session persistence/runtime wiring preserves the new structured seat-controller shape across start/resume/replay flows.
+4. Existing suite: `pnpm -F @ludoforge/runner test`
+5. Existing suite: `pnpm -F @ludoforge/runner typecheck`
 
 ### Invariants
 

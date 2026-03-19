@@ -1,4 +1,5 @@
 import type {
+  AgentDecisionTrace,
   ConditionTraceEntry,
   DecisionTraceEntry,
   EffectTraceEntry,
@@ -10,14 +11,6 @@ import type {
   TriggerLogEntry,
 } from '../kernel/types-core.js';
 import type { PlayerId } from '../kernel/branded.js';
-
-// ── AI Decision Trace ───────────────────────────────────
-
-export interface AiDecisionTrace {
-  readonly seatType: 'ai-random' | 'ai-greedy';
-  readonly candidateCount: number;
-  readonly selectedIndex: number;
-}
 
 // ── Trace Events ────────────────────────────────────────
 
@@ -41,7 +34,7 @@ export interface MoveAppliedEvent {
   readonly decisionTrace?: readonly DecisionTraceEntry[];
   readonly selectorTrace?: readonly SelectorTraceEntry[];
   readonly moveContext?: MoveContext;
-  readonly aiDecision?: AiDecisionTrace;
+  readonly agentDecision?: AgentDecisionTrace;
 }
 
 export interface GameTerminalEvent {
@@ -56,3 +49,5 @@ export type TraceEvent =
   | GameTerminalEvent;
 
 export type TraceSubscriber = (event: TraceEvent) => void;
+
+export type { AgentDecisionTrace } from '../kernel/types-core.js';

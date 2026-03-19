@@ -42,13 +42,44 @@ export interface PolicyEvaluationCandidateMetadata {
   readonly stableMoveKey: string;
   readonly score: number;
   readonly prunedBy: readonly string[];
+  readonly scoreContributions: readonly {
+    readonly termId: string;
+    readonly contribution: number;
+  }[];
+  readonly previewRefIds: readonly string[];
+  readonly unknownPreviewRefIds: readonly string[];
+}
+
+export interface PolicyEvaluationPruningStep {
+  readonly ruleId: string;
+  readonly remainingCandidateCount: number;
+  readonly skippedBecauseEmpty: boolean;
+}
+
+export interface PolicyEvaluationTieBreakStep {
+  readonly tieBreakerId: string;
+  readonly candidateCountBefore: number;
+  readonly candidateCountAfter: number;
+}
+
+export interface PolicyEvaluationPreviewUsage {
+  readonly evaluatedCandidateCount: number;
+  readonly refIds: readonly string[];
+  readonly unknownRefIds: readonly string[];
 }
 
 export interface PolicyEvaluationMetadata {
   readonly seatId: string | null;
+  readonly requestedProfileId: string | null;
   readonly profileId: string | null;
+  readonly profileFingerprint: string | null;
   readonly canonicalOrder: readonly string[];
   readonly candidates: readonly PolicyEvaluationCandidateMetadata[];
+  readonly pruningSteps: readonly PolicyEvaluationPruningStep[];
+  readonly tieBreakChain: readonly PolicyEvaluationTieBreakStep[];
+  readonly previewUsage: PolicyEvaluationPreviewUsage;
+  readonly selectedStableMoveKey: string | null;
+  readonly finalScore: number | null;
   readonly usedFallback: boolean;
   readonly failure: PolicyEvaluationFailure | null;
 }
@@ -67,6 +98,7 @@ export interface EvaluatePolicyMoveInput {
   readonly rng: Rng;
   readonly runtime?: GameDefRuntime;
   readonly fallbackOnError?: boolean;
+  readonly profileIdOverride?: string;
 }
 
 export type PolicyEvaluationCoreResult =
@@ -87,6 +119,9 @@ interface CandidateEntry {
   readonly stableMoveKey: string;
   readonly actionId: string;
   readonly prunedBy: string[];
+  readonly scoreContributions: { readonly termId: string; readonly contribution: number }[];
+  readonly previewRefIds: Set<string>;
+  readonly unknownPreviewRefIds: Set<string>;
   score: number;
 }
 
@@ -258,7 +293,9 @@ class EvaluationContext {
     const weight = this.evaluateExpr(scoreTerm.weight, candidate);
     const value = this.evaluateExpr(scoreTerm.value, candidate);
     if (typeof weight !== 'number' || typeof value !== 'number') {
-      return scoreTerm.unknownAs ?? 0;
+      const contribution = scoreTerm.unknownAs ?? 0;
+      candidate.scoreContributions.push({ termId: scoreTermId, contribution });
+      return contribution;
     }
 
     let contribution = weight * value;
@@ -270,6 +307,7 @@ class EvaluationContext {
         contribution = Math.min(scoreTerm.clamp.max, contribution);
       }
     }
+    candidate.scoreContributions.push({ termId: scoreTermId, contribution });
     return contribution;
   }
 
@@ -464,9 +502,16 @@ class EvaluationContext {
     candidate: CandidateEntry | undefined,
   ): PolicyValue {
     if (ref.kind === 'previewSurface') {
-      return candidate === undefined
-        ? undefined
-        : this.runtimeProviders.previewSurface.resolveSurface(candidate, ref);
+      if (candidate === undefined) {
+        return undefined;
+      }
+      const refId = previewRefKey(ref);
+      candidate.previewRefIds.add(refId);
+      const value = this.runtimeProviders.previewSurface.resolveSurface(candidate, ref);
+      if (value === undefined) {
+        candidate.unknownPreviewRefIds.add(refId);
+      }
+      return value;
     }
     return this.runtimeProviders.currentSurface.resolveSurface(ref);
   }
@@ -483,6 +528,7 @@ class EvaluationContext {
 export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEvaluationCoreResult {
   const candidates = canonicalizeCandidates(input.def, input.legalMoves);
   const canonicalOrder = candidates.map((candidate) => candidate.stableMoveKey);
+  const requestedProfileId = input.profileIdOverride ?? null;
 
   if (candidates.length === 0) {
     return {
@@ -493,9 +539,16 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       },
       metadata: {
         seatId: null,
+        requestedProfileId,
         profileId: null,
+        profileFingerprint: null,
         canonicalOrder,
         candidates: [],
+        pruningSteps: [],
+        tieBreakChain: [],
+        previewUsage: emptyPreviewUsage(),
+        selectedStableMoveKey: null,
+        finalScore: null,
         usedFallback: false,
         failure: {
           code: 'EMPTY_LEGAL_MOVES',
@@ -507,7 +560,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
 
   const catalog = input.def.agents;
   if (catalog === undefined) {
-    return failureWithMetadata(candidates, null, null, {
+    return failureWithMetadata(candidates, null, requestedProfileId, null, {
       code: 'POLICY_CATALOG_MISSING',
       message: 'GameDef.agents is required to evaluate an authored policy.',
     });
@@ -515,16 +568,16 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
 
   const seatId = input.def.seats?.[input.playerId]?.id ?? null;
   if (seatId === null) {
-    return failureWithMetadata(candidates, null, null, {
+    return failureWithMetadata(candidates, null, requestedProfileId, null, {
       code: 'SEAT_UNRESOLVED',
       message: `Player ${input.playerId} does not resolve to a canonical seat id for policy binding.`,
       detail: { playerId: input.playerId },
     });
   }
 
-  const profileId = catalog.bindingsBySeat[seatId];
+  const profileId = input.profileIdOverride ?? catalog.bindingsBySeat[seatId];
   if (profileId === undefined) {
-    return failureWithMetadata(candidates, seatId, null, {
+    return failureWithMetadata(candidates, seatId, requestedProfileId, null, {
       code: 'PROFILE_BINDING_MISSING',
       message: `Seat "${seatId}" is not bound to an authored policy profile.`,
       detail: { seatId },
@@ -533,7 +586,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
 
   const profile = catalog.profiles[profileId];
   if (profile === undefined) {
-    return failureWithMetadata(candidates, seatId, profileId, {
+    return failureWithMetadata(candidates, seatId, requestedProfileId, profileId, {
       code: 'PROFILE_MISSING',
       message: `Compiled policy profile "${profileId}" is missing from GameDef.agents.profiles.`,
       detail: { seatId, profileId },
@@ -543,6 +596,8 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
   try {
     const evaluation = new EvaluationContext(input, candidates, seatId, profile);
     let activeCandidates = [...candidates];
+    const pruningSteps: PolicyEvaluationPruningStep[] = [];
+    const tieBreakChain: PolicyEvaluationTieBreakStep[] = [];
 
     for (const featureId of profile.plan.stateFeatures) {
       evaluation.evaluateStateFeature(featureId);
@@ -582,6 +637,11 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
               candidate.prunedBy.pop();
             }
           });
+          pruningSteps.push({
+            ruleId: pruningRuleId,
+            remainingCandidateCount: activeCandidates.length,
+            skippedBecauseEmpty: true,
+          });
           continue;
         }
         throw new PolicyRuntimeError({
@@ -595,6 +655,11 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         activeCandidates = survivors;
         evaluation.setCurrentCandidates(activeCandidates);
       }
+      pruningSteps.push({
+        ruleId: pruningRuleId,
+        remainingCandidateCount: activeCandidates.length,
+        skippedBecauseEmpty: false,
+      });
     }
 
     for (const candidate of activeCandidates) {
@@ -608,9 +673,15 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       if (bestCandidates.length <= 1) {
         break;
       }
+      const candidateCountBefore = bestCandidates.length;
       const tieBreakResult = evaluation.applyTieBreaker(bestCandidates, tieBreakerId, rng);
       bestCandidates = [...tieBreakResult.candidates];
       rng = tieBreakResult.rng;
+      tieBreakChain.push({
+        tieBreakerId,
+        candidateCountBefore,
+        candidateCountAfter: bestCandidates.length,
+      });
     }
 
     const selected = bestCandidates[0] ?? activeCandidates[0];
@@ -627,9 +698,16 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       rng,
       metadata: {
         seatId,
+        requestedProfileId,
         profileId,
+        profileFingerprint: profile.fingerprint,
         canonicalOrder,
         candidates: candidates.map(candidateMetadata),
+        pruningSteps,
+        tieBreakChain,
+        previewUsage: summarizePreviewUsage(candidates),
+        selectedStableMoveKey: selected.stableMoveKey,
+        finalScore: Number.isFinite(selected.score) ? selected.score : null,
         usedFallback: false,
         failure: null,
       },
@@ -641,7 +719,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           code: 'RUNTIME_EVALUATION_ERROR' as const,
           message: error instanceof Error ? error.message : 'Unknown policy evaluation failure.',
         };
-    return failureWithMetadata(candidates, seatId, profileId, failure);
+    return failureWithMetadata(candidates, seatId, requestedProfileId, profileId, failure, profile.fingerprint);
   }
 }
 
@@ -652,7 +730,8 @@ export function evaluatePolicyMove(input: EvaluatePolicyMoveInput): PolicyEvalua
   }
 
   const candidates = canonicalizeCandidates(input.def, input.legalMoves);
-  const fallbackMove = candidates[0]?.move;
+  const fallbackCandidate = candidates[0];
+  const fallbackMove = fallbackCandidate?.move;
   if (fallbackMove === undefined || input.fallbackOnError === false) {
     throw new PolicyRuntimeError(core.failure);
   }
@@ -662,6 +741,8 @@ export function evaluatePolicyMove(input: EvaluatePolicyMoveInput): PolicyEvalua
     rng: input.rng,
     metadata: {
       ...core.metadata,
+      selectedStableMoveKey: fallbackCandidate?.stableMoveKey ?? null,
+      finalScore: fallbackCandidate === undefined || !Number.isFinite(fallbackCandidate.score) ? null : fallbackCandidate.score,
       usedFallback: true,
     },
   };
@@ -670,17 +751,26 @@ export function evaluatePolicyMove(input: EvaluatePolicyMoveInput): PolicyEvalua
 function failureWithMetadata(
   candidates: readonly CandidateEntry[],
   seatId: string | null,
+  requestedProfileId: string | null,
   profileId: string | null,
   failure: PolicyEvaluationFailure,
+  profileFingerprint: string | null = null,
 ): PolicyEvaluationCoreResult {
   return {
     kind: 'failure',
     failure,
     metadata: {
       seatId,
+      requestedProfileId,
       profileId,
+      profileFingerprint,
       canonicalOrder: candidates.map((candidate) => candidate.stableMoveKey),
       candidates: candidates.map(candidateMetadata),
+      pruningSteps: [],
+      tieBreakChain: [],
+      previewUsage: summarizePreviewUsage(candidates),
+      selectedStableMoveKey: null,
+      finalScore: null,
       usedFallback: false,
       failure,
     },
@@ -694,6 +784,9 @@ function canonicalizeCandidates(def: GameDef, legalMoves: readonly Move[]): Cand
       stableMoveKey: toMoveIdentityKey(def, move),
       actionId: String(move.actionId),
       prunedBy: [],
+      scoreContributions: [],
+      previewRefIds: new Set<string>(),
+      unknownPreviewRefIds: new Set<string>(),
       score: Number.NEGATIVE_INFINITY,
     }))
     .sort((left, right) => left.stableMoveKey.localeCompare(right.stableMoveKey));
@@ -705,7 +798,41 @@ function candidateMetadata(candidate: CandidateEntry): PolicyEvaluationCandidate
     stableMoveKey: candidate.stableMoveKey,
     score: Number.isFinite(candidate.score) ? candidate.score : 0,
     prunedBy: [...candidate.prunedBy],
+    scoreContributions: [...candidate.scoreContributions],
+    previewRefIds: [...candidate.previewRefIds].sort(),
+    unknownPreviewRefIds: [...candidate.unknownPreviewRefIds].sort(),
   };
+}
+
+function summarizePreviewUsage(candidates: readonly CandidateEntry[]): PolicyEvaluationPreviewUsage {
+  const refIds = new Set<string>();
+  const unknownRefIds = new Set<string>();
+  let evaluatedCandidateCount = 0;
+  for (const candidate of candidates) {
+    if (candidate.previewRefIds.size > 0) {
+      evaluatedCandidateCount += 1;
+      candidate.previewRefIds.forEach((refId) => refIds.add(refId));
+    }
+    candidate.unknownPreviewRefIds.forEach((refId) => unknownRefIds.add(refId));
+  }
+  return {
+    evaluatedCandidateCount,
+    refIds: [...refIds].sort(),
+    unknownRefIds: [...unknownRefIds].sort(),
+  };
+}
+
+function emptyPreviewUsage(): PolicyEvaluationPreviewUsage {
+  return {
+    evaluatedCandidateCount: 0,
+    refIds: [],
+    unknownRefIds: [],
+  };
+}
+
+function previewRefKey(ref: CompiledAgentPolicySurfaceRef): string {
+  const seatSuffix = ref.seatToken === undefined ? '' : `.${ref.seatToken}`;
+  return `${ref.family}.${ref.id}${seatSuffix}`;
 }
 
 function sumValues(values: readonly PolicyValue[]): PolicyValue {

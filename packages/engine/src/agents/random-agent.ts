@@ -1,3 +1,4 @@
+import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import type { Agent, Move } from '../kernel/types.js';
 import { completeTemplateMove } from '../kernel/move-completion.js';
 import { pickRandom, selectStochasticFallback } from './agent-move-selection.js';
@@ -24,7 +25,17 @@ export class RandomAgent implements Agent {
     }
 
     if (completedMoves.length === 0 && stochasticMoves.length > 0) {
-      return selectStochasticFallback(stochasticMoves, rng);
+      const fallback = selectStochasticFallback(stochasticMoves, rng);
+      return {
+        ...fallback,
+        agentDecision: {
+          kind: 'builtin',
+          agent: { kind: 'builtin', builtinId: 'random' },
+          candidateCount: stochasticMoves.length,
+          selectedIndex: stochasticMoves.findIndex((move) => move === fallback.move),
+          selectedStableMoveKey: toMoveIdentityKey(input.def, fallback.move),
+        },
+      };
     }
 
     if (completedMoves.length === 0) {
@@ -32,6 +43,16 @@ export class RandomAgent implements Agent {
     }
 
     const { item: selected, rng: nextRng } = pickRandom(completedMoves, rng);
-    return { move: selected, rng: nextRng };
+    return {
+      move: selected,
+      rng: nextRng,
+      agentDecision: {
+        kind: 'builtin',
+        agent: { kind: 'builtin', builtinId: 'random' },
+        candidateCount: completedMoves.length,
+        selectedIndex: completedMoves.findIndex((move) => move === selected),
+        selectedStableMoveKey: toMoveIdentityKey(input.def, selected),
+      },
+    };
   }
 }

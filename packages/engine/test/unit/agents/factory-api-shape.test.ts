@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { createAgent, GreedyAgent, parseAgentSpec, RandomAgent } from '../../../src/agents/index.js';
+import { createAgent, GreedyAgent, parseAgentSpec, PolicyAgent, RandomAgent } from '../../../src/agents/index.js';
 import {
   asActionId,
   asPhaseId,
@@ -82,6 +82,12 @@ describe('agents factory API shape', () => {
     assert.equal(typeof agent.chooseMove, 'function');
   });
 
+  it("createAgent('policy') returns an object with chooseMove", () => {
+    const agent = createAgent('policy');
+    assert.equal(typeof agent.chooseMove, 'function');
+    assert.equal(agent instanceof PolicyAgent, true);
+  });
+
   it("createAgent('greedy') chooseMove works for a simple legal move", () => {
     const def: GameDef = {
       ...defStub,
@@ -129,7 +135,7 @@ phase: [asPhaseId('main')],
   });
 
   it('parseAgentSpec rejects unknown agent names', () => {
-    assert.throws(() => parseAgentSpec('random,smart', 2), /Unknown agent type: smart\. Allowed: random, greedy/);
+    assert.throws(() => parseAgentSpec('random,smart', 2), /Unknown agent type: smart\. Allowed: random, greedy, policy/);
   });
 
   it('parseAgentSpec ignores empty tokens when remaining count matches', () => {

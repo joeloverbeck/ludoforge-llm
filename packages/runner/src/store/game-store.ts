@@ -27,7 +27,7 @@ import type { PartialChoice, PlayerSeat, RenderContext } from './store-types.js'
 import type { AnimationDetailLevel, AnimationPlaybackSpeed } from '../animation/animation-types.js';
 import { resolveAiPlaybackDelayMs, resolveAiSeat, selectAiMove, type AiPlaybackSpeed } from './ai-move-policy.js';
 import type { GameWorkerAPI, OperationStamp, WorkerError } from '../worker/game-worker-api.js';
-import type { AiDecisionTrace, TraceBus } from '@ludoforge/engine/trace';
+import type { AgentDecisionTrace, TraceBus } from '@ludoforge/engine/trace';
 import { getOrComputeLayout } from '../layout/layout-cache.js';
 import type { WorldLayoutModel } from '../layout/world-layout-model.js';
 
@@ -926,8 +926,12 @@ export function createGameStore(
         options?.onMoveApplied?.(completedMove);
 
         if (options?.traceBus !== undefined) {
-          const aiDecision: AiDecisionTrace = {
-            seatType: activeSeat,
+          const agentDecision: AgentDecisionTrace = {
+            kind: 'builtin',
+            agent: {
+              kind: 'builtin',
+              builtinId: activeSeat === 'ai-greedy' ? 'greedy' : 'random',
+            },
             candidateCount,
             selectedIndex,
           };
@@ -945,7 +949,7 @@ export function createGameStore(
             ...(result.conditionTrace !== undefined ? { conditionTrace: result.conditionTrace } : {}),
             ...(result.decisionTrace !== undefined ? { decisionTrace: result.decisionTrace } : {}),
             ...(result.selectorTrace !== undefined ? { selectorTrace: result.selectorTrace } : {}),
-            aiDecision,
+            agentDecision,
           });
 
           if (mutationInputs.terminal !== null) {

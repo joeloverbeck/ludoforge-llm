@@ -1219,6 +1219,86 @@ export interface MoveContext {
   readonly turnFlowWindow?: string;
 }
 
+export type BuiltinAgentId = 'random' | 'greedy';
+
+export interface BuiltinAgentDescriptor {
+  readonly kind: 'builtin';
+  readonly builtinId: BuiltinAgentId;
+}
+
+export interface PolicyAgentDescriptor {
+  readonly kind: 'policy';
+  readonly profileId?: string;
+}
+
+export type AgentDescriptor = BuiltinAgentDescriptor | PolicyAgentDescriptor;
+
+export interface AgentDecisionFailureSummary {
+  readonly code: string;
+  readonly message: string;
+}
+
+export interface AgentDecisionScoreContribution {
+  readonly termId: string;
+  readonly contribution: number;
+}
+
+export interface PolicyCandidateDecisionTrace {
+  readonly actionId: string;
+  readonly stableMoveKey: string;
+  readonly score: number;
+  readonly prunedBy: readonly string[];
+  readonly scoreContributions?: readonly AgentDecisionScoreContribution[];
+  readonly previewRefIds?: readonly string[];
+  readonly unknownPreviewRefIds?: readonly string[];
+}
+
+export interface PolicyPruningStepTrace {
+  readonly ruleId: string;
+  readonly remainingCandidateCount: number;
+  readonly skippedBecauseEmpty: boolean;
+}
+
+export interface PolicyTieBreakStepTrace {
+  readonly tieBreakerId: string;
+  readonly candidateCountBefore: number;
+  readonly candidateCountAfter: number;
+}
+
+export interface PolicyPreviewUsageTrace {
+  readonly evaluatedCandidateCount: number;
+  readonly refIds: readonly string[];
+  readonly unknownRefIds: readonly string[];
+}
+
+export interface BuiltinAgentDecisionTrace {
+  readonly kind: 'builtin';
+  readonly agent: BuiltinAgentDescriptor;
+  readonly candidateCount: number;
+  readonly selectedIndex?: number;
+  readonly selectedStableMoveKey?: string;
+}
+
+export interface PolicyAgentDecisionTrace {
+  readonly kind: 'policy';
+  readonly agent: PolicyAgentDescriptor;
+  readonly seatId: string | null;
+  readonly requestedProfileId: string | null;
+  readonly resolvedProfileId: string | null;
+  readonly profileFingerprint: string | null;
+  readonly initialCandidateCount: number;
+  readonly selectedStableMoveKey: string | null;
+  readonly finalScore: number | null;
+  readonly pruningSteps: readonly PolicyPruningStepTrace[];
+  readonly tieBreakChain: readonly PolicyTieBreakStepTrace[];
+  readonly previewUsage: PolicyPreviewUsageTrace;
+  readonly emergencyFallback: boolean;
+  readonly failure: AgentDecisionFailureSummary | null;
+  readonly candidates?: readonly PolicyCandidateDecisionTrace[];
+}
+
+export type AgentDecisionTrace = BuiltinAgentDecisionTrace | PolicyAgentDecisionTrace;
+
 // ── Execution Options & Collector ─────────────────────────
 
 export interface ExecutionOptions {
@@ -1262,6 +1342,7 @@ export interface MoveLog {
   readonly decisionTrace?: readonly DecisionTraceEntry[];
   readonly selectorTrace?: readonly SelectorTraceEntry[];
   readonly moveContext?: MoveContext;
+  readonly agentDecision?: AgentDecisionTrace;
 }
 
 export interface PlayerScore {
@@ -1367,5 +1448,5 @@ export interface Agent {
     readonly legalMoves: readonly Move[];
     readonly rng: Rng;
     readonly runtime?: import('./gamedef-runtime.js').GameDefRuntime;
-  }): { readonly move: Move; readonly rng: Rng };
+  }): { readonly move: Move; readonly rng: Rng; readonly agentDecision?: AgentDecisionTrace };
 }

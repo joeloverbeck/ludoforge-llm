@@ -1,5 +1,7 @@
 export * from './random-agent.js';
 export * from './greedy-agent.js';
+export * from './policy-agent.js';
+export * from './policy-diagnostics.js';
 export * from './evaluate-state.js';
 export * from './select-candidates.js';
 export * from './policy-eval.js';

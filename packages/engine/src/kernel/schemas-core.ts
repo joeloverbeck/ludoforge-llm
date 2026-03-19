@@ -338,15 +338,6 @@ export const DerivedMetricRequirementSchema = z
   })
   .strict();
 
-export const DerivedMetricDefSchema = z
-  .object({
-    id: StringSchema,
-    computation: DerivedMetricComputationSchema,
-    zoneFilter: DerivedMetricZoneFilterSchema.optional(),
-    requirements: z.array(DerivedMetricRequirementSchema).min(1),
-  })
-  .strict();
-
 export const MarkerWeightConfigSchema = z
   .object({
     activeState: StringSchema,
@@ -360,6 +351,48 @@ export const SeatGroupConfigSchema = z
     insurgentSeats: z.array(StringSchema),
     soloSeat: StringSchema,
     seatProp: StringSchema,
+  })
+  .strict();
+
+export const DerivedMetricMarkerTotalRuntimeSchema = z
+  .object({
+    kind: z.literal('markerTotal'),
+    markerId: StringSchema,
+    markerConfig: MarkerWeightConfigSchema,
+    defaultMarkerState: StringSchema.optional(),
+  })
+  .strict();
+
+export const DerivedMetricControlledPopulationRuntimeSchema = z
+  .object({
+    kind: z.literal('controlledPopulation'),
+    controlFn: z.union([z.literal('coin'), z.literal('solo')]),
+    seatGroupConfig: SeatGroupConfigSchema,
+  })
+  .strict();
+
+export const DerivedMetricTotalEconRuntimeSchema = z
+  .object({
+    kind: z.literal('totalEcon'),
+    controlFn: z.union([z.literal('coin'), z.literal('solo')]),
+    seatGroupConfig: SeatGroupConfigSchema,
+    blockedByTokenTypes: z.array(StringSchema).optional(),
+  })
+  .strict();
+
+export const DerivedMetricRuntimeSchema = z.discriminatedUnion('kind', [
+  DerivedMetricMarkerTotalRuntimeSchema,
+  DerivedMetricControlledPopulationRuntimeSchema,
+  DerivedMetricTotalEconRuntimeSchema,
+]);
+
+export const DerivedMetricDefSchema = z
+  .object({
+    id: StringSchema,
+    computation: DerivedMetricComputationSchema,
+    zoneFilter: DerivedMetricZoneFilterSchema.optional(),
+    requirements: z.array(DerivedMetricRequirementSchema).min(1),
+    runtime: DerivedMetricRuntimeSchema,
   })
   .strict();
 

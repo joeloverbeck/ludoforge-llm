@@ -1585,12 +1585,174 @@
               ],
               "additionalProperties": false
             }
+          },
+          "runtime": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "markerTotal"
+                  },
+                  "markerId": {
+                    "type": "string"
+                  },
+                  "markerConfig": {
+                    "type": "object",
+                    "properties": {
+                      "activeState": {
+                        "type": "string"
+                      },
+                      "passiveState": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "activeState",
+                      "passiveState"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "defaultMarkerState": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "markerId",
+                  "markerConfig"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "controlledPopulation"
+                  },
+                  "controlFn": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "coin"
+                      },
+                      {
+                        "type": "string",
+                        "const": "solo"
+                      }
+                    ]
+                  },
+                  "seatGroupConfig": {
+                    "type": "object",
+                    "properties": {
+                      "coinSeats": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "insurgentSeats": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "soloSeat": {
+                        "type": "string"
+                      },
+                      "seatProp": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "coinSeats",
+                      "insurgentSeats",
+                      "soloSeat",
+                      "seatProp"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "kind",
+                  "controlFn",
+                  "seatGroupConfig"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "totalEcon"
+                  },
+                  "controlFn": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "coin"
+                      },
+                      {
+                        "type": "string",
+                        "const": "solo"
+                      }
+                    ]
+                  },
+                  "seatGroupConfig": {
+                    "type": "object",
+                    "properties": {
+                      "coinSeats": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "insurgentSeats": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "soloSeat": {
+                        "type": "string"
+                      },
+                      "seatProp": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "coinSeats",
+                      "insurgentSeats",
+                      "soloSeat",
+                      "seatProp"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "blockedByTokenTypes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "kind",
+                  "controlFn",
+                  "seatGroupConfig"
+                ],
+                "additionalProperties": false
+              }
+            ]
           }
         },
         "required": [
           "id",
           "computation",
-          "requirements"
+          "requirements",
+          "runtime"
         ],
         "additionalProperties": false
       }

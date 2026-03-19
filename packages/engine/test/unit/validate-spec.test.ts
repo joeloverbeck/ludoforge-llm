@@ -1172,6 +1172,15 @@ describe('validateGameSpec structural rules', () => {
           computation: 'markerTotal',
           zoneFilter: { zoneKinds: ['board'], category: ['city'] },
           requirements: [{ key: 'population', expectedType: 'number' }],
+          runtime: {
+            kind: 'markerTotal',
+            markerId: 'support',
+            markerConfig: {
+              activeState: 'activeSupport',
+              passiveState: 'passiveSupport',
+            },
+            defaultMarkerState: 'neutral',
+          },
         },
       ],
     });
@@ -1186,6 +1195,14 @@ describe('validateGameSpec structural rules', () => {
         {
           id: 'support-total',
           computation: 'bad-computation',
+          runtime: {
+            kind: 'markerTotal',
+            markerId: '',
+            markerConfig: {
+              activeState: '',
+              passiveState: 'passiveSupport',
+            },
+          },
           zoneFilter: {
             zoneIds: ['missing-zone'],
             zoneKinds: ['bad-kind'],
@@ -1203,6 +1220,8 @@ describe('validateGameSpec structural rules', () => {
     assert.equal(diagnostics.some((diagnostic) => diagnostic.path === 'doc.derivedMetrics.0.zoneFilter.attributeEquals'), true);
     assert.equal(diagnostics.some((diagnostic) => diagnostic.path === 'doc.derivedMetrics.0.requirements.0.key'), true);
     assert.equal(diagnostics.some((diagnostic) => diagnostic.path === 'doc.derivedMetrics.0.requirements.0.expectedType'), true);
+    assert.equal(diagnostics.some((diagnostic) => diagnostic.path === 'doc.derivedMetrics.0.runtime.markerId'), true);
+    assert.equal(diagnostics.some((diagnostic) => diagnostic.path === 'doc.derivedMetrics.0.runtime.markerConfig.activeState'), true);
   });
 
   it('reports missing phase reference in action with alternatives', () => {

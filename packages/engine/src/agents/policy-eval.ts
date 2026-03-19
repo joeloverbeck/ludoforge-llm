@@ -2,6 +2,7 @@ import { buildAdjacencyGraph } from '../kernel/spatial.js';
 import { buildRuntimeTableIndex } from '../kernel/runtime-table-index.js';
 import { createEvalContext, createEvalRuntimeResources } from '../kernel/eval-context.js';
 import { evalValue } from '../kernel/eval-value.js';
+import { computeDerivedMetricValue } from '../kernel/derived-values.js';
 import type { PlayerId } from '../kernel/branded.js';
 import { buildSeatResolutionIndex, resolvePlayerIndexForSeatValue, type SeatResolutionIndex } from '../kernel/identity.js';
 import { resolveTurnFlowActionClass } from '../kernel/turn-flow-action-class.js';
@@ -116,6 +117,7 @@ class EvaluationContext {
   private readonly stateFeatureCache = new Map<string, PolicyValue>();
   private readonly candidateFeatureCache = new Map<string, Map<string, PolicyValue>>();
   private readonly aggregateCache = new Map<string, PolicyValue>();
+  private readonly metricCache = new Map<string, number>();
   private victorySurface: VictorySurface | null = null;
 
   constructor(
@@ -519,11 +521,13 @@ class EvaluationContext {
       );
     }
     if (refPath.startsWith('metric.')) {
-      throw this.runtimeError(
-        'UNSUPPORTED_RUNTIME_REF',
-        `Policy runtime ref "${refPath}" is unsupported because the current shared metric contract is not yet executable generically.`,
-        { refPath },
-      );
+      const metricId = refPath.slice('metric.'.length);
+      if (this.metricCache.has(metricId)) {
+        return this.metricCache.get(metricId);
+      }
+      const value = computeDerivedMetricValue(this.input.def, this.input.state, metricId);
+      this.metricCache.set(metricId, value);
+      return value;
     }
     if (refPath.startsWith('var.global.')) {
       const variableId = refPath.slice('var.global.'.length);

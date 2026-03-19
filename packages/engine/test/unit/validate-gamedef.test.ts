@@ -1820,6 +1820,14 @@ describe('validateGameDef reference checks', () => {
           computation: 'markerTotal',
           zoneFilter: { zoneIds: ['missing-zone' as ZoneId] },
           requirements: [{ key: 'population', expectedType: 'number' }],
+          runtime: {
+            kind: 'markerTotal',
+            markerId: 'support',
+            markerConfig: {
+              activeState: 'activeSupport',
+              passiveState: 'passiveSupport',
+            },
+          },
         },
       ],
     } as unknown as GameDef;
@@ -1855,6 +1863,14 @@ describe('validateGameDef reference checks', () => {
           computation: 'markerTotal',
           zoneFilter: { zoneKinds: ['board'] as const, category: ['city'] },
           requirements: [{ key: 'population', expectedType: 'number' }],
+          runtime: {
+            kind: 'markerTotal',
+            markerId: 'support',
+            markerConfig: {
+              activeState: 'activeSupport',
+              passiveState: 'passiveSupport',
+            },
+          },
         },
       ],
     } as unknown as GameDef;

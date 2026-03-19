@@ -37,6 +37,19 @@ function createBaseDef(agents: AgentPolicyCatalog): GameDef {
     globalVars: [{ name: 'usMargin', type: 'int', init: 1, min: -10, max: 10 }],
     perPlayerVars: [{ name: 'tempo', type: 'int', init: 0, min: 0, max: 10 }],
     zones: [],
+    derivedMetrics: [
+      {
+        id: 'boardPressure',
+        computation: 'markerTotal',
+        requirements: [{ key: 'population', expectedType: 'number' }],
+        runtime: {
+          kind: 'markerTotal',
+          markerId: 'pressure',
+          markerConfig: { activeState: 'high', passiveState: 'medium' },
+          defaultMarkerState: 'low',
+        },
+      },
+    ],
     seats: [{ id: 'us' }, { id: 'arvn' }],
     tokenTypes: [],
     setup: [],
@@ -341,7 +354,7 @@ describe('policy-eval', () => {
     assert.equal(result.metadata.failure?.code, 'UNSUPPORTED_PREVIEW');
   });
 
-  it('reports metric refs as unsupported until the shared runtime metric contract is executable', () => {
+  it('resolves metric refs through the shared runtime metric contract', () => {
     const agents = createCatalog(
       {
         stateFeatures: {
@@ -379,7 +392,7 @@ describe('policy-eval', () => {
     const result = evaluatePolicyMove(input);
 
     assert.equal(result.move.actionId, asActionId('alpha'));
-    assert.equal(result.metadata.usedFallback, true);
-    assert.equal(result.metadata.failure?.code, 'UNSUPPORTED_RUNTIME_REF');
+    assert.equal(result.metadata.usedFallback, false);
+    assert.equal(result.metadata.failure, null);
   });
 });

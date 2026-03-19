@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — authored FITL data plus engine integration tests
-**Deps**: specs/15-gamespec-agent-policy-ir.md, docs/fitl-event-authoring-cookbook.md, tickets/15GAMAGEPOLIR-008-integrate-policyagent-with-traces-and-diagnostics.md, tickets/15GAMAGEPOLIR-014-make-policy-metric-refs-executable-through-generic-runtime-contracts.md, tickets/15GAMAGEPOLIR-015-align-candidate-param-refs-with-concrete-move-contracts.md
+**Deps**: specs/15-gamespec-agent-policy-ir.md, docs/fitl-event-authoring-cookbook.md, tickets/15GAMAGEPOLIR-008-integrate-policyagent-with-traces-and-diagnostics.md, archive/tickets/15GAMAGEPOLIR/15GAMAGEPOLIR-014-make-policy-metric-refs-executable-through-generic-runtime-contracts.md, tickets/15GAMAGEPOLIR-015-align-candidate-param-refs-with-concrete-move-contracts.md
 
 ## Problem
 

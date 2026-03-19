@@ -52,6 +52,7 @@ const TIE_BREAKER_KINDS = new Set<TieBreakerKind>([
 
 export interface LowerAgentsOptions {
   readonly referenceSeatIds?: readonly string[];
+  readonly policyMetricIds?: readonly string[];
 }
 
 export function lowerAgents(
@@ -64,7 +65,7 @@ export function lowerAgents(
   }
 
   const parameterDefs = lowerParameterDefs(agents.parameters, diagnostics);
-  const libraryCompiler = new AgentLibraryCompiler(agents.library, parameterDefs, diagnostics);
+  const libraryCompiler = new AgentLibraryCompiler(agents.library, parameterDefs, diagnostics, options);
   const library = libraryCompiler.compile();
   const profiles = addProfileFingerprints(
     lowerProfiles(agents.profiles, agents.library, library, parameterDefs, diagnostics),
@@ -563,6 +564,7 @@ class AgentLibraryCompiler {
     authoredLibrary: GameSpecAgentLibrary | undefined,
     private readonly parameterDefs: Readonly<Record<string, CompiledAgentParameterDef>>,
     private readonly diagnostics: Diagnostic[],
+    private readonly options: LowerAgentsOptions,
   ) {
     this.authoredLibrary = authoredLibrary ?? {};
     this.compiled = {
@@ -1099,6 +1101,9 @@ class AgentLibraryCompiler {
       || refPath.startsWith('var.global.')
       || refPath.startsWith('var.seat.')
     ) {
+      if (refPath.startsWith('metric.') && !this.isKnownMetricRef(refPath.slice('metric.'.length), path)) {
+        return null;
+      }
       return { type: 'number', costClass: 'state' };
     }
 
@@ -1128,6 +1133,9 @@ class AgentLibraryCompiler {
       || nestedPath.startsWith('var.global.')
       || nestedPath.startsWith('var.seat.')
     ) {
+      if (nestedPath.startsWith('metric.') && !this.isKnownMetricRef(nestedPath.slice('metric.'.length), path)) {
+        return null;
+      }
       return { type: 'number', costClass: 'preview' };
     }
     this.reportUnknownLibraryRef(refPath, path);
@@ -1162,6 +1170,21 @@ class AgentLibraryCompiler {
       message: `Invalid candidate param ref "${refPath}".`,
       suggestion: 'Use exactly candidate.param.<parameterId> with a declared agents parameter id.',
     });
+  }
+
+  private isKnownMetricRef(metricId: string, path: string): boolean {
+    if (metricId.length === 0) {
+      this.reportUnknownLibraryRef('metric.', path);
+      return false;
+    }
+    if (this.options.policyMetricIds === undefined) {
+      return true;
+    }
+    if (this.options.policyMetricIds.includes(metricId)) {
+      return true;
+    }
+    this.reportUnknownLibraryRef(`metric.${metricId}`, path);
+    return false;
   }
 }
 

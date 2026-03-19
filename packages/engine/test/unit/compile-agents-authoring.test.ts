@@ -770,4 +770,78 @@ describe('agents authoring surface', () => {
     assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_AGGREGATE_INPUT_INVALID' && diagnostic.path === 'doc.agents.library.candidateAggregates.badAggregate.of'));
     assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_DIVIDE_BY_ZERO' && diagnostic.path === 'doc.agents.library.scoreTerms.divideByZero.value'));
   });
+
+  it('rejects metric refs whose ids are not declared in authored derivedMetrics', () => {
+    const compiled = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      derivedMetrics: [
+        {
+          id: 'knownMetric',
+          computation: 'markerTotal',
+          requirements: [{ key: 'population', expectedType: 'number' }],
+          runtime: {
+            kind: 'markerTotal',
+            markerId: 'support',
+            markerConfig: {
+              activeState: 'activeSupport',
+              passiveState: 'passiveSupport',
+            },
+            defaultMarkerState: 'neutral',
+          },
+        },
+      ],
+      agents: {
+        parameters: {},
+        library: {
+          stateFeatures: {
+            supportedMetric: {
+              type: 'number',
+              expr: { ref: 'metric.knownMetric' },
+            },
+            missingMetric: {
+              type: 'number',
+              expr: { ref: 'metric.missingMetric' },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(compiled.gameDef, null);
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN'
+          && diagnostic.path === 'doc.agents.library.stateFeatures.missingMetric.expr.ref',
+      ),
+      true,
+    );
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN'
+          && diagnostic.path === 'doc.agents.library.stateFeatures.supportedMetric.expr.ref',
+      ),
+      false,
+    );
+  });
 });

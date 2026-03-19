@@ -244,11 +244,37 @@ export interface DerivedMetricRequirement {
   readonly expectedType: 'number';
 }
 
+export interface DerivedMetricMarkerTotalRuntime {
+  readonly kind: 'markerTotal';
+  readonly markerId: string;
+  readonly markerConfig: MarkerWeightConfig;
+  readonly defaultMarkerState?: string;
+}
+
+export interface DerivedMetricControlledPopulationRuntime {
+  readonly kind: 'controlledPopulation';
+  readonly controlFn: 'coin' | 'solo';
+  readonly seatGroupConfig: SeatGroupConfig;
+}
+
+export interface DerivedMetricTotalEconRuntime {
+  readonly kind: 'totalEcon';
+  readonly controlFn: 'coin' | 'solo';
+  readonly seatGroupConfig: SeatGroupConfig;
+  readonly blockedByTokenTypes?: readonly string[];
+}
+
+export type DerivedMetricRuntime =
+  | DerivedMetricMarkerTotalRuntime
+  | DerivedMetricControlledPopulationRuntime
+  | DerivedMetricTotalEconRuntime;
+
 export interface DerivedMetricDef {
   readonly id: string;
   readonly computation: DerivedMetricComputation;
   readonly zoneFilter?: DerivedMetricZoneFilter;
   readonly requirements: readonly DerivedMetricRequirement[];
+  readonly runtime: DerivedMetricRuntime;
 }
 
 export interface VictoryStandingEntry {

@@ -526,23 +526,14 @@ function compileExpandedDoc(
       actionPipelines.failed || actionPipelines.value === undefined ? null : actionPipelines.value;
   }
 
+  let derivedMetricsCompilationFailed = false;
   if (resolvedTableRefDoc.derivedMetrics !== null) {
     const derivedMetrics = compileSection(diagnostics, () =>
       lowerDerivedMetrics(resolvedTableRefDoc.derivedMetrics, diagnostics),
     );
+    derivedMetricsCompilationFailed = derivedMetrics.failed;
     sections.derivedMetrics = derivedMetrics.failed ? null : derivedMetrics.value;
   }
-
-  const agents = compileSection(diagnostics, () =>
-    lowerAgents(
-      resolvedTableRefDoc.agents,
-      diagnostics,
-      seatIdentityContract.contract.referenceSeatIds === undefined
-        ? {}
-        : { referenceSeatIds: seatIdentityContract.contract.referenceSeatIds },
-    ),
-  );
-  sections.agents = agents.failed || agents.value === undefined ? null : agents.value;
 
   let actions: GameDef['actions'] | null = null;
   const rawActions = resolvedTableRefDoc.actions;
@@ -622,10 +613,12 @@ function compileExpandedDoc(
   }
 
   const rawVictoryStandings = resolvedTableRefDoc.victoryStandings;
+  let victoryStandingsCompilationFailed = false;
   if (rawVictoryStandings !== null) {
     const victoryStandingsSection = compileSection(diagnostics, () =>
       lowerVictoryStandings(rawVictoryStandings, diagnostics),
     );
+    victoryStandingsCompilationFailed = victoryStandingsSection.failed;
     sections.victoryStandings = victoryStandingsSection.failed ? null : (victoryStandingsSection.value ?? null);
   }
 
@@ -672,6 +665,24 @@ function compileExpandedDoc(
   );
   const mergedDerivedMetrics = [...(sections.derivedMetrics ?? []), ...synthesized];
   sections.derivedMetrics = mergedDerivedMetrics.length > 0 ? mergedDerivedMetrics : null;
+
+  const agents = compileSection(diagnostics, () =>
+    lowerAgents(
+      resolvedTableRefDoc.agents,
+      diagnostics,
+      {
+        ...(seatIdentityContract.contract.referenceSeatIds === undefined
+          ? {}
+          : { referenceSeatIds: seatIdentityContract.contract.referenceSeatIds }),
+        ...(
+          derivedMetricsCompilationFailed || victoryStandingsCompilationFailed
+            ? {}
+            : { policyMetricIds: (resolvedTableRefDoc.derivedMetrics ?? []).map((metric) => metric.id) }
+        ),
+      },
+    ),
+  );
+  sections.agents = agents.failed || agents.value === undefined ? null : agents.value;
 
   // Policy contract: partial-compile is dependency-aware best-effort.
   // Cross-validation always executes, but each rule gates on prerequisite

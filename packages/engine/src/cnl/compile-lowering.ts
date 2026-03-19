@@ -440,6 +440,11 @@ export function lowerDerivedMetrics(
       continue;
     }
 
+    const runtime = lowerDerivedMetricRuntime(metric, diagnostics, path);
+    if (runtime === null) {
+      continue;
+    }
+
     let zoneFilter: DerivedMetricDef['zoneFilter'] | undefined;
     if (metric.zoneFilter !== undefined) {
       if (!isRecord(metric.zoneFilter)) {
@@ -523,10 +528,199 @@ export function lowerDerivedMetrics(
       computation: metric.computation,
       ...(zoneFilter === undefined ? {} : { zoneFilter }),
       requirements,
+      runtime,
     });
   }
 
   return lowered;
+}
+
+function lowerDerivedMetricRuntime(
+  metric: Record<string, unknown>,
+  diagnostics: Diagnostic[],
+  path: string,
+): DerivedMetricDef['runtime'] | null {
+  if (!isRecord(metric.runtime)) {
+    diagnostics.push(missingCapabilityDiagnostic(`${path}.runtime`, 'derived metric runtime', metric.runtime, ['object']));
+    return null;
+  }
+
+  const runtime = metric.runtime;
+  if (
+    runtime.kind !== 'markerTotal'
+    && runtime.kind !== 'controlledPopulation'
+    && runtime.kind !== 'totalEcon'
+  ) {
+    diagnostics.push(
+      missingCapabilityDiagnostic(`${path}.runtime.kind`, 'derived metric runtime kind', runtime.kind, [
+        'markerTotal',
+        'controlledPopulation',
+        'totalEcon',
+      ]),
+    );
+    return null;
+  }
+
+  if (runtime.kind !== metric.computation) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
+      path: `${path}.runtime.kind`,
+      severity: 'error',
+      message: `Derived metric runtime kind "${runtime.kind}" must match computation "${String(metric.computation)}".`,
+      suggestion: 'Keep derivedMetrics.computation and derivedMetrics.runtime.kind aligned.',
+    });
+    return null;
+  }
+
+  switch (runtime.kind) {
+    case 'markerTotal': {
+      if (typeof runtime.markerId !== 'string' || runtime.markerId.trim() === '') {
+        diagnostics.push(missingCapabilityDiagnostic(`${path}.runtime.markerId`, 'derived metric marker id', runtime.markerId, ['string']));
+        return null;
+      }
+      if (!isRecord(runtime.markerConfig)) {
+        diagnostics.push(
+          missingCapabilityDiagnostic(`${path}.runtime.markerConfig`, 'derived metric markerConfig', runtime.markerConfig, ['object']),
+        );
+        return null;
+      }
+      if (
+        typeof runtime.markerConfig.activeState !== 'string'
+        || runtime.markerConfig.activeState.trim() === ''
+        || typeof runtime.markerConfig.passiveState !== 'string'
+        || runtime.markerConfig.passiveState.trim() === ''
+      ) {
+        diagnostics.push(
+          missingCapabilityDiagnostic(
+            `${path}.runtime.markerConfig`,
+            'derived metric markerConfig',
+            runtime.markerConfig,
+            ['{ activeState: string, passiveState: string }'],
+          ),
+        );
+        return null;
+      }
+      if (runtime.defaultMarkerState !== undefined && (typeof runtime.defaultMarkerState !== 'string' || runtime.defaultMarkerState.trim() === '')) {
+        diagnostics.push(
+          missingCapabilityDiagnostic(
+            `${path}.runtime.defaultMarkerState`,
+            'derived metric defaultMarkerState',
+            runtime.defaultMarkerState,
+            ['string'],
+          ),
+        );
+        return null;
+      }
+      return {
+        kind: 'markerTotal',
+        markerId: runtime.markerId,
+        markerConfig: {
+          activeState: runtime.markerConfig.activeState,
+          passiveState: runtime.markerConfig.passiveState,
+        },
+        ...(runtime.defaultMarkerState === undefined ? {} : { defaultMarkerState: runtime.defaultMarkerState }),
+      };
+    }
+    case 'controlledPopulation': {
+      const seatGroupConfig = lowerDerivedMetricSeatGroupConfig(runtime.seatGroupConfig, diagnostics, `${path}.runtime.seatGroupConfig`);
+      if (seatGroupConfig === null) {
+        return null;
+      }
+      if (runtime.controlFn !== 'coin' && runtime.controlFn !== 'solo') {
+        diagnostics.push(
+          missingCapabilityDiagnostic(`${path}.runtime.controlFn`, 'derived metric controlFn', runtime.controlFn, ['coin', 'solo']),
+        );
+        return null;
+      }
+      return {
+        kind: 'controlledPopulation',
+        controlFn: runtime.controlFn,
+        seatGroupConfig,
+      };
+    }
+    case 'totalEcon': {
+      const seatGroupConfig = lowerDerivedMetricSeatGroupConfig(runtime.seatGroupConfig, diagnostics, `${path}.runtime.seatGroupConfig`);
+      if (seatGroupConfig === null) {
+        return null;
+      }
+      if (runtime.controlFn !== 'coin' && runtime.controlFn !== 'solo') {
+        diagnostics.push(
+          missingCapabilityDiagnostic(`${path}.runtime.controlFn`, 'derived metric controlFn', runtime.controlFn, ['coin', 'solo']),
+        );
+        return null;
+      }
+      if (
+        runtime.blockedByTokenTypes !== undefined
+        && (!Array.isArray(runtime.blockedByTokenTypes) || !runtime.blockedByTokenTypes.every((entry) => typeof entry === 'string' && entry.trim() !== ''))
+      ) {
+        diagnostics.push(
+          missingCapabilityDiagnostic(
+            `${path}.runtime.blockedByTokenTypes`,
+            'derived metric blockedByTokenTypes',
+            runtime.blockedByTokenTypes,
+            ['string[]'],
+          ),
+        );
+        return null;
+      }
+      return {
+        kind: 'totalEcon',
+        controlFn: runtime.controlFn,
+        seatGroupConfig,
+        ...(runtime.blockedByTokenTypes === undefined ? {} : { blockedByTokenTypes: runtime.blockedByTokenTypes }),
+      };
+    }
+  }
+}
+
+function lowerDerivedMetricSeatGroupConfig(
+  raw: unknown,
+  diagnostics: Diagnostic[],
+  path: string,
+): Extract<DerivedMetricDef['runtime'], { readonly kind: 'controlledPopulation' | 'totalEcon' }>['seatGroupConfig'] | null {
+  if (!isRecord(raw)) {
+    diagnostics.push(missingCapabilityDiagnostic(path, 'derived metric seatGroupConfig', raw, ['object']));
+    return null;
+  }
+  const coinSeats =
+    Array.isArray(raw.coinSeats) && raw.coinSeats.every((entry) => typeof entry === 'string' && entry.trim() !== '')
+      ? raw.coinSeats
+      : null;
+  const insurgentSeats =
+    Array.isArray(raw.insurgentSeats) && raw.insurgentSeats.every((entry) => typeof entry === 'string' && entry.trim() !== '')
+      ? raw.insurgentSeats
+      : null;
+  if (coinSeats === null) {
+    diagnostics.push(missingCapabilityDiagnostic(`${path}.coinSeats`, 'derived metric coinSeats', raw.coinSeats, ['string[]']));
+  }
+  if (insurgentSeats === null) {
+    diagnostics.push(
+      missingCapabilityDiagnostic(`${path}.insurgentSeats`, 'derived metric insurgentSeats', raw.insurgentSeats, ['string[]']),
+    );
+  }
+  if (typeof raw.soloSeat !== 'string' || raw.soloSeat.trim() === '') {
+    diagnostics.push(missingCapabilityDiagnostic(`${path}.soloSeat`, 'derived metric soloSeat', raw.soloSeat, ['string']));
+  }
+  if (typeof raw.seatProp !== 'string' || raw.seatProp.trim() === '') {
+    diagnostics.push(missingCapabilityDiagnostic(`${path}.seatProp`, 'derived metric seatProp', raw.seatProp, ['string']));
+  }
+  if (
+    coinSeats === null
+    || insurgentSeats === null
+    || typeof raw.soloSeat !== 'string'
+    || raw.soloSeat.trim() === ''
+    || typeof raw.seatProp !== 'string'
+    || raw.seatProp.trim() === ''
+  ) {
+    return null;
+  }
+
+  return {
+    coinSeats,
+    insurgentSeats,
+    soloSeat: raw.soloSeat,
+    seatProp: raw.seatProp,
+  };
 }
 
 export function lowerActions(

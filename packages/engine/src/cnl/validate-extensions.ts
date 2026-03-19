@@ -55,11 +55,18 @@ interface ScenarioRefForSeatChecks {
   readonly entityId: string;
 }
 
-const DERIVED_METRIC_KEYS = ['id', 'computation', 'zoneFilter', 'requirements'] as const;
+const DERIVED_METRIC_KEYS = ['id', 'computation', 'zoneFilter', 'requirements', 'runtime'] as const;
 const DERIVED_METRIC_ZONE_FILTER_KEYS = ['zoneIds', 'zoneKinds', 'category', 'attributeEquals'] as const;
 const DERIVED_METRIC_REQUIREMENT_KEYS = ['key', 'expectedType'] as const;
 const DERIVED_METRIC_COMPUTATION_VALUES = ['markerTotal', 'controlledPopulation', 'totalEcon'] as const;
 const DERIVED_METRIC_ZONE_KIND_VALUES = ['board', 'aux'] as const;
+const DERIVED_METRIC_RUNTIME_KIND_VALUES = ['markerTotal', 'controlledPopulation', 'totalEcon'] as const;
+const DERIVED_METRIC_MARKER_RUNTIME_KEYS = ['kind', 'markerId', 'markerConfig', 'defaultMarkerState'] as const;
+const DERIVED_METRIC_CONTROLLED_POPULATION_RUNTIME_KEYS = ['kind', 'controlFn', 'seatGroupConfig'] as const;
+const DERIVED_METRIC_TOTAL_ECON_RUNTIME_KEYS = ['kind', 'controlFn', 'seatGroupConfig', 'blockedByTokenTypes'] as const;
+const DERIVED_METRIC_MARKER_CONFIG_KEYS = ['activeState', 'passiveState'] as const;
+const DERIVED_METRIC_SEAT_GROUP_CONFIG_KEYS = ['coinSeats', 'insurgentSeats', 'soloSeat', 'seatProp'] as const;
+const DERIVED_METRIC_CONTROL_FN_VALUES = ['coin', 'solo'] as const;
 
 interface CanonicalScenarioLinkedAssetSelectionOptions {
   readonly kind: 'map' | 'pieceCatalog' | 'seatCatalog';
@@ -67,6 +74,150 @@ interface CanonicalScenarioLinkedAssetSelectionOptions {
   readonly entityId?: string;
   readonly suppressKnownMissingReference?: boolean;
   readonly dialect: ScenarioLinkedAssetSelectionDialect;
+}
+
+function validateStringArrayField(
+  value: unknown,
+  path: string,
+  diagnostics: Diagnostic[],
+  messagePrefix: string,
+): value is readonly string[] {
+  if (!Array.isArray(value)) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_DERIVED_METRIC_RUNTIME_INVALID',
+      path,
+      severity: 'error',
+      message: `${messagePrefix} must be an array of non-empty strings.`,
+      suggestion: 'Provide a list of non-empty strings.',
+    });
+    return false;
+  }
+  let valid = true;
+  for (const [index, entry] of value.entries()) {
+    if (typeof entry === 'string' && entry.trim() !== '') {
+      continue;
+    }
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_DERIVED_METRIC_RUNTIME_INVALID',
+      path: `${path}.${index}`,
+      severity: 'error',
+      message: `${messagePrefix} entries must be non-empty strings.`,
+      suggestion: 'Replace invalid entries with non-empty strings.',
+    });
+    valid = false;
+  }
+  return valid;
+}
+
+function validateDerivedMetricMarkerConfig(
+  value: unknown,
+  path: string,
+  diagnostics: Diagnostic[],
+): void {
+  if (!isRecord(value)) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_DERIVED_METRIC_RUNTIME_INVALID',
+      path,
+      severity: 'error',
+      message: 'derivedMetrics.runtime.markerConfig must be an object.',
+      suggestion: 'Provide activeState and passiveState fields.',
+    });
+    return;
+  }
+  validateUnknownKeys(value, DERIVED_METRIC_MARKER_CONFIG_KEYS, path, diagnostics, 'derived metric runtime markerConfig');
+  validateIdentifierField(value, 'activeState', `${path}.activeState`, diagnostics, 'marker activeState');
+  validateIdentifierField(value, 'passiveState', `${path}.passiveState`, diagnostics, 'marker passiveState');
+}
+
+function validateDerivedMetricSeatGroupConfig(
+  value: unknown,
+  path: string,
+  diagnostics: Diagnostic[],
+): void {
+  if (!isRecord(value)) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_DERIVED_METRIC_RUNTIME_INVALID',
+      path,
+      severity: 'error',
+      message: 'derivedMetrics.runtime.seatGroupConfig must be an object.',
+      suggestion: 'Provide coinSeats, insurgentSeats, soloSeat, and seatProp.',
+    });
+    return;
+  }
+  validateUnknownKeys(value, DERIVED_METRIC_SEAT_GROUP_CONFIG_KEYS, path, diagnostics, 'derived metric runtime seatGroupConfig');
+  validateStringArrayField(value.coinSeats, `${path}.coinSeats`, diagnostics, 'seatGroupConfig.coinSeats');
+  validateStringArrayField(value.insurgentSeats, `${path}.insurgentSeats`, diagnostics, 'seatGroupConfig.insurgentSeats');
+  validateIdentifierField(value, 'soloSeat', `${path}.soloSeat`, diagnostics, 'seatGroupConfig soloSeat');
+  validateIdentifierField(value, 'seatProp', `${path}.seatProp`, diagnostics, 'seatGroupConfig seatProp');
+}
+
+function validateDerivedMetricRuntime(
+  metric: Record<string, unknown>,
+  metricPath: string,
+  diagnostics: Diagnostic[],
+): void {
+  const runtimePath = `${metricPath}.runtime`;
+  const runtime = metric.runtime;
+  if (!isRecord(runtime)) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_DERIVED_METRIC_RUNTIME_INVALID',
+      path: runtimePath,
+      severity: 'error',
+      message: 'derivedMetrics.runtime must be an object.',
+      suggestion: 'Provide a runtime block matching the declared computation.',
+    });
+    return;
+  }
+
+  validateEnumField(runtime, 'kind', DERIVED_METRIC_RUNTIME_KIND_VALUES, runtimePath, diagnostics, 'derived metric runtime');
+  const kind =
+    runtime.kind === 'markerTotal' || runtime.kind === 'controlledPopulation' || runtime.kind === 'totalEcon'
+      ? runtime.kind
+      : undefined;
+  const computation = typeof metric.computation === 'string' ? metric.computation : undefined;
+  if (kind !== undefined && computation !== undefined && kind !== computation) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_DERIVED_METRIC_RUNTIME_INVALID',
+      path: `${runtimePath}.kind`,
+      severity: 'error',
+      message: `derivedMetrics.runtime.kind "${kind}" must match computation "${computation}".`,
+      suggestion: 'Keep computation and runtime.kind aligned.',
+    });
+  }
+
+  switch (kind) {
+    case 'markerTotal': {
+      validateUnknownKeys(runtime, DERIVED_METRIC_MARKER_RUNTIME_KEYS, runtimePath, diagnostics, 'derived metric runtime');
+      validateIdentifierField(runtime, 'markerId', `${runtimePath}.markerId`, diagnostics, 'derived metric marker id');
+      validateDerivedMetricMarkerConfig(runtime.markerConfig, `${runtimePath}.markerConfig`, diagnostics);
+      if (runtime.defaultMarkerState !== undefined) {
+        validateIdentifierField(runtime, 'defaultMarkerState', `${runtimePath}.defaultMarkerState`, diagnostics, 'default marker state');
+      }
+      break;
+    }
+    case 'controlledPopulation': {
+      validateUnknownKeys(runtime, DERIVED_METRIC_CONTROLLED_POPULATION_RUNTIME_KEYS, runtimePath, diagnostics, 'derived metric runtime');
+      validateEnumField(runtime, 'controlFn', DERIVED_METRIC_CONTROL_FN_VALUES, runtimePath, diagnostics, 'derived metric runtime');
+      validateDerivedMetricSeatGroupConfig(runtime.seatGroupConfig, `${runtimePath}.seatGroupConfig`, diagnostics);
+      break;
+    }
+    case 'totalEcon': {
+      validateUnknownKeys(runtime, DERIVED_METRIC_TOTAL_ECON_RUNTIME_KEYS, runtimePath, diagnostics, 'derived metric runtime');
+      validateEnumField(runtime, 'controlFn', DERIVED_METRIC_CONTROL_FN_VALUES, runtimePath, diagnostics, 'derived metric runtime');
+      validateDerivedMetricSeatGroupConfig(runtime.seatGroupConfig, `${runtimePath}.seatGroupConfig`, diagnostics);
+      if (runtime.blockedByTokenTypes !== undefined) {
+        validateStringArrayField(
+          runtime.blockedByTokenTypes,
+          `${runtimePath}.blockedByTokenTypes`,
+          diagnostics,
+          'runtime.blockedByTokenTypes',
+        );
+      }
+      break;
+    }
+    default:
+      break;
+  }
 }
 
 function selectCanonicalScenarioLinkedAsset<TAsset extends { readonly id: string }>(
@@ -508,6 +659,8 @@ export function validateDerivedMetrics(
         validateEnumField(requirement, 'expectedType', ['number'], requirementPath, diagnostics, 'derived metric requirement');
       }
     }
+
+    validateDerivedMetricRuntime(metric, metricPath, diagnostics);
 
     if (metric.zoneFilter === undefined) {
       continue;

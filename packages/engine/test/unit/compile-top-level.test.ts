@@ -1617,6 +1617,15 @@ describe('compile top-level actions/triggers/end conditions', () => {
           computation: 'markerTotal' as const,
           zoneFilter: { zoneKinds: ['board' as const], category: ['city'] },
           requirements: [{ key: 'population', expectedType: 'number' as const }],
+          runtime: {
+            kind: 'markerTotal' as const,
+            markerId: 'support',
+            markerConfig: {
+              activeState: 'activeSupport',
+              passiveState: 'passiveSupport',
+            },
+            defaultMarkerState: 'neutral',
+          },
         },
       ],
       triggers: [],
@@ -1631,6 +1640,15 @@ describe('compile top-level actions/triggers/end conditions', () => {
     assert.equal(result.gameDef?.derivedMetrics?.[0]?.computation, 'markerTotal');
     assert.deepEqual(result.gameDef?.derivedMetrics?.[0]?.zoneFilter?.zoneKinds, ['board']);
     assert.deepEqual(result.gameDef?.derivedMetrics?.[0]?.requirements, [{ key: 'population', expectedType: 'number' }]);
+    assert.deepEqual(result.gameDef?.derivedMetrics?.[0]?.runtime, {
+      kind: 'markerTotal',
+      markerId: 'support',
+      markerConfig: {
+        activeState: 'activeSupport',
+        passiveState: 'passiveSupport',
+      },
+      defaultMarkerState: 'neutral',
+    });
   });
 
   it('carries only sequentially-visible binders across pipeline stages', () => {

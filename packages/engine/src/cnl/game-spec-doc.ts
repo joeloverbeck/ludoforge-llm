@@ -372,11 +372,50 @@ export interface GameSpecDerivedMetricRequirement {
   readonly expectedType: 'number';
 }
 
+export interface GameSpecDerivedMetricMarkerTotalRuntime {
+  readonly kind: 'markerTotal';
+  readonly markerId: string;
+  readonly markerConfig: {
+    readonly activeState: string;
+    readonly passiveState: string;
+  };
+  readonly defaultMarkerState?: string;
+}
+
+export interface GameSpecDerivedMetricControlledPopulationRuntime {
+  readonly kind: 'controlledPopulation';
+  readonly controlFn: 'coin' | 'solo';
+  readonly seatGroupConfig: {
+    readonly coinSeats: readonly string[];
+    readonly insurgentSeats: readonly string[];
+    readonly soloSeat: string;
+    readonly seatProp: string;
+  };
+}
+
+export interface GameSpecDerivedMetricTotalEconRuntime {
+  readonly kind: 'totalEcon';
+  readonly controlFn: 'coin' | 'solo';
+  readonly seatGroupConfig: {
+    readonly coinSeats: readonly string[];
+    readonly insurgentSeats: readonly string[];
+    readonly soloSeat: string;
+    readonly seatProp: string;
+  };
+  readonly blockedByTokenTypes?: readonly string[];
+}
+
+export type GameSpecDerivedMetricRuntime =
+  | GameSpecDerivedMetricMarkerTotalRuntime
+  | GameSpecDerivedMetricControlledPopulationRuntime
+  | GameSpecDerivedMetricTotalEconRuntime;
+
 export interface GameSpecDerivedMetricDef {
   readonly id: string;
   readonly computation: GameSpecDerivedMetricComputation;
   readonly zoneFilter?: GameSpecDerivedMetricZoneFilter;
   readonly requirements: readonly GameSpecDerivedMetricRequirement[];
+  readonly runtime: GameSpecDerivedMetricRuntime;
 }
 
 export interface GameSpecCoupPlanPhase {

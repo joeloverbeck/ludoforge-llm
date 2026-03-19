@@ -46,6 +46,10 @@ export function makeRenderModelFixture(
     choiceUi: { kind: 'none' },
     moveEnumerationWarnings: [],
     runtimeEligible: [],
+    surfaces: {
+      tableOverlays: [],
+      showdown: null,
+    },
     victoryStandings: null,
     terminal: null,
     ...overrides,

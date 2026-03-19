@@ -352,6 +352,10 @@ describe('projectRenderModel state metadata', () => {
       { name: 'eligible', value: false, displayName: 'Eligible' },
       { name: 'support', value: 2, displayName: 'Support' },
     ]);
+    expect(model.surfaces).toEqual({
+      tableOverlays: [],
+      showdown: null,
+    });
     expect('globalMarkers' in (model as object)).toBe(false);
     expect('tracks' in (model as object)).toBe(false);
 

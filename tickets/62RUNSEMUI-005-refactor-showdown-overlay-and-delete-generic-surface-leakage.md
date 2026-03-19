@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: `specs/62-runner-semantic-ui-projection-boundary.md`, `tickets/62RUNSEMUI-002-add-explicit-render-surface-contracts.md`, `tickets/62RUNSEMUI-004-add-visual-config-driven-showdown-surface-projection.md`
+**Deps**: `specs/62-runner-semantic-ui-projection-boundary.md`, `archive/tickets/62RUNSEMUI/62RUNSEMUI-002-add-explicit-render-surface-contracts.md`, `tickets/62RUNSEMUI-004-add-visual-config-driven-showdown-surface-projection.md`
 
 ## Problem
 

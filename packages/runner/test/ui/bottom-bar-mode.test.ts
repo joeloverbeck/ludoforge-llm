@@ -48,6 +48,10 @@ function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']
     choiceUi: { kind: 'none' },
     moveEnumerationWarnings: [],
     runtimeEligible: [],
+    surfaces: {
+      tableOverlays: [],
+      showdown: null,
+    },
     victoryStandings: null,
     terminal: null,
     ...overrides,

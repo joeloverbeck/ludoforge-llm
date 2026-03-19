@@ -128,6 +128,7 @@ describe('projectRenderModel structural sharing', () => {
 
     expect(second.model.zones).toBe(first.model.zones);
     expect(second.model.tokens).toBe(first.model.tokens);
+    expect(second.model.surfaces).toBe(first.model.surfaces);
     expect(second.model.zones[0]).toBe(first.model.zones[0]);
     expect(second.model.tokens[0]).toBe(first.model.tokens[0]);
     expect(second.model.tokens[1]).toBe(first.model.tokens[1]);

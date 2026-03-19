@@ -7,6 +7,7 @@ import type {
   RenderChoiceOption,
   RenderChoiceUi,
   RenderModel,
+  RenderSurfaceModel,
   RenderTerminal,
   RenderToken,
   RenderZone,
@@ -144,6 +145,42 @@ describe('render-model types', () => {
       },
       moveEnumerationWarnings: [{ code: 'WARN', message: 'warning message' }],
       runtimeEligible: [],
+      surfaces: {
+        tableOverlays: [
+          {
+            key: 'overlay:pot',
+            type: 'text',
+            text: 'Pot: 42',
+            point: { x: 0, y: 0 },
+            signature: 'pot=42',
+          },
+        ],
+        showdown: {
+          communityCards: [
+            {
+              id: 'tok:c1',
+              type: 'poker-card',
+              faceUp: true,
+              properties: { rank: 'A', suit: 'hearts' },
+            },
+          ],
+          rankedPlayers: [
+            {
+              playerId: playerZero,
+              displayName: 'Player 0',
+              score: 42,
+              holeCards: [
+                {
+                  id: 'tok:h1',
+                  type: 'poker-card',
+                  faceUp: true,
+                  properties: { rank: 'K', suit: 'spades' },
+                },
+              ],
+            },
+          ],
+        },
+      },
       victoryStandings: null,
       terminal: {
         type: 'win',
@@ -156,6 +193,17 @@ describe('render-model types', () => {
     expect('globalMarkers' in (model as object)).toBe(false);
     expect('tracks' in (model as object)).toBe(false);
     expectTypeOf(model).toMatchTypeOf<RenderModel>();
+  });
+
+  it('covers the RenderSurfaceModel default-capable shape', () => {
+    const surfaces: RenderSurfaceModel = {
+      tableOverlays: [],
+      showdown: null,
+    };
+
+    expect(surfaces.tableOverlays).toEqual([]);
+    expect(surfaces.showdown).toBeNull();
+    expectTypeOf(surfaces).toMatchTypeOf<RenderSurfaceModel>();
   });
 
   it('allows PlayerId | null for RenderZone.ownerID', () => {

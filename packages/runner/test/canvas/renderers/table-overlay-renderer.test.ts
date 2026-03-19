@@ -175,6 +175,10 @@ function makeRenderModel(overrides: Partial<RenderModel> = {}): RenderModel {
     choiceUi: { kind: 'none' },
     moveEnumerationWarnings: [],
     runtimeEligible: [],
+    surfaces: {
+      tableOverlays: [],
+      showdown: null,
+    },
     victoryStandings: null,
     terminal: null,
     ...overrides,

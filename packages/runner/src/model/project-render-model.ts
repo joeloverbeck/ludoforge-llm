@@ -23,6 +23,11 @@ import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
 import { formatChoiceValueFallback, formatChoiceValueResolved } from './choice-value-utils.js';
 
+const EMPTY_RENDER_SURFACES: RenderModel['surfaces'] = {
+  tableOverlays: [],
+  showdown: null,
+};
+
 export function projectRenderModel(
   bundle: RunnerProjectionBundle,
   visualConfigProvider: VisualConfigProvider,
@@ -98,6 +103,7 @@ export function projectRenderModel(
       ...entry,
       displayName: visualConfigProvider.getFactionDisplayName(entry.factionId) ?? formatIdAsDisplayName(entry.seatId),
     })),
+    surfaces: EMPTY_RENDER_SURFACES,
     victoryStandings: frame.victoryStandings,
     terminal: frame.terminal,
   };

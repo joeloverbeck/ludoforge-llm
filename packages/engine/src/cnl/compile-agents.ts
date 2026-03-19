@@ -48,9 +48,14 @@ const TIE_BREAKER_KINDS = new Set<TieBreakerKind>([
   'stableMoveKey',
 ]);
 
+export interface LowerAgentsOptions {
+  readonly referenceSeatIds?: readonly string[];
+}
+
 export function lowerAgents(
   agents: GameSpecAgentsSection | null,
   diagnostics: Diagnostic[],
+  options: LowerAgentsOptions = {},
 ): GameDef['agents'] | undefined {
   if (agents === null) {
     return undefined;
@@ -60,7 +65,7 @@ export function lowerAgents(
   const libraryCompiler = new AgentLibraryCompiler(agents.library, parameterDefs, diagnostics);
   const library = libraryCompiler.compile();
   const profiles = lowerProfiles(agents.profiles, agents.library, library, parameterDefs, diagnostics);
-  const bindingsBySeat = lowerBindings(agents.bindings, profiles, diagnostics);
+  const bindingsBySeat = lowerBindings(agents.bindings, profiles, diagnostics, options);
 
   return {
     schemaVersion: 1,
@@ -459,10 +464,39 @@ function lowerBindings(
   bindings: GameSpecAgentsSection['bindings'],
   profiles: AgentPolicyCatalog['profiles'],
   diagnostics: Diagnostic[],
+  options: LowerAgentsOptions,
 ): AgentPolicyCatalog['bindingsBySeat'] {
   const compiled: Record<string, string> = {};
+  const bindingEntries = Object.entries(bindings ?? {});
+  if (bindingEntries.length === 0) {
+    return compiled;
+  }
 
-  for (const [seatId, profileId] of Object.entries(bindings ?? {})) {
+  if (options.referenceSeatIds === undefined) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_BINDING_SEAT_CATALOG_UNRESOLVED,
+      path: 'doc.agents.bindings',
+      severity: 'error',
+      message: 'agents bindings require resolved canonical seat ids from the selected scenario seatCatalog.',
+      suggestion: 'Add or select a seatCatalog data asset before binding authored policy profiles to seats.',
+    });
+    return compiled;
+  }
+
+  const referenceSeatIds = new Set(options.referenceSeatIds);
+
+  for (const [seatId, profileId] of bindingEntries) {
+    if (!referenceSeatIds.has(seatId)) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_BINDING_UNKNOWN_SEAT,
+        path: `doc.agents.bindings.${seatId}`,
+        severity: 'error',
+        message: `agents binding references seat "${seatId}", which is absent from the resolved canonical seat ids.`,
+        suggestion: `Use one of the resolved canonical seat ids: ${options.referenceSeatIds.join(', ')}.`,
+      });
+      continue;
+    }
+
     if (profiles[profileId] === undefined) {
       diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_BINDING_UNKNOWN_PROFILE,

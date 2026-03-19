@@ -533,7 +533,15 @@ function compileExpandedDoc(
     sections.derivedMetrics = derivedMetrics.failed ? null : derivedMetrics.value;
   }
 
-  const agents = compileSection(diagnostics, () => lowerAgents(resolvedTableRefDoc.agents, diagnostics));
+  const agents = compileSection(diagnostics, () =>
+    lowerAgents(
+      resolvedTableRefDoc.agents,
+      diagnostics,
+      seatIdentityContract.contract.referenceSeatIds === undefined
+        ? {}
+        : { referenceSeatIds: seatIdentityContract.contract.referenceSeatIds },
+    ),
+  );
   sections.agents = agents.failed || agents.value === undefined ? null : agents.value;
 
   let actions: GameDef['actions'] | null = null;

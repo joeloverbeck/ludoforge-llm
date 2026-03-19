@@ -27,10 +27,21 @@ function createCompileReadyDoc() {
   };
 }
 
+function createSeatCatalogAsset(seatIds: readonly string[]) {
+  return {
+    id: 'seats',
+    kind: 'seatCatalog' as const,
+    payload: {
+      seats: seatIds.map((seatId) => ({ id: seatId })),
+    },
+  };
+}
+
 describe('agents authoring surface', () => {
   it('lowers valid authored policy library items into a typed GameDef.agents catalog', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us', 'arvn'])],
       agents: {
         parameters: {
           passFloor: {
@@ -386,9 +397,140 @@ describe('agents authoring surface', () => {
     assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_PROFILE_PARAM_VALUE_INVALID' && diagnostic.path === 'doc.agents.profiles.baseline.params.tieOrder'));
   });
 
+  it('rejects bindings when canonical seat ids cannot be resolved from data assets', () => {
+    const compiled = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      agents: {
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(compiled.gameDef, null);
+    assert.ok(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_AGENT_BINDING_SEAT_CATALOG_UNRESOLVED'
+          && diagnostic.path === 'doc.agents.bindings',
+      ),
+    );
+  });
+
+  it('rejects bindings that target seats absent from the resolved canonical seat catalog', () => {
+    const compiled = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us', 'arvn'])],
+      agents: {
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          vc: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(compiled.gameDef, null);
+    assert.ok(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_AGENT_BINDING_UNKNOWN_SEAT'
+          && diagnostic.path === 'doc.agents.bindings.vc',
+      ),
+    );
+  });
+
+  it('rejects unsupported refs that try to reach presentation or raw-state paths', () => {
+    const compiled = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        library: {
+          candidateFeatures: {
+            presentationLeak: {
+              type: 'id',
+              expr: { ref: 'visualConfig.table.theme' },
+            },
+            rawStateLeak: {
+              type: 'id',
+              expr: { ref: 'state.zones.deck.cards' },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(compiled.gameDef, null);
+    assert.ok(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN'
+          && diagnostic.path === 'doc.agents.library.candidateFeatures.presentationLeak.expr.ref',
+      ),
+    );
+    assert.ok(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN'
+          && diagnostic.path === 'doc.agents.library.candidateFeatures.rawStateLeak.expr.ref',
+      ),
+    );
+  });
+
   it('rejects policy dependency cycles and semantic expression violations', () => {
     const compiled = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
       agents: {
         parameters: {
           mode: {

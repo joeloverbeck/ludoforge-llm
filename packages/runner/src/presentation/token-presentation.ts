@@ -9,7 +9,7 @@ import type {
   ResolvedTokenVisual,
 } from '../config/visual-config-provider.js';
 import type { CardTemplate } from '../config/visual-config-types.js';
-import type { RenderToken, RenderZone } from '../model/render-model.js';
+import type { RunnerToken, RunnerZone } from '../model/runner-frame.js';
 import { computeFanOffset } from '../layout/fan-offset.js';
 import type { TokenRenderStyleProvider } from '../canvas/renderers/renderer-types.js';
 
@@ -76,7 +76,7 @@ export interface PresentationTokenNode {
 
 interface TokenRenderEntry {
   readonly renderId: string;
-  readonly representative: RenderToken;
+  readonly representative: RunnerToken;
   readonly tokenIds: readonly string[];
 }
 
@@ -92,8 +92,8 @@ export interface ResolvedTokenRenderStyle {
 }
 
 export function resolvePresentationTokenNodes(
-  tokens: readonly RenderToken[],
-  zones: readonly RenderZone[],
+  tokens: readonly RunnerToken[],
+  zones: readonly RunnerZone[],
   tokenRenderStyleProvider: TokenRenderStyleProvider,
   highlightedTokenIDs: ReadonlySet<string> = new Set<string>(),
 ): readonly PresentationTokenNode[] {
@@ -127,7 +127,7 @@ export function resolvePresentationTokenNodes(
 }
 
 export function resolveTokenRenderStyle(
-  token: RenderToken,
+  token: RunnerToken,
   tokenRenderStyleProvider: TokenRenderStyleProvider,
 ): ResolvedTokenRenderStyle {
   const tokenVisual = tokenRenderStyleProvider.getTokenTypeVisual(token.type);
@@ -172,7 +172,7 @@ function buildTokenNodeSignature(
 }
 
 function resolveTokenRenderSpec(
-  token: RenderToken,
+  token: RunnerToken,
   stackCount: number,
   tokenRenderStyleProvider: TokenRenderStyleProvider,
   stackBadgeStyle: ResolvedStackBadgeStyle,
@@ -205,7 +205,7 @@ function resolveTokenRenderSpec(
 
 function buildZoneOffsetsByRenderId(
   entries: readonly TokenRenderEntry[],
-  zones: readonly RenderZone[],
+  zones: readonly RunnerZone[],
   tokenRenderStyleProvider: TokenRenderStyleProvider,
 ): ReadonlyMap<string, { x: number; y: number }> {
   const offsetsByRenderId = new Map<string, { x: number; y: number }>();
@@ -391,9 +391,9 @@ function resolvePresentationLane(
   return laneOrder[0] ?? 'default';
 }
 
-function buildRenderEntries(tokens: readonly RenderToken[]): readonly TokenRenderEntry[] {
+function buildRenderEntries(tokens: readonly RunnerToken[]): readonly TokenRenderEntry[] {
   const entries: TokenRenderEntry[] = [];
-  const grouped = new Map<string, RenderToken[]>();
+  const grouped = new Map<string, RunnerToken[]>();
 
   for (const token of tokens) {
     if (token.isSelectable || token.isSelected) {
@@ -435,7 +435,7 @@ function buildRenderEntries(tokens: readonly RenderToken[]): readonly TokenRende
   return entries;
 }
 
-function stackGroupKey(token: RenderToken): string {
+function stackGroupKey(token: RunnerToken): string {
   return JSON.stringify([
     'stack',
     token.zoneID,
@@ -447,7 +447,7 @@ function stackGroupKey(token: RenderToken): string {
 }
 
 function resolveTokenColor(
-  token: RenderToken,
+  token: RunnerToken,
   tokenVisual: ResolvedTokenVisual,
   tokenRenderStyleProvider: TokenRenderStyleProvider,
 ): string {
@@ -464,7 +464,7 @@ function resolveTokenColor(
   return NEUTRAL_TOKEN_COLOR;
 }
 
-function resolveStroke(token: RenderToken, isInteractionHighlighted: boolean): PresentationStrokeSpec {
+function resolveStroke(token: RunnerToken, isInteractionHighlighted: boolean): PresentationStrokeSpec {
   if (token.isSelected) {
     return {
       color: '#f8fafc',

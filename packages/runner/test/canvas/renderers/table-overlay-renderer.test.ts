@@ -6,6 +6,7 @@ import { VisualConfigProvider } from '../../../src/config/visual-config-provider
 import { createTableOverlayRenderer } from '../../../src/canvas/renderers/table-overlay-renderer';
 import { resolveOverlayNodes } from '../../../src/presentation/presentation-scene.js';
 import type { RenderModel, RenderVariable, RenderZone } from '../../../src/model/render-model';
+import type { RunnerFrame } from '../../../src/model/runner-frame.js';
 
 const {
   MockContainer,
@@ -216,7 +217,93 @@ function updateRenderer(
   renderModel: RenderModel | null,
   positions: ReadonlyMap<string, { x: number; y: number }>,
 ): void {
-  renderer.update(renderModel === null ? [] : resolveOverlayNodes(renderModel, positions, provider));
+  renderer.update(
+    renderModel === null
+      ? []
+      : resolveOverlayNodes(toRunnerFrame(renderModel), renderModel.zones, positions, provider),
+  );
+}
+
+function toRunnerFrame(renderModel: RenderModel): RunnerFrame {
+  return {
+    zones: renderModel.zones.map((zone) => ({
+      id: zone.id,
+      ordering: zone.ordering,
+      tokenIDs: zone.tokenIDs,
+      hiddenTokenCount: zone.hiddenTokenCount,
+      markers: zone.markers.map((marker) => ({
+        id: marker.id,
+        state: marker.state,
+        possibleStates: marker.possibleStates,
+      })),
+      visibility: zone.visibility,
+      isSelectable: zone.isSelectable,
+      isHighlighted: zone.isHighlighted,
+      ownerID: zone.ownerID,
+      category: zone.category,
+      attributes: zone.attributes,
+      metadata: zone.metadata,
+    })),
+    adjacencies: renderModel.adjacencies,
+    tokens: renderModel.tokens,
+    globalVars: renderModel.globalVars.map(({ name, value }) => ({ name, value })),
+    playerVars: new Map(
+      Array.from(renderModel.playerVars.entries()).map(([playerId, variables]) => [
+        playerId,
+        variables.map(({ name, value }) => ({ name, value })),
+      ]),
+    ),
+    globalMarkers: renderModel.globalMarkers.map(({ id, state, possibleStates }) => ({ id, state, possibleStates })),
+    tracks: renderModel.tracks.map(({ id, scope, seat, min, max, currentValue }) => ({ id, scope, seat, min, max, currentValue })),
+    activeEffects: renderModel.activeEffects.map((effect) => ({
+      id: effect.id,
+      sourceCardId: effect.id,
+      sourceCardTitle: effect.displayName,
+      attributes: effect.attributes.map((attribute) => ({ key: attribute.key, value: attribute.value })),
+    })),
+    players: renderModel.players.map(({ id, isHuman, isActive, isEliminated, factionId }) => ({ id, isHuman, isActive, isEliminated, factionId })),
+    activePlayerID: renderModel.activePlayerID,
+    turnOrder: renderModel.turnOrder,
+    turnOrderType: renderModel.turnOrderType,
+    simultaneousSubmitted: renderModel.simultaneousSubmitted,
+    interruptStack: renderModel.interruptStack,
+    isInInterrupt: renderModel.isInInterrupt,
+    phaseName: renderModel.phaseName,
+    eventDecks: renderModel.eventDecks.map(({ id, drawZoneId, discardZoneId, playedCard, lookaheadCard, deckSize, discardSize }) => ({
+      id,
+      drawZoneId,
+      discardZoneId,
+      playedCard,
+      lookaheadCard,
+      deckSize,
+      discardSize,
+    })),
+    actionGroups: renderModel.actionGroups.map(({ groupKey, actions }) => ({ groupKey, actions })),
+    choiceBreadcrumb: renderModel.choiceBreadcrumb.map((step) => ({
+      decisionKey: step.decisionKey,
+      name: step.name,
+      chosenValueId: step.chosenValueId,
+      chosenValue: step.chosenValue,
+      iterationGroupId: step.iterationGroupId,
+      iterationEntityId: null,
+    })),
+    choiceContext: renderModel.choiceContext === null
+      ? null
+      : {
+          selectedActionId: renderModel.choiceContext.actionDisplayName,
+          decisionParamName: renderModel.choiceContext.decisionParamName,
+          minSelections: null,
+          maxSelections: null,
+          iterationEntityId: null,
+          iterationIndex: null,
+          iterationTotal: null,
+        },
+    choiceUi: renderModel.choiceUi as RunnerFrame['choiceUi'],
+    moveEnumerationWarnings: renderModel.moveEnumerationWarnings,
+    runtimeEligible: renderModel.runtimeEligible.map(({ seatId, factionId, seatIndex }) => ({ seatId, factionId, seatIndex })),
+    victoryStandings: renderModel.victoryStandings,
+    terminal: renderModel.terminal,
+  };
 }
 
 describe('createTableOverlayRenderer', () => {

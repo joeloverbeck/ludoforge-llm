@@ -16,7 +16,9 @@ import type {
 } from '@ludoforge/engine/runtime';
 import { asPlayerId } from '@ludoforge/engine/runtime';
 
-import { deriveRenderModel } from '../model/derive-render-model.js';
+import { deriveRunnerFrame } from '../model/derive-runner-frame.js';
+import { projectRenderModel } from '../model/project-render-model.js';
+import type { RunnerFrame } from '../model/runner-frame.js';
 import type { RenderModel } from '../model/render-model.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import type { PlayerSeatConfig } from '../session/session-types.js';
@@ -56,9 +58,10 @@ interface GameStoreState {
   readonly appliedMoveEvent: AppliedMoveEvent | null;
   readonly appliedMoveSequence: number;
   readonly activePhaseBanner: string | null;
+  readonly runnerFrame: RunnerFrame | null;
   readonly renderModel: RenderModel | null;
 }
-type MutableGameStoreState = Omit<GameStoreState, 'renderModel'>;
+type MutableGameStoreState = Omit<GameStoreState, 'runnerFrame' | 'renderModel'>;
 
 export type AiStepOutcome =
   | 'advanced'
@@ -196,6 +199,7 @@ const INITIAL_STATE: Omit<GameStoreState, 'playerSeats'> = {
   appliedMoveEvent: null,
   appliedMoveSequence: 0,
   activePhaseBanner: null,
+  runnerFrame: null,
   renderModel: null,
 };
 
@@ -489,7 +493,7 @@ function isHumanTurn(renderModel: RenderModel | null): boolean {
   return activePlayer?.isHuman === true;
 }
 
-function toRenderContext(inputs: RenderDerivationInputs, visualConfigProvider: VisualConfigProvider): RenderContext | null {
+function toRenderContext(inputs: RenderDerivationInputs): RenderContext | null {
   if (inputs.playerID === null) {
     return null;
   }
@@ -503,23 +507,21 @@ function toRenderContext(inputs: RenderDerivationInputs, visualConfigProvider: V
     choiceStack: inputs.choiceStack,
     playerSeats: inputs.playerSeats,
     terminal: inputs.terminal,
-    visualConfigProvider,
   };
 }
 
-function deriveStoreRenderModel(
+function deriveStoreRunnerFrame(
   inputs: RenderDerivationInputs,
-  previousModel: RenderModel | null,
-  visualConfigProvider: VisualConfigProvider,
-): RenderModel | null {
+  previousFrame: RunnerFrame | null,
+): RunnerFrame | null {
   if (inputs.gameDef === null || inputs.gameState === null) {
     return null;
   }
-  const context = toRenderContext(inputs, visualConfigProvider);
+  const context = toRenderContext(inputs);
   if (context === null) {
     return null;
   }
-  return deriveRenderModel(inputs.gameState, inputs.gameDef, context, previousModel);
+  return deriveRunnerFrame(inputs.gameState, inputs.gameDef, context, previousFrame);
 }
 
 function toRenderDerivationInputs(state: MutableGameStoreState): RenderDerivationInputs {
@@ -639,13 +641,16 @@ export function createGameStore(
       const setAndDerive = (patch: Partial<MutableGameStoreState>): void => {
         set((current) => {
           const nextState = materializeNextState(current, patch);
+          const runnerFrame = deriveStoreRunnerFrame(
+            toRenderDerivationInputs(nextState),
+            current.runnerFrame,
+          );
           return {
             ...patch,
-            renderModel: deriveStoreRenderModel(
-              toRenderDerivationInputs(nextState),
-              current.renderModel,
-              visualConfigProvider,
-            ),
+            runnerFrame,
+            renderModel: runnerFrame === null
+              ? null
+              : projectRenderModel(runnerFrame, visualConfigProvider, current.renderModel),
           };
         });
       };

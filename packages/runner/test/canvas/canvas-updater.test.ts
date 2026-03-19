@@ -10,9 +10,11 @@ import type { AdjacencyRenderer, TableOverlayRenderer, TokenRenderer, ZoneRender
 import type { ViewportResult } from '../../src/canvas/viewport-setup';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import type { RenderModel, RenderToken, RenderZone } from '../../src/model/render-model';
+import type { RunnerFrame } from '../../src/model/runner-frame.js';
 import type { GameStore } from '../../src/store/game-store';
 
 interface CanvasTestStoreState {
+  readonly runnerFrame: RunnerFrame | null;
   readonly renderModel: RenderModel | null;
   readonly animationPlaying: boolean;
 }
@@ -101,10 +103,95 @@ function asVar(name: string, value: number | boolean) {
   } as const;
 }
 
-function createCanvasTestStore(initial: CanvasTestStoreState): StoreApi<CanvasTestStoreState> {
-  return createStore<CanvasTestStoreState>()(
-    subscribeWithSelector(() => initial),
+function createCanvasTestStore(initial: Omit<CanvasTestStoreState, 'runnerFrame'> & { runnerFrame?: RunnerFrame | null }): StoreApi<CanvasTestStoreState> {
+  const snapshot: CanvasTestStoreState = {
+    runnerFrame: initial.runnerFrame ?? (initial.renderModel === null ? null : toRunnerFrame(initial.renderModel)),
+    renderModel: initial.renderModel,
+    animationPlaying: initial.animationPlaying,
+  };
+  const store = createStore<CanvasTestStoreState>()(
+    subscribeWithSelector(() => snapshot),
   );
+  const baseSetState = store.setState.bind(store);
+  store.setState = ((partial, replace) => {
+    if (typeof partial === 'function') {
+      return baseSetState((state) => {
+        const next = partial(state);
+        if (next === null || typeof next !== 'object') {
+          return next;
+        }
+        return {
+          ...next,
+          runnerFrame: 'renderModel' in next
+            ? (next.renderModel === null ? null : toRunnerFrame(next.renderModel))
+            : state.runnerFrame,
+        };
+      }, replace);
+    }
+    const next = partial as Partial<CanvasTestStoreState>;
+    return baseSetState({
+      ...next,
+      runnerFrame: 'renderModel' in next
+        ? (next.renderModel === null ? null : toRunnerFrame(next.renderModel))
+        : store.getState().runnerFrame,
+    }, replace);
+  }) as typeof store.setState;
+  return store;
+}
+
+function toRunnerFrame(renderModel: RenderModel): RunnerFrame {
+  return {
+    zones: renderModel.zones.map((zone) => ({
+      id: zone.id,
+      ordering: zone.ordering,
+      tokenIDs: zone.tokenIDs,
+      hiddenTokenCount: zone.hiddenTokenCount,
+      markers: zone.markers.map((marker) => ({ id: marker.id, state: marker.state, possibleStates: marker.possibleStates })),
+      visibility: zone.visibility,
+      isSelectable: zone.isSelectable,
+      isHighlighted: zone.isHighlighted,
+      ownerID: zone.ownerID,
+      category: zone.category,
+      attributes: zone.attributes,
+      metadata: zone.metadata,
+    })),
+    adjacencies: renderModel.adjacencies,
+    tokens: renderModel.tokens,
+    globalVars: renderModel.globalVars.map(({ name, value }) => ({ name, value })),
+    playerVars: new Map(Array.from(renderModel.playerVars.entries()).map(([playerId, vars]) => [playerId, vars.map(({ name, value }) => ({ name, value }))])),
+    globalMarkers: renderModel.globalMarkers.map(({ id, state, possibleStates }) => ({ id, state, possibleStates })),
+    tracks: renderModel.tracks.map(({ id, scope, seat, min, max, currentValue }) => ({ id, scope, seat, min, max, currentValue })),
+    activeEffects: renderModel.activeEffects.map((effect) => ({
+      id: effect.id,
+      sourceCardId: effect.id,
+      sourceCardTitle: effect.displayName,
+      attributes: effect.attributes.map((attribute) => ({ key: attribute.key, value: attribute.value })),
+    })),
+    players: renderModel.players.map(({ id, isHuman, isActive, isEliminated, factionId }) => ({ id, isHuman, isActive, isEliminated, factionId })),
+    activePlayerID: renderModel.activePlayerID,
+    turnOrder: renderModel.turnOrder,
+    turnOrderType: renderModel.turnOrderType,
+    simultaneousSubmitted: renderModel.simultaneousSubmitted,
+    interruptStack: renderModel.interruptStack,
+    isInInterrupt: renderModel.isInInterrupt,
+    phaseName: renderModel.phaseName,
+    eventDecks: renderModel.eventDecks.map(({ id, drawZoneId, discardZoneId, playedCard, lookaheadCard, deckSize, discardSize }) => ({ id, drawZoneId, discardZoneId, playedCard, lookaheadCard, deckSize, discardSize })),
+    actionGroups: renderModel.actionGroups.map(({ groupKey, actions }) => ({ groupKey, actions })),
+    choiceBreadcrumb: renderModel.choiceBreadcrumb.map((step) => ({
+      decisionKey: step.decisionKey,
+      name: step.name,
+      chosenValueId: step.chosenValueId,
+      chosenValue: step.chosenValue,
+      iterationGroupId: step.iterationGroupId,
+      iterationEntityId: null,
+    })),
+    choiceContext: null,
+    choiceUi: renderModel.choiceUi as RunnerFrame['choiceUi'],
+    moveEnumerationWarnings: renderModel.moveEnumerationWarnings,
+    runtimeEligible: renderModel.runtimeEligible.map(({ seatId, factionId, seatIndex }) => ({ seatId, factionId, seatIndex })),
+    victoryStandings: renderModel.victoryStandings,
+    terminal: renderModel.terminal,
+  };
 }
 
 function createRendererMocks() {
@@ -220,8 +307,7 @@ describe('createCanvasUpdater', () => {
     expect(zoneCall?.[1]).toBe(snapshot.positions);
     expect(zoneCall?.[0]).not.toBe(model.zones);
     const adjacencyCall = vi.mocked(renderers.adjacencyRenderer.update).mock.calls[0];
-    expect(adjacencyCall?.[0]).toEqual(model.adjacencies);
-    expect(adjacencyCall?.[0]).not.toBe(model.adjacencies);
+    expect(adjacencyCall?.[0]).toEqual([]);
     expect(adjacencyCall?.[1]).toBe(snapshot.positions);
     const tokenCall = vi.mocked(renderers.tokenRenderer.update).mock.calls[0];
     expect(tokenCall?.[0]).toMatchObject([

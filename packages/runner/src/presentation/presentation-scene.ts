@@ -4,7 +4,7 @@ import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import type { RegionStyle, TableOverlayItemConfig } from '../config/visual-config-types.js';
 import type { Position } from '../canvas/geometry.js';
 import type { InteractionHighlights } from '../canvas/interaction-highlights.js';
-import type { RenderAdjacency, RenderModel, RenderVariable, RenderZone } from '../model/render-model.js';
+import type { RunnerAdjacency, RunnerFrame, RunnerVariable, RunnerZone } from '../model/runner-frame.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
 import {
   resolvePresentationTokenNodes,
@@ -84,9 +84,10 @@ export interface PresentationZoneRenderSpec {
 export interface PresentationZoneNode {
   readonly id: string;
   readonly displayName: string;
+  readonly ownerID: RunnerZone['ownerID'];
   readonly isSelectable: boolean;
   readonly category: string | null;
-  readonly attributes: RenderZone['attributes'];
+  readonly attributes: RunnerZone['attributes'];
   readonly visual: ReturnType<VisualConfigProvider['resolveZoneVisual']>;
   readonly render: PresentationZoneRenderSpec;
 }
@@ -107,7 +108,7 @@ export interface PresentationScene {
 }
 
 interface BuildPresentationSceneOptions {
-  readonly renderModel: RenderModel | null;
+  readonly runnerFrame: RunnerFrame | null;
   readonly positions: ReadonlyMap<string, Position>;
   readonly visualConfigProvider: VisualConfigProvider;
   readonly tokenRenderStyleProvider: TokenRenderStyleProvider;
@@ -124,7 +125,7 @@ const ZONE_SELECTABLE_STROKE: PresentationStrokeSpec = { color: '#93c5fd', width
 const ZONE_DEFAULT_STROKE: PresentationStrokeSpec = { color: '#111827', width: 1, alpha: 0.7 };
 
 export function buildPresentationScene(options: BuildPresentationSceneOptions): PresentationScene {
-  const { renderModel } = options;
+  const { runnerFrame } = options;
   const highlightedZoneIDs = options.interactionHighlights.zoneIDs.length > 0
     ? new Set(options.interactionHighlights.zoneIDs)
     : new Set<string>();
@@ -132,7 +133,7 @@ export function buildPresentationScene(options: BuildPresentationSceneOptions): 
     ? new Set(options.interactionHighlights.tokenIDs)
     : new Set<string>();
 
-  if (renderModel === null) {
+  if (runnerFrame === null) {
     return {
       zones: [],
       tokens: [],
@@ -142,24 +143,27 @@ export function buildPresentationScene(options: BuildPresentationSceneOptions): 
     };
   }
 
-  const zones = resolveZoneNodes(renderModel.zones, options.visualConfigProvider, highlightedZoneIDs);
+  const hiddenZones = options.visualConfigProvider.getHiddenZones();
+  const sourceZones = runnerFrame.zones.filter((zone) => !hiddenZones.has(zone.id));
+  const zones = resolveZoneNodes(sourceZones, options.visualConfigProvider, highlightedZoneIDs);
+  const visibleZoneIDs = new Set(zones.map((zone) => zone.id));
 
   return {
     zones,
     tokens: resolvePresentationTokenNodes(
-      renderModel.tokens,
-      renderModel.zones,
+      runnerFrame.tokens.filter((token) => visibleZoneIDs.has(token.zoneID)),
+      sourceZones,
       options.tokenRenderStyleProvider,
       highlightedTokenIDs,
     ),
-    adjacencies: resolveAdjacencyNodes(renderModel.adjacencies),
-    overlays: resolveOverlayNodes(renderModel, options.positions, options.visualConfigProvider),
+    adjacencies: resolveAdjacencyNodes(runnerFrame.adjacencies, visibleZoneIDs),
+    overlays: resolveOverlayNodes(runnerFrame, zones, options.positions, options.visualConfigProvider),
     regions: resolveRegionNodes(zones, options.positions, options.visualConfigProvider),
   };
 }
 
 export function resolveZoneNodes(
-  zones: readonly RenderZone[],
+  zones: readonly RunnerZone[],
   visualConfigProvider: VisualConfigProvider,
   highlightedZoneIDs: ReadonlySet<string> = new Set<string>(),
 ): readonly PresentationZoneNode[] {
@@ -170,6 +174,7 @@ export function resolveZoneNodes(
     return {
       id: zone.id,
       displayName,
+      ownerID: zone.ownerID,
       isSelectable: zone.isSelectable,
       category: zone.category,
       attributes: zone.attributes,
@@ -180,7 +185,7 @@ export function resolveZoneNodes(
 }
 
 function resolveZoneRenderSpec(
-  zone: RenderZone,
+  zone: RunnerZone,
   displayName: string,
   visual: ReturnType<VisualConfigProvider['resolveZoneVisual']>,
   isInteractionHighlighted: boolean,
@@ -212,7 +217,7 @@ function resolveZoneRenderSpec(
   };
 }
 
-function resolveZoneFillColor(zone: RenderZone, visualColor: string | null | undefined): string {
+function resolveZoneFillColor(zone: RunnerZone, visualColor: string | null | undefined): string {
   if (typeof visualColor === 'string' && visualColor.trim().length > 0) {
     return visualColor;
   }
@@ -229,7 +234,7 @@ function resolveZoneFillColor(zone: RenderZone, visualColor: string | null | und
   return '#4d5c6d';
 }
 
-function resolveZoneStroke(zone: RenderZone, isInteractionHighlighted: boolean): PresentationStrokeSpec {
+function resolveZoneStroke(zone: RunnerZone, isInteractionHighlighted: boolean): PresentationStrokeSpec {
   if (zone.isHighlighted) {
     return ZONE_HIGHLIGHT_STROKE;
   }
@@ -243,7 +248,7 @@ function resolveZoneStroke(zone: RenderZone, isInteractionHighlighted: boolean):
 }
 
 function resolveMarkerLabelText(
-  zone: RenderZone,
+  zone: RunnerZone,
   markerBadgeConfig: ReturnType<VisualConfigProvider['getMarkerBadgeConfig']>,
 ): string {
   const filteredMarkers = markerBadgeConfig === null
@@ -255,7 +260,7 @@ function resolveMarkerLabelText(
 }
 
 function resolveZoneBadge(
-  zone: RenderZone,
+  zone: RunnerZone,
   visual: ReturnType<VisualConfigProvider['resolveZoneVisual']>,
   markerBadgeConfig: ReturnType<VisualConfigProvider['getMarkerBadgeConfig']>,
 ): PresentationZoneBadgeSpec | null {
@@ -286,18 +291,22 @@ function resolveZoneBadge(
 }
 
 export function resolveAdjacencyNodes(
-  adjacencies: readonly RenderAdjacency[],
+  adjacencies: readonly RunnerAdjacency[],
+  visibleZoneIDs: ReadonlySet<string>,
 ): readonly PresentationAdjacencyNode[] {
-  return adjacencies.map((adjacency) => ({
-    from: adjacency.from,
-    to: adjacency.to,
-    category: adjacency.category,
-    isHighlighted: adjacency.isHighlighted,
-  }));
+  return adjacencies
+    .filter((adjacency) => visibleZoneIDs.has(adjacency.from) && visibleZoneIDs.has(adjacency.to))
+    .map((adjacency) => ({
+      from: adjacency.from,
+      to: adjacency.to,
+      category: adjacency.category,
+      isHighlighted: adjacency.isHighlighted,
+    }));
 }
 
 export function resolveOverlayNodes(
-  renderModel: RenderModel,
+  runnerFrame: RunnerFrame,
+  visibleZones: readonly Pick<PresentationZoneNode, 'id' | 'ownerID'>[],
   positions: ReadonlyMap<string, Position>,
   visualConfigProvider: VisualConfigProvider,
 ): readonly PresentationOverlayNode[] {
@@ -307,17 +316,17 @@ export function resolveOverlayNodes(
   }
 
   const seatAnchors = deriveSeatAnchors(
-    renderModel,
+    visibleZones,
     positions,
     new Set(visualConfigProvider.getPlayerSeatAnchorZones()),
   );
-  const tableCenter = deriveTableCenter(renderModel, positions);
+  const tableCenter = deriveTableCenter(visibleZones, positions);
   const result: PresentationOverlayNode[] = [];
 
   for (const [itemIndex, item] of items.entries()) {
     switch (item.kind) {
       case 'globalVar': {
-        const value = findVarValue(renderModel.globalVars, item.varName);
+        const value = findVarValue(runnerFrame.globalVars, item.varName);
         if (value === null) {
           continue;
         }
@@ -337,7 +346,7 @@ export function resolveOverlayNodes(
         break;
       }
       case 'perPlayerVar': {
-        for (const player of renderModel.players) {
+        for (const player of runnerFrame.players) {
           if (player.isEliminated) {
             continue;
           }
@@ -345,7 +354,7 @@ export function resolveOverlayNodes(
           if (target === null) {
             continue;
           }
-          const playerVars = renderModel.playerVars.get(player.id) ?? [];
+          const playerVars = runnerFrame.playerVars.get(player.id) ?? [];
           const value = findVarValue(playerVars, item.varName);
           if (value === null) {
             continue;
@@ -363,7 +372,7 @@ export function resolveOverlayNodes(
         break;
       }
       case 'marker': {
-        const rawValue = findVarValue(renderModel.globalVars, item.varName);
+        const rawValue = findVarValue(runnerFrame.globalVars, item.varName);
         if (typeof rawValue !== 'number' || !Number.isFinite(rawValue)) {
           continue;
         }
@@ -443,13 +452,13 @@ function resolveOverlayPosition(
 }
 
 function deriveSeatAnchors(
-  renderModel: RenderModel,
+  zones: readonly Pick<PresentationZoneNode, 'id' | 'ownerID'>[],
   positions: ReadonlyMap<string, Position>,
   playerSeatAnchorZones: ReadonlySet<string>,
 ): ReadonlyMap<number, PresentationOverlayPoint> {
   const accumulators = new Map<number, { sumX: number; sumY: number; count: number }>();
 
-  for (const zone of renderModel.zones) {
+  for (const zone of zones) {
     if (!playerSeatAnchorZones.has(zone.id) || zone.ownerID === null) {
       continue;
     }
@@ -481,14 +490,14 @@ function deriveSeatAnchors(
 }
 
 function deriveTableCenter(
-  renderModel: RenderModel,
+  zones: readonly Pick<PresentationZoneNode, 'id'>[],
   positions: ReadonlyMap<string, Position>,
 ): PresentationOverlayPoint {
   let sumX = 0;
   let sumY = 0;
   let count = 0;
 
-  for (const zone of renderModel.zones) {
+  for (const zone of zones) {
     const point = positions.get(zone.id);
     if (point === undefined) {
       continue;
@@ -509,7 +518,7 @@ function deriveTableCenter(
 }
 
 function findVarValue(
-  vars: readonly RenderVariable[],
+  vars: readonly RunnerVariable[],
   varName: string,
 ): number | boolean | null {
   const found = vars.find((entry) => entry.name === varName);

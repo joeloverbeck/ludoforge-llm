@@ -1,6 +1,5 @@
 import { parseDecisionKey, type DecisionKey, type MoveParamValue } from '@ludoforge/engine/runtime';
 import type { PartialChoice } from '../store/store-types.js';
-import type { RenderZone } from './render-model.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
 
 export interface IterationContext {
@@ -54,7 +53,7 @@ function getInnermostIterationIndex(iterationPath: string): number | null {
 export function parseIterationContext(
   decisionKey: DecisionKey,
   choiceStack: readonly PartialChoice[],
-  zonesById: ReadonlyMap<string, RenderZone>,
+  zonesById: ReadonlyMap<string, { readonly id: string; readonly displayName?: string }>,
 ): IterationContext | null {
   const parsedDecisionKey = parseDecisionKey(decisionKey);
   if (parsedDecisionKey === null) {

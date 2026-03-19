@@ -1,6 +1,6 @@
 import type { StoreApi } from 'zustand';
 
-import type { RenderAdjacency, RenderModel, RenderToken, RenderVariable, RenderZone } from '../model/render-model';
+import type { RunnerAdjacency, RunnerFrame, RunnerToken, RunnerVariable, RunnerZone } from '../model/runner-frame.js';
 import type { GameStore } from '../store/game-store';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { adjacenciesVisuallyEqual, tokensVisuallyEqual, zonesVisuallyEqual } from './canvas-equality';
@@ -18,9 +18,9 @@ import type { ViewportResult } from './viewport-setup';
 import { buildPresentationScene } from '../presentation/presentation-scene.js';
 
 interface CanvasSnapshotSelectorResult {
-  readonly zones: readonly RenderZone[];
-  readonly tokens: readonly RenderToken[];
-  readonly adjacencies: readonly RenderAdjacency[];
+  readonly zones: readonly RunnerZone[];
+  readonly tokens: readonly RunnerToken[];
+  readonly adjacencies: readonly RunnerAdjacency[];
 }
 
 interface SelectorSubscribeStore<TState> extends StoreApi<TState> {
@@ -57,9 +57,9 @@ export interface CanvasUpdater {
   destroy(): void;
 }
 
-const EMPTY_ZONES: readonly RenderZone[] = [];
-const EMPTY_TOKENS: readonly RenderToken[] = [];
-const EMPTY_ADJACENCIES: readonly RenderAdjacency[] = [];
+const EMPTY_ZONES: readonly RunnerZone[] = [];
+const EMPTY_TOKENS: readonly RunnerToken[] = [];
+const EMPTY_ADJACENCIES: readonly RunnerAdjacency[] = [];
 
 export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
   const store = deps.store as SelectorSubscribeStore<GameStore>;
@@ -67,7 +67,7 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
 
   let started = false;
   let latestSnapshot = selectCanvasSnapshot(store.getState());
-  let latestRenderModel = store.getState().renderModel;
+  let latestRunnerFrame = store.getState().runnerFrame;
   let latestPositionSnapshot = deps.positionStore.getSnapshot();
   let latestInteractionHighlights = deps.getInteractionHighlights?.() ?? EMPTY_INTERACTION_HIGHLIGHTS;
   let animationPlaying = store.getState().animationPlaying;
@@ -75,7 +75,7 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
 
   const applySnapshot = (_snapshot: CanvasSnapshotSelectorResult): void => {
     const scene = buildPresentationScene({
-      renderModel: latestRenderModel,
+      runnerFrame: latestRunnerFrame,
       positions: latestPositionSnapshot.positions,
       visualConfigProvider: deps.visualConfigProvider,
       tokenRenderStyleProvider: deps.tokenRenderStyleProvider,
@@ -107,19 +107,19 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
 
       unsubscribeCallbacks.push(
         store.subscribe(selectCanvasSnapshot, (snapshot) => {
-          latestRenderModel = store.getState().renderModel;
+          latestRunnerFrame = store.getState().runnerFrame;
           maybeApplySnapshot(snapshot);
         }, { equalityFn: canvasSnapshotsEqual }),
       );
 
       unsubscribeCallbacks.push(
-        store.subscribe((state) => state.renderModel, (renderModel) => {
-          latestRenderModel = renderModel;
+        store.subscribe((state) => state.runnerFrame, (runnerFrame) => {
+          latestRunnerFrame = runnerFrame;
           if (animationPlaying) {
             return;
           }
           const scene = buildPresentationScene({
-            renderModel,
+            runnerFrame,
             positions: latestPositionSnapshot.positions,
             visualConfigProvider: deps.visualConfigProvider,
             tokenRenderStyleProvider: deps.tokenRenderStyleProvider,
@@ -159,7 +159,7 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
       latestPositionSnapshot = deps.positionStore.getSnapshot();
       deps.viewport.updateWorldBounds(latestPositionSnapshot.bounds);
       deps.viewport.centerOnBounds(latestPositionSnapshot.bounds);
-      latestRenderModel = store.getState().renderModel;
+      latestRunnerFrame = store.getState().runnerFrame;
       latestSnapshot = selectCanvasSnapshot(store.getState());
       if (animationPlaying) {
         queuedSnapshot = latestSnapshot;
@@ -193,8 +193,8 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
 }
 
 function selectCanvasSnapshot(state: GameStore): CanvasSnapshotSelectorResult {
-  const renderModel = state.renderModel;
-  if (renderModel === null) {
+  const runnerFrame = state.runnerFrame;
+  if (runnerFrame === null) {
     return {
       zones: EMPTY_ZONES,
       tokens: EMPTY_TOKENS,
@@ -203,9 +203,9 @@ function selectCanvasSnapshot(state: GameStore): CanvasSnapshotSelectorResult {
   }
 
   return {
-    zones: renderModel.zones,
-    tokens: renderModel.tokens,
-    adjacencies: renderModel.adjacencies,
+    zones: runnerFrame.zones,
+    tokens: runnerFrame.tokens,
+    adjacencies: runnerFrame.adjacencies,
   };
 }
 
@@ -217,7 +217,7 @@ function canvasSnapshotsEqual(prev: CanvasSnapshotSelectorResult, next: CanvasSn
   );
 }
 
-function overlaysVisuallyEqual(prev: RenderModel | null, next: RenderModel | null): boolean {
+function overlaysVisuallyEqual(prev: RunnerFrame | null, next: RunnerFrame | null): boolean {
   if (prev === next) {
     return true;
   }
@@ -232,7 +232,7 @@ function overlaysVisuallyEqual(prev: RenderModel | null, next: RenderModel | nul
   );
 }
 
-function variablesEqual(prev: readonly RenderVariable[], next: readonly RenderVariable[]): boolean {
+function variablesEqual(prev: readonly RunnerVariable[], next: readonly RunnerVariable[]): boolean {
   if (prev.length !== next.length) {
     return false;
   }
@@ -252,8 +252,8 @@ function variablesEqual(prev: readonly RenderVariable[], next: readonly RenderVa
 }
 
 function playerVarsEqual(
-  prev: RenderModel['playerVars'],
-  next: RenderModel['playerVars'],
+  prev: RunnerFrame['playerVars'],
+  next: RunnerFrame['playerVars'],
 ): boolean {
   if (prev.size !== next.size) {
     return false;
@@ -272,7 +272,7 @@ function playerVarsEqual(
   return true;
 }
 
-function playersEqual(prev: RenderModel['players'], next: RenderModel['players']): boolean {
+function playersEqual(prev: RunnerFrame['players'], next: RunnerFrame['players']): boolean {
   if (prev.length !== next.length) {
     return false;
   }

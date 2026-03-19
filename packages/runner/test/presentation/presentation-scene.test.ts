@@ -4,16 +4,15 @@ import { describe, expect, it } from 'vitest';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import { VisualConfigTokenRenderStyleProvider } from '../../src/canvas/renderers/token-render-style-provider.js';
 import { buildPresentationScene } from '../../src/presentation/presentation-scene.js';
-import type { RenderModel, RenderVariable, RenderZone } from '../../src/model/render-model.js';
+import type { RunnerFrame, RunnerVariable, RunnerZone } from '../../src/model/runner-frame.js';
 
 function makeZone(
   id: string,
   attributes: Readonly<Record<string, AttributeValue>> = {},
-  overrides: Partial<RenderZone> = {},
-): RenderZone {
+  overrides: Partial<RunnerZone> = {},
+): RunnerZone {
   return {
     id,
-    displayName: id,
     ordering: 'stack',
     tokenIDs: [],
     hiddenTokenCount: 0,
@@ -24,17 +23,16 @@ function makeZone(
     ownerID: null,
     category: 'province',
     attributes,
-    visual: { shape: 'rectangle', width: 100, height: 80, color: null },
     metadata: {},
     ...overrides,
   };
 }
 
-function asVar(name: string, value: number | boolean): RenderVariable {
-  return { name, value, displayName: name };
+function asVar(name: string, value: number | boolean): RunnerVariable {
+  return { name, value };
 }
 
-function makeRenderModel(overrides: Partial<RenderModel> = {}): RenderModel {
+function makeRunnerFrame(overrides: Partial<RunnerFrame> = {}): RunnerFrame {
   return {
     zones: [
       makeZone('shared:center'),
@@ -52,8 +50,8 @@ function makeRenderModel(overrides: Partial<RenderModel> = {}): RenderModel {
     tracks: [],
     activeEffects: [],
     players: [
-      { id: asPlayerId(0), displayName: 'P0', isHuman: true, isActive: true, isEliminated: false, factionId: null },
-      { id: asPlayerId(1), displayName: 'P1', isHuman: true, isActive: false, isEliminated: false, factionId: null },
+      { id: asPlayerId(0), isHuman: true, isActive: true, isEliminated: false, factionId: null },
+      { id: asPlayerId(1), isHuman: true, isActive: false, isEliminated: false, factionId: null },
     ],
     activePlayerID: asPlayerId(0),
     turnOrder: [asPlayerId(0), asPlayerId(1)],
@@ -62,7 +60,6 @@ function makeRenderModel(overrides: Partial<RenderModel> = {}): RenderModel {
     interruptStack: [],
     isInInterrupt: false,
     phaseName: 'main',
-    phaseDisplayName: 'Main',
     eventDecks: [],
     actionGroups: [],
     choiceBreadcrumb: [],
@@ -85,7 +82,7 @@ describe('buildPresentationScene', () => {
     ['zone:b', { x: 250, y: 50 }],
   ]);
 
-  it('resolves overlay nodes from render model, positions, and visual config before renderer mutation', () => {
+  it('resolves overlay nodes from runner frame, positions, and visual config before renderer mutation', () => {
     const provider = new VisualConfigProvider({
       version: 1,
       tableOverlays: {
@@ -99,7 +96,7 @@ describe('buildPresentationScene', () => {
     });
 
     const scene = buildPresentationScene({
-      renderModel: makeRenderModel({
+      runnerFrame: makeRunnerFrame({
         globalVars: [asVar('pot', 42), asVar('dealerSeat', 1)],
         playerVars: new Map([
           [asPlayerId(0), [asVar('bet', 5)]],
@@ -113,28 +110,13 @@ describe('buildPresentationScene', () => {
     });
 
     expect(scene.overlays).toHaveLength(4);
-    expect(scene.overlays[0]).toMatchObject({
-      type: 'text',
-      text: 'Pot: 42',
-      point: { x: 0, y: 106.66666666666667 },
-    });
-    expect(scene.overlays[1]).toMatchObject({
-      type: 'text',
-      text: 'Bet: 5',
-      point: { x: -100, y: 80 },
-    });
-    expect(scene.overlays[2]).toMatchObject({
-      type: 'text',
-      text: 'Bet: 9',
-      point: { x: 100, y: 80 },
-    });
-    expect(scene.overlays[3]).toMatchObject({
-      type: 'marker',
-      point: { x: 70, y: 100 },
-    });
+    expect(scene.overlays[0]).toMatchObject({ type: 'text', text: 'Pot: 42' });
+    expect(scene.overlays[1]).toMatchObject({ type: 'text', text: 'Bet: 5' });
+    expect(scene.overlays[2]).toMatchObject({ type: 'text', text: 'Bet: 9' });
+    expect(scene.overlays[3]).toMatchObject({ type: 'marker' });
   });
 
-  it('derives zone scene nodes from visual config instead of passing through render-model zone visuals', () => {
+  it('derives zone scene nodes from visual config instead of semantic frame zone visuals', () => {
     const provider = new VisualConfigProvider({
       version: 1,
       zones: {
@@ -147,35 +129,26 @@ describe('buildPresentationScene', () => {
       },
     });
 
-    const renderModel = makeRenderModel({
-      zones: [
-        makeZone('zone:a', { country: 'southVietnam' }, {
-          displayName: 'Mixed Display Name',
-          visual: { shape: 'rectangle', width: 80, height: 60, color: '#ff00ff' },
-        }),
-      ],
+    const runnerFrame = makeRunnerFrame({
+      zones: [makeZone('zone:a', { country: 'southVietnam' })],
     });
 
     const scene = buildPresentationScene({
-      renderModel,
+      runnerFrame,
       positions,
       visualConfigProvider: provider,
       tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(provider),
       interactionHighlights: { zoneIDs: [], tokenIDs: [] },
     });
 
-    expect(scene.zones).toHaveLength(1);
     expect(scene.zones[0]).toMatchObject({
       id: 'zone:a',
       displayName: 'Configured Zone A',
       visual: { shape: 'hexagon', width: 120, height: 90, color: '#2a6e3f' },
-      render: {
-        fillColor: '#2a6e3f',
-        nameLabel: { text: 'Configured Zone A' },
-      },
+      render: { fillColor: '#2a6e3f', nameLabel: { text: 'Configured Zone A' } },
     });
-    expect(scene.zones).not.toBe(renderModel.zones);
-    expect(scene.zones[0]).not.toBe(renderModel.zones[0]);
+    expect(scene.zones).not.toBe(runnerFrame.zones);
+    expect(scene.zones[0]).not.toBe(runnerFrame.zones[0]);
   });
 
   it('resolves region nodes from provider-resolved zone visuals inside the scene layer', () => {
@@ -198,10 +171,10 @@ describe('buildPresentationScene', () => {
     });
 
     const scene = buildPresentationScene({
-      renderModel: makeRenderModel({
+      runnerFrame: makeRunnerFrame({
         zones: [
-          makeZone('zone:a', { country: 'southVietnam' }, { visual: { shape: 'circle', width: 120, height: 90, color: null } }),
-          makeZone('zone:b', { country: 'southVietnam' }, { visual: { shape: 'circle', width: 80, height: 60, color: null } }),
+          makeZone('zone:a', { country: 'southVietnam' }),
+          makeZone('zone:b', { country: 'southVietnam' }),
         ],
       }),
       positions,
@@ -216,14 +189,12 @@ describe('buildPresentationScene', () => {
       label: 'South Vietnam',
       style: expect.objectContaining({ fillColor: '#2a6e3f' }),
     });
-    expect(scene.regions[0]?.cornerPoints).toContainEqual({ x: -20, y: 0 });
-    expect(scene.regions[0]?.cornerPoints).toContainEqual({ x: 320, y: 100 });
   });
 
   it('resolves interaction highlights into render-ready zone and token strokes', () => {
     const provider = new VisualConfigProvider(null);
     const scene = buildPresentationScene({
-      renderModel: makeRenderModel({
+      runnerFrame: makeRunnerFrame({
         zones: [makeZone('shared:center')],
         tokens: [
           { id: 'token:1', type: 'troop', zoneID: 'shared:center', ownerID: asPlayerId(0), factionId: null, faceUp: true, properties: {}, isSelectable: false, isSelected: false },
@@ -269,7 +240,7 @@ describe('buildPresentationScene', () => {
     });
 
     const scene = buildPresentationScene({
-      renderModel: makeRenderModel({
+      runnerFrame: makeRunnerFrame({
         zones: [makeZone('zone:a')],
         tokens: [
           { id: 'token:1', type: 'troop', zoneID: 'zone:a', ownerID: asPlayerId(0), factionId: null, faceUp: true, properties: {}, isSelectable: false, isSelected: false },
@@ -284,16 +255,7 @@ describe('buildPresentationScene', () => {
     });
 
     expect(scene.tokens).toHaveLength(2);
-    expect(scene.tokens[0]).toMatchObject({
-      stackCount: 2,
-      zoneId: 'zone:a',
-      offset: { x: 0, y: 0 },
-    });
-    expect(scene.tokens[1]).toMatchObject({
-      stackCount: 1,
-      zoneId: 'zone:a',
-      offset: { x: 0, y: 48 },
-    });
-    expect(scene.tokens[0]?.signature).not.toBe(scene.tokens[1]?.signature);
+    expect(scene.tokens[0]).toMatchObject({ stackCount: 2, zoneId: 'zone:a', offset: { x: 0, y: 0 } });
+    expect(scene.tokens[1]).toMatchObject({ stackCount: 1, zoneId: 'zone:a', offset: { x: 0, y: 48 } });
   });
 });

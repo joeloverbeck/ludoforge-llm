@@ -1,6 +1,6 @@
 # RUNARCH-004: Add Browser Stress Regression for Heavy Visual Games
 
-**Status**: PENDING
+**Status**: REJECTED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner verification only

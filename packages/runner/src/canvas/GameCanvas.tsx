@@ -18,7 +18,7 @@ import { createAriaAnnouncer } from './interactions/aria-announcer';
 import { attachKeyboardSelect, handleKeyboardSelectKeyDown } from './interactions/keyboard-select';
 import { createCanvasInteractionController } from './interactions/canvas-interaction-controller';
 import { createHoverTargetController } from './interactions/hover-target-controller';
-import { createPositionStore, type PositionStore } from './position-store';
+import { createRuntimeLayoutStore, type RuntimeLayoutStore } from './runtime-layout-store';
 import { createAdjacencyRenderer } from './renderers/adjacency-renderer';
 import { ContainerPool } from './renderers/container-pool';
 import { createDisposalQueue, type DisposalQueue } from './renderers/disposal-queue';
@@ -103,7 +103,7 @@ interface GameCanvasRuntimeOptions {
 interface GameCanvasRuntimeDeps {
   readonly createGameCanvas: typeof createGameCanvas;
   readonly setupViewport: typeof setupViewport;
-  readonly createPositionStore: typeof createPositionStore;
+  readonly createRuntimeLayoutStore: typeof createRuntimeLayoutStore;
   readonly createZoneRenderer: typeof createZoneRenderer;
   readonly createAdjacencyRenderer: typeof createAdjacencyRenderer;
   readonly createTokenRenderer: typeof createTokenRenderer;
@@ -124,7 +124,7 @@ interface GameCanvasRuntimeDeps {
 const DEFAULT_RUNTIME_DEPS: GameCanvasRuntimeDeps = {
   createGameCanvas,
   setupViewport,
-  createPositionStore,
+  createRuntimeLayoutStore,
   createZoneRenderer,
   createAdjacencyRenderer,
   createTokenRenderer,
@@ -182,14 +182,14 @@ export async function createGameCanvasRuntime(
   const initialState = selectorStore.getState();
   const initialZoneIDs = selectZoneIDs(initialState);
   const initialWorldLayout = initialState.worldLayout;
-  const positionStore = deps.createPositionStore(initialWorldLayout === null ? initialZoneIDs : []);
+  const runtimeLayoutStore = deps.createRuntimeLayoutStore(initialWorldLayout === null ? initialZoneIDs : []);
 
   const applyWorldLayout = (
     worldLayout: WorldLayoutModel | null,
     gameDef: GameStore['gameDef'],
   ): WorldLayoutModel | null => {
     if (worldLayout === null || !Array.isArray(gameDef?.zones)) {
-      positionStore.setFallbackZoneIDs(selectZoneIDs(selectorStore.getState()));
+      runtimeLayoutStore.setFallbackZoneIDs(selectZoneIDs(selectorStore.getState()));
       if (layersForBackground !== null) {
         drawTableBackground(layersForBackground.backgroundLayer, null, EMPTY_TABLE_BOUNDS);
       }
@@ -197,7 +197,7 @@ export async function createGameCanvasRuntime(
     }
 
     const gameDefZoneIDs = gameDef.zones.map((zone) => zone.id);
-    positionStore.setActiveLayout(worldLayout, gameDefZoneIDs);
+    runtimeLayoutStore.setActiveLayout(worldLayout, gameDefZoneIDs);
     if (layersForBackground !== null) {
       drawTableBackground(
         layersForBackground.backgroundLayer,
@@ -242,7 +242,7 @@ export async function createGameCanvasRuntime(
   });
 
   const disposalQueue = createDisposalQueue();
-  const viewportResult = createViewportResult(deps, gameCanvas, positionStore);
+  const viewportResult = createViewportResult(deps, gameCanvas, runtimeLayoutStore);
   const zonePool = new ContainerPool();
   let publishHoverAnchor: () => void = () => {};
 
@@ -309,7 +309,7 @@ export async function createGameCanvasRuntime(
 
   const canvasUpdater = deps.createCanvasUpdater({
     store: options.store,
-    positionStore,
+    runtimeLayoutStore,
     visualConfigProvider: options.visualConfigProvider,
     tokenRenderStyleProvider,
     zoneRenderer,
@@ -334,7 +334,7 @@ export async function createGameCanvasRuntime(
       tokenContainers: () => tokenRenderer.getContainerMap(),
       tokenFaceControllers: () => tokenRenderer.getFaceControllerMap?.() ?? new Map(),
       zoneContainers: () => zoneRenderer.getContainerMap(),
-      zonePositions: () => positionStore.getSnapshot(),
+      zonePositions: () => runtimeLayoutStore.getSnapshot(),
       ephemeralParent: () => gameCanvas.layers.effectsGroup,
       disposalQueue,
     });
@@ -393,7 +393,7 @@ export async function createGameCanvasRuntime(
     if (selectorStore.getState().worldLayout !== null) {
       return;
     }
-    positionStore.setFallbackZoneIDs(zoneIDs);
+    runtimeLayoutStore.setFallbackZoneIDs(zoneIDs);
   }, { equalityFn: stringArraysEqual });
   const unsubscribeWorldLayout = selectorStore.subscribe(
     (state) => state.worldLayout,
@@ -678,9 +678,9 @@ function destroyCanvasPipeline(
 function createViewportResult(
   deps: GameCanvasRuntimeDeps,
   gameCanvas: PixiGameCanvas,
-  positionStore: PositionStore,
+  runtimeLayoutStore: RuntimeLayoutStore,
 ): ViewportResult {
-  const snapshot = positionStore.getSnapshot();
+  const snapshot = runtimeLayoutStore.getSnapshot();
   const worldWidth = Math.max(DEFAULT_WORLD_SIZE, snapshot.bounds.maxX - snapshot.bounds.minX);
   const worldHeight = Math.max(DEFAULT_WORLD_SIZE, snapshot.bounds.maxY - snapshot.bounds.minY);
 

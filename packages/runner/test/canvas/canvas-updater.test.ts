@@ -4,7 +4,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createCanvasUpdater } from '../../src/canvas/canvas-updater';
-import { createPositionStore } from '../../src/canvas/position-store';
+import { createRuntimeLayoutStore } from '../../src/canvas/runtime-layout-store';
 import { VisualConfigTokenRenderStyleProvider } from '../../src/canvas/renderers/token-render-style-provider';
 import type { AdjacencyRenderer, TableOverlayRenderer, TokenRenderer, ZoneRenderer } from '../../src/canvas/renderers/renderer-types';
 import type { ViewportResult } from '../../src/canvas/viewport-setup';
@@ -306,21 +306,21 @@ const TEST_TABLE_OVERLAY_PROVIDER = new VisualConfigProvider({
 const TEST_TOKEN_RENDER_STYLE_PROVIDER = new VisualConfigTokenRenderStyleProvider(TEST_VISUAL_CONFIG_PROVIDER);
 
 describe('createCanvasUpdater', () => {
-  it('start subscribes to store and position store', () => {
+  it('start subscribes to store and runtime layout store', () => {
     const store = createCanvasTestStore({
       renderModel: makeRenderModel(),
       animationPlaying: false,
     });
-    const positionStore = createPositionStore(['zone:a']);
+    const runtimeLayoutStore = createRuntimeLayoutStore(['zone:a']);
     const storeSubscribeSpy = vi.spyOn(store, 'subscribe');
-    const positionSubscribeSpy = vi.spyOn(positionStore, 'subscribe');
+    const runtimeLayoutSubscribeSpy = vi.spyOn(runtimeLayoutStore, 'subscribe');
 
     const renderers = createRendererMocks();
     const viewport = createViewportMock();
 
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
-      positionStore,
+      runtimeLayoutStore,
       visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
@@ -332,21 +332,21 @@ describe('createCanvasUpdater', () => {
     updater.start();
 
     expect(storeSubscribeSpy).toHaveBeenCalledTimes(4);
-    expect(positionSubscribeSpy).toHaveBeenCalledTimes(1);
+    expect(runtimeLayoutSubscribeSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('start performs an initial sync from current store and position snapshots', () => {
+  it('start performs an initial sync from current store and runtime layout snapshots', () => {
     const model = makeRenderModel();
     const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
-    const positionStore = createPositionStore(['zone:a']);
-    const snapshot = positionStore.getSnapshot();
+    const runtimeLayoutStore = createRuntimeLayoutStore(['zone:a']);
+    const snapshot = runtimeLayoutStore.getSnapshot();
 
     const renderers = createRendererMocks();
     const viewport = createViewportMock();
 
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
-      positionStore,
+      runtimeLayoutStore,
       visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
@@ -413,14 +413,14 @@ describe('createCanvasUpdater', () => {
       ],
     });
     const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
-    const positionStore = createPositionStore(['zone:a']);
+    const runtimeLayoutStore = createRuntimeLayoutStore(['zone:a']);
 
     const renderers = createRendererMocks();
     const viewport = createViewportMock();
 
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
-      positionStore,
+      runtimeLayoutStore,
       visualConfigProvider: provider,
       tokenRenderStyleProvider: tokenStyleProvider,
       zoneRenderer: renderers.zoneRenderer,
@@ -446,14 +446,14 @@ describe('createCanvasUpdater', () => {
       globalVars: [asVar('pot', 10)],
     });
     const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
-    const positionStore = createPositionStore(['zone:a']);
+    const runtimeLayoutStore = createRuntimeLayoutStore(['zone:a']);
 
     const renderers = createRendererMocks();
     const viewport = createViewportMock();
 
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
-      positionStore,
+      runtimeLayoutStore,
       visualConfigProvider: TEST_TABLE_OVERLAY_PROVIDER,
       tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(TEST_TABLE_OVERLAY_PROVIDER),
       zoneRenderer: renderers.zoneRenderer,
@@ -484,14 +484,14 @@ describe('createCanvasUpdater', () => {
       globalVars: [asVar('pot', 10), asVar('round', 1)],
     });
     const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
-    const positionStore = createPositionStore(['zone:a']);
+    const runtimeLayoutStore = createRuntimeLayoutStore(['zone:a']);
 
     const renderers = createRendererMocks();
     const viewport = createViewportMock();
 
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
-      positionStore,
+      runtimeLayoutStore,
       visualConfigProvider: TEST_TABLE_OVERLAY_PROVIDER,
       tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(TEST_TABLE_OVERLAY_PROVIDER),
       zoneRenderer: renderers.zoneRenderer,
@@ -526,14 +526,14 @@ describe('createCanvasUpdater', () => {
       worldLayout: makeWorldLayout(['zone:a']),
       animationPlaying: false,
     });
-    const positionStore = createPositionStore(['zone:a']);
+    const runtimeLayoutStore = createRuntimeLayoutStore(['zone:a']);
 
     const renderers = createRendererMocks();
     const viewport = createViewportMock();
 
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
-      positionStore,
+      runtimeLayoutStore,
       visualConfigProvider: TEST_TABLE_OVERLAY_PROVIDER,
       tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(TEST_TABLE_OVERLAY_PROVIDER),
       zoneRenderer: renderers.zoneRenderer,
@@ -571,14 +571,14 @@ describe('createCanvasUpdater', () => {
   it('updates renderers when zones change and ignores metadata-only changes under visual equality gating', () => {
     const model = makeRenderModel();
     const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
-    const positionStore = createPositionStore(['zone:a']);
+    const runtimeLayoutStore = createRuntimeLayoutStore(['zone:a']);
 
     const renderers = createRendererMocks();
     const viewport = createViewportMock();
 
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
-      positionStore,
+      runtimeLayoutStore,
       visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
@@ -612,14 +612,14 @@ describe('createCanvasUpdater', () => {
   it('updates token and adjacency renderers when their slices change', () => {
     const model = makeRenderModel();
     const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
-    const positionStore = createPositionStore(['zone:a']);
+    const runtimeLayoutStore = createRuntimeLayoutStore(['zone:a']);
 
     const renderers = createRendererMocks();
     const viewport = createViewportMock();
 
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
-      positionStore,
+      runtimeLayoutStore,
       visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
@@ -650,18 +650,18 @@ describe('createCanvasUpdater', () => {
     expect(renderers.adjacencyRenderer.update).toHaveBeenCalledTimes(1);
   });
 
-  it('start centers the viewport on the initial position bounds', () => {
+  it('start centers the viewport on the initial runtime layout bounds', () => {
     const model = makeRenderModel();
     const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
-    const positionStore = createPositionStore(['zone:a']);
-    const snapshot = positionStore.getSnapshot();
+    const runtimeLayoutStore = createRuntimeLayoutStore(['zone:a']);
+    const snapshot = runtimeLayoutStore.getSnapshot();
 
     const renderers = createRendererMocks();
     const viewport = createViewportMock();
 
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
-      positionStore,
+      runtimeLayoutStore,
       visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
@@ -675,17 +675,17 @@ describe('createCanvasUpdater', () => {
     expect(viewport.centerOnBounds).toHaveBeenCalledWith(snapshot.bounds);
   });
 
-  it('updates viewport bounds and re-renders with new position data when position store changes', () => {
+  it('updates viewport bounds and re-renders with new runtime layout data when the runtime layout store changes', () => {
     const model = makeRenderModel();
     const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
-    const positionStore = createPositionStore(['zone:a']);
+    const runtimeLayoutStore = createRuntimeLayoutStore(['zone:a']);
 
     const renderers = createRendererMocks();
     const viewport = createViewportMock();
 
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
-      positionStore,
+      runtimeLayoutStore,
       visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
@@ -697,7 +697,7 @@ describe('createCanvasUpdater', () => {
     updater.start();
     vi.clearAllMocks();
 
-    positionStore.setActiveLayout({
+    runtimeLayoutStore.setActiveLayout({
       positions: new Map([['zone:a', { x: 10, y: 20 }]]),
       bounds: {
         minX: 0,
@@ -707,7 +707,7 @@ describe('createCanvasUpdater', () => {
       },
     }, ['zone:a']);
 
-    const latestSnapshot = positionStore.getSnapshot();
+    const latestSnapshot = runtimeLayoutStore.getSnapshot();
 
     expect(viewport.updateWorldBounds).toHaveBeenCalledWith(latestSnapshot.bounds);
     expect(renderers.zoneRenderer.update).toHaveBeenCalledWith(
@@ -728,14 +728,14 @@ describe('createCanvasUpdater', () => {
   it('gates renderer updates while animation is playing', () => {
     const model = makeRenderModel();
     const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
-    const positionStore = createPositionStore(['zone:a']);
+    const runtimeLayoutStore = createRuntimeLayoutStore(['zone:a']);
 
     const renderers = createRendererMocks();
     const viewport = createViewportMock();
 
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
-      positionStore,
+      runtimeLayoutStore,
       visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
@@ -762,14 +762,14 @@ describe('createCanvasUpdater', () => {
   it('applies the latest queued snapshot when animation transitions to false', () => {
     const model = makeRenderModel();
     const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
-    const positionStore = createPositionStore(['zone:a']);
+    const runtimeLayoutStore = createRuntimeLayoutStore(['zone:a']);
 
     const renderers = createRendererMocks();
     const viewport = createViewportMock();
 
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
-      positionStore,
+      runtimeLayoutStore,
       visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
@@ -807,14 +807,14 @@ describe('createCanvasUpdater', () => {
   it('destroy unsubscribes listeners so further changes do not trigger updates', () => {
     const model = makeRenderModel();
     const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
-    const positionStore = createPositionStore(['zone:a']);
+    const runtimeLayoutStore = createRuntimeLayoutStore(['zone:a']);
 
     const renderers = createRendererMocks();
     const viewport = createViewportMock();
 
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
-      positionStore,
+      runtimeLayoutStore,
       visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
@@ -834,7 +834,7 @@ describe('createCanvasUpdater', () => {
       }),
     });
 
-    positionStore.setFallbackZoneIDs(['zone:a', 'zone:b']);
+    runtimeLayoutStore.setFallbackZoneIDs(['zone:a', 'zone:b']);
 
     expect(renderers.zoneRenderer.update).not.toHaveBeenCalled();
     expect(renderers.adjacencyRenderer.update).not.toHaveBeenCalled();
@@ -844,14 +844,14 @@ describe('createCanvasUpdater', () => {
   it('applies interaction highlights without requiring store-state changes', () => {
     const model = makeRenderModel();
     const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
-    const positionStore = createPositionStore(['zone:a']);
+    const runtimeLayoutStore = createRuntimeLayoutStore(['zone:a']);
 
     const renderers = createRendererMocks();
     const viewport = createViewportMock();
 
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
-      positionStore,
+      runtimeLayoutStore,
       visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
@@ -881,7 +881,7 @@ describe('createCanvasUpdater', () => {
           }),
         }),
       ]),
-      positionStore.getSnapshot().positions,
+      runtimeLayoutStore.getSnapshot().positions,
     );
     expect(renderers.tokenRenderer.update).toHaveBeenCalledWith(
       expect.arrayContaining([

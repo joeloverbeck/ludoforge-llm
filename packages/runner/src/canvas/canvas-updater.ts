@@ -11,7 +11,7 @@ import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import type { WorldLayoutModel } from '../layout/world-layout-model.js';
 import { adjacenciesVisuallyEqual, tokensVisuallyEqual, zonesVisuallyEqual } from './canvas-equality';
 import { EMPTY_INTERACTION_HIGHLIGHTS, type InteractionHighlights } from './interaction-highlights.js';
-import type { PositionStore } from './position-store';
+import type { RuntimeLayoutStore } from './runtime-layout-store';
 import type {
   AdjacencyRenderer,
   RegionBoundaryRenderer,
@@ -49,7 +49,7 @@ interface SelectorSubscribeStore<TState> extends StoreApi<TState> {
 
 export interface CanvasUpdaterDeps {
   readonly store: StoreApi<GameStore>;
-  readonly positionStore: PositionStore;
+  readonly runtimeLayoutStore: RuntimeLayoutStore;
   readonly visualConfigProvider: VisualConfigProvider;
   readonly tokenRenderStyleProvider: TokenRenderStyleProvider;
   readonly zoneRenderer: ZoneRenderer;
@@ -79,7 +79,7 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
   let latestSnapshot = selectCanvasSnapshot(store.getState());
   let latestRunnerProjection = store.getState().runnerProjection;
   let latestWorldLayout = store.getState().worldLayout;
-  let latestPositionSnapshot = deps.positionStore.getSnapshot();
+  let latestRuntimeLayoutSnapshot = deps.runtimeLayoutStore.getSnapshot();
   let latestInteractionHighlights = deps.getInteractionHighlights?.() ?? EMPTY_INTERACTION_HIGHLIGHTS;
   let animationPlaying = store.getState().animationPlaying;
   let queuedSnapshot: CanvasSnapshotSelectorResult | null = null;
@@ -98,14 +98,14 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
     const scene = buildPresentationScene({
       runnerFrame: latestRunnerProjection?.frame ?? null,
       overlays,
-      positions: latestPositionSnapshot.positions,
+      positions: latestRuntimeLayoutSnapshot.positions,
       visualConfigProvider: deps.visualConfigProvider,
       tokenRenderStyleProvider: deps.tokenRenderStyleProvider,
       interactionHighlights: latestInteractionHighlights,
     });
     deps.regionBoundaryRenderer?.update(scene.regions);
-    deps.zoneRenderer.update(scene.zones, latestPositionSnapshot.positions);
-    deps.adjacencyRenderer.update(scene.adjacencies, latestPositionSnapshot.positions);
+    deps.zoneRenderer.update(scene.zones, latestRuntimeLayoutSnapshot.positions);
+    deps.adjacencyRenderer.update(scene.adjacencies, latestRuntimeLayoutSnapshot.positions);
     deps.tokenRenderer.update(scene.tokens, deps.zoneRenderer.getContainerMap());
     deps.tableOverlayRenderer?.update(scene.overlays);
   };
@@ -179,9 +179,9 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
       );
 
       unsubscribeCallbacks.push(
-        deps.positionStore.subscribe((positionSnapshot) => {
-          latestPositionSnapshot = positionSnapshot;
-          deps.viewport.updateWorldBounds(positionSnapshot.bounds);
+        deps.runtimeLayoutStore.subscribe((runtimeLayoutSnapshot) => {
+          latestRuntimeLayoutSnapshot = runtimeLayoutSnapshot;
+          deps.viewport.updateWorldBounds(runtimeLayoutSnapshot.bounds);
 
           if (animationPlaying) {
             return;
@@ -191,9 +191,9 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
         }),
       );
 
-      latestPositionSnapshot = deps.positionStore.getSnapshot();
-      deps.viewport.updateWorldBounds(latestPositionSnapshot.bounds);
-      deps.viewport.centerOnBounds(latestPositionSnapshot.bounds);
+      latestRuntimeLayoutSnapshot = deps.runtimeLayoutStore.getSnapshot();
+      deps.viewport.updateWorldBounds(latestRuntimeLayoutSnapshot.bounds);
+      deps.viewport.centerOnBounds(latestRuntimeLayoutSnapshot.bounds);
       latestRunnerProjection = store.getState().runnerProjection;
       latestWorldLayout = store.getState().worldLayout;
       latestSnapshot = selectCanvasSnapshot(store.getState());

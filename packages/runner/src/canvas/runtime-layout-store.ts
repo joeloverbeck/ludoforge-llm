@@ -1,14 +1,14 @@
 import type { Position, PositionBounds, ZonePositionMap } from '../spatial/position-types.js';
 
-export interface PositionStoreSnapshot extends ZonePositionMap {
+export interface RuntimeLayoutSnapshot extends ZonePositionMap {
   readonly zoneIDs: readonly string[];
 }
 
-export interface PositionStore {
-  getSnapshot(): PositionStoreSnapshot;
+export interface RuntimeLayoutStore {
+  getSnapshot(): RuntimeLayoutSnapshot;
   setFallbackZoneIDs(zoneIDs: readonly string[]): void;
   setActiveLayout(next: ZonePositionMap, zoneIDs: readonly string[]): void;
-  subscribe(listener: (snapshot: PositionStoreSnapshot) => void): () => void;
+  subscribe(listener: (snapshot: RuntimeLayoutSnapshot) => void): () => void;
 }
 
 const EMPTY_BOUNDS: PositionBounds = {
@@ -79,12 +79,12 @@ export function computeGridLayout(zoneIDs: readonly string[]): ZonePositionMap {
   };
 }
 
-export function createPositionStore(initialZoneIDs: readonly string[] = []): PositionStore {
+export function createRuntimeLayoutStore(initialZoneIDs: readonly string[] = []): RuntimeLayoutStore {
   let snapshot = createSnapshot(initialZoneIDs, computeGridLayout(initialZoneIDs));
-  const listeners = new Set<(next: PositionStoreSnapshot) => void>();
+  const listeners = new Set<(next: RuntimeLayoutSnapshot) => void>();
 
   return {
-    getSnapshot(): PositionStoreSnapshot {
+    getSnapshot(): RuntimeLayoutSnapshot {
       return snapshot;
     },
 
@@ -106,7 +106,7 @@ export function createPositionStore(initialZoneIDs: readonly string[] = []): Pos
       notifyListeners(listeners, snapshot);
     },
 
-    subscribe(listener: (next: PositionStoreSnapshot) => void): () => void {
+    subscribe(listener: (next: RuntimeLayoutSnapshot) => void): () => void {
       listeners.add(listener);
       return () => {
         listeners.delete(listener);
@@ -115,7 +115,7 @@ export function createPositionStore(initialZoneIDs: readonly string[] = []): Pos
   };
 }
 
-function createSnapshot(zoneIDs: readonly string[], next: ZonePositionMap): PositionStoreSnapshot {
+function createSnapshot(zoneIDs: readonly string[], next: ZonePositionMap): RuntimeLayoutSnapshot {
   return {
     zoneIDs: [...zoneIDs],
     positions: new Map(next.positions),
@@ -128,7 +128,7 @@ function createSnapshot(zoneIDs: readonly string[], next: ZonePositionMap): Posi
   };
 }
 
-function snapshotsEqual(prev: PositionStoreSnapshot, next: PositionStoreSnapshot): boolean {
+function snapshotsEqual(prev: RuntimeLayoutSnapshot, next: RuntimeLayoutSnapshot): boolean {
   if (!zoneIDsEqual(prev.zoneIDs, next.zoneIDs)) {
     return false;
   }
@@ -183,8 +183,8 @@ function boundsEqual(prev: ZonePositionMap['bounds'], next: ZonePositionMap['bou
 }
 
 function notifyListeners(
-  listeners: ReadonlySet<(snapshot: PositionStoreSnapshot) => void>,
-  next: PositionStoreSnapshot,
+  listeners: ReadonlySet<(snapshot: RuntimeLayoutSnapshot) => void>,
+  next: RuntimeLayoutSnapshot,
 ): void {
   for (const listener of listeners) {
     listener(next);

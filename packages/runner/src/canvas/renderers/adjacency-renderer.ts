@@ -2,10 +2,10 @@ import { Graphics, type Container } from 'pixi.js';
 
 import { parseHexColor } from './shape-utils.js';
 import type { EdgeStrokeStyle, VisualConfigProvider } from '../../config/visual-config-provider.js';
-import type { RenderAdjacency } from '../../model/render-model';
 import type { Position } from '../geometry';
 import type { DisposalQueue } from './disposal-queue.js';
 import type { AdjacencyRenderer } from './renderer-types';
+import type { PresentationAdjacencyNode } from '../../presentation/presentation-scene.js';
 
 const DEFAULT_LINE_STYLE = {
   color: 0x6b7280,
@@ -39,7 +39,7 @@ export function createAdjacencyRenderer(
 
   return {
     update(
-      adjacencies: readonly RenderAdjacency[],
+      adjacencies: readonly PresentationAdjacencyNode[],
       positions: ReadonlyMap<string, Position>,
     ): void {
       const nextPairs = new Map<string, PairRenderState>();

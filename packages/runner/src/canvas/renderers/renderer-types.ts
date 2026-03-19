@@ -11,16 +11,19 @@ import type {
 import type { LayoutRole } from '../../config/visual-config-types.js';
 import type { CardTemplate } from '../../config/visual-config-types.js';
 import type {
-  RenderAdjacency,
   RenderToken,
-  RenderZone,
 } from '../../model/render-model';
-import type { PresentationOverlayNode, PresentationRegionNode } from '../../presentation/presentation-scene.js';
+import type {
+  PresentationAdjacencyNode,
+  PresentationOverlayNode,
+  PresentationRegionNode,
+  PresentationZoneNode,
+} from '../../presentation/presentation-scene.js';
 import type { PresentationTokenNode } from '../../presentation/token-presentation.js';
 
 export interface ZoneRenderer {
   update(
-    zones: readonly RenderZone[],
+    zones: readonly PresentationZoneNode[],
     positions: ReadonlyMap<string, Position>,
     highlightedZoneIDs?: ReadonlySet<string>,
   ): void;
@@ -46,7 +49,7 @@ export interface TokenFaceController {
 
 export interface AdjacencyRenderer {
   update(
-    adjacencies: readonly RenderAdjacency[],
+    adjacencies: readonly PresentationAdjacencyNode[],
     positions: ReadonlyMap<string, Position>,
   ): void;
   destroy(): void;

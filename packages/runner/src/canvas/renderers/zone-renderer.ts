@@ -1,6 +1,5 @@
 import { Container, Graphics, Rectangle, Text } from 'pixi.js';
 
-import type { RenderZone } from '../../model/render-model';
 import type { MarkerBadgeConfig } from '../../config/visual-config-types.js';
 import type { Position } from '../geometry';
 import type { ZoneRenderer } from './renderer-types';
@@ -20,6 +19,7 @@ import {
   ZONE_RENDER_HEIGHT as ZONE_HEIGHT,
 } from '../../layout/layout-constants.js';
 import { createManagedText } from '../text/text-runtime.js';
+import type { PresentationZoneNode } from '../../presentation/presentation-scene.js';
 
 const ZONE_CORNER_RADIUS = 12;
 const LINE_CORNER_RADIUS = 4;
@@ -57,7 +57,7 @@ export function createZoneRenderer(
 
   return {
     update(
-      zones: readonly RenderZone[],
+      zones: readonly PresentationZoneNode[],
       positions: ReadonlyMap<string, Position>,
       highlightedZoneIDs: ReadonlySet<string> = new Set<string>(),
     ): void {
@@ -225,7 +225,7 @@ function createText(text: string, x: number, y: number, fontSize: number, opts: 
 
 function updateZoneVisuals(
   visuals: ZoneVisualElements,
-  zone: RenderZone,
+  zone: PresentationZoneNode,
   isInteractionHighlighted: boolean,
   badgeConfig: MarkerBadgeConfig | null,
 ): void {
@@ -254,7 +254,7 @@ function updateZoneVisuals(
   visuals.markersLabel.visible = markerText.length > 0;
 }
 
-function drawZoneBase(base: Graphics, zone: RenderZone, isInteractionHighlighted: boolean): void {
+function drawZoneBase(base: Graphics, zone: PresentationZoneNode, isInteractionHighlighted: boolean): void {
   const fill = resolveFillColor(zone);
   const stroke = resolveStroke(zone, isInteractionHighlighted);
   const dimensions = resolveVisualDimensions(zone.visual, {
@@ -271,7 +271,7 @@ function drawZoneBase(base: Graphics, zone: RenderZone, isInteractionHighlighted
   base.fill({ color: fill }).stroke(stroke);
 }
 
-function resolveFillColor(zone: RenderZone): number {
+function resolveFillColor(zone: PresentationZoneNode): number {
   const visualColor = parseHexColor(zone.visual.color ?? undefined);
   if (visualColor !== null) {
     return visualColor;
@@ -307,7 +307,7 @@ function hideBadge(visuals: ZoneVisualElements): void {
 
 function updateMarkerBadge(
   visuals: ZoneVisualElements,
-  zone: RenderZone,
+  zone: PresentationZoneNode,
   dimensions: { readonly width: number; readonly height: number },
   badgeConfig: MarkerBadgeConfig | null,
 ): void {
@@ -344,7 +344,7 @@ function updateMarkerBadge(
   visuals.badgeLabel.visible = true;
 }
 
-function resolveStroke(zone: RenderZone, isInteractionHighlighted: boolean): { color: number; width: number; alpha: number } {
+function resolveStroke(zone: PresentationZoneNode, isInteractionHighlighted: boolean): { color: number; width: number; alpha: number } {
   if (zone.isHighlighted) {
     return {
       color: 0xfacc15,

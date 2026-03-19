@@ -5,6 +5,7 @@ import type { RegionStyle, TableOverlayItemConfig } from '../config/visual-confi
 import type { Position } from '../canvas/geometry.js';
 import type { InteractionHighlights } from '../canvas/interaction-highlights.js';
 import type { RenderAdjacency, RenderModel, RenderVariable, RenderZone } from '../model/render-model.js';
+import { formatIdAsDisplayName } from '../utils/format-display-name.js';
 import {
   resolvePresentationTokenNodes,
   type PresentationTokenNode,
@@ -41,10 +42,37 @@ export interface PresentationRegionNode {
   readonly signature: string;
 }
 
+export interface PresentationMarkerNode {
+  readonly id: string;
+  readonly displayName: string;
+  readonly state: string;
+}
+
+export interface PresentationZoneNode {
+  readonly id: string;
+  readonly displayName: string;
+  readonly visibility: RenderZone['visibility'];
+  readonly ownerID: RenderZone['ownerID'];
+  readonly hiddenTokenCount: number;
+  readonly isSelectable: boolean;
+  readonly isHighlighted: boolean;
+  readonly category: string | null;
+  readonly attributes: RenderZone['attributes'];
+  readonly visual: ReturnType<VisualConfigProvider['resolveZoneVisual']>;
+  readonly markers: readonly PresentationMarkerNode[];
+}
+
+export interface PresentationAdjacencyNode {
+  readonly from: string;
+  readonly to: string;
+  readonly category: string | null;
+  readonly isHighlighted: boolean;
+}
+
 export interface PresentationScene {
-  readonly zones: readonly RenderZone[];
+  readonly zones: readonly PresentationZoneNode[];
   readonly tokens: readonly PresentationTokenNode[];
-  readonly adjacencies: readonly RenderAdjacency[];
+  readonly adjacencies: readonly PresentationAdjacencyNode[];
   readonly highlightedZoneIDs: ReadonlySet<string>;
   readonly highlightedTokenIDs: ReadonlySet<string>;
   readonly overlays: readonly PresentationOverlayNode[];
@@ -85,19 +113,55 @@ export function buildPresentationScene(options: BuildPresentationSceneOptions): 
     };
   }
 
+  const zones = resolveZoneNodes(renderModel.zones, options.visualConfigProvider);
+
   return {
-    zones: renderModel.zones,
+    zones,
     tokens: resolvePresentationTokenNodes(
       renderModel.tokens,
       renderModel.zones,
       options.tokenRenderStyleProvider,
     ),
-    adjacencies: renderModel.adjacencies,
+    adjacencies: resolveAdjacencyNodes(renderModel.adjacencies),
     highlightedZoneIDs,
     highlightedTokenIDs,
     overlays: resolveOverlayNodes(renderModel, options.positions, options.visualConfigProvider),
-    regions: resolveRegionNodes(renderModel.zones, options.positions, options.visualConfigProvider),
+    regions: resolveRegionNodes(zones, options.positions, options.visualConfigProvider),
   };
+}
+
+export function resolveZoneNodes(
+  zones: readonly RenderZone[],
+  visualConfigProvider: VisualConfigProvider,
+): readonly PresentationZoneNode[] {
+  return zones.map((zone) => ({
+    id: zone.id,
+    displayName: visualConfigProvider.getZoneLabel(zone.id) ?? formatIdAsDisplayName(zone.id),
+    visibility: zone.visibility,
+    ownerID: zone.ownerID,
+    hiddenTokenCount: zone.hiddenTokenCount,
+    isSelectable: zone.isSelectable,
+    isHighlighted: zone.isHighlighted,
+    category: zone.category,
+    attributes: zone.attributes,
+    visual: visualConfigProvider.resolveZoneVisual(zone.id, zone.category, zone.attributes),
+    markers: zone.markers.map((marker) => ({
+      id: marker.id,
+      displayName: formatIdAsDisplayName(marker.id),
+      state: marker.state,
+    })),
+  }));
+}
+
+export function resolveAdjacencyNodes(
+  adjacencies: readonly RenderAdjacency[],
+): readonly PresentationAdjacencyNode[] {
+  return adjacencies.map((adjacency) => ({
+    from: adjacency.from,
+    to: adjacency.to,
+    category: adjacency.category,
+    isHighlighted: adjacency.isHighlighted,
+  }));
 }
 
 export function resolveOverlayNodes(
@@ -189,7 +253,7 @@ export function resolveOverlayNodes(
 }
 
 export function resolveRegionNodes(
-  zones: readonly RenderZone[],
+  zones: readonly Pick<PresentationZoneNode, 'id' | 'attributes' | 'visual'>[],
   positions: ReadonlyMap<string, Position>,
   visualConfigProvider: VisualConfigProvider,
 ): readonly PresentationRegionNode[] {
@@ -326,10 +390,10 @@ function resolveOverlayLabel(label: string | undefined, value: number | boolean)
 }
 
 function groupZonesByAttribute(
-  zones: readonly RenderZone[],
+  zones: readonly Pick<PresentationZoneNode, 'id' | 'attributes' | 'visual'>[],
   attribute: string,
-): ReadonlyMap<string, readonly RenderZone[]> {
-  const groups = new Map<string, RenderZone[]>();
+): ReadonlyMap<string, readonly Pick<PresentationZoneNode, 'id' | 'attributes' | 'visual'>[]> {
+  const groups = new Map<string, Array<Pick<PresentationZoneNode, 'id' | 'attributes' | 'visual'>>>();
 
   for (const zone of zones) {
     const value = zone.attributes[attribute];
@@ -349,7 +413,7 @@ function groupZonesByAttribute(
 }
 
 function collectZoneCornerPoints(
-  zones: readonly RenderZone[],
+  zones: readonly Pick<PresentationZoneNode, 'id' | 'visual'>[],
   positions: ReadonlyMap<string, Position>,
 ): readonly PresentationOverlayPoint[] {
   const points: PresentationOverlayPoint[] = [];

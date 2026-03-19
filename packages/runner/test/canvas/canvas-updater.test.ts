@@ -206,8 +206,21 @@ describe('createCanvasUpdater', () => {
     updater.start();
 
     expect(viewport.updateWorldBounds).toHaveBeenCalledWith(snapshot.bounds);
-    expect(renderers.zoneRenderer.update).toHaveBeenCalledWith(model.zones, snapshot.positions, new Set());
-    expect(renderers.adjacencyRenderer.update).toHaveBeenCalledWith(model.adjacencies, snapshot.positions);
+    const zoneCall = vi.mocked(renderers.zoneRenderer.update).mock.calls[0];
+    expect(zoneCall?.[0]).toMatchObject([
+      {
+        id: 'zone:a',
+        displayName: 'Zone A',
+        visual: { shape: 'rectangle', width: 160, height: 100, color: null },
+      },
+    ]);
+    expect(zoneCall?.[1]).toBe(snapshot.positions);
+    expect(zoneCall?.[2]).toEqual(new Set());
+    expect(zoneCall?.[0]).not.toBe(model.zones);
+    const adjacencyCall = vi.mocked(renderers.adjacencyRenderer.update).mock.calls[0];
+    expect(adjacencyCall?.[0]).toEqual(model.adjacencies);
+    expect(adjacencyCall?.[0]).not.toBe(model.adjacencies);
+    expect(adjacencyCall?.[1]).toBe(snapshot.positions);
     const tokenCall = vi.mocked(renderers.tokenRenderer.update).mock.calls[0];
     expect(tokenCall?.[0]).toMatchObject([
       {
@@ -220,6 +233,57 @@ describe('createCanvasUpdater', () => {
     ]);
     expect(tokenCall?.[1]).toBe(renderers.zoneRenderer.getContainerMap());
     expect(tokenCall?.[2]).toEqual(new Set());
+  });
+
+  it('builds scene-owned zone nodes from the visual config before calling renderers', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        categoryStyles: {
+          city: { shape: 'hexagon', width: 120, height: 80, color: '#123456' },
+        },
+        overrides: {
+          'zone:a': { label: 'Configured Zone A' },
+        },
+      },
+    });
+    const tokenStyleProvider = new VisualConfigTokenRenderStyleProvider(provider);
+    const model = makeRenderModel({
+      zones: [
+        makeZone({
+          category: 'city',
+          displayName: 'Mixed Zone A',
+          visual: { shape: 'circle', width: 90, height: 90, color: '#ff00ff' },
+        }),
+      ],
+    });
+    const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
+    const positionStore = createPositionStore(['zone:a']);
+
+    const renderers = createRendererMocks();
+    const viewport = createViewportMock();
+
+    const updater = createCanvasUpdater({
+      store: store as unknown as StoreApi<GameStore>,
+      positionStore,
+      visualConfigProvider: provider,
+      tokenRenderStyleProvider: tokenStyleProvider,
+      zoneRenderer: renderers.zoneRenderer,
+      adjacencyRenderer: renderers.adjacencyRenderer,
+      tokenRenderer: renderers.tokenRenderer,
+      viewport,
+    });
+
+    updater.start();
+
+    const zoneCall = vi.mocked(renderers.zoneRenderer.update).mock.calls[0];
+    expect(zoneCall?.[0]).toMatchObject([
+      {
+        id: 'zone:a',
+        displayName: 'Configured Zone A',
+        visual: { shape: 'hexagon', width: 120, height: 80, color: '#123456' },
+      },
+    ]);
   });
 
   it('updates table overlays when variable state changes even if zones/tokens/adjacencies are unchanged', () => {
@@ -402,7 +466,17 @@ describe('createCanvasUpdater', () => {
     const latestSnapshot = positionStore.getSnapshot();
 
     expect(viewport.updateWorldBounds).toHaveBeenCalledWith(latestSnapshot.bounds);
-    expect(renderers.zoneRenderer.update).toHaveBeenCalledWith(model.zones, latestSnapshot.positions, new Set());
+    expect(renderers.zoneRenderer.update).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'zone:a',
+          displayName: 'Zone A',
+          visual: { shape: 'rectangle', width: 160, height: 100, color: null },
+        }),
+      ]),
+      latestSnapshot.positions,
+      new Set(),
+    );
   });
 
   it('gates renderer updates while animation is playing', () => {
@@ -551,7 +625,13 @@ describe('createCanvasUpdater', () => {
     expect(renderers.zoneRenderer.update).toHaveBeenCalledTimes(1);
     expect(renderers.tokenRenderer.update).toHaveBeenCalledTimes(1);
     expect(renderers.zoneRenderer.update).toHaveBeenCalledWith(
-      model.zones,
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'zone:a',
+          displayName: 'Zone A',
+          visual: { shape: 'rectangle', width: 160, height: 100, color: null },
+        }),
+      ]),
       positionStore.getSnapshot().positions,
       new Set(['zone:a']),
     );

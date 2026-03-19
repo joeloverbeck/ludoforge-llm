@@ -134,9 +134,55 @@ describe('buildPresentationScene', () => {
     });
   });
 
-  it('resolves region nodes from render-model zone visuals instead of querying visuals again at draw time', () => {
+  it('derives zone scene nodes from visual config instead of passing through render-model zone visuals', () => {
     const provider = new VisualConfigProvider({
       version: 1,
+      zones: {
+        categoryStyles: {
+          province: { shape: 'hexagon', width: 120, height: 90, color: '#2a6e3f' },
+        },
+        overrides: {
+          'zone:a': { label: 'Configured Zone A' },
+        },
+      },
+    });
+
+    const renderModel = makeRenderModel({
+      zones: [
+        makeZone('zone:a', { country: 'southVietnam' }, {
+          displayName: 'Mixed Display Name',
+          visual: { shape: 'rectangle', width: 80, height: 60, color: '#ff00ff' },
+        }),
+      ],
+    });
+
+    const scene = buildPresentationScene({
+      renderModel,
+      positions,
+      visualConfigProvider: provider,
+      tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(provider),
+      interactionHighlights: { zoneIDs: [], tokenIDs: [] },
+    });
+
+    expect(scene.zones).toHaveLength(1);
+    expect(scene.zones[0]).toMatchObject({
+      id: 'zone:a',
+      displayName: 'Configured Zone A',
+      visual: { shape: 'hexagon', width: 120, height: 90, color: '#2a6e3f' },
+      markers: [],
+    });
+    expect(scene.zones).not.toBe(renderModel.zones);
+    expect(scene.zones[0]).not.toBe(renderModel.zones[0]);
+  });
+
+  it('resolves region nodes from provider-resolved zone visuals inside the scene layer', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        categoryStyles: {
+          province: { shape: 'rectangle', width: 140, height: 100 },
+        },
+      },
       regions: {
         styles: {
           southVietnam: {
@@ -151,8 +197,8 @@ describe('buildPresentationScene', () => {
     const scene = buildPresentationScene({
       renderModel: makeRenderModel({
         zones: [
-          makeZone('zone:a', { country: 'southVietnam' }, { visual: { shape: 'rectangle', width: 120, height: 90, color: null } }),
-          makeZone('zone:b', { country: 'southVietnam' }, { visual: { shape: 'rectangle', width: 80, height: 60, color: null } }),
+          makeZone('zone:a', { country: 'southVietnam' }, { visual: { shape: 'circle', width: 120, height: 90, color: null } }),
+          makeZone('zone:b', { country: 'southVietnam' }, { visual: { shape: 'circle', width: 80, height: 60, color: null } }),
         ],
       }),
       positions,
@@ -167,8 +213,8 @@ describe('buildPresentationScene', () => {
       label: 'South Vietnam',
       style: expect.objectContaining({ fillColor: '#2a6e3f' }),
     });
-    expect(scene.regions[0]?.cornerPoints).toContainEqual({ x: -10, y: 5 });
-    expect(scene.regions[0]?.cornerPoints).toContainEqual({ x: 290, y: 80 });
+    expect(scene.regions[0]?.cornerPoints).toContainEqual({ x: -20, y: 0 });
+    expect(scene.regions[0]?.cornerPoints).toContainEqual({ x: 320, y: 100 });
   });
 
   it('carries interaction highlight sets as part of the scene contract', () => {

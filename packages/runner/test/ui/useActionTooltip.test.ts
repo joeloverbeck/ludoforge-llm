@@ -156,6 +156,7 @@ describe('useActionTooltip', () => {
     expect(result.current.tooltipState.description).toBeNull();
     expect(result.current.tooltipState.loading).toBe(false);
     expect(result.current.tooltipState.anchorElement).toBeNull();
+    expect(result.current.tooltipState.status).toBe('idle');
   });
 
   it('sets loading to true between debounce expiry and response arrival', async () => {
@@ -281,6 +282,7 @@ describe('useActionTooltip', () => {
     // Tooltip should still be visible
     expect(result.current.tooltipState.description).not.toBeNull();
     expect(result.current.tooltipState.actionId).toBe('action-1');
+    expect(result.current.tooltipState.interactionOwner).toBe('popover');
   });
 
   it('dismisses tooltip after pointer leaves tooltip', async () => {
@@ -320,6 +322,7 @@ describe('useActionTooltip', () => {
 
     expect(result.current.tooltipState.actionId).toBeNull();
     expect(result.current.tooltipState.description).toBeNull();
+    expect(result.current.tooltipState.status).toBe('idle');
   });
 
   it('does not dismiss during grace period if button is re-entered', async () => {
@@ -432,5 +435,38 @@ describe('useActionTooltip', () => {
 
     expect(typeof result.current.onTooltipPointerEnter).toBe('function');
     expect(typeof result.current.onTooltipPointerLeave).toBe('function');
+  });
+
+  it('supports explicit invalidation while a request is pending', async () => {
+    const description = {
+      sections: [{ kind: 'group' as const, label: 'Test', children: [{ kind: 'keyword' as const, text: 'Description' }] }],
+      limitUsage: [],
+    };
+    let resolveDescribe!: (value: typeof description) => void;
+    const describeAction = vi.fn(() => new Promise<typeof description>((resolve) => {
+      resolveDescribe = resolve;
+    }));
+    const bridge = createMockBridge(describeAction);
+    const { result } = renderHook(() => useActionTooltip(bridge));
+
+    act(() => {
+      result.current.onActionHoverStart('action-1', createAnchorElement());
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    act(() => {
+      result.current.invalidateActionTooltip();
+    });
+
+    await act(async () => {
+      resolveDescribe(description);
+    });
+
+    expect(result.current.tooltipState.actionId).toBeNull();
+    expect(result.current.tooltipState.description).toBeNull();
+    expect(result.current.tooltipState.status).toBe('idle');
   });
 });

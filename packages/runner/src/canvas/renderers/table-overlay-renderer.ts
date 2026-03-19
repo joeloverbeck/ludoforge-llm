@@ -1,10 +1,10 @@
 import { Container, Graphics, Text } from 'pixi.js';
 
 import type { TableOverlayRenderer } from './renderer-types.js';
-import type { PresentationMarkerOverlayNode, PresentationOverlayNode, PresentationTextOverlayNode } from '../../presentation/presentation-scene.js';
+import type { PresentationMarkerOverlayNode, PresentationTextOverlayNode } from '../../presentation/presentation-scene.js';
 import { safeDestroyDisplayObject } from './safe-destroy.js';
 import { parseHexColor } from './shape-utils.js';
-import { createManagedText, createTextSlotPool } from '../text/text-runtime.js';
+import { createKeyedTextReconciler, createManagedText } from '../text/text-runtime.js';
 
 const DEFAULT_TEXT_COLOR = '#f8fafc';
 const DEFAULT_TEXT_FONT_SIZE = 12;
@@ -21,32 +21,18 @@ export function createTableOverlayRenderer(
   parentContainer: Container,
   _unusedLegacyProvider?: unknown,
 ): TableOverlayRenderer {
-  let lastSignature: string | null = null;
+  const textRuntime = createKeyedTextReconciler({ parentContainer });
+  const markersByKey = new Map<string, MarkerSlot>();
 
-  const textSlots = createTextSlotPool({
-    parentContainer,
-    createText: () => createManagedText({
-      style: {
-        fill: DEFAULT_TEXT_COLOR,
-        fontSize: DEFAULT_TEXT_FONT_SIZE,
-        fontFamily: 'monospace',
-      },
-    }),
-  });
-  const markerSlots: MarkerSlot[] = [];
-  let allocatedTextCount = 0;
-  let activeMarkerCount = 0;
-
-  function acquireMarkerSlot(index: number): MarkerSlot {
-    if (index < markerSlots.length) {
-      const slot = markerSlots[index]!;
-      slot.container.visible = true;
-      slot.container.renderable = true;
-      if (slot.container.parent !== parentContainer) {
-        parentContainer.addChild(slot.container);
+  function getOrCreateMarkerSlot(key: string): MarkerSlot {
+    const existing = markersByKey.get(key);
+    if (existing !== undefined) {
+      if (existing.container.parent !== parentContainer) {
+        parentContainer.addChild(existing.container);
       }
-      return slot;
+      return existing;
     }
+
     const container = new Container();
     container.eventMode = 'none';
     container.interactiveChildren = false;
@@ -63,27 +49,16 @@ export function createTableOverlayRenderer(
     });
 
     container.addChild(badge, label);
-    const slot: MarkerSlot = { container, badge, label };
-    markerSlots.push(slot);
     parentContainer.addChild(container);
+
+    const slot: MarkerSlot = { container, badge, label };
+    markersByKey.set(key, slot);
     return slot;
   }
 
-  function updateTextSlot(slot: Text, resolved: PresentationTextOverlayNode): void {
-    slot.text = resolved.text;
-    slot.position.set(resolved.point.x, resolved.point.y);
-    const style = slot.style as { fill?: string; fontSize?: number };
-    const nextFill = resolved.item.color ?? DEFAULT_TEXT_COLOR;
-    const nextSize = resolved.item.fontSize ?? DEFAULT_TEXT_FONT_SIZE;
-    if (style.fill !== nextFill) {
-      style.fill = nextFill;
-    }
-    if (style.fontSize !== nextSize) {
-      style.fontSize = nextSize;
-    }
-  }
-
   function updateMarkerSlot(slot: MarkerSlot, resolved: PresentationMarkerOverlayNode): void {
+    slot.container.visible = true;
+    slot.container.renderable = true;
     slot.container.position.set(resolved.point.x, resolved.point.y);
 
     const markerColor =
@@ -99,83 +74,56 @@ export function createTableOverlayRenderer(
     slot.badge.fill(markerColor);
 
     slot.label.text = resolved.item.label ?? DEFAULT_MARKER_LABEL;
-    const labelStyle = slot.label.style as { fontSize?: number };
-    const nextSize = resolved.item.fontSize ?? 11;
-    if (labelStyle.fontSize !== nextSize) {
-      labelStyle.fontSize = nextSize;
-    }
+    slot.label.style = {
+      fill: '#111827',
+      fontSize: resolved.item.fontSize ?? 11,
+      fontFamily: 'monospace',
+    };
   }
 
-  function hideExcessSlots(textCount: number, markerCount: number): void {
-    for (let i = textCount; i < allocatedTextCount; i += 1) {
-      const slot = textSlots.acquire(i);
-      slot.visible = false;
-      slot.renderable = false;
-      slot.removeFromParent();
-    }
-    for (let i = markerCount; i < activeMarkerCount; i++) {
-      const slot = markerSlots[i] as MarkerSlot | undefined;
-      if (slot !== undefined) {
-        slot.container.visible = false;
-        slot.container.renderable = false;
-        slot.container.removeFromParent();
+  function removeStaleMarkers(activeKeys: ReadonlySet<string>): void {
+    for (const [key, slot] of markersByKey) {
+      if (activeKeys.has(key)) {
+        continue;
       }
-    }
-    allocatedTextCount = textSlots.allocatedCount;
-    activeMarkerCount = markerCount;
-  }
-
-  function destroyAllSlots(): void {
-    textSlots.destroyAll();
-    for (const slot of markerSlots) {
       safeDestroyDisplayObject(slot.container);
+      markersByKey.delete(key);
     }
-    markerSlots.length = 0;
-    allocatedTextCount = 0;
-    activeMarkerCount = 0;
   }
 
   return {
     update(resolvedItems): void {
-      if (resolvedItems.length === 0) {
-        if (lastSignature !== null) {
-          hideExcessSlots(0, 0);
-          lastSignature = null;
+      const textSpecs = resolvedItems
+        .filter((item): item is PresentationTextOverlayNode => item.type === 'text')
+        .map((item) => ({
+          key: item.key,
+          text: item.text,
+          style: {
+            fill: item.item.color ?? DEFAULT_TEXT_COLOR,
+            fontSize: item.item.fontSize ?? DEFAULT_TEXT_FONT_SIZE,
+            fontFamily: 'monospace',
+          },
+          position: { x: item.point.x, y: item.point.y },
+        }));
+      textRuntime.reconcile(textSpecs);
+
+      const activeMarkerKeys = new Set<string>();
+      for (const item of resolvedItems) {
+        if (item.type !== 'marker') {
+          continue;
         }
-        return;
+        activeMarkerKeys.add(item.key);
+        updateMarkerSlot(getOrCreateMarkerSlot(item.key), item);
       }
-      const nextSignature = buildOverlaySignature(resolvedItems);
-      if (lastSignature === nextSignature) {
-        return;
-      }
-
-      lastSignature = nextSignature;
-
-      let textIndex = 0;
-      let markerIndex = 0;
-
-      for (const resolved of resolvedItems) {
-        if (resolved.type === 'text') {
-          const slot = textSlots.acquire(textIndex);
-          updateTextSlot(slot, resolved);
-          textIndex += 1;
-        } else {
-          const slot = acquireMarkerSlot(markerIndex);
-          updateMarkerSlot(slot, resolved);
-          markerIndex += 1;
-        }
-      }
-
-      hideExcessSlots(textIndex, markerIndex);
+      removeStaleMarkers(activeMarkerKeys);
     },
 
     destroy(): void {
-      destroyAllSlots();
-      lastSignature = null;
+      textRuntime.destroy();
+      for (const slot of markersByKey.values()) {
+        safeDestroyDisplayObject(slot.container);
+      }
+      markersByKey.clear();
     },
   };
-}
-
-function buildOverlaySignature(items: readonly PresentationOverlayNode[]): string {
-  return items.map((item) => item.signature).join('\n');
 }

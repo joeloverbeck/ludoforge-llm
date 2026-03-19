@@ -27,6 +27,11 @@ const { MockContainer, MockText } = vi.hoisted(() => {
     parent: HoistedMockContainer | null = null;
     eventMode: 'none' | 'static' = 'none';
     interactiveChildren = true;
+    visible = true;
+    renderable = true;
+    alpha = 1;
+    rotation = 0;
+    scale = new MockPoint();
 
     addChild(...children: HoistedMockText[]): void {
       for (const child of children) {
@@ -59,8 +64,6 @@ const { MockContainer, MockText } = vi.hoisted(() => {
     style: Record<string, unknown> | undefined;
     position = new MockPoint();
     anchor = new MockAnchor();
-    visible = true;
-    renderable = true;
     destroy = vi.fn(() => {
       this.removeFromParent();
     });
@@ -84,8 +87,8 @@ vi.mock('pixi.js', () => ({
 }));
 
 import {
+  createKeyedTextReconciler,
   createManagedText,
-  createTextSlotPool,
   destroyManagedText,
 } from '../../../src/canvas/text/text-runtime';
 
@@ -124,82 +127,105 @@ describe('destroyManagedText', () => {
   });
 });
 
-describe('createTextSlotPool', () => {
-  function createPool(parent: Container) {
-    return createTextSlotPool({
-      parentContainer: parent,
-      createText: () => createManagedText({
-        style: { fill: '#f8fafc', fontSize: 12, fontFamily: 'monospace' },
-      }),
-    });
-  }
-
-  it('acquire creates a new Text and adds it to the parent', () => {
+describe('createKeyedTextReconciler', () => {
+  it('creates and updates text by semantic key', () => {
     const parent = new MockContainer() as unknown as Container;
-    const pool = createPool(parent);
+    const runtime = createKeyedTextReconciler({ parentContainer: parent });
 
-    const slot = pool.acquire(0);
+    runtime.reconcile([{
+      key: 'pot',
+      text: 'Pot: 10',
+      style: { fill: '#fff', fontSize: 12 },
+      position: { x: 10, y: 20 },
+    }]);
 
-    expect(slot).toBeDefined();
-    expect((parent as unknown as InstanceType<typeof MockContainer>).children).toHaveLength(1);
-    expect(pool.allocatedCount).toBe(1);
-  });
+    const first = (parent as unknown as InstanceType<typeof MockContainer>).children[0]!;
 
-  it('acquire at the same index reuses the same Text instance', () => {
-    const parent = new MockContainer() as unknown as Container;
-    const pool = createPool(parent);
+    runtime.reconcile([{
+      key: 'pot',
+      text: 'Pot: 20',
+      style: { fill: '#000', fontSize: 14 },
+      position: { x: 30, y: 40 },
+    }]);
 
-    const first = pool.acquire(0);
-    const second = pool.acquire(0);
-
+    const second = (parent as unknown as InstanceType<typeof MockContainer>).children[0]!;
     expect(second).toBe(first);
+    expect(second.text).toBe('Pot: 20');
+    expect(second.style).toMatchObject({ fill: '#000', fontSize: 14 });
+    expect(second.position.x).toBe(30);
+    expect(second.position.y).toBe(40);
+    expect(first.destroy).not.toHaveBeenCalled();
+  });
+
+  it('replaces a text node when the explicit instance key changes', () => {
+    const parent = new MockContainer() as unknown as Container;
+    const runtime = createKeyedTextReconciler({ parentContainer: parent });
+
+    runtime.reconcile([{ key: 'title', text: 'A', instanceKey: 'v1' }]);
+    const first = (parent as unknown as InstanceType<typeof MockContainer>).children[0]!;
+
+    runtime.reconcile([{ key: 'title', text: 'B', instanceKey: 'v2' }]);
+    const second = (parent as unknown as InstanceType<typeof MockContainer>).children[0]!;
+
+    expect(second).not.toBe(first);
+    expect(first.destroy).toHaveBeenCalledTimes(1);
+    expect(second.text).toBe('B');
+  });
+
+  it('retires text nodes that are removed from the spec set', () => {
+    const parent = new MockContainer() as unknown as Container;
+    const runtime = createKeyedTextReconciler({ parentContainer: parent });
+
+    runtime.reconcile([
+      { key: 'a', text: 'A' },
+      { key: 'b', text: 'B' },
+    ]);
+
+    const removed = (parent as unknown as InstanceType<typeof MockContainer>).children[1]!;
+    runtime.reconcile([{ key: 'a', text: 'A' }]);
+
     expect((parent as unknown as InstanceType<typeof MockContainer>).children).toHaveLength(1);
-    expect(pool.allocatedCount).toBe(1);
+    expect(removed.destroy).toHaveBeenCalledTimes(1);
   });
 
-  it('hideFrom hides slots at and beyond the given index', () => {
+  it('applies advanced properties and custom post-update hooks', () => {
     const parent = new MockContainer() as unknown as Container;
-    const pool = createPool(parent);
+    const runtime = createKeyedTextReconciler({ parentContainer: parent });
 
-    pool.acquire(0);
-    pool.acquire(1);
-    pool.acquire(2);
-    pool.hideFrom(1);
+    runtime.reconcile([{
+      key: 'label',
+      text: 'Label',
+      alpha: 0.25,
+      rotation: Math.PI / 4,
+      scale: { x: 2, y: 3 },
+      apply: (text) => {
+        text.position.set(5, 6);
+      },
+    }]);
 
-    const children = (parent as unknown as InstanceType<typeof MockContainer>).children;
-    expect(children[0]?.visible).toBe(true);
-    expect(children[1]?.visible).toBe(false);
-    expect(children[1]?.renderable).toBe(false);
-    expect(children[2]?.visible).toBe(false);
-    expect(children[2]?.renderable).toBe(false);
+    const label = (parent as unknown as InstanceType<typeof MockContainer>).children[0]!;
+    expect(label.alpha).toBe(0.25);
+    expect(label.rotation).toBe(Math.PI / 4);
+    expect(label.scale.x).toBe(2);
+    expect(label.scale.y).toBe(3);
+    expect(label.position.x).toBe(5);
+    expect(label.position.y).toBe(6);
   });
 
-  it('acquire re-adds a previously detached slot to the parent', () => {
-    const parent = new MockContainer();
-    const pool = createPool(parent as unknown as Container);
-
-    const slot = pool.acquire(0) as unknown as InstanceType<typeof MockText>;
-    slot.removeFromParent();
-
-    const reacquired = pool.acquire(0) as unknown as InstanceType<typeof MockText>;
-
-    expect(reacquired).toBe(slot);
-    expect(reacquired.parent).toBe(parent);
-  });
-
-  it('destroyAll removes and destroys every slot', () => {
+  it('destroy tears down every retained text node', () => {
     const parent = new MockContainer() as unknown as Container;
-    const pool = createPool(parent);
+    const runtime = createKeyedTextReconciler({ parentContainer: parent });
 
-    const slot0 = pool.acquire(0) as unknown as InstanceType<typeof MockText>;
-    const slot1 = pool.acquire(1) as unknown as InstanceType<typeof MockText>;
+    runtime.reconcile([
+      { key: 'a', text: 'A' },
+      { key: 'b', text: 'B' },
+    ]);
+    const [a, b] = (parent as unknown as InstanceType<typeof MockContainer>).children;
 
-    pool.destroyAll();
+    runtime.destroy();
 
-    expect(slot0.destroy).toHaveBeenCalledTimes(1);
-    expect(slot1.destroy).toHaveBeenCalledTimes(1);
-    expect(slot0.parent).toBeNull();
-    expect(slot1.parent).toBeNull();
-    expect(pool.allocatedCount).toBe(0);
+    expect(a?.destroy).toHaveBeenCalledTimes(1);
+    expect(b?.destroy).toHaveBeenCalledTimes(1);
+    expect((parent as unknown as InstanceType<typeof MockContainer>).children).toHaveLength(0);
   });
 });

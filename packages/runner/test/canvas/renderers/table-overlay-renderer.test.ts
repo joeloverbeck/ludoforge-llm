@@ -423,7 +423,7 @@ describe('createTableOverlayRenderer', () => {
     expect(parent.children).toHaveLength(0);
   });
 
-  describe('slot-based reuse', () => {
+  describe('keyed reconciliation', () => {
     it('does not destroy and recreate children when update is called with identical inputs', () => {
       const parent = new MockContainer();
       const provider = new VisualConfigProvider({
@@ -491,7 +491,7 @@ describe('createTableOverlayRenderer', () => {
       expect(markerRef.position.y).toBe(100);
     });
 
-    it('hides excess text slots when item count decreases', () => {
+    it('retires removed per-player overlays when item count decreases', () => {
       const parent = new MockContainer();
       const provider = new VisualConfigProvider({
         version: 1,
@@ -523,7 +523,7 @@ describe('createTableOverlayRenderer', () => {
       const firstSlot = parent.children[0] as InstanceType<typeof MockText>;
       const secondSlot = parent.children[1] as InstanceType<typeof MockText>;
 
-      // One player eliminated → one text slot visible, second hidden
+      // One player eliminated -> the removed keyed overlay is retired.
       updateRenderer(renderer, provider, 
         makeRenderModel({
           players: [
@@ -553,10 +553,10 @@ describe('createTableOverlayRenderer', () => {
       );
       expect(parent.children).toHaveLength(1);
       expect(parent.children[0]).toBe(firstSlot);
-      expect(secondSlot.destroyed).toBe(false);
+      expect(secondSlot.destroyed).toBe(true);
     });
 
-    it('shows previously hidden slots when item count increases again', () => {
+    it('creates a new text node when a removed keyed overlay returns', () => {
       const parent = new MockContainer();
       const provider = new VisualConfigProvider({
         version: 1,
@@ -588,7 +588,7 @@ describe('createTableOverlayRenderer', () => {
       const secondSlot = parent.children[1];
       expect(parent.children).toHaveLength(2);
 
-      // One player eliminated
+      // One player eliminated.
       updateRenderer(renderer, provider, 
         makeRenderModel({
           players: [
@@ -617,8 +617,9 @@ describe('createTableOverlayRenderer', () => {
         positions,
       );
       expect(parent.children).toHaveLength(1);
+      expect(secondSlot?.destroyed).toBe(true);
 
-      // Both players active again
+      // Both players active again.
       updateRenderer(renderer, provider, 
         makeRenderModel({
           playerVars: new Map([
@@ -630,7 +631,7 @@ describe('createTableOverlayRenderer', () => {
       );
       expect(parent.children).toHaveLength(2);
       expect(parent.children[0]).toBe(firstSlot);
-      expect(parent.children[1]).toBe(secondSlot);
+      expect(parent.children[1]).not.toBe(secondSlot);
     });
 
     it('does not call destroy() on Text objects during update cycle', () => {
@@ -652,7 +653,7 @@ describe('createTableOverlayRenderer', () => {
       expect(destroySpy).not.toHaveBeenCalled();
     });
 
-    it('hides children when renderModel becomes null after a non-null update', () => {
+    it('retires children when renderModel becomes null after a non-null update', () => {
       const parent = new MockContainer();
       const provider = new VisualConfigProvider({
         version: 1,
@@ -668,10 +669,10 @@ describe('createTableOverlayRenderer', () => {
 
       updateRenderer(renderer, provider, null as unknown as RenderModel, positions);
       expect(parent.children).toHaveLength(0);
-      expect(child.destroyed).toBe(false);
+      expect(child.destroyed).toBe(true);
     });
 
-    it('destroy() destroys all pooled objects including hidden ones', () => {
+    it('preserves semantic player identity instead of reusing slot zero for a different player', () => {
       const parent = new MockContainer();
       const provider = new VisualConfigProvider({
         version: 1,
@@ -689,7 +690,7 @@ describe('createTableOverlayRenderer', () => {
       });
       const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-      // Two players active
+      // Two players active.
       updateRenderer(renderer, provider, 
         makeRenderModel({
           playerVars: new Map([
@@ -702,40 +703,29 @@ describe('createTableOverlayRenderer', () => {
       const firstSlot = parent.children[0] as InstanceType<typeof MockText>;
       const secondSlot = parent.children[1] as InstanceType<typeof MockText>;
 
-      // Hide second slot
+      // Remove player 0, leaving only player 1.
       updateRenderer(renderer, provider, 
         makeRenderModel({
           players: [
             {
-              id: asPlayerId(0),
-              displayName: 'P0',
+              id: asPlayerId(1),
+              displayName: 'P1',
               isHuman: true,
               isActive: true,
               isEliminated: false,
               factionId: null,
             },
-            {
-              id: asPlayerId(1),
-              displayName: 'P1',
-              isHuman: true,
-              isActive: false,
-              isEliminated: true,
-              factionId: null,
-            },
           ],
           playerVars: new Map([
-            [asPlayerId(0), [asVar('streetBet', 10)]],
             [asPlayerId(1), [asVar('streetBet', 20)]],
           ]),
         }),
         positions,
       );
-      expect(secondSlot.destroyed).toBe(false);
-
-      // Destroy the renderer — all pooled objects destroyed
-      renderer.destroy();
+      expect(parent.children).toHaveLength(1);
+      expect(parent.children[0]).toBe(secondSlot);
       expect(firstSlot.destroyed).toBe(true);
-      expect(secondSlot.destroyed).toBe(true);
+      expect(secondSlot.destroyed).toBe(false);
     });
   });
 });

@@ -1,11 +1,11 @@
-import { Container, Graphics, Text, type TextStyleOptions } from 'pixi.js';
+import { Container, Graphics, type Text, type TextStyleOptions } from 'pixi.js';
 
 import type { RegionBoundaryRenderer } from './renderer-types';
 import { convexHull, type Point } from '../geometry/convex-hull.js';
 import { padHull, roundHullCorners } from '../geometry/hull-padding.js';
 import { drawDashedPolygon } from '../geometry/dashed-polygon.js';
 import type { PresentationRegionNode } from '../../presentation/presentation-scene.js';
-import { createManagedText, destroyManagedText } from '../text/text-runtime.js';
+import { createKeyedTextReconciler } from '../text/text-runtime.js';
 
 const DEFAULT_FILL_ALPHA = 0.15;
 const DEFAULT_BORDER_STYLE = 'dashed' as const;
@@ -18,54 +18,40 @@ const LABEL_REFERENCE_FONT_SIZE = 64;
 const LABEL_ALPHA = 0.25;
 const LABEL_SPAN_FRACTION = 0.7;
 
-interface RegionGraphics {
-  readonly graphics: Graphics;
-  readonly label: Text;
-}
-
 export function createRegionBoundaryRenderer(
   parentContainer: Container,
   _unusedLegacyOptions?: unknown,
 ): RegionBoundaryRenderer {
-  const regionMap = new Map<string, RegionGraphics>();
+  const graphicsByRegionKey = new Map<string, Graphics>();
+  const textRuntime = createKeyedTextReconciler({ parentContainer });
 
   function clearAll(): void {
-    for (const entry of regionMap.values()) {
-      entry.graphics.destroy();
-      destroyManagedText(entry.label);
+    for (const graphics of graphicsByRegionKey.values()) {
+      graphics.destroy();
     }
-    regionMap.clear();
+    graphicsByRegionKey.clear();
+    textRuntime.destroy();
   }
 
-  function getOrCreateRegion(key: string): RegionGraphics {
-    const existing = regionMap.get(key);
+  function getOrCreateGraphics(key: string): Graphics {
+    const existing = graphicsByRegionKey.get(key);
     if (existing !== undefined) {
       return existing;
     }
 
     const graphics = new Graphics();
-    const label = createManagedText({
-      text: '',
-      style: buildLabelStyle(),
-      anchor: { x: 0.5, y: 0.5 },
-    });
-    label.alpha = LABEL_ALPHA;
-
     parentContainer.addChild(graphics);
-    parentContainer.addChild(label);
-
-    const entry: RegionGraphics = { graphics, label };
-    regionMap.set(key, entry);
-    return entry;
+    graphicsByRegionKey.set(key, graphics);
+    return graphics;
   }
 
   function removeStaleRegions(activeKeys: ReadonlySet<string>): void {
-    for (const [key, entry] of regionMap.entries()) {
-      if (!activeKeys.has(key)) {
-        entry.graphics.destroy();
-        destroyManagedText(entry.label);
-        regionMap.delete(key);
+    for (const [key, graphics] of graphicsByRegionKey.entries()) {
+      if (activeKeys.has(key)) {
+        continue;
       }
+      graphics.destroy();
+      graphicsByRegionKey.delete(key);
     }
   }
 
@@ -75,21 +61,46 @@ export function createRegionBoundaryRenderer(
         clearAll();
         return;
       }
+
       const activeKeys = new Set<string>();
+      const labelSpecs = [];
 
       for (const regionNode of regions) {
         activeKeys.add(regionNode.key);
-        const region = getOrCreateRegion(regionNode.key);
-        drawRegion(
-          region,
+        const graphics = getOrCreateGraphics(regionNode.key);
+        const labelLayout = drawRegionGraphics(
+          graphics,
           regionNode.cornerPoints,
-          regionNode.label,
           regionNode.style,
           DEFAULT_PADDING,
           DEFAULT_CORNER_RADIUS,
         );
+
+        labelSpecs.push({
+          key: regionNode.key,
+          text: regionNode.label,
+          style: buildLabelStyle(),
+          anchor: { x: 0.5, y: 0.5 },
+          alpha: LABEL_ALPHA,
+          position: { x: labelLayout.centroid.x, y: labelLayout.centroid.y },
+          rotation: labelLayout.axis.angle,
+          apply: (text: Text) => {
+            text.scale.set(1, 1);
+            let measuredWidth = 0;
+            try {
+              measuredWidth = text.width;
+            } catch {
+              // Some test environments do not provide a backing canvas for measurement.
+            }
+            if (measuredWidth > 0) {
+              const scaleFactor = labelLayout.targetWidth / measuredWidth;
+              text.scale.set(scaleFactor, scaleFactor);
+            }
+          },
+        });
       }
 
+      textRuntime.reconcile(labelSpecs);
       removeStaleRegions(activeKeys);
     },
 
@@ -99,22 +110,25 @@ export function createRegionBoundaryRenderer(
   };
 }
 
-function drawRegion(
-  region: RegionGraphics,
+interface RegionLabelLayout {
+  readonly centroid: Point;
+  readonly axis: LongestAxis;
+  readonly targetWidth: number;
+}
+
+function drawRegionGraphics(
+  graphics: Graphics,
   cornerPoints: readonly Point[],
-  labelText: string,
   style: PresentationRegionNode['style'],
   padding: number,
   cornerRadius: number,
-): void {
+): RegionLabelLayout {
   const hull = convexHull(cornerPoints);
   const paddedHull = padHull(hull, padding);
   const roundedHull = roundHullCorners(paddedHull, cornerRadius);
 
-  const { graphics, label } = region;
   graphics.clear();
 
-  // Fill
   const fillColor = style.fillColor;
   const fillAlpha = style.fillAlpha ?? DEFAULT_FILL_ALPHA;
   const flatCoords = flattenPoints(roundedHull);
@@ -122,7 +136,6 @@ function drawRegion(
   graphics.poly(flatCoords);
   graphics.fill({ color: fillColor, alpha: fillAlpha });
 
-  // Border — dash/gap proportional to border width
   const borderColor = style.borderColor ?? fillColor;
   const borderWidth = style.borderWidth ?? DEFAULT_BORDER_WIDTH;
   const borderStyle = style.borderStyle ?? DEFAULT_BORDER_STYLE;
@@ -138,37 +151,14 @@ function drawRegion(
     graphics.stroke({ color: borderColor, width: borderWidth });
   }
 
-  // Label — auto-rotate and scale to span the hull's longest axis
-  if (labelText.length === 0) {
-    label.text = '';
-    return;
-  }
-
   const centroid = computeCentroid(hull);
   const axis = computeLongestAxis(hull);
 
-  label.text = labelText;
-  label.style.fontSize = LABEL_REFERENCE_FONT_SIZE;
-  label.scale.set(1, 1);
-  label.rotation = 0;
-
-  // Measure at reference size, then compute scale to fill target span.
-  // label.width may throw in environments without a canvas (e.g. tests).
-  let measuredWidth = 0;
-  try {
-    measuredWidth = label.width;
-  } catch {
-    // No canvas available — skip scaling
-  }
-  const targetWidth = axis.length * LABEL_SPAN_FRACTION;
-
-  if (measuredWidth > 0) {
-    const scaleFactor = targetWidth / measuredWidth;
-    label.scale.set(scaleFactor, scaleFactor);
-  }
-
-  label.rotation = axis.angle;
-  label.position.set(centroid.x, centroid.y);
+  return {
+    centroid,
+    axis,
+    targetWidth: axis.length * LABEL_SPAN_FRACTION,
+  };
 }
 
 interface LongestAxis {

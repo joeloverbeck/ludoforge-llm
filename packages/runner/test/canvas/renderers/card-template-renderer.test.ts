@@ -43,13 +43,21 @@ const { MockContainer, MockText } = vi.hoisted(() => {
 
     parent: HoistedMockContainer | null = null;
 
-    destroy = vi.fn();
-
-    removeFromParent = vi.fn();
+    destroy = vi.fn(() => {
+      this.removeFromParent();
+    });
 
     constructor(options: { text: string; style: Record<string, unknown> }) {
       this.text = options.text;
       this.style = options.style;
+    }
+
+    removeFromParent(): void {
+      if (this.parent === null) {
+        return;
+      }
+      this.parent.children = this.parent.children.filter((child) => child !== this);
+      this.parent = null;
     }
   }
 
@@ -154,7 +162,7 @@ describe('drawCardContent', () => {
     expect(firstSlot?.destroy).not.toHaveBeenCalled();
   });
 
-  it('hides excess slots when field count decreases (no destroy)', () => {
+  it('retires removed field text when field count decreases', () => {
     const container = new MockContainer();
 
     drawCardContent(
@@ -186,12 +194,11 @@ describe('drawCardContent', () => {
     );
 
     expect(container.children[0]?.text).toBe('K');
-    expect(secondSlot?.destroy).not.toHaveBeenCalled();
-    expect(secondSlot?.visible).toBe(false);
-    expect(secondSlot?.renderable).toBe(false);
+    expect(container.children).toHaveLength(1);
+    expect(secondSlot?.destroy).toHaveBeenCalledTimes(1);
   });
 
-  it('shows hidden slots when field count increases', () => {
+  it('creates a fresh text node when a removed field returns', () => {
     const container = new MockContainer();
 
     drawCardContent(
@@ -221,7 +228,7 @@ describe('drawCardContent', () => {
       { rank: 'K' },
     );
 
-    expect(secondSlot?.visible).toBe(false);
+    expect(secondSlot?.destroy).toHaveBeenCalledTimes(1);
 
     drawCardContent(
       container as unknown as Container,
@@ -236,9 +243,9 @@ describe('drawCardContent', () => {
       { rank: 'Q', suit: 'Hearts' },
     );
 
-    expect(secondSlot?.visible).toBe(true);
-    expect(secondSlot?.renderable).toBe(true);
-    expect(secondSlot?.text).toBe('Hearts');
+    expect(container.children).toHaveLength(2);
+    expect(container.children[1]).not.toBe(secondSlot);
+    expect(container.children[1]?.text).toBe('Hearts');
   });
 
   it('resets wordWrap when field without wrap replaces field with wrap', () => {

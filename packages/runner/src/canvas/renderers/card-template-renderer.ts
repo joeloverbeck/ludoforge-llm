@@ -1,47 +1,20 @@
 import type { Container } from 'pixi.js';
 
 import type { CardTemplate } from '../../config/visual-config-types.js';
-import { createManagedText, createTextSlotPool, type TextSlotPool } from '../text/text-runtime.js';
-import { type ResolvedCardField, resolveCardTemplateFields } from '../../config/card-field-resolver.js';
+import { createKeyedTextReconciler, type KeyedTextReconciler } from '../text/text-runtime.js';
+import { resolveCardTemplateFields } from '../../config/card-field-resolver.js';
 
 type CardFieldValue = number | string | boolean;
 
-const contentSignatureCache = new WeakMap<Container, string>();
-const poolByContainer = new WeakMap<Container, TextSlotPool>();
+const runtimeByContainer = new WeakMap<Container, KeyedTextReconciler>();
 
-function getOrCreatePool(container: Container): TextSlotPool {
-  let pool = poolByContainer.get(container);
-  if (pool === undefined) {
-    pool = createTextSlotPool({
-      parentContainer: container,
-      createText: () => createManagedText({
-        style: { fill: '#f8fafc', fontSize: 12, fontFamily: 'monospace' },
-      }),
-    });
-    poolByContainer.set(container, pool);
+function getOrCreateRuntime(container: Container): KeyedTextReconciler {
+  let runtime = runtimeByContainer.get(container);
+  if (runtime === undefined) {
+    runtime = createKeyedTextReconciler({ parentContainer: container });
+    runtimeByContainer.set(container, runtime);
   }
-  return pool;
-}
-
-function buildContentSignature(
-  template: CardTemplate,
-  resolvedFields: readonly ResolvedCardField[],
-): string {
-  const mapped = resolvedFields.map((field) => ([
-    field.fieldName,
-    field.align,
-    field.x,
-    field.y,
-    field.fontSize,
-    field.wrap ?? null,
-    field.text,
-    field.color,
-  ]));
-  return JSON.stringify({
-    width: template.width,
-    height: template.height,
-    fields: mapped,
-  });
+  return runtime;
 }
 
 export function drawCardContent(
@@ -50,21 +23,10 @@ export function drawCardContent(
   fields: Readonly<Record<string, CardFieldValue>>,
 ): void {
   const resolvedFields = resolveCardTemplateFields(template.layout, fields);
-
-  const nextSignature = resolvedFields.length === 0
-    ? ''
-    : buildContentSignature(template, resolvedFields);
-
-  if (contentSignatureCache.get(container) === nextSignature) {
-    return;
-  }
-
-  contentSignatureCache.set(container, nextSignature);
-
-  const pool = getOrCreatePool(container);
+  const runtime = getOrCreateRuntime(container);
 
   if (resolvedFields.length === 0) {
-    pool.hideFrom(0);
+    runtime.reconcile([]);
     return;
   }
 
@@ -73,44 +35,35 @@ export function drawCardContent(
   const left = -cardWidth / 2;
   const top = -cardHeight / 2;
 
-  for (let i = 0; i < resolvedFields.length; i++) {
-    const field = resolvedFields[i]!;
+  runtime.reconcile(resolvedFields.map((field) => {
     const hasWrap = typeof field.wrap === 'number' && Number.isFinite(field.wrap);
-
-    const text = pool.acquire(i);
-
-    text.text = field.text;
-    text.style.fill = field.color;
-    text.style.fontSize = field.fontSize;
-    text.style.fontFamily = 'monospace';
-    text.style.align = field.align;
-
-    if (hasWrap) {
-      text.style.wordWrap = true;
-      text.style.wordWrapWidth = field.wrap as number;
-    } else {
-      text.style.wordWrap = false;
-      text.style.wordWrapWidth = 0;
-    }
-
-    text.eventMode = 'none';
-    text.interactiveChildren = false;
-    text.anchor.set(field.align === 'left' ? 0 : field.align === 'center' ? 0.5 : 1, 0);
+    const anchorX = field.align === 'left' ? 0 : field.align === 'center' ? 0.5 : 1;
     const baseX = field.align === 'left' ? left + 3 : field.align === 'center' ? 0 : left + cardWidth - 3;
-    text.position.set(
-      baseX + field.x,
-      top + field.y,
-    );
-  }
 
-  pool.hideFrom(resolvedFields.length);
+    return {
+      key: field.fieldName,
+      text: field.text,
+      style: {
+        fill: field.color,
+        fontSize: field.fontSize,
+        fontFamily: 'monospace',
+        align: field.align,
+        wordWrap: hasWrap,
+        wordWrapWidth: hasWrap ? field.wrap : 0,
+      },
+      anchor: { x: anchorX, y: 0 },
+      position: {
+        x: baseX + field.x,
+        y: top + field.y,
+      },
+    };
+  }));
 }
 
 export function destroyCardContentPool(container: Container): void {
-  const pool = poolByContainer.get(container);
-  if (pool !== undefined) {
-    pool.destroyAll();
-    poolByContainer.delete(container);
+  const runtime = runtimeByContainer.get(container);
+  if (runtime !== undefined) {
+    runtime.destroy();
+    runtimeByContainer.delete(container);
   }
-  contentSignatureCache.delete(container);
 }

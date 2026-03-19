@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner verification only
-**Deps**: archive/tickets/RUNARCH/RUNARCH-001-make-presentation-scene-the-authoritative-canvas-frame.md, tickets/RUNARCH-002-introduce-scene-reconciler-and-canonical-text-runtime.md, tickets/RUNARCH-003-complete-renderer-migration-to-presentation-specs.md, archive/tickets/RUNPRESLIFE/68RUNPRESLIFE-005-fitl-canvas-stress-regression.md
+**Deps**: archive/tickets/RUNARCH/RUNARCH-001-make-presentation-scene-the-authoritative-canvas-frame.md, archive/tickets/RUNARCH/RUNARCH-002-canonical-keyed-text-reconciler.md, tickets/RUNARCH-003-complete-renderer-migration-to-presentation-specs.md, archive/tickets/RUNPRESLIFE/68RUNPRESLIFE-005-fitl-canvas-stress-regression.md
 
 ## Problem
 

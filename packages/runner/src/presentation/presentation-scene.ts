@@ -18,6 +18,7 @@ export interface PresentationOverlayPoint {
 }
 
 export interface PresentationTextOverlayNode {
+  readonly key: string;
   readonly type: 'text';
   readonly text: string;
   readonly item: TableOverlayItemConfig;
@@ -26,6 +27,7 @@ export interface PresentationTextOverlayNode {
 }
 
 export interface PresentationMarkerOverlayNode {
+  readonly key: string;
   readonly type: 'marker';
   readonly item: TableOverlayItemConfig;
   readonly point: PresentationOverlayPoint;
@@ -182,7 +184,7 @@ export function resolveOverlayNodes(
   const tableCenter = deriveTableCenter(renderModel, positions);
   const result: PresentationOverlayNode[] = [];
 
-  for (const item of items) {
+  for (const [itemIndex, item] of items.entries()) {
     switch (item.kind) {
       case 'globalVar': {
         const value = findVarValue(renderModel.globalVars, item.varName);
@@ -195,6 +197,7 @@ export function resolveOverlayNodes(
         }
         const text = resolveOverlayLabel(item.label, value);
         result.push({
+          key: `overlay:${itemIndex}`,
           type: 'text',
           text,
           item,
@@ -219,6 +222,7 @@ export function resolveOverlayNodes(
           }
           const text = resolveOverlayLabel(item.label, value);
           result.push({
+            key: `overlay:${itemIndex}:player:${player.id}`,
             type: 'text',
             text,
             item,
@@ -239,6 +243,7 @@ export function resolveOverlayNodes(
           continue;
         }
         result.push({
+          key: `overlay:${itemIndex}`,
           type: 'marker',
           item,
           point: target,

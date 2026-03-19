@@ -63,7 +63,7 @@ interface GameContainerProps {
   readonly onLoad?: () => void;
 }
 
-type OverlayRegion = 'topStatus' | 'left' | 'side' | 'floating';
+type OverlayRegion = 'topStatus' | 'left' | 'right' | 'floating';
 
 const OVERLAY_REGION_PANELS: Readonly<Record<OverlayRegion, readonly OverlayPanelComponent[]>> = {
   topStatus: [
@@ -75,7 +75,7 @@ const OVERLAY_REGION_PANELS: Readonly<Record<OverlayRegion, readonly OverlayPane
   left: [
     EligiblePanel,
   ],
-  side: [
+  right: [
     VariablesPanel,
     Scoreboard,
     GlobalMarkersBar,
@@ -272,26 +272,9 @@ export function GameContainer({
         }),
     },
   );
-  const sidePanelContent = (
-    <>
-      {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.side, overlayPanelProps)}
-      {eventLogVisible ? (
-        <EventLogPanel
-          entries={eventLogEntries}
-          selectedEntryId={selectedEventLogEntryId}
-          onSelectEntry={(entry) => {
-            setSelectedEventLogEntryId(entry.id);
-            setInteractionHighlights({
-              zoneIDs: entry.zoneIds,
-              tokenIDs: entry.tokenIds,
-            });
-          }}
-        />
-      ) : null}
-    </>
-  );
+  const rightRailContent = renderOverlayRegionPanels(OVERLAY_REGION_PANELS.right, overlayPanelProps);
 
-  const bottomBarContent = (() => {
+  const bottomPrimaryContent = (() => {
     switch (bottomBarState.kind) {
       case 'actions':
         return (
@@ -316,6 +299,20 @@ export function GameContainer({
         return null;
     }
   })();
+
+  const bottomRightDockContent = eventLogVisible ? (
+    <EventLogPanel
+      entries={eventLogEntries}
+      selectedEntryId={selectedEventLogEntryId}
+      onSelectEntry={(entry) => {
+        setSelectedEventLogEntryId(entry.id);
+        setInteractionHighlights({
+          zoneIDs: entry.zoneIds,
+          tokenIDs: entry.tokenIds,
+        });
+      }}
+    />
+  ) : null;
 
   const topStatusContent = renderOverlayRegionPanels(OVERLAY_REGION_PANELS.topStatus, overlayPanelProps);
   const topSessionContent = (
@@ -400,13 +397,14 @@ export function GameContainer({
           />
         </div>
         <UIOverlay
-          leftPanelContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.left, overlayPanelProps)}
+          leftRailContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.left, overlayPanelProps)}
           scoringBarContent={<VictoryStandingsBar store={store} />}
           topBarPresentation={visualConfigProvider.getRunnerChromeTopBar()}
           topStatusContent={topStatusContent}
           topSessionContent={topSessionContent}
-          sidePanelContent={sidePanelContent}
-          bottomBarContent={bottomBarContent}
+          rightRailContent={rightRailContent}
+          bottomPrimaryContent={bottomPrimaryContent}
+          bottomRightDockContent={bottomRightDockContent}
           floatingContent={(
             <>
               {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.floating, overlayPanelProps)}

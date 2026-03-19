@@ -243,6 +243,7 @@ describe('GameContainer chrome state', () => {
     }));
 
     expect(screen.getByTestId('event-log-panel')).toBeTruthy();
+    expect(screen.getByTestId('ui-overlay-bottom-right-dock').contains(screen.getByTestId('event-log-panel'))).toBe(true);
     expect(screen.getByTestId('event-log-toggle-button').textContent).toBe('Hide Log');
 
     fireEvent.click(screen.getByTestId('event-log-toggle-button'));

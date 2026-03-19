@@ -14,22 +14,31 @@ describe('UIOverlay', () => {
     expect(html).toContain('data-testid="ui-overlay-top"');
     expect(html).toContain('data-testid="ui-overlay-top-status"');
     expect(html).toContain('data-testid="ui-overlay-top-session"');
-    expect(html).toContain('data-testid="ui-overlay-left"');
-    expect(html).toContain('data-testid="ui-overlay-side"');
-    expect(html).toContain('data-testid="ui-overlay-bottom"');
+    expect(html).toContain('data-testid="ui-overlay-left-rail"');
+    expect(html).toContain('data-testid="ui-overlay-right-rail"');
+    expect(html).toContain('data-testid="ui-overlay-bottom-region"');
+    expect(html).toContain('data-testid="ui-overlay-bottom-primary"');
+    expect(html).toContain('data-testid="ui-overlay-bottom-right-dock"');
     expect(html).toContain('data-testid="ui-overlay-floating"');
+    expect(html).not.toContain('data-testid="ui-overlay-left"');
+    expect(html).not.toContain('data-testid="ui-overlay-side"');
+    expect(html).not.toContain('data-testid="ui-overlay-bottom"');
   });
 
-  it('renders provided bottomBarContent in bottom region', () => {
+  it('renders provided bottomPrimaryContent and bottomRightDockContent in distinct bottom regions', () => {
     const html = renderToStaticMarkup(
       createElement(UIOverlay, {
-        bottomBarContent: createElement('div', { 'data-testid': 'bottom-slot-content' }, 'bottom controls'),
+        bottomPrimaryContent: createElement('div', { 'data-testid': 'bottom-primary-slot-content' }, 'bottom controls'),
+        bottomRightDockContent: createElement('div', { 'data-testid': 'bottom-dock-slot-content' }, 'dock content'),
       }),
     );
 
-    expect(html).toContain('data-testid="ui-overlay-bottom"');
-    expect(html).toContain('data-testid="bottom-slot-content"');
+    expect(html).toContain('data-testid="ui-overlay-bottom-primary"');
+    expect(html).toContain('data-testid="ui-overlay-bottom-right-dock"');
+    expect(html).toContain('data-testid="bottom-primary-slot-content"');
+    expect(html).toContain('data-testid="bottom-dock-slot-content"');
     expect(html).toContain('bottom controls');
+    expect(html).toContain('dock content');
   });
 
   it('renders provided topStatusContent in top status region', () => {
@@ -74,16 +83,16 @@ describe('UIOverlay', () => {
     expect(html).toContain('top session');
   });
 
-  it('renders provided sidePanelContent in side region', () => {
+  it('renders provided rightRailContent in right rail region', () => {
     const html = renderToStaticMarkup(
       createElement(UIOverlay, {
-        sidePanelContent: createElement('div', { 'data-testid': 'side-slot-content' }, 'side content'),
+        rightRailContent: createElement('div', { 'data-testid': 'right-rail-slot-content' }, 'right rail content'),
       }),
     );
 
-    expect(html).toContain('data-testid="ui-overlay-side"');
-    expect(html).toContain('data-testid="side-slot-content"');
-    expect(html).toContain('side content');
+    expect(html).toContain('data-testid="ui-overlay-right-rail"');
+    expect(html).toContain('data-testid="right-rail-slot-content"');
+    expect(html).toContain('right rail content');
   });
 
   it('renders provided floatingContent in floating region', () => {
@@ -98,15 +107,15 @@ describe('UIOverlay', () => {
     expect(html).toContain('floating content');
   });
 
-  it('renders provided leftPanelContent in left region', () => {
+  it('renders provided leftRailContent in left rail region', () => {
     const html = renderToStaticMarkup(
       createElement(UIOverlay, {
-        leftPanelContent: createElement('div', { 'data-testid': 'left-slot-content' }, 'left content'),
+        leftRailContent: createElement('div', { 'data-testid': 'left-rail-slot-content' }, 'left content'),
       }),
     );
 
-    expect(html).toContain('data-testid="ui-overlay-left"');
-    expect(html).toContain('data-testid="left-slot-content"');
+    expect(html).toContain('data-testid="ui-overlay-left-rail"');
+    expect(html).toContain('data-testid="left-rail-slot-content"');
     expect(html).toContain('left content');
   });
 
@@ -119,9 +128,11 @@ describe('UIOverlay', () => {
       topStatusStartAligned: expect.any(String),
       topSession: expect.any(String),
       scoringBar: expect.any(String),
-      leftPanel: expect.any(String),
-      sidePanels: expect.any(String),
-      bottomBar: expect.any(String),
+      leftRail: expect.any(String),
+      rightRail: expect.any(String),
+      bottomRegion: expect.any(String),
+      bottomPrimary: expect.any(String),
+      bottomRightDock: expect.any(String),
       floating: expect.any(String),
     });
   });

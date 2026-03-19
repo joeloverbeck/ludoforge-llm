@@ -16,6 +16,17 @@ Spec 61 requires dead placeholder-only projection plumbing to be removed once th
 2. Non-placeholder consumers still exist for at least some variable data today, including table-overlay and presentation-scene code paths, so this cleanup must be evidence-driven rather than blanket deletion.
 3. Corrected scope: this ticket should remove only fields proven to be placeholder-only after Tickets 003 and 004, while preserving any remaining production consumers.
 
+## Note
+
+This ticket is the final architectural cleanup pass for Spec 61. Tickets 003 and 004 remove the placeholder UI surfaces; this ticket must then prove which of these projection fields remain justified:
+
+- `globalVars`
+- `playerVars`
+- `globalMarkers`
+- `tracks`
+
+If a field survives, the ticket should document the real production consumer explicitly. If no such consumer remains, the field should be deleted rather than preserved as speculative API surface.
+
 ## Architecture Check
 
 1. A dedicated projection-cleanup pass is safer than deleting model fields opportunistically during UI component removal, because it forces explicit proof of which consumers remain.

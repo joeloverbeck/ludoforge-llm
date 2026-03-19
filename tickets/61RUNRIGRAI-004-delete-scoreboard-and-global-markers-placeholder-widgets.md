@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only UI cleanup
-**Deps**: specs/61-runner-right-rail-cleanup-and-event-log-dock.md, tickets/61RUNRIGRAI-002-move-event-log-from-right-rail-to-bottom-right-dock.md
+**Deps**: specs/61-runner-right-rail-cleanup-and-event-log-dock.md, archive/tickets/RUNARCH/61RUNRIGRAI-001-add-bottom-primary-and-dock-overlay-regions.md
 
 ## Problem
 
@@ -12,9 +12,18 @@
 
 ## Assumption Reassessment (2026-03-19)
 
-1. `packages/runner/src/ui/GameContainer.tsx` still registers both `Scoreboard` and `GlobalMarkersBar` in the `side` overlay region.
+1. After archived Ticket 001, `packages/runner/src/ui/GameContainer.tsx` still registers both `Scoreboard` and `GlobalMarkersBar` in the right-rail overlay region.
 2. `packages/runner/src/ui/Scoreboard.tsx` and `packages/runner/src/ui/GlobalMarkersBar.tsx` still consume `renderModel.tracks` and `renderModel.globalMarkers`.
 3. Corrected scope: this ticket should remove only the widget surfaces and their direct UI tests, while leaving any shared render-model fields in place until the dedicated projection-cleanup ticket proves they are dead.
+
+## Note
+
+This ticket is the authoritative UI-deletion slice for the remaining placeholder right-rail chrome after the dock refactor. It should fully remove:
+
+- `Scoreboard`,
+- `GlobalMarkersBar`,
+- their right-rail registration,
+- their dedicated component tests.
 
 ## Architecture Check
 

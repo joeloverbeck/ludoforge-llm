@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only container composition
-**Deps**: specs/61-runner-right-rail-cleanup-and-event-log-dock.md, tickets/61RUNRIGRAI-001-add-bottom-primary-and-dock-overlay-regions.md
+**Deps**: specs/61-runner-right-rail-cleanup-and-event-log-dock.md, archive/tickets/RUNARCH/61RUNRIGRAI-001-add-bottom-primary-and-dock-overlay-regions.md
 
 ## Problem
 
@@ -12,9 +12,17 @@
 
 ## Assumption Reassessment (2026-03-19)
 
-1. `packages/runner/src/ui/GameContainer.tsx` currently appends `EventLogPanel` to `sidePanelContent` and passes action/choice/AI content through `bottomBarContent`.
-2. `packages/runner/test/ui/GameContainer.test.ts` and `packages/runner/test/ui/GameContainer.chrome.test.tsx` currently model a single bottom slot and a side slot.
-3. Corrected scope: this ticket should only reassign event-log placement and related tests, not delete other side-rail widgets yet.
+1. Reassessment after completing `archive/tickets/RUNARCH/61RUNRIGRAI-001-add-bottom-primary-and-dock-overlay-regions.md`: `packages/runner/src/ui/GameContainer.tsx` already routes `EventLogPanel` through `bottomRightDockContent`, and `UIOverlay` already exposes the new semantic dock contract.
+2. `packages/runner/test/ui/GameContainer.test.ts` and `packages/runner/test/ui/GameContainer.chrome.test.tsx` already cover dock ownership and event-log visibility behavior.
+3. Corrected scope: this ticket is now superseded by archived Ticket 001 and should not be used as the architectural dependency for remaining Spec 61 cleanup work.
+
+## Note
+
+Remaining Spec 61 follow-up should proceed through Tickets `61RUNRIGRAI-003`, `61RUNRIGRAI-004`, and `61RUNRIGRAI-005`. They cover the still-open architectural cleanup:
+
+- deleting placeholder widgets,
+- deleting placeholder-only visual-config contracts,
+- pruning dead runner-frame/render-model fields after widget removal proves they are unused.
 
 ## Architecture Check
 

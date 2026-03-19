@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only UI/config cleanup
-**Deps**: specs/61-runner-right-rail-cleanup-and-event-log-dock.md, tickets/61RUNRIGRAI-002-move-event-log-from-right-rail-to-bottom-right-dock.md
+**Deps**: specs/61-runner-right-rail-cleanup-and-event-log-dock.md, archive/tickets/RUNARCH/61RUNRIGRAI-001-add-bottom-primary-and-dock-overlay-regions.md
 
 ## Problem
 
@@ -12,9 +12,17 @@
 
 ## Assumption Reassessment (2026-03-19)
 
-1. `packages/runner/src/ui/VariablesPanel.tsx` is still registered in `GameContainer` side panels and consumes `visualConfigProvider.getVariablesConfig()`.
+1. After archived Ticket 001, `VariablesPanel` is still registered in `GameContainer` right-rail panels and consumes `visualConfigProvider.getVariablesConfig()`.
 2. `packages/runner/src/config/visual-config-types.ts`, `visual-config-provider.ts`, and `validate-visual-config-refs.ts` still define and validate `variables.prominent`, `variables.panels`, and `variables.formatting`.
 3. Corrected scope: this ticket should remove only the variable-panel surface and its config contract, not touch scoreboard/global-marker cleanup yet.
+
+## Note
+
+This ticket is the first remaining architectural cleanup slice after the dock refactor. It should be treated as the authoritative removal point for:
+
+- `VariablesPanel`,
+- the `variables` visual-config schema/provider contract,
+- any right-rail registration and test scaffolding that exists only for that panel.
 
 ## Architecture Check
 

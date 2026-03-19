@@ -45,9 +45,10 @@ interface CapturedUIOverlayProps {
     readonly statusAlignment: 'center' | 'start';
   };
   readonly scoringBarContent?: ReactNode;
-  readonly leftPanelContent?: ReactNode;
-  readonly sidePanelContent?: ReactNode;
-  readonly bottomBarContent?: ReactNode;
+  readonly leftRailContent?: ReactNode;
+  readonly rightRailContent?: ReactNode;
+  readonly bottomPrimaryContent?: ReactNode;
+  readonly bottomRightDockContent?: ReactNode;
   readonly floatingContent?: ReactNode;
 }
 
@@ -126,9 +127,10 @@ vi.mock('../../src/ui/UIOverlay.js', () => ({
       createElement('div', { 'data-testid': 'ui-overlay-top-status' }, props.topStatusContent),
       createElement('div', { 'data-testid': 'ui-overlay-top-session' }, props.topSessionContent),
       createElement('div', { 'data-testid': 'ui-overlay-scoring' }, props.scoringBarContent),
-      createElement('div', { 'data-testid': 'ui-overlay-left' }, props.leftPanelContent),
-      createElement('div', { 'data-testid': 'ui-overlay-side' }, props.sidePanelContent),
-      createElement('div', { 'data-testid': 'ui-overlay-bottom' }, props.bottomBarContent),
+      createElement('div', { 'data-testid': 'ui-overlay-left-rail' }, props.leftRailContent),
+      createElement('div', { 'data-testid': 'ui-overlay-right-rail' }, props.rightRailContent),
+      createElement('div', { 'data-testid': 'ui-overlay-bottom-primary' }, props.bottomPrimaryContent),
+      createElement('div', { 'data-testid': 'ui-overlay-bottom-right-dock' }, props.bottomRightDockContent),
       createElement('div', { 'data-testid': 'ui-overlay-floating' }, props.floatingContent),
     );
   },
@@ -389,6 +391,8 @@ describe('GameContainer', () => {
     }
     const topStatusHtml = renderToStaticMarkup(createElement('div', null, overlayProps.topStatusContent));
     const topSessionHtml = renderToStaticMarkup(createElement('div', null, overlayProps.topSessionContent));
+    const rightRailHtml = renderToStaticMarkup(createElement('div', null, overlayProps.rightRailContent));
+    const bottomDockHtml = renderToStaticMarkup(createElement('div', null, overlayProps.bottomRightDockContent));
     expect(topStatusHtml).toContain('data-testid="phase-indicator"');
     expect(topStatusHtml).toContain('data-testid="turn-order-display"');
     expect(topStatusHtml).toContain('data-testid="interrupt-banner"');
@@ -398,12 +402,13 @@ describe('GameContainer', () => {
     expect(topSessionHtml).toContain('data-testid="event-log-toggle-button"');
     expect(topSessionHtml).not.toContain('data-testid="settings-menu"');
     expect(html).toContain('data-testid="settings-menu-trigger"');
-    expect(html).toContain('data-testid="variables-panel"');
     expect(html).toContain('data-has-visual-config="true"');
-    expect(html).toContain('data-testid="scoreboard"');
-    expect(html).toContain('data-testid="global-markers-bar"');
-    expect(html).toContain('data-testid="active-effects-panel"');
-    expect(html).toContain('data-testid="event-log-panel"');
+    expect(rightRailHtml).toContain('data-testid="variables-panel"');
+    expect(rightRailHtml).toContain('data-testid="scoreboard"');
+    expect(rightRailHtml).toContain('data-testid="global-markers-bar"');
+    expect(rightRailHtml).toContain('data-testid="active-effects-panel"');
+    expect(rightRailHtml).not.toContain('data-testid="event-log-panel"');
+    expect(bottomDockHtml).toContain('data-testid="event-log-panel"');
     expect(html).toContain('data-testid="warnings-toast"');
     expect(html).toContain('data-testid="player-hand-panel"');
     expect(html).toContain('data-testid="terminal-overlay"');
@@ -422,7 +427,6 @@ describe('GameContainer', () => {
       'scoreboard',
       'global-markers-bar',
       'active-effects-panel',
-      'event-log-panel',
     ]);
     expect(testDoubles.tooltipLayerProps).toMatchObject({
       hoverTarget: null,
@@ -534,17 +538,18 @@ describe('GameContainer', () => {
     }
     const topStatusHtml = renderToStaticMarkup(createElement('div', null, overlayProps.topStatusContent));
     const topSessionHtml = renderToStaticMarkup(createElement('div', null, overlayProps.topSessionContent));
+    const rightRailHtml = renderToStaticMarkup(createElement('div', null, overlayProps.rightRailContent));
     expect(topStatusHtml).toContain('data-testid="phase-indicator"');
     expect(topStatusHtml).toContain('data-testid="turn-order-display"');
     expect(topStatusHtml).toContain('data-testid="interrupt-banner"');
     expect(topStatusHtml).toContain('data-testid="event-deck-panel"');
     expect(topSessionHtml).toContain('data-testid="settings-menu-trigger"');
     expect(html).toContain('data-testid="settings-menu-trigger"');
-    expect(html).toContain('data-testid="variables-panel"');
     expect(html).toContain('data-has-visual-config="true"');
-    expect(html).toContain('data-testid="scoreboard"');
-    expect(html).toContain('data-testid="global-markers-bar"');
-    expect(html).toContain('data-testid="active-effects-panel"');
+    expect(rightRailHtml).toContain('data-testid="variables-panel"');
+    expect(rightRailHtml).toContain('data-testid="scoreboard"');
+    expect(rightRailHtml).toContain('data-testid="global-markers-bar"');
+    expect(rightRailHtml).toContain('data-testid="active-effects-panel"');
     expect(html).toContain('data-testid="player-hand-panel"');
     expect(html).toContain('data-testid="terminal-overlay"');
     expectAppearsInOrder(html, [
@@ -827,7 +832,8 @@ describe('GameContainer', () => {
   });
 
   it('provides visual config context to VariablesPanel', () => {
-    const html = renderToStaticMarkup(
+    testDoubles.uiOverlayProps = null;
+    renderToStaticMarkup(
       createElement(GameContainer, {
         bridge: TEST_BRIDGE,
         store: createContainerStore({
@@ -838,8 +844,41 @@ describe('GameContainer', () => {
       }),
     );
 
-    expect(html).toContain('data-testid="variables-panel"');
-    expect(html).toContain('data-has-visual-config="true"');
+    const overlayProps = testDoubles.uiOverlayProps as CapturedUIOverlayProps | null;
+    expect(overlayProps).not.toBeNull();
+    if (overlayProps === null) {
+      throw new Error('Expected UIOverlay props to be captured.');
+    }
+
+    const rightRailHtml = renderToStaticMarkup(createElement('div', null, overlayProps.rightRailContent));
+    expect(rightRailHtml).toContain('data-testid="variables-panel"');
+  });
+
+  it('routes EventLogPanel through the bottom-right dock instead of the right rail', () => {
+    testDoubles.uiOverlayProps = null;
+    renderToStaticMarkup(
+      createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+        }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+        readOnlyMode: true,
+      }),
+    );
+
+    const overlayProps = testDoubles.uiOverlayProps as CapturedUIOverlayProps | null;
+    expect(overlayProps).not.toBeNull();
+    if (overlayProps === null) {
+      throw new Error('Expected UIOverlay props to be captured.');
+    }
+
+    const rightRailHtml = renderToStaticMarkup(createElement('div', null, overlayProps.rightRailContent));
+    const bottomDockHtml = renderToStaticMarkup(createElement('div', null, overlayProps.bottomRightDockContent));
+
+    expect(rightRailHtml).not.toContain('data-testid="event-log-panel"');
+    expect(bottomDockHtml).toContain('data-testid="event-log-panel"');
   });
 
   it('passes onActionHoverStart and onActionHoverEnd to ActionToolbar', () => {

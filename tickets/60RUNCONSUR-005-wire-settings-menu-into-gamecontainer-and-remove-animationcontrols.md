@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only integration and legacy removal
-**Deps**: specs/60-runner-control-surface-and-settings-menu.md, archive/tickets/60RUNCONSUR-001-add-runner-ui-store-for-chrome-state.md, archive/tickets/RUNCONSUR/60RUNCONSUR-002-split-top-overlay-into-status-and-session-chrome.md, archive/tickets/RUNCONSUR/60RUNCONSUR-003-add-runner-control-descriptor-builder.md, tickets/60RUNCONSUR-004-build-settings-menu-surface-components.md
+**Deps**: specs/60-runner-control-surface-and-settings-menu.md, archive/tickets/60RUNCONSUR-001-add-runner-ui-store-for-chrome-state.md, archive/tickets/RUNCONSUR/60RUNCONSUR-002-split-top-overlay-into-status-and-session-chrome.md, archive/tickets/RUNCONSUR/60RUNCONSUR-003-add-runner-control-descriptor-builder.md, archive/tickets/RUNCONSUR/60RUNCONSUR-004-build-settings-menu-surface-components.md
 
 ## Problem
 
